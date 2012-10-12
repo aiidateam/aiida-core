@@ -1,8 +1,8 @@
 from django.db import models as m
 #from django_orm.postgresql import hstore
 #from django_hstore import hstore
-#from django_extensions.db.fields import UUIDField
-from uuidfield import UUIDField
+from django_extensions.db.fields import UUIDField
+#from uuidfield import UUIDField
 from django.contrib.auth.models import User as AuthUser 
 import getpass
 
@@ -107,7 +107,10 @@ class CalcGroup(GroupClass):
     pass
     
 class CalcStatus(BaseClass):  
-    pass
+    
+    class Meta:
+        verbose_name_plural = "Calc statuses"
+
 
 class Project(BaseClass):  
     pass
@@ -167,7 +170,9 @@ class CodeComment(CommentClass):
     pass
 
 class CodeStatus(BaseClass):   
-    pass
+    
+    class Meta:
+        verbose_name_plural = "Code statuses"
 
 class CodeType(BaseClass):   
     pass

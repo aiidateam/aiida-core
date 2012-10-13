@@ -7,7 +7,6 @@ from django.contrib.auth.models import User as AuthUser
 import getpass
 
 # Need to extend the User class with uuid, and add user-computer-username field
-# Comments tables for everything
 
 #-------------------- Abstract Base Classes ------------------------
 
@@ -34,7 +33,6 @@ class DataClass(BaseClass):
         super(DataClass, self).save(*args, **kwargs)
     class Meta:
         abstract = True    
-
 
 class AttrClass(DataClass):
     isinput = m.BooleanField(default=True)

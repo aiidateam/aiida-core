@@ -20,13 +20,13 @@ class BaseClass(m.Model):
     class Meta:
         abstract = True
 
-qualitychoice = (('1', 1), ('2', 2), ('3', 3), ('4', 4), ('5', 5))     
+qualitychoice = ((1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5'))     
  
 class DataClass(BaseClass):
 #    hdata = m.TextField(blank=True)
     time = m.DateTimeField(auto_now=True)
     user = m.ForeignKey(AuthUser)
-    quality = m.IntegerField(choices=qualitychoice, null=True)  
+    quality = m.IntegerField(choices=qualitychoice, null=True, blank=True)  
     def save(self, *args, **kwargs):
         uname = getpass.getuser()
         self.user = AuthUser.objects.get(username=uname)
@@ -104,8 +104,7 @@ class Calc(DataClass):
 class CalcGroup(GroupClass):  
     pass
     
-class CalcStatus(BaseClass):  
-    
+class CalcStatus(BaseClass):     
     class Meta:
         verbose_name_plural = "Calc statuses"
 
@@ -154,7 +153,7 @@ class Computer(DataClass):
 class Code(DataClass):
     type = m.ForeignKey('CodeType') #to identify which parser/plugin
     status = m.ForeignKey('CodeStatus') #need to define
-    computer = m.ForeignKey('Computer', blank=True) #for checking computer compatibility, empty means all.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
+    computer = m.ForeignKey('Computer', blank=True) #for checking computer compatibility, empty means all.                                                     
     attrnum = m.ManyToManyField('CodeAttrNum', through='CodeAttrNumVal')
     attrtxt = m.ManyToManyField('CodeAttrTxt', through='CodeAttrTxtVal')
     group = m.ManyToManyField('CodeGroup', blank=True)

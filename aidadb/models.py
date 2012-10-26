@@ -140,20 +140,62 @@ class CalcAttrNumVal(m.Model):
     class Meta:
         unique_together=('item','attr')
 
-################################################
-#class Workflow(EntityClass):
-#    pass
-
 class Computer(DataClass):
+    """Table of computers or clusters.
+    
+    Note that some attributes are inherited from the parent class.
+
+    Attributes:
+        hostname: Full hostname of the host
+        workdir: Full path of the aida folder on the host. It can contain
+            the string {username} that will be substituted by the username
+            of the user on that machine.
+            The actual workdir is then obtained as
+            workdir.format(username=THE_ACTUAL_USERNAME)
+            Example: 
+            workdir = "/scratch/{username}/aida/"
+    """
     hostname = m.CharField(max_length=255, unique=True)
     workdir = m.CharField(max_length=255)
     
+class ComputerUsername(DataClass):
+    """Association of aida users with given remote usernames on a computer.
+
+    There is an unique_together constraint to be sure that each aida user
+    has no more than one remote username on a given computer.
+
+    Note:
+        User has already a reverse relationship called computerusername_set
+        that points to all elements that are owned by that user.
+        We need thus to give another related_name for the aidauser key:
+        it is computerusername_remoteuser_set
+        This points to those elements of this table for which a remote
+        username has been set for the given aidauser.
+
+    Attributes:
+        computer: the remote computer
+        aidauser: the aida user
+        remoteusername: the username of the aida user on the remote computer
+    """
+    computer = m.ForeignKey('Computer')
+    aidauser = m.ForeignKey(AuthUser,
+                            related_name='computerusername_remoteuser_set')
+    remoteusername = m.CharField(max_length=255)
+
+    class Meta:
+        unique_together = (("aidauser", "computer"),)
+
+    def __unicode__(self):
+        return self.aidauser.username + " => " + \
+            self.remoteusername + "@" + self.computer.hostname
+
+
 ################################################
 
 class Code(DataClass):
     type = m.ForeignKey('CodeType') #to identify which parser/plugin
     status = m.ForeignKey('CodeStatus') #need to define
-    computer = m.ForeignKey('Computer', blank=True) #for checking computer compatibility, empty means all.                                                     
+    computer = m.ForeignKey('Computer', blank=True) #for checking computer compatibility, empty means all. 
     attrnum = m.ManyToManyField('CodeAttrNum', through='CodeAttrNumVal')
     attrtxt = m.ManyToManyField('CodeAttrTxt', through='CodeAttrTxtVal')
     group = m.ManyToManyField('CodeGroup', blank=True)
@@ -200,7 +242,7 @@ class CodeAttrNumVal(m.Model):
 
 class Element(BaseClass):
     Z = m.IntegerField()
-    #mass = m.FloatField() #move mass to atribute 
+    #mass = m.FloatField() #move mass to attribute 
     attrnum = m.ManyToManyField('ElementAttrNum', through = 'ElementAttrNumVal')
     attrtxt = m.ManyToManyField('ElementAttrTxt', through = 'ElementAttrTxtVal')
     group = m.ManyToManyField('ElementGroup', blank=True)
@@ -359,7 +401,7 @@ class BasisAttrNumVal(m.Model):
 
 #####################################################
 
-dimensions = (('0',0), ('1',1), ('2',2), ('3',3))
+dimensions = ((0,'0'), (1,'1'), (2,'2'), (3,'3'))
 
 class Struc(DataClass):   
     formula = m.CharField(max_length=255) #generated automatically using ordering rules

@@ -17,7 +17,7 @@ class Migration(SchemaMigration):
             ('data', self.gf('django.db.models.fields.TextField')(blank=True)),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
-            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True)),
+            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
             ('code', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.Code'])),
             ('project', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.Project'])),
             ('status', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.CalcStatus'])),
@@ -91,7 +91,7 @@ class Migration(SchemaMigration):
             ('data', self.gf('django.db.models.fields.TextField')(blank=True)),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
-            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True)),
+            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
             ('parent', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.CalcGroup'], null=True, blank=True)),
         ))
         db.send_create_signal('aidadb', ['CalcGroup'])
@@ -135,7 +135,7 @@ class Migration(SchemaMigration):
             ('data', self.gf('django.db.models.fields.TextField')(blank=True)),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
-            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True)),
+            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
             ('parent', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.CalcComment'], null=True, blank=True)),
         ))
         db.send_create_signal('aidadb', ['CalcComment'])
@@ -149,7 +149,7 @@ class Migration(SchemaMigration):
             ('data', self.gf('django.db.models.fields.TextField')(blank=True)),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
-            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True)),
+            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
             ('isinput', self.gf('django.db.models.fields.BooleanField')(default=True)),
         ))
         db.send_create_signal('aidadb', ['CalcAttrTxt'])
@@ -163,7 +163,7 @@ class Migration(SchemaMigration):
             ('data', self.gf('django.db.models.fields.TextField')(blank=True)),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
-            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True)),
+            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
             ('isinput', self.gf('django.db.models.fields.BooleanField')(default=True)),
         ))
         db.send_create_signal('aidadb', ['CalcAttrNum'])
@@ -203,11 +203,30 @@ class Migration(SchemaMigration):
             ('data', self.gf('django.db.models.fields.TextField')(blank=True)),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
-            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True)),
+            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
             ('hostname', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
             ('workdir', self.gf('django.db.models.fields.CharField')(max_length=255)),
         ))
         db.send_create_signal('aidadb', ['Computer'])
+
+        # Adding model 'ComputerUsername'
+        db.create_table('aidadb_computerusername', (
+            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+            ('uuid', self.gf('django.db.models.fields.CharField')(max_length=36, blank=True)),
+            ('title', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
+            ('description', self.gf('django.db.models.fields.TextField')(blank=True)),
+            ('data', self.gf('django.db.models.fields.TextField')(blank=True)),
+            ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
+            ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
+            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
+            ('computer', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.Computer'])),
+            ('aidauser', self.gf('django.db.models.fields.related.ForeignKey')(related_name='computerusername_remoteuser_set', to=orm['auth.User'])),
+            ('remoteusername', self.gf('django.db.models.fields.CharField')(max_length=255)),
+        ))
+        db.send_create_signal('aidadb', ['ComputerUsername'])
+
+        # Adding unique constraint on 'ComputerUsername', fields ['aidauser', 'computer']
+        db.create_unique('aidadb_computerusername', ['aidauser_id', 'computer_id'])
 
         # Adding model 'Code'
         db.create_table('aidadb_code', (
@@ -218,7 +237,7 @@ class Migration(SchemaMigration):
             ('data', self.gf('django.db.models.fields.TextField')(blank=True)),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
-            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True)),
+            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
             ('type', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.CodeType'])),
             ('status', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.CodeStatus'])),
             ('computer', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.Computer'], blank=True)),
@@ -242,7 +261,7 @@ class Migration(SchemaMigration):
             ('data', self.gf('django.db.models.fields.TextField')(blank=True)),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
-            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True)),
+            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
             ('parent', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.CodeGroup'], null=True, blank=True)),
         ))
         db.send_create_signal('aidadb', ['CodeGroup'])
@@ -256,7 +275,7 @@ class Migration(SchemaMigration):
             ('data', self.gf('django.db.models.fields.TextField')(blank=True)),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
-            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True)),
+            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
             ('parent', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.CodeComment'], null=True, blank=True)),
         ))
         db.send_create_signal('aidadb', ['CodeComment'])
@@ -290,7 +309,7 @@ class Migration(SchemaMigration):
             ('data', self.gf('django.db.models.fields.TextField')(blank=True)),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
-            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True)),
+            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
         ))
         db.send_create_signal('aidadb', ['CodeAttrTxt'])
 
@@ -303,7 +322,7 @@ class Migration(SchemaMigration):
             ('data', self.gf('django.db.models.fields.TextField')(blank=True)),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
-            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True)),
+            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
         ))
         db.send_create_signal('aidadb', ['CodeAttrNum'])
 
@@ -361,7 +380,7 @@ class Migration(SchemaMigration):
             ('data', self.gf('django.db.models.fields.TextField')(blank=True)),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
-            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True)),
+            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
             ('isinput', self.gf('django.db.models.fields.BooleanField')(default=True)),
         ))
         db.send_create_signal('aidadb', ['ElementAttrTxt'])
@@ -375,7 +394,7 @@ class Migration(SchemaMigration):
             ('data', self.gf('django.db.models.fields.TextField')(blank=True)),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
-            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True)),
+            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
             ('isinput', self.gf('django.db.models.fields.BooleanField')(default=True)),
         ))
         db.send_create_signal('aidadb', ['ElementAttrNum'])
@@ -389,7 +408,7 @@ class Migration(SchemaMigration):
             ('data', self.gf('django.db.models.fields.TextField')(blank=True)),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
-            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True)),
+            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
             ('parent', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.ElementGroup'], null=True, blank=True)),
         ))
         db.send_create_signal('aidadb', ['ElementGroup'])
@@ -429,7 +448,7 @@ class Migration(SchemaMigration):
             ('data', self.gf('django.db.models.fields.TextField')(blank=True)),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
-            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True)),
+            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
             ('type', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.PotentialType'])),
             ('status', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.PotentialStatus'])),
         ))
@@ -460,7 +479,7 @@ class Migration(SchemaMigration):
             ('data', self.gf('django.db.models.fields.TextField')(blank=True)),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
-            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True)),
+            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
             ('isinput', self.gf('django.db.models.fields.BooleanField')(default=True)),
         ))
         db.send_create_signal('aidadb', ['PotentialAttrTxt'])
@@ -474,7 +493,7 @@ class Migration(SchemaMigration):
             ('data', self.gf('django.db.models.fields.TextField')(blank=True)),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
-            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True)),
+            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
             ('isinput', self.gf('django.db.models.fields.BooleanField')(default=True)),
         ))
         db.send_create_signal('aidadb', ['PotentialAttrNum'])
@@ -488,7 +507,7 @@ class Migration(SchemaMigration):
             ('data', self.gf('django.db.models.fields.TextField')(blank=True)),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
-            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True)),
+            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
             ('parent', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.PotentialGroup'], null=True, blank=True)),
         ))
         db.send_create_signal('aidadb', ['PotentialGroup'])
@@ -502,7 +521,7 @@ class Migration(SchemaMigration):
             ('data', self.gf('django.db.models.fields.TextField')(blank=True)),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
-            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True)),
+            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
             ('parent', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.PotentialComment'], null=True, blank=True)),
         ))
         db.send_create_signal('aidadb', ['PotentialComment'])
@@ -562,7 +581,7 @@ class Migration(SchemaMigration):
             ('data', self.gf('django.db.models.fields.TextField')(blank=True)),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
-            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True)),
+            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
             ('type', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.BasisType'])),
             ('status', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.BasisStatus'])),
         ))
@@ -593,7 +612,7 @@ class Migration(SchemaMigration):
             ('data', self.gf('django.db.models.fields.TextField')(blank=True)),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
-            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True)),
+            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
             ('isinput', self.gf('django.db.models.fields.BooleanField')(default=True)),
         ))
         db.send_create_signal('aidadb', ['BasisAttrTxt'])
@@ -607,7 +626,7 @@ class Migration(SchemaMigration):
             ('data', self.gf('django.db.models.fields.TextField')(blank=True)),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
-            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True)),
+            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
             ('isinput', self.gf('django.db.models.fields.BooleanField')(default=True)),
         ))
         db.send_create_signal('aidadb', ['BasisAttrNum'])
@@ -621,7 +640,7 @@ class Migration(SchemaMigration):
             ('data', self.gf('django.db.models.fields.TextField')(blank=True)),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
-            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True)),
+            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
             ('parent', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.BasisGroup'], null=True, blank=True)),
         ))
         db.send_create_signal('aidadb', ['BasisGroup'])
@@ -635,7 +654,7 @@ class Migration(SchemaMigration):
             ('data', self.gf('django.db.models.fields.TextField')(blank=True)),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
-            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True)),
+            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
             ('parent', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.BasisComment'], null=True, blank=True)),
         ))
         db.send_create_signal('aidadb', ['BasisComment'])
@@ -695,7 +714,7 @@ class Migration(SchemaMigration):
             ('data', self.gf('django.db.models.fields.TextField')(blank=True)),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
-            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True)),
+            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
             ('formula', self.gf('django.db.models.fields.CharField')(max_length=255)),
             ('dim', self.gf('django.db.models.fields.IntegerField')()),
             ('detail', self.gf('django.db.models.fields.TextField')(blank=True)),
@@ -727,7 +746,7 @@ class Migration(SchemaMigration):
             ('data', self.gf('django.db.models.fields.TextField')(blank=True)),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
-            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True)),
+            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
             ('parent', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.StrucGroup'], null=True, blank=True)),
         ))
         db.send_create_signal('aidadb', ['StrucGroup'])
@@ -741,7 +760,7 @@ class Migration(SchemaMigration):
             ('data', self.gf('django.db.models.fields.TextField')(blank=True)),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
-            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True)),
+            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
             ('parent', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.StrucComment'], null=True, blank=True)),
         ))
         db.send_create_signal('aidadb', ['StrucComment'])
@@ -755,7 +774,7 @@ class Migration(SchemaMigration):
             ('data', self.gf('django.db.models.fields.TextField')(blank=True)),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
-            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True)),
+            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
         ))
         db.send_create_signal('aidadb', ['StrucAttrTxt'])
 
@@ -768,7 +787,7 @@ class Migration(SchemaMigration):
             ('data', self.gf('django.db.models.fields.TextField')(blank=True)),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
-            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True)),
+            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
         ))
         db.send_create_signal('aidadb', ['StrucAttrNum'])
 
@@ -830,6 +849,9 @@ class Migration(SchemaMigration):
         # Removing unique constraint on 'CodeAttrTxtVal', fields ['item', 'attr']
         db.delete_unique('aidadb_codeattrtxtval', ['item_id', 'attr_id'])
 
+        # Removing unique constraint on 'ComputerUsername', fields ['aidauser', 'computer']
+        db.delete_unique('aidadb_computerusername', ['aidauser_id', 'computer_id'])
+
         # Removing unique constraint on 'CalcAttrNumVal', fields ['item', 'attr']
         db.delete_unique('aidadb_calcattrnumval', ['item_id', 'attr_id'])
 
@@ -889,6 +911,9 @@ class Migration(SchemaMigration):
 
         # Deleting model 'Computer'
         db.delete_table('aidadb_computer')
+
+        # Deleting model 'ComputerUsername'
+        db.delete_table('aidadb_computerusername')
 
         # Deleting model 'Code'
         db.delete_table('aidadb_code')
@@ -1045,7 +1070,7 @@ class Migration(SchemaMigration):
             'element': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['aidadb.Element']", 'symmetrical': 'False'}),
             'group': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['aidadb.BasisGroup']", 'symmetrical': 'False', 'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
             'status': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.BasisStatus']"}),
             'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
             'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
@@ -1059,7 +1084,7 @@ class Migration(SchemaMigration):
             'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'isinput': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
             'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
             'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
             'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
@@ -1079,7 +1104,7 @@ class Migration(SchemaMigration):
             'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'isinput': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
             'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
             'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
             'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
@@ -1099,7 +1124,7 @@ class Migration(SchemaMigration):
             'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'parent': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.BasisComment']", 'null': 'True', 'blank': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
             'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
             'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
             'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
@@ -1111,7 +1136,7 @@ class Migration(SchemaMigration):
             'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'parent': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.BasisGroup']", 'null': 'True', 'blank': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
             'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
             'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
             'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
@@ -1150,7 +1175,7 @@ class Migration(SchemaMigration):
             'outstruc': ('django.db.models.fields.related.ManyToManyField', [], {'symmetrical': 'False', 'related_name': "'outcalc'", 'blank': 'True', 'to': "orm['aidadb.Struc']"}),
             'parent': ('django.db.models.fields.related.ManyToManyField', [], {'symmetrical': 'False', 'related_name': "'child'", 'blank': 'True', 'to': "orm['aidadb.Calc']"}),
             'project': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.Project']"}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
             'status': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.CalcStatus']"}),
             'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
             'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
@@ -1164,7 +1189,7 @@ class Migration(SchemaMigration):
             'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'isinput': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
             'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
             'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
             'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
@@ -1184,7 +1209,7 @@ class Migration(SchemaMigration):
             'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'isinput': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
             'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
             'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
             'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
@@ -1204,7 +1229,7 @@ class Migration(SchemaMigration):
             'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'parent': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.CalcComment']", 'null': 'True', 'blank': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
             'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
             'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
             'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
@@ -1216,7 +1241,7 @@ class Migration(SchemaMigration):
             'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'parent': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.CalcGroup']", 'null': 'True', 'blank': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
             'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
             'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
             'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
@@ -1247,7 +1272,7 @@ class Migration(SchemaMigration):
             'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
             'group': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['aidadb.CodeGroup']", 'symmetrical': 'False', 'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
             'status': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.CodeStatus']"}),
             'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
             'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
@@ -1260,7 +1285,7 @@ class Migration(SchemaMigration):
             'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
             'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
             'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
             'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
             'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
@@ -1279,7 +1304,7 @@ class Migration(SchemaMigration):
             'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
             'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
             'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
             'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
             'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
@@ -1299,7 +1324,7 @@ class Migration(SchemaMigration):
             'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'parent': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.CodeComment']", 'null': 'True', 'blank': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
             'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
             'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
             'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
@@ -1311,7 +1336,7 @@ class Migration(SchemaMigration):
             'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'parent': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.CodeGroup']", 'null': 'True', 'blank': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
             'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
             'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
             'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
@@ -1339,12 +1364,26 @@ class Migration(SchemaMigration):
             'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
             'hostname': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
             'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
             'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
             'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
             'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'}),
             'workdir': ('django.db.models.fields.CharField', [], {'max_length': '255'})
+        },
+        'aidadb.computerusername': {
+            'Meta': {'unique_together': "(('aidauser', 'computer'),)", 'object_name': 'ComputerUsername'},
+            'aidauser': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'computerusername_remoteuser_set'", 'to': "orm['auth.User']"}),
+            'computer': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.Computer']"}),
+            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
+            'remoteusername': ('django.db.models.fields.CharField', [], {'max_length': '255'}),
+            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
+            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
         },
         'aidadb.element': {
             'Meta': {'object_name': 'Element'},
@@ -1364,7 +1403,7 @@ class Migration(SchemaMigration):
             'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'isinput': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
             'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
             'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
             'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
@@ -1384,7 +1423,7 @@ class Migration(SchemaMigration):
             'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'isinput': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
             'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
             'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
             'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
@@ -1404,7 +1443,7 @@ class Migration(SchemaMigration):
             'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'parent': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.ElementGroup']", 'null': 'True', 'blank': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
             'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
             'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
             'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
@@ -1419,7 +1458,7 @@ class Migration(SchemaMigration):
             'element': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['aidadb.Element']", 'symmetrical': 'False'}),
             'group': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['aidadb.PotentialGroup']", 'symmetrical': 'False', 'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
             'status': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.PotentialStatus']"}),
             'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
             'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
@@ -1433,7 +1472,7 @@ class Migration(SchemaMigration):
             'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'isinput': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
             'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
             'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
             'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
@@ -1453,7 +1492,7 @@ class Migration(SchemaMigration):
             'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'isinput': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
             'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
             'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
             'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
@@ -1473,7 +1512,7 @@ class Migration(SchemaMigration):
             'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'parent': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.PotentialComment']", 'null': 'True', 'blank': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
             'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
             'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
             'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
@@ -1485,7 +1524,7 @@ class Migration(SchemaMigration):
             'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'parent': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.PotentialGroup']", 'null': 'True', 'blank': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
             'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
             'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
             'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
@@ -1527,7 +1566,7 @@ class Migration(SchemaMigration):
             'formula': ('django.db.models.fields.CharField', [], {'max_length': '255'}),
             'group': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['aidadb.StrucGroup']", 'symmetrical': 'False', 'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
             'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
             'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
             'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
@@ -1538,7 +1577,7 @@ class Migration(SchemaMigration):
             'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
             'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
             'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
             'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
             'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
@@ -1557,7 +1596,7 @@ class Migration(SchemaMigration):
             'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
             'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
             'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
             'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
             'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
@@ -1577,7 +1616,7 @@ class Migration(SchemaMigration):
             'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'parent': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.StrucComment']", 'null': 'True', 'blank': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
             'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
             'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
             'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
@@ -1589,7 +1628,7 @@ class Migration(SchemaMigration):
             'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'parent': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.StrucGroup']", 'null': 'True', 'blank': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
             'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
             'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
             'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),

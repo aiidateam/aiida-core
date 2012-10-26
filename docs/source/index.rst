@@ -14,6 +14,11 @@ Contents:
    aidasrv/index
    aidalib/index
 
+   Installation and Deployment <installation>
+   AIDADB Modules <aidadb>
+   Developer's Guide <developers>
+
+
 Indices and tables
 ==================
 

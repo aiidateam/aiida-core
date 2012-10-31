@@ -1,0 +1,1 @@
+[{"pk": 1, "model": "aidadb.computer", "fields": {"workdir": "/scratch/{user}/aida_workdir", "description": "Reachable only from within the EPFL network.", "title": "Workstation of Giovanni Pizzi at EPFL", "quality": null, "hostname": "theospc7.epfl.ch", "user": 1, "time": "2012-10-30T17:06:00Z", "data": "", "uuid": "149d92b0-22b4-11e2-83fc-00259024cf3f"}}]

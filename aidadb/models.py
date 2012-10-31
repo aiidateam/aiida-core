@@ -5,6 +5,7 @@ from django_extensions.db.fields import UUIDField
 #from uuidfield import UUIDField
 from django.contrib.auth.models import User as AuthUser 
 import getpass
+import aidasrv.submitter
 
 # Need to extend the User class with uuid, and add user-computer-username field
 
@@ -95,6 +96,9 @@ class Calc(DataClass):
     parent = m.ManyToManyField('self', related_name='child',
                                symmetrical=False,
                                blank=True)
+
+    def submit(self):
+        aidasrv.submitter.submit_calc(self.id)
     
 #    flowitems = m.ForeignKey('self', symmetrical=False, blank=True, related_name='works')
 #    workflow = m.ForeignKey('Workflow')

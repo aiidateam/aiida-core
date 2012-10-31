@@ -28,7 +28,14 @@ DATABASES = {
         }
     }
 
-
+## Setup a sqlite3 DB for tests (WAY faster, since it remains in-memory
+## and not on disk.
+if 'test' in sys.argv:
+    DATABASES['default'] = {'ENGINE': 'django.db.backends.sqlite3'}
+## Later on, it may be probably better to make a different settings.py for 
+## testing, and then run it using
+## python manage.py test --settings=aidasrv.test_settings
+## to avoid that subtle bugs that are backend-dependent are not trapped
 
 # Usual Django settings starts here.............
 
@@ -174,3 +181,7 @@ LOGGING = {
         },
     }
 }
+
+# We don't need to run the South migrations every time we want to run the
+# test suite. This leads to massive speedup.
+SOUTH_TESTS_MIGRATE = False

@@ -1,13 +1,16 @@
 from django.db import models as m
-#from django_orm.postgresql import hstore
-#from django_hstore import hstore
 from django_extensions.db.fields import UUIDField
-#from uuidfield import UUIDField
 from django.contrib.auth.models import User as AuthUser 
 import getpass
 import aidasrv.submitter
+import os
+import os.path
+from aidasrv.settings import LOCAL_REPOSITORY
+#from django_orm.postgresql import hstore
+#from django_hstore import hstore
+#from uuidfield import UUIDField
 
-# Need to extend the User class with uuid, and add user-computer-username field
+#Need to extend the User class with uuid, and add user-computer-username field
 
 #-------------------- Abstract Base Classes ------------------------
 
@@ -98,8 +101,45 @@ class Calc(DataClass):
                                blank=True)
 
     def submit(self):
-        aidasrv.submitter.submit_calc(self.id)
-    
+        """
+        Submits the calculation to the cluster, using the information
+        specified in the database.
+
+        Note:
+            To be called after the calculation *and* all related tables
+            have been set.
+        """
+        aidasrv.submitter.submit_calc(self)
+
+    def get_local_dir(self):
+        """
+        Returns the path to the directory in the local repository
+        containing all the information of the present calculation.
+        """
+        return os.path.join(LOCAL_REPOSITORY, 'calcs', unicode(self.id))
+
+    def get_local_indir(self):
+        """
+        Returns the subdirectory of the local repository containing the 
+        input files of the current calculation.
+        """
+        return os.path.join(self.get_local_dir(), 'inputs')
+
+    def get_local_outdir(self):
+        """
+        Returns the subdirectory of the local repository containing the 
+        output files retrieved from the current calculation.
+        """
+        return os.path.join(self.get_local_dir(), 'outputs')
+
+    def get_local_attachdir(self):
+        """
+        Returns the subdirectory of the local repository containing the 
+        files attached by the user to the current calculation
+        (e.g. documentation, comments, ...)
+        """
+        return os.path.join(self.get_local_dir(), 'attachments')
+
 #    flowitems = m.ForeignKey('self', symmetrical=False, blank=True, related_name='works')
 #    workflow = m.ForeignKey('Workflow')
 #    qjob = m.IntegerField(blank=True, null=True)
@@ -213,11 +253,18 @@ class CodeComment(CommentClass):
     pass
 
 class CodeStatus(BaseClass):   
-    
+
     class Meta:
         verbose_name_plural = "Code statuses"
 
 class CodeType(BaseClass):   
+    """
+    This class defines the code type. Note that the code title should follow
+    a specific syntax since from the title AIDA retrieves which input (and
+    output) plugins to use.
+    The conversion is described in
+    :func:`aidalib.inputplugins._get_plugin_module_name`.
+    """
     pass
 
 class CodeAttrTxt(DataClass):  

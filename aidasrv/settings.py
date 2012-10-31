@@ -1,13 +1,13 @@
 # Django settings for aidasrv project.
 
-import sys, os
+import sys, os, os.path
+from django.core.exceptions import ImproperlyConfigured
 
 # Assumes that parent directory of aida is root for
 # things like templates/, SQL/ etc.  If not, change what follows...
 AIDA_DIR = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR = os.path.split(AIDA_DIR)[0]
 sys.path = [BASE_DIR] + sys.path
-
 
 #put all database specific portions of settings here
 DBENGINE = os.environ.get('AIDADB_ENGINE', '')
@@ -16,6 +16,7 @@ DBUSER = os.environ.get('AIDADB_USER', '')
 DBPASS = os.environ.get('AIDADB_PASS', '')
 DBHOST = os.environ.get('AIDADB_HOST', '')
 DBPORT = os.environ.get('AIDADB_PORT', '')
+LOCAL_REPOSITORY = os.environ.get('AIDADB_REPOSITORY', '')
 
 DATABASES = {
     'default' : {
@@ -32,6 +33,37 @@ DATABASES = {
 ## and not on disk.
 if 'test' in sys.argv:
     DATABASES['default'] = {'ENGINE': 'django.db.backends.sqlite3'}
+    ##############################################################
+    # IMPORTANT! Choose a different repository location, otherwise 
+    # real data will be destroyed during tests!!
+    LOCAL_REPOSITORY = '/tmp/aida_repository_test/'
+    ##############################################################
+
+## Checks on the LOCAL_REPOSITORY
+if not LOCAL_REPOSITORY:
+    ## Empty string
+    raise ImproperlyConfigured(
+        "Please setup correctly the LOCAL_REPOSITORY variable to "
+        "a suitable directory on which you have write permissions.")
+    
+
+# Normalize LOCAL_REPOSITORY to its absolute path
+LOCAL_REPOSITORY=os.path.abspath(LOCAL_REPOSITORY)
+if not os.path.isdir(LOCAL_REPOSITORY):
+    try:
+        # Try to create the local repository folders with needed parent
+        # folders
+        os.makedirs(LOCAL_REPOSITORY)
+    except OSError:
+        # Possibly here due to permission problems
+        raise ImproperlyConfigured(
+            "Please setup correctly the LOCAL_REPOSITORY variable to "
+            "a suitable directory on which you have write permissions. "
+            "(I was not able to create the directory.)")
+        
+
+
+## ========== NOTE =========
 ## Later on, it may be probably better to make a different settings.py for 
 ## testing, and then run it using
 ## python manage.py test --settings=aidasrv.test_settings

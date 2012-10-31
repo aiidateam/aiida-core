@@ -10,8 +10,8 @@ from aidadb.models import CodeType, Computer, Project, Calc
 from django.contrib.auth.models import User as AuthUser
 import getpass
 from django.db import IntegrityError
-
 from django.core import management
+import json
 
 class SimpleTest(unittest.TestCase):
     # List here fixtures to be load
@@ -36,10 +36,31 @@ class SimpleTest(unittest.TestCase):
         project = Project.objects.get(title__istartswith="test")
         initial_status = CalcStatus.objects.get(title="Submitting")
         calc_type = CalcType.objects.get(title="DFT SCF")
-        self.the_calc = Calc.objects.create(title="test calculation",computer=computer,
-                            code=code,project=project,
-                            status=initial_status,
-                            type=calc_type)
+
+        input_data = {
+            'CONTROL': {
+                'calculation': 'scf',
+                'restart_mode': 'from_scratch',
+                },
+            'SYSTEM': {
+                'ibrav': 0,
+                'fixed_magnetization': [0.,1.,0.5],
+                },
+            'ELECTRONS': {
+                'mixing_beta': 0.3,
+                }
+            }
+
+        data_dict={}
+        data_dict['input_data'] = input_data
+       
+        the_data = json.dumps(data_dict)
+        self.the_calc = Calc.objects.create(title="test calculation",
+                                            computer=computer,
+                                            code=code,project=project,
+                                            status=initial_status,
+                                            type=calc_type,
+                                            data=the_data)
 
     def test_submission(self):
         """

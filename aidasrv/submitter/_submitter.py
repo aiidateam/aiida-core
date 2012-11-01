@@ -57,11 +57,9 @@ def submit_calc(calc):
     ## Write files in ./in directory
     ## TODO: evaluate if it is better to return a dictionary in case we
     ## discover that we need to pass more data
-    (retrieve_output, cmdline_params, stdin, stdout, stderr,
-     preexec, postexec) = create_calc_input(
+    retdict = create_calc_input(
         calc_id=calc.id,infile_dir=calc.get_local_indir())
     
-    #print stdin, stdout, stderr
 
     ## Load the 'signaling' library depending on the current AIDA version.
     ## This in particular provides the signaling strings, to be used later.

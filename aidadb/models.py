@@ -292,8 +292,24 @@ class CodeAttrNumVal(m.Model):
 ###############################################
 
 class Element(BaseClass):
+    """
+    This table contains the atomic elements, from hydrogen (Z=1) to
+    Lawrencium (Z=103).
+
+    The element symbol is stored in the 'title' field. 
+    The element name is stored in the 'description' field.
+    
+    The atomic mass is stored under the 'mass' key in the json-dumped
+    data field. The mass is taken from ASE and, where not available,
+    it has been substituted by a nearest integer number.
+    
+    This default value has not been set as an attribute because the
+    attribute require an owner, and this hinders the usage of fixtures
+    to fill default data in the database since no default user exists.
+
+    TODO: convert Z to an unique field.
+    """
     Z = m.IntegerField()
-    #mass = m.FloatField() #move mass to attribute 
     attrnum = m.ManyToManyField('ElementAttrNum', through = 'ElementAttrNumVal')
     attrtxt = m.ManyToManyField('ElementAttrTxt', through = 'ElementAttrTxtVal')
     group = m.ManyToManyField('ElementGroup', blank=True)

@@ -1,0 +1,43 @@
+"""
+This module contains routines to help in managing the local
+AIDA repository.
+"""
+import os, os.path
+import shutil
+
+def copy_to_repo(source, section, filename):
+    """
+    This routine copies the source file 'source' to the local AIDA repository,
+    in the subdirectory 'section' (that can be 'calcs', 'potentials', ...)
+    to a file with name 'filename'.
+    
+    Only a finite list of section names are allowed, otherwise a ValueError
+    is returned.
+
+    Args:
+        source: the source file on the disk
+        section: the section on the code, as 'calcs', 'potentials', ...
+        filename: the filename relative to aidarepository/section.
+            It can contain also subdirectories, and in this case this
+            function will take care of creating empty directories if needed.
+
+    Raises:
+        OSError: in case of problems accessing or writing the files.
+        ValueError: if the section is not recognized.
+    """
+    if section not in ['calcs', 'potentials']:
+        retstr = "Section '{}' not allowed in copy_to_repo.".format(section)
+        raise ValueError(retstr)
+
+    from aidasrv.settings import LOCAL_REPOSITORY
+    # Check if the LOCAL_REPOSITORY exists, mainly to avoid to write in
+    # random places
+    if not os.path.isdir(LOCAL_REPOSITORY):
+        raise ImproperlyConfigured(
+        "The LOCAL_REPOSITORY variable is not setup correctly.")
+
+    dest = os.path.join(LOCAL_REPOSITORY, unicode(section), unicode(filename))
+    pardir = os.path.dirname(dest)
+    if not os.path.exists(pardir):
+        os.makedirs(pardir)
+    shutil.copyfile(source,dest)

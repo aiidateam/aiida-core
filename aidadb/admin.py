@@ -10,4 +10,3 @@ admin.site.register(CodeType)
 admin.site.register(CodeStatus)
 admin.site.register(Computer)
 admin.site.register(Project)
-

@@ -306,10 +306,8 @@ class Element(BaseClass):
     This default value has not been set as an attribute because the
     attribute require an owner, and this hinders the usage of fixtures
     to fill default data in the database since no default user exists.
-
-    TODO: convert Z to an unique field.
     """
-    Z = m.IntegerField()
+    Z = m.IntegerField(unique=True)
     attrnum = m.ManyToManyField('ElementAttrNum', through = 'ElementAttrNumVal')
     attrtxt = m.ManyToManyField('ElementAttrTxt', through = 'ElementAttrTxtVal')
     group = m.ManyToManyField('ElementGroup', blank=True)

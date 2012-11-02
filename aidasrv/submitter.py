@@ -24,7 +24,8 @@ def submit_calc(calc):
     ## sure that we are submitting the job only once. Possibly with a second
     ## field saying that we entered the submit_calc, or that we actually
     ## submitted it.
-    # For the moment, if the folder exists, I just stop with a 'random' exception
+    # For the moment, if the folder exists, I just stop with a 'random'
+    # exception
     # TODO: FIX THIS!
     if os.path.isdir(calc.get_local_dir()):
         raise OSError('The folder {} already exists!'.format(
@@ -37,8 +38,7 @@ def submit_calc(calc):
     ##                               /inputs
     ##                               /outputs
     ##                               /attachments
-    ## DELETE ONLY /in and /out, NOT attachments!!
-    ## Use the calc.get_local_indir() and similar functions
+    ## delete only ./in and ./out, NOT ./attachments
 
     # Using os.makedirs instead of os.mkdir, this will also create the
     # necessary parent dirs where needed
@@ -63,7 +63,8 @@ def submit_calc(calc):
 
     ## Load the 'signaling' library depending on the current AIDA version.
     ## This in particular provides the signaling strings, to be used later.
-    from aidasrv.signaling.signals import get_running_signal, get_finished_signal
+    from aidasrv.signaling.signals import get_running_signal
+    from aidasrv.signaling.signals import get_finished_signal
 
     ## identify the scheduler script
     ## Call the scheduler script.

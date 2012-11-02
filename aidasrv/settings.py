@@ -33,11 +33,21 @@ DATABASES = {
 ## and not on disk.
 if 'test' in sys.argv:
     DATABASES['default'] = {'ENGINE': 'django.db.backends.sqlite3'}
-    ##############################################################
+    ###################################################################
     # IMPORTANT! Choose a different repository location, otherwise 
     # real data will be destroyed during tests!!
-    LOCAL_REPOSITORY = '/tmp/aida_repository_test/'
-    ##############################################################
+    # The location is automatically created with the tempfile module
+    # Typically, under linux this is created under /tmp
+    # and is not deleted at the end of the run.
+    import tempfile
+    LOCAL_REPOSITORY = tempfile.mkdtemp(prefix='aida_repository_')
+    # I write the local repository on stderr, so that the user running
+    # the tests knows where the files are being stored
+    print >> sys.stderr, "########################################"
+    print >> sys.stderr,  "# LOCAL AIDA REPOSITORY FOR TESTS:"
+    print >> sys.stderr, "# {}".format(LOCAL_REPOSITORY)
+    print >> sys.stderr, "########################################"
+    ##################################################################
 
 ## Checks on the LOCAL_REPOSITORY
 if not LOCAL_REPOSITORY:

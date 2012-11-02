@@ -1,4 +1,5 @@
 from aidalib.inputplugins.exceptions import InputValidationError
+from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 import json
 import os
 
@@ -102,6 +103,12 @@ def create_calc_input(calc, infile_dir):
                 required to be run before the code executes.
             postexec: a (possibly empty) string containing commands that may be
                 required to be run after the code has executed.
+
+    TODO: this function should equally work if called from the API client or
+        from within django. To check/implement! May require some work
+
+    TODO: decide whether to return a namedtuple instead of a dict
+        (see http://docs.python.org/2/library/collections.html#namedtuple-factory-function-for-tuples-with-named-fields )
     """
     retdict = {}
     retdict['retrieve_output'] = ['aida.out', 'out/data-file.xml'] 
@@ -113,6 +120,12 @@ def create_calc_input(calc, infile_dir):
     retdict['postexec'] = ""
 
     input_filename = os.path.join(infile_dir,retdict['stdin'])
+
+    try: 
+        input_structure = calc.inpstruc.get()
+    except (ObjectDoesNotExist, MultipleObjectsReturned):
+        raise InputValidationError('One and only one input structure must be'
+                                   'attached to a QE pw.x calculation')
 
     try:
         input_data = json.loads(calc.data)['input_data']
@@ -152,7 +165,7 @@ def create_calc_input(calc, infile_dir):
                 pass
             infile.write("/\n")
             
-    
+ 
 
     return retdict
 

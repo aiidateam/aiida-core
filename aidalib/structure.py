@@ -206,18 +206,25 @@ def validate_symbols_tuple(symbols_tuple):
         raise ValueError("At least one element of the symbol list has "
                          "not been recognized.")
 
+def _is_ase_atoms(ase_atoms):
+    return False
+
+
 class Structure(object):
     """
     This class contains the information about the 
     """
-    def __init__(self,cell,pbc=[True,True,True]):
+    def __init__(self,cell,pbc=None):
         """
         Initializes the structure with a given cell.
         
         Args:
-            cell: the three real-space lattice vectors, in angstrom.
+            cell: recognizes if it can be:
+                1- the three real-space lattice vectors, in angstrom.
                 cell[i] gives the three coordinates of the i-th vector,
                 with i=0,1,2.
+                2- an ase.atoms object
+                3- an Aida.raw_structure dictionary
             pbc: if we want periodic boundary conditions on each of the
                 three real-space directions.
         """
@@ -229,8 +236,17 @@ class Structure(object):
         self._cell = None
         self._pbc = None
 
-        self.cell = cell
-        self.pbc = pbc
+        if pbc is not None:
+            self.cell = cell
+            self.pbc = pbc
+        elif _is_ase_atoms(cell):
+            raise NotImplementedError
+        elif isinstance(cell,dict):
+            raise NotImplementedError
+        else:
+            self.cell = cell
+            self.pbc = [True,True,True]
+            
 
     def appendSite(self,site):
         """

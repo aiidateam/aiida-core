@@ -111,6 +111,30 @@ elements = {
 _valid_symbols = tuple(i['symbol'] for i in elements.values())
 _atomic_masses = {el['symbol']: el['mass'] for el in elements.values()}
 
+def _calc_cell_volume(cell):
+    """
+    Calculates the volume of a cell given the three lattice vectors.
+
+    It is calculated as cell[0] . (cell[1] x cell[2]), where . represents
+    a dot product and x a cross product.
+
+    Args:
+        cell: the cell vectors; the must be a 3x3 list of lists of floats,
+            no checks are done.
+    
+    Returns:
+        the cell volume.
+    """
+    # returns the volume of the primitive cell: |a1.(a2xa3)|
+    a1 = cell[0]
+    a2 = cell[1]
+    a3 = cell[2]
+    a_mid_0 = a2[1]*a3[2] - a2[2]*a3[1]
+    a_mid_1 = a2[2]*a3[0] - a2[0]*a3[2]
+    a_mid_2 = a2[0]*a3[1] - a2[1]*a3[0]
+    return a1[0]*a_mid_0 + a1[1]*a_mid_1 + a1[2]*a_mid_2
+
+
 def _create_symbols_tuple(symbols):
     """
     Returns a tuple with the symbols provided. If a string is provided,
@@ -183,9 +207,107 @@ def validate_symbols_tuple(symbols_tuple):
                          "not been recognized.")
 
 class Structure(object):
-    pass
+    """
+    This class contains the information about the 
+    """
+    def __init__(self,cell,pbc=[True,True,True]):
+        """
+        Initializes the structure with a given cell.
+        
+        Args:
+            cell: the three real-space lattice vectors, in angstrom.
+                cell[i] gives the three coordinates of the i-th vector,
+                with i=0,1,2.
+            pbc: if we want periodic boundary conditions on each of the
+                three real-space directions.
+        """
+        # Threshold used to check if the cell volume is not zero.
+        self._volume_threshold = 1.e-6
+
+        # Initial values
+        self._sites = []
+        self._cell = None
+        self._pbc = None
+
+        self.cell = cell
+        self.pbc = pbc
+
+    def appendSite(self,site):
+        """
+        Append a site to the structure.
+
+        Args:
+            site: the site to append, must be a StructureSite object.
+        """
+        if not isinstance(site,StructureSite):
+            raise ValueError("Can only append StructureSite objects")
+        
+        self._sites.append(site)
+
+    def clearSites(self):
+        """
+        Removes all sites for the structure.
+        """
+        self._sites = []
+
+    @property
+    def sites(self):
+        return self._sites
+    
+    @property
+    def cell(self):
+        return self._cell
+    
+    @cell.setter
+    def cell(self,value):
+        try:
+            the_cell = [[float(c) for c in i] for i in value]
+            if len(the_cell) != 3:
+                raise ValueError
+            if any(len(i) != 3 for i in the_cell):
+                raise ValueError
+        except (IndexError,ValueError,TypeError):
+            raise ValueError("Cell must be a list of the three vectors, each "
+                             "defined as a list of three coordinates.") 
+        
+        if abs(_calc_cell_volume(the_cell)) < self._volume_threshold:
+            raise ValueError("The cell volume is zero. Invalid cell.")
+
+        self._cell = the_cell
+
+    @property
+    def pbc(self):
+        return self._pbc
+
+    @pbc.setter
+    def pbc(self,value):
+        if isinstance(value,bool):
+            the_pbc = [value,value,value]
+        elif (hasattr(value,'__iter__') and
+              all(isinstance(i,bool) for i in value)):
+            if len(value) == 3:
+                the_pbc = [i for i in value]
+            elif len(value) == 1:
+                the_pbc = [value[0],value[0],value[0]]                
+            else:
+                raise ValueError("pbc length must be either one or three.")
+        else:
+            raise ValueError("pbc must be a boolean or a list of three "
+                             "booleans.")
+        self._pbc = the_pbc
+
+    def is_alloy(self):
+        return any(s.is_alloy() for s in self._sites)
+
+    def has_vacancies(self):
+        return any(s.has_vacancies() for s in self._sites)
 
 class StructureSite(object):
+    """
+    This class contains the information about a given site of the system.
+
+    It can be a single atom, or an alloy, or even contain vacancies.
+    """
     def __init__(self, position, symbols, weights=None, mass=None):
         """
         Create a site.
@@ -329,7 +451,7 @@ class StructureSite(object):
                              "set_symbols_and_weights function instead.")
         validate_symbols_tuple(symbols_tuple)
 
-        self._symbols = copy.deepcopy(symbols_tuple)        
+        self._symbols = symbols_tuple
 
     def set_symbols_and_weights(self,symbols,weights):
         """
@@ -519,6 +641,152 @@ if __name__ == "__main__":
             a = StructureSite((0.,0.,0.),['Ba','C'],weights=[1./3.,1./3.],
                               mass = 1000.)
             self.assertAlmostEqual(a.mass, 1000.)
+
+    class TestStructureInit(unittest.TestCase):
+        """
+        Tests the creation of Structure objects (cell and pbc).
+        """
+        def test_cell_wrong_size_1(self):
+            """
+            Wrong cell size (not 3x3)
+            """
+            with self.assertRaises(ValueError):
+                a = Structure(cell=((0.,0.,0.),))
+
+        def test_cell_wrong_size_2(self):
+            """
+            Wrong cell size (not 3x3)
+            """
+            with self.assertRaises(ValueError):
+                a = Structure(cell=((0.,0.,0.),(0.,0.,0.),(0.,0.)))
+
+        def test_cell_zero_vector(self):
+            """
+            Wrong cell (one vector has zero length)
+            """
+            with self.assertRaises(ValueError):
+                a = Structure(cell=((0.,0.,0.),(0.,1.,0.),(0.,0.,1.)))
+
+        def test_cell_zero_volume(self):
+            """
+            Wrong cell (volume is zero)
+            """
+            with self.assertRaises(ValueError):
+                a = Structure(cell=((1.,0.,0.),(0.,1.,0.),(1.,1.,0.)))
+
+        def test_cell_ok(self):
+            """
+            Correct cell
+            """
+            cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
+            a = Structure(cell=cell)
+            out_cell = a.cell
+            
+            for i in range(3):
+                for j in range(3):
+                    self.assertAlmostEqual(cell[i][j],out_cell[i][j])
         
+        def test_volume(self):
+            """
+            Check the volume calculation
+            """
+            cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
+            self.assertAlmostEqual(_calc_cell_volume(cell), 6.)
+
+            cell = ((1.,0.,0.),(0.,1.,0.),(1.,1.,0.))
+            self.assertAlmostEqual(_calc_cell_volume(cell), 0.)
+
+
+        def test_wrong_pbc_1(self):
+            """
+            Wrong pbc parameter (not bool or iterable)
+            """
+            with self.assertRaises(ValueError):
+                cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
+                a = Structure(cell=cell,pbc=1)
+
+        def test_wrong_pbc_2(self):
+            """
+            Wrong pbc parameter (iterable but with wrong len)
+            """
+            with self.assertRaises(ValueError):
+                cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
+                a = Structure(cell=cell,pbc=[True,True])
+
+        def test_wrong_pbc_3(self):
+            """
+            Wrong pbc parameter (iterable but with wrong len)
+            """
+            with self.assertRaises(ValueError):
+                cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
+                a = Structure(cell=cell,pbc=[])
+
+        def test_ok_pbc_1(self):
+            """
+            Single pbc value
+            """
+            cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
+            a = Structure(cell=cell,pbc=True)
+            self.assertEqual(a.pbc,[True,True,True])
+
+            a = Structure(cell=cell,pbc=False)
+            self.assertEqual(a.pbc,[False,False,False])
+
+        def test_ok_pbc_2(self):
+            """
+            One-element list
+            """
+            cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
+            a = Structure(cell=cell,pbc=[True])
+            self.assertEqual(a.pbc,[True,True,True])
+
+            a = Structure(cell=cell,pbc=[False])
+            self.assertEqual(a.pbc,[False,False,False])
+
+        def test_ok_pbc_3(self):
+            """
+            Three-element list
+            """
+            cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
+            a = Structure(cell=cell,pbc=[True,False,True])
+            self.assertEqual(a.pbc,[True,False,True])
+            
+
+    class TestStructure(unittest.TestCase):
+        """
+        Tests the creation of Structure objects (cell and pbc).
+        """
+
+        def test_cell_ok(self):
+            """
+            Test the creation of a cell and the appending of sites
+            """
+            cell = ((2.,0.,0.),(0.,2.,0.),(0.,0.,2.))
+            a = Structure(cell=cell)
+            out_cell = a.cell
+            
+            s = StructureSite((0.,0.,0.),['Ba'])
+            a.appendSite(s)
+            s = StructureSite((1.,1.,1.),['Ti'])
+            a.appendSite(s)
+            self.assertFalse(a.is_alloy())
+            self.assertFalse(a.has_vacancies())
+
+            s= StructureSite((0.5,1.,1.5), symbols=['O', 'C'], 
+                             weights=[0.5,0.5])
+            a.appendSite(s)
+            self.assertTrue(a.is_alloy())
+            self.assertFalse(a.has_vacancies())
+
+            s= StructureSite((0.5,1.,1.5), symbols=['O'], weights=[0.5])
+            a.appendSite(s)
+            self.assertTrue(a.is_alloy())
+            self.assertTrue(a.has_vacancies())
+
+            a.clearSites()
+            a.appendSite(s)
+            self.assertFalse(a.is_alloy())
+            self.assertTrue(a.has_vacancies())
+
 
     unittest.main()

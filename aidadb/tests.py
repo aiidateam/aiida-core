@@ -16,6 +16,7 @@ import json
 import os, os.path
 import aidadb
 from aidasrv.repomanager.pseudo import add_pseudo_file
+from aidalib.exceptions import ValidationError
 
 testdata_folder = os.path.join(
     os.path.dirname(os.path.abspath(aidadb.__file__)),'testdata')
@@ -47,6 +48,13 @@ class PseudoTest(unittest.TestCase):
                                        element_symbols=['Si'], pot_type=self.type,
                                        pot_status=self.status,user=self.user)
         
+    def step1b(self):
+        """
+        Check M2M relationships on the newly-created potential.
+        """
+        self.assertEqual(self.new_pot.element.count(),1)
+        self.assertEqual(self.new_pot.element.get().title,'Si')
+
     def step2(self):
         """
         Test insertion of a pseudo which is identical to the previous one (same 
@@ -54,10 +62,10 @@ class PseudoTest(unittest.TestCase):
         copy of the pseudo.
         """
         new_pot2 = add_pseudo_file(os.path.join(testdata_folder,
-                                                    'Si.pbe-rrkj_copy.UPF'),
-                                       description="Test pseudo for Si",
-                                       element_symbols=['Si'], pot_type=self.type,
-                                       pot_status=self.status,user=self.user)
+            'Si.pbe-rrkj_copy.UPF'),
+            description="Test pseudo for Si - just a file copy",
+            element_symbols=['Si'], pot_type=self.type,
+            pot_status=self.status,user=self.user)
         self.assertEqual(self.new_pot.id, new_pot2.id)
 
     def step3(self):
@@ -73,12 +81,25 @@ class PseudoTest(unittest.TestCase):
             find a name clash and append a different number to the filename.
         """
         new_pot2 = add_pseudo_file(os.path.join(testdata_folder,
-                                                    'Si.pbe-rrkj++.UPF'),
-                                       description="Test pseudo for Si",
-                                       element_symbols=['Si'], pot_type=self.type,
-                                       pot_status=self.status,user=self.user)
+             'Si.pbe-rrkj++.UPF'),
+             description=("Test pseudo for Si - similar filename, "
+                          "different MD5sum"),
+             element_symbols=['Si'], pot_type=self.type,
+             pot_status=self.status,user=self.user)
         self.assertEqual(new_pot2.title, 'Si.pbe-rrkj-1.UPF')
 
+    def step4(self):
+        """
+        Test insertion of a pseudo referring to an element that does not
+        exist.
+        """
+        with self.assertRaises(ValidationError):
+            new_pot2 = add_pseudo_file(os.path.join(testdata_folder,
+                 'Si.pbe-rrkj.UPF'),
+                 description=("Test pseudo for Si - with wrong "
+                              "element list"),
+                 element_symbols=['inexistent'], pot_type=self.type,
+                 pot_status=self.status,user=self.user)
 
     def the_steps(self):
         for name in sorted(dir(self)):
@@ -183,6 +204,9 @@ class SubmissionTest(unittest.TestCase):
                                            status=initial_status,
                                            type=calc_type,
                                            data=the_data)
+
+        ## TODO: add also a structure and link it as input structure!
+        ## possibly restructure in a more clever way this Test class.
 
     def test_submission(self):
         """

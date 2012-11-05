@@ -4,10 +4,13 @@ maintainance also in the database table 'potential'.
 """
 import hashlib
 from aidadb.models import Potential, PotentialAttrTxt, PotentialAttrTxtVal
+from aidadb.models import Element
 import logging
 import os, os.path
 import re
 from aidasrv.repomanager.file import copy_to_repo
+from django.core.exceptions import ObjectDoesNotExist
+from aidalib.exceptions import ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -117,7 +120,8 @@ def add_pseudo_file(filename,description,element_symbols,
             of the database
         element_symbols: a list of strings, one for each of the elements to 
             which this pseudopotential refers. Typically, it is a list of
-            one element only, as ['Si']
+            one element only, as ['Si']. They must be present in the
+            Element table.
         pot_type: a django object of the PotentialType model, to be associated
             to this pseudo
         pot_status: a django object of the PotentialStatus model, to be
@@ -126,14 +130,22 @@ def add_pseudo_file(filename,description,element_symbols,
 
     Returns: a django object of the Potential model pointing to the pseudo.
 
-    TODO: move the file before adding it to the table (after checking that is
-        is not already there) so that we don't even create the DB entry if the
-        file cannot be copied
-
-    TODO: Finish documentation of this function
-
-    TODO: check elements in the Element table, and add M2M references!
+    Raises:
+        ValidationError: if an element provided in the element_symbols
+            list is not found in the Element table
+        IOError, OSError: possible errors while accessing/copying the files
     """
+    # Check if all elements exist in the Element table.
+    # If everything goes smoothly, add elements as M2M fields later on
+    # (once the pseudopotential has been added to the Potential table)
+    try:
+        elements = [Element.objects.get(title=el) for el in element_symbols]
+    except ObjectDoesNotExist as e:
+        raise ValidationError("On of the elements provided in elements_symbols"
+                              "does not exist in the Element table.")
+            
+    # Calculate md5sum, compare with database, and return the existing
+    # object, if any
     md5str = md5_file(filename)
     existing_pot = get_pseudo_from_md5(md5str)
     if existing_pot:
@@ -177,15 +189,24 @@ def add_pseudo_file(filename,description,element_symbols,
                 break
             idx=idx+1
 
+        # Copy the file in the repository
+        # Due to overwrite==False, an exception is raised if the
+        # file already exists or cannot be copied, so that we
+        # never create the entry in the Potential table if an error 
+        # occurs
+        copy_to_repo(source=filename, section='potentials',
+                     filename=title,overwrite=False)
+
         # Create the new entry in the potential table
         newpot = Potential.objects.create(title=title,
                  description=description, user=user,
                  type=pot_type,status=pot_status)
-        newpot.save()
 
-        # Copy the file in the repository
-        copy_to_repo(source=filename, section='potentials',
-                     filename=newpot.title)
+        # Add the M2M links to the elements
+        for el in elements:
+            newpot.element.add(el)
+        
+        newpot.save()
 
         # Store the md5sum attribute
         md5sum_attr, was_created = PotentialAttrTxt.objects.get_or_create(

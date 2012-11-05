@@ -151,7 +151,7 @@ def validate_weights_tuple(weights_tuple,threshold):
     If the sum is less than one, it means that there are vacancies.
     Each element of the list must be >= 0, and the sum must be <= 1.
     """
-    w_sum = reduce(lambda x, y: x+y, weights_tuple)
+    w_sum = sum(weights_tuple)
     if ( any(i < 0. for i in weights_tuple) or 
          (w_sum - 1. > threshold) ):
         raise ValueError("The weight list is not valid (each element "
@@ -228,20 +228,17 @@ class StructureSite(object):
         
         It sets the mass to None if the sum of weights is zero.
         """
-        import math
-        w_sum = reduce(lambda x, y: x+y, self._weights)
+        w_sum = sum(self._weights)
         
-        if math.fabs(w_sum) < self._sum_threshold:
+        if abs(w_sum) < self._sum_threshold:
             self._mass = None
             return
         
         normalized_weights = (i/w_sum for i in self._weights)
         element_masses = (_atomic_masses[sym] for sym in self._symbols)
         # Weighted mass
-        self._mass = reduce(lambda x,y: x+y,
-                            map(lambda x: x[0]*x[1], 
-                                zip(normalized_weights, element_masses)))
-        
+        self._mass = sum([i*j for i,j in zip(normalized_weights, element_masses)])
+
     @property
     def mass(self):
         """
@@ -357,11 +354,10 @@ class StructureSite(object):
 
         It uses the internal variable _sum_threshold as a threshold.
         """
-        w_sum = reduce(lambda x, y: x+y, self._weights)
+        w_sum = sum(self._weights)
         return not(1. - w_sum < self._sum_threshold)
 
 if __name__ == "__main__":
-    # TODO DEBUG PART, TO REMOVE
     import unittest
     
     class ValidSymbols(unittest.TestCase):

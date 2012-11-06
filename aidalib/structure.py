@@ -111,6 +111,17 @@ elements = {
 _valid_symbols = tuple(i['symbol'] for i in elements.values())
 _atomic_masses = {el['symbol']: el['mass'] for el in elements.values()}
 
+def _has_ase():
+    """
+    Returns True if the ase module can be imported, False otherwise.
+    """
+    try:
+        import ase
+    except ImportError:
+        return False
+    return True
+
+
 def _calc_cell_volume(cell):
     """
     Calculates the volume of a cell given the three lattice vectors.
@@ -207,8 +218,16 @@ def validate_symbols_tuple(symbols_tuple):
                          "not been recognized.")
 
 def _is_ase_atoms(ase_atoms):
-    return False
-
+    """
+    Check if the ase_atoms parameter is actually a ase.Atoms object.
+    
+    It requires that ase can be imported doing 'import ase'.
+    
+    TODO: Check if we want to try to import ase and do something reasonable depending on
+    whether ase is there or not.
+    """
+    import ase
+    return isinstance(ase_atoms, ase.Atoms)
 
 class Structure(object):
     """
@@ -219,14 +238,16 @@ class Structure(object):
         Initializes the structure with a given cell.
         
         Args:
-            cell: recognizes if it can be:
-                1- the three real-space lattice vectors, in angstrom.
+            cell: It can be:
+                1. the three real-space lattice vectors, in angstrom.
                 cell[i] gives the three coordinates of the i-th vector,
                 with i=0,1,2.
-                2- an ase.atoms object
-                3- an Aida.raw_structure dictionary
+                2. an ase.atoms object, using the ASE python library.
+                3. an aida 'raw structure' dictionary as saved in the database
             pbc: if we want periodic boundary conditions on each of the
                 three real-space directions.
+                If this variable is set, only case 1 of cell is accepted.
+                Default: [True, True, True]
         """
         # Threshold used to check if the cell volume is not zero.
         self._volume_threshold = 1.e-6
@@ -240,13 +261,61 @@ class Structure(object):
             self.cell = cell
             self.pbc = pbc
         elif _is_ase_atoms(cell):
-            raise NotImplementedError
+            # Read the ase structure
+            import ase
+            self.cell = cell.cell
+            self.pbc = cell.pbc
+            for atom in cell:
+                self.appendSite(StructureSite(ase=atom))
         elif isinstance(cell,dict):
-            raise NotImplementedError
+            try:
+                self.cell = cell['cell']
+            except (KeyError, ValueError):
+                raise ValueError("Invalid 'cell' section in raw structure cell")
+            
+            try:
+                self.pbc = cell['pbc']
+            except (KeyError, ValueError):
+                raise ValueError("Invalid 'pbc' section in raw structure cell")
+                
+            try:
+                for site in cell['sites']:
+                    s = StructureSite(raw=site)
+                    self.appendSite(s)
+            except (KeyError, ValueError) as e:
+                raise ValueError("Invalid 'sites' section in raw structure cell. Error was: "
+                                 "'{}'".format(e.message))
+
         else:
             self.cell = cell
             self.pbc = [True,True,True]
             
+    def get_raw(self):
+        """
+        Return the raw version of the structure, mapped to a suitable dictionary. 
+
+        This is the structure that is actually stored (after serialization) in the DB.
+        
+        Returns:
+            a python dictionary with the structure.
+        """
+        return {
+            'cell': self.cell,
+            'pbc': self.pbc,
+            'sites': [site.get_raw() for site in self.sites],
+            }
+
+    def get_raw_json(self):
+        """
+        Return a JSON-serialized version of the raw structure
+
+        Returns:
+            a string that contains the JSON-serialized python dictionary as given by
+            get_raw().
+        """
+        import json
+        raw = self.get_raw()
+        return json.dumps(raw)
 
     def appendSite(self,site):
         """
@@ -277,7 +346,7 @@ class Structure(object):
     @cell.setter
     def cell(self,value):
         try:
-            the_cell = [[float(c) for c in i] for i in value]
+            the_cell = tuple(tuple(float(c) for c in i) for i in value)
             if len(the_cell) != 3:
                 raise ValueError
             if any(len(i) != 3 for i in the_cell):
@@ -298,18 +367,26 @@ class Structure(object):
     @pbc.setter
     def pbc(self,value):
         if isinstance(value,bool):
-            the_pbc = [value,value,value]
-        elif (hasattr(value,'__iter__') and
-              all(isinstance(i,bool) for i in value)):
-            if len(value) == 3:
-                the_pbc = [i for i in value]
-            elif len(value) == 1:
-                the_pbc = [value[0],value[0],value[0]]                
+            the_pbc = (value,value,value)
+        elif (hasattr(value,'__iter__')):
+            # To manage numpy lists of bools, whose elements are of type numpy.bool_
+            # and for which isinstance(i,bool) return False...
+            if hasattr(value,'tolist'):
+                the_value = value.tolist()
             else:
-                raise ValueError("pbc length must be either one or three.")
+                the_value = value
+            if all(isinstance(i,bool) for i in the_value):
+                if len(the_value) == 3:
+                    the_pbc = tuple(i for i in the_value)
+                elif len(value) == 1:
+                    the_pbc = (the_value[0],the_value[0],the_value[0])
+                else:
+                    raise ValueError("pbc length must be either one or three.")
+            else:
+                raise ValueError("pbc elements are not booleans.")
         else:
             raise ValueError("pbc must be a boolean or a list of three "
-                             "booleans.")
+                             "booleans.", value)
         self._pbc = the_pbc
 
     def is_alloy(self):
@@ -324,33 +401,95 @@ class StructureSite(object):
 
     It can be a single atom, or an alloy, or even contain vacancies.
     """
-    def __init__(self, position, symbols, weights=None, mass=None):
+    def __init__(self, **kwargs):
         """
         Create a site.
 
         Args:
-           position: the absolute position (three floats) in angstrom
-           symbols: a single string for the symbol of this site, or a list
-               of symbol strings
-           weights: the weights for each atomic species of this site.
-               If only a single symbol is provided, then this value is
-               optional and the weight is set to 1.
-           mass: the mass for this site in atomic mass units. If not provided,
-               the mass is set by the self.reset_mass() function.
+           One can either pass:
+               raw: the raw python dictionary that will be converted to a StructureSite object.
+           Or alternatively the following parameters:
+               position: the absolute position (three floats) in angstrom
+               symbols: a single string for the symbol of this site, or a list
+                   of symbol strings
+               weights (optional): the weights for each atomic species of this site.
+                  If only a single symbol is provided, then this value is
+                  optional and the weight is set to 1.
+               mass (optional): the mass for this site in atomic mass units. If not provided,
+                   the mass is set by the self.reset_mass() function.
         """
         # Threshold to check if the sum is one or not
         self._sum_threshold = 1.e-6
-        
+
         # Internal variables
         self._mass = None
         self._symbols = None
         self._weights = None
-        self._position = position
-        self.set_symbols_and_weights(symbols,weights)
-        if mass is None:
-            self.reset_mass()
+
+        # Logic to create the structure
+        if 'raw' in kwargs:
+            if len(kwargs) != 1:
+                raise ValueError("If you pass 'raw', then you cannot pass any other "
+                                 "parameter.")
+
+            raw = kwargs['raw']
+            try:
+                self.position = raw['position']
+            except KeyError:
+                raise ValueError("No 'position' key in raw site data.")
+
+            try:
+                self.set_symbols_and_weights(raw['symbols'],raw['weights'])
+            except KeyError:
+                raise ValueError("You didn't specify either 'symbols' or 'weights' in the "
+                                 "raw site data.")
+            try:
+                self.mass = raw['mass']
+            except KeyError:
+                raise ValueError("You didn't specify the site mass in the raw site data.")
+
+        elif 'ase' in kwargs:
+            if len(kwargs) != 1:
+                raise ValueError("If you pass 'ase', then you cannot pass any other "
+                                 "parameter.")
+            aseatom = kwargs['ase']
+            try:
+                self.position = aseatom.position
+                self.set_symbols_and_weights([aseatom.symbol],[1.])
+                self.mass = aseatom.mass
+            except AttributeError:
+                raise ValueError("Error using the aseatom object. Are you sure it is a "
+                                 "ase.atom.Atom object? [Introspection says it is "
+                                 "{}]".format(str(type(aseatom))))
+
         else:
-            self.mass = mass
+            if 'position' not in kwargs or 'symbols' not in kwargs:
+                raise ValueError("Both 'position' and 'symbols' need to be specified (at least) "
+                                 "to create a StructureSite object. Otherwise, pass a raw "
+                                 "structure using the 'raw' parameter.")
+            self.position = kwargs['position']
+            weights = kwargs.get('weights',None)
+            self.set_symbols_and_weights(kwargs['symbols'],weights)
+            if 'mass' not in kwargs:
+                self.reset_mass()
+            else:
+                self.mass = kwargs['mass']
+
+    def get_raw(self):
+        """
+        Return the raw version of the structure, mapped to a suitable dictionary. 
+
+        This is the format that is actually used to store each site of the structure in the DB.
+        
+        Returns:
+            a python dictionary with the site.
+        """
+        return {
+            'symbols': self.symbols,
+            'weights': self.weights,
+            'position': self.position,
+            'mass': self.mass,
+            }
 
     def reset_mass(self):
         """
@@ -406,11 +545,11 @@ class StructureSite(object):
         in angstrom.
         """
         try:
-            internal_pos = (float(i) for i in value)
+            internal_pos = tuple(float(i) for i in value)
             if len(internal_pos) != 3:
                 raise ValueError
         # value is not iterable or elements are not floats or len != 3
-        except (ValueError,TypeError):
+        except (ValueError,TypeError), e:
             raise ValueError("Wrong format for position, must be a list of "
                              "three float numbers.")
         self._position = internal_pos
@@ -531,14 +670,14 @@ if __name__ == "__main__":
             Should not accept a non-list, non-number weight
             """
             with self.assertRaises(ValueError):
-                a = StructureSite((0.,0.,0.),'Ba',weights='aaa')
+                a = StructureSite(position=(0.,0.,0.),symbols='Ba',weights='aaa')
         
         def test_empty_list(self):
             """
             Should not accept an empty list
             """
             with self.assertRaises(ValueError):
-                a = StructureSite((0.,0.,0.),'Ba',weights=[])
+                a = StructureSite(position=(0.,0.,0.),symbols='Ba',weights=[])
 
         def test_symbol_weight_mismatch(self):
             """
@@ -546,42 +685,42 @@ if __name__ == "__main__":
             list.
             """
             with self.assertRaises(ValueError):
-                a = StructureSite((0.,0.,0.),['Ba','C'],weights=[1.])
+                a = StructureSite(position=(0.,0.,0.),symbols=['Ba','C'],weights=[1.])
 
             with self.assertRaises(ValueError):
-                a = StructureSite((0.,0.,0.),['Ba'],weights=[0.1,0.2])
+                a = StructureSite(position=(0.,0.,0.),symbols=['Ba'],weights=[0.1,0.2])
 
         def test_negative_value(self):
             """
             Should not accept a negative weight
             """
             with self.assertRaises(ValueError):
-                a = StructureSite((0.,0.,0.),['Ba','C'],weights=[-0.1,0.3])
+                a = StructureSite(position=(0.,0.,0.),symbols=['Ba','C'],weights=[-0.1,0.3])
 
         def test_sum_greater_one(self):
             """
             Should not accept a sum of weights larger than one
             """
             with self.assertRaises(ValueError):
-                a = StructureSite((0.,0.,0.),['Ba','C'],weights=[0.5,0.6])
+                a = StructureSite(position=(0.,0.,0.),symbols=['Ba','C'],weights=[0.5,0.6])
 
         def test_sum_one(self):
             """
             Should accept a sum equal to one
             """
-            a = StructureSite((0.,0.,0.),['Ba','C'],weights=[1./3.,2./3.])
+            a = StructureSite(position=(0.,0.,0.),symbols=['Ba','C'],weights=[1./3.,2./3.])
 
         def test_sum_less_one(self):
             """
             Should accept a sum equal less than one
             """
-            a = StructureSite((0.,0.,0.),['Ba','C'],weights=[1./3.,1./3.])
+            a = StructureSite(position=(0.,0.,0.),symbols=['Ba','C'],weights=[1./3.,1./3.])
         
         def test_none(self):
             """
             Should accept None.
             """
-            a = StructureSite((0.,0.,0.),'Ba',None)
+            a = StructureSite(position=(0.,0.,0.),symbols='Ba',weights=None)
 
 
     class TestSite(unittest.TestCase):
@@ -592,7 +731,7 @@ if __name__ == "__main__":
             """
             Should accept a sum equal to one
             """
-            a = StructureSite((0.,0.,0.),['Ba','C'],weights=[1./3.,2./3.])
+            a = StructureSite(position=(0.,0.,0.),symbols=['Ba','C'],weights=[1./3.,2./3.])
             self.assertTrue(a.is_alloy())
             self.assertFalse(a.has_vacancies())
 
@@ -600,7 +739,7 @@ if __name__ == "__main__":
             """
             Should accept a sum equal less than one
             """
-            a = StructureSite((0.,0.,0.),['Ba','C'],weights=[1./3.,1./3.])
+            a = StructureSite(position=(0.,0.,0.),symbols=['Ba','C'],weights=[1./3.,1./3.])
             self.assertTrue(a.is_alloy())
             self.assertTrue(a.has_vacancies())
         
@@ -608,11 +747,11 @@ if __name__ == "__main__":
             """
             Should recognize a simple element.
             """
-            a = StructureSite((0.,0.,0.),'Ba',None)
+            a = StructureSite(position=(0.,0.,0.),symbols='Ba',weights=None)
             self.assertFalse(a.is_alloy())
             self.assertFalse(a.has_vacancies())
 
-            b = StructureSite((0.,0.,0.),'Ba',1.)
+            b = StructureSite(position=(0.,0.,0.),symbols='Ba',weights=1.)
             self.assertFalse(b.is_alloy())
             self.assertFalse(b.has_vacancies())
 
@@ -624,7 +763,7 @@ if __name__ == "__main__":
             """
             mass for elements with sum one
             """
-            a = StructureSite((0.,0.,0.),['Ba','C'],weights=[1./3.,2./3.])
+            a = StructureSite(position=(0.,0.,0.),symbols=['Ba','C'],weights=[1./3.,2./3.])
             self.assertAlmostEqual(a.mass, 
                                    (_atomic_masses['Ba'] + 
                                     2.* _atomic_masses['C'])/3.)
@@ -633,7 +772,7 @@ if __name__ == "__main__":
             """
             mass for elements with sum less than one
             """
-            a = StructureSite((0.,0.,0.),['Ba','C'],weights=[1./3.,1./3.])
+            a = StructureSite(position=(0.,0.,0.),symbols=['Ba','C'],weights=[1./3.,1./3.])
             self.assertAlmostEqual(a.mass, 
                                    (_atomic_masses['Ba'] + 
                                     _atomic_masses['C'])/2.)
@@ -642,7 +781,7 @@ if __name__ == "__main__":
             """
             mass for a single element
             """
-            a = StructureSite((0.,0.,0.),['Ba'])
+            a = StructureSite(position=(0.,0.,0.),symbols=['Ba'])
             self.assertAlmostEqual(a.mass, 
                                    _atomic_masses['Ba'])
             
@@ -650,7 +789,7 @@ if __name__ == "__main__":
             """
             mass set manually
             """
-            a = StructureSite((0.,0.,0.),['Ba','C'],weights=[1./3.,1./3.],
+            a = StructureSite(position=(0.,0.,0.),symbols=['Ba','C'],weights=[1./3.,1./3.],
                               mass = 1000.)
             self.assertAlmostEqual(a.mass, 1000.)
 
@@ -739,10 +878,10 @@ if __name__ == "__main__":
             """
             cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
             a = Structure(cell=cell,pbc=True)
-            self.assertEqual(a.pbc,[True,True,True])
+            self.assertEqual(a.pbc,tuple([True,True,True]))
 
             a = Structure(cell=cell,pbc=False)
-            self.assertEqual(a.pbc,[False,False,False])
+            self.assertEqual(a.pbc,tuple([False,False,False]))
 
         def test_ok_pbc_2(self):
             """
@@ -750,10 +889,10 @@ if __name__ == "__main__":
             """
             cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
             a = Structure(cell=cell,pbc=[True])
-            self.assertEqual(a.pbc,[True,True,True])
+            self.assertEqual(a.pbc,tuple([True,True,True]))
 
             a = Structure(cell=cell,pbc=[False])
-            self.assertEqual(a.pbc,[False,False,False])
+            self.assertEqual(a.pbc,tuple([False,False,False]))
 
         def test_ok_pbc_3(self):
             """
@@ -761,7 +900,7 @@ if __name__ == "__main__":
             """
             cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
             a = Structure(cell=cell,pbc=[True,False,True])
-            self.assertEqual(a.pbc,[True,False,True])
+            self.assertEqual(a.pbc,tuple([True,False,True]))
             
 
     class TestStructure(unittest.TestCase):
@@ -777,20 +916,20 @@ if __name__ == "__main__":
             a = Structure(cell=cell)
             out_cell = a.cell
             
-            s = StructureSite((0.,0.,0.),['Ba'])
+            s = StructureSite(position=(0.,0.,0.),symbols=['Ba'])
             a.appendSite(s)
-            s = StructureSite((1.,1.,1.),['Ti'])
+            s = StructureSite(position=(1.,1.,1.),symbols=['Ti'])
             a.appendSite(s)
             self.assertFalse(a.is_alloy())
             self.assertFalse(a.has_vacancies())
 
-            s= StructureSite((0.5,1.,1.5), symbols=['O', 'C'], 
+            s= StructureSite(position=(0.5,1.,1.5), symbols=['O', 'C'], 
                              weights=[0.5,0.5])
             a.appendSite(s)
             self.assertTrue(a.is_alloy())
             self.assertFalse(a.has_vacancies())
 
-            s= StructureSite((0.5,1.,1.5), symbols=['O'], weights=[0.5])
+            s= StructureSite(position=(0.5,1.,1.5), symbols=['O'], weights=[0.5])
             a.appendSite(s)
             self.assertTrue(a.is_alloy())
             self.assertTrue(a.has_vacancies())
@@ -800,5 +939,54 @@ if __name__ == "__main__":
             self.assertFalse(a.is_alloy())
             self.assertTrue(a.has_vacancies())
 
+
+    class TestRawStructure(unittest.TestCase):
+        """
+        Tests the creation of Structure, converting it to a raw structure and converting it back.
+        """
+        def test_to_from_raw(self):
+            """
+            Start from a Structure object, convert to raw and then back
+            """
+            cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
+            a = Structure(cell=cell)
+            out_cell = a.cell
+            
+            a.pbc = [False,True,True]
+
+            s = StructureSite(position=(0.,0.,0.),symbols=['Ba'])
+            a.appendSite(s)
+            s = StructureSite(position=(1.,1.,1.),symbols=['Ti'])
+            a.appendSite(s)
+
+            raw = a.get_raw()           
+            b = Structure(raw)
+            
+            for i in range(3):
+                for j in range(3):
+                    self.assertAlmostEqual(cell[i][j], b.cell[i][j])
+            
+            self.assertEqual(b.pbc, (False,True,True))
+            self.assertEqual(len(b.sites), 2)
+            self.assertEqual(b.sites[0].symbols[0], 'Ba')
+            self.assertEqual(b.sites[1].symbols[0], 'Ti')
+            for i in range(3):
+                self.assertAlmostEqual(b.sites[1].position[i], 1.)
+
+    class TestAseStructure(unittest.TestCase):
+        """
+        Tests the creation of Structure from/to a ASE object.
+        """
+        @unittest.skipIf(not _has_ase(),"Unable to import ase")
+        def test_ase(self):
+            import ase
+            a = ase.Atoms('SiGe',cell=(1.,2.,3.),pbc=(True,False,False))
+            a.set_positions(
+                ((0.,0.,0.),
+                 (0.5,0.7,0.9),)
+                )
+            
+            b = Structure(a)
+            c = a.get_ase()
 
     unittest.main()

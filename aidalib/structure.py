@@ -305,6 +305,19 @@ class Structure(object):
             'sites': [site.get_raw() for site in self.sites],
             }
 
+    def get_ase(self):
+        """
+        Return a ASE object corresponding to this structure. Requires to be able to import ase.
+
+        Note: If any site is an alloy or has vacancies, a ValueError is raised (from the
+            site.get_ase() routine).
+        """
+        import ase
+        asecell = ase.Atoms(cell=self.cell, pbc=self.pbc)
+        for site in self.sites:
+            asecell.append(site.get_ase())
+        return asecell
+
     def get_raw_json(self):
         """
         Return a JSON-serialized version of the raw structure
@@ -490,6 +503,19 @@ class StructureSite(object):
             'position': self.position,
             'mass': self.mass,
             }
+
+    def get_ase(self):
+        """
+        Return a ase.Atom object for this site.
+
+        Note: If any site is an alloy or has vacancies, a ValueError is raised (from the
+            site.get_ase() routine).
+        """
+        import ase
+        if self.is_alloy() or self.has_vacancies():
+            raise ValueError("Cannot convert to ASE if the site is an alloy or has vacancies.")
+        aseatom = ase.Atom(position=self.position, symbol=self.symbols[0], mass=self.mass)
+        return aseatom
 
     def reset_mass(self):
         """
@@ -985,8 +1011,19 @@ if __name__ == "__main__":
                 ((0.,0.,0.),
                  (0.5,0.7,0.9),)
                 )
-            
+            a[1].mass = 110.2
+
             b = Structure(a)
-            c = a.get_ase()
+            c = b.get_ase()
+
+            self.assertEqual(a[0].symbol, c[0].symbol)
+            self.assertEqual(a[1].symbol, c[1].symbol)
+            for i in range(3):
+                self.assertAlmostEqual(a[0].position[i], c[0].position[i])
+            for i in range(3):
+                for j in range(3):
+                    self.assertAlmostEqual(a.cell[i][j], c.cell[i][j])
+               
+            self.assertAlmostEqual(c[1].mass, 110.2)
 
     unittest.main()

@@ -33,7 +33,7 @@ def copy_to_repo(source, section, filename, overwrite=False):
         retstr = "Section '{}' not allowed in copy_to_repo.".format(section)
         raise ValueError(retstr)
 
-    from aidasrv.settings import LOCAL_REPOSITORY
+    from aida.djsite.settings.settings import LOCAL_REPOSITORY
     # Check if the LOCAL_REPOSITORY exists, mainly to avoid to write in
     # random places
     if not os.path.isdir(LOCAL_REPOSITORY):

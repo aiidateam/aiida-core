@@ -2,10 +2,10 @@ from django.db import models as m
 from django_extensions.db.fields import UUIDField
 from django.contrib.auth.models import User as AuthUser 
 import getpass
-import aidasrv.submitter
+import aida.jobmanager.submitter
 import os
 import os.path
-from aidasrv.settings import LOCAL_REPOSITORY
+from aida.djsite.settings.settings import LOCAL_REPOSITORY
 #from django_orm.postgresql import hstore
 #from django_hstore import hstore
 #from uuidfield import UUIDField

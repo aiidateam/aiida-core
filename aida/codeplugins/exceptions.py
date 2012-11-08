@@ -1,4 +1,4 @@
-from aidalib.exceptions import ValidationError
+from aida.common.exceptions import ValidationError
 
 class InputValidationError(ValidationError):
     """

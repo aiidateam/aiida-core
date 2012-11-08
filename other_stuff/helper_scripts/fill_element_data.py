@@ -5,7 +5,7 @@ fixture), or to update data in case of errors/corrections/...
 
 Note: to be run from ./manage.py shell
 """
-from aidadb.models import Element
+from aida.djsite.main.models import Element
 import ase
 import numpy
 import json

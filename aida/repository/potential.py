@@ -3,14 +3,14 @@ This module manages the pseudopotentials in the local repository and their
 maintainance also in the database table 'potential'.
 """
 import hashlib
-from aidadb.models import Potential, PotentialAttrTxt, PotentialAttrTxtVal
-from aidadb.models import Element
+from aida.djsite.main.models import Potential, PotentialAttrTxt, PotentialAttrTxtVal
+from aida.djsite.main.models import Element
 import logging
 import os, os.path
 import re
-from aidasrv.repomanager.file import copy_to_repo
+from aida.repository.utils.files import copy_to_repo
 from django.core.exceptions import ObjectDoesNotExist
-from aidalib.exceptions import ValidationError
+from aida.common.exceptions import ValidationError
 
 logger = logging.getLogger(__name__)
 

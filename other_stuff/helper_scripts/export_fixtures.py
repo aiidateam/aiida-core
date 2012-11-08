@@ -1,10 +1,10 @@
 import sys, os, os.path
 
-sys.path.append(os.path.abspath('..'))
-os.environ['DJANGO_SETTINGS_MODULE'] = 'aidasrv.settings'
+#sys.path.append(os.path.abspath('..'))
+os.environ['DJANGO_SETTINGS_MODULE'] = 'aida.djsite.settings.settings'
 
 from django.core.serializers import serialize
-from aidadb import models
+from aida.djsite.main import models
 
 model_names = ['CalcStatus', 'CalcType', 'CodeStatus', 'CodeType', 'Code', 'Computer', 'Project'] # a list of the names of the models you want to export
 

@@ -26,12 +26,12 @@ def create_calc_input(calc_id, infile_dir):
     ### routines, independent of if we are on the server or on the client
     # I import it here, otherwise if done above it generates a circular
     # dependency
-    from aidadb.models import Calc
+    from aida.djsite.main.models import Calc
     calc = Calc.objects.get(id=calc_id)
     
     input_plugin_name = _get_plugin_module_name(calc.code.type.title)
     input_plugin = importlib.import_module(input_plugin_name,
-                                           package='aidalib.inputplugins')
+                                           package='aida.codeplugins')
     
     return input_plugin.create_calc_input(calc, infile_dir)
       

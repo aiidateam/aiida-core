@@ -1,4 +1,4 @@
-from aidalib.inputplugins.exceptions import InputValidationError
+from aida.codeplugins.exceptions import InputValidationError
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 import json
 import os

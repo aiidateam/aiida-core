@@ -5,21 +5,26 @@ They are executed when when you run "manage.py test" or
 
 """
 from django.utils import unittest
-from aidadb.models import CalcStatus, CalcType, Code, CodeStatus
-from aidadb.models import CodeType, Computer, Project, Calc
-from aidadb.models import Element, Potential, PotentialStatus, PotentialType
+from aida.djsite.main.models import CalcStatus, CalcType, Code, CodeStatus
+from aida.djsite.main.models import CodeType, Computer, Project, Calc
+from aida.djsite.main.models import Element, Potential, PotentialStatus, PotentialType
 from django.contrib.auth.models import User as AuthUser
 import getpass
 from django.db import IntegrityError
 from django.core import management
 import json
 import os, os.path
-import aidadb
-from aidasrv.repomanager.pseudo import add_pseudo_file
-from aidalib.exceptions import ValidationError
+import aida.djsite.main
+from aida.repository.potential import add_pseudo_file
+from aida.common.exceptions import ValidationError
+import aida
+
+
+
 
 testdata_folder = os.path.join(
-    os.path.dirname(os.path.abspath(aidadb.__file__)),'testdata')
+    os.path.dirname(os.path.abspath(aida.__file__)),os.path.pardir,'testdata')
+
 
 class PseudoTest(unittest.TestCase):
     """

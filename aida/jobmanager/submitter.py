@@ -2,7 +2,7 @@ import shutil
 import sys
 import os
 import os.path
-from aidalib.inputplugins import create_calc_input
+from aida.codeplugins import create_calc_input
 
 def submit_calc(calc):
     """Submits a given calculation (given as a Calc Django object) of
@@ -63,8 +63,8 @@ def submit_calc(calc):
 
     ## Load the 'signaling' library depending on the current AIDA version.
     ## This in particular provides the signaling strings, to be used later.
-    from aidasrv.signaling.signals import get_running_signal
-    from aidasrv.signaling.signals import get_finished_signal
+    from aida.jobmanager.signaling.signals import get_running_signal
+    from aida.jobmanager.signaling.signals import get_finished_signal
 
     ## identify the scheduler script
     ## Call the scheduler script.

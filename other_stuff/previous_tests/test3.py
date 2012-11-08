@@ -1,4 +1,4 @@
-from aidadb.models import *
+from aida.djsite.main.models import *
 #from django_orm.postgresql.hstore.expressions import HstoreExpression as HE
 
 

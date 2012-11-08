@@ -1,5 +1,5 @@
 from django.contrib import admin
-from aidadb.models import *
+from aida.djsite.main.models import *
 
 admin.site.register(Calc)
 admin.site.register(CalcType)

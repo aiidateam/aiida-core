@@ -4,6 +4,17 @@ from django.conf.urls import patterns, include, url
 from django.contrib import admin
 admin.autodiscover()
 
+# APIs
+from tastypie.api import Api
+from aida.djsite.main.api import (CalcResource, CalcAttrNumResource, 
+    CalcAttrNumValResource, StrucResource)
+
+v1_api = Api(api_name='v1')
+v1_api.register(CalcResource())
+v1_api.register(CalcAttrNumResource())
+v1_api.register(CalcAttrNumValResource())
+v1_api.register(StrucResource())
+
 urlpatterns = patterns('',
     # Examples:
     # url(r'^$', 'aida1.views.home', name='home'),
@@ -14,4 +25,5 @@ urlpatterns = patterns('',
 
     # Uncomment the next line to enable the admin:
     url(r'^admin/', include(admin.site.urls)),
+    url(r'^api/', include(v1_api.urls)),
 )

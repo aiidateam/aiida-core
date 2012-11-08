@@ -2,6 +2,8 @@ from django.contrib import admin
 from aida.djsite.main.models import *
 
 admin.site.register(Calc)
+admin.site.register(CalcAttrNum)
+admin.site.register(CalcAttrNumVal)
 admin.site.register(CalcType)
 admin.site.register(CalcStatus)
 admin.site.register(Struc)

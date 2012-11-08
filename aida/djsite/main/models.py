@@ -109,7 +109,7 @@ class Calc(DataClass):
             To be called after the calculation *and* all related tables
             have been set.
         """
-        aidasrv.submitter.submit_calc(self)
+        aida.jobmanager.submitter.submit_calc(self)
 
     def get_local_dir(self):
         """
@@ -202,19 +202,11 @@ class Computer(DataClass):
     hostname = m.CharField(max_length=255, unique=True)
     workdir = m.CharField(max_length=255)
     
-class ComputerUsername(DataClass):
+class ComputerUsername(m.Model):
     """Association of aida users with given remote usernames on a computer.
 
     There is an unique_together constraint to be sure that each aida user
     has no more than one remote username on a given computer.
-
-    Note:
-        User has already a reverse relationship called computerusername_set
-        that points to all elements that are owned by that user.
-        We need thus to give another related_name for the aidauser key:
-        it is computerusername_remoteuser_set
-        This points to those elements of this table for which a remote
-        username has been set for the given aidauser.
 
     Attributes:
         computer: the remote computer
@@ -222,8 +214,7 @@ class ComputerUsername(DataClass):
         remoteusername: the username of the aida user on the remote computer
     """
     computer = m.ForeignKey('Computer')
-    aidauser = m.ForeignKey(AuthUser,
-                            related_name='computerusername_remoteuser_set')
+    aidauser = m.ForeignKey(AuthUser)
     remoteusername = m.CharField(max_length=255)
 
     class Meta:
@@ -262,8 +253,8 @@ class CodeType(BaseClass):
     This class defines the code type. Note that the code title should follow
     a specific syntax since from the title AIDA retrieves which input (and
     output) plugins to use.
-    The conversion is described in
-    :func:`aidalib.inputplugins._get_plugin_module_name`.
+    The conversion is described in the functions of the 
+    :mod:`aida.codeplugins` module.
     """
     pass
 

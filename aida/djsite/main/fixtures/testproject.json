@@ -1,1 +1,1 @@
-[{"pk": 1, "model": "aidadb.project", "fields": {"description": "Project for test purposes", "data": "", "uuid": "5df7c750-22b4-11e2-876b-00259024cf3f", "title": "Test project"}}]
+[{"pk": 1, "model": "main.project", "fields": {"description": "Project for test purposes", "data": "", "uuid": "5df7c750-22b4-11e2-876b-00259024cf3f", "title": "Test project"}}]

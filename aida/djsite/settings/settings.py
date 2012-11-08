@@ -1,4 +1,4 @@
-# Django settings for aidasrv project.
+# Django settings for the AIDA project.
 
 import sys, os, os.path
 from django.core.exceptions import ImproperlyConfigured
@@ -76,7 +76,7 @@ if not os.path.isdir(LOCAL_REPOSITORY):
 ## ========== NOTE =========
 ## Later on, it may be probably better to make a different settings.py for 
 ## testing, and then run it using
-## python manage.py test --settings=aidasrv.test_settings
+## python manage.py test --settings=aida.djsite.settings.test_settings
 ## to avoid that subtle bugs that are backend-dependent are not trapped
 
 # Usual Django settings starts here.............
@@ -169,10 +169,10 @@ MIDDLEWARE_CLASSES = (
     # 'django.middleware.clickjacking.XFrameOptionsMiddleware',
 )
 
-ROOT_URLCONF = 'aidasrv.urls'
+ROOT_URLCONF = 'aida.djsite.settings.urls'
 
 # Python dotted path to the WSGI application used by Django's runserver.
-WSGI_APPLICATION = 'aidasrv.wsgi.application'
+WSGI_APPLICATION = 'aida.djsite.settings.wsgi.application'
 
 TEMPLATE_DIRS = (
     # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
@@ -201,7 +201,7 @@ INSTALLED_APPS = (
 # See http://docs.djangoproject.com/en/dev/topics/logging for
 # more details on how to customize your logging configuration.
 #
-# Added logging on console for >=DEBUG signals from aidasrv module
+# Added logging on console for >=DEBUG signals from aida.repository module
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': True,
@@ -238,7 +238,7 @@ LOGGING = {
             'level': 'ERROR',
             'propagate': True,
         },
-        'aidasrv': {
+        'aida.repository': {
             'handlers': ['console'],
             'level': 'DEBUG',
             'propagate': True,

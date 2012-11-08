@@ -1,6 +1,6 @@
 """
-This script creates a dictionary to fill the aidalib.structure element
-dictionary.
+This script creates a dictionary to fill the dictionary of elements in the 
+aida.common.classes.structure module.
 """
 import ase
 import numpy

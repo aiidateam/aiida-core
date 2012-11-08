@@ -1,1 +1,1 @@
-[{"pk": 1, "model": "aidadb.calctype", "fields": {"description": "", "data": "", "uuid": "8d743ca2-22b4-11e2-a76d-00259024cf3f", "title": "DFT SCF"}}]
+[{"pk": 1, "model": "main.calctype", "fields": {"description": "", "data": "", "uuid": "8d743ca2-22b4-11e2-a76d-00259024cf3f", "title": "DFT SCF"}}]

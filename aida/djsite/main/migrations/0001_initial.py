@@ -9,7 +9,7 @@ class Migration(SchemaMigration):
 
     def forwards(self, orm):
         # Adding model 'Calc'
-        db.create_table('aidadb_calc', (
+        db.create_table('main_calc', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('uuid', self.gf('django.db.models.fields.CharField')(max_length=36, blank=True)),
             ('title', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
@@ -18,72 +18,72 @@ class Migration(SchemaMigration):
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
             ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
-            ('code', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.Code'])),
-            ('project', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.Project'])),
-            ('status', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.CalcStatus'])),
-            ('type', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.CalcType'])),
-            ('computer', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.Computer'])),
+            ('code', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.Code'])),
+            ('project', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.Project'])),
+            ('status', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.CalcStatus'])),
+            ('type', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.CalcType'])),
+            ('computer', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.Computer'])),
         ))
-        db.send_create_signal('aidadb', ['Calc'])
+        db.send_create_signal('main', ['Calc'])
 
         # Adding M2M table for field inpstruc on 'Calc'
-        db.create_table('aidadb_calc_inpstruc', (
+        db.create_table('main_calc_inpstruc', (
             ('id', models.AutoField(verbose_name='ID', primary_key=True, auto_created=True)),
-            ('calc', models.ForeignKey(orm['aidadb.calc'], null=False)),
-            ('struc', models.ForeignKey(orm['aidadb.struc'], null=False))
+            ('calc', models.ForeignKey(orm['main.calc'], null=False)),
+            ('struc', models.ForeignKey(orm['main.struc'], null=False))
         ))
-        db.create_unique('aidadb_calc_inpstruc', ['calc_id', 'struc_id'])
+        db.create_unique('main_calc_inpstruc', ['calc_id', 'struc_id'])
 
         # Adding M2M table for field outstruc on 'Calc'
-        db.create_table('aidadb_calc_outstruc', (
+        db.create_table('main_calc_outstruc', (
             ('id', models.AutoField(verbose_name='ID', primary_key=True, auto_created=True)),
-            ('calc', models.ForeignKey(orm['aidadb.calc'], null=False)),
-            ('struc', models.ForeignKey(orm['aidadb.struc'], null=False))
+            ('calc', models.ForeignKey(orm['main.calc'], null=False)),
+            ('struc', models.ForeignKey(orm['main.struc'], null=False))
         ))
-        db.create_unique('aidadb_calc_outstruc', ['calc_id', 'struc_id'])
+        db.create_unique('main_calc_outstruc', ['calc_id', 'struc_id'])
 
         # Adding M2M table for field inppot on 'Calc'
-        db.create_table('aidadb_calc_inppot', (
+        db.create_table('main_calc_inppot', (
             ('id', models.AutoField(verbose_name='ID', primary_key=True, auto_created=True)),
-            ('calc', models.ForeignKey(orm['aidadb.calc'], null=False)),
-            ('potential', models.ForeignKey(orm['aidadb.potential'], null=False))
+            ('calc', models.ForeignKey(orm['main.calc'], null=False)),
+            ('potential', models.ForeignKey(orm['main.potential'], null=False))
         ))
-        db.create_unique('aidadb_calc_inppot', ['calc_id', 'potential_id'])
+        db.create_unique('main_calc_inppot', ['calc_id', 'potential_id'])
 
         # Adding M2M table for field outpot on 'Calc'
-        db.create_table('aidadb_calc_outpot', (
+        db.create_table('main_calc_outpot', (
             ('id', models.AutoField(verbose_name='ID', primary_key=True, auto_created=True)),
-            ('calc', models.ForeignKey(orm['aidadb.calc'], null=False)),
-            ('potential', models.ForeignKey(orm['aidadb.potential'], null=False))
+            ('calc', models.ForeignKey(orm['main.calc'], null=False)),
+            ('potential', models.ForeignKey(orm['main.potential'], null=False))
         ))
-        db.create_unique('aidadb_calc_outpot', ['calc_id', 'potential_id'])
+        db.create_unique('main_calc_outpot', ['calc_id', 'potential_id'])
 
         # Adding M2M table for field basis on 'Calc'
-        db.create_table('aidadb_calc_basis', (
+        db.create_table('main_calc_basis', (
             ('id', models.AutoField(verbose_name='ID', primary_key=True, auto_created=True)),
-            ('calc', models.ForeignKey(orm['aidadb.calc'], null=False)),
-            ('basis', models.ForeignKey(orm['aidadb.basis'], null=False))
+            ('calc', models.ForeignKey(orm['main.calc'], null=False)),
+            ('basis', models.ForeignKey(orm['main.basis'], null=False))
         ))
-        db.create_unique('aidadb_calc_basis', ['calc_id', 'basis_id'])
+        db.create_unique('main_calc_basis', ['calc_id', 'basis_id'])
 
         # Adding M2M table for field group on 'Calc'
-        db.create_table('aidadb_calc_group', (
+        db.create_table('main_calc_group', (
             ('id', models.AutoField(verbose_name='ID', primary_key=True, auto_created=True)),
-            ('calc', models.ForeignKey(orm['aidadb.calc'], null=False)),
-            ('calcgroup', models.ForeignKey(orm['aidadb.calcgroup'], null=False))
+            ('calc', models.ForeignKey(orm['main.calc'], null=False)),
+            ('calcgroup', models.ForeignKey(orm['main.calcgroup'], null=False))
         ))
-        db.create_unique('aidadb_calc_group', ['calc_id', 'calcgroup_id'])
+        db.create_unique('main_calc_group', ['calc_id', 'calcgroup_id'])
 
         # Adding M2M table for field parent on 'Calc'
-        db.create_table('aidadb_calc_parent', (
+        db.create_table('main_calc_parent', (
             ('id', models.AutoField(verbose_name='ID', primary_key=True, auto_created=True)),
-            ('from_calc', models.ForeignKey(orm['aidadb.calc'], null=False)),
-            ('to_calc', models.ForeignKey(orm['aidadb.calc'], null=False))
+            ('from_calc', models.ForeignKey(orm['main.calc'], null=False)),
+            ('to_calc', models.ForeignKey(orm['main.calc'], null=False))
         ))
-        db.create_unique('aidadb_calc_parent', ['from_calc_id', 'to_calc_id'])
+        db.create_unique('main_calc_parent', ['from_calc_id', 'to_calc_id'])
 
         # Adding model 'CalcGroup'
-        db.create_table('aidadb_calcgroup', (
+        db.create_table('main_calcgroup', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('uuid', self.gf('django.db.models.fields.CharField')(max_length=36, blank=True)),
             ('title', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
@@ -92,42 +92,42 @@ class Migration(SchemaMigration):
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
             ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
-            ('parent', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.CalcGroup'], null=True, blank=True)),
+            ('parent', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.CalcGroup'], null=True, blank=True)),
         ))
-        db.send_create_signal('aidadb', ['CalcGroup'])
+        db.send_create_signal('main', ['CalcGroup'])
 
         # Adding model 'CalcStatus'
-        db.create_table('aidadb_calcstatus', (
+        db.create_table('main_calcstatus', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('uuid', self.gf('django.db.models.fields.CharField')(max_length=36, blank=True)),
             ('title', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
             ('description', self.gf('django.db.models.fields.TextField')(blank=True)),
             ('data', self.gf('django.db.models.fields.TextField')(blank=True)),
         ))
-        db.send_create_signal('aidadb', ['CalcStatus'])
+        db.send_create_signal('main', ['CalcStatus'])
 
         # Adding model 'Project'
-        db.create_table('aidadb_project', (
+        db.create_table('main_project', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('uuid', self.gf('django.db.models.fields.CharField')(max_length=36, blank=True)),
             ('title', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
             ('description', self.gf('django.db.models.fields.TextField')(blank=True)),
             ('data', self.gf('django.db.models.fields.TextField')(blank=True)),
         ))
-        db.send_create_signal('aidadb', ['Project'])
+        db.send_create_signal('main', ['Project'])
 
         # Adding model 'CalcType'
-        db.create_table('aidadb_calctype', (
+        db.create_table('main_calctype', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('uuid', self.gf('django.db.models.fields.CharField')(max_length=36, blank=True)),
             ('title', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
             ('description', self.gf('django.db.models.fields.TextField')(blank=True)),
             ('data', self.gf('django.db.models.fields.TextField')(blank=True)),
         ))
-        db.send_create_signal('aidadb', ['CalcType'])
+        db.send_create_signal('main', ['CalcType'])
 
         # Adding model 'CalcComment'
-        db.create_table('aidadb_calccomment', (
+        db.create_table('main_calccomment', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('uuid', self.gf('django.db.models.fields.CharField')(max_length=36, blank=True)),
             ('title', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
@@ -136,12 +136,12 @@ class Migration(SchemaMigration):
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
             ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
-            ('parent', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.CalcComment'], null=True, blank=True)),
+            ('parent', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.CalcComment'], null=True, blank=True)),
         ))
-        db.send_create_signal('aidadb', ['CalcComment'])
+        db.send_create_signal('main', ['CalcComment'])
 
         # Adding model 'CalcAttrTxt'
-        db.create_table('aidadb_calcattrtxt', (
+        db.create_table('main_calcattrtxt', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('uuid', self.gf('django.db.models.fields.CharField')(max_length=36, blank=True)),
             ('title', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
@@ -152,10 +152,10 @@ class Migration(SchemaMigration):
             ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
             ('isinput', self.gf('django.db.models.fields.BooleanField')(default=True)),
         ))
-        db.send_create_signal('aidadb', ['CalcAttrTxt'])
+        db.send_create_signal('main', ['CalcAttrTxt'])
 
         # Adding model 'CalcAttrNum'
-        db.create_table('aidadb_calcattrnum', (
+        db.create_table('main_calcattrnum', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('uuid', self.gf('django.db.models.fields.CharField')(max_length=36, blank=True)),
             ('title', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
@@ -166,36 +166,36 @@ class Migration(SchemaMigration):
             ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
             ('isinput', self.gf('django.db.models.fields.BooleanField')(default=True)),
         ))
-        db.send_create_signal('aidadb', ['CalcAttrNum'])
+        db.send_create_signal('main', ['CalcAttrNum'])
 
         # Adding model 'CalcAttrTxtVal'
-        db.create_table('aidadb_calcattrtxtval', (
+        db.create_table('main_calcattrtxtval', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('item', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.Calc'])),
-            ('attr', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.CalcAttrTxt'])),
+            ('item', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.Calc'])),
+            ('attr', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.CalcAttrTxt'])),
             ('val', self.gf('django.db.models.fields.TextField')()),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
         ))
-        db.send_create_signal('aidadb', ['CalcAttrTxtVal'])
+        db.send_create_signal('main', ['CalcAttrTxtVal'])
 
         # Adding unique constraint on 'CalcAttrTxtVal', fields ['item', 'attr']
-        db.create_unique('aidadb_calcattrtxtval', ['item_id', 'attr_id'])
+        db.create_unique('main_calcattrtxtval', ['item_id', 'attr_id'])
 
         # Adding model 'CalcAttrNumVal'
-        db.create_table('aidadb_calcattrnumval', (
+        db.create_table('main_calcattrnumval', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('item', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.Calc'])),
-            ('attr', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.CalcAttrNum'])),
+            ('item', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.Calc'])),
+            ('attr', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.CalcAttrNum'])),
             ('val', self.gf('django.db.models.fields.FloatField')()),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
         ))
-        db.send_create_signal('aidadb', ['CalcAttrNumVal'])
+        db.send_create_signal('main', ['CalcAttrNumVal'])
 
         # Adding unique constraint on 'CalcAttrNumVal', fields ['item', 'attr']
-        db.create_unique('aidadb_calcattrnumval', ['item_id', 'attr_id'])
+        db.create_unique('main_calcattrnumval', ['item_id', 'attr_id'])
 
         # Adding model 'Computer'
-        db.create_table('aidadb_computer', (
+        db.create_table('main_computer', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('uuid', self.gf('django.db.models.fields.CharField')(max_length=36, blank=True)),
             ('title', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
@@ -207,29 +207,22 @@ class Migration(SchemaMigration):
             ('hostname', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
             ('workdir', self.gf('django.db.models.fields.CharField')(max_length=255)),
         ))
-        db.send_create_signal('aidadb', ['Computer'])
+        db.send_create_signal('main', ['Computer'])
 
         # Adding model 'ComputerUsername'
-        db.create_table('aidadb_computerusername', (
+        db.create_table('main_computerusername', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('uuid', self.gf('django.db.models.fields.CharField')(max_length=36, blank=True)),
-            ('title', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
-            ('description', self.gf('django.db.models.fields.TextField')(blank=True)),
-            ('data', self.gf('django.db.models.fields.TextField')(blank=True)),
-            ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
-            ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
-            ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
-            ('computer', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.Computer'])),
-            ('aidauser', self.gf('django.db.models.fields.related.ForeignKey')(related_name='computerusername_remoteuser_set', to=orm['auth.User'])),
+            ('computer', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.Computer'])),
+            ('aidauser', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
             ('remoteusername', self.gf('django.db.models.fields.CharField')(max_length=255)),
         ))
-        db.send_create_signal('aidadb', ['ComputerUsername'])
+        db.send_create_signal('main', ['ComputerUsername'])
 
         # Adding unique constraint on 'ComputerUsername', fields ['aidauser', 'computer']
-        db.create_unique('aidadb_computerusername', ['aidauser_id', 'computer_id'])
+        db.create_unique('main_computerusername', ['aidauser_id', 'computer_id'])
 
         # Adding model 'Code'
-        db.create_table('aidadb_code', (
+        db.create_table('main_code', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('uuid', self.gf('django.db.models.fields.CharField')(max_length=36, blank=True)),
             ('title', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
@@ -238,22 +231,22 @@ class Migration(SchemaMigration):
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
             ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
-            ('type', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.CodeType'])),
-            ('status', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.CodeStatus'])),
-            ('computer', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.Computer'], blank=True)),
+            ('type', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.CodeType'])),
+            ('status', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.CodeStatus'])),
+            ('computer', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.Computer'], blank=True)),
         ))
-        db.send_create_signal('aidadb', ['Code'])
+        db.send_create_signal('main', ['Code'])
 
         # Adding M2M table for field group on 'Code'
-        db.create_table('aidadb_code_group', (
+        db.create_table('main_code_group', (
             ('id', models.AutoField(verbose_name='ID', primary_key=True, auto_created=True)),
-            ('code', models.ForeignKey(orm['aidadb.code'], null=False)),
-            ('codegroup', models.ForeignKey(orm['aidadb.codegroup'], null=False))
+            ('code', models.ForeignKey(orm['main.code'], null=False)),
+            ('codegroup', models.ForeignKey(orm['main.codegroup'], null=False))
         ))
-        db.create_unique('aidadb_code_group', ['code_id', 'codegroup_id'])
+        db.create_unique('main_code_group', ['code_id', 'codegroup_id'])
 
         # Adding model 'CodeGroup'
-        db.create_table('aidadb_codegroup', (
+        db.create_table('main_codegroup', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('uuid', self.gf('django.db.models.fields.CharField')(max_length=36, blank=True)),
             ('title', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
@@ -262,12 +255,12 @@ class Migration(SchemaMigration):
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
             ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
-            ('parent', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.CodeGroup'], null=True, blank=True)),
+            ('parent', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.CodeGroup'], null=True, blank=True)),
         ))
-        db.send_create_signal('aidadb', ['CodeGroup'])
+        db.send_create_signal('main', ['CodeGroup'])
 
         # Adding model 'CodeComment'
-        db.create_table('aidadb_codecomment', (
+        db.create_table('main_codecomment', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('uuid', self.gf('django.db.models.fields.CharField')(max_length=36, blank=True)),
             ('title', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
@@ -276,32 +269,32 @@ class Migration(SchemaMigration):
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
             ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
-            ('parent', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.CodeComment'], null=True, blank=True)),
+            ('parent', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.CodeComment'], null=True, blank=True)),
         ))
-        db.send_create_signal('aidadb', ['CodeComment'])
+        db.send_create_signal('main', ['CodeComment'])
 
         # Adding model 'CodeStatus'
-        db.create_table('aidadb_codestatus', (
+        db.create_table('main_codestatus', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('uuid', self.gf('django.db.models.fields.CharField')(max_length=36, blank=True)),
             ('title', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
             ('description', self.gf('django.db.models.fields.TextField')(blank=True)),
             ('data', self.gf('django.db.models.fields.TextField')(blank=True)),
         ))
-        db.send_create_signal('aidadb', ['CodeStatus'])
+        db.send_create_signal('main', ['CodeStatus'])
 
         # Adding model 'CodeType'
-        db.create_table('aidadb_codetype', (
+        db.create_table('main_codetype', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('uuid', self.gf('django.db.models.fields.CharField')(max_length=36, blank=True)),
             ('title', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
             ('description', self.gf('django.db.models.fields.TextField')(blank=True)),
             ('data', self.gf('django.db.models.fields.TextField')(blank=True)),
         ))
-        db.send_create_signal('aidadb', ['CodeType'])
+        db.send_create_signal('main', ['CodeType'])
 
         # Adding model 'CodeAttrTxt'
-        db.create_table('aidadb_codeattrtxt', (
+        db.create_table('main_codeattrtxt', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('uuid', self.gf('django.db.models.fields.CharField')(max_length=36, blank=True)),
             ('title', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
@@ -311,10 +304,10 @@ class Migration(SchemaMigration):
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
             ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
         ))
-        db.send_create_signal('aidadb', ['CodeAttrTxt'])
+        db.send_create_signal('main', ['CodeAttrTxt'])
 
         # Adding model 'CodeAttrNum'
-        db.create_table('aidadb_codeattrnum', (
+        db.create_table('main_codeattrnum', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('uuid', self.gf('django.db.models.fields.CharField')(max_length=36, blank=True)),
             ('title', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
@@ -324,55 +317,55 @@ class Migration(SchemaMigration):
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
             ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
         ))
-        db.send_create_signal('aidadb', ['CodeAttrNum'])
+        db.send_create_signal('main', ['CodeAttrNum'])
 
         # Adding model 'CodeAttrTxtVal'
-        db.create_table('aidadb_codeattrtxtval', (
+        db.create_table('main_codeattrtxtval', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('item', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.Code'])),
-            ('attr', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.CodeAttrTxt'])),
+            ('item', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.Code'])),
+            ('attr', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.CodeAttrTxt'])),
             ('val', self.gf('django.db.models.fields.TextField')()),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
         ))
-        db.send_create_signal('aidadb', ['CodeAttrTxtVal'])
+        db.send_create_signal('main', ['CodeAttrTxtVal'])
 
         # Adding unique constraint on 'CodeAttrTxtVal', fields ['item', 'attr']
-        db.create_unique('aidadb_codeattrtxtval', ['item_id', 'attr_id'])
+        db.create_unique('main_codeattrtxtval', ['item_id', 'attr_id'])
 
         # Adding model 'CodeAttrNumVal'
-        db.create_table('aidadb_codeattrnumval', (
+        db.create_table('main_codeattrnumval', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('item', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.Code'])),
-            ('attr', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.CodeAttrNum'])),
+            ('item', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.Code'])),
+            ('attr', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.CodeAttrNum'])),
             ('val', self.gf('django.db.models.fields.FloatField')()),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
         ))
-        db.send_create_signal('aidadb', ['CodeAttrNumVal'])
+        db.send_create_signal('main', ['CodeAttrNumVal'])
 
         # Adding unique constraint on 'CodeAttrNumVal', fields ['item', 'attr']
-        db.create_unique('aidadb_codeattrnumval', ['item_id', 'attr_id'])
+        db.create_unique('main_codeattrnumval', ['item_id', 'attr_id'])
 
         # Adding model 'Element'
-        db.create_table('aidadb_element', (
+        db.create_table('main_element', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('uuid', self.gf('django.db.models.fields.CharField')(max_length=36, blank=True)),
             ('title', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
             ('description', self.gf('django.db.models.fields.TextField')(blank=True)),
             ('data', self.gf('django.db.models.fields.TextField')(blank=True)),
-            ('Z', self.gf('django.db.models.fields.IntegerField')()),
+            ('Z', self.gf('django.db.models.fields.IntegerField')(unique=True)),
         ))
-        db.send_create_signal('aidadb', ['Element'])
+        db.send_create_signal('main', ['Element'])
 
         # Adding M2M table for field group on 'Element'
-        db.create_table('aidadb_element_group', (
+        db.create_table('main_element_group', (
             ('id', models.AutoField(verbose_name='ID', primary_key=True, auto_created=True)),
-            ('element', models.ForeignKey(orm['aidadb.element'], null=False)),
-            ('elementgroup', models.ForeignKey(orm['aidadb.elementgroup'], null=False))
+            ('element', models.ForeignKey(orm['main.element'], null=False)),
+            ('elementgroup', models.ForeignKey(orm['main.elementgroup'], null=False))
         ))
-        db.create_unique('aidadb_element_group', ['element_id', 'elementgroup_id'])
+        db.create_unique('main_element_group', ['element_id', 'elementgroup_id'])
 
         # Adding model 'ElementAttrTxt'
-        db.create_table('aidadb_elementattrtxt', (
+        db.create_table('main_elementattrtxt', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('uuid', self.gf('django.db.models.fields.CharField')(max_length=36, blank=True)),
             ('title', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
@@ -383,10 +376,10 @@ class Migration(SchemaMigration):
             ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
             ('isinput', self.gf('django.db.models.fields.BooleanField')(default=True)),
         ))
-        db.send_create_signal('aidadb', ['ElementAttrTxt'])
+        db.send_create_signal('main', ['ElementAttrTxt'])
 
         # Adding model 'ElementAttrNum'
-        db.create_table('aidadb_elementattrnum', (
+        db.create_table('main_elementattrnum', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('uuid', self.gf('django.db.models.fields.CharField')(max_length=36, blank=True)),
             ('title', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
@@ -397,10 +390,10 @@ class Migration(SchemaMigration):
             ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
             ('isinput', self.gf('django.db.models.fields.BooleanField')(default=True)),
         ))
-        db.send_create_signal('aidadb', ['ElementAttrNum'])
+        db.send_create_signal('main', ['ElementAttrNum'])
 
         # Adding model 'ElementGroup'
-        db.create_table('aidadb_elementgroup', (
+        db.create_table('main_elementgroup', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('uuid', self.gf('django.db.models.fields.CharField')(max_length=36, blank=True)),
             ('title', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
@@ -409,38 +402,38 @@ class Migration(SchemaMigration):
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
             ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
-            ('parent', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.ElementGroup'], null=True, blank=True)),
+            ('parent', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.ElementGroup'], null=True, blank=True)),
         ))
-        db.send_create_signal('aidadb', ['ElementGroup'])
+        db.send_create_signal('main', ['ElementGroup'])
 
         # Adding model 'ElementAttrTxtVal'
-        db.create_table('aidadb_elementattrtxtval', (
+        db.create_table('main_elementattrtxtval', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('item', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.Element'])),
-            ('attr', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.ElementAttrTxt'])),
+            ('item', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.Element'])),
+            ('attr', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.ElementAttrTxt'])),
             ('val', self.gf('django.db.models.fields.TextField')()),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
         ))
-        db.send_create_signal('aidadb', ['ElementAttrTxtVal'])
+        db.send_create_signal('main', ['ElementAttrTxtVal'])
 
         # Adding unique constraint on 'ElementAttrTxtVal', fields ['item', 'attr']
-        db.create_unique('aidadb_elementattrtxtval', ['item_id', 'attr_id'])
+        db.create_unique('main_elementattrtxtval', ['item_id', 'attr_id'])
 
         # Adding model 'ElementAttrNumVal'
-        db.create_table('aidadb_elementattrnumval', (
+        db.create_table('main_elementattrnumval', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('item', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.Element'])),
-            ('attr', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.ElementAttrNum'])),
+            ('item', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.Element'])),
+            ('attr', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.ElementAttrNum'])),
             ('val', self.gf('django.db.models.fields.FloatField')()),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
         ))
-        db.send_create_signal('aidadb', ['ElementAttrNumVal'])
+        db.send_create_signal('main', ['ElementAttrNumVal'])
 
         # Adding unique constraint on 'ElementAttrNumVal', fields ['item', 'attr']
-        db.create_unique('aidadb_elementattrnumval', ['item_id', 'attr_id'])
+        db.create_unique('main_elementattrnumval', ['item_id', 'attr_id'])
 
         # Adding model 'Potential'
-        db.create_table('aidadb_potential', (
+        db.create_table('main_potential', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('uuid', self.gf('django.db.models.fields.CharField')(max_length=36, blank=True)),
             ('title', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
@@ -449,29 +442,29 @@ class Migration(SchemaMigration):
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
             ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
-            ('type', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.PotentialType'])),
-            ('status', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.PotentialStatus'])),
+            ('type', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.PotentialType'])),
+            ('status', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.PotentialStatus'])),
         ))
-        db.send_create_signal('aidadb', ['Potential'])
+        db.send_create_signal('main', ['Potential'])
 
         # Adding M2M table for field element on 'Potential'
-        db.create_table('aidadb_potential_element', (
+        db.create_table('main_potential_element', (
             ('id', models.AutoField(verbose_name='ID', primary_key=True, auto_created=True)),
-            ('potential', models.ForeignKey(orm['aidadb.potential'], null=False)),
-            ('element', models.ForeignKey(orm['aidadb.element'], null=False))
+            ('potential', models.ForeignKey(orm['main.potential'], null=False)),
+            ('element', models.ForeignKey(orm['main.element'], null=False))
         ))
-        db.create_unique('aidadb_potential_element', ['potential_id', 'element_id'])
+        db.create_unique('main_potential_element', ['potential_id', 'element_id'])
 
         # Adding M2M table for field group on 'Potential'
-        db.create_table('aidadb_potential_group', (
+        db.create_table('main_potential_group', (
             ('id', models.AutoField(verbose_name='ID', primary_key=True, auto_created=True)),
-            ('potential', models.ForeignKey(orm['aidadb.potential'], null=False)),
-            ('potentialgroup', models.ForeignKey(orm['aidadb.potentialgroup'], null=False))
+            ('potential', models.ForeignKey(orm['main.potential'], null=False)),
+            ('potentialgroup', models.ForeignKey(orm['main.potentialgroup'], null=False))
         ))
-        db.create_unique('aidadb_potential_group', ['potential_id', 'potentialgroup_id'])
+        db.create_unique('main_potential_group', ['potential_id', 'potentialgroup_id'])
 
         # Adding model 'PotentialAttrTxt'
-        db.create_table('aidadb_potentialattrtxt', (
+        db.create_table('main_potentialattrtxt', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('uuid', self.gf('django.db.models.fields.CharField')(max_length=36, blank=True)),
             ('title', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
@@ -482,10 +475,10 @@ class Migration(SchemaMigration):
             ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
             ('isinput', self.gf('django.db.models.fields.BooleanField')(default=True)),
         ))
-        db.send_create_signal('aidadb', ['PotentialAttrTxt'])
+        db.send_create_signal('main', ['PotentialAttrTxt'])
 
         # Adding model 'PotentialAttrNum'
-        db.create_table('aidadb_potentialattrnum', (
+        db.create_table('main_potentialattrnum', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('uuid', self.gf('django.db.models.fields.CharField')(max_length=36, blank=True)),
             ('title', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
@@ -496,10 +489,10 @@ class Migration(SchemaMigration):
             ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
             ('isinput', self.gf('django.db.models.fields.BooleanField')(default=True)),
         ))
-        db.send_create_signal('aidadb', ['PotentialAttrNum'])
+        db.send_create_signal('main', ['PotentialAttrNum'])
 
         # Adding model 'PotentialGroup'
-        db.create_table('aidadb_potentialgroup', (
+        db.create_table('main_potentialgroup', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('uuid', self.gf('django.db.models.fields.CharField')(max_length=36, blank=True)),
             ('title', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
@@ -508,12 +501,12 @@ class Migration(SchemaMigration):
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
             ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
-            ('parent', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.PotentialGroup'], null=True, blank=True)),
+            ('parent', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.PotentialGroup'], null=True, blank=True)),
         ))
-        db.send_create_signal('aidadb', ['PotentialGroup'])
+        db.send_create_signal('main', ['PotentialGroup'])
 
         # Adding model 'PotentialComment'
-        db.create_table('aidadb_potentialcomment', (
+        db.create_table('main_potentialcomment', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('uuid', self.gf('django.db.models.fields.CharField')(max_length=36, blank=True)),
             ('title', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
@@ -522,58 +515,58 @@ class Migration(SchemaMigration):
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
             ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
-            ('parent', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.PotentialComment'], null=True, blank=True)),
+            ('parent', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.PotentialComment'], null=True, blank=True)),
         ))
-        db.send_create_signal('aidadb', ['PotentialComment'])
+        db.send_create_signal('main', ['PotentialComment'])
 
         # Adding model 'PotentialStatus'
-        db.create_table('aidadb_potentialstatus', (
+        db.create_table('main_potentialstatus', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('uuid', self.gf('django.db.models.fields.CharField')(max_length=36, blank=True)),
             ('title', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
             ('description', self.gf('django.db.models.fields.TextField')(blank=True)),
             ('data', self.gf('django.db.models.fields.TextField')(blank=True)),
         ))
-        db.send_create_signal('aidadb', ['PotentialStatus'])
+        db.send_create_signal('main', ['PotentialStatus'])
 
         # Adding model 'PotentialType'
-        db.create_table('aidadb_potentialtype', (
+        db.create_table('main_potentialtype', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('uuid', self.gf('django.db.models.fields.CharField')(max_length=36, blank=True)),
             ('title', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
             ('description', self.gf('django.db.models.fields.TextField')(blank=True)),
             ('data', self.gf('django.db.models.fields.TextField')(blank=True)),
         ))
-        db.send_create_signal('aidadb', ['PotentialType'])
+        db.send_create_signal('main', ['PotentialType'])
 
         # Adding model 'PotentialAttrTxtVal'
-        db.create_table('aidadb_potentialattrtxtval', (
+        db.create_table('main_potentialattrtxtval', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('item', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.Potential'])),
-            ('attr', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.PotentialAttrTxt'])),
+            ('item', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.Potential'])),
+            ('attr', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.PotentialAttrTxt'])),
             ('val', self.gf('django.db.models.fields.TextField')()),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
         ))
-        db.send_create_signal('aidadb', ['PotentialAttrTxtVal'])
+        db.send_create_signal('main', ['PotentialAttrTxtVal'])
 
         # Adding unique constraint on 'PotentialAttrTxtVal', fields ['item', 'attr']
-        db.create_unique('aidadb_potentialattrtxtval', ['item_id', 'attr_id'])
+        db.create_unique('main_potentialattrtxtval', ['item_id', 'attr_id'])
 
         # Adding model 'PotentialAttrNumVal'
-        db.create_table('aidadb_potentialattrnumval', (
+        db.create_table('main_potentialattrnumval', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('item', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.Potential'])),
-            ('attr', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.PotentialAttrNum'])),
+            ('item', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.Potential'])),
+            ('attr', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.PotentialAttrNum'])),
             ('val', self.gf('django.db.models.fields.FloatField')()),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
         ))
-        db.send_create_signal('aidadb', ['PotentialAttrNumVal'])
+        db.send_create_signal('main', ['PotentialAttrNumVal'])
 
         # Adding unique constraint on 'PotentialAttrNumVal', fields ['item', 'attr']
-        db.create_unique('aidadb_potentialattrnumval', ['item_id', 'attr_id'])
+        db.create_unique('main_potentialattrnumval', ['item_id', 'attr_id'])
 
         # Adding model 'Basis'
-        db.create_table('aidadb_basis', (
+        db.create_table('main_basis', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('uuid', self.gf('django.db.models.fields.CharField')(max_length=36, blank=True)),
             ('title', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
@@ -582,29 +575,29 @@ class Migration(SchemaMigration):
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
             ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
-            ('type', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.BasisType'])),
-            ('status', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.BasisStatus'])),
+            ('type', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.BasisType'])),
+            ('status', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.BasisStatus'])),
         ))
-        db.send_create_signal('aidadb', ['Basis'])
+        db.send_create_signal('main', ['Basis'])
 
         # Adding M2M table for field element on 'Basis'
-        db.create_table('aidadb_basis_element', (
+        db.create_table('main_basis_element', (
             ('id', models.AutoField(verbose_name='ID', primary_key=True, auto_created=True)),
-            ('basis', models.ForeignKey(orm['aidadb.basis'], null=False)),
-            ('element', models.ForeignKey(orm['aidadb.element'], null=False))
+            ('basis', models.ForeignKey(orm['main.basis'], null=False)),
+            ('element', models.ForeignKey(orm['main.element'], null=False))
         ))
-        db.create_unique('aidadb_basis_element', ['basis_id', 'element_id'])
+        db.create_unique('main_basis_element', ['basis_id', 'element_id'])
 
         # Adding M2M table for field group on 'Basis'
-        db.create_table('aidadb_basis_group', (
+        db.create_table('main_basis_group', (
             ('id', models.AutoField(verbose_name='ID', primary_key=True, auto_created=True)),
-            ('basis', models.ForeignKey(orm['aidadb.basis'], null=False)),
-            ('basisgroup', models.ForeignKey(orm['aidadb.basisgroup'], null=False))
+            ('basis', models.ForeignKey(orm['main.basis'], null=False)),
+            ('basisgroup', models.ForeignKey(orm['main.basisgroup'], null=False))
         ))
-        db.create_unique('aidadb_basis_group', ['basis_id', 'basisgroup_id'])
+        db.create_unique('main_basis_group', ['basis_id', 'basisgroup_id'])
 
         # Adding model 'BasisAttrTxt'
-        db.create_table('aidadb_basisattrtxt', (
+        db.create_table('main_basisattrtxt', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('uuid', self.gf('django.db.models.fields.CharField')(max_length=36, blank=True)),
             ('title', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
@@ -615,10 +608,10 @@ class Migration(SchemaMigration):
             ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
             ('isinput', self.gf('django.db.models.fields.BooleanField')(default=True)),
         ))
-        db.send_create_signal('aidadb', ['BasisAttrTxt'])
+        db.send_create_signal('main', ['BasisAttrTxt'])
 
         # Adding model 'BasisAttrNum'
-        db.create_table('aidadb_basisattrnum', (
+        db.create_table('main_basisattrnum', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('uuid', self.gf('django.db.models.fields.CharField')(max_length=36, blank=True)),
             ('title', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
@@ -629,10 +622,10 @@ class Migration(SchemaMigration):
             ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
             ('isinput', self.gf('django.db.models.fields.BooleanField')(default=True)),
         ))
-        db.send_create_signal('aidadb', ['BasisAttrNum'])
+        db.send_create_signal('main', ['BasisAttrNum'])
 
         # Adding model 'BasisGroup'
-        db.create_table('aidadb_basisgroup', (
+        db.create_table('main_basisgroup', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('uuid', self.gf('django.db.models.fields.CharField')(max_length=36, blank=True)),
             ('title', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
@@ -641,12 +634,12 @@ class Migration(SchemaMigration):
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
             ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
-            ('parent', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.BasisGroup'], null=True, blank=True)),
+            ('parent', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.BasisGroup'], null=True, blank=True)),
         ))
-        db.send_create_signal('aidadb', ['BasisGroup'])
+        db.send_create_signal('main', ['BasisGroup'])
 
         # Adding model 'BasisComment'
-        db.create_table('aidadb_basiscomment', (
+        db.create_table('main_basiscomment', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('uuid', self.gf('django.db.models.fields.CharField')(max_length=36, blank=True)),
             ('title', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
@@ -655,58 +648,58 @@ class Migration(SchemaMigration):
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
             ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
-            ('parent', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.BasisComment'], null=True, blank=True)),
+            ('parent', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.BasisComment'], null=True, blank=True)),
         ))
-        db.send_create_signal('aidadb', ['BasisComment'])
+        db.send_create_signal('main', ['BasisComment'])
 
         # Adding model 'BasisStatus'
-        db.create_table('aidadb_basisstatus', (
+        db.create_table('main_basisstatus', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('uuid', self.gf('django.db.models.fields.CharField')(max_length=36, blank=True)),
             ('title', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
             ('description', self.gf('django.db.models.fields.TextField')(blank=True)),
             ('data', self.gf('django.db.models.fields.TextField')(blank=True)),
         ))
-        db.send_create_signal('aidadb', ['BasisStatus'])
+        db.send_create_signal('main', ['BasisStatus'])
 
         # Adding model 'BasisType'
-        db.create_table('aidadb_basistype', (
+        db.create_table('main_basistype', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('uuid', self.gf('django.db.models.fields.CharField')(max_length=36, blank=True)),
             ('title', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
             ('description', self.gf('django.db.models.fields.TextField')(blank=True)),
             ('data', self.gf('django.db.models.fields.TextField')(blank=True)),
         ))
-        db.send_create_signal('aidadb', ['BasisType'])
+        db.send_create_signal('main', ['BasisType'])
 
         # Adding model 'BasisAttrTxtVal'
-        db.create_table('aidadb_basisattrtxtval', (
+        db.create_table('main_basisattrtxtval', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('item', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.Basis'])),
-            ('attr', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.BasisAttrTxt'])),
+            ('item', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.Basis'])),
+            ('attr', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.BasisAttrTxt'])),
             ('val', self.gf('django.db.models.fields.TextField')()),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
         ))
-        db.send_create_signal('aidadb', ['BasisAttrTxtVal'])
+        db.send_create_signal('main', ['BasisAttrTxtVal'])
 
         # Adding unique constraint on 'BasisAttrTxtVal', fields ['item', 'attr']
-        db.create_unique('aidadb_basisattrtxtval', ['item_id', 'attr_id'])
+        db.create_unique('main_basisattrtxtval', ['item_id', 'attr_id'])
 
         # Adding model 'BasisAttrNumVal'
-        db.create_table('aidadb_basisattrnumval', (
+        db.create_table('main_basisattrnumval', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('item', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.Basis'])),
-            ('attr', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.BasisAttrNum'])),
+            ('item', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.Basis'])),
+            ('attr', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.BasisAttrNum'])),
             ('val', self.gf('django.db.models.fields.FloatField')()),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
         ))
-        db.send_create_signal('aidadb', ['BasisAttrNumVal'])
+        db.send_create_signal('main', ['BasisAttrNumVal'])
 
         # Adding unique constraint on 'BasisAttrNumVal', fields ['item', 'attr']
-        db.create_unique('aidadb_basisattrnumval', ['item_id', 'attr_id'])
+        db.create_unique('main_basisattrnumval', ['item_id', 'attr_id'])
 
         # Adding model 'Struc'
-        db.create_table('aidadb_struc', (
+        db.create_table('main_struc', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('uuid', self.gf('django.db.models.fields.CharField')(max_length=36, blank=True)),
             ('title', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
@@ -719,26 +712,26 @@ class Migration(SchemaMigration):
             ('dim', self.gf('django.db.models.fields.IntegerField')()),
             ('detail', self.gf('django.db.models.fields.TextField')(blank=True)),
         ))
-        db.send_create_signal('aidadb', ['Struc'])
+        db.send_create_signal('main', ['Struc'])
 
         # Adding M2M table for field element on 'Struc'
-        db.create_table('aidadb_struc_element', (
+        db.create_table('main_struc_element', (
             ('id', models.AutoField(verbose_name='ID', primary_key=True, auto_created=True)),
-            ('struc', models.ForeignKey(orm['aidadb.struc'], null=False)),
-            ('element', models.ForeignKey(orm['aidadb.element'], null=False))
+            ('struc', models.ForeignKey(orm['main.struc'], null=False)),
+            ('element', models.ForeignKey(orm['main.element'], null=False))
         ))
-        db.create_unique('aidadb_struc_element', ['struc_id', 'element_id'])
+        db.create_unique('main_struc_element', ['struc_id', 'element_id'])
 
         # Adding M2M table for field group on 'Struc'
-        db.create_table('aidadb_struc_group', (
+        db.create_table('main_struc_group', (
             ('id', models.AutoField(verbose_name='ID', primary_key=True, auto_created=True)),
-            ('struc', models.ForeignKey(orm['aidadb.struc'], null=False)),
-            ('strucgroup', models.ForeignKey(orm['aidadb.strucgroup'], null=False))
+            ('struc', models.ForeignKey(orm['main.struc'], null=False)),
+            ('strucgroup', models.ForeignKey(orm['main.strucgroup'], null=False))
         ))
-        db.create_unique('aidadb_struc_group', ['struc_id', 'strucgroup_id'])
+        db.create_unique('main_struc_group', ['struc_id', 'strucgroup_id'])
 
         # Adding model 'StrucGroup'
-        db.create_table('aidadb_strucgroup', (
+        db.create_table('main_strucgroup', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('uuid', self.gf('django.db.models.fields.CharField')(max_length=36, blank=True)),
             ('title', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
@@ -747,12 +740,12 @@ class Migration(SchemaMigration):
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
             ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
-            ('parent', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.StrucGroup'], null=True, blank=True)),
+            ('parent', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.StrucGroup'], null=True, blank=True)),
         ))
-        db.send_create_signal('aidadb', ['StrucGroup'])
+        db.send_create_signal('main', ['StrucGroup'])
 
         # Adding model 'StrucComment'
-        db.create_table('aidadb_struccomment', (
+        db.create_table('main_struccomment', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('uuid', self.gf('django.db.models.fields.CharField')(max_length=36, blank=True)),
             ('title', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
@@ -761,12 +754,12 @@ class Migration(SchemaMigration):
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
             ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
-            ('parent', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.StrucComment'], null=True, blank=True)),
+            ('parent', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.StrucComment'], null=True, blank=True)),
         ))
-        db.send_create_signal('aidadb', ['StrucComment'])
+        db.send_create_signal('main', ['StrucComment'])
 
         # Adding model 'StrucAttrTxt'
-        db.create_table('aidadb_strucattrtxt', (
+        db.create_table('main_strucattrtxt', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('uuid', self.gf('django.db.models.fields.CharField')(max_length=36, blank=True)),
             ('title', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
@@ -776,10 +769,10 @@ class Migration(SchemaMigration):
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
             ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
         ))
-        db.send_create_signal('aidadb', ['StrucAttrTxt'])
+        db.send_create_signal('main', ['StrucAttrTxt'])
 
         # Adding model 'StrucAttrNum'
-        db.create_table('aidadb_strucattrnum', (
+        db.create_table('main_strucattrnum', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('uuid', self.gf('django.db.models.fields.CharField')(max_length=36, blank=True)),
             ('title', self.gf('django.db.models.fields.CharField')(unique=True, max_length=255)),
@@ -789,851 +782,278 @@ class Migration(SchemaMigration):
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
             ('quality', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
         ))
-        db.send_create_signal('aidadb', ['StrucAttrNum'])
+        db.send_create_signal('main', ['StrucAttrNum'])
 
         # Adding model 'StrucAttrTxtVal'
-        db.create_table('aidadb_strucattrtxtval', (
+        db.create_table('main_strucattrtxtval', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('item', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.Struc'])),
-            ('attr', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.StrucAttrTxt'])),
+            ('item', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.Struc'])),
+            ('attr', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.StrucAttrTxt'])),
             ('val', self.gf('django.db.models.fields.TextField')()),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
         ))
-        db.send_create_signal('aidadb', ['StrucAttrTxtVal'])
+        db.send_create_signal('main', ['StrucAttrTxtVal'])
 
         # Adding unique constraint on 'StrucAttrTxtVal', fields ['item', 'attr']
-        db.create_unique('aidadb_strucattrtxtval', ['item_id', 'attr_id'])
+        db.create_unique('main_strucattrtxtval', ['item_id', 'attr_id'])
 
         # Adding model 'StrucAttrNumVal'
-        db.create_table('aidadb_strucattrnumval', (
+        db.create_table('main_strucattrnumval', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('item', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.Struc'])),
-            ('attr', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['aidadb.StrucAttrNum'])),
+            ('item', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.Struc'])),
+            ('attr', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.StrucAttrNum'])),
             ('val', self.gf('django.db.models.fields.FloatField')()),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
         ))
-        db.send_create_signal('aidadb', ['StrucAttrNumVal'])
+        db.send_create_signal('main', ['StrucAttrNumVal'])
 
         # Adding unique constraint on 'StrucAttrNumVal', fields ['item', 'attr']
-        db.create_unique('aidadb_strucattrnumval', ['item_id', 'attr_id'])
+        db.create_unique('main_strucattrnumval', ['item_id', 'attr_id'])
 
 
     def backwards(self, orm):
         # Removing unique constraint on 'StrucAttrNumVal', fields ['item', 'attr']
-        db.delete_unique('aidadb_strucattrnumval', ['item_id', 'attr_id'])
+        db.delete_unique('main_strucattrnumval', ['item_id', 'attr_id'])
 
         # Removing unique constraint on 'StrucAttrTxtVal', fields ['item', 'attr']
-        db.delete_unique('aidadb_strucattrtxtval', ['item_id', 'attr_id'])
+        db.delete_unique('main_strucattrtxtval', ['item_id', 'attr_id'])
 
         # Removing unique constraint on 'BasisAttrNumVal', fields ['item', 'attr']
-        db.delete_unique('aidadb_basisattrnumval', ['item_id', 'attr_id'])
+        db.delete_unique('main_basisattrnumval', ['item_id', 'attr_id'])
 
         # Removing unique constraint on 'BasisAttrTxtVal', fields ['item', 'attr']
-        db.delete_unique('aidadb_basisattrtxtval', ['item_id', 'attr_id'])
+        db.delete_unique('main_basisattrtxtval', ['item_id', 'attr_id'])
 
         # Removing unique constraint on 'PotentialAttrNumVal', fields ['item', 'attr']
-        db.delete_unique('aidadb_potentialattrnumval', ['item_id', 'attr_id'])
+        db.delete_unique('main_potentialattrnumval', ['item_id', 'attr_id'])
 
         # Removing unique constraint on 'PotentialAttrTxtVal', fields ['item', 'attr']
-        db.delete_unique('aidadb_potentialattrtxtval', ['item_id', 'attr_id'])
+        db.delete_unique('main_potentialattrtxtval', ['item_id', 'attr_id'])
 
         # Removing unique constraint on 'ElementAttrNumVal', fields ['item', 'attr']
-        db.delete_unique('aidadb_elementattrnumval', ['item_id', 'attr_id'])
+        db.delete_unique('main_elementattrnumval', ['item_id', 'attr_id'])
 
         # Removing unique constraint on 'ElementAttrTxtVal', fields ['item', 'attr']
-        db.delete_unique('aidadb_elementattrtxtval', ['item_id', 'attr_id'])
+        db.delete_unique('main_elementattrtxtval', ['item_id', 'attr_id'])
 
         # Removing unique constraint on 'CodeAttrNumVal', fields ['item', 'attr']
-        db.delete_unique('aidadb_codeattrnumval', ['item_id', 'attr_id'])
+        db.delete_unique('main_codeattrnumval', ['item_id', 'attr_id'])
 
         # Removing unique constraint on 'CodeAttrTxtVal', fields ['item', 'attr']
-        db.delete_unique('aidadb_codeattrtxtval', ['item_id', 'attr_id'])
+        db.delete_unique('main_codeattrtxtval', ['item_id', 'attr_id'])
 
         # Removing unique constraint on 'ComputerUsername', fields ['aidauser', 'computer']
-        db.delete_unique('aidadb_computerusername', ['aidauser_id', 'computer_id'])
+        db.delete_unique('main_computerusername', ['aidauser_id', 'computer_id'])
 
         # Removing unique constraint on 'CalcAttrNumVal', fields ['item', 'attr']
-        db.delete_unique('aidadb_calcattrnumval', ['item_id', 'attr_id'])
+        db.delete_unique('main_calcattrnumval', ['item_id', 'attr_id'])
 
         # Removing unique constraint on 'CalcAttrTxtVal', fields ['item', 'attr']
-        db.delete_unique('aidadb_calcattrtxtval', ['item_id', 'attr_id'])
+        db.delete_unique('main_calcattrtxtval', ['item_id', 'attr_id'])
 
         # Deleting model 'Calc'
-        db.delete_table('aidadb_calc')
+        db.delete_table('main_calc')
 
         # Removing M2M table for field inpstruc on 'Calc'
-        db.delete_table('aidadb_calc_inpstruc')
+        db.delete_table('main_calc_inpstruc')
 
         # Removing M2M table for field outstruc on 'Calc'
-        db.delete_table('aidadb_calc_outstruc')
+        db.delete_table('main_calc_outstruc')
 
         # Removing M2M table for field inppot on 'Calc'
-        db.delete_table('aidadb_calc_inppot')
+        db.delete_table('main_calc_inppot')
 
         # Removing M2M table for field outpot on 'Calc'
-        db.delete_table('aidadb_calc_outpot')
+        db.delete_table('main_calc_outpot')
 
         # Removing M2M table for field basis on 'Calc'
-        db.delete_table('aidadb_calc_basis')
+        db.delete_table('main_calc_basis')
 
         # Removing M2M table for field group on 'Calc'
-        db.delete_table('aidadb_calc_group')
+        db.delete_table('main_calc_group')
 
         # Removing M2M table for field parent on 'Calc'
-        db.delete_table('aidadb_calc_parent')
+        db.delete_table('main_calc_parent')
 
         # Deleting model 'CalcGroup'
-        db.delete_table('aidadb_calcgroup')
+        db.delete_table('main_calcgroup')
 
         # Deleting model 'CalcStatus'
-        db.delete_table('aidadb_calcstatus')
+        db.delete_table('main_calcstatus')
 
         # Deleting model 'Project'
-        db.delete_table('aidadb_project')
+        db.delete_table('main_project')
 
         # Deleting model 'CalcType'
-        db.delete_table('aidadb_calctype')
+        db.delete_table('main_calctype')
 
         # Deleting model 'CalcComment'
-        db.delete_table('aidadb_calccomment')
+        db.delete_table('main_calccomment')
 
         # Deleting model 'CalcAttrTxt'
-        db.delete_table('aidadb_calcattrtxt')
+        db.delete_table('main_calcattrtxt')
 
         # Deleting model 'CalcAttrNum'
-        db.delete_table('aidadb_calcattrnum')
+        db.delete_table('main_calcattrnum')
 
         # Deleting model 'CalcAttrTxtVal'
-        db.delete_table('aidadb_calcattrtxtval')
+        db.delete_table('main_calcattrtxtval')
 
         # Deleting model 'CalcAttrNumVal'
-        db.delete_table('aidadb_calcattrnumval')
+        db.delete_table('main_calcattrnumval')
 
         # Deleting model 'Computer'
-        db.delete_table('aidadb_computer')
+        db.delete_table('main_computer')
 
         # Deleting model 'ComputerUsername'
-        db.delete_table('aidadb_computerusername')
+        db.delete_table('main_computerusername')
 
         # Deleting model 'Code'
-        db.delete_table('aidadb_code')
+        db.delete_table('main_code')
 
         # Removing M2M table for field group on 'Code'
-        db.delete_table('aidadb_code_group')
+        db.delete_table('main_code_group')
 
         # Deleting model 'CodeGroup'
-        db.delete_table('aidadb_codegroup')
+        db.delete_table('main_codegroup')
 
         # Deleting model 'CodeComment'
-        db.delete_table('aidadb_codecomment')
+        db.delete_table('main_codecomment')
 
         # Deleting model 'CodeStatus'
-        db.delete_table('aidadb_codestatus')
+        db.delete_table('main_codestatus')
 
         # Deleting model 'CodeType'
-        db.delete_table('aidadb_codetype')
+        db.delete_table('main_codetype')
 
         # Deleting model 'CodeAttrTxt'
-        db.delete_table('aidadb_codeattrtxt')
+        db.delete_table('main_codeattrtxt')
 
         # Deleting model 'CodeAttrNum'
-        db.delete_table('aidadb_codeattrnum')
+        db.delete_table('main_codeattrnum')
 
         # Deleting model 'CodeAttrTxtVal'
-        db.delete_table('aidadb_codeattrtxtval')
+        db.delete_table('main_codeattrtxtval')
 
         # Deleting model 'CodeAttrNumVal'
-        db.delete_table('aidadb_codeattrnumval')
+        db.delete_table('main_codeattrnumval')
 
         # Deleting model 'Element'
-        db.delete_table('aidadb_element')
+        db.delete_table('main_element')
 
         # Removing M2M table for field group on 'Element'
-        db.delete_table('aidadb_element_group')
+        db.delete_table('main_element_group')
 
         # Deleting model 'ElementAttrTxt'
-        db.delete_table('aidadb_elementattrtxt')
+        db.delete_table('main_elementattrtxt')
 
         # Deleting model 'ElementAttrNum'
-        db.delete_table('aidadb_elementattrnum')
+        db.delete_table('main_elementattrnum')
 
         # Deleting model 'ElementGroup'
-        db.delete_table('aidadb_elementgroup')
+        db.delete_table('main_elementgroup')
 
         # Deleting model 'ElementAttrTxtVal'
-        db.delete_table('aidadb_elementattrtxtval')
+        db.delete_table('main_elementattrtxtval')
 
         # Deleting model 'ElementAttrNumVal'
-        db.delete_table('aidadb_elementattrnumval')
+        db.delete_table('main_elementattrnumval')
 
         # Deleting model 'Potential'
-        db.delete_table('aidadb_potential')
+        db.delete_table('main_potential')
 
         # Removing M2M table for field element on 'Potential'
-        db.delete_table('aidadb_potential_element')
+        db.delete_table('main_potential_element')
 
         # Removing M2M table for field group on 'Potential'
-        db.delete_table('aidadb_potential_group')
+        db.delete_table('main_potential_group')
 
         # Deleting model 'PotentialAttrTxt'
-        db.delete_table('aidadb_potentialattrtxt')
+        db.delete_table('main_potentialattrtxt')
 
         # Deleting model 'PotentialAttrNum'
-        db.delete_table('aidadb_potentialattrnum')
+        db.delete_table('main_potentialattrnum')
 
         # Deleting model 'PotentialGroup'
-        db.delete_table('aidadb_potentialgroup')
+        db.delete_table('main_potentialgroup')
 
         # Deleting model 'PotentialComment'
-        db.delete_table('aidadb_potentialcomment')
+        db.delete_table('main_potentialcomment')
 
         # Deleting model 'PotentialStatus'
-        db.delete_table('aidadb_potentialstatus')
+        db.delete_table('main_potentialstatus')
 
         # Deleting model 'PotentialType'
-        db.delete_table('aidadb_potentialtype')
+        db.delete_table('main_potentialtype')
 
         # Deleting model 'PotentialAttrTxtVal'
-        db.delete_table('aidadb_potentialattrtxtval')
+        db.delete_table('main_potentialattrtxtval')
 
         # Deleting model 'PotentialAttrNumVal'
-        db.delete_table('aidadb_potentialattrnumval')
+        db.delete_table('main_potentialattrnumval')
 
         # Deleting model 'Basis'
-        db.delete_table('aidadb_basis')
+        db.delete_table('main_basis')
 
         # Removing M2M table for field element on 'Basis'
-        db.delete_table('aidadb_basis_element')
+        db.delete_table('main_basis_element')
 
         # Removing M2M table for field group on 'Basis'
-        db.delete_table('aidadb_basis_group')
+        db.delete_table('main_basis_group')
 
         # Deleting model 'BasisAttrTxt'
-        db.delete_table('aidadb_basisattrtxt')
+        db.delete_table('main_basisattrtxt')
 
         # Deleting model 'BasisAttrNum'
-        db.delete_table('aidadb_basisattrnum')
+        db.delete_table('main_basisattrnum')
 
         # Deleting model 'BasisGroup'
-        db.delete_table('aidadb_basisgroup')
+        db.delete_table('main_basisgroup')
 
         # Deleting model 'BasisComment'
-        db.delete_table('aidadb_basiscomment')
+        db.delete_table('main_basiscomment')
 
         # Deleting model 'BasisStatus'
-        db.delete_table('aidadb_basisstatus')
+        db.delete_table('main_basisstatus')
 
         # Deleting model 'BasisType'
-        db.delete_table('aidadb_basistype')
+        db.delete_table('main_basistype')
 
         # Deleting model 'BasisAttrTxtVal'
-        db.delete_table('aidadb_basisattrtxtval')
+        db.delete_table('main_basisattrtxtval')
 
         # Deleting model 'BasisAttrNumVal'
-        db.delete_table('aidadb_basisattrnumval')
+        db.delete_table('main_basisattrnumval')
 
         # Deleting model 'Struc'
-        db.delete_table('aidadb_struc')
+        db.delete_table('main_struc')
 
         # Removing M2M table for field element on 'Struc'
-        db.delete_table('aidadb_struc_element')
+        db.delete_table('main_struc_element')
 
         # Removing M2M table for field group on 'Struc'
-        db.delete_table('aidadb_struc_group')
+        db.delete_table('main_struc_group')
 
         # Deleting model 'StrucGroup'
-        db.delete_table('aidadb_strucgroup')
+        db.delete_table('main_strucgroup')
 
         # Deleting model 'StrucComment'
-        db.delete_table('aidadb_struccomment')
+        db.delete_table('main_struccomment')
 
         # Deleting model 'StrucAttrTxt'
-        db.delete_table('aidadb_strucattrtxt')
+        db.delete_table('main_strucattrtxt')
 
         # Deleting model 'StrucAttrNum'
-        db.delete_table('aidadb_strucattrnum')
+        db.delete_table('main_strucattrnum')
 
         # Deleting model 'StrucAttrTxtVal'
-        db.delete_table('aidadb_strucattrtxtval')
+        db.delete_table('main_strucattrtxtval')
 
         # Deleting model 'StrucAttrNumVal'
-        db.delete_table('aidadb_strucattrnumval')
+        db.delete_table('main_strucattrnumval')
 
 
     models = {
-        'aidadb.basis': {
-            'Meta': {'object_name': 'Basis'},
-            'attrnum': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['aidadb.BasisAttrNum']", 'through': "orm['aidadb.BasisAttrNumVal']", 'symmetrical': 'False'}),
-            'attrtxt': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['aidadb.BasisAttrTxt']", 'through': "orm['aidadb.BasisAttrTxtVal']", 'symmetrical': 'False'}),
-            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'element': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['aidadb.Element']", 'symmetrical': 'False'}),
-            'group': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['aidadb.BasisGroup']", 'symmetrical': 'False', 'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
-            'status': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.BasisStatus']"}),
-            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
-            'type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.BasisType']"}),
-            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
-        },
-        'aidadb.basisattrnum': {
-            'Meta': {'object_name': 'BasisAttrNum'},
-            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'isinput': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
-            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
-            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
-        },
-        'aidadb.basisattrnumval': {
-            'Meta': {'unique_together': "(('item', 'attr'),)", 'object_name': 'BasisAttrNumVal'},
-            'attr': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.BasisAttrNum']"}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'item': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.Basis']"}),
-            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'val': ('django.db.models.fields.FloatField', [], {})
-        },
-        'aidadb.basisattrtxt': {
-            'Meta': {'object_name': 'BasisAttrTxt'},
-            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'isinput': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
-            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
-            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
-        },
-        'aidadb.basisattrtxtval': {
-            'Meta': {'unique_together': "(('item', 'attr'),)", 'object_name': 'BasisAttrTxtVal'},
-            'attr': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.BasisAttrTxt']"}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'item': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.Basis']"}),
-            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'val': ('django.db.models.fields.TextField', [], {})
-        },
-        'aidadb.basiscomment': {
-            'Meta': {'object_name': 'BasisComment'},
-            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'parent': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.BasisComment']", 'null': 'True', 'blank': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
-            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
-            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
-        },
-        'aidadb.basisgroup': {
-            'Meta': {'object_name': 'BasisGroup'},
-            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'parent': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.BasisGroup']", 'null': 'True', 'blank': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
-            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
-            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
-        },
-        'aidadb.basisstatus': {
-            'Meta': {'object_name': 'BasisStatus'},
-            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
-        },
-        'aidadb.basistype': {
-            'Meta': {'object_name': 'BasisType'},
-            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
-        },
-        'aidadb.calc': {
-            'Meta': {'object_name': 'Calc'},
-            'attrnum': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['aidadb.CalcAttrNum']", 'through': "orm['aidadb.CalcAttrNumVal']", 'symmetrical': 'False'}),
-            'attrtxt': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['aidadb.CalcAttrTxt']", 'through': "orm['aidadb.CalcAttrTxtVal']", 'symmetrical': 'False'}),
-            'basis': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['aidadb.Basis']", 'symmetrical': 'False', 'blank': 'True'}),
-            'code': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.Code']"}),
-            'computer': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.Computer']"}),
-            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'group': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['aidadb.CalcGroup']", 'symmetrical': 'False', 'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'inppot': ('django.db.models.fields.related.ManyToManyField', [], {'symmetrical': 'False', 'related_name': "'inpcalc'", 'blank': 'True', 'to': "orm['aidadb.Potential']"}),
-            'inpstruc': ('django.db.models.fields.related.ManyToManyField', [], {'symmetrical': 'False', 'related_name': "'inpcalc'", 'blank': 'True', 'to': "orm['aidadb.Struc']"}),
-            'outpot': ('django.db.models.fields.related.ManyToManyField', [], {'symmetrical': 'False', 'related_name': "'outcalc'", 'blank': 'True', 'to': "orm['aidadb.Potential']"}),
-            'outstruc': ('django.db.models.fields.related.ManyToManyField', [], {'symmetrical': 'False', 'related_name': "'outcalc'", 'blank': 'True', 'to': "orm['aidadb.Struc']"}),
-            'parent': ('django.db.models.fields.related.ManyToManyField', [], {'symmetrical': 'False', 'related_name': "'child'", 'blank': 'True', 'to': "orm['aidadb.Calc']"}),
-            'project': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.Project']"}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
-            'status': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.CalcStatus']"}),
-            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
-            'type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.CalcType']"}),
-            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
-        },
-        'aidadb.calcattrnum': {
-            'Meta': {'object_name': 'CalcAttrNum'},
-            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'isinput': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
-            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
-            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
-        },
-        'aidadb.calcattrnumval': {
-            'Meta': {'unique_together': "(('item', 'attr'),)", 'object_name': 'CalcAttrNumVal'},
-            'attr': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.CalcAttrNum']"}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'item': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.Calc']"}),
-            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'val': ('django.db.models.fields.FloatField', [], {})
-        },
-        'aidadb.calcattrtxt': {
-            'Meta': {'object_name': 'CalcAttrTxt'},
-            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'isinput': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
-            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
-            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
-        },
-        'aidadb.calcattrtxtval': {
-            'Meta': {'unique_together': "(('item', 'attr'),)", 'object_name': 'CalcAttrTxtVal'},
-            'attr': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.CalcAttrTxt']"}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'item': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.Calc']"}),
-            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'val': ('django.db.models.fields.TextField', [], {})
-        },
-        'aidadb.calccomment': {
-            'Meta': {'object_name': 'CalcComment'},
-            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'parent': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.CalcComment']", 'null': 'True', 'blank': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
-            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
-            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
-        },
-        'aidadb.calcgroup': {
-            'Meta': {'object_name': 'CalcGroup'},
-            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'parent': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.CalcGroup']", 'null': 'True', 'blank': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
-            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
-            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
-        },
-        'aidadb.calcstatus': {
-            'Meta': {'object_name': 'CalcStatus'},
-            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
-        },
-        'aidadb.calctype': {
-            'Meta': {'object_name': 'CalcType'},
-            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
-        },
-        'aidadb.code': {
-            'Meta': {'object_name': 'Code'},
-            'attrnum': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['aidadb.CodeAttrNum']", 'through': "orm['aidadb.CodeAttrNumVal']", 'symmetrical': 'False'}),
-            'attrtxt': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['aidadb.CodeAttrTxt']", 'through': "orm['aidadb.CodeAttrTxtVal']", 'symmetrical': 'False'}),
-            'computer': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.Computer']", 'blank': 'True'}),
-            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'group': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['aidadb.CodeGroup']", 'symmetrical': 'False', 'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
-            'status': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.CodeStatus']"}),
-            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
-            'type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.CodeType']"}),
-            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
-        },
-        'aidadb.codeattrnum': {
-            'Meta': {'object_name': 'CodeAttrNum'},
-            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
-            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
-            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
-        },
-        'aidadb.codeattrnumval': {
-            'Meta': {'unique_together': "(('item', 'attr'),)", 'object_name': 'CodeAttrNumVal'},
-            'attr': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.CodeAttrNum']"}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'item': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.Code']"}),
-            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'val': ('django.db.models.fields.FloatField', [], {})
-        },
-        'aidadb.codeattrtxt': {
-            'Meta': {'object_name': 'CodeAttrTxt'},
-            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
-            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
-            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
-        },
-        'aidadb.codeattrtxtval': {
-            'Meta': {'unique_together': "(('item', 'attr'),)", 'object_name': 'CodeAttrTxtVal'},
-            'attr': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.CodeAttrTxt']"}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'item': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.Code']"}),
-            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'val': ('django.db.models.fields.TextField', [], {})
-        },
-        'aidadb.codecomment': {
-            'Meta': {'object_name': 'CodeComment'},
-            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'parent': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.CodeComment']", 'null': 'True', 'blank': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
-            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
-            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
-        },
-        'aidadb.codegroup': {
-            'Meta': {'object_name': 'CodeGroup'},
-            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'parent': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.CodeGroup']", 'null': 'True', 'blank': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
-            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
-            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
-        },
-        'aidadb.codestatus': {
-            'Meta': {'object_name': 'CodeStatus'},
-            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
-        },
-        'aidadb.codetype': {
-            'Meta': {'object_name': 'CodeType'},
-            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
-        },
-        'aidadb.computer': {
-            'Meta': {'object_name': 'Computer'},
-            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'hostname': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
-            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
-            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'}),
-            'workdir': ('django.db.models.fields.CharField', [], {'max_length': '255'})
-        },
-        'aidadb.computerusername': {
-            'Meta': {'unique_together': "(('aidauser', 'computer'),)", 'object_name': 'ComputerUsername'},
-            'aidauser': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'computerusername_remoteuser_set'", 'to': "orm['auth.User']"}),
-            'computer': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.Computer']"}),
-            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
-            'remoteusername': ('django.db.models.fields.CharField', [], {'max_length': '255'}),
-            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
-            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
-        },
-        'aidadb.element': {
-            'Meta': {'object_name': 'Element'},
-            'Z': ('django.db.models.fields.IntegerField', [], {}),
-            'attrnum': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['aidadb.ElementAttrNum']", 'through': "orm['aidadb.ElementAttrNumVal']", 'symmetrical': 'False'}),
-            'attrtxt': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['aidadb.ElementAttrTxt']", 'through': "orm['aidadb.ElementAttrTxtVal']", 'symmetrical': 'False'}),
-            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'group': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['aidadb.ElementGroup']", 'symmetrical': 'False', 'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
-        },
-        'aidadb.elementattrnum': {
-            'Meta': {'object_name': 'ElementAttrNum'},
-            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'isinput': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
-            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
-            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
-        },
-        'aidadb.elementattrnumval': {
-            'Meta': {'unique_together': "(('item', 'attr'),)", 'object_name': 'ElementAttrNumVal'},
-            'attr': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.ElementAttrNum']"}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'item': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.Element']"}),
-            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'val': ('django.db.models.fields.FloatField', [], {})
-        },
-        'aidadb.elementattrtxt': {
-            'Meta': {'object_name': 'ElementAttrTxt'},
-            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'isinput': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
-            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
-            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
-        },
-        'aidadb.elementattrtxtval': {
-            'Meta': {'unique_together': "(('item', 'attr'),)", 'object_name': 'ElementAttrTxtVal'},
-            'attr': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.ElementAttrTxt']"}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'item': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.Element']"}),
-            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'val': ('django.db.models.fields.TextField', [], {})
-        },
-        'aidadb.elementgroup': {
-            'Meta': {'object_name': 'ElementGroup'},
-            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'parent': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.ElementGroup']", 'null': 'True', 'blank': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
-            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
-            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
-        },
-        'aidadb.potential': {
-            'Meta': {'object_name': 'Potential'},
-            'attrnum': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['aidadb.PotentialAttrNum']", 'through': "orm['aidadb.PotentialAttrNumVal']", 'symmetrical': 'False'}),
-            'attrtxt': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['aidadb.PotentialAttrTxt']", 'through': "orm['aidadb.PotentialAttrTxtVal']", 'symmetrical': 'False'}),
-            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'element': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['aidadb.Element']", 'symmetrical': 'False'}),
-            'group': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['aidadb.PotentialGroup']", 'symmetrical': 'False', 'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
-            'status': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.PotentialStatus']"}),
-            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
-            'type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.PotentialType']"}),
-            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
-        },
-        'aidadb.potentialattrnum': {
-            'Meta': {'object_name': 'PotentialAttrNum'},
-            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'isinput': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
-            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
-            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
-        },
-        'aidadb.potentialattrnumval': {
-            'Meta': {'unique_together': "(('item', 'attr'),)", 'object_name': 'PotentialAttrNumVal'},
-            'attr': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.PotentialAttrNum']"}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'item': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.Potential']"}),
-            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'val': ('django.db.models.fields.FloatField', [], {})
-        },
-        'aidadb.potentialattrtxt': {
-            'Meta': {'object_name': 'PotentialAttrTxt'},
-            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'isinput': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
-            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
-            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
-        },
-        'aidadb.potentialattrtxtval': {
-            'Meta': {'unique_together': "(('item', 'attr'),)", 'object_name': 'PotentialAttrTxtVal'},
-            'attr': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.PotentialAttrTxt']"}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'item': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.Potential']"}),
-            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'val': ('django.db.models.fields.TextField', [], {})
-        },
-        'aidadb.potentialcomment': {
-            'Meta': {'object_name': 'PotentialComment'},
-            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'parent': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.PotentialComment']", 'null': 'True', 'blank': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
-            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
-            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
-        },
-        'aidadb.potentialgroup': {
-            'Meta': {'object_name': 'PotentialGroup'},
-            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'parent': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.PotentialGroup']", 'null': 'True', 'blank': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
-            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
-            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
-        },
-        'aidadb.potentialstatus': {
-            'Meta': {'object_name': 'PotentialStatus'},
-            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
-        },
-        'aidadb.potentialtype': {
-            'Meta': {'object_name': 'PotentialType'},
-            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
-        },
-        'aidadb.project': {
-            'Meta': {'object_name': 'Project'},
-            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
-        },
-        'aidadb.struc': {
-            'Meta': {'object_name': 'Struc'},
-            'attrnum': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['aidadb.StrucAttrNum']", 'through': "orm['aidadb.StrucAttrNumVal']", 'symmetrical': 'False'}),
-            'attrtxt': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['aidadb.StrucAttrTxt']", 'through': "orm['aidadb.StrucAttrTxtVal']", 'symmetrical': 'False'}),
-            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'detail': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'dim': ('django.db.models.fields.IntegerField', [], {}),
-            'element': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['aidadb.Element']", 'symmetrical': 'False'}),
-            'formula': ('django.db.models.fields.CharField', [], {'max_length': '255'}),
-            'group': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['aidadb.StrucGroup']", 'symmetrical': 'False', 'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
-            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
-            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
-        },
-        'aidadb.strucattrnum': {
-            'Meta': {'object_name': 'StrucAttrNum'},
-            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
-            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
-            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
-        },
-        'aidadb.strucattrnumval': {
-            'Meta': {'unique_together': "(('item', 'attr'),)", 'object_name': 'StrucAttrNumVal'},
-            'attr': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.StrucAttrNum']"}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'item': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.Struc']"}),
-            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'val': ('django.db.models.fields.FloatField', [], {})
-        },
-        'aidadb.strucattrtxt': {
-            'Meta': {'object_name': 'StrucAttrTxt'},
-            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
-            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
-            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
-        },
-        'aidadb.strucattrtxtval': {
-            'Meta': {'unique_together': "(('item', 'attr'),)", 'object_name': 'StrucAttrTxtVal'},
-            'attr': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.StrucAttrTxt']"}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'item': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.Struc']"}),
-            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'val': ('django.db.models.fields.TextField', [], {})
-        },
-        'aidadb.struccomment': {
-            'Meta': {'object_name': 'StrucComment'},
-            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'parent': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.StrucComment']", 'null': 'True', 'blank': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
-            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
-            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
-        },
-        'aidadb.strucgroup': {
-            'Meta': {'object_name': 'StrucGroup'},
-            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'parent': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['aidadb.StrucGroup']", 'null': 'True', 'blank': 'True'}),
-            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
-            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
-            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
-        },
         'auth.group': {
             'Meta': {'object_name': 'Group'},
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
@@ -1669,7 +1089,573 @@ class Migration(SchemaMigration):
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'model': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
             'name': ('django.db.models.fields.CharField', [], {'max_length': '100'})
+        },
+        'main.basis': {
+            'Meta': {'object_name': 'Basis'},
+            'attrnum': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['main.BasisAttrNum']", 'through': "orm['main.BasisAttrNumVal']", 'symmetrical': 'False'}),
+            'attrtxt': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['main.BasisAttrTxt']", 'through': "orm['main.BasisAttrTxtVal']", 'symmetrical': 'False'}),
+            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'element': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['main.Element']", 'symmetrical': 'False'}),
+            'group': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['main.BasisGroup']", 'symmetrical': 'False', 'blank': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
+            'status': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.BasisStatus']"}),
+            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.BasisType']"}),
+            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
+            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
+        },
+        'main.basisattrnum': {
+            'Meta': {'object_name': 'BasisAttrNum'},
+            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'isinput': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
+            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
+            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
+        },
+        'main.basisattrnumval': {
+            'Meta': {'unique_together': "(('item', 'attr'),)", 'object_name': 'BasisAttrNumVal'},
+            'attr': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.BasisAttrNum']"}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'item': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.Basis']"}),
+            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'val': ('django.db.models.fields.FloatField', [], {})
+        },
+        'main.basisattrtxt': {
+            'Meta': {'object_name': 'BasisAttrTxt'},
+            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'isinput': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
+            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
+            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
+        },
+        'main.basisattrtxtval': {
+            'Meta': {'unique_together': "(('item', 'attr'),)", 'object_name': 'BasisAttrTxtVal'},
+            'attr': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.BasisAttrTxt']"}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'item': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.Basis']"}),
+            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'val': ('django.db.models.fields.TextField', [], {})
+        },
+        'main.basiscomment': {
+            'Meta': {'object_name': 'BasisComment'},
+            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'parent': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.BasisComment']", 'null': 'True', 'blank': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
+            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
+            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
+        },
+        'main.basisgroup': {
+            'Meta': {'object_name': 'BasisGroup'},
+            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'parent': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.BasisGroup']", 'null': 'True', 'blank': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
+            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
+            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
+        },
+        'main.basisstatus': {
+            'Meta': {'object_name': 'BasisStatus'},
+            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
+        },
+        'main.basistype': {
+            'Meta': {'object_name': 'BasisType'},
+            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
+        },
+        'main.calc': {
+            'Meta': {'object_name': 'Calc'},
+            'attrnum': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['main.CalcAttrNum']", 'through': "orm['main.CalcAttrNumVal']", 'symmetrical': 'False'}),
+            'attrtxt': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['main.CalcAttrTxt']", 'through': "orm['main.CalcAttrTxtVal']", 'symmetrical': 'False'}),
+            'basis': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['main.Basis']", 'symmetrical': 'False', 'blank': 'True'}),
+            'code': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.Code']"}),
+            'computer': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.Computer']"}),
+            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'group': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['main.CalcGroup']", 'symmetrical': 'False', 'blank': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'inppot': ('django.db.models.fields.related.ManyToManyField', [], {'symmetrical': 'False', 'related_name': "'inpcalc'", 'blank': 'True', 'to': "orm['main.Potential']"}),
+            'inpstruc': ('django.db.models.fields.related.ManyToManyField', [], {'symmetrical': 'False', 'related_name': "'inpcalc'", 'blank': 'True', 'to': "orm['main.Struc']"}),
+            'outpot': ('django.db.models.fields.related.ManyToManyField', [], {'symmetrical': 'False', 'related_name': "'outcalc'", 'blank': 'True', 'to': "orm['main.Potential']"}),
+            'outstruc': ('django.db.models.fields.related.ManyToManyField', [], {'symmetrical': 'False', 'related_name': "'outcalc'", 'blank': 'True', 'to': "orm['main.Struc']"}),
+            'parent': ('django.db.models.fields.related.ManyToManyField', [], {'symmetrical': 'False', 'related_name': "'child'", 'blank': 'True', 'to': "orm['main.Calc']"}),
+            'project': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.Project']"}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
+            'status': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.CalcStatus']"}),
+            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.CalcType']"}),
+            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
+            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
+        },
+        'main.calcattrnum': {
+            'Meta': {'object_name': 'CalcAttrNum'},
+            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'isinput': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
+            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
+            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
+        },
+        'main.calcattrnumval': {
+            'Meta': {'unique_together': "(('item', 'attr'),)", 'object_name': 'CalcAttrNumVal'},
+            'attr': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.CalcAttrNum']"}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'item': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.Calc']"}),
+            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'val': ('django.db.models.fields.FloatField', [], {})
+        },
+        'main.calcattrtxt': {
+            'Meta': {'object_name': 'CalcAttrTxt'},
+            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'isinput': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
+            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
+            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
+        },
+        'main.calcattrtxtval': {
+            'Meta': {'unique_together': "(('item', 'attr'),)", 'object_name': 'CalcAttrTxtVal'},
+            'attr': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.CalcAttrTxt']"}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'item': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.Calc']"}),
+            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'val': ('django.db.models.fields.TextField', [], {})
+        },
+        'main.calccomment': {
+            'Meta': {'object_name': 'CalcComment'},
+            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'parent': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.CalcComment']", 'null': 'True', 'blank': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
+            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
+            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
+        },
+        'main.calcgroup': {
+            'Meta': {'object_name': 'CalcGroup'},
+            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'parent': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.CalcGroup']", 'null': 'True', 'blank': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
+            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
+            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
+        },
+        'main.calcstatus': {
+            'Meta': {'object_name': 'CalcStatus'},
+            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
+        },
+        'main.calctype': {
+            'Meta': {'object_name': 'CalcType'},
+            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
+        },
+        'main.code': {
+            'Meta': {'object_name': 'Code'},
+            'attrnum': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['main.CodeAttrNum']", 'through': "orm['main.CodeAttrNumVal']", 'symmetrical': 'False'}),
+            'attrtxt': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['main.CodeAttrTxt']", 'through': "orm['main.CodeAttrTxtVal']", 'symmetrical': 'False'}),
+            'computer': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.Computer']", 'blank': 'True'}),
+            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'group': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['main.CodeGroup']", 'symmetrical': 'False', 'blank': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
+            'status': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.CodeStatus']"}),
+            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.CodeType']"}),
+            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
+            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
+        },
+        'main.codeattrnum': {
+            'Meta': {'object_name': 'CodeAttrNum'},
+            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
+            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
+            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
+        },
+        'main.codeattrnumval': {
+            'Meta': {'unique_together': "(('item', 'attr'),)", 'object_name': 'CodeAttrNumVal'},
+            'attr': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.CodeAttrNum']"}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'item': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.Code']"}),
+            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'val': ('django.db.models.fields.FloatField', [], {})
+        },
+        'main.codeattrtxt': {
+            'Meta': {'object_name': 'CodeAttrTxt'},
+            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
+            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
+            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
+        },
+        'main.codeattrtxtval': {
+            'Meta': {'unique_together': "(('item', 'attr'),)", 'object_name': 'CodeAttrTxtVal'},
+            'attr': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.CodeAttrTxt']"}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'item': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.Code']"}),
+            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'val': ('django.db.models.fields.TextField', [], {})
+        },
+        'main.codecomment': {
+            'Meta': {'object_name': 'CodeComment'},
+            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'parent': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.CodeComment']", 'null': 'True', 'blank': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
+            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
+            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
+        },
+        'main.codegroup': {
+            'Meta': {'object_name': 'CodeGroup'},
+            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'parent': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.CodeGroup']", 'null': 'True', 'blank': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
+            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
+            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
+        },
+        'main.codestatus': {
+            'Meta': {'object_name': 'CodeStatus'},
+            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
+        },
+        'main.codetype': {
+            'Meta': {'object_name': 'CodeType'},
+            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
+        },
+        'main.computer': {
+            'Meta': {'object_name': 'Computer'},
+            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'hostname': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
+            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
+            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'}),
+            'workdir': ('django.db.models.fields.CharField', [], {'max_length': '255'})
+        },
+        'main.computerusername': {
+            'Meta': {'unique_together': "(('aidauser', 'computer'),)", 'object_name': 'ComputerUsername'},
+            'aidauser': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
+            'computer': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.Computer']"}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'remoteusername': ('django.db.models.fields.CharField', [], {'max_length': '255'})
+        },
+        'main.element': {
+            'Meta': {'object_name': 'Element'},
+            'Z': ('django.db.models.fields.IntegerField', [], {'unique': 'True'}),
+            'attrnum': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['main.ElementAttrNum']", 'through': "orm['main.ElementAttrNumVal']", 'symmetrical': 'False'}),
+            'attrtxt': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['main.ElementAttrTxt']", 'through': "orm['main.ElementAttrTxtVal']", 'symmetrical': 'False'}),
+            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'group': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['main.ElementGroup']", 'symmetrical': 'False', 'blank': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
+        },
+        'main.elementattrnum': {
+            'Meta': {'object_name': 'ElementAttrNum'},
+            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'isinput': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
+            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
+            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
+        },
+        'main.elementattrnumval': {
+            'Meta': {'unique_together': "(('item', 'attr'),)", 'object_name': 'ElementAttrNumVal'},
+            'attr': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.ElementAttrNum']"}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'item': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.Element']"}),
+            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'val': ('django.db.models.fields.FloatField', [], {})
+        },
+        'main.elementattrtxt': {
+            'Meta': {'object_name': 'ElementAttrTxt'},
+            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'isinput': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
+            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
+            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
+        },
+        'main.elementattrtxtval': {
+            'Meta': {'unique_together': "(('item', 'attr'),)", 'object_name': 'ElementAttrTxtVal'},
+            'attr': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.ElementAttrTxt']"}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'item': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.Element']"}),
+            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'val': ('django.db.models.fields.TextField', [], {})
+        },
+        'main.elementgroup': {
+            'Meta': {'object_name': 'ElementGroup'},
+            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'parent': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.ElementGroup']", 'null': 'True', 'blank': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
+            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
+            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
+        },
+        'main.potential': {
+            'Meta': {'object_name': 'Potential'},
+            'attrnum': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['main.PotentialAttrNum']", 'through': "orm['main.PotentialAttrNumVal']", 'symmetrical': 'False'}),
+            'attrtxt': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['main.PotentialAttrTxt']", 'through': "orm['main.PotentialAttrTxtVal']", 'symmetrical': 'False'}),
+            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'element': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['main.Element']", 'symmetrical': 'False'}),
+            'group': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['main.PotentialGroup']", 'symmetrical': 'False', 'blank': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
+            'status': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.PotentialStatus']"}),
+            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'type': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.PotentialType']"}),
+            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
+            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
+        },
+        'main.potentialattrnum': {
+            'Meta': {'object_name': 'PotentialAttrNum'},
+            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'isinput': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
+            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
+            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
+        },
+        'main.potentialattrnumval': {
+            'Meta': {'unique_together': "(('item', 'attr'),)", 'object_name': 'PotentialAttrNumVal'},
+            'attr': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.PotentialAttrNum']"}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'item': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.Potential']"}),
+            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'val': ('django.db.models.fields.FloatField', [], {})
+        },
+        'main.potentialattrtxt': {
+            'Meta': {'object_name': 'PotentialAttrTxt'},
+            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'isinput': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
+            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
+            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
+        },
+        'main.potentialattrtxtval': {
+            'Meta': {'unique_together': "(('item', 'attr'),)", 'object_name': 'PotentialAttrTxtVal'},
+            'attr': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.PotentialAttrTxt']"}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'item': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.Potential']"}),
+            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'val': ('django.db.models.fields.TextField', [], {})
+        },
+        'main.potentialcomment': {
+            'Meta': {'object_name': 'PotentialComment'},
+            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'parent': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.PotentialComment']", 'null': 'True', 'blank': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
+            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
+            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
+        },
+        'main.potentialgroup': {
+            'Meta': {'object_name': 'PotentialGroup'},
+            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'parent': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.PotentialGroup']", 'null': 'True', 'blank': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
+            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
+            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
+        },
+        'main.potentialstatus': {
+            'Meta': {'object_name': 'PotentialStatus'},
+            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
+        },
+        'main.potentialtype': {
+            'Meta': {'object_name': 'PotentialType'},
+            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
+        },
+        'main.project': {
+            'Meta': {'object_name': 'Project'},
+            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
+        },
+        'main.struc': {
+            'Meta': {'object_name': 'Struc'},
+            'attrnum': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['main.StrucAttrNum']", 'through': "orm['main.StrucAttrNumVal']", 'symmetrical': 'False'}),
+            'attrtxt': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['main.StrucAttrTxt']", 'through': "orm['main.StrucAttrTxtVal']", 'symmetrical': 'False'}),
+            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'detail': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'dim': ('django.db.models.fields.IntegerField', [], {}),
+            'element': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['main.Element']", 'symmetrical': 'False'}),
+            'formula': ('django.db.models.fields.CharField', [], {'max_length': '255'}),
+            'group': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['main.StrucGroup']", 'symmetrical': 'False', 'blank': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
+            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
+            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
+        },
+        'main.strucattrnum': {
+            'Meta': {'object_name': 'StrucAttrNum'},
+            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
+            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
+            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
+        },
+        'main.strucattrnumval': {
+            'Meta': {'unique_together': "(('item', 'attr'),)", 'object_name': 'StrucAttrNumVal'},
+            'attr': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.StrucAttrNum']"}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'item': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.Struc']"}),
+            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'val': ('django.db.models.fields.FloatField', [], {})
+        },
+        'main.strucattrtxt': {
+            'Meta': {'object_name': 'StrucAttrTxt'},
+            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
+            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
+            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
+        },
+        'main.strucattrtxtval': {
+            'Meta': {'unique_together': "(('item', 'attr'),)", 'object_name': 'StrucAttrTxtVal'},
+            'attr': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.StrucAttrTxt']"}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'item': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.Struc']"}),
+            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'val': ('django.db.models.fields.TextField', [], {})
+        },
+        'main.struccomment': {
+            'Meta': {'object_name': 'StrucComment'},
+            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'parent': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.StrucComment']", 'null': 'True', 'blank': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
+            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
+            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
+        },
+        'main.strucgroup': {
+            'Meta': {'object_name': 'StrucGroup'},
+            'data': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'parent': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['main.StrucGroup']", 'null': 'True', 'blank': 'True'}),
+            'quality': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
+            'time': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'title': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '255'}),
+            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
+            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
         }
     }
 
-    complete_apps = ['aidadb']
+    complete_apps = ['main']

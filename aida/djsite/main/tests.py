@@ -1,10 +1,11 @@
 """
 This file contains tests for AIDA.
 They are executed when when you run "manage.py test" or
-"manage.py test aidadb" (much faster)
+"manage.py test main" (much faster)
 
 """
 from django.utils import unittest
+import aida
 from aida.djsite.main.models import CalcStatus, CalcType, Code, CodeStatus
 from aida.djsite.main.models import CodeType, Computer, Project, Calc
 from aida.djsite.main.models import Element, Potential, PotentialStatus, PotentialType
@@ -17,11 +18,8 @@ import os, os.path
 import aida.djsite.main
 from aida.repository.potential import add_pseudo_file
 from aida.common.exceptions import ValidationError
-import aida
 
-
-
-
+# Get the absolute path of the testdata folder, related to the aida module
 testdata_folder = os.path.join(
     os.path.dirname(os.path.abspath(aida.__file__)),os.path.pardir,'testdata')
 
@@ -128,23 +126,19 @@ class ElementTest(unittest.TestCase):
         """
         a = Element.objects.get(Z=1)
         self.assertEqual(a.title, "H")
-        self.assertAlmostEqual(json.loads(a.data)['mass'], 1.00794, places=2)
 
         a = Element.objects.get(Z=6)
         self.assertEqual(a.title, "C")
-        self.assertAlmostEqual(json.loads(a.data)['mass'], 12.011, places=2)
 
         a = Element.objects.get(Z=8)
         self.assertEqual(a.title, "O")
-        self.assertAlmostEqual(json.loads(a.data)['mass'], 16., places=2)
 
-        a = Element.objects.get(Z=56)
-        self.assertEqual(a.title, "Ba")
-        self.assertAlmostEqual(json.loads(a.data)['mass'], 137., places=0)
+        # Test also the other way round
+        a = Element.objects.get(title="Ba")
+        self.assertEqual(a.Z, 56)
 
-        a = Element.objects.get(Z=22)
-        self.assertEqual(a.title, "Ti")
-        self.assertAlmostEqual(json.loads(a.data)['mass'], 48., places=0)
+        a = Element.objects.get(title="Ti")
+        self.assertEqual(a.Z, 22)
                          
     def test_no_zequalszero(self):
         """

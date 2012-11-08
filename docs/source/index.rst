@@ -11,12 +11,12 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
-   aidasrv/index
-   aidalib/index
+   jobmanager/index
+   common/index
 
-   Installation and Deployment <installation>
-   AIDADB Modules <aidadb>
-   Developer's Guide <developers>
+   Installation and Deployment [OUTDATED] <installation> 
+   aida.common Modules [OUTDATED] <aida.common>
+   Developer's Guide <developers> 
 
 
 Indices and tables
@@ -29,5 +29,5 @@ Indices and tables
 Modules provided with aida
 ++++++++++++++++++++++++++
 
-* :doc:`aidasrv <aidasrv/index>` module
-* :doc:`aidalib <aidalib/index>` module
+* :doc:`aida.jobmanager <jobmanager/index>` module
+* :doc:`aida.common <common/index>` module

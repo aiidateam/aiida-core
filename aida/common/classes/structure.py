@@ -2,6 +2,8 @@
 This module defines the classes for structures and all related functions to
 operate on them.
 """
+import itertools
+
 elements = {
     1: {   'mass': 1.0079400000000001, 'name': 'Hydrogen', 'symbol': 'H'},
     2: {   'mass': 4.0026000000000002, 'name': 'Helium', 'symbol': 'He'},
@@ -260,6 +262,11 @@ class Structure(object):
         if pbc is not None:
             self.cell = cell
             self.pbc = pbc
+        elif isinstance(cell,Structure):
+            self.cell = cell.cell
+            self.pbc = cell.pbc
+            for site in cell.sites:
+                self.appendSite(site)
         elif _is_ase_atoms(cell):
             # Read the ase structure
             import ase
@@ -305,6 +312,23 @@ class Structure(object):
             'sites': [site.get_raw() for site in self.sites],
             }
 
+    def get_elements(self):
+        """
+        Return a list of elements, as obtained by reading all sites of the
+        structure, keeping all duplicates.
+        """
+        return list(itertools.chain.from_iterable(
+                site.symbols for site in self.sites))
+
+    def get_formula(self):
+        """
+        Return a string with a formula for the given element.
+        
+        TODO: implement it better! (like Si2 instead of SiSi, Si0.4Ge0.6 instead
+        of SiGe, etc.)
+        """
+        return "".join(self.get_elements())
+
     def get_ase(self):
         """
         Return a ASE object corresponding to this structure. Requires to be able to import ase.
@@ -333,6 +357,9 @@ class Structure(object):
     def appendSite(self,site):
         """
         Append a site to the structure.
+
+        TODO: 
+            change this function to append a COPY of the provided site.
 
         Args:
             site: the site to append, must be a StructureSite object.

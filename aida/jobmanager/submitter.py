@@ -1,3 +1,4 @@
+from __future__ import print_function
 import shutil
 import sys
 import os
@@ -24,12 +25,13 @@ def submit_calc(calc):
     ## sure that we are submitting the job only once. Possibly with a second
     ## field saying that we entered the submit_calc, or that we actually
     ## submitted it.
-    # For the moment, if the folder exists, I just stop with a 'random'
-    # exception
+    # For the moment, if the folder exists, I just print a warning and
+    # delete the folder!!
     # TODO: FIX THIS!
     if os.path.isdir(calc.get_local_dir()):
-        raise OSError('The folder {} already exists!'.format(
-                calc.get_local_dir()))
+        print('The folder {} already exists! I DELETE IT.'.format(
+                calc.get_local_dir()),file=sys.stderr)
+        shutil.rmtree(calc.get_local_dir())
 
     ## Clear directories, if present (past submission failed), and create 
     ## empty new ones.

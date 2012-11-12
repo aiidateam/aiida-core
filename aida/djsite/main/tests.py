@@ -18,6 +18,8 @@ import os, os.path
 import aida.djsite.main
 from aida.repository.potential import add_pseudo_file
 from aida.common.exceptions import ValidationError
+from aida.common.classes import structure
+from aida.repository.structure import add_structure
 
 # Get the absolute path of the testdata folder, related to the aida module
 testdata_folder = os.path.join(
@@ -155,13 +157,12 @@ class SubmissionTest(unittest.TestCase):
     # setUp, even if possibly redundant
     #fixtures = ['testcalcstatus']
 
-    @classmethod
-    def setUpClass(cls):
+    def test_submission(self):
         """
-        Set up things once for all tests of this class. Important otherwise
-        data is added more than once to the database
+        Tests that I can submit a calculation.
         """
-        AuthUser.objects.get_or_create(username=getpass.getuser())
+        testuser, was_created = AuthUser.objects.get_or_create(
+            username=getpass.getuser())
         # To be loaded in the correct order!
         management.call_command('loaddata', 'testproject', verbosity=0)
         management.call_command('loaddata', 'testcomputer', verbosity=0)
@@ -180,7 +181,7 @@ class SubmissionTest(unittest.TestCase):
 
         input_data = {
             'CONTROL': {
-                'calculation': 'scf',
+                'calculation': 'relax',
                 'restart_mode': 'from_scratch',
                 },
             'SYSTEM': {
@@ -190,32 +191,41 @@ class SubmissionTest(unittest.TestCase):
                 },
             'ELECTRONS': {
                 'mixing_beta': 0.3,
-                }
+                },
+            'K_POINTS': {
+                'type': 'automatic',
+                'points': [4, 4, 4, 0, 0, 0],
+                },
             }
 
         data_dict={}
         data_dict['input_data'] = input_data
        
         the_data = json.dumps(data_dict)
-        cls.the_calc = Calc.objects.create(title="test calculation",
+        self.the_calc = Calc.objects.create(title="test calculation",
                                            computer=computer,
                                            code=code,project=project,
                                            status=initial_status,
                                            type=calc_type,
                                            data=the_data)
 
-        ## TODO: add also a structure and link it as input structure!
-        ## possibly restructure in a more clever way this Test class.
+        # There are still no input structures attached
+        with self.assertRaises(ValidationError):
+            self.the_calc.submit()
+            
+        a = 5.43
+        struc = structure.Structure(cell=((a/2.,a/2.,0.),
+                                          (a/2.,0.,a/2.),
+                                          (0.,a/2.,a/2.)),
+                                    pbc=(True,True,True))
+        struc.appendSite(structure.StructureSite(symbols='Si',position=(0.,0.,0.)))
+        struc.appendSite(structure.StructureSite(symbols='Si',
+                                                 position=(a/2.,a/2.,a/2.)))
 
-    def test_submission(self):
-        """
-        Tests that I can submit a calculation.
-        """
+        
+        struc_django = add_structure(struc,title='Si bulk cell',
+                                     user=testuser,dim=3)
+        self.the_calc.inpstruc.add(struc_django)
+
         self.the_calc.submit()
 
-# Note: tests must start with 'test_'
-#    def test_failing_test(self):
-#        """
-#        Failing test to debug the testing suite.
-#        """
-#        self.assertEqual(1 + 1, 3)

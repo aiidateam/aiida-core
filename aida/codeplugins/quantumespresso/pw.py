@@ -1,7 +1,14 @@
+"""
+Plugin to create a Quantum Espresso pw.x file.
+
+TODO: many cards missing
+TODO: implement if_pos
+"""
 from aida.codeplugins.exceptions import InputValidationError
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 import json
 import os
+from aida.common.classes.structure import Structure
 
 # List of namelists (uppercase) that are allowed to be found in the
 # input_data, in the correct order
@@ -122,7 +129,7 @@ def create_calc_input(calc, infile_dir):
     input_filename = os.path.join(infile_dir,retdict['stdin'])
 
     try: 
-        input_structure = calc.inpstruc.get()
+        dj_input_structure = calc.inpstruc.get()
     except (ObjectDoesNotExist, MultipleObjectsReturned):
         raise InputValidationError('One and only one input structure must be'
                                    'attached to a QE pw.x calculation')
@@ -152,6 +159,80 @@ def create_calc_input(calc, infile_dir):
         raise InputValidationError("Unknown 'calculation' value in "
                                    "CONTROL namelist {}".format(sugg_string))
 
+    # ============ I prepare the input structure data =============
+    input_structure = Structure(json.loads(dj_input_structure.detail))
+    cell_parameters_card = "CELL_PARAMETERS angstrom\n"
+    # TODO: += is slow in concatenating strings, improve
+    for vector in input_structure.cell:
+        cell_parameters_card += "{0:18.10f} {1:18.10f} {2:18.10f}\n".format(*vector)
+
+    atomic_positions_card = "ATOMIC_POSITIONS angstrom\n"
+    # TODO: += is slow in concatenating strings, improve
+    # TODO: implement if_pos
+    for idx, site in enumerate(input_structure.sites):
+        if site.is_alloy() or site.has_vacancies():
+            raise InputValidationError("The {}-th site is an alloy or has "
+                "vacancies. This is not allowed for pw.x input structures.")
+        atomic_positions_card += (
+            "{0} {1:18.10f} {2:18.10f} {3:18.10f}\n".format(
+                site.symbols[0].ljust(4),
+                *site.position))
+
+    try:
+        k_points = input_data['K_POINTS']
+    except KeyError: 
+        raise InputValidationError("No K_POINTS specified.")
+
+    try:
+        k_points_type = k_points['type']
+    except KeyError: 
+        raise InputValidationError("No 'type' specified in K_POINTS card.")
+    
+    # ============ I prepare the k-points =============
+    if k_points_type != "gamma":
+        try:
+            k_points_list = k_points["points"]
+            num_k_points = len(k_points_list)
+        except KeyError:
+            raise InputValidationError("'K_POINTS' does not contain a 'points' "
+                                       "key")
+        except TypeError:
+            raise QEInputValidationError("'points' key is not a list")
+        if num_k_points == 0:
+            raise QEInputValidationError("At least one k point must be "
+                "provided for non-gamma calculations")
+
+    k_points_card = "K_POINTS {}\n".format(k_points_type)
+
+    if k_points_type == "automatic":
+        if len(k_points_list) != 6:
+            raise InputValidationError("k_points type is automatic, but "
+                "'points' is not a list of 6 integers")
+        try: 
+            k_points_card += ("{:d} {:d} {:d} {:d} {:d} {:d}\n"
+                             "".format(*k_points_list))
+        except ValueError:
+            raise InputValidationError("Some elements  of the 'points' key "
+                "in the K_POINTS card are not integers")
+            
+    elif k_points_type == "gamma":
+        # nothing to be written in this case
+        pass
+    else:
+        k_points_card += "{:d}\n".format(num_k_points)
+        try:
+            if all(len(i)==4 for i in k_points_list):
+                for kpoint in k_points_list:
+                    k_points_card += ("  {:18.10f} {:18.10f} {:18.10f} {:18.10f}"
+                        "\n".format(kpoint))
+            else:
+                raise QEInputValidationError("points must either all have "
+                    "length four (3 coordinates + last value: weight)")
+        except (KeyError, TypeError):
+            raise QEInputValidationError("'points' must be a list of k points, "
+                "each k point must be provided as a list of 4 items: its "
+                "coordinates and its weight")
+
     with open(input_filename,'w') as infile:
         for namelist in namelists_toprint:
             infile.write("&{0}\n".format(namelist.upper()))           
@@ -164,8 +245,19 @@ def create_calc_input(calc, infile_dir):
                 # leave it empty
                 pass
             infile.write("/\n")
+        # TODO: write ATOMIC_SPECIES
             
- 
+        infile.write(atomic_positions_card)
+
+        infile.write(k_points_card)
+            
+        infile.write(cell_parameters_card)
+
+        #TODO: write CONSTRAINTS
+
+        #TODO: write OCCUPATIONS
+                
+   
 
     return retdict
 

@@ -1,5 +1,6 @@
 from django.db import models as m
 from django_extensions.db.fields import UUIDField
+from django_extensions.db.fields.json import JSONField
 from django.contrib.auth.models import User as AuthUser 
 import getpass
 import aida.jobmanager.submitter
@@ -15,47 +16,53 @@ from aida.djsite.settings.settings import LOCAL_REPOSITORY
 #-------------------- Abstract Base Classes ------------------------
 
 class BaseClass(m.Model):
-    uuid = UUIDField(auto=True)
-    title = m.CharField(max_length=255, unique=True)
+    # UUIDField by default uses version 1 (host ID, sequence number and current time) 
+    uuid = UUIDField(auto=True,version=1)
     description = m.TextField(blank=True)
-    data = m.TextField(blank=True)
-    def __unicode__(self):
-        return self.title
+    data = JSONField()
+
     class Meta:
         abstract = True
 
-qualitychoice = ((1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5'))     
+
+# qualitychoice = ((1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5'))     
+
  
 class DataClass(BaseClass):
-#    hdata = m.TextField(blank=True)
-    time = m.DateTimeField(auto_now=True)
+    ctime = m.DateTimeField(auto_now_add=True)
+    mtime = m.DateTimeField(auto_now=True)
     user = m.ForeignKey(AuthUser)
-    quality = m.IntegerField(choices=qualitychoice, null=True, blank=True)  
-    def save(self, *args, **kwargs):
-        uname = getpass.getuser()
-        self.user = AuthUser.objects.get(username=uname)
-        super(DataClass, self).save(*args, **kwargs)
+# use an attribute instead
+#    quality = m.IntegerField(choices=qualitychoice, null=True, blank=True)
+
     class Meta:
         abstract = True    
 
-class AttrClass(DataClass):
+
+class AttrClass(BaseClass):
+    name = m.CharField(max_length=255, unique=True)
     isinput = m.BooleanField(default=True)
+
     class Meta:
         abstract = True    
 
 
 class GroupClass(DataClass):
+    name = m.CharField(max_length=255, unique=True)
     parent = m.ForeignKey('self', blank=True, null=True)
+
     class Meta:
         abstract = True       
 
 
 class CommentClass(DataClass):
+    name = m.CharField(max_length=255, unique=True)
     parent = m.ForeignKey('self', blank=True, null=True)
+    comment = m.TextField(blank=True)
+
     class Meta:
         abstract = True  
         
-    
 #
 #class EntityClass(DataClass):
 #    ''' 
@@ -81,22 +88,22 @@ class CommentClass(DataClass):
 
 #---------------- Primary Classes ---------------------------------
 
-class Calc(DataClass):
+class Calculation(DataClass):
     code = m.ForeignKey('Code')
     project = m.ForeignKey('Project')
     status = m.ForeignKey('CalcStatus')
     type = m.ForeignKey('CalcType') #to determine type, relax, tbd
     computer = m.ForeignKey('Computer') #computer to which to submit
-    inpstruc = m.ManyToManyField('Struc', related_name='inpcalc', blank=True)
-    outstruc = m.ManyToManyField('Struc', related_name='outcalc', blank=True)
+    instructures = m.ManyToManyField('Structure', related_name='incalculations', blank=True)
+    outstructures = m.ManyToManyField('Structure', related_name='outcalculations', blank=True)
 #    method = m.ManyToManyField('Method', blank=True)
-    inppot = m.ManyToManyField('Potential', related_name='inpcalc', blank=True)
-    outpot = m.ManyToManyField('Potential', related_name='outcalc', blank=True)
+    inpotentials = m.ManyToManyField('Potential', related_name='incalculations', blank=True)
+    outpotentials = m.ManyToManyField('Potential', related_name='outcalculations', blank=True)
     basis = m.ManyToManyField('Basis', blank=True)
     attrnum = m.ManyToManyField('CalcAttrNum', through = 'CalcAttrNumVal')
     attrtxt = m.ManyToManyField('CalcAttrTxt', through = 'CalcAttrTxtVal')
-    group = m.ManyToManyField('CalcGroup', blank=True)
-    parent = m.ManyToManyField('self', related_name='child',
+    groups = m.ManyToManyField('CalcGroup', blank=True)
+    parents = m.ManyToManyField('self', related_name='children',
                                symmetrical=False,
                                blank=True)
 
@@ -111,35 +118,6 @@ class Calc(DataClass):
         """
         aida.jobmanager.submitter.submit_calc(self)
 
-    def get_local_dir(self):
-        """
-        Returns the path to the directory in the local repository
-        containing all the information of the present calculation.
-        """
-        return os.path.join(LOCAL_REPOSITORY, 'calcs', unicode(self.id))
-
-    def get_local_indir(self):
-        """
-        Returns the subdirectory of the local repository containing the 
-        input files of the current calculation.
-        """
-        return os.path.join(self.get_local_dir(), 'inputs')
-
-    def get_local_outdir(self):
-        """
-        Returns the subdirectory of the local repository containing the 
-        output files retrieved from the current calculation.
-        """
-        return os.path.join(self.get_local_dir(), 'outputs')
-
-    def get_local_attachdir(self):
-        """
-        Returns the subdirectory of the local repository containing the 
-        files attached by the user to the current calculation
-        (e.g. documentation, comments, ...)
-        """
-        return os.path.join(self.get_local_dir(), 'attachments')
-
 #    flowitems = m.ForeignKey('self', symmetrical=False, blank=True, related_name='works')
 #    workflow = m.ForeignKey('Workflow')
 #    qjob = m.IntegerField(blank=True, null=True)
@@ -148,41 +126,50 @@ class Calc(DataClass):
 class CalcGroup(GroupClass):  
     pass
     
-class CalcStatus(BaseClass):     
+
+class CalcStatus(BaseClass): 
+    name = m.CharField(max_length=255, unique=True)    
     class Meta:
         verbose_name_plural = "Calc statuses"
 
 
-class Project(BaseClass):  
+class Project(DataClass):
+    name = m.CharField(max_length=255, unique=True)
     pass
 
-class CalcType(BaseClass):   
+
+class CalcType(BaseClass):
+    name = m.CharField(max_length=255, unique=True)
     pass 
+
 
 class CalcComment(CommentClass):
     pass
 
+
 class CalcAttrTxt(AttrClass):   
     pass
+
 
 class CalcAttrNum(AttrClass):  
     pass
 
-class CalcAttrTxtVal(m.Model):
-    item = m.ForeignKey('Calc')
-    attr = m.ForeignKey('CalcAttrTxt')
-    val = m.TextField()
-    time = m.DateTimeField(auto_now=True)
-    class Meta:
-        unique_together=('item','attr')
 
-class CalcAttrNumVal(m.Model):
-    item = m.ForeignKey('Calc')
-    attr = m.ForeignKey('CalcAttrNum')
-    val = m.FloatField()
-    time = m.DateTimeField(auto_now=True)
+class CalcAttrTxtVal(DataClass):
+    calculation = m.ForeignKey('Calculation')
+    attribute = m.ForeignKey('CalcAttrTxt')
+    value = m.TextField()
+
     class Meta:
-        unique_together=('item','attr')
+        unique_together=('calculation','attribute')
+
+
+class CalcAttrNumVal(DataClass):
+    calculation = m.ForeignKey('Calculation')
+    attribute = m.ForeignKey('CalcAttrNum')
+    value = m.FloatField()
+    class Meta:
+        unique_together=('calculation','attribute')
 
 class Computer(DataClass):
     """Table of computers or clusters.
@@ -210,24 +197,26 @@ class ComputerUsername(m.Model):
 
     Attributes:
         computer: the remote computer
-        aidauser: the aida user
+        user: the local aida user
         remoteusername: the username of the aida user on the remote computer
     """
     computer = m.ForeignKey('Computer')
-    aidauser = m.ForeignKey(AuthUser)
+    user = m.ForeignKey(AuthUser)
     remoteusername = m.CharField(max_length=255)
 
     class Meta:
-        unique_together = (("aidauser", "computer"),)
+        unique_together = (("user", "computer"),)
 
     def __unicode__(self):
-        return self.aidauser.username + " => " + \
+        return self.user.username + " => " + \
             self.remoteusername + "@" + self.computer.hostname
 
 
 ################################################
 
 class Code(DataClass):
+    name = m.CharField(max_length=255,unique=True)
+    version = m.CharField(max_length=255)
     type = m.ForeignKey('CodeType') #to identify which parser/plugin
     status = m.ForeignKey('CodeStatus') #need to define
     computer = m.ForeignKey('Computer', blank=True) #for checking computer compatibility, empty means all. 
@@ -237,48 +226,57 @@ class Code(DataClass):
     def __unicode__(self):
         return self.title
 
+
 class CodeGroup(GroupClass):  
     pass    
+
     
 class CodeComment(CommentClass): 
     pass
 
+
 class CodeStatus(BaseClass):   
+    name = m.CharField(max_length=255, unique=True)    
 
     class Meta:
         verbose_name_plural = "Code statuses"
 
+
 class CodeType(BaseClass):   
     """
-    This class defines the code type. Note that the code title should follow
+    This class defines the code type. Note that the CodeType name should follow
     a specific syntax since from the title AIDA retrieves which input (and
     output) plugins to use.
     The conversion is described in the functions of the 
     :mod:`aida.codeplugins` module.
     """
+    name = m.CharField(max_length=255, unique=True)    
+
+
+class CodeAttrTxt(AttrClass):  
     pass
 
-class CodeAttrTxt(DataClass):  
+
+class CodeAttrNum(AttrClass):   
     pass
 
-class CodeAttrNum(DataClass):   
-    pass
 
-class CodeAttrTxtVal(m.Model):
-    item = m.ForeignKey('Code')
-    attr = m.ForeignKey('CodeAttrTxt')
-    val = m.TextField()
-    time = m.DateTimeField(auto_now=True)
+class CodeAttrTxtVal(DataClass):
+    code = m.ForeignKey('Code')
+    attribute = m.ForeignKey('CodeAttrTxt')
+    value = m.TextField()
+
     class Meta:
-        unique_together=('item','attr')
+        unique_together=('code','attribute')
+
         
-class CodeAttrNumVal(m.Model):
-    item = m.ForeignKey('Code')
-    attr = m.ForeignKey('CodeAttrNum')
-    val = m.FloatField()
-    time = m.DateTimeField(auto_now=True)
+class CodeAttrNumVal(DataClass):
+    code = m.ForeignKey('Code')
+    attribute = m.ForeignKey('CodeAttrNum')
+    value = m.FloatField()
+
     class Meta:
-        unique_together=('item','attr')
+        unique_together=('code','attribute')
 
 ###############################################
 
@@ -287,8 +285,7 @@ class Element(BaseClass):
     This table contains the atomic elements, from hydrogen (Z=1) to
     Lawrencium (Z=103).
 
-    The element symbol is stored in the 'title' field. 
-    The element name is stored in the 'description' field.
+    Name contains the English element name.
     
     The atomic mass is stored under the 'mass' key in the json-dumped
     data field. The mass is taken from ASE and, where not available,
@@ -298,35 +295,42 @@ class Element(BaseClass):
     attribute require an owner, and this hinders the usage of fixtures
     to fill default data in the database since no default user exists.
     """
+    symbol = m.CharField(max_length=3, unique=True)
+    name = m.CharField(max_length=255, unique=True)
     Z = m.IntegerField(unique=True)
     attrnum = m.ManyToManyField('ElementAttrNum', through = 'ElementAttrNumVal')
     attrtxt = m.ManyToManyField('ElementAttrTxt', through = 'ElementAttrTxtVal')
     group = m.ManyToManyField('ElementGroup', blank=True)
         
+
 class ElementAttrTxt(AttrClass):   
     pass
+
 
 class ElementAttrNum(AttrClass):   
     pass
 
+
 class ElementGroup(GroupClass):  
     pass
 
-class ElementAttrTxtVal(m.Model):
-    item = m.ForeignKey('Element')
-    attr = m.ForeignKey('ElementAttrTxt')
-    val = m.TextField()
-    time = m.DateTimeField(auto_now=True)
+
+class ElementAttrTxtVal(DataClass):
+    element = m.ForeignKey('Element')
+    attribute = m.ForeignKey('ElementAttrTxt')
+    value = m.TextField()
+
     class Meta:
-        unique_together=('item','attr')
+        unique_together=('element','attribute')
         
-class ElementAttrNumVal(m.Model):
-    item = m.ForeignKey('Element')
-    attr = m.ForeignKey('ElementAttrNum')
-    val = m.FloatField()
-    time = m.DateTimeField(auto_now=True)
+
+class ElementAttrNumVal(DataClass):
+    element = m.ForeignKey('Element')
+    attribute = m.ForeignKey('ElementAttrNum')
+    value = m.FloatField()
+
     class Meta:
-        unique_together=('item','attr')
+        unique_together=('element','attribute')
 
 ######################################################
 #
@@ -372,7 +376,7 @@ class ElementAttrNumVal(m.Model):
 class Potential(DataClass):
     type = m.ForeignKey('PotentialType')
     status = m.ForeignKey('PotentialStatus')
-    element = m.ManyToManyField('Element')
+    elements = m.ManyToManyField('Element')
     attrnum = m.ManyToManyField('PotentialAttrNum', through = 'PotentialAttrNumVal')
     attrtxt = m.ManyToManyField('PotentialAttrTxt', through = 'PotentialAttrTxtVal')
     group = m.ManyToManyField('PotentialGroup', blank=True)

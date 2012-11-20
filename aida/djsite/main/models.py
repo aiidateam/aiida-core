@@ -9,12 +9,11 @@ import os.path
 from aida.djsite.settings.settings import LOCAL_REPOSITORY
 #from django_orm.postgresql import hstore
 #from django_hstore import hstore
-#from uuidfield import UUIDField
 
-#Need to extend the User class with uuid, and add user-computer-username field
+#TODO: Need to extend the User class with uuid
 
-#-------------------- Abstract Base Classes ------------------------
 
+######################### Abstract Classes ###########################
 class BaseClass(m.Model):
     # UUIDField by default uses version 1 (host ID, sequence number and current time) 
     uuid = UUIDField(auto=True,version=1)
@@ -24,16 +23,10 @@ class BaseClass(m.Model):
     class Meta:
         abstract = True
 
-
-# qualitychoice = ((1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5'))     
-
- 
 class DataClass(BaseClass):
     ctime = m.DateTimeField(auto_now_add=True)
     mtime = m.DateTimeField(auto_now=True)
     user = m.ForeignKey(AuthUser)
-# use an attribute instead
-#    quality = m.IntegerField(choices=qualitychoice, null=True, blank=True)
 
     class Meta:
         abstract = True    
@@ -63,31 +56,9 @@ class CommentClass(DataClass):
     class Meta:
         abstract = True  
         
-#
-#class EntityClass(DataClass):
-#    ''' 
-#    quality: 1-5 stars, NULL means unranked
-#    '''
-#    time = m.DateTimeField(auto_now=True)
-#    user = m.ForeignKey(AuthUser)
-#    quality = m.IntegerField(choices=qualitychoice, null=True)
-#    def save(self, *args, **kwargs):
-#        uname = getpass.getuser()
-#        self.user = AuthUser.objects.get(username=uname)
-#        super(EntityClass, self).save(*args, **kwargs)
-#    class Meta:
-#        abstract = True
-#        
-# static entries: type, status --> use BaseClass
-# time: Calc, Struc, Computer, Pot, ... Groups, Attributes, NOT status?
-# data: calc, struc, computer, pot, groups, attrs
-# user: Calc, Struc, computer, Pot, Basis, Attr
-# quality: Calc, Pot, Code, Basis, NOT struc, NOT attr, element, group
-# single parent: Groups, comments
-# multi-parent: calc only
+############################ Primary Classes ##############################
 
-#---------------- Primary Classes ---------------------------------
-
+## ----------Calculation-related tables ----------------
 class Calculation(DataClass):
     code = m.ForeignKey('Code')
     project = m.ForeignKey('Project')
@@ -96,12 +67,11 @@ class Calculation(DataClass):
     computer = m.ForeignKey('Computer') #computer to which to submit
     instructures = m.ManyToManyField('Structure', related_name='incalculations', blank=True)
     outstructures = m.ManyToManyField('Structure', related_name='outcalculations', blank=True)
-#    method = m.ManyToManyField('Method', blank=True)
     inpotentials = m.ManyToManyField('Potential', related_name='incalculations', blank=True)
     outpotentials = m.ManyToManyField('Potential', related_name='outcalculations', blank=True)
-    basis = m.ManyToManyField('Basis', blank=True)
-    attrnum = m.ManyToManyField('CalcAttrNum', through = 'CalcAttrNumVal')
-    attrtxt = m.ManyToManyField('CalcAttrTxt', through = 'CalcAttrTxtVal')
+    bases = m.ManyToManyField('Basis', blank=True)
+    attrsnum = m.ManyToManyField('CalcAttrNum', through = 'CalcAttrNumVal')
+    attrstxt = m.ManyToManyField('CalcAttrTxt', through = 'CalcAttrTxtVal')
     groups = m.ManyToManyField('CalcGroup', blank=True)
     parents = m.ManyToManyField('self', related_name='children',
                                symmetrical=False,
@@ -117,10 +87,6 @@ class Calculation(DataClass):
             have been set.
         """
         aida.jobmanager.submitter.submit_calc(self)
-
-#    flowitems = m.ForeignKey('self', symmetrical=False, blank=True, related_name='works')
-#    workflow = m.ForeignKey('Workflow')
-#    qjob = m.IntegerField(blank=True, null=True)
 
 
 class CalcGroup(GroupClass):  
@@ -171,6 +137,8 @@ class CalcAttrNumVal(DataClass):
     class Meta:
         unique_together=('calculation','attribute')
 
+
+## ----------Computer-related tables ----------------
 class Computer(DataClass):
     """Table of computers or clusters.
     
@@ -188,6 +156,7 @@ class Computer(DataClass):
     """
     hostname = m.CharField(max_length=255, unique=True)
     workdir = m.CharField(max_length=255)
+
     
 class ComputerUsername(m.Model):
     """Association of aida users with given remote usernames on a computer.
@@ -212,17 +181,16 @@ class ComputerUsername(m.Model):
             self.remoteusername + "@" + self.computer.hostname
 
 
-################################################
-
+## ----------Code-related tables ----------------
 class Code(DataClass):
     name = m.CharField(max_length=255,unique=True)
     version = m.CharField(max_length=255)
     type = m.ForeignKey('CodeType') #to identify which parser/plugin
     status = m.ForeignKey('CodeStatus') #need to define
     computer = m.ForeignKey('Computer', blank=True) #for checking computer compatibility, empty means all. 
-    attrnum = m.ManyToManyField('CodeAttrNum', through='CodeAttrNumVal')
-    attrtxt = m.ManyToManyField('CodeAttrTxt', through='CodeAttrTxtVal')
-    group = m.ManyToManyField('CodeGroup', blank=True)
+    attrsnum = m.ManyToManyField('CodeAttrNum', through='CodeAttrNumVal')
+    attrstxt = m.ManyToManyField('CodeAttrTxt', through='CodeAttrTxtVal')
+    groups = m.ManyToManyField('CodeGroup', blank=True)
     def __unicode__(self):
         return self.title
 
@@ -278,8 +246,8 @@ class CodeAttrNumVal(DataClass):
     class Meta:
         unique_together=('code','attribute')
 
-###############################################
 
+## ----------Element-related tables ----------------
 class Element(BaseClass):
     """
     This table contains the atomic elements, from hydrogen (Z=1) to
@@ -295,12 +263,12 @@ class Element(BaseClass):
     attribute require an owner, and this hinders the usage of fixtures
     to fill default data in the database since no default user exists.
     """
-    symbol = m.CharField(max_length=3, unique=True)
     name = m.CharField(max_length=255, unique=True)
+    symbol = m.CharField(max_length=3, unique=True)
     Z = m.IntegerField(unique=True)
-    attrnum = m.ManyToManyField('ElementAttrNum', through = 'ElementAttrNumVal')
-    attrtxt = m.ManyToManyField('ElementAttrTxt', through = 'ElementAttrTxtVal')
-    group = m.ManyToManyField('ElementGroup', blank=True)
+    attrsnum = m.ManyToManyField('ElementAttrNum', through = 'ElementAttrNumVal')
+    attrstxt = m.ManyToManyField('ElementAttrTxt', through = 'ElementAttrTxtVal')
+    groups = m.ManyToManyField('ElementGroup', blank=True)
         
 
 class ElementAttrTxt(AttrClass):   
@@ -332,13 +300,171 @@ class ElementAttrNumVal(DataClass):
     class Meta:
         unique_together=('element','attribute')
 
+## ----------Potential-related tables ----------------
+class Potential(DataClass):
+    type = m.ForeignKey('PotType')
+    status = m.ForeignKey('PotStatus')
+    elements = m.ManyToManyField('Element')
+    attrsnum = m.ManyToManyField('PotAttrNum', through = 'PotAttrNumVal')
+    attrstxt = m.ManyToManyField('PotAttrTxt', through = 'PotAttrTxtVal')
+    groups = m.ManyToManyField('PotGroup', blank=True)
+
+class PotAttrTxt(AttrClass): 
+    pass
+
+class PotAttrNum(AttrClass): 
+    pass
+
+class PotGroup(GroupClass): 
+    pass
+
+class PotComment(CommentClass): 
+    pass
+
+class PotStatus(BaseClass): 
+    name = m.CharField(max_length=255, unique=True)    
+    class Meta:
+        verbose_name_plural = "Pot statuses"
+
+class PotType(BaseClass): 
+    name = m.CharField(max_length=255, unique=True)
+
+class PotAttrTxtVal(DataClass):
+    potential = m.ForeignKey('Potential')
+    attribute = m.ForeignKey('PotAttrTxt')
+    value = m.TextField()
+    class Meta:
+        unique_together=('potential','attribute')
+        
+class PotAttrNumVal(DataClass):
+    potential = m.ForeignKey('Potential')
+    attribute = m.ForeignKey('PotAttrNum')
+    value = m.FloatField()
+    class Meta:
+        unique_together=('potential','attribute')
+
+## ----------Basis-related tables ----------------
+class Basis(DataClass):
+    type = m.ForeignKey('BasisType')
+    status = m.ForeignKey('BasisStatus')
+    elements = m.ManyToManyField('Element')
+    attrsnum = m.ManyToManyField('BasisAttrNum', through = 'BasisAttrNumVal')
+    attrstxt = m.ManyToManyField('BasisAttrTxt', through = 'BasisAttrTxtVal')
+    groups = m.ManyToManyField('BasisGroup', blank=True)
+
+class BasisAttrTxt(AttrClass): 
+    pass
+
+class BasisAttrNum(AttrClass): 
+    pass
+
+class BasisGroup(GroupClass): 
+    pass
+
+class BasisComment(CommentClass): 
+    pass
+
+class BasisStatus(BaseClass): 
+    name = m.CharField(max_length=255, unique=True)    
+    class Meta:
+        verbose_name_plural = "Pot statuses"
+
+class BasisType(BaseClass): 
+    name = m.CharField(max_length=255, unique=True)
+
+class BasisAttrTxtVal(DataClass):
+    basis = m.ForeignKey('Basis')
+    attribute = m.ForeignKey('BasisAttrTxt')
+    value = m.TextField()
+    class Meta:
+        unique_together=('basis','attribute')
+        
+class BasisAttrNumVal(DataClass):
+    basis = m.ForeignKey('Basis')
+    attribute = m.ForeignKey('BasisAttrNum')
+    value = m.FloatField()
+    class Meta:
+        unique_together=('basis','attribute')
+
+
+## ----------Structure-related tables ----------------
+dimensions = ((0,'0'), (1,'1'), (2,'2'), (3,'3'))
+class Structure(DataClass):   
+    formula = m.CharField(max_length=255) #generated automatically using ordering rules
+    dim = m.IntegerField(choices = dimensions, default=3)
+    elements = m.ManyToManyField('Element')
+    attrsnum = m.ManyToManyField('StructAttrNum', through = 'StructAttrNumVal')
+    attrstxt = m.ManyToManyField('StructAttrTxt', through = 'StructAttrTxtVal')
+    groups = m.ManyToManyField('StructGroup', blank=True)
+    
+class StructGroup(GroupClass):  
+    pass    
+    
+class StructComment(CommentClass): 
+    pass
+
+class StructAttrTxt(AttrClass):  
+    pass
+
+class StructAttrNum(AttrClass):  
+    pass
+
+class StructAttrTxtVal(DataClass):
+    structure = m.ForeignKey('Structure')
+    attribute = m.ForeignKey('StructAttrTxt')
+    value = m.TextField()
+    class Meta:
+        unique_together=('structure','attribute')
+
+class StructAttrNumVal(DataClass):
+    structure = m.ForeignKey('Structure')
+    attribute = m.ForeignKey('StructAttrNum')
+    val = m.FloatField()
+    class Meta:
+        unique_together=('structure','attribute')
+
+
+#############################################
+##Old Stuff:
+##In data class:
+# qualitychoice = ((1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5'))     
+# use an attribute instead
+#    quality = m.IntegerField(choices=qualitychoice, null=True, blank=True)
+##
+#
+#class EntityClass(DataClass):
+#    ''' 
+#    quality: 1-5 stars, NULL means unranked
+#    '''
+#    time = m.DateTimeField(auto_now=True)
+#    user = m.ForeignKey(AuthUser)
+#    quality = m.IntegerField(choices=qualitychoice, null=True)
+#    def save(self, *args, **kwargs):
+#        uname = getpass.getuser()
+#        self.user = AuthUser.objects.get(username=uname)
+#        super(EntityClass, self).save(*args, **kwargs)
+#    class Meta:
+#        abstract = True
+#        
+# static entries: type, status --> use BaseClass
+# time: Calc, Struc, Computer, Pot, ... Groups, Attributes, NOT status?
+# data: calc, struc, computer, pot, groups, attrs
+# user: Calc, Struc, computer, Pot, Basis, Attr
+# quality: Calc, Pot, Code, Basis, NOT struc, NOT attr, element, group
+# single parent: Groups, comments
+# multi-parent: calc only
+##
+##In calculation
+#    flowitems = m.ForeignKey('self', symmetrical=False, blank=True, related_name='works')
+#    workflow = m.ForeignKey('Workflow')
+#    qjob = m.IntegerField(blank=True, null=True)
 ######################################################
 #
 #class Method(EntityClass):
 #    type = m.ForeignKey('MethodType')
 #    status = m.ForeignKey('MethodStatus')
-#    attrnum = m.ManyToManyField('MethodAttrNum', through = 'MethodAttrNumVal')
-#    attrtxt = m.ManyToManyField('MethodAttrTxt', through = 'MethodAttrTxtVal')
+#    attrsnum = m.ManyToManyField('MethodAttrNum', through = 'MethodAttrNumVal')
+#    attrstxt = m.ManyToManyField('MethodAttrTxt', through = 'MethodAttrTxtVal')
 #    groups = m.ManyToManyField('MethodGroup', blank=True)
 #
 #class MethodAttrTxt(DataClass): 
@@ -372,136 +498,3 @@ class ElementAttrNumVal(DataClass):
 #    class Meta:
 #        unique_together=('item','attr')
 #####################################################
-
-class Potential(DataClass):
-    type = m.ForeignKey('PotentialType')
-    status = m.ForeignKey('PotentialStatus')
-    elements = m.ManyToManyField('Element')
-    attrnum = m.ManyToManyField('PotentialAttrNum', through = 'PotentialAttrNumVal')
-    attrtxt = m.ManyToManyField('PotentialAttrTxt', through = 'PotentialAttrTxtVal')
-    group = m.ManyToManyField('PotentialGroup', blank=True)
-
-class PotentialAttrTxt(AttrClass): 
-    pass
-
-class PotentialAttrNum(AttrClass): 
-    pass
-
-class PotentialGroup(GroupClass): 
-    pass
-
-class PotentialComment(CommentClass): 
-    pass
-
-class PotentialStatus(BaseClass): 
-    pass
-
-class PotentialType(BaseClass): 
-    pass
-
-class PotentialAttrTxtVal(m.Model):
-    item = m.ForeignKey('Potential')
-    attr = m.ForeignKey('PotentialAttrTxt')
-    val = m.TextField()
-    time = m.DateTimeField(auto_now=True)
-    class Meta:
-        unique_together=('item','attr')
-        
-class PotentialAttrNumVal(m.Model):
-    item = m.ForeignKey('Potential')
-    attr = m.ForeignKey('PotentialAttrNum')
-    val = m.FloatField()
-    time = m.DateTimeField(auto_now=True)
-    class Meta:
-        unique_together=('item','attr')
-
-######################################################
-
-class Basis(DataClass):
-    type = m.ForeignKey('BasisType')
-    status = m.ForeignKey('BasisStatus')
-    element = m.ManyToManyField('Element')
-    attrnum = m.ManyToManyField('BasisAttrNum', through = 'BasisAttrNumVal')
-    attrtxt = m.ManyToManyField('BasisAttrTxt', through = 'BasisAttrTxtVal')
-    group = m.ManyToManyField('BasisGroup', blank=True)
-
-class BasisAttrTxt(AttrClass): 
-    pass
-
-class BasisAttrNum(AttrClass): 
-    pass
-
-class BasisGroup(GroupClass): 
-    pass
-
-class BasisComment(CommentClass): 
-    pass
-
-class BasisStatus(BaseClass): 
-    pass
-
-class BasisType(BaseClass): 
-    pass
-
-class BasisAttrTxtVal(m.Model):
-    item = m.ForeignKey('Basis')
-    attr = m.ForeignKey('BasisAttrTxt')
-    val = m.TextField()
-    time = m.DateTimeField(auto_now=True)
-    class Meta:
-        unique_together=('item','attr')
-        
-class BasisAttrNumVal(m.Model):
-    item = m.ForeignKey('Basis')
-    attr = m.ForeignKey('BasisAttrNum')
-    val = m.FloatField()
-    time = m.DateTimeField(auto_now=True)
-    class Meta:
-        unique_together=('item','attr')
-
-#####################################################
-
-dimensions = ((0,'0'), (1,'1'), (2,'2'), (3,'3'))
-
-class Struc(DataClass):   
-    formula = m.CharField(max_length=255) #generated automatically using ordering rules
-    dim = m.IntegerField(choices = dimensions)
-#    dim = m.ForeignKey('StrucDim') #dimensionality/ make a choice integer field, default 3
-    detail = m.TextField(blank=True)  #contains cell and atoms in angstroms json
-    element = m.ManyToManyField('Element')
-    attrnum = m.ManyToManyField('StrucAttrNum', through = 'StrucAttrNumVal')
-    attrtxt = m.ManyToManyField('StrucAttrTxt', through = 'StrucAttrTxtVal')
-    group = m.ManyToManyField('StrucGroup', blank=True)
-    
-class StrucGroup(GroupClass):  
-    pass    
-    
-class StrucComment(CommentClass): 
-    pass
-
-class StrucAttrTxt(DataClass):  
-    pass
-
-class StrucAttrNum(DataClass):  
-    pass
-
-class StrucAttrTxtVal(m.Model):
-    item = m.ForeignKey('Struc')
-    attr = m.ForeignKey('StrucAttrTxt')
-    val = m.TextField()
-    time = m.DateTimeField(auto_now=True)
-    class Meta:
-        unique_together=('item','attr')
-
-class StrucAttrNumVal(m.Model):
-    item = m.ForeignKey('Struc')
-    attr = m.ForeignKey('StrucAttrNum')
-    val = m.FloatField()
-    time = m.DateTimeField(auto_now=True)
-    class Meta:
-        unique_together=('item','attr')
-
-#class Material(DataClass):   
-#    pass
-        
-#############################################

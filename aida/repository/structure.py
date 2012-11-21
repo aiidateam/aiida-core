@@ -1,13 +1,13 @@
-from aida.common.classes.structure import Structure
-from aida.djsite.main.models import Struc, Element
+from aida.common.classes.structure import Structure as BaseStructure
+from aida.djsite.main.models import Structure, Element
 import json
 
-def add_structure(in_struc,title,user,dim=3,parents=None):
+def add_structure(in_structure,title,user,dim=3,parents=None):
     """
     Adds a new structrure to the database.
     
     Args:
-        structure: Any structure that is accepted by the __init__ method
+        in_structure: Any structure that is accepted by the __init__ method
             of the aida.common.classes.structure.Structure class (e.g. a
             Structure class, a raw structure, an ase object, ...)
         title: a string as a title
@@ -20,17 +20,17 @@ def add_structure(in_struc,title,user,dim=3,parents=None):
         the aida.djsite.main.model.Struc Django model that was saved.
     """
     # Whatever the input format, I convert it to an internal structure
-    the_struc = Structure(in_struc)
+    the_structure = BaseStructure(in_structure)
 
-    django_struc = Struc.objects.create(title=title,user=user,dim=dim,
-                                        formula=the_struc.get_formula(),
-                                        detail=json.dumps(the_struc.get_raw()))
+    django_structure = Structure.objects.create(title=title,user=user,dim=dim,
+        formula=the_structure.get_formula(),
+        detail=json.dumps(the_structure.get_raw()))
 
-    for el in tuple(set(the_struc.get_elements())):
+    for el in tuple(set(the_structure.get_elements())):
         el_django = Element.objects.get(title=el)
-        django_struc.element.add(el_django)
+        django_structure.element.add(el_django)
     
-    django_struc.save()
-    return django_struc
+    django_structure.save()
+    return django_structure
     
     

@@ -7,8 +7,9 @@ They are executed when when you run "manage.py test" or
 from django.utils import unittest
 import aida
 from aida.djsite.main.models import CalcStatus, CalcType, Code, CodeStatus
-from aida.djsite.main.models import CodeType, Computer, Project, Calc
-from aida.djsite.main.models import Element, Potential, PotentialStatus, PotentialType
+from aida.djsite.main.models import CodeType, Computer, Project, Calculation
+from aida.djsite.main.models import Element, Potential, PotStatus, PotType
+from aida.djsite.main.models import PotAttrTxtVal
 from django.contrib.auth.models import User as AuthUser
 import getpass
 from django.db import IntegrityError
@@ -38,9 +39,9 @@ class PseudoTest(unittest.TestCase):
         """
         cls.user, was_created = AuthUser.objects.get_or_create(
             username=getpass.getuser())
-        cls.status, was_created = PotentialStatus.objects.get_or_create(
-            title='Unknown')
-        cls.type, was_created = PotentialType.objects.get_or_create(title='pz')
+        cls.status, was_created = PotStatus.objects.get_or_create(
+            name='Unknown')
+        cls.type, was_created = PotType.objects.get_or_create(name='pz')
     
 
     def step1(self):
@@ -50,28 +51,35 @@ class PseudoTest(unittest.TestCase):
         self.new_pot = add_pseudo_file(os.path.join(testdata_folder,
                                                     'Si.pbe-rrkj.UPF'),
                                        description="Test pseudo for Si",
-                                       element_symbols=['Si'], pot_type=self.type,
+                                       element_symbols=['Si'], 
+                                       pot_type=self.type,
                                        pot_status=self.status,user=self.user)
         
     def step1b(self):
         """
         Check M2M relationships on the newly-created potential.
         """
-        self.assertEqual(self.new_pot.element.count(),1)
-        self.assertEqual(self.new_pot.element.get().title,'Si')
+        self.assertEqual(self.new_pot.elements.count(),1)
+        self.assertEqual(self.new_pot.elements.get().symbol,'Si')
 
     def step2(self):
         """
         Test insertion of a pseudo which is identical to the previous one (same 
-        md5sum) to see if the function returns the same id instead of adding a
-        copy of the pseudo.
+        md5sum) to see if the 'md5sum' attribute is correctly set.
         """
         new_pot2 = add_pseudo_file(os.path.join(testdata_folder,
             'Si.pbe-rrkj_copy.UPF'),
             description="Test pseudo for Si - just a file copy",
             element_symbols=['Si'], pot_type=self.type,
             pot_status=self.status,user=self.user)
-        self.assertEqual(self.new_pot.id, new_pot2.id)
+
+        # I don't catch exceptions: md5sum should be set, and only one
+        # such attribute should be present
+        md5sum1 = PotAttrTxtVal.objects.get(potential=self.new_pot,
+                                            attribute__name="md5sum").value
+        md5sum2 = PotAttrTxtVal.objects.get(potential=new_pot2,
+                                            attribute__name="md5sum").value
+        self.assertEqual(md5sum1, md5sum2)
 
     def step3(self):
         """
@@ -91,7 +99,14 @@ class PseudoTest(unittest.TestCase):
                           "different MD5sum"),
              element_symbols=['Si'], pot_type=self.type,
              pot_status=self.status,user=self.user)
-        self.assertEqual(new_pot2.title, 'Si.pbe-rrkj-1.UPF')
+
+        # I don't catch exceptions: md5sum should be set, and only one
+        # such attribute should be present
+        md5sum1 = PotAttrTxtVal.objects.get(potential=self.new_pot,
+                                            attribute__name="md5sum").value
+        md5sum2 = PotAttrTxtVal.objects.get(potential=new_pot2,
+                                            attribute__name="md5sum").value
+        self.assertNotEqual(md5sum1, md5sum2)
 
     def step4(self):
         """
@@ -116,6 +131,8 @@ class PseudoTest(unittest.TestCase):
             try:
                 step()
             except Exception as e:
+                import traceback
+                print traceback.format_exc()
                 self.fail("{} failed ({}: {})".format(step.__name__, e.__class__.__name__, e))
                           
 class ElementTest(unittest.TestCase):
@@ -127,19 +144,19 @@ class ElementTest(unittest.TestCase):
         Tests chemical symbols and masses of a few atoms (H, C, O, Ba, Ti).
         """
         a = Element.objects.get(Z=1)
-        self.assertEqual(a.title, "H")
+        self.assertEqual(a.symbol, "H")
 
         a = Element.objects.get(Z=6)
-        self.assertEqual(a.title, "C")
+        self.assertEqual(a.symbol, "C")
 
         a = Element.objects.get(Z=8)
-        self.assertEqual(a.title, "O")
+        self.assertEqual(a.symbol, "O")
 
         # Test also the other way round
-        a = Element.objects.get(title="Ba")
+        a = Element.objects.get(symbol="Ba")
         self.assertEqual(a.Z, 56)
 
-        a = Element.objects.get(title="Ti")
+        a = Element.objects.get(symbol="Ti")
         self.assertEqual(a.Z, 22)
                          
     def test_no_zequalszero(self):

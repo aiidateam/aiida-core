@@ -18,7 +18,7 @@ class BaseClass(m.Model):
     # UUIDField by default uses version 1 (host ID, sequence number and current time) 
     uuid = UUIDField(auto=True,version=1)
     description = m.TextField(blank=True)
-    data = JSONField()
+    data = JSONField(blank=True)
 
     class Meta:
         abstract = True
@@ -38,6 +38,9 @@ class AttrClass(BaseClass):
 
     class Meta:
         abstract = True    
+    
+    def __unicode__(self):
+        return self.name
 
 
 class GroupClass(DataClass):
@@ -47,14 +50,18 @@ class GroupClass(DataClass):
     class Meta:
         abstract = True       
 
+    def __unicode__(self):
+        return self.name
 
 class CommentClass(DataClass):
-    name = m.CharField(max_length=255, unique=True)
     parent = m.ForeignKey('self', blank=True, null=True)
     comment = m.TextField(blank=True)
 
     class Meta:
         abstract = True  
+
+    def __unicode__(self):
+        return self.comment
         
 ############################ Primary Classes ##############################
 
@@ -98,15 +105,22 @@ class CalcStatus(BaseClass):
     class Meta:
         verbose_name_plural = "Calc statuses"
 
+    def __unicode__(self):
+        return self.name
+
 
 class Project(DataClass):
     name = m.CharField(max_length=255, unique=True)
-    pass
+
+    def __unicode__(self):
+        return self.name
 
 
 class CalcType(BaseClass):
     name = m.CharField(max_length=255, unique=True)
-    pass 
+
+    def __unicode__(self):
+        return self.name
 
 
 class CalcComment(CommentClass):
@@ -131,7 +145,14 @@ class CalcAttrTxtVal(DataClass):
 
 
 class CalcAttrNumVal(DataClass):
-    calculation = m.ForeignKey('Calculation')
+    # Note: for the API to work for queries on related fields, the 
+    # related_name seems to need to be fixed to the name of the class
+    # otherwise the query with the through field works using 
+    # calcattrnumval__value=.., but the name of the field is instead
+    # calcattrnumval_set
+    #
+    # .. todo:: fix also other fields, when the API will be extended!
+    calculation = m.ForeignKey('Calculation',related_name='calcattrnumval')
     attribute = m.ForeignKey('CalcAttrNum')
     value = m.FloatField()
     class Meta:
@@ -156,6 +177,9 @@ class Computer(DataClass):
     """
     hostname = m.CharField(max_length=255, unique=True)
     workdir = m.CharField(max_length=255)
+
+    def __unicode__(self):
+        return self.hostname
 
     
 class ComputerUsername(m.Model):
@@ -191,8 +215,9 @@ class Code(DataClass):
     attrsnum = m.ManyToManyField('CodeAttrNum', through='CodeAttrNumVal')
     attrstxt = m.ManyToManyField('CodeAttrTxt', through='CodeAttrTxtVal')
     groups = m.ManyToManyField('CodeGroup', blank=True)
+
     def __unicode__(self):
-        return self.title
+        return self.name
 
 
 class CodeGroup(GroupClass):  
@@ -209,6 +234,9 @@ class CodeStatus(BaseClass):
     class Meta:
         verbose_name_plural = "Code statuses"
 
+    def __unicode__(self):
+        return self.name
+
 
 class CodeType(BaseClass):   
     """
@@ -220,6 +248,8 @@ class CodeType(BaseClass):
     """
     name = m.CharField(max_length=255, unique=True)    
 
+    def __unicode__(self):
+        return self.name
 
 class CodeAttrTxt(AttrClass):  
     pass
@@ -269,7 +299,10 @@ class Element(BaseClass):
     attrsnum = m.ManyToManyField('ElementAttrNum', through = 'ElementAttrNumVal')
     attrstxt = m.ManyToManyField('ElementAttrTxt', through = 'ElementAttrTxtVal')
     groups = m.ManyToManyField('ElementGroup', blank=True)
-        
+
+    def __unicode__(self):
+        return "{} ({})".format(self.name, self.symbol)
+
 
 class ElementAttrTxt(AttrClass):   
     pass
@@ -326,8 +359,14 @@ class PotStatus(BaseClass):
     class Meta:
         verbose_name_plural = "Pot statuses"
 
+    def __unicode__(self):
+        return self.name
+
 class PotType(BaseClass): 
     name = m.CharField(max_length=255, unique=True)
+
+    def __unicode__(self):
+        return self.name
 
 class PotAttrTxtVal(DataClass):
     potential = m.ForeignKey('Potential')
@@ -366,11 +405,19 @@ class BasisComment(CommentClass):
 
 class BasisStatus(BaseClass): 
     name = m.CharField(max_length=255, unique=True)    
+
     class Meta:
         verbose_name_plural = "Pot statuses"
 
+    def __unicode__(self):
+        return self.name
+
+
 class BasisType(BaseClass): 
     name = m.CharField(max_length=255, unique=True)
+
+    def __unicode__(self):
+        return self.name
 
 class BasisAttrTxtVal(DataClass):
     basis = m.ForeignKey('Basis')
@@ -396,6 +443,9 @@ class Structure(DataClass):
     attrsnum = m.ManyToManyField('StructAttrNum', through = 'StructAttrNumVal')
     attrstxt = m.ManyToManyField('StructAttrTxt', through = 'StructAttrTxtVal')
     groups = m.ManyToManyField('StructGroup', blank=True)
+
+    def __unicode__(self):
+        return self.formula
     
 class StructGroup(GroupClass):  
     pass    

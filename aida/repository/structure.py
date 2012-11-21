@@ -51,6 +51,8 @@ def get_structure(django_structure):
     Args:
         django_structure: a django Structure model
 
+    .. todo:: Probably, to be moved as a method of the structure object?
+
     .. todo:: Exception managing (see also comments in the code)
 
     Returns:

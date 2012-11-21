@@ -34,6 +34,26 @@ def is_subfolder(subfolder,parent):
     return os.path.commonprefix([subfolder,parent]) == parent
 
 
+def join_folder_file(folder,filename):
+    """
+    Joins a folder with a filename.
+
+    Also checks that the filename is valid, e.g. that is not .., or
+    contains slashes, etc., by checking that after joining the two parts
+    together, and splitting them back, we get the tuple (folder, filename).
+
+    .. todo:: check if this check works, and if it is sufficient. Probably
+        something stronger is needed.
+    """
+    dest_abs_path = os.path.join(folder,filename)
+
+    if not os.path.split(dest_abs_path) == (folder,filename):
+        errstr = "You didn't specify a valid filename: {}".format(filename)
+        raise ValueError(errstr)
+
+    return dest_abs_path
+
+
 class SandboxFolder(object):
     """
     A class to manage the creation and management of a sandbox folder.
@@ -50,37 +70,61 @@ class SandboxFolder(object):
             os.makedirs(sandbox_folder)
 
         self._abspath = tempfile.mkdtemp(dir=sandbox_folder)
-        
-    def insert_file(self,src,subfolder=os.curdir,dest_name=None):
+       
+ 
+    def get_file_path(self, filename, subfolder=os.curdir,
+                      create_subfolders=False):
         """
-        Copy a file to the sandbox folder, possibly in a subfolder of it
-        (by default, it copies to the top directory).
-        
+        Return the absolute path of a given file in the folder, possibly
+        within a subfolder.
+
+        Can also be used for instance to start creating a file in the
+        sandbox.
+
+        Check that the subfolder is actually within the sandbox folder 
+        (can be False if subfolder='..', for instance).
+
         Args:
             src: the source filename to copy
+            filename: The file name.
             subfolder: the relative path of the subfolder where to create
-                the file. If it does not exist, it is created first.
-            dest_name: if None, the same basename of src is used. Otherwise,
-                the destination filename will have this file name.
+                the file.
+            create_subfolders: if True, creates the required subfolders, if
+                they don't exists. Note that the file itself is never created.
         """
-        if dest_name is None:
-            dest_filename = unicode(os.path.basename(src))
-        else:
-            dest_filename = unicode(dest_name)
-
-        # create the subdirectory, if needed; first check that we are not
-        # trying to write outside the sandbox (e.g. because the user passed
-        # ".." as subfolder parameter)
         dest_abs_dir = os.path.realpath(os.path.join(
                 self.abspath,unicode(subfolder)))
         if not is_subfolder(dest_abs_dir,self.abspath):
             raise ValueError("You specified a subfolder that goes out of the "
                              "boundaries of the sandbox folder!\nSandbox={}, "
                              "subfolder={}".format(self.abspath,dest_abs_dir))
-        if not os.path.exists(dest_abs_dir):
+
+        if create_subfolders and not os.path.exists(dest_abs_dir):
             os.makedirs(dest_abs_dir)
 
-        dest_abs_path = os.path.join(dest_abs_dir,dest_filename)
+        return join_folder_file(dest_abs_dir,filename)
+
+
+    def insert_file(self,src,dest_name=None,subfolder=os.curdir):
+        """
+        Copy a file to the sandbox folder, possibly in a subfolder of it
+        (by default, it copies to the top directory).
+        
+        Args:
+            src: the source filename to copy
+            dest_name: if None, the same basename of src is used. Otherwise,
+                the destination filename will have this file name.
+            subfolder: the relative path of the subfolder where to create
+                the file. If it does not exist, it is created first.
+        """
+        if dest_name is None:
+            dest_filename = unicode(os.path.basename(src))
+        else:
+            dest_filename = unicode(dest_name)
+
+        dest_abs_path = self.get_file_path(dest_filename, subfolder=subfolder,
+                      create_subfolders=True)
+
         shutil.copyfile(src,dest_abs_path)
 
         return dest_abs_path
@@ -91,6 +135,55 @@ class SandboxFolder(object):
         The absolute path of the sandbox.
         """
         return self._abspath
+
+
+def get_filename_from_repo(filename, section, uuid, subfolder=os.curdir):
+    """
+    Return the absolute file name of a file in the repository.
+
+    Args:
+        filename: the file name
+        section: the section on the code, as 'calculations', 'potentials', ...
+            Only a finite list of section names are allowed, otherwise a
+            ValueError is returned.
+        uuid: the UUID within the given section, as stored in the database
+        subfolder: the subfolder in which the file sits.
+    """
+    folder = get_repo_folder_path(section, uuid, subfolder)
+    
+    return join_folder_file(folder,filename)
+
+
+def get_repo_folder_path(section, uuid, subfolder=os.curdir):
+    """
+    Return the absolute path of a folder in the repository.
+
+    It also checks to be within the section/uuid folder (can be False if
+    subfolder='..', for instance).
+
+    Args:
+        section: the section on the code, as 'calculations', 'potentials', ...
+            Only a finite list of section names are allowed, otherwise a
+            ValueError is returned.
+        uuid: the UUID within the given section, as stored in the database
+        subfolder: the subfolder in which the file sits.    
+    """
+    if section not in ['calculations', 'potentials','structures']:
+        retstr = "Repository section '{}' not allowed.".format(section)
+        raise ValueError(retstr)
+
+    entity_dir=os.path.realpath(os.path.join(perm_repository, unicode(section), 
+                                             unicode(uuid)))
+    dest = os.path.realpath(os.path.join(entity_dir,unicode(subfolder)))
+
+    # Directory boundary check
+    if not is_subfolder(dest,entity_dir):
+            raise ValueError("You specified a subfolder that goes out of the "
+                             "boundaries of the entity folder!\nEntity folder"
+                             "={}, subfolder={}".format(entity_dir,dest))
+
+    return dest
+
 
 def move_folder_to_repo(src, section, uuid, subfolder=os.curdir,
                      overwrite=False):
@@ -120,19 +213,8 @@ def move_folder_to_repo(src, section, uuid, subfolder=os.curdir,
         OSError or IOError: in case of problems accessing or writing the files.
         ValueError: if the section is not recognized.
     """
-    if section not in ['calculations', 'potentials','structures']:
-        retstr = "Repository section '{}' not allowed.".format(section)
-        raise ValueError(retstr)
 
-    entity_dir=os.path.realpath(os.path.join(perm_repository, unicode(section), 
-                                             unicode(uuid)))
-    dest = os.path.realpath(os.path.join(entity_dir,unicode(subfolder)))
-
-    # Directory boundary check
-    if not is_subfolder(dest,entity_dir):
-            raise ValueError("You specified a subfolder that goes out of the "
-                             "boundaries of the entity folder!\nEntity folder"
-                             "={}, subfolder={}".format(entity_dir,dest))
+    dest = get_repo_folder_path(section, uuid, subfolder=os.curdir)
         
     # Create parent dir, if needed
     pardir = os.path.dirname(dest)

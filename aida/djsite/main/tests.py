@@ -20,7 +20,7 @@ import aida.djsite.main
 from aida.repository.potential import add_pseudo_file
 from aida.common.exceptions import ValidationError
 from aida.common.classes import structure
-from aida.repository.structure import add_structure
+from aida.repository.structure import add_structure, get_structure
 
 # Get the absolute path of the testdata folder, related to the aida module
 testdata_folder = os.path.join(
@@ -178,23 +178,17 @@ class SubmissionTest(unittest.TestCase):
         """
         Tests that I can submit a calculation.
         """
-        testuser, was_created = AuthUser.objects.get_or_create(
-            username=getpass.getuser())
-        # To be loaded in the correct order!
-        management.call_command('loaddata', 'testproject', verbosity=0)
-        management.call_command('loaddata', 'testcomputer', verbosity=0)
-        management.call_command('loaddata', 'testcalcstatus', verbosity=0)
-        management.call_command('loaddata', 'testcalctype', verbosity=0)
-        management.call_command('loaddata', 'testcodestatus', verbosity=0)
-        management.call_command('loaddata', 'testcodetype', verbosity=0)
-        management.call_command('loaddata', 'testcode', verbosity=0)
-
+        testuser = AuthUser.objects.create(username="test")
         # I insert a new calculation
-        code = Code.objects.get(title__istartswith="pw.x")
-        computer = code.computer
-        project = Project.objects.get(title__istartswith="test")
-        initial_status = CalcStatus.objects.get(title="Submitting")
-        calc_type = CalcType.objects.get(title="DFT SCF")
+        project = Project.objects.create(name="test",user=testuser)
+        computer = Computer.objects.create(hostname="localhost",user=testuser)
+        initial_status = CalcStatus.objects.create(name="test_status")
+        calc_type = CalcType.objects.create(name="dft.scf")
+        code_status = CodeStatus.objects.create(name="development")
+        code_type = CodeType.objects.create(name="quantumespresso.pw")
+        code = Code.objects.create(name="pw.x",computer=computer,
+                                   type=code_type,status=code_status,
+                                   user=testuser)
 
         input_data = {
             'CONTROL': {
@@ -219,30 +213,40 @@ class SubmissionTest(unittest.TestCase):
         data_dict['input_data'] = input_data
        
         the_data = json.dumps(data_dict)
-        self.the_calc = Calc.objects.create(title="test calculation",
-                                           computer=computer,
-                                           code=code,project=project,
-                                           status=initial_status,
-                                           type=calc_type,
-                                           data=the_data)
+        self.the_calc = Calculation.objects.create(user=testuser,
+                                                   computer=computer,
+                                                   code=code,project=project,
+                                                   status=initial_status,
+                                                   type=calc_type,
+                                                   data=the_data)
 
         # There are still no input structures attached
-        with self.assertRaises(ValidationError):
-            self.the_calc.submit()
+#        with self.assertRaises(ValidationError):
+#            self.the_calc.submit()
             
         a = 5.43
         struc = structure.Structure(cell=((a/2.,a/2.,0.),
                                           (a/2.,0.,a/2.),
                                           (0.,a/2.,a/2.)),
                                     pbc=(True,True,True))
-        struc.appendSite(structure.StructureSite(symbols='Si',position=(0.,0.,0.)))
+        struc.appendSite(structure.StructureSite(symbols='Si',
+                                                 position=(0.,0.,0.)))
         struc.appendSite(structure.StructureSite(symbols='Si',
                                                  position=(a/2.,a/2.,a/2.)))
+       
+        struc_django = add_structure(struc,user=testuser,dim=3)
+        self.the_calc.instructures.add(struc_django)
 
+        # I want to check that I am able to retrieve the file
+        retrieved_struc = get_structure(struc_django)
         
-        struc_django = add_structure(struc,title='Si bulk cell',
-                                     user=testuser,dim=3)
-        self.the_calc.inpstruc.add(struc_django)
+        test_cell = retrieved_struc.cell
+        self.assertAlmostEqual(test_cell[0][0],a/2.)
+        self.assertAlmostEqual(test_cell[0][2],0.)
+        self.assertEqual(retrieved_struc.pbc,(True,True,True))
+        self.assertEqual(len(retrieved_struc.sites),2)
+        self.assertEqual(retrieved_struc.sites[0].symbols,('Si',))
+        self.assertAlmostEqual(retrieved_struc.sites[1].position[0],a/2.)
 
         self.the_calc.submit()
 

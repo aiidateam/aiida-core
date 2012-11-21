@@ -109,7 +109,7 @@ def add_pseudo_file(filename,description,element_symbols,
     f = SandboxFolder()
     
     # add the pseudo inside the folder
-    pseudo_file_path = f.insert_file(filename,subfolder=".",dest_name=None)
+    pseudo_file_path = f.insert_file(filename)
 
     # Calculate md5sum
     md5str = md5_file(pseudo_file_path)

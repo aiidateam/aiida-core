@@ -6,7 +6,7 @@ import getpass
 import aida.jobmanager.submitter
 import os
 import os.path
-from aida.djsite.settings.settings import LOCAL_REPOSITORY
+from aida.repository.utils.files import RepositoryFolder
 #from django_orm.postgresql import hstore
 #from django_hstore import hstore
 
@@ -95,6 +95,36 @@ class Calculation(DataClass):
         """
         aida.jobmanager.submitter.submit_calc(self)
 
+    def get_input_params(self):
+        """
+        Return a dictionary with the input parameters if this calculation,
+        as obtained by reading the local repository.
+        """
+        from aida.repository.calculation import get_input_params
+        return get_input_params(self)
+
+    def get_input_structures(self):
+        """
+        Return a list of BaseStructure objects for the input structures
+        associated with this calculation.
+        """
+        return [i.get_structure() for i in self.instructures.all()]
+
+    def get_repo_folder(self):
+        """
+        Return a RepositoryFolder object pointing to the local repository
+        folder for this calculation.
+        """
+        return RepositoryFolder(section='calculations', uuid=self.uuid)
+
+    def get_codetype(self):
+        """
+        Return a string with the code type.
+        
+        Useful to abstract the request of the codetype, independent of 
+        the underlying model.
+        """
+        return self.code.type.name
 
 class CalcGroup(GroupClass):  
     pass
@@ -342,6 +372,14 @@ class Potential(DataClass):
     attrstxt = m.ManyToManyField('PotAttrTxt', through = 'PotAttrTxtVal')
     groups = m.ManyToManyField('PotGroup', blank=True)
 
+    def get_repo_folder(self):
+        """
+        Return a RepositoryFolder object pointing to the local repository
+        folder for this calculation.
+        """
+        return RepositoryFolder(section='potentials', uuid=self.uuid)
+
+
 class PotAttrTxt(AttrClass): 
     pass
 
@@ -447,6 +485,23 @@ class Structure(DataClass):
     def __unicode__(self):
         return self.formula
     
+    def get_repo_folder(self):
+        """
+        Return a RepositoryFolder object pointing to the local repository
+        folder for this calculation.
+        """
+        return RepositoryFolder(section='structures', uuid=self.uuid)
+
+    def get_structure(self):
+        """
+        Return a aida.common.classes.structure.Structure object corresponding
+        to the entry, reading it from the suitable place (the local
+        repository in the current implementation).
+        """
+        import aida.repository.structure
+
+        return aida.repository.structure.get_structure(self)
+
 class StructGroup(GroupClass):  
     pass    
     

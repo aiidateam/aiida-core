@@ -8,7 +8,7 @@ from aida.djsite.main.models import Element
 import logging
 import os, os.path
 import re
-from aida.repository.utils.files import move_folder_to_repo
+from aida.repository.utils.files import RepositoryFolder
 from django.core.exceptions import ObjectDoesNotExist
 from aida.common.exceptions import ValidationError
 from aida.repository.utils.files import SandboxFolder
@@ -106,36 +106,37 @@ def add_pseudo_file(filename,description,element_symbols,
                               "does not exist in the Element table.")
             
     # Create a new sandbox folder
-    f = SandboxFolder()
-    
-    # add the pseudo inside the folder
-    pseudo_file_path = f.insert_file(filename)
+    with SandboxFolder() as f:  
+        # add the pseudo inside the folder
+        pseudo_file_path = f.insert_file(filename)
 
-    # Calculate md5sum
-    md5str = md5_file(pseudo_file_path)
+        # Calculate md5sum
+        md5str = md5_file(pseudo_file_path)
 
-    # Create the new entry in the potential table
-    newpot = Potential.objects.create(description=description,user=user,
-             type=pot_type,status=pot_status)
-    # Add the M2M links to the elements
-    for el in elements:
-        newpot.elements.add(el)
-    # and save
-    newpot.save()
+        # Create the new entry in the potential table
+        newpot = Potential.objects.create(description=description,user=user,
+                 type=pot_type,status=pot_status)
+        # Add the M2M links to the elements
+        for el in elements:
+            newpot.elements.add(el)
+        # and save
+        newpot.save()
 
-    # Store the md5sum attribute
-    md5sum_attr, was_created = PotAttrTxt.objects.get_or_create(
-        name='md5sum')
-    if was_created:
-        md5sum_attr.isinput=False
-        md5sum_attr.description=('md5sum string of the corresponding '
-            'potential file stored in the local repository (available '
-            'for the moment only for single-file pseudopotentials).')
-    PotAttrTxtVal.objects.create(value=md5str,potential=newpot,
-        attribute=md5sum_attr,user=user)
+        # Store the md5sum attribute
+        md5sum_attr, was_created = PotAttrTxt.objects.get_or_create(
+            name='md5sum')
+        if was_created:
+            md5sum_attr.isinput=False
+            md5sum_attr.description=('md5sum string of the corresponding '
+                'potential file stored in the local repository (available '
+                'for the moment only for single-file pseudopotentials).')
+        PotAttrTxtVal.objects.create(value=md5str,potential=newpot,
+            attribute=md5sum_attr,user=user)
 
-    # Move the sandbox folder to the repository. Don't use the f object anymore then!
-    repofolder_path = move_folder_to_repo(src=f.abspath,section='potentials',uuid=newpot.uuid)
+        # Move the sandbox folder to the repository. Don't use the f
+        # object anymore then! (Indeed, I exit from the 'with' block)
+        repo_folder = newpot.get_repo_folder()
+        repo_folder.replace_with_folder(srcdir=f.abspath,move=True)
 
     return newpot
         

@@ -269,7 +269,6 @@ class Structure(object):
                 self.appendSite(site)
         elif _is_ase_atoms(cell):
             # Read the ase structure
-            import ase
             self.cell = cell.cell
             self.pbc = cell.pbc
             for atom in cell:

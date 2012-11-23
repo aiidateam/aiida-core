@@ -3,6 +3,9 @@ Plugin to create a Quantum Espresso pw.x file.
 
 TODO: many cards missing
 TODO: implement if_pos
+TODO: implement pre_... and post_... hooks to add arbitrary strings before
+      and after a namelist, and a 'final_string' (all optional); useful 
+      for development when new cards are needed
 """
 from aida.codeplugins.exceptions import InputValidationError
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
@@ -27,19 +30,29 @@ _calc_types_onlyions = ['relax', 'md']
 _calc_types_bothionscells = ['vc-relax', 'vc-md']
 
 def get_suggestion(provided_string,allowed_strings):
-    try:
-        import difflib
-        
-        similar_kws = difflib.get_close_matches(provided_string,
-                                                allowed_strings)
-        if len(similar_kws)==1:
-            return "(Maybe you wanted to specify {0}?)".format(similar_kws[0])
-        elif len(similar_kws)>1:
-            return "(Maybe you wanted to specify one of these: {0}?)".format(string.join(similar_kws,', '))
-        else:
-            return "(No similar keywords found...)"
-    except ImportError:
-        return ""
+    """
+    Given a string and a list of allowed_strings, it returns a string to print
+    on screen, with sensible text depending on whether no suggestion is found,
+    or one or more than one suggestions are found.
+
+    Args:
+        provided_string: the string to compare
+        allowed_strings: a list of valid strings
+    
+    Returns:
+        A string to print on output, to suggest to the user a possible valid
+        value.
+    """
+    import difflib
+    
+    similar_kws = difflib.get_close_matches(provided_string,
+                                            allowed_strings)
+    if len(similar_kws)==1:
+        return "(Maybe you wanted to specify {0}?)".format(similar_kws[0])
+    elif len(similar_kws)>1:
+        return "(Maybe you wanted to specify one of these: {0}?)".format(string.join(similar_kws,', '))
+    else:
+        return "(No similar keywords found...)"
 
 def conv_to_fortran(val):
     """
@@ -64,6 +77,16 @@ def conv_to_fortran(val):
     return val_str
 
 def get_input_data_text(key,val):
+    """
+    Given a key and a value, return a string (possibly multiline for arrays)
+    with the text to be added to the input file.
+    
+    Args:
+        key: the flag name
+        val: the flag value. If it is an array, a line for each element
+            is produced, with variable indexing starting from 1.
+            Each value is formatted using the conv_to_fortran function.
+    """
     # I don't try to do iterator=iter(val) and catch TypeError because
     # it would also match strings
     if hasattr(val,'__iter__'):
@@ -77,9 +100,9 @@ def get_input_data_text(key,val):
         # single value
         return "  {0} = {1}\n".format(key, conv_to_fortran(val))
 
-def create_calc_input(calc, infile_dir):
+def create_calc_input(calc, input_folder):
     """
-    Create the necessary input files in infile_dir for calculation calc.
+    Create the necessary input files in input_folder for calculation calc.
 
     Note: for the moment, it requires that flags are provided lowercase,
         while namelists/cards are provided uppercase.
@@ -87,7 +110,7 @@ def create_calc_input(calc, infile_dir):
     Args:
         calc: the calculation object for which we want to create the 
             input file structure.
-        infile_dir: the directory where we want to create the files.
+        input_folder: the directory where we want to create the files.
 
     Returns:
         a dictionary with the following keys:
@@ -126,18 +149,25 @@ def create_calc_input(calc, infile_dir):
     retdict['preexec'] = ""
     retdict['postexec'] = ""
 
-    input_filename = os.path.join(infile_dir,retdict['stdin'])
+    input_filename = os.path.join(input_folder,retdict['stdin'])
 
-    try: 
-        dj_input_structure = calc.inpstruc.get()
-    except (ObjectDoesNotExist, MultipleObjectsReturned):
-        raise InputValidationError('One and only one input structure must be'
+    # get_input_structures returns a list, I check that I have only
+    # one input structure and then I save it in input_structure
+    input_structure = calc.get_input_structures()
+    if len(input_structure) != 1:
+        raise InputValidationError('One and only one input structure can be'
                                    'attached to a QE pw.x calculation')
+    input_structure = input_structure[0]
 
     try:
-        input_data = json.loads(calc.data)['input_data']
-    except (ValueError, KeyError):
-        input_data = {}
+        input_params = calc.get_input_params()
+        input_data = input_params['input_data']
+    except Exception as e:
+        import traceback
+        print traceback.format_exc()
+        raise InputValidationError('Unable to retrieve the input data. '
+                                   'I got exception "{}" with message: '
+                                   '{}'.format(str(type(e)), e.message))
         
     try:
         control_nl = input_data['CONTROL']
@@ -160,7 +190,6 @@ def create_calc_input(calc, infile_dir):
                                    "CONTROL namelist {}".format(sugg_string))
 
     # ============ I prepare the input structure data =============
-    input_structure = Structure(json.loads(dj_input_structure.detail))
     cell_parameters_card = "CELL_PARAMETERS angstrom\n"
     # TODO: += is slow in concatenating strings, improve
     for vector in input_structure.cell:

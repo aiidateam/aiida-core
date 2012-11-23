@@ -103,12 +103,12 @@ class Calculation(DataClass):
         from aida.repository.calculation import get_input_params
         return get_input_params(self)
 
-    def get_input_structures(self):
+    def get_input_sites(self):
         """
-        Return a list of BaseStructure objects for the input structures
+        Return a list of Sites objects for the input sites
         associated with this calculation.
         """
-        return [i.get_structure() for i in self.instructures.all()]
+        return [i.get_sites() for i in self.instructures.all()]
 
     def get_repo_folder(self):
         """
@@ -492,15 +492,15 @@ class Structure(DataClass):
         """
         return RepositoryFolder(section='structures', uuid=self.uuid)
 
-    def get_structure(self):
+    def get_sites(self):
         """
-        Return a aida.common.classes.structure.Structure object corresponding
+        Return a aida.common.classes.structure.Sites object corresponding
         to the entry, reading it from the suitable place (the local
         repository in the current implementation).
         """
         import aida.repository.structure
 
-        return aida.repository.structure.get_structure(self)
+        return aida.repository.structure.get_sites(self)
 
 class StructGroup(GroupClass):  
     pass    

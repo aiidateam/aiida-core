@@ -11,7 +11,7 @@ from aida.codeplugins.exceptions import InputValidationError
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 import json
 import os
-from aida.common.classes.structure import Structure
+from aida.common.classes.structure import Sites
 
 # List of namelists (uppercase) that are allowed to be found in the
 # input_data, in the correct order
@@ -109,7 +109,7 @@ def create_calc_input(calc, input_folder):
     
     Args:
         calc: the calculation object for which we want to create the 
-            input file structure.
+            input file.
         input_folder: the directory where we want to create the files.
 
     Returns:
@@ -151,13 +151,13 @@ def create_calc_input(calc, input_folder):
 
     input_filename = os.path.join(input_folder,retdict['stdin'])
 
-    # get_input_structures returns a list, I check that I have only
-    # one input structure and then I save it in input_structure
-    input_structure = calc.get_input_structures()
-    if len(input_structure) != 1:
-        raise InputValidationError('One and only one input structure can be'
+    # get_input_sites returns a list, I check that I have only
+    # one input site and then I save it in input_site
+    input_site = calc.get_input_sites()
+    if len(input_site) != 1:
+        raise InputValidationError('One and only one input structure can be '
                                    'attached to a QE pw.x calculation')
-    input_structure = input_structure[0]
+    input_site = input_site[0]
 
     try:
         input_params = calc.get_input_params()
@@ -189,16 +189,16 @@ def create_calc_input(calc, input_folder):
         raise InputValidationError("Unknown 'calculation' value in "
                                    "CONTROL namelist {}".format(sugg_string))
 
-    # ============ I prepare the input structure data =============
+    # ============ I prepare the input site data =============
     cell_parameters_card = "CELL_PARAMETERS angstrom\n"
     # TODO: += is slow in concatenating strings, improve
-    for vector in input_structure.cell:
+    for vector in input_site.cell:
         cell_parameters_card += "{0:18.10f} {1:18.10f} {2:18.10f}\n".format(*vector)
 
     atomic_positions_card = "ATOMIC_POSITIONS angstrom\n"
     # TODO: += is slow in concatenating strings, improve
     # TODO: implement if_pos
-    for idx, site in enumerate(input_structure.sites):
+    for idx, site in enumerate(input_site.sites):
         if site.is_alloy() or site.has_vacancies():
             raise InputValidationError("The {}-th site is an alloy or has "
                 "vacancies. This is not allowed for pw.x input structures.")

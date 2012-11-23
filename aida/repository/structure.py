@@ -1,34 +1,39 @@
-from aida.common.classes.structure import Structure as BaseStructure
+from aida.common.classes.structure import Sites
 from aida.djsite.main.models import Structure, Element
 from aida.repository.utils.files import SandboxFolder, RepositoryFolder
 import json
 
-def add_structure(in_structure,user,dim=3):
+_SITES_FILE='sites.json'
+
+def add_structure(sites,user,dim=3):
     """
     Adds a new structrure to the database.
     
+    .. todo:: decide whether to use the **kwargs method used also in the
+        add_calculation function in the aida.repository.calculation module.
+
     Args:
-        in_structure: Any structure that is accepted by the __init__ method
-            of the aida.common.classes.structure.Structure class (e.g. a
-            Structure class, a raw structure, an ase object, ...)
+        sites: Any object that is accepted by the __init__ method
+            of the aida.common.classes.structure.Sites class (e.g. a
+            Sites class, a raw_sites dictionary, an ase object, ...)
         user: a suitable django user
         dim: the dimensionality (0, 1, 2, or 3)
 
     Returns:
         the aida.djsite.main.model.Structure Django model that was saved.
     """
-    # Whatever the input format, I convert it to an internal structure
-    the_structure = BaseStructure(in_structure)
+    # Whatever the input format, I convert it to an internal Sites object
+    internal_sites = Sites(sites)
     
     # Create a new sandbox folder
     with SandboxFolder() as f:
-        with open(f.get_file_path(filename='structure.json'), 'w') as jsonfile:
-            json.dump(the_structure.get_raw(),fp=jsonfile)
+        with open(f.get_file_path(filename=_SITES_FILE), 'w') as jsonfile:
+            json.dump(internal_sites.get_raw(),fp=jsonfile)
 
         django_structure = Structure.objects.create(user=user,dim=dim,
-            formula=the_structure.get_formula())
+            formula=internal_sites.get_formula())
 
-        for symbol in tuple(set(the_structure.get_elements())):
+        for symbol in tuple(set(internal_sites.get_elements())):
             elem_django = Element.objects.get(symbol=symbol)
             django_structure.elements.add(elem_django)
 
@@ -51,31 +56,30 @@ def add_structure(in_structure,user,dim=3):
     
     return django_structure
 
-def get_structure(django_structure):
+def get_sites(structure):
     """
-    Get a structure from the database and/or repository and return it as
-    an aida Structure object.
+    Get the Sites object connected to a structure of the database.
 
     Args:
-        django_structure: a django Structure model
+        structure: a django Structure model
 
     .. todo:: Exception managing (see also comments in the code)
 
     Returns:
-        the Structure object.
+        the Sites object.
     """
-    repo_folder = django_structure.get_repo_folder()
-    structure_filename = repo_folder.get_filename('structure.json')
+    repo_folder = structure.get_repo_folder()
+    sites_filename = repo_folder.get_filename(_SITES_FILE)
 
     # .. todo:: catch IOError here and raise RepositoryConsistencyError
     # (to be defined)
-    with open(structure_filename) as jsonfile:
-        raw_structure = json.load(jsonfile)
+    with open(sites_filename) as jsonfile:
+        raw_sites = json.load(jsonfile)
 
     # I convert the raw format into an internal structure
-    # .. todo:: catch Errors while decoding the raw_structure
-    the_structure = BaseStructure(raw_structure)
+    # .. todo:: catch Errors while decoding the raw_sites
+    sites = Sites(raw_sites)
     
-    return the_structure
+    return sites
     
     

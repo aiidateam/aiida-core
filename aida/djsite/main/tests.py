@@ -20,7 +20,7 @@ import aida.djsite.main
 from aida.repository.potential import add_pseudo_file
 from aida.common.exceptions import ValidationError
 from aida.common.classes import structure
-from aida.repository.structure import add_structure, get_structure
+from aida.repository.structure import add_structure
 from aida.repository.calculation import add_calculation
 
 # Get the absolute path of the testdata folder, related to the aida module
@@ -219,33 +219,33 @@ class SubmissionTest(unittest.TestCase):
             computer=computer, code=code, project=project,
             status=initial_status, type=calc_type, input_params=input_params)
 
-        # There are still no input structures attached
+        # There are still no input Sites attached
         with self.assertRaises(ValidationError):
             self.the_calc.submit()
             
         a = 5.43
-        struct = structure.Structure(cell=((a/2.,a/2.,0.),
-                                          (a/2.,0.,a/2.),
-                                          (0.,a/2.,a/2.)),
-                                    pbc=(True,True,True))
-        struct.appendSite(structure.StructureSite(symbols='Si',
+        sites = structure.Sites(cell=((a/2.,a/2.,0.),
+                                      (a/2.,0.,a/2.),
+                                      (0.,a/2.,a/2.)),
+                                pbc=(True,True,True))
+        sites.appendSite(structure.Site(symbols='Si',
                                                  position=(0.,0.,0.)))
-        struct.appendSite(structure.StructureSite(symbols='Si',
+        sites.appendSite(structure.Site(symbols='Si',
                                                  position=(a/2.,a/2.,a/2.)))
        
-        struct_django = add_structure(struct,user=testuser,dim=3)
+        struct_django = add_structure(sites,user=testuser,dim=3)
         self.the_calc.instructures.add(struct_django)
 
         # I want to check that I am able to retrieve the file
-        retrieved_struct = struct_django.get_structure()
+        retrieved_sites = struct_django.get_sites()
         
-        test_cell = retrieved_struct.cell
+        test_cell = retrieved_sites.cell
         self.assertAlmostEqual(test_cell[0][0],a/2.)
         self.assertAlmostEqual(test_cell[0][2],0.)
-        self.assertEqual(retrieved_struct.pbc,(True,True,True))
-        self.assertEqual(len(retrieved_struct.sites),2)
-        self.assertEqual(retrieved_struct.sites[0].symbols,('Si',))
-        self.assertAlmostEqual(retrieved_struct.sites[1].position[0],a/2.)
+        self.assertEqual(retrieved_sites.pbc,(True,True,True))
+        self.assertEqual(len(retrieved_sites.sites),2)
+        self.assertEqual(retrieved_sites.sites[0].symbols,('Si',))
+        self.assertAlmostEqual(retrieved_sites.sites[1].position[0],a/2.)
 
         self.the_calc.submit()
 

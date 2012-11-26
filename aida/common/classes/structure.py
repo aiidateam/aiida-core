@@ -5,6 +5,16 @@ collection of sites) and all related functions to operate on them.
 import itertools
 import copy
 
+# Threshold used to check if the mass of two different Site objects is the same.
+_mass_threshold = 1.e-3
+# Threshold to check if the sum is one or not
+_sum_threshold = 1.e-6
+# Threshold used to check if the cell volume is not zero.
+_volume_threshold = 1.e-6
+
+
+
+# Element table
 elements = {
     1: {   'mass': 1.0079400000000001, 'name': 'Hydrogen', 'symbol': 'H'},
     2: {   'mass': 4.0026000000000002, 'name': 'Helium', 'symbol': 'He'},
@@ -255,9 +265,6 @@ class Sites(object):
                 If this variable is set, only case 1 of cell is accepted.
                 Default: [True, True, True]
         """
-        # Threshold used to check if the cell volume is not zero.
-        self._volume_threshold = 1.e-6
-
         # Initial values
         self._sites = []
         self._cell = None
@@ -398,7 +405,7 @@ class Sites(object):
         """
         new_site = Site(site=site) # So we make a copy
         
-        self._validate_site_type(site, reset_type_if_needed=reset_type_if_needed)
+        self._validate_site_type(new_site, reset_type_if_needed=reset_type_if_needed)
 
         # If here, no exceptions have been raised, so I store. Note that the new_site.type value may 
         # have been changed by the previous function.
@@ -437,33 +444,33 @@ class Sites(object):
         site_idx = positions[type_idx][0] 
         
         # If it is of the same type, I am happy
-        is_same_type, differences_str = new_site.same_type(self.sites[site_idx])
+        is_same_type, differences_str = new_site.compare_type(self.sites[site_idx])
         if is_same_type:
             return
 
         # If I am here, the type string is the same, but they are actually of different type!
-        
+
         if not reset_type_if_needed:
             errstr = ("The site you are trying to insert is of type '{}'. However, another site already "
                       "exists with same type, but with different properties! ({})".format(
                          new_site.type, differences_str))
             raise ValueError(errstr)
 
-        # I check if there is a atom of the same atom
+        # I check if there is a atom of the same type
         for site in self.sites:
-            if new_site.same_type(self.sites):
+            is_same_type, _ = new_site.compare_type(site)
+            if is_same_type:
                 new_site.type = site.type
                 return
 
         # If I am here, I didn't find any existing site which is of the same type
-        existing_type_names = [the_type for the_type in type_list if the_type.startswith(new_site.type)]
+        existing_type_names = [the_type for the_type in types if the_type.startswith(new_site.type)]
 
         append_int = 1
-        while "{s}{d}".format(new_site.type, append_int) in existing_type_names:
+        while "{:s}{:d}".format(new_site.type, append_int) in existing_type_names:
             append_int += 1
         else:
-            new_site.type = "{s}{d}".format(new_site.type, append_int)
-            
+            new_site.type = "{:s}{:d}".format(new_site.type, append_int)
 
     def clearSites(self):
         """
@@ -491,7 +498,7 @@ class Sites(object):
             raise ValueError("Cell must be a list of the three vectors, each "
                              "defined as a list of three coordinates.") 
         
-        if abs(_calc_cell_volume(the_cell)) < self._volume_threshold:
+        if abs(_calc_cell_volume(the_cell)) < _volume_threshold:
             raise ValueError("The cell volume is zero. Invalid cell.")
 
         self._cell = the_cell
@@ -561,9 +568,6 @@ class Site(object):
                    By default, it is set to a string with the symbols appended one to the other, without
                    spaces, in alphabetical order; if the site has a vacancy, a X is appended at the end too.
         """
-        # Threshold to check if the sum is one or not
-        self._sum_threshold = 1.e-6
-
         # Internal variables
         self._mass = None
         self._symbols = None
@@ -694,7 +698,7 @@ class Site(object):
         """
         w_sum = sum(self._weights)
         
-        if abs(w_sum) < self._sum_threshold:
+        if abs(w_sum) < _sum_threshold:
             self._mass = None
             return
         
@@ -736,7 +740,7 @@ class Site(object):
         
         self.type = type_string
 
-    def same_type(self, other_site):
+    def compare_type(self, other_site):
         """
         Compare with another Site object to check if they are different.
         
@@ -749,8 +753,30 @@ class Site(object):
                 which is either None (if the first element was True), or contains a 'human-readable'
                 description of the first difference encountered between the two sites.
         """
-        #return (True, None)
-        raise NotImplementedError
+        # Check length of symbols
+        if len(self.symbols) != len(other_site.symbols):
+            return (False, "Different length of symbols list")
+        
+        # Check list of symbols
+        for i in range(len(self.symbols)):
+            if self.symbols[i] != other_site.symbols[i]:
+                return (False, "Symbol at position {:d} are different ({} vs. {})".format(
+                        i+1, self.symbols[i], other_site.symbols[i]))
+
+        # Check weights (assuming length of weights and of symbols have same length, which should
+        # always be true
+        for i in range(len(self.weights)):
+            if self.weights[i] != other_site.weights[i]:
+                return (False, "Weight at position {:d} are different ({} vs. {})".format(
+                        i+1, self.weights[i], other_site.weights[i]))
+            
+
+        # Check masses
+        if abs(self.mass - other_site.mass) > _mass_threshold:
+            return (False, "Masses are different ({} vs. {})".format(self.mass, other_site.mass))
+    
+        # If we got here, the two Site objects are similar enough to be considered of the same type
+        return (True, None)
         
 
     @property
@@ -813,7 +839,7 @@ class Site(object):
         if len(weights_tuple) != len(self._symbols):
             raise ValueError("Cannot change the number of weights. Use the "
                              "set_symbols_and_weights function instead.")
-        validate_weights_tuple(weights_tuple,self._sum_threshold)
+        validate_weights_tuple(weights_tuple, _sum_threshold)
 
         self._weights = weights_tuple
         self.set_automatic_type()
@@ -859,7 +885,7 @@ class Site(object):
         if len(symbols_tuple) != len(weights_tuple):
             raise ValueError("The number of symbols and weights must coincide.")
         validate_symbols_tuple(symbols_tuple)
-        validate_weights_tuple(weights_tuple,self._sum_threshold)
+        validate_weights_tuple(weights_tuple,_sum_threshold)
         self._symbols = symbols_tuple
         self._weights = weights_tuple
         self.set_automatic_type()
@@ -878,7 +904,7 @@ class Site(object):
         It uses the internal variable _sum_threshold as a threshold.
         """
         w_sum = sum(self._weights)
-        return not(1. - w_sum < self._sum_threshold)
+        return not(1. - w_sum < _sum_threshold)
 
 if __name__ == "__main__":
     import unittest
@@ -1267,7 +1293,7 @@ if __name__ == "__main__":
             
             type_list = a.get_types()
             self.assertEqual(len(type_list),3) # I should have now three types
-            self.assertEqual(set(i['type'] for i in type_list), set(('Ba', 'Ba2', 'Ti')))
+            self.assertEqual(set(i[0] for i in type_list), set(('Ba', 'Ba2', 'Ti')))
 
         def test_type_4(self):
             """

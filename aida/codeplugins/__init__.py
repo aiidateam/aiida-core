@@ -1,6 +1,6 @@
 import re
 import importlib
-import sys
+from aida.common.classes.folder import Folder
 
 def create_calc_input(calc, input_folder):
     """
@@ -16,17 +16,17 @@ def create_calc_input(calc, input_folder):
             and the data from the database are retrieved through API
             requests).
         input_folder: The files are generated in the directory input_folder.
-            The directory must already exist, and should be empty 
-            (files may be overwritten). The advantage of having this
-            parameter is that this function can be used also before
-            submitting the calculation to verify that the
-            automatically-generated input file is as expected.
+            This should be a Folder object.
     """
     ### TODO: in the future, do not depend on aidadb but call suitable
     ### routines, independent of if we are on the server or on the client
     # I import it here, otherwise if done above it generates a circular
     # dependency
-    
+    if not isinstance(input_folder, Folder):
+        raise TypeError("input_folder must be a class of type "
+                        "aida.common.classes.folder.Folder, or a derived "
+                        "class.")
+
     input_plugin_name = _get_plugin_module_name(calc.get_codetype())
     input_plugin = importlib.import_module(input_plugin_name,
                                            package='aida.codeplugins')

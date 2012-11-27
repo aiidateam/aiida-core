@@ -369,8 +369,12 @@ class Sites(object):
 
     def get_types(self):
         """
-        Return a list of types. Each type is a tuple, the first element is the type string, the 
-        second element is a list of the indices of the sites referring to this type.
+        Return a list of types. Each type is a tuple, the first element is the
+        type string, the second element is a list of the indices of the sites
+        referring to this type.
+        
+        The second element should never be an empty list! At least an element
+        should be present.
         """       
         positions = {}
         types = []
@@ -467,10 +471,12 @@ class Sites(object):
         existing_type_names = [the_type for the_type in types if the_type.startswith(new_site.type)]
 
         append_int = 1
-        while "{:s}{:d}".format(new_site.type, append_int) in existing_type_names:
+        while True:
+            new_typename = "{:s}{:d}".format(new_site.type, append_int) 
+            if new_typename not in existing_type_names:
+                break
             append_int += 1
-        else:
-            new_site.type = "{:s}{:d}".format(new_site.type, append_int)
+        new_site.type = new_typename
 
     def clearSites(self):
         """

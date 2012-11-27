@@ -1,8 +1,10 @@
+from __future__ import print_function
 import shutil
 import sys
 import os
 import os.path
 from aida.codeplugins import create_calc_input
+from aida.repository.utils.files import SandboxFolder
 
 def submit_calc(calc):
     """Submits a given calculation (given as a Calc Django object) of
@@ -24,42 +26,40 @@ def submit_calc(calc):
     ## sure that we are submitting the job only once. Possibly with a second
     ## field saying that we entered the submit_calc, or that we actually
     ## submitted it.
-    # For the moment, if the folder exists, I just stop with a 'random'
-    # exception
     # TODO: FIX THIS!
-    if os.path.isdir(calc.get_local_dir()):
-        raise OSError('The folder {} already exists!'.format(
-                calc.get_local_dir()))
 
-    ## Clear directories, if present (past submission failed), and create 
-    ## empty new ones.
     ## Folder structure:
-    ## AidaRepository/Jobs/Localjobid/
-    ##                               /inputs
-    ##                               /outputs
-    ##                               /attachments
-    ## delete only ./in and ./out, NOT ./attachments
+    ## AidaRepository/calculations/UUID/
+    ##                                 /inputs/
+    ##                                 /outputs/
+    ##                                 /... (e.g. files with the inputs etc.)
+    ## For increased safety, I ask the plugin to write in a Sandbox Folder
+    with SandboxFolder() as sandbox:
+        ## identify the plugin script (+ version etc.)
+        ## Validate input
+        ## (also includes validation of parameter dependencies from parents).
+        ## See if the above should be done in a separate step, or by the plugin
+        ## itself.
+        ## Create input file using the correct plugin.
+        ## Expected behavior: 
+        ## Write files in ./in directory
+        ## TODO: evaluate if it is better to return a dictionary in case we
+        ## discover that we need to pass more data
+        ## To see if this interface is the best one or not (i.e., if we want
+        ## to give full access to the input_folder to the input plugin)
+        retdict = create_calc_input(calc=calc,
+            input_folder=sandbox.abspath)
 
-    # Using os.makedirs instead of os.mkdir, this will also create the
-    # necessary parent dirs where needed
-    for dir_to_del in [calc.get_local_indir(), calc.get_local_outdir()]:
-        if os.path.isdir(dir_to_del):
-            shutil.rmtree(dir_to_del)
-        os.makedirs(dir_to_del)  
-
-    ## identify the plugin script (+ version etc.)
-    ## Validate input
-    ## (also includes validation of parameter dependencies from parents).
-    ## See if the above should be done in a separate step, or by the plugin
-    ## itself.
-    ## Create input file using the correct plugin.
-    ## Expected behavior: 
-    ## Write files in ./in directory
-    ## TODO: evaluate if it is better to return a dictionary in case we
-    ## discover that we need to pass more data
-    retdict = create_calc_input(
-        calc_id=calc.id,infile_dir=calc.get_local_indir())
-    
+        # I now move the 
+        calc_folder = calc.get_repo_folder()
+        input_folder = calc_folder.get_subfolder('inputs')
+        # For the moment, if the folder exists, I just print a warning and
+        # delete the folder (by means of the 'overwrite=True' flag)!!
+        if input_folder.exists():
+            print('The folder {} already exists! I DELETE IT.'.format(
+                    input_folder.abspath),file=sys.stderr)
+        input_folder.replace_with_folder(sandbox.abspath, move=True,
+                                         overwrite=True)
 
     ## Load the 'signaling' library depending on the current AIDA version.
     ## This in particular provides the signaling strings, to be used later.

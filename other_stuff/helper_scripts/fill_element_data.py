@@ -40,15 +40,16 @@ for Z in range(1,104):
     else:
         mass = atomic_masses[Z]
 
-    title = ase.data.chemical_symbols[Z]
-    description = ase.data.atomic_names[Z]
+    symbol = ase.data.chemical_symbols[Z]
+    name = ase.data.atomic_names[Z]
 #   I don't store any mass in the DB for the time being
 #    data = json.dumps({'mass': mass})
 
     ## Storing data in the database
-    el = Element.objects.create(title=title,description=description,
-#                               data=data,Z=Z)
+    el = Element.objects.create(symbol=symbol,name=name,
                                 Z=Z)
+#                               data=data,Z=Z)
+
     el.save()
     
 

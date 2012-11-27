@@ -6,14 +6,17 @@ admin.autodiscover()
 
 # APIs
 from tastypie.api import Api
-from aida.djsite.main.api import (CalcResource, CalcAttrNumResource, 
-    CalcAttrNumValResource, StrucResource)
+from aida.djsite.main.api import (CalculationResource,
+                                  CalcAttrNumResource, 
+                                  CalcAttrNumValResource, 
+                                  StructureResource,
+                                  )
 
 v1_api = Api(api_name='v1')
-v1_api.register(CalcResource())
+v1_api.register(CalculationResource())
 v1_api.register(CalcAttrNumResource())
 v1_api.register(CalcAttrNumValResource())
-v1_api.register(StrucResource())
+v1_api.register(StructureResource())
 
 urlpatterns = patterns('',
     # Examples:

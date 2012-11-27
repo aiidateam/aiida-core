@@ -255,21 +255,82 @@ class SubmissionTest(unittest.TestCase):
 
         input_params = {
             'CONTROL': {
-                'calculation': 'relax',
+                'calculation': 'vc-relax',
                 'restart_mode': 'from_scratch',
+                'wf_collect': True,
                 },
             'SYSTEM': {
-                'ibrav': 0,
-                'fixed_magnetization': [0.,1.,0.5],
-                'nosym': True,
+                'ecutwfc': 47.,
+                'ecutrho': 568.,
                 },
             'ELECTRONS': {
-                'mixing_beta': 0.3,
+                'conv_thr': 1.e-10,
                 },
             'K_POINTS': {
                 'type': 'automatic',
                 'points': [4, 4, 4, 0, 0, 0],
                 },
+            }
+        
+        calc_data = {'user': self.testuser, 'computer': self.computer,
+                     'code': self.code, 'project': self.project,
+                     'status': self.initial_status, 'type': self.calc_type}
+
+        # internally calls Calculation.objects.create
+        # correctly managing the input_data
+        self.the_calc = add_calculation(input_params=input_params,**calc_data)
+
+        # There are still no input Sites attached
+        with self.assertRaises(ValidationError):
+            self.the_calc.submit()
+            
+        a = 5.43
+        sites = structure.Sites(cell=((a/2.,a/2.,0.),
+                                      (a/2.,0.,a/2.),
+                                      (0.,a/2.,a/2.)),
+                                pbc=(True,True,True))
+        sites.appendSite(structure.Site(symbols='Ge',
+                                                 position=(0.,0.,0.)))
+        sites.appendSite(structure.Site(symbols='Ge',
+                                                 position=(a/2.,a/2.,a/2.)))
+       
+        test_struct_django = add_structure(sites,user=self.testuser,dim=3)
+
+        # I recreate a new calculation, this time with structure
+        self.the_calc = add_calculation(
+            input_params=input_params,structure_list=[test_struct_django],
+            potential_list=[self.new_pot], **calc_data)
+
+        # Wrong pseudopotential list
+        with self.assertRaises(ValidationError):
+            self.the_calc.submit()
+            
+
+    def test_submission(self):
+        """
+        Tests that I can submit a calculation.
+        """
+        input_params = {
+            'CONTROL': {
+                'calculation': 'vc-relax',
+                'restart_mode': 'from_scratch',
+                'wf_collect': True,
+                },
+            'SYSTEM': {
+                'ecutwfc': 47.,
+                'ecutrho': 568.,
+                },
+            'ELECTRONS': {
+                'conv_thr': 1.e-10,
+                },
+            'K_POINTS': {
+                'type': 'automatic',
+                'points': [4, 4, 4, 0, 0, 0],
+                },
+            'fixed_coords': [
+                [True, True, True],
+                [False, False, False],
+                ],
             }
         
         calc_data = {'user': self.testuser, 'computer': self.computer,

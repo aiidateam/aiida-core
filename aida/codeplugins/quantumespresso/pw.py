@@ -33,6 +33,44 @@ _calc_types_noionscells = ['scf','nscf','bands']
 _calc_types_onlyions = ['relax', 'md']
 _calc_types_bothionscells = ['vc-relax', 'vc-md']
 
+_blocked_keywords = [('CONTROL', 'pseudo_dir'), # set later
+                     ('CONTROL', 'outdir'),  # set later
+                     ('CONTROL', 'verbosity'),  # set later
+                     ('CONTROL', 'prefix'),  # set later
+                     ('SYSTEM', 'ibrav'),  # set later
+                     ('SYSTEM', 'celldm'),
+                     ('SYSTEM', 'nat'),  # set later
+                     ('SYSTEM', 'ntyp'),  # set later
+                     ('SYSTEM', 'a'), ('SYSTEM', 'b'), ('SYSTEM', 'c'),
+                     ('SYSTEM', 'cosab'), ('SYSTEM', 'cosac'), ('SYSTEM', 'cosbc'),
+                     ]
+
+def _if_pos(fixed):
+    """
+    Simple function that returns 0 if fixed is True, 1 otherwise.
+    Useful to convert from the boolean value of fixed_coords to the value required
+    by Quantum Espresso as if_pos.
+    """
+    if fixed:
+        return 0
+    else:
+        return 1
+
+def _lowercase_dict(d, name=None):
+    if isinstance(d,dict):
+        new_dict = dict((k.lower(), v) for k, v in d.iteritems())
+        if len(new_dict) != len(d):
+            if name is None:
+                raise InputValidationError("There is a dictionary with two keys "
+                    "with the same name when compared case-insensitively. "
+                    "This is not allowed.")
+            else:
+                raise InputValidationError("Inside the dictionary '{}' there are two keys "
+                    "with the same name when compared case-insensitively. "
+                    "This is not allowed.".format(name))
+        return new_dict
+    else:
+        return d
 
 def create_calc_input(calc, work_folder):
     """
@@ -77,29 +115,61 @@ def create_calc_input(calc, work_folder):
     TODO: decide whether to return a namedtuple instead of a dict
         (see http://docs.python.org/2/library/collections.html#namedtuple-factory-function-for-tuples-with-named-fields )
     """
-    PSEUDO_SUBFOLDER = './pseudo'
-    
+    PSEUDO_SUBFOLDER = './pseudo/'
+    OUTPUT_SUBFOLDER = './out/'
+    PREFIX = 'aida'
+
     retdict = {}
-    retdict['retrieve_output'] = ['aida.out', 'out/data-file.xml'] 
     retdict['cmdline_params'] = "" # possibly -npool and similar
     retdict['stdin'] = 'aida.in'
     retdict['stdout'] = 'aida.out'
     retdict['stderr'] = None
     retdict['preexec'] = ""
     retdict['postexec'] = ""
+    retdict['retrieve_output'] = []
+    retdict['retrieve_output'].append(retdict['stdout'])
+    retdict['retrieve_output'].append(os.path.join(OUTPUT_SUBFOLDER, 'data-file.xml'))
 
     input_filename = work_folder.get_filename(retdict['stdin'])
 
     # I get input parameters
     try:
         input_data = calc.get_input_data()
-        input_params = input_data.pop('input_params')
+        read_input_params = input_data.pop('input_params')
     except Exception as e:
         import traceback
         print traceback.format_exc()
         raise InputValidationError('Unable to retrieve the input data. '
                                    'I got exception "{}" with message: '
                                    '{}'.format(str(type(e)), e.message))
+
+    # I put the first-level keys as uppercase (i.e., namelist and card names)
+    # and the second-level keys as lowercase, if they are dictionaries (deeper levels are
+    # unchanged)
+    input_params = dict((k.upper(), _lowercase_dict(v, name=k.upper())) 
+                for k, v in read_input_params.iteritems())
+    if len(input_params) != len(read_input_params):
+        raise InputValidationError('There was at least a pair of keys in the '
+            'input_params dictionary which were identically when compared '
+            'case-insensitively. This is not allowed.')
+
+    # I remove unwanted elements (for the moment, instead, I stop; to change when
+    # we setup a reasonable logging)
+    for nl, flag in _blocked_keywords:
+        if nl in input_params:
+            if flag in input_params[nl]:
+                #del input_params[nl][flag]
+                raise ValueError("You cannot specify explicitly the '{}' flag in the '{}' "
+                                 "namelist or card.".format(flag, nl))
+
+    # Set some variables (look out at the case! NAMELISTS should be uppercase, internal
+    # flag names must be lowercase)
+    if 'CONTROL' not in input_params:
+        input_params['CONTROL'] = {}
+    input_params['CONTROL']['pseudo_dir'] = PSEUDO_SUBFOLDER
+    input_params['CONTROL']['outdir'] = OUTPUT_SUBFOLDER
+    input_params['CONTROL']['verbosity'] = 'high'
+    input_params['CONTROL']['prefix'] = PREFIX
 
     # get_input_sites returns a list, I check that I have only
     # one input site and then I save it in input_site
@@ -184,22 +254,53 @@ def create_calc_input(calc, work_folder):
 
     # ------------ ATOMIC_POSITIONS -----------
     atomic_positions_card_list = ["ATOMIC_POSITIONS angstrom\n"]
+
+    # Check on validity of FIXED_COORDS
+    fixed_coords_strings = []
+    try:
+        fixed_coords = input_params.pop('FIXED_COORDS')
+        if len(fixed_coords) != len(input_site.sites):
+            raise InputValidationError("Input structure contains {:d} atoms, but "
+                "fixed_coords has length {:d}".format(len(input_site.sites),
+                                                        len(fixed_coords)))
+
+        for i, this_atom_fix in enumerate(fixed_coords):
+            if len(this_atom_fix) != 3:
+                raise InputValidationError("fixed_coords({:d}) has not length three"
+                                             "".format(i+1))
+            for fixed_c in this_atom_fix:
+                if not isinstance(fixed_c, bool):
+                    raise InputValidationError("fixed_coords({:d}) has non-boolean "
+                                               "elements".format(i+1))
+
+            if_pos_values = [_if_pos(_) for _ in this_atom_fix]
+            fixed_coords_strings.append("  {:d} {:d} {:d}".format(*if_pos_values))
+    except KeyError:
+        # No fixed_coords specified: I store a list of empty strings
+        fixed_coords_strings = [""] * len(input_site.sites)
+
     # TODO: implement if_pos
-    for idx, site in enumerate(input_site.sites):
+    for idx, (site, fixed_coords_string) in enumerate(
+        zip(input_site.sites,fixed_coords_strings)):
         if site.is_alloy() or site.has_vacancies():
             raise InputValidationError("The {}-th site is an alloy or has "
                 "vacancies. This is not allowed for pw.x input structures.")
-        # In the current version, max length of the specie name is 3. We do 
-        # ljust(6) for formatting purposes, but note that ljust never trims
-        # the string
         atomic_positions_card_list.append(
-            "{0} {1:18.10f} {2:18.10f} {3:18.10f}\n".format(
-                site.type.ljust(6), *site.position))
+            "{0} {1:18.10f} {2:18.10f} {3:18.10f} {4}\n".format(
+                site.type.ljust(6), site.position[0], site.position[1],
+                site.position[2], fixed_coords_string))
     atomic_positions_card = "".join(atomic_positions_card_list)
+
+    # I set the variables that must be specified, related to the system
+    # Set some variables (look out at the case! NAMELISTS should be uppercase, internal
+    # flag names must be lowercase)
+    input_params['SYSTEM']['ibrav'] = 0
+    input_params['SYSTEM']['nat'] = len(input_site.sites)
+    input_params['SYSTEM']['ntyp'] = len(specie_names)
 
     # ============ I prepare the k-points =============
     try:
-        k_points = input_params['K_POINTS']
+        k_points = input_params.pop('K_POINTS')
     except KeyError: 
         raise InputValidationError("No K_POINTS specified.")
 
@@ -273,20 +374,18 @@ def create_calc_input(calc, work_folder):
                                      _calc_types_bothionscells)
         raise InputValidationError("Unknown 'calculation' value in "
                                    "CONTROL namelist {}".format(sugg_string))
- 
+
+    
     # TODO: set default/forced values
 
     with open(input_filename,'w') as infile:
-        for namelist in namelists_toprint:
-            infile.write("&{0}\n".format(namelist.upper()))           
-            # namelist content
-            try:
-                for k, v in sorted(input_params[namelist].iteritems()):
-                    infile.write(get_input_data_text(k,v))
-            except KeyError:
-                # namelist not explicitly mentioned in input_data:
-                # leave it empty
-                pass
+        for namelist_name in namelists_toprint:
+            infile.write("&{0}\n".format(namelist_name))
+            # namelist content; set to {} if not present, so that we leave an 
+            # empty namelist
+            namelist = input_params.pop(namelist_name,{})
+            for k, v in sorted(namelist.iteritems()):
+                infile.write(get_input_data_text(k,v))
             infile.write("/\n")
 
         # Write cards now
@@ -297,7 +396,13 @@ def create_calc_input(calc, work_folder):
         #TODO: write CONSTRAINTS
         #TODO: write OCCUPATIONS
 
-    # Todo: either consume remaining input_data keys, or print warning
+    #TODO: improve this debug
+    if len(input_params):
+        print "Warning, following nl/cards in input_params not consumed: " + ",".join(
+            input_params.keys())
+    if len(input_data):
+        print "Warning, following options in input_data not consumed: " + ",".join(
+            input_data.keys())
 
     return retdict
 

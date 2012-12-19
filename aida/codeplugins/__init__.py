@@ -2,20 +2,20 @@ import re
 import importlib
 import sys
 
-def create_calc_input(calc_id, infile_dir):
+def create_calc_input(calc, input_folder):
     """
     Creates all necessary input files for the calculation with ID
     calc_id. 
     
     Args:
-        calc_id: the id of the calculation in the database.
+        calc: the calculation object.
             Note that the calculation and all related M2M fields should
             be already set in the database.
             The advantage of asking for the calc_id is that (in the 
             future) the same function can be used also on the client side,
             and the data from the database are retrieved through API
             requests).
-        infile_dir: The files are generated in the directory infile_dir.
+        input_folder: The files are generated in the directory input_folder.
             The directory must already exist, and should be empty 
             (files may be overwritten). The advantage of having this
             parameter is that this function can be used also before
@@ -26,14 +26,12 @@ def create_calc_input(calc_id, infile_dir):
     ### routines, independent of if we are on the server or on the client
     # I import it here, otherwise if done above it generates a circular
     # dependency
-    from aida.djsite.main.models import Calc
-    calc = Calc.objects.get(id=calc_id)
     
-    input_plugin_name = _get_plugin_module_name(calc.code.type.title)
+    input_plugin_name = _get_plugin_module_name(calc.get_codetype())
     input_plugin = importlib.import_module(input_plugin_name,
                                            package='aida.codeplugins')
     
-    return input_plugin.create_calc_input(calc, infile_dir)
+    return input_plugin.create_calc_input(calc, input_folder)
       
 def _get_plugin_module_name(code_type_title):
     """

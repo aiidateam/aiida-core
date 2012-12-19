@@ -1,57 +1,66 @@
 from tastypie import fields
 from tastypie.resources import ModelResource, ALL, ALL_WITH_RELATIONS
 
-from aida.djsite.main.models import Struc, Calc, CalcAttrNum, CalcAttrNumVal
+from aida.djsite.main.models import Structure, Calculation, CalcAttrNum, CalcAttrNumVal
 
-class StrucResource(ModelResource):
-    inpcalc = fields.ToManyField('aida.djsite.main.api.CalcResource', 'inpcalc',related_name='inpstruc')
-    outcalc = fields.ToManyField('aida.djsite.main.api.CalcResource', 'outcalc', related_name='outstruc')
+class StructureResource(ModelResource):
+    incalculations = fields.ToManyField('aida.djsite.main.api.CalculationResource', 'incalculations',related_name='instructures')
+    outcalculations = fields.ToManyField('aida.djsite.main.api.CalculationResource', 'outcalculations', related_name='outstructures')
+
     class Meta:
-        queryset = Struc.objects.all()
+        queryset = Structure.objects.all()
         filtering = {
-            'inpcalc': ALL_WITH_RELATIONS,
-            'outcalc': ALL_WITH_RELATIONS,
+            'incalculations': ALL_WITH_RELATIONS,
+            'outcalculations': ALL_WITH_RELATIONS,
             }
-        allowed_method = ['get']
+        allowed_methods = ['get']
         include_resource_uri = True    
 
-class CalcResource(ModelResource):
+    def apply_filters(self, request, applicable_filters):
+        """
+        Overridden to get only distinct results
+        """
+        return self.get_object_list(request).filter(**applicable_filters).distinct()
+
+class CalculationResource(ModelResource):
      # Set full=True if you want to put the value instead of the URI
-    calcattrnumval=fields.ToManyField('aida.djsite.main.api.CalcAttrNumValResource', 'calcattrnumval')
+    calcattrnumval=fields.ToManyField('aida.djsite.main.api.CalcAttrNumValResource', 'calcattrnumval',related_name='calcattrnumval')
 
     class Meta:
-        queryset = Calc.objects.all()
+        queryset = Calculation.objects.all()
         filtering = {
             'calcattrnumval': ALL_WITH_RELATIONS,
             }
-        allowed_method = ['get']
+        allowed_methods = ['get']
         #excludes = ['id']
         include_resource_uri = True
         #authentication = BasicAuthentication()
         #authorization = DjangoAuthorization()
 
 class CalcAttrNumValResource(ModelResource):
-    item = fields.ToOneField('aida.djsite.main.api.CalcResource', 'item')
-    attr = fields.ToOneField('aida.djsite.main.api.CalcAttrNumResource', 'attr')
+    calculation = fields.ToOneField('aida.djsite.main.api.CalculationResource',
+                                    'calculation')
+    attribute = fields.ToOneField('aida.djsite.main.api.CalcAttrNumResource', 
+                                  'attribute')
 
     class Meta:
         queryset = CalcAttrNumVal.objects.all()
         filtering = {
-            'item': ALL_WITH_RELATIONS,
-            'attr': ALL_WITH_RELATIONS,
-            'val': ALL,
+            'calculation': ALL_WITH_RELATIONS,
+            'attribute': ALL_WITH_RELATIONS,
+            'value': ALL,
             }
-        allowed_method = ['get']
+        allowed_methods = ['get']
         include_resource_uri = True
 
 class CalcAttrNumResource(ModelResource):
-    calcattrnumval_set = fields.ToManyField('aida.djsite.main.api.CalcAttrNumValResource', 'calcattrnumval_set', related_name='attr')
+    calcattrnumval_set = fields.ToManyField('aida.djsite.main.api.CalcAttrNumValResource', 'calcattrnumval_set', related_name='attribute')
 
     class Meta:
         queryset = CalcAttrNum.objects.all()
         filtering = {
             'calcattrnumval_set': ALL_WITH_RELATIONS,
-            'title': ALL,
+            'name': ALL,
             }
-        allowed_method = ['get']
+        allowed_methods = ['get']
         include_resource_uri = True

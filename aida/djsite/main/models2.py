@@ -51,7 +51,7 @@ class CommentClass(EntityClass):
 #################################################################
 calcstate_choice = (('prepared', 'prepared'),
                     ('submitted', 'submitted'), 
-                    ('ququed', 'queued'),
+                    ('queued', 'queued'),
                     ('running', 'runnning'),
                     ('failed', 'failed'),
                     ('finished', 'finished'),
@@ -61,7 +61,7 @@ class Calc(EntityClass):
     code = m.ForeignKey('Code')
     state = m.CharField(max_length=255, choices=calcstate_choice, db_index=True)
     type = m.ForeignKey('CalcType')
-    dataout = m.ManyToManyField('Data', blank=True)   
+    datain = m.ManyToManyField('Data', blank=True)   
     attr = m.ManyToManyField('CalcAttr', through = 'CalcAttrVal')
     group = m.ManyToManyField('CalcGroup', blank=True)
 
@@ -102,26 +102,28 @@ class CalcAttrVal(EntityClass):
 ##############################################################
 
 class Data(EntityClass):
-    calc = m.ForeignKey('Calc', related_name='datain')      #unique parent Calc for each data
+    calc = m.ForeignKey('Calc', related_name='dataout')      #unique parent Calc for each data
     type = m.ForeignKey('DataType')
     numval = m.FloatField()
     txtval = m.TextField()
-    isfile = m.BooleanField()
-    isdone = m.BooleanField()
+    isdone = m.BooleanField(default=True)
     group = m.ManyToManyField('DataGroup', blank=True)
     linkdata = m.ManyToManyField('self')
     attr = m.ManyToManyField('DataAttr', through = 'DataAttrVal')
 
 #datagrouptype_choice = (('collection', 'collection'), ('relation', 'relation'))        
 
+
 class DataGroup(BaseClass):
     #type = m.CharField(max_length=255, choices=datagrouptype_choice)
     pass
+
 
 class DataType(EntityClass):
     '''
     Data types can be: energy, spectrucm, density, structure, potential, file directory, etc
     '''
+    pass
 
 
 class DataComment(CommentClass):
@@ -180,12 +182,6 @@ class Computer(NameClass):
 #        return self.aidauser.username + " => " + \
 #            self.remoteusername + "@" + self.computer.hostname
 #
-#################################################
-#
-#class Job(DataClass):
-#    computer = m.ForeignKey('Computer') #computer to which to submit
-#    qjobid = m.IntegerField(blank=True, null=True)
-################################################
 
 class Code(EntityClass):
     type = m.ForeignKey('CodeType') #to identify which parser/plugin

@@ -62,8 +62,8 @@ def get_pseudo_from_md5(md5str):
                                                 value=md5str)
     return [i.potential for i in matching_md5]
 
-def add_pseudo_file(filename,description,element_symbols,
-                    pot_type,pot_status,user):
+def add_pseudo_file(filename,element_symbols,
+                    pot_type,pot_status,user,description=""):
     """
     Adds a pseudopotential file to the DB and to the local repository.
 
@@ -139,7 +139,31 @@ def add_pseudo_file(filename,description,element_symbols,
         repo_folder.replace_with_folder(srcdir=f.abspath,move=True)
 
     return newpot
-        
+       
+    
+def get_potential_from_uuid(uuid):
+    """
+    Given a UUID, queries the database to get the Potential object with
+    that UUID and returns it.
+
+    Args:
+        uuid: a string with the uuid.
+    Returns:
+        a aida.djsite.main.Potential object.
+    Raises:
+        ValueError if no Potential entry could be found with that UUID.
+            (The field has the unique attribute, so no more than one
+            can be found.)
+    """
+    try:
+        the_potential = Potential.objects.get(uuid=uuid)
+    except ObjectDoesNotExist:
+        raise ValueError("Potential with UUID={} could not be found."
+                         "".format(uuid))
+    
+    return the_potential
+
+ 
 ##"""
 ##    Note that the 'title' field of the Potential entry corresponds
 ##    to the filename in the 'potentials' section of the aida local repository.

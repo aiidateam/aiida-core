@@ -95,13 +95,13 @@ class Calculation(DataClass):
         """
         aida.jobmanager.submitter.submit_calc(self)
 
-    def get_input_params(self):
+    def get_input_data(self):
         """
-        Return a dictionary with the input parameters if this calculation,
+        Return a dictionary with the input data of this calculation,
         as obtained by reading the local repository.
         """
-        from aida.repository.calculation import get_input_params
-        return get_input_params(self)
+        from aida.repository.calculation import get_input_data
+        return get_input_data(self)
 
     def get_input_sites(self):
         """
@@ -116,6 +116,18 @@ class Calculation(DataClass):
         folder for this calculation.
         """
         return RepositoryFolder(section='calculations', uuid=self.uuid)
+
+    def get_repo_inputs_folder(self):
+        """
+        Return a RepositoryFolder object pointing to the 'inputs' subfolder.
+        """
+        return self.get_repo_folder().get_subfolder('inputs')
+
+    def get_repo_outputs_folder(self):
+        """
+        Return a RepositoryFolder object pointing to the 'inputs' subfolder.
+        """
+        return self.get_repo_folder().get_subfolder('outputs')
 
     def get_codetype(self):
         """
@@ -379,6 +391,12 @@ class Potential(DataClass):
         """
         return RepositoryFolder(section='potentials', uuid=self.uuid)
 
+    def get_element_set(self):
+        """
+        Return a set of strings for the element symbols associated to this
+        potential.
+        """
+        return set(el.symbol for el in self.elements.all())
 
 class PotAttrTxt(AttrClass): 
     pass

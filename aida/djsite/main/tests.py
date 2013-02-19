@@ -38,11 +38,9 @@ class PseudoTest(unittest.TestCase):
         Set up things once for all tests of this class. 
         In particular, defines a type and a status.
         """
-        cls.user, was_created = AuthUser.objects.get_or_create(
-            username=getpass.getuser())
-        cls.status, was_created = PotStatus.objects.get_or_create(
-            name='Unknown')
-        cls.type, was_created = PotType.objects.get_or_create(name='pz')
+        cls.user = AuthUser.objects.create(username="test-pseudo")
+        cls.status = PotStatus.objects.create(name='Unknown-pseudotest')
+        cls.type = PotType.objects.create(name='pz-pseudotest')
     
 
     def step1(self):
@@ -169,60 +167,19 @@ class ElementTest(unittest.TestCase):
             Element.objects.get(Z=0)
         
 
-class SubmissionTest(unittest.TestCase):
-    # List here fixtures to be load
-    # for some reasons it doesn't work... for the moment I just load it in
-    # setUp, even if possibly redundant
-    #fixtures = ['testcalcstatus']
-
-    def test_submission(self):
+class StructureTest(unittest.TestCase):
+    """
+    Test if I am able to store a structure, and then to retrieve it.
+    """
+    @classmethod
+    def setUpClass(cls):
         """
-        Tests that I can submit a calculation.
+        Set up things once for all tests of this class. 
+        In particular, defines a type and a status.
         """
-        testuser = AuthUser.objects.create(username="test")
-        # I insert a new calculation
-        project = Project.objects.create(name="test",user=testuser)
-        computer = Computer.objects.create(hostname="localhost",user=testuser)
-        initial_status = CalcStatus.objects.create(name="test_status")
-        calc_type = CalcType.objects.create(name="dft.scf")
-        code_status = CodeStatus.objects.create(name="development")
-        code_type = CodeType.objects.create(name="Quantum Espresso/pw")
-        code = Code.objects.create(name="pw.x",computer=computer,
-                                   type=code_type,status=code_status,
-                                   user=testuser)
+        cls.testuser = AuthUser.objects.create(username="test-structure")
 
-        input_data = {
-            'CONTROL': {
-                'calculation': 'relax',
-                'restart_mode': 'from_scratch',
-                },
-            'SYSTEM': {
-                'ibrav': 0,
-                'fixed_magnetization': [0.,1.,0.5],
-                'nosym': True,
-                },
-            'ELECTRONS': {
-                'mixing_beta': 0.3,
-                },
-            'K_POINTS': {
-                'type': 'automatic',
-                'points': [4, 4, 4, 0, 0, 0],
-                },
-            }
-
-        input_params={}
-        input_params['input_data'] = input_data
-        
-        # internally calls Calculation.objects.create
-        # correctly managing the input_data
-        self.the_calc = add_calculation(user=testuser,
-            computer=computer, code=code, project=project,
-            status=initial_status, type=calc_type, input_params=input_params)
-
-        # There are still no input Sites attached
-        with self.assertRaises(ValidationError):
-            self.the_calc.submit()
-            
+    def test_storage_and_retrieve(self):
         a = 5.43
         sites = structure.Sites(cell=((a/2.,a/2.,0.),
                                       (a/2.,0.,a/2.),
@@ -233,8 +190,7 @@ class SubmissionTest(unittest.TestCase):
         sites.appendSite(structure.Site(symbols='Si',
                                                  position=(a/2.,a/2.,a/2.)))
        
-        struct_django = add_structure(sites,user=testuser,dim=3)
-        self.the_calc.instructures.add(struct_django)
+        struct_django = add_structure(sites,user=self.testuser,dim=3)
 
         # I want to check that I am able to retrieve the file
         retrieved_sites = struct_django.get_sites()
@@ -247,5 +203,152 @@ class SubmissionTest(unittest.TestCase):
         self.assertEqual(retrieved_sites.sites[0].symbols,('Si',))
         self.assertAlmostEqual(retrieved_sites.sites[1].position[0],a/2.)
 
-        self.the_calc.submit()
 
+class SubmissionTest(unittest.TestCase):
+    # List here fixtures to be load
+    # for some reasons it doesn't work... for the moment I just load it in
+    # setUp, even if possibly redundant
+    #fixtures = ['testcalcstatus']
+
+    @classmethod
+    def setUpClass(cls):
+        """
+        Set up things once for all tests of this class. 
+        In particular, defines a type and a status.
+        """
+        cls.testuser = AuthUser.objects.create(username="test-submission")
+        cls.project = Project.objects.create(name="test",user=cls.testuser)
+        cls.computer = Computer.objects.create(hostname="localhost",
+                                               user=cls.testuser)
+        cls.initial_status = CalcStatus.objects.create(name="test_status")
+        cls.calc_type = CalcType.objects.create(name="dft.scf")
+        cls.code_status = CodeStatus.objects.create(name="development")
+        cls.code_type = CodeType.objects.create(name="Quantum Espresso/pw")
+        cls.code = Code.objects.create(name="pw.x",computer=cls.computer,
+               type=cls.code_type,status=cls.code_status,
+               user=cls.testuser)
+        cls.pot_status = PotStatus.objects.create(name='Unknown-subtest')
+        cls.pot_type = PotType.objects.create(name='pz-subtest')
+
+        a = 5.43
+        sites = structure.Sites(cell=((a/2.,a/2.,0.),
+                                      (a/2.,0.,a/2.),
+                                      (0.,a/2.,a/2.)),
+                                pbc=(True,True,True))
+        sites.appendSite(structure.Site(symbols='Si',
+                                                 position=(0.,0.,0.)))
+        sites.appendSite(structure.Site(symbols='Si',
+                                                 position=(a/2.,a/2.,a/2.)))
+       
+        cls.struct_django = add_structure(sites,user=cls.testuser,dim=3)
+
+        cls.new_pot = add_pseudo_file(os.path.join(testdata_folder,
+            'Si.pbe-rrkj_copy.UPF'),
+            element_symbols=['Si'], pot_type=cls.pot_type,
+            pot_status=cls.pot_status,user=cls.testuser)
+
+
+    def test_failed_submission(self):
+        """
+        Tests that I cannot submit a wrong calculation.
+        """
+
+        input_params = {
+            'CONTROL': {
+                'calculation': 'vc-relax',
+                'restart_mode': 'from_scratch',
+                'wf_collect': True,
+                },
+            'SYSTEM': {
+                'ecutwfc': 47.,
+                'ecutrho': 568.,
+                },
+            'ELECTRONS': {
+                'conv_thr': 1.e-10,
+                },
+            'K_POINTS': {
+                'type': 'automatic',
+                'points': [4, 4, 4, 0, 0, 0],
+                },
+            }
+        
+        calc_data = {'user': self.testuser, 'computer': self.computer,
+                     'code': self.code, 'project': self.project,
+                     'status': self.initial_status, 'type': self.calc_type}
+
+        # internally calls Calculation.objects.create
+        # correctly managing the input_data
+        self.the_calc = add_calculation(input_params=input_params,**calc_data)
+
+        # There are still no input Sites attached
+        with self.assertRaises(ValidationError):
+            self.the_calc.submit()
+            
+        a = 5.43
+        sites = structure.Sites(cell=((a/2.,a/2.,0.),
+                                      (a/2.,0.,a/2.),
+                                      (0.,a/2.,a/2.)),
+                                pbc=(True,True,True))
+        sites.appendSite(structure.Site(symbols='Ge',
+                                                 position=(0.,0.,0.)))
+        sites.appendSite(structure.Site(symbols='Ge',
+                                                 position=(a/2.,a/2.,a/2.)))
+       
+        test_struct_django = add_structure(sites,user=self.testuser,dim=3)
+
+        # I recreate a new calculation, this time with structure
+        self.the_calc = add_calculation(
+            input_params=input_params,structure_list=[test_struct_django],
+            potential_list=[self.new_pot], **calc_data)
+
+        # Wrong pseudopotential list
+        with self.assertRaises(ValidationError):
+            self.the_calc.submit()
+            
+
+    def test_submission(self):
+        """
+        Tests that I can submit a calculation.
+        """
+        input_params = {
+            'CONTROL': {
+                'calculation': 'vc-relax',
+                'restart_mode': 'from_scratch',
+                'wf_collect': True,
+                },
+            'SYSTEM': {
+                'ecutwfc': 47.,
+                'ecutrho': 568.,
+                },
+            'ELECTRONS': {
+                'conv_thr': 1.e-10,
+                },
+            'K_POINTS': {
+                'type': 'automatic',
+                'points': [4, 4, 4, 0, 0, 0],
+                },
+            'fixed_coords': [
+                [True, True, True],
+                [False, False, False],
+                ],
+            }
+        
+        calc_data = {'user': self.testuser, 'computer': self.computer,
+                     'code': self.code, 'project': self.project,
+                     'status': self.initial_status, 'type': self.calc_type}
+
+        # internally calls Calculation.objects.create
+        # correctly managing the input_data
+        self.the_calc = add_calculation(input_params=input_params,**calc_data)
+
+        # There are still no input Sites attached
+        with self.assertRaises(ValidationError):
+            self.the_calc.submit()
+            
+        # I recreate a new calculation, this time with structures
+        self.the_calc = add_calculation(
+            input_params=input_params,structure_list=[self.struct_django],
+            potential_list=[self.new_pot], **calc_data)
+
+        self.the_calc.submit()
+            

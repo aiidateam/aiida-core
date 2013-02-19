@@ -3,7 +3,18 @@ This module defines the classes for structures (called Sites, being a
 collection of sites) and all related functions to operate on them.
 """
 import itertools
+import copy
 
+# Threshold used to check if the mass of two different Site objects is the same.
+_mass_threshold = 1.e-3
+# Threshold to check if the sum is one or not
+_sum_threshold = 1.e-6
+# Threshold used to check if the cell volume is not zero.
+_volume_threshold = 1.e-6
+
+
+
+# Element table
 elements = {
     1: {   'mass': 1.0079400000000001, 'name': 'Hydrogen', 'symbol': 'H'},
     2: {   'mass': 4.0026000000000002, 'name': 'Helium', 'symbol': 'He'},
@@ -254,9 +265,6 @@ class Sites(object):
                 If this variable is set, only case 1 of cell is accepted.
                 Default: [True, True, True]
         """
-        # Threshold used to check if the cell volume is not zero.
-        self._volume_threshold = 1.e-6
-
         # Initial values
         self._sites = []
         self._cell = None
@@ -269,13 +277,13 @@ class Sites(object):
             self.cell = cell.cell
             self.pbc = cell.pbc
             for site in cell.sites:
-                self.appendSite(site)
+                self.appendSite(Site(site=site))
         elif _is_ase_atoms(cell):
             # Read the ase structure
             self.cell = cell.cell
             self.pbc = cell.pbc
             for atom in cell:
-                self.appendSite(Site(ase=atom))
+                self.appendSite(Site(ase=atom),reset_type_if_needed=True)
         elif isinstance(cell,dict):
             try:
                 self.cell = cell['cell']
@@ -359,20 +367,116 @@ class Sites(object):
         raw = self.get_raw()
         return json.dumps(raw)
 
-    def appendSite(self,site):
+    def get_types(self):
         """
-        Append a site to the Sites.
+        Return a list of types. Each type is a tuple, the first element is the
+        type string, the second element is a list of the indices of the sites
+        referring to this type.
+        
+        The second element should never be an empty list! At least an element
+        should be present.
+        """       
+        positions = {}
+        types = []
+        
+        # * positions is a dictionary that maps each type to a list, containing the positions of the sites
+        #   in the self.sites list.
+        # * types keeps track of the order in which the types were found
+        for i, the_type in enumerate([site.type for site in self.sites]):
+            if the_type in positions:
+                positions[the_type].append(i)
+            else:
+                positions[the_type] = [i]
+                types.append(the_type)
 
-        TODO: 
-            change this function to append a COPY of the provided site.
+        # I return the final object
+        final_list = [(the_type, positions[the_type]) for the_type in types]
+
+        return final_list
+
+    def appendSite(self,site,reset_type_if_needed=False):
+        """
+        Append a site to the Sites. It makes a copy of the site.
 
         Args:
             site: the site to append, must be a Site object.
+            reset_type_if_needed: if False, an exception is raised if a site with same type but different
+                properties (mass, symbols, weights, ...) is found.
+                If True, and an atom with same type but different properties is found, all the sites
+                already present in self.sites are checked to see if there is a site with the same properties.
+                Then, the same type is set. Otherwise, a new type name is chosen adding a number to the site
+                name such that the type is different from the existing ones.
         """
-        if not isinstance(site,Site):
-            raise ValueError("Can only append Site objects")
+        new_site = Site(site=site) # So we make a copy
         
-        self._sites.append(site)
+        self._validate_site_type(new_site, reset_type_if_needed=reset_type_if_needed)
+
+        # If here, no exceptions have been raised, so I store. Note that the new_site.type value may 
+        # have been changed by the previous function.
+        self._sites.append(new_site) 
+
+    def _validate_site_type(self, new_site, reset_type_if_needed):
+        """
+        Validate if the site can be added (i.e., if no other sites with the same type exist, or if
+        they exist, then they are equal).
+        
+        Note: this may change the attribute 'type' of the site object, so be careful!!
+
+        Args:
+            new_site: the new site to check, must be a Site object.
+            reset_type_if_needed: if False, an exception is raised if a site with same type but different
+                properties (mass, symbols, weights, ...) is found.
+                If True, and an atom with same type but different properties is found, all the sites
+                already present in self.sites are checked to see if there is a site with the same properties.
+                Then, the same type is set. Otherwise, a new type name is chosen adding a number to the site
+                name such that the type is different from the existing ones.
+        """
+        type_list = self.get_types()
+        if type_list:
+            types, positions = zip(*type_list)
+        else:
+            types = []
+            positions = []
+
+        if new_site.type not in types:
+            # There is no element with this type, OK to insert
+            return
+
+        # I get the index of the type, and the
+        # first atom of this type (there should always be at least one!)
+        type_idx = types.index(new_site.type)
+        site_idx = positions[type_idx][0] 
+        
+        # If it is of the same type, I am happy
+        is_same_type, differences_str = new_site.compare_type(self.sites[site_idx])
+        if is_same_type:
+            return
+
+        # If I am here, the type string is the same, but they are actually of different type!
+
+        if not reset_type_if_needed:
+            errstr = ("The site you are trying to insert is of type '{}'. However, another site already "
+                      "exists with same type, but with different properties! ({})".format(
+                         new_site.type, differences_str))
+            raise ValueError(errstr)
+
+        # I check if there is a atom of the same type
+        for site in self.sites:
+            is_same_type, _ = new_site.compare_type(site)
+            if is_same_type:
+                new_site.type = site.type
+                return
+
+        # If I am here, I didn't find any existing site which is of the same type
+        existing_type_names = [the_type for the_type in types if the_type.startswith(new_site.type)]
+
+        append_int = 1
+        while True:
+            new_typename = "{:s}{:d}".format(new_site.type, append_int) 
+            if new_typename not in existing_type_names:
+                break
+            append_int += 1
+        new_site.type = new_typename
 
     def clearSites(self):
         """
@@ -382,11 +486,11 @@ class Sites(object):
 
     @property
     def sites(self):
-        return self._sites
+        return copy.deepcopy(self._sites)
     
     @property
     def cell(self):
-        return self._cell
+        return copy.deepcopy(self._cell)
     
     @cell.setter
     def cell(self,value):
@@ -400,14 +504,14 @@ class Sites(object):
             raise ValueError("Cell must be a list of the three vectors, each "
                              "defined as a list of three coordinates.") 
         
-        if abs(_calc_cell_volume(the_cell)) < self._volume_threshold:
+        if abs(_calc_cell_volume(the_cell)) < _volume_threshold:
             raise ValueError("The cell volume is zero. Invalid cell.")
 
         self._cell = the_cell
 
     @property
     def pbc(self):
-        return self._pbc
+        return copy.deepcopy(self._pbc)
 
     @pbc.setter
     def pbc(self,value):
@@ -454,6 +558,8 @@ class Site(object):
            One can either pass:
                raw: the raw python dictionary that will be converted to a
                Site object.
+               ase: an ase Atom object
+               site: a Site object (to get a copy)
            Or alternatively the following parameters:
                position: the absolute position (three floats) in angstrom
                symbols: a single string for the symbol of this site, or a list
@@ -463,14 +569,16 @@ class Site(object):
                   optional and the weight is set to 1.
                mass (optional): the mass for this site in atomic mass units. If not provided,
                    the mass is set by the self.reset_mass() function.
+               type (optional): a string that uniquely identifies the Site type. Two sites with the
+                   same 'type' string are treated as the same atom type (e.g. for symmetry detection, ...)
+                   By default, it is set to a string with the symbols appended one to the other, without
+                   spaces, in alphabetical order; if the site has a vacancy, a X is appended at the end too.
         """
-        # Threshold to check if the sum is one or not
-        self._sum_threshold = 1.e-6
-
         # Internal variables
         self._mass = None
         self._symbols = None
         self._weights = None
+        self._type = None
 
         # Logic to create the site from the raw format
         if 'raw' in kwargs:
@@ -495,15 +603,38 @@ class Site(object):
                 raise ValueError("You didn't specify the site mass in the "
                                  "raw site data.")
 
-        elif 'ase' in kwargs:
+            try:
+                self.type = raw['type']
+            except KeyError:
+                raise ValueError("You didn't specify the site type in the "
+                                 "raw site data.")
+
+        elif 'site' in kwargs:
             if len(kwargs) != 1:
-                raise ValueError("If you pass 'ase', then you cannot pass "
+                raise ValueError("If you pass 'site', then you cannot pass "
                                  "any other parameter.")
+            oldsite = kwargs['site']
+
+            try:
+                self.position = oldsite.position
+                self.set_symbols_and_weights(oldsite.symbols,oldsite.weights)
+                self.mass = oldsite.mass
+                self.type = oldsite.type
+            except AttributeError:
+                raise ValueError("Error using the Site object. Are you sure "
+                    "it is a aida.common.classes.structure.Site object? [Introspection says it is "
+                    "{}]".format(str(type(oldsite))))
+
+        elif 'ase' in kwargs:
             aseatom = kwargs['ase']
+            if len(kwargs) != 1:
+                raise ValueError("If you pass 'ase', then you cannot pass any other parameter.")
+            
             try:
                 self.position = aseatom.position
                 self.set_symbols_and_weights([aseatom.symbol],[1.])
                 self.mass = aseatom.mass
+                self.set_automatic_type()
             except AttributeError:
                 raise ValueError("Error using the aseatom object. Are you sure "
                     "it is a ase.atom.Atom object? [Introspection says it is "
@@ -521,6 +652,10 @@ class Site(object):
                 self.reset_mass()
             else:
                 self.mass = kwargs['mass']
+            if 'type' not in kwargs:
+                self.set_automatic_type()
+            else:
+                self.type = kwargs['type']
 
     def get_raw(self):
         """
@@ -537,6 +672,7 @@ class Site(object):
             'weights': self.weights,
             'position': self.position,
             'mass': self.mass,
+            'type': self.type,
             }
 
     def get_ase(self):
@@ -568,7 +704,7 @@ class Site(object):
         """
         w_sum = sum(self._weights)
         
-        if abs(w_sum) < self._sum_threshold:
+        if abs(w_sum) < _sum_threshold:
             self._mass = None
             return
         
@@ -576,6 +712,78 @@ class Site(object):
         element_masses = (_atomic_masses[sym] for sym in self._symbols)
         # Weighted mass
         self._mass = sum([i*j for i,j in zip(normalized_weights, element_masses)])
+
+    @property
+    def type(self):
+        """
+        Return the type of this site (a string).
+        
+        The type of a site is used to decide whether two sites are identical (same mass, symbols,
+        weights, ...) or not.
+        """
+        return self._type
+
+    @type.setter
+    def type(self, value):
+        """
+        Set the type of this site (a string).
+        
+        Note that if the weights or the symbols are changed, the type is overwritten with the
+        automatic one.
+        """
+        self._type = str(value)
+
+    def set_automatic_type(self):
+        """
+        Set the type to a string obtained with the symbols appended one after the other, without
+        spaces, in alphabetical order; if the site has a vacancy, a X is appended at the end too.
+        """
+        sorted_symbol_list = list(set(self.symbols))
+        sorted_symbol_list.sort() # In-place sort
+        type_string = "".join(sorted_symbol_list)
+        if self.has_vacancies():
+            type_string += "X"
+        
+        self.type = type_string
+
+    def compare_type(self, other_site):
+        """
+        Compare with another Site object to check if they are different.
+        
+        Note! This does NOT check the 'type' attribute. Instead, it compares (with reasonable thresholds,
+        where applicable): the mass, and the list of symbols and of weights.
+
+        Return:
+            A tuple with two elements. The first one is True if the two sites are 'equivalent' (same mass,
+                symbols and weights), False otherwise. The second element of the tuple is a string, 
+                which is either None (if the first element was True), or contains a 'human-readable'
+                description of the first difference encountered between the two sites.
+        """
+        # Check length of symbols
+        if len(self.symbols) != len(other_site.symbols):
+            return (False, "Different length of symbols list")
+        
+        # Check list of symbols
+        for i in range(len(self.symbols)):
+            if self.symbols[i] != other_site.symbols[i]:
+                return (False, "Symbol at position {:d} are different ({} vs. {})".format(
+                        i+1, self.symbols[i], other_site.symbols[i]))
+
+        # Check weights (assuming length of weights and of symbols have same length, which should
+        # always be true
+        for i in range(len(self.weights)):
+            if self.weights[i] != other_site.weights[i]:
+                return (False, "Weight at position {:d} are different ({} vs. {})".format(
+                        i+1, self.weights[i], other_site.weights[i]))
+            
+
+        # Check masses
+        if abs(self.mass - other_site.mass) > _mass_threshold:
+            return (False, "Masses are different ({} vs. {})".format(self.mass, other_site.mass))
+    
+        # If we got here, the two Site objects are similar enough to be considered of the same type
+        return (True, None)
+        
 
     @property
     def mass(self):
@@ -597,7 +805,7 @@ class Site(object):
         Return the position of this site in absolute coordinates, 
         in angstrom.
         """
-        return self._position
+        return copy.deepcopy(self._position)
 
     @position.setter
     def position(self,value):
@@ -620,8 +828,10 @@ class Site(object):
         """
         Weights for this site. Refer also to
         :func:validate_symbols_tuple for the validation rules on the weights.
+
+        Note that when the weights are changed, the type is automatically regenerated.
         """
-        return self._weights
+        return copy.deepcopy(self._weights)
 
     @weights.setter
     def weights(self, value):
@@ -632,12 +842,13 @@ class Site(object):
         """
         weights_tuple = _create_weights_tuple(value)
 
-        if len(weights_list) != len(self._symbols):
+        if len(weights_tuple) != len(self._symbols):
             raise ValueError("Cannot change the number of weights. Use the "
                              "set_symbols_and_weights function instead.")
-        validate_weight_tuple(weights_tuple,self._sum_threshold)
+        validate_weights_tuple(weights_tuple, _sum_threshold)
 
         self._weights = weights_tuple
+        self.set_automatic_type()
 
     @property
     def symbols(self):
@@ -645,8 +856,10 @@ class Site(object):
         List of symbols for this site. If the site is a single atom,
         pass a list of one element only, or simply the string for that atom.
         For alloys, a list of elements.
+
+        Note that when the symbols are changed, the type is automatically regenerated.
         """
-        return self._symbols
+        return copy.deepcopy(self._symbols)
     
     @symbols.setter
     def symbols(self, value):
@@ -657,27 +870,31 @@ class Site(object):
         I set a copy of the list, so to avoid that the content changes 
         after the value is set.
         """
-        symbols_tuple = _create_symbols_tuple(symbols)
+        symbols_tuple = _create_symbols_tuple(value)
        
-        if len(symbols_list) != len(self._weights):
+        if len(symbols_tuple) != len(self._weights):
             raise ValueError("Cannot change the number of symbols. Use the "
                              "set_symbols_and_weights function instead.")
         validate_symbols_tuple(symbols_tuple)
 
         self._symbols = symbols_tuple
+        self.set_automatic_type()
 
     def set_symbols_and_weights(self,symbols,weights):
         """
         Set the chemical symbols and the weights for the site.
+
+        Note that this function also resets the type to the automatically generated one.
         """
         symbols_tuple = _create_symbols_tuple(symbols)
         weights_tuple = _create_weights_tuple(weights)
         if len(symbols_tuple) != len(weights_tuple):
             raise ValueError("The number of symbols and weights must coincide.")
         validate_symbols_tuple(symbols_tuple)
-        validate_weights_tuple(weights_tuple,self._sum_threshold)
+        validate_weights_tuple(weights_tuple,_sum_threshold)
         self._symbols = symbols_tuple
         self._weights = weights_tuple
+        self.set_automatic_type()
 
     def is_alloy(self):
         """
@@ -693,7 +910,7 @@ class Site(object):
         It uses the internal variable _sum_threshold as a threshold.
         """
         w_sum = sum(self._weights)
-        return not(1. - w_sum < self._sum_threshold)
+        return not(1. - w_sum < _sum_threshold)
 
 if __name__ == "__main__":
     import unittest
@@ -820,6 +1037,22 @@ if __name__ == "__main__":
             b = Site(position=(0.,0.,0.),symbols='Ba',weights=1.)
             self.assertFalse(b.is_alloy())
             self.assertFalse(b.has_vacancies())
+
+        def test_automatic_type(self):
+            """
+            Check the automatic type generator.
+            """
+            a = Site(position=(0.,0.,0.),symbols='Ba')
+            self.assertEqual(a.type,'Ba')
+
+            a = Site(position=(0.,0.,0.),symbols=('Si','Ge'),weights=(1./3.,2./3.))
+            self.assertEqual(a.type,'GeSi')
+
+            a = Site(position=(0.,0.,0.),symbols=('Si','Ge'),weights=(0.4,0.5))
+            self.assertEqual(a.type,'GeSiX')
+            
+            a.type = 'newstring'
+            self.assertEqual(a.type,'newstring')
 
     class TestMasses(unittest.TestCase):
         """
@@ -1007,6 +1240,167 @@ if __name__ == "__main__":
             a.appendSite(s)
             self.assertFalse(a.is_alloy())
             self.assertTrue(a.has_vacancies())
+
+        def test_type_1(self):
+            """
+            Test the management of types.
+            """
+            a = Sites(cell=((2.,0.,0.),(0.,2.,0.),(0.,0.,2.)))
+            
+            s = Site(position=(0.,0.,0.),symbols=['Ba'])
+            a.appendSite(s)
+            s = Site(position=(0.5,0.5,0.5),symbols=['Ba'])
+            a.appendSite(s)
+            # Shouldn't complain, I added twice the same atom, with same mass etc.
+            s = Site(position=(1.,1.,1.),symbols=['Ti'])
+            a.appendSite(s)
+            
+            type_list = a.get_types()
+            self.assertEqual(len(type_list),2) # I should only have two types
+
+        def test_type_2(self):
+            """
+            Test the management of types.
+            """
+            a = Sites(cell=((2.,0.,0.),(0.,2.,0.),(0.,0.,2.)))
+            
+            s = Site(position=(0.,0.,0.),symbols=['Ba'],type='Ba1')
+            a.appendSite(s)
+            s = Site(position=(0.5,0.5,0.5),symbols=['Ba'],type='Ba2')
+            a.appendSite(s)
+            s = Site(position=(1.,1.,1.),symbols=['Ti'])
+            a.appendSite(s)
+            
+            type_list = a.get_types()
+            self.assertEqual(len(type_list),3) # I should have now three types
+            # i[0] is the type name, while i[0] is the list of indices
+            self.assertEqual(set(i[0] for i in type_list), set(('Ba1', 'Ba2', 'Ti')))
+
+        def test_type_3(self):
+            """
+            Test the management of types.
+            """
+            a = Sites(cell=((2.,0.,0.),(0.,2.,0.),(0.,0.,2.)))
+            
+            s = Site(position=(0.,0.,0.),symbols=['Ba'],mass=100.)
+            a.appendSite(s)
+            s = Site(position=(0.5,0.5,0.5),symbols=['Ba'],mass=101.)
+            with self.assertRaises(ValueError):
+                # Shouldn't allow, I am adding two sites with the same automatic tag 'Ba'
+                # but with different masses
+                a.appendSite(s) 
+
+            # now it should work
+            s = Site(position=(0.5,0.5,0.5),symbols=['Ba'],mass=101.,type='Ba2')
+            a.appendSite(s) 
+                
+            s = Site(position=(1.,1.,1.),symbols=['Ti'])
+            a.appendSite(s)
+            
+            type_list = a.get_types()
+            self.assertEqual(len(type_list),3) # I should have now three types
+            self.assertEqual(set(i[0] for i in type_list), set(('Ba', 'Ba2', 'Ti')))
+
+        def test_type_4(self):
+            """
+            Test the management of types.
+            """
+            a = Sites(cell=((2.,0.,0.),(0.,2.,0.),(0.,0.,2.)))
+            
+            s = Site(position=(0.,0.,0.),symbols=['Ba','Ti'],weights=(1.,0.),type='mytype')
+            a.appendSite(s)
+
+            s = Site(position=(0.5,0.5,0.5),symbols=['Ba','Ti'],weights=(0.9,0.1),type='mytype')
+            with self.assertRaises(ValueError):
+                # Shouldn't allow, different weights
+                a.appendSite(s) 
+
+            s = Site(position=(0.5,0.5,0.5),symbols=['Ba','Ti'],weights=(0.8,0.1),type='mytype')
+            with self.assertRaises(ValueError):
+                # Shouldn't allow, different weights (with vacancy)
+                a.appendSite(s) 
+
+            s = Site(position=(0.5,0.5,0.5),symbols=['Ba'],type='mytype')
+            with self.assertRaises(ValueError):
+                # Shouldn't allow, different symbols list
+                a.appendSite(s) 
+
+            s = Site(position=(0.5,0.5,0.5),symbols=['Si','Ti'],weights=(1.,0.),type='mytype')
+            with self.assertRaises(ValueError):
+                # Shouldn't allow, different symbols list
+                a.appendSite(s) 
+
+        def test_type_5(self):
+            """
+            Test the management of types.
+            """
+            a = Sites(cell=((2.,0.,0.),(0.,2.,0.),(0.,0.,2.)))
+            
+            s = Site(position=(0.,0.,0.),symbols='Ba',mass=100.)
+            a.appendSite(s)
+
+            s = Site(position=(0.,0.,0.),symbols='Ti')
+            a.appendSite(s)
+
+            s = Site(position=(0.,0.,0.),symbols='Ti',type='Ti2')
+            a.appendSite(s)
+
+            # Should not complain
+            s = Site(position=(0.,0.,0.),symbols='Ba',mass=150.)
+            a.appendSite(s,reset_type_if_needed=True)
+
+            type_list = a.get_types()
+            # There should be 4 different types
+            self.assertEqual(len(type_list), 4)
+
+            # Type name of the fourth atom
+            self.assertEqual(type_list[3][0],'Ba1')
+            
+
+        def test_get_types(self):
+            """
+            Test the get_types method
+            """
+            a = Sites(cell=((2.,0.,0.),(0.,2.,0.),(0.,0.,2.)))
+            
+            s = Site(position=(0.,0.,0.),symbols=['Ba'])
+            a.appendSite(s)
+
+            s = Site(position=(0.,0.,0.),symbols=['Ba'])
+            a.appendSite(s)
+
+            s = Site(position=(0.,0.,0.),symbols=['Ti'])
+            a.appendSite(s)
+
+            s = Site(position=(0.,0.,0.),symbols=['Ti'], type='Ti2')
+            a.appendSite(s)
+
+            s = Site(position=(0.,0.,0.),symbols=['O'])
+            a.appendSite(s)
+
+            s = Site(position=(0.,0.,0.),symbols=['O'])
+            a.appendSite(s)
+
+            s = Site(position=(0.,0.,0.),symbols=['O'], type='O2')
+            a.appendSite(s)
+
+            s = Site(position=(0.,0.,0.),symbols=['O'], type='O3')
+            a.appendSite(s)
+
+            sites_list = a.sites
+            
+            found_sites = []
+            for the_type, the_sites in a.get_types():
+                for the_site_idx in the_sites:
+                    already_in_list = the_site_idx in found_sites
+                    # Check that a site is not present twice
+                    self.assertFalse(already_in_list)
+                    # Check that we are pointing to a site with correct type
+                    self.assertEqual(the_type, sites_list[the_site_idx].type)
+                    found_sites.append(the_site_idx)
+            
+            # Check that all sites were present
+            self.assertEqual(sorted(found_sites), range(len(a.sites)))
 
 
     class TestRawSites(unittest.TestCase):

@@ -2,6 +2,7 @@ from aida.common.classes.structure import Sites
 from aida.djsite.main.models import Structure, Element
 from aida.repository.utils.files import SandboxFolder, RepositoryFolder
 import json
+from django.core.exceptions import ObjectDoesNotExist
 
 _SITES_FILE='sites.json'
 
@@ -27,7 +28,7 @@ def add_structure(sites,user,dim=3):
     
     # Create a new sandbox folder
     with SandboxFolder() as f:
-        with open(f.get_file_path(filename=_SITES_FILE), 'w') as jsonfile:
+        with open(f.get_filename(filename=_SITES_FILE), 'w') as jsonfile:
             json.dump(internal_sites.get_raw(),fp=jsonfile)
 
         django_structure = Structure.objects.create(user=user,dim=dim,
@@ -56,6 +57,7 @@ def add_structure(sites,user,dim=3):
     
     return django_structure
 
+
 def get_sites(structure):
     """
     Get the Sites object connected to a structure of the database.
@@ -83,3 +85,26 @@ def get_sites(structure):
     return sites
     
     
+def get_sites_from_uuid(uuid):
+    """
+    Given a UUID, queries the database to get the Structure object with
+    that UUID, gets the relative site and returns it.
+
+    Args:
+        uuid: a string with the uuid.
+    Returns:
+        a Sites object.
+    Raises:
+        ValueError if no Structure entry could be found with that UUID.
+            (The field has the unique attribute, so no more than one
+            can be found.)
+        An exception may also be raised when reading the Sites object from 
+            file, refer to the get_sites() function.
+    """
+    try:
+        the_structure = Structure.objects.get(uuid=uuid)
+    except ObjectDoesNotExist:
+        raise ValueError("Structure with UUID={} could not be found."
+                         "".format(uuid))
+    
+    return the_structure.get_sites()

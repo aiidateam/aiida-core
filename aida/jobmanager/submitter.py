@@ -48,17 +48,15 @@ def submit_calc(calc):
         ## To see if this interface is the best one or not (i.e., if we want
         ## to give full access to the input_folder to the input plugin)
         retdict = create_calc_input(calc=calc,
-            input_folder=sandbox.abspath)
+            input_folder=sandbox)
 
-        # I now move the 
-        calc_folder = calc.get_repo_folder()
-        input_folder = calc_folder.get_subfolder('inputs')
+        inputs_folder = calc.get_repo_inputs_folder()
         # For the moment, if the folder exists, I just print a warning and
         # delete the folder (by means of the 'overwrite=True' flag)!!
-        if input_folder.exists():
+        if inputs_folder.exists():
             print('The folder {} already exists! I DELETE IT.'.format(
                     input_folder.abspath),file=sys.stderr)
-        input_folder.replace_with_folder(sandbox.abspath, move=True,
+        inputs_folder.replace_with_folder(sandbox.abspath, move=True,
                                          overwrite=True)
 
     ## Load the 'signaling' library depending on the current AIDA version.

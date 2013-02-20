@@ -8,7 +8,7 @@ class Scheduler(object):
     """
     def __init__(self, computer):
         """
-        Store the computer (of type aida.common.computer.Computer) 
+        Store the computer (of type aida.common.entities.computer.Computer) 
         in a internal variable, and load the specific subclass from 
         the plugins subfolder reading the value computer.scheduler
         """

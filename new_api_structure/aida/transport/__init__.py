@@ -48,27 +48,98 @@ class Transport(object):
         (ssh, local, ...)
 
         Most of the methods must be implemented there
+        TODO: instead of pass, think at a proper method
         """
         pass
 
     
-    def get(self, src, dst):
+    def chdir(self,directory):
         """
-        Retrieve a file
-
-        To be implemented in the plugins
+        Change directory to 'directory'
         
-        Args:
-           src: remote_folder_path
-           dst: local_folder_path
+        Args: 
+            directory: path to change working directory into.
+
+        Raises:
+            IOError: if the requested path doesn't exist on the server
         """
         raise NotImplementedError
+    def exec_and_get_output():
+        raise NotImplementedError
+    def exec_command():
+        raise NotImplementedError
+    def get(self, src, dst):
+        """
+        Retrieve a file from remote source to local destination
+
+        TODO: To be implemented in the plugins
+        
+        Args:
+            src: remote_folder_path
+            dst: local_folder_path
+        """
+        raise NotImplementedError
+
+
+    def getcwd(self):
+        """
+        Return a string identifying the current working directory
+
+        Args:
+            None
+        """
+        raise NotImplementedError
+
+
+    def get_attribute(self,path):
+        """
+        Return an attribute objects for file in a given path. Each attribute object consists in a dictionary with the following keys:
+            - st_size: size of files, in bytes 
+            - st_uid: user id of owner
+            - st_gid: group id of owner
+            - st_mode: protection bits
+            - st_atime: time of most recent access
+            - st_mtime: time of most recent modification
+
+        TODO: define in this Module the object
+
+        Args:
+            path: path to file
+        """
+        raise NotImplementedError
+
+
+    def mkdir(self,path,mode=511):
+        """
+        Create a folder (directory) named path with numeric mode mode. 
+
+        Args:
+            path: name of the folder to create
+            mode: permissions (posiz-style) for the newly created folder
+
+        TODO: decide a default permission for creation.
+
+        Raises:
+            If the directory already exists, OSError is raised.
+        """
+        raise NotImplementedError
+
+
+    def listdir(self, path='.'):
+        """
+        Return a list of the names of the entries in the given path. The list is in arbitrary order. It does not include the special entries '.' and '..' even if they are present in the directory.
+
+        Args: 
+            path: path to list (default to '.')
+        """
+        raise NotImplementedError
+
 
     def put(self, src, dst):
         """
-        Put a file remotely
+        Put a file from local src to remote dst
 
-        To be implemented in the plugins
+        TODO: To be implemented in the plugins
         
         Args:
            src: remote_folder_path
@@ -76,3 +147,30 @@ class Transport(object):
         """
         raise NotImplementedError
 
+
+    def normalize(self,path='.'):
+        """
+        Return the normalized path (on the server) of a given path. This can be used to quickly resolve symbolic links or determine what the server is considering to be the "current folder".
+
+        Args:
+            path: path to be normalized
+
+        Raises:
+            IOError: if the path can't be resolved on the server
+        """
+        raise NotImplementedError
+
+
+    def remove(self,path):
+        """Remove the file at the given path. This only works on files; for removing folders (directories), use rmdir.
+
+        Args: 
+
+        """
+        raise NotImplementedError
+
+
+    def rename():
+        raise NotImplementedError
+    def rmdir():
+        raise NotImplementedError

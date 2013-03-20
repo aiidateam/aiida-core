@@ -1,36 +1,50 @@
-def copyfile(src, dst):
-    """
-    a function that does the correct thing depending on whether src and
-    dst are on the same remote machine or not.
+#
+# TODO: move copyfile in the ExecutionManager
+# def copyfile(src, dst):
+#     """
+#     a function that does the correct thing depending on whether src and
+#     dst are on the same remote machine or not.
     
-    src and dst will be urls to be parsed using the functions in
-    aida.common.aidaurl.
+#     src and dst will be urls to be parsed using the functions in
+#     aida.common.aidaurl.
 
-    Will do something like:
-    if src.protocol == dst.protocol and src.computer == dst.computer:
-       transport = src.transport
-       transport.copyfile(src.path,dst.path)
-    else:
-       raise NotImplementedError
-       ## in the future, first copy from src to local sandbox, then back to dst
-       ## (or possibly directly btw src and dst? understand how rsync works
-       ## in this case)
-    """
-    pass
+#     Will do something like:
+#     if src.protocol == dst.protocol and src.computer == dst.computer:
+#        transport = src.transport
+#        transport.copyfile(src.path,dst.path)
+#     else:
+#        raise NotImplementedError
+#        ## in the future, first copy from src to local sandbox, then back to dst
+#        ## (or possibly directly btw src and dst? understand how rsync works
+#        ## in this case)
+#     """
+#     pass
 
 
 class Transport(object):
     """
     Abstract class for a generic transport (ssh, local, ...)
-
-    Here we show only the implementation of get and put, but
-    other functions to be implemented are (take inspiration from
-    python functions e.g. in os and shutils)
-    * copy (also with wildcards if dst is a dir; in the future, correct
-            management of symlinks, permissions, ...)
-    * exec()  to exec a specific command remotely; pass arguments
-            in a list so that they can be escaped properly
-    * is_dir, is_file, list_dir, mkdir, remove, chmod (to get and set)
+    Has following methods to operate remotely on machine, 
+    and to copy a file from remote to local or viceversa:
+    - chdir(self,path)
+    - chmod(self,path,mode)
+    - chown(self,path,uid,gid)
+    - copy(self,src,dst)
+    - exec_and_get_output(self)
+    - exec_command(self,command)
+    - get(self, src, dst)
+    - getcwd(self)
+    - get_attribute(self,path)
+    - is_dir(self,path)
+    - is_file(self,path)
+    - listdir(self, path)
+    - mkdir(self,path,mode)
+    - normalize(self,path)
+    - put(self, src, dst)
+    - remove(self,path)
+    - rename(self,oldpath,newpath)
+    - rmdir(self,path)
+    
     * __enter__ and __exit__ so that we can use with statements
       to open/close the channel (if any) and leave it open only
       while we are inside the with statement; see if we also need some
@@ -53,21 +67,77 @@ class Transport(object):
         pass
 
     
-    def chdir(self,directory):
+    def chdir(self,path):
         """
         Change directory to 'directory'
         
         Args: 
-            directory: path to change working directory into.
+            path (str) - path to change working directory into.
 
         Raises:
-            IOError: if the requested path doesn't exist on the server
+            IOError - if the requested path doesn't exist on the server
         """
         raise NotImplementedError
-    def exec_and_get_output():
+
+
+    def chmod(self,path,mode):
+        """
+        Change permissions of a path.
+
+        Args:
+            path (str) - path to file
+            mode (int) - new permissions
+        """
         raise NotImplementedError
-    def exec_command():
+
+    
+    def chown(self,path,uid,gid):
+        """
+        Change the owner (uid) and group (gid) of a file. 
+        As with python's os.chown function, you must pass both arguments, 
+        so if you only want to change one, use stat first to retrieve the 
+        current owner and group.
+
+        Args:
+            path (str) - path of the file to change the owner and group of
+            uid (int) - new owner's uid
+            gid (int) - new group id
+        """
         raise NotImplementedError
+
+
+    def copy(self,src,dst):
+        """
+        Copy a file or a directory from remote source to remote destination
+        
+        Args:
+            src (str) - path of the remote source directory / file
+            dst (str) - path of the remote destination directory / file
+
+        Raises: IOError if one of src or dst does not exist
+        """
+        raise NotImplementedError
+    
+    
+    def exec_and_get_output(self):
+        """
+        TODO: must do all the bunch of task for sending and submitting a 
+        calculation remotely and retrieve the results.
+        """
+        raise NotImplementedError
+
+
+    def exec_command(self,command):
+        """
+        Execute the command on the shell, similarly to os.system.
+        Return the value of the exit status of the command execution
+        
+        Args:
+            command (str) - execute the command given as a string
+        """
+        raise NotImplementedError
+
+
     def get(self, src, dst):
         """
         Retrieve a file from remote source to local destination
@@ -75,8 +145,8 @@ class Transport(object):
         TODO: To be implemented in the plugins
         
         Args:
-            src: remote_folder_path
-            dst: local_folder_path
+            src (str) - remote_folder_path
+            dst (str) - local_folder_path
         """
         raise NotImplementedError
 
@@ -93,7 +163,8 @@ class Transport(object):
 
     def get_attribute(self,path):
         """
-        Return an attribute objects for file in a given path. Each attribute object consists in a dictionary with the following keys:
+        Return an attribute objects for file in a given path. 
+        Each attribute object consists in a dictionary with the following keys:
             - st_size: size of files, in bytes 
             - st_uid: user id of owner
             - st_gid: group id of owner
@@ -104,7 +175,39 @@ class Transport(object):
         TODO: define in this Module the object
 
         Args:
-            path: path to file
+            path (str) - path to file
+        """
+        raise NotImplementedError
+
+
+    def is_dir(self,path):
+        """
+        Return True if path is an existing directory.
+
+        Args:
+            path (str) - path to directory
+        """
+        raise NotImplementedError
+
+
+    def is_file(self,path):
+        """
+        Return True if path is an existing file.
+
+        Args:
+            path (str) - path to file
+        """
+        raise NotImplementedError
+
+
+    def listdir(self, path='.'):
+        """
+        Return a list of the names of the entries in the given path. 
+        The list is in arbitrary order. It does not include the special 
+        entries '.' and '..' even if they are present in the directory.
+
+        Args: 
+            path (str) - path to list (default to '.')
         """
         raise NotImplementedError
 
@@ -114,8 +217,8 @@ class Transport(object):
         Create a folder (directory) named path with numeric mode mode. 
 
         Args:
-            path: name of the folder to create
-            mode: permissions (posiz-style) for the newly created folder
+            path (str) - name of the folder to create
+            mode (int) - permissions (posiz-style) for the newly created folder
 
         TODO: decide a default permission for creation.
 
@@ -125,12 +228,17 @@ class Transport(object):
         raise NotImplementedError
 
 
-    def listdir(self, path='.'):
+    def normalize(self,path='.'):
         """
-        Return a list of the names of the entries in the given path. The list is in arbitrary order. It does not include the special entries '.' and '..' even if they are present in the directory.
+        Return the normalized path (on the server) of a given path. 
+        This can be used to quickly resolve symbolic links or determine 
+        what the server is considering to be the "current folder".
 
-        Args: 
-            path: path to list (default to '.')
+        Args:
+            path (str) - path to be normalized
+
+        Raises:
+            IOError - if the path can't be resolved on the server
         """
         raise NotImplementedError
 
@@ -142,35 +250,45 @@ class Transport(object):
         TODO: To be implemented in the plugins
         
         Args:
-           src: remote_folder_path
-           dst: local_folder_path
-        """
-        raise NotImplementedError
-
-
-    def normalize(self,path='.'):
-        """
-        Return the normalized path (on the server) of a given path. This can be used to quickly resolve symbolic links or determine what the server is considering to be the "current folder".
-
-        Args:
-            path: path to be normalized
-
-        Raises:
-            IOError: if the path can't be resolved on the server
+           src (str) - remote_folder_path
+           dst (str) - local_folder_path
         """
         raise NotImplementedError
 
 
     def remove(self,path):
-        """Remove the file at the given path. This only works on files; for removing folders (directories), use rmdir.
+        """
+        Remove the file at the given path. This only works on files; 
+        for removing folders (directories), use rmdir.
 
         Args: 
+            path: path to file to remove
 
+        Raises:
+            IOError: if the path is a directory
         """
         raise NotImplementedError
 
 
-    def rename():
+    def rename(self,oldpath,newpath):
+        """
+        Rename a file or folder from oldpath to newpath.
+
+        Parameters:
+            oldpath (str) - existing name of the file or folder
+            newpath (str) - new name for the file or folder
+
+        Raises:
+            IOError - if something goes wrong
+        """
         raise NotImplementedError
-    def rmdir():
+
+
+    def rmdir(self,path):
+        """
+        Remove the folder named path
+
+        Args:
+            path (str) - name of the folder to remove
+        """
         raise NotImplementedError

@@ -103,7 +103,6 @@ class SshTransport(aida.transport.Transport):
         """
         self._sftp.mkdir(path,mode)
 
-
     def rmdir(self, path):
         """
         Remove the folder named 'path'.
@@ -177,8 +176,8 @@ class SshTransport(aida.transport.Transport):
 
         if self.getcwd() is not None:
             escaped_folder = self.getcwd().replace("'","""'"'"'""")
-            command_to_execute = ("""cd '{escaped_folder}' ; """
-                                  """{real_command}""".format(
+            command_to_execute = ("cd '{escaped_folder}' ; "
+                                  "{real_command}".format(
                     escaped_folder = escaped_folder,
                     real_command = command))
         else:
@@ -226,7 +225,6 @@ class SshTransport(aida.transport.Transport):
                 for l in filelike_stdin.readlines():
                     ssh_stdin.write(l)
             except AttributeError:
-                ## TEST IF THIS IS THE CORRECT EXCEPTION!
                 raise ValueError("stdin can only be either a string of a "
                                  "file-like object!")
 
@@ -289,6 +287,20 @@ if __name__ == '__main__':
                 t.isdir(directory)
                 t.rmdir(directory)
                
+        def test_chdir_to_empty_string(self):
+            """
+            I check that if I pass an empty string to chdir, the cwd does not change
+            (this is a paramiko default behavior), but getcwd() is still correctly 
+            defined.
+            """
+            with SshTransport(machine='localhost', 
+                              key_policy=paramiko.AutoAddPolicy()) as t:
+
+                new_dir = '/tmp'
+                t.chdir(new_dir)
+                t.chdir("")
+                self.assertEquals(new_dir, t.getcwd())
+
 
     class TestExecuteCommandWait(unittest.TestCase):
         """
@@ -308,7 +320,7 @@ if __name__ == '__main__':
             import os
             
             location = '/tmp' # Use a full path here
-            subfolder = """_'sf"#""" # A folder with characters to escape
+            subfolder = """_'s f"#""" # A folder with characters to escape
 
             subfolder_fullpath = os.path.join(location,subfolder)
             
@@ -369,7 +381,6 @@ if __name__ == '__main__':
                 self.assertEquals(stdout, test_string)
                 self.assertEquals(stderr, "")
 
-
         def test_exec_with_wrong_stdin(self):
             # I pass a number
             with SshTransport('localhost', 
@@ -379,7 +390,7 @@ if __name__ == '__main__':
                         'cat', stdin=1)
             
     import logging
-#    aidalogger.setLevel(logging.DEBUG)
-
+    #aidalogger.setLevel(logging.DEBUG)
+    
     unittest.main()
     

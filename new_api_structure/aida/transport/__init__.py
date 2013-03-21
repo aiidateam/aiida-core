@@ -320,14 +320,3 @@ class Transport(object):
         """
         raise NotImplementedError
 
-if __name__ == '__main__':
-    import aida.transport
-    from aida.common.pluginloader import load_plugin
-    plugin_type = 'ssh'
-
-    TransportPlugin = load_plugin(base_class = aida.transport.Transport,
-                                 plugins_module = 'aida.transport.plugins',
-                                 plugin_name = plugin_type)
-    
-    with TransportPlugin() as t:
-        t.listdir()

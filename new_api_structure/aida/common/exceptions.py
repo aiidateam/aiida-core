@@ -6,3 +6,9 @@ class AidaException(Exception):
     (e.g. ExecManagerException, TransportException, ...)
     """
     pass
+
+class InternalError(AidaException):
+    """
+    Error raised when there is an internal error of Aida.
+    """
+    pass

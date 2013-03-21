@@ -20,62 +20,74 @@
 #     """
 #     pass
 
+import aida.common
+from aida.common.exceptions import InternalError
 
 class Transport(object):
     """
     Abstract class for a generic transport (ssh, local, ...)
-    Has following methods to operate remotely on machine, 
-    and to copy a file from remote to local or viceversa:
-    - chdir(self,path)
-    - chmod(self,path,mode)
-    - chown(self,path,uid,gid)
-    - copy(self,src,dst)
-    - exec_and_get_output(self)
-    - exec_command(self,command)
-    - get(self, src, dst)
-    - getcwd(self)
-    - get_attribute(self,path)
-    - is_dir(self,path)
-    - is_file(self,path)
-    - listdir(self, path)
-    - mkdir(self,path,mode)
-    - normalize(self,path)
-    - put(self, src, dst)
-    - remove(self,path)
-    - rename(self,oldpath,newpath)
-    - rmdir(self,path)
     
-    * __enter__ and __exit__ so that we can use with statements
-      to open/close the channel (if any) and leave it open only
-      while we are inside the with statement; see if we also need some
-      explicit open/close methods. I'm thinking to something like:
-      with Transport(...) as t:
-         t.put(...)
-         t.get(...)
-         ...
-      ...
-      # And here the channel is automatically open
+    TODO: * decide if we want chdir and get_pwd (see discussion in the
+            docstring of chdir)
+          * exec_command: decide how 'low-level' we want this to be:
+            probably we want something higher-level, where we give the command
+            to run, and it automatically waits for the calculation to finish
+            and return stdout, stderr and retval (maybe with timeout?)
+            Possibly, we may want to have a counterpart for more low-level
+            interaction with the job.
+          * we probably need a command to copy files between two folders on
+            the same remote server. To understand how to do it.
+
     """
-    def __init__(self, further_params):
+    def __init__(self, *args, **kwargs):
         """
-        Will actually load the proper subclass from the plugins subfolder
-        (ssh, local, ...)
-
-        Most of the methods must be implemented there
-        TODO: instead of pass, think at a proper method
+        The main initializer of the base class. To be called from 
+        each subclass!
         """
-        pass
-
+        self._logger = aida.common.aidalogger.getChild('transport')
+        
     
+    def __enter__(self):
+        """
+        For transports that require opening a connection, open
+        all required channels.
+        """
+        raise NotImplementedError
+
+    def __exit__(self, type, value, traceback):
+        """
+        Close connections, if needed.
+        """
+        raise NotImplementedError
+
+    @property
+    def logger(self):
+        """
+        Return the internal logger
+        """
+        try:
+            return self._logger
+        except AttributeError:
+            errmsg = ( "No self._logger configured for {}, did you call\n"
+                       "   super().__init__()?".format(self.__class__.__name__))
+            raise InternalError(errmsg)
+
     def chdir(self,path):
         """
-        Change directory to 'directory'
+        Change directory to 'path'
         
+        TODO: understand if we want this behavior: this is emulated
+            by paramiko, and we should emulate it also for the local
+            transport, since we do not want a global chdir for the whole
+            code (the same holds for get_pwd).
+            However, it could be useful to execute by default the
+            codes from that specific directory.
+
         Args: 
             path (str) - path to change working directory into.
 
         Raises:
-            IOError - if the requested path doesn't exist on the server
+            IOError - if the requested path does not exist
         """
         raise NotImplementedError
 
@@ -119,19 +131,34 @@ class Transport(object):
         raise NotImplementedError
     
     
-    def exec_and_get_output(self):
+    def exec_command(self,command, **kwargs):
         """
-        TODO: must do all the bunch of task for sending and submitting a 
-        calculation remotely and retrieve the results.
+        Execute the command on the shell, similarly to os.system.
+
+        Enforce the execution to be run from the pwd (as given by
+        self.getpwd), if this is not None.
+
+        Return stdin, stdout, stderr and the session, when this exists
+        (can be None). If possible, use the higher-level
+        exec_command_wait function.
+        
+        Args:
+            command (str) - execute the command given as a string
         """
         raise NotImplementedError
 
 
-    def exec_command(self,command):
+    def exec_command_wait(self,command, **kwargs):
         """
-        Execute the command on the shell, similarly to os.system.
-        Return the value of the exit status of the command execution
+        Execute the command on the shell, waits for it to finish,
+        and return the retcode, the stdout and the stderr.
+
+        Enforce the execution to be run from the pwd (as given by
+        self.getpwd), if this is not None.
         
+        Return the retcode, stdout and stderr.
+            stdout and stderr are strings.
+
         Args:
             command (str) - execute the command given as a string
         """
@@ -180,7 +207,7 @@ class Transport(object):
         raise NotImplementedError
 
 
-    def is_dir(self,path):
+    def isdir(self,path):
         """
         Return True if path is an existing directory.
 
@@ -190,7 +217,7 @@ class Transport(object):
         raise NotImplementedError
 
 
-    def is_file(self,path):
+    def isfile(self,path):
         """
         Return True if path is an existing file.
 
@@ -292,3 +319,15 @@ class Transport(object):
             path (str) - name of the folder to remove
         """
         raise NotImplementedError
+
+if __name__ == '__main__':
+    import aida.transport
+    from aida.common.pluginloader import load_plugin
+    plugin_type = 'ssh'
+
+    TransportPlugin = load_plugin(base_class = aida.transport.Transport,
+                                 plugins_module = 'aida.transport.plugins',
+                                 plugin_name = plugin_type)
+    
+    with TransportPlugin() as t:
+        t.listdir()

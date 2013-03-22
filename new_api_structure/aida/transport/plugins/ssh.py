@@ -278,6 +278,36 @@ if __name__ == '__main__':
         """
         Test to check, create and delete folders.
         """
+        
+        def test_listdir(self):
+            """
+            create directories, verify listdir, delete a folder with subfolders
+            """
+            # Imports required later
+            import random
+            import string
+            import os
+
+            with SshTransport(machine='localhost', timeout=30, 
+                              key_policy=paramiko.AutoAddPolicy()) as t:
+                location = os.path.join('/','tmp')
+                directory = 'temp_dir_test'
+                t.chdir(location)
+                
+                self.assertEquals(location, t.getcwd())
+                while t.isdir(directory):
+                    # I append a random letter/number until it is unique
+                    directory += random.choice(
+                        string.ascii_uppercase + string.digits)
+                t.mkdir(directory)
+                t.chdir(directory)
+                list_of_dir=['1','-f a&','as']
+                for this_dir in list_of_dir:
+                    t.mkdir(this_dir)
+                list_of_dir_found = t.listdir('.')
+                self.assertTrue(sorted(list_of_dir_found)==sorted(list_of_dir))    
+                t.chdir('..')
+                t.rmdir(directory)
 
         def test_dir_creation_deletion(self):
             # Imports required later
@@ -299,6 +329,70 @@ if __name__ == '__main__':
                 t.mkdir(directory)
                 t.isdir(directory)
                 self.assertFalse(t.isfile(directory))
+                t.rmdir(directory)
+
+        def test_dir_copy(self):
+            """
+            Verify if in the copy of a directory also the protection bits are carried over
+            """
+            # Imports required later
+            import random
+            import string
+            import os
+
+            with SshTransport(machine='localhost', timeout=30, 
+                              key_policy=paramiko.AutoAddPolicy()) as t:
+                location = os.path.join('/','tmp')
+                directory = 'temp_dir_test'
+                t.chdir(location)
+                
+                while t.isdir(directory):
+                    # I append a random letter/number until it is unique
+                    directory += random.choice(
+                        string.ascii_uppercase + string.digits)
+                t.mkdir(directory,mode=777)
+                dest_directory = directory+'_copy'
+                t.copy(directory,dest_directory)
+                attr_obj = t.get_attribute(dest_directory)
+                attr_obj_dest = t.get_attribute(dest_directory)
+                self.assertEquals(attr_obj.st_mode,777)
+                self.assertEquals(attr_obj,attr_obj_dest)
+                t.rmdir(directory)
+                t.rmdir(dest_directory)
+                
+
+        def test_dir_permissions_creation_modification(self):
+            """
+            verify if chmod raises IOError when trying to change bits on a non-existing folder
+            """
+            # Imports required later
+            import random
+            import string
+            import os
+
+            with SshTransport(machine='localhost', timeout=30, 
+                              key_policy=paramiko.AutoAddPolicy()) as t:
+                location = os.path.join('/','tmp')
+                directory = 'temp_dir_test'
+                t.chdir(location)
+
+                while t.isdir(directory):
+                    # I append a random letter/number until it is unique
+                    directory += random.choice(
+                        string.ascii_uppercase + string.digits)
+                t.mkdir(directory,mode=500)
+                t.chmod(directory,777)
+                t.chdir(directory)
+
+                fake_dir=''
+                with self.assertRaises(IOError):
+                    t.chmod(fake_dir,777)
+
+                fake_dir='pippo'
+                with self.assertRaises(IOError):
+                    t.chmod(fake_dir,777)
+
+                t.chdir('..')
                 t.rmdir(directory)
 
                 
@@ -347,6 +441,141 @@ if __name__ == '__main__':
                 t.chdir(new_dir)
                 t.chdir("")
                 self.assertEquals(new_dir, t.getcwd())
+
+    class TestPutGet(unittest.TestCase):
+        """
+        Test to verify whether the put and get functions behave correctly.
+        1) thy work, 2) need abs path where necessary 3) reject empy strings
+        """
+
+        def test_put_and_get(self):
+            import os
+            import random
+            import string
+
+            local_dir = os.path.join('/','tmp')
+            directory = 'tmp_try'
+
+            with SshTransport(machine='localhost', 
+                              key_policy=paramiko.AutoAddPolicy()) as t:
+
+                t.chdir(local_dir)
+                while t.isdir(directory):
+                    # I append a random letter/number until it is unique
+                    directory += random.choice(
+                        string.ascii_uppercase + string.digits)
+                    
+                t.mkdir(directory)
+                t.chdir(directory)
+
+                local_file_name = os.path.join(local_dir,directory,'file.txt')
+                remote_file_name = os.path.join(local_dir,directory,'file_remote.txt')
+                retrieved_file_name = os.path.join(local_dir,directory,'file_retrieved.txt')
+
+                f = open(local_file_name,'w')
+                f.close()
+
+                # here use full path in src and dst
+                t.put(local_file_name,remote_file_name)
+                t.get(remote_file_name,retrieved_file_name)
+                
+                list_of_file = t.listdir('.')
+                self.assertTrue(local_file_name not in list_of_file)
+                self.assertTrue(remote_file_name not in list_of_file)
+                self.assertTrue(retrieved_file_name not in list_of_file)
+
+                t.chdir('..')
+                t.rmdir(directory)
+                    
+        def test_put_get_abs_path(self):
+            """
+            test of exception for non existing files and abs path
+            """
+            import os
+            import random
+            import string
+            local_dir = os.path.join('/','tmp')
+            directory = 'tmp_try'
+
+            with SshTransport(machine='localhost', 
+                              key_policy=paramiko.AutoAddPolicy()) as t:
+
+                t.chdir(local_dir)
+                while t.isdir(directory):
+                    # I append a random letter/number until it is unique
+                    directory += random.choice(
+                        string.ascii_uppercase + string.digits)
+
+                t.mkdir(directory)
+                t.chdir(directory)
+
+                partial_file_name = 'file.txt'
+                local_file_name = os.path.join(local_dir,directory,'file.txt')
+                remote_file_name = 'file_remote.txt'
+                retrieved_file_name = os.path.join(local_dir,directory,'file_retrieved.txt')
+                
+                f = open(local_file_name,'w')
+                f.close()
+
+                with self.assertRaises(ValueError):
+                    # file is not abs_path
+                    t.put(partial_file_name,remote_file_name)
+                with self.assertRaises(OSError):
+                    # file does not exist
+                    t.put(retrieved_file_name,remote_file_name)                    
+                    t.get(remote_file_name,retrieved_file_name)
+                
+                t.put(local_file_name,remote_file_name)
+                with self.assertRaises(ValueError):
+                    # file is not abs_path
+                    t.get(remote_file_name,'delete_me.txt')
+
+                t.chdir('..')
+                t.rmdir(directory)
+
+        def test_put_get_empty_string(self):
+            """
+            test of exception put/get of empty strings
+            """
+            import os
+            import random
+            import string
+            local_dir = os.path.join('/','tmp')
+            directory = 'tmp_try'
+
+            with SshTransport(machine='localhost', 
+                              key_policy=paramiko.AutoAddPolicy()) as t:
+
+                t.chdir(local_dir)
+                while t.isdir(directory):
+                    # I append a random letter/number until it is unique
+                    directory += random.choice(
+                        string.ascii_uppercase + string.digits)
+
+                t.mkdir(directory)
+                t.chdir(directory)
+
+                local_file_name = os.path.join(local_dir,directory,'file_local.txt')
+                remote_file_name = 'file_remote.txt'
+                retrieved_file_name = os.path.join(local_dir,directory,'file_retrieved.txt')
+                
+                f = open(local_file_name,'w')
+                f.close()
+
+                with self.assertRaises(ValueError):
+                    # file is empty string
+                    t.put('',remote_file_name)
+                    t.put(local_file_name,'')
+
+                t.put(local_file_name,remote_file_name)
+                
+                with self.assertRaises(ValueError):
+                    # file is empty string
+                    t.get('',retrieved_file_name)
+                    t.get(remote_file_name,'')
+
+                t.chdir('..')
+                t.rmdir(directory)
 
 
     class TestExecuteCommandWait(unittest.TestCase):

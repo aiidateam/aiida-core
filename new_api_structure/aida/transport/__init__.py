@@ -168,6 +168,7 @@ class Transport(object):
     def get(self, src, dst):
         """
         Retrieve a file from remote source to local destination
+        dst must be an absolute path (src not necessarily)
 
         TODO: To be implemented in the plugins
         
@@ -272,7 +273,8 @@ class Transport(object):
 
     def put(self, src, dst):
         """
-        Put a file from local src to remote dst
+        Put a file from local src to remote dst.
+        src must be an absolute path (dst not necessarily))
 
         TODO: To be implemented in the plugins
         

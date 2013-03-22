@@ -114,6 +114,10 @@ class SshTransport(aida.transport.Transport):
         Return True if the given path is a directory, False otherwise.
         Return False also if the path does not exist.
         """
+        # Return False on empty string (paramiko would map this to the local
+        # folder instead)
+        if not path:
+            return False
         try:
             return S_ISDIR(self._sftp.stat(path).st_mode)
         except IOError as e:
@@ -129,6 +133,9 @@ class SshTransport(aida.transport.Transport):
         Return False also if the path does not exist.
         """
         try:
+            self.logger.debug("stat for path '{}' ('{}'): {} [{}]".format(
+                    path, self._sftp.normalize(path),
+                    self._sftp.stat(path),self._sftp.stat(path).st_mode))
             return S_ISREG(self._sftp.stat(path).st_mode)
         except IOError as e:
             if getattr(e,"errno",None) == 2:
@@ -400,7 +407,7 @@ if __name__ == '__main__':
                         'cat', stdin=1)
             
     import logging
-    #aidalogger.setLevel(logging.DEBUG)
+    aidalogger.setLevel(logging.DEBUG)
     
     unittest.main()
     

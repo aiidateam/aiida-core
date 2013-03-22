@@ -290,6 +290,8 @@ if __name__ == '__main__':
                 fake_folder = os.path.join(directory,'pippo')
                 self.assertFalse(t.isfile(fake_folder))
                 self.assertFalse(t.isdir(fake_folder))
+                self.assertFalse(t.isdir(""))
+                self.assertFalse(t.isfile(""))
                 with self.assertRaises(IOError):
                     t.chdir(fake_folder)
                 t.rmdir(directory)

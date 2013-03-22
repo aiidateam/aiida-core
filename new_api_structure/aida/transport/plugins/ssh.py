@@ -1,4 +1,4 @@
-from stat import S_ISDIR
+from stat import S_ISDIR,S_ISREG
 import StringIO
 import paramiko
 
@@ -127,7 +127,7 @@ class SshTransport(aida.transport.Transport):
     def isfile(self,path):
         """
         Return True if the given path is a file, False otherwise.
-        Return False also if the path does not exist.        
+        Return False also if the path does not exist.
         """
         try:
             return S_ISREG(self._sftp.stat(path).st_mode)
@@ -273,10 +273,11 @@ if __name__ == '__main__':
             # Imports required later
             import random
             import string
+            import os
 
             with SshTransport(machine='localhost', timeout=30, 
                               key_policy=paramiko.AutoAddPolicy()) as t:
-                location = '/tmp'
+                location = os.path.join('/','tmp')
                 directory = 'temp_dir_test'
                 t.chdir(location)
                 
@@ -287,8 +288,14 @@ if __name__ == '__main__':
                         string.ascii_uppercase + string.digits)
                 t.mkdir(directory)
                 t.isdir(directory)
+                self.assertFalse(t.isfile(directory))
+                fake_folder = os.path.join(directory,'pippo')
+                self.assertFalse(t.isfile(fake_folder))
+                self.assertFalse(t.isdir(fake_folder))
+                with self.assertRaises(IOError):
+                    t.chdir(fake_folder)
                 t.rmdir(directory)
-               
+
 
     class TestExecuteCommandWait(unittest.TestCase):
         """

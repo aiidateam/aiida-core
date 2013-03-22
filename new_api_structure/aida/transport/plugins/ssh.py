@@ -132,6 +132,11 @@ class SshTransport(aida.transport.Transport):
         Return True if the given path is a file, False otherwise.
         Return False also if the path does not exist.
         """
+        # This should not be needed for files, since an empty string should
+        # be mapped by paramiko to the local directory - which is not a file -
+        # but this is just to be sure
+        if not path:
+            return False
         try:
             self.logger.debug("stat for path '{}' ('{}'): {} [{}]".format(
                     path, self._sftp.normalize(path),
@@ -432,7 +437,7 @@ if __name__ == '__main__':
                         'cat', stdin=1)
             
     import logging
-    aidalogger.setLevel(logging.DEBUG)
+#    aidalogger.setLevel(logging.DEBUG)
     
     unittest.main()
     

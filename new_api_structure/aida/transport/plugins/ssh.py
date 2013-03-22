@@ -294,14 +294,38 @@ if __name__ == '__main__':
                 t.mkdir(directory)
                 t.isdir(directory)
                 self.assertFalse(t.isfile(directory))
-                fake_folder = os.path.join(directory,'pippo')
-                self.assertFalse(t.isfile(fake_folder))
-                self.assertFalse(t.isdir(fake_folder))
+                t.rmdir(directory)
+
+                
+        def test_isfile_isdir_to_empty_string(self):
+            """
+            I check that isdir or isfile return False when executed on an empty string
+            """
+            import os
+
+            with SshTransport(machine='localhost', timeout=30, 
+                              key_policy=paramiko.AutoAddPolicy()) as t:
+                location = os.path.join('/','tmp')
+                t.chdir(location)
                 self.assertFalse(t.isdir(""))
                 self.assertFalse(t.isfile(""))
+
+
+        def test_isfile_isdir_to_non_existing_string(self):
+            """
+            I check that isdir or isfile return False when executed on an empty string
+            """
+            import os
+            with SshTransport(machine='localhost', timeout=30, 
+                              key_policy=paramiko.AutoAddPolicy()) as t:
+
+                location = os.path.join('/','tmp')
+                t.chdir(location)
+                fake_folder = 'pippo'
+                self.assertFalse(t.isfile(fake_folder))
+                self.assertFalse(t.isdir(fake_folder))
                 with self.assertRaises(IOError):
                     t.chdir(fake_folder)
-                t.rmdir(directory)
 
                
         def test_chdir_to_empty_string(self):
@@ -310,10 +334,11 @@ if __name__ == '__main__':
             (this is a paramiko default behavior), but getcwd() is still correctly 
             defined.
             """
+            import os
             with SshTransport(machine='localhost', 
                               key_policy=paramiko.AutoAddPolicy()) as t:
 
-                new_dir = '/tmp'
+                new_dir = os.path.join('/','tmp')
                 t.chdir(new_dir)
                 t.chdir("")
                 self.assertEquals(new_dir, t.getcwd())

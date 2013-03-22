@@ -382,6 +382,10 @@ if __name__ == '__main__':
                         string.ascii_uppercase + string.digits)
                 t.mkdir(directory,mode=500)
                 t.chmod(directory,777)
+                ## TODO: probably here we should then check for 
+                ## the new directory modes. To see if we want a higher
+                ## level function to ask for the mode, or we just
+                ## use get_attribute
                 t.chdir(directory)
 
                 fake_dir=''

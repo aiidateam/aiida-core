@@ -3,6 +3,7 @@ import StringIO
 import paramiko
 
 import aida.transport
+from aida.common.utils import escape_for_bash
 from aida.common import aidalogger
 
 class SshTransport(aida.transport.Transport):
@@ -14,12 +15,11 @@ class SshTransport(aida.transport.Transport):
             machine: the machine to connect to
             load_system_host_keys (optional, default True): if False, do not load the
                 system host keys
-            key_policy (optional, default = paramiko.RejectPolicy()): the policy to use for
-                unknown keys
-            Other parameters are passed to the connect function (as port, username, password, ...)
-            (see the __enter__ function of this class, or the documentation of\
-            paramiko.SSHClient.connect())
-
+            key_policy (optional, default = paramiko.RejectPolicy()): the policy to use
+                for unknown keys
+            Other parameters are passed to the connect function (as port, username,
+            password, ...) (see the __enter__ function of this class, or the
+            documentation of paramiko.SSHClient.connect())
         """
 
         ## First call the parent __init__ to setup the logger!
@@ -80,6 +80,9 @@ class SshTransport(aida.transport.Transport):
         if path is not None:
             self._sftp.chdir(path)
 
+    def normalize(self, path):
+        return self._sftp.normalize(path)
+        
     def getcwd(self):
         """
         Return the current working directory for this SFTP session, as
@@ -175,20 +178,9 @@ class SshTransport(aida.transport.Transport):
         channel = self._client.get_transport().open_session()
         channel.set_combine_stderr(combine_stderr)
 
-        # Here, I escape the folder. In particular, 'escaped_folder' is
-        # within single quotes. Then, the only thing that I have to escape
-        # in bash is a single quote. To do this, I substitute every single
-        # quote ' with '"'"' which means:
-        #              12345
-        # 1: exit from the enclosing single quotes
-        # 234: "'" is a single quote character, escaped by double quotes
-        # 5: reopen the single quote to continue the string
-        # Finally, note that for python I have to enclose the string '"'"'
-        # within triple quotes to make it work, getting finally: """'"'"'"""
-
         if self.getcwd() is not None:
-            escaped_folder = self.getcwd().replace("'","""'"'"'""")
-            command_to_execute = ("cd '{escaped_folder}' ; "
+            escaped_folder = escape_for_bash(self.getcwd())
+            command_to_execute = ("cd {escaped_folder} ; "
                                   "{real_command}".format(
                     escaped_folder = escaped_folder,
                     real_command = command))
@@ -290,7 +282,7 @@ if __name__ == '__main__':
 
             with SshTransport(machine='localhost', timeout=30, 
                               key_policy=paramiko.AutoAddPolicy()) as t:
-                location = os.path.join('/','tmp')
+                location = t.normalize(os.path.join('/','tmp'))
                 directory = 'temp_dir_test'
                 t.chdir(location)
                 
@@ -317,7 +309,7 @@ if __name__ == '__main__':
 
             with SshTransport(machine='localhost', timeout=30, 
                               key_policy=paramiko.AutoAddPolicy()) as t:
-                location = os.path.join('/','tmp')
+                location = t.normalize(os.path.join('/','tmp'))
                 directory = 'temp_dir_test'
                 t.chdir(location)
                 
@@ -342,7 +334,7 @@ if __name__ == '__main__':
 
             with SshTransport(machine='localhost', timeout=30, 
                               key_policy=paramiko.AutoAddPolicy()) as t:
-                location = os.path.join('/','tmp')
+                location = t.normalize(os.path.join('/','tmp'))
                 directory = 'temp_dir_test'
                 t.chdir(location)
                 
@@ -372,7 +364,7 @@ if __name__ == '__main__':
 
             with SshTransport(machine='localhost', timeout=30, 
                               key_policy=paramiko.AutoAddPolicy()) as t:
-                location = os.path.join('/','tmp')
+                location = t.normalize(os.path.join('/','tmp'))
                 directory = 'temp_dir_test'
                 t.chdir(location)
 
@@ -408,7 +400,7 @@ if __name__ == '__main__':
 
             with SshTransport(machine='localhost', timeout=30, 
                               key_policy=paramiko.AutoAddPolicy()) as t:
-                location = os.path.join('/','tmp')
+                location = t.normalize(os.path.join('/','tmp'))
                 t.chdir(location)
                 self.assertFalse(t.isdir(""))
                 self.assertFalse(t.isfile(""))
@@ -422,7 +414,7 @@ if __name__ == '__main__':
             with SshTransport(machine='localhost', timeout=30, 
                               key_policy=paramiko.AutoAddPolicy()) as t:
 
-                location = os.path.join('/','tmp')
+                location = t.normalize(os.path.join('/','tmp'))
                 t.chdir(location)
                 fake_folder = 'pippo'
                 self.assertFalse(t.isfile(fake_folder))
@@ -441,7 +433,7 @@ if __name__ == '__main__':
             with SshTransport(machine='localhost', 
                               key_policy=paramiko.AutoAddPolicy()) as t:
 
-                new_dir = os.path.join('/','tmp')
+                new_dir = t.normalize(os.path.join('/','tmp'))
                 t.chdir(new_dir)
                 t.chdir("")
                 self.assertEquals(new_dir, t.getcwd())
@@ -456,7 +448,7 @@ if __name__ == '__main__':
             import os
             import random
             import string
-
+            
             local_dir = os.path.join('/','tmp')
             directory = 'tmp_try'
 
@@ -599,15 +591,16 @@ if __name__ == '__main__':
             """
             import os
             
-            location = '/tmp' # Use a full path here
-            subfolder = """_'s f"#""" # A folder with characters to escape
-
-            subfolder_fullpath = os.path.join(location,subfolder)
-            
+            # Start value
             delete_at_end = False
 
             with SshTransport('localhost', 
                               key_policy=paramiko.AutoAddPolicy()) as t:
+
+                # To compare with: getcwd uses the normalized ('realpath') path
+                location = t.normalize('/tmp')
+                subfolder = """_'s f"#""" # A folder with characters to escape
+                subfolder_fullpath = os.path.join(location,subfolder)
 
                 t.chdir(location)
                 if not t.isdir(subfolder):

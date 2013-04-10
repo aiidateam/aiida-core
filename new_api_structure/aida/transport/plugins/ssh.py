@@ -36,6 +36,24 @@ class SshTransport(aida.transport.Transport):
             'key_policy',paramiko.RejectPolicy()) # This is paramiko default
         self._client.set_missing_host_key_policy(self._missing_key_policy)
 
+    def __unicode__(self):
+        """
+        Return a useful string.
+        """
+        conn_info = unicode(self._machine)
+        try:
+            conn_info = unicode(self._further_init_args['username']) + u'@' + conn_info
+        except KeyError:
+            # No username explicitly defined: ignore
+            pass
+        try:
+            conn_info += u':{}'.format(self._further_init_args['port'])
+        except KeyError:
+        # No port explicitly defined: ignore
+            pass
+            
+        return u'{}({})'.format(self.__class__.__name__, conn_info)
+    
     def __enter__(self):
         """
         Open a SSHClient to the machine possibly using the parameters given

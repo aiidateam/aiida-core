@@ -39,14 +39,8 @@ class Transport(object):
             the same remote server. To understand how to do it.
 
     """
-    def __init__(self, *args, **kwargs):
-        """
-        The main initializer of the base class. To be called from 
-        each subclass!
-        """
-        self._logger = aida.common.aidalogger.getChild('transport')
+    _logger = aida.common.aidalogger.getChild('transport')
         
-    
     def __enter__(self):
         """
         For transports that require opening a connection, open
@@ -59,6 +53,13 @@ class Transport(object):
         Close connections, if needed.
         """
         raise NotImplementedError
+
+    def __str__(self):
+        return unicode(self).encode('utf-8')
+
+    # Remember to define this in each plugin!
+    def __unicode__(self):
+        return u"[Transport class or subclass]"
 
     @property
     def logger(self):
@@ -321,4 +322,7 @@ class Transport(object):
             path (str) - name of the folder to remove
         """
         raise NotImplementedError
+
+#if __name__ == "__main__":
+#    print str(Transport())
 

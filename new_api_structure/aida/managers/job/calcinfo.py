@@ -1,6 +1,6 @@
-from aida.common.extendeddict import ExtendedDict
+from aida.common.extendeddicts import DefaultFieldsAttributeDict
 
-class CalcInfo(ExtendedDict):
+class CalcInfo(DefaultFieldsAttributeDict):
     """
     This object will store the data returned by the code plugin and to be
     passed to the ExecManager 
@@ -13,11 +13,15 @@ class CalcInfo(ExtendedDict):
     * preexec_commands
     * postexec_commands
     * retrieve_output_list
-
+    * join_files (if True, join stdout and stderr on a single file)
     """
-    pass
+    _default_fields = (
+        'cmdline_params','stdin', 'stdout', 'stderr',
+        'preexec_commands', 'postexec_commands', 'retrieve_output_list',
+        'join_files')
 
-class DynResourcesInfo(ExtendedDict):
+## TODO Improve/implement this!
+class DynResourcesInfo(AttributeDict):
     """
     This object will contain a list of 'dynamical' resources to be 
     passed from the code plugin to the ExecManager, containing

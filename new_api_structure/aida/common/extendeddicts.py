@@ -94,18 +94,10 @@ class FixedFieldsAttributeDict(AttributeDict):
     use a derived class to do the actual work.
     E.g.:
     class TestExample(FixedFieldsAttributeDict):
-        def __init__(self,*args,**kwargs):
-            # In derived classes, first define the valid_fields, then call
-            # super().__init__()
-            self._valid_fields = ('a','b','c')
-            super(TestExample, self).__init__(*args, **kwargs)
-    Remember to set self._valid_fields before calling super().__init__!
+        _valid_fields = ('a','b','c')
     """
+    _valid_fields = tuple()
     def __init__(self,init={}):
-        # I valid_fields is not already defined in this class, define it to an
-        # empty tuple. This is useful for derived classes: in this case, first define
-        # self.valid_fields as a tuple in the init, then call super().__init__()
-        self._valid_fields = getattr(self,'_valid_fields', tuple())
         for key in init:
             if key not in self._valid_fields:
                 errmsg = "'{}' is not a valid key for object '{}'".format(
@@ -131,6 +123,13 @@ class FixedFieldsAttributeDict(AttributeDict):
             object.__setattr__(self,attr,value)
         else:
             super(FixedFieldsAttributeDict,self).__setattr__(attr,value)
+            
+    @classmethod
+    def get_valid_fields(cls):
+        """
+        Return the list of valid fields.
+        """
+        return cls._valid_fields
 
 
 class DefaultFieldsAttributeDict(AttributeDict):
@@ -148,18 +147,11 @@ class DefaultFieldsAttributeDict(AttributeDict):
     Define the _default_fields in a subclass!    
     E.g.:
     class TestExample(DefaultFieldsAttributeDict):
-        def __init__(self,*args,**kwargs):
-            # In derived classes, first define the valid_fields, then call
-            # super().__init__()
-            self._default_fields = ('a','b','c')
-            super(TestExample, self).__init__(*args, **kwargs)
-    Remember to set self._valid_fields before calling super().__init__!
+        _default_fields = ('a','b','c')
     
     TODO: implement also methods as defaultitems, extraitems, defaultiteritems, ...
     """
-    def __init__(self,init={}):
-        self._default_fields = getattr(self,'_default_fields', tuple())
-        super(DefaultFieldsAttributeDict, self).__init__(init)
+    _default_fields = tuple()
 
     def __setattr__(self, attr, value):
         """
@@ -183,11 +175,12 @@ class DefaultFieldsAttributeDict(AttributeDict):
             else:
                 raise
 
-    def get_default_fields(self):
+    @classmethod
+    def get_default_fields(cls):
         """
         Return the list of default fields, either defined in the instance or not.
         """
-        return self._default_fields
+        return cls._default_fields
     
     def defaultkeys(self):
         """
@@ -209,19 +202,13 @@ if __name__ == "__main__":
         """
         An example class that accepts only the 'a', 'b' and 'c' keys/attributes.
         """
-        def __init__(self,*args,**kwargs):
-            # In derived classes, first define the valid_fields, then call super().__init__()
-            self._valid_fields = ('a','b','c')
-            super(TestFFADExample, self).__init__(*args, **kwargs)
+        _valid_fields = ('a','b','c')
 
     class TestDFADExample(DefaultFieldsAttributeDict):
         """
         An example class that has 'a', 'b' and 'c' as default keys.
         """
-        def __init__(self,*args,**kwargs):
-            # In derived classes, first define the valid_fields, then call super().__init__()
-            self._default_fields = ('a','b','c')
-            super(TestDFADExample, self).__init__(*args, **kwargs)
+        _default_fields = ('a','b','c')
 
 
     class TestAttributeDictAccess(unittest.TestCase):
@@ -442,6 +429,14 @@ if __name__ == "__main__":
             b.c = 3
             with self.assertRaises(ValueError):
                 b['d'] = 2
+        
+        def test_class_attribute(self):
+            """
+            I test that the get_valid_fields() is working as a class method,
+            so I don't need to instantiate the class to get the list.
+            """
+            self.assertEquals(set(TestFFADExample.get_valid_fields()),
+                              set(['a','b','c']))
    
     class TestDFAD(unittest.TestCase):
         
@@ -469,6 +464,14 @@ if __name__ == "__main__":
             self.assertEquals(set(a.extrakeys()),set(['d','e']))
             self.assertIsNone(a.c)
         
+        def test_class_attribute(self):
+            """
+            I test that the get_default_fields() is working as a class method,
+            so I don't need to instantiate the class to get the list.
+            """
+            self.assertEquals(set(TestDFADExample.get_default_fields()),
+                              set(['a','b','c']))
+
    
     import logging
     aidalogger.setLevel(logging.DEBUG)

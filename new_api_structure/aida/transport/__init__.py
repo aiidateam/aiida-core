@@ -119,13 +119,14 @@ class Transport(object):
         raise NotImplementedError
 
 
-    def copy(self,src,dst):
+    def copy(self,remotesource,remotedestination):
         """
-        Copy a file or a directory from remote source to remote destination
+        Copy a file or a directory from remote source to remote destination 
+        (On the same remote machine)
         
         Args:
-            src (str) - path of the remote source directory / file
-            dst (str) - path of the remote destination directory / file
+            remotesource (str) - path of the remote source directory / file
+            remotedestination (str) - path of the remote destination directory / file
 
         Raises: IOError if one of src or dst does not exist
         """
@@ -166,7 +167,7 @@ class Transport(object):
         raise NotImplementedError
 
 
-    def get(self, src, dst):
+    def get(self, remotepath, localpath, *args, **kwargs):
         """
         Retrieve a file from remote source to local destination
         dst must be an absolute path (src not necessarily)
@@ -174,8 +175,8 @@ class Transport(object):
         TODO: To be implemented in the plugins
         
         Args:
-            src (str) - remote_folder_path
-            dst (str) - local_folder_path
+            remotepath (str) - remote_folder_path
+            localpath (str) - local_folder_path
         """
         raise NotImplementedError
 
@@ -272,7 +273,7 @@ class Transport(object):
         raise NotImplementedError
 
 
-    def put(self, src, dst):
+    def put(self, localpath, remotepath, *args, ** kwargs):
         """
         Put a file from local src to remote dst.
         src must be an absolute path (dst not necessarily))
@@ -280,8 +281,8 @@ class Transport(object):
         TODO: To be implemented in the plugins
         
         Args:
-           src (str) - remote_folder_path
-           dst (str) - local_folder_path
+           localpath (str) - remote_folder_path
+           remotepath (str) - local_folder_path
         """
         raise NotImplementedError
 

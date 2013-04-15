@@ -148,6 +148,46 @@ class SshTransport(aida.transport.Transport):
             else:
                 raise # Typically if I don't have permissions (errno=13)
 
+
+    def put(self,localpath,remotepath,callback=None):
+        """
+        put a file from local to remote
+        """
+        # TODO: flag confirm exists since v1.7.7. What is the paramiko version supported?
+        
+        return self._sftp.put(localpath,remotepath,callback=callback)
+
+
+    def get(self,remotepath,localpath,callback=None):
+        """
+        get a file from remote to local
+        """
+        return self._sftp.get(remotepath,localpath,callback)
+        
+
+    def copy(self,remotesource,remotedestination):
+        """
+        Copy a file or a directory from remote source to remote destination
+        """
+        # there is no standard for this in paramiko, I use therefore the exec_command
+        command = 'cp -r %s %s' % (remotesource,remotedestination) # NOTE: I am assuming linux
+
+        # TODO : is it the right way to do it?
+
+        stdin,stdout,stderr,channel = self.exec_command(command)
+#        print stderr
+#        with open()
+#       if stderr
+        return
+
+
+    def listdir(self,path='.'):
+        return self._sftp.listdir(path)
+
+    def remove(self,path):
+        return self._sftp.remove(path)
+    
+
     def isfile(self,path):
         """
         Return True if the given path is a file, False otherwise.
@@ -316,6 +356,10 @@ if __name__ == '__main__':
                     t.mkdir(this_dir)
                 list_of_dir_found = t.listdir('.')
                 self.assertTrue(sorted(list_of_dir_found)==sorted(list_of_dir))    
+
+                for this_dir in list_of_dir:
+                    t.rmdir(this_dir)
+
                 t.chdir('..')
                 t.rmdir(directory)
 
@@ -483,20 +527,26 @@ if __name__ == '__main__':
                 t.chdir(directory)
 
                 local_file_name = os.path.join(local_dir,directory,'file.txt')
-                remote_file_name = os.path.join(local_dir,directory,'file_remote.txt')
+                remote_file_name = 'file_remote.txt'
                 retrieved_file_name = os.path.join(local_dir,directory,'file_retrieved.txt')
 
-                f = open(local_file_name,'w')
-                f.close()
+                text = 'Viva Verdi\n'
+                with open(local_file_name,'w') as f:
+                    f.write(text)
 
                 # here use full path in src and dst
                 t.put(local_file_name,remote_file_name)
                 t.get(remote_file_name,retrieved_file_name)
                 
                 list_of_file = t.listdir('.')
-                self.assertTrue(local_file_name not in list_of_file)
-                self.assertTrue(remote_file_name not in list_of_file)
-                self.assertTrue(retrieved_file_name not in list_of_file)
+                # fails because local_file_name has the full path, while list_of_file not
+                self.assertFalse(local_file_name in list_of_file)
+                self.assertTrue(remote_file_name in list_of_file)
+                self.assertFalse(retrieved_file_name in list_of_file)
+
+                os.remove(local_file_name)
+                t.remove(remote_file_name)
+                os.remove(retrieved_file_name)
 
                 t.chdir('..')
                 t.rmdir(directory)
@@ -531,18 +581,22 @@ if __name__ == '__main__':
                 f = open(local_file_name,'w')
                 f.close()
 
-                with self.assertRaises(ValueError):
+                with self.assertRaises(OSError):
                     # file is not abs_path
                     t.put(partial_file_name,remote_file_name)
                 with self.assertRaises(OSError):
                     # file does not exist
-                    t.put(retrieved_file_name,remote_file_name)                    
+                    t.put(retrieved_file_name,remote_file_name)
+                with self.assertRaises(IOError):
                     t.get(remote_file_name,retrieved_file_name)
                 
                 t.put(local_file_name,remote_file_name)
-                with self.assertRaises(ValueError):
+                with self.assertRaises(IOError):
                     # file is not abs_path
                     t.get(remote_file_name,'delete_me.txt')
+
+                t.remove(remote_file_name)
+                os.remove(local_file_name)
 
                 t.chdir('..')
                 t.rmdir(directory)
@@ -551,6 +605,7 @@ if __name__ == '__main__':
             """
             test of exception put/get of empty strings
             """
+            # TODO : verify the correctness of \n at the end of a file
             import os
             import random
             import string
@@ -573,22 +628,36 @@ if __name__ == '__main__':
                 remote_file_name = 'file_remote.txt'
                 retrieved_file_name = os.path.join(local_dir,directory,'file_retrieved.txt')
                 
-                f = open(local_file_name,'w')
-                f.close()
+                text = 'Viva Verdi\n'
+                with  open(local_file_name,'w') as f:
+                    f.write(text)
 
-                with self.assertRaises(ValueError):
+
+                with self.assertRaises(OSError):
                     # file is empty string
                     t.put('',remote_file_name)
                     t.put(local_file_name,'')
 
                 t.put(local_file_name,remote_file_name)
                 
-                with self.assertRaises(ValueError):
+                with self.assertRaises(IOError):
                     # file is empty string
                     t.get('',retrieved_file_name)
+
+                with self.assertRaises(IOError):
                     t.get(remote_file_name,'')
 
+                    # TODO : get doesn't retrieve empty files. Is it what we want?
+#                t.get(remote_file_name,retrieved_file_name)
+
+                os.remove(local_file_name)
+                t.remove(remote_file_name)
+                # If it couldn't end the copy, it leaves what he did on local file
+                self.assertTrue( 'file_retrieved.txt' in t.listdir('.') )
+                os.remove(retrieved_file_name)
+
                 t.chdir('..')
+
                 t.rmdir(directory)
 
 

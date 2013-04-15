@@ -1,15 +1,29 @@
-import cPickle
-
 from aida.common import aidalogger
 
-## TODO: see if we want to have a function to rebuild a nested dictionary as a nested
-##       AttributeDict object when deserializing with json. (now it deserialized to a
-##       standard dictionary; comparison of AttributeDict == dict works fine, though.
-##       Note also that when pickling, instead, the structure is well preserved)
+## TODO: see if we want to have a function to rebuild a nested dictionary as
+## a nested AttributeDict object when deserializing with json.
+## (now it deserialized to a standard dictionary; comparison of
+## AttributeDict == dict works fine, though.
+## Note also that when pickling, instead, the structure is well preserved)
 
-##       Note that for instance putting this code in __getattr__ doesn't work:
-##       everytime I try to write on a.b.c I am actually writing on a copy
-##         return AttributeDict(item) if type(item) == dict else item
+## Note that for instance putting this code in __getattr__ doesn't work:
+## everytime I try to write on a.b.c I am actually writing on a copy
+##    return AttributeDict(item) if type(item) == dict else item
+
+class Enumerate(frozenset):
+    def __getattr__(self,name):
+        if name in self:
+            return name
+        raise AttributeError("No attribute '{}' in Enumerate '{}'".format(
+                name, self.__class__.__name__))
+
+    def __setattr__(self, name, value):
+        raise AttributeError("Cannot set attribute in Enumerate '{}'".format(
+                self.__class__.__name__))
+
+    def __delattr__(self, name):
+        raise AttributeError("Cannot delete attribute in Enumerate '{}'".format(
+                self.__class__.__name__))
 
 class AttributeDict(dict):
     """

@@ -69,9 +69,7 @@ class Transport(object):
         try:
             return self._logger
         except AttributeError:
-            errmsg = ( "No self._logger configured for {}, did you call\n"
-                       "   super().__init__()?".format(self.__class__.__name__))
-            raise InternalError(errmsg)
+            raise InternalError("No self._logger configured for {}!")
 
     def chdir(self,path):
         """

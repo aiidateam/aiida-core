@@ -59,6 +59,7 @@ class JobInfo(DefaultFieldsAttributeDict):
 
     Fields:
        jobId: the job ID on the scheduler
+       title: the job title, as known by the scheduler
        exitStatus: the exit status of the job as reported by the operating
            system on the execution host
        terminatingSignal: the UNIX signal that was responsible for the end of
@@ -78,8 +79,9 @@ class JobInfo(DefaultFieldsAttributeDict):
            the retrieval of the full list of allocated machines, this 
            attribute can be used to know at least the number of machines
        queueName: The name of the queue in which the job was queued or started
-       wallclockTime: the accumulated wallclock time, of time datetime.timedelta
-       cpuTime: the accumulated cpu time, of time datetime.timedelta
+       wallclockTime: the accumulated wallclock time, in seconds
+       requestedWallclockTime: the requested wallclock time, in seconds
+       cpuTime: the accumulated cpu time, in seconds
        submissionTime: the absolute time at which the job was submitted,
            of type datetime.datetime
        dispatchTime: the absolute time at which the job first entered the
@@ -89,6 +91,7 @@ class JobInfo(DefaultFieldsAttributeDict):
     """
     _default_fields = (
         'jobId',
+        'title',
         'exitStatus',
         'terminatingSignal',
         'annotation',
@@ -101,6 +104,7 @@ class JobInfo(DefaultFieldsAttributeDict):
         'numMachines',
         'queueName',
         'wallclockTime',
+        'requestedWallclockTime',
         'cpuTime',
         'submissionTime',
         'dispatchTime',

@@ -5,6 +5,9 @@ from aida.common.exceptions import AidaException
 class SchedulerError(AidaException):
     pass
 
+class SchedulerParsingError(SchedulerError):
+    pass
+
 class Scheduler(object):
     """
     Note: probably we want to inherit from some more reasonable class.
@@ -24,6 +27,16 @@ class Scheduler(object):
         This class assumes that the transport is open and active.
         """
         self.transport = transport
+
+    @property
+    def logger(self):
+        """
+        Return the internal logger
+        """
+        try:
+            return self._logger
+        except AttributeError:
+            raise InternalError("No self._logger configured for {}!")
 
     @classmethod
     def _get_submit_script(cls, calc_info):
@@ -138,7 +151,7 @@ class Scheduler(object):
         retval, stdout, stderr = self.transport.exec_command_wait(
             self._get_joblist_command(jobs=jobs, user=user))
         
-        return _parse_joblist_output(retval, stdout, stderr)
+        return self._parse_joblist_output(retval, stdout, stderr)
         
     @classmethod
     def _get_submit_command(cls, submit_script):

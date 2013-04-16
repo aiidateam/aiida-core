@@ -165,19 +165,29 @@ class SshTransport(aida.transport.Transport):
         return self._sftp.get(remotepath,localpath,callback)
         
 
-    def copy(self,remotesource,remotedestination):
+    def copy(self,remotesource,remotedestination,cp_exe='cp',cp_flags='-r'):
         """
         Copy a file or a directory from remote source to remote destination
         """
-        # there is no standard for this in paramiko, I use therefore the exec_command
-        command = 'cp -r %s %s' % (remotesource,remotedestination) # NOTE: I am assuming linux
+        # TODO : I don't have a simple idea on how to understand 
+        #        what is the right cp command.
+        # In the majority of cases, we should deal with linux cp commands
+        # TODO :
 
-        # TODO : is it the right way to do it?
+        # stdin,stdout,stderr,channel = self.exec_command['which %s' % cp_exe]
+        # with open(stdout,'r') as f:
+        #     cp_exe = f.readline().strip()
+        command = '%s %s %s %s' % (cp_exe,cp_flags,remotesource,remotedestination)
 
         stdin,stdout,stderr,channel = self.exec_command(command)
-#        print stderr
-#        with open()
-#       if stderr
+
+        # TODO : read stderr
+
+        # with open(stdout,'r') as f:
+        #     lines = f.readlines().strip()
+        # if lines.strip():
+        #     raise OSError('Failed to copy file %s to %s' % (remotesource,remotedestination))
+
         return
 
 

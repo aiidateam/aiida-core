@@ -119,7 +119,7 @@ class Transport(object):
         raise NotImplementedError
 
 
-    def copy(self,remotesource,remotedestination):
+    def copy(self,remotesource,remotedestination,*args,**kwargs):
         """
         Copy a file or a directory from remote source to remote destination 
         (On the same remote machine)

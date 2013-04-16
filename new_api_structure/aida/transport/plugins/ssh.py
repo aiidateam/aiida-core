@@ -1,6 +1,7 @@
 from stat import S_ISDIR,S_ISREG
 import StringIO
 import paramiko
+import os
 
 import aida.transport
 from aida.common.utils import escape_for_bash
@@ -151,10 +152,19 @@ class SshTransport(aida.transport.Transport):
 
     def put(self,localpath,remotepath,callback=None):
         """
-        put a file from local to remote
-        """
-        # TODO: flag confirm exists since v1.7.7. What is the paramiko version supported?
+        Put a file from local to remote.
+
+        Args:
+            localpath: an (absolute) local path
+            remotepath: a remote path
         
+        Raises:
+            OSError if the localpath does not exist
+        """
+        # TODO: flag confirm exists since v1.7.7. What is the paramiko
+        # version supported?
+        if not os.path.isabs(localpath):
+            raise ValueError("The localpath must be an absolute path")
         return self._sftp.put(localpath,remotepath,callback=callback)
 
 
@@ -162,10 +172,12 @@ class SshTransport(aida.transport.Transport):
         """
         get a file from remote to local
         """
+        if not os.path.isabs(localpath):
+            raise ValueError("The localpath must be an absolute path")
         return self._sftp.get(remotepath,localpath,callback)
         
 
-    def copy(self,remotesource,remotedestination,cp_exe='cp',cp_flags='-r'):
+    def copy(self,remotesource,remotedestination):
         """
         Copy a file or a directory from remote source to remote destination
         """
@@ -174,22 +186,27 @@ class SshTransport(aida.transport.Transport):
         # In the majority of cases, we should deal with linux cp commands
         # TODO :
 
-        # stdin,stdout,stderr,channel = self.exec_command['which %s' % cp_exe]
-        # with open(stdout,'r') as f:
-        #     cp_exe = f.readline().strip()
-        command = '%s %s %s %s' % (cp_exe,cp_flags,remotesource,remotedestination)
+        # For the moment, these are hardcoded. They may become parameters
+        # as soon as we see the need.
+        cp_exe='cp'
+        cp_flags='-r'
 
-        stdin,stdout,stderr,channel = self.exec_command(command)
+        command = '%s %s %s %s' % (cp_exe,
+                                   cp_flags,
+                                   escape_for_bash(remotesource),
+                                   escape_for_bash(remotedestination))
 
-        # TODO : read stderr
+        retval,stdout,stderr = self.exec_command_wait(command)
 
-        # with open(stdout,'r') as f:
-        #     lines = f.readlines().strip()
-        # if lines.strip():
-        #     raise OSError('Failed to copy file %s to %s' % (remotesource,remotedestination))
-
-        return
-
+        # TODO : check and fix below
+        
+        if retval == 0:
+            if stderr.strip():
+                self.logger.warning("There was nonempty stderr in the cp "
+                                    "command: {}".format(stderr))
+            return True
+        else:
+            raise IOError("TODO WRITE THIS STRING")
 
     def listdir(self,path='.'):
         return self._sftp.listdir(path)
@@ -397,7 +414,8 @@ if __name__ == '__main__':
 
         def test_dir_copy(self):
             """
-            Verify if in the copy of a directory also the protection bits are carried over
+            Verify if in the copy of a directory also the protection bits
+            are carried over
             """
             # Imports required later
             import random
@@ -427,7 +445,8 @@ if __name__ == '__main__':
 
         def test_dir_permissions_creation_modification(self):
             """
-            verify if chmod raises IOError when trying to change bits on a non-existing folder
+            verify if chmod raises IOError when trying to change bits on a
+            non-existing folder
             """
             # Imports required later
             import random
@@ -466,7 +485,8 @@ if __name__ == '__main__':
                 
         def test_isfile_isdir_to_empty_string(self):
             """
-            I check that isdir or isfile return False when executed on an empty string
+            I check that isdir or isfile return False when executed on an
+            empty string
             """
             import os
 
@@ -480,7 +500,8 @@ if __name__ == '__main__':
 
         def test_isfile_isdir_to_non_existing_string(self):
             """
-            I check that isdir or isfile return False when executed on an empty string
+            I check that isdir or isfile return False when executed on an
+            empty string
             """
             import os
             with SshTransport(machine='localhost', timeout=30, 
@@ -497,9 +518,9 @@ if __name__ == '__main__':
                
         def test_chdir_to_empty_string(self):
             """
-            I check that if I pass an empty string to chdir, the cwd does not change
-            (this is a paramiko default behavior), but getcwd() is still correctly 
-            defined.
+            I check that if I pass an empty string to chdir, the cwd does
+            not change (this is a paramiko default behavior), but getcwd()
+            is still correctly defined.
             """
             import os
             with SshTransport(machine='localhost', 
@@ -513,7 +534,9 @@ if __name__ == '__main__':
     class TestPutGet(unittest.TestCase):
         """
         Test to verify whether the put and get functions behave correctly.
-        1) thy work, 2) need abs path where necessary 3) reject empy strings
+        1) they work
+        2) they need abs paths where necessary, i.e. for local paths
+        3) they reject empty strings
         """
 
         def test_put_and_get(self):
@@ -548,11 +571,12 @@ if __name__ == '__main__':
                 t.put(local_file_name,remote_file_name)
                 t.get(remote_file_name,retrieved_file_name)
                 
-                list_of_file = t.listdir('.')
-                # fails because local_file_name has the full path, while list_of_file not
-                self.assertFalse(local_file_name in list_of_file)
-                self.assertTrue(remote_file_name in list_of_file)
-                self.assertFalse(retrieved_file_name in list_of_file)
+                list_of_files = t.listdir('.')
+                # it is False because local_file_name has the full path,
+                # while list_of_files has not
+                self.assertFalse(local_file_name in list_of_files)
+                self.assertTrue(remote_file_name in list_of_files)
+                self.assertFalse(retrieved_file_name in list_of_files)
 
                 os.remove(local_file_name)
                 t.remove(remote_file_name)
@@ -591,18 +615,19 @@ if __name__ == '__main__':
                 f = open(local_file_name,'w')
                 f.close()
 
-                with self.assertRaises(OSError):
-                    # file is not abs_path
+                with self.assertRaises(ValueError):
+                    # partial_file_name is not an abs path
                     t.put(partial_file_name,remote_file_name)
                 with self.assertRaises(OSError):
-                    # file does not exist
+                    # retrieved_file_name does not exist
                     t.put(retrieved_file_name,remote_file_name)
                 with self.assertRaises(IOError):
+                    # remote_file_name does not exist
                     t.get(remote_file_name,retrieved_file_name)
                 
                 t.put(local_file_name,remote_file_name)
-                with self.assertRaises(IOError):
-                    # file is not abs_path
+                with self.assertRaises(ValueError):
+                    # local filename is not an abs path
                     t.get(remote_file_name,'delete_me.txt')
 
                 t.remove(remote_file_name)
@@ -643,26 +668,34 @@ if __name__ == '__main__':
                     f.write(text)
 
 
-                with self.assertRaises(OSError):
-                    # file is empty string
+                with self.assertRaises(ValueError):
+                    # localpath is an empty string
+                    # ValueError because it is not an abs path
                     t.put('',remote_file_name)
+
+                with self.assertRaises(IOError):
+                    # remote path is an empty string
                     t.put(local_file_name,'')
 
                 t.put(local_file_name,remote_file_name)
                 
                 with self.assertRaises(IOError):
-                    # file is empty string
+                    # remote path is an empty string
                     t.get('',retrieved_file_name)
 
-                with self.assertRaises(IOError):
+                with self.assertRaises(ValueError):
+                    # local path is an empty string
+                    # ValueError because it is not an abs path
                     t.get(remote_file_name,'')
 
-                    # TODO : get doesn't retrieve empty files. Is it what we want?
-#                t.get(remote_file_name,retrieved_file_name)
+                    # TODO : get doesn't retrieve empty files.
+                    # Is it what we want?
+                t.get(remote_file_name,retrieved_file_name)
 
                 os.remove(local_file_name)
                 t.remove(remote_file_name)
-                # If it couldn't end the copy, it leaves what he did on local file
+                # If it couldn't end the copy, it leaves what he did on
+                # local file
                 self.assertTrue( 'file_retrieved.txt' in t.listdir('.') )
                 os.remove(retrieved_file_name)
 

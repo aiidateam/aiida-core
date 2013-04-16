@@ -21,6 +21,10 @@ class SshTransport(aida.transport.Transport):
             Other parameters are passed to the connect function (as port, username,
             password, ...) (see the __enter__ function of this class, or the
             documentation of paramiko.SSHClient.connect())
+
+        TODO : implement a property self.sftp that raises a reasonable exception
+               if the channel has not been opened. Understand if we need explicit 
+               open() and close() functions.
         """
 
         ## First call the parent __init__ to setup the logger!
@@ -84,6 +88,8 @@ class SshTransport(aida.transport.Transport):
     def __exit__(self, type, value, traceback):
         """
         Close the SFTP channel, and the SSHClient.
+        
+        TODO : correctly manage exceptions
         """
         self._sftp.close()
         self._client.close()
@@ -177,27 +183,44 @@ class SshTransport(aida.transport.Transport):
         return self._sftp.get(remotepath,localpath,callback)
         
 
-    def copy(self,remotesource,remotedestination):
+    def copy(self,remotesource,remotedestination,dereference=False):
         """
-        Copy a file or a directory from remote source to remote destination
+        Copy a file or a directory from remote source to remote destination.
+        Flags used: -r: recursive copy; -f: force, makes the command non interactive;
+          -L follows symbolic links
+
+        Args:
+            remotesource: file to copy from
+            remotedestination: file to copy to
+            dereference: if True, copy content instead of copying the symlinks only
+
+        Raises:
+            IOError if the cp execution failed.
         """
-        # TODO : I don't have a simple idea on how to understand 
-        #        what is the right cp command.
         # In the majority of cases, we should deal with linux cp commands
-        # TODO :
+        
+        # TODO : do we need to avoid the aliases when calling cp_exe='cp'? Call directly /bin/cp?
+        
+        # TODO: verify that it does not re
 
         # For the moment, these are hardcoded. They may become parameters
         # as soon as we see the need.
+        
         cp_exe='cp'
-        cp_flags='-r'
 
-        command = '%s %s %s %s' % (cp_exe,
-                                   cp_flags,
-                                   escape_for_bash(remotesource),
-                                   escape_for_bash(remotedestination))
+        ## To evaluate if we also want -p: preserves mode,ownership and timestamp
+        cp_flags='-r -f'
+        if dereference:
+            # use -L; --dereference is not supported on mac
+            cp_flags+=' -L'
+        
+        command = '{} {} {} {}'.format(cp_exe,
+                                       cp_flags,
+                                       escape_for_bash(remotesource),
+                                       escape_for_bash(remotedestination))
 
         retval,stdout,stderr = self.exec_command_wait(command)
-
+        
         # TODO : check and fix below
         
         if retval == 0:
@@ -206,7 +229,9 @@ class SshTransport(aida.transport.Transport):
                                     "command: {}".format(stderr))
             return True
         else:
-            raise IOError("TODO WRITE THIS STRING")
+            self.logger.error("Problem executing cp. Exit code: {}, stdout: '{}', "
+                              "stderr: '{}'".format(retval, stdout, stderr))
+            raise IOError("Error while executing cp. Exit code: {}".format(retval) )
 
     def listdir(self,path='.'):
         return self._sftp.listdir(path)

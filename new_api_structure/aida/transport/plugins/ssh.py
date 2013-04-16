@@ -1,8 +1,10 @@
 from stat import S_ISDIR,S_ISREG
 import StringIO
 import paramiko
+import os
 
 import aida.transport
+from aida.common.utils import escape_for_bash
 from aida.common import aidalogger
 
 class SshTransport(aida.transport.Transport):
@@ -14,12 +16,11 @@ class SshTransport(aida.transport.Transport):
             machine: the machine to connect to
             load_system_host_keys (optional, default True): if False, do not load the
                 system host keys
-            key_policy (optional, default = paramiko.RejectPolicy()): the policy to use for
-                unknown keys
-            Other parameters are passed to the connect function (as port, username, password, ...)
-            (see the __enter__ function of this class, or the documentation of\
-            paramiko.SSHClient.connect())
-
+            key_policy (optional, default = paramiko.RejectPolicy()): the policy to use
+                for unknown keys
+            Other parameters are passed to the connect function (as port, username,
+            password, ...) (see the __enter__ function of this class, or the
+            documentation of paramiko.SSHClient.connect())
         """
 
         ## First call the parent __init__ to setup the logger!
@@ -36,6 +37,24 @@ class SshTransport(aida.transport.Transport):
             'key_policy',paramiko.RejectPolicy()) # This is paramiko default
         self._client.set_missing_host_key_policy(self._missing_key_policy)
 
+    def __unicode__(self):
+        """
+        Return a useful string.
+        """
+        conn_info = unicode(self._machine)
+        try:
+            conn_info = unicode(self._further_init_args['username']) + u'@' + conn_info
+        except KeyError:
+            # No username explicitly defined: ignore
+            pass
+        try:
+            conn_info += u':{}'.format(self._further_init_args['port'])
+        except KeyError:
+        # No port explicitly defined: ignore
+            pass
+            
+        return u'{}({})'.format(self.__class__.__name__, conn_info)
+    
     def __enter__(self):
         """
         Open a SSHClient to the machine possibly using the parameters given
@@ -80,6 +99,9 @@ class SshTransport(aida.transport.Transport):
         if path is not None:
             self._sftp.chdir(path)
 
+    def normalize(self, path):
+        return self._sftp.normalize(path)
+        
     def getcwd(self):
         """
         Return the current working directory for this SFTP session, as
@@ -126,6 +148,72 @@ class SshTransport(aida.transport.Transport):
                 return False
             else:
                 raise # Typically if I don't have permissions (errno=13)
+
+
+    def put(self,localpath,remotepath,callback=None):
+        """
+        Put a file from local to remote.
+
+        Args:
+            localpath: an (absolute) local path
+            remotepath: a remote path
+        
+        Raises:
+            OSError if the localpath does not exist
+        """
+        # TODO: flag confirm exists since v1.7.7. What is the paramiko
+        # version supported?
+        if not os.path.isabs(localpath):
+            raise ValueError("The localpath must be an absolute path")
+        return self._sftp.put(localpath,remotepath,callback=callback)
+
+
+    def get(self,remotepath,localpath,callback=None):
+        """
+        get a file from remote to local
+        """
+        if not os.path.isabs(localpath):
+            raise ValueError("The localpath must be an absolute path")
+        return self._sftp.get(remotepath,localpath,callback)
+        
+
+    def copy(self,remotesource,remotedestination):
+        """
+        Copy a file or a directory from remote source to remote destination
+        """
+        # TODO : I don't have a simple idea on how to understand 
+        #        what is the right cp command.
+        # In the majority of cases, we should deal with linux cp commands
+        # TODO :
+
+        # For the moment, these are hardcoded. They may become parameters
+        # as soon as we see the need.
+        cp_exe='cp'
+        cp_flags='-r'
+
+        command = '%s %s %s %s' % (cp_exe,
+                                   cp_flags,
+                                   escape_for_bash(remotesource),
+                                   escape_for_bash(remotedestination))
+
+        retval,stdout,stderr = self.exec_command_wait(command)
+
+        # TODO : check and fix below
+        
+        if retval == 0:
+            if stderr.strip():
+                self.logger.warning("There was nonempty stderr in the cp "
+                                    "command: {}".format(stderr))
+            return True
+        else:
+            raise IOError("TODO WRITE THIS STRING")
+
+    def listdir(self,path='.'):
+        return self._sftp.listdir(path)
+
+    def remove(self,path):
+        return self._sftp.remove(path)
+    
 
     def isfile(self,path):
         """
@@ -175,20 +263,9 @@ class SshTransport(aida.transport.Transport):
         channel = self._client.get_transport().open_session()
         channel.set_combine_stderr(combine_stderr)
 
-        # Here, I escape the folder. In particular, 'escaped_folder' is
-        # within single quotes. Then, the only thing that I have to escape
-        # in bash is a single quote. To do this, I substitute every single
-        # quote ' with '"'"' which means:
-        #              12345
-        # 1: exit from the enclosing single quotes
-        # 234: "'" is a single quote character, escaped by double quotes
-        # 5: reopen the single quote to continue the string
-        # Finally, note that for python I have to enclose the string '"'"'
-        # within triple quotes to make it work, getting finally: """'"'"'"""
-
         if self.getcwd() is not None:
-            escaped_folder = self.getcwd().replace("'","""'"'"'""")
-            command_to_execute = ("cd '{escaped_folder}' ; "
+            escaped_folder = escape_for_bash(self.getcwd())
+            command_to_execute = ("cd {escaped_folder} ; "
                                   "{real_command}".format(
                     escaped_folder = escaped_folder,
                     real_command = command))
@@ -290,7 +367,7 @@ if __name__ == '__main__':
 
             with SshTransport(machine='localhost', timeout=30, 
                               key_policy=paramiko.AutoAddPolicy()) as t:
-                location = os.path.join('/','tmp')
+                location = t.normalize(os.path.join('/','tmp'))
                 directory = 'temp_dir_test'
                 t.chdir(location)
                 
@@ -306,6 +383,10 @@ if __name__ == '__main__':
                     t.mkdir(this_dir)
                 list_of_dir_found = t.listdir('.')
                 self.assertTrue(sorted(list_of_dir_found)==sorted(list_of_dir))    
+
+                for this_dir in list_of_dir:
+                    t.rmdir(this_dir)
+
                 t.chdir('..')
                 t.rmdir(directory)
 
@@ -317,7 +398,7 @@ if __name__ == '__main__':
 
             with SshTransport(machine='localhost', timeout=30, 
                               key_policy=paramiko.AutoAddPolicy()) as t:
-                location = os.path.join('/','tmp')
+                location = t.normalize(os.path.join('/','tmp'))
                 directory = 'temp_dir_test'
                 t.chdir(location)
                 
@@ -333,7 +414,8 @@ if __name__ == '__main__':
 
         def test_dir_copy(self):
             """
-            Verify if in the copy of a directory also the protection bits are carried over
+            Verify if in the copy of a directory also the protection bits
+            are carried over
             """
             # Imports required later
             import random
@@ -342,7 +424,7 @@ if __name__ == '__main__':
 
             with SshTransport(machine='localhost', timeout=30, 
                               key_policy=paramiko.AutoAddPolicy()) as t:
-                location = os.path.join('/','tmp')
+                location = t.normalize(os.path.join('/','tmp'))
                 directory = 'temp_dir_test'
                 t.chdir(location)
                 
@@ -363,7 +445,8 @@ if __name__ == '__main__':
 
         def test_dir_permissions_creation_modification(self):
             """
-            verify if chmod raises IOError when trying to change bits on a non-existing folder
+            verify if chmod raises IOError when trying to change bits on a
+            non-existing folder
             """
             # Imports required later
             import random
@@ -372,7 +455,7 @@ if __name__ == '__main__':
 
             with SshTransport(machine='localhost', timeout=30, 
                               key_policy=paramiko.AutoAddPolicy()) as t:
-                location = os.path.join('/','tmp')
+                location = t.normalize(os.path.join('/','tmp'))
                 directory = 'temp_dir_test'
                 t.chdir(location)
 
@@ -402,13 +485,14 @@ if __name__ == '__main__':
                 
         def test_isfile_isdir_to_empty_string(self):
             """
-            I check that isdir or isfile return False when executed on an empty string
+            I check that isdir or isfile return False when executed on an
+            empty string
             """
             import os
 
             with SshTransport(machine='localhost', timeout=30, 
                               key_policy=paramiko.AutoAddPolicy()) as t:
-                location = os.path.join('/','tmp')
+                location = t.normalize(os.path.join('/','tmp'))
                 t.chdir(location)
                 self.assertFalse(t.isdir(""))
                 self.assertFalse(t.isfile(""))
@@ -416,13 +500,14 @@ if __name__ == '__main__':
 
         def test_isfile_isdir_to_non_existing_string(self):
             """
-            I check that isdir or isfile return False when executed on an empty string
+            I check that isdir or isfile return False when executed on an
+            empty string
             """
             import os
             with SshTransport(machine='localhost', timeout=30, 
                               key_policy=paramiko.AutoAddPolicy()) as t:
 
-                location = os.path.join('/','tmp')
+                location = t.normalize(os.path.join('/','tmp'))
                 t.chdir(location)
                 fake_folder = 'pippo'
                 self.assertFalse(t.isfile(fake_folder))
@@ -433,15 +518,15 @@ if __name__ == '__main__':
                
         def test_chdir_to_empty_string(self):
             """
-            I check that if I pass an empty string to chdir, the cwd does not change
-            (this is a paramiko default behavior), but getcwd() is still correctly 
-            defined.
+            I check that if I pass an empty string to chdir, the cwd does
+            not change (this is a paramiko default behavior), but getcwd()
+            is still correctly defined.
             """
             import os
             with SshTransport(machine='localhost', 
                               key_policy=paramiko.AutoAddPolicy()) as t:
 
-                new_dir = os.path.join('/','tmp')
+                new_dir = t.normalize(os.path.join('/','tmp'))
                 t.chdir(new_dir)
                 t.chdir("")
                 self.assertEquals(new_dir, t.getcwd())
@@ -449,14 +534,16 @@ if __name__ == '__main__':
     class TestPutGet(unittest.TestCase):
         """
         Test to verify whether the put and get functions behave correctly.
-        1) thy work, 2) need abs path where necessary 3) reject empy strings
+        1) they work
+        2) they need abs paths where necessary, i.e. for local paths
+        3) they reject empty strings
         """
 
         def test_put_and_get(self):
             import os
             import random
             import string
-
+            
             local_dir = os.path.join('/','tmp')
             directory = 'tmp_try'
 
@@ -473,20 +560,27 @@ if __name__ == '__main__':
                 t.chdir(directory)
 
                 local_file_name = os.path.join(local_dir,directory,'file.txt')
-                remote_file_name = os.path.join(local_dir,directory,'file_remote.txt')
+                remote_file_name = 'file_remote.txt'
                 retrieved_file_name = os.path.join(local_dir,directory,'file_retrieved.txt')
 
-                f = open(local_file_name,'w')
-                f.close()
+                text = 'Viva Verdi\n'
+                with open(local_file_name,'w') as f:
+                    f.write(text)
 
                 # here use full path in src and dst
                 t.put(local_file_name,remote_file_name)
                 t.get(remote_file_name,retrieved_file_name)
                 
-                list_of_file = t.listdir('.')
-                self.assertTrue(local_file_name not in list_of_file)
-                self.assertTrue(remote_file_name not in list_of_file)
-                self.assertTrue(retrieved_file_name not in list_of_file)
+                list_of_files = t.listdir('.')
+                # it is False because local_file_name has the full path,
+                # while list_of_files has not
+                self.assertFalse(local_file_name in list_of_files)
+                self.assertTrue(remote_file_name in list_of_files)
+                self.assertFalse(retrieved_file_name in list_of_files)
+
+                os.remove(local_file_name)
+                t.remove(remote_file_name)
+                os.remove(retrieved_file_name)
 
                 t.chdir('..')
                 t.rmdir(directory)
@@ -522,17 +616,22 @@ if __name__ == '__main__':
                 f.close()
 
                 with self.assertRaises(ValueError):
-                    # file is not abs_path
+                    # partial_file_name is not an abs path
                     t.put(partial_file_name,remote_file_name)
                 with self.assertRaises(OSError):
-                    # file does not exist
-                    t.put(retrieved_file_name,remote_file_name)                    
+                    # retrieved_file_name does not exist
+                    t.put(retrieved_file_name,remote_file_name)
+                with self.assertRaises(IOError):
+                    # remote_file_name does not exist
                     t.get(remote_file_name,retrieved_file_name)
                 
                 t.put(local_file_name,remote_file_name)
                 with self.assertRaises(ValueError):
-                    # file is not abs_path
+                    # local filename is not an abs path
                     t.get(remote_file_name,'delete_me.txt')
+
+                t.remove(remote_file_name)
+                os.remove(local_file_name)
 
                 t.chdir('..')
                 t.rmdir(directory)
@@ -541,6 +640,7 @@ if __name__ == '__main__':
             """
             test of exception put/get of empty strings
             """
+            # TODO : verify the correctness of \n at the end of a file
             import os
             import random
             import string
@@ -563,22 +663,44 @@ if __name__ == '__main__':
                 remote_file_name = 'file_remote.txt'
                 retrieved_file_name = os.path.join(local_dir,directory,'file_retrieved.txt')
                 
-                f = open(local_file_name,'w')
-                f.close()
+                text = 'Viva Verdi\n'
+                with  open(local_file_name,'w') as f:
+                    f.write(text)
+
 
                 with self.assertRaises(ValueError):
-                    # file is empty string
+                    # localpath is an empty string
+                    # ValueError because it is not an abs path
                     t.put('',remote_file_name)
+
+                with self.assertRaises(IOError):
+                    # remote path is an empty string
                     t.put(local_file_name,'')
 
                 t.put(local_file_name,remote_file_name)
                 
-                with self.assertRaises(ValueError):
-                    # file is empty string
+                with self.assertRaises(IOError):
+                    # remote path is an empty string
                     t.get('',retrieved_file_name)
+
+                with self.assertRaises(ValueError):
+                    # local path is an empty string
+                    # ValueError because it is not an abs path
                     t.get(remote_file_name,'')
 
+                    # TODO : get doesn't retrieve empty files.
+                    # Is it what we want?
+                t.get(remote_file_name,retrieved_file_name)
+
+                os.remove(local_file_name)
+                t.remove(remote_file_name)
+                # If it couldn't end the copy, it leaves what he did on
+                # local file
+                self.assertTrue( 'file_retrieved.txt' in t.listdir('.') )
+                os.remove(retrieved_file_name)
+
                 t.chdir('..')
+
                 t.rmdir(directory)
 
 
@@ -599,15 +721,16 @@ if __name__ == '__main__':
             """
             import os
             
-            location = '/tmp' # Use a full path here
-            subfolder = """_'s f"#""" # A folder with characters to escape
-
-            subfolder_fullpath = os.path.join(location,subfolder)
-            
+            # Start value
             delete_at_end = False
 
             with SshTransport('localhost', 
                               key_policy=paramiko.AutoAddPolicy()) as t:
+
+                # To compare with: getcwd uses the normalized ('realpath') path
+                location = t.normalize('/tmp')
+                subfolder = """_'s f"#""" # A folder with characters to escape
+                subfolder_fullpath = os.path.join(location,subfolder)
 
                 t.chdir(location)
                 if not t.isdir(subfolder):

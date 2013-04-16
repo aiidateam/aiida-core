@@ -39,14 +39,8 @@ class Transport(object):
             the same remote server. To understand how to do it.
 
     """
-    def __init__(self, *args, **kwargs):
-        """
-        The main initializer of the base class. To be called from 
-        each subclass!
-        """
-        self._logger = aida.common.aidalogger.getChild('transport')
+    _logger = aida.common.aidalogger.getChild('transport')
         
-    
     def __enter__(self):
         """
         For transports that require opening a connection, open
@@ -60,6 +54,13 @@ class Transport(object):
         """
         raise NotImplementedError
 
+    def __str__(self):
+        return unicode(self).encode('utf-8')
+
+    # Remember to define this in each plugin!
+    def __unicode__(self):
+        return u"[Transport class or subclass]"
+
     @property
     def logger(self):
         """
@@ -68,9 +69,7 @@ class Transport(object):
         try:
             return self._logger
         except AttributeError:
-            errmsg = ( "No self._logger configured for {}, did you call\n"
-                       "   super().__init__()?".format(self.__class__.__name__))
-            raise InternalError(errmsg)
+            raise InternalError("No self._logger configured for {}!")
 
     def chdir(self,path):
         """
@@ -118,13 +117,14 @@ class Transport(object):
         raise NotImplementedError
 
 
-    def copy(self,src,dst):
+    def copy(self,remotesource,remotedestination,*args,**kwargs):
         """
-        Copy a file or a directory from remote source to remote destination
+        Copy a file or a directory from remote source to remote destination 
+        (On the same remote machine)
         
         Args:
-            src (str) - path of the remote source directory / file
-            dst (str) - path of the remote destination directory / file
+            remotesource (str) - path of the remote source directory / file
+            remotedestination (str) - path of the remote destination directory / file
 
         Raises: IOError if one of src or dst does not exist
         """
@@ -165,7 +165,7 @@ class Transport(object):
         raise NotImplementedError
 
 
-    def get(self, src, dst):
+    def get(self, remotepath, localpath, *args, **kwargs):
         """
         Retrieve a file from remote source to local destination
         dst must be an absolute path (src not necessarily)
@@ -173,8 +173,8 @@ class Transport(object):
         TODO: To be implemented in the plugins
         
         Args:
-            src (str) - remote_folder_path
-            dst (str) - local_folder_path
+            remotepath (str) - remote_folder_path
+            localpath (str) - local_folder_path
         """
         raise NotImplementedError
 
@@ -271,7 +271,7 @@ class Transport(object):
         raise NotImplementedError
 
 
-    def put(self, src, dst):
+    def put(self, localpath, remotepath, *args, ** kwargs):
         """
         Put a file from local src to remote dst.
         src must be an absolute path (dst not necessarily))
@@ -279,8 +279,8 @@ class Transport(object):
         TODO: To be implemented in the plugins
         
         Args:
-           src (str) - remote_folder_path
-           dst (str) - local_folder_path
+           localpath (str) - remote_folder_path
+           remotepath (str) - local_folder_path
         """
         raise NotImplementedError
 
@@ -321,4 +321,7 @@ class Transport(object):
             path (str) - name of the folder to remove
         """
         raise NotImplementedError
+
+#if __name__ == "__main__":
+#    print str(Transport())
 

@@ -39,6 +39,8 @@ _map_status_pbspro = {
 class PbsproScheduler(aida.scheduler.Scheduler):
     """
     PBSPro implementation of the scheduler functions.
+
+    TODO: implement __unicode__ and __str__ methods.
     """
     _logger = aida.scheduler.Scheduler._logger.getChild('pbspro')
 
@@ -394,8 +396,12 @@ if __name__ == '__main__':
 
     PbsproScheduler._logger.setLevel(logging.DEBUG)
 #    PbsproScheduler._get_joblist_command(user='pi',jobs=['8392','sdfd'])
-    with SshTransport('bellatrix.epfl.ch',
+    with SshTransport('bellatrix.epfl.ch' #,username='cepellot',
                       key_policy=paramiko.AutoAddPolicy()) as t:
         s = PbsproScheduler(t)
         job_list = s.getJobs()
-        print "\n".join("{}".format(j.jobId) for j in job_list)
+        print "\n".join("{} of {} with status {}".format(
+                j.jobId, j.jobOwner, j.jobState) for j in job_list
+                        if j.jobState and
+                        (j.jobState == jobStates.QUEUED_HELD or
+                         j.jobState == jobStates.QUEUED))

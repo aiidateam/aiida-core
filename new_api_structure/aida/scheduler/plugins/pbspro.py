@@ -237,7 +237,7 @@ class PbsproScheduler(aida.scheduler.Scheduler):
                     exec_host_list = []
                     for exec_host in exec_hosts:
                         node = NodeInfo()
-                        node.machineName, data = exec_host.split('/')
+                        node.nodeName, data = exec_host.split('/')
                         data = data.split('*')
                         if len(data) == 1:
                             node.jobIndex = int(data[0])
@@ -250,9 +250,9 @@ class PbsproScheduler(aida.scheduler.Scheduler):
                                              "instead of 1 or 2 in exec_hosts: "
                                              "{}".format(len(data), exec_hosts))
                         exec_host_list.append(node)
-                    this_job.allocatedMachines = exec_host_list
+                    this_job.allocatedNodes = exec_host_list
                 except Exception as e:
-                    self.logger.debug("Problem parsing the machine names, I "
+                    self.logger.debug("Problem parsing the node names, I "
                                       "got Exception {} with message {}; "
                                       "exec_hosts was {}".format(
                             str(type(e)), e.message, exec_hosts))
@@ -278,7 +278,7 @@ class PbsproScheduler(aida.scheduler.Scheduler):
                         this_job.jobId))
 
             try:
-                this_job.numMachines = int(raw_data['resource_list.nodect'])
+                this_job.numNodes = int(raw_data['resource_list.nodect'])
             except KeyError:
                 self.logger.debug("No 'resource_list.nodect' field for job id "
                     "{}".format(this_job.jobId))
@@ -288,8 +288,14 @@ class PbsproScheduler(aida.scheduler.Scheduler):
                         raw_data['resource_list.nodect'],
                         this_job.jobId))
 
-            # TODO here: if allocatedMachines is not None, check the length
-            # and compare with numMachines
+            # Double check of redundant info
+            if (this_job.allocatedNodes is not None and 
+                this_job.numNodes is not None):
+                if len(this_job.allocatedNodes) != this_job.numNodes:
+                    self.logger.error("The length of the list of allocated "
+                                      "nodes ({}) is different from the "
+                                      "expected number of nodes ({})!".format(
+                        len(this_job.allocatedNodes), this_job.numNodes))
 
             try:
                 this_job.queueName = raw_data['queue']
@@ -465,18 +471,18 @@ if __name__ == '__main__':
             if j.jobState and j.jobState == jobStates.RUNNING:
                 print "{} of {} with status {}".format(
                     j.jobId, j.jobOwner, j.jobState)
-                if j.allocatedMachines:
+                if j.allocatedNodes:
                     num_nodes = 0
                     num_cores = 0
-                    for n in j.allocatedMachines:
+                    for n in j.allocatedNodes:
 #                        print "  -> node {}, index {}, cores {}".format(
-#                            n.machineName, n.jobIndex, n.numCores)
+#                            n.nodeName, n.jobIndex, n.numCores)
                         num_nodes += 1
                         num_cores += n.numCores
                        
-                    if j.numMachines != num_nodes:
+                    if j.numNodes != num_nodes:
                         print "WARNING! expected nodes = {}, found = {}".format(
-                            j.numMachines, num_nodes)
+                            j.numNodes, num_nodes)
                     if j.numCores != num_cores:
                         print "WARNING! expected cores = {}, found = {}".format(
                             j.numCores, num_cores)

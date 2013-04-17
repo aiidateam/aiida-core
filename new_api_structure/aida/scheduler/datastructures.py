@@ -1,7 +1,5 @@
 from aida.common.extendeddicts import (
-    DefaultFieldsAttributeDict,
-    Enumerate)
-
+    DefaultFieldsAttributeDict, Enumerate)
 
 class JobState(Enumerate):
     pass
@@ -16,10 +14,24 @@ jobStates = JobState((
         'FAILED',
         ))
     
+#class QueueInfo(DefaultFieldsAttributeDict):
+#    _default_fields = ('name',)
 
-class QueueInfo(DefaultFieldsAttributeDict):
-    _default_fields = ('name',)
-    
+class NodeInfo(DefaultFieldsAttributeDict):
+    """
+    Similarly to what is defined in the DRMAA v.2 as SlotInfo; this identifies
+    each node on which a job is running, and how many CPUs are being
+    used.
+
+    * nodeName: name of the node
+    * numCores: number of cores used by the job on this node
+    """
+    _default_fields = (
+        'nodeName',
+        'numCores',
+        )
+
+
 class MachineResource(DefaultFieldsAttributeDict):
     # These should be the same defined in the DB for storage.
     # At some point we may decide to create dynamically the _default_fields
@@ -68,16 +80,16 @@ class JobInfo(DefaultFieldsAttributeDict):
            being in the current state or substate.
        jobState: the job state (one of those defined in aida.scheduler.states)
        jobSubState: a string with the implementation-specific sub-state
-       allocatedMachines: a list of machines used for the current job.
+       allocatedNodes: a list of nodes used for the current job.
        submissionMachine: Name of the submission host for this job.
        jobOwner: the job owner as reported by the scheduler
        numCores: the number of requested cores (this more or less is what
            is called 'slots' in DRMAAv2)
-       numMachines: the number of machines, or nodes, required by the job.
-           If allocatedMachines is not None, this number must be equal to
-           len(allocatedMachines). Otherwise, for schedulers not supporting
-           the retrieval of the full list of allocated machines, this 
-           attribute can be used to know at least the number of machines
+       numNodes: the number of nodes, required by the job.
+           If allocatedNodes is not None, this number must be equal to
+           len(allocatedNodes). Otherwise, for schedulers not supporting
+           the retrieval of the full list of allocated nodes, this 
+           attribute can be used to know at least the number of nodes
        queueName: The name of the queue in which the job was queued or started
        wallclockTime: the accumulated wallclock time, in seconds
        requestedWallclockTime: the requested wallclock time, in seconds
@@ -97,11 +109,11 @@ class JobInfo(DefaultFieldsAttributeDict):
         'annotation',
         'jobState',
         'jobSubState',
-        'allocatedMachines',
+        'allocatedNodes',
         'submissionMachine',
         'jobOwner',
         'numCores',
-        'numMachines',
+        'numNodes',
         'queueName',
         'wallclockTime',
         'requestedWallclockTime',

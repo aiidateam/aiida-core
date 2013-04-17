@@ -105,6 +105,17 @@ class SshTransport(aida.transport.Transport):
         if path is not None:
             self._sftp.chdir(path)
 
+        # Paramiko already checked that path is a folder, otherwise I would
+        # have gotten an exception. Now, I want to check that I have read
+        # permissions in this folder (nothing is said on write permissions,
+        # though).
+        # Otherwise, if I do exec_command, that as a first operation does a
+        # cd in the folder, I get a wrong retval, that is an unwanted behavior.
+        #
+        # Note: I don't store the result of the function; if I have no
+        # read permissions, this will raise an exception.
+        self._sftp.stat('.')
+
     def normalize(self, path):
         return self._sftp.normalize(path)
         
@@ -155,6 +166,12 @@ class SshTransport(aida.transport.Transport):
             else:
                 raise # Typically if I don't have permissions (errno=13)
 
+
+    def chmod(self,path,mode):
+        if not path:
+            raise IOError("Input path is an empty argument.")
+        return self._sftp.chmod(path,mode)
+            
 
     def put(self,localpath,remotepath,callback=None):
         """
@@ -213,6 +230,15 @@ class SshTransport(aida.transport.Transport):
         if dereference:
             # use -L; --dereference is not supported on mac
             cp_flags+=' -L'
+
+        # if in input I give an invalid object raise ValueError
+        if not remotesource:
+            raise ValueError('Input to copy() must be a non empty string. ' +
+                             'Found instead %s as remotesource' % remotesource)
+
+        if not remotedestination:
+            raise ValueError('Input to copy() must be a non empty string. ' +
+                             'Found instead %s as remotedestination' % remotedestination)
         
         command = '{} {} {} {}'.format(cp_exe,
                                        cp_flags,
@@ -239,6 +265,7 @@ class SshTransport(aida.transport.Transport):
     def remove(self,path):
         return self._sftp.remove(path)
     
+            
 
     def isfile(self,path):
         """
@@ -290,7 +317,7 @@ class SshTransport(aida.transport.Transport):
 
         if self.getcwd() is not None:
             escaped_folder = escape_for_bash(self.getcwd())
-            command_to_execute = ("cd {escaped_folder} ; "
+            command_to_execute = ("cd {escaped_folder} && "
                                   "{real_command}".format(
                     escaped_folder = escaped_folder,
                     real_command = command))
@@ -457,13 +484,17 @@ if __name__ == '__main__':
                     # I append a random letter/number until it is unique
                     directory += random.choice(
                         string.ascii_uppercase + string.digits)
-                t.mkdir(directory,mode=777)
+                t.mkdir(directory)
+                
                 dest_directory = directory+'_copy'
                 t.copy(directory,dest_directory)
-                attr_obj = t.get_attribute(dest_directory)
-                attr_obj_dest = t.get_attribute(dest_directory)
-                self.assertEquals(attr_obj.st_mode,777)
-                self.assertEquals(attr_obj,attr_obj_dest)
+                
+                with self.assertRaises(ValueError):
+                    t.copy(directory,'')
+
+                with self.assertRaises(ValueError):
+                    t.copy('',directory)
+
                 t.rmdir(directory)
                 t.rmdir(dest_directory)
                 
@@ -476,7 +507,7 @@ if __name__ == '__main__':
             # Imports required later
             import random
             import string
-            import os
+            import os,stat
 
             with SshTransport(machine='localhost', timeout=30, 
                               key_policy=paramiko.AutoAddPolicy()) as t:
@@ -488,21 +519,36 @@ if __name__ == '__main__':
                     # I append a random letter/number until it is unique
                     directory += random.choice(
                         string.ascii_uppercase + string.digits)
-                t.mkdir(directory,mode=500)
-                t.chmod(directory,777)
+                
+                # create directory with non default permissions
+                t.mkdir(directory,mode=777)
+                # change permissions
+                t.chmod(directory, 0)
+
+                with self.assertRaises(IOError):
+                    # trying to enter a directory without permissions
+                    t.chdir(directory)
+                with self.assertRaises(IOError):
+                    t.rmdir(directory)
+
+                # TODO: paramiko is not able to set the mod I want
+                t.chmod(directory, 511)
+
                 ## TODO: probably here we should then check for 
                 ## the new directory modes. To see if we want a higher
                 ## level function to ask for the mode, or we just
                 ## use get_attribute
                 t.chdir(directory)
 
+                # change permissions of an empty string, non existing folder.
                 fake_dir=''
                 with self.assertRaises(IOError):
                     t.chmod(fake_dir,777)
 
                 fake_dir='pippo'
                 with self.assertRaises(IOError):
-                    t.chmod(fake_dir,777)
+                    # chmod to a non existing folder
+                    t.chmod(fake_dir,666)
 
                 t.chdir('..')
                 t.rmdir(directory)
@@ -570,12 +616,13 @@ if __name__ == '__main__':
             import string
             
             local_dir = os.path.join('/','tmp')
+            remote_dir = local_dir
             directory = 'tmp_try'
 
             with SshTransport(machine='localhost', 
                               key_policy=paramiko.AutoAddPolicy()) as t:
 
-                t.chdir(local_dir)
+                t.chdir(remote_dir)
                 while t.isdir(directory):
                     # I append a random letter/number until it is unique
                     directory += random.choice(
@@ -617,13 +664,15 @@ if __name__ == '__main__':
             import os
             import random
             import string
+
             local_dir = os.path.join('/','tmp')
+            remote_dir = local_dir
             directory = 'tmp_try'
 
             with SshTransport(machine='localhost', 
                               key_policy=paramiko.AutoAddPolicy()) as t:
 
-                t.chdir(local_dir)
+                t.chdir(remote_dir)
                 while t.isdir(directory):
                     # I append a random letter/number until it is unique
                     directory += random.choice(
@@ -669,13 +718,15 @@ if __name__ == '__main__':
             import os
             import random
             import string
+
             local_dir = os.path.join('/','tmp')
+            remote_dir = local_dir
             directory = 'tmp_try'
 
             with SshTransport(machine='localhost', 
                               key_policy=paramiko.AutoAddPolicy()) as t:
 
-                t.chdir(local_dir)
+                t.chdir(remote_dir)
                 while t.isdir(directory):
                     # I append a random letter/number until it is unique
                     directory += random.choice(

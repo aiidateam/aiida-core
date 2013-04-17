@@ -1,7 +1,12 @@
+"""
+Plugin for PBSPro.
+This has been tested on PBSPro v. 12.
+"""
+
 import aida.scheduler
 from aida.common.utils import escape_for_bash
 from aida.scheduler import SchedulerError, SchedulerParsingError
-from aida.scheduler.datastructures import JobInfo, jobStates
+from aida.scheduler.datastructures import JobInfo, jobStates, NodeInfo
 
 # This maps PbsPro status letters to our own status list
 
@@ -48,6 +53,9 @@ class PbsproScheduler(aida.scheduler.Scheduler):
     def _get_joblist_command(cls,jobs=None,user=None): 
         """
         The command to report full information on existing jobs.
+
+        TODO: in the case of job arrays, decide what to do (i.e., if we want
+              to pass the -t options to list each subjob).
         """
         command = 'qstat -f'
         if user:
@@ -164,8 +172,8 @@ class PbsproScheduler(aida.scheduler.Scheduler):
                 i.split('=',1)[1].lstrip()
                 for i in job['lines'] if '=' in i}
 
-            # TODO: set existStatus and terminatingSignal if a finished
-            #       job remains in the queue list
+            # I believe that exitStatus and terminatingSignal cannot be
+            # retrieved from the qstat -f output.
             
             # I wrap calls in try-except clauses to avoid errors if a field
             # is missing
@@ -204,8 +212,51 @@ class PbsproScheduler(aida.scheduler.Scheduler):
                     this_job.jobId))
 
 
-            # TODO: allocatedMachines, submissionMachine
-                
+            # TODO: check if the assumption
+            #       submissionMachine == raw_data['server'] is correct
+            try:
+                this_job.submissionMachine = raw_data['server']
+            except KeyError:
+                # No 'server' found; I skip
+                pass
+
+            try:
+                exec_hosts = raw_data['exec_host'].split('+')
+            except KeyError:
+                # No exec_host information found (it may be ok, if the job
+                # is not running)
+                pass
+            else:
+                # parse each host; syntax, from the man page:
+                # hosta/J1+hostb/J2*P+...
+                # where  J1 and J2 are an index of the job
+                # on the named host and P is the number of
+                # processors allocated from that host to this job.
+                # P does not appear if it is 1.
+                try:
+                    exec_host_list = []
+                    for exec_host in exec_hosts:
+                        node = NodeInfo()
+                        node.machineName, data = exec_host.split('/')
+                        data = data.split('*')
+                        if len(data) == 1:
+                            node.jobIndex = int(data[0])
+                            node.numCores = 1
+                        elif len(data) == 2:
+                            node.jobIndex = int(data[0])
+                            node.numCores = int(data[1])
+                        else:
+                            raise ValueError("Wrong number of pieces: {} "
+                                             "instead of 1 or 2 in exec_hosts: "
+                                             "{}".format(len(data), exec_hosts))
+                        exec_host_list.append(node)
+                    this_job.allocatedMachines = exec_host_list
+                except Exception as e:
+                    self.logger.debug("Problem parsing the machine names, I "
+                                      "got Exception {} with message {}; "
+                                      "exec_hosts was {}".format(
+                            str(type(e)), e.message, exec_hosts))
+
             try:
                 # I strip the part after the @: is this always ok?
                 this_job.jobOwner = raw_data['job_owner'].split('@')[0]
@@ -214,18 +265,28 @@ class PbsproScheduler(aida.scheduler.Scheduler):
                     this_job.jobId))
 
             try:
-                this_job.numCores = raw_data['resource_list.ncpus']
+                this_job.numCores = int(raw_data['resource_list.ncpus'])
                 # TODO: understand if this is the correct field also for
                 #       multithreaded (OpenMP) jobs.
             except KeyError:
                 self.logger.debug("No 'resource_list.ncpus' field for job id "
                     "{}".format(this_job.jobId))
+            except IndexError:
+                self.logger.warning(";resource_list.ncpus' is not an integer "
+                                    "({}) for job id {}!".format(
+                        raw_data['resource_list.ncpus'],
+                        this_job.jobId))
 
             try:
-                this_job.numMachines = raw_data['resource_list.nodect']
+                this_job.numMachines = int(raw_data['resource_list.nodect'])
             except KeyError:
                 self.logger.debug("No 'resource_list.nodect' field for job id "
                     "{}".format(this_job.jobId))
+            except IndexError:
+                self.logger.warning(";resource_list.nodect' is not an integer "
+                                    "({}) for job id {}!".format(
+                        raw_data['resource_list.nodect'],
+                        this_job.jobId))
 
             # TODO here: if allocatedMachines is not None, check the length
             # and compare with numMachines
@@ -396,12 +457,27 @@ if __name__ == '__main__':
 
     PbsproScheduler._logger.setLevel(logging.DEBUG)
 #    PbsproScheduler._get_joblist_command(user='pi',jobs=['8392','sdfd'])
-    with SshTransport('bellatrix.epfl.ch' #,username='cepellot',
+    with SshTransport('bellatrix.epfl.ch', #username='cepellot',
                       key_policy=paramiko.AutoAddPolicy()) as t:
         s = PbsproScheduler(t)
         job_list = s.getJobs()
-        print "\n".join("{} of {} with status {}".format(
-                j.jobId, j.jobOwner, j.jobState) for j in job_list
-                        if j.jobState and
-                        (j.jobState == jobStates.QUEUED_HELD or
-                         j.jobState == jobStates.QUEUED))
+        for j in job_list:
+            if j.jobState and j.jobState == jobStates.RUNNING:
+                print "{} of {} with status {}".format(
+                    j.jobId, j.jobOwner, j.jobState)
+                if j.allocatedMachines:
+                    num_nodes = 0
+                    num_cores = 0
+                    for n in j.allocatedMachines:
+#                        print "  -> node {}, index {}, cores {}".format(
+#                            n.machineName, n.jobIndex, n.numCores)
+                        num_nodes += 1
+                        num_cores += n.numCores
+                       
+                    if j.numMachines != num_nodes:
+                        print "WARNING! expected nodes = {}, found = {}".format(
+                            j.numMachines, num_nodes)
+                    if j.numCores != num_cores:
+                        print "WARNING! expected cores = {}, found = {}".format(
+                            j.numCores, num_cores)
+                        

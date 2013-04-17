@@ -1,7 +1,5 @@
 from aida.common.extendeddicts import (
-    DefaultFieldsAttributeDict,
-    Enumerate)
-
+    DefaultFieldsAttributeDict, Enumerate)
 
 class JobState(Enumerate):
     pass
@@ -16,10 +14,24 @@ jobStates = JobState((
         'FAILED',
         ))
     
+#class QueueInfo(DefaultFieldsAttributeDict):
+#    _default_fields = ('name',)
 
-class QueueInfo(DefaultFieldsAttributeDict):
-    _default_fields = ('name',)
-    
+class NodeInfo(DefaultFieldsAttributeDict):
+    """
+    Similarly to what is defined in the DRMAA v.2 as SlotInfo; this identifies
+    each machine (node) on which a job is running, and how many CPUs are being
+    used.
+
+    * machineName: name of the node
+    * numCores: number of cores used by the job on this node
+    """
+    _default_fields = (
+        'machineName',
+        'numCores',
+        )
+
+
 class MachineResource(DefaultFieldsAttributeDict):
     # These should be the same defined in the DB for storage.
     # At some point we may decide to create dynamically the _default_fields

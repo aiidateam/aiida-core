@@ -17,6 +17,70 @@ jobStates = JobState((
 #class QueueInfo(DefaultFieldsAttributeDict):
 #    _default_fields = ('name',)
 
+class ResourceLimits(DefaultFieldsAttributeDict):
+    """
+    A list of resource limits for a job to be submitted.
+
+    For the moment, the only supported fields are 'virtualMemory'
+    and 'wallclockTime'.
+    
+    Fields:
+    * virtualMemory: The maximum amount of memory the job is allowed
+         to allocate ON EACH NODE, in kilobyte
+    * wallclockTime: The maximum wall clock time that all processes of 
+         a job are allowed to exist, in seconds
+    """
+    # For documentation of the commented fields, see DRMAA v2 docs.
+    _default_fields = (
+#        'coreFileSize', 
+#        'cpuTime',
+#        'dataSize',
+#        'fileSize',
+#        'openFiles',
+#        'stackSize',
+        'virtualMemory', 
+        'wallclockTime',
+        )
+
+class JobTemplate(DefaultFieldsAttributeDict):
+    """
+    A template for submitting jobs. This contains all required information
+    to create the job header.
+    
+    Fields:
+    * argv: a list of strings with the command line arguments
+          of the program to run. The first one is the executable name. For
+          MPI runs, this will probably be mpirun or a similar program; 
+          this has to be chosen at a upper level.
+    * TODO: refine this list and choose what we want to support.
+    """
+    _default_fields = (
+#        'argv',           # no, this is managed differently at a higher level
+        'submitAsHold',
+        'rerunnable',
+        'jobEnvironment',
+        'workingDirectory', # allow for {} fields, list which!
+ #       'jobCategory',
+        'email',
+        'emailOnStarted',
+        'emailOnTerminated',
+        'jobName',
+        'schedOutputPath',    
+        'schedErrorPath',     
+        'schedJoinFiles',     
+        'queueName',
+        'numNodes',
+        'numCpusPerNode',
+        'priority',
+#        'candidateMachines',
+#        'startTime',
+#        'deadlineTime',
+#        'stageInFiles',
+#        'stageOutFiles',
+        'resourceLimits', 
+        )
+ 
+
 class NodeInfo(DefaultFieldsAttributeDict):
     """
     Similarly to what is defined in the DRMAA v.2 as SlotInfo; this identifies

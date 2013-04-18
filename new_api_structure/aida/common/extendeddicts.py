@@ -164,6 +164,20 @@ class DefaultFieldsAttributeDict(AttributeDict):
         _default_fields = ('a','b','c')
     
     TODO: implement also methods as defaultitems, extraitems, defaultiteritems, ...
+
+    TODO: decide behavior if I set to None a field. Current behavior, if
+        a is an instanec and 'def_field' one of the default fields, that is 
+        undefined, we get:
+           a.get('def_field') -> None
+           a.get('def_field','whatever') -> 'whatever'
+           a.defaultkeys() does NOT contain 'def_field'
+
+       if we do a.def_field = None, then the behavior becomes
+           a.get('def_field') -> None
+           a.get('def_field','whatever') -> None
+           a.defaultkeys() DOES contain 'def_field'
+
+       See if we want that setting a default field to None means deleting it.
     """
     _default_fields = tuple()
 

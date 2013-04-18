@@ -1,7 +1,13 @@
+"""
+Plugin for PBSPro.
+This has been tested on PBSPro v. 12.
+"""
+
 import aida.scheduler
 from aida.common.utils import escape_for_bash
 from aida.scheduler import SchedulerError, SchedulerParsingError
-from aida.scheduler.datastructures import JobInfo, jobStates
+from aida.scheduler.datastructures import (
+    JobInfo, jobStates, NodeInfo, ResourceLimits)
 
 # This maps PbsPro status letters to our own status list
 
@@ -39,6 +45,8 @@ _map_status_pbspro = {
 class PbsproScheduler(aida.scheduler.Scheduler):
     """
     PBSPro implementation of the scheduler functions.
+
+    TODO: implement __unicode__ and __str__ methods.
     """
     _logger = aida.scheduler.Scheduler._logger.getChild('pbspro')
 
@@ -46,6 +54,9 @@ class PbsproScheduler(aida.scheduler.Scheduler):
     def _get_joblist_command(cls,jobs=None,user=None): 
         """
         The command to report full information on existing jobs.
+
+        TODO: in the case of job arrays, decide what to do (i.e., if we want
+              to pass the -t options to list each subjob).
         """
         command = 'qstat -f'
         if user:
@@ -62,6 +73,175 @@ class PbsproScheduler(aida.scheduler.Scheduler):
             
         cls._logger.debug("qstat command: {}".format(command))
         return command
+
+    def _get_submit_script_header(self, job_tmpl):
+        """
+        Return the submit script header, using the parameters from the
+        job_tmpl.
+
+        Args:
+           job_tmpl: an JobTemplate instance with relevant parameters set.
+
+        TODO: truncate the title if too long
+        """
+        import re 
+        import string
+        import copy
+
+        empty_line = ""
+        
+        lines = []
+        if job_tmpl.submitAsHold:
+            lines.append("#PBS -h")
+
+        if job_tmpl.rerunnable:
+            lines.append("#PBS -r y")
+        else:
+            lines.append("#PBS -r n")
+
+        if job_tmpl.email:
+            # If not specified, but email events are set, PBSPro
+            # sends the mail to the job owner by default
+            lines.append('#PBS -M {}'.format(job_tmpl.email))
+            
+        email_events = ""
+        if job_tmpl.emailOnStarted:
+            email_events += "b"
+        if job_tmpl.emailOnTerminated:
+            email_events += "ea"
+        if email_events:
+            lines.append("#PBS -m {}".format(email_events))
+            if not job_tmpl.email:
+                self.logger.info(
+                    "Email triggers provided to PBSPro script for job,"
+                    "but no email field set; will send emails to "
+                    "the job owner as set in the scheduler")
+        else:
+            lines.append("#PBS -m n")
+            
+        if job_tmpl.jobName:
+            # From qsub man page:
+            # string, up to 15 characters in length.  It must
+            # consist of an  alphabetic  or  numeric  character 
+            # followed  by printable, non-white-space characters.
+            # Default:  if a script is used to submit the job, the job's name
+            # is the name of the script.  If no script  is  used,  the  job's
+            # name is "STDIN".
+            #
+            # I leave only letters, numbers, dots, dashes and underscores
+            # Note: I don't compile the regexp, I am going to use it only once
+            job_title = re.sub(r'[^a-zA-Z0-9_.-]+', '', job_tmpl.jobName)
+
+            # prepend a 'j' (for 'job') before the string if the string
+            # is now empty or does not start with a valid charachter
+            if not job_title or (
+                job_title[0] not in string.letters + string.digits):
+                job_title = 'j' + job_title
+            
+            # Truncate to the first 15 characters 
+            # Nothing is done if the string is shorter.
+            job_title = job_title[:15]
+            
+            lines.append("#PBS -N {}".format(job_title))
+            
+        if job_tmpl.schedOutputPath:
+            lines.append("#PBS -o {}".format(job_tmpl.schedOutputPath))
+
+        if job_tmpl.schedJoinFiles:
+            # from qsub man page:
+            # 'oe': Standard error and standard output are merged  into 
+            #       standard output
+            # 'eo': Standard error and standard output are merged  into 
+            #       standard error
+            # 'n' : Standard error and standard output are not merged (default)
+            lines.append("#PBS -j oe")
+            if job_tmpl.schedErrorPath:
+                self.logger.info(
+                    "schedJoinFiles is True, but schedErrorPath is set in "
+                    "PBSPro script; ignoring schedErrorPath")
+        else:
+            if job_tmpl.schedErrorPath:
+                lines.append("#PBS -e {}".format(job_tmpl.schedErrorPath))
+
+        if job_tmpl.queueName:
+            lines.append("#PBS -q {}".format(job_tmpl.queueName))
+            
+        if job_tmpl.priority:
+            # Priority of the job.  Format: host-dependent integer.  Default:
+            # zero.   Range:  [-1024,  +1023] inclusive.  Sets job's Priority
+            # attribute to priority.
+            # TODO: Here I expect that priority is passed in the correct PBSPro
+            # format. To fix.
+            lines.append("#PBS -p {}".format(job_tmpl.priority))
+
+        
+        if not job_tmpl.numNodes:
+            raise ValueError("numNodes is required for the PBSPro scheduler "
+                             "plugin")
+        select_string = "select={}".format(job_tmpl.numNodes)
+        if job_tmpl.numCpusPerNode:
+            select_string += ":ncpus={}".format(job_tmpl.numCpusPerNode)
+
+        if job_tmpl.resourceLimits:
+            if not isinstance(job_tmpl.resourceLimits, ResourceLimits):
+                raise ValueError("If you provide resourceLimits, it must be "
+                                 "of type ResourceLimits")
+            if job_tmpl.resourceLimits.get('wallclockTime',None):
+                try:
+                    tot_secs = int(job_tmpl.resourceLimits.wallclockTime)
+                    if tot_secs <= 0:
+                        raise ValueError
+                except ValueError:
+                    raise ValueError(
+                        "resourceLimits.wallclockTime must be "
+                        "a positive integer (in seconds)! It is instead '{}'"
+                        "".format((job_tmpl.resourceLimits.wallclockTime)))
+                hours = tot_secs / 3600
+                tot_minutes = tot_secs % 3600
+                minutes = tot_minutes / 60
+                seconds = tot_minutes % 60
+                lines.append("#PBS -l walltime={:02d}:{:02d}:{:02d}".format(
+                        hours, minutes, seconds))
+
+            if job_tmpl.resourceLimits.get('virtualMemory',None):
+                try:
+                    virtualMemorykB = int(job_tmpl.resourceLimits.virtualMemory)
+                    if virtualMemorykB <= 0:
+                        raise ValueError
+                except ValueError:
+                    raise ValueError(
+                        "resourceLimits.virtualMemory must be "
+                        "a positive integer (in kB)! It is instead '{}'"
+                        "".format((job_tmpl.resourceLimits.virtualMemory)))
+                select_string += ":mem={}kb".format(virtualMemorykB)
+            
+        lines.append("#PBS -l {}".format(select_string))
+
+        # Job environment variables are to be set on one single line. 
+        # This is a tough job due to the escaping of commas, etc.
+        # moreover, I am having issues making it work.
+        # Therefore, I assume that this is bash and export variables by
+        # and.
+        
+        if job_tmpl.jobEnvironment:
+            lines.append(empty_line)
+            lines.append("# ENVIRONMENT VARIABLES BEGIN ###")
+            if not isinstance(job_tmpl.jobEnvironment, dict):
+                raise ValueError("If you provide jobEnvironment, it must be "
+                                 "a dictionary")
+            for k, v in job_tmpl.jobEnvironment.iteritems():
+                lines.append("export {}={}".format(
+                        k.strip(),
+                        escape_for_bash(v)))
+            lines.append("# ENVIRONMENT VARIABLES  END  ###")
+            lines.append(empty_line)
+
+        # Required to change directory to the working directory, that is
+        # the one from which the job was submitted
+        lines.append("cd $PBS_O_WORKDIR")
+        lines.append(empty_line)
+
+        return "\n".join(lines)
 
     @classmethod
     def _get_submit_command(cls, submit_script):
@@ -162,8 +342,8 @@ class PbsproScheduler(aida.scheduler.Scheduler):
                 i.split('=',1)[1].lstrip()
                 for i in job['lines'] if '=' in i}
 
-            # TODO: set existStatus and terminatingSignal if a finished
-            #       job remains in the queue list
+            # I believe that exitStatus and terminatingSignal cannot be
+            # retrieved from the qstat -f output.
             
             # I wrap calls in try-except clauses to avoid errors if a field
             # is missing
@@ -202,8 +382,51 @@ class PbsproScheduler(aida.scheduler.Scheduler):
                     this_job.jobId))
 
 
-            # TODO: allocatedMachines, submissionMachine
-                
+            # TODO: we are not setting it because probably the assumption
+            #       submissionMachine == raw_data['server'] is not correct
+#            try:
+#                this_job.submissionMachine = raw_data['server']
+#            except KeyError:
+#                # No 'server' found; I skip
+#                pass
+
+            try:
+                exec_hosts = raw_data['exec_host'].split('+')
+            except KeyError:
+                # No exec_host information found (it may be ok, if the job
+                # is not running)
+                pass
+            else:
+                # parse each host; syntax, from the man page:
+                # hosta/J1+hostb/J2*P+...
+                # where  J1 and J2 are an index of the job
+                # on the named host and P is the number of
+                # processors allocated from that host to this job.
+                # P does not appear if it is 1.
+                try:
+                    exec_host_list = []
+                    for exec_host in exec_hosts:
+                        node = NodeInfo()
+                        node.nodeName, data = exec_host.split('/')
+                        data = data.split('*')
+                        if len(data) == 1:
+                            node.jobIndex = int(data[0])
+                            node.numCores = 1
+                        elif len(data) == 2:
+                            node.jobIndex = int(data[0])
+                            node.numCores = int(data[1])
+                        else:
+                            raise ValueError("Wrong number of pieces: {} "
+                                             "instead of 1 or 2 in exec_hosts: "
+                                             "{}".format(len(data), exec_hosts))
+                        exec_host_list.append(node)
+                    this_job.allocatedNodes = exec_host_list
+                except Exception as e:
+                    self.logger.debug("Problem parsing the node names, I "
+                                      "got Exception {} with message {}; "
+                                      "exec_hosts was {}".format(
+                            str(type(e)), e.message, exec_hosts))
+
             try:
                 # I strip the part after the @: is this always ok?
                 this_job.jobOwner = raw_data['job_owner'].split('@')[0]
@@ -212,21 +435,37 @@ class PbsproScheduler(aida.scheduler.Scheduler):
                     this_job.jobId))
 
             try:
-                this_job.numCores = raw_data['resource_list.ncpus']
+                this_job.numCores = int(raw_data['resource_list.ncpus'])
                 # TODO: understand if this is the correct field also for
                 #       multithreaded (OpenMP) jobs.
             except KeyError:
                 self.logger.debug("No 'resource_list.ncpus' field for job id "
                     "{}".format(this_job.jobId))
+            except IndexError:
+                self.logger.warning(";resource_list.ncpus' is not an integer "
+                                    "({}) for job id {}!".format(
+                        raw_data['resource_list.ncpus'],
+                        this_job.jobId))
 
             try:
-                this_job.numMachines = raw_data['resource_list.nodect']
+                this_job.numNodes = int(raw_data['resource_list.nodect'])
             except KeyError:
                 self.logger.debug("No 'resource_list.nodect' field for job id "
                     "{}".format(this_job.jobId))
+            except IndexError:
+                self.logger.warning(";resource_list.nodect' is not an integer "
+                                    "({}) for job id {}!".format(
+                        raw_data['resource_list.nodect'],
+                        this_job.jobId))
 
-            # TODO here: if allocatedMachines is not None, check the length
-            # and compare with numMachines
+            # Double check of redundant info
+            if (this_job.allocatedNodes is not None and 
+                this_job.numNodes is not None):
+                if len(this_job.allocatedNodes) != this_job.numNodes:
+                    self.logger.error("The length of the list of allocated "
+                                      "nodes ({}) is different from the "
+                                      "expected number of nodes ({})!".format(
+                        len(this_job.allocatedNodes), this_job.numNodes))
 
             try:
                 this_job.queueName = raw_data['queue']
@@ -387,15 +626,49 @@ class PbsproScheduler(aida.scheduler.Scheduler):
 if __name__ == '__main__':
     import logging
     import paramiko
+    import uuid
+
     from aida.transport import Transport
     from aida.common.pluginloader import load_plugin
+    from aida.managers.execution.datastructures import CalcInfo
 
     SshTransport = load_plugin(Transport, 'aida.transport.plugins', 'ssh')
 
     PbsproScheduler._logger.setLevel(logging.DEBUG)
-#    PbsproScheduler._get_joblist_command(user='pi',jobs=['8392','sdfd'])
-    with SshTransport('bellatrix.epfl.ch',
+    s = PbsproScheduler()
+
+    with SshTransport('bellatrix.epfl.ch', #username='cepellot',
                       key_policy=paramiko.AutoAddPolicy()) as t:
-        s = PbsproScheduler(t)
+        s.set_transport(t)
+    
         job_list = s.getJobs()
-        print "\n".join("{}".format(j.jobId) for j in job_list)
+        for j in job_list:
+            if j.jobState and j.jobState == jobStates.RUNNING:
+                print "{} of {} with status {}".format(
+                    j.jobId, j.jobOwner, j.jobState)
+                if j.allocatedNodes:
+                    num_nodes = 0
+                    num_cores = 0
+                    for n in j.allocatedNodes:
+#                        print "  -> node {}, index {}, cores {}".format(
+#                            n.nodeName, n.jobIndex, n.numCores)
+                        num_nodes += 1
+                        num_cores += n.numCores
+                       
+                    if j.numNodes != num_nodes:
+                        print "WARNING! expected nodes = {}, found = {}".format(
+                            j.numNodes, num_nodes)
+                    if j.numCores != num_cores:
+                        print "WARNING! expected cores = {}, found = {}".format(
+                            j.numCores, num_cores)
+
+               
+        calc_info = CalcInfo()
+        calc_info.argv = ["mpirun", "-np", "23", "pw.x", "-npool", "1"]
+        calc_info.stdinName = 'aida.in'
+        calc_info.numNodes = 1
+        calc_info.uuid = str(uuid.uuid4())
+        calc_info.resourceLimits = ResourceLimits()
+        calc_info.resourceLimits.wallclockTime = 24 * 3600 
+
+        print s._get_submit_script(calc_info)

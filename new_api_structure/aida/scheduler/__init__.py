@@ -25,12 +25,15 @@ class Scheduler(object):
     """
     _logger = aida.common.aidalogger.getChild('scheduler')
     
-    def __init__(self, transport):
+    def __init__(self):
+        self._transport = None
+
+    def set_transport(self,transport):
         """
-        Pass an active transport; it is used to perform the required actions.
+        Set the transport to be used to query the machine or to submit scripts.
         This class assumes that the transport is open and active.
         """
-        self.transport = transport
+        self._transport = transport        
 
     @property
     def logger(self):
@@ -223,6 +226,14 @@ class Scheduler(object):
             self._get_joblist_command(jobs=jobs, user=user))
         
         return self._parse_joblist_output(retval, stdout, stderr)
+
+    @property
+    def transport(self):
+        if self._transport is None:
+            raise SchedulerError("Use the set_transport function to set the "
+                                 "transport for the scheduler first.")
+        else:
+            return self._transport
         
     @classmethod
     def _get_submit_command(cls, submit_script):
@@ -257,6 +268,7 @@ class Scheduler(object):
         
         Typically, this function does not need to be modified by the plugins.
         """
+
         self.transport.chdir(working_directory)
         retval, stdout, stderr = self.transport.execute_command_wait(
             self._get_submit_command(escape_for_bash(submit_script)))

@@ -183,10 +183,10 @@ class PbsproScheduler(aida.scheduler.Scheduler):
             select_string += ":ncpus={}".format(job_tmpl.numCpusPerNode)
 
         if job_tmpl.resourceLimits:
-            if not isinstance(job_tmpl.jobEnvironment, ResourceLimits):
-                raise ValueError("If you provide jobEnvironment, it must be "
+            if not isinstance(job_tmpl.resourceLimits, ResourceLimits):
+                raise ValueError("If you provide resourceLimits, it must be "
                                  "of type ResourceLimits")
-            if job_tmpl.resourceLimits.wallclockTime:
+            if job_tmpl.resourceLimits.get('wallclockTime',None):
                 try:
                     tot_secs = int(job_tmpl.resourceLimits.wallclockTime)
                     if tot_secs <= 0:
@@ -203,7 +203,7 @@ class PbsproScheduler(aida.scheduler.Scheduler):
                 lines.append("#PBS -l walltime={:02d}:{:02d}:{:02d}".format(
                         hours, minutes, seconds))
 
-            if job_tmpl.resourceLimits.virtualMemory:
+            if job_tmpl.resourceLimits.get('virtualMemory',None):
                 try:
                     virtualMemorykB = int(job_tmpl.resourceLimits.virtualMemory)
                     if virtualMemorykB <= 0:
@@ -635,10 +635,12 @@ if __name__ == '__main__':
     SshTransport = load_plugin(Transport, 'aida.transport.plugins', 'ssh')
 
     PbsproScheduler._logger.setLevel(logging.DEBUG)
-#    PbsproScheduler._get_joblist_command(user='pi',jobs=['8392','sdfd'])
+    s = PbsproScheduler()
+
     with SshTransport('bellatrix.epfl.ch', #username='cepellot',
                       key_policy=paramiko.AutoAddPolicy()) as t:
-        s = PbsproScheduler(t)
+        s.set_transport(t)
+    
         job_list = s.getJobs()
         for j in job_list:
             if j.jobState and j.jobState == jobStates.RUNNING:
@@ -666,5 +668,7 @@ if __name__ == '__main__':
         calc_info.stdinName = 'aida.in'
         calc_info.numNodes = 1
         calc_info.uuid = str(uuid.uuid4())
-        
+        calc_info.resourceLimits = ResourceLimits()
+        calc_info.resourceLimits.wallclockTime = 24 * 3600 
+
         print s._get_submit_script(calc_info)

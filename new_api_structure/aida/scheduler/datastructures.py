@@ -1,4 +1,5 @@
 from aida.common.extendeddicts import (
+    FixedFieldsAttributeDict,
     DefaultFieldsAttributeDict, Enumerate)
 
 class JobState(Enumerate):
@@ -17,7 +18,7 @@ jobStates = JobState((
 #class QueueInfo(DefaultFieldsAttributeDict):
 #    _default_fields = ('name',)
 
-class ResourceLimits(DefaultFieldsAttributeDict):
+class ResourceLimits(FixedFieldsAttributeDict):
     """
     A list of resource limits for a job to be submitted.
 
@@ -31,7 +32,7 @@ class ResourceLimits(DefaultFieldsAttributeDict):
          a job are allowed to exist, in seconds
     """
     # For documentation of the commented fields, see DRMAA v2 docs.
-    _default_fields = (
+    _valid_fields = (
 #        'coreFileSize', 
 #        'cpuTime',
 #        'dataSize',

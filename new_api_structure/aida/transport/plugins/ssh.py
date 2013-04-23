@@ -6,7 +6,20 @@ import os
 import aida.transport
 from aida.common.utils import escape_for_bash
 from aida.common import aidalogger
+from aida.common.extendeddicts import FixedFieldsAttributeDict
 
+class FileAttribute(FixedFieldsAttributeDict):
+    """
+    A class with attributes of a file, that is returned by get_attribute()
+    """
+    _valid_fields = (
+        'st_size',
+        'st_uid',
+        'st_gid',
+        'st_mode',
+        'st_atime',
+        'st_mtime',
+        )
 
 class SshTransport(aida.transport.Transport):
     # Valid keywords accepted by the connect method of paramiko.SSHClient
@@ -164,7 +177,7 @@ class SshTransport(aida.transport.Transport):
         so this should never happen within this class.
         """
         return self.sftp.getcwd()
-
+    
     def mkdir(self, path, mode=511):
         """
         Create a folder (directory) named path with numeric mode mode.
@@ -235,7 +248,21 @@ class SshTransport(aida.transport.Transport):
         if not os.path.isabs(localpath):
             raise ValueError("The localpath must be an absolute path")
         return self.sftp.get(remotepath,localpath,callback)
-        
+
+
+    def get_attribute(self,path):
+        """
+        Returns the list of attributes of a file
+        Receives in input the path of a given file
+        """
+        paramiko_attr = self.sftp.lstat(path)
+        aida_attr = FileAttribute()
+        # map the paramiko class into the aida one
+        # note that paramiko object contains more informations than the aida
+        for key in aida_attr._valid_fields:
+            aida_attr[key] = paramiko_attr.__dict__[key]
+        return aida_attr
+    
 
     def copy(self,remotesource,remotedestination,dereference=False):
         """
@@ -577,7 +604,10 @@ if __name__ == '__main__':
                 
                 # create directory with non default permissions
                 t.mkdir(directory,mode=0777)
-                
+
+                # test if the security bits have changed
+                self.assertEquals( t.get_attribute(directory).st_mode , 16893 )
+
                 # change permissions
                 t.chmod(directory, 0511)
                 

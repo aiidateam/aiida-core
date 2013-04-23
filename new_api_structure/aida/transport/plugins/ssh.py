@@ -7,58 +7,64 @@ import aida.transport
 from aida.common.utils import escape_for_bash
 from aida.common import aidalogger
 
+
 class SshTransport(aida.transport.Transport):
+    # Valid keywords accepted by the connect method of paramiko.SSHClient
+    _valid_connect_params = ['port', 'username', 'password', 'pkey',
+                             'key_filename', 'timeout', 'allow_agent',
+                             'look_for_keys', 'compress']
+    
     def __init__(self, machine, **kwargs):
         """
         Initialize the SshTransport class. 
         
         Args:
             machine: the machine to connect to
-            load_system_host_keys (optional, default True): if False, do not load the
-                system host keys
-            key_policy (optional, default = paramiko.RejectPolicy()): the policy to use
-                for unknown keys
-            Other parameters are passed to the connect function (as port, username,
-            password, ...) (see the __enter__ function of this class, or the
-            documentation of paramiko.SSHClient.connect())
+            load_system_host_keys (optional, default False): if False, do not
+                load the system host keys
+            key_policy (optional, default = paramiko.RejectPolicy()): the
+                policy to use for unknown keys
+            Other parameters valid for the ssh connect function (see the 
+            self._valid_connect_params list) are passed to the connect
+            function (as port, username, password, ...); taken from the
+            accepted paramiko.SSHClient.connect() params)
 
-        TODO : implement a property self.sftp that raises a reasonable exception
-               if the channel has not been opened. Understand if we need explicit 
-               open() and close() functions.
+            TODO : implement a property self.sftp that raises a reasonable
+               exception if the channel has not been opened. Understand if
+               we need explicit open() and close() functions.
         """
 
         ## First call the parent __init__ to setup the logger!
         super(SshTransport,self).__init__()
         self._logger = super(SshTransport,self).logger.getChild('ssh')
 
+        self._is_open = False
+        self._sftp = None
+        
         self._machine = machine
-        self._further_init_args = kwargs
+
         self._client = paramiko.SSHClient()
-        if kwargs.get('load_system_host_keys', True):
+        self._load_system_host_keys = kwargs.pop(
+            'load_system_host_keys', False)
+        if self._load_system_host_keys:
             self._client.load_system_host_keys()
 
-        self._missing_key_policy = kwargs.get(
+        self._missing_key_policy = kwargs.pop(
             'key_policy',paramiko.RejectPolicy()) # This is paramiko default
         self._client.set_missing_host_key_policy(self._missing_key_policy)
 
-    def __unicode__(self):
-        """
-        Return a useful string.
-        """
-        conn_info = unicode(self._machine)
-        try:
-            conn_info = unicode(self._further_init_args['username']) + u'@' + conn_info
-        except KeyError:
-            # No username explicitly defined: ignore
-            pass
-        try:
-            conn_info += u':{}'.format(self._further_init_args['port'])
-        except KeyError:
-        # No port explicitly defined: ignore
-            pass
-            
-        return u'{}({})'.format(self.__class__.__name__, conn_info)
-    
+        self._connect_args = {}
+        for k in self._valid_connect_params:
+            try:
+                self._connect_args[k] = kwargs.pop(k)
+            except KeyError:
+                pass
+
+        if kwargs:
+            raise ValueError("The following parameters were not accepted by "
+                             "the transport: {}".format(
+                    ",".join(str(k) for k in kwargs)))
+
     def __enter__(self):
         """
         Open a SSHClient to the machine possibly using the parameters given
@@ -67,22 +73,17 @@ class SshTransport(aida.transport.Transport):
         Also opens a sftp channel, ready to be used.
         The current working directory is set explicitly, so it is not None.
         """
-        # Valid keywords accepted by the connect method of paramiko.SSHClient
-        valid_kw_params = ['port', 'username', 'password', 'pkey',
-                           'key_filename', 'timeout', 'allow_agent',
-                           'look_for_keys', 'compress']
         
-        further_args = {k: v for k, v in self._further_init_args.iteritems()
-                        if k in valid_kw_params}
-
         # Open a SSHClient
-        self._client.connect(self._machine,**further_args)
+        self._client.connect(self._machine,**self._connect_args)
 
         # Open also a SFTPClient
         self._sftp = self._client.open_sftp()
         # Set the current directory to a explicit path, and not to None
         self._sftp.chdir(self._sftp.normalize('.'))
 
+        self._is_open = True
+        
         return self
         
     def __exit__(self, type, value, traceback):
@@ -93,6 +94,42 @@ class SshTransport(aida.transport.Transport):
         """
         self._sftp.close()
         self._client.close()
+        self._is_open = False
+
+    @property
+    def sshclient(self):
+        if not self._is_open:
+            raise aida.transport.TransportInternalError(
+                "Error, ssh method called for SshTransport "
+                "without opening the channel first")
+        return self._client
+
+    @property
+    def sftp(self):
+        if not self._is_open:
+            raise aida.transport.TransportInternalError(
+                "Error, sftp method called for SshTransport "
+                "without opening the channel first")
+        return self._sftp
+
+    def __unicode__(self):
+        """
+        Return a useful string.
+        """
+        conn_info = unicode(self._machine)
+        try:
+            conn_info = (unicode(self._connect_args['username']) + 
+                         u'@' + conn_info)
+        except KeyError:
+            # No username explicitly defined: ignore
+            pass
+        try:
+            conn_info += u':{}'.format(self._connect_args['port'])
+        except KeyError:
+        # No port explicitly defined: ignore
+            pass
+            
+        return u'{}({})'.format(self.__class__.__name__, conn_info)
 
     def chdir(self, path):
         """
@@ -103,7 +140,7 @@ class SshTransport(aida.transport.Transport):
         happens and the cwd is unchanged.
         """
         if path is not None:
-            self._sftp.chdir(path)
+            self.sftp.chdir(path)
 
         # Paramiko already checked that path is a folder, otherwise I would
         # have gotten an exception. Now, I want to check that I have read
@@ -114,10 +151,10 @@ class SshTransport(aida.transport.Transport):
         #
         # Note: I don't store the result of the function; if I have no
         # read permissions, this will raise an exception.
-        self._sftp.stat('.')
+        self.sftp.stat('.')
 
     def normalize(self, path):
-        return self._sftp.normalize(path)
+        return self.sftp.normalize(path)
         
     def getcwd(self):
         """
@@ -126,7 +163,7 @@ class SshTransport(aida.transport.Transport):
         this method will return None. But in __enter__ this is set explicitly,
         so this should never happen within this class.
         """
-        return self._sftp.getcwd()
+        return self.sftp.getcwd()
 
     def mkdir(self, path, mode=511):
         """
@@ -140,13 +177,13 @@ class SshTransport(aida.transport.Transport):
                 current working directory.
             mode: the numeric mode for the new folder.
         """
-        self._sftp.mkdir(path,mode)
+        self.sftp.mkdir(path,mode)
 
     def rmdir(self, path):
         """
         Remove the folder named 'path'.
         """
-        self._sftp.rmdir(path)
+        self.sftp.rmdir(path)
 
     def isdir(self,path):
         """
@@ -158,7 +195,7 @@ class SshTransport(aida.transport.Transport):
         if not path:
             return False
         try:
-            return S_ISDIR(self._sftp.stat(path).st_mode)
+            return S_ISDIR(self.sftp.stat(path).st_mode)
         except IOError as e:
             if getattr(e,"errno",None) == 2:
                 # errno=2 means path does not exist: I return False
@@ -170,7 +207,7 @@ class SshTransport(aida.transport.Transport):
     def chmod(self,path,mode):
         if not path:
             raise IOError("Input path is an empty argument.")
-        return self._sftp.chmod(path,mode)
+        return self.sftp.chmod(path,mode)
             
 
     def put(self,localpath,remotepath,callback=None):
@@ -188,7 +225,7 @@ class SshTransport(aida.transport.Transport):
         # version supported?
         if not os.path.isabs(localpath):
             raise ValueError("The localpath must be an absolute path")
-        return self._sftp.put(localpath,remotepath,callback=callback)
+        return self.sftp.put(localpath,remotepath,callback=callback)
 
 
     def get(self,remotepath,localpath,callback=None):
@@ -197,7 +234,7 @@ class SshTransport(aida.transport.Transport):
         """
         if not os.path.isabs(localpath):
             raise ValueError("The localpath must be an absolute path")
-        return self._sftp.get(remotepath,localpath,callback)
+        return self.sftp.get(remotepath,localpath,callback)
         
 
     def copy(self,remotesource,remotedestination,dereference=False):
@@ -260,13 +297,11 @@ class SshTransport(aida.transport.Transport):
             raise IOError("Error while executing cp. Exit code: {}".format(retval) )
 
     def listdir(self,path='.'):
-        return self._sftp.listdir(path)
+        return self.sftp.listdir(path)
 
     def remove(self,path):
-        return self._sftp.remove(path)
+        return self.sftp.remove(path)
     
-            
-
     def isfile(self,path):
         """
         Return True if the given path is a file, False otherwise.
@@ -279,9 +314,9 @@ class SshTransport(aida.transport.Transport):
             return False
         try:
             self.logger.debug("stat for path '{}' ('{}'): {} [{}]".format(
-                    path, self._sftp.normalize(path),
-                    self._sftp.stat(path),self._sftp.stat(path).st_mode))
-            return S_ISREG(self._sftp.stat(path).st_mode)
+                    path, self.sftp.normalize(path),
+                    self.sftp.stat(path),self.sftp.stat(path).st_mode))
+            return S_ISREG(self.sftp.stat(path).st_mode)
         except IOError as e:
             if getattr(e,"errno",None) == 2:
                 # errno=2 means path does not exist: I return False
@@ -312,7 +347,7 @@ class SshTransport(aida.transport.Transport):
             plus the methods provided by paramiko, and channel is a 
             paramiko.Channel object.
         """
-        channel = self._client.get_transport().open_session()
+        channel = self.sshclient.get_transport().open_session()
         channel.set_combine_stderr(combine_stderr)
 
         if self.getcwd() is not None:
@@ -391,9 +426,25 @@ if __name__ == '__main__':
         """
         Test basic connections.
         """
-        
+
+        def test_closed_connection_ssh(self):
+            with self.assertRaises(aida.transport.TransportInternalError):
+                t = SshTransport(machine='localhost')
+                t.exec_command('ls')
+
+        def test_closed_connection_sftp(self):
+            with self.assertRaises(aida.transport.TransportInternalError):
+                t = SshTransport(machine='localhost')
+                t.listdir()
+                
+        def test_invalid_param(self):
+            with self.assertRaises(ValueError):
+                SshTransport(machine='localhost', invalid_param=True)
+                             
+
         def test_auto_add_policy(self):
             with SshTransport(machine='localhost', timeout=30, 
+                              load_system_host_keys=True,
                               key_policy=paramiko.AutoAddPolicy()) as t:
                 pass
 
@@ -418,6 +469,7 @@ if __name__ == '__main__':
             import os
 
             with SshTransport(machine='localhost', timeout=30, 
+                              load_system_host_keys=True,
                               key_policy=paramiko.AutoAddPolicy()) as t:
                 location = t.normalize(os.path.join('/','tmp'))
                 directory = 'temp_dir_test'
@@ -449,6 +501,7 @@ if __name__ == '__main__':
             import os
 
             with SshTransport(machine='localhost', timeout=30, 
+                              load_system_host_keys=True,
                               key_policy=paramiko.AutoAddPolicy()) as t:
                 location = t.normalize(os.path.join('/','tmp'))
                 directory = 'temp_dir_test'
@@ -475,6 +528,7 @@ if __name__ == '__main__':
             import os
 
             with SshTransport(machine='localhost', timeout=30, 
+                              load_system_host_keys=True,
                               key_policy=paramiko.AutoAddPolicy()) as t:
                 location = t.normalize(os.path.join('/','tmp'))
                 directory = 'temp_dir_test'
@@ -510,6 +564,7 @@ if __name__ == '__main__':
             import os,stat
 
             with SshTransport(machine='localhost', timeout=30, 
+                              load_system_host_keys=True,
                               key_policy=paramiko.AutoAddPolicy()) as t:
                 location = t.normalize(os.path.join('/','tmp'))
                 directory = 'temp_dir_test'
@@ -562,6 +617,7 @@ if __name__ == '__main__':
             import os
 
             with SshTransport(machine='localhost', timeout=30, 
+                              load_system_host_keys=True,
                               key_policy=paramiko.AutoAddPolicy()) as t:
                 location = t.normalize(os.path.join('/','tmp'))
                 t.chdir(location)
@@ -576,6 +632,7 @@ if __name__ == '__main__':
             """
             import os
             with SshTransport(machine='localhost', timeout=30, 
+                              load_system_host_keys=True,
                               key_policy=paramiko.AutoAddPolicy()) as t:
 
                 location = t.normalize(os.path.join('/','tmp'))
@@ -595,6 +652,7 @@ if __name__ == '__main__':
             """
             import os
             with SshTransport(machine='localhost', 
+                              load_system_host_keys=True,
                               key_policy=paramiko.AutoAddPolicy()) as t:
 
                 new_dir = t.normalize(os.path.join('/','tmp'))
@@ -620,6 +678,7 @@ if __name__ == '__main__':
             directory = 'tmp_try'
 
             with SshTransport(machine='localhost', 
+                              load_system_host_keys=True,
                               key_policy=paramiko.AutoAddPolicy()) as t:
 
                 t.chdir(remote_dir)
@@ -670,6 +729,7 @@ if __name__ == '__main__':
             directory = 'tmp_try'
 
             with SshTransport(machine='localhost', 
+                              load_system_host_keys=True,
                               key_policy=paramiko.AutoAddPolicy()) as t:
 
                 t.chdir(remote_dir)
@@ -724,6 +784,7 @@ if __name__ == '__main__':
             directory = 'tmp_try'
 
             with SshTransport(machine='localhost', 
+                              load_system_host_keys=True,
                               key_policy=paramiko.AutoAddPolicy()) as t:
 
                 t.chdir(remote_dir)
@@ -801,6 +862,7 @@ if __name__ == '__main__':
             delete_at_end = False
 
             with SshTransport('localhost', 
+                              load_system_host_keys=True,
                               key_policy=paramiko.AutoAddPolicy()) as t:
 
                 # To compare with: getcwd uses the normalized ('realpath') path
@@ -831,7 +893,8 @@ if __name__ == '__main__':
 
         def test_exec_with_stdin_string(self):
             test_string = str("some_test String")
-            with SshTransport('localhost', 
+            with SshTransport('localhost',  
+                              load_system_host_keys=True,
                               key_policy=paramiko.AutoAddPolicy()) as t:
                 retcode, stdout, stderr = t.exec_command_wait(
                     'cat', stdin=test_string)
@@ -842,6 +905,7 @@ if __name__ == '__main__':
         def test_exec_with_stdin_unicode(self):
             test_string = u"some_test String"
             with SshTransport('localhost', 
+                              load_system_host_keys=True,
                               key_policy=paramiko.AutoAddPolicy()) as t:
                 retcode, stdout, stderr = t.exec_command_wait(
                     'cat', stdin=test_string)
@@ -853,6 +917,7 @@ if __name__ == '__main__':
             test_string = "some_test String"
             stdin = StringIO.StringIO(test_string)
             with SshTransport('localhost', 
+                              load_system_host_keys=True,
                               key_policy=paramiko.AutoAddPolicy()) as t:
                 retcode, stdout, stderr = t.exec_command_wait(
                     'cat', stdin=stdin)
@@ -863,6 +928,7 @@ if __name__ == '__main__':
         def test_exec_with_wrong_stdin(self):
             # I pass a number
             with SshTransport('localhost', 
+                              load_system_host_keys=True,
                               key_policy=paramiko.AutoAddPolicy()) as t:
                 with self.assertRaises(ValueError):
                     retcode, stdout, stderr = t.exec_command_wait(

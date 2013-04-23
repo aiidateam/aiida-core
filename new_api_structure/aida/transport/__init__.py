@@ -23,6 +23,14 @@
 import aida.common
 from aida.common.exceptions import InternalError
 
+class TransportInternalError(InternalError):
+    """
+    Raised if there is a transport error that is raised to an internal error (e.g.
+    a transport method called without opening the channel first).
+    """
+    pass
+    
+
 class Transport(object):
     """
     Abstract class for a generic transport (ssh, local, ...)

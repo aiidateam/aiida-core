@@ -6,7 +6,20 @@ import os
 import aida.transport
 from aida.common.utils import escape_for_bash
 from aida.common import aidalogger
+from aida.common.extendeddicts import FixedFieldsAttributeDict
 
+class FileAttribute(FixedFieldsAttributeDict):
+    """
+    A class with attributes of a file, that is returned by get_attribute()
+    """
+    _valid_fields = (
+        'st_size',
+        'st_uid',
+        'st_gid',
+        'st_mode',
+        'st_atime',
+        'st_mtime',
+        )
 
 class SshTransport(aida.transport.Transport):
     # Valid keywords accepted by the connect method of paramiko.SSHClient
@@ -164,7 +177,7 @@ class SshTransport(aida.transport.Transport):
         so this should never happen within this class.
         """
         return self.sftp.getcwd()
-
+    
     def mkdir(self, path, mode=511):
         """
         Create a folder (directory) named path with numeric mode mode.
@@ -235,7 +248,21 @@ class SshTransport(aida.transport.Transport):
         if not os.path.isabs(localpath):
             raise ValueError("The localpath must be an absolute path")
         return self.sftp.get(remotepath,localpath,callback)
-        
+
+
+    def get_attribute(self,path):
+        """
+        Returns the list of attributes of a file
+        Receives in input the path of a given file
+        """
+        paramiko_attr = self.sftp.lstat(path)
+        aida_attr = FileAttribute()
+        # map the paramiko class into the aida one
+        # note that paramiko object contains more informations than the aida
+        for key in aida_attr._valid_fields:
+            aida_attr[key] = paramiko_attr.__dict__[key]
+        return aida_attr
+    
 
     def copy(self,remotesource,remotedestination,dereference=False):
         """
@@ -578,25 +605,21 @@ if __name__ == '__main__':
                 # create directory with non default permissions
                 t.mkdir(directory,mode=0777)
 
-                
-                
+                # test if the security bits have changed
+                self.assertEquals( t.get_attribute(directory).st_mode , 16893 )
+
                 # change permissions
                 t.chmod(directory, 0511)
-
                 
-
-                #                with self.assertRaises(IOError):
-                #                    # trying to enter a directory without permissions
-                #t.chdir(directory)
-                #                with self.assertRaises(IOError):
-                #t.rmdir(directory)
-
+                # TODO : bug in paramiko. When changing the directory to very low \
+                # I cannot set it back to higher permissions
+                
                 ## TODO: probably here we should then check for 
                 ## the new directory modes. To see if we want a higher
                 ## level function to ask for the mode, or we just
                 ## use get_attribute
                 t.chdir(directory)
-
+                
                 # change permissions of an empty string, non existing folder.
                 fake_dir=''
                 with self.assertRaises(IOError):
@@ -608,7 +631,7 @@ if __name__ == '__main__':
                     t.chmod(fake_dir,0777)
 
                 t.chdir('..')
-                #                t.rmdir(directory)
+                t.rmdir(directory)
 
                 
         def test_isfile_isdir_to_empty_string(self):

@@ -214,18 +214,30 @@ class Scheduler(object):
         """
         raise NotImplementedError
         
-    def getJobs(self,jobs=None,user=None):
+    def getJobs(self, jobs=None, user=None, as_dict=False):
         """
-        Get the list of jobs and return a list of JobInfo objects.
+        Get the list of jobs and return it.
         
         Typically, this function does not need to be modified by the plugins.
         
-        For the meaning of the args, see the _get_joblist_command method.
+        Args:
+            jobs: a list of jobs to check; only these are checked
+            user: only jobs belonging to a given user are checked
+            as_dict: if False (default), a list of JobInfo objects is returned. If
+                True, a dictionary is returned, having as key the jobId and as value the
+                JobInfo object.
         """
         retval, stdout, stderr = self.transport.exec_command_wait(
             self._get_joblist_command(jobs=jobs, user=user))
         
-        return self._parse_joblist_output(retval, stdout, stderr)
+        joblist = self._parse_joblist_output(retval, stdout, stderr)
+        if as_dict:
+            jobdict = {j.jobId: j for j in joblist}
+            if None in jobdict:
+                raise SchedulerError("Found at least a job without jobid")
+            return jobdict
+        else:
+            return joblist
 
     @property
     def transport(self):

@@ -15,11 +15,42 @@ class User(AuthUser):
     '''
     uuid = UUIDField(auto=True)
         
+#-------------------- Abstract Base Classes ------------------------
+
+class BaseClass(m.Model):
+    uuid = UUIDField(auto=True)
+    description = m.TextField(blank=True)
+    class Meta:
+        abstract = True
+
+
+class NameClass(BaseClass):
+    name = m.CharField(max_length=255, unique=True)
+    def __unicode__(self):
+        return self.title
+
     
 quality_choice = ((1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5'))     
 
-nodetype_choice = (("calculation","calculation"), ("data","data"), ("code","code"))
+ 
+class EntityClass(BaseClass):
+    crtime = m.DateTimeField(auto_now_add=True, editable=False)
+    modtime = m.DateTimeField(auto_now=True)
+    user = m.ForeignKey(User)
+    quality = m.IntegerField(choices=quality_choice, null=True, blank=True)  
+    metadata = m.TextField(blank=True)
+    class Meta:
+        abstract = True
+                
 
+#class CommentClass(EntityClass):
+#    parent = m.ForeignKey('self', blank=True, null=True)
+#    class Meta:
+#        abstract = True       
+        
+#-------------------------- Primary Classes ---------------------------------
+
+#############################################################################
 calcstate_choice = (('prepared', 'prepared'),
                     ('submitted', 'submitted'), 
                     ('queued', 'queued'),
@@ -28,63 +59,42 @@ calcstate_choice = (('prepared', 'prepared'),
                     ('finished', 'finished'),
                     ('completed', 'completed'))
 
-
-class Node(m.Model):
-    uuid = UUIDField(auto=True)
-    name = m.CharField(max_length=255, unique=True)
-    description = m.TextField(blank=True)
-    crtime = m.DateTimeField(auto_now_add=True, editable=False)
-    modtime = m.DateTimeField(auto_now=True)
-    computer = 
-    path = m.TextField(blank=True)
+class Calc(EntityClass):
+    code = m.ForeignKey('Code')
     state = m.CharField(max_length=255, choices=calcstate_choice, db_index=True)
     type = m.CharField(max_length=255, db_index=True)
-    user = m.ForeignKey(User)
-    quality = m.IntegerField(choices=quality_choice, null=True, blank=True) 
-    metadata = m.TextField(blank=True)
-    class Meta:
-        abstract = True
-                
+    datain = m.ManyToManyField('Data', blank=True)   
+    group = m.ManyToManyField('CalcGroup', blank=True)
+    
+
+calcgrouptype_choice = (('project', 'project'), ('collection', 'collection'), ('workflow', 'workflow'))
+
+class CalcGroup(BaseClass):  
+    type =  m.CharField(max_length=255, choices=calcgrouptype_choice, db_index=True)
+    
+
+#class CalcComment(CommentClass):
+#    '''
+#    Convenience feature
+#    '''
+#    pass
 
 attrdatatype_choice = (('float', 'float'), ('int', 'int'), ('txt', 'txt'),  ('bool', 'bool'))
 
-class Attr(m.Model):
+class CalcAttr(NameClass):
     '''
     Attributes are annotations ONLY for storing metadata and tagging. This is only for querying convenience.
-    Actual input and output data should never go here, only convenient duplicates.
+    Actual input and output data should never go here.
     '''
-    uuid = UUIDField(auto=True) 
-    node = m.ForeignKey('Node')
-    name = m.CharField(max_length=255, db_index=True)
+    calc = m.ForeignKey('Calc')
+    key = m.CharField(max_length=255, db_index=True)
     txtval = m.TextField()
     floatval = m.FloatField()
     intval = m.IntegerField()
     boolval = m.BooleanField()
     datatype = m.CharField(max_length=255, choices=attrdatatype_choice, db_index=True)
     class Meta:
-        unique_together = (("node", "key")
-
-
-class Comment(m.Model):
-    uuid = UUIDField(auto=True)
-    user = m.ForeignKey(User)
-    node = m.ForeignKey('Node')
-    crtime = m.DateTimeField(auto_now_add=True, editable=False)
-    content = m.TextField(blank=True)
-    parent = m.ForeignKey('self', blank=True, null=True)
-
-    
-grouptype_choice = (('project', 'project'), ('collection', 'collection'), ('workflow', 'workflow'))
-
-class Group(BaseClass):  
-    uuid = UUIDField(auto=True)
-    nodes = m.ManyToManyField('Node', blank=True, rel)  
-    crtime = m.DateTimeField(auto_now_add=True, editable=False)
-    name = m.CharField(max_length=255, unique=True)
-    description = m.TextField(blank=True)
-    type =  m.CharField(max_length=255, choices=calcgrouptype_choice, db_index=True)
-    
-
+        unique_together = (("calc", "key")
 
 
 ##############################################################
@@ -100,6 +110,31 @@ class Data(EntityClass):
 #datagrouptype_choice = (('collection', 'collection'), ('relation', 'relation'))        
 
 
+class DataGroup(BaseClass):
+    #type = m.CharField(max_length=255, choices=datagrouptype_choice)
+    pass
+
+
+#class DataComment(CommentClass):
+#    pass
+
+class DataAttr(NameClass):
+    '''
+    Attributes are annotations ONLY for storing metadata and tagging. This is only for querying convenience.
+    Actual input and output data should never go here.
+    '''
+    data = m.ForeignKey('Data')
+    key = m.CharField(max_length=255, db_index=True)
+    txtval = m.TextField()
+    floatval = m.FloatField()
+    intval = m.IntegerField()
+    boolval = m.BooleanField()
+    datatype = m.CharField(max_length=255, choices=attrdatatype_choice, db_index=True)
+    class Meta:
+        unique_together = (("data", "key")
+
+
+#############################################################
 
 
 class Computer(NameClass):

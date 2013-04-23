@@ -199,7 +199,8 @@ class Transport(object):
 
     def get_attribute(self,path):
         """
-        Return an attribute objects for file in a given path. 
+        Return an object FixedFieldsAttributeDict for file in a given path,
+        as defined in aida.common.extendeddicts 
         Each attribute object consists in a dictionary with the following keys:
             - st_size: size of files, in bytes 
             - st_uid: user id of owner

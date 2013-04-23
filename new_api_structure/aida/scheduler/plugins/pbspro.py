@@ -628,7 +628,7 @@ if __name__ == '__main__':
     import logging
     import uuid
     from aida.common.pluginloader import load_plugin
-    from aida.managers.execution.datastructures import CalcInfo
+    from aida.common.datastructures import CalcInfo
     
     # TODO : clean the old commands when the test will be possible to be carried offline
     
@@ -1062,7 +1062,6 @@ Job Id: 74165.mycluster
     
             submit_script_text = s._get_submit_script(calc_info)
 
-            self.assertFalse( 'aida.out' in submit_script_text )
             self.assertTrue( '#PBS -r n' in submit_script_text )
             self.assertTrue( submit_script_text.startswith('#!/bin/bash') )
             self.assertTrue( '#PBS -l walltime=24:00:00' in submit_script_text )

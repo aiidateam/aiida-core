@@ -178,19 +178,21 @@ class SshTransport(aida.transport.Transport):
         """
         return self.sftp.getcwd()
     
-    def mkdir(self, path, mode=511):
+    def mkdir(self, path):
         """
         Create a folder (directory) named path with numeric mode mode.
-        The default mode is 0777 (octal). On some systems, mode is
-        ignored. Where it is used, the current umask value is first
-        masked out.
 
         Args:
-            path: the folder to create. Relative paths refer to the\
+            path: the folder to create. Relative paths refer to the
                 current working directory.
-            mode: the numeric mode for the new folder.
+
+        Raises:
+            If the directory already exists, OSError is raised.
         """
-        self.sftp.mkdir(path,mode)
+        try:
+            self.sftp.mkdir(path)
+        except IOError as e:
+            raise OSError(e.message)
 
     def rmdir(self, path):
         """
@@ -255,12 +257,12 @@ class SshTransport(aida.transport.Transport):
         Returns the list of attributes of a file
         Receives in input the path of a given file
         """
-        paramiko_attr = self.sftp.listdir_attr(path)
+        paramiko_attr = self.sftp.lstat(path)
         aida_attr = FileAttribute()
         # map the paramiko class into the aida one
         # note that paramiko object contains more informations than the aida
-        for key in aida_attr.keys():
-            aida_attr[key] = paramiko_attr.__dict__[key]
+        for key in aida_attr._valid_fields:
+            aida_attr[key] = getattr(paramiko_attr,key)
         return aida_attr
     
 
@@ -533,13 +535,18 @@ if __name__ == '__main__':
                 location = t.normalize(os.path.join('/','tmp'))
                 directory = 'temp_dir_test'
                 t.chdir(location)
-                
+
                 self.assertEquals(location, t.getcwd())
                 while t.isdir(directory):
                     # I append a random letter/number until it is unique
                     directory += random.choice(
                         string.ascii_uppercase + string.digits)
                 t.mkdir(directory)
+
+                with self.assertRaises(OSError):
+                    # I create twice the same directory
+                    t.mkdir(directory)
+                
                 t.isdir(directory)
                 self.assertFalse(t.isfile(directory))
                 t.rmdir(directory)
@@ -603,12 +610,19 @@ if __name__ == '__main__':
                         string.ascii_uppercase + string.digits)
                 
                 # create directory with non default permissions
-                t.mkdir(directory,mode=0777)
+                t.mkdir(directory)
 
-                print t.get_attribute(directory)
-                
+                # change permissions
+                t.chmod(directory, 0777)                
+
+                # test if the security bits have changed
+                self.assertEquals( t.get_mode(directory) , 0777 )
+
                 # change permissions
                 t.chmod(directory, 0511)
+
+                # test if the security bits have changed
+                self.assertEquals( t.get_mode(directory) , 0511 )
                 
                 # TODO : bug in paramiko. When changing the directory to very low \
                 # I cannot set it back to higher permissions

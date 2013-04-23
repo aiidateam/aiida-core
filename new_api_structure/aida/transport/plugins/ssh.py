@@ -577,26 +577,19 @@ if __name__ == '__main__':
                 
                 # create directory with non default permissions
                 t.mkdir(directory,mode=0777)
-
-                
                 
                 # change permissions
                 t.chmod(directory, 0511)
-
                 
-
-                #                with self.assertRaises(IOError):
-                #                    # trying to enter a directory without permissions
-                #t.chdir(directory)
-                #                with self.assertRaises(IOError):
-                #t.rmdir(directory)
-
+                # TODO : bug in paramiko. When changing the directory to very low \
+                # I cannot set it back to higher permissions
+                
                 ## TODO: probably here we should then check for 
                 ## the new directory modes. To see if we want a higher
                 ## level function to ask for the mode, or we just
                 ## use get_attribute
                 t.chdir(directory)
-
+                
                 # change permissions of an empty string, non existing folder.
                 fake_dir=''
                 with self.assertRaises(IOError):
@@ -608,7 +601,7 @@ if __name__ == '__main__':
                     t.chmod(fake_dir,0777)
 
                 t.chdir('..')
-                #                t.rmdir(directory)
+                t.rmdir(directory)
 
                 
         def test_isfile_isdir_to_empty_string(self):

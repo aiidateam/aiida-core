@@ -1039,6 +1039,8 @@ def parse_pw_text_output(data,xml_data):
             except:
                 parsed_data['warnings'].append('Error while parsing ATOMIC_POSITIONS.')
 
+                # TODO : I want to save Co1
+
         # save dipole in debye units, only at last iteration of scf cycle
         elif 'Computed dipole along edir' in line:
             try:
@@ -1065,7 +1067,7 @@ def parse_pw_text_output(data,xml_data):
                 parsed_data['scf_iterations'].append(int(line.split("in"\
                                                         )[1].split( "iterations")[0]))
             except:
-                raise QEOutputParsingError('Error while parsing scf iterations.')
+                parsed_data['warnings'].append('Error while parsing scf iterations.')
 
         elif 'End of self-consistent calculation' in line:
             try:
@@ -1081,100 +1083,119 @@ def parse_pw_text_output(data,xml_data):
                         doloop=False
                         break
             except:
-                raise QEOutputParsingError('Error while parsing ethr.')
+                parsed_data['warnings'].append('Error while parsing ethr.')
         # grep energy and eventually, magnetization
         elif '!' in line:
             try:
                 if 'energy' not in parsed_data:
-                    parsed_data['energy']=[]
+                    parsed_data['energy'] = []
                 if 'energy_accuracy' not in parsed_data:
-                    parsed_data['energy_accuracy']=[]
+                    parsed_data['energy_accuracy'] = []
                 if 'energy_contribution' not in parsed_data:
-                    parsed_data['energy_contribution']=[]
+                    parsed_data['energy_contribution'] = []
+                if 'total_magnetization' not in parsed_data:
+                    parsed_data['total_magnetization'] = []
+                if 'absolute_magnetization' not in parsed_data:
+                    parsed_data['absolute_magnetization'] = []
 
-                E=float(line.split('=')[1].split('Ry')[0])*ry_to_ev
-                parsed_data['energy'].append(E)
-                parsed_data['energy_accuracy']=float(data[count+2].split('<')[1].split('Ry')[0])
+                En = float(line.split('=')[1].split('Ry')[0])*constants.ry_to_ev
+                E_acc=float(data[count+2].split('<')[1].split('Ry')[0])*constants.ry_to_ev
+                parsed_data['energy'].append(En)
+                parsed_data['energy_accuracy'].append(E_acc)
+                
                 try:
                     # TODO decide units for magnetization. now bohr mag/cell
-                    en_terms=[]
-                    doloop=True
-                    j=0
-                    while doloop:
+                    en_terms = {}
+                    j = 0
+                    while True:
                         j+=1
-                        line2=data[count+j]
+                        line2 = data[count+j]
+
                         if 'one-electron contribution' in line2:
-                            en_terms.append(float(line2.split('=')[1].split('Ry')[0])*ry_to_ev )
+                            En = float(line2.split('=')[1].split('Ry')[0])*constants.ry_to_ev
+                            en_terms['one-electron'] = En
                         elif 'hartree contribution' in line2:
-                            en_terms.append(float(line2.split('=')[1].split('Ry')[0])*ry_to_ev )
+                            En = float(line2.split('=')[1].split('Ry')[0])*constants.ry_to_ev
+                            en_terms['hartree'] = En
                         elif 'xc contribution' in line2:
-                            en_terms.append(float(line2.split('=')[1].split('Ry')[0])*ry_to_ev )
+                            En = float(line2.split('=')[1].split('Ry')[0])*constants.ry_to_ev
+                            en_terms['xc'] = En
                         elif 'ewald contribution' in line2:
-                            en_terms.append(float(line2.split('=')[1].split('Ry')[0])*ry_to_ev )
+                            En = float(line2.split('=')[1].split('Ry')[0])*constants.ry_to_ev
+                            en_terms['ewald'] = En
+                        elif 'ewald contribution' in line2:
+                            En = float(line2.split('=')[1].split('Ry')[0])*constants.ry_to_ev
+                            en_terms['ewald'] = En
+                        elif 'smearing contrib.' in line2:
+                            En = float(line2.split('=')[1].split('Ry')[0])*constants.ry_to_ev
+                            en_terms['smearing'] = En
+                        elif 'one-center paw contrib.' in line2:
+                            En = float(line2.split('=')[1].split('Ry')[0])*constants.ry_to_ev
+                            en_terms['one_center_paw'] = En
+                        elif 'convergence' in line2:
+                            break
                         elif 'total magnetization' in line2:
                             if 'total_magnetization' not in parsed_data:
-                                parsed_data['total_magnetization']=[]
+                                parsed_data['total_magnetization'] = []
                             value=float(line2.split('=')[1].split('Bohr')[0])
-                            parsed_data['total_magnetization']=value
+                            parsed_data['total_magnetization'].append(value)
                         # assuming absolute mag comes after total mag, is the last term to parse
                         elif 'absolute magnetization' in line2:
                             if 'absolute_magnetization' not in parsed_data:
-                                parsed_data['absolute_magnetization']=[]
+                                parsed_data['absolute_magnetization'] = []
                             value=float(line2.split('=')[1].split('Bohr')[0])
-                            parsed_data['absolute_magnetization']=value
-                            break
-                        elif j>200:
-                            doloop=False
-                            raise QEOutputParsingError('Error while parsing total energy: endless loop.')
+                            parsed_data['absolute_magnetization'].append(value)
+                            
                     if vdw_correction:
-                        doloop=True
                         j=0
-                        #ENDLESS LOOP
-                        while doloop:
+                        while True:
                             j+=-1
                             if 'Non-local correlation energy' in data[count+j]:
-                                en_terms.append(float(data[count+j].split("=")[1])*ry_to_ev)
-                                doloop=False
+                                En = float(data[count+j].split("=")[1])*constants.ry_to_ev
+                                en_terms['vdw'] = En
                                 break
+                            
                     parsed_data['energy_contribution'].append(en_terms)
                 except:
-                    pass
+                    parsed_data['warnings'].append('Error while parsing for energy terms.')
             except:
-                #raise QEOutputParsingError('Error while parsing total energy.')
-                ## No total energy in NSCF
-                pass
+                ## Note : NO total energy in NSCF
+                parsed_data['warnings'].append('Error while parsing for energy.')
 
         elif 'the Fermi energy is' in line:
             try:
-                parsed_data['fermi_energy_outfile']=line.split('is')[1].split('ev')[0]
+                parsed_data['fermi_energy_outfile'] = line.split('is')[1].split('ev')[0]
             except:
-                raise QEOutputParsingError('Error while parsing Fermi energy.')
+                parsed_data['warnings'] = 'Error while parsing Fermi energy.'
 
         elif 'PWSCF' in line and 'WALL' in line:
             try:
-                time=line.split('CPU')[1].split('WALL')[0]
-                parsed_data['wall_time']=time
+                time = line.split('CPU')[1].split('WALL')[0]
+                parsed_data['wall_time'] = time
             except:
-                raise QEOutputParsingError('Error while parsing wall time.')
+                parsed_data['warnings'].append('Error while parsing wall time.')
+                
             try:
-                parsed_data['wall_time_seconds'] = convert_qe_time_to_sec(parsed_data['wall_time'])
+                parsed_data['wall_time_seconds'] = \
+                    convert_qe_time_to_sec(parsed_data['wall_time'])
             except ValueError:
-                print >> sys.stderr, "Unable to convert wall_time in seconds..."
+                raise QEOutputParsingError("Unable to convert wall_time in seconds.")
 
         elif 'Forces acting on atoms (Ry/au):' in line:
             try:
                 if 'forces' not in parsed_data:
-                    parsed_data['forces']=[]
-                forces=[]
-                found_counter=0
-                for j in range(nat*8):  # 8 is a sufficiently high number
-                    line2=data[count+j]
+                    parsed_data['forces'] = []
+                forces = []
+                found_counter = 0
+                for j in range(nat*8):  # 8*nat is a sufficiently high number of lines
+                    line2 = data[count+j]
                     if 'atom ' in line2:
-                        found_counter+=1
+                        found_counter += 1
                         if str(found_counter)+' type' in line2:
-                            line2=line2.split('=')[1].split()
+                            line2 = line2.split('=')[1].split()
                             # CONVERT FORCES IN eV/Ang
-                            vec=[float(s)*ry_to_ev/bohr_to_ang for s in line2]
+                            vec = [ float(s)*constants.ry_to_ev / \
+                                 constants.bohr_to_ang for s in line2 ]
                             forces.append(vec)
                             
                         else:
@@ -1186,129 +1207,104 @@ def parse_pw_text_output(data,xml_data):
                 if forces!=[]:
                     parsed_data['forces'].append(forces)
             except:
-                raise QEOutputParsingError('Error while parsing forces.')
-
+                parsed_data['warnings'].append('Error while parsing forces.')
+                
+    # TODO : adding the parsing support for the decomposition of the forces
+                
         elif 'Total force =' in line:
             try:
                 if 'total_force' not in parsed_data:
-                    parsed_data['total_force']=[]
-                value=float(line.split('=')[1].split('Total')[0])
+                    parsed_data['total_force'] = []
+                value = float(line.split('=')[1].split('Total')[0])
                 parsed_data['total_force'].append(value*ry_to_ev/bohr_to_ang)
             except:
-                raise QEOutputParsingError('Error while parsing total force.')
+                parsed_data['warnings'].append('Error while parsing total force.')
         
         elif 'entering subroutine stress ...' in line:
             try:
                 if 'stress' not in parsed_data:
-                    parsed_data['stress']=[]
-                stress=[]
+                    parsed_data['stress'] = []
+                stress = []
 
-                doloop=True
-                j=0
-                while doloop:
-                    j+=1
+                j = 0
+                while True:
+                    j += 1
                     if 'total' in data[count+j] and 'stress' in data[count+j]:
-                        doloop=False
                         break
-                    if j>200:
-                        doloop=False
-                        raise QEOutputParsingError('Error while parsing stress: endless loop.')
+
                 line2=data[count+j]
                 if '(Ry/bohr**3)' not in line2:
                     raise QEOutputParsingError('Error while parsing stress: unexpected units.')
                 for k in range(3):
-                    line2=data[count+j+k+1].split()
-                    vec=[ float(s)*ry_to_ev/(bohr_to_ang)**3 for s in line2[0:3] ]
+                    line2 = data[count+j+k+1].split()
+                    vec = [ float(s)*constants.ry_to_ev/(constants.bohr_to_ang)**3 \
+                            for s in line2[0:3] ]
                     stress.append(vec)
                 parsed_data['stress'].append(stress)
             except:
-                raise QEOutputParsingError('Error while parsing stress tensor.')
+                parsed_data['warnings'].append('Error while parsing stress tensor.')
+
             
         elif 'SUMMARY OF PHASES' in line:
             try:
-                doloop=True
                 j = 0
-                while doloop:
-                   j+=1
-                   if 'Ionic Phase' in data[count+j]:  
-                      value = float(data[count+j].split(':')[1].split('(')[0])
-                      mod   = float(data[count+j].split('(mod')[1].split(')')[0])
-                      parsed_data['ionic_phase'] = {'value' : value, 'mod'  : mod }
-                      doloop=False
-                   if (j>100):
-                      doloop=False
-                      raise QEOutputParsingError('Error while parsing polarization: ionic phase not found.')
-                doloop=True
-                while doloop:
-                   j+=1
-                   if 'Electronic Phase' in data[count+j]:
-                      value = float(data[count+j].split(':')[1].split('(')[0])
-                      mod   = float(data[count+j].split('(mod')[1].split(')')[0])
-                      parsed_data['electronic_phase'] = {'value' : value, 'mod'  : mod }
-                      doloop=False
-                   if (j>120): 
-                      doloop=False
-                      raise QEOutputParsingError('Error while parsing polarization: electronic phase not found.')   
-                doloop=True
-                while doloop:
-                   j+=1 
-                   if 'TOTAL PHASE' in data[count+j]:
-                      value = float(data[count+j].split(':')[1].split('(')[0])
-                      mod   = float(data[count+j].split('(mod')[1].split(')')[0])
-                      parsed_data['total_phase'] = {'value' : value, 'mod'  : mod }
-                      doloop = False
-                   if (j>140): 
-                      doloop=False
-                      raise QEOutputParsingError('Error while parsing polarization: total phase not found.')
-                doloop=True
-                while doloop:
-                   j+=1
-                   if '(e/Omega)' in data[count+j]:
-                      value = float(data[count+j].split('=')[1].split('(')[0])
-                      mod = float(data[count+j].split('mod')[1].split(')')[0])
-                      units = data[count+j].split(')')[1:]
-                      units =  units[0].strip() + ')' + units[1].strip()
-                      parsed_data['polarization_times_volume'] = {'value' : value, 'mod'  : mod , 'units' : units }
-                      doloop=False
-                   if (j>200): 
-                      doloop=False
-                      raise QEOutputParsingError('Error while parsing polarization: polarization times volume not found.')
-                doloop=True
-                while doloop:
-                   j+=1
+                while True:
+                    j+=1
+                    if 'Ionic Phase' in data[count+j]:                        
+                        value = float(data[count+j].split(':')[1].split('(')[0])
+                        mod = float(data[count+j].split('(mod')[1].split(')')[0])
+                        parsed_data['ionic_phase'] = {'value' : value, 'mod'  : mod}
+
+                        j+=1
+                        value = float(data[count+j].split(':')[1].split('(')[0])
+                        mod = float(data[count+j].split('(mod')[1].split(')')[0])
+                        parsed_data['electronic_phase'] = {'value' : value, 'mod'  : mod}
+                        
+                        j+=1
+                        value = float(data[count+j].split(':')[1].split('(')[0])
+                        mod = float(data[count+j].split('(mod')[1].split(')')[0])
+                        parsed_data['total_phase'] = {'value' : value, 'mod'  : mod}
+
+                    # TODO : decide a standard unit for e charge
                    if 'e/bohr^2' in data[count+j]:
                       value = float(data[count+j].split('=')[1].split('(')[0])
                       mod = float(data[count+j].split('mod')[1].split(')')[0])
                       units = data[count+j].split(')')[1].strip() 
-                      parsed_data['polarization'] = {'value' : value, 'mod'  : mod , 'units' : units }
-                      doloop=False
-                   if (j>220):
-                      doloop=False
-                      raise QEOutputParsingError('Error while parsing polarization: polarization in e/bohr^2 not found.')   
-                doloop=True
-                while doloop: 
-                   j+=1
-                   if 'polarization direction' in data[count+j]: 
-                      vec = [ float(s) for s in data[count+j].split('(')[1].split(')')[0].split(',') ]
-                      parsed_data['polarization_direction'] = vec
-                      doloop=False
-                   if (j>240):
-                      doloop = False
-                      raise QEOutputParsingError('Error while parsing polarization: direction not found.')
-	    except:
-                raise QEOutputParsingError('Error while parsing Berry phase polarization.')
-     
+                      parsed_data['polarization'] = {'value':value,'mod':mod,'units':units}
 
+                   if 'polarization direction' in data[count+j]: 
+                      vec = [ float(s) for s in \
+                              data[count+j].split('(')[1].split(')')[0].split(',') ]
+                      parsed_data['polarization_direction'] = vec
+                        
+            except:
+                warning = 'Error while parsing polarization.'
+                parsed_data['warnings'].append(warning)     
+        
+        
         # controls on relaxation-dynamics convergence
         # TODO put all the different relaxations
         elif 'nstep' in line and '=' in line:
-            max_dynamic_iterations=int(line.split()[2])
+            max_dynamic_iterations = int(line.split()[2])
         elif 'Wentzcovitch Damped Dynamics:' in line and 'iterations completed, stopping' in line:
-            dynamic_iterations=int(line.split()[3])
-            if max_dynamic_iterations==dynamic_iterations:
-                warning='Maximum number of iterations reached in Wentzcovitch Damped Dynamics.'
+            dynamic_iterations = int(line.split()[3])
+            if max_dynamic_iterations == dynamic_iterations:
+                warning = 'Maximum number of iterations reached in Wentzcovitch Damped Dynamics.'
                 parsed_data['warnings'].append(warning)
 
+        elif 'point group' in line:
+            try:
+                point_group_data = line.split()
+                pg_international = point_group_data[-1].split('(')[1].split(')')[0]
+                pg_schoenflies = point_group_data[-2]
+                parsed_data['pointgroup_international'] = pg_international
+                parsed_data['pointgroup_schoenflies'] = pg_schoenflies
+            except Exception:
+                warning = "Problem parsing point group, I found: {}".format(point_group_data)
+                parsed_data['warnings'].append(warning)
+
+
+        # Test of some errors
         # bands not converging
         elif 'eigenvalues not converged' in line and 'c_bands:' in line:
             try:
@@ -1327,10 +1323,10 @@ def parse_pw_text_output(data,xml_data):
                     if count+j==len(data)-2:   #-2 for the safety of not reaching the end of file
                         raise QEOutputParsingError('Error while parsing. While trying to understand the position of c_bands non convergence error, reached the end of the file.')
                     if problem:
-                        warning='%s bands did not reach convergence.' %(num_not_conv)
+                        warning='{} bands did not reach convergence.'.format(num_not_conv)
                         parsed_data['warnings'].append(warning)
             except:
-                raise QEOutputParsingError('Error while parsing c_bands errors.')
+                parsed_data['warnings'].append('Error while parsing c_bands errors.')
 
         # BFGS not at convergence
         elif 'The maximum number of steps has been reached.' in line:
@@ -1338,7 +1334,7 @@ def parse_pw_text_output(data,xml_data):
             parsed_data['warnings'].append(warning)
         # scf not at convergence
         elif 'convergence NOT achieved after' in line and 'iterations: stopping':
-            warning='Scf calculation did not reacher convergence after %s iterations' % (int(line.split()[4]))
+            warning='Scf calculation did not reacher convergence after {} iterations'.format(int(line.split()[4]))
             parsed_data['warnings'].append(warning)
 
         elif 'SCF correction compared to forces is too large, reduce conv_thr' in line:
@@ -1347,14 +1343,5 @@ def parse_pw_text_output(data,xml_data):
             
         elif 'Warning:' in line:
             parsed_data['warnings'].append(str(line))
-        elif 'point group' in line:
-            try:
-                point_group_data = line.split()
-                pg_international = point_group_data[-1].split('(')[1].split(')')[0]
-                pg_schoenflies = point_group_data[-2]
-                parsed_data['pointgroup_international'] = pg_international
-                parsed_data['pointgroup_schoenflies'] = pg_schoenflies
-            except Exception:
-                parsed_data['warnings'].append("Problem parsing point group, I found: %s" % point_group_data)
     
     return parsed_data

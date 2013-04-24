@@ -23,6 +23,14 @@
 import aida.common
 from aida.common.exceptions import InternalError
 
+class TransportInternalError(InternalError):
+    """
+    Raised if there is a transport error that is raised to an internal error (e.g.
+    a transport method called without opening the channel first).
+    """
+    pass
+    
+
 class Transport(object):
     """
     Abstract class for a generic transport (ssh, local, ...)
@@ -116,7 +124,7 @@ class Transport(object):
         """
         raise NotImplementedError
 
-
+    
     def copy(self,remotesource,remotedestination,*args,**kwargs):
         """
         Copy a file or a directory from remote source to remote destination 
@@ -147,7 +155,7 @@ class Transport(object):
         """
         raise NotImplementedError
 
-
+    
     def exec_command_wait(self,command, **kwargs):
         """
         Execute the command on the shell, waits for it to finish,
@@ -164,7 +172,7 @@ class Transport(object):
         """
         raise NotImplementedError
 
-
+    
     def get(self, remotepath, localpath, *args, **kwargs):
         """
         Retrieve a file from remote source to local destination
@@ -178,7 +186,7 @@ class Transport(object):
         """
         raise NotImplementedError
 
-
+    
     def getcwd(self):
         """
         Return a string identifying the current working directory
@@ -188,10 +196,11 @@ class Transport(object):
         """
         raise NotImplementedError
 
-
+    
     def get_attribute(self,path):
         """
-        Return an attribute objects for file in a given path. 
+        Return an object FixedFieldsAttributeDict for file in a given path,
+        as defined in aida.common.extendeddicts 
         Each attribute object consists in a dictionary with the following keys:
             - st_size: size of files, in bytes 
             - st_uid: user id of owner
@@ -207,6 +216,13 @@ class Transport(object):
         """
         raise NotImplementedError
 
+
+    def get_mode(self,path):
+        """
+        Return the portion of the file's mode that can be set by chmod().
+        """
+        import stat
+        return stat.S_IMODE(self.get_attribute(path).st_mode)
 
     def isdir(self,path):
         """
@@ -233,22 +249,19 @@ class Transport(object):
         Return a list of the names of the entries in the given path. 
         The list is in arbitrary order. It does not include the special 
         entries '.' and '..' even if they are present in the directory.
-
+        
         Args: 
-            path (str) - path to list (default to '.')
+        path (str) - path to list (default to '.')
         """
         raise NotImplementedError
-
-
-    def mkdir(self,path,mode=511):
+    
+    
+    def mkdir(self,path):
         """
-        Create a folder (directory) named path with numeric mode mode. 
+        Create a folder (directory) named path.
 
         Args:
             path (str) - name of the folder to create
-            mode (int) - permissions (posiz-style) for the newly created folder
-
-        TODO: decide a default permission for creation.
 
         Raises:
             If the directory already exists, OSError is raised.

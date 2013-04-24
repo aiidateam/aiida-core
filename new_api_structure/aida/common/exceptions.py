@@ -13,6 +13,13 @@ class InternalError(AidaException):
     """
     pass
 
+class ValidationError(AidaException):
+    """
+    Error raised when there is an error during the validation phase
+    of a property. 
+    """
+    pass
+
 class ConfigurationError(AidaException):
     """
     Error raised when there is a configuration error in Aida.

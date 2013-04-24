@@ -1,4 +1,5 @@
 from aida.common import aidalogger
+from aida.common.exceptions import ValidationError
 
 ## TODO: see if we want to have a function to rebuild a nested dictionary as
 ## a nested AttributeDict object when deserializing with json.
@@ -163,7 +164,18 @@ class DefaultFieldsAttributeDict(AttributeDict):
     class TestExample(DefaultFieldsAttributeDict):
         _default_fields = ('a','b','c')
     
-    TODO: implement also methods as defaultitems, extraitems, defaultiteritems, ...
+    When the validate() method is called, it calls in turn all validate_KEY
+    methods, where KEY is one of the default keys.
+    If the method is not present, the field is considered to be always valid.
+    Each validate_KEY method should accept a single argument 'value' that will
+    contain the value to be checked.
+    It raises a ValidationError if any of the validate_KEY
+    function raises an exception, otherwise it simply returns.
+    NOTE: the validate_ functions are called also for unset fields, so if the
+    field can be empty on validation, you have to start your validation
+    function with something similar to
+    if value is None:
+        return
 
     TODO: decide behavior if I set to None a field. Current behavior, if
         a is an instanec and 'def_field' one of the default fields, that is 
@@ -180,6 +192,18 @@ class DefaultFieldsAttributeDict(AttributeDict):
        See if we want that setting a default field to None means deleting it.
     """
     _default_fields = tuple()
+
+    def validate(self):
+        for key in self.get_default_fields():
+            # I get the attribute starting with validate_ and containing the name of the key
+            # I set a dummy function if there is no validate_KEY function defined
+            validator = getattr(self,'validate_{}'.format(key), lambda value: None)
+            if callable(validator):
+                try:
+                    validator(self[key])
+                except Exception as e:
+                    raise ValidationError("Invalid value for key '{}' [{}]: {}".format(
+                        key, e.__class__.__name__, e.message))
 
     def __setattr__(self, attr, value):
         """
@@ -208,7 +232,7 @@ class DefaultFieldsAttributeDict(AttributeDict):
         """
         Return the list of default fields, either defined in the instance or not.
         """
-        return cls._default_fields
+        return list(cls._default_fields)
     
     def defaultkeys(self):
         """
@@ -232,12 +256,23 @@ if __name__ == "__main__":
         """
         _valid_fields = ('a','b','c')
 
+
     class TestDFADExample(DefaultFieldsAttributeDict):
         """
         An example class that has 'a', 'b' and 'c' as default keys.
         """
         _default_fields = ('a','b','c')
 
+        def validate_a(self,value):
+            # Ok if unset
+            if value is None:
+                return
+            
+            if not isinstance(value,int):
+                raise TypeError('expecting integer')
+            if value < 0:
+                raise ValueError('expecting a positive or zero value')
+        
 
     class TestAttributeDictAccess(unittest.TestCase):
         """
@@ -500,7 +535,29 @@ if __name__ == "__main__":
             self.assertEquals(set(TestDFADExample.get_default_fields()),
                               set(['a','b','c']))
 
+
+        def test_validation(self):
+            o = TestDFADExample()
+
+            # Should be ok to have an empty 'a' attribute
+            o.validate()
+            
+            o.a = 4
+            o.b = 'text'
+
+            # This should be fine
+            o.validate()
+
+            o.a = 'string'
+            # o.a must be a positive integer
+            with self.assertRaises(ValidationError):
+                o.validate()
    
+            o.a = -3
+            # a.a must be a positive integer
+            with self.assertRaises(ValidationError):
+                o.validate()
+
     import logging
     aidalogger.setLevel(logging.DEBUG)
     

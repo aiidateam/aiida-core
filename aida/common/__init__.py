@@ -1,9 +1,12 @@
-"""The aida library module.
+import logging
+import sys
 
-This module contains what is needed both by client and server instances of
-aida.
+aidalogger = logging.getLogger("aida")
 
-"""
+# For the moment I hardcode the logger properties: in this way things go
+# to stderr with a specific format
+FORMAT = '[%(name)s@%(levelname)s] %(message)s'
+logging.basicConfig(format=FORMAT)
 
-__author__ = 'Boris Kozinsky, Andrea Cepellotti & Giovanni Pizzi'
-__version__ = (0, 0, 1, 'alpha')
+#fallback_handler = logging.StreamHandler(stream=sys.stderr)
+#aidalogger.addHandler(fallback_handler)

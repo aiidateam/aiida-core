@@ -15,94 +15,112 @@ class User(AuthUser):
     '''
     uuid = UUIDField(auto=True)
         
-    
+#-------------------- Abstract Base Classes ------------------------
+  
 quality_choice = ((1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5'))     
 
-nodetype_choice = (("calculation","calculation"), ("data","data"), ("code","code"))
-
-calcstate_choice = (('prepared', 'prepared'),
-                    ('submitted', 'submitted'), 
-                    ('queued', 'queued'),
-                    ('running', 'runnning'),
-                    ('failed', 'failed'),
-                    ('finished', 'finished'),
-                    ('completed', 'completed'))
-
-
-class Node(m.Model):
+class NodeClass(m.Model):
     uuid = UUIDField(auto=True)
-    name = m.CharField(max_length=255, unique=True)
+    name = m.CharField(max_length=255, db_index=True)
     description = m.TextField(blank=True)
-    crtime = m.DateTimeField(auto_now_add=True, editable=False)
-    modtime = m.DateTimeField(auto_now=True)
-    computer = 
-    path = m.TextField(blank=True)
-    state = m.CharField(max_length=255, choices=calcstate_choice, db_index=True)
-    type = m.CharField(max_length=255, db_index=True)
+    time = m.DateTimeField(auto_now_add=True, editable=False)
     user = m.ForeignKey(User)
     quality = m.IntegerField(choices=quality_choice, null=True, blank=True) 
-    metadata = m.TextField(blank=True)
+    type = m.CharField(max_length=255, db_index=True)
+    path = m.FilePathField()
+    attrdata = m.TextField(blank=True)   # json of the data to be split into attrs for querying
+    metadata = m.TextField(blank=True)   # json of the data    
+    def __unicode__(self):
+        return self.name, self.type
     class Meta:
         abstract = True
-                
+
+#----------------------------------------------------------------------
+
+nodetype_choice = (("calculation","calculation"), ("data","data"))
+
+state_choice = (('prepared', 'prepared'),
+                ('submitted', 'submitted'), 
+                ('queued', 'queued'),
+                ('running', 'runnning'),
+                ('failed', 'failed'),
+                ('finished', 'finished'),
+                ('completed', 'completed'))
+
+class Node(NodeClass):
+    '''
+    Generic node, data or calculation. There will be several types of connections.
+    Naming convention: data A --> calc C --> data B. 
+    A is 'input' of C. C is 'destination' of A. B is 'output' of C. C is 'source' of B. 
+    A is 'parent' of B,C. C,B are 'children' of A.
+    TODO: node hierarchy and workflows.
+    '''
+    state = m.CharField(max_length=255, choices=state_choice, db_index=True)
+    # if node is a calculation
+    code = m.ForeignKey('Code', null=True)   # only for calculations
+    computer = m.ForeignKey('Computer', null=True)  # only for calculations
+    inputs = m.ManyToManyField('self', symmetrical=False, related_name='destinations', through='Input')  # only direct inputs
+    #if node is data
+    source = m.ForeignKey('self', null=True, related_name='outputs')   #only valid for data nodes to link to source calculations
+    #for both types
+    children = m.ManyToManyField('self', symmetrical=False, related_name='parents', through='Path')
+   
+   # members = m.ManyToManyField('self', symmetrical=False, related_name='containers') 
+#edgetype_choice = (("input","input"), ("member","member"), ("workflow","workflow"))
+
+class Input(m.Model):
+    '''
+    Connects an input data with a calculation. The label is identifying the input type.
+    '''
+    data = m.ForeignKey('Node')
+    destination = m.ForeignKey('Node')
+    label = m.CharField(max_length=255, db_index=True)    #label for data input for calculation 
+
+
+class Path(m.Model):
+    '''
+    Transitive closure for all node paths.
+    '''
+    origin = m.ForeignKey('Node')
+    destination = m.ForeignKey('Node')
+    depth = m.IntegerField()
+
 
 attrdatatype_choice = (('float', 'float'), ('int', 'int'), ('txt', 'txt'),  ('bool', 'bool'))
+
 
 class Attr(m.Model):
     '''
     Attributes are annotations ONLY for storing metadata and tagging. This is only for querying convenience.
-    Actual input and output data should never go here, only convenient duplicates.
+    Actual input and output data should never go here, only duplicates and comments.
     '''
-    uuid = UUIDField(auto=True) 
     node = m.ForeignKey('Node')
-    name = m.CharField(max_length=255, db_index=True)
+    key = m.CharField(max_length=255, db_index=True)
+    user = m.ForeignKey(User)
+    time = m.DateTimeField(auto_now_add=True, editable=False)
     txtval = m.TextField()
     floatval = m.FloatField()
     intval = m.IntegerField()
     boolval = m.BooleanField()
     datatype = m.CharField(max_length=255, choices=attrdatatype_choice, db_index=True)
     class Meta:
-        unique_together = (("node", "key")
+        unique_together = (("node", "key"))
+
+#grouptype_choice = (('project', 'project'), ('collection', 'collection'), ('workflow', 'workflow'))
 
 
-class Comment(m.Model):
+class Group(m.Model):  
     uuid = UUIDField(auto=True)
-    user = m.ForeignKey(User)
-    node = m.ForeignKey('Node')
-    crtime = m.DateTimeField(auto_now_add=True, editable=False)
-    content = m.TextField(blank=True)
-    parent = m.ForeignKey('self', blank=True, null=True)
-
-    
-grouptype_choice = (('project', 'project'), ('collection', 'collection'), ('workflow', 'workflow'))
-
-class Group(BaseClass):  
-    uuid = UUIDField(auto=True)
-    nodes = m.ManyToManyField('Node', blank=True, rel)  
-    crtime = m.DateTimeField(auto_now_add=True, editable=False)
+    node = m.ManyToManyField('Node', blank=True, related_name='group')  
+    time = m.DateTimeField(auto_now_add=True, editable=False)
     name = m.CharField(max_length=255, unique=True)
     description = m.TextField(blank=True)
-    type =  m.CharField(max_length=255, choices=calcgrouptype_choice, db_index=True)
+#   type =  m.CharField(max_length=255, choices=calcgrouptype_choice, db_index=True)
     
-
-
-
-##############################################################
-
-class Data(EntityClass):
-    calc = m.ForeignKey('Calc', related_name='dataout')      #unique parent Calc for each data
-    type = m.CharField(max_length=255, db_index=True)
-    numval = m.FloatField()
-    group = m.ManyToManyField('DataGroup', blank=True)
-    linkdata = m.ManyToManyField('self')
-    attr = m.ManyToManyField('DataAttr', through = 'DataAttrVal')
-
 #datagrouptype_choice = (('collection', 'collection'), ('relation', 'relation'))        
 
 
-
-
-class Computer(NameClass):
+class Computer(m.Model):
     """Table of computers or clusters.
 
     Attributes:
@@ -119,6 +137,10 @@ class Computer(NameClass):
     workdir = m.CharField(max_length=255)
     
     
+class Code(NodeClass):
+    computer = m.ManyToManyField('Computer') #for checking computer compatibility
+
+
 #class ComputerUsername(m.Model):
 #    """Association of aida users with given remote usernames on a computer.
 #
@@ -141,37 +163,4 @@ class Computer(NameClass):
 #    def __unicode__(self):
 #        return self.aidauser.username + " => " + \
 #            self.remoteusername + "@" + self.computer.hostname
-#
-
-class Code(EntityClass):
-    type = m.CharField(max_length=255, db_index=True) #to identify which parser/plugin
-    computer = m.ForeignKey('Computer', blank=True) #for checking computer compatibility, empty means all
-    group = m.ManyToManyField('CodeGroup', blank=True)
-    attr = m.ManyToManyField('CodeAttr', through='CodeAttrVal')
-    def __unicode__(self):
-        return self.name
-
-class CodeGroup(NameClass):  
-    pass    
-    
-class CodeComment(CommentClass): 
-    pass
-
-
-class DataAttr(NameClass):
-    '''
-    Attributes are annotations ONLY for storing metadata and tagging. This is only for querying convenience.
-    Actual input and output data should never go here.
-    '''
-    data = m.ForeignKey('Data')
-    key = m.CharField(max_length=255, db_index=True)
-    txtval = m.TextField()
-    floatval = m.FloatField()
-    intval = m.IntegerField()
-    boolval = m.BooleanField()
-    datatype = m.CharField(max_length=255, choices=attrdatatype_choice, db_index=True)
-    class Meta:
-        unique_together = (("data", "key")
-
-
 

@@ -1,13 +1,12 @@
+import getpass
+import os
+
 from django.db import models as m
 from django_extensions.db.fields import UUIDField
 from django.contrib.auth.models import User as AuthUser 
-import getpass
-import aida.jobmanager.submitter
-import os
-import os.path
-from aida.djsite.settings.settings import LOCAL_REPOSITORY
-#from uuidfield import UUIDField
 
+from aida.djsite.settings.settings import LOCAL_REPOSITORY
+from aida.common.exceptions import DBContentError
 
 class User(AuthUser):
     '''
@@ -86,7 +85,7 @@ class Path(m.Model):
     depth = m.IntegerField()
 
 
-attrdatatype_choice = (('float', 'float'), ('int', 'int'), ('txt', 'txt'),  ('bool', 'bool'))
+attrdatatype_choice = (('float', 'float'), ('int', 'int'), ('txt', 'txt'),  ('bool', 'bool'), ('json', 'json'))
 
 
 class Attr(m.Model):
@@ -98,13 +97,89 @@ class Attr(m.Model):
     key = m.CharField(max_length=255, db_index=True)
     user = m.ForeignKey(User)
     time = m.DateTimeField(auto_now_add=True, editable=False)
-    txtval = m.TextField()
-    floatval = m.FloatField()
-    intval = m.IntegerField()
-    boolval = m.BooleanField()
+    tval = m.TextField()
+    fval = m.FloatField()
+    ival = m.IntegerField()
+#    boolval = m.BooleanField()
     datatype = m.CharField(max_length=255, choices=attrdatatype_choice, db_index=True)
+
     class Meta:
         unique_together = (("node", "key"))
+        
+    def set(self,value):
+        """
+        This can be called on a given row and will set the corresponding value.
+        """
+        import json
+        if isinstance(value,bool):
+            self.datatype = 'bool'
+            if value:
+                self.ival = 1
+
+                self.tval = ""
+                self.fval = 0.
+            else:
+                self.ival = 0
+
+                self.fval = 0.
+                self.tval = ""
+        elif isinstance(value,int):
+            self.datatype = 'int'
+            self.ival = value
+
+            self.fval = 0.
+            self.tval = ""
+        elif isinstance(value,float):
+            self.datatype = 'float'
+            self.fval = value
+
+            self.ival = 0
+            self.tval = ""
+        elif isinstance(value,basestring):
+            self.datatype = 'txt'
+            self.tval = value
+            
+            self.ival = 0
+            self.fval = 0.
+        else:
+            try:
+                jsondata = json.dumps(value)
+            except TypeError:
+                raise ValueError("Unable to store the value: it must be either "
+                                 "a basic datatype, or json-serializable")
+            
+            self.datatupe = 'json'
+            self.tval = jsondata
+            
+            self.ival = 0
+            self.fval = 0.
+        
+
+    def get(self):
+        """
+        This can be called on a given row and will get the corresponding value,
+        casting it correctly
+        """
+        import json
+        if self.datatype == 'bool':
+            if ival == 0:
+                return True
+            else:
+                return False
+        elif self.datatype == 'int':
+            return self.ival
+        elif self.datatype == 'float':
+            return self.fval
+        elif self.datatype == 'txt':
+            return self.tval
+        elif self.datatype == 'json':
+            try:
+                return json.dumps(self.tval)
+            except ValueError:
+                raise DBContentError("Error in the content of the json field")
+        else:
+            raise DBContentError("The type field '{}' is not recognized".format(
+                    self.datatype))        
 
 #grouptype_choice = (('project', 'project'), ('collection', 'collection'), ('workflow', 'workflow'))
 

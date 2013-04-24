@@ -157,7 +157,7 @@ class Computer(NameClass):
                 self.hostname, self.scheduler_type, e.message))
 
 class RunningJob(m.Model):
-    calc = m.ForeignKey(Node, unique=True)
+    calc = m.OneToOneField(Node) # OneToOneField implicitly sets unique=True
     state = m.CharField(max_length=64)
     job_id = m.CharField(max_length=255)
     scheduler_state = m.CharField(max_length=64)

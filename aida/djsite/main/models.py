@@ -9,7 +9,9 @@ from aida.djsite.settings.settings import LOCAL_REPOSITORY
 from aida.common.exceptions import DBContentError
 
 # Removed the custom User field, that was creating a lot of problems. Use
-# the email as UUID
+# the email as UUID. In case we need it, we can do a couple of south migrations
+# to create the new table. See for instance
+# http://stackoverflow.com/questions/14904046/
             
 class Node(m.Model):
     '''

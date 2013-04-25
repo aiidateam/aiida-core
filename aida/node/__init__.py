@@ -4,7 +4,7 @@ from aida.djsite.main.models import Node as DjangoNode
 from aida.common.exceptions import NotExistent
 
 
-class Node(object):
+class NodeEntity(object):
     """
     Base class to map a node in the DB + its permanent repository counterpart.
     """

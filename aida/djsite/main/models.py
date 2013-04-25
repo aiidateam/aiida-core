@@ -126,7 +126,7 @@ class Attribute(m.Model):
     class Meta:
         unique_together = (("node", "key"))
         
-    def set(self,value):
+    def setvalue(self,value):
         """
         This can be called on a given row and will set the corresponding value.
         NOTE: Rules below need to be checked.
@@ -175,7 +175,7 @@ class Attribute(m.Model):
             self.ival = 0
             self.fval = 0.
         
-    def get(self):
+    def getvalue(self):
         """
         This can be called on a given row and will get the corresponding value,
         casting it correctly

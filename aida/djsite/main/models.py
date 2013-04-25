@@ -224,9 +224,17 @@ class Computer(m.Model):
             Example: 
             workdir = "/scratch/{username}/aida/"
         transport_type: a string with a valid transport type
+
+
+    Note: other things that may be set in the metadata:
+        - mpirun command
+        - num cores per node
+        - max num cores
+        - allocate full node = True or False
+        - ... (further limits per user etc.)
     """
     uuid = UUIDField(auto=True)
-    hostname = m.CharField(max_length=255, unique=True)
+    hostname = m.CharField(max_length=255, unique=True) # FQDN
     description = m.TextField(blank=True)
     workdir = m.CharField(max_length=255)
     transport_type = m.CharField(max_length=255)

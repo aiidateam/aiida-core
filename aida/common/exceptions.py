@@ -7,6 +7,11 @@ class AidaException(Exception):
     """
     pass
 
+class NotExistent(AidaException):
+    """
+    Raised when the required entity does not exist.
+    """
+
 class InternalError(AidaException):
     """
     Error raised when there is an internal error of Aida.

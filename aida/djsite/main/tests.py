@@ -6,6 +6,8 @@ They are executed when when you run "manage.py test" or
 from django.utils import unittest
 
 from aida.node import Node
+from aida.common.exceptions import ModificationNotAllowed
+
 
 class TestNodeBasic(unittest.TestCase):
     """
@@ -23,8 +25,7 @@ class TestNodeBasic(unittest.TestCase):
         import getpass
         from django.contrib.auth.models import User
 
-        User.objects.create_user(getpass.getuser, 'unknown@mail.com', 'fakepwd')
-        print "DONE!"
+        User.objects.create_user(getpass.getuser(), 'unknown@mail.com', 'fakepwd')
 
     @classmethod
     def tearDownClass(cls):

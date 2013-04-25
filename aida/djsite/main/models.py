@@ -49,9 +49,8 @@ class Node(m.Model):
     
     # Used only if node is a calculation
     computer = m.ForeignKey('Computer', null=True)  # only for calculations
+    
 
-    def __unicode__(self):
-        return u"[{}] {}".format(self.type, self.uuid)
 
 class Link(m.Model):
     '''
@@ -70,6 +69,8 @@ class Link(m.Model):
 
     # TODO: remember to choose hierarchical names for types of nodes,
     #       starting with calculation. data. or code.
+    # This depends on how workflow objects are implemented
+    
     include_in_tc = m.BooleanField()
 
     
@@ -117,9 +118,10 @@ class Attribute(m.Model):
     node = m.ForeignKey('Node', related_name='attributes')
     key = m.TextField(db_index=True)
     datatype = m.CharField(max_length=10, choices=attrdatatype_choice, db_index=True)
-    tval = m.TextField(blank=True)
-    fval = m.FloatField(null=True,blank=True)
-    ival = m.IntegerField(null=True,blank=True)
+    tval = m.TextField( default='', blank=True)
+    fval = m.FloatField( default=None, null=True)
+    ival = m.IntegerField( default=None, null=True)
+    bval = m.NullBooleanField( default=None, null=True)
 
     class Meta:
         unique_together = (("node", "key"))
@@ -127,38 +129,37 @@ class Attribute(m.Model):
     def setvalue(self,value):
         """
         This can be called on a given row and will set the corresponding value.
+        NOTE: Rules below need to be checked.
         """
         import json
         if isinstance(value,bool):
             self.datatype = 'bool'
-            if value:
-                self.ival = 1
+            self.bval = value
+            self.tval = ''
+            self.ival = None
+            self.fval = None
 
-                self.tval = ""
-                self.fval = 0.
-            else:
-                self.ival = 0
-
-                self.fval = 0.
-                self.tval = ""
         elif isinstance(value,int):
             self.datatype = 'int'
             self.ival = value
+            self.tval = ''
+            self.bval = None
+            self.fval = None
 
-            self.fval = 0.
-            self.tval = ""
         elif isinstance(value,float):
             self.datatype = 'float'
             self.fval = value
+            self.tval = ''
+            self.ival = None
+            self.bval = None
 
-            self.ival = 0
-            self.tval = ""
         elif isinstance(value,basestring):
             self.datatype = 'txt'
             self.tval = value
-            
-            self.ival = 0
-            self.fval = 0.
+            self.bval = None
+            self.ival = None
+            self.fval = None
+
         else:
             try:
                 jsondata = json.dumps(value)
@@ -168,10 +169,11 @@ class Attribute(m.Model):
             
             self.datatype = 'json'
             self.tval = jsondata
-            
-            self.ival = 0
-            self.fval = 0.
-        self.save()
+            self.bval = None
+            self.ival = None
+            self.fval = None
+        
+        self.save()       
         
     def getvalue(self):
         """
@@ -180,10 +182,7 @@ class Attribute(m.Model):
         """
         import json
         if self.datatype == 'bool':
-            if self.ival == 0:
-                return False
-            else:
-                return True
+            return self.bval
         elif self.datatype == 'int':
             return self.ival
         elif self.datatype == 'float':

@@ -51,7 +51,7 @@ class Node(m.Model):
     computer = m.ForeignKey('Computer', null=True)  # only for calculations
 
     def __unicode__(self):
-        return self.name, self.type
+        return u"[{}] {}".format(self.type, self.uuid)
 
 class Link(m.Model):
     '''
@@ -117,9 +117,9 @@ class Attribute(m.Model):
     node = m.ForeignKey('Node', related_name='attributes')
     key = m.TextField(db_index=True)
     datatype = m.CharField(max_length=10, choices=attrdatatype_choice, db_index=True)
-    tval = m.TextField()
-    fval = m.FloatField()
-    ival = m.IntegerField()
+    tval = m.TextField(blank=True)
+    fval = m.FloatField(null=True,blank=True)
+    ival = m.IntegerField(null=True,blank=True)
 
     class Meta:
         unique_together = (("node", "key"))
@@ -171,6 +171,7 @@ class Attribute(m.Model):
             
             self.ival = 0
             self.fval = 0.
+        self.save()
         
     def getvalue(self):
         """
@@ -179,10 +180,10 @@ class Attribute(m.Model):
         """
         import json
         if self.datatype == 'bool':
-            if ival == 0:
-                return True
-            else:
+            if self.ival == 0:
                 return False
+            else:
+                return True
         elif self.datatype == 'int':
             return self.ival
         elif self.datatype == 'float':
@@ -191,7 +192,7 @@ class Attribute(m.Model):
             return self.tval
         elif self.datatype == 'json':
             try:
-                return json.dumps(self.tval)
+                return json.loads(self.tval)
             except ValueError:
                 raise DBContentError("Error in the content of the json field")
         else:

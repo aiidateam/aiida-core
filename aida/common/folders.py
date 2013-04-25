@@ -324,7 +324,7 @@ class RepositoryFolder(Folder):
         """
         return RepositoryFolder(self.section,self.uuid)
 
-    def get_subfolder(self,subfolder):
+    def get_subfolder(self,subfolder,create=False):
         """
         Returns a subdirectory object of the current directory.
         
@@ -336,9 +336,13 @@ class RepositoryFolder(Folder):
                 Can also contain .. but cannot go beyond the entity folder
                 (i.e., the section/uuid folder).
         """
-        return RepositoryFolder(self.section,self.uuid,
+        new_folder = RepositoryFolder(self.section,self.uuid,
             subfolder=os.path.normpath(os.path.join(self.subfolder,subfolder)))
 
+        if create:
+            new_folder.create()
+
+        return new_folder
 
 if __name__ == "__main__":
     # .. todo:: implement tests here

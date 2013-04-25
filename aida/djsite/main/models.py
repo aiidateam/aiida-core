@@ -49,9 +49,8 @@ class Node(m.Model):
     
     # Used only if node is a calculation
     computer = m.ForeignKey('Computer', null=True)  # only for calculations
+    
 
-    def __unicode__(self):
-        return self.name, self.type
 
 class Link(m.Model):
     '''
@@ -70,6 +69,8 @@ class Link(m.Model):
 
     # TODO: remember to choose hierarchical names for types of nodes,
     #       starting with calculation. data. or code.
+    # This depends on how workflow objects are implemented
+    
     include_in_tc = m.BooleanField()
 
     
@@ -117,9 +118,10 @@ class Attribute(m.Model):
     node = m.ForeignKey('Node', related_name='attributes')
     key = m.TextField(db_index=True)
     datatype = m.CharField(max_length=10, choices=attrdatatype_choice, db_index=True)
-    tval = m.TextField()
-    fval = m.FloatField()
-    ival = m.IntegerField()
+    txtval = m.TextField()
+    floatval = m.FloatField()
+    intval = m.IntegerField()
+    boolval = m.NullBooleanField()
 
     class Meta:
         unique_together = (("node", "key"))
@@ -127,6 +129,7 @@ class Attribute(m.Model):
     def set(self,value):
         """
         This can be called on a given row and will set the corresponding value.
+        NOTE: Rules below need to be checked.
         """
         import json
         if isinstance(value,bool):

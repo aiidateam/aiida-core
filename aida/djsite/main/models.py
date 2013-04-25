@@ -3,18 +3,14 @@ import os
 
 from django.db import models as m
 from django_extensions.db.fields import UUIDField
-from django.contrib.auth.models import User as AuthUser 
+from django.contrib.auth.models import User
 
 from aida.djsite.settings.settings import LOCAL_REPOSITORY
 from aida.common.exceptions import DBContentError
 
-## TODO make one table using the BaseClass of Django >= 1.5
-class AidaUser(AuthUser):
-    '''
-    Need to extend the User class with uuid
-    '''
-    uuid = UUIDField(auto=True)
-        
+# Removed the custom User field, that was creating a lot of problems. Use
+# the email as UUID
+            
 class Node(m.Model):
     '''
     Generic node: data or calculation or code. There will be several types of connections.
@@ -42,7 +38,7 @@ class Node(m.Model):
     label = m.TextField(db_index=True, blank=True)
     description = m.TextField(blank=True)
     time = m.DateTimeField(auto_now_add=True, editable=False)
-    user = m.ForeignKey(AidaUser)
+    user = m.ForeignKey(User)
 
     # Direct links
     outputs = m.ManyToManyField('self', symmetrical=False, related_name='inputs', through='Link')  
@@ -92,14 +88,14 @@ class Path(m.Model):
     """
     Transitive closure table for all node paths.
     """
-    parent = m.ForeignKey('Node',related_name='child_paths')
-    child = m.ForeignKey('Node',related_name='parent_paths')
-    depth = m.IntegerField()
+    parent = m.ForeignKey('Node',related_name='child_paths',editable=False)
+    child = m.ForeignKey('Node',related_name='parent_paths',editable=False)
+    depth = m.IntegerField(editable=False)
 
     # Used to delete
-    entry_edge_id = m.IntegerField(null=True)
-    direct_edge_id = m.IntegerField(null=True)
-    exit_edge_id = m.IntegerField(null=True)
+    entry_edge_id = m.IntegerField(null=True,editable=False)
+    direct_edge_id = m.IntegerField(null=True,editable=False)
+    exit_edge_id = m.IntegerField(null=True,editable=False)
 
 
 attrdatatype_choice = (
@@ -207,7 +203,7 @@ class Group(m.Model):
     nodes = m.ManyToManyField('Node', related_name='groups')
     time = m.DateTimeField(auto_now_add=True, editable=False)
     description = m.TextField(blank=True)
-    user = m.ForeignKey(AidaUser)  # The owner of the group, not of the calculations
+    user = m.ForeignKey(User)  # The owner of the group, not of the calculations
 
 class Computer(m.Model):
     """Table of computers or clusters.
@@ -278,7 +274,7 @@ class AuthInfo(m.Model):
     Table that pairs aida users and computers, with all required authentication
     information.
     """
-    aidauser = m.ForeignKey(AidaUser)
+    aidauser = m.ForeignKey(User)
     computer = m.ForeignKey(Computer)
     auth_params = m.TextField(default='{}')  # Will store a json; contains mainly the remoteuser
                                              # and the private_key
@@ -320,7 +316,7 @@ class AuthInfo(m.Model):
 class Comment(m.Model):
     node = m.ForeignKey(Node,related_name='comments')
     time = m.DateTimeField(auto_now_add=True, editable=False)
-    user = m.ForeignKey(AidaUser)
+    user = m.ForeignKey(User)
     content = m.TextField(blank=True)
 
 #class Code(NodeClass):

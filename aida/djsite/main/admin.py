@@ -1,14 +1,14 @@
 from django.contrib import admin
 from aida.djsite.main.models import *
 
-admin.site.register(Calculation)
-admin.site.register(CalcAttrNum)
-admin.site.register(CalcAttrNumVal)
-admin.site.register(CalcType)
-admin.site.register(CalcStatus)
-admin.site.register(Structure)
-admin.site.register(Code)
-admin.site.register(CodeType)
-admin.site.register(CodeStatus)
+admin.site.register(Node)
+admin.site.register(Link)
+admin.site.register(Path)
+admin.site.register(Attribute)
+admin.site.register(Group)
 admin.site.register(Computer)
-admin.site.register(Project)
+admin.site.register(RunningJob)
+admin.site.register(AuthInfo)
+admin.site.register(Comment)
+
+

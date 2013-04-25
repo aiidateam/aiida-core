@@ -1,5 +1,4 @@
 # Django settings for the AIDA project.
-
 import sys, os, os.path
 from django.core.exceptions import ImproperlyConfigured
 
@@ -71,7 +70,6 @@ if not os.path.isdir(LOCAL_REPOSITORY):
             "a suitable directory on which you have write permissions. "
             "(I was not able to create the directory.)")
         
-
 
 ## ========== NOTE =========
 ## Later on, it may be probably better to make a different settings.py for 

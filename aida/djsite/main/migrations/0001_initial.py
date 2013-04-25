@@ -8,13 +8,6 @@ from django.db import models
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
-        # Adding model 'AidaUser'
-        db.create_table(u'main_aidauser', (
-            (u'user_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['auth.User'], unique=True, primary_key=True)),
-            ('uuid', self.gf('django.db.models.fields.CharField')(max_length=36, blank=True)),
-        ))
-        db.send_create_signal(u'main', ['AidaUser'])
-
         # Adding model 'Node'
         db.create_table(u'main_node', (
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
@@ -23,7 +16,7 @@ class Migration(SchemaMigration):
             ('label', self.gf('django.db.models.fields.TextField')(db_index=True, blank=True)),
             ('description', self.gf('django.db.models.fields.TextField')(blank=True)),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now_add=True, blank=True)),
-            ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.AidaUser'])),
+            ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
             ('computer', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.Computer'], null=True)),
         ))
         db.send_create_signal(u'main', ['Node'])
@@ -73,7 +66,7 @@ class Migration(SchemaMigration):
             ('name', self.gf('django.db.models.fields.TextField')(unique=True, db_index=True)),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now_add=True, blank=True)),
             ('description', self.gf('django.db.models.fields.TextField')(blank=True)),
-            ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.AidaUser'])),
+            ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
         ))
         db.send_create_signal(u'main', ['Group'])
 
@@ -113,7 +106,7 @@ class Migration(SchemaMigration):
         # Adding model 'AuthInfo'
         db.create_table(u'main_authinfo', (
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('aidauser', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.AidaUser'])),
+            ('aidauser', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
             ('computer', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.Computer'])),
             ('auth_params', self.gf('django.db.models.fields.TextField')(default='{}')),
         ))
@@ -127,7 +120,7 @@ class Migration(SchemaMigration):
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('node', self.gf('django.db.models.fields.related.ForeignKey')(related_name='comments', to=orm['main.Node'])),
             ('time', self.gf('django.db.models.fields.DateTimeField')(auto_now_add=True, blank=True)),
-            ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['main.AidaUser'])),
+            ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
             ('content', self.gf('django.db.models.fields.TextField')(blank=True)),
         ))
         db.send_create_signal(u'main', ['Comment'])
@@ -139,9 +132,6 @@ class Migration(SchemaMigration):
 
         # Removing unique constraint on 'Attribute', fields ['node', 'key']
         db.delete_unique(u'main_attribute', ['node_id', 'key'])
-
-        # Deleting model 'AidaUser'
-        db.delete_table(u'main_aidauser')
 
         # Deleting model 'Node'
         db.delete_table(u'main_node')
@@ -211,11 +201,6 @@ class Migration(SchemaMigration):
             'model': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
             'name': ('django.db.models.fields.CharField', [], {'max_length': '100'})
         },
-        u'main.aidauser': {
-            'Meta': {'object_name': 'AidaUser', '_ormbases': [u'auth.User']},
-            u'user_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': u"orm['auth.User']", 'unique': 'True', 'primary_key': 'True'}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
-        },
         u'main.attribute': {
             'Meta': {'unique_together': "(('node', 'key'),)", 'object_name': 'Attribute'},
             'datatype': ('django.db.models.fields.CharField', [], {'max_length': '10', 'db_index': 'True'}),
@@ -229,7 +214,7 @@ class Migration(SchemaMigration):
         },
         u'main.authinfo': {
             'Meta': {'unique_together': "(('aidauser', 'computer'),)", 'object_name': 'AuthInfo'},
-            'aidauser': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['main.AidaUser']"}),
+            'aidauser': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['auth.User']"}),
             'auth_params': ('django.db.models.fields.TextField', [], {'default': "'{}'"}),
             'computer': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['main.Computer']"}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'})
@@ -240,7 +225,7 @@ class Migration(SchemaMigration):
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'node': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'comments'", 'to': u"orm['main.Node']"}),
             'time': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'blank': 'True'}),
-            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['main.AidaUser']"})
+            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['auth.User']"})
         },
         u'main.computer': {
             'Meta': {'object_name': 'Computer'},
@@ -261,7 +246,7 @@ class Migration(SchemaMigration):
             'name': ('django.db.models.fields.TextField', [], {'unique': 'True', 'db_index': 'True'}),
             'nodes': ('django.db.models.fields.related.ManyToManyField', [], {'related_name': "'groups'", 'symmetrical': 'False', 'to': u"orm['main.Node']"}),
             'time': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'blank': 'True'}),
-            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['main.AidaUser']"}),
+            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['auth.User']"}),
             'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
         },
         u'main.link': {
@@ -282,7 +267,7 @@ class Migration(SchemaMigration):
             'outputs': ('django.db.models.fields.related.ManyToManyField', [], {'related_name': "'inputs'", 'symmetrical': 'False', 'through': u"orm['main.Link']", 'to': u"orm['main.Node']"}),
             'time': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'blank': 'True'}),
             'type': ('django.db.models.fields.TextField', [], {'db_index': 'True'}),
-            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['main.AidaUser']"}),
+            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['auth.User']"}),
             'uuid': ('django.db.models.fields.CharField', [], {'max_length': '36', 'blank': 'True'})
         },
         u'main.path': {

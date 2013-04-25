@@ -2,9 +2,9 @@ from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 
 from aida.djsite.main.models import Node as DjangoNode
 from aida.common.exceptions import NotExistent
+from aida.djsite import get_automatic_user
 
-
-class NodeEntity(object):
+class Node(object):
     """
     Base class to map a node in the DB + its permanent repository counterpart.
     """
@@ -17,11 +17,9 @@ class NodeEntity(object):
                 raise NotExistent("No entry with the UUID {} found".format(
                     uuid))
         else:
-            self._tablerow = DjangoNode.objects.create()
+            self._tablerow = DjangoNode.objects.create(user=get_automatic_user())
             # Check if here we already have a UUID
 
-        
-        
     @property
     def uuid(self):
         return self.tablerow.uuid

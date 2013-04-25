@@ -79,12 +79,12 @@ class Link(m.Model):
     #       two calculations as input of a data object.
     def save(self):
         if self.pk is None:
-            if (self.input.type.startswith('calculation') or
-                self.input.type.startswith('data')) and
+            if ((self.input.type.startswith('calculation') or
+                 self.input.type.startswith('data')) and
                 (self.output.type.startswith('calculation') or
-                 self.output.type.startswith('data')):
+                 self.output.type.startswith('data'))):
                 self.include_in_tc = True
-             else:
+            else:
                 self.include_in_tc = False
         super(Link,self).save()
 
@@ -317,7 +317,7 @@ class AuthInfo(m.Model):
         params = self.computer.get_transport_params() + self.get_auth_params()
         return ThisTransport(machine=self.computer.hostname,**params)
 
-class Comment(m.Models):
+class Comment(m.Model):
     node = m.ForeignKey(Node,related_name='comments')
     time = m.DateTimeField(auto_now_add=True, editable=False)
     user = m.ForeignKey(AidaUser)

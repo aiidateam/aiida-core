@@ -1,8 +1,3 @@
-#if __name__ == "__main__":
-from aida.djsite.settings import settings
-import os
-os.environ['DJANGO_SETTINGS_MODULE'] = 'aida.djsite.settings.settings'
-
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from django.db import transaction
 
@@ -30,6 +25,7 @@ class Node(object):
     
     def __init__(self,uuid=None):
         self._can_be_modified = False
+        self._temp_folder = None
         if uuid is not None:
             # If I am loading, I cannot modify it
             self._can_be_modified = False
@@ -39,7 +35,6 @@ class Node(object):
             except ObjectDoesNotExist:
                 raise NotExistent("No entry with the UUID {} found".format(
                     uuid))
-            self._temp_folder = None
         else:
             self._tablerow = DjangoNode.objects.create(user=get_automatic_user())
             self._can_be_modified = True
@@ -215,122 +210,11 @@ class Node(object):
             # I just issue a warning
             self.logger.warning("Trying to store an already saved node: {}".format(self.uuid))
 
-    # Called only upon real object destruction from memory
-    # I just try to remove junk, whenever possible
     def __del__(self):
-        if self._temp_folder is not None:
+        """
+        Called only upon real object destruction from memory
+        I just try to remove junk, whenever possible; do not trust too much this function!
+        """
+        if getattr(self,'_temp_folder',None) is not None:
             self._temp_folder.erase()
 
-if __name__ == '__main__':
-    ## TODO: TO MOVE TO DJANGO TESTS!
-    import unittest
-    
-    class TestDirectoryManipulation(unittest.TestCase):
-        boolval = True
-        intval = 123
-        floatval = 4.56
-        stringval = "aaaa"
-        dictval = {'num': 3, 'something': 'else'}
-        listval = [1, "s", True]
-
-        def test_int_attr_before_storing(self):
-            a = Node()
-            a.set_internal_attr('bool', self.boolval)
-            a.set_internal_attr('integer', self.intval)
-            a.set_internal_attr('float', self.floatval)
-            a.set_internal_attr('string', self.stringval)
-            a.set_internal_attr('dict', self.dictval)
-            a.set_internal_attr('list', self.listval)
-
-            # Now I check if I can retrieve them, before the storage
-            self.assertEquals(self.boolval, a.get_internal_attr('bool'))
-            self.assertEquals(self.intval, a.get_internal_attr('integer'))
-            self.assertEquals(self.floatval, a.get_internal_attr('float'))
-            self.assertEquals(self.stringval, a.get_internal_attr('string'))
-            self.assertEquals(self.dictval, a.get_internal_attr('dict'))
-            self.assertEquals(self.listval, a.get_internal_attr('list'))
-
-            # And now I try to delete the keys
-            a.del_internal_attr('bool')
-            a.del_internal_attr('integer')
-            a.del_internal_attr('float')
-            a.del_internal_attr('string')
-            a.del_internal_attr('dict')
-            a.del_internal_attr('list')
-
-            with self.assertRaises(AttributeError):
-                # I delete twice the same attribute
-                a.del_internal_attr('bool')
-
-            with self.assertRaises(AttributeError):
-                # I delete a non-existing attribute
-                a.del_internal_attr('nonexisting')
-
-            with self.assertRaises(AttributeError):
-                # I get a deleted attribute
-                a.get_internal_attr('bool')
-
-            with self.assertRaises(AttributeError):
-                # I get a non-existing attribute
-                a.get_internal_attr('nonexisting')
-            
-
-        def test_int_attr_after_storing(self):
-            a = Node()
-            a.set_internal_attr('bool', self.boolval)
-            a.set_internal_attr('integer', self.intval)
-            a.set_internal_attr('float', self.floatval)
-            a.set_internal_attr('string', self.stringval)
-            a.set_internal_attr('dict', self.dictval)
-            a.set_internal_attr('list', self.listval)
-
-            a.store()
-
-            # Now I check if I can retrieve them, before the storage
-            self.assertEquals(self.boolval, a.get_internal_attr('bool'))
-            self.assertEquals(self.intval, a.get_internal_attr('integer'))
-            self.assertEquals(self.floatval, a.get_internal_attr('float'))
-            self.assertEquals(self.stringval, a.get_internal_attr('string'))
-            self.assertEquals(self.dictval, a.get_internal_attr('dict'))
-            self.assertEquals(self.listval, a.get_internal_attr('list'))
-
-            # And now I try to edit/delete the keys; I should not be able to do it
-            # after saving. I try only for a couple of attributes
-            with self.assertRaises(ModificationNotAllowed):                
-                a.del_internal_attr('bool')
-            with self.assertRaises(ModificationNotAllowed):                
-                a.set_internal_attr('integer',13)
-
-
-        def test_int_attr_with_reload(self):
-            a = Node()
-            a.set_internal_attr('bool', self.boolval)
-            a.set_internal_attr('integer', self.intval)
-            a.set_internal_attr('float', self.floatval)
-            a.set_internal_attr('string', self.stringval)
-            a.set_internal_attr('dict', self.dictval)
-            a.set_internal_attr('list', self.listval)
-
-            a.store()
-
-            b = Node(uuid=a.uuid)
-            self.assertEquals(self.boolval, b.get_internal_attr('bool'))
-            self.assertEquals(self.intval, b.get_internal_attr('integer'))
-            self.assertEquals(self.floatval, b.get_internal_attr('float'))
-            self.assertEquals(self.stringval, b.get_internal_attr('string'))
-            self.assertEquals(self.dictval, b.get_internal_attr('dict'))
-            self.assertEquals(self.listval, b.get_internal_attr('list'))
-
-            with self.assertRaises(ModificationNotAllowed):                
-                a.set_internal_attr('i',12)
-            
-
-    unittest.main()
-        
-
-
-    ## TO TEST:
-    # reload from uuid, an re-check attrs
-    # create a copy, and recheck attrs, and modify them and check they don't change on original instance
-    # check for files
-    # Store internal and external attribute with same name

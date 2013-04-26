@@ -159,8 +159,8 @@ class SshTransport(aida.transport.Transport):
         # have gotten an exception. Now, I want to check that I have read
         # permissions in this folder (nothing is said on write permissions,
         # though).
-        # Otherwise, if I do exec_command, that as a first operation does a
-        # cd in the folder, I get a wrong retval, that is an unwanted behavior.
+        # Otherwise, if I do _exec_command_internal, that as a first operation 
+        # cd's in a folder, I get a wrong retval, that is an unwanted behavior.
         #
         # Note: I don't store the result of the function; if I have no
         # read permissions, this will raise an exception.
@@ -353,14 +353,14 @@ class SshTransport(aida.transport.Transport):
             else:
                 raise # Typically if I don't have permissions (errno=13)
 
-    def exec_command(self,command,combine_stderr=False,bufsize=-1):
+    def _exec_command_internal(self,command,combine_stderr=False,bufsize=-1):
         """
         Executes the specified command, first changing directory to the
         current working directory are returned by
         self.getcwd().
         Does not wait for the calculation to finish.
 
-        For a higher-level exec_command that automatically waits for the
+        For a higher-level _exec_command_internal that automatically waits for the
         job to finish, use exec_command_wait.
 
         Args:
@@ -410,14 +410,14 @@ class SshTransport(aida.transport.Transport):
             command: the command to execute
             stdin: can either be None (the default), a string or a
                   file-like object.
-            combine_stderr: (optional, default=False) see docstring of self.exec_command()
+            combine_stderr: (optional, default=False) see docstring of self._exec_command_internal()
             bufsize: same meaning of paramiko.
 
         Returns:
             a tuple with (return_value, stdout, stderr) where stdout and stderr
             are strings.
         """
-        ssh_stdin, stdout, stderr, channel = self.exec_command(
+        ssh_stdin, stdout, stderr, channel = self._exec_command_internal(
             command, combine_stderr,bufsize=bufsize)
         
         if stdin is not None:
@@ -459,7 +459,7 @@ if __name__ == '__main__':
         def test_closed_connection_ssh(self):
             with self.assertRaises(aida.transport.TransportInternalError):
                 t = SshTransport(machine='localhost')
-                t.exec_command('ls')
+                t._exec_command_internal('ls')
 
         def test_closed_connection_sftp(self):
             with self.assertRaises(aida.transport.TransportInternalError):
@@ -892,7 +892,7 @@ if __name__ == '__main__':
             then see if I can run pwd. This also checks the correct
             escaping of funny characters, both in the directory
             creation (which should be done by paramiko) and in the command 
-            execution (done in this module, in the exec_command function).
+            execution (done in this module, in the _exec_command_internal function).
             """
             import os
             

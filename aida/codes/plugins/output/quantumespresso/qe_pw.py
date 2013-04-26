@@ -3,7 +3,7 @@ import os, sys
 import string
 from distutils.version import StrictVersion
 from aida.common.extendeddicts import FixedFieldsAttributeDict
-from aida.codes.plugins.output.quantum_espresso.constants import QEConversionConstants
+from aida.codes.plugins.output.quantumespresso.constants import QEConversionConstants
 from aida.codes.plugins.exceptions import OutputParsingError, FailedJobError
 """
 A collection of function that are used to parse the output of Quantum Espresso PW.
@@ -1379,8 +1379,9 @@ def parse_pw_text_output(data, xml_data):
     return parsed_data
 
 
-def parse_pw_output(out_file, xml_file=None):
+def parse_calculation_output(out_file, xml_file=None):
     """
+    Parses the output of a calculation
     Receives in input the paths to the output file and the xml file.
     
     Args: (str) out_file: path to pw std output

@@ -82,6 +82,16 @@ class Folder(object):
                 for fname in os.listdir(self.abspath)
                 if fnmatch.fnmatch(fname, pattern)]
 
+    def get_file_list(self,pattern=None):
+        """
+        Works as self.get_content_list(), but returns only a list of files and
+        not of directories.
+        """
+        if pattern is None:
+             return [f[0] for f in self.get_content_list() if f[1]]
+        else:
+             return [f[0] for f in self.get_content_list(pattern=pattern) if f[1]]
+
     def create_symlink(self, src, name):
         """
         Create a symlink inside the folder to the location 'src'.

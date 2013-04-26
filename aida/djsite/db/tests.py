@@ -1,12 +1,62 @@
 """
 This file contains tests for AIDA.
 They are executed when when you run "manage.py test" or
-"manage.py test main" (much faster, tests only the 'main' app, i.e., only this file)
+"manage.py test db" (much faster, tests only the 'db' app, i.e., only this file)
 """
 from django.utils import unittest
 
 from aida.node import Node
 from aida.common.exceptions import ModificationNotAllowed
+
+class TestQueryWithAidaObjects(unittest.TestCase):
+    """
+    Test if queries work properly also with aida.node.Node classes instead of
+    aida.djsite.db.models.DbNode objects.
+    """
+    @classmethod
+    def setUpClass(cls):
+        import getpass
+        from django.contrib.auth.models import User
+
+        User.objects.create_user(getpass.getuser(), 'unknown@mail.com', 'fakepwd')
+
+    @classmethod
+    def tearDownClass(cls):
+        import getpass
+        from django.contrib.auth.models import User
+        from django.core.exceptions import ObjectDoesNotExist
+
+        try:
+            User.objects.get(username=getpass.getuser).delete()
+        except ObjectDoesNotExist:
+            pass
+        
+    def test_queries(self):
+        ## TODO: make a good test, not just random stuff!!
+
+        from aida.djsite.db.models import DbNode, Link
+        a  = Node().store()
+        a2 = Node().store()
+        a3 = Node().store()
+        a4 = Node().store()        
+
+        a.add_link_to(a2)
+        a2.add_link_to(a3)
+        a4.add_link_from(a2)
+        a3.add_link_to(a4)
+
+        b = Node.query(pk=a2)
+        print '0>>>', b
+        print '1>>>', Node.query(inputs__in=b)
+        print '1b>>', DbNode.objects.filter(inputs__in=b)
+        belem = b[0]
+        print '2>>>', Node.query(inputs=belem)
+
+        print '3>>>', Link.objects.filter(input=belem)
+
+
+        print '4>>>', Node.query(attributes__key='_integer',
+                                       attributes__ival=123)
 
 
 class TestNodeBasic(unittest.TestCase):
@@ -131,7 +181,6 @@ class TestNodeBasic(unittest.TestCase):
         
 
      ## TO TEST:
-     # reload from uuid, an re-check attrs
      # create a copy, and recheck attrs, and modify them and check they don't change on original instance
      # check for files
      # Store internal and external attribute with same name

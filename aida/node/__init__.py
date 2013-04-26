@@ -2,7 +2,7 @@ from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from django.db import transaction
 
 import aida.common
-from aida.djsite.main.models import Node as DjangoNode, Attribute
+from aida.djsite.db.models import DbNode, Attribute
 from aida.common.exceptions import (
     InternalError, InvalidOperation, ModificationNotAllowed, NotExistent )
 from aida.djsite.utils import get_automatic_user
@@ -22,6 +22,12 @@ class Node(object):
     and in this case they are directly set on the db.
     """
     _logger = aida.common.aidalogger.getChild('node')
+
+    def __int__(self):
+        if self.dbnode is not None:
+            return self.dbnode.pk
+        else:
+            return None
     
     def __init__(self,uuid=None):
         self._can_be_modified = False
@@ -30,22 +36,53 @@ class Node(object):
             # If I am loading, I cannot modify it
             self._can_be_modified = False
             try:
-                self._tablerow = DjangoNode.objects.get(uuid=uuid)
+                self._dbnode = DbNode.objects.get(uuid=uuid)
                 # I do not check for multiple entries found
             except ObjectDoesNotExist:
                 raise NotExistent("No entry with the UUID {} found".format(
                     uuid))
         else:
-            self._tablerow = DjangoNode.objects.create(user=get_automatic_user())
+            self._dbnode = DbNode.objects.create(user=get_automatic_user())
             self._can_be_modified = True
             self._temp_folder = SandboxFolder()
             # Used only before the first save
             self._intattrs_cache = {}
         self._repo_folder = RepositoryFolder(section=_section_name, uuid=self.uuid)
 
+    @classmethod
+    def query(cls,*args,**kwargs):
+        return DbNode.aidaobjects.filter(*args,**kwargs)
+
     @property
     def logger(self):
         return self._logger
+
+    def add_link_to(self,dest,label=None):
+        """
+        Add a link from the current node to the 'dest' node.
+        Both nodes must be a Node instance (or a subclass of Node)
+        """
+        from aida.djsite.db.models import Link
+        if self._can_be_modified:
+            raise ModificationNotAllowed("You have to store the source link")
+        if not isinstance(dest,Node):
+            raise ValueError("dest must be a Node instance")
+        if dest._can_be_modified:
+            raise ModificationNotAllowed("You have to store the destination link")
+
+        if label is None:
+            Link.objects.create(input=self.dbnode, output=dest.dbnode)
+        else:
+            Link.objects.create(input=self.dbnode, output=dest.dbnode, label=label)
+
+    def add_link_from(self,src,label=None):
+        """
+        Add a link to the current node from the 'src' node.
+        Both nodes must be a Node instance (or a subclass of Node)
+        """
+        if not isinstance(src,Node):
+            raise ValueError("src must be a Node instance")
+        src.add_link_to(self,label)
 
     def set_internal_attr(self, key, value):
         if not self._can_be_modified:
@@ -115,10 +152,10 @@ class Node(object):
     def _get_attribute_db(self, key):
         """
         This is the raw-level method that accesses the DB. To be used only internally,
-        after saving self.tablerow.
+        after saving self.dbnode.
         """
         try:
-            attr = Attribute.objects.get(node=self.tablerow, key=key)
+            attr = Attribute.objects.get(dbnode=self.dbnode, key=key)
         except ObjectDoesNotExist:
             raise AttributeError("Key {} not found in db".format(key))
         return attr.getvalue()
@@ -127,10 +164,10 @@ class Node(object):
         """
         This is the raw-level method that accesses the DB. No checks are done
         to prevent the user from deleting a valid key. To be used only internally,
-        after saving self.tablerow.
+        after saving self.dbnode.
         """
         try:
-            Attribute.objects.get(node=self.tablerow, key=key).delete()
+            Attribute.objects.get(dbnode=self.dbnode, key=key).delete()
         except ObjectDoesNotExist:
             raise AttributeError("Cannot delete attribute {}, not found in db".format(key))
 
@@ -138,25 +175,32 @@ class Node(object):
         """
         This is the raw-level method that accesses the DB. No checks are done
         to prevent the user from (re)setting a valid key. To be used only internally,
-        after saving self.tablerow.
+        after saving self.dbnode.
 
         Note: there may be some error on concurrent write; not checked in this unlucky case!
         """
-        attr, created = Attribute.objects.get_or_create(node=self.tablerow, key=key)
+        attr, created = Attribute.objects.get_or_create(dbnode=self.dbnode, key=key)
         ## TODO: create a get_or_create_with_value method
         attr.setvalue(value)
 
     @property
     def uuid(self):
-        return unicode(self.tablerow.uuid)
+        return unicode(self.dbnode.uuid)
 
     @property
-    def tablerow(self):
-        return self._tablerow
+    def dbnode(self):
+        return self._dbnode
 
     @property
-    def folder(self):
+    def repo_folder(self):
         return self._repo_folder
+
+    @property
+    def current_folder(self):
+        if self._can_be_modified:
+            return self.get_temp_folder()
+        else:
+            return self.repo_folder
 
     def get_temp_folder(self):
         if self._temp_folder is None:
@@ -164,25 +208,33 @@ class Node(object):
                                 "not set!".format(self.uuid))
         return self._temp_folder
 
-    def add_file(self,src_abs,dst_rel):
+    def add_file(self,src_abs,dst_filename):
         """
         Copy a file from a local file inside the repository directory.
+        The file cannot be put in a subfolder.
 
         Copy to a cache directory if the entry has not been saved yet.
         src_abs: the absolute path of the file to copy.
-        dst_rel: the relative path in which to copy.
+        dst_filename: the filename on which to copy.
 
         TODO: in the future, add an internal=True optional parameter, and allow for files
         to be added later, in the same way in which we have internal and non-internal attributes.
         Decide also how to store. If in two separate subfolders, remember to reset the limit.
         """
+        if not self._can_be_modified:
+            raise ValueError("Cannot insert file after storing the node")
+        
         if not os.path.isabs(src_abs):
             raise ValueError("The source file in add_file must be an absolute path")
         if os.path.isabs(dst_rel):
-            raise ValueError("The destination file in add_file must be a relative path")
-        subfolder_path, dst_filename = os.path.split(dst_rel)
-        subfolder = self.folder.subfolder(subfolder_path,create=True)
-        subfolder.insertfile(src_abs,dst_filename)
+            raise ValueError("The destination file in add_file must be a filename")
+        self.get_temp_folder().insertfile(src_abs,dst_filename)
+
+    def get_file_path(self,filename):
+        """
+        TODO: For the moment works only for one kind of files, 'internal'
+        """
+        self.current_folder.get_file_path(filename,check_existence=True)
 
     def store(self):
         """
@@ -196,19 +248,22 @@ class Node(object):
             # I save the corresponding django entry
             with transaction.commit_on_success():
                 # Save the row
-                self.tablerow.save()
+                self.dbnode.save()
                 # Save its (internal) attributes
                 for k, v in self._intattrs_cache.iteritems():
                     self._set_attribute_db(k,v)
 
                 # I set the folder
-                self.folder.replace_with_folder(self.get_temp_folder().abspath, move=True, overwrite=True)
+                self.repo_folder.replace_with_folder(self.get_temp_folder().abspath, move=True, overwrite=True)
             
             self._temp_folder = None            
             self._can_be_modified = False
         else:
             # I just issue a warning
             self.logger.warning("Trying to store an already saved node: {}".format(self.uuid))
+
+        # This is useful because I can do a2 = Node().store()
+        return self
 
     def __del__(self):
         """

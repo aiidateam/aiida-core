@@ -93,7 +93,7 @@ class Folder(object):
                 moved!
             name: the filename of the symlink to be created.
         """
-        dest_abs_path = self.get_filename(name)
+        dest_abs_path = self.get_file_path(name)
         os.symlink(src,dest_abs_path)
 
     def insert_file(self,src,dest_name=None):
@@ -112,12 +112,12 @@ class Folder(object):
 
         # I get the full path of the filename, checking also that I don't
         # go beyond the folder limits
-        dest_abs_path = self.get_filename(filename)
+        dest_abs_path = self.get_file_path(filename)
 
         shutil.copyfile(src,dest_abs_path)
         return dest_abs_path
 
-    def get_filename(self,filename):
+    def get_file_path(self,filename,check_existence=False):
         """
         Return an absolute path for a filename in this folder.
         
@@ -126,6 +126,8 @@ class Folder(object):
         
         Args:
             filename: The filename to open.
+            check_existence: if False, just create the file path and return it. Otherwise, also
+                check if the file actually exists. Raise OSError if it does not.
         """
         dest_abs_path = os.path.join(self.abspath,filename)
         
@@ -133,6 +135,11 @@ class Folder(object):
             errstr = "You didn't specify a valid filename: {}".format(filename)
             raise ValueError(errstr)
 
+        if check_existence:
+            if not os.path.isfile(filename):
+                raise OSError("{} is not a file within the folder {}".format(
+                    filename, self.abspath))
+        
         return dest_abs_path
 
 

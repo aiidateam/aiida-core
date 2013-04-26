@@ -32,17 +32,15 @@ class TestQueryWithAidaObjects(unittest.TestCase):
             pass
         
     def test_links_and_queries(self):
-        ## TODO: make a good test, not just random stuff!!
-
         from aida.djsite.db.models import DbNode, Link
         a  = Node()
-        a.set_internal_attr('myvalue', 123)
+        a.set_attr('myvalue', 123)
         a.store()
         
         a2 = Node().store()
         
         a3 = Node()
-        a3.set_internal_attr('myvalue', 145)
+        a3.set_attr('myvalue', 145)
         a3.store()
         
         a4 = Node().store()        
@@ -94,7 +92,7 @@ class TestQueryWithAidaObjects(unittest.TestCase):
         
 
         # Query for related fields using django syntax
-        # Note that being myvalue an internal attribute, it is internally stored starting
+        # Note that being myvalue an attribute, it is internally stored starting
         # with an underscore
         nodes_with_given_attribute = Node.query(attributes__key='_myvalue',
                                                 attributes__ival=145)
@@ -133,52 +131,52 @@ class TestNodeBasic(unittest.TestCase):
         except ObjectDoesNotExist:
             pass
 
-    def test_int_attr_before_storing(self):
+    def test_attr_before_storing(self):
         a = Node()
-        a.set_internal_attr('bool', self.boolval)
-        a.set_internal_attr('integer', self.intval)
-        a.set_internal_attr('float', self.floatval)
-        a.set_internal_attr('string', self.stringval)
-        a.set_internal_attr('dict', self.dictval)
-        a.set_internal_attr('list', self.listval)
+        a.set_attr('k1', self.boolval)
+        a.set_attr('k2', self.intval)
+        a.set_attr('k3', self.floatval)
+        a.set_attr('k4', self.stringval)
+        a.set_attr('k5', self.dictval)
+        a.set_attr('k6', self.listval)
 
         # Now I check if I can retrieve them, before the storage
-        self.assertEquals(self.boolval, a.get_internal_attr('bool'))
-        self.assertEquals(self.intval, a.get_internal_attr('integer'))
-        self.assertEquals(self.floatval, a.get_internal_attr('float'))
-        self.assertEquals(self.stringval, a.get_internal_attr('string'))
-        self.assertEquals(self.dictval, a.get_internal_attr('dict'))
-        self.assertEquals(self.listval, a.get_internal_attr('list'))
+        self.assertEquals(self.boolval,   a.get_attr('k1'))
+        self.assertEquals(self.intval,    a.get_attr('k2'))
+        self.assertEquals(self.floatval,  a.get_attr('k3'))
+        self.assertEquals(self.stringval, a.get_attr('k4'))
+        self.assertEquals(self.dictval,   a.get_attr('k5'))
+        self.assertEquals(self.listval,   a.get_attr('k6'))
 
         # And now I try to delete the keys
-        a.del_internal_attr('bool')
-        a.del_internal_attr('integer')
-        a.del_internal_attr('float')
-        a.del_internal_attr('string')
-        a.del_internal_attr('dict')
-        a.del_internal_attr('list')
+        a.del_attr('k1')
+        a.del_attr('k2')
+        a.del_attr('k3')
+        a.del_attr('k4')
+        a.del_attr('k5')
+        a.del_attr('k6')
 
         with self.assertRaises(AttributeError):
             # I delete twice the same attribute
-            a.del_internal_attr('bool')
+            a.del_attr('k1')
 
         with self.assertRaises(AttributeError):
             # I delete a non-existing attribute
-            a.del_internal_attr('nonexisting')
+            a.del_attr('nonexisting')
 
         with self.assertRaises(AttributeError):
             # I get a deleted attribute
-            a.get_internal_attr('bool')
+            a.get_attr('k1')
 
         with self.assertRaises(AttributeError):
             # I get a non-existing attribute
-            a.get_internal_attr('nonexisting')
+            a.get_attr('nonexisting')
 
     def test_attributes_on_copy(self):
         import copy
         
         a = Node()
-        internal_attrs_to_set = {
+        attrs_to_set = {
             'bool': self.boolval,
             'integer': self.intval,
             'float': self.floatval,
@@ -187,48 +185,48 @@ class TestNodeBasic(unittest.TestCase):
             'list': self.listval,
             }
 
-        for k,v in internal_attrs_to_set.iteritems():
-            a.set_internal_attr(k, v)
+        for k,v in attrs_to_set.iteritems():
+            a.set_attr(k, v)
 
         a.store()
 
-        # I now set external attributes
-        external_attrs_to_set = {
+        # I now set metadata
+        metadata_to_set = {
             'bool': 'some non-boolean value',
             'some_other_name': 987}
 
-        for k,v in external_attrs_to_set.iteritems():
-            a.set_attr(k, v)    
+        for k,v in metadata_to_set.iteritems():
+            a.set_metadata(k, v)    
 
         # I make a copy
         b = a.copy()
-        # I modify an internal parameter and add one new; I mirror it in the dictionary
+        # I modify an attribute and add a new one; I mirror it in the dictionary
         # for later checking
-        b_expected_int_attributes = copy.deepcopy(internal_attrs_to_set)
-        b.set_internal_attr('integer', 489)
-        b_expected_int_attributes['integer'] = 489
-        b.set_internal_attr('new', 'cvb')
-        b_expected_int_attributes['new'] = 'cvb'
+        b_expected_attributes = copy.deepcopy(attrs_to_set)
+        b.set_attr('integer', 489)
+        b_expected_attributes['integer'] = 489
+        b.set_attr('new', 'cvb')
+        b_expected_attributes['new'] = 'cvb'
 
         # I check before storing that the attributes are ok
-        self.assertEquals({k: v for k,v in b.iter_internal_attrs()}, b_expected_int_attributes)
-        # Note that during copy, I do not copy the external attributes!
-        self.assertEquals({k: v for k,v in b.iter_attrs()}, {})
+        self.assertEquals({k: v for k,v in b.iterattrs()}, b_expected_attributes)
+        # Note that during copy, I do not copy the metadata!
+        self.assertEquals({k: v for k,v in b.itermetadata()}, {})
         
         # I store now
         b.store()
-        # and I finally add an external attribute
-        b.set_attr('extattr', 'textofext')
-        b_expected_ext_attributes = {'extattr': 'textofext'}
+        # and I finally add a metadata
+        b.set_metadata('meta', 'textofext')
+        b_expected_metadata = {'meta': 'textofext'}
 
         # Now I check for the attributes
         # First I check that nothing has changed 
-        self.assertEquals({k: v for k,v in a.iter_internal_attrs()}, internal_attrs_to_set)
-        self.assertEquals({k: v for k,v in a.iter_attrs()}, external_attrs_to_set)
+        self.assertEquals({k: v for k,v in a.iterattrs()}, attrs_to_set)
+        self.assertEquals({k: v for k,v in a.itermetadata()}, metadata_to_set)
 
         # I check then on the 'b' copy
-        self.assertEquals({k: v for k,v in b.iter_internal_attrs()}, b_expected_int_attributes)
-        self.assertEquals({k: v for k,v in b.iter_attrs()}, b_expected_ext_attributes)
+        self.assertEquals({k: v for k,v in b.iterattrs()}, b_expected_attributes)
+        self.assertEquals({k: v for k,v in b.itermetadata()}, b_expected_metadata)
 
     def test_files(self):
         import tempfile
@@ -310,84 +308,88 @@ class TestNodeBasic(unittest.TestCase):
             self.assertEquals(f.read(), file_content_different)
         
 
-    def test_int_attr_after_storing(self):
+    def test_attr_after_storing(self):
         a = Node()
-        a.set_internal_attr('bool', self.boolval)
-        a.set_internal_attr('integer', self.intval)
-        a.set_internal_attr('float', self.floatval)
-        a.set_internal_attr('string', self.stringval)
-        a.set_internal_attr('dict', self.dictval)
-        a.set_internal_attr('list', self.listval)
+        a.set_attr('bool', self.boolval)
+        a.set_attr('integer', self.intval)
+        a.set_attr('float', self.floatval)
+        a.set_attr('string', self.stringval)
+        a.set_attr('dict', self.dictval)
+        a.set_attr('list', self.listval)
 
         a.store()
 
         # Now I check if I can retrieve them, before the storage
-        self.assertEquals(self.boolval, a.get_internal_attr('bool'))
-        self.assertEquals(self.intval, a.get_internal_attr('integer'))
-        self.assertEquals(self.floatval, a.get_internal_attr('float'))
-        self.assertEquals(self.stringval, a.get_internal_attr('string'))
-        self.assertEquals(self.dictval, a.get_internal_attr('dict'))
-        self.assertEquals(self.listval, a.get_internal_attr('list'))
+        self.assertEquals(self.boolval,   a.get_attr('bool'))
+        self.assertEquals(self.intval,    a.get_attr('integer'))
+        self.assertEquals(self.floatval,  a.get_attr('float'))
+        self.assertEquals(self.stringval, a.get_attr('string'))
+        self.assertEquals(self.dictval,   a.get_attr('dict'))
+        self.assertEquals(self.listval,   a.get_attr('list'))
 
         # And now I try to edit/delete the keys; I should not be able to do it
         # after saving. I try only for a couple of attributes
         with self.assertRaises(ModificationNotAllowed):                
-            a.del_internal_attr('bool')
+            a.del_attr('bool')
         with self.assertRaises(ModificationNotAllowed):                
-            a.set_internal_attr('integer',13)
+            a.set_attr('integer',13)
 
 
-    def test_int_attr_with_reload(self):
+    def test_attr_with_reload(self):
         a = Node()
-        a.set_internal_attr('bool', self.boolval)
-        a.set_internal_attr('integer', self.intval)
-        a.set_internal_attr('float', self.floatval)
-        a.set_internal_attr('string', self.stringval)
-        a.set_internal_attr('dict', self.dictval)
-        a.set_internal_attr('list', self.listval)
+        a.set_attr('bool', self.boolval)
+        a.set_attr('integer', self.intval)
+        a.set_attr('float', self.floatval)
+        a.set_attr('string', self.stringval)
+        a.set_attr('dict', self.dictval)
+        a.set_attr('list', self.listval)
 
         a.store()
 
         b = Node(uuid=a.uuid)
-        self.assertEquals(self.boolval, b.get_internal_attr('bool'))
-        self.assertEquals(self.intval, b.get_internal_attr('integer'))
-        self.assertEquals(self.floatval, b.get_internal_attr('float'))
-        self.assertEquals(self.stringval, b.get_internal_attr('string'))
-        self.assertEquals(self.dictval, b.get_internal_attr('dict'))
-        self.assertEquals(self.listval, b.get_internal_attr('list'))
+        self.assertEquals(self.boolval,   b.get_attr('bool'))
+        self.assertEquals(self.intval,    b.get_attr('integer'))
+        self.assertEquals(self.floatval,  b.get_attr('float'))
+        self.assertEquals(self.stringval, b.get_attr('string'))
+        self.assertEquals(self.dictval,   b.get_attr('dict'))
+        self.assertEquals(self.listval,   b.get_attr('list'))
 
         with self.assertRaises(ModificationNotAllowed):                
-            a.set_internal_attr('i',12)
+            a.set_attr('i',12)
 
-    def test_internal_and_noninternal_attr(self):
+    def test_attr_and_metadata(self):
         a = Node()
-        a.set_internal_attr('bool', self.boolval)
-        a.set_internal_attr('integer', self.intval)
-        a.set_internal_attr('float', self.floatval)
-        a.set_internal_attr('string', self.stringval)
-        a.set_internal_attr('dict', self.dictval)
-        a.set_internal_attr('list', self.listval)
+        a.set_attr('bool', self.boolval)
+        a.set_attr('integer', self.intval)
+        a.set_attr('float', self.floatval)
+        a.set_attr('string', self.stringval)
+        a.set_attr('dict', self.dictval)
+        a.set_attr('list', self.listval)
 
         with self.assertRaises(ModificationNotAllowed):
             # I did not store, I cannot modify
-            a.set_attr('bool', 'blablabla')
+            a.set_metadata('bool', 'blablabla')
 
         a.store()
 
+        # I check that I cannot store a metadata with key starting with underscore
+        with self.assertRaises(ValueError):
+            a.set_metadata('_start_with_underscore', 'some text')
+
         a_string = 'some non-boolean value'
         # I now set
-        a.set_attr('bool', a_string)
+        a.set_metadata('bool', a_string)
 
         # I check that there is no name clash
-        self.assertEquals(self.boolval, a.get_internal_attr('bool'))
-        self.assertEquals(a_string, a.get_attr('bool'))
+        self.assertEquals(self.boolval, a.get_attr('bool'))
+        self.assertEquals(a_string, a.get_metadata('bool'))
         
-    def test_int_attr_listing(self):
+    def test_attr_listing(self):
         """
-        Checks that the list of attributes (internal and external) is ok.
+        Checks that the list of attributes and metadata is ok.
         """
         a = Node()
-        internal_attrs_to_set = {
+        attrs_to_set = {
             'bool': self.boolval,
             'integer': self.intval,
             'float': self.floatval,
@@ -396,31 +398,27 @@ class TestNodeBasic(unittest.TestCase):
             'list': self.listval,
             }
 
-        for k,v in internal_attrs_to_set.iteritems():
-            a.set_internal_attr(k, v)
+        for k,v in attrs_to_set.iteritems():
+            a.set_attr(k, v)
 
         a.store()
 
-        # I now set external attributes
-        external_attrs_to_set = {
+        # I now set metadata
+        metadata_to_set = {
             'bool': 'some non-boolean value',
             'some_other_name': 987}
 
-        for k,v in external_attrs_to_set.iteritems():
-            a.set_attr(k, v)        
+        for k,v in metadata_to_set.iteritems():
+            a.set_metadata(k, v)        
 
-        self.assertEquals(set(a.internal_attrs()),
-                          set(internal_attrs_to_set.keys()))
         self.assertEquals(set(a.attrs()),
-                          set(external_attrs_to_set.keys()))
+                          set(attrs_to_set.keys()))
+        self.assertEquals(set(a.metadata()),
+                          set(metadata_to_set.keys()))
 
-        returned_internal_attrs = {k: v for k, v in a.iter_internal_attrs()}
-        self.assertEquals(returned_internal_attrs, internal_attrs_to_set)
+        returned_internal_attrs = {k: v for k, v in a.iterattrs()}
+        self.assertEquals(returned_internal_attrs, attrs_to_set)
 
-        returned_attrs = {k: v for k, v in a.iter_attrs()}
-        self.assertEquals(returned_attrs, external_attrs_to_set)
+        returned_attrs = {k: v for k, v in a.itermetadata()}
+        self.assertEquals(returned_attrs, metadata_to_set)
 
-    
-     ## TO TEST:
-     # create a copy, and recheck attrs, and modify them and check they don't change on original instance
-     # check for files

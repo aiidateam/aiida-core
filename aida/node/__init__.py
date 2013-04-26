@@ -251,7 +251,7 @@ class Node(object):
         """
         newobject = self.__class__()
         for k, v in self.iter_internal_attrs():
-            newobject.set_internal_attrs(k,v)
+            newobject.set_internal_attr(k,v)
 
         for filename in self.current_folder.get_file_list():
             newobject.add_file(self.current_folder.get_file_path(filename),filename)

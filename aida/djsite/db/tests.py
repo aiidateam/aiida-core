@@ -30,6 +30,30 @@ class TestQueryWithAidaObjects(unittest.TestCase):
             User.objects.get(username=getpass.getuser).delete()
         except ObjectDoesNotExist:
             pass
+
+    def test_get_inputs_and_outputs(self):
+        a1 = Node().store()
+        a2 = Node().store()        
+        a3 = Node().store()
+        a4 = Node().store()        
+
+        a1.add_link_to(a2)
+        a2.add_link_to(a3)
+        a4.add_link_from(a2)
+        a3.add_link_to(a4)
+
+        # I check that I get the correct links
+        self.assertEquals(set([n.uuid for n in a1.get_inputs()]),set([]))
+        self.assertEquals(set([n.uuid for n in a1.get_outputs()]),set([a2.uuid]))
+
+        self.assertEquals(set([n.uuid for n in a2.get_inputs()]),set([a1.uuid]))
+        self.assertEquals(set([n.uuid for n in a2.get_outputs()]),set([a3.uuid, a4.uuid]))
+
+        self.assertEquals(set([n.uuid for n in a3.get_inputs()]),set([a2.uuid]))
+        self.assertEquals(set([n.uuid for n in a3.get_outputs()]),set([a4.uuid]))
+
+        self.assertEquals(set([n.uuid for n in a4.get_inputs()]),set([a2.uuid, a3.uuid]))
+        self.assertEquals(set([n.uuid for n in a4.get_outputs()]),set([]))
         
     def test_links_and_queries(self):
         from aida.djsite.db.models import DbNode, Link

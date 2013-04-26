@@ -31,13 +31,20 @@ class TestQueryWithAidaObjects(unittest.TestCase):
         except ObjectDoesNotExist:
             pass
         
-    def test_queries(self):
+    def test_links_and_queries(self):
         ## TODO: make a good test, not just random stuff!!
 
         from aida.djsite.db.models import DbNode, Link
-        a  = Node().store()
+        a  = Node()
+        a.set_internal_attr('myvalue', 123)
+        a.store()
+        
         a2 = Node().store()
-        a3 = Node().store()
+        
+        a3 = Node()
+        a3.set_internal_attr('myvalue', 145)
+        a3.store()
+        
         a4 = Node().store()        
 
         a.add_link_to(a2)
@@ -46,17 +53,55 @@ class TestQueryWithAidaObjects(unittest.TestCase):
         a3.add_link_to(a4)
 
         b = Node.query(pk=a2)
-        print '0>>>', b
-        print '1>>>', Node.query(inputs__in=b)
-        print '1b>>', DbNode.objects.filter(inputs__in=b)
-        belem = b[0]
-        print '2>>>', Node.query(inputs=belem)
+        self.assertEquals(len(b), 1)
+        # It is a aida.node.Node instance
+        self.assertTrue(isinstance(b[0],Node))
+        self.assertEquals(b[0].uuid, a2.uuid)
+        
+        going_out_from_a2 = Node.query(inputs__in=b)
+        # Two nodes going out from a2
+        self.assertEquals(len(going_out_from_a2), 2)
+        self.assertTrue(isinstance(going_out_from_a2[0],Node))
+        self.assertTrue(isinstance(going_out_from_a2[1],Node))
+        uuid_set = set([going_out_from_a2[0].uuid, going_out_from_a2[1].uuid])
 
-        print '3>>>', Link.objects.filter(input=belem)
+        # I check that I can query also directly the django DbNode
+        # class passing a aida.node.Node entity
+        
+        going_out_from_a2_db = DbNode.objects.filter(inputs__in=b)
+        self.assertEquals(len(going_out_from_a2_db), 2)
+        self.assertTrue(isinstance(going_out_from_a2_db[0],DbNode))
+        self.assertTrue(isinstance(going_out_from_a2_db[1],DbNode))
+        uuid_set_db = set([going_out_from_a2_db[0].uuid, going_out_from_a2_db[1].uuid])
 
+        # I check that doing the query with a Node or DbNode instance,
+        # I get the same nodes
+        self.assertEquals(uuid_set, uuid_set_db)
 
-        print '4>>>', Node.query(attributes__key='_integer',
-                                       attributes__ival=123)
+        # This time I don't use the __in filter, but I still pass a Node instance
+        going_out_from_a2_bis = Node.query(inputs=b[0])
+        self.assertEquals(len(going_out_from_a2_bis), 2)
+        self.assertTrue(isinstance(going_out_from_a2_bis[0],Node))
+        self.assertTrue(isinstance(going_out_from_a2_bis[1],Node))
+
+        # Query for links starting from b[0]==a2 using again the Node class
+        output_links_b = Link.objects.filter(input=b[0])
+        self.assertEquals(len(output_links_b), 2)
+        self.assertTrue(isinstance(output_links_b[0],Link))
+        self.assertTrue(isinstance(output_links_b[1],Link))
+        uuid_set_db_link = set([output_links_b[0].output.uuid, output_links_b[1].output.uuid])
+        self.assertEquals(uuid_set, uuid_set_db_link)        
+        
+
+        # Query for related fields using django syntax
+        # Note that being myvalue an internal attribute, it is internally stored starting
+        # with an underscore
+        nodes_with_given_attribute = Node.query(attributes__key='_myvalue',
+                                                attributes__ival=145)
+        # should be entry a3
+        self.assertEquals(len(nodes_with_given_attribute), 1)
+        self.assertTrue(isinstance(nodes_with_given_attribute[0],Node))
+        self.assertEquals(nodes_with_given_attribute[0].uuid,a3.uuid)
 
 
 class TestNodeBasic(unittest.TestCase):

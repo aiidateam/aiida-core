@@ -68,32 +68,57 @@ class Node(object):
     def logger(self):
         return self._logger
 
-    def add_link_to(self,dest,label=None):
+    def validate(self):
         """
-        Add a link from the current node to the 'dest' node.
-        Both nodes must be a Node instance (or a subclass of Node)
-        """
-        from aida.djsite.db.models import Link
-        if self._can_be_modified:
-            raise ModificationNotAllowed("You have to store the source link")
-        if not isinstance(dest,Node):
-            raise ValueError("dest must be a Node instance")
-        if dest._can_be_modified:
-            raise ModificationNotAllowed("You have to store the destination link")
+        Check if the attributes and files retrieved from the DB are valid.
+        Raise a ValidationError if something is wrong.
 
-        if label is None:
-            Link.objects.create(input=self.dbnode, output=dest.dbnode)
-        else:
-            Link.objects.create(input=self.dbnode, output=dest.dbnode, label=label)
+        For the base class, this is always valid. Subclasses will reimplement this.
+        """
+        return True
 
     def add_link_from(self,src,label=None):
         """
         Add a link to the current node from the 'src' node.
         Both nodes must be a Node instance (or a subclass of Node)
+
+        In subclasses, change only this.
         """
+        from aida.djsite.db.models import Link
+        if self._can_be_modified:
+            raise ModificationNotAllowed("You have to store the destination node to make link")
         if not isinstance(src,Node):
             raise ValueError("src must be a Node instance")
-        src.add_link_to(self,label)
+        if src._can_be_modified:
+            raise ModificationNotAllowed("You have to store the source node to make a link")
+
+        if label is None:
+            Link.objects.create(input=src.dbnode, output=self.dbnode)
+        else:
+            Link.objects.create(input=src.dbnode, output=self.dbnode, label=label)
+
+    def add_link_to(self,dest,label=None):
+        """
+        Add a link from the current node to the 'dest' node.
+        Both nodes must be a Node instance (or a subclass of Node)
+
+        Do not change in subclasses, subclass the add_link_from class only.
+        """
+        if not isinstance(dest,Node):
+            raise ValueError("dest must be a Node instance")
+        dest.add_link_from(self,label)
+
+    def get_inputs(self):
+        """
+        Return an iterator over the list of nodes that enter (directly) in this node
+        """ 
+        return DbNode.aidaobjects.filter(outputs=self.dbnode).distinct()
+
+    def get_outputs(self):
+        """
+        Return an iterator over the list of nodes that exit (directly) in this node
+        """ 
+        return DbNode.aidaobjects.filter(inputs=self.dbnode).distinct()
 
     def set_attr(self, key, value):
         if not self._can_be_modified:

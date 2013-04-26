@@ -173,6 +173,82 @@ class TestNodeBasic(unittest.TestCase):
         with self.assertRaises(AttributeError):
             # I get a non-existing attribute
             a.get_internal_attr('nonexisting')
+
+    def test_files(self):
+        import tempfile
+
+        a = Node()
+
+        file_content = 'some text ABCDE'
+        file_content_different = 'other values 12345'
+
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(file_content)
+            f.flush()
+            a.add_file(f.name,'file1.txt')
+            a.add_file(f.name,'file2.txt')
+
+        self.assertEquals(set(a.current_folder.get_file_list()),set(['file1.txt','file2.txt']))
+        with open(a.current_folder.get_file_path('file1.txt')) as f:
+            self.assertEquals(f.read(), file_content)
+        with open(a.current_folder.get_file_path('file2.txt')) as f:
+            self.assertEquals(f.read(), file_content)
+
+        b = a.copy()
+        self.assertEquals(set(b.current_folder.get_file_list()),set(['file1.txt','file2.txt']))
+        with open(b.current_folder.get_file_path('file1.txt')) as f:
+            self.assertEquals(f.read(), file_content)
+        with open(b.current_folder.get_file_path('file2.txt')) as f:
+            self.assertEquals(f.read(), file_content)
+
+        # I overwrite a file and create a new one in the copy only
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(file_content_different)
+            f.flush()
+            b.add_file(f.name,'file2.txt')       
+            b.add_file(f.name,'file3.txt')
+
+        # I check the new content, and that the old one has not changed
+        self.assertEquals(set(a.current_folder.get_file_list()),set(['file1.txt','file2.txt']))
+        with open(a.current_folder.get_file_path('file1.txt')) as f:
+            self.assertEquals(f.read(), file_content)
+        with open(a.current_folder.get_file_path('file2.txt')) as f:
+            self.assertEquals(f.read(), file_content)
+        self.assertEquals(set(b.current_folder.get_file_list()),
+                          set(['file1.txt','file2.txt','file3.txt']))
+        with open(b.current_folder.get_file_path('file1.txt')) as f:
+            self.assertEquals(f.read(), file_content)
+        with open(b.current_folder.get_file_path('file2.txt')) as f:
+            self.assertEquals(f.read(), file_content_different)
+        with open(b.current_folder.get_file_path('file3.txt')) as f:
+            self.assertEquals(f.read(), file_content_different)
+
+        # This should in principle change the location of the files, so I recheck
+        a.store()
+
+        # I now copy after storing
+        c = a.copy()
+        # I overwrite a file and create a new one in the copy only
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(file_content_different)
+            f.flush()
+            c.add_file(f.name,'file1.txt')       
+            c.add_file(f.name,'file4.txt')
+
+        self.assertEquals(set(a.current_folder.get_file_list()),set(['file1.txt','file2.txt']))
+        with open(a.current_folder.get_file_path('file1.txt')) as f:
+            self.assertEquals(f.read(), file_content)
+        with open(a.current_folder.get_file_path('file2.txt')) as f:
+            self.assertEquals(f.read(), file_content)
+
+        self.assertEquals(set(c.current_folder.get_file_list()),
+                          set(['file1.txt','file2.txt','file4.txt']))
+        with open(c.current_folder.get_file_path('file1.txt')) as f:
+            self.assertEquals(f.read(), file_content_different)
+        with open(c.current_folder.get_file_path('file2.txt')) as f:
+            self.assertEquals(f.read(), file_content)
+        with open(c.current_folder.get_file_path('file4.txt')) as f:
+            self.assertEquals(f.read(), file_content_different)
         
 
     def test_int_attr_after_storing(self):
@@ -223,9 +299,69 @@ class TestNodeBasic(unittest.TestCase):
 
         with self.assertRaises(ModificationNotAllowed):                
             a.set_internal_attr('i',12)
-        
 
+    def test_internal_and_noninternal_attr(self):
+        a = Node()
+        a.set_internal_attr('bool', self.boolval)
+        a.set_internal_attr('integer', self.intval)
+        a.set_internal_attr('float', self.floatval)
+        a.set_internal_attr('string', self.stringval)
+        a.set_internal_attr('dict', self.dictval)
+        a.set_internal_attr('list', self.listval)
+
+        with self.assertRaises(ModificationNotAllowed):
+            # I did not store, I cannot modify
+            a.set_attr('bool', 'blablabla')
+
+        a.store()
+
+        a_string = 'some non-boolean value'
+        # I now set
+        a.set_attr('bool', a_string)
+
+        # I check that there is no name clash
+        self.assertEquals(self.boolval, a.get_internal_attr('bool'))
+        self.assertEquals(a_string, a.get_attr('bool'))
+        
+    def test_int_attr_listing(self):
+        """
+        Checks that the list of attributes (internal and external) is ok.
+        """
+        a = Node()
+        internal_attrs_to_set = {
+            'bool': self.boolval,
+            'integer': self.intval,
+            'float': self.floatval,
+            'string': self.stringval,
+            'dict': self.dictval,
+            'list': self.listval,
+            }
+
+        for k,v in internal_attrs_to_set.iteritems():
+            a.set_internal_attr(k, v)
+
+        a.store()
+
+        # I now set
+        external_attrs_to_set = {
+            'bool': 'some non-boolean value',
+            'some_other_name': 987}
+
+        for k,v in external_attrs_to_set.iteritems():
+            a.set_attr(k, v)        
+
+        self.assertEquals(set(a.internal_attrs()),
+                          set(internal_attrs_to_set.keys()))
+        self.assertEquals(set(a.attrs()),
+                          set(external_attrs_to_set.keys()))
+
+        returned_internal_attrs = {k: v for k, v in a.iter_internal_attrs()}
+        self.assertEquals(returned_internal_attrs, internal_attrs_to_set)
+
+        returned_attrs = {k: v for k, v in a.iter_attrs()}
+        self.assertEquals(returned_attrs, external_attrs_to_set)
+
+    
      ## TO TEST:
      # create a copy, and recheck attrs, and modify them and check they don't change on original instance
      # check for files
-     # Store internal and external attribute with same name

@@ -5,6 +5,8 @@ from django.db import models as m
 from django_extensions.db.fields import UUIDField
 from django.contrib.auth.models import User
 
+from django.db.models.query import QuerySet
+
 from aida.djsite.settings.settings import LOCAL_REPOSITORY
 from aida.common.exceptions import DBContentError
 
@@ -12,8 +14,17 @@ from aida.common.exceptions import DBContentError
 # the email as UUID. In case we need it, we can do a couple of south migrations
 # to create the new table. See for instance
 # http://stackoverflow.com/questions/14904046/
+
+class AidaQuerySet(QuerySet):
+    def iterator(self):
+        for obj in super(AidaQuerySet, self).iterator():
+            yield obj.get_aida_class()
+
+class AidaObjectManager(m.Manager):
+    def get_query_set(self):
+        return AidaQuerySet(self.model, using=self._db)
             
-class Node(m.Model):
+class DbNode(m.Model):
     '''
     Generic node: data or calculation or code. There will be several types of connections.
     Naming convention: A --> C --> B. 
@@ -30,8 +41,8 @@ class Node(m.Model):
       the first time.
     * other attributes MUST start WITHOUT an underscore. These are user-defined and
       can be appended even after the calculation has run, since they just are metadata.
-    * There is no json metadata attached to the Node entries.
-    * Attributes in the Attribute table have to be thought as belonging to the Node,
+    * There is no json metadata attached to the DbNode entries.
+    * Attributes in the Attribute table have to be thought as belonging to the DbNode,
       and this is the reason for which there is no 'user' field in the Attribute field.
     '''
     uuid = UUIDField(auto=True)
@@ -47,17 +58,29 @@ class Node(m.Model):
     # Transitive closure
     children = m.ManyToManyField('self', symmetrical=False, related_name='parents', through='Path')
     
-    # Used only if node is a calculation
+    # Used only if dbnode is a calculation
     computer = m.ForeignKey('Computer', null=True)  # only for calculations
-    
 
+    objects = m.Manager()
+    # Return aida Node instances or their subclasses instead of DbNode instances
+    aidaobjects = AidaObjectManager()
+    
+    def get_aida_class(self):
+        """
+        Return the corresponding aida instance of class aida.node.Node or a
+        appropriate subclass
+
+        TODO: manage loading of subclasses
+        """
+        from aida.node import Node
+        return Node(uuid=self.uuid)
 
 class Link(m.Model):
     '''
-    Direct connection between two nodes. The label is identifying the link type.
+    Direct connection between two dbnodes. The label is identifying the link type.
     '''
-    input = m.ForeignKey('Node',related_name='output_links')
-    output = m.ForeignKey('Node',related_name='input_links')
+    input = m.ForeignKey('DbNode',related_name='output_links')
+    output = m.ForeignKey('DbNode',related_name='input_links')
     #label for data input for calculation
     label = m.CharField(max_length=255, db_index=True, blank=True)
 
@@ -67,7 +90,7 @@ class Link(m.Model):
     # TODO: implement deletion from TC table
     # TODO: implement triggers on TC on UPDATE
 
-    # TODO: remember to choose hierarchical names for types of nodes,
+    # TODO: remember to choose hierarchical names for types of dbnodes,
     #       starting with calculation. data. or code.
     # This depends on how workflow objects are implemented
     
@@ -76,7 +99,7 @@ class Link(m.Model):
     
     # TODO: I also want to check some more logic e.g. to avoid having
     #       two calculations as input of a data object.
-    def save(self):
+    def save(self,*args,**kwargs):
         if self.pk is None:
             if ((self.input.type.startswith('calculation') or
                  self.input.type.startswith('data')) and
@@ -85,14 +108,14 @@ class Link(m.Model):
                 self.include_in_tc = True
             else:
                 self.include_in_tc = False
-        super(Link,self).save()
+        super(Link,self).save(*args,**kwargs)
 
 class Path(m.Model):
     """
-    Transitive closure table for all node paths.
+    Transitive closure table for all dbnode paths.
     """
-    parent = m.ForeignKey('Node',related_name='child_paths',editable=False)
-    child = m.ForeignKey('Node',related_name='parent_paths',editable=False)
+    parent = m.ForeignKey('DbNode',related_name='child_paths',editable=False)
+    child = m.ForeignKey('DbNode',related_name='parent_paths',editable=False)
     depth = m.IntegerField(editable=False)
 
     # Used to delete
@@ -115,7 +138,7 @@ class Attribute(m.Model):
     Actual input and output data should never go here, only duplicates and comments.
     '''
     time = m.DateTimeField(auto_now_add=True, editable=False)
-    node = m.ForeignKey('Node', related_name='attributes')
+    dbnode = m.ForeignKey('DbNode', related_name='attributes')
     key = m.TextField(db_index=True)
     datatype = m.CharField(max_length=10, choices=attrdatatype_choice, db_index=True)
     tval = m.TextField( default='', blank=True)
@@ -124,7 +147,7 @@ class Attribute(m.Model):
     bval = m.NullBooleanField( default=None, null=True)
 
     class Meta:
-        unique_together = (("node", "key"))
+        unique_together = (("dbnode", "key"))
         
     def setvalue(self,value):
         """
@@ -202,7 +225,7 @@ class Attribute(m.Model):
 class Group(m.Model):
     uuid = UUIDField(auto=True)
     name = m.TextField(unique=True, db_index=True)
-    nodes = m.ManyToManyField('Node', related_name='groups')
+    dbnodes = m.ManyToManyField('DbNode', related_name='groups')
     time = m.DateTimeField(auto_now_add=True, editable=False)
     description = m.TextField(blank=True)
     user = m.ForeignKey(User)  # The owner of the group, not of the calculations
@@ -210,7 +233,7 @@ class Group(m.Model):
 class Computer(m.Model):
     """Table of computers or clusters.
 
-    # TODO: understand if we want that this becomes simply another type of node.
+    # TODO: understand if we want that this becomes simply another type of dbnode.
 
     Attributes:
         hostname: Full hostname of the host
@@ -264,7 +287,7 @@ class Computer(m.Model):
                 self.hostname, self.scheduler_type, e.message))
 
 class RunningJob(m.Model):
-    calc = m.OneToOneField(Node,related_name='jobinfo') # OneToOneField implicitly sets unique=True
+    calc = m.OneToOneField(DbNode,related_name='jobinfo') # OneToOneField implicitly sets unique=True
     calc_state = m.CharField(max_length=64)
     job_id = m.TextField(blank=True)
     scheduler_state = m.CharField(max_length=64,blank=True)
@@ -316,60 +339,8 @@ class AuthInfo(m.Model):
         return ThisTransport(machine=self.computer.hostname,**params)
 
 class Comment(m.Model):
-    node = m.ForeignKey(Node,related_name='comments')
+    dbnode = m.ForeignKey(DbNode,related_name='comments')
     time = m.DateTimeField(auto_now_add=True, editable=False)
     user = m.ForeignKey(User)
     content = m.TextField(blank=True)
-
-#class Code(NodeClass):
-#    computer = m.ManyToManyField('Computer') #for checking computer compatibility
-
-#class ComputerUsername(m.Model):
-#    """Association of aida users with given remote usernames on a computer.
-#
-#    There is an unique_together constraint to be sure that each aida user
-#    has no more than one remote username on a given computer.
-#
-#    Attributes:
-#        computer: the remote computer
-#        aidauser: the aida user
-#        remoteusername: the username of the aida user on the remote computer
-#    NOTE: this table can be eliminated in favor of a text field in each computer containing a dict.
-#    """
-#    computer = m.ForeignKey('Computer')
-#    aidauser = m.ForeignKey(User)
-#    remoteusername = m.CharField(max_length=255)
-#
-#    class Meta:
-#        unique_together = (("aidauser", "computer"),)
-#
-#    def __unicode__(self):
-#        return self.aidauser.username + " => " + \
-#            self.remoteusername + "@" + self.computer.hostname
-
-#-------------------- Abstract Base Classes ------------------------
-#quality_choice = ((1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5'))     
-#nodetype_choice = (("calculation","calculation"), ("data","data"))
-#state_choice = (('prepared', 'prepared'),
-#                ('submitted', 'submitted'), 
-#                ('queued', 'queued'),
-#                ('running', 'runnning'),
-#                ('failed', 'failed'),
-#               ('finished', 'finished'),
-#               ('completed', 'completed'))
-
-## OLDSTUFF OF Node
-#    path = m.FilePathField()
-#    quality = m.IntegerField(choices=quality_choice, null=True, blank=True) 
-#    #if node is data
-#    source = m.ForeignKey('self', null=True, related_name='outputs')   #only valid for data nodes to link to source calculations
-   # members = m.ManyToManyField('self', symmetrical=False, related_name='containers') 
-#edgetype_choice = (("input","input"), ("member","member"), ("workflow","workflow"))
-#    state = m.CharField(max_length=255, choices=state_choice, db_index=True)
-
-## OLDSTUFF OF group
-#grouptype_choice = (('project', 'project'), ('collection', 'collection'), ('workflow', 'workflow'))
-#datagrouptype_choice = (('collection', 'collection'), ('relation', 'relation'))
-#   type =  m.CharField(max_length=255, choices=calcgrouptype_choice, db_index=True)    
-    
 

@@ -6,7 +6,7 @@ admin.autodiscover()
 
 # APIs
 #from tastypie.api import Api
-#from aida.djsite.main.api import (CalculationResource,
+#from aida.djsite.db.api import (CalculationResource,
 #                                  CalcAttrNumResource, 
 #                                  CalcAttrNumValResource, 
 #                                  StructureResource,

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from aida.djsite.main.models import *
+from aida.djsite.db.models import *
 
 admin.site.register(Node)
 admin.site.register(Link)

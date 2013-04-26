@@ -24,6 +24,11 @@ class Node(object):
     _logger = aida.common.aidalogger.getChild('node')
 
     def __int__(self):
+        """
+        Convert the class to an integer. This is needed to allow querying with Django.
+        Be careful, though, not to pass it to a wrong field! This only returns the
+        local DB principal key value.
+        """
         if self.dbnode is not None:
             return self.dbnode.pk
         else:

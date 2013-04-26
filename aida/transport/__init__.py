@@ -139,12 +139,12 @@ class Transport(object):
         raise NotImplementedError
     
     
-    def exec_command(self,command, **kwargs):
+    def _exec_command_internal(self,command, **kwargs):
         """
         Execute the command on the shell, similarly to os.system.
 
-        Enforce the execution to be run from the pwd (as given by
-        self.getpwd), if this is not None.
+        Enforce the execution to be run from the cwd (as given by
+        self.getcwd), if this is not None.
 
         Return stdin, stdout, stderr and the session, when this exists
         (can be None). If possible, use the higher-level
@@ -162,7 +162,7 @@ class Transport(object):
         and return the retcode, the stdout and the stderr.
 
         Enforce the execution to be run from the pwd (as given by
-        self.getpwd), if this is not None.
+        self.getcwd), if this is not None.
         
         Return the retcode, stdout and stderr.
             stdout and stderr are strings.

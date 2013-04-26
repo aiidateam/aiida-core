@@ -1,10 +1,12 @@
+import os
+
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from django.db import transaction
 
 import aida.common
 from aida.djsite.db.models import DbNode, Attribute
 from aida.common.exceptions import (
-    InternalError, InvalidOperation, ModificationNotAllowed, NotExistent )
+    InternalError, ModificationNotAllowed, NotExistent )
 from aida.djsite.utils import get_automatic_user
 from aida.common.folders import RepositoryFolder, SandboxFolder
 
@@ -126,8 +128,8 @@ class Node(object):
         if key.startswith('_'):
             raise ValueError("An attribute cannot start with an underscore")
         if self._can_be_modified:
-            raise InvalidOperation("The non-internal attributes of a node can be set only after "
-                                   "storing the node")
+            raise ModificationNotAllowed("The non-internal attributes of a node can be set only after "
+                                         "storing the node")
         self._set_attribute_db(key,value)
             
     def get_attr(self,key):
@@ -154,9 +156,65 @@ class Node(object):
         if key.startswith('_'):
             raise ValueError("An attribute cannot start with an underscore")
         if self._can_be_modified:
-            raise InvalidOperation("The non-internal attributes of a node can be set and deleted "
-                                   "only after storing the node")
+            raise ModificationNotAllowed("The non-internal attributes of a node can be set and deleted "
+                                         "only after storing the node")
         self._del_attribute_db(key)
+
+    def attrs(self):
+        """
+        Returns the keys of the (non-internal) attributes
+        """
+        from django.db.models import Q
+        # I return the list of keys
+        return self._list_all_attributes_db().filter(
+            ~Q(key__startswith='_')).distinct().values_list('key', flat=True)
+
+    def iter_attrs(self):
+        """
+        Iterator over the non-internal attributes, returning tuples (key, value)
+        """
+        from django.db.models import Q
+        attrlist = self._list_all_attributes_db().filter(
+            ~Q(key__startswith='_'))
+        for attr in attrlist:
+            yield (attr.key, attr.getvalue())
+            
+    def iter_internal_attrs(self):
+        """
+        Iterator over the internal attributes, returning tuples (key, value)
+
+        TODO: check what happens if someone stores the object while the iterator is
+        being used!
+        """
+        if self._can_be_modified:
+            for k, v in self._intattrs_cache.iteritems():
+                # I strip the underscore
+                yield (k[1:],v)
+        else:          
+            attrlist = self._list_all_attributes_db().filter(
+                key__startswith='_')
+            for attr in attrlist:
+                # I strip the initial underscore
+                yield (attr.key[1:], attr.getvalue())
+
+    def internal_attrs(self):
+        """
+        Returns the keys of the attributes
+        """
+
+        if self._can_be_modified:
+            return [k[1:] for k in self._intattrs_cache.keys()]
+        else:
+            # I return the list of keys of internal
+            # attributes, stripping the initial underscore
+            return [k[1:] for k in self._list_all_attributes_db().filter(
+                key__startswith='_').distinct().values_list('key', flat=True)]
+
+    def _list_all_attributes_db(self):
+        """
+        Return a django queryset with the attributes of this node
+        """
+        return Attribute.objects.filter(dbnode=self.dbnode)
 
     def _get_attribute_db(self, key):
         """
@@ -191,6 +249,25 @@ class Node(object):
         attr, created = Attribute.objects.get_or_create(dbnode=self.dbnode, key=key)
         ## TODO: create a get_or_create_with_value method
         attr.setvalue(value)
+
+    def copy(self):
+        """
+        Return a copy of the current object to work with.
+
+        This is a completely new entry in the DB, with its own UUID.
+        Works both on stored instances and with not-stored ones.
+
+        Copies files and internal_attributes, but not the non-internal ones.
+        Does not store the entity to allow modification of internal parameters.
+        """
+        newobject = self.__class__()
+        for k, v in self.iter_internal_attrs():
+            newobject.set_internal_attr(k,v)
+
+        for filename in self.current_folder.get_file_list():
+            newobject.add_file(self.current_folder.get_file_path(filename),filename)
+
+        return newobject
 
     @property
     def uuid(self):
@@ -235,9 +312,9 @@ class Node(object):
         
         if not os.path.isabs(src_abs):
             raise ValueError("The source file in add_file must be an absolute path")
-        if os.path.isabs(dst_rel):
-            raise ValueError("The destination file in add_file must be a filename")
-        self.get_temp_folder().insertfile(src_abs,dst_filename)
+        if os.path.split(dst_filename)[0]:
+            raise ValueError("The destination file in add_file must be a filename without any subfolder")
+        self.get_temp_folder().insert_file(src_abs,dst_filename)
 
     def get_file_path(self,filename):
         """

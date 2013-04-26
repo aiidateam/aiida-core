@@ -182,22 +182,33 @@ class Node(object):
     def iter_internal_attrs(self):
         """
         Iterator over the internal attributes, returning tuples (key, value)
-        """        
-        attrlist = self._list_all_attributes_db().filter(
-            key__startswith='_')
-        for attr in attrlist:
-            # I strip the initial underscore
-            yield (attr.key[1:], attr.getvalue())
+
+        TODO: check what happens if someone stores the object while the iterator is
+        being used!
+        """
+        if self._can_be_modified:
+            for k, v in self._intattrs_cache.iteritems():
+                # I strip the underscore
+                yield (k[1:],v)
+        else:          
+            attrlist = self._list_all_attributes_db().filter(
+                key__startswith='_')
+            for attr in attrlist:
+                # I strip the initial underscore
+                yield (attr.key[1:], attr.getvalue())
 
     def internal_attrs(self):
         """
         Returns the keys of the attributes
         """
-        from django.db.models import Q
-        # I return the list of keys of internal
-        # attributes, stripping the initial underscore
-        return [k[1:] for k in self._list_all_attributes_db().filter(
-            key__startswith='_').distinct().values_list('key', flat=True)]
+
+        if self._can_be_modified:
+            return [k[1:] for k in self._intattrs_cache.keys()]
+        else:
+            # I return the list of keys of internal
+            # attributes, stripping the initial underscore
+            return [k[1:] for k in self._list_all_attributes_db().filter(
+                key__startswith='_').distinct().values_list('key', flat=True)]
 
     def _list_all_attributes_db(self):
         """

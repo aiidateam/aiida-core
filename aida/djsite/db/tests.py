@@ -209,8 +209,13 @@ class TestNodeBasic(unittest.TestCase):
         b_expected_int_attributes['integer'] = 489
         b.set_internal_attr('new', 'cvb')
         b_expected_int_attributes['new'] = 'cvb'
+
+        # I check before storing that the attributes are ok
+        self.assertEquals({k: v for k,v in b.iter_internal_attrs()}, b_expected_int_attributes)
+        # Note that during copy, I do not copy the external attributes!
+        self.assertEquals({k: v for k,v in b.iter_attrs()}, {})
         
-        # I store
+        # I store now
         b.store()
         # and I finally add an external attribute
         b.set_attr('extattr', 'textofext')

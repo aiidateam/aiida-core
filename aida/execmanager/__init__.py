@@ -3,7 +3,7 @@ from django.contrib.auth.models import User as AidaUser
 
 from aida.common.datastructures import calcStates
 from aida.scheduler.datastructures import jobStates
-from aida.djsite.main.models import Computer, AuthInfo, RunningJob
+from aida.djsite.db.models import Computer, AuthInfo, RunningJob
 from aida.common.exceptions import DBContentError, ConfigurationError, AuthenticationError
     
 def update_running_table(authinfo):

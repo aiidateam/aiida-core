@@ -190,7 +190,7 @@ INSTALLED_APPS = (
     'south',
     # Uncomment the next line to enable admin documentation:
     # 'django.contrib.admindocs',
-    'aida.djsite.main'
+    'aida.djsite.db'
 )
 
 # A sample logging configuration. The only tangible logging

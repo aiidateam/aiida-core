@@ -174,6 +174,57 @@ class TestNodeBasic(unittest.TestCase):
             # I get a non-existing attribute
             a.get_internal_attr('nonexisting')
 
+    def test_attributes_on_copy(self):
+        import copy
+        
+        a = Node()
+        internal_attrs_to_set = {
+            'bool': self.boolval,
+            'integer': self.intval,
+            'float': self.floatval,
+            'string': self.stringval,
+            'dict': self.dictval,
+            'list': self.listval,
+            }
+
+        for k,v in internal_attrs_to_set.iteritems():
+            a.set_internal_attr(k, v)
+
+        a.store()
+
+        # I now set external attributes
+        external_attrs_to_set = {
+            'bool': 'some non-boolean value',
+            'some_other_name': 987}
+
+        for k,v in external_attrs_to_set.iteritems():
+            a.set_attr(k, v)    
+
+        # I make a copy
+        b = a.copy()
+        # I modify an internal parameter and add one new; I mirror it in the dictionary
+        # for later checking
+        b_expected_int_attributes = copy.deepcopy(internal_attrs_to_set)
+        b.set_internal_attr('integer', 489)
+        b_expected_int_attributes['integer'] = 489
+        b.set_internal_attr('new', 'cvb')
+        b_expected_int_attributes['new'] = 'cvb'
+        
+        # I store
+        b.store()
+        # and I finally add an external attribute
+        b.set_attr('extattr', 'textofext')
+        b_expected_ext_attributes = {'extattr': 'textofext'}
+
+        # Now I check for the attributes
+        # First I check that nothing has changed 
+        self.assertEquals({k: v for k,v in a.iter_internal_attrs()}, internal_attrs_to_set)
+        self.assertEquals({k: v for k,v in a.iter_attrs()}, external_attrs_to_set)
+
+        # I check then on the 'b' copy
+        self.assertEquals({k: v for k,v in b.iter_internal_attrs()}, b_expected_int_attributes)
+        self.assertEquals({k: v for k,v in b.iter_attrs()}, b_expected_ext_attributes)
+
     def test_files(self):
         import tempfile
 
@@ -195,6 +246,9 @@ class TestNodeBasic(unittest.TestCase):
             self.assertEquals(f.read(), file_content)
 
         b = a.copy()
+        self.assertNotEquals(a.uuid, b.uuid)
+
+        # Check that the content is there
         self.assertEquals(set(b.current_folder.get_file_list()),set(['file1.txt','file2.txt']))
         with open(b.current_folder.get_file_path('file1.txt')) as f:
             self.assertEquals(f.read(), file_content)
@@ -342,7 +396,7 @@ class TestNodeBasic(unittest.TestCase):
 
         a.store()
 
-        # I now set
+        # I now set external attributes
         external_attrs_to_set = {
             'bool': 'some non-boolean value',
             'some_other_name': 987}

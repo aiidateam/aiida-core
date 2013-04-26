@@ -579,7 +579,7 @@ def parse_pw_xml_output(data,parse_eigenvalues=False):
                     a=target_tags.getElementsByTagName(tagname)[0]
                     b=a.getAttribute('XYZ').replace('\n','').rsplit()
                     value=[ float(s) for s in b ]
-                    metric=parsed_data['units_for_k_points']
+                    metric=parsed_data['k_points_units']
                     if metric=='2 pi / a':
                         value=[ float(s)/parsed_data['lattice_parameter'] for s in value ]
 
@@ -589,6 +589,7 @@ def parse_pw_xml_output(data,parse_eigenvalues=False):
 
                 parsed_data['k_point_start']=kpoints
             except Exception as e:
+                print e
                 raise QEOutputParsingError('Error parsing tag {}'.format(tagname)+\
                                            ' inside {}.'.format(target_tags.tagName ) )
     except Exception as ev:

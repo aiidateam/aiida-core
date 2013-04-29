@@ -143,7 +143,7 @@ class TestNodeBasic(unittest.TestCase):
         import getpass
         from django.contrib.auth.models import User
 
-        User.objects.create_user(getpass.getuser(), 'unknown@mail.com', 'fakepwd')
+        cls.user = User.objects.create_user(getpass.getuser(), 'unknown@mail.com', 'fakepwd')
 
     @classmethod
     def tearDownClass(cls):
@@ -267,20 +267,20 @@ class TestNodeBasic(unittest.TestCase):
             a.add_file(f.name,'file1.txt')
             a.add_file(f.name,'file2.txt')
 
-        self.assertEquals(set(a.current_folder.get_file_list()),set(['file1.txt','file2.txt']))
-        with open(a.current_folder.get_file_path('file1.txt')) as f:
+        self.assertEquals(set(a.get_file_list()),set(['file1.txt','file2.txt']))
+        with open(a.get_file_path('file1.txt')) as f:
             self.assertEquals(f.read(), file_content)
-        with open(a.current_folder.get_file_path('file2.txt')) as f:
+        with open(a.get_file_path('file2.txt')) as f:
             self.assertEquals(f.read(), file_content)
 
         b = a.copy()
         self.assertNotEquals(a.uuid, b.uuid)
 
         # Check that the content is there
-        self.assertEquals(set(b.current_folder.get_file_list()),set(['file1.txt','file2.txt']))
-        with open(b.current_folder.get_file_path('file1.txt')) as f:
+        self.assertEquals(set(b.get_file_list()),set(['file1.txt','file2.txt']))
+        with open(b.get_file_path('file1.txt')) as f:
             self.assertEquals(f.read(), file_content)
-        with open(b.current_folder.get_file_path('file2.txt')) as f:
+        with open(b.get_file_path('file2.txt')) as f:
             self.assertEquals(f.read(), file_content)
 
         # I overwrite a file and create a new one in the copy only
@@ -291,18 +291,18 @@ class TestNodeBasic(unittest.TestCase):
             b.add_file(f.name,'file3.txt')
 
         # I check the new content, and that the old one has not changed
-        self.assertEquals(set(a.current_folder.get_file_list()),set(['file1.txt','file2.txt']))
-        with open(a.current_folder.get_file_path('file1.txt')) as f:
+        self.assertEquals(set(a.get_file_list()),set(['file1.txt','file2.txt']))
+        with open(a.get_file_path('file1.txt')) as f:
             self.assertEquals(f.read(), file_content)
-        with open(a.current_folder.get_file_path('file2.txt')) as f:
+        with open(a.get_file_path('file2.txt')) as f:
             self.assertEquals(f.read(), file_content)
-        self.assertEquals(set(b.current_folder.get_file_list()),
+        self.assertEquals(set(b.get_file_list()),
                           set(['file1.txt','file2.txt','file3.txt']))
-        with open(b.current_folder.get_file_path('file1.txt')) as f:
+        with open(b.get_file_path('file1.txt')) as f:
             self.assertEquals(f.read(), file_content)
-        with open(b.current_folder.get_file_path('file2.txt')) as f:
+        with open(b.get_file_path('file2.txt')) as f:
             self.assertEquals(f.read(), file_content_different)
-        with open(b.current_folder.get_file_path('file3.txt')) as f:
+        with open(b.get_file_path('file3.txt')) as f:
             self.assertEquals(f.read(), file_content_different)
 
         # This should in principle change the location of the files, so I recheck
@@ -317,19 +317,19 @@ class TestNodeBasic(unittest.TestCase):
             c.add_file(f.name,'file1.txt')       
             c.add_file(f.name,'file4.txt')
 
-        self.assertEquals(set(a.current_folder.get_file_list()),set(['file1.txt','file2.txt']))
-        with open(a.current_folder.get_file_path('file1.txt')) as f:
+        self.assertEquals(set(a.get_file_list()),set(['file1.txt','file2.txt']))
+        with open(a.get_file_path('file1.txt')) as f:
             self.assertEquals(f.read(), file_content)
-        with open(a.current_folder.get_file_path('file2.txt')) as f:
+        with open(a.get_file_path('file2.txt')) as f:
             self.assertEquals(f.read(), file_content)
 
-        self.assertEquals(set(c.current_folder.get_file_list()),
+        self.assertEquals(set(c.get_file_list()),
                           set(['file1.txt','file2.txt','file4.txt']))
-        with open(c.current_folder.get_file_path('file1.txt')) as f:
+        with open(c.get_file_path('file1.txt')) as f:
             self.assertEquals(f.read(), file_content_different)
-        with open(c.current_folder.get_file_path('file2.txt')) as f:
+        with open(c.get_file_path('file2.txt')) as f:
             self.assertEquals(f.read(), file_content)
-        with open(c.current_folder.get_file_path('file4.txt')) as f:
+        with open(c.get_file_path('file4.txt')) as f:
             self.assertEquals(f.read(), file_content_different)
         
 
@@ -454,7 +454,7 @@ class TestNodeBasic(unittest.TestCase):
         """
         class myNodeWithFields(Node):
             # State can be updated even after storing
-            _updatable_attributes = ('state') 
+            _updatable_attributes = ('state',) 
         
         a = myNodeWithFields()
         attrs_to_set = {
@@ -499,8 +499,38 @@ class TestNodeBasic(unittest.TestCase):
         # I check that the counter was not incremented
         self.assertEquals(a.dbnode.nodeversion, 3)
 
+        b = a.copy()
+        # updatable attributes are not copied
+        with self.assertRaises(AttributeError):
+            b.get_attr('state')
+
+    def test_comments(self):
+        # This is the best way to compare dates with the stored ones, instead of
+        # directly loading datetime.datetime.now(), or you can get a
+        # "can't compare offset-naive and offset-aware datetimes" error
+        from django.utils import timezone
+
+        a = Node()
+        with self.assertRaises(ModificationNotAllowed):
+            a.add_comment('text')
+        self.assertEquals(a.get_comments(),[])
+        a.store()
+        before = timezone.now()
+        a.add_comment('text')
+        a.add_comment('text2')        
+        after = timezone.now()
+
+        comments = a.get_comments()
         
-            
+        times = [i[2] for i in comments]
+        for time in times:
+            self.assertTrue(time > before)
+            self.assertTrue(time < after )
+
+        self.assertEquals([(i[0], i[1], i[3]) for i in comments],
+                          [(self.user.username, self.user.email, 'text'),
+                           (self.user.username, self.user.email, 'text2'),])
+        
         
 class TestSubNodes(unittest.TestCase):
     
@@ -525,11 +555,17 @@ class TestSubNodes(unittest.TestCase):
 
     
     def test_valid_links(self):
+        import tempfile
+
         from aida.node import Node, Calculation, Data, Code
+        from aida.common.pluginloader import load_plugin
+
+        FileData = load_plugin(Data, 'aida.node.dataplugins', 'file')
 
         # I create some objects
         d1 = Data().store()
-        d2 = Data().store()
+        with tempfile.NamedTemporaryFile() as f:
+            d2 = FileData(f.name).store()
 
         code = Code().store()
         
@@ -581,3 +617,68 @@ class TestSubNodes(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             d1.add_link_from(calc2)
+
+
+
+class TestFileData(unittest.TestCase):
+    """
+    Test the FileData class.
+    """    
+    @classmethod
+    def setUpClass(cls):
+        import getpass
+        from django.contrib.auth.models import User
+
+        User.objects.create_user(getpass.getuser(), 'unknown@mail.com', 'fakepwd')
+
+    @classmethod
+    def tearDownClass(cls):
+        import getpass
+        from django.contrib.auth.models import User
+        from django.core.exceptions import ObjectDoesNotExist
+
+        try:
+            User.objects.get(username=getpass.getuser).delete()
+        except ObjectDoesNotExist:
+            pass
+        
+    def test_reload(self):
+        import os
+        import tempfile
+
+        from aida.node.dataplugins.file import FileData
+
+        # Or, equivalently:
+        #        from aida.node import Data
+        #        from aida.common.pluginloader import load_plugin        
+        #        FileData = load_plugin(Data,'aida.node.dataplugins','file')
+
+        file_content = 'some text ABCDE'
+        with tempfile.NamedTemporaryFile() as f:
+            filename = f.name
+            basename = os.path.split(filename)[1]
+            f.write(file_content)
+            f.flush()
+            a = FileData(filename)
+
+        the_uuid = a.uuid
+
+        self.assertEquals(a.get_file_list(),[basename])
+
+        with open(a.get_file_path(basename)) as f:
+            self.assertEquals(f.read(), file_content)
+
+        a.store()
+
+        with open(a.get_file_path(basename)) as f:
+            self.assertEquals(f.read(), file_content)
+        self.assertEquals(a.get_file_list(),[basename])
+
+        b = Node.get_subclass_from_uuid(the_uuid)
+
+        # I check the retrieved object
+        self.assertTrue(isinstance(b,FileData))
+        self.assertEquals(b.get_file_list(),[basename])
+        with open(b.get_file_path(basename)) as f:
+            self.assertEquals(f.read(), file_content)
+

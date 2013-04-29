@@ -17,10 +17,9 @@ class Data(Node):
     _plugin_type_string = "data"
     _updatable_attributes = tuple() 
         
-    def __init__(self,*args,**kwargs):
+    def __init__(self,**kwargs):
         self._logger = super(Data,self).logger.getChild('data')
-        super(Data,self).__init__(*args, **kwargs)
-        # TODO here!
+        super(Data,self).__init__(**kwargs)
 
     def validate(self):
         '''

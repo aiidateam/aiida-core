@@ -1022,7 +1022,7 @@ Job Id: 74165.mycluster
             # TODO : parse the env_vars
         def test_parse_with_error_retval(self):
             """
-            The qstat -f command has received a retval /= 0
+            The qstat -f command has received a retval != 0
             """
             PbsproScheduler._logger.setLevel(logging.DEBUG)
             s = PbsproScheduler()            

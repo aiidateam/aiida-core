@@ -97,7 +97,7 @@ class DbNode(m.Model):
         if baseclass == 'calculation':
             if pluginclass:
                 try:
-                    PluginClass = load_plugin(Calculation, 'aida.node.calculationplugins', "")
+                    PluginClass = load_plugin(Calculation, 'aida.node.calculationplugins', pluginclass)
                 except ImportError:
                     aidalogger.warning("Unable to find calculation plugin for type '{}' (node={}), "
                                        "will use base Calculation class".format(self.type,self.uuid))
@@ -108,7 +108,7 @@ class DbNode(m.Model):
         elif baseclass == 'code':
             if pluginclass:
                 try:
-                    PluginClass = load_plugin(Code, 'aida.node.codeplugins', "")
+                    PluginClass = load_plugin(Code, 'aida.node.codeplugins', pluginclass)
                 except ImportError:
                     aidalogger.warning("Unable to find code plugin for type '{}' (node={}), "
                                        "will use base Code class".format(self.type,self.uuid))
@@ -119,7 +119,7 @@ class DbNode(m.Model):
         elif baseclass == 'data':
             if pluginclass:
                 try:
-                    PluginClass = load_plugin(Data, 'aida.node.dataplugins', "")
+                    PluginClass = load_plugin(Data, 'aida.node.dataplugins', pluginclass)
                 except ImportError:
                     aidalogger.warning("Unable to find data plugin for type '{}' (node={}), "
                                        "will use base Data class".format(self.type,self.uuid))
@@ -346,13 +346,13 @@ class Computer(m.Model):
             raise ConfigurationError('No scheduler found for {} [type {}], message: {}'.format(
                 self.hostname, self.scheduler_type, e.message))
 
-class RunningJob(m.Model):
-    calc = m.OneToOneField(DbNode,related_name='jobinfo') # OneToOneField implicitly sets unique=True
-    calc_state = m.CharField(max_length=64)
-    job_id = m.TextField(blank=True)
-    scheduler_state = m.CharField(max_length=64,blank=True)
-    # Will store a json of the last JobInfo got from the scheduler
-    last_jobinfo = m.TextField(default='{}')  
+#class RunningJob(m.Model):
+#    calc = m.OneToOneField(DbNode,related_name='jobinfo') # OneToOneField implicitly sets unique=True
+#    calc_state = m.CharField(max_length=64)
+#    job_id = m.TextField(blank=True)
+#    scheduler_state = m.CharField(max_length=64,blank=True)
+#    # Will store a json of the last JobInfo got from the scheduler
+#    last_jobinfo = m.TextField(default='{}')  
 
 class AuthInfo(m.Model):
     """
@@ -367,9 +367,9 @@ class AuthInfo(m.Model):
     class Meta:
         unique_together = (("aidauser", "computer"),)
 
-    def update_running_table(self):
+    def update_calc_states(self):
         import aida
-        aida.execmanager.update_running_table(self)
+        aida.execmanager.update_calc_states(self)
 
     def get_auth_params(self):
         import json

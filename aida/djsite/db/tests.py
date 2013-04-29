@@ -143,7 +143,7 @@ class TestNodeBasic(unittest.TestCase):
         import getpass
         from django.contrib.auth.models import User
 
-        User.objects.create_user(getpass.getuser(), 'unknown@mail.com', 'fakepwd')
+        cls.user = User.objects.create_user(getpass.getuser(), 'unknown@mail.com', 'fakepwd')
 
     @classmethod
     def tearDownClass(cls):
@@ -499,8 +499,33 @@ class TestNodeBasic(unittest.TestCase):
         # I check that the counter was not incremented
         self.assertEquals(a.dbnode.nodeversion, 3)
 
+    def test_comments(self):
+        # This is the best way to compare dates with the stored ones, instead of
+        # directly loading datetime.datetime.now(), or you can get a
+        # "can't compare offset-naive and offset-aware datetimes" error
+        from django.utils import timezone
+
+        a = Node()
+        with self.assertRaises(ModificationNotAllowed):
+            a.add_comment('text')
+        self.assertEquals(a.get_comments(),[])
+        a.store()
+        before = timezone.now()
+        a.add_comment('text')
+        a.add_comment('text2')        
+        after = timezone.now()
+
+        comments = a.get_comments()
         
-            
+        times = [i[2] for i in comments]
+        for time in times:
+            self.assertTrue(time > before)
+            self.assertTrue(time < after )
+
+        self.assertEquals([(i[0], i[1], i[3]) for i in comments],
+                          [(self.user.username, self.user.email, 'text'),
+                           (self.user.username, self.user.email, 'text2'),])
+        
         
 class TestSubNodes(unittest.TestCase):
     

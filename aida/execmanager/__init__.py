@@ -6,7 +6,7 @@ from aida.scheduler.datastructures import jobStates
 from aida.djsite.db.models import Computer, AuthInfo, RunningJob
 from aida.common.exceptions import DBContentError, ConfigurationError, AuthenticationError
     
-def update_running_table(authinfo):
+def update_calculation_status(authinfo):
     """
     Update the status in WITHSCHEDULER status belonging to user 'aidauser' and running on
     computer 'computer'.

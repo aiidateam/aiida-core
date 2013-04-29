@@ -358,6 +358,8 @@ class Node(object):
 
         Can be called only once. Afterwards, attributes cannot be changed anymore!
         Instead, metadata can be changed only AFTER calling this store() function.
+        
+        TODO: This needs to be generalized, allowing for flexible methods for storing data and its attributes.
         """
         if self._can_be_modified:
             
@@ -380,6 +382,14 @@ class Node(object):
 
         # This is useful because I can do a2 = Node().store()
         return self
+
+    
+    def retrieve(self):
+        '''
+        Retrieve info from DB and files, and recreate the Aiida node object.
+        '''
+        pass
+
 
     def __del__(self):
         """

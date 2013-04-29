@@ -26,8 +26,8 @@ class AidaObjectManager(m.Manager):
             
 class DbNode(m.Model):
     '''
-    Generic node: data or calculation or code. There will be several types of connections.
-    Naming convention: A --> C --> B. 
+    Generic node: data or calculation (or code - tbd). There will be several types of connections.
+    Naming convention (NOT FINAL): A --> C --> B. 
       A is 'input' of C.
       C is 'output' of A. 
       A is 'parent' of B,C
@@ -41,9 +41,12 @@ class DbNode(m.Model):
       the first time.
     * other attributes MUST start WITHOUT an underscore. These are user-defined and
       can be appended even after the calculation has run, since they just are metadata.
-    * There is no json metadata attached to the DbNode entries.
+    * There is no json metadata attached to the DbNode entries. This can go into an attribute if needed.
     * Attributes in the Attribute table have to be thought as belonging to the DbNode,
       and this is the reason for which there is no 'user' field in the Attribute field.
+    * For a Data node, attributes will /define/ the data and hence should be immutable.
+      User-defined attributes are metadata for convenience of tagging and searching only.
+      User should be careful not to attach data computed from data as metadata. 
     '''
     uuid = UUIDField(auto=True)
     # in the form data.upffile, data.structure, calculation, code.quantumespresso.pw, ...

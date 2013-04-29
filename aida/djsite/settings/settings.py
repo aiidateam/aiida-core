@@ -190,7 +190,9 @@ INSTALLED_APPS = (
     'south',
     # Uncomment the next line to enable admin documentation:
     # 'django.contrib.admindocs',
-    'aida.djsite.db'
+    'aida.djsite.db',
+    'kombu.transport.django',
+    'djcelery',
 )
 
 # A sample logging configuration. The only tangible logging
@@ -247,3 +249,25 @@ LOGGING = {
 # We don't need to run the South migrations every time we want to run the
 # test suite. This leads to massive speedup.
 SOUTH_TESTS_MIGRATE = False
+
+# -------------------------
+# AIDA-Deamon configuration
+# -------------------------
+from celery.schedules import crontab
+from datetime import timedelta
+import djcelery
+
+djcelery.setup_loader()
+
+BROKER_URL = "django://";
+CELERY_RESULT_BACKEND = "database";
+
+CELERYBEAT_SCHEDULER = "djcelery.schedulers.DatabaseScheduler";
+CELERYBEAT_SCHEDULE = {
+    'do-every-30-seconds': {
+        'task': 'aida.djsite.db.tasks.poll',
+        'schedule': timedelta(seconds=30),
+        'args': ("foo", 16)
+    },
+}
+

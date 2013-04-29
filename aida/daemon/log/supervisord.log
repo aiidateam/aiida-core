@@ -1,0 +1,108 @@
+2013-04-29 17:01:17,171 INFO RPC interface 'supervisor' initialized
+2013-04-29 17:01:17,171 CRIT Server 'unix_http_server' running without any HTTP authentication checking
+2013-04-29 17:01:17,172 INFO daemonizing the supervisord process
+2013-04-29 17:01:17,173 INFO supervisord started with pid 41742
+2013-04-29 17:01:18,177 INFO spawned: '0' with pid 41743
+2013-04-29 17:01:18,180 INFO spawned: '0' with pid 41744
+2013-04-29 17:01:18,216 INFO exited: 0 (exit status 2; not expected)
+2013-04-29 17:01:18,216 INFO exited: 0 (exit status 2; not expected)
+2013-04-29 17:01:19,219 INFO spawned: '0' with pid 41746
+2013-04-29 17:01:19,221 INFO spawned: '0' with pid 41747
+2013-04-29 17:01:19,254 INFO exited: 0 (exit status 2; not expected)
+2013-04-29 17:01:19,255 INFO exited: 0 (exit status 2; not expected)
+2013-04-29 17:01:21,259 INFO spawned: '0' with pid 41748
+2013-04-29 17:01:21,261 INFO spawned: '0' with pid 41749
+2013-04-29 17:01:21,292 INFO exited: 0 (exit status 2; not expected)
+2013-04-29 17:01:21,293 INFO exited: 0 (exit status 2; not expected)
+2013-04-29 17:01:24,299 INFO spawned: '0' with pid 41750
+2013-04-29 17:01:24,301 INFO spawned: '0' with pid 41751
+2013-04-29 17:01:24,332 INFO exited: 0 (exit status 2; not expected)
+2013-04-29 17:01:24,334 INFO gave up: 0 entered FATAL state, too many start retries too quickly
+2013-04-29 17:01:24,334 INFO exited: 0 (exit status 2; not expected)
+2013-04-29 17:01:25,335 INFO gave up: 0 entered FATAL state, too many start retries too quickly
+2013-04-29 17:04:05,278 WARN received SIGQUIT indicating exit request
+2013-04-29 17:07:04,268 INFO RPC interface 'supervisor' initialized
+2013-04-29 17:07:04,268 CRIT Server 'unix_http_server' running without any HTTP authentication checking
+2013-04-29 17:07:04,269 INFO daemonizing the supervisord process
+2013-04-29 17:07:04,270 INFO supervisord started with pid 41840
+2013-04-29 17:07:05,273 INFO spawned: '0' with pid 41841
+2013-04-29 17:07:05,275 INFO spawned: '0' with pid 41842
+2013-04-29 17:07:16,103 INFO success: 0 entered RUNNING state, process has stayed up for > than 10 seconds (startsecs)
+2013-04-29 17:07:16,104 INFO success: 0 entered RUNNING state, process has stayed up for > than 10 seconds (startsecs)
+2013-04-29 17:09:07,390 WARN received SIGQUIT indicating exit request
+2013-04-29 17:09:07,390 INFO waiting for 0, 0 to die
+2013-04-29 17:09:10,393 INFO waiting for 0, 0 to die
+2013-04-29 17:09:13,396 INFO waiting for 0, 0 to die
+2013-04-29 17:09:16,400 INFO waiting for 0, 0 to die
+2013-04-29 17:09:18,291 INFO stopped: 0 (exit status 0)
+2013-04-29 17:09:18,348 INFO stopped: 0 (exit status 0)
+2013-04-29 17:23:03,280 INFO RPC interface 'supervisor' initialized
+2013-04-29 17:23:03,280 CRIT Server 'unix_http_server' running without any HTTP authentication checking
+2013-04-29 17:23:03,281 INFO daemonizing the supervisord process
+2013-04-29 17:23:03,282 INFO supervisord started with pid 42213
+2013-04-29 17:23:04,285 INFO spawned: '0' with pid 42214
+2013-04-29 17:23:04,286 INFO spawned: '0' with pid 42215
+2013-04-29 17:23:15,155 INFO success: 0 entered RUNNING state, process has stayed up for > than 10 seconds (startsecs)
+2013-04-29 17:23:15,156 INFO success: 0 entered RUNNING state, process has stayed up for > than 10 seconds (startsecs)
+2013-04-29 17:36:36,343 WARN received SIGQUIT indicating exit request
+2013-04-29 17:36:36,344 INFO waiting for 0, 0 to die
+2013-04-29 17:36:37,442 INFO stopped: 0 (exit status 0)
+2013-04-29 17:36:37,471 INFO stopped: 0 (exit status 0)
+2013-04-29 17:41:32,682 INFO RPC interface 'supervisor' initialized
+2013-04-29 17:41:32,698 CRIT Server 'unix_http_server' running without any HTTP authentication checking
+2013-04-29 17:41:32,701 INFO daemonizing the supervisord process
+2013-04-29 17:41:32,702 INFO supervisord started with pid 43178
+2013-04-29 17:41:33,707 INFO spawned: '0' with pid 43179
+2013-04-29 17:41:33,710 INFO spawned: '0' with pid 43180
+2013-04-29 17:41:43,966 INFO success: 0 entered RUNNING state, process has stayed up for > than 10 seconds (startsecs)
+2013-04-29 17:41:43,966 INFO success: 0 entered RUNNING state, process has stayed up for > than 10 seconds (startsecs)
+2013-04-29 18:04:09,507 WARN received SIGTERM indicating exit request
+2013-04-29 18:04:09,507 INFO waiting for 0, 0 to die
+2013-04-29 18:04:12,579 WARN received SIGTERM indicating exit request
+2013-04-29 18:04:12,579 INFO waiting for 0, 0 to die
+2013-04-29 18:04:15,581 INFO waiting for 0, 0 to die
+2013-04-29 18:04:18,585 INFO waiting for 0, 0 to die
+2013-04-29 18:04:20,293 INFO stopped: 0 (exit status 0)
+2013-04-29 18:04:20,319 INFO stopped: 0 (exit status 0)
+2013-04-29 18:04:47,047 INFO RPC interface 'supervisor' initialized
+2013-04-29 18:04:47,047 CRIT Server 'unix_http_server' running without any HTTP authentication checking
+2013-04-29 18:04:47,048 INFO daemonizing the supervisord process
+2013-04-29 18:04:47,049 INFO supervisord started with pid 43619
+2013-04-29 18:04:48,051 INFO spawned: '0' with pid 43621
+2013-04-29 18:04:48,053 INFO spawned: '0' with pid 43622
+2013-04-29 18:04:58,954 INFO success: 0 entered RUNNING state, process has stayed up for > than 10 seconds (startsecs)
+2013-04-29 18:04:58,954 INFO success: 0 entered RUNNING state, process has stayed up for > than 10 seconds (startsecs)
+2013-04-29 18:05:10,193 WARN received SIGTERM indicating exit request
+2013-04-29 18:05:10,194 INFO waiting for 0, 0 to die
+2013-04-29 18:05:13,197 INFO waiting for 0, 0 to die
+2013-04-29 18:05:16,018 INFO stopped: 0 (exit status 0)
+2013-04-29 18:05:16,042 INFO stopped: 0 (exit status 0)
+2013-04-29 18:05:42,573 INFO RPC interface 'supervisor' initialized
+2013-04-29 18:05:42,573 CRIT Server 'unix_http_server' running without any HTTP authentication checking
+2013-04-29 18:05:42,574 INFO daemonizing the supervisord process
+2013-04-29 18:05:42,575 INFO supervisord started with pid 43693
+2013-04-29 18:05:43,578 INFO spawned: '0' with pid 43694
+2013-04-29 18:05:43,579 INFO spawned: '0' with pid 43695
+2013-04-29 18:05:54,502 INFO success: 0 entered RUNNING state, process has stayed up for > than 10 seconds (startsecs)
+2013-04-29 18:05:54,502 INFO success: 0 entered RUNNING state, process has stayed up for > than 10 seconds (startsecs)
+2013-04-29 18:06:26,666 WARN received SIGTERM indicating exit request
+2013-04-29 18:06:26,666 INFO waiting for 0, 0 to die
+2013-04-29 18:06:29,669 INFO waiting for 0, 0 to die
+2013-04-29 18:06:32,672 INFO waiting for 0, 0 to die
+2013-04-29 18:06:35,980 INFO waiting for 0, 0 to die
+2013-04-29 18:06:37,589 INFO stopped: 0 (exit status 0)
+2013-04-29 18:06:37,652 INFO stopped: 0 (exit status 0)
+2013-04-29 18:06:59,813 INFO RPC interface 'supervisor' initialized
+2013-04-29 18:06:59,813 CRIT Server 'unix_http_server' running without any HTTP authentication checking
+2013-04-29 18:06:59,814 INFO daemonizing the supervisord process
+2013-04-29 18:06:59,815 INFO supervisord started with pid 43765
+2013-04-29 18:07:00,818 INFO spawned: '0' with pid 43766
+2013-04-29 18:07:00,820 INFO spawned: '0' with pid 43767
+2013-04-29 18:07:11,668 INFO success: 0 entered RUNNING state, process has stayed up for > than 10 seconds (startsecs)
+2013-04-29 18:07:11,668 INFO success: 0 entered RUNNING state, process has stayed up for > than 10 seconds (startsecs)
+2013-04-29 18:10:51,889 WARN received SIGTERM indicating exit request
+2013-04-29 18:10:51,889 INFO waiting for 0, 0 to die
+2013-04-29 18:10:54,893 INFO waiting for 0, 0 to die
+2013-04-29 18:10:57,897 INFO waiting for 0, 0 to die
+2013-04-29 18:10:58,253 INFO stopped: 0 (exit status 0)
+2013-04-29 18:10:58,284 INFO stopped: 0 (exit status 0)

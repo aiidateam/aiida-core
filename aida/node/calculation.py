@@ -40,21 +40,28 @@ while the calculation is running, to make sure that everything is going as plann
 
 class Calculation(Node):
     _plugin_type_string = "calculation"
-    _updatable_attributes = tuple() 
+    _updatable_attributes = ('state', 'job_id', 'scheduler_state', 'last_jobinfo')
     
     def __init__(self,*args,**kwargs):
+        from aida.common.datastructures import calcStates
+        
         self._logger = super(Calculation,self).logger.getChild('calculation')
         super(Calculation,self).__init__(*args, **kwargs)
-        # define labeled data input ports
-        # TODO here!
+
+        self._set_state(calcStates.NEW)
 
 
     def validate(self):
+        from aida.common.datastructures import calcStates
+        from aida.common.exceptions import ValidationError
+        
         # TODO
         # Check that each of supplied data objects matches correct data type. 
         # Assume data objects are validated. It's the data plugin method's job.
         super(Calculation,self).validate()
-        
+
+        if self.get_state() not in calcStates:
+            raise ValidationError("Calculation state '{}' is not valid".format(self.get_state()))
         
     def add_link_from(self,src, *args, **kwargs):
         '''
@@ -72,3 +79,92 @@ class Calculation(Node):
         
         return super(Calculation,self).add_link_from(src, *args, **kwargs)
     
+    def _set_state(self, state):
+        from aida.common.datastructures import calcStates
+        if state not in calcStates:
+            raise ValueError("'{}' is not a valid calculation status".format(state))
+        self.set_attr('state', state)
+
+    def get_state(self):
+        return self.get_attr('state', None)
+
+    def _set_jobid(self, jobid):
+        """
+        Always set as a string
+        """
+        return self.set_attr('jobid', unicode(jobid))
+    
+    def get_jobid(self):
+        return self.get_attr('jobid', None)
+        
+    def _set_scheduler_state(self,state):
+        # I don't do any test here on the possible valid values,
+        # I just convert it to a string
+        self.set_attr('scheduler_state', unicode(state))
+                
+    def get_scheduler_state(self):
+        self.get_attr('scheduler_state', None)
+
+    def _set_last_jobinfo(self,last_jobinfo):
+        import json
+        
+        self.set_attr('last_jobinfo', json.dumps(last_jobinfo))
+
+    def get_last_jobinfo(self):
+        import json
+        from aida.scheduler.datastructures import JobInfo
+
+        jsondata = json.loads(self.get_attr('last_jobinfo','{}'))
+        try:
+            # I try to return a JobInfo object
+            return JobInfo(jsondata)
+        except ValueError:
+            return jsondata
+
+    @classmethod
+    def get_all_with_state(cls, state, computer=None, user=None, only_computer_user_pairs = False):
+        """
+        Filter all calculations with a given state.
+
+        Issue a warning if the state is not in the list of valid states.
+
+        Args:
+            state: The state to be used to filter (should be a string among those defined in
+                aida.common.datastructures.calcStates)
+            computer: a Django entry (or its pk) of a computer in the Computer table;
+                if present, the results are restricted to calculations running on that
+                specific computer
+            user: a Django entry (or its pk) of a user in the User table;
+                if present, the results are restricted to calculations of that
+                specific user
+            only_computer_user_pairs: if False (default) return a queryset where each element
+                is a suitable instance of Node (it should be an instance of Calculation, if
+                everything goes right!)
+                If True, return only a list of tuples, where each tuple is in the format
+                ('computer__id', 'user__id') [where the IDs are the IDs of the respective tables]
+        """
+        # I assume that calcStates are strings. If this changes in the future, update the
+        # filter below from attributes__tval to the correct field.
+        from aida.common.datastructures import calcStates
+        if state not in calcStates:
+            self.logger.warning("querying for calculation state='{}', but it is not a "
+                                "valid calculation state".format(state))
+
+        kwargs = {}
+        if computer is not None:
+            kwargs['computer'] = computer
+        if user is not None:
+            kwargs['user'] = user
+        
+        queryresults = self.query(
+            type__startswith=Calculation._plugin_type_string,
+            attributes__key='_state',
+            attributes__tval=state,
+            **kwargs)
+
+        if only_computer_user_pairs:
+            return queryresults.values_list(
+                'computer__id', 'user__id')
+        else:
+            return queryresults
+            

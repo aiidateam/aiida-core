@@ -8,6 +8,7 @@ from django.utils import unittest
 from aida.node import Node
 from aida.common.exceptions import ModificationNotAllowed
 
+
 class TestQueryWithAidaObjects(unittest.TestCase):
     """
     Test if queries work properly also with aida.node.Node classes instead of
@@ -30,6 +31,30 @@ class TestQueryWithAidaObjects(unittest.TestCase):
             User.objects.get(username=getpass.getuser).delete()
         except ObjectDoesNotExist:
             pass
+
+    def test_get_inputs_and_outputs(self):
+        a1 = Node().store()
+        a2 = Node().store()        
+        a3 = Node().store()
+        a4 = Node().store()        
+
+        a1.add_link_to(a2)
+        a2.add_link_to(a3)
+        a4.add_link_from(a2)
+        a3.add_link_to(a4)
+
+        # I check that I get the correct links
+        self.assertEquals(set([n.uuid for n in a1.get_inputs()]),set([]))
+        self.assertEquals(set([n.uuid for n in a1.get_outputs()]),set([a2.uuid]))
+
+        self.assertEquals(set([n.uuid for n in a2.get_inputs()]),set([a1.uuid]))
+        self.assertEquals(set([n.uuid for n in a2.get_outputs()]),set([a3.uuid, a4.uuid]))
+
+        self.assertEquals(set([n.uuid for n in a3.get_inputs()]),set([a2.uuid]))
+        self.assertEquals(set([n.uuid for n in a3.get_outputs()]),set([a4.uuid]))
+
+        self.assertEquals(set([n.uuid for n in a4.get_inputs()]),set([a2.uuid, a3.uuid]))
+        self.assertEquals(set([n.uuid for n in a4.get_outputs()]),set([]))
         
     def test_links_and_queries(self):
         from aida.djsite.db.models import DbNode, Link
@@ -422,3 +447,137 @@ class TestNodeBasic(unittest.TestCase):
         returned_attrs = {k: v for k, v in a.itermetadata()}
         self.assertEquals(returned_attrs, metadata_to_set)
 
+
+    def test_versioning_and_postsave_attributes(self):
+        """
+        Checks the versioning.
+        """
+        class myNodeWithFields(Node):
+            # State can be updated even after storing
+            _updatable_attributes = ('state') 
+        
+        a = myNodeWithFields()
+        attrs_to_set = {
+            'bool': self.boolval,
+            'integer': self.intval,
+            'float': self.floatval,
+            'string': self.stringval,
+            'dict': self.dictval,
+            'list': self.listval,
+            'state': 267,
+            }
+
+        for k,v in attrs_to_set.iteritems():
+            a.set_attr(k, v)
+            
+        # Check before storing
+        self.assertEquals(267,a.get_attr('state'))
+
+        a.store()
+
+        # Check after storing
+        self.assertEquals(267,a.get_attr('state'))        
+
+        # Even if I stored many attributes, this should stay at 1
+        self.assertEquals(a.dbnode.nodeversion, 1)
+        self.assertEquals(a.dbnode.lastsyncedversion, 0)
+
+        # I check increment on new version
+        a.set_metadata('a', 'b')
+        self.assertEquals(a.dbnode.nodeversion, 2)
+
+        # I check that I can set this attribute
+        a.set_attr('state', 999)
+
+        # I check increment on new version
+        self.assertEquals(a.dbnode.nodeversion, 3)
+
+        with self.assertRaises(ModificationNotAllowed):
+            # I check that I cannot modify this attribute
+            a.set_attr('otherattribute', 222)
+
+        # I check that the counter was not incremented
+        self.assertEquals(a.dbnode.nodeversion, 3)
+
+        
+            
+        
+class TestSubNodes(unittest.TestCase):
+    
+    @classmethod
+    def setUpClass(cls):
+        import getpass
+        from django.contrib.auth.models import User
+
+        User.objects.create_user(getpass.getuser(), 'unknown@mail.com', 'fakepwd')
+        
+
+    @classmethod
+    def tearDownClass(cls):
+        import getpass
+        from django.contrib.auth.models import User
+        from django.core.exceptions import ObjectDoesNotExist
+
+        try:
+            User.objects.get(username=getpass.getuser).delete()
+        except ObjectDoesNotExist:
+            pass
+
+    
+    def test_valid_links(self):
+        from aida.node import Node, Calculation, Data, Code
+
+        # I create some objects
+        d1 = Data().store()
+        d2 = Data().store()
+
+        code = Code().store()
+        
+        calc = Calculation().store()
+        calc2 = Calculation().store()
+
+        
+        d1.add_link_to(calc)
+        calc.add_link_from(d2)
+        calc.add_link_from(code)
+
+        # I try to add wrong links (data to data, calc to calc, etc.)
+        with self.assertRaises(ValueError):
+            d1.add_link_to(d2)
+
+        with self.assertRaises(ValueError):
+            d1.add_link_from(d2)
+
+        with self.assertRaises(ValueError):
+            d1.add_link_from(code)
+
+        with self.assertRaises(ValueError):
+            code.add_link_from(d1)
+
+        with self.assertRaises(ValueError):
+            calc.add_link_from(calc2)
+
+        calculation_inputs = calc.get_inputs()
+        inputs_type_data = [i for i in calculation_inputs if isinstance(i,Data)]
+        inputs_type_code = [i for i in calculation_inputs if isinstance(i,Code)]
+
+        # This calculation has three inputs (2 data and one code)
+        self.assertEquals(len(calculation_inputs), 3)
+        self.assertEquals(len(inputs_type_data), 2)
+        self.assertEquals(len(inputs_type_code), 1)
+        
+    def check_single_calc_source(self):
+        """
+        Each data node can only have one input calculation
+        """
+        from aida.node import Node, Calculation, Data, Code
+        
+        d1 = Data().store()
+        
+        calc = Calculation().store()
+        calc2 = Calculation().store()
+
+        d1.add_link_from(calc)
+
+        with self.assertRaises(ValueError):
+            d1.add_link_from(calc2)

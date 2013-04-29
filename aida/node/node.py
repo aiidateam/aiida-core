@@ -192,14 +192,23 @@ class Node(object):
                 raise ModificationNotAllowed("Cannot delete an attribute after saving a node")
 
 
-    def get_attr(self, key):
-        if self._to_be_stored:
+    def get_attr(self, key, *args):
+        if len(args) > 1:
+            raise ValueError("After the key name you can pass at most one value, that is "
+                             "the default value to be used if no attribute is found.")
+        try:
+            if self._to_be_stored:
+                try:
+                    return self._attrs_cache["_{}".format(key)]
+                except KeyError:
+                    raise AttributeError("Attribute {} does not exist".format(key))
+            else:
+                return self._get_attribute_db('_{}'.format(key))
+        except AttributeError as e:
             try:
-                return self._attrs_cache["_{}".format(key)]
-            except KeyError:
-                raise AttributeError("Attribute {} does not exist".format(key))
-        else:
-            return self._get_attribute_db('_{}'.format(key))
+                return args[0]
+            except IndexError:
+                raise e
 
     def set_metadata(self,key,value):
         """
@@ -263,21 +272,29 @@ class Node(object):
         for md in metadatalist:
             yield (md.key, md.getvalue())
             
-    def iterattrs(self):
+    def iterattrs(self,also_updatable=True):
         """
         Iterator over the attributes, returning tuples (key, value)
+
+        If also_updatable is False, does not iterate over attributes that are updatable
 
         TODO: check what happens if someone stores the object while the iterator is
         being used!
         """
+        updatable_list = ["_{}".format(attr) for attr in self._updatable_attributes]
+        
         if self._to_be_stored:
             for k, v in self._attrs_cache.iteritems():
+                if not also_updatable and k in updatable_list:
+                    continue
                 # I strip the underscore
                 yield (k[1:],v)
         else:          
             attrlist = self._list_all_attributes_db().filter(
                 key__startswith='_')
             for attr in attrlist:
+                if not also_updatable and attr.key in updatable_list:
+                    continue
                 # I strip the initial underscore
                 yield (attr.key[1:], attr.getvalue())
 
@@ -416,7 +433,7 @@ class Node(object):
         newobject.dbnode.description = self.dbnode.description # Inherit description
         newobject.dbnode.computer = self.dbnode.computer # Inherit computer
         
-        for k, v in self.iterattrs():
+        for k, v in self.iterattrs(also_updatable=False):
             newobject.set_attr(k,v)
 
         for filename in self.get_file_list():

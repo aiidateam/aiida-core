@@ -1,13 +1,11 @@
 import os
 
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
-from django.db import transaction
 
 import aida.common
-from aida.djsite.db.models import DbNode, Attribute
+#from aida.djsite.db.models import DbNode, Attribute
 from aida.common.exceptions import (
     InternalError, ModificationNotAllowed, NotExistent, ValidationError )
-from aida.djsite.utils import get_automatic_user
 from aida.common.folders import RepositoryFolder, SandboxFolder
 
 # Name to be used for the section
@@ -61,6 +59,9 @@ class Node(object):
             return self._dbnode.pk
     
     def __init__(self,**kwargs):
+        from aida.djsite.utils import get_automatic_user
+        from aida.djsite.db.models import DbNode
+
         self._to_be_stored = False
         self._temp_folder = None
         uuid = kwargs.pop('uuid', None)
@@ -98,6 +99,8 @@ class Node(object):
         Map to the aidaobjects manager of the DbNode, that returns
         Node objects (or their subclasses) instead of DbNode entities.
         """
+        from aida.djsite.db.models import DbNode
+        
         return DbNode.aidaobjects.filter(**kwargs)
 
     @property
@@ -154,13 +157,17 @@ class Node(object):
     def get_inputs(self):
         """
         Return a list of nodes that enter (directly) in this node
-        """ 
+        """
+        from aida.djsite.db.models import DbNode
+        
         return list(DbNode.aidaobjects.filter(outputs=self.dbnode).distinct())
 
     def get_outputs(self):
         """
         Return a list of nodes that exit (directly) in this node
-        """ 
+        """
+        from aida.djsite.db.models import DbNode
+        
         return list(DbNode.aidaobjects.filter(inputs=self.dbnode).distinct())
 
     def set_attr(self, key, value):
@@ -291,7 +298,32 @@ class Node(object):
         """
         Return a django queryset with the attributes of this node
         """
+        from aida.djsite.db.models import Attribute
+        
         return Attribute.objects.filter(dbnode=self.dbnode)
+
+    def add_comment(self,content):
+        """
+        Add a new comment.
+        """
+        from aida.djsite.db.models import Comment
+        from aida.djsite.utils import get_automatic_user
+
+        if self._to_be_stored:
+            raise ModificationNotAllowed("Comments can be added only after "
+                                         "storing the node")
+
+        Comment.objects.create(dbnode=self._dbnode, user=get_automatic_user(), content=content)
+
+    def get_comments(self):
+        """
+        Return the list of comments, sorted by date; each element of the list is a tuple
+        containing (username, username_email, date, content)
+        """
+        from aida.djsite.db.models import Comment
+
+        return list(Comment.objects.filter(dbnode=self._dbnode).order_by('time').values_list(
+            'user__username', 'user__email', 'time', 'content'))
 
     def _get_attribute_db(self, key):
         """
@@ -300,6 +332,8 @@ class Node(object):
         The calling function must check that the key of attributes is prepended with
         an underscore and the key of metadata is not.
         """
+        from aida.djsite.db.models import Attribute
+
         try:
             attr = Attribute.objects.get(dbnode=self.dbnode, key=key)
         except ObjectDoesNotExist:
@@ -314,6 +348,8 @@ class Node(object):
         The calling function must check that the key of attributes is prepended with
         an underscore and the key of metadata is not.
         """
+        from aida.djsite.db.models import Attribute
+
         self._increment_version_number_db()
         try:
             Attribute.objects.get(dbnode=self.dbnode, key=key).delete()
@@ -327,6 +363,7 @@ class Node(object):
         metadata or attribute). 
         """
         from django.db.models import F
+        from aida.djsite.db.models import DbNode
 
         # I increment the node number using a filter (this should be the right way of doing it;
         # dbnode.nodeversion  = F('nodeversion') + 1
@@ -354,6 +391,8 @@ class Node(object):
         This can be set to False during the store() so that the version does not get increased for each
         attribute.
         """
+        from aida.djsite.db.models import Attribute
+                
         if incrementversion:
              self._increment_version_number_db()
         attr, created = Attribute.objects.get_or_create(dbnode=self.dbnode, key=key)
@@ -391,6 +430,8 @@ class Node(object):
 
     @property
     def dbnode(self):
+        from aida.djsite.db.models import DbNode
+        
         # I also update the internal _dbnode variable, if it was saved
         if not self._to_be_stored:
             self._dbnode = DbNode.objects.get(pk=self._dbnode.pk)
@@ -466,6 +507,8 @@ class Node(object):
         
         TODO: This needs to be generalized, allowing for flexible methods for storing data and its attributes.
         """
+        from django.db import transaction
+
         if self._to_be_stored:
 
             # As a first thing, I check if the data is valid

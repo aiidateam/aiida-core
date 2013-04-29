@@ -39,9 +39,12 @@ while the calculation is running, to make sure that everything is going as plann
 '''
 
 class Calculation(Node):
+    _plugin_type_string = "calculation"
+    _updatable_attributes = tuple() 
+    
     def __init__(self,*args,**kwargs):
-        self._logger = super(Data,self).logger.getChild('calculation')
-        super(Data,self).__init__(*args, **kwargs)
+        self._logger = super(Calculation,self).logger.getChild('calculation')
+        super(Calculation,self).__init__(*args, **kwargs)
         # define labeled data input ports
         # TODO here!
 
@@ -50,12 +53,14 @@ class Calculation(Node):
         # TODO
         # Check that each of supplied data objects matches correct data type. 
         # Assume data objects are validated. It's the data plugin method's job.
-        return True
+        super(Calculation,self).validate()
         
         
-    def add_link_from(self,src,*args,**kwargs):
+    def add_link_from(self,src, *args, **kwargs):
         '''
-        TODO: Use input labels for Data input links.
+        Add a link with a code as destination.
+        You can use the parameters of the base Node class, in particular the label
+        parameter to label the link.
         '''
         
         from aida.node.data import Data
@@ -65,5 +70,5 @@ class Calculation(Node):
         if not isinstance(src,(Data, Code)):
             raise ValueError("Nodes entering in calculation can only be of type data or code")
         
-        return super(Data,self).add_link_to(dest,*args, **kwargs)
+        return super(Calculation,self).add_link_from(src, *args, **kwargs)
     

@@ -454,7 +454,7 @@ class TestNodeBasic(unittest.TestCase):
         """
         class myNodeWithFields(Node):
             # State can be updated even after storing
-            _updatable_attributes = ('state') 
+            _updatable_attributes = ('state',) 
         
         a = myNodeWithFields()
         attrs_to_set = {
@@ -498,6 +498,11 @@ class TestNodeBasic(unittest.TestCase):
 
         # I check that the counter was not incremented
         self.assertEquals(a.dbnode.nodeversion, 3)
+
+        b = a.copy()
+        # updatable attributes are not copied
+        with self.assertRaises(AttributeError):
+            b.get_attr('state')
 
     def test_comments(self):
         # This is the best way to compare dates with the stored ones, instead of

@@ -346,13 +346,13 @@ class Computer(m.Model):
             raise ConfigurationError('No scheduler found for {} [type {}], message: {}'.format(
                 self.hostname, self.scheduler_type, e.message))
 
-class RunningJob(m.Model):
-    calc = m.OneToOneField(DbNode,related_name='jobinfo') # OneToOneField implicitly sets unique=True
-    calc_state = m.CharField(max_length=64)
-    job_id = m.TextField(blank=True)
-    scheduler_state = m.CharField(max_length=64,blank=True)
-    # Will store a json of the last JobInfo got from the scheduler
-    last_jobinfo = m.TextField(default='{}')  
+#class RunningJob(m.Model):
+#    calc = m.OneToOneField(DbNode,related_name='jobinfo') # OneToOneField implicitly sets unique=True
+#    calc_state = m.CharField(max_length=64)
+#    job_id = m.TextField(blank=True)
+#    scheduler_state = m.CharField(max_length=64,blank=True)
+#    # Will store a json of the last JobInfo got from the scheduler
+#    last_jobinfo = m.TextField(default='{}')  
 
 class AuthInfo(m.Model):
     """
@@ -367,9 +367,9 @@ class AuthInfo(m.Model):
     class Meta:
         unique_together = (("aidauser", "computer"),)
 
-    def update_running_table(self):
+    def update_calc_states(self):
         import aida
-        aida.execmanager.update_running_table(self)
+        aida.execmanager.update_calc_states(self)
 
     def get_auth_params(self):
         import json

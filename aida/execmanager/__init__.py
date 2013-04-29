@@ -1,26 +1,24 @@
 from django.exceptions import DoesNotExist
-from django.contrib.auth.models import User as AidaUser 
+from django.contrib.auth.models import User
 
 from aida.common.datastructures import calcStates
 from aida.scheduler.datastructures import jobStates
-from aida.djsite.db.models import Computer, AuthInfo, RunningJob
+from aida.djsite.db.models import Computer, AuthInfo
 from aida.common.exceptions import DBContentError, ConfigurationError, AuthenticationError
+from aida.common import aidalogger
     
-def update_calculation_status(authinfo):
+def update_calc_states(authinfo):
     """
-    Update the status in WITHSCHEDULER status belonging to user 'aidauser' and running on
-    computer 'computer'.
+    Update the states of calculations in WITHSCHEDULER status belonging to user and machine
+    as defined in the 'authinfo' table.
+    """
+    from aida.node import Calculation
 
-    Args:
-        computer: a Django object for the computer
-        aidauser: a Django object for the aida user
-    """
-    import json
-    
-    calcs_to_inquire = RunningJob.objects.filter(
+    # This returns an iterator over aida Calculation objects
+    calcs_to_inquire = Calculation.get_all_with_state(
         state=calcStates.WITHSCHEDULER,
-        calc__computer=authinfo.computer,
-        calc__aidauser=authinfo.aidauser)
+        computer=authinfo.computer,
+        user=authinfo.aidauser)
 
     # NOTE: no further check is done that machine and aidauser are correct for each calc in calcs
     s = authinfo.computer.get_scheduler()
@@ -33,53 +31,51 @@ def update_calculation_status(authinfo):
             s.set_transport(t)
             # TODO: see if we want to filter already here the jobs only for the given user,
             # or on the list of jobs
-            jobs = s.getJobs(as_dict = True)
+            found_jobs = s.getJobs(as_dict = True)
     
             # I update the status of jobs
             finished = []
             for c in calcs_to_inquire:
+                jobid = c.get_jobid()
+                if jobid is None:
+                    aidalogger.error("Calculation {} is WITHSCHEDULER but no job id was found!".format(
+                        c.uuid))
+                    continue
+                
                 # I check if the calculation to be checked (c) is in the output of qstat
-                if c.job_id in jobs:
+                if jobid in found_jobs:
                     # jobinfo: the information returned by qstat for this job
-                    jobinfo = jobs[c.job_id]
+                    jobinfo = found_jobs[jobid]
                     if jobinfo.jobState in [jobStates.DONE, jobStates.FAILED]:
                         finished.append(c)
-                        c.state = calcStates.FINISHED
+                        c._set_state(calcStates.FINISHED)
                     elif jobinfo.jobState == jobStates.UNDETERMINED:
-                        c.state = calcStates.UNDETERMINED
+                        c._set_state(calcStates.UNDETERMINED)
                         self.logger.error("There is an undetermined calc with uuid {}".format(
                             c.calc.uuid))
                     else:
-                        c.state = calcStates.WITHSCHEDULER
-                    c.scheduler_state = jobinfo.jobState
-                    c.last_jobinfo = json.dumps(jobinfo)
+                        c._set_state(calcStates.WITHSCHEDULER)
+                    c._set_scheduler_state(jobinfo.jobState)
+                    c._set_last_jobinfo(jobinfo)
                 else:
                     # calculation c is not found in the output of qstat
                     finished.append(c)
-                    c.state = calcStates.FINISHED
-                c.save()
+                    c._set_state(calcStates.FINISHED)
 
             # TODO: implement this part
             # TODO: understand if this second save may cause problems if we have many threads
             for c in finished:
-                # c.last_jobinfo = json.dumps(>>> GET MORE DETAILED INFO OF FINISHED JOB <<<)
-                # c.save()
+                # c._set_last_jobinfo(json.dumps(>>> GET MORE DETAILED INFO OF FINISHED JOB <<<))
                 pass
 
 # in daemon
 def daemon():
     update_jobs()
     # Now, finished jobs have a 'finished' status in DB
-    # here, do tricks to 
-    retrieve_finished()
-    parse_results()
-    ...
+    # retrieve_finished() # < WILL LOOK FOR THINGS IN A FINISHED STATUS
+    # parse_results()
+    #...
 
-# in daemon
-def retrieve_finished():
-    computers_users_to_check = set(
-        RunningJob.objects.filter(state=calcStates.WITHSCHEDULER).values_list(
-            'calc__computer__id', 'calc__aidauser__id'))
 
 # in daemon
 def update_jobs():
@@ -88,12 +84,14 @@ def update_jobs():
     """
     # I create a unique set of pairs (computer, aidauser)
     computers_users_to_check = set(
-        RunningJob.objects.filter(state=calcStates.WITHSCHEDULER).values_list(
-            'calc__computer__id', 'calc__aidauser__id'))
-
+        Calculation.get_all_with_state(
+            state=calcStates.WITHSCHEDULER,
+            only_computer_user_pairs = True)
+        )
+    
     for computer_id, aidauser_id in computers_users_to_check:
         computer = Computer.objects.get(id=computer_id)
-        aidauser = AidaUser.objects.get(id=aidauser_id)
+        aidauser = User.objects.get(id=aidauser_id)
         try:
             try:
                 authinfo = AuthInfo.objects.get(computer=computer,aidauser=aidauser)
@@ -111,6 +109,8 @@ def update_jobs():
                        aidauser.username,
                        computer.hostname,
                        e.__class__.__name, e.message))
-            logger.error(msg)
+            aidalogger.error(msg)
 
 
+def submit_calc():
+    pass

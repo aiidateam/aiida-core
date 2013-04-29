@@ -127,6 +127,20 @@ class Folder(object):
         shutil.copyfile(src,dest_abs_path)
         return dest_abs_path
 
+    def remove_file(self,filename):
+        """
+        Remove a file from the folder.
+        
+        Args:
+            filename: the relative path name to remove
+        """
+        # I get the full path of the filename, checking also that I don't
+        # go beyond the folder limits
+        dest_abs_path = self.get_file_path(filename)
+
+        os.remove(filename)
+
+
     def get_file_path(self,filename,check_existence=False):
         """
         Return an absolute path for a filename in this folder.
@@ -146,7 +160,7 @@ class Folder(object):
             raise ValueError(errstr)
 
         if check_existence:
-            if not os.path.isfile(filename):
+            if not os.path.isfile(dest_abs_path):
                 raise OSError("{} is not a file within the folder {}".format(
                     filename, self.abspath))
         

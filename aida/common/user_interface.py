@@ -40,8 +40,8 @@ def SimpleWorkflow():
     
     myjobparams = Jobparams.create() # a subclass of Data with a preset schema
     
-    #set params for job execution
-    mycalc = Relaxation.create()
+    mycalc = Relaxation.create() # creates an 'abstract' object
+    # Sublcass of calculation which expects input {'input_file': Input(), 'struc': Struc(), ...}
     mycalc.attrs.add({'NPROC' : 32, 'NPOOL' : 1, 'CALCTYPE' : 'md', 'RUNTIME' : '1:00:00'})  # add or modify job attributes
     
     mycalc.NODES = 4   # only a temporary object property
@@ -49,28 +49,52 @@ def SimpleWorkflow():
     mycalc.store()  #State = initiated
     # params are validated based on expected schema at the store time
     
-    #connect objects
-    mycalc.set_input)
-    myinput.set_destination(mycalc)
+    #connect concrete objects to calculation
+    mycalc.set_input({'input_file':myinput, 'struc':mystruc,...})
     
     mycalc.submit()
     # execution manager loads plugins and does its thing
+    # when finished code plugin will serialize and store output data
+
+
+def AbstractStaticWorkflow():
+    '''
+    In case of a predefined workflow we have the full graph.
+    This is an example of constructing it.
+    The end result should look like a single calculation. 
+    '''
+    
+    struc1 = Struc()   # abstract place
+    calc1 = 
+    # set up dependencies by connecting ports
     
 
-
-def AdvancedWorkflow():
+def DynamicWorkflow():
+    '''
+    In case of dynamic workflows, nodes are created on the fly.
+    Each data object will have a unique label, derived from its variable name. ???
     
-    struclist = Struc.filter(child__type__startswith = 'calculation', child__attr__key = 'energy', child__attr__fval__lte = 10.4)
-
+    
+    
+    struc1 = Struc(...)
+    calc1 = Relaxation(...)
+    
+    calc2 = Phonon(...)
+    calc2.set_input({
+    for data2 in output_set:
+        
 
 def Observing():
-
+    
 
 def RestartWorkflow():
 
 
 
 def QueryWorkflow():
+    
+    struclist = Struc.filter(child__type__startswith = 'calculation', child__attr__key = 'energy', child__attr__fval__lte = 10.4)
+
 
     
 

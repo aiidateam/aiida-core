@@ -6,7 +6,7 @@
 ### we should instead keep track internally of the 'current working directory'
 ### in the exact same way as paramiko does already.
 
-import os,shutil
+import os,shutil,subprocess
 import aida.transport
 from aida.common.utils import escape_for_bash
 from aida.common import aidalogger
@@ -25,104 +25,183 @@ class FileAttribute(FixedFieldsAttributeDict):
         'st_mtime',
         )
 
-
 class LocalTransport(aida.transport.Transport):
 
-    def __init(self)__:
-        # internal_dir will emulate the concept of working directory
+    def __init__(self):
+        # # First call the parent __init__ to setup the logger!
+        # super(LocalTransport,self).__init__()
+        # self._logger = super(LocalTransport,self).logger.getChild('local')
+
+        # _internal_dir will emulate the concept of working directory
         # The real current working directory is not to be changed
-        
-        internal_dir = os.getenv("HOME")
-        _is_open = False
-
-    def __init(self)__:
-        self._is_open = True
-
-        return self
-
-    def __close__(self):
+        #        self._internal_dir = None
         self._is_open = False
-
-    def __unicode__(self):
+        self._internal_dir = None
+        #        if kwargs:
+            #            raise ValueError("Input parameters to LocalTransport"
+                             #                             " are not recognized")
+    
+    
+    def __enter__(self):
         """
-        Return a useful string.
+        Opens a local transport channel
         """
-        conn_info = unicode(self._machine)
-        try:
-            conn_info = (unicode(self._connect_args['username']) + 
-                         u'@' + conn_info)
-        except KeyError:
-            # No username explicitly defined: ignore
-            pass
-        try:
-            conn_info += u':{}'.format(self._connect_args['port'])
-        except KeyError:
-        # No port explicitly defined: ignore
-            pass
+        self._internal_dir = os.path.expanduser("~")
+        self._is_open = True
+        return self
+    
+    
+    def __exit__(self, type, value, traceback):
+        """
+        Closes the local transport channel
+        """
+        self._is_open = False
+        
+        
+    # def __unicode__(self):
+    #     """
+    #     Return a useful string.
+    #     """
+    #     conn_info = unicode(self._machine)
+    #     try:
+    #         conn_info = (unicode(self._connect_args['username']) + 
+    #                      u'@' + conn_info)
+    #     except KeyError:
+    #         # No username explicitly defined: ignore
+    #         pass
+    #     try:
+    #         conn_info += u':{}'.format(self._connect_args['port'])
+    #     except KeyError:
+    #     # No port explicitly defined: ignore
+    #         pass
             
-        return u'{}({})'.format(self.__class__.__name__, conn_info)
+    #     return u'{}({})'.format(self.__class__.__name__, conn_info)
 
+
+    # TODO : fix this decorator
     @property
-    def localclient(self):
+    def lc(self):
         if not self._is_open:
             raise aida.transport.TransportInternalError(
                 "Error, local method called for LocalTransport "
-                "without opening the channel first")
+                "with channel closed")
         return self
 
-    def chdir(self, path):
-        internal_dir = os.path.normpath( os.path.join( internal_dir,path ) )
-        
-    def normalize(self, path):
-        return os.path.normpath(path)
 
+    def chdir(self, path):
+        """
+        Changes directory to path, emulated internally.
+        Raises OSError if the directory does not have read attributes.
+        """
+        if os.access("myfile", os.R_OK):
+            _internal_dir = os.path.normpath( os.path.join( _internal_dir,path ) )
+        else:
+            raise OSError
+    
+    
+    def normalize(self, path):
+        """
+        Normalizes path, eliminating double slashes, etc..
+        """
+        return os.path.normpath( os.path.join(_internal_dir,path) )
+    
+    
     def getcwd(self):
-        return internal_dir
+        """
+        Returns the current working directory, emulated by the transport
+        """
+        return _internal_dir
+
 
     def mkdir(self, path):
-        os.mkdir( os.path.join( internal_dir,path ) )
+        """
+        Creates the folder path.
+        """
+        os.mkdir( os.path.join( _internal_dir,path ) )
+
 
     def rmdir(self, path):
-        os.rmdir( os.path.join( internal_dir,path ) )
+        """
+        Removes a folder at location path.
+        """
+        os.rmdir( os.path.join( _internal_dir,path ) )
+
 
     def isdir(self,path):
-        return os.path.isdir( os.path.join( internal_dir,path ) )
+        """
+        Checks if 'path' is a directory.
+        Returns a bool
+        """
+        return os.path.isdir( os.path.join( _internal_dir,path ) )
+
 
     def chmod(self,path,mode):
-        os.chmod( os.path.join( internal_dir,path ) , mode )
+        """
+        Changes permission bits of object at path
+        """
+        os.chmod( os.path.join( _internal_dir,path ) , mode )
     
+
     def put(self,source,destination):
+        """
+        Copies a file from source to destination
+        (equivalent to copy)
+        """
         return self.copy( source,destination )
+
 
     def get(self,source,destination):
+        """
+        Copies a file from source to destination
+        (equivalent to copy)
+        """
         return self.copy( source,destination )
 
+
     def copy(self,source,destination):
-        the_source = os.path.join( internal_dir,source )
-        the_destination = os.path.join( internal_dir,destination )
+        """
+        Copies a file from source to destination
+        """
+        the_source = os.path.join( _internal_dir,source )
+        the_destination = os.path.join( _internal_dir,destination )
         shutil.copyfile( the_source, the_destination )
+
 
     def get_attribute(self,path):
         """
-        Returns the list of attributes of a file
-        Receives in input the path of a given file
+        Returns the list of attributes of a file.
+        Receives in input the path of a given file.
         """
-        os_attr = self.sftp.lstat( os.path.join(internal_dir,path) )
+        os_attr = os.lstat( os.path.join(_internal_dir,path) )
         aida_attr = FileAttribute()
         # map the paramiko class into the aida one
         # note that paramiko object contains more informations than the aida
         for key in aida_attr._valid_fields:
             aida_attr[key] = getattr(os_attr,key)
         return aida_attr
+
         
-    def listdir(self,path=internal_dir):
-        return os.listdir( os.path.join( internal_dir,path ) )
+    def listdir(self,path='.'):
+        """
+        Returns a list containing the names of the entries in the directory .
+        """
+        return os.listdir( os.path.join( _internal_dir,path ) )
+
 
     def remove(self,path):
-        os.remove( os.path.join( internal_dir,path ) )
+        """
+        Removes a file at position path.
+        """
+        os.remove( os.path.join( _internal_dir,path ) )
+
     
     def isfile(self,path):
-        return os.path.isdir( os.path.join( internal_dir,path ) )
+        """
+        Checks if object at path is a file.
+        Returns a boolean.
+        """
+        return os.path.isdir( os.path.join( _internal_dir,path ) )
+
 
     def _exec_command_internal(self,command):
         """
@@ -168,3 +247,37 @@ class LocalTransport(aida.transport.Transport):
         output_text, stderr_text = proc.communicate()
         
         return retval, output_text, stderr_text
+
+
+
+
+
+
+
+if __name__ == '__main__':
+    import unittest
+    import logging
+    #    from test import *
+
+# TODO : implement tests of basic connections
+
+    class TestBasicConnection(unittest.TestCase):
+        """
+        Test basic connections.
+        """
+        def test_closed_connection(self):
+            with self.assertRaises(aida.transport.TransportInternalError):
+                t = LocalTransport()
+                t.listdir()
+                
+        def test_invalid_param(self):
+            with self.assertRaises(ValueError):
+                LocalTransport(machine='localhost')
+                             
+        def test_basic(self):
+            with LocalTransport() as t:
+                pass
+
+    # run_tests('local')
+
+    unittest.main()

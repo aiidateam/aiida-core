@@ -6,7 +6,7 @@ from django.db import transaction
 import aida.common
 from aida.djsite.db.models import DbNode, Attribute
 from aida.common.exceptions import (
-    InternalError, ModificationNotAllowed, NotExistent )
+    InternalError, ModificationNotAllowed, NotExistent, ValidationError )
 from aida.djsite.utils import get_automatic_user
 from aida.common.folders import RepositoryFolder, SandboxFolder
 
@@ -36,7 +36,19 @@ class Node(object):
 
     _plugin_type_string = "" # For base nodes, it is an empty string; to be subclassed
     
-
+    @classmethod
+    def get_subclass_from_uuid(cls,uuid):
+        """
+        This class method will load an entry from the uuid, but loading the proper
+        subclass where appropriate (while if Node(uuid=...) is called, only the Node
+        class is loaded, even if the node is of a subclass).
+        """
+        from aida.djsite.db.models import DbNode
+        try:
+            return DbNode.objects.get(uuid=uuid).get_aida_class()
+        except ObjectDoesNotExist:
+            raise NotExistent("No entry with the UUID {} found".format(uuid))
+        
     def __int__(self):
         """
         Convert the class to an integer. This is needed to allow querying with Django.
@@ -48,10 +60,14 @@ class Node(object):
         else:
             return self._dbnode.pk
     
-    def __init__(self,uuid=None):
+    def __init__(self,**kwargs):
         self._to_be_stored = False
         self._temp_folder = None
+        uuid = kwargs.pop('uuid', None)
+        
         if uuid is not None:
+            if kwargs:
+                raise ValueError("If you pass a UUID, you cannot pass any further parameter")
             # If I am loading, I cannot modify it
             self._to_be_stored = False
             try:
@@ -60,6 +76,13 @@ class Node(object):
             except ObjectDoesNotExist:
                 raise NotExistent("No entry with the UUID {} found".format(
                     uuid))
+
+            self._repo_folder = RepositoryFolder(section=_section_name, uuid=self.uuid)
+            try:
+                self.validate()
+            except ValidationError:
+                raise DBContentError("The data in the DB with UUID={} is not valid for class {}".format(
+                    uuid, self.__class__.__name__))
         else:
             self._dbnode = DbNode.objects.create(user=get_automatic_user())
             self._dbnode.type = self._plugin_type_string
@@ -67,7 +90,7 @@ class Node(object):
             self._temp_folder = SandboxFolder()
             # Used only before the first save
             self._attrs_cache = {}
-        self._repo_folder = RepositoryFolder(section=_section_name, uuid=self.uuid)
+            self._repo_folder = RepositoryFolder(section=_section_name, uuid=self.uuid)
 
     @classmethod
     def query(cls,**kwargs):
@@ -85,6 +108,9 @@ class Node(object):
         """
         Check if the attributes and files retrieved from the DB are valid.
         Raise a ValidationError if something is wrong.
+
+        Must be able to work even before storing: therefore, use the get_attr and similar methods
+        that automatically read either from the DB or from the internal attribute cache.
 
         For the base class, this is always valid. Subclasses will reimplement this.
         In the subclass, always call the super().validate() method first!
@@ -354,7 +380,7 @@ class Node(object):
         for k, v in self.iterattrs():
             newobject.set_attr(k,v)
 
-        for filename in self.current_folder.get_file_list():
+        for filename in self.get_file_list():
             newobject.add_file(self.current_folder.get_file_path(filename),filename)
 
         return newobject
@@ -381,11 +407,27 @@ class Node(object):
         else:
             return self.repo_folder
 
+    def get_file_list(self):
+        return self.current_folder.get_file_list()
+
     def get_temp_folder(self):
         if self._temp_folder is None:
             raise InternalError("The temp_folder was asked for node {}, but it is "
                                 "not set!".format(self.uuid))
         return self._temp_folder
+
+    def remove_file(self,filename):
+        """
+        Remove a file from the repository directory.
+
+        Can be called only before storing.
+        """
+        if not self._to_be_stored:
+            raise ValueError("Cannot delete a file after storing the node")
+        
+        if os.path.split(filename)[0]:
+            raise ValueError("The destination file in add_file must be a filename without any subfolder")
+        self.get_temp_folder().remove_file(filename)
 
     def add_file(self,src_abs,dst_filename):
         """
@@ -408,11 +450,12 @@ class Node(object):
             raise ValueError("The destination file in add_file must be a filename without any subfolder")
         self.get_temp_folder().insert_file(src_abs,dst_filename)
 
+
     def get_file_path(self,filename):
         """
         TODO: For the moment works only for one kind of files, 'internal'
         """
-        self.current_folder.get_file_path(filename,check_existence=True)
+        return self.current_folder.get_file_path(filename,check_existence=True)
 
     def store(self):
         """
@@ -424,7 +467,9 @@ class Node(object):
         TODO: This needs to be generalized, allowing for flexible methods for storing data and its attributes.
         """
         if self._to_be_stored:
-            
+
+            # As a first thing, I check if the data is valid
+            self.validate()
             # I save the corresponding django entry
             with transaction.commit_on_success():
                 # Save the row

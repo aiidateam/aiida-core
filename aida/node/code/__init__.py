@@ -1,5 +1,11 @@
 from aida.node import Node
 
+'''
+TBD: Code should be taken out of the Node hierarchy. Along with computer, 
+it is a type of equipment used to perform the calculation.
+We assume that the number of codes will be much smaller than data and calculations.
+'''
+
 class Code(Node):
     def __init__(self,*args,**kwargs):
         self._logger = super(Data,self).logger.getChild('code')

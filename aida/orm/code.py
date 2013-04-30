@@ -1,4 +1,4 @@
-from aida.node import Node
+from aida.orm import Node
 
 def _get_machine_name_from_computer(computer):
     from aida.djsite.db.models import Computer

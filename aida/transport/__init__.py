@@ -22,6 +22,20 @@
 
 import aida.common
 from aida.common.exceptions import InternalError
+from aida.common.extendeddicts import FixedFieldsAttributeDict
+
+class FileAttribute(FixedFieldsAttributeDict):
+    """
+    A class with attributes of a file, that is returned by get_attribute()
+    """
+    _valid_fields = (
+        'st_size',
+        'st_uid',
+        'st_gid',
+        'st_mode',
+        'st_atime',
+        'st_mtime',
+        )
 
 class TransportInternalError(InternalError):
     """
@@ -335,6 +349,5 @@ class Transport(object):
         """
         raise NotImplementedError
 
-#if __name__ == "__main__":
-#    print str(Transport())
+    
 

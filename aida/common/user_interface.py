@@ -73,7 +73,7 @@ def AbstractWorkflow():
     struc2 = Struc.create(type='abstract')
     calc1 = Relaxation(inputs={'input.struc':struc0, 'input.param':param_rel}, 
                        outputs={'output.first_struc':struc1, 'output.last_struc':struc2})
-    calc1.execute(callbak=newfunc("calc1")))
+    calc1.execute(callback = newfunc("calc1")))
     # struc1 and struc2 are now concrete
     
    
@@ -92,8 +92,7 @@ def AbstractWorkflow():
     # calc4.execute()
 
 
-def newfunct(arg):
-
+def newfunc(arg):
     if (arg=="calc1"):    
       param_ph = Parameter.create(...)
       calc2 = Phonon(inputs={'input.struc':struc2, 'input.param':param_ph}, outputs={...})
@@ -107,8 +106,7 @@ def LabelWorkflow():
     '''
     
     struc0 = Struc.find(...) 
-    
-    param_rel = Parameter.create_or_retrieve(...)
+    param_rel = Parameter.create(...)
         
     calc1 = Calculation(type='qe.relax', inputs={'input.struc':struc0, 'input.param':param_rel})
     # Code plugin creates data objects and assign labels 'output.first_struc' and 'output.last_struc' to the right output objects
@@ -117,7 +115,7 @@ def LabelWorkflow():
     
     param_ph = Parameter.create(...)
     
-    if calc1.output.first_struc.energy < calc1.output.first_struc.energy
+    if 1 < 2:
         calc2 = Calculation(type='qe.ph', inputs={'input.struc':calc1.get_output_labels('output.last_struc'), 'input.param':param_ph}, outputs={...})
         # Plugin will check if all objects pointed to by the label exists
         # If not, DB object is not created and execution is skipped.

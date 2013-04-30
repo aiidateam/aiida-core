@@ -238,7 +238,7 @@ class PbsproScheduler(aida.scheduler.Scheduler):
 
         # Required to change directory to the working directory, that is
         # the one from which the job was submitted
-        lines.append("cd $PBS_O_WORKDIR")
+        lines.append('cd "$PBS_O_WORKDIR"')
         lines.append(empty_line)
 
         return "\n".join(lines)

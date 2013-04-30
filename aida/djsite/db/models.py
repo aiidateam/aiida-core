@@ -65,13 +65,13 @@ class DbNode(m.Model):
     computer = m.ForeignKey('Computer', null=True)  # only for calculations
 
     # Index that is incremented every time a modification is done on itself or on attributes.
-    # Managed by the aida.node.Node class. Do not modify
+    # Managed by the aida.orm.Node class. Do not modify
     nodeversion = m.IntegerField(default=1,editable=False)
     # Index that keeps track of the last time the node was updated to the remote aida instance.
     # Zero means that it was never stored, so also files need to be udpated.
     # When this number is > 0, only attributes and not files will be uploaded to the remote aida
     # instance.
-    # Managed by the aida.node.Node class. Do not modify
+    # Managed by the aida.orm.Node class. Do not modify
     lastsyncedversion = m.IntegerField(default=0,editable=False)
 
     objects = m.Manager()
@@ -80,10 +80,10 @@ class DbNode(m.Model):
     
     def get_aida_class(self):
         """
-        Return the corresponding aida instance of class aida.node.Node or a
+        Return the corresponding aida instance of class aida.orm.Node or a
         appropriate subclass.
         """
-        from aida.node import Node, Calculation, Code, Data
+        from aida.orm import Node, Calculation, Code, Data
         from aida.common.pluginloader import load_plugin
         from aida.common import aidalogger
 
@@ -97,7 +97,7 @@ class DbNode(m.Model):
         if baseclass == 'calculation':
             if pluginclass:
                 try:
-                    PluginClass = load_plugin(Calculation, 'aida.node.calculationplugins', pluginclass)
+                    PluginClass = load_plugin(Calculation, 'aida.orm.calculationplugins', pluginclass)
                 except ImportError:
                     aidalogger.warning("Unable to find calculation plugin for type '{}' (node={}), "
                                        "will use base Calculation class".format(self.type,self.uuid))
@@ -108,7 +108,7 @@ class DbNode(m.Model):
         elif baseclass == 'code':
             if pluginclass:
                 try:
-                    PluginClass = load_plugin(Code, 'aida.node.codeplugins', pluginclass)
+                    PluginClass = load_plugin(Code, 'aida.orm.codeplugins', pluginclass)
                 except ImportError:
                     aidalogger.warning("Unable to find code plugin for type '{}' (node={}), "
                                        "will use base Code class".format(self.type,self.uuid))
@@ -119,7 +119,7 @@ class DbNode(m.Model):
         elif baseclass == 'data':
             if pluginclass:
                 try:
-                    PluginClass = load_plugin(Data, 'aida.node.dataplugins', pluginclass)
+                    PluginClass = load_plugin(Data, 'aida.orm.dataplugins', pluginclass)
                 except ImportError:
                     aidalogger.warning("Unable to find data plugin for type '{}' (node={}), "
                                        "will use base Data class".format(self.type,self.uuid))

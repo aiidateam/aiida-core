@@ -1,4 +1,4 @@
-from aida.node import Node
+from aida.orm import Node
 '''
 Specifications of the Data class:
 Aiida Data objects are subclasses of Node and should have 
@@ -29,7 +29,7 @@ class Data(Node):
         return True
         
     def add_link_from(self,src,*args,**kwargs):
-        from aida.node.calculation import Calculation
+        from aida.orm.calculation import Calculation
 
         if len(self.get_inputs()) > 1:
             raise ValueError("At most one node can enter a data node")

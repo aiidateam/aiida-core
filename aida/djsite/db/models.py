@@ -317,6 +317,7 @@ class Computer(m.Model):
     uuid = UUIDField(auto=True)
     hostname = m.CharField(max_length=255, unique=True) # FQDN
     description = m.TextField(blank=True)
+    # TODO: next three fields should not be blank...
     workdir = m.CharField(max_length=255)
     transport_type = m.CharField(max_length=255)
     scheduler_type = m.CharField(max_length=255)

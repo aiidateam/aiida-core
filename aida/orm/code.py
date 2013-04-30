@@ -44,6 +44,7 @@ class Code(Node):
             remote_machine_exec: a list or tuple of length 2 with (machinename, remote_executable)
                 as accepted by the set_remote_machine_exec() method.
         """
+        import os
         self._logger = super(Code,self).logger.getChild('code')
         super(Code,self).__init__(**kwargs)
 
@@ -57,7 +58,7 @@ class Code(Node):
         if isinstance(files, basestring):
             files=[files]
         for f in files:
-            self.add_file(f)
+            self.add_file(f,os.path.split(f)[1])
 
         # By default I set a local code
         self._set_local()
@@ -77,6 +78,12 @@ class Code(Node):
                                  "of length 2, with machine and executable "
                                  "name")
             self.set_remote_machine_exec(*remote_machine_exec)
+
+        input_plugin = kwargs.pop('input_plugin', None)
+        self.set_input_plugin(input_plugin)
+
+        output_plugin = kwargs.pop('output_plugin', None)
+        self.set_output_plugin(output_plugin)
 
         if kwargs:
             raise ValueError("Invalid parameters found in the __init__: {}".format(kwargs.keys()))
@@ -131,6 +138,37 @@ class Code(Node):
         """
         return self.get_attr('postexec_code',u"")
 
+    def set_input_plugin(self, input_plugin):
+        """
+        Set a string for the input plugin
+
+        TODO: check that the plugin referenced by th string input_plugin actually exists
+        """
+        if input_plugin is None:
+            raise ValueError("You need to specify an input plugin")
+        self.set_attr('input_plugin', input_plugin)
+        
+    def get_input_plugin(self, input_plugin):
+        """
+        Return the input plugin
+        """
+        return self.get_attr('input_plugin')
+
+    def set_output_plugin(self, output_plugin):
+        """
+        Set a string for the output plugin
+        Can be none if no output plugin is available/needed
+
+        TODO: check that the plugin referenced by th string input_plugin actually exists
+        """
+        self.set_attr('output_plugin', output_plugin)
+        
+    def get_output_plugin(self, output_plugin):
+        """
+        Return the output plugin
+        """
+        return self.get_attr('output_plugin',None)
+
 
     def set_local_executable(self,exec_name):
         """
@@ -138,10 +176,10 @@ class Code(Node):
         Implicitly set the code as local.
         """
         self._set_local()
-        self.set_attr('local_exec_name',exec_name)
+        self.set_attr('local_executable',exec_name)
 
     def get_local_executable(self):
-        return self.get_attr('local_exec_name', u"")
+        return self.get_attr('local_executable', u"")
 
     def set_remote_machine_exec(self,machine,exec_path):
         """
@@ -193,7 +231,7 @@ class Code(Node):
         """
         self.set_attr('is_local', False)
         try:
-            self.del_attr('local_exec_name')
+            self.del_attr('local_executable')
         except AttributeError:
             pass
 

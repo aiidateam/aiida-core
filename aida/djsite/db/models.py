@@ -368,10 +368,6 @@ class AuthInfo(m.Model):
     class Meta:
         unique_together = (("aidauser", "computer"),)
 
-    def update_calc_states(self):
-        import aida
-        aida.execmanager.update_calc_states(self)
-
     def get_auth_params(self):
         import json
         try:

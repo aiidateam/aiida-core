@@ -404,3 +404,5 @@ class Comment(m.Model):
     user = m.ForeignKey(User)
     content = m.TextField(blank=True)
 
+
+

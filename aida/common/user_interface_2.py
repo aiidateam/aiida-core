@@ -132,6 +132,28 @@ def WorkflowSteps(workflow,step):
     workflow.add_callback(WorkflowStep, step+1)
 
 
+class DoSomething(Workflow):
+    def step1(self):
+        struc0 = Struc.find(...) 
+        param_rel = Parameter.create(...) 
+        calc1 = Calculation(type='qe.relax', inputs={'input.struc':struc0, 'input.param':param_rel})
+        # Code plugin creates data objects and assign labels 'output.first_struc' and 'output.last_struc' to the right output objects
+        calc1.execute(label='firstpw')
+        return 
+    
+    def step2(self):
+        param_ph = Parameter.create(...)
+        if 1 < 2:
+            calc2 = Calculation(type='qe.ph', inputs={'input.struc':calc1.get_output_labels('output.last_struc'), 'input.param':param_ph}, outputs={...})
+    
+    
+    def run(self):
+        return step1
+    
+
+
+
+
 def DynamicWorkflow():
     '''
     In case of dynamic workflows, nodes are created on the fly.

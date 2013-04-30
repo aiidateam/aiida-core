@@ -200,11 +200,11 @@ class TestDirectoryManipulation(unittest.TestCase):
                 t.chdir(directory)
 
             new_cwd = t.getcwd()
-
+            
             self.assertEquals(old_cwd,new_cwd)
-
+            
             # TODO : the test leaves a directory even if it is successful
-            #        There bug is in paramiko. After lowering the permissions,
+            #        The bug is in paramiko. After lowering the permissions,
             #        I cannot restore them to higher values
             #t.rmdir(directory)
 

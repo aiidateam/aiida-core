@@ -73,10 +73,14 @@ def AbstractWorkflow():
     struc2 = Struc.create(type='abstract')
     calc1 = Relaxation(inputs={'input.struc':struc0, 'input.param':param_rel}, 
                        outputs={'output.first_struc':struc1, 'output.last_struc':struc2})
-    calc1.execute(callbak=newfunc("calc1")))
+    calc1.execute()
     # struc1 and struc2 are now concrete
     
-   
+    param_ph = Parameter.create(...)
+    calc2 = Phonon(inputs={'input.struc':struc2, 'input.param':param_ph}, outputs={...})
+    calc2.waitfor(calc1) # this will hold cacl2 until calc1 is done
+    calc2.execute()
+
     ############ INDPENDENT PARALLEL PART ###########
 
     struc3 = Struc.create(type='abstract')
@@ -89,42 +93,43 @@ def AbstractWorkflow():
     param_ph = Parameter.create(...)
     calc4 = Phonon(inputs={'input.struc':struc4, 'input.param':param_ph}, outputs={...})
     calc4.waitfor(calc3) # this will hold cacl2 until calc1 is done
-    # calc4.execute()
+    calc4.execute()
 
 
-def newfunct(arg):
-
-    if (arg=="calc1"):    
-      param_ph = Parameter.create(...)
-      calc2 = Phonon(inputs={'input.struc':struc2, 'input.param':param_ph}, outputs={...})
-      calc2.waitfor(calc1) # this will hold cacl2 until calc1 is done
-      #calc2.execute()
-
-
-def LabelWorkflow():
+def WorkflowSteps(workflow,step):
     '''
     SAME BUT USING LABELS OF PORTS
     '''
-    
-    struc0 = Struc.find(...) 
-    
-    param_rel = Parameter.create_or_retrieve(...)
+    if step == 0: # if len(workflow.get_calcs()) == 0:
+        struc0 = Struc.find(...) 
+        param_rel = Parameter.create(...)
         
-    calc1 = Calculation(type='qe.relax', inputs={'input.struc':struc0, 'input.param':param_rel})
-    # Code plugin creates data objects and assign labels 'output.first_struc' and 'output.last_struc' to the right output objects
-    calc1.execute(label='calc1')
-    # struc1 and struc2 are only created in the end of calc1
+        calc1 = Calculation(type='qe.relax', inputs={'input.struc':struc0, 'input.param':param_rel})
+        # Code plugin creates data objects and assign labels 'output.first_struc' and 'output.last_struc' to the right output objects
+        calc1.execute(label='firstpw')
+        # struc1 and struc2 are only created in the end of calc1
+    elif step == 1: # if no calculation in workflow starting with ph.x
+        calc1 = workflow.getcalc('firstpw')
+        param_ph = Parameter.create(...)
     
-    param_ph = Parameter.create(...)
-    
-    if calc1.output.first_struc.energy < calc1.output.first_struc.energy
-        calc2 = Calculation(type='qe.ph', inputs={'input.struc':calc1.get_output_labels('output.last_struc'), 'input.param':param_ph}, outputs={...})
-        # Plugin will check if all objects pointed to by the label exists
-        # If not, DB object is not created and execution is skipped.
+        for idx, output_structure in enumerate(calc1.get_outputs(type='data.structure')):
+            calc2 = Calculation(type='qe.ph')
+            calc2.add_link_from(output_structure)
+            calc2.execute(label='ph.x_{}'.fromat(idx))            
+    # Plugin will check if all objects pointed to by the label exists
+    # If not, DB object is not created and execution is skipped.
     # If calc1 does not even exist yet, then
-    calc2.execute()
-    
+    elif step == 2: # if no calcs with name average
+        list_of_ph=workflow.getcalc(startwsith ph.x)
+        finalcalc = calculation(average, 'average')
+        for ph in list_of_ph:
+            finalcalc.add_link_from())
     ############ INDPENDENT PARALLEL PART ###########
+    else:
+        workflow.stop()
+        return
+        
+    workflow.add_callback(WorkflowStep, step+1)
 
 
 def DynamicWorkflow():

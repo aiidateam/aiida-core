@@ -7,7 +7,7 @@ import aida.common
 
 logger = aida.common.aidalogger.getChild('pluginloader')
 
-def load_plugin(base_class, plugins_module, plugin_name):
+def load_plugin(base_class, plugins_module, plugin_type):
     """
     Load a specific plugin for the given base class. 
 
@@ -17,7 +17,7 @@ def load_plugin(base_class, plugins_module, plugin_name):
         base_class: the abstract base class of the plugin.
         plugins_module: a string with the full module name separated with dots
             that points to the folder with plugins. It must be importable by python.
-        plugin_name: the name of the plugin.
+        plugin_type: the name of the plugin.
 
     Return: 
         the class of the required plugin.
@@ -26,6 +26,12 @@ def load_plugin(base_class, plugins_module, plugin_name):
     if for instance plugin_name == 'ssh' and base_class.__name__ == 'Transport',
     thend there must be a class named 'SshTransport' which is a subclass of base_class
     in a file 'ssh.py' in the plugins_module folder.
+    Note: if the plugin_type contains dots, the code first reshuffles everything by
+        separating all the folder as in the following example:
+        * plugins_module='aida.codeplugins.input'
+        * plugin_type='simpleplugins.templatereplacer'
+        then the plugin_name is simply 'templatereplacer', to be searched within the
+        'aida.codeplugins.input.simpleplugins' folder.
 
     Example:
        plugin_class = load_plugin(
@@ -34,17 +40,11 @@ def load_plugin(base_class, plugins_module, plugin_name):
        and plugin_class will be the class 'aida.transport.plugins.ssh.SshTransport'
     """
 
-
+    module_name = ".".join([plugins_module,plugin_type.lower()])
+    real_plugins_module, plugin_name = module_name.rsplit('.',1)
+    
     expected_class_name = "{0}{1}".format(plugin_name.capitalize(),
                                           base_class.__name__)
-
-    # Note: I am doing it in a complicated way because originally I wanted to
-    # put simply the absolute path to the plugins folder, but I was having some
-    # issues.
-    # If this works, probably it is just simpler to run import_module on
-    # plugins_module + '.' + plugin_name.lower()
-
-    module_name = ".".join([plugins_module,plugin_name.lower()])
 
     try:
         plugin = importlib.import_module(module_name)
@@ -64,5 +64,5 @@ def load_plugin(base_class, plugins_module, plugin_name):
 
     # If here, we did not find the class
     err_msg = "Unable to find a suitable class {} in {}".format(
-        expected_class_name, full_filename)
+        expected_class_name, module_name)
     raise ImportError(err_msg)

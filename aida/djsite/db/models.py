@@ -384,6 +384,7 @@ class AuthInfo(m.Model):
         transport to connect to the computer.
         """    
         from aida.common.pluginloader import load_plugin
+        import aida.transport
 
         try:
             ThisTransport = load_plugin(aida.transport.Transport, 'aida.transport.plugins',
@@ -392,7 +393,7 @@ class AuthInfo(m.Model):
             raise ConfigurationError('No transport found for {} [type {}], message: {}'.format(
                 self.computer.hostname, self.computer.transport_type, e.message))
 
-        params = self.computer.get_transport_params() + self.get_auth_params()
+        params = dict(self.computer.get_transport_params().items() + self.get_auth_params().items())
         return ThisTransport(machine=self.computer.hostname,**params)
 
 class Comment(m.Model):

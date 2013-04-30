@@ -6,6 +6,8 @@ load_django()
 
 from aida.orm import Calculation, Code, Data
 from aida.djsite.db.models import Computer
+from aida.execmanager import submit_calc
+from aida.djsite.utils import get_automatic_user
 
 #from aida.common.pluginloader import load_plugin
 #ParameterData = load_plugin(Data, 'aida.orm.dataplugins', 'parameter')
@@ -13,7 +15,7 @@ from aida.orm.dataplugins.parameter import ParameterData
 
 computername = "bellatrix.epfl.ch"
 # A string with the version of this script, used to recreate a code when necessary
-current_version = "1.0.0"
+current_version = "1.0.2"
 
 def get_or_create_machine():
     import json
@@ -33,6 +35,19 @@ def get_or_create_machine():
             transport_params = json.dumps(
             {})
             )
+
+    from aida.djsite.db.models import AuthInfo
+    authinfo, created = AuthInfo.objects.get_or_create(
+        aidauser=get_automatic_user(),
+        computer=computer, 
+        defaults={'auth_params': '{}'}
+        )
+
+    if created:
+        print "  (Created authinfo)"
+    else:
+        print "  (Retrieved authinfo)"
+    
     return computer
 
 def get_or_create_code():
@@ -57,7 +72,7 @@ except ValueError:
 """)
             f.flush()
             code = Code(local_executable = "sum.py", 
-                        input_plugin='simple_plugin.template_replacer')
+                        input_plugin='simpleplugins.templatereplacer')
             code.add_file(f.name, "sum.py")
             code.store()
             code.set_metadata("version", current_version)
@@ -99,7 +114,7 @@ calc.add_link_from(code)
 calc.add_link_from(template_data, label="template")
 calc.add_link_from(parameters, label="parameters")
 
-calc.submit()
+submit_calc(calc)
 print "submitted calculation; calc=Calculation(uuid='{}') # ID={}".format(
     calc.uuid,calc.dbnode.pk)
 

@@ -148,7 +148,7 @@ class Code(Node):
             raise ValueError("You need to specify an input plugin")
         self.set_attr('input_plugin', input_plugin)
         
-    def get_input_plugin(self, input_plugin):
+    def get_input_plugin(self):
         """
         Return the input plugin
         """

@@ -138,7 +138,7 @@ class Folder(object):
         # go beyond the folder limits
         dest_abs_path = self.get_file_path(filename)
 
-        os.remove(filename)
+        os.remove(dest_abs_path)
 
 
     def get_file_path(self,filename,check_existence=False):

@@ -22,6 +22,20 @@
 
 import aida.common
 from aida.common.exceptions import InternalError
+from aida.common.extendeddicts import FixedFieldsAttributeDict
+
+class FileAttribute(FixedFieldsAttributeDict):
+    """
+    A class with attributes of a file, that is returned by get_attribute()
+    """
+    _valid_fields = (
+        'st_size',
+        'st_uid',
+        'st_gid',
+        'st_mode',
+        'st_atime',
+        'st_mtime',
+        )
 
 class TransportInternalError(InternalError):
     """
@@ -139,12 +153,12 @@ class Transport(object):
         raise NotImplementedError
     
     
-    def exec_command(self,command, **kwargs):
+    def _exec_command_internal(self,command, **kwargs):
         """
         Execute the command on the shell, similarly to os.system.
 
-        Enforce the execution to be run from the pwd (as given by
-        self.getpwd), if this is not None.
+        Enforce the execution to be run from the cwd (as given by
+        self.getcwd), if this is not None.
 
         Return stdin, stdout, stderr and the session, when this exists
         (can be None). If possible, use the higher-level
@@ -162,7 +176,7 @@ class Transport(object):
         and return the retcode, the stdout and the stderr.
 
         Enforce the execution to be run from the pwd (as given by
-        self.getpwd), if this is not None.
+        self.getcwd), if this is not None.
         
         Return the retcode, stdout and stderr.
             stdout and stderr are strings.
@@ -335,6 +349,5 @@ class Transport(object):
         """
         raise NotImplementedError
 
-#if __name__ == "__main__":
-#    print str(Transport())
+    
 

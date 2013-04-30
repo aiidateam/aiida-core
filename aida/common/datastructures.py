@@ -1,4 +1,4 @@
-from aida.common.extendeddicts import DefaultFieldsAttributeDict
+from aida.common.extendeddicts import DefaultFieldsAttributeDict, Enumerate
 
 class CalcState(Enumerate):
     pass

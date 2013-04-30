@@ -1,6 +1,21 @@
 import os, os.path
 import string
 
+from aida.common.exceptions import ConfigurationError
+
+def get_repository_folder():
+    """
+    Return the top folder of the local repository.
+    """
+    try:
+        from aida.djsite.settings.settings import LOCAL_REPOSITORY
+        if not os.path.isdir(LOCAL_REPOSITORY):
+            raise ImportError
+    except ImportError:
+        raise ConfigurationError(
+            "The LOCAL_REPOSITORY variable is not set correctly.")
+    return os.path.realpath(LOCAL_REPOSITORY)
+
 def escape_for_bash(str_to_escape):
     """
     This function takes any string and escapes it in a way that

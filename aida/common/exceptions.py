@@ -7,6 +7,26 @@ class AidaException(Exception):
     """
     pass
 
+class NotExistent(AidaException):
+    """
+    Raised when the required entity does not exist.
+    """
+    pass
+
+class ModificationNotAllowed(AidaException):
+    """
+    Raised when the user tries to modify a field, object, property, ... that should not
+    be modified.
+    """
+    pass
+
+class InvalidOperation(AidaException):
+    """
+    The allowed operation is not valid (e.g., when trying to add a non-internal attribute
+    before saving the entry)
+    """
+    pass
+
 class InternalError(AidaException):
     """
     Error raised when there is an internal error of Aida.

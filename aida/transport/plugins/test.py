@@ -197,7 +197,7 @@ class TestDirectoryManipulation(unittest.TestCase):
             old_cwd = t.getcwd()
 
             with self.assertRaises( IOError ):
-                    t.chdir(directory)
+                t.chdir(directory)
 
             new_cwd = t.getcwd()
 
@@ -321,7 +321,6 @@ class TestPutGet(unittest.TestCase):
         directory = 'tmp_try'
 
         with custom_transport as t:
-
             t.chdir(remote_dir)
             while t.isdir(directory):
                 # I append a random letter/number until it is unique

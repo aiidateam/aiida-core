@@ -100,8 +100,8 @@ class Node(object):
         Node objects (or their subclasses) instead of DbNode entities.
         """
         from aida.djsite.db.models import DbNode
-        
-        return DbNode.aidaobjects.filter(**kwargs)
+
+        return DbNode.aidaobjects.filter(type__startswith=cls._plugin_type_string,**kwargs)
 
     @property
     def logger(self):

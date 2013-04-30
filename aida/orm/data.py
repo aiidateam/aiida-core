@@ -14,6 +14,8 @@ method. This is done independently in order to allow cross-validation of plugins
 '''
 
 class Data(Node):
+    # IMPORTANT! define it here, and not in the __init__, otherwise the classmethod query()
+    # will not filter correctly
     _plugin_type_string = "data"
     _updatable_attributes = tuple() 
         

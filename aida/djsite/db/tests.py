@@ -5,7 +5,7 @@ They are executed when when you run "manage.py test" or
 """
 from django.utils import unittest
 
-from aida.node import Node
+from aida.orm import Node
 from aida.common.exceptions import ModificationNotAllowed
 
 class TransitiveClosure(unittest.TestCase):
@@ -85,7 +85,7 @@ class TransitiveClosure(unittest.TestCase):
 
 class TestQueryWithAidaObjects(unittest.TestCase):
     """
-    Test if queries work properly also with aida.node.Node classes instead of
+    Test if queries work properly also with aida.orm.Node classes instead of
     aida.djsite.db.models.DbNode objects.
     """
     @classmethod
@@ -151,7 +151,7 @@ class TestQueryWithAidaObjects(unittest.TestCase):
 
         b = Node.query(pk=a2)
         self.assertEquals(len(b), 1)
-        # It is a aida.node.Node instance
+        # It is a aida.orm.Node instance
         self.assertTrue(isinstance(b[0],Node))
         self.assertEquals(b[0].uuid, a2.uuid)
         
@@ -163,7 +163,7 @@ class TestQueryWithAidaObjects(unittest.TestCase):
         uuid_set = set([going_out_from_a2[0].uuid, going_out_from_a2[1].uuid])
 
         # I check that I can query also directly the django DbNode
-        # class passing a aida.node.Node entity
+        # class passing a aida.orm.Node entity
         
         going_out_from_a2_db = DbNode.objects.filter(inputs__in=b)
         self.assertEquals(len(going_out_from_a2_db), 2)
@@ -636,11 +636,11 @@ class TestSubNodes(unittest.TestCase):
     def test_valid_links(self):
         import tempfile
 
-        from aida.node import Node, Calculation, Data, Code
+        from aida.orm import Node, Calculation, Data, Code
         from aida.djsite.db.models import Computer
         from aida.common.pluginloader import load_plugin
 
-        FileData = load_plugin(Data, 'aida.node.dataplugins', 'file')
+        FileData = load_plugin(Data, 'aida.orm.dataplugins', 'file')
 
         # I create some objects
         d1 = Data().store()
@@ -696,7 +696,7 @@ class TestSubNodes(unittest.TestCase):
         """
         Each data node can only have one input calculation
         """
-        from aida.node import Node, Calculation, Data, Code
+        from aida.orm import Node, Calculation, Data, Code
         
         d1 = Data().store()
         
@@ -741,7 +741,7 @@ class TestCode(unittest.TestCase):
         import tempfile
 
         from aida.djsite.db.models import Computer
-        from aida.node import Code
+        from aida.orm import Code
         from aida.common.exceptions import ValidationError
 
         code = Code(local_executable='test.sh')
@@ -761,7 +761,7 @@ class TestCode(unittest.TestCase):
         import tempfile
 
         from aida.djsite.db.models import Computer
-        from aida.node import Code
+        from aida.orm import Code
         from aida.common.exceptions import ValidationError
 
         with self.assertRaises(ValueError):
@@ -820,12 +820,12 @@ class TestFileData(unittest.TestCase):
         import os
         import tempfile
 
-        from aida.node.dataplugins.file import FileData
+        from aida.orm.dataplugins.file import FileData
 
         # Or, equivalently:
-        #        from aida.node import Data
+        #        from aida.orm import Data
         #        from aida.common.pluginloader import load_plugin        
-        #        FileData = load_plugin(Data,'aida.node.dataplugins','file')
+        #        FileData = load_plugin(Data,'aida.orm.dataplugins','file')
 
         file_content = 'some text ABCDE'
         with tempfile.NamedTemporaryFile() as f:

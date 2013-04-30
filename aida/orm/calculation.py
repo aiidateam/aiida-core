@@ -1,4 +1,4 @@
-from aida.node import Node
+from aida.orm import Node
 
 '''
 Each calculation object should be defined by analogy of a function 
@@ -82,8 +82,8 @@ class Calculation(Node):
         parameter to label the link.
         '''
         
-        from aida.node.data import Data
-        from aida.node.code import Code
+        from aida.orm.data import Data
+        from aida.orm.code import Code
         
         
         if not isinstance(src,(Data, Code)):

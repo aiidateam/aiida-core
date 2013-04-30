@@ -15,7 +15,7 @@ in the perm repo?
 """
 import os
 
-from aida.node import Data
+from aida.orm import Data
 
 
 class FileData(Data):

@@ -1,4 +1,4 @@
-import aida.node
+import aida.orm
 
 ''' 
 Graph Rules:

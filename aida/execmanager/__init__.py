@@ -12,7 +12,7 @@ def update_calc_states(authinfo):
     Update the states of calculations in WITHSCHEDULER status belonging to user and machine
     as defined in the 'authinfo' table.
     """
-    from aida.node import Calculation
+    from aida.orm import Calculation
 
     # This returns an iterator over aida Calculation objects
     calcs_to_inquire = Calculation.get_all_with_state(

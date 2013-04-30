@@ -48,17 +48,29 @@ class Calculation(Node):
         self._logger = super(Calculation,self).logger.getChild('calculation')
         super(Calculation,self).__init__(*args, **kwargs)
 
+        uuid = kwargs.pop('uuid', None)
+        if uuid is not None:
+            # if I am loading an existing calc: stop here
+            return
+
+        # For new calculations
         self._set_state(calcStates.NEW)
 
+        computer = kwargs.pop('computer', None)
+        if computer is not None:
+            self.set_computer(computer)
+
+        if kwargs:
+            raise ValueError("Invalid parameters found in the __init__: {}".format(kwargs.keys()))
 
     def validate(self):
         from aida.common.datastructures import calcStates
         from aida.common.exceptions import ValidationError
         
-        # TODO
-        # Check that each of supplied data objects matches correct data type. 
-        # Assume data objects are validated. It's the data plugin method's job.
         super(Calculation,self).validate()
+
+        if self.get_computer() is None:
+            raise ValidationError("You did not specify any computer")
 
         if self.get_state() not in calcStates:
             raise ValidationError("Calculation state '{}' is not valid".format(self.get_state()))
@@ -78,7 +90,40 @@ class Calculation(Node):
             raise ValueError("Nodes entering in calculation can only be of type data or code")
         
         return super(Calculation,self).add_link_from(src, *args, **kwargs)
+
+
+    def set_computer(self,computer):
+        """
+        TODO: probably this method should be in the base class, and check for the type
+        """
+        from aida.djsite.db.models import Computer
+        from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
+
+        if self._to_be_stored:
+            if isinstance(computer, basestring):
+                try:
+                    computer = Computer.objects.get(hostname=computer)
+                except ObjectDoesNotExist:
+                    raise ValueError("No computer found in the table of computers with "
+                                     "the given name '{}'".format(computer))
+                except MultipleObjectsReturned:
+                    raise ValueError("There is more than one computer with name '{}', "
+                                     "pass a Django Computer instance".format(computer))
+            elif isinstance(computer, Computer):
+                if computer.pk is None:
+                    raise ValueError("The computer instance you are passing has not been stored yet")
+            else:
+                raise ValueError("Pass either a computer name, or a Computer django instance")
     
+            self.dbnode.computer = computer
+        else:
+            self.logger.error("Trying to change the computer of an already saved node: {}".format(
+                self.uuid))
+            raise ModificationNotAllowed("Node with uuid={} was already stored".format(self.uuid))
+
+    def get_computer(self):
+        return self.dbnode.computer
+
     def _set_state(self, state):
         from aida.common.datastructures import calcStates
         if state not in calcStates:

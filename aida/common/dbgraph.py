@@ -18,4 +18,3 @@ def GraphCheck():
         raise GraphError('Node {0} violates connection rules')
    
    
- 

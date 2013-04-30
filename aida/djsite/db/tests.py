@@ -8,6 +8,80 @@ from django.utils import unittest
 from aida.node import Node
 from aida.common.exceptions import ModificationNotAllowed
 
+class TransitiveClosure(unittest.TestCase):
+    """
+    Test the creation of the transitive closure table
+    """
+    @classmethod
+    def setUpClass(cls):
+        import getpass
+        from django.contrib.auth.models import User
+
+        User.objects.create_user(getpass.getuser(), 'unknown@mail.com', 'fakepwd')
+
+    @classmethod
+    def tearDownClass(cls):
+        import getpass
+        from django.contrib.auth.models import User
+        from django.core.exceptions import ObjectDoesNotExist
+
+        try:
+            User.objects.get(username=getpass.getuser).delete()
+        except ObjectDoesNotExist:
+            pass
+
+    def test_creation_and_deletion(self):
+        from aida.djsite.db.models import Link # Direct links
+        from aida.djsite.db.models import Path # The transitive closure table
+        
+        n1 = Node().store()
+        n2 = Node().store()
+        n3 = Node().store()
+        n4 = Node().store()
+        n5 = Node().store()
+        n6 = Node().store()
+        n7 = Node().store()
+        n8 = Node().store()        
+        n9 = Node().store()
+
+        # I create a strange graph, inserting links in a order
+        # such that I often have to create the transitive closure
+        # between two graphs
+        n2.add_link_to(n3)
+        n1.add_link_to(n2)
+        n3.add_link_to(n5)
+        n4.add_link_to(n5)
+        n2.add_link_to(n4)
+
+        n6.add_link_to(n7)
+        n7.add_link_to(n8)
+        n5.add_link_to(n6)
+        n9.add_link_to(n7)
+        n6.add_link_to(n9)
+
+        # For this graph, there should be 4 links connecting 1 to 8
+        self.assertEquals(len(Path.objects.filter(parent=n1,child=n8).distinct()),4)
+        
+        # I cut one branch below: I should loose 2 links
+        Link.objects.filter(input=n6, output=n9).delete()
+        self.assertEquals(len(Path.objects.filter(parent=n1,child=n8).distinct()),2)
+
+        # I cut another branch above: I should loose one more link
+        Link.objects.filter(input=n2, output=n4).delete()
+        self.assertEquals(len(Path.objects.filter(parent=n1,child=n8).distinct()),1)
+        
+        # Another cut should delete all links
+        Link.objects.filter(input=n3, output=n5).delete()
+        self.assertEquals(len(Path.objects.filter(parent=n1,child=n8).distinct()),0)
+
+        # But I did not delete everything! For instance, I can check the following links
+        self.assertEquals(len(Path.objects.filter(parent=n4,child=n8).distinct()),1)
+        self.assertEquals(len(Path.objects.filter(parent=n5,child=n7).distinct()),1)
+
+        # Finally, I reconnect in a different way the two graphs and check that 1 and
+        # 8 are again connected
+        n3.add_link_to(n4)
+        self.assertEquals(len(Path.objects.filter(parent=n1,child=n8).distinct()),1)          
 
 class TestQueryWithAidaObjects(unittest.TestCase):
     """

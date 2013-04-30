@@ -1,4 +1,4 @@
-from django.exceptions import DoesNotExist
+from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth.models import User
 
 from aida.common.datastructures import calcStates
@@ -7,7 +7,7 @@ from aida.djsite.db.models import Computer, AuthInfo
 from aida.common.exceptions import DBContentError, ConfigurationError, AuthenticationError
 from aida.common import aidalogger
     
-def update_calc_states(authinfo):
+def update_running_calcs_status(authinfo):
     """
     Update the states of calculations in WITHSCHEDULER status belonging to user and machine
     as defined in the 'authinfo' table.
@@ -23,6 +23,8 @@ def update_calc_states(authinfo):
     # NOTE: no further check is done that machine and aidauser are correct for each calc in calcs
     s = authinfo.computer.get_scheduler()
     t = authinfo.get_transport()
+
+    finished_calculations = {}
 
     # I avoid to open an ssh connection if there are no calcs with state WITHSCHEDULER
     if len(calcs_to_inquire):
@@ -68,20 +70,23 @@ def update_calc_states(authinfo):
                 # c._set_last_jobinfo(json.dumps(>>> GET MORE DETAILED INFO OF FINISHED JOB <<<))
                 pass
 
-# in daemon
-def daemon():
-    update_jobs()
-    # Now, finished jobs have a 'finished' status in DB
-    # retrieve_finished() # < WILL LOOK FOR THINGS IN A FINISHED STATUS
-    # parse_results()
-    #...
-
+            ## in daemon
+            #def daemon():
+            #update_jobs()
+            ## Now, finished jobs have a 'finished' status in DB
+            ## retrieve_finished() # < WILL LOOK FOR THINGS IN A FINISHED STATUS
+            ## parse_results()
+            ##...
+            finished_calculations[authinfo.computer.hostname] = finished
+    return finished_calculations
 
 # in daemon
 def update_jobs():
     """
     calls an update for each set of pairs (machine, aidauser)
     """
+    from aida.orm import Calculation
+    
     # I create a unique set of pairs (computer, aidauser)
     computers_users_to_check = set(
         Calculation.get_all_with_state(
@@ -95,13 +100,13 @@ def update_jobs():
         try:
             try:
                 authinfo = AuthInfo.objects.get(computer=computer,aidauser=aidauser)
-            except DoesNotExist:
+            except ObjectDoesNotExist:
                 # I do not check for MultipleObjectsReturned thanks to
                 # the unique_together constraint
                 raise AuthenticationError(
                     "The aida user {} is not configured to use computer {}".format(
                         aidauser.username, computer.hostname))
-            authinfo.update_running_table()
+            update_running_calcs_status(authinfo)
         except Exception as e:
             # TODO: set logger properly
             msg = ("Error while updating RunningJob table for aidauser={} on computer={}, "
@@ -112,5 +117,5 @@ def update_jobs():
             aidalogger.error(msg)
 
 
-def submit_calc():
+def submit_calc(calc):
     pass

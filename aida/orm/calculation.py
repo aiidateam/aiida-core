@@ -192,8 +192,8 @@ class Calculation(Node):
         # filter below from attributes__tval to the correct field.
         from aida.common.datastructures import calcStates
         if state not in calcStates:
-            self.logger.warning("querying for calculation state='{}', but it is not a "
-                                "valid calculation state".format(state))
+            cls.logger.warning("querying for calculation state='{}', but it is not a "
+                              "valid calculation state".format(state))
 
         kwargs = {}
         if computer is not None:
@@ -201,8 +201,7 @@ class Calculation(Node):
         if user is not None:
             kwargs['user'] = user
         
-        queryresults = self.query(
-            type__startswith=Calculation._plugin_type_string,
+        queryresults = cls.query(
             attributes__key='_state',
             attributes__tval=state,
             **kwargs)

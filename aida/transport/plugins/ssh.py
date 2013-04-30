@@ -152,11 +152,10 @@ class SshTransport(aida.transport.Transport):
         Differently from paramiko, if you pass None to chdir, nothing
         happens and the cwd is unchanged.
         """
+        old_path = self.sftp.getcwd()
         if path is not None:
             self.sftp.chdir(path)
-
-        # TODO : when chdir fails, it leaves the cwd in the directory it failed to open
-
+        
         # Paramiko already checked that path is a folder, otherwise I would
         # have gotten an exception. Now, I want to check that I have read
         # permissions in this folder (nothing is said on write permissions,
@@ -166,7 +165,13 @@ class SshTransport(aida.transport.Transport):
         #
         # Note: I don't store the result of the function; if I have no
         # read permissions, this will raise an exception.
-        self.sftp.stat('.')
+        try:
+            self.sftp.stat('.')
+        except IOError as e:
+            if 'Permission denied' in e:
+                self.chdir(old_path)
+            raise IOError(e)
+
 
     def normalize(self, path):
         return self.sftp.normalize(path)

@@ -1,4 +1,4 @@
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from django.contrib.auth.models import User
 
 from aida.common.datastructures import calcStates
@@ -6,6 +6,7 @@ from aida.scheduler.datastructures import jobStates
 from aida.djsite.db.models import Computer, AuthInfo
 from aida.common.exceptions import DBContentError, ConfigurationError, AuthenticationError
 from aida.common import aidalogger
+from aida.djsite.utils import get_automatic_user
     
 def update_running_calcs_status(authinfo):
     """
@@ -24,7 +25,7 @@ def update_running_calcs_status(authinfo):
     s = authinfo.computer.get_scheduler()
     t = authinfo.get_transport()
 
-    finished_calculations = {}
+    finished = []
 
     # I avoid to open an ssh connection if there are no calcs with state WITHSCHEDULER
     if len(calcs_to_inquire):
@@ -36,7 +37,7 @@ def update_running_calcs_status(authinfo):
             found_jobs = s.getJobs(as_dict = True)
     
             # I update the status of jobs
-            finished = []
+
             for c in calcs_to_inquire:
                 jobid = c.get_jobid()
                 if jobid is None:
@@ -77,8 +78,22 @@ def update_running_calcs_status(authinfo):
             ## retrieve_finished() # < WILL LOOK FOR THINGS IN A FINISHED STATUS
             ## parse_results()
             ##...
-            finished_calculations[authinfo.computer.hostname] = finished
-    return finished_calculations
+            
+    return finished
+
+def get_authinfo(computer, aidauser):
+    try:
+        authinfo = AuthInfo.objects.get(computer=computer,aidauser=aidauser)
+    except ObjectDoesNotExist:
+        raise AuthenticationError(
+            "The aida user {} is not configured to use computer {}".format(
+                aidauser.username, computer.hostname))
+    except MultipleObjectsReturned:
+        raise ConfigurationError(
+            "The aida user {} is not configured more than once to use computer {}! "
+            "only one configuration is allowed".format(
+                aidauser.username, computer.hostname))
+    return authinfo
 
 # in daemon
 def update_jobs():
@@ -98,15 +113,11 @@ def update_jobs():
         computer = Computer.objects.get(id=computer_id)
         aidauser = User.objects.get(id=aidauser_id)
         try:
-            try:
-                authinfo = AuthInfo.objects.get(computer=computer,aidauser=aidauser)
-            except ObjectDoesNotExist:
-                # I do not check for MultipleObjectsReturned thanks to
-                # the unique_together constraint
-                raise AuthenticationError(
-                    "The aida user {} is not configured to use computer {}".format(
-                        aidauser.username, computer.hostname))
-            update_running_calcs_status(authinfo)
+            authinfo = get_authinfo(computer, aidauser)
+            finished_calcs = update_running_calcs_status(authinfo)
+            print "*** '{}' for machine '{}' ***".format(aidauser.username, computer.hostname)
+            for c in finished_calcs:
+                print c
         except Exception as e:
             # TODO: set logger properly
             msg = ("Error while updating RunningJob table for aidauser={} on computer={}, "
@@ -118,4 +129,34 @@ def update_jobs():
 
 
 def submit_calc(calc):
-    pass
+    """
+    Submit a calculation
+    Args:
+        calc: the calculation to submit (an instance of the aida.orm.Calculation class)
+
+    # TODO: check that there is one node for parallelization info, ...
+    #       Probably set them as properties of the calculation, before storing it?
+    """
+    from aida.codeplugins import CodePlugin
+    from aida.orm import Calculation, Code
+    from aida.common.pluginloader import load_plugin
+    
+    if not isinstance(calc,Calculation):
+        raise ValueError("calc must be a Calculation")
+    
+    authinfo = get_authinfo(calc.get_computer(), calc.get_user())
+    s = authinfo.computer.get_scheduler()
+    t = authinfo.get_transport()
+
+    input_codes = list(Code.query(outputs=calc))
+    if len(input_codes) != 1:
+        raise LinkingError("Calculation must have one and only one input code")
+    input_code = input_codes[0]
+
+    # load dynamically the input plugin
+    InputPlugin = load_plugin(CodePlugin, 'aida.codeplugins.input', input_code.get_input_plugin())
+
+    
+    # call the input plugin create() method, passing a list of input data with label, and
+    #    retrieving the calcinfo object
+    # get the output folder, and call the method to submit (to be written, if I remember correctly)

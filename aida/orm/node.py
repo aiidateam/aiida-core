@@ -120,6 +120,9 @@ class Node(object):
         """
         return True
 
+    def get_user(self):
+        return self.dbnode.user
+
     def add_link_from(self,src,label=None):
         """
         Add a link to the current node from the 'src' node.

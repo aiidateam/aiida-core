@@ -648,7 +648,7 @@ class TestSubNodes(unittest.TestCase):
             d2 = FileData(f.name).store()
 
         code = Code(remote_machine_exec=('localhost','/bin/true'),
-                    input_plugin='simple_plugin.template_replacer').store()
+                    input_plugin='simple_plugins.template_replacer').store()
 
         unsavedcomputer = Computer(hostname='localhost')
 
@@ -746,7 +746,7 @@ class TestCode(unittest.TestCase):
         from aida.common.exceptions import ValidationError
 
         code = Code(local_executable='test.sh',
-                    input_plugin='simple_plugin.template_replacer')
+                    input_plugin='simple_plugins.template_replacer')
         with self.assertRaises(ValidationError):
             # No file with name test.sh
             code.store()
@@ -769,24 +769,24 @@ class TestCode(unittest.TestCase):
         with self.assertRaises(ValueError):
             # remote_machine_exec has length 2 but is not a list or tuple
             code = Code(remote_machine_exec='ab',
-                        input_plugin='simple_plugin.template_replacer')
+                        input_plugin='simple_plugins.template_replacer')
 
         # invalid code path
         with self.assertRaises(ValueError):
             code = Code(remote_machine_exec=('localhost', ''),
-                        input_plugin='simple_plugin.template_replacer')
+                        input_plugin='simple_plugins.template_replacer')
 
         # Relative path is invalid for remote code
         with self.assertRaises(ValueError):
             code = Code(remote_machine_exec=('localhost', 'subdir/run.exe'),
-                        input_plugin='simple_plugin.template_replacer')
+                        input_plugin='simple_plugins.template_replacer')
 
         # No input plugin specified
         with self.assertRaises(ValueError):
             code = Code(remote_machine_exec=('localhost', 'subdir/run.exe'))
         
         code = Code(remote_machine_exec=('localhost', '/bin/ls'),
-                    input_plugin='simple_plugin.template_replacer')
+                    input_plugin='simple_plugins.template_replacer')
         with tempfile.NamedTemporaryFile() as f:
             f.write("#/bin/bash\n\necho test run\n")
             f.flush()

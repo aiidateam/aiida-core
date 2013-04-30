@@ -1,0 +1,211 @@
+supervisor: error trying to setuid to 501 (Can't drop privilege as nonroot user)
+python: can't open file '/Users/riki/Develop/epfl/aida/aida/manage.py': [Errno 2] No such file or directory
+supervisor: error trying to setuid to 501 (Can't drop privilege as nonroot user)
+python: can't open file '/Users/riki/Develop/epfl/aida/aida/manage.py': [Errno 2] No such file or directory
+supervisor: error trying to setuid to 501 (Can't drop privilege as nonroot user)
+python: can't open file '/Users/riki/Develop/epfl/aida/aida/manage.py': [Errno 2] No such file or directory
+supervisor: error trying to setuid to 501 (Can't drop privilege as nonroot user)
+python: can't open file '/Users/riki/Develop/epfl/aida/aida/manage.py': [Errno 2] No such file or directory
+supervisor: error trying to setuid to 501 (Can't drop privilege as nonroot user)
+[2013-04-29 16:07:06,101: INFO/MainProcess] Celerybeat: Starting...
+[2013-04-29 16:07:06,101: INFO/MainProcess] Writing entries...
+[2013-04-29 16:07:06,185: INFO/MainProcess] DatabaseScheduler: Schedule changed.
+[2013-04-29 16:07:06,185: INFO/MainProcess] Writing entries...
+[2013-04-29 16:07:36,186: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.db.tasks.poll)
+[2013-04-29 16:07:36,234: INFO/MainProcess] Writing entries...
+[2013-04-29 16:08:06,189: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.db.tasks.poll)
+[2013-04-29 16:08:36,191: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.db.tasks.poll)
+[2013-04-29 16:09:06,195: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.db.tasks.poll)
+[2013-04-29 16:09:18,292: INFO/MainProcess] Writing entries...
+[2013-04-29 16:09:18,325: INFO/MainProcess] Writing entries...
+celerybeat v3.0.18 (Chiastic Slide) is starting.
+__    -    ... __   -        _
+Configuration ->
+    . broker -> django://localhost//
+    . loader -> djcelery.loaders.DjangoLoader
+    . scheduler -> djcelery.schedulers.DatabaseScheduler
+
+    . logfile -> [stderr]@INFO
+    . maxinterval -> now (0s)
+supervisor: error trying to setuid to 501 (Can't drop privilege as nonroot user)
+[2013-04-29 16:23:05,067: INFO/MainProcess] Celerybeat: Starting...
+[2013-04-29 16:23:05,067: INFO/MainProcess] Writing entries...
+[2013-04-29 16:23:05,104: INFO/MainProcess] DatabaseScheduler: Schedule changed.
+[2013-04-29 16:23:05,104: INFO/MainProcess] Writing entries...
+[2013-04-29 16:23:05,108: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 16:23:05,116: INFO/MainProcess] Writing entries...
+[2013-04-29 16:23:35,111: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 16:24:05,114: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 16:24:35,116: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 16:25:05,119: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 16:25:35,121: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 16:26:05,123: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 16:26:05,129: INFO/MainProcess] Writing entries...
+[2013-04-29 16:26:35,126: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 16:27:05,128: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 16:27:35,131: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 16:28:05,133: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 16:28:35,136: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 16:29:05,138: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 16:29:05,144: INFO/MainProcess] Writing entries...
+[2013-04-29 16:29:35,141: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 16:30:05,143: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 16:30:35,145: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 16:31:05,147: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 16:31:35,149: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 16:32:05,152: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 16:32:05,157: INFO/MainProcess] Writing entries...
+[2013-04-29 16:32:35,154: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 16:33:05,157: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 16:33:35,158: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 16:34:05,161: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 16:34:35,164: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 16:35:05,165: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 16:35:05,190: INFO/MainProcess] Writing entries...
+[2013-04-29 16:35:35,167: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 16:36:05,170: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 16:36:35,173: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 16:36:37,442: INFO/MainProcess] Writing entries...
+[2013-04-29 16:36:37,447: INFO/MainProcess] Writing entries...
+celerybeat v3.0.18 (Chiastic Slide) is starting.
+__    -    ... __   -        _
+Configuration ->
+    . broker -> django://localhost//
+    . loader -> djcelery.loaders.DjangoLoader
+    . scheduler -> djcelery.schedulers.DatabaseScheduler
+
+    . logfile -> [stderr]@INFO
+    . maxinterval -> now (0s)
+supervisor: error trying to setuid to 501 (Can't drop privilege as nonroot user)
+[2013-04-29 17:41:34,613: INFO/MainProcess] Celerybeat: Starting...
+[2013-04-29 17:41:34,613: INFO/MainProcess] Writing entries...
+[2013-04-29 17:41:34,725: INFO/MainProcess] DatabaseScheduler: Schedule changed.
+[2013-04-29 17:41:34,725: INFO/MainProcess] Writing entries...
+[2013-04-29 17:41:34,729: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 17:41:34,810: INFO/MainProcess] Writing entries...
+[2013-04-29 17:42:04,734: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 17:42:34,738: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 17:43:04,741: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 17:43:34,743: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 17:44:04,745: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 17:44:34,748: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 17:45:04,750: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 17:45:04,755: INFO/MainProcess] Writing entries...
+[2013-04-29 17:45:34,752: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 17:46:04,754: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 17:46:34,757: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 17:47:04,758: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 17:47:34,761: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 17:48:04,763: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 17:48:04,768: INFO/MainProcess] Writing entries...
+[2013-04-29 17:48:34,765: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 17:49:04,768: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 17:49:34,770: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 17:50:04,773: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 17:50:34,775: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 17:51:04,777: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 17:51:04,808: INFO/MainProcess] Writing entries...
+[2013-04-29 17:51:34,780: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 17:52:04,782: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 17:52:34,785: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 17:53:04,787: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 17:53:34,789: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 17:54:04,791: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 17:54:04,853: INFO/MainProcess] Writing entries...
+[2013-04-29 17:54:34,793: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 17:55:04,796: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 17:55:34,799: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 17:56:04,801: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 17:56:34,804: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 17:57:04,806: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 17:57:34,809: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 17:57:34,820: INFO/MainProcess] Writing entries...
+[2013-04-29 17:58:04,811: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 17:58:34,813: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 17:59:04,816: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 17:59:34,820: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 18:00:04,822: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 18:00:34,825: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 18:00:34,855: INFO/MainProcess] Writing entries...
+[2013-04-29 18:01:04,827: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 18:01:34,830: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 18:02:04,832: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 18:02:34,834: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 18:03:04,837: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 18:03:34,839: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 18:04:04,842: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 18:04:04,866: INFO/MainProcess] Writing entries...
+[2013-04-29 18:04:20,293: INFO/MainProcess] Writing entries...
+[2013-04-29 18:04:20,294: INFO/MainProcess] Writing entries...
+celerybeat v3.0.18 (Chiastic Slide) is starting.
+__    -    ... __   -        _
+Configuration ->
+    . broker -> django://localhost//
+    . loader -> djcelery.loaders.DjangoLoader
+    . scheduler -> djcelery.schedulers.DatabaseScheduler
+
+    . logfile -> [stderr]@INFO
+    . maxinterval -> now (0s)
+supervisor: error trying to setuid to 501 (Can't drop privilege as nonroot user)
+[2013-04-29 18:04:48,852: INFO/MainProcess] Celerybeat: Starting...
+[2013-04-29 18:04:48,852: INFO/MainProcess] Writing entries...
+[2013-04-29 18:04:48,890: INFO/MainProcess] DatabaseScheduler: Schedule changed.
+[2013-04-29 18:04:48,890: INFO/MainProcess] Writing entries...
+[2013-04-29 18:04:48,894: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 18:04:48,901: INFO/MainProcess] Writing entries...
+[2013-04-29 18:05:16,018: INFO/MainProcess] Writing entries...
+[2013-04-29 18:05:16,018: INFO/MainProcess] Writing entries...
+celerybeat v3.0.18 (Chiastic Slide) is starting.
+__    -    ... __   -        _
+Configuration ->
+    . broker -> django://localhost//
+    . loader -> djcelery.loaders.DjangoLoader
+    . scheduler -> djcelery.schedulers.DatabaseScheduler
+
+    . logfile -> [stderr]@INFO
+    . maxinterval -> now (0s)
+supervisor: error trying to setuid to 501 (Can't drop privilege as nonroot user)
+[2013-04-29 18:05:44,432: INFO/MainProcess] Celerybeat: Starting...
+[2013-04-29 18:05:44,432: INFO/MainProcess] Writing entries...
+[2013-04-29 18:05:44,472: INFO/MainProcess] DatabaseScheduler: Schedule changed.
+[2013-04-29 18:05:44,472: INFO/MainProcess] Writing entries...
+[2013-04-29 18:05:44,478: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 18:05:44,486: INFO/MainProcess] Writing entries...
+[2013-04-29 18:06:14,480: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 18:06:37,590: INFO/MainProcess] Writing entries...
+[2013-04-29 18:06:37,628: INFO/MainProcess] Writing entries...
+celerybeat v3.0.18 (Chiastic Slide) is starting.
+__    -    ... __   -        _
+Configuration ->
+    . broker -> django://localhost//
+    . loader -> djcelery.loaders.DjangoLoader
+    . scheduler -> djcelery.schedulers.DatabaseScheduler
+
+    . logfile -> [stderr]@INFO
+    . maxinterval -> now (0s)
+supervisor: error trying to setuid to 501 (Can't drop privilege as nonroot user)
+[2013-04-29 18:07:01,614: INFO/MainProcess] Celerybeat: Starting...
+[2013-04-29 18:07:01,615: INFO/MainProcess] Writing entries...
+[2013-04-29 18:07:01,654: INFO/MainProcess] DatabaseScheduler: Schedule changed.
+[2013-04-29 18:07:01,654: INFO/MainProcess] Writing entries...
+[2013-04-29 18:07:01,658: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 18:07:01,666: INFO/MainProcess] Writing entries...
+[2013-04-29 18:07:31,660: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 18:08:01,663: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 18:08:31,665: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 18:09:01,667: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 18:09:31,670: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 18:10:01,673: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 18:10:01,828: INFO/MainProcess] Writing entries...
+[2013-04-29 18:10:31,674: INFO/MainProcess] Scheduler: Sending due task do-every-30-seconds (aida.djsite.db.tasks.poll)
+[2013-04-29 18:10:58,254: INFO/MainProcess] Writing entries...
+[2013-04-29 18:10:58,259: INFO/MainProcess] Writing entries...
+celerybeat v3.0.18 (Chiastic Slide) is starting.
+__    -    ... __   -        _
+Configuration ->
+    . broker -> django://localhost//
+    . loader -> djcelery.loaders.DjangoLoader
+    . scheduler -> djcelery.schedulers.DatabaseScheduler
+
+    . logfile -> [stderr]@INFO
+    . maxinterval -> now (0s)

@@ -41,32 +41,22 @@ def load_plugin(base_class, plugins_module, plugin_name):
     # Note: I am doing it in a complicated way because originally I wanted to
     # put simply the absolute path to the plugins folder, but I was having some
     # issues.
-    # If this works, proably it is just simpler to run import_module on
+    # If this works, probably it is just simpler to run import_module on
     # plugins_module + '.' + plugin_name.lower()
-    try:
-        plugin_folder_module = importlib.import_module(plugins_module)
-    except ImportError:
-        raise ImportError("Unable to find the plugins module folder")
-    
-    plugin_folder_path = os.path.split(os.path.realpath(
-            plugin_folder_module.__file__))[0]
 
-    full_filename = os.path.join(plugin_folder_path, plugin_name.lower() + '.py')
-
-    if not os.path.exists(full_filename):
-        err_msg = "Unable to find a suitable plugin file {}.py in {}".format(
-            plugin_name.lower(), plugin_folder_path)
-        raise ImportError(err_msg)
-
-    # I create a reasonable module name
     module_name = ".".join([plugins_module,plugin_name.lower()])
 
-    plugin = imp.load_source(module_name, full_filename)
+    try:
+        plugin = importlib.import_module(module_name)
+    except ImportError:
+        raise ImportError("Unable to find the plugins module folder or a {}.py file within it".format(
+            plugin_name.lower()))
+
     for elem_name, elem in plugin.__dict__.iteritems():
         try:
             if issubclass(elem, base_class):
                 if elem_name == expected_class_name:
-                    return elem
+                    return getattr(plugin,elem_name)
         except TypeError:
             # This happens when we pass a non-class to issubclass; 
             # we just skip this case

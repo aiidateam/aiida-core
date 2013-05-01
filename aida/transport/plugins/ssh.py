@@ -283,8 +283,8 @@ class SshTransport(aida.transport.Transport):
         if not os.path.isabs(localpath):
             raise ValueError("The localpath must be an absolute path")
         
-        if not self.isdir(localpath):
-            raise ValueError("Input localpath is not a folder : {}".format(localpath))
+        if not os.path.isdir(localpath):
+            raise ValueError("Input localpath is not a folder: {}".format(localpath))
 
         try:
             self.mkdir(remotepath)

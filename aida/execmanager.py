@@ -275,7 +275,6 @@ def submit_calc(calc):
                 calc._set_remote_workdir(t.getcwd())
                 
                 # copy all files, recursively with folders
-                execlogger.warning("NO RECURSION IMPLEMENTED HERE!")
                 for f, _ in folder.get_content_list():
                     execlogger.debug("copying file {}...".format(f))
                     t.put(folder.get_file_path(f), f)

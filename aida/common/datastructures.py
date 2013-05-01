@@ -13,7 +13,7 @@ calcStates = CalcState((
                       # (both DONE and FAILED)
         'RETRIEVING', # while retrieving data
         'RETRIEVED',  # data retrieved, no more need to connect to scheduler
-        'SUBMISSIONFAILED',
+        'SUBMISSIONFAILED', # error occurred during submission phase
         ))
 
 

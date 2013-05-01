@@ -35,6 +35,7 @@ class JobTemplate(DefaultFieldsAttributeDict):
          a job are allowed to exist, in seconds
 
     * TODO: refine this list and choose what we want to support.
+    * TODO: validation? also call the validate function in the proper place then.
     """
     _default_fields = (
         'submitAsHold',

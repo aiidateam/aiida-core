@@ -4,6 +4,7 @@ import importlib
 import imp
 
 import aida.common
+from aida.common.exceptions import MissingPluginError
 
 logger = aida.common.aidalogger.getChild('pluginloader')
 
@@ -21,6 +22,9 @@ def load_plugin(base_class, plugins_module, plugin_type):
 
     Return: 
         the class of the required plugin.
+
+    Raise:
+        MissingPluginError if the plugin cannot be loaded
 
     The plugin class must have a specific name and be located in a specific file:
     if for instance plugin_name == 'ssh' and base_class.__name__ == 'Transport',
@@ -49,7 +53,7 @@ def load_plugin(base_class, plugins_module, plugin_type):
     try:
         plugin = importlib.import_module(module_name)
     except ImportError:
-        raise ImportError("Unable to load the module {}".format(
+        raise MissingPluginError("Unable to load the module {}".format(
             module_name))
 
     for elem_name, elem in plugin.__dict__.iteritems():
@@ -65,4 +69,4 @@ def load_plugin(base_class, plugins_module, plugin_type):
     # If here, we did not find the class
     err_msg = "Unable to find a suitable class {} in {}".format(
         expected_class_name, module_name)
-    raise ImportError(err_msg)
+    raise MissingPluginError(err_msg)

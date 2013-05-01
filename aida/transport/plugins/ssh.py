@@ -184,6 +184,45 @@ class SshTransport(aida.transport.Transport):
         so this should never happen within this class.
         """
         return self.sftp.getcwd()
+
+
+    def makedirs(self,path,ignore_existing=False):
+        """
+        Super-mkdir; create a leaf directory and all intermediate ones.
+        Works like mkdir, except that any intermediate path segment (not
+        just the rightmost) will be created if it does not exist.
+
+        NOTE: since os.path.split uses the separators as the host system
+        (that could be windows), I assume the remote computer is Linux-based
+        and use '/' as separators!
+
+        Args:
+            path (str) - directory to create
+            ignore_existing (bool) - if set to true, it doesn't give any error
+            if the leaf directory does already exist
+
+        Raises:
+            If the directory already exists, OSError is raised.
+        """
+        if path.startswith('/'):
+            to_create = path.strip().split('/')[1:]
+            this_dir='/'
+        else:
+            to_create = path.strip().split('/')
+            this_dir = ''
+            
+        for count,element in enumerate(to_create):
+            if count>0:
+                this_dir += '/'
+            this_dir += element
+            if count+1==len(to_create) and self.isdir(this_dir) and ignore_existing:
+                return
+            if count+1==len(to_create) and self.isdir(this_dir) and not ignore_existing:
+                self.mkdir(this_dir)
+            if not self.isdir(this_dir):
+                self.mkdir(this_dir)
+
+
     
     def mkdir(self,path,ignore_existing=False):
         """

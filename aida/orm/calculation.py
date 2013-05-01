@@ -265,7 +265,7 @@ class Calculation(Node):
         if computer is not None:
             # I convert it from various type of inputs (string, DbComputer, Computer)
             # to a Computer type
-            kwargs['computer'] = Computer(DbComputer.get_dbcomputer(computer))
+            kwargs['computer'] = Computer.get(computer)
         if user is not None:
             kwargs['user'] = user
         

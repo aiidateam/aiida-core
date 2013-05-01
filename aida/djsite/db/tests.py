@@ -698,7 +698,7 @@ class TestSubNodes(unittest.TestCase):
         self.assertEquals(len(inputs_type_data), 2)
         self.assertEquals(len(inputs_type_code), 1)
         
-    def check_single_calc_source(self):
+    def test_check_single_calc_source(self):
         """
         Each data node can only have one input calculation
         """
@@ -764,6 +764,9 @@ class TestCode(unittest.TestCase):
 
         code.store()
         self.assertTrue(code.can_run_on(self.computer))
+        self.assertTrue(code.get_local_executable(),'test.sh')
+        self.assertTrue(code.get_execname(),'stest.sh')
+                
 
     def test_remote(self):
         import tempfile
@@ -804,6 +807,10 @@ class TestCode(unittest.TestCase):
         # If there are no files, I can store
         code.remove_file('test.sh')
         code.store()
+
+        self.assertEquals(code.get_remote_machine(), 'localhost')
+        self.assertEquals(code.get_remote_executable(), '/bin/ls')
+        self.assertEquals(code.get_execname(), '/bin/ls')
 
         self.assertTrue(code.can_run_on('localhost')) 
         self.assertTrue(code.can_run_on(self.computer))         

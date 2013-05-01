@@ -52,7 +52,7 @@ class ConfigurationError(AidaException):
     """
     pass
 
-class DBContentError(AidaException):
+class DbContentError(AidaException):
     """
     Raised when the content of the DB is not valid.
     This should never happen if the user does not play directly

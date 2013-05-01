@@ -157,22 +157,66 @@ class Node(object):
             raise ValueError("dest must be a Node instance")
         dest.add_link_from(self,label)
 
-    def get_inputs(self):
+    def get_inputs(self,type=None,also_labels=False):
         """
         Return a list of nodes that enter (directly) in this node
-        """
-        from aida.djsite.db.models import DbNode
-        
-        return list(DbNode.aidaobjects.filter(outputs=self.dbnode).distinct())
 
-    def get_outputs(self):
+        Args:
+            type: if specified, should be a class, and it filters only elements of that
+                specific type (or a subclass of 'type')
+            also_labels: if False (default) only return a list of input nodes.
+                If True, return a list of tuples, where each tuple has the following
+                format: ('label', Node)
+                with 'label' the link label, and Node a Node instance or subclass
         """
-        Return a list of nodes that exit (directly) in this node
-        """
-        from aida.djsite.db.models import DbNode
-        
-        return list(DbNode.aidaobjects.filter(inputs=self.dbnode).distinct())
+        from aida.djsite.db.models import Link
 
+        inputs_list = ((i.label, i.input.get_aida_class()) for i in
+                       Link.objects.filter(output=self.dbnode).distinct())
+        
+        if type is None:
+            if also_labels:
+                return list(inputs_list)
+            else:
+                return [i[1] for i in inputs_list]
+        else:
+            filtered_list = (i for i in inputs_list if isinstance(i[1],type))
+            if also_labels:
+                return list(filtered_list)
+            else:
+                return [i[1] for i in filtered_list]
+            
+
+    def get_outputs(self,type=None,also_labels=False):
+        """
+        Return a list of nodes that exit (directly) from this node
+
+        Args:
+            type: if specified, should be a class, and it filters only elements of that
+                specific type (or a subclass of 'type')
+            also_labels: if False (default) only return a list of input nodes.
+                If True, return a list of tuples, where each tuple has the following
+                format: ('label', Node)
+                with 'label' the link label, and Node a Node instance or subclass
+        """
+        from aida.djsite.db.models import Link
+
+        outputs_list = ((i.label, i.output.get_aida_class()) for i in
+                       Link.objects.filter(input=self.dbnode).distinct())
+        
+        if type is None:
+            if also_labels:
+                return list(outputs_list)
+            else:
+                return [i[1] for i in outputs_list]
+        else:
+            filtered_list = (i for i in outputs_list if isinstance(i[1],type))
+            if also_labels:
+                return list(filtered_list)
+            else:
+                return [i[1] for i in filtered_list]
+
+            
     def set_attr(self, key, value):
         if self._to_be_stored:
             self._attrs_cache["_{}".format(key)] = value
@@ -534,15 +578,26 @@ class Node(object):
             # As a first thing, I check if the data is valid
             self.validate()
             # I save the corresponding django entry
-            with transaction.commit_on_success():
-                # Save the row
-                self._dbnode.save()
-                # Save its attributes
-                for k, v in self._attrs_cache.iteritems():
-                    self._set_attribute_db(k,v,incrementversion=False)
+            # I set the folder
+            self.repo_folder.replace_with_folder(self.get_temp_folder().abspath, move=True, overwrite=True)
 
-                # I set the folder
-                self.repo_folder.replace_with_folder(self.get_temp_folder().abspath, move=True, overwrite=True)
+            # I do the transaction only during storage on DB to avoid timeout problems, especially
+            # with SQLite
+            try:
+                with transaction.commit_on_success():
+                    # Save the row
+                    self._dbnode.save()
+                    # Save its attributes
+                    for k, v in self._attrs_cache.iteritems():
+                        self._set_attribute_db(k,v,incrementversion=False)
+            # This is one of the few cases where it is ok to do a 'global' except,
+            # also because I am re-raising the exception
+            except:
+                # I put back the files in the sandbox folder since the transaction did not succeed
+                self.get_temp_folder().replace_with_folder(
+                    self.repo_folder.abspath, move=True, overwrite=True)                
+                raise
+
             
             self._temp_folder = None            
             self._to_be_stored = False

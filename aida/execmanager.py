@@ -137,7 +137,7 @@ def submit_calc(calc):
     # TODO: check that there is one node for parallelization info, ...
     #       Probably set them as properties of the calculation, before storing it?
     """
-    from aida.codeplugins import CodePlugin
+    from aida.codeplugins.input import CodePlugin
     from aida.orm import Calculation, Code
     from aida.common.pluginloader import load_plugin
     
@@ -156,7 +156,10 @@ def submit_calc(calc):
     # load dynamically the input plugin
     InputPlugin = load_plugin(CodePlugin, 'aida.codeplugins.input', input_code.get_input_plugin())
 
-    
+    with SandboxFolder() as folder:
+        plugin = InputPlugin()
+        calcinfo = plugin.create(calc, calc.get_inputs(type=Data,also_labels=True), folder)
+        
     # call the input plugin create() method, passing a list of input data with label, and
     #    retrieving the calcinfo object
     # get the output folder, and call the method to submit (to be written, if I remember correctly)

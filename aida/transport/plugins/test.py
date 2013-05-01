@@ -488,40 +488,108 @@ class TestPutGetTree(unittest.TestCase):
             t.chdir(directory)
 
             local_file_name = os.path.join(local_subfolder,'file.txt')
-            # remote_file_name = os.path.join(remote_subfolder,'file_remote.txt')
-            # retrieved_file_name = os.path.join(local_dir,directory,local_subfolder,
-            #                                   'file_retrieved.txt')
 
             text = 'Viva Verdi\n'
             with open(local_file_name,'w') as f:
                 f.write(text)
 
             # here use full path in src and dst
+            for i in range(2):
+                if i==0:
+                    t.put(local_subfolder,remote_subfolder)
+                    t.get(remote_subfolder,retrieved_subfolder)
+                else:
+                    t.puttree(local_subfolder,remote_subfolder)
+                    t.gettree(remote_subfolder,retrieved_subfolder)
+
+                # Here I am mixing the local with the remote fold
+                list_of_dirs = t.listdir('.')
+                # # it is False because local_file_name has the full path,
+                # # while list_of_files has not
+                self.assertFalse( local_subfolder in list_of_dirs)
+                self.assertTrue( remote_subfolder in list_of_dirs)
+                self.assertFalse( retrieved_subfolder in list_of_dirs)
+                self.assertTrue( 'tmp1' in list_of_dirs)
+                self.assertTrue( 'tmp3' in list_of_dirs)
+
+                list_pushed_file = t.listdir('tmp2')
+                list_retrieved_file = t.listdir('tmp3')
+                self.assertTrue( 'file.txt' in list_pushed_file )
+                self.assertTrue( 'file.txt' in list_retrieved_file )
+            
+            os.remove(os.path.join(local_subfolder,'file.txt'))
+            os.rmdir(local_subfolder)
+            os.remove(os.path.join(retrieved_subfolder,'file.txt'))
+            os.rmdir(retrieved_subfolder)
+            t.remove(os.path.join(remote_subfolder,'file.txt'))
+            t.rmdir(remote_subfolder)
+            
+            t.chdir('..')
+            t.rmdir(directory)
+            
+
+    def test_put_and_get_overwrite(self):
+        import os
+        import random
+        import string
+        
+        local_dir = os.path.join('/','tmp')
+        remote_dir = local_dir
+        directory = 'tmp_try'
+
+        with custom_transport as t:
+
+            t.chdir(remote_dir)
+            
+            while os.path.exists(os.path.join(local_dir,directory) ):
+                # I append a random letter/number until it is unique
+                directory += random.choice(
+                    string.ascii_uppercase + string.digits)
+
+            local_subfolder = os.path.join(local_dir,directory,'tmp1')
+            remote_subfolder = 'tmp2'
+            retrieved_subfolder = os.path.join(local_dir,directory,'tmp3')
+            
+            os.mkdir(os.path.join(local_dir,directory))
+            os.mkdir(os.path.join(local_dir,directory,local_subfolder))
+            
+            t.chdir(directory)
+
+            local_file_name = os.path.join(local_subfolder,'file.txt')
+
+            text = 'Viva Verdi\n'
+            with open(local_file_name,'w') as f:
+                f.write(text)
+
+
             t.put(local_subfolder,remote_subfolder)
             t.get(remote_subfolder,retrieved_subfolder)
 
-            # Here I am mixing the local with the remote fold
-            list_of_dirs = t.listdir('.')
-            # # it is False because local_file_name has the full path,
-            # # while list_of_files has not
-            self.assertFalse( local_subfolder in list_of_dirs)
-            self.assertTrue( remote_subfolder in list_of_dirs)
-            self.assertFalse( retrieved_subfolder in list_of_dirs)
-            self.assertTrue( 'tmp1' in list_of_dirs)
-            self.assertTrue( 'tmp3' in list_of_dirs)
+            # by defaults rewrite everything
+            t.put(local_subfolder,remote_subfolder)
+            t.get(remote_subfolder,retrieved_subfolder)
 
-            list_pushed_file = t.listdir('tmp2')
-            list_retrieved_file = t.listdir('tmp3')
-            self.assertTrue( 'file.txt' in list_pushed_file )
-            self.assertTrue( 'file.txt' in list_retrieved_file )
-            
-            # os.remove(local_file_name)
-            # t.remove(remote_file_name)
-            # os.remove(retrieved_file_name)
+            with self.assertRaises(OSError):
+                t.put(local_subfolder,remote_subfolder,overwrite=False)
+            with self.assertRaises(OSError):
+                t.get(remote_subfolder,retrieved_subfolder,overwrite=False)
+            with self.assertRaises(OSError):
+                t.puttree(local_subfolder,remote_subfolder,overwrite=False)
+            with self.assertRaises(OSError):
+                t.gettree(remote_subfolder,retrieved_subfolder,overwrite=False)
 
-            # t.chdir('..')
-            # t.rmdir(directory)
             
+            os.remove(os.path.join(local_subfolder,'file.txt'))
+            os.rmdir(local_subfolder)
+            os.remove(os.path.join(retrieved_subfolder,'file.txt'))
+            os.rmdir(retrieved_subfolder)
+            t.remove(os.path.join(remote_subfolder,'file.txt'))
+            t.rmdir(remote_subfolder)
+            # t.rmtree(remote_subfolder)
+            # here I am mixing inevitably the local and the remote folder
+            t.chdir('..')
+            t.rmdir(directory)
+
 
 
 class TestExecuteCommandWait(unittest.TestCase):

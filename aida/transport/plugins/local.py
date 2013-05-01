@@ -140,7 +140,7 @@ class LocalTransport(aida.transport.Transport):
             os.chmod( real_path , mode )
             
     
-    def put(self,source,destination,dereference=False):
+    def put(self,source,destination,dereference=False,overwrite=True):
         """
         Copies a file from source to destination
         """
@@ -155,12 +155,12 @@ class LocalTransport(aida.transport.Transport):
             raise ValueError("Source must be an absolute path")
 
         if self.isdir(source):
-            return self.puttree( source,destination,dereference )
+            self.puttree( source,destination,dereference,overwrite )
         else:
-            return self.putfile( source,destination )
+            self.putfile( source,destination,overwrite )
                     
 
-    def putfile(self,source,destination):
+    def putfile(self,source,destination,overwrite=True):
         """
         """
         if not destination:
@@ -176,14 +176,14 @@ class LocalTransport(aida.transport.Transport):
         if not os.path.exists( source ):
             raise OSError( "Source does not exists" )
 
-        try:
-            shutil.copyfile( source, os.path.join(self.curdir,destination) )
-            return True
-        except Exception as e:
-            raise IOError("Error while executing shutil.copyfile")
-
+        the_destination = os.path.join(self.curdir,destination)
+        if os.path.exists(the_destination) and not overwrite:
+            raise OSError('Destination already exists: not overwriting it')
+            
+        shutil.copyfile( source, the_destination )
         
-    def puttree(self,source,destination,dereference=False):
+        
+    def puttree(self,source,destination,dereference=False,overwrite=True):
         if not destination:
             raise IOError("Input destination to putfile "
                              "must be a non empty string")
@@ -197,14 +197,21 @@ class LocalTransport(aida.transport.Transport):
         if not os.path.exists( source ):
             raise OSError( "Source does not exists" )
 
-        try:
-            shutil.copytree( source, os.path.join(self.curdir,destination) )
-            return True
-        except Exception as e:
-            raise IOError("Error while executing shutil.copyfile")
+        the_destination = os.path.join(self.curdir,destination)
+        if os.path.exists(the_destination) and overwrite:
+            self.rmtree(the_destination)
+        elif os.path.exists(the_destination) and not overwrite:
+            raise OSError('Destination already exists: not overwriting it')
+
+        shutil.copytree( source, the_destination )
 
 
-    def get(self,source,destination,dereference=False):
+    def rmtree(self,path):
+        the_path = os.path.join(self.curdir,path)
+        shutil.rmtree(the_path)
+        
+
+    def get(self,source,destination,dereference=False,overwrite=True):
         """
         Copies a file from source to destination
         """
@@ -220,14 +227,14 @@ class LocalTransport(aida.transport.Transport):
 
         if not os.path.isabs( destination ):
             raise ValueError("Destination must be an absolute path")
-
+        
         if self.isdir(source):
-            return self.gettree( source,destination,dereference )
+            self.gettree( source,destination,dereference,overwrite )
         else:
-            return self.getfile( source,destination )
+            self.getfile( source,destination,overwrite )
 
 
-    def getfile(self,source,destination):
+    def getfile(self,source,destination,overwrite=True):
         """
         Copies a file from source to destination
         (equivalent to copy)
@@ -243,15 +250,13 @@ class LocalTransport(aida.transport.Transport):
             raise IOError("Source not found")
         if not os.path.isabs( destination ):
             raise ValueError("Destination must be an absolute path")
+        if os.path.exists(destination) and not overwrite:
+            raise OSError('Destination already exists: not overwriting it')
 
-        try:
-            shutil.copyfile( the_source, destination )
-            return True
-        except Exception as e:
-            raise IOError("Error while executing shutil.copyfile")
+        shutil.copyfile( the_source, destination )
         
 
-    def gettree(self,source,destination,dereference=False):
+    def gettree(self,source,destination,dereference=False,overwrite=True):
         """
         Copies a file from source to destination
         (equivalent to copy)
@@ -268,12 +273,13 @@ class LocalTransport(aida.transport.Transport):
         if not os.path.isabs( destination ):
             raise ValueError("Destination must be an absolute path")
 
-        try:
-            shutil.copytree( the_source, destination, symlinks=dereference )
-            return True
-        except Exception as e:
-            raise IOError("Error while executing shutil.copyfile")
+        if os.path.exists(destination) and overwrite:
+            self.rmtree(destination)
+        elif os.path.exists(destination) and not overwrite:
+            raise OSError('Destination already exists: not overwriting it')
 
+        shutil.copytree( the_source, destination, symlinks=dereference )
+        
 
     def copy(self,source,destination,dereference=False):
         """

@@ -424,7 +424,7 @@ class DbWorkflow(m.Model):
     time        = m.DateTimeField(auto_now_add=True, editable=False)
     user        = m.ForeignKey(User)
     comment     = m.TextField(blank=True)
-    status      = m.CharField(choices=calcStates,default=calcStates.NEW)
+    #status      = m.CharField(choices=calcStates,default=calcStates.NEW)
 
     def get_calculations(self):
 
@@ -441,7 +441,7 @@ class DbWorkflowStep(m.Model):
     time         = m.DateTimeField(auto_now_add=True, editable=False)
     nextcall     = m.CharField(max_length=255, blank=False, default=workflow_step_exit)
     calculations = m.ManyToManyField('DbNode', symmetrical=False, related_name="steps")
-    status       = m.CharField(choices=calcStates,default=calcStates.NEW)
+    #status       = m.CharField(choices=calcStates,default=calcStates.NEW)
 
     class Meta:
         unique_together = (("workflow", "name"))

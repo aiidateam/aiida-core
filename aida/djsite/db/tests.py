@@ -612,33 +612,34 @@ class TestSubNodes(unittest.TestCase):
     def setUpClass(cls):
         import getpass
         from django.contrib.auth.models import User
-        from aida.djsite.db.models import Computer
+        from aida.orm import Computer
 
         User.objects.create_user(getpass.getuser(), 'unknown@mail.com', 'fakepwd')
         cls.computer = Computer(hostname='localhost')
-        cls.computer.save()
+        cls.computer.store()
 
     @classmethod
     def tearDownClass(cls):
         import getpass
         from django.contrib.auth.models import User
         from django.core.exceptions import ObjectDoesNotExist
-        from aida.djsite.db.models import Computer
+        from aida.djsite.db.models import DbComputer
 
         try:
             User.objects.get(username=getpass.getuser).delete()
         except ObjectDoesNotExist:
             pass
 
-        Computer.objects.filter().delete()
+        DbComputer.objects.filter().delete()
 
     
     def test_valid_links(self):
         import tempfile
 
         from aida.orm import Node, Calculation, Data, Code
-        from aida.djsite.db.models import Computer
+        from aida.orm import Computer
         from aida.common.pluginloader import load_plugin
+        from aida.djsite.db.models import DbComputer
 
         FileData = load_plugin(Data, 'aida.orm.dataplugins', 'file')
 
@@ -650,19 +651,23 @@ class TestSubNodes(unittest.TestCase):
         code = Code(remote_machine_exec=('localhost','/bin/true'),
                     input_plugin='simple_plugins.template_replacer').store()
 
-        unsavedcomputer = Computer(hostname='localhost')
+        unsavedcomputer = Computer(dbcomputer=DbComputer(hostname='localhost'))
 
         with self.assertRaises(ValueError):
             # I need to save the localhost entry first
-            calc = Calculation(computer=unsavedcomputer).store()
+            calc = Calculation(computer=unsavedcomputer,
+                num_nodes=1,num_cpus_per_node=1).store()
 
         # I check both with a string or with an object
-        calc = Calculation(computer=self.computer).store()
-        calc2 = Calculation(computer='localhost').store()
-        with self.assertRaises(ValueError):
+        calc = Calculation(computer=self.computer,
+            num_nodes=1,num_cpus_per_node=1).store()
+        calc2 = Calculation(computer='localhost',
+            num_nodes=1,num_cpus_per_node=1).store()
+        with self.assertRaises(TypeError):
             # I don't want to call it with things that are neither
             # strings nor Computer instances
-            calc3 = Calculation(computer=1).store()
+            calc3 = Calculation(computer=1,
+                num_nodes=1,num_cpus_per_node=1).store()
         
         d1.add_link_to(calc)
         calc.add_link_from(d2)
@@ -701,8 +706,10 @@ class TestSubNodes(unittest.TestCase):
         
         d1 = Data().store()
         
-        calc = Calculation(computer=self.computer).store()
-        calc2 = Calculation(computer=self.computer).store()
+        calc = Calculation(computer=self.computer,
+            num_nodes=1,num_cpus_per_node=1).store()
+        calc2 = Calculation(computer=self.computer,
+            num_nodes=1,num_cpus_per_node=1).store()
 
         d1.add_link_from(calc)
 
@@ -717,31 +724,30 @@ class TestCode(unittest.TestCase):
     def setUpClass(cls):
         import getpass
         from django.contrib.auth.models import User
-        from aida.djsite.db.models import Computer
+        from aida.orm import Computer
 
         User.objects.create_user(getpass.getuser(), 'unknown@mail.com', 'fakepwd')
         cls.computer = Computer(hostname='localhost')
-        cls.computer.save()
+        cls.computer.store()
 
     @classmethod
     def tearDownClass(cls):
         import getpass
         from django.contrib.auth.models import User
         from django.core.exceptions import ObjectDoesNotExist
-        from aida.djsite.db.models import Computer
+        from aida.djsite.db.models import DbComputer
 
         try:
             User.objects.get(username=getpass.getuser).delete()
         except ObjectDoesNotExist:
             pass
 
-        Computer.objects.filter().delete()
+        DbComputer.objects.filter().delete()
         
         
     def test_code_local(self):
         import tempfile
 
-        from aida.djsite.db.models import Computer
         from aida.orm import Code
         from aida.common.exceptions import ValidationError
 
@@ -762,7 +768,6 @@ class TestCode(unittest.TestCase):
     def test_remote(self):
         import tempfile
 
-        from aida.djsite.db.models import Computer
         from aida.orm import Code
         from aida.common.exceptions import ValidationError
 

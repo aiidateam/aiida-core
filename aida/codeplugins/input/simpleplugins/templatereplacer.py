@@ -21,7 +21,7 @@ TODO: probably use Python's Template strings instead??
 TODO: catch exceptions
 """
 from aida.codeplugins.input import InputPlugin
-from aida.codeplugins.exceptions import InputValidationError
+from aida.common.exceptions import InputValidationError
 from aida.common.datastructures import CalcInfo
 
 # TODO: write a 'input_type_checker' routine to automatically check the existence

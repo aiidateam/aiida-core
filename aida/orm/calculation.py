@@ -51,7 +51,8 @@ TODO: set the following as properties of the Calculation
 
 class Calculation(Node):
     _plugin_type_string = "calculation"
-    _updatable_attributes = ('state', 'job_id', 'scheduler_state', 'last_jobinfo')
+    _updatable_attributes = ('state', 'job_id', 'scheduler_state', 'last_jobinfo',
+			     'remote_workdir')
     
     def __init__(self,*args,**kwargs):
         from aida.common.datastructures import calcStates
@@ -143,6 +144,12 @@ class Calculation(Node):
 
     def get_state(self):
         return self.get_attr('state', None)
+
+    def _set_remote_workdir(self, remote_workdir):
+        self.set_attr('remote_workdir', remote_workdir)
+
+    def get_remote_workdir(self):
+        return self.get_attr('remote_workdir', None)
 
     def _set_job_id(self, job_id):
         """

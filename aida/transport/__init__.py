@@ -360,7 +360,7 @@ class Transport(object):
             stderr (sStr)
         """
         command = 'whoami'
-        retval, username, stderr = exec_command_wait(command)
+        retval, username, stderr = self.exec_command_wait(command)
         if retval == 0:
             if stderr.strip():
                 self.logger.warning("There was nonempty stderr in the whoami "

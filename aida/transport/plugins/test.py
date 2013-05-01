@@ -663,66 +663,62 @@ class TestPutGetTree(unittest.TestCase):
         directory = 'tmp_try'
 
         with custom_transport as t:
-
             t.chdir(remote_dir)
-            while t.isdir(directory):
+            
+            while os.path.exists(os.path.join(local_dir,directory) ):
                 # I append a random letter/number until it is unique
                 directory += random.choice(
                     string.ascii_uppercase + string.digits)
 
-            t.mkdir(directory)
-            t.chdir(directory)
-
-            local_file_name = os.path.join(local_dir,directory,'file_local.txt')
-            remote_file_name = 'file_remote.txt'
-            retrieved_file_name = os.path.join(local_dir,directory,'file_retrieved.txt')
+            local_subfolder = os.path.join(local_dir,directory,'tmp1')
+            remote_subfolder = 'tmp2'
+            retrieved_subfolder = os.path.join(local_dir,directory,'tmp3')
             
+            os.mkdir(os.path.join(local_dir,directory))
+            os.mkdir(os.path.join(local_dir,directory,local_subfolder))
+            
+            t.chdir(directory)
+            local_file_name = os.path.join(local_subfolder,'file.txt')
+
             text = 'Viva Verdi\n'
             with  open(local_file_name,'w') as f:
                 f.write(text)
 
+
             # localpath is an empty string
             # ValueError because it is not an abs path
             with self.assertRaises(ValueError):
-                t.put('',remote_file_name)
-            with self.assertRaises(ValueError):
-                t.putfile('',remote_file_name)
+                t.puttree('',remote_subfolder)
 
             # remote path is an empty string
             with self.assertRaises(IOError):
-                t.put(local_file_name,'')
-            with self.assertRaises(IOError):
-                t.putfile(local_file_name,'')
+                t.puttree(local_subfolder,'')
 
-            t.put(local_file_name,remote_file_name)
-            # overwrite the remote_file_name
-            t.putfile(local_file_name,remote_file_name)
+            t.puttree(local_subfolder,remote_subfolder)
             
             # remote path is an empty string
             with self.assertRaises(IOError):
-                t.get('',retrieved_file_name)
-            with self.assertRaises(IOError):
-                t.getfile('',retrieved_file_name)
+                t.gettree('',retrieved_subfolder)
 
             # local path is an empty string
             # ValueError because it is not an abs path
             with self.assertRaises(ValueError):
-                t.get(remote_file_name,'')
-            with self.assertRaises(ValueError):
-                t.getfile(remote_file_name,'')
+                t.gettree(remote_subfolder,'')
 
             # TODO : get doesn't retrieve empty files.
             # Is it what we want?
-            t.get(remote_file_name,retrieved_file_name)
-            # overwrite retrieved_file_name
-            t.getfile(remote_file_name,retrieved_file_name)
+            t.gettree(remote_subfolder,retrieved_subfolder)
 
-            os.remove(local_file_name)
-            t.remove(remote_file_name)
-            # If it couldn't end the copy, it leaves what he did on
-            # local file
-            self.assertTrue( 'file_retrieved.txt' in t.listdir('.') )
-            os.remove(retrieved_file_name)
+
+            os.remove(os.path.join(local_subfolder,'file.txt'))
+            os.rmdir(local_subfolder)
+            t.remove(os.path.join(remote_subfolder,'file.txt'))
+            t.rmdir(remote_subfolder)
+            # If it couldn't end the copy, it leaves what he did on local file
+            # here I am mixing local with remote
+            self.assertTrue( 'file.txt' in t.listdir('tmp3') )
+            os.remove(os.path.join(retrieved_subfolder,'file.txt'))
+            os.rmdir(retrieved_subfolder)
 
             t.chdir('..')
             t.rmdir(directory)

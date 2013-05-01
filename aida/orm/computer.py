@@ -1,10 +1,6 @@
-#import os
-#from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 import aida.common
-#from aida.djsite.db.models import DbNode, Attribute
-#from aida.common.exceptions import (
-#    DBContentError, InternalError, ModificationNotAllowed, NotExistent, ValidationError )
-#from aida.common.folders import RepositoryFolder, SandboxFolder
+from aida.common.exceptions import (
+    ConfigurationError, InvalidOperation, MissingPluginError, ModificationNotAllowed)
 
 class Computer(object):
     """
@@ -33,7 +29,6 @@ class Computer(object):
         return self._dbcomputer.pk
     
     def __init__(self,**kwargs):
-        from aida.common.exceptions import NotExistent
         from aida.djsite.db.models import DbComputer
 
         dbcomputer = kwargs.pop('dbcomputer', None)
@@ -171,7 +166,7 @@ class Computer(object):
         import json
         if self.to_be_stored:
             raise ModificationNotAllowed("Cannot set a property after having stored the entry")
-        self.computer.metadata = json.dumps(metadata_dict)
+        self.dbcomputer.metadata = json.dumps(metadata_dict)
 
     def _set_property(self,k,v):
         olddata = self._get_metadata()
@@ -213,11 +208,12 @@ class Computer(object):
         self._set_property("mpirun_command", val)
 
     def get_transport_params(self):
+        from aida.common.exceptions import DbContentError
         import json
         try:
             return json.loads(self.dbcomputer.transport_params)
         except ValueError:
-            raise DBContentError(
+            raise DbContentError(
                 "Error while reading transport_params for computer {}".format(
                     self.hostname))
 

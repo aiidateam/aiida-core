@@ -98,7 +98,7 @@ class Code(Node):
                 raise ValidationError("You did not specify a remote executable")
             
         
-    def add_link_from(self,src,*args,**kwargs):
+    def add_link_from(self,src,label=None):
         raise ValueError("A code node cannot have any input nodes")
 
     def set_prepend_text(self,code):
@@ -153,7 +153,7 @@ class Code(Node):
         """
         self.set_attr('output_plugin', output_plugin)
         
-    def get_output_plugin(self, output_plugin):
+    def get_output_plugin(self):
         """
         Return the output plugin
         """
@@ -271,5 +271,5 @@ class Code(Node):
         if self.is_local():
             return u"./{}".format(self.get_local_executable())
         else:
-            return get_remote_executable()
+            return self.get_remote_executable()
 

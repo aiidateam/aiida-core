@@ -8,7 +8,7 @@ from django.contrib.auth.models import User
 from django.db.models.query import QuerySet
 
 from aida.djsite.settings.settings import LOCAL_REPOSITORY
-from aida.common.exceptions import DBContentError
+from aida.common.exceptions import DbContentError
 
 # Removed the custom User field, that was creating a lot of problems. Use
 # the email as UUID. In case we need it, we can do a couple of south migrations
@@ -276,9 +276,9 @@ class Attribute(m.Model):
             try:
                 return json.loads(self.tval)
             except ValueError:
-                raise DBContentError("Error in the content of the json field")
+                raise DbContentError("Error in the content of the json field")
         else:
-            raise DBContentError("The type field '{}' is not recognized".format(
+            raise DbContentError("The type field '{}' is not recognized".format(
                     self.datatype))        
 
 
@@ -328,7 +328,7 @@ class DbComputer(m.Model):
     @classmethod
     def get_dbcomputer(cls,computer):
         from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
-        from aida.common.exceptions import DBContentError, NotExistent
+        from aida.common.exceptions import DbContentError, NotExistent
         from aida.orm import Computer
 
         if isinstance(computer, basestring):
@@ -378,7 +378,7 @@ class AuthInfo(m.Model):
         try:
             return json.loads(self.auth_params)
         except ValueError:
-            raise DBContentError(
+            raise DbContentError(
                 "Error while reading auth_params for authinfo, aidauser={}, computer={}".format(
                     self.aidauser.username, self.computer.hostname))
 

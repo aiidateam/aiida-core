@@ -270,13 +270,14 @@ class Transport(object):
         raise NotImplementedError
     
     
-    def mkdir(self,path):
+    def mkdir(self,path,ignore_existing=False):
         """
         Create a folder (directory) named path.
 
         Args:
             path (str) - name of the folder to create
-
+            ignore_existing: if True, does not give any error if the directory
+                already exists
         Raises:
             If the directory already exists, OSError is raised.
         """

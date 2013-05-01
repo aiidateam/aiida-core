@@ -5,7 +5,7 @@ from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 import aida.common
 #from aida.djsite.db.models import DbNode, Attribute
 from aida.common.exceptions import (
-    DBContentError, InternalError, ModificationNotAllowed, NotExistent, ValidationError )
+    DbContentError, InternalError, ModificationNotAllowed, NotExistent, ValidationError )
 from aida.common.folders import RepositoryFolder, SandboxFolder
 
 # Name to be used for the section
@@ -82,7 +82,7 @@ class Node(object):
             try:
                 self.validate()
             except ValidationError as e:
-                raise DBContentError("The data in the DB with UUID={} is not valid for class {}: {}".format(
+                raise DbContentError("The data in the DB with UUID={} is not valid for class {}: {}".format(
                     uuid, self.__class__.__name__, e.message))
         else:
             self._dbnode = DbNode.objects.create(user=get_automatic_user())
@@ -111,8 +111,6 @@ class Node(object):
         """
         Set the label of the calculation
         """
-        from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
-
         if self._to_be_stored:
             self.dbnode.label = label
         else:

@@ -78,6 +78,11 @@ class TemplatereplacerInputPlugin(InputPlugin):
         cmdline_params_tmpl = template.pop('cmdline_params', [])
         input_through_stdin = template.pop('input_through_stdin', False)
 
+        if input_file_name is not None and not input_file_template:
+            raise InputValidationError("If you give an input_file_name, you "
+                                       "must also specify a input_file_template")
+
+
         if input_through_stdin and input_file_name is None:
             raise InputValidationError("If you ask for input_through_stdin you have to "
                                        "specify a input_file_name")
@@ -89,7 +94,7 @@ class TemplatereplacerInputPlugin(InputPlugin):
             
         input_file = StringIO.StringIO(input_file_template.format(**parameters))
         if input_file_name:
-            tempfolder.create_file_from_filelike(input_file_content)
+            tempfolder.create_file_from_filelike(input_file, input_file_name)
         else:
             if input_file_template:
                 self.logger.warning("No input file name passed, but a input file template is present")

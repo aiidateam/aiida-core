@@ -185,21 +185,27 @@ class SshTransport(aida.transport.Transport):
         """
         return self.sftp.getcwd()
     
-    def mkdir(self, path):
+    def mkdir(self,path,ignore_existing=False):
         """
-        Create a folder (directory) named path with numeric mode mode.
+        Create a folder (directory) named path.
 
         Args:
-            path: the folder to create. Relative paths refer to the
-                current working directory.
+            path (str) - name of the folder to create
+            ignore_existing: if True, does not give any error if the directory
+                already exists
 
         Raises:
             If the directory already exists, OSError is raised.
         """
+        if ignore_existing and self.isdir(path):
+            return
+        
         try:
             self.sftp.mkdir(path)
         except IOError as e:
-            raise OSError(e.message)
+            raise OSError("Error during mkdir of '{}' in '{}', maybe the directory "
+                          "already exists? ({})".format(
+                              path,self.getcwd(), e.message))
 
     def rmdir(self, path):
         """

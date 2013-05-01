@@ -4,6 +4,10 @@ import sys
 from aida.common.utils import load_django
 load_django()
 
+from aida.common import aidalogger
+import logging
+aidalogger.setLevel(logging.INFO)
+
 from aida.orm import Calculation, Code, Data
 from aida.djsite.db.models import Computer
 from aida.execmanager import submit_calc
@@ -15,13 +19,16 @@ from aida.orm.dataplugins.parameter import ParameterData
 
 computername = "bellatrix.epfl.ch"
 # A string with the version of this script, used to recreate a code when necessary
-current_version = "1.0.2"
+current_version = "1.0.3"
 
 def get_or_create_machine():
     import json
     from django.core.exceptions import ObjectDoesNotExist
     from aida.djsite.db.models import Computer
 
+#    # I always delete the computer first
+#    Computer.objects.filter(hostname=computername).delete()
+    
     try:
         computer = Computer.objects.get(hostname=computername)
         print >> sys.stderr, "Using the existing computer {}...".format(computername)
@@ -40,7 +47,10 @@ def get_or_create_machine():
     authinfo, created = AuthInfo.objects.get_or_create(
         aidauser=get_automatic_user(),
         computer=computer, 
-        defaults={'auth_params': '{}'}
+        defaults={'auth_params': json.dumps(
+            {'username': 'pizzi',
+             'load_system_host_keys': True},
+            )}
         )
 
     if created:
@@ -64,7 +74,7 @@ def get_or_create_code():
 import sys
 
 try:
-    print float(sys.argv[0])+float(sys.argv[1])
+    print float(sys.argv[1])+float(sys.argv[2])
 except KeyError:
     print >> sys.stderr, "Pass two numbers on the command line"
 except ValueError:
@@ -93,11 +103,11 @@ code = get_or_create_code()
 #template_data = ParameterData({
 #    'input_file_template': "",
 #    'input_file_name': "",
-#    'stdin' = ["", ""],
+#    'cmdline_params' = ["", ""],
 #    })
 
 template_data = ParameterData({
-    'stdin': ["{add1}", "{add2}"],
+    'cmdline_params': ["{add1}", "{add2}"],
     }).store()
 
 parameters = ParameterData({

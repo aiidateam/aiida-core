@@ -49,8 +49,8 @@ def load_plugin(base_class, plugins_module, plugin_type):
     try:
         plugin = importlib.import_module(module_name)
     except ImportError:
-        raise ImportError("Unable to find the plugins module folder or a {}.py file within it".format(
-            plugin_name.lower()))
+        raise ImportError("Unable to load the module {}".format(
+            module_name))
 
     for elem_name, elem in plugin.__dict__.iteritems():
         try:

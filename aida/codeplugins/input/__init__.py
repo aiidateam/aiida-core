@@ -1,4 +1,8 @@
-class CodePlugin(object):
+import aida.common
+
+class InputPlugin(object):
+    _logger = aida.common.aidalogger.getChild('inputplugin')
+    
     def create(self,calculation,inputdata,tempfolder):        
         """
         This is the routine to be called when you want to create
@@ -18,3 +22,8 @@ class CodePlugin(object):
               and what is the behavior on the tempfolder
         """
         raise NotImplementedError
+
+    @property
+    def logger(self):
+        return self._logger
+    

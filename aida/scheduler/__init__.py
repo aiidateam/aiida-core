@@ -45,7 +45,7 @@ class Scheduler(object):
         except AttributeError:
             raise InternalError("No self._logger configured for {}!")
 
-    def _get_submit_script(self, calc_info):
+    def get_submit_script(self, calc_info):
         """
         Return the submit script as a string.
         calc_info of type aida.managers.job.calcinfo.CalcInfo
@@ -139,8 +139,7 @@ class Scheduler(object):
         """
         raise NotImplementedError
 
-    @classmethod
-    def _get_run_line(cls, argv, stdin_name, stdout_name, stderr_name, join_files):
+    def _get_run_line(self, argv, stdin_name, stdout_name, stderr_name, join_files):
         """
         Return a string with the line to execute a specific code with specific arguments.
         
@@ -181,11 +180,10 @@ class Scheduler(object):
                        command_to_exec,
                        stdin_str, stdout_str, stderr_str))
                        
-        cls._logger.debug('_get_run_line output: {}'.format(output_string))
+        self.logger.debug('_get_run_line output: {}'.format(output_string))
         return output_string
     
-    @classmethod
-    def _get_joblist_command(cls,jobs=None,user=None):
+    def _get_joblist_command(self,jobs=None,user=None):
         """
         Return a list with the qsub (or equivalent) command to run + 
         required parameters to get the most complete description possible;
@@ -247,8 +245,7 @@ class Scheduler(object):
         else:
             return self._transport
         
-    @classmethod
-    def _get_submit_command(cls, submit_script):
+    def _get_submit_command(self, submit_script):
         """
         Return the string to execute to submit a given script.
         
@@ -282,7 +279,7 @@ class Scheduler(object):
         """
 
         self.transport.chdir(working_directory)
-        retval, stdout, stderr = self.transport.execute_command_wait(
+        retval, stdout, stderr = self.transport.exec_command_wait(
             self._get_submit_command(escape_for_bash(submit_script)))
         return self._parse_submit_output(retval, stdout, stderr)
         

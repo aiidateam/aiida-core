@@ -15,12 +15,15 @@ def update_running_calcs_status(authinfo):
     """
     from aida.orm import Calculation
 
+    aidalogger.info("Updating running calc status for user {} and machine {}".format(
+        authinfo.aidauser.username, authinfo.computer.hostname))
+
     # This returns an iterator over aida Calculation objects
     calcs_to_inquire = Calculation.get_all_with_state(
         state=calcStates.WITHSCHEDULER,
         computer=authinfo.computer,
         user=authinfo.aidauser)
-
+    
     # NOTE: no further check is done that machine and aidauser are correct for each calc in calcs
     s = authinfo.computer.get_scheduler()
     t = authinfo.get_transport()
@@ -39,7 +42,7 @@ def update_running_calcs_status(authinfo):
             # I update the status of jobs
 
             for c in calcs_to_inquire:
-                jobid = c.get_jobid()
+                jobid = c.get_job_id()
                 if jobid is None:
                     aidalogger.error("Calculation {} is WITHSCHEDULER but no job id was found!".format(
                         c.uuid))
@@ -58,8 +61,13 @@ def update_running_calcs_status(authinfo):
                             c.calc.uuid))
                     else:
                         c._set_state(calcStates.WITHSCHEDULER)
+
+                    print "DEBUG: ", jobinfo.jobState
                     c._set_scheduler_state(jobinfo.jobState)
-                    c._set_last_jobinfo(jobinfo)
+
+                    # TODO: reimplement this solving the issue
+                    # TypeError: datetime.datetime(2013, 5, 1, 7, 50, 19) is not JSON serializable
+                    # c._set_last_jobinfo(jobinfo)
                 else:
                     # calculation c is not found in the output of qstat
                     finished.append(c)
@@ -112,20 +120,25 @@ def update_jobs():
     for computer_id, aidauser_id in computers_users_to_check:
         computer = Computer.objects.get(id=computer_id)
         aidauser = User.objects.get(id=aidauser_id)
+
+        aidalogger.info("({},{}) pair to check".format(
+            aidauser.username, computer.hostname))
+
         try:
             authinfo = get_authinfo(computer, aidauser)
             finished_calcs = update_running_calcs_status(authinfo)
             print "*** '{}' for machine '{}' ***".format(aidauser.username, computer.hostname)
             for c in finished_calcs:
-                print c
+                print '-', c.uuid, c.get_job_id(), c.get_scheduler_state()
         except Exception as e:
             # TODO: set logger properly
-            msg = ("Error while updating RunningJob table for aidauser={} on computer={}, "
+            msg = ("Error while updating calculation status for aidauser={} on computer={}, "
                    "error type is {}, error message: {}".format(
                        aidauser.username,
                        computer.hostname,
-                       e.__class__.__name, e.message))
+                       e.__class__.__name__, e.message))
             aidalogger.error(msg)
+            raise
 
 
 def submit_calc(calc):
@@ -134,32 +147,127 @@ def submit_calc(calc):
     Args:
         calc: the calculation to submit (an instance of the aida.orm.Calculation class)
 
-    # TODO: check that there is one node for parallelization info, ...
-    #       Probably set them as properties of the calculation, before storing it?
+    # TODO: maybe change the calcinfo to contain only the relevant information from the plugin,
+    # if everything else is managed within this function! And move the logic to create the job template
+    # here, instead that in the scheduler plugin. Adapt also pbspro script.
     """
-    from aida.codeplugins.input import CodePlugin
-    from aida.orm import Calculation, Code
+    import StringIO
+    
+    from aida.codeplugins.input import InputPlugin
+    from aida.orm import Calculation, Code, Data
     from aida.common.pluginloader import load_plugin
+    from aida.common.folders import SandboxFolder
+    from aida.common.exceptions import MissingPluginError
+    from aida.scheduler.datastructures import ResourceLimits
     
     if not isinstance(calc,Calculation):
         raise ValueError("calc must be a Calculation")
+
+    if calc.get_state() != calcStates.NEW:
+        raise ValueError("Can only submit calculations with state=NEW! (state is {} instead".format(
+            calc.get_state()))
+
+    # I start to submit the calculation: I set the state
+    calc._set_state(calcStates.SUBMITTING)
     
     authinfo = get_authinfo(calc.get_computer(), calc.get_user())
     s = authinfo.computer.get_scheduler()
     t = authinfo.get_transport()
 
-    input_codes = list(Code.query(outputs=calc))
+    input_codes = calc.get_inputs(type=Code)
     if len(input_codes) != 1:
+        # TODO: Raise InputValidationError instead? Move it from codeplugins to aida.common.exceptions?
         raise LinkingError("Calculation must have one and only one input code")
-    input_code = input_codes[0]
+    code = input_codes[0]
 
     # load dynamically the input plugin
-    InputPlugin = load_plugin(CodePlugin, 'aida.codeplugins.input', input_code.get_input_plugin())
+    try:
+        Plugin = load_plugin(InputPlugin, 'aida.codeplugins.input', code.get_input_plugin())
+    except ImportError as e:
+        # TODO: use this exception also elsewhere; actually, raise it directly from within the load_plugin
+        # module
+        raise MissingPluginError("Missing plugin for code input! {}".format(e.message))
 
     with SandboxFolder() as folder:
-        plugin = InputPlugin()
+        plugin = Plugin()
         calcinfo = plugin.create(calc, calc.get_inputs(type=Data,also_labels=True), folder)
+
+        # TODO: enrich the calcinfo object with the following properties from the Calculation
+        # object
+        # 'email', 'emailOnStarted', 'emailOnTerminated', 'rerunnable', 'queueName',
+        # 'numNodes', 'priority', 'resourceLimits',
+
+        # TODO: enrich with the list of things to retrieve!
+
+        # TODO: store the list of things to retrieve somewhere!
+
+        # to be put as a property of the machine 'numCpusPerNode'
+
+        # TODO: implement validation for jobtemplate
+        # TODO: maybe remove resource limits and put everything together?
         
-    # call the input plugin create() method, passing a list of input data with label, and
-    #    retrieving the calcinfo object
-    # get the output folder, and call the method to submit (to be written, if I remember correctly)
+        
+        # TODO: REMOVE! TEMPORARY HACK TO MAKE THINGS WORK
+        calcinfo.resourceLimits = ResourceLimits()
+        calcinfo.resourceLimits.wallclockTime = 12*60 # 12 min
+        calcinfo.numNodes = 1
+        calcinfo.numCpuPerNode = 1
+        aidalogger.warning("DEBUG VALUES INSERTED HERE!")
+        
+
+
+        if calcinfo.argv is None:
+            calcinfo.argv = []
+        # TODO: add mpirun stuff here!
+        calcinfo.argv = [code.get_execname()] + calcinfo.argv
+        # TODO: add also code from the machine + u'\n\n'
+        calcinfo.prependText = code.get_prepend_text() + u'\n\n' + (
+            calcinfo.prependText if calcinfo.prependText is not None else u"")
+        calcinfo.appendText = (calcinfo.prependText if calcinfo.prependText is not None
+                               else u"") + u'\n\n' + code.get_append_text()
+
+        # TODO: give possibility to use a different name??
+        script_filename = 'aida.submit'
+        script_content = s.get_submit_script(calcinfo)
+        folder.create_file_from_filelike(StringIO.StringIO(script_content),script_filename)
+            
+        with t:
+            s.set_transport(t)
+
+            remote_user = "pizzi"
+            aidalogger.warning("DEBUG VALUES INSERTED HERE! (2)")
+            remote_working_directory = calc.get_computer().workdir.format(username=remote_user)
+
+            t.chdir(remote_working_directory)
+            # TODO: sharding?
+            # TODO: store the folder in the calculation!!
+            t.mkdir(calcinfo.uuid)
+            t.chdir(calcinfo.uuid)
+            
+            # copy all files, recursively with folders
+            aidalogger.warning("NO RECURSION IMPLEMENTED HERE!")
+            for f, _ in folder.get_content_list():
+                aidalogger.info("copying file {}...".format(f))
+                t.put(folder.get_file_path(f), f)
+
+            # TODO: IMPLEMENT A BETTER LOGIC! CHECK FOR THE CODE WITH can_run_on!
+            if code.is_local():
+                # Maybe do it differently?
+                for f, _ in code.repo_folder.get_content_list():
+                    aidalogger.info("copying code file {}...".format(f))
+                    t.put(code.repo_folder.get_file_path(f), f)
+                t.chmod(code.get_local_executable(), 0755) # rwxr-xr-x
+                    
+
+            # TODO!! Adapt also the calcInfo class, etc.
+            # manage local resources
+            # manage remote copy
+
+            job_id = s.submit_from_script(t.getcwd(),script_filename)
+            calc._set_job_id(job_id)
+            calc._set_state(calcStates.WITHSCHEDULER)
+
+            aidalogger.info("submitted calculation {} with job id {}".format(
+                calc.uuid, job_id))
+
+            

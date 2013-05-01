@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from aida.common.datastructures import calcStates
 from aida.scheduler.datastructures import jobStates
 from aida.djsite.db.models import DbComputer, AuthInfo
-from aida.common.exceptions import DBContentError, ConfigurationError, AuthenticationError
+from aida.common.exceptions import ConfigurationError, AuthenticationError
 from aida.common import aidalogger
 from aida.djsite.utils import get_automatic_user
     
@@ -15,7 +15,7 @@ def update_running_calcs_status(authinfo):
     Update the states of calculations in WITHSCHEDULER status belonging to user and machine
     as defined in the 'authinfo' table.
     """
-    from aida.orm import Calculation
+    from aida.orm import Calculation, Computer
 
     execlogger.debug("Updating running calc status for user {} and machine {}".format(
         authinfo.aidauser.username, authinfo.computer.hostname))
@@ -27,7 +27,7 @@ def update_running_calcs_status(authinfo):
         user=authinfo.aidauser)
     
     # NOTE: no further check is done that machine and aidauser are correct for each calc in calcs
-    s = authinfo.computer.get_scheduler()
+    s = Computer(dbcomputer=authinfo.computer).get_scheduler()
     t = authinfo.get_transport()
 
     finished = []
@@ -87,8 +87,9 @@ def update_running_calcs_status(authinfo):
     return finished
 
 def get_authinfo(computer, aidauser):
+    from aida.djsite.db.models import DbComputer
     try:
-        authinfo = AuthInfo.objects.get(computer=computer,aidauser=aidauser)
+        authinfo = AuthInfo.objects.get(computer=DbComputer.get_dbcomputer(computer),aidauser=aidauser)
     except ObjectDoesNotExist:
         raise AuthenticationError(
             "The aida user {} is not configured to use computer {}".format(
@@ -267,7 +268,7 @@ def submit_calc(calc):
     
                 t.chdir(remote_working_directory)
                 # Sharding
-                t.mkdir(calcinfo.uuid[:2])
+                t.mkdir(calcinfo.uuid[:2],ignore_existing=True)
                 t.chdir(calcinfo.uuid[:2])
                 t.mkdir(calcinfo.uuid[2:])
                 t.chdir(calcinfo.uuid[2:])
@@ -294,7 +295,7 @@ def submit_calc(calc):
                 if job_tmpl.submitAsHold:
                     calc._set_scheduler_state(jobStates.QUEUED_HELD)
                 else:
-                    calc._set_scheduler_state(jobStates.QUEUED_HELD)
+                    calc._set_scheduler_state(jobStates.QUEUED)
 
     
                 execlogger.debug("submitted calculation {} with job id {}".format(

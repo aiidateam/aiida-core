@@ -102,10 +102,21 @@ class LocalTransport(aida.transport.Transport):
         return self.curdir
 
 
-    def mkdir(self, path):
+    def mkdir(self,path,ignore_existing=False):
         """
-        Creates the folder path.
+        Create a folder (directory) named path.
+
+        Args:
+            path (str) - name of the folder to create
+            ignore_existing: if True, does not give any error if the directory
+                already exists
+
+        Raises:
+            If the directory already exists, OSError is raised.
         """
+        if ignore_existing and self.isdir(path):
+            return
+
         os.mkdir( os.path.join( self.curdir,path ) )
 
 

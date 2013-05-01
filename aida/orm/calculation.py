@@ -36,13 +36,29 @@ Here each calculation needs to be hashed in order to be reused on restarts.
 NOTE: Need to include functionality of an observer method in calc or data plugins, to check the data 
 while the calculation is running, to make sure that everything is going as planned, otherwise stop.
 
+TODO: set the following as properties of the Calculation
+        #        'email',
+        #        'emailOnStarted',
+        #        'emailOnTerminated',
+        #        'rerunnable',
+        #        'queueName', 
+        #        'numNodes',
+        #        'priority',
+        #        'resourceLimits',
+
+
 '''
 
 class Calculation(Node):
     _plugin_type_string = "calculation"
-    _updatable_attributes = ('state', 'job_id', 'scheduler_state', 'last_jobinfo')
+    _updatable_attributes = ('state', 'job_id', 'scheduler_state', 'last_jobinfo',
+			     'remote_workdir')
     
     def __init__(self,*args,**kwargs):
+        """
+        Possible arguments:
+        computer, num_nodes, num_cpus_per_node
+        """
         from aida.common.datastructures import calcStates
         
         self._logger = super(Calculation,self).logger.getChild('calculation')
@@ -55,10 +71,19 @@ class Calculation(Node):
 
         # For new calculations
         self._set_state(calcStates.NEW)
+    	self.set_label("Calculation {}".format(self.uuid))
 
         computer = kwargs.pop('computer', None)
         if computer is not None:
             self.set_computer(computer)
+
+        num_nodes = kwargs.pop('num_nodes',None)
+        if num_nodes is not None:
+            self.set_num_nodes(num_nodes)        
+
+        num_cpus_per_node = kwargs.pop('num_cpus_per_node',None)
+        if num_cpus_per_node is not None:
+            self.set_num_cpus_per_node(num_cpus_per_node)        
 
         if kwargs:
             raise ValueError("Invalid parameters found in the __init__: {}".format(kwargs.keys()))
@@ -74,6 +99,54 @@ class Calculation(Node):
 
         if self.get_state() not in calcStates:
             raise ValidationError("Calculation state '{}' is not valid".format(self.get_state()))
+
+	try:
+	    if int(self.get_num_nodes()) <= 0:
+		raise ValueError
+	except (ValueError,TypeError):
+		raise ValidationError("The number of nodes must be specified and must be positive")
+	    
+	try:
+	    if int(self.get_num_cpus_per_node()) <= 0:
+		raise ValueError
+	except (ValueError,TypeError):
+		raise ValidationError("The number of CPUs per node must be specified and must be positive")
+
+    def set_queue_name(self,val):
+        self.set_attr('queue_name',unicode(val))
+
+    def set_priority(self,val):
+        self.set_attr('priority',unicode(val))
+    
+    def set_max_memory_kb(self,val):
+        self.set_attr('max_memory_kb',int(val))
+
+    def set_max_wallclock_seconds(self,val):    
+        self.set_attr('max_wallclock_seconds',int(val))
+
+    def set_num_nodes(self,val):
+        self.set_attr('num_nodes',int(val))
+
+    def set_num_cpus_per_node(self,val):
+        self.set_attr('num_cpus_per_node',int(val))
+
+    def get_queue_name(self):
+        return self.get_attr('queue_name', None)
+
+    def get_priority(self):
+        return self.get_attr('priority', None)
+    
+    def get_max_memory_kb(self):
+        return self.get_attr('max_memory_kb', None)
+
+    def get_max_wallclock_seconds(self):	
+        return self.get_attr('max_wallclock_seconds', None)
+
+    def get_num_nodes(self):
+        return self.get_attr('num_nodes', None)
+
+    def get_num_cpus_per_node(self):
+        return self.get_attr('num_cpus_per_node', None)
         
     def add_link_from(self,src, *args, **kwargs):
         '''
@@ -96,33 +169,19 @@ class Calculation(Node):
         """
         TODO: probably this method should be in the base class, and check for the type
         """
-        from aida.djsite.db.models import Computer
+        from aida.djsite.db.models import DbComputer
         from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 
         if self._to_be_stored:
-            if isinstance(computer, basestring):
-                try:
-                    computer = Computer.objects.get(hostname=computer)
-                except ObjectDoesNotExist:
-                    raise ValueError("No computer found in the table of computers with "
-                                     "the given name '{}'".format(computer))
-                except MultipleObjectsReturned:
-                    raise ValueError("There is more than one computer with name '{}', "
-                                     "pass a Django Computer instance".format(computer))
-            elif isinstance(computer, Computer):
-                if computer.pk is None:
-                    raise ValueError("The computer instance you are passing has not been stored yet")
-            else:
-                raise ValueError("Pass either a computer name, or a Computer django instance")
-    
-            self.dbnode.computer = computer
+	    self.dbnode.computer = DbComputer.get_dbcomputer(computer)
         else:
             self.logger.error("Trying to change the computer of an already saved node: {}".format(
                 self.uuid))
             raise ModificationNotAllowed("Node with uuid={} was already stored".format(self.uuid))
 
     def get_computer(self):
-        return self.dbnode.computer
+        from aida.orm import Computer
+        return Computer(dbcomputer=self.dbnode.computer)
 
     def _set_state(self, state):
         from aida.common.datastructures import calcStates
@@ -133,14 +192,20 @@ class Calculation(Node):
     def get_state(self):
         return self.get_attr('state', None)
 
-    def _set_jobid(self, jobid):
+    def _set_remote_workdir(self, remote_workdir):
+        self.set_attr('remote_workdir', remote_workdir)
+
+    def get_remote_workdir(self):
+        return self.get_attr('remote_workdir', None)
+
+    def _set_job_id(self, job_id):
         """
         Always set as a string
         """
-        return self.set_attr('jobid', unicode(jobid))
+        return self.set_attr('job_id', unicode(job_id))
     
-    def get_jobid(self):
-        return self.get_attr('jobid', None)
+    def get_job_id(self):
+        return self.get_attr('job_id', None)
         
     def _set_scheduler_state(self,state):
         # I don't do any test here on the possible valid values,
@@ -148,23 +213,22 @@ class Calculation(Node):
         self.set_attr('scheduler_state', unicode(state))
                 
     def get_scheduler_state(self):
-        self.get_attr('scheduler_state', None)
+        return self.get_attr('scheduler_state', None)
 
     def _set_last_jobinfo(self,last_jobinfo):
-        import json
+        import pickle
         
-        self.set_attr('last_jobinfo', json.dumps(last_jobinfo))
+        self.set_attr('last_jobinfo', pickle.dumps(last_jobinfo))
 
     def get_last_jobinfo(self):
-        import json
-        from aida.scheduler.datastructures import JobInfo
-
-        jsondata = json.loads(self.get_attr('last_jobinfo','{}'))
-        try:
-            # I try to return a JobInfo object
-            return JobInfo(jsondata)
-        except ValueError:
-            return jsondata
+        import pickle
+        
+        last_jobinfo_pickled = self.get_attr('last_jobinfo',None)
+        if last_jobinfo_pickled is not None:
+            return pickle.loads(last_jobinfo_pickled)
+        else:
+            return None
+    
 
     @classmethod
     def get_all_with_state(cls, state, computer=None, user=None, only_computer_user_pairs = False):
@@ -176,9 +240,8 @@ class Calculation(Node):
         Args:
             state: The state to be used to filter (should be a string among those defined in
                 aida.common.datastructures.calcStates)
-            computer: a Django entry (or its pk) of a computer in the Computer table;
-                if present, the results are restricted to calculations running on that
-                specific computer
+            computer: a Django DbComputer entry, or a Computer object, of a computer in the DbComputer table.
+                A string for the hostname is also valid.
             user: a Django entry (or its pk) of a user in the User table;
                 if present, the results are restricted to calculations of that
                 specific user
@@ -191,18 +254,22 @@ class Calculation(Node):
         # I assume that calcStates are strings. If this changes in the future, update the
         # filter below from attributes__tval to the correct field.
         from aida.common.datastructures import calcStates
+        from aida.djsite.db.models import DbComputer
+        from aida.orm import Computer
+
         if state not in calcStates:
-            self.logger.warning("querying for calculation state='{}', but it is not a "
-                                "valid calculation state".format(state))
+            cls.logger.warning("querying for calculation state='{}', but it is not a "
+                              "valid calculation state".format(state))
 
         kwargs = {}
         if computer is not None:
-            kwargs['computer'] = computer
+            # I convert it from various type of inputs (string, DbComputer, Computer)
+            # to a Computer type
+            kwargs['computer'] = Computer.get(computer)
         if user is not None:
             kwargs['user'] = user
         
-        queryresults = self.query(
-            type__startswith=Calculation._plugin_type_string,
+        queryresults = cls.query(
             attributes__key='_state',
             attributes__tval=state,
             **kwargs)

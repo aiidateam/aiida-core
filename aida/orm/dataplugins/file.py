@@ -74,6 +74,9 @@ class FileData(Data):
 
     def validate(self):
         from aida.common.exceptions import ValidationError
+
+        super(FileData,self).validate()
+        
         try:
             filename = self.get_attr('filename')
         except AttributeError:

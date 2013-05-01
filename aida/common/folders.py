@@ -127,6 +127,27 @@ class Folder(object):
         shutil.copyfile(src,dest_abs_path)
         return dest_abs_path
 
+    def create_file_from_filelike(self,src_filelike,dest_name):
+        """
+        Create a file from a file-like object.
+        
+        Args:
+            src_filelike: the file-like object (e.g., if you have
+                a string called s, you can pass StringIO.StringIO(s))
+            dest_name: the destination filename will have this file name.
+        """
+        filename = unicode(dest_name)
+
+        # I get the full path of the filename, checking also that I don't
+        # go beyond the folder limits
+        dest_abs_path = self.get_file_path(filename)
+
+        with open(dest_abs_path,'w') as f:
+            for l in src_filelike.readlines():
+                f.write(l)
+
+        return dest_abs_path
+
     def remove_file(self,filename):
         """
         Remove a file from the folder.

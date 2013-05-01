@@ -612,33 +612,34 @@ class TestSubNodes(unittest.TestCase):
     def setUpClass(cls):
         import getpass
         from django.contrib.auth.models import User
-        from aida.djsite.db.models import Computer
+        from aida.orm import Computer
 
         User.objects.create_user(getpass.getuser(), 'unknown@mail.com', 'fakepwd')
         cls.computer = Computer(hostname='localhost')
-        cls.computer.save()
+        cls.computer.store()
 
     @classmethod
     def tearDownClass(cls):
         import getpass
         from django.contrib.auth.models import User
         from django.core.exceptions import ObjectDoesNotExist
-        from aida.djsite.db.models import Computer
+        from aida.djsite.db.models import DbComputer
 
         try:
             User.objects.get(username=getpass.getuser).delete()
         except ObjectDoesNotExist:
             pass
 
-        Computer.objects.filter().delete()
+        DbComputer.objects.filter().delete()
 
     
     def test_valid_links(self):
         import tempfile
 
         from aida.orm import Node, Calculation, Data, Code
-        from aida.djsite.db.models import Computer
+        from aida.orm import Computer
         from aida.common.pluginloader import load_plugin
+        from aida.djsite.db.models import DbComputer
 
         FileData = load_plugin(Data, 'aida.orm.dataplugins', 'file')
 
@@ -647,21 +648,26 @@ class TestSubNodes(unittest.TestCase):
         with tempfile.NamedTemporaryFile() as f:
             d2 = FileData(f.name).store()
 
-        code = Code(remote_machine_exec=('localhost','/bin/true')).store()
+        code = Code(remote_machine_exec=('localhost','/bin/true'),
+                    input_plugin='simple_plugins.template_replacer').store()
 
-        unsavedcomputer = Computer(hostname='localhost')
+        unsavedcomputer = Computer(dbcomputer=DbComputer(hostname='localhost'))
 
         with self.assertRaises(ValueError):
             # I need to save the localhost entry first
-            calc = Calculation(computer=unsavedcomputer).store()
+            calc = Calculation(computer=unsavedcomputer,
+                num_nodes=1,num_cpus_per_node=1).store()
 
         # I check both with a string or with an object
-        calc = Calculation(computer=self.computer).store()
-        calc2 = Calculation(computer='localhost').store()
-        with self.assertRaises(ValueError):
+        calc = Calculation(computer=self.computer,
+            num_nodes=1,num_cpus_per_node=1).store()
+        calc2 = Calculation(computer='localhost',
+            num_nodes=1,num_cpus_per_node=1).store()
+        with self.assertRaises(TypeError):
             # I don't want to call it with things that are neither
             # strings nor Computer instances
-            calc3 = Calculation(computer=1).store()
+            calc3 = Calculation(computer=1,
+                num_nodes=1,num_cpus_per_node=1).store()
         
         d1.add_link_to(calc)
         calc.add_link_from(d2)
@@ -692,7 +698,7 @@ class TestSubNodes(unittest.TestCase):
         self.assertEquals(len(inputs_type_data), 2)
         self.assertEquals(len(inputs_type_code), 1)
         
-    def check_single_calc_source(self):
+    def test_check_single_calc_source(self):
         """
         Each data node can only have one input calculation
         """
@@ -700,8 +706,10 @@ class TestSubNodes(unittest.TestCase):
         
         d1 = Data().store()
         
-        calc = Calculation(computer=self.computer).store()
-        calc2 = Calculation(computer=self.computer).store()
+        calc = Calculation(computer=self.computer,
+            num_nodes=1,num_cpus_per_node=1).store()
+        calc2 = Calculation(computer=self.computer,
+            num_nodes=1,num_cpus_per_node=1).store()
 
         d1.add_link_from(calc)
 
@@ -716,35 +724,35 @@ class TestCode(unittest.TestCase):
     def setUpClass(cls):
         import getpass
         from django.contrib.auth.models import User
-        from aida.djsite.db.models import Computer
+        from aida.orm import Computer
 
         User.objects.create_user(getpass.getuser(), 'unknown@mail.com', 'fakepwd')
         cls.computer = Computer(hostname='localhost')
-        cls.computer.save()
+        cls.computer.store()
 
     @classmethod
     def tearDownClass(cls):
         import getpass
         from django.contrib.auth.models import User
         from django.core.exceptions import ObjectDoesNotExist
-        from aida.djsite.db.models import Computer
+        from aida.djsite.db.models import DbComputer
 
         try:
             User.objects.get(username=getpass.getuser).delete()
         except ObjectDoesNotExist:
             pass
 
-        Computer.objects.filter().delete()
+        DbComputer.objects.filter().delete()
         
         
     def test_code_local(self):
         import tempfile
 
-        from aida.djsite.db.models import Computer
         from aida.orm import Code
         from aida.common.exceptions import ValidationError
 
-        code = Code(local_executable='test.sh')
+        code = Code(local_executable='test.sh',
+                    input_plugin='simple_plugins.template_replacer')
         with self.assertRaises(ValidationError):
             # No file with name test.sh
             code.store()
@@ -756,27 +764,37 @@ class TestCode(unittest.TestCase):
 
         code.store()
         self.assertTrue(code.can_run_on(self.computer))
+        self.assertTrue(code.get_local_executable(),'test.sh')
+        self.assertTrue(code.get_execname(),'stest.sh')
+                
 
     def test_remote(self):
         import tempfile
 
-        from aida.djsite.db.models import Computer
         from aida.orm import Code
         from aida.common.exceptions import ValidationError
 
         with self.assertRaises(ValueError):
             # remote_machine_exec has length 2 but is not a list or tuple
-            code = Code(remote_machine_exec='ab')
+            code = Code(remote_machine_exec='ab',
+                        input_plugin='simple_plugins.template_replacer')
 
         # invalid code path
         with self.assertRaises(ValueError):
-            code = Code(remote_machine_exec=('localhost', ''))
+            code = Code(remote_machine_exec=('localhost', ''),
+                        input_plugin='simple_plugins.template_replacer')
 
         # Relative path is invalid for remote code
         with self.assertRaises(ValueError):
+            code = Code(remote_machine_exec=('localhost', 'subdir/run.exe'),
+                        input_plugin='simple_plugins.template_replacer')
+
+        # No input plugin specified
+        with self.assertRaises(ValueError):
             code = Code(remote_machine_exec=('localhost', 'subdir/run.exe'))
         
-        code = Code(remote_machine_exec=('localhost', '/bin/ls'))
+        code = Code(remote_machine_exec=('localhost', '/bin/ls'),
+                    input_plugin='simple_plugins.template_replacer')
         with tempfile.NamedTemporaryFile() as f:
             f.write("#/bin/bash\n\necho test run\n")
             f.flush()
@@ -789,6 +807,10 @@ class TestCode(unittest.TestCase):
         # If there are no files, I can store
         code.remove_file('test.sh')
         code.store()
+
+        self.assertEquals(code.get_remote_machine(), 'localhost')
+        self.assertEquals(code.get_remote_executable(), '/bin/ls')
+        self.assertEquals(code.get_execname(), '/bin/ls')
 
         self.assertTrue(code.can_run_on('localhost')) 
         self.assertTrue(code.can_run_on(self.computer))         

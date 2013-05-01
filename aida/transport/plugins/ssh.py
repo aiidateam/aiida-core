@@ -456,8 +456,6 @@ class SshTransport(aida.transport.Transport):
         return retval, output_text, stderr_text
 
 
-
-
 if __name__ == '__main__':
     import unittest
     import logging
@@ -501,4 +499,6 @@ if __name__ == '__main__':
     run_tests('ssh')
     
     unittest.main()
+
+
 

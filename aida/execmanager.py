@@ -69,6 +69,8 @@ def update_running_calcs_status(authinfo):
                     # calculation c is not found in the output of qstat
                     finished.append(c)
                     c._set_state(calcStates.FINISHED)
+                    c._set_scheduler_state(calcStates.FINISHED)
+
 
             # TODO: implement this part
             # TODO: understand if this second save may cause problems if we have many threads
@@ -159,139 +161,145 @@ def submit_calc(calc):
     
     if not isinstance(calc,Calculation):
         raise ValueError("calc must be a Calculation")
-
+    
     if calc.get_state() != calcStates.NEW:
         raise ValueError("Can only submit calculations with state=NEW! (state is {} instead".format(
             calc.get_state()))
-
+    
     # I start to submit the calculation: I set the state
     calc._set_state(calcStates.SUBMITTING)
-    
-    authinfo = get_authinfo(calc.get_computer(), calc.get_user())
-    s = authinfo.computer.get_scheduler()
-    t = authinfo.get_transport()
-
-    input_codes = calc.get_inputs(type=Code)
-    if len(input_codes) != 1:
-        # TODO: Raise InputValidationError instead? Move it from codeplugins to aida.common.exceptions?
-        raise LinkingError("Calculation must have one and only one input code")
-    code = input_codes[0]
-
-    if not code.can_run_on(calc.get_computer()):
-        raise InputValidationError("The selected code {} cannot run on machine {}".format(
-            code.uuid, calc.get_computer().hostname))
-
-    # load dynamically the input plugin
+         
     try:
-        Plugin = load_plugin(InputPlugin, 'aida.codeplugins.input', code.get_input_plugin())
-    except ImportError as e:
-        # TODO: use this exception also elsewhere; actually, raise it directly from within the load_plugin
-        # module
-        raise MissingPluginError("Missing plugin for code input! {}".format(e.message))
-
-    with SandboxFolder() as folder:
-        plugin = Plugin()
-        calcinfo = plugin.create(calc, calc.get_inputs(type=Data,also_labels=True), folder)
-
-        # TODO: enrich the calcinfo object with the following properties from the Calculation
-        # object
-        # 'email', 'emailOnStarted', 'emailOnTerminated', 'rerunnable', 'queueName',
-        # 'numNodes', 'priority', 'maxWallclockSeconds', 'maxMemoryKb'
-
-        # TODO: enrich with the list of things to retrieve!
-
-        # TODO: store the list of things to retrieve somewhere!
-
-        # to be put as a property of the machine 'numCpusPerNode'
-
-        # TODO: implement validation for jobtemplate
-
-        
-        ####### I create the job template to pass to the scheduler
-        ## TODO check for hardcoded values
-        job_tmpl = JobTemplate()
-        job_tmpl.submitAsHold = False
-        job_tmpl.rerunnable = False
-        job_tmpl.jobEnvironment = {}
-        # TODO: set email, emailOn...
-        job_tmpl.jobName = 'aida-{}'.format(calc.uuid) 
-        job_tmpl.schedOutputPath = 'scheduler-stdout.txt'
-        job_tmpl.schedErrorPath = 'scheduler-stderr.txt'
-        job_tmpl.schedJoinFiles = False
-
-        # TODO: add also code from the machine + u'\n\n'
-        job_tmpl.prependText = code.get_prepend_text() + u'\n\n' + (
-            calcinfo.prependText if calcinfo.prependText is not None else u"")
-        job_tmpl.appendText = (calcinfo.prependText if calcinfo.prependText is not None
-                               else u"") + u'\n\n' + code.get_append_text()
-
-        # TODO: ADD ALSO THE MPIRUN PART
-        job_tmpl.argv = [code.get_execname()] + (
-            calcinfo.cmdlineParams if calcinfo.cmdlineParams is not None else [])
-
-        job_tmpl.stdinName = calcinfo.stdinName
-        job_tmpl.stdoutName = calcinfo.stdoutName
-        job_tmpl.stderrName = calcinfo.stderrName
-        job_tmpl.joinFiles = calcinfo.joinFiles
-        
-        #job_tmpl.queueName = calc_info.queueName
-        #job_tmpl.priority = ...
-        #job_tmpl.maxMemoryKb = ...
-        job_tmpl.maxWallclockSeconds = 12*60 # 12 min
-        job_tmpl.numNodes = 1
-        job_tmpl.numCpusPerNode = 1
-
-        # TODO: give possibility to use a different name??
-        script_filename = 'aida.submit'
-        script_content = s.get_submit_script(job_tmpl)
-        folder.create_file_from_filelike(StringIO.StringIO(script_content),script_filename)
-
-        # TODO: create a node of type local directory to store the created files
-        # TODO: add a .aida folder with a pickle of the calcinfo and job_tmpl objects, for debugging
-        #       purposes
-        
-        with t:
-            s.set_transport(t)
-
-            remote_user = t.whoami()
-            # TODO Doc: {username} field
-            remote_working_directory = calc.get_computer().workdir.format(username=remote_user)
-            if not remote_working_directory.strip():
-                raise ConfigurationError("No remote_working_directory configured for the computer")
-
-            t.chdir(remote_working_directory)
-            # TODO: sharding?
-            # TODO: store the folder in the calculation!!
-            t.mkdir(calcinfo.uuid[:2])
-            t.chdir(calcinfo.uuid[:2])
-            t.mkdir(calcinfo.uuid[2:])
-            t.chdir(calcinfo.uuid[2:])
-
-            calc._set_remote_workdir(t.getcwd())
-            
-            # copy all files, recursively with folders
-            aidalogger.warning("NO RECURSION IMPLEMENTED HERE!")
-            for f, _ in folder.get_content_list():
-                aidalogger.info("copying file {}...".format(f))
-                t.put(folder.get_file_path(f), f)
-
-            if code.is_local():
-                # Maybe do it differently?
-                for f, _ in code.repo_folder.get_content_list():
-                    aidalogger.info("copying code file {}...".format(f))
-                    t.put(code.repo_folder.get_file_path(f), f)
-                t.chmod(code.get_local_executable(), 0755) # rwxr-xr-x
-                    
-
-            # TODO!! Adapt also the calcInfo class, etc.
-            # manage local resources
-            # manage remote copy
-
-            job_id = s.submit_from_script(t.getcwd(),script_filename)
-            calc._set_job_id(job_id)
-            calc._set_state(calcStates.WITHSCHEDULER)
-
-            aidalogger.info("submitted calculation {} with job id {}".format(
-                calc.uuid, job_id))
-
+         authinfo = get_authinfo(calc.get_computer(), calc.get_user())
+         s = authinfo.computer.get_scheduler()
+         t = authinfo.get_transport()
+     
+         input_codes = calc.get_inputs(type=Code)
+         if len(input_codes) != 1:
+             # TODO: Raise InputValidationError instead? Move it from codeplugins to aida.common.exceptions?
+             raise LinkingError("Calculation must have one and only one input code")
+         code = input_codes[0]
+     
+         if not code.can_run_on(calc.get_computer()):
+             raise InputValidationError("The selected code {} cannot run on machine {}".format(
+                 code.uuid, calc.get_computer().hostname))
+     
+         # load dynamically the input plugin
+         try:
+             Plugin = load_plugin(InputPlugin, 'aida.codeplugins.input', code.get_input_plugin())
+         except ImportError as e:
+             # TODO: use this exception also elsewhere; actually, raise it directly from within the load_plugin
+             # module
+             raise MissingPluginError("Missing plugin for code input! {}".format(e.message))
+     
+         with SandboxFolder() as folder:
+             plugin = Plugin()
+             calcinfo = plugin.create(calc, calc.get_inputs(type=Data,also_labels=True), folder)
+     
+             # TODO: enrich the calcinfo object with the following properties from the Calculation
+             # object
+             # 'email', 'emailOnStarted', 'emailOnTerminated', 'rerunnable', 'queueName',
+             # 'numNodes', 'priority', 'maxWallclockSeconds', 'maxMemoryKb'
+     
+             # TODO: enrich with the list of things to retrieve!
+     
+             # TODO: store the list of things to retrieve somewhere!
+     
+             # to be put as a property of the machine 'numCpusPerNode'
+     
+             # TODO: implement validation for jobtemplate
+     
+             
+             ####### I create the job template to pass to the scheduler
+             ## TODO check for hardcoded values
+             job_tmpl = JobTemplate()
+             job_tmpl.submitAsHold = False
+             job_tmpl.rerunnable = False
+             job_tmpl.jobEnvironment = {}
+             # TODO: set email, emailOn...
+             job_tmpl.jobName = 'aida-{}'.format(calc.uuid) 
+             job_tmpl.schedOutputPath = 'scheduler-stdout.txt'
+             job_tmpl.schedErrorPath = 'scheduler-stderr.txt'
+             job_tmpl.schedJoinFiles = False
+     
+             # TODO: add also code from the machine + u'\n\n'
+             job_tmpl.prependText = code.get_prepend_text() + u'\n\n' + (
+                 calcinfo.prependText if calcinfo.prependText is not None else u"")
+             job_tmpl.appendText = (calcinfo.prependText if calcinfo.prependText is not None
+                                    else u"") + u'\n\n' + code.get_append_text()
+     
+             # TODO: ADD ALSO THE MPIRUN PART
+             job_tmpl.argv = [code.get_execname()] + (
+                 calcinfo.cmdlineParams if calcinfo.cmdlineParams is not None else [])
+     
+             job_tmpl.stdinName = calcinfo.stdinName
+             job_tmpl.stdoutName = calcinfo.stdoutName
+             job_tmpl.stderrName = calcinfo.stderrName
+             job_tmpl.joinFiles = calcinfo.joinFiles
+             
+             #job_tmpl.queueName = calc_info.queueName
+             #job_tmpl.priority = ...
+             #job_tmpl.maxMemoryKb = ...
+             job_tmpl.maxWallclockSeconds = 12*60 # 12 min
+             job_tmpl.numNodes = 1
+             job_tmpl.numCpusPerNode = 1
+     
+             # TODO: give possibility to use a different name??
+             script_filename = 'aida.submit'
+             script_content = s.get_submit_script(job_tmpl)
+             folder.create_file_from_filelike(StringIO.StringIO(script_content),script_filename)
+     
+             # TODO: create a node of type local directory to store the created files
+             # TODO: add a .aida folder with a pickle of the calcinfo and job_tmpl objects, for debugging
+             #       purposes
+             
+             with t:
+                 s.set_transport(t)
+     
+                 remote_user = t.whoami()
+                 # TODO Doc: {username} field
+                 remote_working_directory = calc.get_computer().workdir.format(username=remote_user)
+                 if not remote_working_directory.strip():
+                     raise ConfigurationError("No remote_working_directory configured for the computer")
+     
+                 t.chdir(remote_working_directory)
+                 # TODO: sharding?
+                 # TODO: store the folder in the calculation!!
+                 t.mkdir(calcinfo.uuid[:2])
+                 t.chdir(calcinfo.uuid[:2])
+                 t.mkdir(calcinfo.uuid[2:])
+                 t.chdir(calcinfo.uuid[2:])
+     
+                 calc._set_remote_workdir(t.getcwd())
+                 
+                 # copy all files, recursively with folders
+                 aidalogger.warning("NO RECURSION IMPLEMENTED HERE!")
+                 for f, _ in folder.get_content_list():
+                     aidalogger.info("copying file {}...".format(f))
+                     t.put(folder.get_file_path(f), f)
+     
+                 if code.is_local():
+                     # Maybe do it differently?
+                     for f, _ in code.repo_folder.get_content_list():
+                         aidalogger.info("copying code file {}...".format(f))
+                         t.put(code.repo_folder.get_file_path(f), f)
+                     t.chmod(code.get_local_executable(), 0755) # rwxr-xr-x
+                         
+     
+                 # TODO!! Adapt also the calcInfo class, etc.
+                 # manage local resources
+                 # manage remote copy
+     
+                 job_id = s.submit_from_script(t.getcwd(),script_filename)
+                 calc._set_job_id(job_id)
+                 calc._set_state(calcStates.WITHSCHEDULER)
+                 # For now I set it to QUEUED
+                 # TODO: set it to QUEUED_HOLD when appropriate
+                 calc._set_scheduler_state(jobStates.QUEUED)
+     
+                 aidalogger.info("submitted calculation {} with job id {}".format(
+                     calc.uuid, job_id))
+    except:
+         calc._set_state(calcStates.SUBMISSIONFAILED)
+         raise
             

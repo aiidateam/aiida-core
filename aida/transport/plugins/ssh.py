@@ -297,6 +297,9 @@ class SshTransport(aida.transport.Transport):
         if not os.path.isdir(localpath):
             raise ValueError("Input localpath is not a folder: {}".format(localpath))
 
+        if not remotepath:
+            raise IOError("remotepath must be a non empty string")
+
         if self.isdir(remotepath) and overwrite:
             pass
         elif self.isdir(remotepath) and not overwrite:
@@ -352,9 +355,14 @@ class SshTransport(aida.transport.Transport):
         if os.path.isdir(localpath) and not overwrite:            
             raise OSError('Destination already exists: not overwriting it')
 
+        if not remotepath:
+            raise IOError("Remotepaths must be a non empty string")
+        if not localpath:
+            raise ValueError("Localpaths must be a non empty string")
+        
         if not os.path.isdir(dest):
             os.mkdir(dest)
-
+        
         for item in item_list:
             item = str(item)
 

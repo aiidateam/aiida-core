@@ -11,6 +11,8 @@ log_dir          = "daemon/log"
 
 def install_daemon_files(aida_dir, daemon_dir, log_dir, aida_user):
 
+  aida_module_dir = os.path.split(os.path.abspath(aida.__file__))[0]
+
   daemon_conf = """
 [unix_http_server]
 file="""+daemon_dir+"""/supervisord.sock   ; (the path to the socket file)
@@ -36,7 +38,7 @@ serverurl=unix:///"""+daemon_dir+"""/supervisor.sock
 ;=======================================
 
 [program:aida-daemon]
-command=python """+aida_dir+"""/../manage.py celeryd --loglevel=INFO
+command=python """+aida_module_dir+"""/djsite/manage.py celeryd --loglevel=INFO
 directory="""+daemon_dir+"""
 user="""+aida_user+"""
 numprocs=1
@@ -52,7 +54,7 @@ process_name=%(process_num)s
 ; AIDA Deamon BEAT - for scheduled tasks
 ; ==========================================
 [program:aida-daemon-beat]
-command=python """+aida_dir+"""/../manage.py celerybeat
+command=python """+aida_module_dir+"""/djsite/manage.py celerybeat
 directory="""+daemon_dir+"""
 user="""+aida_user+"""
 numprocs=1
@@ -74,10 +76,20 @@ class Command(BaseCommand):
 
       # python manage.py migrate djcelery
       #call_command('syncdb', interactive=True)
-      aida_dir        = os.path.abspath(aida.__path__[0])
+
+      aida_dir        = os.path.expanduser("~/.aida") #os.path.abspath(aida.__path__[0])
       aida_daemon_dir = os.path.join(aida_dir,daemon_subdir)
       aida_log_dir    = os.path.join(aida_dir,log_dir)
       aida_user       = getpass.getuser()
+      
+      if (not os.path.isdir(aida_dir)):
+        os.makedirs(aida_dir)
+
+      if (not os.path.isdir(aida_daemon_dir)):
+        os.makedirs(aida_daemon_dir)
+
+      if (not os.path.isdir(aida_log_dir)):
+        os.makedirs(aida_log_dir)
 
       # Install daemon files 
       install_daemon_files(aida_dir, aida_daemon_dir, aida_log_dir, aida_user)

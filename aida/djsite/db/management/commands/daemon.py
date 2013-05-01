@@ -8,7 +8,8 @@ from signal import signal, SIGTERM
 import time 
 class Command(BaseCommand):
 
-    aida_dir = os.path.abspath(aida.__path__[0])
+    #aida_dir = os.path.abspath(aida.__path__[0])
+    aida_dir        = os.path.expanduser("~/.aida")
 
     option_list = BaseCommand.option_list + (
         make_option('--start',
@@ -31,7 +32,6 @@ class Command(BaseCommand):
 
     def getDaemonPid(self):
 
-        self.aida_dir = os.path.abspath(aida.__path__[0])
         if (os.path.isfile(os.path.join(self.aida_dir,install.daemon_subdir,"supervisord.pid"))):
             return int(open(os.path.join(self.aida_dir,install.daemon_subdir,"supervisord.pid"), 'r').read().strip())
         else:

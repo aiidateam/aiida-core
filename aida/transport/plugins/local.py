@@ -102,6 +102,48 @@ class LocalTransport(aida.transport.Transport):
         return self.curdir
 
 
+    def _os_path_split_asunder(self, path, debug=False):
+        parts = []
+        while True:
+            newpath, tail = os.path.split(path)
+            if debug: print repr(path), (newpath, tail)
+            if newpath == path:
+                assert not tail
+                if path: parts.append(path)
+                break
+            parts.append(tail)
+            path = newpath
+        parts.reverse()
+        return parts
+
+
+    def makedirs(self,path,ignore_existing=False):
+        """
+        Super-mkdir; create a leaf directory and all intermediate ones.
+        Works like mkdir, except that any intermediate path segment (not
+        just the rightmost) will be created if it does not exist.
+
+        Args:
+            path (str) - directory to create
+            ignore_existing (bool) - if set to true, it doesn't give any error
+            if the leaf directory does already exist
+
+        Raises:
+            If the directory already exists, OSError is raised.
+        """
+        the_path = os.path.join(self.curdir,path)
+        to_create = self._os_path_split_asunder(the_path)
+        this_dir = ''
+        for count,element in enumerate(to_create):
+            this_dir=os.path.join(this_dir,element)
+            if count+1==len(to_create) and self.isdir(this_dir) and ignore_existing:
+                return
+            if count+1==len(to_create) and self.isdir(this_dir) and not ignore_existing:
+                os.mkdir(this_dir)
+            if not os.path.exists(this_dir):
+                os.mkdir(this_dir)
+    
+    
     def mkdir(self,path,ignore_existing=False):
         """
         Create a folder (directory) named path.

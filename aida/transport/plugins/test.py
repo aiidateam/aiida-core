@@ -8,11 +8,55 @@ import unittest
 from aida.common.pluginloader import load_plugin
 
 custom_transport = None
-        
+
 class TestDirectoryManipulation(unittest.TestCase):
     """
     Test to check, create and delete folders.
     """
+    def test_makedirs(self):
+        """
+        Verify the functioning of makedirs command
+        """
+        # Imports required later
+        import random
+        import string
+        import os
+
+        with custom_transport as t:
+            location = t.normalize(os.path.join('/','tmp'))
+            directory = 'temp_dir_test'
+            t.chdir(location)
+            
+            self.assertEquals(location, t.getcwd())
+            while t.isdir(directory):
+                # I append a random letter/number until it is unique
+                directory += random.choice(
+                    string.ascii_uppercase + string.digits)
+            t.mkdir(directory)
+            t.chdir(directory)
+
+            # define folder structure
+            dir_tree = os.path.join('1','2')
+            # I create the tree
+            t.makedirs(dir_tree)
+            # verify the existence
+            self.assertTrue( t.isdir('1') )
+            self.assertTrue( dir_tree )
+
+            # try to recreate the same folder
+            with self.assertRaises(OSError):
+                t.makedirs(dir_tree)
+
+            # recreate but with ignore flag
+            t.makedirs(dir_tree,True)
+
+            t.rmdir(dir_tree)
+            t.rmdir('1')
+                
+            t.chdir('..')
+            t.rmdir(directory)
+
+
     
     def test_listdir(self):
         """

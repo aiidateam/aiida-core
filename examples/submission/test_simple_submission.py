@@ -19,7 +19,7 @@ from aida.orm.dataplugins.parameter import ParameterData
 
 computername = "bellatrix.epfl.ch"
 # A string with the version of this script, used to recreate a code when necessary
-current_version = "1.0.3"
+current_version = "1.0.4"
 
 def get_or_create_machine():
     import json
@@ -74,11 +74,22 @@ def get_or_create_code():
 import sys
 
 try:
-    print float(sys.argv[1])+float(sys.argv[2])
+    with open('factor.dat') as f:
+       factor = float(f.read().strip())
+except IOError:
+    print >> sys.stderr, "No factor file found, using factor = 1"
+except ValueError:
+    print >> sys.stderr, "The value in factor.dat is not a valid number"
+    sys.exit(1)
+
+try:
+    print factor*float(sys.argv[1])+float(sys.argv[2])
 except KeyError:
     print >> sys.stderr, "Pass two numbers on the command line"
+    sys.exit(1)
 except ValueError:
     print >> sys.stderr, "The values on the command line are not valid numbers"
+    sys.exit(1)
 """)
             f.flush()
             code = Code(local_executable = "sum.py", 
@@ -100,19 +111,18 @@ except ValueError:
 computer = get_or_create_machine()
 code = get_or_create_code()
 
-#template_data = ParameterData({
-#    'input_file_template': "",
-#    'input_file_name': "",
-#    'cmdline_params' = ["", ""],
-#    })
-
 template_data = ParameterData({
+    'input_file_template': "{factor}\n",
+    # TODO: pass only input_file_name and no template and see if an error is raised
+    'input_file_name': "factor.dat",
     'cmdline_params': ["{add1}", "{add2}"],
+    'output_file_name': "result.txt",
     }).store()
 
 parameters = ParameterData({
     'add1': 3.45,
     'add2': 7.89,
+    'factor': 2,
     }).store()
 
 calc = Calculation(computer=computer).store()

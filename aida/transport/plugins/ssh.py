@@ -232,7 +232,7 @@ class SshTransport(aida.transport.Transport):
         return self.sftp.chmod(path,mode)
             
 
-    def put(self,localpath,remotepath,callback=None):
+    def put(self,localpath,remotepath,callback=None,dereference=False):
         """
         Put a file from local to remote.
 
@@ -245,18 +245,97 @@ class SshTransport(aida.transport.Transport):
         """
         # TODO: flag confirm exists since v1.7.7. What is the paramiko
         # version supported?
+
         if not os.path.isabs(localpath):
             raise ValueError("The localpath must be an absolute path")
+        if os.path.isdir(localpath):
+            return self.puttree(localpath,remotepath,callback=callback,dereference=dereference)
+        elif os.path.isfile(localpath):
+            return self.putfile(localpath,remotepath,callback=callback)
+        else:
+            raise OSError("Localpath {} not found".format(localpath))
+
+
+    def putfile(self,localpath,remotepath,callback=None):
+        """
+        Put a file from local to remote.
+
+        Args:
+            localpath: an (absolute) local path
+            remotepath: a remote path
+        
+        Raises:
+            OSError if the localpath does not exist
+        """        
+        # TODO : check what happens if I give in input a directory
+        
+        if not os.path.isabs(localpath):
+            raise ValueError("The localpath must be an absolute path")
+        
         return self.sftp.put(localpath,remotepath,callback=callback)
 
 
-    def get(self,remotepath,localpath,callback=None):
+    def puttree(self,localpath,remotepath,callback=None,dereference=False):
+        """
+        Note: setting dereference equal to true could cause infinite loops.
+              see os.walk() documentation
+        """
+        if not os.path.isabs(localpath):
+            raise ValueError("The localpath must be an absolute path")
+        
+        if not self.isdir(localpath):
+            raise ValueError("Input localpath is not a folder : {}".format(localpath))
+
+        for this_source in os.walk(localpath):
+            for this_dir in this_source[1]:
+                new_local_dir = os.path.join(localpath,this_source[0],this_dir)
+                new_remote_dir = os.path.join(remotepath,this_source[0],this_dir)
+                self.sftp.mkdir(new_remote_dir)
+                # TODO : check what happens if directory exists already
+                
+            for this_file in this_source[2]:
+                new_local_file = os.path.join(localpath,this_source[0],this_file)        
+                new_remote_file = os.path.join(remotepath,this_source[0],this_file)
+                self.putfile(new_local_file,new_remote_file)
+
+
+    def get(self,remotepath,localpath,callback=None,dereference=False):
         """
         get a file from remote to local
         """
         if not os.path.isabs(localpath):
             raise ValueError("The localpath must be an absolute path")
+
+        if self.isdir(remotepath):
+            self.gettree(remotepath,localpath,callback,dereference)
+        elif self.isfile(remotepath):
+            self.getfile(remotepath,localpath,callback)
+        else:
+            raise IOError("Localpath {} not found".format(localpath))
+
+
+    def getfile(self,remotepath,localpath,callback=None):
+        if not os.path.isabs(localpath):
+            raise ValueError("The localpath must be an absolute path")
+        
         return self.sftp.get(remotepath,localpath,callback)
+        
+        # TODO : fix documentation
+        
+    def gettree(self,remotepath,localpath,callback=None,dereference=False):
+        item_list = self.listdir(remotepath)
+        dest = str(localpath)
+
+        if not os.path.isdir(dest):
+            os.mkdir(dest)
+
+        for item in item_list:
+            item = str(item)
+
+            if self.isdir( os.path.join(remotepath,item) ):
+                self.gettree( os.path.join(remotepath,item) , os.path.join(dest,item) )
+            else:
+                self.getfile( os.path.join(remotepath,item) , os.path.join(dest,item) )
 
 
     def get_attribute(self,path):
@@ -271,9 +350,31 @@ class SshTransport(aida.transport.Transport):
         for key in aida_attr._valid_fields:
             aida_attr[key] = getattr(paramiko_attr,key)
         return aida_attr
-    
 
-    def copy(self,remotesource,remotedestination,dereference=False):
+
+    def copyfile(self,remotesource,remotedestination):
+        """
+        copy a file from remote source to remote destination
+
+        Args:
+        remotesource,remotedestination
+        """
+        cp_flags = '-f'
+        return copy(remotesource,remotedestination,cp_flags=cp_flags)
+
+
+    def copytree(self,remotesource,remotedestination):
+        """
+        copy a folder recursively from remote source to remote destination
+
+        Args:
+        remotesource,remotedestination
+        """
+        cp_flags = '-r -f'
+        return copy(remotesource,remotedestination,cp_flags=cp_flags)
+
+
+    def copy(self,remotesource,remotedestination,dereference=False, cp_flags='-r -f'):
         """
         Copy a file or a directory from remote source to remote destination.
         Flags used: -r: recursive copy; -f: force, makes the command non interactive;
@@ -299,7 +400,6 @@ class SshTransport(aida.transport.Transport):
         cp_exe='cp'
 
         ## To evaluate if we also want -p: preserves mode,ownership and timestamp
-        cp_flags='-r -f'
         if dereference:
             # use -L; --dereference is not supported on mac
             cp_flags+=' -L'

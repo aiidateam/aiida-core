@@ -5,7 +5,7 @@ from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 import aida.common
 #from aida.djsite.db.models import DbNode, Attribute
 from aida.common.exceptions import (
-    InternalError, ModificationNotAllowed, NotExistent, ValidationError )
+    DBContentError, InternalError, ModificationNotAllowed, NotExistent, ValidationError )
 from aida.common.folders import RepositoryFolder, SandboxFolder
 
 # Name to be used for the section
@@ -81,9 +81,9 @@ class Node(object):
             self._repo_folder = RepositoryFolder(section=_section_name, uuid=self.uuid)
             try:
                 self.validate()
-            except ValidationError:
-                raise DBContentError("The data in the DB with UUID={} is not valid for class {}".format(
-                    uuid, self.__class__.__name__))
+            except ValidationError as e:
+                raise DBContentError("The data in the DB with UUID={} is not valid for class {}: {}".format(
+                    uuid, self.__class__.__name__, e.message))
         else:
             self._dbnode = DbNode.objects.create(user=get_automatic_user())
             self._dbnode.type = self._plugin_type_string
@@ -106,6 +106,23 @@ class Node(object):
     @property
     def logger(self):
         return self._logger
+
+    def set_label(self,label):
+        """
+        Set the label of the calculation
+        """
+        from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
+
+        if self._to_be_stored:
+            self.dbnode.label = label
+        else:
+            self.logger.error("Trying to change the label of an already saved node: {}".format(
+                self.uuid))
+            raise ModificationNotAllowed("Node with uuid={} was already stored".format(self.uuid))
+
+    @property
+    def label(self):
+        return self.dbnode.label
 
     def validate(self):
         """
@@ -608,13 +625,6 @@ class Node(object):
         # This is useful because in this way I can do
         # n = Node().store()
         return self
-
-    
-    def retrieve(self):
-        '''
-        Retrieve info from DB and files, and recreate the Aiida node object.
-        '''
-        pass
 
 
     def __del__(self):

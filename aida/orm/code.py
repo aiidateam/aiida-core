@@ -1,16 +1,5 @@
 from aida.orm import Node
 
-def _get_machine_name_from_computer(computer):
-    from aida.djsite.db.models import Computer
-    if isinstance(computer,basestring):
-        machinename = computer
-    elif isinstance(computer, Computer):
-        machinename = computer.hostname
-    else:
-        raise ValueError("pass either a string with a computer name, or a "
-                         "django Computer object")
-    return machinename
-
 class Code(Node):
     """
     A code entity.
@@ -188,10 +177,16 @@ class Code(Node):
         path on that machine.
         """
         import os
+        from aida.djsite.db.models import DbComputer
+        
         if not os.path.isabs(exec_path):
             raise ValueError("exec_path must be an absolute path (on the remote machine)")
 
-        machinename = _get_machine_name_from_computer(machine)
+        if isinstance(machine, basestring):
+            machinename = machine
+        else:
+            # I retrieve the hostname of a DbComputer or Computer object
+            machinename = DbComputer.get_dbcomputer(machine).hostname
 
         self._set_remote()
 
@@ -252,7 +247,12 @@ class Code(Node):
 
         TODO: add filters to mask the remote machines on which a local code can run.
         """
-        machinename = _get_machine_name_from_computer(computer)
+        from aida.djsite.db.models import DbComputer
+        if isinstance(computer, basestring):
+            machinename = computer
+        else:
+            # I retrieve the hostname of a DbComputer or Computer object
+            machinename = DbComputer.get_dbcomputer(computer).hostname
         
         if self.is_local():
             return True

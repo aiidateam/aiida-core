@@ -7,7 +7,7 @@ TODO: implement pre_... and post_... hooks to add arbitrary strings before
       and after a namelist, and a 'final_string' (all optional); useful 
       for development when new cards are needed
 """
-from aida.codeplugins.exceptions import InputValidationError
+from aida.common.exceptions import InputValidationError
 from aida.common.classes.structure import Sites
 from aida.common.utils import get_suggestion
 from aida.codeplugins.quantumespresso import (

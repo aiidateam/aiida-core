@@ -8,8 +8,7 @@ from aida.common import aidalogger
 import logging
 aidalogger.setLevel(logging.INFO)
 
-from aida.orm import Calculation, Code, Data
-from aida.djsite.db.models import Computer
+from aida.orm import Calculation, Code, Data, Computer
 from aida.execmanager import submit_calc
 from aida.djsite.utils import get_automatic_user
 
@@ -19,34 +18,29 @@ from aida.orm.dataplugins.parameter import ParameterData
 
 computername = "bellatrix.epfl.ch"
 # A string with the version of this script, used to recreate a code when necessary
-current_version = "1.0.4"
+current_version = "1.0.1"
 
 def get_or_create_machine():
     import json
-    from django.core.exceptions import ObjectDoesNotExist
-    from aida.djsite.db.models import Computer
+    from aida.common.exceptions import NotExistent
 
-#    # I always delete the computer first
+#    # I can delete the computer first
 #    Computer.objects.filter(hostname=computername).delete()
     
     try:
-        computer = Computer.objects.get(hostname=computername)
+        computer = Computer.get(computername)
         print >> sys.stderr, "Using the existing computer {}...".format(computername)
-    except ObjectDoesNotExist:
+    except NotExistent:
         print >> sys.stderr, "Creating a new computer..."
-        computer =Computer.objects.create(
-            hostname=computername,
-            workdir = "/scratch/{username}/aida",
-            transport_type = "ssh",
-            scheduler_type = "pbspro",
-            transport_params = json.dumps(
-            {})
-            )
+        computer = Computer(hostname=computername,transport_type='ssh',
+                            scheduler_type='pbspro')
+        computer.set_workdir("/scratch/{username}/aida")
+        computer.store()
 
     from aida.djsite.db.models import AuthInfo
     authinfo, created = AuthInfo.objects.get_or_create(
         aidauser=get_automatic_user(),
-        computer=computer, 
+        computer=computer.dbcomputer, 
         defaults={'auth_params': json.dumps(
             {'username': 'pizzi',
              'load_system_host_keys': True},
@@ -125,7 +119,11 @@ parameters = ParameterData({
     'factor': 2,
     }).store()
 
-calc = Calculation(computer=computer).store()
+calc = Calculation(computer=computer)
+calc.set_max_wallclock_seconds(12*60) # 12 min
+calc.set_num_nodes(1)
+calc.set_num_cpus_per_node(1)
+calc.store()
 print "created calculation; calc=Calculation(uuid='{}') # ID={}".format(
     calc.uuid,calc.dbnode.pk)
 

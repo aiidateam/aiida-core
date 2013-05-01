@@ -157,7 +157,7 @@ class Scheduler(object):
         self.logger.debug('_get_run_line output: {}'.format(output_string))
         return output_string
     
-    def _get_joblist_command(self,jobs=None,user=None):
+    def _get_joblist_command(self,jobs=None):
         """
         Return a list with the qsub (or equivalent) command to run + 
         required parameters to get the most complete description possible;
@@ -186,7 +186,7 @@ class Scheduler(object):
         """
         raise NotImplementedError
         
-    def getJobs(self, jobs=None, user=None, as_dict=False):
+    def getJobs(self, jobs=None, as_dict=False):
         """
         Get the list of jobs and return it.
         
@@ -194,13 +194,12 @@ class Scheduler(object):
         
         Args:
             jobs: a list of jobs to check; only these are checked
-            user: only jobs belonging to a given user are checked
             as_dict: if False (default), a list of JobInfo objects is returned. If
                 True, a dictionary is returned, having as key the jobId and as value the
                 JobInfo object.
         """
         retval, stdout, stderr = self.transport.exec_command_wait(
-            self._get_joblist_command(jobs=jobs, user=user))
+            self._get_joblist_command(jobs=jobs))
         
         joblist = self._parse_joblist_output(retval, stdout, stderr)
         if as_dict:

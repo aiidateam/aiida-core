@@ -3,6 +3,11 @@ import string
 
 from aida.common.exceptions import ConfigurationError
 
+def load_django():
+#    from django.core.management import setup_environ
+#    from scalingtest import settings
+    os.environ['DJANGO_SETTINGS_MODULE'] = 'aida.djsite.settings.settings'
+
 def get_repository_folder():
     """
     Return the top folder of the local repository.

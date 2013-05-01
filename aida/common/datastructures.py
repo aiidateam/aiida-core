@@ -13,6 +13,7 @@ calcStates = CalcState((
                       # (both DONE and FAILED)
         'RETRIEVING', # while retrieving data
         'RETRIEVED',  # data retrieved, no more need to connect to scheduler
+        'SUBMISSIONFAILED', # error occurred during submission phase
         ))
 
 
@@ -28,14 +29,14 @@ class CalcInfo(DefaultFieldsAttributeDict):
     * dynresources_info
     """
     _default_fields = (
-        'job_environment',
+        'jobEnvironment', # TODO UNDERSTAND THIS!
         'email',
         'emailOnStarted',
         'emailOnTerminated',
         'uuid',
         'prependText', # (both from computer and code)
         'appendText',  # (both from computer and code)
-        'argv',         # (including everything, also mpirun etc.; argv[0] is
+        'cmdlineParams',         # (including everything, also mpirun etc.; argv[0] is
                         #   the executable
         'stdinName',
         'stdoutName',
@@ -45,7 +46,8 @@ class CalcInfo(DefaultFieldsAttributeDict):
         'numNodes',
         'numCpusPerNode',
         'priority',
-        'resourceLimits',
+        'maxWallclockSeconds',
+        'maxMemoryKb',
         'rerunnable',
         )
 

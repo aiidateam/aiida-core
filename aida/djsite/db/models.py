@@ -8,7 +8,7 @@ from django.contrib.auth.models import User
 from django.db.models.query import QuerySet
 
 from aida.djsite.settings.settings import LOCAL_REPOSITORY
-from aida.common.exceptions import DBContentError
+from aida.common.exceptions import DbContentError
 
 # Removed the custom User field, that was creating a lot of problems. Use
 # the email as UUID. In case we need it, we can do a couple of south migrations
@@ -62,7 +62,7 @@ class DbNode(m.Model):
     children = m.ManyToManyField('self', symmetrical=False, related_name='parents', through='Path')
     
     # Used only if dbnode is a calculation
-    computer = m.ForeignKey('Computer', null=True)  # only for calculations
+    computer = m.ForeignKey('DbComputer', null=True)  # only for calculations
 
     # Index that is incremented every time a modification is done on itself or on attributes.
     # Managed by the aida.orm.Node class. Do not modify
@@ -98,7 +98,7 @@ class DbNode(m.Model):
             if pluginclass:
                 try:
                     PluginClass = load_plugin(Calculation, 'aida.orm.calculationplugins', pluginclass)
-                except ImportError:
+                except MissingPluginError:
                     aidalogger.warning("Unable to find calculation plugin for type '{}' (node={}), "
                                        "will use base Calculation class".format(self.type,self.uuid))
                     PluginClass = Calculation
@@ -109,7 +109,7 @@ class DbNode(m.Model):
             if pluginclass:
                 try:
                     PluginClass = load_plugin(Code, 'aida.orm.codeplugins', pluginclass)
-                except ImportError:
+                except MissingPluginError:
                     aidalogger.warning("Unable to find code plugin for type '{}' (node={}), "
                                        "will use base Code class".format(self.type,self.uuid))
                     PluginClass = Code
@@ -120,7 +120,7 @@ class DbNode(m.Model):
             if pluginclass:
                 try:
                     PluginClass = load_plugin(Data, 'aida.orm.dataplugins', pluginclass)
-                except ImportError:
+                except MissingPluginError:
                     aidalogger.warning("Unable to find data plugin for type '{}' (node={}), "
                                        "will use base Data class".format(self.type,self.uuid))
                     PluginClass = Data
@@ -276,9 +276,9 @@ class Attribute(m.Model):
             try:
                 return json.loads(self.tval)
             except ValueError:
-                raise DBContentError("Error in the content of the json field")
+                raise DbContentError("Error in the content of the json field")
         else:
-            raise DBContentError("The type field '{}' is not recognized".format(
+            raise DbContentError("The type field '{}' is not recognized".format(
                     self.datatype))        
 
 
@@ -290,7 +290,7 @@ class Group(m.Model):
     description = m.TextField(blank=True)
     user = m.ForeignKey(User)  # The owner of the group, not of the calculations
 
-class Computer(m.Model):
+class DbComputer(m.Model):
     """Table of computers or clusters.
 
     # TODO: understand if we want that this becomes simply another type of dbnode.
@@ -317,6 +317,7 @@ class Computer(m.Model):
     uuid = UUIDField(auto=True)
     hostname = m.CharField(max_length=255, unique=True) # FQDN
     description = m.TextField(blank=True)
+    # TODO: next three fields should not be blank...
     workdir = m.CharField(max_length=255)
     transport_type = m.CharField(max_length=255)
     scheduler_type = m.CharField(max_length=255)
@@ -324,27 +325,32 @@ class Computer(m.Model):
 
     metadata = m.TextField(default="{}") # Will store a json
 
-    def get_transport_params(self):
-        import json
-        try:
-            return json.loads(self.transport_params)
-        except ValueError:
-            raise DBContentError(
-                "Error while reading transport_params for computer {}".format(
-                    self.hostname))
-        
-    def get_scheduler(self):
-        import aida.scheduler
-        from aida.common.pluginloader import load_plugin
+    @classmethod
+    def get_dbcomputer(cls,computer):
+        from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
+        from aida.common.exceptions import DbContentError, NotExistent
+        from aida.orm import Computer
 
-        try:
-            ThisPlugin = load_plugin(aida.scheduler.Scheduler, 'aida.scheduler.plugins',
-                               self.scheduler_type)
-            # I call the init without any parameter
-            return ThisPlugin()
-        except ImportError as e:
-            raise ConfigurationError('No scheduler found for {} [type {}], message: {}'.format(
-                self.hostname, self.scheduler_type, e.message))
+        if isinstance(computer, basestring):
+            try:
+                dbcomputer = DbComputer.objects.get(hostname=computer)
+            except ObjectDoesNotExist:
+                raise NotExistent("No computer found in the table of computers with "
+                                 "the given name '{}'".format(computer))
+            except MultipleObjectsReturned:
+                raise DbContentError("There is more than one computer with name '{}', "
+                                 "pass a Django Computer instance".format(computer))
+        elif isinstance(computer, DbComputer):
+            if computer.pk is None:
+                raise ValueError("The computer instance you are passing has not been stored yet")
+            dbcomputer = computer
+        elif isinstance(computer,Computer):
+            if computer.dbcomputer.pk is None:
+                raise ValueError("The computer instance you are passing has not been stored yet")
+            dbcomputer = computer.dbcomputer
+        else:
+            raise TypeError("Pass either a computer name, a DbComputer django instance or a Computer object")
+        return dbcomputer
 
 #class RunningJob(m.Model):
 #    calc = m.OneToOneField(DbNode,related_name='jobinfo') # OneToOneField implicitly sets unique=True
@@ -360,25 +366,21 @@ class AuthInfo(m.Model):
     information.
     """
     aidauser = m.ForeignKey(User)
-    computer = m.ForeignKey(Computer)
+    computer = m.ForeignKey(DbComputer)
     auth_params = m.TextField(default='{}')  # Will store a json; contains mainly the remoteuser
                                              # and the private_key
 
     class Meta:
         unique_together = (("aidauser", "computer"),)
 
-    def update_calc_states(self):
-        import aida
-        aida.execmanager.update_calc_states(self)
-
     def get_auth_params(self):
         import json
         try:
             return json.loads(self.auth_params)
         except ValueError:
-            raise DBContentError(
+            raise DbContentError(
                 "Error while reading auth_params for authinfo, aidauser={}, computer={}".format(
-                    self.aidauser, self.computer))
+                    self.aidauser.username, self.computer.hostname))
 
     # a method of AuthInfo
     def get_transport(self):
@@ -387,15 +389,18 @@ class AuthInfo(m.Model):
         transport to connect to the computer.
         """    
         from aida.common.pluginloader import load_plugin
+        import aida.transport
+        from aida.orm import Computer
 
         try:
             ThisTransport = load_plugin(aida.transport.Transport, 'aida.transport.plugins',
                                         self.computer.transport_type)
-        except ImportError as e:
+        except MissingPluginError as e:
             raise ConfigurationError('No transport found for {} [type {}], message: {}'.format(
                 self.computer.hostname, self.computer.transport_type, e.message))
 
-        params = self.computer.get_transport_params() + self.get_auth_params()
+        params = dict(Computer(dbcomputer=self.computer).get_transport_params().items() +
+                      self.get_auth_params().items())
         return ThisTransport(machine=self.computer.hostname,**params)
 
 class Comment(m.Model):

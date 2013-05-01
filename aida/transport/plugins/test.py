@@ -8,11 +8,55 @@ import unittest
 from aida.common.pluginloader import load_plugin
 
 custom_transport = None
-        
+
 class TestDirectoryManipulation(unittest.TestCase):
     """
     Test to check, create and delete folders.
     """
+    def test_makedirs(self):
+        """
+        Verify the functioning of makedirs command
+        """
+        # Imports required later
+        import random
+        import string
+        import os
+
+        with custom_transport as t:
+            location = t.normalize(os.path.join('/','tmp'))
+            directory = 'temp_dir_test'
+            t.chdir(location)
+            
+            self.assertEquals(location, t.getcwd())
+            while t.isdir(directory):
+                # I append a random letter/number until it is unique
+                directory += random.choice(
+                    string.ascii_uppercase + string.digits)
+            t.mkdir(directory)
+            t.chdir(directory)
+
+            # define folder structure
+            dir_tree = os.path.join('1','2')
+            # I create the tree
+            t.makedirs(dir_tree)
+            # verify the existence
+            self.assertTrue( t.isdir('1') )
+            self.assertTrue( dir_tree )
+
+            # try to recreate the same folder
+            with self.assertRaises(OSError):
+                t.makedirs(dir_tree)
+
+            # recreate but with ignore flag
+            t.makedirs(dir_tree,True)
+
+            t.rmdir(dir_tree)
+            t.rmdir('1')
+                
+            t.chdir('..')
+            t.rmdir(directory)
+
+
     
     def test_listdir(self):
         """
@@ -254,9 +298,9 @@ class TestDirectoryManipulation(unittest.TestCase):
             t.chdir("")
             self.assertEquals(new_dir, t.getcwd())
 
-class TestPutGet(unittest.TestCase):
+class TestPutGetFile(unittest.TestCase):
     """
-    Test to verify whether the put and get functions behave correctly.
+    Test to verify whether the put and get functions behave correctly on files.
     1) they work
     2) they need abs paths where necessary, i.e. for local paths
     3) they reject empty strings
@@ -293,6 +337,8 @@ class TestPutGet(unittest.TestCase):
             # here use full path in src and dst
             t.put(local_file_name,remote_file_name)
             t.get(remote_file_name,retrieved_file_name)
+            t.putfile(local_file_name,remote_file_name)
+            t.getfile(remote_file_name,retrieved_file_name)
             
             list_of_files = t.listdir('.')
             # it is False because local_file_name has the full path,
@@ -338,20 +384,32 @@ class TestPutGet(unittest.TestCase):
             f = open(local_file_name,'w')
             f.close()
 
+            # partial_file_name is not an abs path
             with self.assertRaises(ValueError):
-                # partial_file_name is not an abs path
                 t.put(partial_file_name,remote_file_name)
+            with self.assertRaises(ValueError):
+                t.putfile(partial_file_name,remote_file_name)
+
+            # retrieved_file_name does not exist
             with self.assertRaises(OSError):
-                # retrieved_file_name does not exist
                 t.put(retrieved_file_name,remote_file_name)
+            with self.assertRaises(OSError):
+                t.putfile(retrieved_file_name,remote_file_name)
+                
+            # remote_file_name does not exist
             with self.assertRaises(IOError):
-                # remote_file_name does not exist
                 t.get(remote_file_name,retrieved_file_name)
+            with self.assertRaises(IOError):
+                t.getfile(remote_file_name,retrieved_file_name)
             
             t.put(local_file_name,remote_file_name)
+            t.putfile(local_file_name,remote_file_name)
+            
+            # local filename is not an abs path
             with self.assertRaises(ValueError):
-                # local filename is not an abs path
                 t.get(remote_file_name,'delete_me.txt')
+            with self.assertRaises(ValueError):
+                t.getfile(remote_file_name,'delete_me.txt')
 
             t.remove(remote_file_name)
             os.remove(local_file_name)
@@ -391,30 +449,41 @@ class TestPutGet(unittest.TestCase):
             with  open(local_file_name,'w') as f:
                 f.write(text)
 
-
+            # localpath is an empty string
+            # ValueError because it is not an abs path
             with self.assertRaises(ValueError):
-                # localpath is an empty string
-                # ValueError because it is not an abs path
                 t.put('',remote_file_name)
+            with self.assertRaises(ValueError):
+                t.putfile('',remote_file_name)
 
+            # remote path is an empty string
             with self.assertRaises(IOError):
-                # remote path is an empty string
                 t.put(local_file_name,'')
+            with self.assertRaises(IOError):
+                t.putfile(local_file_name,'')
 
             t.put(local_file_name,remote_file_name)
+            # overwrite the remote_file_name
+            t.putfile(local_file_name,remote_file_name)
             
+            # remote path is an empty string
             with self.assertRaises(IOError):
-                # remote path is an empty string
                 t.get('',retrieved_file_name)
+            with self.assertRaises(IOError):
+                t.getfile('',retrieved_file_name)
 
+            # local path is an empty string
+            # ValueError because it is not an abs path
             with self.assertRaises(ValueError):
-                # local path is an empty string
-                # ValueError because it is not an abs path
                 t.get(remote_file_name,'')
+            with self.assertRaises(ValueError):
+                t.getfile(remote_file_name,'')
 
-                # TODO : get doesn't retrieve empty files.
-                # Is it what we want?
+            # TODO : get doesn't retrieve empty files.
+            # Is it what we want?
             t.get(remote_file_name,retrieved_file_name)
+            # overwrite retrieved_file_name
+            t.getfile(remote_file_name,retrieved_file_name)
 
             os.remove(local_file_name)
             t.remove(remote_file_name)
@@ -424,7 +493,278 @@ class TestPutGet(unittest.TestCase):
             os.remove(retrieved_file_name)
 
             t.chdir('..')
+            t.rmdir(directory)
 
+
+class TestPutGetTree(unittest.TestCase):
+    """
+    Test to verify whether the put and get functions behave correctly on folders.
+    1) they work
+    2) they need abs paths where necessary, i.e. for local paths
+    3) they reject empty strings
+    """
+
+    def test_put_and_get(self):
+        import os
+        import random
+        import string
+        
+        local_dir = os.path.join('/','tmp')
+        remote_dir = local_dir
+        directory = 'tmp_try'
+
+        with custom_transport as t:
+
+            t.chdir(remote_dir)
+            
+            while os.path.exists(os.path.join(local_dir,directory) ):
+                # I append a random letter/number until it is unique
+                directory += random.choice(
+                    string.ascii_uppercase + string.digits)
+
+            local_subfolder = os.path.join(local_dir,directory,'tmp1')
+            remote_subfolder = 'tmp2'
+            retrieved_subfolder = os.path.join(local_dir,directory,'tmp3')
+            
+            os.mkdir(os.path.join(local_dir,directory))
+            os.mkdir(os.path.join(local_dir,directory,local_subfolder))
+            
+            t.chdir(directory)
+
+            local_file_name = os.path.join(local_subfolder,'file.txt')
+
+            text = 'Viva Verdi\n'
+            with open(local_file_name,'w') as f:
+                f.write(text)
+
+            # here use full path in src and dst
+            for i in range(2):
+                if i==0:
+                    t.put(local_subfolder,remote_subfolder)
+                    t.get(remote_subfolder,retrieved_subfolder)
+                else:
+                    t.puttree(local_subfolder,remote_subfolder)
+                    t.gettree(remote_subfolder,retrieved_subfolder)
+
+                # Here I am mixing the local with the remote fold
+                list_of_dirs = t.listdir('.')
+                # # it is False because local_file_name has the full path,
+                # # while list_of_files has not
+                self.assertFalse( local_subfolder in list_of_dirs)
+                self.assertTrue( remote_subfolder in list_of_dirs)
+                self.assertFalse( retrieved_subfolder in list_of_dirs)
+                self.assertTrue( 'tmp1' in list_of_dirs)
+                self.assertTrue( 'tmp3' in list_of_dirs)
+
+                list_pushed_file = t.listdir('tmp2')
+                list_retrieved_file = t.listdir('tmp3')
+                self.assertTrue( 'file.txt' in list_pushed_file )
+                self.assertTrue( 'file.txt' in list_retrieved_file )
+            
+            os.remove(os.path.join(local_subfolder,'file.txt'))
+            os.rmdir(local_subfolder)
+            os.remove(os.path.join(retrieved_subfolder,'file.txt'))
+            os.rmdir(retrieved_subfolder)
+            t.remove(os.path.join(remote_subfolder,'file.txt'))
+            t.rmdir(remote_subfolder)
+            
+            t.chdir('..')
+            t.rmdir(directory)
+            
+
+    def test_put_and_get_overwrite(self):
+        import os
+        import random
+        import string
+        
+        local_dir = os.path.join('/','tmp')
+        remote_dir = local_dir
+        directory = 'tmp_try'
+
+        with custom_transport as t:
+            t.chdir(remote_dir)
+            
+            while os.path.exists(os.path.join(local_dir,directory) ):
+                # I append a random letter/number until it is unique
+                directory += random.choice(
+                    string.ascii_uppercase + string.digits)
+
+            local_subfolder = os.path.join(local_dir,directory,'tmp1')
+            remote_subfolder = 'tmp2'
+            retrieved_subfolder = os.path.join(local_dir,directory,'tmp3')
+            
+            os.mkdir(os.path.join(local_dir,directory))
+            os.mkdir(os.path.join(local_dir,directory,local_subfolder))
+            
+            t.chdir(directory)
+
+            local_file_name = os.path.join(local_subfolder,'file.txt')
+
+            text = 'Viva Verdi\n'
+            with open(local_file_name,'w') as f:
+                f.write(text)
+
+
+            t.put(local_subfolder,remote_subfolder)
+            t.get(remote_subfolder,retrieved_subfolder)
+
+            # by defaults rewrite everything
+            t.put(local_subfolder,remote_subfolder)
+            t.get(remote_subfolder,retrieved_subfolder)
+
+            with self.assertRaises(OSError):
+                t.put(local_subfolder,remote_subfolder,overwrite=False)
+            with self.assertRaises(OSError):
+                t.get(remote_subfolder,retrieved_subfolder,overwrite=False)
+            with self.assertRaises(OSError):
+                t.puttree(local_subfolder,remote_subfolder,overwrite=False)
+            with self.assertRaises(OSError):
+                t.gettree(remote_subfolder,retrieved_subfolder,overwrite=False)
+
+            
+            os.remove(os.path.join(local_subfolder,'file.txt'))
+            os.rmdir(local_subfolder)
+            os.remove(os.path.join(retrieved_subfolder,'file.txt'))
+            os.rmdir(retrieved_subfolder)
+            t.remove(os.path.join(remote_subfolder,'file.txt'))
+            t.rmdir(remote_subfolder)
+            # t.rmtree(remote_subfolder)
+            # here I am mixing inevitably the local and the remote folder
+            t.chdir('..')
+            t.rmdir(directory)
+
+
+    def test_put_get_abs_path(self):
+        """
+        test of exception for non existing files and abs path
+        """
+        import os
+        import random
+        import string
+
+        local_dir = os.path.join('/','tmp')
+        remote_dir = local_dir
+        directory = 'tmp_try'
+
+        with custom_transport as t:
+            t.chdir(remote_dir)
+            
+            while os.path.exists(os.path.join(local_dir,directory) ):
+                # I append a random letter/number until it is unique
+                directory += random.choice(
+                    string.ascii_uppercase + string.digits)
+
+            local_subfolder = os.path.join(local_dir,directory,'tmp1')
+            remote_subfolder = 'tmp2'
+            retrieved_subfolder = os.path.join(local_dir,directory,'tmp3')
+            
+            os.mkdir(os.path.join(local_dir,directory))
+            os.mkdir(os.path.join(local_dir,directory,local_subfolder))
+            
+            t.chdir(directory)
+            local_file_name = os.path.join(local_subfolder,'file.txt')
+
+            f = open(local_file_name,'w')
+            f.close()
+
+            # 'tmp1' is not an abs path
+            with self.assertRaises(ValueError):
+                t.puttree('tmp1',remote_subfolder)
+
+            # 'tmp3' does not exist
+            with self.assertRaises(OSError):
+                t.puttree(retrieved_subfolder,remote_subfolder)
+                
+            # remote_file_name does not exist
+            with self.assertRaises(IOError):
+                t.gettree('non_existing',retrieved_subfolder)
+            
+            t.puttree(local_subfolder,remote_subfolder)
+            
+            # local filename is not an abs path
+            with self.assertRaises(ValueError):
+                t.gettree(remote_subfolder,'delete_me')
+
+            os.remove(os.path.join(local_subfolder,'file.txt'))
+            os.rmdir(local_subfolder)
+            t.remove(os.path.join(remote_subfolder,'file.txt'))
+            t.rmdir(remote_subfolder)
+
+            t.chdir('..')
+            t.rmdir(directory)
+
+    def test_put_get_empty_string(self):
+        """
+        test of exception put/get of empty strings
+        """
+        # TODO : verify the correctness of \n at the end of a file
+        import os
+        import random
+        import string
+
+        local_dir = os.path.join('/','tmp')
+        remote_dir = local_dir
+        directory = 'tmp_try'
+
+        with custom_transport as t:
+            t.chdir(remote_dir)
+            
+            while os.path.exists(os.path.join(local_dir,directory) ):
+                # I append a random letter/number until it is unique
+                directory += random.choice(
+                    string.ascii_uppercase + string.digits)
+
+            local_subfolder = os.path.join(local_dir,directory,'tmp1')
+            remote_subfolder = 'tmp2'
+            retrieved_subfolder = os.path.join(local_dir,directory,'tmp3')
+            
+            os.mkdir(os.path.join(local_dir,directory))
+            os.mkdir(os.path.join(local_dir,directory,local_subfolder))
+            
+            t.chdir(directory)
+            local_file_name = os.path.join(local_subfolder,'file.txt')
+
+            text = 'Viva Verdi\n'
+            with  open(local_file_name,'w') as f:
+                f.write(text)
+
+
+            # localpath is an empty string
+            # ValueError because it is not an abs path
+            with self.assertRaises(ValueError):
+                t.puttree('',remote_subfolder)
+
+            # remote path is an empty string
+            with self.assertRaises(IOError):
+                t.puttree(local_subfolder,'')
+
+            t.puttree(local_subfolder,remote_subfolder)
+            
+            # remote path is an empty string
+            with self.assertRaises(IOError):
+                t.gettree('',retrieved_subfolder)
+
+            # local path is an empty string
+            # ValueError because it is not an abs path
+            with self.assertRaises(ValueError):
+                t.gettree(remote_subfolder,'')
+
+            # TODO : get doesn't retrieve empty files.
+            # Is it what we want?
+            t.gettree(remote_subfolder,retrieved_subfolder)
+
+
+            os.remove(os.path.join(local_subfolder,'file.txt'))
+            os.rmdir(local_subfolder)
+            t.remove(os.path.join(remote_subfolder,'file.txt'))
+            t.rmdir(remote_subfolder)
+            # If it couldn't end the copy, it leaves what he did on local file
+            # here I am mixing local with remote
+            self.assertTrue( 'file.txt' in t.listdir('tmp3') )
+            os.remove(os.path.join(retrieved_subfolder,'file.txt'))
+            os.rmdir(retrieved_subfolder)
+
+            t.chdir('..')
             t.rmdir(directory)
 
 
@@ -511,8 +851,6 @@ class TestExecuteCommandWait(unittest.TestCase):
             with self.assertRaises(ValueError):
                 retcode, stdout, stderr = t.exec_command_wait(
                     'cat', stdin=1)
-
-
 
 
 def run_tests(transport_to_test):

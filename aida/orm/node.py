@@ -5,7 +5,7 @@ from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 import aida.common
 #from aida.djsite.db.models import DbNode, Attribute
 from aida.common.exceptions import (
-    InternalError, ModificationNotAllowed, NotExistent, ValidationError )
+    DbContentError, InternalError, ModificationNotAllowed, NotExistent, ValidationError )
 from aida.common.folders import RepositoryFolder, SandboxFolder
 
 # Name to be used for the section
@@ -81,9 +81,9 @@ class Node(object):
             self._repo_folder = RepositoryFolder(section=_section_name, uuid=self.uuid)
             try:
                 self.validate()
-            except ValidationError:
-                raise DBContentError("The data in the DB with UUID={} is not valid for class {}".format(
-                    uuid, self.__class__.__name__))
+            except ValidationError as e:
+                raise DbContentError("The data in the DB with UUID={} is not valid for class {}: {}".format(
+                    uuid, self.__class__.__name__, e.message))
         else:
             self._dbnode = DbNode.objects.create(user=get_automatic_user())
             self._dbnode.type = self._plugin_type_string
@@ -94,18 +94,33 @@ class Node(object):
             self._repo_folder = RepositoryFolder(section=_section_name, uuid=self.uuid)
 
     @classmethod
-    def query(cls,**kwargs):
+    def query(cls,*args,**kwargs):
         """
         Map to the aidaobjects manager of the DbNode, that returns
         Node objects (or their subclasses) instead of DbNode entities.
         """
         from aida.djsite.db.models import DbNode
-        
-        return DbNode.aidaobjects.filter(**kwargs)
+
+        return DbNode.aidaobjects.filter(*args,type__startswith=cls._plugin_type_string,**kwargs)
 
     @property
     def logger(self):
         return self._logger
+
+    def set_label(self,label):
+        """
+        Set the label of the calculation
+        """
+        if self._to_be_stored:
+            self.dbnode.label = label
+        else:
+            self.logger.error("Trying to change the label of an already saved node: {}".format(
+                self.uuid))
+            raise ModificationNotAllowed("Node with uuid={} was already stored".format(self.uuid))
+
+    @property
+    def label(self):
+        return self.dbnode.label
 
     def validate(self):
         """
@@ -119,6 +134,9 @@ class Node(object):
         In the subclass, always call the super().validate() method first!
         """
         return True
+
+    def get_user(self):
+        return self.dbnode.user
 
     def add_link_from(self,src,label=None):
         """
@@ -154,22 +172,66 @@ class Node(object):
             raise ValueError("dest must be a Node instance")
         dest.add_link_from(self,label)
 
-    def get_inputs(self):
+    def get_inputs(self,type=None,also_labels=False):
         """
         Return a list of nodes that enter (directly) in this node
-        """
-        from aida.djsite.db.models import DbNode
-        
-        return list(DbNode.aidaobjects.filter(outputs=self.dbnode).distinct())
 
-    def get_outputs(self):
+        Args:
+            type: if specified, should be a class, and it filters only elements of that
+                specific type (or a subclass of 'type')
+            also_labels: if False (default) only return a list of input nodes.
+                If True, return a list of tuples, where each tuple has the following
+                format: ('label', Node)
+                with 'label' the link label, and Node a Node instance or subclass
         """
-        Return a list of nodes that exit (directly) in this node
-        """
-        from aida.djsite.db.models import DbNode
-        
-        return list(DbNode.aidaobjects.filter(inputs=self.dbnode).distinct())
+        from aida.djsite.db.models import Link
 
+        inputs_list = ((i.label, i.input.get_aida_class()) for i in
+                       Link.objects.filter(output=self.dbnode).distinct())
+        
+        if type is None:
+            if also_labels:
+                return list(inputs_list)
+            else:
+                return [i[1] for i in inputs_list]
+        else:
+            filtered_list = (i for i in inputs_list if isinstance(i[1],type))
+            if also_labels:
+                return list(filtered_list)
+            else:
+                return [i[1] for i in filtered_list]
+            
+
+    def get_outputs(self,type=None,also_labels=False):
+        """
+        Return a list of nodes that exit (directly) from this node
+
+        Args:
+            type: if specified, should be a class, and it filters only elements of that
+                specific type (or a subclass of 'type')
+            also_labels: if False (default) only return a list of input nodes.
+                If True, return a list of tuples, where each tuple has the following
+                format: ('label', Node)
+                with 'label' the link label, and Node a Node instance or subclass
+        """
+        from aida.djsite.db.models import Link
+
+        outputs_list = ((i.label, i.output.get_aida_class()) for i in
+                       Link.objects.filter(input=self.dbnode).distinct())
+        
+        if type is None:
+            if also_labels:
+                return list(outputs_list)
+            else:
+                return [i[1] for i in outputs_list]
+        else:
+            filtered_list = (i for i in outputs_list if isinstance(i[1],type))
+            if also_labels:
+                return list(filtered_list)
+            else:
+                return [i[1] for i in filtered_list]
+
+            
     def set_attr(self, key, value):
         if self._to_be_stored:
             self._attrs_cache["_{}".format(key)] = value
@@ -531,15 +593,26 @@ class Node(object):
             # As a first thing, I check if the data is valid
             self.validate()
             # I save the corresponding django entry
-            with transaction.commit_on_success():
-                # Save the row
-                self._dbnode.save()
-                # Save its attributes
-                for k, v in self._attrs_cache.iteritems():
-                    self._set_attribute_db(k,v,incrementversion=False)
+            # I set the folder
+            self.repo_folder.replace_with_folder(self.get_temp_folder().abspath, move=True, overwrite=True)
 
-                # I set the folder
-                self.repo_folder.replace_with_folder(self.get_temp_folder().abspath, move=True, overwrite=True)
+            # I do the transaction only during storage on DB to avoid timeout problems, especially
+            # with SQLite
+            try:
+                with transaction.commit_on_success():
+                    # Save the row
+                    self._dbnode.save()
+                    # Save its attributes
+                    for k, v in self._attrs_cache.iteritems():
+                        self._set_attribute_db(k,v,incrementversion=False)
+            # This is one of the few cases where it is ok to do a 'global' except,
+            # also because I am re-raising the exception
+            except:
+                # I put back the files in the sandbox folder since the transaction did not succeed
+                self.get_temp_folder().replace_with_folder(
+                    self.repo_folder.abspath, move=True, overwrite=True)                
+                raise
+
             
             self._temp_folder = None            
             self._to_be_stored = False
@@ -550,13 +623,6 @@ class Node(object):
         # This is useful because in this way I can do
         # n = Node().store()
         return self
-
-    
-    def retrieve(self):
-        '''
-        Retrieve info from DB and files, and recreate the Aiida node object.
-        '''
-        pass
 
 
     def __del__(self):

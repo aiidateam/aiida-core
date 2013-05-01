@@ -1,16 +1,5 @@
 from aida.orm import Node
 
-def _get_machine_name_from_computer(computer):
-    from aida.djsite.db.models import Computer
-    if isinstance(computer,basestring):
-        machinename = computer
-    elif isinstance(computer, Computer):
-        machinename = computer.hostname
-    else:
-        raise ValueError("pass either a string with a computer name, or a "
-                         "django Computer object")
-    return machinename
-
 class Code(Node):
     """
     A code entity.
@@ -44,6 +33,7 @@ class Code(Node):
             remote_machine_exec: a list or tuple of length 2 with (machinename, remote_executable)
                 as accepted by the set_remote_machine_exec() method.
         """
+        import os
         self._logger = super(Code,self).logger.getChild('code')
         super(Code,self).__init__(**kwargs)
 
@@ -57,7 +47,7 @@ class Code(Node):
         if isinstance(files, basestring):
             files=[files]
         for f in files:
-            self.add_file(f)
+            self.add_file(f,os.path.split(f)[1])
 
         # By default I set a local code
         self._set_local()
@@ -77,6 +67,12 @@ class Code(Node):
                                  "of length 2, with machine and executable "
                                  "name")
             self.set_remote_machine_exec(*remote_machine_exec)
+
+        input_plugin = kwargs.pop('input_plugin', None)
+        self.set_input_plugin(input_plugin)
+
+        output_plugin = kwargs.pop('output_plugin', None)
+        self.set_output_plugin(output_plugin)
 
         if kwargs:
             raise ValueError("Invalid parameters found in the __init__: {}".format(kwargs.keys()))
@@ -102,34 +98,66 @@ class Code(Node):
                 raise ValidationError("You did not specify a remote executable")
             
         
-    def add_link_from(self,src,*args,**kwargs):
+    def add_link_from(self,src,label=None):
         raise ValueError("A code node cannot have any input nodes")
 
-    def set_preexec_code(self,code):
+    def set_prepend_text(self,code):
         """
         Pass a string of code that will be put in the scheduler script before the
         execution of the code.
         """
-        self.set_attr('preexec_code', unicode(code))
+        self.set_attr('prepend_text', unicode(code))
 
-    def get_preexec_code(self):
+    def get_prepend_text(self):
         """
-        Return the preexec_code, or an empty string if no pre-exec code was defined.
+        Return the code that will be put in the scheduler script before the
+        execution, or an empty string if no pre-exec code was defined.
         """
-        return self.get_attr('preexec_code',u"")
+        return self.get_attr('prepend_text',u"")
 
-    def set_postexec_code(self,code):
+    def set_append_text(self,code):
         """
-        Pass a string of code that will be put in the scheduler script before the
+        Pass a string of code that will be put in the scheduler script after the
         execution of the code.
         """
-        self.set_attr('postexec_code', unicode(code))
+        self.set_attr('append_text', unicode(code))
 
-    def get_postexec_code(self):
+    def get_append_text(self):
         """
         Return the postexec_code, or an empty string if no post-exec code was defined.
         """
-        return self.get_attr('postexec_code',u"")
+        return self.get_attr('append_text',u"")
+
+    def set_input_plugin(self, input_plugin):
+        """
+        Set a string for the input plugin
+
+        TODO: check that the plugin referenced by th string input_plugin actually exists
+        """
+        if input_plugin is None:
+            raise ValueError("You need to specify an input plugin")
+        self.set_attr('input_plugin', input_plugin)
+        
+    def get_input_plugin(self):
+        """
+        Return the input plugin
+        """
+        return self.get_attr('input_plugin')
+
+    def set_output_plugin(self, output_plugin):
+        """
+        Set a string for the output plugin
+        Can be none if no output plugin is available/needed
+
+        TODO: check that the plugin referenced by th string input_plugin actually exists
+        """
+        self.set_attr('output_plugin', output_plugin)
+        
+    def get_output_plugin(self):
+        """
+        Return the output plugin
+        """
+        return self.get_attr('output_plugin',None)
 
 
     def set_local_executable(self,exec_name):
@@ -138,10 +166,10 @@ class Code(Node):
         Implicitly set the code as local.
         """
         self._set_local()
-        self.set_attr('local_exec_name',exec_name)
+        self.set_attr('local_executable',exec_name)
 
     def get_local_executable(self):
-        return self.get_attr('local_exec_name', u"")
+        return self.get_attr('local_executable', u"")
 
     def set_remote_machine_exec(self,machine,exec_path):
         """
@@ -149,10 +177,16 @@ class Code(Node):
         path on that machine.
         """
         import os
+        from aida.djsite.db.models import DbComputer
+        
         if not os.path.isabs(exec_path):
             raise ValueError("exec_path must be an absolute path (on the remote machine)")
 
-        machinename = _get_machine_name_from_computer(machine)
+        if isinstance(machine, basestring):
+            machinename = machine
+        else:
+            # I retrieve the hostname of a DbComputer or Computer object
+            machinename = DbComputer.get_dbcomputer(machine).hostname
 
         self._set_remote()
 
@@ -193,7 +227,7 @@ class Code(Node):
         """
         self.set_attr('is_local', False)
         try:
-            self.del_attr('local_exec_name')
+            self.del_attr('local_executable')
         except AttributeError:
             pass
 
@@ -213,7 +247,12 @@ class Code(Node):
 
         TODO: add filters to mask the remote machines on which a local code can run.
         """
-        machinename = _get_machine_name_from_computer(computer)
+        from aida.djsite.db.models import DbComputer
+        if isinstance(computer, basestring):
+            machinename = computer
+        else:
+            # I retrieve the hostname of a DbComputer or Computer object
+            machinename = DbComputer.get_dbcomputer(computer).hostname
         
         if self.is_local():
             return True
@@ -232,5 +271,5 @@ class Code(Node):
         if self.is_local():
             return u"./{}".format(self.get_local_executable())
         else:
-            return get_remote_executable()
+            return self.get_remote_executable()
 

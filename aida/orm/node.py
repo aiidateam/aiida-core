@@ -94,14 +94,14 @@ class Node(object):
             self._repo_folder = RepositoryFolder(section=_section_name, uuid=self.uuid)
 
     @classmethod
-    def query(cls,**kwargs):
+    def query(cls,*args,**kwargs):
         """
         Map to the aidaobjects manager of the DbNode, that returns
         Node objects (or their subclasses) instead of DbNode entities.
         """
         from aida.djsite.db.models import DbNode
 
-        return DbNode.aidaobjects.filter(type__startswith=cls._plugin_type_string,**kwargs)
+        return DbNode.aidaobjects.filter(*args,type__startswith=cls._plugin_type_string,**kwargs)
 
     @property
     def logger(self):

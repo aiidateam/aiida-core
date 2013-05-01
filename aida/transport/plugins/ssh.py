@@ -286,17 +286,24 @@ class SshTransport(aida.transport.Transport):
         if not self.isdir(localpath):
             raise ValueError("Input localpath is not a folder : {}".format(localpath))
 
+        try:
+            self.mkdir(remotepath)
+        except OSError: # directory already exists
+            pass
+        
+        base_name = localpath
+        
         for this_source in os.walk(localpath):
-            for this_dir in this_source[1]:
-                new_local_dir = os.path.join(localpath,this_source[0],this_dir)
-                new_remote_dir = os.path.join(remotepath,this_source[0],this_dir)
-                self.sftp.mkdir(new_remote_dir)
-                # TODO : check what happens if directory exists already
+            this_basename = this_source[0].lstrip(localpath)
+            try:
+                self.mkdir( os.path.join(remotepath,this_basename) )
+            except OSError: # directory already exists
+                pass
                 
             for this_file in this_source[2]:
-                new_local_file = os.path.join(localpath,this_source[0],this_file)        
-                new_remote_file = os.path.join(remotepath,this_source[0],this_file)
-                self.putfile(new_local_file,new_remote_file)
+                this_local_file = os.path.join(localpath,this_basename,this_file)        
+                this_remote_file = os.path.join(remotepath,this_basename,this_file)
+                self.putfile(this_local_file,this_remote_file)
 
 
     def get(self,remotepath,localpath,callback=None,dereference=False):
@@ -305,13 +312,14 @@ class SshTransport(aida.transport.Transport):
         """
         if not os.path.isabs(localpath):
             raise ValueError("The localpath must be an absolute path")
-
+        
         if self.isdir(remotepath):
+            print '!!!!'
             self.gettree(remotepath,localpath,callback,dereference)
         elif self.isfile(remotepath):
             self.getfile(remotepath,localpath,callback)
         else:
-            raise IOError("Localpath {} not found".format(localpath))
+            raise IOError("Remotepath {} not found".format(remotepath))
 
 
     def getfile(self,remotepath,localpath,callback=None):

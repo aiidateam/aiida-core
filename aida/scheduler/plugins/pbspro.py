@@ -7,7 +7,7 @@ import aida.scheduler
 from aida.common.utils import escape_for_bash
 from aida.scheduler import SchedulerError, SchedulerParsingError
 from aida.scheduler.datastructures import (
-    JobInfo, jobStates, NodeInfo, ResourceLimits)
+    JobInfo, jobStates, NodeInfo)
 
 # This maps PbsPro status letters to our own status list
 
@@ -181,39 +181,35 @@ class PbsproScheduler(aida.scheduler.Scheduler):
         if job_tmpl.numCpusPerNode:
             select_string += ":ncpus={}".format(job_tmpl.numCpusPerNode)
 
-        if job_tmpl.resourceLimits:
-            if not isinstance(job_tmpl.resourceLimits, ResourceLimits):
-                raise ValueError("If you provide resourceLimits, it must be "
-                                 "of type ResourceLimits")
-            if job_tmpl.resourceLimits.get('wallclockTime',None):
-                try:
-                    tot_secs = int(job_tmpl.resourceLimits.wallclockTime)
-                    if tot_secs <= 0:
-                        raise ValueError
-                except ValueError:
-                    raise ValueError(
-                        "resourceLimits.wallclockTime must be "
-                        "a positive integer (in seconds)! It is instead '{}'"
-                        "".format((job_tmpl.resourceLimits.wallclockTime)))
-                hours = tot_secs / 3600
-                tot_minutes = tot_secs % 3600
-                minutes = tot_minutes / 60
-                seconds = tot_minutes % 60
-                lines.append("#PBS -l walltime={:02d}:{:02d}:{:02d}".format(
-                        hours, minutes, seconds))
+        if job_tmpl.maxWallclockSeconds is not None:
+            try:
+                tot_secs = int(job_tmpl.maxWallclockSeconds)
+                if tot_secs <= 0:
+                    raise ValueError
+            except ValueError:
+                raise ValueError(
+                    "maxWallclockSeconds must be "
+                    "a positive integer (in seconds)! It is instead '{}'"
+                    "".format((job_tmpl.maxWallclockTime)))
+            hours = tot_secs / 3600
+            tot_minutes = tot_secs % 3600
+            minutes = tot_minutes / 60
+            seconds = tot_minutes % 60
+            lines.append("#PBS -l walltime={:02d}:{:02d}:{:02d}".format(
+                hours, minutes, seconds))
 
-            if job_tmpl.resourceLimits.get('virtualMemory',None):
-                try:
-                    virtualMemorykB = int(job_tmpl.resourceLimits.virtualMemory)
-                    if virtualMemorykB <= 0:
-                        raise ValueError
-                except ValueError:
-                    raise ValueError(
-                        "resourceLimits.virtualMemory must be "
-                        "a positive integer (in kB)! It is instead '{}'"
-                        "".format((job_tmpl.resourceLimits.virtualMemory)))
-                select_string += ":mem={}kb".format(virtualMemorykB)
-            
+        if job_tmpl.maxMemoryKb:
+            try:
+                virtualMemoryKb = int(job_tmpl.maxMemoryKb)
+                if virtualMemoryKb <= 0:
+                    raise ValueError
+            except ValueError:
+                raise ValueError(
+                    "maxMemoryKb must be "
+                    "a positive integer (in kB)! It is instead '{}'"
+                    "".format((job_tmpl.MaxMemoryKb)))
+                select_string += ":mem={}kb".format(virtualMemoryKb)
+                
         lines.append("#PBS -l {}".format(select_string))
 
         # Job environment variables are to be set on one single line. 
@@ -631,7 +627,6 @@ if __name__ == '__main__':
     import logging
     import uuid
     from aida.common.pluginloader import load_plugin
-    from aida.common.datastructures import CalcInfo
     
     # TODO : clean the old commands when the test will be possible to be carried offline
     
@@ -973,7 +968,6 @@ Job Id: 74165.mycluster
             """
             Test whether _parse_joblist can parse the qstat -f output
             """
-            PbsproScheduler._logger.setLevel(logging.DEBUG)
             s = PbsproScheduler()
             
             retval = 0
@@ -1027,43 +1021,44 @@ Job Id: 74165.mycluster
             """
             The qstat -f command has received a retval != 0
             """
-            PbsproScheduler._logger.setLevel(logging.DEBUG)
             s = PbsproScheduler()            
             retval = 1
             stdout = text_qstat_f_to_test
             stderr = ''
+            # Disable logging to avoid excessive output during test
+            logging.disable(logging.ERROR)
             with self.assertRaises(SchedulerError):
                 job_list = s._parse_joblist_output(retval, stdout, stderr)
+            # Reset logging level
+            logging.disable(logging.NOTSET)
 
-        def test_parse_with_error_stderr(self):
-            """
-            The qstat -f command has received a stderr
-            """
-            PbsproScheduler._logger.setLevel(logging.DEBUG)
-            s = PbsproScheduler()            
-            retval = 0
-            stdout = text_qstat_f_to_test
-            stderr = 'A non empty error message'
-            # TODO : catch the logging error
-            job_list = s._parse_joblist_output(retval, stdout, stderr)
-            #            print s._logger._log, dir(s._logger._log),'!!!!'
+#        def test_parse_with_error_stderr(self):
+#            """
+#            The qstat -f command has received a stderr
+#            """
+#            s = PbsproScheduler()            
+#            retval = 0
+#            stdout = text_qstat_f_to_test
+#            stderr = 'A non empty error message'
+#            # TODO : catch the logging error
+#            job_list = s._parse_joblist_output(retval, stdout, stderr)
+#            #            print s._logger._log, dir(s._logger._log),'!!!!'
 
     class TestSubmitScript(unittest.TestCase):
         def test_submit_script(self):
             """
             """
-            # PbsproScheduler._logger.setLevel(logging.DEBUG)
+            from aida.scheduler.datastructures import JobTemplate
             s = PbsproScheduler()
 
-            calc_info = CalcInfo()
-            calc_info.argv = ["mpirun", "-np", "23", "pw.x", "-npool", "1"]
-            calc_info.stdinName = 'aida.in'
-            calc_info.numNodes = 1
-            calc_info.uuid = str(uuid.uuid4())
-            calc_info.resourceLimits = ResourceLimits()
-            calc_info.resourceLimits.wallclockTime = 24 * 3600 
+            job_tmpl = JobTemplate()
+            job_tmpl.argv = ["mpirun", "-np", "23", "pw.x", "-npool", "1"]
+            job_tmpl.stdinName = 'aida.in'
+            job_tmpl.numNodes = 1
+            job_tmpl.uuid = str(uuid.uuid4())
+            job_tmpl.maxWallclockSeconds = 24 * 3600 
     
-            submit_script_text = s.get_submit_script(calc_info)
+            submit_script_text = s.get_submit_script(job_tmpl)
 
             self.assertTrue( '#PBS -r n' in submit_script_text )
             self.assertTrue( submit_script_text.startswith('#!/bin/bash') )

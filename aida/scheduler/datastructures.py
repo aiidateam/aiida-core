@@ -18,30 +18,6 @@ jobStates = JobState((
 #class QueueInfo(DefaultFieldsAttributeDict):
 #    _default_fields = ('name',)
 
-class ResourceLimits(FixedFieldsAttributeDict):
-    """
-    A list of resource limits for a job to be submitted.
-
-    For the moment, the only supported fields are 'virtualMemory'
-    and 'wallclockTime'.
-    
-    Fields:
-    * virtualMemory: The maximum amount of memory the job is allowed
-         to allocate ON EACH NODE, in kilobyte
-    * wallclockTime: The maximum wall clock time that all processes of 
-         a job are allowed to exist, in seconds
-    """
-    # For documentation of the commented fields, see DRMAA v2 docs.
-    _valid_fields = (
-#        'coreFileSize', 
-#        'cpuTime',
-#        'dataSize',
-#        'fileSize',
-#        'openFiles',
-#        'stackSize',
-        'virtualMemory', 
-        'wallclockTime',
-        )
 
 class JobTemplate(DefaultFieldsAttributeDict):
     """
@@ -53,15 +29,18 @@ class JobTemplate(DefaultFieldsAttributeDict):
           of the program to run. The first one is the executable name. For
           MPI runs, this will probably be mpirun or a similar program; 
           this has to be chosen at a upper level.
+    * maxMemoryKb: The maximum amount of memory the job is allowed
+         to allocate ON EACH NODE, in kilobyte
+    * maxWallclockSeconds: The maximum wall clock time that all processes of 
+         a job are allowed to exist, in seconds
+
     * TODO: refine this list and choose what we want to support.
     """
     _default_fields = (
-#        'argv',           # no, this is managed differently at a higher level
         'submitAsHold',
         'rerunnable',
         'jobEnvironment',
-        'workingDirectory', # allow for {} fields, list which!
- #       'jobCategory',
+        'workingDirectory', 
         'email',
         'emailOnStarted',
         'emailOnTerminated',
@@ -73,12 +52,16 @@ class JobTemplate(DefaultFieldsAttributeDict):
         'numNodes',
         'numCpusPerNode',
         'priority',
-#        'candidateMachines',
-#        'startTime',
-#        'deadlineTime',
-#        'stageInFiles',
-#        'stageOutFiles',
-        'resourceLimits', 
+        'maxMemoryKb', 
+        'maxWallclockSeconds',
+
+        'prependText',
+        'appendText',
+        'argv',
+        'stdinName',
+        'stdoutName',
+        'stderrName',
+        'joinFiles',
         )
  
 
@@ -95,7 +78,6 @@ class NodeInfo(DefaultFieldsAttributeDict):
         'nodeName',
         'numCores',
         )
-
 
 class MachineResource(DefaultFieldsAttributeDict):
     # These should be the same defined in the DB for storage.
@@ -121,7 +103,6 @@ class MachineResource(DefaultFieldsAttributeDict):
 #double load;
 #long physMemory;
 #long virtMemory;
-
 
 ## To be changed/adapted/improved!!
 class JobInfo(DefaultFieldsAttributeDict):

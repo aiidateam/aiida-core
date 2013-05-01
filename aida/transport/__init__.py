@@ -300,6 +300,33 @@ class Transport(object):
 
     def put(self, localpath, remotepath, *args, ** kwargs):
         """
+        Put a file or a directory from local src to remote dst.
+        src must be an absolute path (dst not necessarily))
+        Redirects to putfile and puttree.
+       
+        Args:
+           localpath (str) - remote_path
+           remotepath (str) - local_path
+        """
+        raise NotImplementedError
+
+
+    def putfile(self, localpath, remotepath, *args, ** kwargs):
+        """
+        Put a file from local src to remote dst.
+        src must be an absolute path (dst not necessarily))
+
+        TODO: To be implemented in the plugins
+        
+        Args:
+           localpath (str) - remote_file_path
+           remotepath (str) - local_file_path
+        """
+        raise NotImplementedError
+
+
+    def puttree(self, localpath, remotepath, *args, ** kwargs):
+        """
         Put a file from local src to remote dst.
         src must be an absolute path (dst not necessarily))
 
@@ -359,6 +386,8 @@ class Transport(object):
             retval (int)
             stderr (sStr)
         """
+        # TODO : add tests for this class
+        
         command = 'whoami'
         retval, username, stderr = self.exec_command_wait(command)
         if retval == 0:

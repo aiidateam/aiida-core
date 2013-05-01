@@ -4,6 +4,10 @@ load_django()
 
 from aida.execmanager import *
 
+from aida.common import aidalogger
+import logging
+aidalogger.setLevel(logging.INFO)
+
 update_jobs()
 #retrieve_jobs()
 

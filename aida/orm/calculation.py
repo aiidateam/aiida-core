@@ -36,6 +36,17 @@ Here each calculation needs to be hashed in order to be reused on restarts.
 NOTE: Need to include functionality of an observer method in calc or data plugins, to check the data 
 while the calculation is running, to make sure that everything is going as planned, otherwise stop.
 
+TODO: set the following as properties of the Calculation
+        #        'email',
+        #        'emailOnStarted',
+        #        'emailOnTerminated',
+        #        'rerunnable',
+        #        'queueName', 
+        #        'numNodes',
+        #        'priority',
+        #        'resourceLimits',
+
+
 '''
 
 class Calculation(Node):
@@ -133,14 +144,14 @@ class Calculation(Node):
     def get_state(self):
         return self.get_attr('state', None)
 
-    def _set_jobid(self, jobid):
+    def _set_job_id(self, job_id):
         """
         Always set as a string
         """
-        return self.set_attr('jobid', unicode(jobid))
+        return self.set_attr('job_id', unicode(job_id))
     
-    def get_jobid(self):
-        return self.get_attr('jobid', None)
+    def get_job_id(self):
+        return self.get_attr('job_id', None)
         
     def _set_scheduler_state(self,state):
         # I don't do any test here on the possible valid values,
@@ -148,7 +159,7 @@ class Calculation(Node):
         self.set_attr('scheduler_state', unicode(state))
                 
     def get_scheduler_state(self):
-        self.get_attr('scheduler_state', None)
+        return self.get_attr('scheduler_state', None)
 
     def _set_last_jobinfo(self,last_jobinfo):
         import json

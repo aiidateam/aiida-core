@@ -20,6 +20,12 @@ class ModificationNotAllowed(AidaException):
     """
     pass
 
+class MissingPluginError(AidaException):
+    """
+    Raised when the user tries to use a plugin that is not available or does not exist.
+    """
+    pass
+
 class InvalidOperation(AidaException):
     """
     The allowed operation is not valid (e.g., when trying to add a non-internal attribute

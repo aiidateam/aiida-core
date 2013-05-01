@@ -112,31 +112,32 @@ class Code(Node):
     def add_link_from(self,src,*args,**kwargs):
         raise ValueError("A code node cannot have any input nodes")
 
-    def set_preexec_code(self,code):
+    def set_prepend_text(self,code):
         """
         Pass a string of code that will be put in the scheduler script before the
         execution of the code.
         """
-        self.set_attr('preexec_code', unicode(code))
+        self.set_attr('prepend_text', unicode(code))
 
-    def get_preexec_code(self):
+    def get_prepend_text(self):
         """
-        Return the preexec_code, or an empty string if no pre-exec code was defined.
+        Return the code that will be put in the scheduler script before the
+        execution, or an empty string if no pre-exec code was defined.
         """
-        return self.get_attr('preexec_code',u"")
+        return self.get_attr('prepend_text',u"")
 
-    def set_postexec_code(self,code):
+    def set_append_text(self,code):
         """
-        Pass a string of code that will be put in the scheduler script before the
+        Pass a string of code that will be put in the scheduler script after the
         execution of the code.
         """
-        self.set_attr('postexec_code', unicode(code))
+        self.set_attr('append_text', unicode(code))
 
-    def get_postexec_code(self):
+    def get_append_text(self):
         """
         Return the postexec_code, or an empty string if no post-exec code was defined.
         """
-        return self.get_attr('postexec_code',u"")
+        return self.get_attr('append_text',u"")
 
     def set_input_plugin(self, input_plugin):
         """

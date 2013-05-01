@@ -104,18 +104,18 @@ class TemplatereplacerInputPlugin(InputPlugin):
         calcinfo = CalcInfo()
 
         calcinfo.uuid = calculation.uuid
-        calcinfo.argv = cmdline_params # This will be enriched outside
+        calcinfo.cmdlineParams = cmdline_params
         if input_through_stdin is not None:
             calcinfo.stdinName = input_file_name
         if output_file_name:
             calcinfo.stdoutName = output_file_name
 
-        #        'job_environment',
+
+        # TODO: implement in the CalcInfo objects the fields for 
+        #        'jobEnvironment',
         #        'prependText', # (both from computer and code)
         #        'appendText',  # (both from computer and code)
         #        'stderrName',
         #        'joinFiles',
-
-        # TODO: implement in the CalcInfo objects the fields for 
         
         return calcinfo

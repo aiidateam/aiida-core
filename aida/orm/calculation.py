@@ -162,20 +162,19 @@ class Calculation(Node):
         return self.get_attr('scheduler_state', None)
 
     def _set_last_jobinfo(self,last_jobinfo):
-        import json
+        import pickle
         
-        self.set_attr('last_jobinfo', json.dumps(last_jobinfo))
+        self.set_attr('last_jobinfo', pickle.dumps(last_jobinfo))
 
     def get_last_jobinfo(self):
-        import json
-        from aida.scheduler.datastructures import JobInfo
-
-        jsondata = json.loads(self.get_attr('last_jobinfo','{}'))
-        try:
-            # I try to return a JobInfo object
-            return JobInfo(jsondata)
-        except ValueError:
-            return jsondata
+        import pickle
+        
+        last_jobinfo_pickled = self.get_attr('last_jobinfo',None)
+        if last_jobinfo_pickled is not None:
+            return pickle.loads(last_jobinfo_pickled)
+        else:
+            return None
+    
 
     @classmethod
     def get_all_with_state(cls, state, computer=None, user=None, only_computer_user_pairs = False):

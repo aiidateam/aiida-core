@@ -303,10 +303,8 @@ class LocalTransport(aida.transport.Transport):
         retval = local_proc.returncode
 
         return retval, output_text, stderr_text
-
-
-
-
+            
+    
 if __name__ == '__main__':
     import unittest
     import logging

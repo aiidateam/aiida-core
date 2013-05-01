@@ -51,7 +51,8 @@ TODO: set the following as properties of the Calculation
 
 class Calculation(Node):
     _plugin_type_string = "calculation"
-    _updatable_attributes = ('state', 'job_id', 'scheduler_state', 'last_jobinfo')
+    _updatable_attributes = ('state', 'job_id', 'scheduler_state', 'last_jobinfo',
+			     'remote_workdir')
     
     def __init__(self,*args,**kwargs):
         from aida.common.datastructures import calcStates
@@ -144,6 +145,12 @@ class Calculation(Node):
     def get_state(self):
         return self.get_attr('state', None)
 
+    def _set_remote_workdir(self, remote_workdir):
+        self.set_attr('remote_workdir', remote_workdir)
+
+    def get_remote_workdir(self):
+        return self.get_attr('remote_workdir', None)
+
     def _set_job_id(self, job_id):
         """
         Always set as a string
@@ -162,20 +169,19 @@ class Calculation(Node):
         return self.get_attr('scheduler_state', None)
 
     def _set_last_jobinfo(self,last_jobinfo):
-        import json
+        import pickle
         
-        self.set_attr('last_jobinfo', json.dumps(last_jobinfo))
+        self.set_attr('last_jobinfo', pickle.dumps(last_jobinfo))
 
     def get_last_jobinfo(self):
-        import json
-        from aida.scheduler.datastructures import JobInfo
-
-        jsondata = json.loads(self.get_attr('last_jobinfo','{}'))
-        try:
-            # I try to return a JobInfo object
-            return JobInfo(jsondata)
-        except ValueError:
-            return jsondata
+        import pickle
+        
+        last_jobinfo_pickled = self.get_attr('last_jobinfo',None)
+        if last_jobinfo_pickled is not None:
+            return pickle.loads(last_jobinfo_pickled)
+        else:
+            return None
+    
 
     @classmethod
     def get_all_with_state(cls, state, computer=None, user=None, only_computer_user_pairs = False):

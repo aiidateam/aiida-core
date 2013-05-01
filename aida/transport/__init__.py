@@ -350,4 +350,25 @@ class Transport(object):
         raise NotImplementedError
 
     
+    def whoami(self):
+        """
+        Get the remote username
+
+        Returns:
+            username (str)
+            retval (int)
+            stderr (sStr)
+        """
+        command = 'whoami'
+        retval, username, stderr = self.exec_command_wait(command)
+        if retval == 0:
+            if stderr.strip():
+                self.logger.warning("There was nonempty stderr in the whoami "
+                                    "command: {}".format(stderr))
+            return username.strip()
+        else:
+            self.logger.error("Problem executing whoami. Exit code: {}, stdout: '{}', "
+                              "stderr: '{}'".format(retval, username, stderr))
+            raise IOError("Error while executing cp. Exit code: {}".format(retval) )
+
 

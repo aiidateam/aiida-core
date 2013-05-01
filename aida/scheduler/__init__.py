@@ -45,16 +45,12 @@ class Scheduler(object):
         except AttributeError:
             raise InternalError("No self._logger configured for {}!")
 
-    def get_submit_script(self, calc_info):
+    def get_submit_script(self, job_tmpl):
         """
         Return the submit script as a string.
-        calc_info of type aida.managers.job.calcinfo.CalcInfo
+        Args:
+           job_tmpl: a aida.scheduler.datastrutures.JobTemplate object.
         
-        This must be implemented by the plugin subclass. The plugin will
-        typically call the _get_run_line method implemented in this
-        abstract class, that should be general enough. Nothing avoid to customize it,
-        if really needed.
-
         TODO: understand if, in the future, we want to pass more
         than one calculation, e.g. for job arrays.
 
@@ -71,38 +67,16 @@ class Scheduler(object):
         output of _get_script_main_content
         postpend_code
         postpend_computer
-        
-        TODO: improve, generalize, depending on what we define for calc_info!
         """
+        from aida.scheduler.datastructures import JobTemplate
+        from aida.common.exceptions import InternalError
+        
+        if not isinstance(job_tmpl, JobTemplate):
+            raise InternalError("job_tmpl should be of type JobTemplate")
+        
         empty_line = ""
 
         shebang = "#!/bin/bash"
-
-        job_tmpl = JobTemplate()
-        job_tmpl.submitAsHold = False
-        # From the PBSPro documentation (man qrerun):
-        # To rerun a job is to kill it and requeue it in the execution
-        # queue from which it was run
-        job_tmpl.rerunnable = False     # TODO fix, read from job_info
-        job_tmpl.jobEnvironment = {}    # TODO fix, read from job_info
-                                        # TODO: set email, emailOn...
-        if calc_info.uuid:
-            job_tmpl.jobName = 'aida-{}'.format(calc_info.uuid) 
-        else:
-            job_tmpl.jobName = 'aidajob'
-
-        # TODO: different behavior? May be changed by calc_info?
-        job_tmpl.schedOutputPath = 'scheduler-stdout.txt'
-        job_tmpl.schedErrorPath = 'scheduler-stderr.txt'
-        job_tmpl.schedJoinFiles = False
-
-        job_tmpl.queueName = calc_info.queueName
-
-        job_tmpl.numNodes = calc_info.numNodes
-        job_tmpl.numCpusPerNode = calc_info.numCpusPerNode
-        job_tmpl.priority = calc_info.priority
-
-        job_tmpl.resourceLimits = calc_info.resourceLimits
 
         # I fill the list with the lines, and finally join them and return
         script_lines = []
@@ -112,18 +86,18 @@ class Scheduler(object):
         script_lines.append(self._get_submit_script_header(job_tmpl))
         script_lines.append(empty_line)
 
-        if calc_info.prependText:
-            script_lines.append(calc_info.prependText)
+        if job_tmpl.prependText:
+            script_lines.append(job_tmpl.prependText)
             script_lines.append(empty_line)
 
         script_lines.append(self._get_run_line(
-                calc_info.argv, calc_info.stdinName,
-                calc_info.stdoutName, calc_info.stderrName,
-                calc_info.joinFiles))
+                job_tmpl.argv, job_tmpl.stdinName,
+                job_tmpl.stdoutName, job_tmpl.stderrName,
+                job_tmpl.joinFiles))
         script_lines.append(empty_line)
 
-        if calc_info.appendText:
-            script_lines.append(calc_info.appendText)
+        if job_tmpl.appendText:
+            script_lines.append(job_tmpl.appendText)
             script_lines.append(empty_line)
 
         return "\n".join(script_lines)

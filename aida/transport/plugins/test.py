@@ -538,7 +538,6 @@ class TestPutGetTree(unittest.TestCase):
         directory = 'tmp_try'
 
         with custom_transport as t:
-
             t.chdir(remote_dir)
             
             while os.path.exists(os.path.join(local_dir,directory) ):
@@ -590,6 +589,143 @@ class TestPutGetTree(unittest.TestCase):
             t.chdir('..')
             t.rmdir(directory)
 
+
+    def test_put_get_abs_path(self):
+        """
+        test of exception for non existing files and abs path
+        """
+        import os
+        import random
+        import string
+
+        local_dir = os.path.join('/','tmp')
+        remote_dir = local_dir
+        directory = 'tmp_try'
+
+        with custom_transport as t:
+            t.chdir(remote_dir)
+            
+            while os.path.exists(os.path.join(local_dir,directory) ):
+                # I append a random letter/number until it is unique
+                directory += random.choice(
+                    string.ascii_uppercase + string.digits)
+
+            local_subfolder = os.path.join(local_dir,directory,'tmp1')
+            remote_subfolder = 'tmp2'
+            retrieved_subfolder = os.path.join(local_dir,directory,'tmp3')
+            
+            os.mkdir(os.path.join(local_dir,directory))
+            os.mkdir(os.path.join(local_dir,directory,local_subfolder))
+            
+            t.chdir(directory)
+            local_file_name = os.path.join(local_subfolder,'file.txt')
+
+            f = open(local_file_name,'w')
+            f.close()
+
+            # 'tmp1' is not an abs path
+            with self.assertRaises(ValueError):
+                t.puttree('tmp1',remote_subfolder)
+
+            # 'tmp3' does not exist
+            with self.assertRaises(OSError):
+                t.puttree(retrieved_subfolder,remote_subfolder)
+                
+            # remote_file_name does not exist
+            with self.assertRaises(IOError):
+                t.gettree('non_existing',retrieved_subfolder)
+            
+            t.puttree(local_subfolder,remote_subfolder)
+            
+            # local filename is not an abs path
+            with self.assertRaises(ValueError):
+                t.gettree(remote_subfolder,'delete_me')
+
+            os.remove(os.path.join(local_subfolder,'file.txt'))
+            os.rmdir(local_subfolder)
+            t.remove(os.path.join(remote_subfolder,'file.txt'))
+            t.rmdir(remote_subfolder)
+
+            t.chdir('..')
+            t.rmdir(directory)
+
+    def test_put_get_empty_string(self):
+        """
+        test of exception put/get of empty strings
+        """
+        # TODO : verify the correctness of \n at the end of a file
+        import os
+        import random
+        import string
+
+        local_dir = os.path.join('/','tmp')
+        remote_dir = local_dir
+        directory = 'tmp_try'
+
+        with custom_transport as t:
+
+            t.chdir(remote_dir)
+            while t.isdir(directory):
+                # I append a random letter/number until it is unique
+                directory += random.choice(
+                    string.ascii_uppercase + string.digits)
+
+            t.mkdir(directory)
+            t.chdir(directory)
+
+            local_file_name = os.path.join(local_dir,directory,'file_local.txt')
+            remote_file_name = 'file_remote.txt'
+            retrieved_file_name = os.path.join(local_dir,directory,'file_retrieved.txt')
+            
+            text = 'Viva Verdi\n'
+            with  open(local_file_name,'w') as f:
+                f.write(text)
+
+            # localpath is an empty string
+            # ValueError because it is not an abs path
+            with self.assertRaises(ValueError):
+                t.put('',remote_file_name)
+            with self.assertRaises(ValueError):
+                t.putfile('',remote_file_name)
+
+            # remote path is an empty string
+            with self.assertRaises(IOError):
+                t.put(local_file_name,'')
+            with self.assertRaises(IOError):
+                t.putfile(local_file_name,'')
+
+            t.put(local_file_name,remote_file_name)
+            # overwrite the remote_file_name
+            t.putfile(local_file_name,remote_file_name)
+            
+            # remote path is an empty string
+            with self.assertRaises(IOError):
+                t.get('',retrieved_file_name)
+            with self.assertRaises(IOError):
+                t.getfile('',retrieved_file_name)
+
+            # local path is an empty string
+            # ValueError because it is not an abs path
+            with self.assertRaises(ValueError):
+                t.get(remote_file_name,'')
+            with self.assertRaises(ValueError):
+                t.getfile(remote_file_name,'')
+
+            # TODO : get doesn't retrieve empty files.
+            # Is it what we want?
+            t.get(remote_file_name,retrieved_file_name)
+            # overwrite retrieved_file_name
+            t.getfile(remote_file_name,retrieved_file_name)
+
+            os.remove(local_file_name)
+            t.remove(remote_file_name)
+            # If it couldn't end the copy, it leaves what he did on
+            # local file
+            self.assertTrue( 'file_retrieved.txt' in t.listdir('.') )
+            os.remove(retrieved_file_name)
+
+            t.chdir('..')
+            t.rmdir(directory)
 
 
 class TestExecuteCommandWait(unittest.TestCase):

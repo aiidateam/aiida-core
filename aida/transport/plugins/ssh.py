@@ -291,6 +291,9 @@ class SshTransport(aida.transport.Transport):
         if not os.path.isabs(localpath):
             raise ValueError("The localpath must be an absolute path")
         
+        if not os.path.exists(localpath):
+            raise OSError("The localpath does not exists")
+
         if not os.path.isdir(localpath):
             raise ValueError("Input localpath is not a folder: {}".format(localpath))
 
@@ -314,10 +317,6 @@ class SshTransport(aida.transport.Transport):
                 this_local_file = os.path.join(localpath,this_basename,this_file)        
                 this_remote_file = os.path.join(remotepath,this_basename,this_file)
                 self.putfile(this_local_file,this_remote_file)
-
-
-    def rmtree(self,localpath,remotepath):
-        raise NotImplementedError
 
 
     def get(self,remotepath,localpath,callback=None,dereference=False,overwrite=True):

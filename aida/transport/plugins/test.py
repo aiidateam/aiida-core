@@ -254,9 +254,9 @@ class TestDirectoryManipulation(unittest.TestCase):
             t.chdir("")
             self.assertEquals(new_dir, t.getcwd())
 
-class TestPutGet(unittest.TestCase):
+class TestPutGetFile(unittest.TestCase):
     """
-    Test to verify whether the put and get functions behave correctly.
+    Test to verify whether the put and get functions behave correctly on files.
     1) they work
     2) they need abs paths where necessary, i.e. for local paths
     3) they reject empty strings
@@ -293,6 +293,8 @@ class TestPutGet(unittest.TestCase):
             # here use full path in src and dst
             t.put(local_file_name,remote_file_name)
             t.get(remote_file_name,retrieved_file_name)
+            t.putfile(local_file_name,remote_file_name)
+            t.getfile(remote_file_name,retrieved_file_name)
             
             list_of_files = t.listdir('.')
             # it is False because local_file_name has the full path,
@@ -338,20 +340,32 @@ class TestPutGet(unittest.TestCase):
             f = open(local_file_name,'w')
             f.close()
 
+            # partial_file_name is not an abs path
             with self.assertRaises(ValueError):
-                # partial_file_name is not an abs path
                 t.put(partial_file_name,remote_file_name)
+            with self.assertRaises(ValueError):
+                t.putfile(partial_file_name,remote_file_name)
+
+            # retrieved_file_name does not exist
             with self.assertRaises(OSError):
-                # retrieved_file_name does not exist
                 t.put(retrieved_file_name,remote_file_name)
+            with self.assertRaises(OSError):
+                t.putfile(retrieved_file_name,remote_file_name)
+                
+            # remote_file_name does not exist
             with self.assertRaises(IOError):
-                # remote_file_name does not exist
                 t.get(remote_file_name,retrieved_file_name)
+            with self.assertRaises(IOError):
+                t.getfile(remote_file_name,retrieved_file_name)
             
             t.put(local_file_name,remote_file_name)
+            t.putfile(local_file_name,remote_file_name)
+            
+            # local filename is not an abs path
             with self.assertRaises(ValueError):
-                # local filename is not an abs path
                 t.get(remote_file_name,'delete_me.txt')
+            with self.assertRaises(ValueError):
+                t.getfile(remote_file_name,'delete_me.txt')
 
             t.remove(remote_file_name)
             os.remove(local_file_name)
@@ -391,30 +405,41 @@ class TestPutGet(unittest.TestCase):
             with  open(local_file_name,'w') as f:
                 f.write(text)
 
-
+            # localpath is an empty string
+            # ValueError because it is not an abs path
             with self.assertRaises(ValueError):
-                # localpath is an empty string
-                # ValueError because it is not an abs path
                 t.put('',remote_file_name)
+            with self.assertRaises(ValueError):
+                t.putfile('',remote_file_name)
 
+            # remote path is an empty string
             with self.assertRaises(IOError):
-                # remote path is an empty string
                 t.put(local_file_name,'')
+            with self.assertRaises(IOError):
+                t.putfile(local_file_name,'')
 
             t.put(local_file_name,remote_file_name)
+            # overwrite the remote_file_name
+            t.putfile(local_file_name,remote_file_name)
             
+            # remote path is an empty string
             with self.assertRaises(IOError):
-                # remote path is an empty string
                 t.get('',retrieved_file_name)
+            with self.assertRaises(IOError):
+                t.getfile('',retrieved_file_name)
 
+            # local path is an empty string
+            # ValueError because it is not an abs path
             with self.assertRaises(ValueError):
-                # local path is an empty string
-                # ValueError because it is not an abs path
                 t.get(remote_file_name,'')
+            with self.assertRaises(ValueError):
+                t.getfile(remote_file_name,'')
 
-                # TODO : get doesn't retrieve empty files.
-                # Is it what we want?
+            # TODO : get doesn't retrieve empty files.
+            # Is it what we want?
             t.get(remote_file_name,retrieved_file_name)
+            # overwrite retrieved_file_name
+            t.getfile(remote_file_name,retrieved_file_name)
 
             os.remove(local_file_name)
             t.remove(remote_file_name)
@@ -424,8 +449,79 @@ class TestPutGet(unittest.TestCase):
             os.remove(retrieved_file_name)
 
             t.chdir('..')
-
             t.rmdir(directory)
+
+
+class TestPutGetTree(unittest.TestCase):
+    """
+    Test to verify whether the put and get functions behave correctly on folders.
+    1) they work
+    2) they need abs paths where necessary, i.e. for local paths
+    3) they reject empty strings
+    """
+
+    def test_put_and_get(self):
+        import os
+        import random
+        import string
+        
+        local_dir = os.path.join('/','tmp')
+        remote_dir = local_dir
+        directory = 'tmp_try'
+
+        with custom_transport as t:
+
+            t.chdir(remote_dir)
+            
+            while os.path.exists(os.path.join(local_dir,directory) ):
+                # I append a random letter/number until it is unique
+                directory += random.choice(
+                    string.ascii_uppercase + string.digits)
+
+            local_subfolder = os.path.join(local_dir,directory,'tmp1')
+            remote_subfolder = 'tmp2'
+            retrieved_subfolder = os.path.join(local_dir,directory,'tmp3')
+            
+            os.mkdir(os.path.join(local_dir,directory))
+            os.mkdir(os.path.join(local_dir,directory,local_subfolder))
+            
+            t.chdir(directory)
+
+            local_file_name = os.path.join(local_subfolder,'file.txt')
+            # remote_file_name = os.path.join(remote_subfolder,'file_remote.txt')
+            # retrieved_file_name = os.path.join(local_dir,directory,local_subfolder,
+            #                                   'file_retrieved.txt')
+
+            text = 'Viva Verdi\n'
+            with open(local_file_name,'w') as f:
+                f.write(text)
+
+            # here use full path in src and dst
+            t.put(local_subfolder,remote_subfolder)
+            t.get(remote_subfolder,retrieved_subfolder)
+
+            # Here I am mixing the local with the remote fold
+            list_of_dirs = t.listdir('.')
+            # # it is False because local_file_name has the full path,
+            # # while list_of_files has not
+            self.assertFalse( local_subfolder in list_of_dirs)
+            self.assertTrue( remote_subfolder in list_of_dirs)
+            self.assertFalse( retrieved_subfolder in list_of_dirs)
+            self.assertTrue( 'tmp1' in list_of_dirs)
+            self.assertTrue( 'tmp3' in list_of_dirs)
+
+            list_pushed_file = t.listdir('tmp2')
+            list_retrieved_file = t.listdir('tmp3')
+            self.assertTrue( 'file.txt' in list_pushed_file )
+            self.assertTrue( 'file.txt' in list_retrieved_file )
+            
+            # os.remove(local_file_name)
+            # t.remove(remote_file_name)
+            # os.remove(retrieved_file_name)
+
+            # t.chdir('..')
+            # t.rmdir(directory)
+            
 
 
 class TestExecuteCommandWait(unittest.TestCase):
@@ -511,8 +607,6 @@ class TestExecuteCommandWait(unittest.TestCase):
             with self.assertRaises(ValueError):
                 retcode, stdout, stderr = t.exec_command_wait(
                     'cat', stdin=1)
-
-
 
 
 def run_tests(transport_to_test):

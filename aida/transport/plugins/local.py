@@ -75,6 +75,7 @@ class LocalTransport(aida.transport.Transport):
                 "Error, local method called for LocalTransport "
                 "without opening the channel first")
 
+
     def chdir(self, path):
         """
         Changes directory to path, emulated internally.
@@ -85,12 +86,14 @@ class LocalTransport(aida.transport.Transport):
             self._internal_dir = os.path.normpath( new_path )
         else:
             raise IOError('Not having read permissions')
+
     
     def normalize(self, path):
         """
         Normalizes path, eliminating double slashes, etc..
         """
         return os.path.realpath( os.path.join(self.curdir,path) )
+
     
     def getcwd(self):
         """
@@ -98,17 +101,20 @@ class LocalTransport(aida.transport.Transport):
         """
         return self.curdir
 
+
     def mkdir(self, path):
         """
         Creates the folder path.
         """
         os.mkdir( os.path.join( self.curdir,path ) )
 
+
     def rmdir(self, path):
         """
         Removes a folder at location path.
         """
         os.rmdir( os.path.join( self.curdir,path ) )
+
 
     def isdir(self,path):
         """
@@ -119,6 +125,7 @@ class LocalTransport(aida.transport.Transport):
             return False
         else:
             return os.path.isdir( os.path.join( self.curdir,path ) )
+
 
     def chmod(self,path,mode):
         """
@@ -131,11 +138,11 @@ class LocalTransport(aida.transport.Transport):
             raise IOError("Directory not given in input")
         else:
             os.chmod( real_path , mode )
+            
     
-    def put(self,source,destination):
+    def put(self,source,destination,dereference=False):
         """
         Copies a file from source to destination
-        (equivalent to copy)
         """
         if not destination:
             raise IOError("Input destination to put function "
@@ -144,15 +151,62 @@ class LocalTransport(aida.transport.Transport):
             raise ValueError("Input source to put function "
                              "must be a non empty string")
 
-        if os.path.isabs( source ):
-            return self.copy( source,destination )
-        else:
+        if not os.path.isabs( source ):
             raise ValueError("Source must be an absolute path")
 
-    def get(self,source,destination):
+        if self.isdir(source):
+            return self.puttree( source,destination,dereference )
+        else:
+            return self.putfile( source,destination )
+                    
+
+    def putfile(self,source,destination):
+        """
+        """
+        if not destination:
+            raise IOError("Input destination to putfile "
+                             "must be a non empty string")
+        if not source:
+            raise ValueError("Input source to putfile "
+                             "must be a non empty string")
+
+        if not os.path.isabs( source ):
+            raise ValueError("Source must be an absolute path")
+
+        if not os.path.exists( source ):
+            raise OSError( "Source does not exists" )
+
+        try:
+            shutil.copyfile( source, os.path.join(self.curdir,destination) )
+            return True
+        except Exception as e:
+            raise IOError("Error while executing shutil.copyfile")
+
+        
+    def puttree(self,source,destination,dereference=False):
+        if not destination:
+            raise IOError("Input destination to putfile "
+                             "must be a non empty string")
+        if not source:
+            raise ValueError("Input source to putfile "
+                             "must be a non empty string")
+
+        if not os.path.isabs( source ):
+            raise ValueError("Source must be an absolute path")
+
+        if not os.path.exists( source ):
+            raise OSError( "Source does not exists" )
+
+        try:
+            shutil.copytree( source, os.path.join(self.curdir,destination) )
+            return True
+        except Exception as e:
+            raise IOError("Error while executing shutil.copyfile")
+
+
+    def get(self,source,destination,dereference=False):
         """
         Copies a file from source to destination
-        (equivalent to copy)
         """
         if not destination:
             raise ValueError("Input destination to get function "
@@ -164,40 +218,117 @@ class LocalTransport(aida.transport.Transport):
         if not os.path.exists( os.path.join(self.curdir,source) ):
             raise IOError("Source not found")
 
-        if os.path.isabs( destination ):
-            return self.copy( source,destination )
-        else:
+        if not os.path.isabs( destination ):
             raise ValueError("Destination must be an absolute path")
 
-    
-    def copy(self,source,destination,dereference=False):
+        if self.isdir(source):
+            return self.gettree( source,destination,dereference )
+        else:
+            return self.getfile( source,destination )
+
+
+    def getfile(self,source,destination):
         """
         Copies a file from source to destination
+        (equivalent to copy)
         """
         if not destination:
-            raise ValueError("Input destination to copy function "
+            raise ValueError("Input destination to get function "
                              "must be a non empty string")
         if not source:
-            raise ValueError("Input source to copy function "
+            raise IOError("Input source to get function "
                              "must be a non empty string")
+        the_source = os.path.join(self.curdir,source)
+        if not os.path.exists( the_source ):
+            raise IOError("Source not found")
+        if not os.path.isabs( destination ):
+            raise ValueError("Destination must be an absolute path")
+
+        try:
+            shutil.copyfile( the_source, destination )
+            return True
+        except Exception as e:
+            raise IOError("Error while executing shutil.copyfile")
         
+
+    def gettree(self,source,destination,dereference=False):
+        """
+        Copies a file from source to destination
+        (equivalent to copy)
+        """
+        if not destination:
+            raise ValueError("Input destination to get function "
+                             "must be a non empty string")
+        if not source:
+            raise IOError("Input source to get function "
+                             "must be a non empty string")
+        the_source = os.path.join(self.curdir,source)
+        if not os.path.exists( the_source ):
+            raise IOError("Source not found")
+        if not os.path.isabs( destination ):
+            raise ValueError("Destination must be an absolute path")
+
+        try:
+            shutil.copytree( the_source, destination, symlinks=dereference )
+            return True
+        except Exception as e:
+            raise IOError("Error while executing shutil.copyfile")
+
+
+    def copy(self,source,destination,dereference=False):
+        """
+        """
+        if not source:
+            raise ValueError("Input source to copy "
+                             "must be a non empty object")
+        if not destination:
+            raise ValueError("Input destination to copy "
+                             "must be a non empty object")
+        if not os.path.exists(os.path.join( self.curdir,source )):
+            raise OSError("Source not found")
+        if self.isdir(source):
+            return self.copytree(source,destination,dereference)
+
+        if self.isfile(source):
+            return self.copyfile( source,destination )        
+
+
+    def copyfile(self,source,destination):
+        """
+        """
+        if not source:
+            raise ValueError("Input source to copyfile "
+                             "must be a non empty object")
+        if not destination:
+            raise ValueError("Input destination to copyfile "
+                             "must be a non empty object")
         the_source = os.path.join( self.curdir,source )
         the_destination = os.path.join( self.curdir,destination )
         if not os.path.exists(the_source):
             raise OSError("Source not found")
-            
-        if self.isdir(the_source):
-            try:
-                shutil.copytree( the_source, the_destination, symlinks=dereference )
-                return True
-            except Exception as e:
-                raise IOError("Error while executing shutil.copytree")
-        if self.isfile(the_source):
-            try:
-                shutil.copyfile( the_source, the_destination )
-                return True
-            except Exception as e:
-                raise IOError("Error while executing shutil.copyfile")
+        try:
+            shutil.copyfile( the_source, the_destination )
+            return True
+        except Exception as e:
+            raise IOError("Error while executing shutil.copyfile")
+
+
+    def copytree(self,source,destination,dereference=False):
+        if not source:
+            raise ValueError("Input source to copytree "
+                             "must be a non empty object")
+        if not destination:
+            raise ValueError("Input destination to copytree "
+                             "must be a non empty object")
+        the_source = os.path.join( self.curdir,source )
+        the_destination = os.path.join( self.curdir,destination )
+        if not os.path.exists(the_source):
+            raise OSError("Source not found")
+        try:
+            shutil.copytree( the_source, the_destination, symlinks = dereference )
+            return True
+        except Exception as e:
+            raise IOError("Error while executing shutil.copytree")
             
     
     def get_attribute(self,path):
@@ -214,7 +345,6 @@ class LocalTransport(aida.transport.Transport):
         return aida_attr
 
 
-    
     def listdir(self,path='.'):
         """
         Returns a list containing the names of the entries in the directory .
@@ -227,7 +357,6 @@ class LocalTransport(aida.transport.Transport):
         Removes a file at position path.
         """
         os.remove( os.path.join( self.curdir,path ) )
-
 
     
     def isfile(self,path):

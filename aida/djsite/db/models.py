@@ -405,4 +405,59 @@ class Comment(m.Model):
     content = m.TextField(blank=True)
 
 
+#
+#
+#
 
+workflow_step_exit = "wf_exit"
+
+class DbWorkflow(m.Model):
+
+    from aida.common.datastructures import calcStates
+
+    uuid        = UUIDField(auto=True)
+    time        = m.DateTimeField(auto_now_add=True, editable=False)
+    user        = m.ForeignKey(User)
+    comment     = m.TextField(blank=True)
+    status      = m.CharField(choices=calcStates,default=calcStates.NEW)
+
+    def get_calculations(self):
+
+        return Calculations.query(steps=self.steps)
+
+    
+class DbWorkflowStep(m.Model):
+
+    from aida.common.datastructures import calcStates
+
+    workflow     = m.ForeignKey(DbWorkflow, related_name='steps')
+    name         = m.CharField(max_length=255, blank=False)
+    user         = m.ForeignKey(User)
+    time         = m.DateTimeField(auto_now_add=True, editable=False)
+    nextcall     = m.CharField(max_length=255, blank=False, default=workflow_step_exit)
+    calculations = m.ManyToManyField('DbNode', symmetrical=False, related_name="steps")
+    status       = m.CharField(choices=calcStates,default=calcStates.NEW)
+
+    class Meta:
+        unique_together = (("workflow", "name"))
+
+
+    def add_calculation(self, calculation):
+        
+        from aida.orm import Calculation
+
+        if (not isinstance(step_calculation, Calculation)):
+            raise ValueError("Cannot add a non-Calculation object to a workflow step")          
+
+        self.calculations.add(calculation)
+
+    def get_calculations(self):
+
+        return Calculations.query(steps=self)#pk__in = step.calculations.values_list("pk", flat=True))
+
+    def update_status(self, extended = False):
+
+        calc_status = self.calculations.filter(attributes__key="_state").values_list("uuid", "attributes__tval")
+        s = set([l[1] for l in status])
+        
+        return

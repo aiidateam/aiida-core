@@ -8,7 +8,7 @@ from aida.common.utils import get_repository_folder
 _sandbox_folder = os.path.realpath(os.path.join(get_repository_folder(),'sandbox'))
 _perm_repository = os.path.realpath(os.path.join(get_repository_folder(),'repository'))
 
-_valid_sections = ['node']
+_valid_sections = ['node', 'workflow']
 
 class Folder(object):
     """

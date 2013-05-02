@@ -3,6 +3,41 @@ import string
 
 from aida.common.exceptions import ConfigurationError
 
+CONFIG_FNAME = 'config.json'
+
+def backup_config():
+    
+    import shutil
+    aida_dir    = os.path.expanduser("~/.aida")
+    conf_file   = os.path.join(aida_dir, CONFIG_FNAME)
+    if (os.path.isfile(conf_file)):
+        shutil.copy(conf_file, conf_file+"_bk")
+    
+def get_config():
+    
+    import json
+    
+    aida_dir    = os.path.expanduser("~/.aida")
+    conf_file   = os.path.join(aida_dir, CONFIG_FNAME)
+    if (os.path.isfile(conf_file)):
+        with open(conf_file,"r") as json_file:
+            return json.load(json_file)
+    else:
+        raise ConfigurationError
+
+def store_config(confs):
+    
+    import json
+    
+    aida_dir    = os.path.expanduser("~/.aida")
+    conf_file   = os.path.join(aida_dir, CONFIG_FNAME)
+    
+    try:
+        with open(conf_file,"w") as json_file:
+            json.dump(confs, json_file)
+    except:
+        raise ConfigurationError
+    
 def load_django():
 #    from django.core.management import setup_environ
 #    from scalingtest import settings

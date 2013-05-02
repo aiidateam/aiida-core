@@ -53,15 +53,27 @@ class TransitiveClosure(unittest.TestCase):
         n4.add_link_to(n5)
         n2.add_link_to(n4)
 
+
         n6.add_link_to(n7)
         n7.add_link_to(n8)
-        n5.add_link_to(n6)
-        n9.add_link_to(n7)
-        n6.add_link_to(n9)
 
-        # For this graph, there should be 4 links connecting 1 to 8
+        # Yet, no links from 1 to 8
+        self.assertEquals(len(Path.objects.filter(parent=n1,child=n8).distinct()),0)
+
+        n5.add_link_to(n6)
+        # Yet, now 2 links from 1 to 8
+        self.assertEquals(len(Path.objects.filter(parent=n1,child=n8).distinct()),2)
+
+        n9.add_link_to(n7)
+        # Still two links...
+        self.assertEquals(len(Path.objects.filter(parent=n1,child=n8).distinct()),2)
+
+        n6.add_link_to(n9)
+        # And now there should be 4 nodes
         self.assertEquals(len(Path.objects.filter(parent=n1,child=n8).distinct()),4)
         
+        ### I start deleting now
+
         # I cut one branch below: I should loose 2 links
         Link.objects.filter(input=n6, output=n9).delete()
         self.assertEquals(len(Path.objects.filter(parent=n1,child=n8).distinct()),2)
@@ -583,6 +595,7 @@ class TestNodeBasic(unittest.TestCase):
         # directly loading datetime.datetime.now(), or you can get a
         # "can't compare offset-naive and offset-aware datetimes" error
         from django.utils import timezone
+        import time
 
         a = Node()
         with self.assertRaises(ModificationNotAllowed):
@@ -590,8 +603,10 @@ class TestNodeBasic(unittest.TestCase):
         self.assertEquals(a.get_comments(),[])
         a.store()
         before = timezone.now()
+        time.sleep(1) # I wait 1 second because MySql time precision is 1 sec
         a.add_comment('text')
         a.add_comment('text2')        
+        time.sleep(1)
         after = timezone.now()
 
         comments = a.get_comments()

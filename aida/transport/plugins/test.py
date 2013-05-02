@@ -683,7 +683,7 @@ class TestPutGetTree(unittest.TestCase):
             
             # local filename is not an abs path
             with self.assertRaises(ValueError):
-                t.gettree(remote_subfolder,'delete_me')
+                t.gettree(remote_subfolder,'delete_me_tree')
 
             os.remove(os.path.join(local_subfolder,'file.txt'))
             os.rmdir(local_subfolder)

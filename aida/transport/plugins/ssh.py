@@ -467,6 +467,9 @@ class SshTransport(aida.transport.Transport):
             raise IOError("Remotepath must be a non empty string")
         if not localpath:
             raise ValueError("Localpaths must be a non empty string")
+
+        if not os.path.isabs(localpath):
+            raise ValueError("Localpaths must be an absolute path")
         
         if not os.path.isdir(dest):
             os.mkdir(dest)

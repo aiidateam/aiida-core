@@ -50,7 +50,8 @@ class PbsproScheduler(aida.scheduler.Scheduler):
     """
     _logger = aida.scheduler.Scheduler._logger.getChild('pbspro')
 
-    def _get_joblist_command(self,jobs=None,user=None): 
+
+    def _get_joblist_command(self,jobs=None): 
         """
         The command to report full information on existing jobs.
 
@@ -58,17 +59,15 @@ class PbsproScheduler(aida.scheduler.Scheduler):
               to pass the -t options to list each subjob).
         """
         command = 'qstat -f'
-        if user:
-            command += ' -u {}'.format(escape_for_bash(user))
         if jobs:
             if isinstance(jobs, basestring):
-                command += ' {}'.format(jobs)
+                command += ' {}'.format(escape_for_bash(jobs))
             else:
                 try:
-                    command += ' {}'.format(' '.join(jobs))
+                    command += ' {}'.format(' '.join(escape_for_bash(j) for j in jobs))
                 except TypeError:
                     raise TypeError(
-                        "If provided, the 'jobs' variable must be a list of strings")
+                        "If provided, the 'jobs' variable must be a string or a list of strings")
             
         self.logger.debug("qstat command: {}".format(command))
         return command
@@ -267,17 +266,25 @@ class PbsproScheduler(aida.scheduler.Scheduler):
             in the qstat output; missing jobs (for whatever reason) simply
             will not appear here.
         """
+        # I don't raise because if I pass a list of jobs, I get a non-zero status
+        # if one of the job is not in the list anymore
+
         # retval should be zero
-        if retval != 0:
-            self.logger.error("Error in _parse_joblist_output: retval={}; "
-                "stdout={}; stderr={}".format(retval, stdout, stderr))
-            raise SchedulerError(
-                "Error during qstat parsing (_parse_joblist_output function)")
+        #if retval != 0:
+            #self.logger.warning("Error in _parse_joblist_output: retval={}; "
+            #    "stdout={}; stderr={}".format(retval, stdout, stderr))
+
 
         # issue a warning if there is any stderr output
-        if stderr.strip():
-            self.logger.error("Warning in _parse_joblist_output, non-empty "
-                "stderr='{}'".format(stderr))
+        # but I strip lines containing "Unknown Job Id", that happens
+        # also when I ask for a calculation that has finished
+        filtered_stderr = '\n'.join(l for l in stderr.split('\n') if "Unknown Job Id" not in l)
+        if filtered_stderr.strip():
+            self.logger.warning("Warning in _parse_joblist_output, non-empty "
+                "(filtered) stderr='{}'".format(filtered_stderr))
+            if retval != 0:
+                raise SchedulerError(
+                    "Error during qstat parsing (_parse_joblist_output function)")
 
         jobdata_raw = [] # will contain raw data parsed from qstat output
         # Get raw data and split in lines
@@ -296,11 +303,10 @@ class PbsproScheduler(aida.scheduler.Scheduler):
                         # The list is still empty! (This means that I found a
                         # non-empty line, before finding the first 'Job Id:'
                         # string: it is an error. However this may happen
-                        # only before the first job. To err on the safe side,
-                        # I print a warning instead of crashing).
-                        #raise SchedulerParsingError("I did not find the header for the first job")
-                        self.logger.warning("I found some text before the "
-                        "first job: {}".format(l))
+                        # only before the first job. 
+                        raise SchedulerParsingError("I did not find the header for the first job")
+                        #self.logger.warning("I found some text before the "
+                        #"first job: {}".format(l))
                     else:
                         if l.startswith(' '):
                             # If it starts with a space, it is a new field
@@ -626,14 +632,7 @@ if __name__ == '__main__':
     import unittest
     import logging
     import uuid
-    from aida.common.pluginloader import load_plugin
-    
-    # TODO : clean the old commands when the test will be possible to be carried offline
-    
-    # from aida.transport import Transport
-    
-    # SshTransport = load_plugin(Transport, 'aida.transport.plugins', 'ssh')
-    
+        
     text_qstat_f_to_test = """Job Id: 68350.mycluster
     Job_Name = cell-Qnormal
     Job_Owner = usernum1@mycluster.cluster

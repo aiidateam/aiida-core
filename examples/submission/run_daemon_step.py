@@ -6,7 +6,7 @@ from aida.execmanager import update_jobs
 
 from aida.common import aidalogger
 import logging
-aidalogger.setLevel(logging.INFO)
+aidalogger.setLevel(logging.DEBUG)
 
 update_jobs()
 #retrieve_jobs()

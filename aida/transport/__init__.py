@@ -153,6 +153,34 @@ class Transport(object):
         raise NotImplementedError
     
     
+    def copyfile(self,remotesource,remotedestination,*args,**kwargs):
+        """
+        Copy a file from remote source to remote destination 
+        (On the same remote machine)
+        
+        Args:
+            remotesource (str) - path of the remote source directory / file
+            remotedestination (str) - path of the remote destination directory / file
+
+        Raises: IOError if one of src or dst does not exist
+        """
+        raise NotImplementedError
+
+    
+    def copytree(self,remotesource,remotedestination,*args,**kwargs):
+        """
+        Copy a folder from remote source to remote destination 
+        (On the same remote machine)
+        
+        Args:
+            remotesource (str) - path of the remote source directory / file
+            remotedestination (str) - path of the remote destination directory / file
+        
+        Raises: IOError if one of src or dst does not exist
+        """
+        raise NotImplementedError
+
+    
     def _exec_command_internal(self,command, **kwargs):
         """
         Execute the command on the shell, similarly to os.system.
@@ -185,14 +213,12 @@ class Transport(object):
             command (str) - execute the command given as a string
         """
         raise NotImplementedError
-
+    
     
     def get(self, remotepath, localpath, *args, **kwargs):
         """
-        Retrieve a file from remote source to local destination
+        Retrieve a file or folder from remote source to local destination
         dst must be an absolute path (src not necessarily)
-
-        TODO: To be implemented in the plugins
         
         Args:
             remotepath (str) - remote_folder_path
@@ -200,7 +226,31 @@ class Transport(object):
         """
         raise NotImplementedError
 
-    
+
+    def getfile(self, remotepath, localpath, *args, **kwargs):
+        """
+        Retrieve a file from remote source to local destination
+        dst must be an absolute path (src not necessarily)
+        
+        Args:
+            remotepath (str) - remote_folder_path
+            localpath (str) - local_folder_path
+        """
+        raise NotImplementedError
+
+
+    def gettree(self, remotepath, localpath, *args, **kwargs):
+        """
+        Retrieve a folder recursively from remote source to local destination
+        dst must be an absolute path (src not necessarily)
+        
+        Args:
+            remotepath (str) - remote_folder_path
+            localpath (str) - local_folder_path
+        """
+        raise NotImplementedError
+
+
     def getcwd(self):
         """
         Return a string identifying the current working directory
@@ -222,8 +272,6 @@ class Transport(object):
             - st_mode: protection bits
             - st_atime: time of most recent access
             - st_mtime: time of most recent modification
-
-        TODO: define in this Module the object
 
         Args:
             path (str) - path to file
@@ -268,15 +316,33 @@ class Transport(object):
         path (str) - path to list (default to '.')
         """
         raise NotImplementedError
+
+
+    def makedirs(self,path,ignore_existing=False):
+        """
+        Super-mkdir; create a leaf directory and all intermediate ones.
+        Works like mkdir, except that any intermediate path segment (not
+        just the rightmost) will be created if it does not exist.
+
+        Args:
+            path (str) - directory to create
+            ignore_existing (bool) - if set to true, it doesn't give any error
+            if the leaf directory does already exist
+
+        Raises:
+            If the directory already exists, OSError is raised.
+        """
+        raise NotImplementedError
     
     
-    def mkdir(self,path):
+    def mkdir(self,path,ignore_existing=False):
         """
         Create a folder (directory) named path.
 
         Args:
             path (str) - name of the folder to create
-
+            ignore_existing: if True, does not give any error if the directory
+                already exists
         Raises:
             If the directory already exists, OSError is raised.
         """
@@ -300,10 +366,33 @@ class Transport(object):
 
     def put(self, localpath, remotepath, *args, ** kwargs):
         """
+        Put a file or a directory from local src to remote dst.
+        src must be an absolute path (dst not necessarily))
+        Redirects to putfile and puttree.
+       
+        Args:
+           localpath (str) - remote_path
+           remotepath (str) - local_path
+        """
+        raise NotImplementedError
+
+
+    def putfile(self, localpath, remotepath, *args, ** kwargs):
+        """
         Put a file from local src to remote dst.
         src must be an absolute path (dst not necessarily))
+        
+        Args:
+           localpath (str) - remote_file_path
+           remotepath (str) - local_file_path
+        """
+        raise NotImplementedError
 
-        TODO: To be implemented in the plugins
+
+    def puttree(self, localpath, remotepath, *args, ** kwargs):
+        """
+        Put a folder recursively from local src to remote dst.
+        src must be an absolute path (dst not necessarily))
         
         Args:
            localpath (str) - remote_folder_path
@@ -342,13 +431,24 @@ class Transport(object):
 
     def rmdir(self,path):
         """
-        Remove the folder named path
+        Remove the folder named path.
+        This works only for empty folders. For recursive remove, use rmtree.
 
         Args:
-            path (str) - name of the folder to remove
+            path (str) - absolute path to the folder to remove
         """
         raise NotImplementedError
 
+
+    def rmtree(self,path):
+        """
+        Remove recursively the content at path
+
+        Args:
+            path (str): absolute path to remove
+        """
+        raise NotImplementedError
+    
     
     def whoami(self):
         """
@@ -359,6 +459,8 @@ class Transport(object):
             retval (int)
             stderr (sStr)
         """
+        # TODO : add tests for this class
+        
         command = 'whoami'
         retval, username, stderr = self.exec_command_wait(command)
         if retval == 0:
@@ -371,4 +473,4 @@ class Transport(object):
                               "stderr: '{}'".format(retval, username, stderr))
             raise IOError("Error while executing cp. Exit code: {}".format(retval) )
 
-
+ 

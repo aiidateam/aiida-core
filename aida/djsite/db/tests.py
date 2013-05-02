@@ -583,6 +583,7 @@ class TestNodeBasic(unittest.TestCase):
         # directly loading datetime.datetime.now(), or you can get a
         # "can't compare offset-naive and offset-aware datetimes" error
         from django.utils import timezone
+        import time
 
         a = Node()
         with self.assertRaises(ModificationNotAllowed):
@@ -590,8 +591,10 @@ class TestNodeBasic(unittest.TestCase):
         self.assertEquals(a.get_comments(),[])
         a.store()
         before = timezone.now()
+        time.sleep(1) # I wait 1 second because MySql time precision is 1 sec
         a.add_comment('text')
         a.add_comment('text2')        
+        time.sleep(1)
         after = timezone.now()
 
         comments = a.get_comments()

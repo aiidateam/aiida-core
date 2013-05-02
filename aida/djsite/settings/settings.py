@@ -31,7 +31,11 @@ DATABASES = {
 ## Setup a sqlite3 DB for tests (WAY faster, since it remains in-memory
 ## and not on disk.
 if 'test' in sys.argv:
-    DATABASES['default'] = {'ENGINE': 'django.db.backends.sqlite3'}
+    # if you define such a variable to False, it will use the same backend
+    # that you have already configured also for tests. Otherwise, 
+    # Setup a sqlite3 DB for tests (WAY faster, since it remains in-memory)
+    if globals().get('use_inmemory_sqlite_for_tests', True):
+        DATABASES['default'] = {'ENGINE': 'django.db.backends.sqlite3'}
     ###################################################################
     # IMPORTANT! Choose a different repository location, otherwise 
     # real data will be destroyed during tests!!

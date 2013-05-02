@@ -237,15 +237,52 @@ class SshTransport(aida.transport.Transport):
                           "already exists? ({})".format(
                               path,self.getcwd(), e.message))
 
-        # TODO : implement remove tree
+    # TODO : implement rmtree
     def rmtree(self,path):
-        raise NotImplementedError
+        """
+        Remove a file or a directory at path, recursively
+        Flags used: -r: recursive copy; -f: force, makes the command non interactive;
+
+        Args:
+            path (str) - remote path to delete
+
+        Raises:
+            IOError if the rm execution failed.
+        """
+        # Assuming linux rm command!
+        
+        # TODO : do we need to avoid the aliases when calling rm_exe='rm'? Call directly /bin/rm?
+                
+        rm_exe = 'rm'
+        rm_flags = '-r -f'
+        # if in input I give an invalid object raise ValueError
+        if not path:
+            raise ValueError('Input to rmtree() must be a non empty string. ' +
+                             'Found instead %s as path' % path)
+        
+        command = '{} {} {}'.format(rm_exe,
+                                       rm_flags,
+                                       escape_for_bash(path))
+
+        retval,stdout,stderr = self.exec_command_wait(command)
+        
+        if retval == 0:
+            if stderr.strip():
+                self.logger.warning("There was nonempty stderr in the rm "
+                                    "command: {}".format(stderr))
+            return True
+        else:
+            self.logger.error("Problem executing rm. Exit code: {}, stdout: '{}', "
+                              "stderr: '{}'".format(retval, stdout, stderr))
+            raise IOError("Error while executing rm. Exit code: {}".format(retval) )
+
     
     def rmdir(self, path):
         """
         Remove the folder named 'path' if empty.
         """
         self.sftp.rmdir(path)
+
 
     def isdir(self,path):
         """

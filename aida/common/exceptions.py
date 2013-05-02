@@ -52,7 +52,7 @@ class ConfigurationError(AidaException):
     """
     pass
 
-class DBContentError(AidaException):
+class DbContentError(AidaException):
     """
     Raised when the content of the DB is not valid.
     This should never happen if the user does not play directly
@@ -65,6 +65,13 @@ class AuthenticationError(AidaException):
     Raised when a user tries to access a resource for which it is
     not authenticated, e.g. an aidauser tries to access a computer
     for which there is no entry in the AuthInfo table.
+    """
+    pass
+
+class InputValidationError(ValidationError):
+    """
+    The input data for a calculation did not validate (e.g., missing
+    required input data, wrong data, ...)
     """
     pass
 

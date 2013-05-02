@@ -10,7 +10,7 @@ TODO: implement pre_... and post_... hooks to add arbitrary strings before
 import os
 from aida.codeplugins.input.quantumespresso import (
     conv_to_fortran, get_input_data_text)
-from aida.codeplugins.exceptions import InputValidationError
+from aida.common.exceptions import InputValidationError
 from aida.common.utils import get_suggestion
 from aida.common.utils import get_unique_filename
 

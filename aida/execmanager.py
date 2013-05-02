@@ -202,8 +202,9 @@ def submit_calc(calc):
     from aida.orm import Calculation, Code, Data
     from aida.common.pluginloader import load_plugin
     from aida.common.folders import SandboxFolder
-    from aida.common.exceptions import MissingPluginError, InputValidationError
+    from aida.common.exceptions import InputValidationError, MissingPluginError, ValidationError
     from aida.scheduler.datastructures import JobTemplate
+    from aida.common.utils import validate_list_of_two_string_tuples
 
     
     if not isinstance(calc,Calculation):
@@ -337,7 +338,19 @@ def submit_calc(calc):
                     execlogger.debug("copying file {}...".format(f))
                     t.put(folder.get_file_path(f), f)
 
-                # TODO!! copy local resources remotely
+                # local_copy_list is a list of tuples, each with (src_abs_path, dest_rel_path)
+                local_copy_list = calcinfo.local_copy_list
+                if local_copy_list is None:
+                    local_copy_list = []
+                try:
+                    validate_list_of_two_string_tuples(local_copy_list)
+                except ValidationError as e:
+                    raise PluginInternalError()
+
+                for src_abs_path, dest_rel_path in local_copy_list:
+                    execlogger.debug('copying local file to {}'.format(dest_rel_path))
+                    t.put(src_abs_path, dest_rel_path)
+
                 # TODO!! manage remote copy
     
                 if code.is_local():

@@ -8,6 +8,9 @@ from aida.common import aidalogger
 import logging
 aidalogger.setLevel(logging.INFO)
 
+import tempfile
+import datetime
+
 from aida.orm import Calculation, Code, Data, Computer
 from aida.execmanager import submit_calc
 from aida.djsite.utils import get_automatic_user
@@ -15,10 +18,11 @@ from aida.djsite.utils import get_automatic_user
 #from aida.common.pluginloader import load_plugin
 #ParameterData = load_plugin(Data, 'aida.orm.dataplugins', 'parameter')
 from aida.orm.dataplugins.parameter import ParameterData
+from aida.orm.dataplugins.singlefile import SinglefileData
 
 computername = "bellatrix.epfl.ch"
 # A string with the version of this script, used to recreate a code when necessary
-current_version = "1.0.1"
+current_version = "1.0.2"
 
 def get_or_create_machine():
     import json
@@ -84,6 +88,16 @@ except KeyError:
 except ValueError:
     print >> sys.stderr, "The values on the command line are not valid numbers"
     sys.exit(1)
+
+try:
+    with open('check.txt') as f:
+        print '*'*80
+        print "Read from file check.txt:"
+        print f.read()
+        print '*'*80
+except IOError:
+    print >> sys.stderr, "No check file found!"
+    sys.exit(1)
 """)
             f.flush()
             code = Code(local_executable = "sum.py", 
@@ -111,6 +125,7 @@ template_data = ParameterData({
     'input_file_name': "factor.dat",
     'cmdline_params': ["{add1}", "{add2}"],
     'output_file_name': "result.txt",
+    'files_to_copy': [('the_only_file','check.txt')],
     }).store()
 
 parameters = ParameterData({
@@ -118,6 +133,12 @@ parameters = ParameterData({
     'add2': 7.89,
     'factor': 2,
     }).store()
+
+with tempfile.NamedTemporaryFile() as f:
+    f.write("double check, created @ {}".format(datetime.datetime.now()))
+    f.flush()
+    # I don't worry of the name with which it is internally stored
+    fileparam = SinglefileData(filename=f.name).store()
 
 calc = Calculation(computer=computer)
 calc.set_max_wallclock_seconds(12*60) # 12 min
@@ -131,6 +152,7 @@ calc.add_link_from(code)
 
 calc.add_link_from(template_data, label="template")
 calc.add_link_from(parameters, label="parameters")
+calc.add_link_from(fileparam, label="the_only_file")
 
 submit_calc(calc)
 print "submitted calculation; calc=Calculation(uuid='{}') # ID={}".format(

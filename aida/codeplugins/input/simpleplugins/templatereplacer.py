@@ -102,6 +102,7 @@ class TemplatereplacerInputPlugin(InputPlugin):
         cmdline_params = [i.format(**parameters) for i in cmdline_params_tmpl]
 
         calcinfo = CalcInfo()
+        calcinfo.retrieve_list = []
 
         calcinfo.uuid = calculation.uuid
         calcinfo.cmdlineParams = cmdline_params
@@ -109,12 +110,14 @@ class TemplatereplacerInputPlugin(InputPlugin):
             calcinfo.stdinName = input_file_name
         if output_file_name:
             calcinfo.stdoutName = output_file_name
+            calcinfo.retrieve_list.append(output_file_name)
 
+        
 
-        # TODO: implement in the CalcInfo objects the fields for 
+        # TODO: implement
         #        'jobEnvironment',
-        #        'prependText', # (both from computer and code)
-        #        'appendText',  # (both from computer and code)
+        #        'prependText',
+        #        'appendText', 
         #        'stderrName',
         #        'joinFiles',
         

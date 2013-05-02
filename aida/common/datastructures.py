@@ -14,6 +14,7 @@ calcStates = CalcState((
         'RETRIEVING', # while retrieving data
         'RETRIEVED',  # data retrieved, no more need to connect to scheduler
         'SUBMISSIONFAILED', # error occurred during submission phase
+        'RETRIEVALFAILED', # error occurred during retrieval phase
         ))
 
 
@@ -25,7 +26,6 @@ class CalcInfo(DefaultFieldsAttributeDict):
     passed to the ExecManager 
     
     # TODO:
-    * retrieve_output_list
     * dynresources_info
     """
     _default_fields = (
@@ -34,10 +34,9 @@ class CalcInfo(DefaultFieldsAttributeDict):
         'emailOnStarted',
         'emailOnTerminated',
         'uuid',
-        'prependText', # (both from computer and code)
-        'appendText',  # (both from computer and code)
-        'cmdlineParams',         # (including everything, also mpirun etc.; argv[0] is
-                        #   the executable
+        'prependText', 
+        'appendText',  
+        'cmdlineParams',  # as a list of strings
         'stdinName',
         'stdoutName',
         'stderrName',
@@ -49,6 +48,9 @@ class CalcInfo(DefaultFieldsAttributeDict):
         'maxWallclockSeconds',
         'maxMemoryKb',
         'rerunnable',
+        'retrieve_list', # a list of files or patterns to retrieve
+        'local_file_list', # a list of length-two tuples with (localabspath, relativedestpath)
+        'remote_file_list', # a list of length-three tuples with (remotemachinename, remoteabspath, relativedestpath)
         )
 
 

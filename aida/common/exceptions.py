@@ -39,6 +39,13 @@ class InternalError(AidaException):
     """
     pass
 
+class PluginInternalError(InternalError):
+    """
+    Error raised when there is an internal error which is due to a plugin
+    and not to the aida infrastructure.
+    """
+    pass
+
 class ValidationError(AidaException):
     """
     Error raised when there is an error during the validation phase

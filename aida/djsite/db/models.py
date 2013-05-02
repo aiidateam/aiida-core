@@ -50,8 +50,9 @@ class DbNode(m.Model):
     '''
     uuid = UUIDField(auto=True)
     # in the form data.upffile, data.structure, calculation, code.quantumespresso.pw, ...
-    type = m.TextField(db_index=True) 
-    label = m.TextField(db_index=True, blank=True)
+    # max_length required for index by MySql
+    type = m.CharField(max_length=255,db_index=True) 
+    label = m.CharField(max_length=255, db_index=True, blank=True)
     description = m.TextField(blank=True)
     time = m.DateTimeField(auto_now_add=True, editable=False)
     user = m.ForeignKey(User)
@@ -199,7 +200,8 @@ class Attribute(m.Model):
     '''
     time = m.DateTimeField(auto_now_add=True, editable=False)
     dbnode = m.ForeignKey('DbNode', related_name='attributes')
-    key = m.TextField(db_index=True)
+    # max_length is required by MySql to have indexes and unique constraints
+    key = m.CharField(max_length=255,db_index=True)
     datatype = m.CharField(max_length=10, choices=attrdatatype_choice, db_index=True)
     tval = m.TextField( default='', blank=True)
     fval = m.FloatField( default=None, null=True)
@@ -284,7 +286,8 @@ class Attribute(m.Model):
 
 class Group(m.Model):
     uuid = UUIDField(auto=True)
-    name = m.TextField(unique=True, db_index=True)
+    # max_length is required by MySql to have indexes and unique constraints
+    name = m.CharField(max_length=255,unique=True, db_index=True)
     dbnodes = m.ManyToManyField('DbNode', related_name='groups')
     time = m.DateTimeField(auto_now_add=True, editable=False)
     description = m.TextField(blank=True)

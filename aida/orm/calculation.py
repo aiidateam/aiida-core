@@ -1,58 +1,21 @@
 from aida.orm import Node
+from aida.common.datastructures import calcStates
+from aida.common.exceptions import ModificationNotAllowed
 
-'''
-Each calculation object should be defined by analogy of a function 
-with a fixed set of labeled and declared inputs.
-
-mystruc = Struc(...)
-myinputparam = InputParam(...)
-myjobparam = JobParam(...)
-myupfA = UPF(...)
-myupfB = UPF(...)
-
-MyCalc = Calc({'struc': Struc(), 'upfA': UPF(),...})
-This will define the abstract object with labeled input ports of defined type. 
-
-MyCalc({'struc':mystruc, 'upfA':myupfA, ...})
-
-Calculations can exist in the db as empty entities of state 'Abstract'.
-Also Data can exist in the db with 'Abstract' state. This can be used to pre-define a workflow.
-
-Calculation can only be submitted if all the data inputs are filled with concrete data objects.
-It then changes status to 'Prepared' and so on.
-Note: a calculation is set to 'retrieved' when all output nodes are validated and stored (TBD). 
-
-When dealing with workflows g(f(A,B),C) = h(A,B,C)
-however g(f(A,B=5),C) = h(A,C) since B is concrete.
-
-To repeat an existing (static) workflow, take the set of calculation nodes, 
-copy them and related data nodes and set everything to abstract. Then run throught the static workflow manager.
-User can choose new data inputs.
-
-A dynamic workflow is a script that creates calc and data on the fly. 
-The script can be stored as an attribute of a previously generated workflow.
-Here each calculation needs to be hashed in order to be reused on restarts.
-
-NOTE: Need to include functionality of an observer method in calc or data plugins, to check the data 
-while the calculation is running, to make sure that everything is going as planned, otherwise stop.
-
-TODO: set the following as properties of the Calculation
-        #        'email',
-        #        'emailOnStarted',
-        #        'emailOnTerminated',
-        #        'rerunnable',
-        #        'queueName', 
-        #        'numNodes',
-        #        'priority',
-        #        'resourceLimits',
-
-
-'''
+#TODO: set the following as properties of the Calculation
+#        'email',
+#        'emailOnStarted',
+#        'emailOnTerminated',
+#        'rerunnable',
+#        'queueName', 
+#        'numNodes',
+#        'priority',
+#        'resourceLimits',
 
 class Calculation(Node):
     _plugin_type_string = "calculation"
     _updatable_attributes = ('state', 'job_id', 'scheduler_state', 'last_jobinfo',
-			     'remote_workdir')
+			     'remote_workdir', 'retrieve_list')
     
     def __init__(self,*args,**kwargs):
         """
@@ -193,15 +156,38 @@ class Calculation(Node):
         return self.get_attr('state', None)
 
     def _set_remote_workdir(self, remote_workdir):
+	if self.get_state() != calcStates.SUBMITTING:
+	    raise ModificationNotAllowed("Cannot set the remote workdir if you are not "
+					 "submitting the calculation (current state is "
+					 "{})".format(self.get_state()))
         self.set_attr('remote_workdir', remote_workdir)
 
     def get_remote_workdir(self):
         return self.get_attr('remote_workdir', None)
 
+    def _set_retrieve_list(self, retrieve_list):
+	if self.get_state() != calcStates.SUBMITTING:
+	    raise ModificationNotAllowed("Cannot set the retrieve_list if you are not "
+					 "submitting the calculation (current state is "
+					 "{})".format(self.get_state()))
+	
+	if (not(isinstance(retrieve_list,(tuple,list))) or
+	      not(all(isinstance(i,basestring) for i in retrieve_list))):
+	    raise ValueError("You have to pass a list (or tuple) of strings as retrieve_list")
+        self.set_attr('retrieve_list', retrieve_list)
+
+    def get_retrieve_list(self):
+        return self.get_attr('retrieve_list', None)
+
     def _set_job_id(self, job_id):
         """
         Always set as a string
         """
+	if self.get_state() != calcStates.SUBMITTING:
+	    raise ModificationNotAllowed("Cannot set the job id if you are not "
+					 "submitting the calculation (current state is "
+					 "{})".format(self.get_state()))
+
         return self.set_attr('job_id', unicode(job_id))
     
     def get_job_id(self):
@@ -280,3 +266,39 @@ class Calculation(Node):
         else:
             return queryresults
             
+
+## SOME OLD COMMENTS
+# Each calculation object should be defined by analogy of a function 
+# with a fixed set of labeled and declared inputs.
+# 
+# mystruc = Struc(...)
+# myinputparam = InputParam(...)
+# myjobparam = JobParam(...)
+# myupfA = UPF(...)
+# myupfB = UPF(...)
+# 
+# MyCalc = Calc({'struc': Struc(), 'upfA': UPF(),...})
+# This will define the abstract object with labeled input ports of defined type. 
+# 
+# MyCalc({'struc':mystruc, 'upfA':myupfA, ...})
+# 
+# Calculations can exist in the db as empty entities of state 'Abstract'.
+# Also Data can exist in the db with 'Abstract' state. This can be used to pre-define a workflow.
+# 
+# Calculation can only be submitted if all the data inputs are filled with concrete data objects.
+# It then changes status to 'Prepared' and so on.
+# Note: a calculation is set to 'retrieved' when all output nodes are validated and stored (TBD). 
+# 
+# When dealing with workflows g(f(A,B),C) = h(A,B,C)
+# however g(f(A,B=5),C) = h(A,C) since B is concrete.
+# 
+# To repeat an existing (static) workflow, take the set of calculation nodes, 
+# copy them and related data nodes and set everything to abstract. Then run throught the static workflow manager.
+# User can choose new data inputs.
+# 
+# A dynamic workflow is a script that creates calc and data on the fly. 
+# The script can be stored as an attribute of a previously generated workflow.
+# Here each calculation needs to be hashed in order to be reused on restarts.
+# 
+# NOTE: Need to include functionality of an observer method in calc or data plugins, to check the data 
+# while the calculation is running, to make sure that everything is going as planned, otherwise stop.

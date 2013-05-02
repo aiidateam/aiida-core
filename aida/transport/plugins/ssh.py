@@ -9,6 +9,7 @@ from aida.common.utils import escape_for_bash
 from aida.common import aidalogger
 from aida.transport import FileAttribute
 
+# TODO : callback functions in paramiko are currently not used much and probably broken
 
 class SshTransport(aida.transport.Transport):
     # Valid keywords accepted by the connect method of paramiko.SSHClient
@@ -18,7 +19,7 @@ class SshTransport(aida.transport.Transport):
     
     def __init__(self, machine, **kwargs):
         """
-        Initialize the SshTransport class. 
+        Initialize the SshTransport class.
         
         Args:
             machine: the machine to connect to
@@ -316,7 +317,8 @@ class SshTransport(aida.transport.Transport):
         return self.sftp.chmod(path,mode)
             
 
-    def put(self,localpath,remotepath,callback=None,dereference=False,overwrite=True):
+    def put(self,localpath,remotepath,callback=None,dereference=False,overwrite=True,
+            pattern=None):
         """
         Put a file or a folder from local to remote.
         redirects to putfile or puttree.
@@ -327,6 +329,11 @@ class SshTransport(aida.transport.Transport):
                 default = False
             overwrite(bool) - if True overwrites files and folders
                 default = False
+            pattern (str) - return list of files matching filters
+                            in Unix style. Tested on unix only.
+                            default = None
+                            Works only on the cwd, e.g.
+                            listdir('.',*/*.txt) will not work
 
         Raises:
             ValueError if local path is invalid
@@ -337,13 +344,33 @@ class SshTransport(aida.transport.Transport):
 
         if not os.path.isabs(localpath):
             raise ValueError("The localpath must be an absolute path")
-        if os.path.isdir(localpath):
-            return self.puttree(localpath,remotepath,callback=callback,
-                                dereference=dereference,overwrite=overwrite)
-        elif os.path.isfile(localpath):
-            return self.putfile(localpath,remotepath,callback=callback,overwrite=overwrite)
+
+        if pattern:
+            full_list = os.listdir(localpath)
+            filtered_list = fnmatch.filter(full_list,pattern)
+            to_send = [ os.path.join(localpath,i) for i in filtered_list ]
+            to_arrive = [os.path.join(remotepath,i) for i in filtered_list]
+            if self.isfile(remotepath) or self.isdir(remotepath):
+                if not overwrite:
+                    raise OSError('Destination already exists: not overwriting it')
+                else:
+                    self.rmtree(remotepath)
+            if os.path.isdir(localpath) and remotepath != '.':
+                self.mkdir(remotepath)
+
         else:
-            raise OSError("Localpath {} not found".format(localpath))
+            to_send = [localpath]
+            to_arrive = [remotepath]
+
+        for this_localpath,this_remotepath in zip(to_send,to_arrive):
+            if os.path.isdir(this_localpath):
+                self.puttree(this_localpath,this_remotepath,callback=callback,
+                                    dereference=dereference,overwrite=overwrite)
+            elif os.path.isfile(this_localpath):
+                self.putfile(this_localpath,this_remotepath,callback=callback,
+                                    overwrite=overwrite)
+            else:
+                raise OSError("Localpath {} not found".format(this_localpath))
 
 
     def putfile(self,localpath,remotepath,callback=None,overwrite=True):
@@ -426,7 +453,8 @@ class SshTransport(aida.transport.Transport):
                 self.putfile(this_local_file,this_remote_file)
 
 
-    def get(self,remotepath,localpath,callback=None,dereference=False,overwrite=True):
+    def get(self,remotepath,localpath,callback=None,dereference=False,overwrite=True,
+            pattern=None):
         """
         Get a file or folder from remote to local.
         Redirects to getfile or gettree.
@@ -438,6 +466,11 @@ class SshTransport(aida.transport.Transport):
                 default = False
             overwrite(bool) - if True overwrites files and folders
                 default = False
+            pattern (str) - return list of files matching filters
+                            in Unix style. Tested on unix only.
+                            default = None
+                            Works only on the cwd, e.g.
+                            listdir('.',*/*.txt) will not work
 
         Raises:
             ValueError if local path is invalid
@@ -445,13 +478,29 @@ class SshTransport(aida.transport.Transport):
         """
         if not os.path.isabs(localpath):
             raise ValueError("The localpath must be an absolute path")
-        
-        if self.isdir(remotepath):
-            self.gettree(remotepath,localpath,callback,dereference,overwrite)
-        elif self.isfile(remotepath):
-            self.getfile(remotepath,localpath,callback,overwrite)
+
+        if pattern:
+            filtered_list = self.listdir(remotepath,pattern)
+            to_retrieve = [os.path.join(remotepath,i) for i in filtered_list]
+            to_arrive = [os.path.join(localpath,i) for i in filtered_list]
+            if os.path.exists(localpath):
+                if not overwrite:
+                    raise OSError('Destination already exists: not overwriting it')
+                else:
+                    shutil.rmtree(localpath)
+            if self.isdir(remotepath): # and destination is not '.'
+                os.mkdir(localpath)
         else:
-            raise IOError("Remotepath {} not found".format(remotepath))
+            to_retrieve = [remotepath]
+            to_arrive = [localpath]
+
+        for this_remotepath,this_localpath in zip(to_retrieve,to_arrive):
+            if self.isdir(this_remotepath):
+                self.gettree(this_remotepath,this_localpath,callback,dereference,overwrite)
+            elif self.isfile(this_remotepath):
+                self.getfile(this_remotepath,this_localpath,callback,overwrite)
+            else:
+                raise IOError("Remotepath {} not found".format(this_remotepath))
 
 
     def getfile(self,remotepath,localpath,callback=None,overwrite=True):
@@ -559,17 +608,23 @@ class SshTransport(aida.transport.Transport):
         return copy(remotesource,remotedestination,cp_flags=cp_flags)
 
 
-    def copy(self,remotesource,remotedestination,dereference=False, cp_flags='-r -f'):
+    def copy(self,remotesource,remotedestination,dereference=False, cp_flags='-r -f',
+             pattern=None):
         """
         Copy a file or a directory from remote source to remote destination.
         Flags used: -r: recursive copy; -f: force, makes the command non interactive;
           -L follows symbolic links
 
         Args:
-            remotesource: file to copy from
-            remotedestination: file to copy to
-            dereference: if True, copy content instead of copying the symlinks only
-            cp_flags: default = '-r -f'
+            remotesource (str) - file to copy from
+            remotedestination (str) - file to copy to
+            dereference (bool) - if True, copy content instead of copying the symlinks only
+            cp_flags (str)     - default = '-r -f'
+            pattern (str)      - return list of files matching filters
+                                 in Unix style. Tested on unix only.
+                                 default = None
+                                 Works only on the cwd, e.g.
+                                 listdir('.',*/*.txt) will not work
 
         Raises:
             IOError if the cp execution failed.
@@ -579,12 +634,12 @@ class SshTransport(aida.transport.Transport):
         # TODO : do we need to avoid the aliases when calling cp_exe='cp'? Call directly /bin/cp?
         
         # TODO: verify that it does not re
-
+        
         # For the moment, these are hardcoded. They may become parameters
         # as soon as we see the need.
         
         cp_exe='cp'
-
+        
         ## To evaluate if we also want -p: preserves mode,ownership and timestamp
         if dereference:
             # use -L; --dereference is not supported on mac
@@ -599,27 +654,35 @@ class SshTransport(aida.transport.Transport):
             raise ValueError('Input to copy() must be a non empty string. ' +
                              'Found instead %s as remotedestination' % remotedestination)
         
-        command = '{} {} {} {}'.format(cp_exe,
-                                       cp_flags,
-                                       escape_for_bash(remotesource),
-                                       escape_for_bash(remotedestination))
-
-        retval,stdout,stderr = self.exec_command_wait(command)
-        
-        # TODO : check and fix below
-        
-        if retval == 0:
-            if stderr.strip():
-                self.logger.warning("There was nonempty stderr in the cp "
-                                    "command: {}".format(stderr))
-            return True
+        if pattern:
+            filtered_files = self.listdir(remotesource,pattern)
+            to_copy = [ os.path.join(remotesource,i) for i in filtered_files ]
         else:
-            self.logger.error("Problem executing cp. Exit code: {}, stdout: '{}', "
-                              "stderr: '{}'".format(retval, stdout, stderr))
-            raise IOError("Error while executing cp. Exit code: {}".format(retval) )
+            to_copy = [remotesource]
+
+        for this_remotesource in to_copy:
+        
+            command = '{} {} {} {}'.format(cp_exe,
+                                           cp_flags,
+                                           escape_for_bash(this_remotesource),
+                                           escape_for_bash(remotedestination))
+
+            retval,stdout,stderr = self.exec_command_wait(command)
+        
+            # TODO : check and fix below
+            
+            if retval == 0:
+                if stderr.strip():
+                    self.logger.warning("There was nonempty stderr in the cp "
+                                        "command: {}".format(stderr))
+            else:
+                self.logger.error("Problem executing cp. Exit code: {}, stdout: '{}', "
+                                  "stderr: '{}', command: '{}'"
+                                  .format(retval, stdout, stderr,command))
+                raise IOError("Error while executing cp. Exit code: {}".format(retval) )
 
 
-    def listdir(self,path='.',filter=None):
+    def listdir(self,path='.',pattern=None):
         """
         Get the list of files at path.
         Args: path - default = '.'
@@ -627,10 +690,10 @@ class SshTransport(aida.transport.Transport):
                              Unix only. (Use to emulate ls * for example)
         """
         full_list = self.sftp.listdir(path)
-        if not filter:
+        if not pattern:
             return full_list
         else:
-            return fnmatch.filter( full_list,filter )
+            return fnmatch.filter( full_list,pattern )
 
 
     def remove(self,path):
@@ -759,6 +822,7 @@ class SshTransport(aida.transport.Transport):
 
 
 if __name__ == '__main__':
+    # Test ssh plugin on localhost
     import unittest
     import logging
     from test import *
@@ -801,6 +865,3 @@ if __name__ == '__main__':
     run_tests('ssh')
     
     unittest.main()
-
-
-

@@ -70,26 +70,27 @@ def get_suggestion(provided_string,allowed_strings):
         return "(No similar keywords found...)"
 
 
-def validate_list_of_two_string_tuples(val):
+def validate_list_of_string_tuples(val, tuple_length):
     """
     Check that:
     1. val is a list or tuple
     2. each element of the list:
       a. is a list or tuple
-      b. is of length two
+      b. is of length equal to the parameter tuple_length
       c. each of the two elements is a string
 
     Return if valid, raise ValidationError if invalid
     """
     from aida.common.exceptions import ValidationError
-    
+
     err_msg = ("the value must be a list (or tuple) "
-               "of length-two list (or tuples), whose elements are strings")
+               "of length-N list (or tuples), whose elements are strings; "
+               "N={}".format(tuple_length))
     if not isinstance(val,(list,tuple)):
         raise ValidationError(err_msg)
     for f in val:
         if (not isinstance(f,(list,tuple)) or
-              len(f)!=2 or
+              len(f)!=tuple_length or
               not all(isinstance(s,basestring) for s in f)):
             raise ValidationError(err_msg)
 

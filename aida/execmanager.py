@@ -349,6 +349,8 @@ def submit_calc(calc):
             
 def retrieve_finished_on_authinfo(authinfo):
     from aida.orm import Calculation
+    from aida.common.folders import SandboxFolder
+    import os
     
     calcs_to_retrieve = Calculation.get_all_with_state(
         state=calcStates.FINISHED,
@@ -381,12 +383,14 @@ def retrieve_finished_on_authinfo(authinfo):
 
                     with SandboxFolder() as folder:
                         for item in retrieve_list:
-                            t.get(item,folder.abspath)
+                            t.get(item,
+                                  os.path.join(folder.abspath,os.path.split(item)[1]))
 
                     calc._set_state(calcStates.RETRIEVED)
                 except:
                     execlogger.error("Error retrieving calc {}".format(calc.uuid))
                     calc._set_state(calcStates.RETRIEVALFAILED)
+                    raise
 
             
     return retrieved

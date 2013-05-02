@@ -145,7 +145,7 @@ def submit_calc(calc):
         calc: the calculation to submit (an instance of the aida.orm.Calculation class)
     """
     import StringIO
-    import pickle
+    import json
     
     from aida.codeplugins.input import InputPlugin
     from aida.orm import Calculation, Code, Data
@@ -158,9 +158,9 @@ def submit_calc(calc):
     if not isinstance(calc,Calculation):
         raise ValueError("calc must be a Calculation")
     
-    if calc.get_state() != calcStates.NEW and calc.get_state() != calcStates.SUBMISSIONFAILED:
-        raise ValueError("Can only submit calculations with state=NEW or state=SUBMISSIONFAILED! "
-                         "(state is {} instead".format(
+    if calc.get_state() != calcStates.NEW:
+        raise ValueError("Can only submit calculations with state=NEW! "
+                         "(state is {} instead)".format(
                              calc.get_state()))
     
     # I start to submit the calculation: I set the state
@@ -216,9 +216,18 @@ def submit_calc(calc):
                 (calcinfo.appendText if calcinfo.appendText is not None else u"") +
                 ((code.get_append_text() + u"\n\n") if code.get_append_text() else u"") +
                 ((computer.get_append_text() + u"\n\n") if computer.get_append_text() else u""))
+
+            # The Calculation validation should take care of always having a sensible value here
+            # so I don't need to check
+            num_nodes = calc.get_num_nodes()
+            num_cpus_per_node = calc.get_num_cpus_per_node()
+            tot_num_cpus = num_nodes * num_cpus_per_node
     
-            # TODO: ADD ALSO THE MPIRUN PART
-            job_tmpl.argv = [code.get_execname()] + (
+            mpi_args = [arg.format(num_nodes=num_nodes,
+                                   num_cpus_per_node=num_cpus_per_node,
+                                   tot_num_cpus=tot_num_cpus) for arg in
+                        computer.get_mpirun_command()]
+            job_tmpl.argv = mpi_args + [code.get_execname()] + (
                 calcinfo.cmdlineParams if calcinfo.cmdlineParams is not None else [])
     
             job_tmpl.stdinName = calcinfo.stdinName
@@ -242,10 +251,8 @@ def submit_calc(calc):
             if maxMemoryKb is not None:
                 job_tmpl.maxMemoryKb = maxMemoryKb
 
-            # The Calculation validation should take care of always having a sensible value here
-            # so I don't need to check
-            job_tmpl.numNodes = calc.get_num_nodes()
-            job_tmpl.numCpusPerNode = calc.get_num_cpus_per_node()
+            job_tmpl.numNodes = num_nodes
+            job_tmpl.numCpusPerNode = num_cpus_per_node
     
             # TODO: give possibility to use a different name??
             script_filename = 'aida.submit'
@@ -254,8 +261,8 @@ def submit_calc(calc):
     
             # TODO: decide how to store the files in this folder
             subfolder = folder.get_subfolder('.aida',create=True)
-            subfolder.create_file_from_filelike(StringIO.StringIO(pickle.dumps(job_tmpl)),'job_tmpl.pickle')
-            subfolder.create_file_from_filelike(StringIO.StringIO(pickle.dumps(calcinfo)),'calcinfo.pickle')
+            subfolder.create_file_from_filelike(StringIO.StringIO(json.dumps(job_tmpl)),'job_tmpl.json')
+            subfolder.create_file_from_filelike(StringIO.StringIO(json.dumps(calcinfo)),'calcinfo.json')
             
             
             with t:

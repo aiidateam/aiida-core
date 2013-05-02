@@ -104,9 +104,36 @@ class Computer(object):
         For the base class, this is always valid. Subclasses will reimplement this.
         In the subclass, always call the super().validate() method first!
         """
-        # workdir
-        # 
-        return True
+        from aida.common.exceptions import ValidationError
+        
+        if not self.get_hostname().strip():
+            raise ValidationError("No hostname specified")
+        if not self.get_transport_type().strip():
+            raise ValidationError("No transport_type specified")
+        if not self.get_scheduler_type().strip():
+            raise ValidationError("No scheduler_type specified")
+        if not self.get_workdir().strip():
+            raise ValidationError("No workdir specified")
+        try:
+            self.get_workdir().format(username="test")
+        except KeyError as e:
+            raise ValidationError("In workdir there is an unknown replacement field '{}'".format(
+                e.message))
+        try:
+            self.get_transport_params()
+        except DbContentError:
+            raise ValidationError("Error in the DB content of the transport_params")
+
+        mpirun_command = self.get_mpirun_command()
+        if not isinstance(mpirun_command,(tuple,list)) or not(
+            all(isinstance(i,basestring) for i in mpirun_command)):
+                raise ValidationError("the mpirun_command must be a list of strings")
+        try:
+            for arg in mpirun_command:
+                arg.format(num_nodes=12,num_cpus_per_node=2,tot_num_cpus=24)
+        except KeyError as e:
+            raise ValidationError("In workdir there is an unknown replacement field '{}'".format(
+                e.message))
 
     def copy(self):
         """
@@ -131,13 +158,16 @@ class Computer(object):
         Store the computer in the DB.
         Can be called only once. 
         """
-
+        from django.db import IntegrityError
+        
         if self.to_be_stored:
 
             # As a first thing, I check if the data is valid
             self.validate()
-            self.dbcomputer.save()
-            # TODO: check for Exceptions from Django
+            try:
+                self.dbcomputer.save()
+            except IntegrityError:
+                raise ValueError("Integrity error, probably the hostname already exists in the DB")
         else:
             self.logger.error("Trying to store an already saved computer")
             raise ModificationNotAllowed("The computer was already stored")
@@ -149,15 +179,7 @@ class Computer(object):
     @property
     def hostname(self):
         return self.dbcomputer.hostname
-
-    @property
-    def scheduler_type(self):
-        return self.dbcomputer.scheduler_type
-
-    @property
-    def transport_type(self):
-        return self.dbcomputer.transport_type
-
+        
     def _get_metadata(self):
         import json
         return json.loads(self.dbcomputer.metadata)
@@ -185,21 +207,20 @@ class Computer(object):
             elif len(args) == 1:
                 return args[0]
 
-    #TODO DEFINE SPECIFIC METHODS TO SET/GET THE PROPERTIES THAT WE WANT + IMPLEMENT VALIDATOR
     def get_prepend_text(self):
-        self._get_property("prepend_text", "")
+        return self._get_property("prepend_text", "")
 
     def set_prepend_text(self,val):
         self._set_property("prepend_text", unicode(val))
 
     def get_append_text(self):
-        self._get_property("append_text", "")
+        return self._get_property("append_text", "")
 
     def set_append_text(self,val):
         self._set_property("append_text", unicode(val))
 
     def get_mpirun_command(self):
-        self._get_property("mpirun_command", [])
+        return self._get_property("mpirun_command", [])
 
     def set_mpirun_command(self,val):
         if not isinstance(val,(tuple,list)) or not(
@@ -246,11 +267,17 @@ class Computer(object):
         else:
             raise ModificationNotAllowed("Cannot set a property after having stored the entry")
 
+    def get_scheduler_type(self):
+        return self.dbcomputer.scheduler_type
+
     def set_scheduler_type(self,val):
         if self.to_be_stored:
             self.dbcomputer.scheduler_type = val
         else:
             raise ModificationNotAllowed("Cannot set a property after having stored the entry")
+
+    def get_transport_type(self):
+        return self.dbcomputer.transport_type
 
     def set_transport_type(self,val):
         if self.to_be_stored:
@@ -264,7 +291,7 @@ class Computer(object):
 
         try:
             ThisPlugin = load_plugin(aida.scheduler.Scheduler, 'aida.scheduler.plugins',
-                               self.scheduler_type)
+                               self.get_scheduler_type())
             # I call the init without any parameter
             return ThisPlugin()
         except MissingPluginError as e:

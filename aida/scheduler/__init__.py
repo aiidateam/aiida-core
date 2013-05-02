@@ -174,6 +174,29 @@ class Scheduler(object):
         """
         raise NotImplementedError
 
+    def _get_detailed_jobinfo_command(self,jobid):
+        """
+        Return the command to run to get the detailed information on a job,
+        even after the job has finished.
+
+        The output text is just retrieved, and returned for logging purposes.
+        """
+        raise NotImplementedError
+
+    def get_detailed_jobinfo(self, jobid):
+        command = self._get_detailed_jobinfo_command(jobid=jobid)
+        retval, stdout, stderr = self.transport.exec_command_wait(
+            command)
+
+        return u"""Detailed jobinfo obtained with command '{}'
+Return Code: {}
+-------------------------------------------------------------
+stdout:
+{}
+stderr:
+{}
+""".format(command, retval, stdout, stderr)
+
     def _parse_joblist_output(self, retval, stdout, stderr):
         """
         Parse the queue output string, as returned by executing the

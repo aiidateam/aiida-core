@@ -306,7 +306,7 @@ class Transport(object):
         raise NotImplementedError
 
 
-    def listdir(self, path='.',filter=None):
+    def listdir(self, path='.',pattern=None):
         """
         Return a list of the names of the entries in the given path. 
         The list is in arbitrary order. It does not include the special 
@@ -314,9 +314,11 @@ class Transport(object):
         
         Args: 
             path (str) - path to list (default to '.')
-            filter (str) - return list of files matching filters
-                           in Unix style. Tested on unix only.
-                           default = None
+            pattern (str) - return list of files matching filters
+                            in Unix style. Tested on unix only.
+                            default = None
+                            Works only on the cwd, e.g.
+                            listdir('.',*/*.txt) will not work
         """
         raise NotImplementedError
 

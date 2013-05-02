@@ -615,7 +615,10 @@ class TestSubNodes(unittest.TestCase):
         from aida.orm import Computer
 
         User.objects.create_user(getpass.getuser(), 'unknown@mail.com', 'fakepwd')
-        cls.computer = Computer(hostname='localhost')
+        cls.computer = Computer(hostname='localhost',
+                                transport_type='ssh',
+                                scheduler_type='pbspro',
+                                workdir='/tmp/aida')
         cls.computer.store()
 
     @classmethod
@@ -727,7 +730,10 @@ class TestCode(unittest.TestCase):
         from aida.orm import Computer
 
         User.objects.create_user(getpass.getuser(), 'unknown@mail.com', 'fakepwd')
-        cls.computer = Computer(hostname='localhost')
+        cls.computer = Computer(hostname='localhost',
+                                transport_type='ssh',
+                                scheduler_type='pbspro',
+                                workdir='/tmp/aida')
         cls.computer.store()
 
     @classmethod

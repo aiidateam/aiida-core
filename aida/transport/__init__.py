@@ -306,14 +306,17 @@ class Transport(object):
         raise NotImplementedError
 
 
-    def listdir(self, path='.'):
+    def listdir(self, path='.',filter=None):
         """
         Return a list of the names of the entries in the given path. 
         The list is in arbitrary order. It does not include the special 
         entries '.' and '..' even if they are present in the directory.
         
         Args: 
-        path (str) - path to list (default to '.')
+            path (str) - path to list (default to '.')
+            filter (str) - return list of files matching filters
+                           in Unix style. Tested on unix only.
+                           default = None
         """
         raise NotImplementedError
 
@@ -474,3 +477,18 @@ class Transport(object):
             raise IOError("Error while executing cp. Exit code: {}".format(retval) )
 
  
+if __name__ == '__main__':
+    import unittest
+    import logging
+
+    class TestGeneric(unittest.TestCase):
+        """
+        Test whoami on localhost.
+        """
+        def test_whoami(self):
+            import getpass
+            from plugins.local import LocalTransport
+            with LocalTransport() as t:
+                self.assertEquals( t.whoami() , getpass.getuser() )
+    
+    unittest.main()

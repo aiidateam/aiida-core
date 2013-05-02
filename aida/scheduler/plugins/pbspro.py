@@ -72,6 +72,15 @@ class PbsproScheduler(aida.scheduler.Scheduler):
         self.logger.debug("qstat command: {}".format(command))
         return command
 
+    def _get_detailed_jobinfo_command(self,jobid):
+        """
+        Return the command to run to get the detailed information on a job,
+        even after the job has finished.
+
+        The output text is just retrieved, and returned for logging purposes.
+        """
+        return "tracejob -v {}".format(escape_for_bash(jobid))
+
     def _get_submit_script_header(self, job_tmpl):
         """
         Return the submit script header, using the parameters from the

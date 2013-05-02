@@ -57,6 +57,41 @@ class TestDirectoryManipulation(unittest.TestCase):
             t.rmdir(directory)
 
 
+    def test_rmtree(self):
+        """
+        Verify the functioning of makedirs command
+        """
+        # Imports required later
+        import random
+        import string
+        import os
+
+        with custom_transport as t:
+            location = t.normalize(os.path.join('/','tmp'))
+            directory = 'temp_dir_test'
+            t.chdir(location)
+            
+            self.assertEquals(location, t.getcwd())
+            while t.isdir(directory):
+                # I append a random letter/number until it is unique
+                directory += random.choice(
+                    string.ascii_uppercase + string.digits)
+            t.mkdir(directory)
+            t.chdir(directory)
+
+            # define folder structure
+            dir_tree = os.path.join('1','2')
+            # I create the tree
+            t.makedirs(dir_tree)
+            # remove it
+            t.rmtree('1')
+            # verify the removal
+            self.assertFalse( t.isdir('1') )
+                
+            t.chdir('..')
+            t.rmdir(directory)
+
+
     
     def test_listdir(self):
         """
@@ -79,11 +114,15 @@ class TestDirectoryManipulation(unittest.TestCase):
                     string.ascii_uppercase + string.digits)
             t.mkdir(directory)
             t.chdir(directory)
-            list_of_dir=['1','-f a&','as']
+            list_of_dir=['1','-f a&','as','a2','a4f']
             for this_dir in list_of_dir:
                 t.mkdir(this_dir)
             list_of_dir_found = t.listdir('.')
             self.assertTrue(sorted(list_of_dir_found)==sorted(list_of_dir))    
+
+            self.assertTrue( sorted(t.listdir('.','a*')), sorted(['as','a2','a4f']) )
+            self.assertTrue( sorted(t.listdir('.','a?')), sorted(['as','a2']) )
+            self.assertTrue( sorted(t.listdir('.','a[2-4]*')), sorted(['a2','a4f']) )
 
             for this_dir in list_of_dir:
                 t.rmdir(this_dir)
@@ -683,7 +722,7 @@ class TestPutGetTree(unittest.TestCase):
             
             # local filename is not an abs path
             with self.assertRaises(ValueError):
-                t.gettree(remote_subfolder,'delete_me')
+                t.gettree(remote_subfolder,'delete_me_tree')
 
             os.remove(os.path.join(local_subfolder,'file.txt'))
             os.rmdir(local_subfolder)
@@ -692,6 +731,7 @@ class TestPutGetTree(unittest.TestCase):
 
             t.chdir('..')
             t.rmdir(directory)
+            
 
     def test_put_get_empty_string(self):
         """
@@ -727,8 +767,7 @@ class TestPutGetTree(unittest.TestCase):
             text = 'Viva Verdi\n'
             with  open(local_file_name,'w') as f:
                 f.write(text)
-
-
+            
             # localpath is an empty string
             # ValueError because it is not an abs path
             with self.assertRaises(ValueError):

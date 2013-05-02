@@ -1,15 +1,21 @@
 from celery.task import task
-from time import sleep
 from celery.utils.log import get_task_logger
 logger = get_task_logger(__name__)
 from celery import Task
 
-@task
-def poll(_i,_s):
+from aida.execmanager import daemon_main_loop
 
-    print "Polling with args "+str(_i)+" and "+str(_s)+" ..."
-    sleep(5)
-    print "Polled"
+@task
+def update_and_retrieve():
+    daemon_main_loop()
+
+#@task
+#def poll(_i,_s):
+#    from time import sleep
+#
+#    print "Polling with args "+str(_i)+" and "+str(_s)+" ..."
+#    sleep(5)
+#    print "Polled"
 
 @task
 def collector(_var):

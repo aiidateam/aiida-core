@@ -20,8 +20,8 @@ except IndexError:
     print >> sys.stderr, "Pass a UUID"
     sys.exit(1)
 
-n = Node(uuid=uuid)
-print '\n'.join('{}={}'.format(k,shorten(v)) for k,v in n.iterattrs())
-
 c = Calculation(uuid=uuid)
+lj = c.get_last_jobinfo()
+print "\n".join("{} = {}".format(*i) for i in lj.iteritems())
+
 

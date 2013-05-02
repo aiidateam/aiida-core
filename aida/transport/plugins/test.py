@@ -4,6 +4,11 @@ Every transport plugin should be able to pass all of these common tests.
 Plugin specific tests will be written in the plugin itself.
 """
 
+# TODO : test for copy with pattern
+# TODO : test for copy with/without patterns, overwriting folder
+# TODO : test for exotic cases of copy with source = destination
+# TODO : silly cases of copy/put/get from self to self
+
 import unittest
 from aida.common.pluginloader import load_plugin
 
@@ -57,6 +62,41 @@ class TestDirectoryManipulation(unittest.TestCase):
             t.rmdir(directory)
 
 
+    def test_rmtree(self):
+        """
+        Verify the functioning of makedirs command
+        """
+        # Imports required later
+        import random
+        import string
+        import os
+
+        with custom_transport as t:
+            location = t.normalize(os.path.join('/','tmp'))
+            directory = 'temp_dir_test'
+            t.chdir(location)
+            
+            self.assertEquals(location, t.getcwd())
+            while t.isdir(directory):
+                # I append a random letter/number until it is unique
+                directory += random.choice(
+                    string.ascii_uppercase + string.digits)
+            t.mkdir(directory)
+            t.chdir(directory)
+
+            # define folder structure
+            dir_tree = os.path.join('1','2')
+            # I create the tree
+            t.makedirs(dir_tree)
+            # remove it
+            t.rmtree('1')
+            # verify the removal
+            self.assertFalse( t.isdir('1') )
+                
+            t.chdir('..')
+            t.rmdir(directory)
+
+
     
     def test_listdir(self):
         """
@@ -79,11 +119,15 @@ class TestDirectoryManipulation(unittest.TestCase):
                     string.ascii_uppercase + string.digits)
             t.mkdir(directory)
             t.chdir(directory)
-            list_of_dir=['1','-f a&','as']
+            list_of_dir=['1','-f a&','as','a2','a4f']
             for this_dir in list_of_dir:
                 t.mkdir(this_dir)
             list_of_dir_found = t.listdir('.')
             self.assertTrue(sorted(list_of_dir_found)==sorted(list_of_dir))    
+
+            self.assertTrue( sorted(t.listdir('.','a*')), sorted(['as','a2','a4f']) )
+            self.assertTrue( sorted(t.listdir('.','a?')), sorted(['as','a2']) )
+            self.assertTrue( sorted(t.listdir('.','a[2-4]*')), sorted(['a2','a4f']) )
 
             for this_dir in list_of_dir:
                 t.rmdir(this_dir)
@@ -634,6 +678,61 @@ class TestPutGetTree(unittest.TestCase):
             t.rmdir(directory)
 
 
+
+    def test_put_and_get_pattern(self):
+        import os
+        import random
+        import string
+        
+        local_dir = os.path.join('/','tmp')
+        remote_dir = local_dir
+        directory = 'tmp_try'
+
+        with custom_transport as t:
+            t.chdir(remote_dir)
+            
+            while os.path.exists(os.path.join(local_dir,directory) ):
+                # I append a random letter/number until it is unique
+                directory += random.choice(
+                    string.ascii_uppercase + string.digits)
+
+            local_subfolder = os.path.join(local_dir,directory,'tmp1')
+            local_subsubfolder = os.path.join(local_subfolder,'subdir')
+            remote_subfolder = 'tmp2'
+            retrieved_subfolder = os.path.join(local_dir,directory,'tmp3')
+            
+            os.mkdir(os.path.join(local_dir,directory))
+            os.mkdir(os.path.join(local_dir,directory,local_subfolder))            
+            os.mkdir(os.path.join(local_dir,directory,local_subsubfolder))
+            t.chdir(directory)
+
+            # create a tree with files
+            local_file_name_1 = os.path.join(local_subfolder,'a.txt')
+            local_file_name_2 = os.path.join(local_subfolder,'b.tmp')
+            local_file_name_3 = os.path.join(local_subfolder,'c.txt')
+            local_file_name_4 = os.path.join(local_subsubfolder,'d.txt')
+            text = 'Viva Verdi\n'
+            for filename in [local_file_name_1,local_file_name_2,
+                             local_file_name_3,local_file_name_4]:
+                with open(filename,'w') as f:
+                    f.write(text)
+            
+            t.put(local_subfolder,remote_subfolder,pattern='*.txt')
+            # copies a.txt and c.txt but not the subsubfolder
+            self.assertEquals( set(['a.txt','c.txt']), set(t.listdir(remote_subfolder)) )
+
+            # now copy everything
+            t.put(local_subfolder,remote_subfolder)
+
+            # analogous test for get
+            t.get(remote_subfolder,retrieved_subfolder,pattern='*.txt')
+            # copies a.txt and c.txt but not the subsubfolder
+            self.assertEquals( set(['a.txt','c.txt']), set(os.listdir(retrieved_subfolder)) )
+
+            t.chdir('..')
+            t.rmtree(directory)
+
+
     def test_put_get_abs_path(self):
         """
         test of exception for non existing files and abs path
@@ -683,7 +782,7 @@ class TestPutGetTree(unittest.TestCase):
             
             # local filename is not an abs path
             with self.assertRaises(ValueError):
-                t.gettree(remote_subfolder,'delete_me')
+                t.gettree(remote_subfolder,'delete_me_tree')
 
             os.remove(os.path.join(local_subfolder,'file.txt'))
             os.rmdir(local_subfolder)
@@ -692,6 +791,7 @@ class TestPutGetTree(unittest.TestCase):
 
             t.chdir('..')
             t.rmdir(directory)
+            
 
     def test_put_get_empty_string(self):
         """
@@ -727,8 +827,7 @@ class TestPutGetTree(unittest.TestCase):
             text = 'Viva Verdi\n'
             with  open(local_file_name,'w') as f:
                 f.write(text)
-
-
+            
             # localpath is an empty string
             # ValueError because it is not an abs path
             with self.assertRaises(ValueError):

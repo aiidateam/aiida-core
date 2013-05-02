@@ -43,7 +43,11 @@ DATABASES = {
 ## Setup a sqlite3 DB for tests (WAY faster, since it remains in-memory
 ## and not on disk.
 if 'test' in sys.argv:
-    DATABASES['default'] = {'ENGINE': 'django.db.backends.sqlite3'}
+    # if you define such a variable to False, it will use the same backend
+    # that you have already configured also for tests. Otherwise, 
+    # Setup a sqlite3 DB for tests (WAY faster, since it remains in-memory)
+    if globals().get('use_inmemory_sqlite_for_tests', True):
+        DATABASES['default'] = {'ENGINE': 'django.db.backends.sqlite3'}
     ###################################################################
     # IMPORTANT! Choose a different repository location, otherwise 
     # real data will be destroyed during tests!!
@@ -250,7 +254,7 @@ LOGGING = {
             'level': 'ERROR',
             'propagate': True,
         },
-        'aida.repository': {
+        'aida': {
             'handlers': ['console'],
             'level': 'DEBUG',
             'propagate': True,
@@ -265,7 +269,7 @@ SOUTH_TESTS_MIGRATE = False
 # -------------------------
 # AIDA-Deamon configuration
 # -------------------------
-from celery.schedules import crontab
+#from celery.schedules import crontab
 from datetime import timedelta
 import djcelery
 
@@ -276,10 +280,17 @@ CELERY_RESULT_BACKEND = "database";
 
 CELERYBEAT_SCHEDULER = "djcelery.schedulers.DatabaseScheduler";
 CELERYBEAT_SCHEDULE = {
-    'do-every-30-seconds': {
-        'task': 'aida.djsite.db.tasks.poll',
-        'schedule': timedelta(seconds=30),
-        'args': ("foo", 16)
-    },
+#    'do-every-30-seconds': {
+#        'task': 'aida.djsite.db.tasks.poll',
+#        'schedule': timedelta(seconds=30),
+#        'args': ("foo", 16)
+#    },
+## TODO: instead of starting the execution every N seconds, do it in such a way
+##       that it waits N seconds between the end of the previous iteration and
+##       the beginning of the following
+    'update-status-and-retrieve': {
+        'task':'aida.djsite.db.tasks.update_and_retrieve',
+        'schedule': timedelta(seconds=120),
+        },
 }
 

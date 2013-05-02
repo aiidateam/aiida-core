@@ -23,6 +23,7 @@ if print_all:
 else:
     calclist = Calculation.query(~Q(attributes__tval=calcStates.RETRIEVED),
                                   ~Q(attributes__tval=calcStates.SUBMISSIONFAILED),
+                                  ~Q(attributes__tval=calcStates.RETRIEVALFAILED),
                                   ~Q(attributes__tval=calcStates.UNDETERMINED),
                                   ~Q(attributes__tval=calcStates.NEW),
                                   attributes__key="_state"

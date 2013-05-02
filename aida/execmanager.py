@@ -16,6 +16,7 @@ def update_running_calcs_status(authinfo):
     as defined in the 'authinfo' table.
     """
     from aida.orm import Calculation, Computer
+    from aida.scheduler.datastructures import JobInfo
 
     execlogger.debug("Updating running calc status for user {} and machine {}".format(
         authinfo.aidauser.username, authinfo.computer.hostname))
@@ -48,41 +49,63 @@ def update_running_calcs_status(authinfo):
             # I update the status of jobs
 
             for c in calcs_to_inquire:
-                jobid = c.get_job_id()
-                if jobid is None:
-                    execlogger.error("Calculation {} is WITHSCHEDULER but no job id was found!".format(
-                        c.uuid))
-                    continue
-                
-                # I check if the calculation to be checked (c) is in the output of qstat
-                if jobid in found_jobs:
-                    # jobinfo: the information returned by qstat for this job
-                    jobinfo = found_jobs[jobid]
-                    if jobinfo.jobState in [jobStates.DONE, jobStates.FAILED]:
+                try:
+                    jobid = c.get_job_id()
+                    if jobid is None:
+                        execlogger.error("Calculation {} is WITHSCHEDULER but no job id was found!".format(
+                            c.uuid))
+                        continue
+                    
+                    # I check if the calculation to be checked (c) is in the output of qstat
+                    if jobid in found_jobs:
+                        # jobinfo: the information returned by qstat for this job
+                        jobinfo = found_jobs[jobid]
+                        execlogger.debug("Inquirying calculation {} ({}): it has jobState={}".format(
+                            c.uuid, jobid, jobinfo.jobState))
+                        if jobinfo.jobState in [jobStates.DONE, jobStates.FAILED]:
+                            finished.append(c)
+                            c._set_state(calcStates.FINISHED)
+                        elif jobinfo.jobState == jobStates.UNDETERMINED:
+                            c._set_state(calcStates.UNDETERMINED)
+                            self.logger.error("There is an undetermined calc with uuid {}".format(
+                                c.calc.uuid))
+                        else:
+                            c._set_state(calcStates.WITHSCHEDULER)
+    
+                        c._set_scheduler_state(jobinfo.jobState)
+    
+                        c._set_last_jobinfo(jobinfo)
+                    else:
+                        execlogger.debug("Inquirying calculation {} ({}): not found, assuming "
+                                         "jobState={}".format(
+                            c.uuid, jobid, jobStates.DONE))
+
+                        # calculation c is not found in the output of qstat
                         finished.append(c)
                         c._set_state(calcStates.FINISHED)
-                    elif jobinfo.jobState == jobStates.UNDETERMINED:
-                        c._set_state(calcStates.UNDETERMINED)
-                        self.logger.error("There is an undetermined calc with uuid {}".format(
-                            c.calc.uuid))
-                    else:
-                        c._set_state(calcStates.WITHSCHEDULER)
-
-                    c._set_scheduler_state(jobinfo.jobState)
-
-                    c._set_last_jobinfo(jobinfo)
-                else:
-                    # calculation c is not found in the output of qstat
-                    finished.append(c)
-                    c._set_state(calcStates.FINISHED)
-                    c._set_scheduler_state(calcStates.FINISHED)
-
-
-            # TODO: implement this part
-            # TODO: understand if this second save may cause problems if we have many threads
+                        c._set_scheduler_state(jobStates.DONE)
+                except Exception as e:
+                    # TODO: implement a counter, after N retrials set it to a status that
+                    # requires the user intervention
+                    execlogger.warning("There was an exception for calculation {} ({}): {}".format(
+                        c.uuid, e.__class__.__name__, e.message))
+                    continue
+    
             for c in finished:
-                # c._set_last_jobinfo(jobinfo)
-                pass
+                try:
+                    detailed_jobinfo = s.get_detailed_jobinfo(jobid=c.get_job_id())
+                    last_jobinfo = c.get_last_jobinfo()
+                    if last_jobinfo is None:    
+                        last_jobinfo = JobInfo()
+                        last_jobinfo.jobId = c.get_job_id()
+                        last_jobinfo.jobState = jobStates.FINISHED
+                    last_jobinfo.detailedJobinfo = detailed_jobinfo
+                    c._set_last_jobinfo(last_jobinfo)
+                except Exception as e:
+                    execlogger.warning("There was an exception while retrieving the detailed jobinfo "
+                                       "for calculation {} ({}): {}".format(
+                                       c.uuid, e.__class__.__name__, e.message))
+                    continue
             
     return finished
 
@@ -100,6 +123,38 @@ def get_authinfo(computer, aidauser):
             "only one configuration is allowed".format(
                 aidauser.username, computer.hostname))
     return authinfo
+
+def daemon_main_loop():
+    update_jobs()
+    retrieve_jobs()
+
+def retrieve_jobs():
+    from aida.orm import Calculation
+    
+    # I create a unique set of pairs (computer, aidauser)
+    computers_users_to_check = set(
+        Calculation.get_all_with_state(
+            state=calcStates.FINISHED,
+            only_computer_user_pairs = True)
+        )
+    
+    for dbcomputer_id, aidauser_id in computers_users_to_check:
+        dbcomputer = DbComputer.objects.get(id=dbcomputer_id)
+        aidauser = User.objects.get(id=aidauser_id)
+
+        execlogger.debug("({},{}) pair to check".format(
+            aidauser.username, dbcomputer.hostname))
+        try:
+            authinfo = get_authinfo(dbcomputer, aidauser)
+            retrieve_finished_for_authinfo(authinfo)
+        except Exception as e:
+            msg = ("Error while retrieving calculation status for aidauser={} on computer={}, "
+                   "error type is {}, error message: {}".format(
+                       aidauser.username,
+                       dbcomputer.hostname,
+                       e.__class__.__name__, e.message))
+            execlogger.error(msg)
+            raise
 
 # in daemon
 def update_jobs():
@@ -125,9 +180,6 @@ def update_jobs():
         try:
             authinfo = get_authinfo(dbcomputer, aidauser)
             finished_calcs = update_running_calcs_status(authinfo)
-            print "*** '{}' for machine '{}' ***".format(aidauser.username, dbcomputer.hostname)
-            for c in finished_calcs:
-                print '-> FINISHED: ', c.uuid, c.get_job_id(), c.get_scheduler_state()
         except Exception as e:
             msg = ("Error while updating calculation status for aidauser={} on computer={}, "
                    "error type is {}, error message: {}".format(
@@ -136,7 +188,6 @@ def update_jobs():
                        e.__class__.__name__, e.message))
             execlogger.error(msg)
             raise
-
 
 def submit_calc(calc):
     """
@@ -162,7 +213,9 @@ def submit_calc(calc):
         raise ValueError("Can only submit calculations with state=NEW! "
                          "(state is {} instead)".format(
                              calc.get_state()))
-    
+
+    # TODO: do some sort of blocking call, to be sure that the submit function is not called
+    # twice for the same calc?
     # I start to submit the calculation: I set the state
     calc._set_state(calcStates.SUBMITTING)
          
@@ -191,8 +244,7 @@ def submit_calc(calc):
     
             # TODO: support -V option of schedulers!
 
-            # TODO: files_to_retrieve
-            
+            calc._set_retrieve_list(calcinfo.retrieve_list if calcinfo.retrieve_list is not None else [])
     
             # I create the job template to pass to the scheduler
             job_tmpl = JobTemplate()
@@ -206,7 +258,6 @@ def submit_calc(calc):
             job_tmpl.schedErrorPath = 'scheduler-stderr.txt'
             job_tmpl.schedJoinFiles = False
             
-
             # TODO: add also code from the machine + u'\n\n'
             job_tmpl.prependText = (
                 ((computer.get_prepend_text() + u"\n\n") if computer.get_prepend_text() else u"") + 
@@ -259,7 +310,6 @@ def submit_calc(calc):
             script_content = s.get_submit_script(job_tmpl)
             folder.create_file_from_filelike(StringIO.StringIO(script_content),script_filename)
     
-            # TODO: decide how to store the files in this folder
             subfolder = folder.get_subfolder('.aida',create=True)
             subfolder.create_file_from_filelike(StringIO.StringIO(json.dumps(job_tmpl)),'job_tmpl.json')
             subfolder.create_file_from_filelike(StringIO.StringIO(json.dumps(calcinfo)),'calcinfo.json')
@@ -307,7 +357,58 @@ def submit_calc(calc):
     
                 execlogger.debug("submitted calculation {} with job id {}".format(
                     calc.uuid, job_id))
+
+                # TODO: decide where to store the whole folder
+                #       with the files created by the input plugin
     except:
         calc._set_state(calcStates.SUBMISSIONFAILED)
         raise
             
+def retrieve_finished_for_authinfo(authinfo):
+    from aida.orm import Calculation
+    from aida.common.folders import SandboxFolder
+    import os
+    
+    calcs_to_retrieve = Calculation.get_all_with_state(
+        state=calcStates.FINISHED,
+        computer=authinfo.computer,
+        user=authinfo.aidauser)
+    
+    retrieved = []
+    
+    # I avoid to open an ssh connection if there are no calcs with state FINISHED
+    if len(calcs_to_retrieve):
+
+        # Open connection
+        with authinfo.get_transport() as t:
+            for calc in calcs_to_retrieve:
+                try:
+                    # TODO: MOVE THE FOLLOWING CODE IN A NEW FUNCTION,
+                    # receiving the open transport and the calculation.
+                    # TODO: 
+                    execlogger.debug("Retrieving calc {} ({})".format(calc.dbnode.pk, calc.uuid))
+                    workdir = calc.get_remote_workdir()
+                    retrieve_list = calc.get_retrieve_list()
+                    execlogger.debug("chdir {}".format(workdir))
+                    t.chdir(workdir)
+                    # TODO: create remote_output node always
+                    # TODO: decide what to do: one node per element in the retrieve_list, or
+                    #       one node for everything (problem of overwriting; we can say that we
+                    #       write in order, so following things overwrite previous things;
+                    #       or change the way in which we store the retrieve list so that it is
+                    #       a tuple of two elements, with source and dest.
+
+                    with SandboxFolder() as folder:
+                        for item in retrieve_list:
+                            t.get(item,
+                                  os.path.join(folder.abspath,os.path.split(item)[1]))
+
+                    calc._set_state(calcStates.RETRIEVED)
+                    retrieved.append(calc)
+                except:
+                    execlogger.error("Error retrieving calc {}".format(calc.uuid))
+                    calc._set_state(calcStates.RETRIEVALFAILED)
+                    raise
+
+            
+    return retrieved

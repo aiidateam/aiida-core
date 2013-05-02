@@ -100,7 +100,6 @@ class TemplatereplacerInputPlugin(InputPlugin):
         remote_copy_list = []
 
         for link_name, dest_rel_path in files_to_copy:
-            print link_name, '<<<<'
             try:
                 fileobj = inputdict.pop(link_name)
             except KeyError:

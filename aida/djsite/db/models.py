@@ -95,7 +95,7 @@ class DbNode(m.Model):
         except IndexError:
             pluginclass = ""
 
-        if baseclass == 'calculation':
+        if baseclass == Calculation._plugin_type_string:
             if pluginclass:
                 try:
                     PluginClass = load_plugin(Calculation, 'aida.orm.calculationplugins', pluginclass)
@@ -106,7 +106,7 @@ class DbNode(m.Model):
             else:
                 PluginClass = Calculation
             return PluginClass(uuid=self.uuid)
-        elif baseclass == 'code':
+        elif baseclass == Code._plugin_type_string:
             if pluginclass:
                 try:
                     PluginClass = load_plugin(Code, 'aida.orm.codeplugins', pluginclass)
@@ -117,7 +117,7 @@ class DbNode(m.Model):
             else:
                 PluginClass = Code
             return PluginClass(uuid=self.uuid)
-        elif baseclass == 'data':
+        elif baseclass == Data._plugin_type_string:
             if pluginclass:
                 try:
                     PluginClass = load_plugin(Data, 'aida.orm.dataplugins', pluginclass)
@@ -190,6 +190,7 @@ attrdatatype_choice = (
     ('int', 'int'),
     ('txt', 'txt'),
     ('bool', 'bool'),
+    ('date', 'date'),
     ('json', 'json'))
 
 class Attribute(m.Model):
@@ -206,7 +207,8 @@ class Attribute(m.Model):
     tval = m.TextField( default='', blank=True)
     fval = m.FloatField( default=None, null=True)
     ival = m.IntegerField( default=None, null=True)
-    bval = m.NullBooleanField( default=None, null=True)
+    bval = m.NullBooleanField(default=None, null=True)
+    dval = m.DateTimeField(default=None, null=True)
 
     class Meta:
         unique_together = (("dbnode", "key"))
@@ -214,15 +216,17 @@ class Attribute(m.Model):
     def setvalue(self,value):
         """
         This can be called on a given row and will set the corresponding value.
-        NOTE: Rules below need to be checked.
         """
         import json
+        import datetime 
+        
         if isinstance(value,bool):
             self.datatype = 'bool'
             self.bval = value
             self.tval = ''
             self.ival = None
             self.fval = None
+            self.dval = None
 
         elif isinstance(value,int):
             self.datatype = 'int'
@@ -230,6 +234,7 @@ class Attribute(m.Model):
             self.tval = ''
             self.bval = None
             self.fval = None
+            self.dval = None
 
         elif isinstance(value,float):
             self.datatype = 'float'
@@ -237,10 +242,22 @@ class Attribute(m.Model):
             self.tval = ''
             self.ival = None
             self.bval = None
+            self.dval = None
 
         elif isinstance(value,basestring):
             self.datatype = 'txt'
             self.tval = value
+            self.bval = None
+            self.ival = None
+            self.fval = None
+            self.dval = None
+
+        elif isinstance(value,datetime.datetime):
+            self.datatype = 'date'
+            # TODO: time-aware and time-naive datetime objects, see
+            # https://docs.djangoproject.com/en/dev/topics/i18n/timezones/#naive-and-aware-datetime-objects
+            self.dval = value
+            self.tval = None
             self.bval = None
             self.ival = None
             self.fval = None
@@ -274,6 +291,8 @@ class Attribute(m.Model):
             return self.fval
         elif self.datatype == 'txt':
             return self.tval
+        elif self.datatype == 'date':
+            return self.dval
         elif self.datatype == 'json':
             try:
                 return json.loads(self.tval)

@@ -12,6 +12,7 @@ from aida.common.utils import escape_for_bash
 from aida.common import aidalogger
 from aida.transport import FileAttribute
 import StringIO
+import fnmatch
 
 
 class LocalTransport(aida.transport.Transport):
@@ -527,14 +528,20 @@ class LocalTransport(aida.transport.Transport):
         return aida_attr
 
 
-    def listdir(self,path='.'):
+    def listdir(self,path='.',filter=None):
         """
         Returns a list containing the names of the entries in the directory.
         Args = path (str) - default ='.'
+               filter (str) - returns the list of files matching pattern.
+                              Unix only. (Use to emulate ls * for example)
         """
-        return os.listdir( os.path.join( self.curdir,path ) )
+        full_list = os.listdir( os.path.join( self.curdir,path ) )
+        if not filter:
+            return full_list
+        else:
+            return fnmatch.filter( full_list,filter )
 
-    
+
     def remove(self,path):
         """
         Removes a file at position path.

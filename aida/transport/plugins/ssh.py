@@ -2,6 +2,7 @@ from stat import S_ISDIR,S_ISREG
 import StringIO
 import paramiko
 import os
+import fnmatch
 
 import aida.transport
 from aida.common.utils import escape_for_bash
@@ -618,12 +619,18 @@ class SshTransport(aida.transport.Transport):
             raise IOError("Error while executing cp. Exit code: {}".format(retval) )
 
 
-    def listdir(self,path='.'):
+    def listdir(self,path='.',filter=None):
         """
         Get the list of files at path.
         Args: path - default = '.'
+              filter (str) - returns the list of files matching pattern.
+                             Unix only. (Use to emulate ls * for example)
         """
-        return self.sftp.listdir(path)
+        full_list = self.sftp.listdir(path)
+        if not filter:
+            return full_list
+        else:
+            return fnmatch.filter( full_list,filter )
 
 
     def remove(self,path):

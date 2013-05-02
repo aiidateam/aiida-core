@@ -114,11 +114,15 @@ class TestDirectoryManipulation(unittest.TestCase):
                     string.ascii_uppercase + string.digits)
             t.mkdir(directory)
             t.chdir(directory)
-            list_of_dir=['1','-f a&','as']
+            list_of_dir=['1','-f a&','as','a2','a4f']
             for this_dir in list_of_dir:
                 t.mkdir(this_dir)
             list_of_dir_found = t.listdir('.')
             self.assertTrue(sorted(list_of_dir_found)==sorted(list_of_dir))    
+
+            self.assertTrue( sorted(t.listdir('.','a*')), sorted(['as','a2','a4f']) )
+            self.assertTrue( sorted(t.listdir('.','a?')), sorted(['as','a2']) )
+            self.assertTrue( sorted(t.listdir('.','a[2-4]*')), sorted(['a2','a4f']) )
 
             for this_dir in list_of_dir:
                 t.rmdir(this_dir)

@@ -1,16 +1,21 @@
 from django.core.management.base import BaseCommand, CommandError
 from optparse import make_option
-import install
 import os
 import aida
 import subprocess
 from signal import signal, SIGTERM
 import time 
+from aida.common.utils import get_config
+
+daemon_subdir    = "daemon"
+daemon_conf_file = "aida_daemon.conf"
+log_dir          = "daemon/log"
+
 class Command(BaseCommand):
 
     #aida_dir = os.path.abspath(aida.__path__[0])
     aida_dir        = os.path.expanduser("~/.aida")
-
+    
     option_list = BaseCommand.option_list + (
         make_option('--start',
             action='store_true',
@@ -32,18 +37,18 @@ class Command(BaseCommand):
 
     def getDaemonPid(self):
 
-        if (os.path.isfile(os.path.join(self.aida_dir,install.daemon_subdir,"supervisord.pid"))):
-            return int(open(os.path.join(self.aida_dir,install.daemon_subdir,"supervisord.pid"), 'r').read().strip())
+        if (os.path.isfile(os.path.join(self.aida_dir,daemon_subdir,"supervisord.pid"))):
+            return int(open(os.path.join(self.aida_dir,daemon_subdir,"supervisord.pid"), 'r').read().strip())
         else:
             return None
 
 
     def start(self):
-
+        
         self.stdout.write("Starting AIDA Daemon ...")
 
         process = subprocess.Popen("supervisord -c "+ \
-            os.path.join(self.aida_dir,install.daemon_subdir,"aida_daemon.conf"), 
+            os.path.join(self.aida_dir,daemon_subdir,"aida_daemon.conf"), 
             shell=True, stdout=subprocess.PIPE)
         process.wait()
         if (process.returncode==0):
@@ -58,7 +63,7 @@ class Command(BaseCommand):
     def status(self, pid):
 
         process = subprocess.Popen("supervisorctl -c "+ \
-            os.path.join(self.aida_dir,install.daemon_subdir,"aida_daemon.conf")+" avail", 
+            os.path.join(self.aida_dir,daemon_subdir,"aida_daemon.conf")+" avail", 
             shell=True, stdout=subprocess.PIPE)
 
         process.wait()

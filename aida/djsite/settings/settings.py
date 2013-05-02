@@ -1,6 +1,7 @@
 # Django settings for the AIDA project.
 import sys, os, os.path
 from django.core.exceptions import ImproperlyConfigured
+from aida.common.utils import store_config, get_config
 
 # Assumes that parent directory of aida is root for
 # things like templates/, SQL/ etc.  If not, change what follows...
@@ -8,14 +9,25 @@ AIDA_DIR = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR = os.path.split(AIDA_DIR)[0]
 sys.path = [BASE_DIR] + sys.path
 
+try:
+    confs = get_config()
+except:
+    raise ImproperlyConfigured("Please run the AIDA Installation")
+
+def get_default(field, default):
+    if field in confs:
+        return confs[field]
+    else:
+        return default
+          
 #put all database specific portions of settings here
-DBENGINE = os.environ.get('AIDADB_ENGINE', '')
-DBNAME = os.environ.get('AIDADB_NAME', '')
-DBUSER = os.environ.get('AIDADB_USER', '')
-DBPASS = os.environ.get('AIDADB_PASS', '')
-DBHOST = os.environ.get('AIDADB_HOST', '')
-DBPORT = os.environ.get('AIDADB_PORT', '')
-LOCAL_REPOSITORY = os.environ.get('AIDADB_REPOSITORY', '')
+DBENGINE = get_default('AIDADB_ENGINE', '')
+DBNAME = get_default('AIDADB_NAME', '')
+DBUSER = get_default('AIDADB_USER', '')
+DBPASS = get_default('AIDADB_PASS', '')
+DBHOST = get_default('AIDADB_HOST', '')
+DBPORT = get_default('AIDADB_PORT', '')
+LOCAL_REPOSITORY = get_default('AIDADB_REPOSITORY', '')
 
 DATABASES = {
     'default' : {

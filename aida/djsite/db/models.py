@@ -414,7 +414,7 @@ class Comment(m.Model):
 
 
 #
-#
+# Workflows
 #
 
 workflow_step_exit = "wf_exit"
@@ -422,16 +422,25 @@ workflow_status = (('running', 'running'),
     ('finished', 'finished'),
 )
 
-class DbWorkflow(m.Model):
+class DbWorkflowScript(m.Model):
     
     uuid        = UUIDField(auto=True)
     time        = m.DateTimeField(auto_now_add=True, editable=False)
     name        = m.CharField(max_length=255, editable=False, blank=False, unique=True)
+    version     = m.IntegerField()
     user        = m.ForeignKey(User)
-    comment     = m.TextField(blank=True)
-    status      = m.CharField(max_length=255, choices=workflow_status, default='running')
+    comment     = m.TextField(blank=True)  
     repo_folder = m.CharField(max_length=255)
 
+class DbWorkflow(m.Model):
+    
+    uuid        = UUIDField(auto=True)
+    time        = m.DateTimeField(auto_now_add=True, editable=False)
+    version     = m.IntegerField()
+    user        = m.ForeignKey(User)
+    script      = m.ForeignKey(DbWorkflowScript, related_name='instances')
+    status       = m.CharField(max_length=255, choices=workflow_status, default='running')
+    
     def get_calculations(self):
         
         from aida.orm import Calculation

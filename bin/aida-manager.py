@@ -119,7 +119,7 @@ def create_configuration(dev_arg):
           
       
           
-      readline.set_startup_hook(lambda: readline.insert_text(get_default('DBENGINE','sqlite3')))
+      readline.set_startup_hook(lambda: readline.insert_text(get_default('AIDADB_ENGINE','sqlite3')))
       confs['AIDADB_ENGINE'] = raw_input('Database engine: ')
       
       if 'sqlite' in confs['AIDADB_ENGINE']:
@@ -138,7 +138,7 @@ def create_configuration(dev_arg):
           
           confs['AIDADB_ENGINE'] = 'postgresql_psycopg2'
           
-          readline.set_startup_hook(lambda: readline.insert_text(get_default('AIDADB_HOST','locahost')))
+          readline.set_startup_hook(lambda: readline.insert_text(get_default('AIDADB_HOST','localhost')))
           confs['AIDADB_HOST'] = raw_input('PostgreSQL host: ')
           
           readline.set_startup_hook(lambda: readline.insert_text(get_default('AIDADB_PORT','5432')))
@@ -151,17 +151,17 @@ def create_configuration(dev_arg):
           confs['AIDADB_USER'] = raw_input('AIDA Database user: ')
       
           readline.set_startup_hook(lambda: readline.insert_text(get_default('AIDADB_PASS','aida_password')))
-          confs['AIDADB_PASS'] = raw_input('AIDA Database user: ')
+          confs['AIDADB_PASS'] = raw_input('AIDA Database password: ')
 
       elif 'mysql' in confs['AIDADB_ENGINE']:
           
           confs['AIDADB_ENGINE'] = 'mysql'
           
-          readline.set_startup_hook(lambda: readline.insert_text(get_default('AIDADB_NAME','locahost')))
-          confs['AIDADB_HOST'] = raw_input('PostgreSQL host: ')
+          readline.set_startup_hook(lambda: readline.insert_text(get_default('AIDADB_NAME','localhost')))
+          confs['AIDADB_HOST'] = raw_input('mySQL host: ')
           
           readline.set_startup_hook(lambda: readline.insert_text(get_default('AIDADB_PORT','3306')))
-          confs['AIDADB_PORT'] = raw_input('PostgreSQL port: ')
+          confs['AIDADB_PORT'] = raw_input('mySQL port: ')
           
           readline.set_startup_hook(lambda: readline.insert_text(get_default('AIDADB_NAME','aidadb')))
           confs['AIDADB_NAME'] = raw_input('AIDA Database name: ')
@@ -170,7 +170,7 @@ def create_configuration(dev_arg):
           confs['AIDADB_USER'] = raw_input('AIDA Database user: ')
       
           readline.set_startup_hook(lambda: readline.insert_text(get_default('AIDADB_PASS','aida_password')))
-          confs['AIDADB_PASS'] = raw_input('AIDA Database user: ')
+          confs['AIDADB_PASS'] = raw_input('AIDA Database password: ')
       
       else:
           raise Exception("You have to specify a database !")

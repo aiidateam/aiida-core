@@ -20,7 +20,7 @@ class Calculation(Node):
     def __init__(self,*args,**kwargs):
         """
         Possible arguments:
-        computer, num_nodes, num_cpus_per_node
+        computer, num_nodes, num_cpus_per_node, code
         """
         from aida.common.datastructures import calcStates
         
@@ -47,6 +47,10 @@ class Calculation(Node):
         num_cpus_per_node = kwargs.pop('num_cpus_per_node',None)
         if num_cpus_per_node is not None:
             self.set_num_cpus_per_node(num_cpus_per_node)        
+
+        code = kwargs.pop('code',None)
+        if code is not None:
+            self.set_code(code)
 
         if kwargs:
             raise ValueError("Invalid parameters found in the __init__: {}".format(kwargs.keys()))
@@ -127,6 +131,11 @@ class Calculation(Node):
         
         return super(Calculation,self).add_link_from(src, *args, **kwargs)
 
+    def set_code(self,code):
+        from aida.orm import Code
+        if not isinstance(code, Code):
+            raise ValueError("Codes entering in calculation can only be of type Code()")
+        self.add_link_from(code)
 
     def set_computer(self,computer):
         """

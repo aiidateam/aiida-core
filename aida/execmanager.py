@@ -235,7 +235,7 @@ def submit_calc(calc):
 
         if not code.can_run_on(computer):
             raise InputValidationError("The selected code {} cannot run on machine {}".format(
-                code.uuid, calc.get_computer().hostname))
+                code.uuid, computer.hostname))
     
         # load dynamically the input plugin
         Plugin = load_plugin(InputPlugin, 'aida.codeplugins.input', code.get_input_plugin())
@@ -329,8 +329,20 @@ def submit_calc(calc):
                 remote_working_directory = calc.get_computer().get_workdir().format(username=remote_user)
                 if not remote_working_directory.strip():
                     raise ConfigurationError("No remote_working_directory configured for the computer")
-    
-                t.chdir(remote_working_directory)
+
+                # If it already exists, no exception is raised
+                try:
+                    t.chdir(remote_working_directory)
+                except IOError:
+                    execlogger.debug("Unable to chdkir in {}, trying to create it".format(
+                        remote_working_directory))
+                    try:
+                        t.makedirs(remote_working_directory)
+                        t.chdir(remote_working_directory)
+                    except IOError as e:
+                        raise ConfigurationError(
+                            "Unable to create the remote directory {} on {}".format(
+                                remote_working_directory, computer.hostname))
                 # Sharding
                 t.mkdir(calcinfo.uuid[:2],ignore_existing=True)
                 t.chdir(calcinfo.uuid[:2])

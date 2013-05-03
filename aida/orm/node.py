@@ -165,7 +165,7 @@ class Node(object):
         #
         # I am linking src->self; a loop would be created if a Path exists already
         # in the TC table from self to src
-        if len(Path.objects.filter(parent=src.dbnode, child=self.dbnode))>0:
+        if len(Path.objects.filter(parent=self.dbnode, child=src.dbnode))>0:
             raise ValueError("The link you are attempting to create would generate a loop")            
 
         # Check if the source allows output links from this node (will raise ValueError if 

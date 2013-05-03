@@ -34,7 +34,7 @@ class Folder(object):
         self._folder_limit = folder_limit
 
     
-    def get_subfolder(self, subfolder, create=False):
+    def get_subfolder(self, subfolder, create=False, reset_limit=False):
         """
         Return a Folder object pointing to a subfolder.
 
@@ -44,24 +44,34 @@ class Folder(object):
                 this may also contain '..' parts,
                 as far as this does not go beyond the folder_limit.
             create: if True, the new subfolder is created, if it does not exist.
+            reset_limit: when doing b = a.get_subfolder('xxx', reset_limit=False),
+                the limit of b will be the same limit of a.
+                if True, the limit will be set to the boundaries of folder b.
             
         Returns:
             a Folder object pointing to the subfolder.
-            The subfolder limit will be the same of the parent.
         """
         dest_abs_dir = os.path.realpath(os.path.join(
                 self.abspath,unicode(subfolder)))
 
-        # Create a new Folder object, with the same limit of the parent
+        
+        if reset_limit:
+            # Create a new Folder object, with a limit to itself (cannot go
+            # back to this folder)
+            folder_limit = None
+        else:
+            # Create a new Folder object, with the same limit of the parent
+            folder_limit = self.folder_limit
+
         new_folder = Folder(abspath=dest_abs_dir, 
-                            folder_limit = self.folder_limit)
+                            folder_limit = folder_limit)
         
         if create:
             new_folder.create()
             
         return new_folder
     
-    def get_content_list(self,pattern='*',only_filenames = False):
+    def get_content_list(self,pattern='*',only_paths = True):
         """
         Return a list of files (and subfolders) in the folder,
         matching a given pattern.
@@ -83,21 +93,11 @@ class Folder(object):
         file_list = [fname for fname in os.listdir(self.abspath)
                 if fnmatch.fnmatch(fname, pattern)]
 
-        if only_filenames:
+        if only_paths:
             return file_list
         else:
             return [(fname,not os.path.isdir(os.path.join(self.abspath, fname))) 
                     for fname in file_list]
-
-    def get_file_list(self,pattern=None):
-        """
-        Works as self.get_content_list(), but returns only a list of files and
-        not of directories.
-        """
-        if pattern is None:
-             return [f[0] for f in self.get_content_list() if f[1]]
-        else:
-             return [f[0] for f in self.get_content_list(pattern=pattern) if f[1]]
 
     def create_symlink(self, src, name):
         """
@@ -110,10 +110,10 @@ class Folder(object):
                 moved!
             name: the filename of the symlink to be created.
         """
-        dest_abs_path = self.get_file_path(name)
+        dest_abs_path = self.get_abs_path(name)
         os.symlink(src,dest_abs_path)
 
-    def insert_file(self,src,dest_name=None):
+    def insert_path(self,src,dest_name=None,overwrite=True):
         """
         Copy a file to the folder.
         
@@ -121,6 +121,8 @@ class Folder(object):
             src: the source filename to copy
             dest_name: if None, the same basename of src is used. Otherwise,
                 the destination filename will have this file name.
+            if overwrite == False, raises an error on existing destination;
+            otherwise, delete it first.
         """
         if dest_name is None:
             filename = unicode(os.path.basename(src))
@@ -129,9 +131,47 @@ class Folder(object):
 
         # I get the full path of the filename, checking also that I don't
         # go beyond the folder limits
-        dest_abs_path = self.get_file_path(filename)
+        dest_abs_path = self.get_abs_path(filename)
 
-        shutil.copyfile(src,dest_abs_path)
+        if not os.path.isabs(src):
+            raise ValueError("src must be an absolute path in insert_file")
+
+        # In this way, the destination is always correct (i.e., if I copy to a
+        # folder, I point to the correct location inside it)
+        if os.path.isdir(dest_abs_path):
+            dest_abs_path = os.path.join(dest_abs_path,os.path.basename(src))
+
+        if os.path.isfile(src):
+            if os.path.exists(dest_abs_path):
+                if overwrite:
+                    if os.path.isdir(dest_abs_path):
+                        shutil.rmtree(dest_abs_path)
+                    else:
+                        os.remove(dest_abs_path)
+                    # This automatically overwrites files
+                    shutil.copyfile(src,dest_abs_path)
+                else:
+                    raise IOError("destination already exists: {}".format(
+                        os.path.join(dest_abs_path)))
+            else:
+                shutil.copyfile(src,dest_abs_path)
+        elif os.path.isdir(src):
+            if os.path.exists(dest_abs_path):
+                if overwrite:
+                    if os.path.isdir(dest_abs_path):
+                        shutil.rmtree(dest_abs_path)
+                    else:
+                        os.remove(dest_abs_path)
+                    # This automatically overwrites files
+                    shutil.copytree(src,dest_abs_path)
+                else:
+                    raise IOError("destination already exists: {}".format(
+                        os.path.join(dest_abs_path)))
+            else:
+                shutil.copytree(src,dest_abs_path)
+        else:
+            raise ValueError("insert_path can only insert files or paths, not symlinks or the like")
+
         return dest_abs_path
 
     def create_file_from_filelike(self,src_filelike,dest_name):
@@ -147,7 +187,7 @@ class Folder(object):
 
         # I get the full path of the filename, checking also that I don't
         # go beyond the folder limits
-        dest_abs_path = self.get_file_path(filename)
+        dest_abs_path = self.get_abs_path(filename)
 
         with open(dest_abs_path,'w') as f:
             for l in src_filelike.readlines():
@@ -155,42 +195,48 @@ class Folder(object):
 
         return dest_abs_path
 
-    def remove_file(self,filename):
+    def remove_path(self,filename):
         """
-        Remove a file from the folder.
+        Remove a file or folder from the folder.
         
         Args:
             filename: the relative path name to remove
         """
         # I get the full path of the filename, checking also that I don't
         # go beyond the folder limits
-        dest_abs_path = self.get_file_path(filename)
+        dest_abs_path = self.get_abs_path(filename,check_existence=True)
 
-        os.remove(dest_abs_path)
+        if os.path.isdir(dest_abs_path):
+            shutil.rmtree(dest_abs_path)
+        else:
+            os.remove(dest_abs_path)
 
 
-    def get_file_path(self,filename,check_existence=False):
+
+    def get_abs_path(self,relpath,check_existence=False):
         """
-        Return an absolute path for a filename in this folder.
+        Return an absolute path for a file or folder in this folder.
         
         The advantage of using this method is that it checks that filename is a valid
         filename within this folder, and not something e.g. containing slashes.
         
         Args:
-            filename: The filename to open.
-            check_existence: if False, just create the file path and return it. Otherwise, also
-                check if the file actually exists. Raise OSError if it does not.
+            filename: The file or directory.
+            check_existence: if False, just return the file path. Otherwise, also
+                check if the file or directory actually exists. Raise OSError if it does not.
         """
-        dest_abs_path = os.path.join(self.abspath,filename)
+        if os.path.isabs(relpath):
+            raise ValueError("relpath must be a relative path")
+        dest_abs_path = os.path.join(self.abspath,relpath)
         
-        if not os.path.split(dest_abs_path) == (self.abspath,filename):
-            errstr = "You didn't specify a valid filename: {}".format(filename)
+        if not os.path.commonprefix([dest_abs_path,self.folder_limit]) == self.folder_limit:
+            errstr = "You didn't specify a valid filename: {}".format(relpath)
             raise ValueError(errstr)
 
         if check_existence:
-            if not os.path.isfile(dest_abs_path):
-                raise OSError("{} is not a file within the folder {}".format(
-                    filename, self.abspath))
+            if not os.path.exists(dest_abs_path):
+                raise OSError("{} is does not exist within the folder {}".format(
+                    relpath, self.abspath))
         
         return dest_abs_path
 
@@ -383,25 +429,8 @@ class RepositoryFolder(Folder):
         """
         return RepositoryFolder(self.section,self.uuid)
 
-    def get_subfolder(self,subfolder,create=False):
-        """
-        Returns a subdirectory object of the current directory.
-        
-        Overrides the base class Folder get_subfolder method by creating a new instance of
-        a RepositoryFolder object, instead of a simple Folder object.
 
-        Args:
-            subfolder: the required subfolder.
-                Can also contain .. but cannot go beyond the entity folder
-                (i.e., the section/uuid folder).
-        """
-        new_folder = RepositoryFolder(self.section,self.uuid,
-            subfolder=os.path.normpath(os.path.join(self.subfolder,subfolder)))
-
-        if create:
-            new_folder.create()
-
-        return new_folder
+    # NOTE! The get_subfolder method will return a Folder object, and not a RepositoryFolder object
 
 if __name__ == "__main__":
     # .. todo:: implement tests here

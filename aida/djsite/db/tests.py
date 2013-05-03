@@ -8,7 +8,7 @@ from django.utils import unittest
 from aida.orm import Node
 from aida.common.exceptions import ModificationNotAllowed
 
-class TransitiveClosure(unittest.TestCase):
+class TransitiveNoLoops(unittest.TestCase):
     """
     Test the creation of the transitive closure table
     """
@@ -29,6 +29,53 @@ class TransitiveClosure(unittest.TestCase):
             User.objects.get(username=getpass.getuser).delete()
         except ObjectDoesNotExist:
             pass
+
+        from aida.djsite.db.models import DbNode
+        DbNode.objects.filter().delete()
+
+    def test_loop_not_allowed(self):
+        n1 = Node().store()
+        n2 = Node().store()
+        n3 = Node().store()
+        n4 = Node().store()
+
+        n1.add_link_to(n2)
+        n2.add_link_to(n3)
+        n3.add_link_to(n4)
+
+        from aida.djsite.db.models import Path
+
+        with self.assertRaises(ValueError): # This would generate a loop
+            n4.add_link_to(n1)
+
+            src = 4
+            dest = 1
+
+class TransitiveClosureDeletion(unittest.TestCase):
+    """
+    Test the creation of the transitive closure table
+    """
+    @classmethod
+    def setUpClass(cls):
+        import getpass
+        from django.contrib.auth.models import User
+
+        User.objects.create_user(getpass.getuser(), 'unknown@mail.com', 'fakepwd')
+
+    @classmethod
+    def tearDownClass(cls):
+        import getpass
+        from django.contrib.auth.models import User
+        from django.core.exceptions import ObjectDoesNotExist
+
+        try:
+            User.objects.get(username=getpass.getuser).delete()
+        except ObjectDoesNotExist:
+            pass
+
+        from aida.djsite.db.models import DbNode
+        DbNode.objects.filter().delete()
+
 
     def test_creation_and_deletion(self):
         from aida.djsite.db.models import Link # Direct links
@@ -117,6 +164,10 @@ class TestQueryWithAidaObjects(unittest.TestCase):
             User.objects.get(username=getpass.getuser).delete()
         except ObjectDoesNotExist:
             pass
+
+        from aida.djsite.db.models import DbNode
+        DbNode.objects.filter().delete()
+
 
     def test_get_inputs_and_outputs(self):
         a1 = Node().store()
@@ -241,6 +292,10 @@ class TestNodeBasic(unittest.TestCase):
             User.objects.get(username=getpass.getuser).delete()
         except ObjectDoesNotExist:
             pass
+
+        from aida.djsite.db.models import DbNode
+        DbNode.objects.filter().delete()
+
 
     def test_attr_before_storing(self):
         a = Node()
@@ -371,45 +426,45 @@ class TestNodeBasic(unittest.TestCase):
         with tempfile.NamedTemporaryFile() as f:
             f.write(file_content)
             f.flush()
-            a.add_file(f.name,'file1.txt')
-            a.add_file(f.name,'file2.txt')
+            a.add_path(f.name,'file1.txt')
+            a.add_path(f.name,'file2.txt')
 
-        self.assertEquals(set(a.get_file_list()),set(['file1.txt','file2.txt']))
-        with open(a.get_file_path('file1.txt')) as f:
+        self.assertEquals(set(a.get_path_list()),set(['file1.txt','file2.txt']))
+        with open(a.get_abs_path('file1.txt')) as f:
             self.assertEquals(f.read(), file_content)
-        with open(a.get_file_path('file2.txt')) as f:
+        with open(a.get_abs_path('file2.txt')) as f:
             self.assertEquals(f.read(), file_content)
 
         b = a.copy()
         self.assertNotEquals(a.uuid, b.uuid)
 
         # Check that the content is there
-        self.assertEquals(set(b.get_file_list()),set(['file1.txt','file2.txt']))
-        with open(b.get_file_path('file1.txt')) as f:
+        self.assertEquals(set(b.get_path_list()),set(['file1.txt','file2.txt']))
+        with open(b.get_abs_path('file1.txt')) as f:
             self.assertEquals(f.read(), file_content)
-        with open(b.get_file_path('file2.txt')) as f:
+        with open(b.get_abs_path('file2.txt')) as f:
             self.assertEquals(f.read(), file_content)
 
         # I overwrite a file and create a new one in the copy only
         with tempfile.NamedTemporaryFile() as f:
             f.write(file_content_different)
             f.flush()
-            b.add_file(f.name,'file2.txt')       
-            b.add_file(f.name,'file3.txt')
+            b.add_path(f.name,'file2.txt')       
+            b.add_path(f.name,'file3.txt')
 
         # I check the new content, and that the old one has not changed
-        self.assertEquals(set(a.get_file_list()),set(['file1.txt','file2.txt']))
-        with open(a.get_file_path('file1.txt')) as f:
+        self.assertEquals(set(a.get_path_list()),set(['file1.txt','file2.txt']))
+        with open(a.get_abs_path('file1.txt')) as f:
             self.assertEquals(f.read(), file_content)
-        with open(a.get_file_path('file2.txt')) as f:
+        with open(a.get_abs_path('file2.txt')) as f:
             self.assertEquals(f.read(), file_content)
-        self.assertEquals(set(b.get_file_list()),
+        self.assertEquals(set(b.get_path_list()),
                           set(['file1.txt','file2.txt','file3.txt']))
-        with open(b.get_file_path('file1.txt')) as f:
+        with open(b.get_abs_path('file1.txt')) as f:
             self.assertEquals(f.read(), file_content)
-        with open(b.get_file_path('file2.txt')) as f:
+        with open(b.get_abs_path('file2.txt')) as f:
             self.assertEquals(f.read(), file_content_different)
-        with open(b.get_file_path('file3.txt')) as f:
+        with open(b.get_abs_path('file3.txt')) as f:
             self.assertEquals(f.read(), file_content_different)
 
         # This should in principle change the location of the files, so I recheck
@@ -421,22 +476,22 @@ class TestNodeBasic(unittest.TestCase):
         with tempfile.NamedTemporaryFile() as f:
             f.write(file_content_different)
             f.flush()
-            c.add_file(f.name,'file1.txt')       
-            c.add_file(f.name,'file4.txt')
+            c.add_path(f.name,'file1.txt')       
+            c.add_path(f.name,'file4.txt')
 
-        self.assertEquals(set(a.get_file_list()),set(['file1.txt','file2.txt']))
-        with open(a.get_file_path('file1.txt')) as f:
+        self.assertEquals(set(a.get_path_list()),set(['file1.txt','file2.txt']))
+        with open(a.get_abs_path('file1.txt')) as f:
             self.assertEquals(f.read(), file_content)
-        with open(a.get_file_path('file2.txt')) as f:
+        with open(a.get_abs_path('file2.txt')) as f:
             self.assertEquals(f.read(), file_content)
 
-        self.assertEquals(set(c.get_file_list()),
+        self.assertEquals(set(c.get_path_list()),
                           set(['file1.txt','file2.txt','file4.txt']))
-        with open(c.get_file_path('file1.txt')) as f:
+        with open(c.get_abs_path('file1.txt')) as f:
             self.assertEquals(f.read(), file_content_different)
-        with open(c.get_file_path('file2.txt')) as f:
+        with open(c.get_abs_path('file2.txt')) as f:
             self.assertEquals(f.read(), file_content)
-        with open(c.get_file_path('file4.txt')) as f:
+        with open(c.get_abs_path('file4.txt')) as f:
             self.assertEquals(f.read(), file_content_different)
         
 
@@ -671,6 +726,10 @@ class TestSubNodes(unittest.TestCase):
 
         DbComputer.objects.filter().delete()
 
+        from aida.djsite.db.models import DbNode
+        DbNode.objects.filter().delete()
+
+
     def test_set_code(self):
         from aida.orm import Node, Calculation, Data, Code
         from aida.orm import Computer
@@ -761,13 +820,14 @@ class TestSubNodes(unittest.TestCase):
         from aida.orm import Computer
         from aida.common.pluginloader import load_plugin
         from aida.djsite.db.models import DbComputer
+        from aida.common.datastructures import calcStates
 
-        FileData = load_plugin(Data, 'aida.orm.dataplugins', 'file')
+        SinglefileData = load_plugin(Data, 'aida.orm.dataplugins', 'singlefile')
 
         # I create some objects
         d1 = Data().store()
         with tempfile.NamedTemporaryFile() as f:
-            d2 = FileData(f.name).store()
+            d2 = SinglefileData(f.name).store()
 
         code = Code(remote_machine_exec=('localhost','/bin/true'),
                     input_plugin='simple_plugins.template_replacer').store()
@@ -821,10 +881,19 @@ class TestSubNodes(unittest.TestCase):
 
         data_node = Data().store()
 
+        # I do a trick to set it to a state that allows writing
+        calc_a._set_state(calcStates.RETRIEVING) 
+        calc_b._set_state(calcStates.RETRIEVING) 
+
         data_node.add_link_from(calc_a)
         # A data cannot have to input calculations
         with self.assertRaises(ValueError):
             data_node.add_link_from(calc_b)
+
+        newdata = Data()
+        # Cannot add an input link if the calculation is not in status NEW
+        with self.assertRaises(ValueError):
+            calc_a.add_link_from(newdata)
 
         calculation_inputs = calc.get_inputs()
         inputs_type_data = [i for i in calculation_inputs if isinstance(i,Data)]
@@ -840,13 +909,22 @@ class TestSubNodes(unittest.TestCase):
         Each data node can only have one input calculation
         """
         from aida.orm import Node, Calculation, Data, Code
-        
+        from aida.common.datastructures import calcStates
+
         d1 = Data().store()
         
         calc = Calculation(computer=self.computer,
             num_nodes=1,num_cpus_per_node=1).store()
         calc2 = Calculation(computer=self.computer,
             num_nodes=1,num_cpus_per_node=1).store()
+
+        # I cannot, calc it is in state NEW
+        with self.assertRaises(ValueError):
+            d1.add_link_from(calc)
+
+        # I do a trick to set it to a state that allows setting the link
+        calc._set_state(calcStates.RETRIEVING) 
+        calc2._set_state(calcStates.RETRIEVING) 
 
         d1.add_link_from(calc)
 
@@ -855,7 +933,7 @@ class TestSubNodes(unittest.TestCase):
 
 class TestCode(unittest.TestCase):
     """
-    Test the FileData class.
+    Test the Code class.
     """    
     @classmethod
     def setUpClass(cls):
@@ -883,6 +961,10 @@ class TestCode(unittest.TestCase):
             pass
 
         DbComputer.objects.filter().delete()
+
+        from aida.djsite.db.models import DbNode
+        DbNode.objects.filter().delete()
+
         
         
     def test_code_local(self):
@@ -900,7 +982,7 @@ class TestCode(unittest.TestCase):
         with tempfile.NamedTemporaryFile() as f:
             f.write("#/bin/bash\n\necho test run\n")
             f.flush()
-            code.add_file(f.name, 'test.sh')
+            code.add_path(f.name, 'test.sh')
 
         code.store()
         self.assertTrue(code.can_run_on(self.computer))
@@ -938,14 +1020,14 @@ class TestCode(unittest.TestCase):
         with tempfile.NamedTemporaryFile() as f:
             f.write("#/bin/bash\n\necho test run\n")
             f.flush()
-            code.add_file(f.name, 'test.sh')
+            code.add_path(f.name, 'test.sh')
 
         with self.assertRaises(ValidationError):
             # There are files inside
             code.store()
 
         # If there are no files, I can store
-        code.remove_file('test.sh')
+        code.remove_path('test.sh')
         code.store()
 
         self.assertEquals(code.get_remote_machine(), 'localhost')
@@ -956,9 +1038,9 @@ class TestCode(unittest.TestCase):
         self.assertTrue(code.can_run_on(self.computer))         
         self.assertFalse(code.can_run_on('another.computer.com'))
         
-class TestFileData(unittest.TestCase):
+class TestSinglefileData(unittest.TestCase):
     """
-    Test the FileData class.
+    Test the SinglefileData class.
     """    
     @classmethod
     def setUpClass(cls):
@@ -977,17 +1059,17 @@ class TestFileData(unittest.TestCase):
             User.objects.get(username=getpass.getuser).delete()
         except ObjectDoesNotExist:
             pass
+
+        from aida.djsite.db.models import DbNode
+        DbNode.objects.filter().delete()
+
         
     def test_reload(self):
         import os
         import tempfile
 
-        from aida.orm.dataplugins.file import FileData
+        from aida.orm.dataplugins.singlefile import SinglefileData
 
-        # Or, equivalently:
-        #        from aida.orm import Data
-        #        from aida.common.pluginloader import load_plugin        
-        #        FileData = load_plugin(Data,'aida.orm.dataplugins','file')
 
         file_content = 'some text ABCDE'
         with tempfile.NamedTemporaryFile() as f:
@@ -995,26 +1077,26 @@ class TestFileData(unittest.TestCase):
             basename = os.path.split(filename)[1]
             f.write(file_content)
             f.flush()
-            a = FileData(filename)
+            a = SinglefileData(filename)
 
         the_uuid = a.uuid
 
-        self.assertEquals(a.get_file_list(),[basename])
+        self.assertEquals(a.get_path_list(),[basename])
 
-        with open(a.get_file_path(basename)) as f:
+        with open(a.get_abs_path(basename)) as f:
             self.assertEquals(f.read(), file_content)
 
         a.store()
 
-        with open(a.get_file_path(basename)) as f:
+        with open(a.get_abs_path(basename)) as f:
             self.assertEquals(f.read(), file_content)
-        self.assertEquals(a.get_file_list(),[basename])
+        self.assertEquals(a.get_path_list(),[basename])
 
         b = Node.get_subclass_from_uuid(the_uuid)
 
         # I check the retrieved object
-        self.assertTrue(isinstance(b,FileData))
-        self.assertEquals(b.get_file_list(),[basename])
-        with open(b.get_file_path(basename)) as f:
+        self.assertTrue(isinstance(b,SinglefileData))
+        self.assertEquals(b.get_path_list(),[basename])
+        with open(b.get_abs_path(basename)) as f:
             self.assertEquals(f.read(), file_content)
 

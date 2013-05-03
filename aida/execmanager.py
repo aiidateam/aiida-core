@@ -206,7 +206,7 @@ def submit_calc(calc):
     from aida.common.exceptions import InputValidationError, MissingPluginError, ValidationError
     from aida.scheduler.datastructures import JobTemplate
     from aida.common.utils import validate_list_of_string_tuples
-    from aida.orm.datastructures.remote import RemoteData
+    from aida.orm.dataplugins.remote import RemoteData
     
     if not isinstance(calc,Calculation):
         raise ValueError("calc must be a Calculation")

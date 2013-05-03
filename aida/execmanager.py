@@ -245,7 +245,7 @@ def submit_calc(calc):
             calcinfo = plugin.create(calc, calc.get_inputs(type=Data,also_labels=True), folder)
     
             if code.is_local():
-                if code.get_local_executable() in folder.get_content_list(only_filenames=True):
+                if code.get_local_executable() in folder.get_content_list():
                     raise PluginInternalError("The plugin created a file {} that is also "
                                               "the executable name!".format(code.get_local_executable()))
 
@@ -358,14 +358,14 @@ def submit_calc(calc):
                 # But I checked for this earlier.
                 if code.is_local():
                     # Note: this will possibly overwrite files
-                    for f, _ in code.repo_folder.get_content_list():
-                        t.put(code.repo_folder.get_file_path(f), f)
+                    for f in code.get_path_list():
+                        t.put(code.get_abs_path(f), f)
                     t.chmod(code.get_local_executable(), 0755) # rwxr-xr-x
 
                 # copy all files, recursively with folders
-                for f, _ in folder.get_content_list():
+                for f in folder.get_content_list():
                     execlogger.debug("copying file/folder {}...".format(f))
-                    t.put(folder.get_file_path(f), f)
+                    t.put(folder.get_abs_path(f), f)
 
                 # local_copy_list is a list of tuples, each with (src_abs_path, dest_rel_path)
                 local_copy_list = calcinfo.local_copy_list

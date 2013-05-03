@@ -121,7 +121,7 @@ except IOError:
             f.flush()
             code = Code(local_executable = "sum.py", 
                         input_plugin='simpleplugins.templatereplacer')
-            code.add_file(f.name, "sum.py")
+            code.add_path(f.name, "sum.py")
             code.store()
             code.set_metadata("version", current_version)
         return code

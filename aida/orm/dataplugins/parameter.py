@@ -26,9 +26,9 @@ class ParameterData(Data):
         for k, v in dictionary.iteritems():
             self.set_attr(k, v)
 
-    def add_file(self, *args, **kwargs):
+    def add_path(self, *args, **kwargs):
         from aida.common.exceptions import ModificationNotAllowed
-        raise ModificationNotAllowed("Cannot add files to a ParameterData object")
+        raise ModificationNotAllowed("Cannot add files or directories to a ParameterData object")
 
     #    def validate(self):
     #        # There should be nothing specific to check

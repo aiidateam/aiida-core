@@ -32,7 +32,7 @@ from aida.orm.dataplugins.remote import RemoteData
 
 computername = "bellatrix.epfl.ch"
 # A string with the version of this script, used to recreate a code when necessary
-current_version = "1.0.3"
+current_version = "1.0.4"
 #queue = None
 queue = "P_share_queue"
 
@@ -56,14 +56,18 @@ def get_or_create_machine():
         computer.store()
 
     from aida.djsite.db.models import AuthInfo
+    auth_params = {'username': remoteuser,
+             'load_system_host_keys': True}
+
+    if os.path.exists('~/.ssh/id_rsa'):
+        auth_params['key_filename'] = os.path.expanduser('~/.ssh/id_rsa')
+    elif os.path.exists('~/.ssh.id_dsa'):
+        auth_params['key_filename'] = os.path.expanduser('~/.ssh/id_rsa')
+
     authinfo, created = AuthInfo.objects.get_or_create(
         aidauser=get_automatic_user(),
         computer=computer.dbcomputer, 
-        defaults={'auth_params': json.dumps(
-            {'username': remoteuser,
-             'key_filename': os.path.expanduser('~/.ssh/id_rsa'),
-             'load_system_host_keys': True},
-            )}
+        defaults= {'auth_params': json.dumps(auth_params)},
         )
 
     if created:

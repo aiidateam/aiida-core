@@ -346,7 +346,7 @@ class SshTransport(aida.transport.Transport):
             
 
     def put(self,localpath,remotepath,callback=None,dereference=False,overwrite=True,
-            pattern=None):
+            pattern=None,ignore_nonexisting=False):
         """
         Put a file or a folder from local to remote.
         redirects to putfile or puttree.
@@ -370,6 +370,10 @@ class SshTransport(aida.transport.Transport):
         # TODO: flag confirm exists since v1.7.7. What is the paramiko
         # version supported?
 
+        # TODO : add dereference
+        if dereference:
+            raise NotImplementedError
+
         if not os.path.isabs(localpath):
             raise ValueError("The localpath must be an absolute path")
 
@@ -387,22 +391,37 @@ class SshTransport(aida.transport.Transport):
                     try:
                         self.mkdir(does_dir_exist)
                     except OSError as e:
-                        if 'File exists' in e.message:
+                        if 'File exists' in str(e) or 'directory already exists' in str(e):
                             pass
+                        else:
+                            raise
                         
                 if os.path.isdir(this_lpath):
                     self.puttree( this_lpath,this_rpath,callback,dereference,overwrite )
+                elif os.path.isfile(this_lpath):
+                    self.putfile( this_lpath,this_rpath,callback,dereference,overwrite )
                 else:
-                    self.putfile( this_lpath,this_rpath,callback,overwrite )
+                    if ignore_nonexisting:
+                        pass
+                    else:
+                        raise OSError("The local path {} does not exist"
+                                      .format(this_lpath))
+
 
         else:
             if os.path.isdir(localpath):
                 self.puttree( localpath,remotepath,callback,dereference,overwrite )
+            elif os.path.isfile(localpath):
+                self.putfile( localpath,remotepath,callback,dereference,overwrite )
             else:
-                self.putfile( localpath,remotepath,callback,overwrite )
+                if ignore_nonexisting:
+                    pass
+                else:
+                    raise OSError("The local path {} does not exist"
+                                  .format(localpath))
 
 
-    def putfile(self,localpath,remotepath,callback=None,overwrite=True):
+    def putfile(self,localpath,remotepath,callback=None,dereference=False,overwrite=True):
         """
         Put a file from local to remote.
 
@@ -416,7 +435,11 @@ class SshTransport(aida.transport.Transport):
             ValueError if local path is invalid
             OSError if the localpath does not exist,
                     or unintentionally overwriting
-        """        
+        """
+        # TODO : add dereference
+        if dereference:
+            raise NotImplementedError
+
         # TODO : check what happens if I give in input a directory
         
         if not os.path.isabs(localpath):
@@ -448,6 +471,10 @@ class SshTransport(aida.transport.Transport):
         Note: setting dereference equal to true could cause infinite loops.
               see os.walk() documentation
         """
+                # TODO : add dereference
+        if dereference:
+            raise NotImplementedError
+
         if not os.path.isabs(localpath):
             raise ValueError("The localpath must be an absolute path")
         
@@ -483,7 +510,7 @@ class SshTransport(aida.transport.Transport):
 
 
     def get(self,remotepath,localpath,callback=None,dereference=False,overwrite=True,
-            pattern=None):
+            pattern=None,ignore_nonexisting=False):
         """
         Get a file or folder from remote to local.
         Redirects to getfile or gettree.
@@ -505,6 +532,10 @@ class SshTransport(aida.transport.Transport):
             ValueError if local path is invalid
             IOError if the remotepath is not found
         """
+        # TODO : add dereference
+        if dereference:
+            raise NotImplementedError
+
         if not os.path.isabs(localpath):
             raise ValueError("The localpath must be an absolute path")
 
@@ -521,23 +552,37 @@ class SshTransport(aida.transport.Transport):
                     does_dir_exist = os.path.join(does_dir_exist,this_dir)
                     try:
                         self.mkdir(does_dir_exist)
-                    except OSError as e:
-                        if 'File exists' in e.message:
+                    except Exception as e:
+                        if 'directory already exists' in e.message:
                             pass
+                        else:
+                            raise
                         
                 if self.isdir(this_src):
                     self.gettree( this_src,this_dst,callback,dereference,overwrite )
+                elif self.isfile(this_src):
+                    self.getfile( this_src,this_dst,callback,dereference,overwrite )
                 else:
-                    self.getfile( this_src,this_dst,callback,overwrite )
+                    if ignore_nonexisting:
+                        pass
+                    else:
+                        raise IOError("The remote path {} does not exist"
+                                      .format(this_src))
 
         else:
             if self.isdir(remotepath):
                 self.gettree( remotepath,localpath,callback,dereference,overwrite )
+            elif self.isfile(remotepath):
+                self.getfile( remotepath,localpath,callback,dereference,overwrite )
             else:
-                self.getfile( remotepath,localpath,callback,overwrite )
+                if ignore_nonexisting:
+                    pass
+                else:
+                    raise IOError("The remote path {} does not exist".format(
+                        remotepath))
 
 
-    def getfile(self,remotepath,localpath,callback=None,overwrite=True):
+    def getfile(self,remotepath,localpath,callback=None,dereference=False,overwrite=True):
         """
         Get a file from remote to local.
 
@@ -551,12 +596,17 @@ class SshTransport(aida.transport.Transport):
             ValueError if local path is invalid
             OSError if unintentionally overwriting
         """
+        # TODO : add dereference
+
         if not os.path.isabs(localpath):
             raise ValueError("The localpath must be an absolute path")
 
         if os.path.isfile(localpath) and not overwrite:            
             raise OSError('Destination already exists: not overwriting it')
 
+        if dereference:
+            raise NotImplementedError
+            
         return self.sftp.get(remotepath,localpath,callback)
         
         
@@ -577,7 +627,10 @@ class SshTransport(aida.transport.Transport):
             IOError if the remotepath is not found
             OSError if unintentionally overwriting
         """
-        # TODO : implement dereference
+        # TODO : add dereference
+        if dereference:
+            raise NotImplementedError
+
         item_list = self.listdir(remotepath)
         dest = str(localpath)
 
@@ -618,7 +671,8 @@ class SshTransport(aida.transport.Transport):
         return aida_attr
 
 
-    def copyfile(self,remotesource,remotedestination):
+    def copyfile(self,remotesource,remotedestination,dereference=False,
+                 pattern=None):
         """
         Copy a file from remote source to remote destination
         Redirects to copy().
@@ -627,10 +681,11 @@ class SshTransport(aida.transport.Transport):
         remotesource,remotedestination
         """
         cp_flags = '-f'
-        return copy(remotesource,remotedestination,cp_flags=cp_flags)
+        return copy(remotesource,remotedestination,dereference,cp_flags,pattern)
 
 
-    def copytree(self,remotesource,remotedestination):
+    def copytree(self,remotesource,remotedestination,dereference=False,
+                 pattern=None):
         """
         copy a folder recursively from remote source to remote destination
         Redirects to copy()
@@ -639,7 +694,7 @@ class SshTransport(aida.transport.Transport):
         remotesource,remotedestination
         """
         cp_flags = '-r -f'
-        return copy(remotesource,remotedestination,cp_flags=cp_flags)
+        return copy(remotesource,remotedestination,dereference,cp_flags,pattern)
 
 
     def copy(self,remotesource,remotedestination,dereference=False, cp_flags='-r -f',

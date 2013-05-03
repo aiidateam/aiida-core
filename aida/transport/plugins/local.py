@@ -199,7 +199,8 @@ class LocalTransport(aida.transport.Transport):
             os.chmod( real_path , mode )
             
     
-    def put(self,source,destination,dereference=False,overwrite=True,pattern=None):
+    def put(self,source,destination,dereference=False,overwrite=True,pattern=None,
+            ignore_nonexisting=False):
         """
         Copies a file or a folder from source to destination.
         Automatically redirects to putfile or puttree.
@@ -245,19 +246,34 @@ class LocalTransport(aida.transport.Transport):
                     try:
                         self.mkdir(does_dir_exist)
                     except OSError as e:
-                        if 'File exists' in e.message:
+                        if 'File exists' in str(e):
                             pass
+                        else:
+                            raise
                         
                 if self.isdir(this_src):
                     self.puttree( this_src,this_dst,dereference,overwrite )
-                else:
+                elif self.isfile(this_src):
                     self.putfile( this_src,this_dst,overwrite )
+                else:
+                    if ignore_nonexisting:
+                        pass
+                    else:
+                        raise OSError("The local path {} does not exist"
+                                      .format(source))                    
 
         else:
             if self.isdir(source):
                 self.puttree( source,destination,dereference,overwrite )
-            else:
+            elif self.isfile(source):
                 self.putfile( source,destination,overwrite )
+            else:
+                if ignore_nonexisting:
+                    pass
+                else:
+                    raise OSError("The local path {} does not exist"
+                                  .format(source))
+
                     
 
     def putfile(self,source,destination,overwrite=True):
@@ -333,7 +349,7 @@ class LocalTransport(aida.transport.Transport):
         elif os.path.exists(the_destination) and not overwrite:
             raise OSError('Destination already exists: not overwriting it')
 
-        shutil.copytree( source, the_destination )
+        shutil.copytree( source, the_destination,symlinks=dereference )
 
 
     def rmtree(self,path):
@@ -346,7 +362,8 @@ class LocalTransport(aida.transport.Transport):
         shutil.rmtree(the_path)
         
 
-    def get(self,source,destination,dereference=False,overwrite=True,pattern=None):
+    def get(self,source,destination,dereference=False,overwrite=True,pattern=None,
+            ignore_nonexisting=False):
         """
         Copies a folder or a file recursively from 'remote' source to
         'local' destination.
@@ -394,21 +411,35 @@ class LocalTransport(aida.transport.Transport):
                 for this_dir in splitted_list[:-1]:
                     does_dir_exist = os.path.join(does_dir_exist,this_dir)
                     try:
-                        self.mkdir(does_dir_exist)
+                        os.mkdir(does_dir_exist)
                     except OSError as e:
-                        if 'File exists' in e.message:
+                        if 'File exists' in str(e) or 'Is a directory' in str(e):
                             pass
+                        else:
+                            raise
                         
                 if self.isdir(this_src):
                     self.gettree( this_src,this_dst,dereference,overwrite )
-                else:
+                elif self.isfile(this_src):
                     self.getfile( this_src,this_dst,overwrite )
+                else:
+                    if ignore_nonexisting:
+                        pass
+                    else:
+                        raise IOError("The remote path {} does not exist".format(
+                            this_src))
 
         else:
             if self.isdir(source):
                 self.gettree( source,destination,dereference,overwrite )
-            else:
+            elif self.isfile(source):
                 self.getfile( source,destination,overwrite )
+            else:
+                if ignore_nonexisting:
+                    pass
+                else:
+                    raise IOError("The remote path {} does not exist".format(
+                        source))
 
 
     def getfile(self,source,destination,overwrite=True):

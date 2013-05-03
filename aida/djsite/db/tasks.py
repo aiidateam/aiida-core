@@ -1,12 +1,24 @@
 from celery.task import task
-from time import sleep
- 
-@task
-def poll(_i,_s):
+from celery.utils.log import get_task_logger
+from django.core.cache import cache
+from celery import Task
+from aida.execmanager import daemon_main_loop
 
-    print "Polling with args "+str(_i)+" and "+str(_s)+" ..."
-    sleep(5)
-    print "Polled"
+logger = get_task_logger(__name__)
+
+LOCK_EXPIRE = 60 * 1000 # Expire time for the retriever 
+
+@task
+def update_and_retrieve():
+    
+    acquire_lock = lambda: cache.add('update_and_retrieve', 'true', LOCK_EXPIRE)
+    release_lock = lambda: cache.delete('update_and_retrieve')
+    
+    if acquire_lock():
+        try:
+            daemon_main_loop()
+        finally:
+            release_lock()
 
 @task
 def collector(_var):
@@ -16,3 +28,13 @@ def collector(_var):
   print _var
   print "---------------------------------------"
 
+
+# @task
+# class WorkflowLauncherTask(Task):
+
+# 	def __init__(self, ):
+		
+# 		Task.__init__(self)
+
+#     def run(self, x, y):
+#         return x + y

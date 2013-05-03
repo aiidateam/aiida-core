@@ -1,4 +1,4 @@
-from aida.node import Node
+from aida.orm import Node
 '''
 Specifications of the Data class:
 Aiida Data objects are subclasses of Node and should have 
@@ -14,6 +14,8 @@ method. This is done independently in order to allow cross-validation of plugins
 '''
 
 class Data(Node):
+    # IMPORTANT! define it here, and not in the __init__, otherwise the classmethod query()
+    # will not filter correctly
     _plugin_type_string = "data"
     _updatable_attributes = tuple() 
         
@@ -28,16 +30,16 @@ class Data(Node):
         ''' 
         return True
         
-    def add_link_from(self,src,*args,**kwargs):
-        from aida.node.calculation import Calculation
+    def add_link_from(self,src,label=None):
+        from aida.orm.calculation import Calculation
 
-        if len(self.get_inputs()) > 1:
+        if len(self.get_inputs()) > 0:
             raise ValueError("At most one node can enter a data node")
-            
+        
         if not isinstance(src, Calculation):
             raise ValueError("Links entering a data object can only be of type calculation")
         
-        return super(Data,self).add_link_from(src,*args, **kwargs)
+        return super(Data,self).add_link_from(src,label)
     
   
     #    def store(self):

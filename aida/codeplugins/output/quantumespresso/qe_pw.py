@@ -3,8 +3,8 @@ import os, sys
 import string
 from distutils.version import StrictVersion
 from aida.common.extendeddicts import FixedFieldsAttributeDict
-from aida.codes.plugins.output.quantumespresso.constants import QEConversionConstants
-from aida.codes.plugins.exceptions import OutputParsingError, FailedJobError
+from aida.codeplugins.output.quantumespresso.constants import QEConversionConstants
+from aida.codeplugins.exceptions import OutputParsingError, FailedJobError
 """
 A collection of function that are used to parse the output of Quantum Espresso PW.
 The function that needs to be called from outside is parse_pw_output()

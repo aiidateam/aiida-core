@@ -20,6 +20,12 @@ class ModificationNotAllowed(AidaException):
     """
     pass
 
+class MissingPluginError(AidaException):
+    """
+    Raised when the user tries to use a plugin that is not available or does not exist.
+    """
+    pass
+
 class InvalidOperation(AidaException):
     """
     The allowed operation is not valid (e.g., when trying to add a non-internal attribute
@@ -30,6 +36,13 @@ class InvalidOperation(AidaException):
 class InternalError(AidaException):
     """
     Error raised when there is an internal error of Aida.
+    """
+    pass
+
+class PluginInternalError(InternalError):
+    """
+    Error raised when there is an internal error which is due to a plugin
+    and not to the aida infrastructure.
     """
     pass
 
@@ -46,7 +59,7 @@ class ConfigurationError(AidaException):
     """
     pass
 
-class DBContentError(AidaException):
+class DbContentError(AidaException):
     """
     Raised when the content of the DB is not valid.
     This should never happen if the user does not play directly
@@ -59,6 +72,13 @@ class AuthenticationError(AidaException):
     Raised when a user tries to access a resource for which it is
     not authenticated, e.g. an aidauser tries to access a computer
     for which there is no entry in the AuthInfo table.
+    """
+    pass
+
+class InputValidationError(ValidationError):
+    """
+    The input data for a calculation did not validate (e.g., missing
+    required input data, wrong data, ...)
     """
     pass
 

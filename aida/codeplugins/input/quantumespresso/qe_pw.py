@@ -8,13 +8,13 @@ TODO: implement pre_... and post_... hooks to add arbitrary strings before
       for development when new cards are needed
 """
 import os
-from aida.codes.plugins.input.quantumespresso import (
+from aida.codeplugins.input.quantumespresso import (
     conv_to_fortran, get_input_data_text)
-from aida.codes.plugins.exceptions import InputValidationError
+from aida.common.exceptions import InputValidationError
 from aida.common.utils import get_suggestion
 from aida.common.utils import get_unique_filename
 
-from aida.node.data.plugins.structure import ...
+from aida.orm.data.plugins.structure import ...
 from aida.common.datastructures import CalcInfo ....
 
 

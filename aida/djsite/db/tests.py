@@ -5,13 +5,99 @@ They are executed when when you run "manage.py test" or
 """
 from django.utils import unittest
 
-from aida.node import Node
+from aida.orm import Node
 from aida.common.exceptions import ModificationNotAllowed
 
+class TransitiveClosure(unittest.TestCase):
+    """
+    Test the creation of the transitive closure table
+    """
+    @classmethod
+    def setUpClass(cls):
+        import getpass
+        from django.contrib.auth.models import User
+
+        User.objects.create_user(getpass.getuser(), 'unknown@mail.com', 'fakepwd')
+
+    @classmethod
+    def tearDownClass(cls):
+        import getpass
+        from django.contrib.auth.models import User
+        from django.core.exceptions import ObjectDoesNotExist
+
+        try:
+            User.objects.get(username=getpass.getuser).delete()
+        except ObjectDoesNotExist:
+            pass
+
+    def test_creation_and_deletion(self):
+        from aida.djsite.db.models import Link # Direct links
+        from aida.djsite.db.models import Path # The transitive closure table
+        
+        n1 = Node().store()
+        n2 = Node().store()
+        n3 = Node().store()
+        n4 = Node().store()
+        n5 = Node().store()
+        n6 = Node().store()
+        n7 = Node().store()
+        n8 = Node().store()        
+        n9 = Node().store()
+
+        # I create a strange graph, inserting links in a order
+        # such that I often have to create the transitive closure
+        # between two graphs
+        n2.add_link_to(n3)
+        n1.add_link_to(n2)
+        n3.add_link_to(n5)
+        n4.add_link_to(n5)
+        n2.add_link_to(n4)
+
+
+        n6.add_link_to(n7)
+        n7.add_link_to(n8)
+
+        # Yet, no links from 1 to 8
+        self.assertEquals(len(Path.objects.filter(parent=n1,child=n8).distinct()),0)
+
+        n5.add_link_to(n6)
+        # Yet, now 2 links from 1 to 8
+        self.assertEquals(len(Path.objects.filter(parent=n1,child=n8).distinct()),2)
+
+        n9.add_link_to(n7)
+        # Still two links...
+        self.assertEquals(len(Path.objects.filter(parent=n1,child=n8).distinct()),2)
+
+        n6.add_link_to(n9)
+        # And now there should be 4 nodes
+        self.assertEquals(len(Path.objects.filter(parent=n1,child=n8).distinct()),4)
+        
+        ### I start deleting now
+
+        # I cut one branch below: I should loose 2 links
+        Link.objects.filter(input=n6, output=n9).delete()
+        self.assertEquals(len(Path.objects.filter(parent=n1,child=n8).distinct()),2)
+
+        # I cut another branch above: I should loose one more link
+        Link.objects.filter(input=n2, output=n4).delete()
+        self.assertEquals(len(Path.objects.filter(parent=n1,child=n8).distinct()),1)
+        
+        # Another cut should delete all links
+        Link.objects.filter(input=n3, output=n5).delete()
+        self.assertEquals(len(Path.objects.filter(parent=n1,child=n8).distinct()),0)
+
+        # But I did not delete everything! For instance, I can check the following links
+        self.assertEquals(len(Path.objects.filter(parent=n4,child=n8).distinct()),1)
+        self.assertEquals(len(Path.objects.filter(parent=n5,child=n7).distinct()),1)
+
+        # Finally, I reconnect in a different way the two graphs and check that 1 and
+        # 8 are again connected
+        n3.add_link_to(n4)
+        self.assertEquals(len(Path.objects.filter(parent=n1,child=n8).distinct()),1)          
 
 class TestQueryWithAidaObjects(unittest.TestCase):
     """
-    Test if queries work properly also with aida.node.Node classes instead of
+    Test if queries work properly also with aida.orm.Node classes instead of
     aida.djsite.db.models.DbNode objects.
     """
     @classmethod
@@ -77,7 +163,7 @@ class TestQueryWithAidaObjects(unittest.TestCase):
 
         b = Node.query(pk=a2)
         self.assertEquals(len(b), 1)
-        # It is a aida.node.Node instance
+        # It is a aida.orm.Node instance
         self.assertTrue(isinstance(b[0],Node))
         self.assertEquals(b[0].uuid, a2.uuid)
         
@@ -89,7 +175,7 @@ class TestQueryWithAidaObjects(unittest.TestCase):
         uuid_set = set([going_out_from_a2[0].uuid, going_out_from_a2[1].uuid])
 
         # I check that I can query also directly the django DbNode
-        # class passing a aida.node.Node entity
+        # class passing a aida.orm.Node entity
         
         going_out_from_a2_db = DbNode.objects.filter(inputs__in=b)
         self.assertEquals(len(going_out_from_a2_db), 2)
@@ -196,6 +282,27 @@ class TestNodeBasic(unittest.TestCase):
         with self.assertRaises(AttributeError):
             # I get a non-existing attribute
             a.get_attr('nonexisting')
+
+    def test_datetime_attribute(self):
+        import datetime
+        from django.utils.timezone import make_aware, get_current_timezone, is_naive
+
+        a = Node()
+
+        date = datetime.datetime.now()
+
+        a.set_attr('some_date', date)
+        a.store()
+
+        retrieved = a.get_attr('some_date')
+
+        if is_naive(date):
+            date_to_compare = make_aware(date, get_current_timezone())
+        else:
+            date_to_compare = date
+
+        self.assertEquals(date_to_compare,retrieved)
+
 
     def test_attributes_on_copy(self):
         import copy
@@ -509,6 +616,7 @@ class TestNodeBasic(unittest.TestCase):
         # directly loading datetime.datetime.now(), or you can get a
         # "can't compare offset-naive and offset-aware datetimes" error
         from django.utils import timezone
+        import time
 
         a = Node()
         with self.assertRaises(ModificationNotAllowed):
@@ -516,8 +624,10 @@ class TestNodeBasic(unittest.TestCase):
         self.assertEquals(a.get_comments(),[])
         a.store()
         before = timezone.now()
+        time.sleep(1) # I wait 1 second because MySql time precision is 1 sec
         a.add_comment('text')
         a.add_comment('text2')        
+        time.sleep(1)
         after = timezone.now()
 
         comments = a.get_comments()
@@ -538,40 +648,65 @@ class TestSubNodes(unittest.TestCase):
     def setUpClass(cls):
         import getpass
         from django.contrib.auth.models import User
+        from aida.orm import Computer
 
         User.objects.create_user(getpass.getuser(), 'unknown@mail.com', 'fakepwd')
-        
+        cls.computer = Computer(hostname='localhost',
+                                transport_type='ssh',
+                                scheduler_type='pbspro',
+                                workdir='/tmp/aida')
+        cls.computer.store()
 
     @classmethod
     def tearDownClass(cls):
         import getpass
         from django.contrib.auth.models import User
         from django.core.exceptions import ObjectDoesNotExist
+        from aida.djsite.db.models import DbComputer
 
         try:
             User.objects.get(username=getpass.getuser).delete()
         except ObjectDoesNotExist:
             pass
 
+        DbComputer.objects.filter().delete()
+
     
     def test_valid_links(self):
         import tempfile
 
-        from aida.node import Node, Calculation, Data, Code
+        from aida.orm import Node, Calculation, Data, Code
+        from aida.orm import Computer
         from aida.common.pluginloader import load_plugin
+        from aida.djsite.db.models import DbComputer
 
-        FileData = load_plugin(Data, 'aida.node.dataplugins', 'file')
+        FileData = load_plugin(Data, 'aida.orm.dataplugins', 'file')
 
         # I create some objects
         d1 = Data().store()
         with tempfile.NamedTemporaryFile() as f:
             d2 = FileData(f.name).store()
 
-        code = Code().store()
-        
-        calc = Calculation().store()
-        calc2 = Calculation().store()
+        code = Code(remote_machine_exec=('localhost','/bin/true'),
+                    input_plugin='simple_plugins.template_replacer').store()
 
+        unsavedcomputer = Computer(dbcomputer=DbComputer(hostname='localhost'))
+
+        with self.assertRaises(ValueError):
+            # I need to save the localhost entry first
+            calc = Calculation(computer=unsavedcomputer,
+                num_nodes=1,num_cpus_per_node=1).store()
+
+        # I check both with a string or with an object
+        calc = Calculation(computer=self.computer,
+            num_nodes=1,num_cpus_per_node=1).store()
+        calc2 = Calculation(computer='localhost',
+            num_nodes=1,num_cpus_per_node=1).store()
+        with self.assertRaises(TypeError):
+            # I don't want to call it with things that are neither
+            # strings nor Computer instances
+            calc3 = Calculation(computer=1,
+                num_nodes=1,num_cpus_per_node=1).store()
         
         d1.add_link_to(calc)
         calc.add_link_from(d2)
@@ -602,24 +737,127 @@ class TestSubNodes(unittest.TestCase):
         self.assertEquals(len(inputs_type_data), 2)
         self.assertEquals(len(inputs_type_code), 1)
         
-    def check_single_calc_source(self):
+    def test_check_single_calc_source(self):
         """
         Each data node can only have one input calculation
         """
-        from aida.node import Node, Calculation, Data, Code
+        from aida.orm import Node, Calculation, Data, Code
         
         d1 = Data().store()
         
-        calc = Calculation().store()
-        calc2 = Calculation().store()
+        calc = Calculation(computer=self.computer,
+            num_nodes=1,num_cpus_per_node=1).store()
+        calc2 = Calculation(computer=self.computer,
+            num_nodes=1,num_cpus_per_node=1).store()
 
         d1.add_link_from(calc)
 
         with self.assertRaises(ValueError):
             d1.add_link_from(calc2)
 
+class TestCode(unittest.TestCase):
+    """
+    Test the FileData class.
+    """    
+    @classmethod
+    def setUpClass(cls):
+        import getpass
+        from django.contrib.auth.models import User
+        from aida.orm import Computer
 
+        User.objects.create_user(getpass.getuser(), 'unknown@mail.com', 'fakepwd')
+        cls.computer = Computer(hostname='localhost',
+                                transport_type='ssh',
+                                scheduler_type='pbspro',
+                                workdir='/tmp/aida')
+        cls.computer.store()
 
+    @classmethod
+    def tearDownClass(cls):
+        import getpass
+        from django.contrib.auth.models import User
+        from django.core.exceptions import ObjectDoesNotExist
+        from aida.djsite.db.models import DbComputer
+
+        try:
+            User.objects.get(username=getpass.getuser).delete()
+        except ObjectDoesNotExist:
+            pass
+
+        DbComputer.objects.filter().delete()
+        
+        
+    def test_code_local(self):
+        import tempfile
+
+        from aida.orm import Code
+        from aida.common.exceptions import ValidationError
+
+        code = Code(local_executable='test.sh',
+                    input_plugin='simple_plugins.template_replacer')
+        with self.assertRaises(ValidationError):
+            # No file with name test.sh
+            code.store()
+
+        with tempfile.NamedTemporaryFile() as f:
+            f.write("#/bin/bash\n\necho test run\n")
+            f.flush()
+            code.add_file(f.name, 'test.sh')
+
+        code.store()
+        self.assertTrue(code.can_run_on(self.computer))
+        self.assertTrue(code.get_local_executable(),'test.sh')
+        self.assertTrue(code.get_execname(),'stest.sh')
+                
+
+    def test_remote(self):
+        import tempfile
+
+        from aida.orm import Code
+        from aida.common.exceptions import ValidationError
+
+        with self.assertRaises(ValueError):
+            # remote_machine_exec has length 2 but is not a list or tuple
+            code = Code(remote_machine_exec='ab',
+                        input_plugin='simple_plugins.template_replacer')
+
+        # invalid code path
+        with self.assertRaises(ValueError):
+            code = Code(remote_machine_exec=('localhost', ''),
+                        input_plugin='simple_plugins.template_replacer')
+
+        # Relative path is invalid for remote code
+        with self.assertRaises(ValueError):
+            code = Code(remote_machine_exec=('localhost', 'subdir/run.exe'),
+                        input_plugin='simple_plugins.template_replacer')
+
+        # No input plugin specified
+        with self.assertRaises(ValueError):
+            code = Code(remote_machine_exec=('localhost', 'subdir/run.exe'))
+        
+        code = Code(remote_machine_exec=('localhost', '/bin/ls'),
+                    input_plugin='simple_plugins.template_replacer')
+        with tempfile.NamedTemporaryFile() as f:
+            f.write("#/bin/bash\n\necho test run\n")
+            f.flush()
+            code.add_file(f.name, 'test.sh')
+
+        with self.assertRaises(ValidationError):
+            # There are files inside
+            code.store()
+
+        # If there are no files, I can store
+        code.remove_file('test.sh')
+        code.store()
+
+        self.assertEquals(code.get_remote_machine(), 'localhost')
+        self.assertEquals(code.get_remote_executable(), '/bin/ls')
+        self.assertEquals(code.get_execname(), '/bin/ls')
+
+        self.assertTrue(code.can_run_on('localhost')) 
+        self.assertTrue(code.can_run_on(self.computer))         
+        self.assertFalse(code.can_run_on('another.computer.com'))
+        
 class TestFileData(unittest.TestCase):
     """
     Test the FileData class.
@@ -646,12 +884,12 @@ class TestFileData(unittest.TestCase):
         import os
         import tempfile
 
-        from aida.node.dataplugins.file import FileData
+        from aida.orm.dataplugins.file import FileData
 
         # Or, equivalently:
-        #        from aida.node import Data
+        #        from aida.orm import Data
         #        from aida.common.pluginloader import load_plugin        
-        #        FileData = load_plugin(Data,'aida.node.dataplugins','file')
+        #        FileData = load_plugin(Data,'aida.orm.dataplugins','file')
 
         file_content = 'some text ABCDE'
         with tempfile.NamedTemporaryFile() as f:

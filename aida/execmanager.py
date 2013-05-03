@@ -452,7 +452,6 @@ def retrieve_finished_for_authinfo(authinfo):
                     retrieve_list = calc.get_retrieve_list()
                     execlogger.debug("chdir {}".format(workdir))
                     t.chdir(workdir)
-                    # TODO: create remote_output node always
                     # TODO: decide what to do: one node per element in the retrieve_list, or
                     #       one node for everything (problem of overwriting; we can say that we
                     #       write in order, so following things overwrite previous things;
@@ -464,14 +463,25 @@ def retrieve_finished_for_authinfo(authinfo):
                             t.get(item,
                                   os.path.join(folder.abspath,os.path.split(item)[1]))
 
-
+                    # TODO: add parsing! set the state to calcStates.PARSING!
 
                     calc._set_state(calcStates.RETRIEVED)
                     retrieved.append(calc)
                 except:
-                    execlogger.error("Error retrieving calc {}".format(calc.uuid))
-                    calc._set_state(calcStates.RETRIEVALFAILED)
-                    raise
+                    import traceback
+                    import StringIO
+                    buf = StringIO.StringIO()
+                    traceback.print_exc(file=buf)
+                    buf.seek(0)
+                    if calc.get_state() == calcStates.PARSING:
+                        execlogger.error("Error parsing calc {}, I set it to RETRIEVED anyway. "
+                            "Traceback: {}".format(calc.uuid, buf.read()))
+                        # TODO: add a 'comment' to the calculation
+                        calc._set_state(calcStates.RETRIEVED)
+                    else:
+                        execlogger.error("Error retrieving calc {}".format(calc.uuid))
+                        calc._set_state(calcStates.RETRIEVALFAILED)
+                        raise
 
             
     return retrieved

@@ -168,6 +168,10 @@ class Node(object):
         if len(Path.objects.filter(parent=src.dbnode, child=self.dbnode))>0:
             raise ValueError("The link you are attempting to create would generate a loop")            
 
+        # Check if the source allows output links from this node (will raise ValueError if 
+        # this is not the case)
+        src.can_link_as_output(self)
+
         if label is None:
             autolabel_idx = 1
 
@@ -209,6 +213,14 @@ class Node(object):
         if not isinstance(dest,Node):
             raise ValueError("dest must be a Node instance")
         dest.add_link_from(self,label)
+
+    def can_link_as_output(self,dest):
+        """
+        Raise a ValueError if a link from self to dest is not allowed.
+        Implement in subclasses
+        """
+        return True
+
 
     def get_inputs(self,type=None,also_labels=False):
         """

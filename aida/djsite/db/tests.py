@@ -729,6 +729,7 @@ class TestSubNodes(unittest.TestCase):
         from aida.orm import Computer
         from aida.common.pluginloader import load_plugin
         from aida.djsite.db.models import DbComputer
+        from aida.common.datastructures import calcStates
 
         FileData = load_plugin(Data, 'aida.orm.dataplugins', 'file')
 
@@ -789,6 +790,10 @@ class TestSubNodes(unittest.TestCase):
 
         data_node = Data().store()
 
+        # I do a trick to set it to a state that allows writing
+        calc_a._set_state(calcStates.RETRIEVING) 
+        calc_b._set_state(calcStates.RETRIEVING) 
+
         data_node.add_link_from(calc_a)
         # A data cannot have to input calculations
         with self.assertRaises(ValueError):
@@ -808,13 +813,22 @@ class TestSubNodes(unittest.TestCase):
         Each data node can only have one input calculation
         """
         from aida.orm import Node, Calculation, Data, Code
-        
+        from aida.common.datastructures import calcStates
+
         d1 = Data().store()
         
         calc = Calculation(computer=self.computer,
             num_nodes=1,num_cpus_per_node=1).store()
         calc2 = Calculation(computer=self.computer,
             num_nodes=1,num_cpus_per_node=1).store()
+
+        # I cannot, calc it is in state NEW
+        with self.assertRaises(ValueError):
+            d1.add_link_from(calc)
+
+        # I do a trick to set it to a state that allows setting the link
+        calc._set_state(calcStates.RETRIEVING) 
+        calc2._set_state(calcStates.RETRIEVING) 
 
         d1.add_link_from(calc)
 

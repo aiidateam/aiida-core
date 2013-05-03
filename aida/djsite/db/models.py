@@ -219,6 +219,7 @@ class Attribute(m.Model):
         """
         import json
         import datetime 
+        from django.utils.timezone import is_naive, make_aware, get_current_timezone
         
         if isinstance(value,bool):
             self.datatype = 'bool'
@@ -253,11 +254,18 @@ class Attribute(m.Model):
             self.dval = None
 
         elif isinstance(value,datetime.datetime):
+
+            # current timezone is taken from the settings file of django
+            if is_naive(value):
+                value_to_set = make_aware(value,get_current_timezone())
+            else:
+                value_to_set = value
+
             self.datatype = 'date'
             # TODO: time-aware and time-naive datetime objects, see
             # https://docs.djangoproject.com/en/dev/topics/i18n/timezones/#naive-and-aware-datetime-objects
-            self.dval = value
-            self.tval = None
+            self.dval = value_to_set
+            self.tval = ''
             self.bval = None
             self.ival = None
             self.fval = None
@@ -283,6 +291,8 @@ class Attribute(m.Model):
         casting it correctly
         """
         import json
+        from django.utils.timezone import is_naive, make_aware, get_current_timezone
+
         if self.datatype == 'bool':
             return self.bval
         elif self.datatype == 'int':
@@ -292,6 +302,10 @@ class Attribute(m.Model):
         elif self.datatype == 'txt':
             return self.tval
         elif self.datatype == 'date':
+            if is_naive(self.dval):
+                return make_aware(self.dval,get_current_timezone())
+            else:
+                return self.dval
             return self.dval
         elif self.datatype == 'json':
             try:

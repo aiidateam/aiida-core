@@ -49,6 +49,8 @@ class CalcInfo(DefaultFieldsAttributeDict):
         'maxMemoryKb',
         'rerunnable',
         'retrieve_list', # a list of files or patterns to retrieve
+        'local_file_list', # a list of length-two tuples with (localabspath, relativedestpath)
+        'remote_file_list', # a list of length-three tuples with (remotemachinename, remoteabspath, relativedestpath)
         )
 
 

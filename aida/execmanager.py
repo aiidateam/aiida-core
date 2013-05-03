@@ -197,6 +197,7 @@ def submit_calc(calc):
     """
     import StringIO
     import json
+    import os
     
     from aida.codeplugins.input import InputPlugin
     from aida.orm import Calculation, Code, Data
@@ -204,7 +205,7 @@ def submit_calc(calc):
     from aida.common.folders import SandboxFolder
     from aida.common.exceptions import InputValidationError, MissingPluginError, ValidationError
     from aida.scheduler.datastructures import JobTemplate
-    from aida.common.utils import validate_list_of_two_string_tuples
+    from aida.common.utils import validate_list_of_string_tuples
 
     
     if not isinstance(calc,Calculation):
@@ -243,6 +244,12 @@ def submit_calc(calc):
             plugin = Plugin()
             calcinfo = plugin.create(calc, calc.get_inputs(type=Data,also_labels=True), folder)
     
+            if code.is_local():
+                if code.get_local_executable() in folder.get_content_list(only_filenames=True):
+                    raise PluginInternalError("The plugin created a file {} that is also "
+                                              "the executable name!".format(code.get_local_executable()))
+
+
             # TODO: support -V option of schedulers!
 
             calc._set_retrieve_list(calcinfo.retrieve_list if calcinfo.retrieve_list is not None else [])
@@ -255,8 +262,8 @@ def submit_calc(calc):
             job_tmpl.jobEnvironment = {}
             #'email', 'emailOnStarted', 'emailOnTerminated',
             job_tmpl.jobName = 'aida-{}'.format(calc.uuid) 
-            job_tmpl.schedOutputPath = 'scheduler-stdout.txt'
-            job_tmpl.schedErrorPath = 'scheduler-stderr.txt'
+            job_tmpl.schedOutputPath = '_scheduler-stdout.txt'
+            job_tmpl.schedErrorPath = '_scheduler-stderr.txt'
             job_tmpl.schedJoinFiles = False
             
             # TODO: add also code from the machine + u'\n\n'
@@ -307,14 +314,13 @@ def submit_calc(calc):
             job_tmpl.numCpusPerNode = num_cpus_per_node
     
             # TODO: give possibility to use a different name??
-            script_filename = 'aida.submit'
+            script_filename = '_aidasubmit.sh'
             script_content = s.get_submit_script(job_tmpl)
             folder.create_file_from_filelike(StringIO.StringIO(script_content),script_filename)
     
             subfolder = folder.get_subfolder('.aida',create=True)
             subfolder.create_file_from_filelike(StringIO.StringIO(json.dumps(job_tmpl)),'job_tmpl.json')
             subfolder.create_file_from_filelike(StringIO.StringIO(json.dumps(calcinfo)),'calcinfo.json')
-            
             
             with t:
                 s.set_transport(t)
@@ -332,10 +338,20 @@ def submit_calc(calc):
                 t.chdir(calcinfo.uuid[2:])
                 # I store the workdir of the calculation for later file retrieval
                 calc._set_remote_workdir(t.getcwd())
-                
+
+                # I first create the code files, so that the code can put
+                # default files to be overwritten by the plugin itself.
+                # Still, beware! The code file itself could be overwritten...
+                # But I checked for this earlier.
+                if code.is_local():
+                    # Note: this will possibly overwrite files
+                    for f, _ in code.repo_folder.get_content_list():
+                        t.put(code.repo_folder.get_file_path(f), f)
+                    t.chmod(code.get_local_executable(), 0755) # rwxr-xr-x
+
                 # copy all files, recursively with folders
                 for f, _ in folder.get_content_list():
-                    execlogger.debug("copying file {}...".format(f))
+                    execlogger.debug("copying file/folder {}...".format(f))
                     t.put(folder.get_file_path(f), f)
 
                 # local_copy_list is a list of tuples, each with (src_abs_path, dest_rel_path)
@@ -343,22 +359,37 @@ def submit_calc(calc):
                 if local_copy_list is None:
                     local_copy_list = []
                 try:
-                    validate_list_of_two_string_tuples(local_copy_list)
+                    validate_list_of_string_tuples(local_copy_list, tuple_length = 2)
                 except ValidationError as e:
-                    raise PluginInternalError()
+                    raise PluginInternalError('local_copy_list format problem: {}'.format(e.message))
+
+                remote_copy_list = calcinfo.remote_copy_list
+                if remote_copy_list is None:
+                    remote_copy_list = []
+                try:
+                    validate_list_of_string_tuples(remote_copy_list, tuple_length = 3)
+                except ValidationError as e:
+                    raise PluginInternalError('remote_copy_list format problem: {}'.format(e.message))
 
                 for src_abs_path, dest_rel_path in local_copy_list:
-                    execlogger.debug('copying local file to {}'.format(dest_rel_path))
+                    execlogger.debug('copying local file/folder to {}'.format(dest_rel_path))
                     t.put(src_abs_path, dest_rel_path)
+                
+                for remote_machine, remote_abs_path, dest_rel_path in remote_copy_list:
+                    if os.path.isabs(dest_rel_path):
+                        raise PluginInternalError("the destination path of the remote copy "
+                            "is absolute! ({})".format(dest_rel_path))
 
-                # TODO!! manage remote copy
-    
-                if code.is_local():
-                    # Note: this will possibly overwrite files
-                    for f, _ in code.repo_folder.get_content_list():
-                        t.put(code.repo_folder.get_file_path(f), f)
-                    t.chmod(code.get_local_executable(), 0755) # rwxr-xr-x
-    
+                    if remote_machine == computer.hostname:
+                        execlogger.debug('copying {} remotely, directly on the machine {}'.format(
+                            dest_rel_path, remote_machine))
+                        t.copy(remote_abs_path, dest_rel_path)
+                    else:
+                        # TODO: implement copy between two different machines!
+                        raise NotImplementedError("Remote copy between two different machines "
+                            "is not implemented yet")
+
+        
                 job_id = s.submit_from_script(t.getcwd(),script_filename)
                 calc._set_job_id(job_id)
                 calc._set_state(calcStates.WITHSCHEDULER)

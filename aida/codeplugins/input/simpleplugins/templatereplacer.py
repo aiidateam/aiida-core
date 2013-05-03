@@ -58,7 +58,8 @@ class TemplatereplacerInputPlugin(InputPlugin):
 
         from aida.orm.dataplugins.parameter import ParameterData
         from aida.orm.dataplugins.singlefile import SinglefileData
-        from aida.common.utils import validate_list_of_two_string_tuples
+        from aida.orm.dataplugins.remote import RemoteData
+        from aida.common.utils import validate_list_of_string_tuples
         from aida.common.exceptions import ValidationError
         
         inputdict = dict(inputdata)
@@ -91,25 +92,29 @@ class TemplatereplacerInputPlugin(InputPlugin):
                                        template.keys()))
 
         try:
-            validate_list_of_two_string_tuples(files_to_copy)
+            validate_list_of_string_tuples(files_to_copy, tuple_length = 2)
         except ValidationError as e:
             raise InputValidationError("invalid file_to_copy format: {}".format(e.message))
 
         local_copy_list = []
+        remote_copy_list = []
 
         for link_name, dest_rel_path in files_to_copy:
-            print link_name, '<<<<'
             try:
                 fileobj = inputdict.pop(link_name)
             except KeyError:
                 raise InputValidationError("You are asking to copy a file link {}, "
                     "but there is no input link with such a name".format(link_name))
-            if not isinstance(fileobj, SinglefileData):
+            if isinstance(fileobj, SinglefileData):
+                local_copy_list.append((fileobj.get_file_abs_path(),dest_rel_path))
+            elif isinstance(fileobj, RemoteData): # can be a folder
+                remote_copy_list.append(
+                    (fileobj.get_remote_machine(), fileobj.get_remote_path(),dest_rel_path)
+                    )
+            else:
                 raise InputValidationError("If you ask to copy a file link {}, "
-                    "it must be a subclass of SinglefileData; it is instead of type {}".format(
+                    "it must be either a SinglefileData or a RemoteData; it is instead of type {}".format(
                         link_name, fileobj.__class__.__name__))
-
-            local_copy_list.append((fileobj.get_file_abs_path(),dest_rel_path))
 
         if len(inputdict) > 0:
             raise InputValidationError("The input nodes with the following labels could not be "
@@ -139,6 +144,7 @@ class TemplatereplacerInputPlugin(InputPlugin):
         calcinfo.uuid = calculation.uuid
         calcinfo.cmdlineParams = cmdline_params
         calcinfo.local_copy_list = local_copy_list
+        calcinfo.remote_copy_list = remote_copy_list
         if input_through_stdin is not None:
             calcinfo.stdinName = input_file_name
         if output_file_name:

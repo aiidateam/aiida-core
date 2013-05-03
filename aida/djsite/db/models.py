@@ -95,7 +95,7 @@ class DbNode(m.Model):
         except IndexError:
             pluginclass = ""
 
-        if baseclass == 'calculation':
+        if baseclass == Calculation._plugin_type_string:
             if pluginclass:
                 try:
                     PluginClass = load_plugin(Calculation, 'aida.orm.calculationplugins', pluginclass)
@@ -106,7 +106,7 @@ class DbNode(m.Model):
             else:
                 PluginClass = Calculation
             return PluginClass(uuid=self.uuid)
-        elif baseclass == 'code':
+        elif baseclass == Code._plugin_type_string:
             if pluginclass:
                 try:
                     PluginClass = load_plugin(Code, 'aida.orm.codeplugins', pluginclass)
@@ -117,7 +117,7 @@ class DbNode(m.Model):
             else:
                 PluginClass = Code
             return PluginClass(uuid=self.uuid)
-        elif baseclass == 'data':
+        elif baseclass == Data._plugin_type_string:
             if pluginclass:
                 try:
                     PluginClass = load_plugin(Data, 'aida.orm.dataplugins', pluginclass)
@@ -190,6 +190,7 @@ attrdatatype_choice = (
     ('int', 'int'),
     ('txt', 'txt'),
     ('bool', 'bool'),
+    ('date', 'date'),
     ('json', 'json'))
 
 class Attribute(m.Model):
@@ -206,7 +207,8 @@ class Attribute(m.Model):
     tval = m.TextField( default='', blank=True)
     fval = m.FloatField( default=None, null=True)
     ival = m.IntegerField( default=None, null=True)
-    bval = m.NullBooleanField( default=None, null=True)
+    bval = m.NullBooleanField(default=None, null=True)
+    dval = m.DateTimeField(default=None, null=True)
 
     class Meta:
         unique_together = (("dbnode", "key"))
@@ -214,15 +216,18 @@ class Attribute(m.Model):
     def setvalue(self,value):
         """
         This can be called on a given row and will set the corresponding value.
-        NOTE: Rules below need to be checked.
         """
         import json
+        import datetime 
+        from django.utils.timezone import is_naive, make_aware, get_current_timezone
+        
         if isinstance(value,bool):
             self.datatype = 'bool'
             self.bval = value
             self.tval = ''
             self.ival = None
             self.fval = None
+            self.dval = None
 
         elif isinstance(value,int):
             self.datatype = 'int'
@@ -230,6 +235,7 @@ class Attribute(m.Model):
             self.tval = ''
             self.bval = None
             self.fval = None
+            self.dval = None
 
         elif isinstance(value,float):
             self.datatype = 'float'
@@ -237,10 +243,29 @@ class Attribute(m.Model):
             self.tval = ''
             self.ival = None
             self.bval = None
+            self.dval = None
 
         elif isinstance(value,basestring):
             self.datatype = 'txt'
             self.tval = value
+            self.bval = None
+            self.ival = None
+            self.fval = None
+            self.dval = None
+
+        elif isinstance(value,datetime.datetime):
+
+            # current timezone is taken from the settings file of django
+            if is_naive(value):
+                value_to_set = make_aware(value,get_current_timezone())
+            else:
+                value_to_set = value
+
+            self.datatype = 'date'
+            # TODO: time-aware and time-naive datetime objects, see
+            # https://docs.djangoproject.com/en/dev/topics/i18n/timezones/#naive-and-aware-datetime-objects
+            self.dval = value_to_set
+            self.tval = ''
             self.bval = None
             self.ival = None
             self.fval = None
@@ -266,6 +291,8 @@ class Attribute(m.Model):
         casting it correctly
         """
         import json
+        from django.utils.timezone import is_naive, make_aware, get_current_timezone
+
         if self.datatype == 'bool':
             return self.bval
         elif self.datatype == 'int':
@@ -274,6 +301,12 @@ class Attribute(m.Model):
             return self.fval
         elif self.datatype == 'txt':
             return self.tval
+        elif self.datatype == 'date':
+            if is_naive(self.dval):
+                return make_aware(self.dval,get_current_timezone())
+            else:
+                return self.dval
+            return self.dval
         elif self.datatype == 'json':
             try:
                 return json.loads(self.tval)
@@ -414,29 +447,61 @@ class Comment(m.Model):
 
 
 #
-#
+# Workflows
 #
 
 workflow_step_exit = "wf_exit"
+workflow_status = (('running', 'running'),
+    ('finished', 'finished'),
+)
 
-class DbWorkflow(m.Model):
-
-    from aida.common.datastructures import calcStates
-
+class DbWorkflowScript(m.Model):
+    
     uuid        = UUIDField(auto=True)
     time        = m.DateTimeField(auto_now_add=True, editable=False)
+    name        = m.CharField(max_length=255, editable=False, blank=False, unique=True)
+    version     = m.IntegerField()
     user        = m.ForeignKey(User)
-    comment     = m.TextField(blank=True)
-    #status      = m.CharField(choices=calcStates,default=calcStates.NEW)
+    comment     = m.TextField(blank=True)  
+    repo_folder = m.CharField(max_length=255)
 
+class DbWorkflow(m.Model):
+    
+    uuid        = UUIDField(auto=True)
+    time        = m.DateTimeField(auto_now_add=True, editable=False)
+    version     = m.IntegerField()
+    user        = m.ForeignKey(User)
+    script      = m.ForeignKey(DbWorkflowScript, related_name='instances')
+    status       = m.CharField(max_length=255, choices=workflow_status, default='running')
+    
     def get_calculations(self):
+        
+        from aida.orm import Calculation
+        return Calculation.query(steps=self.steps)
 
-        return Calculations.query(steps=self.steps)
+    def finish(self):
+        self.status = 'finished'
+    
+class DbWorkflowParameters(m.Model):
 
+    workflow     = m.ForeignKey(DbWorkflow, related_name='params')
+    name         = m.CharField(max_length=255, blank=False)
+    time         = m.DateTimeField(auto_now_add=True, editable=False)
+    value        = m.TextField(blank=False)
+
+    class Meta:
+        unique_together = (("workflow", "name"))
+
+    def deserialize(self):
+        
+        import json
+        try:
+            return json.loads(self.value)
+        except:
+            raise ValueError("Cannot rebuild the parameter {}".format(self.name))
+        
     
 class DbWorkflowStep(m.Model):
-
-    from aida.common.datastructures import calcStates
 
     workflow     = m.ForeignKey(DbWorkflow, related_name='steps')
     name         = m.CharField(max_length=255, blank=False)
@@ -444,28 +509,36 @@ class DbWorkflowStep(m.Model):
     time         = m.DateTimeField(auto_now_add=True, editable=False)
     nextcall     = m.CharField(max_length=255, blank=False, default=workflow_step_exit)
     calculations = m.ManyToManyField('DbNode', symmetrical=False, related_name="steps")
-    #status       = m.CharField(choices=calcStates,default=calcStates.NEW)
+    status       = m.CharField(max_length=255, choices=workflow_status, default='running')
 
     class Meta:
         unique_together = (("workflow", "name"))
 
 
-    def add_calculation(self, calculation):
+    def add_calculation(self, step_calculation):
         
         from aida.orm import Calculation
 
         if (not isinstance(step_calculation, Calculation)):
             raise ValueError("Cannot add a non-Calculation object to a workflow step")          
 
-        self.calculations.add(calculation)
+        try:
+            self.calculations.add(step_calculation)
+        except:
+            raise ValueError("Error adding calculation to step")                      
 
     def get_calculations(self):
-
-        return Calculations.query(steps=self)#pk__in = step.calculations.values_list("pk", flat=True))
+        
+        from aida.orm import Calculation
+        
+        return Calculation.query(steps=self)#pk__in = step.calculations.values_list("pk", flat=True))
 
     def update_status(self, extended = False):
 
+        from aida.common.datastructures import calcStates
+
         calc_status = self.calculations.filter(attributes__key="_state").values_list("uuid", "attributes__tval")
-        s = set([l[1] for l in status])
+        s = set([l[1] for l in calc_status])
+        if len(s)==1 and s[0]==calcStates.RETRIEVED:
+            self.status = 'finished'
         
-        return

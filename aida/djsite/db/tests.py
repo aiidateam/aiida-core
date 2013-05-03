@@ -8,7 +8,7 @@ from django.utils import unittest
 from aida.orm import Node
 from aida.common.exceptions import ModificationNotAllowed
 
-class TransitiveClosure(unittest.TestCase):
+class TransitiveNoLoops(unittest.TestCase):
     """
     Test the creation of the transitive closure table
     """
@@ -29,6 +29,51 @@ class TransitiveClosure(unittest.TestCase):
             User.objects.get(username=getpass.getuser).delete()
         except ObjectDoesNotExist:
             pass
+
+        from aida.djsite.db.models import DbNode
+        DbNode.objects.filter().delete()
+
+    def test_loop_not_allowed(self):
+        n1 = Node().store()
+        n2 = Node().store()
+        n3 = Node().store()
+        n4 = Node().store()
+
+        n1.add_link_to(n2)
+        n2.add_link_to(n3)
+        n3.add_link_to(n4)
+
+        from aida.djsite.db.models import Path
+        print Path.objects.filter(parent=n1).values_list('child')
+
+        with self.assertRaises(ValueError): # This would generate a loop
+            n4.add_link_to(n1)
+
+class TransitiveClosureDeletion(unittest.TestCase):
+    """
+    Test the creation of the transitive closure table
+    """
+    @classmethod
+    def setUpClass(cls):
+        import getpass
+        from django.contrib.auth.models import User
+
+        User.objects.create_user(getpass.getuser(), 'unknown@mail.com', 'fakepwd')
+
+    @classmethod
+    def tearDownClass(cls):
+        import getpass
+        from django.contrib.auth.models import User
+        from django.core.exceptions import ObjectDoesNotExist
+
+        try:
+            User.objects.get(username=getpass.getuser).delete()
+        except ObjectDoesNotExist:
+            pass
+
+        from aida.djsite.db.models import DbNode
+        DbNode.objects.filter().delete()
+
 
     def test_creation_and_deletion(self):
         from aida.djsite.db.models import Link # Direct links
@@ -117,6 +162,10 @@ class TestQueryWithAidaObjects(unittest.TestCase):
             User.objects.get(username=getpass.getuser).delete()
         except ObjectDoesNotExist:
             pass
+
+        from aida.djsite.db.models import DbNode
+        DbNode.objects.filter().delete()
+
 
     def test_get_inputs_and_outputs(self):
         a1 = Node().store()
@@ -241,6 +290,10 @@ class TestNodeBasic(unittest.TestCase):
             User.objects.get(username=getpass.getuser).delete()
         except ObjectDoesNotExist:
             pass
+
+        from aida.djsite.db.models import DbNode
+        DbNode.objects.filter().delete()
+
 
     def test_attr_before_storing(self):
         a = Node()
@@ -671,6 +724,10 @@ class TestSubNodes(unittest.TestCase):
 
         DbComputer.objects.filter().delete()
 
+        from aida.djsite.db.models import DbNode
+        DbNode.objects.filter().delete()
+
+
     def test_set_code(self):
         from aida.orm import Node, Calculation, Data, Code
         from aida.orm import Computer
@@ -897,6 +954,10 @@ class TestCode(unittest.TestCase):
             pass
 
         DbComputer.objects.filter().delete()
+
+        from aida.djsite.db.models import DbNode
+        DbNode.objects.filter().delete()
+
         
         
     def test_code_local(self):
@@ -991,6 +1052,10 @@ class TestFileData(unittest.TestCase):
             User.objects.get(username=getpass.getuser).delete()
         except ObjectDoesNotExist:
             pass
+
+        from aida.djsite.db.models import DbNode
+        DbNode.objects.filter().delete()
+
         
     def test_reload(self):
         import os

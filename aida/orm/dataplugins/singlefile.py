@@ -18,19 +18,19 @@ import os
 from aida.orm import Data
 
 
-class FileData(Data):
+class SinglefileData(Data):
     """
     Pass as input either the uuid of an existing node, or a
     file parameter with the (absolute) path of a file on the hard drive.
     It will get copied inside.
 
-    Internally must have a single file, and stores as internal attribute the filename
-    in the '_filename' attribute.
+    Internally must have a single file, and stores as internal attribute
+    the filename in the '_filename' attribute.
     """
-    _plugin_type_string = ".".join([Data._plugin_type_string,'file'])
+    _plugin_type_string = ".".join([Data._plugin_type_string,'singlefile'])
 
     def __init__(self,filename=None,**kwargs):
-        super(FileData,self).__init__(**kwargs)
+        super(SinglefileData,self).__init__(**kwargs)
 
         uuid = kwargs.pop('uuid', None)
         if uuid is not None:
@@ -38,6 +38,15 @@ class FileData(Data):
 
         if filename is not None:
             self.add_file(filename)
+
+    @property
+    def filename(self):
+        return self.get_attr('filename')
+
+    def get_file_abs_path(self):
+        import os
+
+        return os.path.join(self.current_folder.abspath,self.filename)
 
     def add_file(self,src_abs,dst_filename=None):
         """
@@ -58,7 +67,7 @@ class FileData(Data):
             # filename is not there: no problem, it simply means
             pass
             
-        super(FileData,self).add_file(src_abs,final_filename)
+        super(SinglefileData,self).add_file(src_abs,final_filename)
 
         for delete_me in old_file_list:
             self.remove_file(delete_me)
@@ -75,16 +84,17 @@ class FileData(Data):
     def validate(self):
         from aida.common.exceptions import ValidationError
 
-        super(FileData,self).validate()
+        super(SinglefileData,self).validate()
         
         try:
-            filename = self.get_attr('filename')
+            filename = self.filename
         except AttributeError:
             raise ValidationError("attribute 'filename' not set.")
 
         if [filename] != self.get_file_list():
-            raise ValidationError("The list of files in the folder does not match the "
-                                  "'filename' attribute. _filename='{}', files: {}".format(
-                                      filename, self.get_file_list()))
+            raise ValidationError("The list of files in the folder does not "
+                "match the 'filename' attribute. "
+                "_filename='{}', files: {}".format(
+                    filename, self.get_file_list()))
         
     

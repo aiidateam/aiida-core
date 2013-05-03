@@ -671,6 +671,56 @@ class TestSubNodes(unittest.TestCase):
 
         DbComputer.objects.filter().delete()
 
+    def test_links_label_constraints(self):
+        from aida.orm import Node
+
+        n1 = Node().store()
+        n2 = Node().store()
+        n3 = Node().store()
+        n4 = Node().store()
+        n5 = Node().store()
+
+        n3.add_link_from(n1, label='label1')
+        # This should be allowed since it is an output label with the same name
+        n3.add_link_to(n4, label='label1')
+
+        # An input link with that name already exists
+        with self.assertRaises(ValueError):
+            n3.add_link_from(n2, label='label1')
+
+        # instead, for outputs, I can have multiple times the same label
+        # (think to the case where n3 is a StructureData, and both n4 and n5
+        #  are calculations that use as label 'input_cell')
+        n3.add_link_to(n5, label='label1')
+
+
+    def test_links_label_autogenerator(self):
+        from django.db import transaction
+
+        from aida.orm import Node
+
+        n1 = Node().store()
+        n2 = Node().store()
+        n3 = Node().store()
+        n4 = Node().store()
+        n5 = Node().store()
+        n6 = Node().store()
+        n7 = Node().store()
+        n8 = Node().store()
+        n9 = Node().store()
+        n10 = Node().store()
+
+
+        n10.add_link_from(n1)
+        # Label should be automatically generated
+        n10.add_link_from(n2)
+        n10.add_link_from(n3)
+        n10.add_link_from(n4)
+        n10.add_link_from(n5)
+        n10.add_link_from(n6)
+        n10.add_link_from(n7)
+        n10.add_link_from(n8)
+        n10.add_link_from(n9)
     
     def test_valid_links(self):
         import tempfile
@@ -712,6 +762,10 @@ class TestSubNodes(unittest.TestCase):
         calc.add_link_from(d2)
         calc.add_link_from(code)
 
+        # Cannot link to itself
+        with self.assertRaises(ValueError):
+            d1.add_link_to(d1)
+
         # I try to add wrong links (data to data, calc to calc, etc.)
         with self.assertRaises(ValueError):
             d1.add_link_to(d2)
@@ -727,6 +781,18 @@ class TestSubNodes(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             calc.add_link_from(calc2)
+
+        calc_a = Calculation(computer=self.computer,
+            num_nodes=1,num_cpus_per_node=1).store()
+        calc_b = Calculation(computer=self.computer,
+            num_nodes=1,num_cpus_per_node=1).store()
+
+        data_node = Data().store()
+
+        data_node.add_link_from(calc_a)
+        # A data cannot have to input calculations
+        with self.assertRaises(ValueError):
+            data_node.add_link_from(calc_b)
 
         calculation_inputs = calc.get_inputs()
         inputs_type_data = [i for i in calculation_inputs if isinstance(i,Data)]

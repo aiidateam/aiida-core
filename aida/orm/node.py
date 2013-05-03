@@ -145,7 +145,10 @@ class Node(object):
 
         In subclasses, change only this.
         """
-        from aida.djsite.db.models import Link
+        from aida.djsite.db.models import Link, Path
+        from django.db import IntegrityError
+        from aida.common.exceptions import InternalError
+
         if self._to_be_stored:
             raise ModificationNotAllowed("You have to store the destination node to make link")
         if not isinstance(src,Node):
@@ -156,10 +159,45 @@ class Node(object):
         if self.uuid == src.uuid:
             raise ValueError("Cannot link to itself")
 
+        # Check for cycles. This works if the transitive closure is enabled; if it 
+        # isn't, this test will never fail, but then having a circular link is not
+        # meaningful but does not pose a huge threat
+        #
+        # I am linking src->self; a loop would be created if a Path exists already
+        # in the TC table from self to src
+        if len(Path.objects.filter(parent=src.dbnode, child=self.dbnode))>0:
+            raise ValueError("The link you are attempting to create would generate a loop")            
+
         if label is None:
-            Link.objects.create(input=src.dbnode, output=self.dbnode)
+            autolabel_idx = 1
+
+            existing_from_autolabels = list(Link.objects.filter(
+                output=self.dbnode,
+                label__startswith="link_").values_list('label',flat=True))
+            while "link_{}".format(autolabel_idx) in existing_from_autolabels:
+                autolabel_idx += 1
+
+            safety_counter = 0
+            while True:
+                safety_counter += 1
+                if safety_counter > 100:
+                    # Well, if you have more than 100 concurrent addings to the same 
+                    # node, you are clearly doing something wrong...
+                    raise InternalError("Hey! We found more than 100 concurrent adds of links "
+                        "to the same nodes! Are you really doing that??")
+                try:
+                    Link.objects.create(input=src.dbnode, output=self.dbnode,
+                        label="link_{}".format(autolabel_idx))
+                    break
+                except IntegrityError as e:
+                    # Retry loop until you find a new loop
+                    autolabel_idx += 1
         else:
-            Link.objects.create(input=src.dbnode, output=self.dbnode, label=label)
+            try:
+                Link.objects.create(input=src.dbnode, output=self.dbnode, label=label)
+            except IntegrityError as e:
+                raise ValueError("There is already a link with the same name "
+                    "(raw message was {})".format(e.message))
 
     def add_link_to(self,dest,label=None):
         """

@@ -8,7 +8,7 @@ from aida.common.utils import get_repository_folder
 _sandbox_folder = os.path.realpath(os.path.join(get_repository_folder(),'sandbox'))
 _perm_repository = os.path.realpath(os.path.join(get_repository_folder(),'repository'))
 
-_valid_sections = ['node']
+_valid_sections = ['node', 'workflow']
 
 class Folder(object):
     """
@@ -61,7 +61,7 @@ class Folder(object):
             
         return new_folder
     
-    def get_content_list(self,pattern='*'):
+    def get_content_list(self,pattern='*',only_filenames = False):
         """
         Return a list of files (and subfolders) in the folder,
         matching a given pattern.
@@ -73,14 +73,21 @@ class Folder(object):
             pattern: a pattern for the file/folder names, using Unix filename
                 pattern matching (see Python standard module fnmatch).
                 By default, pattern is '*', matching all files and folders.
+            only_filenames: if False (default), return pairs (name, is_file).
+                if True, return only a flat list.
         Returns:
             a list of tuples of two elements, the first is the file name and
             the second is True if the element is a file, False if it is a
             directory.
         """
-        return [(fname,not os.path.isdir(os.path.join(self.abspath, fname))) 
-                for fname in os.listdir(self.abspath)
+        file_list = [fname for fname in os.listdir(self.abspath)
                 if fnmatch.fnmatch(fname, pattern)]
+
+        if only_filenames:
+            return file_list
+        else:
+            return [(fname,not os.path.isdir(os.path.join(self.abspath, fname))) 
+                    for fname in file_list]
 
     def get_file_list(self,pattern=None):
         """

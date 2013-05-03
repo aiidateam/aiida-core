@@ -23,7 +23,7 @@ def get_config():
         with open(conf_file,"r") as json_file:
             return json.load(json_file)
     else:
-        raise ConfigurationError
+        raise ConfigurationError("Unable to load configuration file")
 
 def store_config(confs):
     
@@ -36,7 +36,7 @@ def store_config(confs):
         with open(conf_file,"w") as json_file:
             json.dump(confs, json_file)
     except:
-        raise ConfigurationError
+        raise ConfigurationError("Unable to store configuration")
     
 def load_django():
 #    from django.core.management import setup_environ

@@ -20,14 +20,6 @@ def update_and_retrieve():
         finally:
             release_lock()
 
-#@task
-#def poll(_i,_s):
-#    from time import sleep
-#
-#    print "Polling with args "+str(_i)+" and "+str(_s)+" ..."
-#    sleep(5)
-#    print "Polled"
-
 @task
 def collector(_var):
     

@@ -283,6 +283,27 @@ class TestNodeBasic(unittest.TestCase):
             # I get a non-existing attribute
             a.get_attr('nonexisting')
 
+    def test_datetime_attribute(self):
+        import datetime
+        from django.utils.timezone import make_aware, get_current_timezone, is_naive
+
+        a = Node()
+
+        date = datetime.datetime.now()
+
+        a.set_attr('some_date', date)
+        a.store()
+
+        retrieved = a.get_attr('some_date')
+
+        if is_naive(date):
+            date_to_compare = make_aware(date, get_current_timezone())
+        else:
+            date_to_compare = date
+
+        self.assertEquals(date_to_compare,retrieved)
+
+
     def test_attributes_on_copy(self):
         import copy
         

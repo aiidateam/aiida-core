@@ -11,6 +11,9 @@ from aida.common.folders import RepositoryFolder, SandboxFolder
 # Name to be used for the section
 _section_name = 'node'
 
+# The name of the subfolder in which to put the files/directories added with add_path
+_path_subfolder_name = 'path'
+
 class Node(object):
     """
     Base class to map a node in the DB + its permanent repository counterpart.
@@ -89,6 +92,8 @@ class Node(object):
             self._dbnode.type = self._plugin_type_string
             self._to_be_stored = True
             self._temp_folder = SandboxFolder()
+            # Create an empty folder, to avoid any problem in the future
+            self.path_subfolder.create()
             # Used only before the first save
             self._attrs_cache = {}
             self._repo_folder = RepositoryFolder(section=_section_name, uuid=self.uuid)
@@ -165,8 +170,12 @@ class Node(object):
         #
         # I am linking src->self; a loop would be created if a Path exists already
         # in the TC table from self to src
-        if len(Path.objects.filter(parent=src.dbnode, child=self.dbnode))>0:
+        if len(Path.objects.filter(parent=self.dbnode, child=src.dbnode))>0:
             raise ValueError("The link you are attempting to create would generate a loop")            
+
+        # Check if the source allows output links from this node (will raise ValueError if 
+        # this is not the case)
+        src.can_link_as_output(self)
 
         if label is None:
             autolabel_idx = 1
@@ -209,6 +218,14 @@ class Node(object):
         if not isinstance(dest,Node):
             raise ValueError("dest must be a Node instance")
         dest.add_link_from(self,label)
+
+    def can_link_as_output(self,dest):
+        """
+        Raise a ValueError if a link from self to dest is not allowed.
+        Implement in subclasses
+        """
+        return True
+
 
     def get_inputs(self,type=None,also_labels=False):
         """
@@ -536,8 +553,8 @@ class Node(object):
         for k, v in self.iterattrs(also_updatable=False):
             newobject.set_attr(k,v)
 
-        for filename in self.get_file_list():
-            newobject.add_file(self.current_folder.get_file_path(filename),filename)
+        for path in self.get_path_list():
+            newobject.add_path(self.get_abs_path(path),path)
 
         return newobject
 
@@ -565,8 +582,13 @@ class Node(object):
         else:
             return self.repo_folder
 
-    def get_file_list(self):
-        return self.current_folder.get_file_list()
+    @property
+    def path_subfolder(self):
+        return self.current_folder.get_subfolder(
+            _path_subfolder_name,reset_limit=True)
+
+    def get_path_list(self):
+        return self.path_subfolder.get_content_list()
 
     def get_temp_folder(self):
         if self._temp_folder is None:
@@ -574,46 +596,48 @@ class Node(object):
                                 "not set!".format(self.uuid))
         return self._temp_folder
 
-    def remove_file(self,filename):
+    def remove_path(self,path):
         """
-        Remove a file from the repository directory.
+        Remove a file or directory from the repository directory.
 
         Can be called only before storing.
         """
         if not self._to_be_stored:
-            raise ValueError("Cannot delete a file after storing the node")
+            raise ValueError("Cannot delete a path after storing the node")
         
-        if os.path.split(filename)[0]:
-            raise ValueError("The destination file in add_file must be a filename without any subfolder")
-        self.get_temp_folder().remove_file(filename)
+        if os.path.isabs(path):
+            raise ValueError("The destination path in remove_path must be a relative path")
+        self.path_subfolder.remove_path(path)
 
-    def add_file(self,src_abs,dst_filename):
+    def add_path(self,src_abs,dst_path):
         """
-        Copy a file from a local file inside the repository directory.
-        The file cannot be put in a subfolder.
+        Copy a file or folder from a local file inside the repository directory.
+        If there is a subpath, folders will be created.
 
         Copy to a cache directory if the entry has not been saved yet.
         src_abs: the absolute path of the file to copy.
-        dst_filename: the filename on which to copy.
+        dst_filename: the (relative) path on which to copy.
 
         TODO: in the future, add an add_attachment() that has the same meaning of a metadata file.
         Decide also how to store. If in two separate subfolders, remember to reset the limit.
         """
         if not self._to_be_stored:
-            raise ValueError("Cannot insert file after storing the node")
+            raise ValueError("Cannot insert a path after storing the node")
         
         if not os.path.isabs(src_abs):
-            raise ValueError("The source file in add_file must be an absolute path")
-        if os.path.split(dst_filename)[0]:
-            raise ValueError("The destination file in add_file must be a filename without any subfolder")
-        self.get_temp_folder().insert_file(src_abs,dst_filename)
+            raise ValueError("The source path in add_path must be absolute")
+        if os.path.isabs(dst_path):
+            raise ValueError("The destination path in add_path must be a filename without any subfolder")
+        self.path_subfolder.insert_path(src_abs,dst_path)
 
 
-    def get_file_path(self,filename):
+    def get_abs_path(self,path,section=_path_subfolder_name):
         """
-        TODO: For the moment works only for one kind of files, 'internal'
+        TODO: For the moment works only for one kind of files, 'path' (internal files)
         """
-        return self.current_folder.get_file_path(filename,check_existence=True)
+        if os.path.isabs(path):
+            raise ValueError("The path in get_abs_path must be relative")
+        return self.current_folder.get_subfolder(section,reset_limit=True).get_abs_path(path,check_existence=True)
 
     def store(self):
         """

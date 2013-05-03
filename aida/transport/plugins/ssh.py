@@ -14,7 +14,8 @@ from aida.transport import FileAttribute
 
 class SshTransport(aida.transport.Transport):
     # Valid keywords accepted by the connect method of paramiko.SSHClient
-    _valid_connect_params = ['port', 'username', 'password', 'pkey',
+    # I disable 'password'
+    _valid_connect_params = ['port', 'username', 'pkey',
                              'key_filename', 'timeout', 'allow_agent',
                              'look_for_keys', 'compress']
     
@@ -79,7 +80,15 @@ class SshTransport(aida.transport.Transport):
         """
         
         # Open a SSHClient
-        self._client.connect(self._machine,**self._connect_args)
+        try:
+            self._client.connect(self._machine,**self._connect_args)
+        except Exception as e:
+            self.logger.error("Error connecting through SSH: [{}] {}, "
+                              "connect_args were: {}".format(
+                                  e.__class__.__name__,
+                                  e.message,
+                                  self._connect_args))
+            raise
 
         # Open also a SFTPClient
         self._sftp = self._client.open_sftp()
@@ -381,13 +390,13 @@ class SshTransport(aida.transport.Transport):
                         if 'File exists' in e.message:
                             pass
                         
-                if self.isdir(this_lpath):
+                if os.path.isdir(this_lpath):
                     self.puttree( this_lpath,this_rpath,callback,dereference,overwrite )
                 else:
                     self.putfile( this_lpath,this_rpath,callback,overwrite )
 
         else:
-            if self.isdir(localpath):
+            if os.path.isdir(localpath):
                 self.puttree( localpath,remotepath,callback,dereference,overwrite )
             else:
                 self.putfile( localpath,remotepath,callback,overwrite )

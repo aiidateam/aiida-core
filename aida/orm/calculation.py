@@ -153,6 +153,14 @@ class Calculation(Node):
         if not isinstance(src,(Data, Code)):
             raise ValueError("Nodes entering in calculation can only be of type data or code")
         
+        valid_states = [calcStates.NEW]
+
+        if self.get_state() not in valid_states:
+            raise ValueError("Can add an input node to a calculation only if it is in one "
+                "of the following states: {}, it is instead {}".format(valid_states,
+                    self.get_state()))
+
+
         return super(Calculation,self).add_link_from(src, *args, **kwargs)
 
     def set_code(self,code):

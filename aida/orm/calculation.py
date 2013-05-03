@@ -48,10 +48,6 @@ class Calculation(Node):
         if num_cpus_per_node is not None:
             self.set_num_cpus_per_node(num_cpus_per_node)        
 
-        code = kwargs.pop('code',None)
-        if code is not None:
-            self.set_code(code)
-
         if kwargs:
             raise ValueError("Invalid parameters found in the __init__: {}".format(kwargs.keys()))
 

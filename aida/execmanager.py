@@ -206,7 +206,7 @@ def submit_calc(calc):
     from aida.common.exceptions import InputValidationError, MissingPluginError, ValidationError
     from aida.scheduler.datastructures import JobTemplate
     from aida.common.utils import validate_list_of_string_tuples
-
+    from aida.orm.datastructures.remote import RemoteData
     
     if not isinstance(calc,Calculation):
         raise ValueError("calc must be a Calculation")
@@ -336,8 +336,9 @@ def submit_calc(calc):
                 t.chdir(calcinfo.uuid[:2])
                 t.mkdir(calcinfo.uuid[2:])
                 t.chdir(calcinfo.uuid[2:])
+                workdir = t.getcwd()
                 # I store the workdir of the calculation for later file retrieval
-                calc._set_remote_workdir(t.getcwd())
+                calc._set_remote_workdir(workdir)
 
                 # I first create the code files, so that the code can put
                 # default files to be overwritten by the plugin itself.
@@ -388,8 +389,12 @@ def submit_calc(calc):
                         # TODO: implement copy between two different machines!
                         raise NotImplementedError("Remote copy between two different machines "
                             "is not implemented yet")
-
         
+                remotedata = RemoteData(remote_machine = computer.hostname, 
+                        remote_path = workdir).store()
+
+                calc.add_link_to(remotedata, label='remote_folder')
+
                 job_id = s.submit_from_script(t.getcwd(),script_filename)
                 calc._set_job_id(job_id)
                 calc._set_state(calcStates.WITHSCHEDULER)
@@ -397,7 +402,6 @@ def submit_calc(calc):
                     calc._set_scheduler_state(jobStates.QUEUED_HELD)
                 else:
                     calc._set_scheduler_state(jobStates.QUEUED)
-
     
                 execlogger.debug("submitted calculation {} with job id {}".format(
                     calc.uuid, job_id))
@@ -411,6 +415,7 @@ def submit_calc(calc):
 def retrieve_finished_for_authinfo(authinfo):
     from aida.orm import Calculation
     from aida.common.folders import SandboxFolder
+
     import os
     
     calcs_to_retrieve = Calculation.get_all_with_state(
@@ -446,6 +451,8 @@ def retrieve_finished_for_authinfo(authinfo):
                         for item in retrieve_list:
                             t.get(item,
                                   os.path.join(folder.abspath,os.path.split(item)[1]))
+
+
 
                     calc._set_state(calcStates.RETRIEVED)
                     retrieved.append(calc)

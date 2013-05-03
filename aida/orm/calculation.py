@@ -75,6 +75,34 @@ class Calculation(Node):
 	except (ValueError,TypeError):
 		raise ValidationError("The number of CPUs per node must be specified and must be positive")
 
+    def can_link_as_output(self,dest):
+        """
+        Raise a ValueError if a link from self to dest is not allowed.
+        
+        An output of a calculation can only be a data, and can only be set 
+        when the calculation is in the SUBMITTING or RETRIEVING or PARSING state.
+        (during SUBMITTING, the execmanager adds a link to the remote folder; 
+         all other links are added while in the retrieving phase)
+        """
+        from aida.orm import Data
+
+        valid_states = [
+              calcStates.SUBMITTING,
+              calcStates.RETRIEVING,
+              calcStates.PARSING,
+              ]
+        
+        if not isinstance(dest, Data):
+            raise ValueError("The output of a calculation node can only be a data node")
+
+        if self.get_state() not in valid_states:
+            raise ValueError("Can add an output node to a calculation only if it is in one "
+                "of the following states: {}, it is instead {}".format(valid_states,
+                    self.get_state()))
+
+        return super(Calculation, self).can_link_as_output(dest)
+
+
     def set_queue_name(self,val):
         self.set_attr('queue_name',unicode(val))
 

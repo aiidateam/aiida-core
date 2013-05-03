@@ -101,6 +101,19 @@ class Code(Node):
     def add_link_from(self,src,label=None):
         raise ValueError("A code node cannot have any input nodes")
 
+    def can_link_as_output(self,dest):
+        """
+        Raise a ValueError if a link from self to dest is not allowed.
+        
+        An output of a code can only be a calculation
+        """
+        from aida.orm import Calculation
+        
+        if not isinstance(dest, Calculation):
+            raise ValueError("The output of a code node can only be a calculation")
+
+        return super(Code, self).can_link_as_output(dest)
+
     def set_prepend_text(self,code):
         """
         Pass a string of code that will be put in the scheduler script before the

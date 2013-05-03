@@ -49,6 +49,9 @@ class TransitiveNoLoops(unittest.TestCase):
         with self.assertRaises(ValueError): # This would generate a loop
             n4.add_link_to(n1)
 
+            src = 4
+            dest = 1
+
 class TransitiveClosureDeletion(unittest.TestCase):
     """
     Test the creation of the transitive closure table
@@ -887,6 +890,11 @@ class TestSubNodes(unittest.TestCase):
         # A data cannot have to input calculations
         with self.assertRaises(ValueError):
             data_node.add_link_from(calc_b)
+
+        newdata = Data()
+        # Cannot add an input link if the calculation is not in status NEW
+        with self.assertRaises(ValueError):
+            calc_a.add_link_from(newdata)
 
         calculation_inputs = calc.get_inputs()
         inputs_type_data = [i for i in calculation_inputs if isinstance(i,Data)]

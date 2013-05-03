@@ -1,6 +1,7 @@
 # Django settings for the AIDA project.
 import sys, os, os.path
-from django.core.exceptions import ImproperlyConfigured
+from aida.common.exceptions import ConfigurationError
+from aida.common.utils import store_config, get_config
 
 # Assumes that parent directory of aida is root for
 # things like templates/, SQL/ etc.  If not, change what follows...
@@ -8,23 +9,29 @@ AIDA_DIR = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR = os.path.split(AIDA_DIR)[0]
 sys.path = [BASE_DIR] + sys.path
 
+try:
+    confs = get_config()
+except:
+    raise ImproperlyConfigured("Please run the AIDA Installation")
+          
 #put all database specific portions of settings here
-DBENGINE = os.environ.get('AIDADB_ENGINE', '')
-DBNAME = os.environ.get('AIDADB_NAME', '')
-DBUSER = os.environ.get('AIDADB_USER', '')
-DBPASS = os.environ.get('AIDADB_PASS', '')
-DBHOST = os.environ.get('AIDADB_HOST', '')
-DBPORT = os.environ.get('AIDADB_PORT', '')
-LOCAL_REPOSITORY = os.environ.get('AIDADB_REPOSITORY', '')
+DBENGINE = confs.get('AIDADB_ENGINE', '')
+DBNAME = confs.get('AIDADB_NAME', '')
+DBUSER = confs.get('AIDADB_USER', '')
+DBPASS = confs.get('AIDADB_PASS', '')
+DBHOST = confs.get('AIDADB_HOST', '')
+DBPORT = confs.get('AIDADB_PORT', '')
+LOCAL_REPOSITORY = confs.get('AIDADB_REPOSITORY', '')
 
 DATABASES = {
     'default' : {
-        'ENGINE'    : 'django.db.backends.' + DBENGINE,   # Add 'postgresql_psycopg2', 'mysql', 'sqlite3' or 'oracle'. 
-        'NAME'      : DBNAME,                       # Or path to database file if using sqlite3.   
-        'USER'      : DBUSER,                       # Not used with sqlite3.
-        'PASSWORD'  : DBPASS,                        # Not used with sqlite3.
-        'HOST'      : DBHOST,                       # Set to empty string for localhost. Not used with sqlite3. 
-        'PORT'      : DBPORT,                       # Set to empty string for default. Not used with sqlite3.      
+        # Add 'postgresql_psycopg2', 'mysql', 'sqlite3' or 'oracle'. 
+        'ENGINE'    : 'django.db.backends.' + DBENGINE, 
+        'NAME'      : DBNAME,  # Or path to database file if using sqlite3.   
+        'USER'      : DBUSER,  # Not used with sqlite3.
+        'PASSWORD'  : DBPASS,  # Not used with sqlite3.
+        'HOST'      : DBHOST,  # Set to empty string for localhost. Not used with sqlite3. 
+        'PORT'      : DBPORT,  # Set to empty string for default. Not used with sqlite3.      
         }
     }
 
@@ -34,7 +41,7 @@ if 'test' in sys.argv:
     # if you define such a variable to False, it will use the same backend
     # that you have already configured also for tests. Otherwise, 
     # Setup a sqlite3 DB for tests (WAY faster, since it remains in-memory)
-    if globals().get('use_inmemory_sqlite_for_tests', True):
+    if confs.get('use_inmemory_sqlite_for_tests', True):
         DATABASES['default'] = {'ENGINE': 'django.db.backends.sqlite3'}
     ###################################################################
     # IMPORTANT! Choose a different repository location, otherwise 
@@ -53,13 +60,13 @@ if 'test' in sys.argv:
     ##################################################################
 
 ## Checks on the LOCAL_REPOSITORY
-if not LOCAL_REPOSITORY:
-    ## Empty string
-    raise ImproperlyConfigured(
+try:
+    LOCAL_REPOSITORY
+except NameError:
+    raise ConfigurationError(
         "Please setup correctly the LOCAL_REPOSITORY variable to "
         "a suitable directory on which you have write permissions.")
     
-
 # Normalize LOCAL_REPOSITORY to its absolute path
 LOCAL_REPOSITORY=os.path.abspath(LOCAL_REPOSITORY)
 if not os.path.isdir(LOCAL_REPOSITORY):
@@ -69,21 +76,15 @@ if not os.path.isdir(LOCAL_REPOSITORY):
         os.makedirs(LOCAL_REPOSITORY)
     except OSError:
         # Possibly here due to permission problems
-        raise ImproperlyConfigured(
+        raise ConfigurationError(
             "Please setup correctly the LOCAL_REPOSITORY variable to "
             "a suitable directory on which you have write permissions. "
             "(I was not able to create the directory.)")
         
 
-## ========== NOTE =========
-## Later on, it may be probably better to make a different settings.py for 
-## testing, and then run it using
-## python manage.py test --settings=aida.djsite.settings.test_settings
-## to avoid that subtle bugs that are backend-dependent are not trapped
-
 # Usual Django settings starts here.............
 
-DEBUG = True
+DEBUG = False
 TEMPLATE_DEBUG = DEBUG
 
 ADMINS = (
@@ -97,7 +98,7 @@ MANAGERS = ADMINS
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
 # although not all choices may be available on all operating systems.
 # In a Windows environment this must be set to your system time zone.
-TIME_ZONE = 'America/Chicago'
+TIME_ZONE = 'America/New_York'
 
 # Language code for this installation. All choices can be found here:
 # http://www.i18nguy.com/unicode/language-identifiers.html
@@ -114,6 +115,7 @@ USE_I18N = True
 USE_L10N = True
 
 # If you set this to False, Django will not use timezone-aware datetimes.
+# For Aida, leave it as True, otherwise setting properties with dates will not work.
 USE_TZ = True
 
 # Absolute filesystem path to the directory that will hold user-uploaded files.
@@ -267,18 +269,13 @@ BROKER_URL = "django://";
 CELERY_RESULT_BACKEND = "database";
 
 CELERYBEAT_SCHEDULER = "djcelery.schedulers.DatabaseScheduler";
+
+# Every 30 seconds it is started, but for how it is done internally, if the previous loop
+# is still working, it won't restart twice at the same time.
 CELERYBEAT_SCHEDULE = {
-#    'do-every-30-seconds': {
-#        'task': 'aida.djsite.db.tasks.poll',
-#        'schedule': timedelta(seconds=30),
-#        'args': ("foo", 16)
-#    },
-## TODO: instead of starting the execution every N seconds, do it in such a way
-##       that it waits N seconds between the end of the previous iteration and
-##       the beginning of the following
     'update-status-and-retrieve': {
         'task':'aida.djsite.db.tasks.update_and_retrieve',
-        'schedule': timedelta(seconds=120),
+        'schedule': timedelta(seconds=30),
         },
 }
 

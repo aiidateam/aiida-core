@@ -3,6 +3,41 @@ import string
 
 from aida.common.exceptions import ConfigurationError
 
+CONFIG_FNAME = 'config.json'
+
+def backup_config():
+    
+    import shutil
+    aida_dir    = os.path.expanduser("~/.aida")
+    conf_file   = os.path.join(aida_dir, CONFIG_FNAME)
+    if (os.path.isfile(conf_file)):
+        shutil.copy(conf_file, conf_file+"_bk")
+    
+def get_config():
+    
+    import json
+    
+    aida_dir    = os.path.expanduser("~/.aida")
+    conf_file   = os.path.join(aida_dir, CONFIG_FNAME)
+    if (os.path.isfile(conf_file)):
+        with open(conf_file,"r") as json_file:
+            return json.load(json_file)
+    else:
+        raise ConfigurationError("Unable to load configuration file")
+
+def store_config(confs):
+    
+    import json
+    
+    aida_dir    = os.path.expanduser("~/.aida")
+    conf_file   = os.path.join(aida_dir, CONFIG_FNAME)
+    
+    try:
+        with open(conf_file,"w") as json_file:
+            json.dump(confs, json_file)
+    except:
+        raise ConfigurationError("Unable to store configuration")
+    
 def load_django():
 #    from django.core.management import setup_environ
 #    from scalingtest import settings
@@ -70,26 +105,27 @@ def get_suggestion(provided_string,allowed_strings):
         return "(No similar keywords found...)"
 
 
-def validate_list_of_two_string_tuples(val):
+def validate_list_of_string_tuples(val, tuple_length):
     """
     Check that:
     1. val is a list or tuple
     2. each element of the list:
       a. is a list or tuple
-      b. is of length two
+      b. is of length equal to the parameter tuple_length
       c. each of the two elements is a string
 
     Return if valid, raise ValidationError if invalid
     """
     from aida.common.exceptions import ValidationError
-    
+
     err_msg = ("the value must be a list (or tuple) "
-               "of length-two list (or tuples), whose elements are strings")
+               "of length-N list (or tuples), whose elements are strings; "
+               "N={}".format(tuple_length))
     if not isinstance(val,(list,tuple)):
         raise ValidationError(err_msg)
     for f in val:
         if (not isinstance(f,(list,tuple)) or
-              len(f)!=2 or
+              len(f)!=tuple_length or
               not all(isinstance(s,basestring) for s in f)):
             raise ValidationError(err_msg)
 

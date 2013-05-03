@@ -19,10 +19,14 @@ from aida.djsite.utils import get_automatic_user
 #ParameterData = load_plugin(Data, 'aida.orm.dataplugins', 'parameter')
 from aida.orm.dataplugins.parameter import ParameterData
 from aida.orm.dataplugins.singlefile import SinglefileData
+from aida.orm.dataplugins.remote import RemoteData
 
 computername = "bellatrix.epfl.ch"
 # A string with the version of this script, used to recreate a code when necessary
 current_version = "1.0.2"
+#queue = None
+queue = "P_share_queue"
+
 
 def get_or_create_machine():
     import json
@@ -125,7 +129,8 @@ template_data = ParameterData({
     'input_file_name': "factor.dat",
     'cmdline_params': ["{add1}", "{add2}"],
     'output_file_name': "result.txt",
-    'files_to_copy': [('the_only_file','check.txt')],
+    'files_to_copy': [('the_only_local_file','check.txt'),
+                      ('the_only_remote_node','bashrc-copy')],
     }).store()
 
 parameters = ParameterData({
@@ -140,10 +145,15 @@ with tempfile.NamedTemporaryFile() as f:
     # I don't worry of the name with which it is internally stored
     fileparam = SinglefileData(filename=f.name).store()
 
+remoteparam = RemoteData(remote_machine="bellatrix.epfl.ch",
+    remote_path="/home/pizzi/.bashrc").store()
+
 calc = Calculation(computer=computer)
 calc.set_max_wallclock_seconds(12*60) # 12 min
 calc.set_num_nodes(1)
 calc.set_num_cpus_per_node(1)
+if queue is not None:
+    calc.set_queue_name(queue)
 calc.store()
 print "created calculation; calc=Calculation(uuid='{}') # ID={}".format(
     calc.uuid,calc.dbnode.pk)
@@ -152,7 +162,8 @@ calc.add_link_from(code)
 
 calc.add_link_from(template_data, label="template")
 calc.add_link_from(parameters, label="parameters")
-calc.add_link_from(fileparam, label="the_only_file")
+calc.add_link_from(fileparam, label="the_only_local_file")
+calc.add_link_from(remoteparam, label="the_only_remote_node")
 
 submit_calc(calc)
 print "submitted calculation; calc=Calculation(uuid='{}') # ID={}".format(

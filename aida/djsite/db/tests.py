@@ -671,6 +671,38 @@ class TestSubNodes(unittest.TestCase):
 
         DbComputer.objects.filter().delete()
 
+    def test_set_code(self):
+        from aida.orm import Node, Calculation, Data, Code
+        from aida.orm import Computer
+        from aida.common.pluginloader import load_plugin
+        from aida.djsite.db.models import DbComputer
+        
+        code = Code(remote_machine_exec=('localhost','/bin/true'),
+                    input_plugin='simple_plugins.template_replacer')#.store()
+        
+        computer = self.computer
+
+        unstoredcalc = Calculation(computer=computer,
+                           num_nodes=1,num_cpus_per_node=1)
+        calc = Calculation(computer=computer,
+                           num_nodes=1,num_cpus_per_node=1).store()
+        # calc is not stored, and code is not (can't add links to node)
+        with self.assertRaises(ModificationNotAllowed):
+            unstoredcalc.set_code(code)
+
+        # calc is stored, but code is not
+        with self.assertRaises(ModificationNotAllowed):
+            calc.set_code(code)
+
+        # calc is not stored, but code is
+        code.store()        
+        with self.assertRaises(ModificationNotAllowed):
+            unstoredcalc.set_code(code)
+
+        # code and calc are stored
+        calc.set_code(code)
+        
+
     def test_links_label_constraints(self):
         from aida.orm import Node
 

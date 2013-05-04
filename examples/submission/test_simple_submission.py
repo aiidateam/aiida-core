@@ -33,8 +33,8 @@ from aida.orm.dataplugins.remote import RemoteData
 computername = "bellatrix.epfl.ch"
 # A string with the version of this script, used to recreate a code when necessary
 current_version = "1.0.4"
-#queue = None
-queue = "P_share_queue"
+queue = None
+#queue = "P_share_queue"
 
 
 def get_or_create_machine():

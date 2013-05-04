@@ -586,8 +586,8 @@ class Node(object):
         return self.current_folder.get_subfolder(
             _path_subfolder_name,reset_limit=True)
 
-    def get_path_list(self):
-        return self.path_subfolder.get_content_list()
+    def get_path_list(self, subfolder='.'):
+        return self.path_subfolder.get_subfolder(subfolder).get_content_list()
 
     def get_temp_folder(self):
         if self._temp_folder is None:

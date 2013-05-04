@@ -12,6 +12,8 @@ from aida.common.exceptions import ModificationNotAllowed
 #        'priority',
 #        'resourceLimits',
 
+_input_subfolder = 'raw_input'
+
 class Calculation(Node):
     _plugin_type_string = "calculation"
     _updatable_attributes = ('state', 'job_id', 'scheduler_state', 'last_jobinfo',
@@ -22,8 +24,6 @@ class Calculation(Node):
         Possible arguments:
         computer, num_nodes, num_cpus_per_node, code
         """
-        from aida.common.datastructures import calcStates
-        
         self._logger = super(Calculation,self).logger.getChild('calculation')
         super(Calculation,self).__init__(*args, **kwargs)
 
@@ -52,7 +52,6 @@ class Calculation(Node):
             raise ValueError("Invalid parameters found in the __init__: {}".format(kwargs.keys()))
 
     def validate(self):
-        from aida.common.datastructures import calcStates
         from aida.common.exceptions import ValidationError
         
         super(Calculation,self).validate()
@@ -102,6 +101,31 @@ class Calculation(Node):
 
         return super(Calculation, self).can_link_as_output(dest)
 
+    def _store_raw_input_folder(self, folder_path):
+        """
+        Copy the content of the folder internally, in a subfolder called 'raw_input'
+
+        Args:
+            folder_path: the path to the folder from which the content should be taken
+        """
+        # This function can be called only if the state is SUBMITTING
+        if self.get_state() != calcStates.SUBMITTING:
+            raise ModificationNotAllowed("The raw input folder can be stored only if the "
+                "state is SUBMITTING, it is instead {}".format(self.get_state()))
+
+        # get subfolder and replace with copy
+        raw_input_folder = self.current_folder.get_subfolder(_input_subfolder,create=True)
+        raw_input_folder.replace_with_folder(folder_path, move=False, overwrite=True)
+
+    @property
+    def raw_input_folder(self):
+        from aida.common.exceptions import NotExistent
+
+        input_folder = self.current_folder.get_subfolder(_input_subfolder)
+        if input_folder.exists():
+            return raw_input_folder
+        else:
+            raise NotExistent("raw_input_folder not created yet")
 
     def set_queue_name(self,val):
         self.set_attr('queue_name',unicode(val))
@@ -139,7 +163,7 @@ class Calculation(Node):
     def get_num_cpus_per_node(self):
         return self.get_attr('num_cpus_per_node', None)
         
-    def add_link_from(self,src, *args, **kwargs):
+    def add_link_from(self,src,label=None):
         '''
         Add a link with a code as destination.
         You can use the parameters of the base Node class, in particular the label
@@ -160,8 +184,7 @@ class Calculation(Node):
                 "of the following states: {}, it is instead {}".format(valid_states,
                     self.get_state()))
 
-
-        return super(Calculation,self).add_link_from(src, *args, **kwargs)
+        return super(Calculation,self).add_link_from(src, label)
 
     def set_code(self,code):
         from aida.orm import Code
@@ -174,10 +197,9 @@ class Calculation(Node):
         TODO: probably this method should be in the base class, and check for the type
         """
         from aida.djsite.db.models import DbComputer
-        from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 
         if self._to_be_stored:
-	    self.dbnode.computer = DbComputer.get_dbcomputer(computer)
+	       self.dbnode.computer = DbComputer.get_dbcomputer(computer)
         else:
             self.logger.error("Trying to change the computer of an already saved node: {}".format(
                 self.uuid))
@@ -188,7 +210,6 @@ class Calculation(Node):
         return Computer(dbcomputer=self.dbnode.computer)
 
     def _set_state(self, state):
-        from aida.common.datastructures import calcStates
         if state not in calcStates:
             raise ValueError("'{}' is not a valid calculation status".format(state))
         self.set_attr('state', state)
@@ -280,8 +301,6 @@ class Calculation(Node):
         """
         # I assume that calcStates are strings. If this changes in the future, update the
         # filter below from attributes__tval to the correct field.
-        from aida.common.datastructures import calcStates
-        from aida.djsite.db.models import DbComputer
         from aida.orm import Computer
 
         if state not in calcStates:

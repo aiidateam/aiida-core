@@ -321,7 +321,10 @@ def submit_calc(calc):
             subfolder = folder.get_subfolder('.aida',create=True)
             subfolder.create_file_from_filelike(StringIO.StringIO(json.dumps(job_tmpl)),'job_tmpl.json')
             subfolder.create_file_from_filelike(StringIO.StringIO(json.dumps(calcinfo)),'calcinfo.json')
-            
+
+            # After this call, no modifications to the folder should be done
+            calc._store_raw_input_folder(folder.abspath)
+
             with t:
                 s.set_transport(t)
                 remote_user = t.whoami()
@@ -418,8 +421,6 @@ def submit_calc(calc):
                 execlogger.debug("submitted calculation {} with job id {}".format(
                     calc.uuid, job_id))
 
-                # TODO: decide where to store the whole folder
-                #       with the files created by the input plugin
     except:
         calc._set_state(calcStates.SUBMISSIONFAILED)
         raise
@@ -444,26 +445,29 @@ def retrieve_finished_for_authinfo(authinfo):
         with authinfo.get_transport() as t:
             for calc in calcs_to_retrieve:
                 try:
-                    # TODO: MOVE THE FOLLOWING CODE IN A NEW FUNCTION,
-                    # receiving the open transport and the calculation.
-                    # TODO: 
                     execlogger.debug("Retrieving calc {} ({})".format(calc.dbnode.pk, calc.uuid))
                     workdir = calc.get_remote_workdir()
                     retrieve_list = calc.get_retrieve_list()
                     execlogger.debug("chdir {}".format(workdir))
                     t.chdir(workdir)
-                    # TODO: decide what to do: one node per element in the retrieve_list, or
-                    #       one node for everything (problem of overwriting; we can say that we
-                    #       write in order, so following things overwrite previous things;
-                    #       or change the way in which we store the retrieve list so that it is
-                    #       a tuple of two elements, with source and dest.
+
+                    retrieved = FolderData()
 
                     with SandboxFolder() as folder:
                         for item in retrieve_list:
                             t.get(item,
-                                  os.path.join(folder.abspath,os.path.split(item)[1]))
+                                  os.path.join(folder.abspath,os.path.split(item)[1]),
+                                  ignore_nonexisting=True)
+                        # Here I retrieved everything; now I store them inside the calculation
+                        retrieved.replace_with_folder(folder)
 
-                    # TODO: add parsing! set the state to calcStates.PARSING!
+                    execlogger.debug("Storing retrieved data={} of calc {}".format(retrieved.dbnode.pk, calc.dbnode.pk))
+                    retrieved.store()
+                    calc.set_link_to(retrieved, label="retrieved")
+
+                    calc._set_state(calcStates.PARSING)
+
+                    # TODO: parse here
 
                     calc._set_state(calcStates.RETRIEVED)
                     retrieved.append(calc)

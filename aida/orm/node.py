@@ -152,7 +152,6 @@ class Node(object):
         """
         from aida.djsite.db.models import Link, Path
         from django.db import IntegrityError
-        from aida.common.exceptions import InternalError
 
         if self._to_be_stored:
             raise ModificationNotAllowed("You have to store the destination node to make link")

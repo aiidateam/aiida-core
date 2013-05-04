@@ -8,7 +8,7 @@ import aida
 
 
 # ONLY these commands are passed to the Django manager
-filter_command_list = ['syncdb', 'daemon', 'migrate', 'test']
+filter_command_list = ['syncdb', 'daemon', 'migrate', 'test', 'shell']
 
 # For the daemon, to be hard-coded when ok
 daemon_subdir    = "daemon"

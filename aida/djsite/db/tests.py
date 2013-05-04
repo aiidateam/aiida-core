@@ -493,7 +493,143 @@ class TestNodeBasic(unittest.TestCase):
             self.assertEquals(f.read(), file_content)
         with open(c.get_abs_path('file4.txt')) as f:
             self.assertEquals(f.read(), file_content_different)
+
+
+    def test_folders(self):
+        """
+        Similar as test_files, but I manipulate a tree of folders
+        """
+        import tempfile
+        import os,shutil
+        import random,string
         
+        a = Node()
+
+        # Since Node uses the same method of Folder(),
+        # for this test I create a test folder by hand
+        # For any non-test usage, use SandboxFolder()!
+
+        directory = os.path.realpath( os.path.join('/','tmp','tmp_try') )
+        while os.path.exists( os.path.join(directory) ):
+            # I append a random letter/number until it is unique
+            directory += random.choice(
+                string.ascii_uppercase + string.digits)
+        
+        # create a folder structure to copy around
+        tree_1 = os.path.join(directory,'tree_1')
+        os.makedirs(tree_1)
+        file_content = 'some text ABCDE'
+        file_content_different = 'other values 12345'
+        with open(os.path.join(tree_1,'file1.txt'),'w') as f:
+            f.write(file_content)
+        os.mkdir( os.path.join(tree_1,'dir1') )
+        os.mkdir( os.path.join(tree_1,'dir1','dir2') )
+        with open(os.path.join(tree_1,'dir1','file2.txt'),'w') as f:
+            f.write(file_content)
+        os.mkdir( os.path.join(tree_1,'dir1','dir2','dir3') )
+
+        # add the tree to the node
+        
+        a.add_path(tree_1,'tree_1')
+
+        # verify if the node has the structure I expect
+        self.assertEquals(set(a.get_path_list()),set(['tree_1']))
+        self.assertEquals( set( a.get_path_list('tree_1') ), set(['file1.txt','dir1']) )
+        self.assertEquals( set( a.get_path_list( os.path.join('tree_1','dir1')) ),
+                           set(['dir2','file2.txt']) )
+        with open(a.get_abs_path( os.path.join('tree_1','file1.txt') )) as f:
+            self.assertEquals(f.read(), file_content)
+        with open(a.get_abs_path( os.path.join('tree_1','dir1','file2.txt') )) as f:
+            self.assertEquals(f.read(), file_content)
+
+        # try to exit from the folder
+        with self.assertRaises(ValueError):
+            a.get_path_list('..')
+
+        # copy into a new node
+        b = a.copy()
+        self.assertNotEquals(a.uuid, b.uuid)
+
+        # Check that the content is there
+        self.assertEquals(set(b.get_path_list('.')),set(['tree_1']))
+        self.assertEquals( set( b.get_path_list('tree_1') ), set(['file1.txt','dir1']) )
+        self.assertEquals( set( b.get_path_list( os.path.join('tree_1','dir1')) ),
+                           set(['dir2','file2.txt']) )
+        with open(b.get_abs_path( os.path.join('tree_1','file1.txt') )) as f:
+            self.assertEquals(f.read(), file_content)
+        with open(b.get_abs_path( os.path.join('tree_1','dir1','file2.txt') )) as f:
+            self.assertEquals(f.read(), file_content)
+
+        # I overwrite a file and create a new one in the copy only
+        dir3 = os.path.join(directory,'dir3')
+        os.mkdir( dir3 )
+
+        b.add_path( dir3 , os.path.join('tree_1','dir3') )
+        # no absolute path here
+        with self.assertRaises(ValueError):
+            b.add_path( 'dir3' , os.path.join('tree_1','dir3') )
+        
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(file_content_different)
+            f.flush()
+            b.add_path(f.name,'file3.txt')
+
+        # I check the new content, and that the old one has not changed
+        # old
+        self.assertEquals(set(a.get_path_list('.')),set(['tree_1']))
+        self.assertEquals( set( a.get_path_list('tree_1') ), set(['file1.txt','dir1']) )
+        self.assertEquals( set( a.get_path_list( os.path.join('tree_1','dir1')) ),
+                           set(['dir2','file2.txt']) )
+        with open(a.get_abs_path( os.path.join('tree_1','file1.txt') )) as f:
+            self.assertEquals(f.read(), file_content)
+        with open(a.get_abs_path( os.path.join('tree_1','dir1','file2.txt') )) as f:
+            self.assertEquals(f.read(), file_content)
+            #new
+        self.assertEquals(set(b.get_path_list('.')),set(['tree_1','file3.txt']))
+        self.assertEquals( set( b.get_path_list('tree_1') ), set(['file1.txt','dir1','dir3']) )
+        self.assertEquals( set( b.get_path_list( os.path.join('tree_1','dir1')) ),
+                           set(['dir2','file2.txt']) )
+        with open(b.get_abs_path( os.path.join('tree_1','file1.txt') )) as f:
+            self.assertEquals(f.read(), file_content)
+        with open(b.get_abs_path( os.path.join('tree_1','dir1','file2.txt') )) as f:
+            self.assertEquals(f.read(), file_content)
+
+        # This should in principle change the location of the files, so I recheck
+        a.store()
+
+        # I now copy after storing
+        c = a.copy()
+        # I overwrite a file, create a new one and remove a directory in the copy only
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(file_content_different)
+            f.flush()
+            c.add_path( f.name , os.path.join('tree_1','file1.txt') )
+            c.add_path( f.name , os.path.join('tree_1','dir1','file4.txt') )
+        c.remove_path( os.path.join('tree_1','dir1','dir2') )
+
+        # check old
+        self.assertEquals(set(a.get_path_list('.')),set(['tree_1']))
+        self.assertEquals( set( a.get_path_list('tree_1') ), set(['file1.txt','dir1']) )
+        self.assertEquals( set( a.get_path_list( os.path.join('tree_1','dir1')) ),
+                           set(['dir2','file2.txt']) )
+        with open(a.get_abs_path( os.path.join('tree_1','file1.txt') )) as f:
+            self.assertEquals(f.read(), file_content)
+        with open(a.get_abs_path( os.path.join('tree_1','dir1','file2.txt') )) as f:
+            self.assertEquals(f.read(), file_content)
+
+        # check new
+        self.assertEquals( set( c.get_path_list('.')),set(['tree_1']))
+        self.assertEquals( set( c.get_path_list('tree_1') ), set(['file1.txt','dir1']) )
+        self.assertEquals( set( c.get_path_list( os.path.join('tree_1','dir1')) ),
+                           set(['file2.txt','file4.txt']) )
+        with open(c.get_abs_path( os.path.join('tree_1','file1.txt') )) as f:
+            self.assertEquals(f.read(), file_content_different)
+        with open(c.get_abs_path( os.path.join('tree_1','dir1','file2.txt') )) as f:
+            self.assertEquals(f.read(), file_content)
+
+        # garbage cleaning
+        shutil.rmtree(directory)
+
 
     def test_attr_after_storing(self):
         a = Node()

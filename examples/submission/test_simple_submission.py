@@ -42,8 +42,10 @@ def get_or_create_machine():
     from aida.common.exceptions import NotExistent
 
 #    # I can delete the computer first
-    from aida.djsite.db.models import DbComputer
-    DbComputer.objects.filter(hostname=computername).delete()
+#### DON'T DO THIS! WILL ALSO DELETE ALL CALCULATIONS THAT WERE USING
+#### THIS COMPUTER!
+#    from aida.djsite.db.models import DbComputer
+#    DbComputer.objects.filter(hostname=computername).delete()
     
     try:
         computer = Computer.get(computername)

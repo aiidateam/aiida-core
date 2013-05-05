@@ -48,7 +48,19 @@ class Node(object):
         try:
             return DbNode.objects.get(uuid=uuid).get_aida_class()
         except ObjectDoesNotExist:
-            raise NotExistent("No entry with the UUID {} found".format(uuid))
+            raise NotExistent("No entry with UUID={} found".format(uuid))
+
+    @classmethod
+    def get_subclass_from_pk(cls,pk):
+        """
+        This class method will load an entry from the pk (integer primary key used in 
+        this database), but loading the proper subclass where appropriate.
+        """
+        from aida.djsite.db.models import DbNode
+        try:
+            return DbNode.objects.get(pk=pk).get_aida_class()
+        except ObjectDoesNotExist:
+            raise NotExistent("No entry with pk={} found".format(pk))
         
     def __int__(self):
         """
@@ -560,6 +572,11 @@ class Node(object):
     @property
     def uuid(self):
         return unicode(self.dbnode.uuid)
+
+    @property
+    def pk(self):
+        return unicode(self.dbnode.pk)
+
 
     @property
     def dbnode(self):

@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from aida.common.datastructures import calcStates
 from aida.scheduler.datastructures import jobStates
 from aida.djsite.db.models import DbComputer, AuthInfo
-from aida.common.exceptions import ConfigurationError, AuthenticationError
+from aida.common.exceptions import AuthenticationError, ConfigurationError, PluginInternalError
 from aida.common import aidalogger
 from aida.djsite.utils import get_automatic_user
     
@@ -67,7 +67,7 @@ def update_running_calcs_status(authinfo):
                             c._set_state(calcStates.FINISHED)
                         elif jobinfo.jobState == jobStates.UNDETERMINED:
                             c._set_state(calcStates.UNDETERMINED)
-                            self.logger.error("There is an undetermined calc with uuid {}".format(
+                            execlogger.error("There is an undetermined calc with uuid {}".format(
                                 c.calc.uuid))
                         else:
                             c._set_state(calcStates.WITHSCHEDULER)
@@ -82,7 +82,6 @@ def update_running_calcs_status(authinfo):
 
                         # calculation c is not found in the output of qstat
                         finished.append(c)
-                        c._set_state(calcStates.FINISHED)
                         c._set_scheduler_state(jobStates.DONE)
                 except Exception as e:
                     # TODO: implement a counter, after N retrials set it to a status that
@@ -93,7 +92,12 @@ def update_running_calcs_status(authinfo):
     
             for c in finished:
                 try:
-                    detailed_jobinfo = s.get_detailed_jobinfo(jobid=c.get_job_id())
+                    try:
+                        detailed_jobinfo = s.get_detailed_jobinfo(jobid=c.get_job_id())
+                    except NotImplementedError:
+                        detailed_jobinfo = (u"AIDA MESSAGE: This scheduler does not implement "
+                            u"the routine get_detailed_jobinfo to retrieve the information on "
+                            u"a job after it has finished.")
                     last_jobinfo = c.get_last_jobinfo()
                     if last_jobinfo is None:    
                         last_jobinfo = JobInfo()
@@ -106,11 +110,16 @@ def update_running_calcs_status(authinfo):
                                        "for calculation {} ({}): {}".format(
                                        c.uuid, e.__class__.__name__, e.message))
                     continue
+                finally:
+                    # Set the state to FINISHED as the very last thing of this routine; no further
+                    # change should be done after this, so that in general the retriever can just 
+                    # poll for this state, if we want to.
+                    c._set_state(calcStates.FINISHED)
+
             
     return finished
 
 def get_authinfo(computer, aidauser):
-    from aida.djsite.db.models import DbComputer
     try:
         authinfo = AuthInfo.objects.get(computer=DbComputer.get_dbcomputer(computer),aidauser=aidauser)
     except ObjectDoesNotExist:
@@ -428,6 +437,7 @@ def submit_calc(calc):
 def retrieve_finished_for_authinfo(authinfo):
     from aida.orm import Calculation
     from aida.common.folders import SandboxFolder
+    from aida.orm.dataplugins.folder import FolderData
 
     import os
     
@@ -444,6 +454,7 @@ def retrieve_finished_for_authinfo(authinfo):
         # Open connection
         with authinfo.get_transport() as t:
             for calc in calcs_to_retrieve:
+                calc._set_state(calcStates.RETRIEVING)
                 try:
                     execlogger.debug("Retrieving calc {} ({})".format(calc.dbnode.pk, calc.uuid))
                     workdir = calc.get_remote_workdir()
@@ -451,7 +462,7 @@ def retrieve_finished_for_authinfo(authinfo):
                     execlogger.debug("chdir {}".format(workdir))
                     t.chdir(workdir)
 
-                    retrieved = FolderData()
+                    retrieved_files = FolderData()
 
                     with SandboxFolder() as folder:
                         for item in retrieve_list:
@@ -459,11 +470,11 @@ def retrieve_finished_for_authinfo(authinfo):
                                   os.path.join(folder.abspath,os.path.split(item)[1]),
                                   ignore_nonexisting=True)
                         # Here I retrieved everything; now I store them inside the calculation
-                        retrieved.replace_with_folder(folder)
+                        retrieved_files.replace_with_folder(folder.abspath,overwrite=True)
 
-                    execlogger.debug("Storing retrieved data={} of calc {}".format(retrieved.dbnode.pk, calc.dbnode.pk))
-                    retrieved.store()
-                    calc.set_link_to(retrieved, label="retrieved")
+                    execlogger.debug("Storing retrieved_files={} of calc {}".format(retrieved_files.dbnode.pk, calc.dbnode.pk))
+                    retrieved_files.store()
+                    calc.add_link_to(retrieved_files, label="retrieved")
 
                     calc._set_state(calcStates.PARSING)
 

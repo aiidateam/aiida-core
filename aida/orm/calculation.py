@@ -121,9 +121,9 @@ class Calculation(Node):
     def raw_input_folder(self):
         from aida.common.exceptions import NotExistent
 
-        input_folder = self.current_folder.get_subfolder(_input_subfolder)
-        if input_folder.exists():
-            return raw_input_folder
+        return_folder = self.current_folder.get_subfolder(_input_subfolder)
+        if return_folder.exists():
+            return return_folder
         else:
             raise NotExistent("raw_input_folder not created yet")
 

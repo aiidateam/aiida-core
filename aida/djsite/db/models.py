@@ -8,7 +8,7 @@ from django.contrib.auth.models import User
 from django.db.models.query import QuerySet
 
 from aida.djsite.settings.settings import LOCAL_REPOSITORY
-from aida.common.exceptions import DbContentError
+from aida.common.exceptions import DbContentError, MissingPluginError
 
 # Removed the custom User field, that was creating a lot of problems. Use
 # the email as UUID. In case we need it, we can do a couple of south migrations

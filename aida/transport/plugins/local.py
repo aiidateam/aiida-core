@@ -13,6 +13,7 @@ from aida.common import aidalogger
 from aida.transport import FileAttribute
 import StringIO
 import fnmatch
+import glob
 
 
 class LocalTransport(aida.transport.Transport):
@@ -198,7 +199,8 @@ class LocalTransport(aida.transport.Transport):
             os.chmod( real_path , mode )
             
     
-    def put(self,source,destination,dereference=False,overwrite=True,pattern=None):
+    def put(self,source,destination,dereference=False,overwrite=True,pattern=None,
+            ignore_nonexisting=False):
         """
         Copies a file or a folder from source to destination.
         Automatically redirects to putfile or puttree.
@@ -231,28 +233,47 @@ class LocalTransport(aida.transport.Transport):
             raise ValueError("Source must be an absolute path")
 
         if pattern:
-            full_list = os.listdir(source)
-            filtered_list = fnmatch.filter(full_list,pattern)
+            filtered_list = self._local_listdir(source,pattern)
             to_send = [ os.path.join(source,i) for i in filtered_list ]
             to_arrive = [ os.path.join(destination,i) for i in filtered_list ]
-            # remotely create a directory
-            if self.isfile(destination) or self.isdir(destination):
-                if not overwrite:
-                    raise OSError('Destination already exists: not overwriting it')
-                else:
-                    self.rmtree(destination)
-            if os.path.isdir(source) and destination != '.':
-                self.mkdir(destination)
-            
-        else:
-            to_send = [source]
-            to_arrive = [destination]
 
-        for this_src,this_dst in zip(to_send,to_arrive):
-            if self.isdir(this_src):
-                self.puttree( this_src,this_dst,dereference,overwrite )
+            for this_src,this_dst in zip(to_send,to_arrive):
+                splitted_list = self._os_path_split_asunder(this_dst)
+
+                does_dir_exist = ''
+                for this_dir in splitted_list[:-1]:
+                    does_dir_exist = os.path.join(does_dir_exist,this_dir)
+                    try:
+                        self.mkdir(does_dir_exist)
+                    except OSError as e:
+                        if 'File exists' in str(e):
+                            pass
+                        else:
+                            raise
+                        
+                if self.isdir(this_src):
+                    self.puttree( this_src,this_dst,dereference,overwrite )
+                elif self.isfile(this_src):
+                    self.putfile( this_src,this_dst,overwrite )
+                else:
+                    if ignore_nonexisting:
+                        pass
+                    else:
+                        raise OSError("The local path {} does not exist"
+                                      .format(source))                    
+
+        else:
+            if self.isdir(source):
+                self.puttree( source,destination,dereference,overwrite )
+            elif self.isfile(source):
+                self.putfile( source,destination,overwrite )
             else:
-                self.putfile( this_src,this_dst,overwrite )
+                if ignore_nonexisting:
+                    pass
+                else:
+                    raise OSError("The local path {} does not exist"
+                                  .format(source))
+
                     
 
     def putfile(self,source,destination,overwrite=True):
@@ -328,7 +349,7 @@ class LocalTransport(aida.transport.Transport):
         elif os.path.exists(the_destination) and not overwrite:
             raise OSError('Destination already exists: not overwriting it')
 
-        shutil.copytree( source, the_destination )
+        shutil.copytree( source, the_destination,symlinks=dereference )
 
 
     def rmtree(self,path):
@@ -341,7 +362,8 @@ class LocalTransport(aida.transport.Transport):
         shutil.rmtree(the_path)
         
 
-    def get(self,source,destination,dereference=False,overwrite=True,pattern=None):
+    def get(self,source,destination,dereference=False,overwrite=True,pattern=None,
+            ignore_nonexisting=False):
         """
         Copies a folder or a file recursively from 'remote' source to
         'local' destination.
@@ -378,26 +400,46 @@ class LocalTransport(aida.transport.Transport):
             raise ValueError("Destination must be an absolute path")
 
         if pattern:
-            list_files = self.listdir(source,pattern)
-            to_retrieve = [ os.path.join(source,i) for i in list_files ]
-            to_arrive = [ os.path.join(destination,i) for i in list_files ]
-            # locally create a directory
-            if os.path.exists(destination):
-                if not overwrite:
-                    raise OSError('Destination already exists: not overwriting it')
-                else:
-                    shutil.rmtree(destination)
-            if self.isdir(source): # and destination is not '.'
-                os.mkdir(destination)
-        else:
-            to_retrieve = [source]
-            to_arrive = [destination]
+            filtered_list = self.listdir(source,pattern)
+            to_retrieve = [ os.path.join(source,i) for i in filtered_list ]
+            to_arrive = [ os.path.join(destination,i) for i in filtered_list ]
 
-        for this_src,this_dst in zip(to_retrieve,to_arrive):
-            if self.isdir(this_src):
-                self.gettree( this_src,this_dst,dereference,overwrite )
+            for this_src,this_dst in zip(to_retrieve,to_arrive):
+                splitted_list = self._os_path_split_asunder(this_dst)
+
+                does_dir_exist = ''
+                for this_dir in splitted_list[:-1]:
+                    does_dir_exist = os.path.join(does_dir_exist,this_dir)
+                    try:
+                        os.mkdir(does_dir_exist)
+                    except OSError as e:
+                        if 'File exists' in str(e) or 'Is a directory' in str(e):
+                            pass
+                        else:
+                            raise
+                        
+                if self.isdir(this_src):
+                    self.gettree( this_src,this_dst,dereference,overwrite )
+                elif self.isfile(this_src):
+                    self.getfile( this_src,this_dst,overwrite )
+                else:
+                    if ignore_nonexisting:
+                        pass
+                    else:
+                        raise IOError("The remote path {} does not exist".format(
+                            this_src))
+
+        else:
+            if self.isdir(source):
+                self.gettree( source,destination,dereference,overwrite )
+            elif self.isfile(source):
+                self.getfile( source,destination,overwrite )
             else:
-                self.getfile( this_src,this_dst,overwrite )
+                if ignore_nonexisting:
+                    pass
+                else:
+                    raise IOError("The remote path {} does not exist".format(
+                        source))
 
 
     def getfile(self,source,destination,overwrite=True):
@@ -485,8 +527,6 @@ class LocalTransport(aida.transport.Transport):
             pattern (str) - copies list of files matching filters
                             in Unix style. Tested on unix only.
                             default = None
-                            Works only on the cwd, e.g.
-                            listdir('.',*/*.txt) will not work
 
         Raises:
             ValueError if 'remote' source or destination is not valid
@@ -509,24 +549,35 @@ class LocalTransport(aida.transport.Transport):
         if self.isfile(destination) or self.isdir(destination):
             self.rmtree(destination)
 
+# TODO : fix the pattern option and make it work like put and get do
+
         if pattern:
             file_list = self.listdir(source,pattern)
             to_copy = [os.path.join(source,i) for i in file_list ]
             to_copy_to = [os.path.join(destination,i) for i in file_list ]
-            if self.isdir(source) and destination != '.' and not self.isdir(destination):
-                self.mkdir(destination)
-            # The following should excluede every file matching patterns like *.git
-            #            return self.copytree(source,destination,dereference,
-            #                     ignore=shutil.ignore_patterns( *shutil_patterns ) )
-        else:
-            to_copy = [source]
-            to_copy_to = [destination]
 
-        for this_src,this_dst in zip(to_copy,to_copy_to):
-            if self.isdir(this_src):
-                return self.copytree(this_src,this_dst,dereference)
+            for this_src,this_dst in zip(to_copy,to_copy_to):
+                splitted_list = self._os_path_split_asunder(this_dst)
+
+                does_dir_exist = ''
+                for this_dir in splitted_list[:-1]:
+                    does_dir_exist = os.path.join(does_dir_exist,this_dir)
+                    try:
+                        self.mkdir(does_dir_exist)
+                    except OSError as e:
+                        if 'File exists' in e.message:
+                            pass
+
+                if self.isdir(this_src):
+                    return self.copytree(this_src,this_dst,dereference)
+                else:
+                    return self.copyfile( this_src,this_dst )
+
+        else:
+            if self.isdir(source):
+                return self.copytree(source,destination,dereference)
             else:
-                return self.copyfile( this_src,this_dst )
+                return self.copyfile( source,destination )
 
 
     def copyfile(self,source,destination):
@@ -601,6 +652,23 @@ class LocalTransport(aida.transport.Transport):
         return aida_attr
 
 
+    def _local_listdir(self,path,pattern=None):
+        # acts on the local folder, for the rest, same as listdir
+        if not pattern:
+            return os.listdir( path )
+        else:
+            import re
+            if path.startswith('/'): # always this is the case in the local plugin
+                base_dir = path
+            else:
+                base_dir = os.path.join(os.getcwd(),path)
+
+            filtered_list = glob.glob(os.path.join(base_dir,pattern) )
+            if not base_dir.endswith(os.sep):
+                base_dir+=os.sep
+            return [ re.sub(base_dir,'',i) for i in filtered_list ]
+        
+
     def listdir(self,path='.',pattern=None):
         """
         Returns a list containing the names of the entries in the directory.
@@ -608,11 +676,15 @@ class LocalTransport(aida.transport.Transport):
                filter (str) - returns the list of files matching pattern.
                               Unix only. (Use to emulate ls * for example)
         """
-        full_list = os.listdir( os.path.join( self.curdir,path ) )
+        the_path = os.path.join(self.curdir,path).strip()
         if not pattern:
-            return full_list
+            return os.listdir( the_path )
         else:
-            return fnmatch.filter( full_list,pattern )
+            import re
+            filtered_list = glob.glob(os.path.join(the_path,pattern) )
+            if not the_path.endswith('/'):
+                the_path+='/'
+            return [ re.sub(the_path,'',i) for i in filtered_list ]
 
 
     def remove(self,path):

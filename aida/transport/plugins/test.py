@@ -617,10 +617,10 @@ class TestPutGetTree(unittest.TestCase):
             
 
     def test_put_and_get_overwrite(self):
-        import os
+        import os, shutil
         import random
         import string
-        
+
         local_dir = os.path.join('/','tmp')
         remote_dir = local_dir
         directory = 'tmp_try'
@@ -665,17 +665,13 @@ class TestPutGetTree(unittest.TestCase):
             with self.assertRaises(OSError):
                 t.gettree(remote_subfolder,retrieved_subfolder,overwrite=False)
 
-            
-            os.remove(os.path.join(local_subfolder,'file.txt'))
-            os.rmdir(local_subfolder)
-            os.remove(os.path.join(retrieved_subfolder,'file.txt'))
-            os.rmdir(retrieved_subfolder)
-            t.remove(os.path.join(remote_subfolder,'file.txt'))
-            t.rmdir(remote_subfolder)
+            shutil.rmtree(local_subfolder)
+            shutil.rmtree(retrieved_subfolder)
+            t.rmtree(remote_subfolder)
             # t.rmtree(remote_subfolder)
             # here I am mixing inevitably the local and the remote folder
             t.chdir('..')
-            t.rmdir(directory)
+            t.rmtree(directory)
 
 
 
@@ -721,6 +717,13 @@ class TestPutGetTree(unittest.TestCase):
             # copies a.txt and c.txt but not the subsubfolder
             self.assertEquals( set(['a.txt','c.txt']), set(t.listdir(remote_subfolder)) )
 
+            # test a more nested pattern
+            t.rmtree(remote_subfolder)
+            t.put(local_subfolder,remote_subfolder,pattern='*/*.txt')
+            # copies d.txt in the subsubfolder
+            self.assertEquals( ['subdir'], t.listdir(remote_subfolder) )
+            self.assertEquals( ['d.txt'],t.listdir(os.path.join(remote_subfolder,'subdir')) )
+
             # now copy everything
             t.put(local_subfolder,remote_subfolder)
 
@@ -728,6 +731,14 @@ class TestPutGetTree(unittest.TestCase):
             t.get(remote_subfolder,retrieved_subfolder,pattern='*.txt')
             # copies a.txt and c.txt but not the subsubfolder
             self.assertEquals( set(['a.txt','c.txt']), set(os.listdir(retrieved_subfolder)) )
+
+            # more nested
+            t.rmtree(retrieved_subfolder)
+            t.get(remote_subfolder,retrieved_subfolder,pattern='*/*.txt')
+            # copies a.txt and c.txt but not the subsubfolder
+            self.assertEquals( ['subdir'],os.listdir(retrieved_subfolder))
+            self.assertEquals( ['d.txt'],
+                               os.listdir(os.path.join(retrieved_subfolder,'subdir')) )
 
             t.chdir('..')
             t.rmtree(directory)
@@ -768,26 +779,41 @@ class TestPutGetTree(unittest.TestCase):
 
             # 'tmp1' is not an abs path
             with self.assertRaises(ValueError):
+                t.put('tmp1',remote_subfolder)
+            with self.assertRaises(ValueError):
+                t.putfile('tmp1',remote_subfolder)
+            with self.assertRaises(ValueError):
                 t.puttree('tmp1',remote_subfolder)
 
             # 'tmp3' does not exist
+            with self.assertRaises(OSError):
+                t.put(retrieved_subfolder,remote_subfolder)
+            with self.assertRaises(OSError):
+                t.putfile(retrieved_subfolder,remote_subfolder)
             with self.assertRaises(OSError):
                 t.puttree(retrieved_subfolder,remote_subfolder)
                 
             # remote_file_name does not exist
             with self.assertRaises(IOError):
+                t.get('non_existing',retrieved_subfolder)
+            with self.assertRaises(IOError):
+                t.getfile('non_existing',retrieved_subfolder)
+            with self.assertRaises(IOError):
                 t.gettree('non_existing',retrieved_subfolder)
             
-            t.puttree(local_subfolder,remote_subfolder)
+            t.put(local_subfolder,remote_subfolder)
             
             # local filename is not an abs path
+            with self.assertRaises(ValueError):
+                t.get(remote_subfolder,'delete_me_tree')
+            with self.assertRaises(ValueError):
+                t.getfile(remote_subfolder,'delete_me_tree')
             with self.assertRaises(ValueError):
                 t.gettree(remote_subfolder,'delete_me_tree')
 
             os.remove(os.path.join(local_subfolder,'file.txt'))
             os.rmdir(local_subfolder)
-            t.remove(os.path.join(remote_subfolder,'file.txt'))
-            t.rmdir(remote_subfolder)
+            t.rmtree(remote_subfolder)
 
             t.chdir('..')
             t.rmdir(directory)

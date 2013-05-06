@@ -1,6 +1,7 @@
 import aida.common
 from aida.common.exceptions import (
-    ConfigurationError, InvalidOperation, MissingPluginError, ModificationNotAllowed)
+    ConfigurationError, DbContentError, InvalidOperation,
+    MissingPluginError, ModificationNotAllowed)
 
 class Computer(object):
     """
@@ -229,7 +230,6 @@ class Computer(object):
         self._set_property("mpirun_command", val)
 
     def get_transport_params(self):
-        from aida.common.exceptions import DbContentError
         import json
         try:
             return json.loads(self.dbcomputer.transport_params)

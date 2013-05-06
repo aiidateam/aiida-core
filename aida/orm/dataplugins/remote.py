@@ -40,11 +40,11 @@ class RemoteData(Data):
     def set_remote_path(self,val):
         self.set_attr('remote_path', val)
 
-    def add_file(self,src_abs,dst_filename=None):
+    def add_path(self,src_abs,dst_filename=None):
         """
-        Disable adding files to a RemoteData
+        Disable adding files or directories to a RemoteData
         """
-        raise ModificationNotAllowed("Cannot add files to a RemoteData object")
+        raise ModificationNotAllowed("Cannot add files or directories to a RemoteData object")
 
     def validate(self):
         from aida.common.exceptions import ValidationError

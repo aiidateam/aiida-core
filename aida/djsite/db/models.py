@@ -8,7 +8,7 @@ from django.contrib.auth.models import User
 from django.db.models.query import QuerySet
 
 from aida.djsite.settings.settings import LOCAL_REPOSITORY
-from aida.common.exceptions import DbContentError
+from aida.common.exceptions import DbContentError, MissingPluginError
 
 # Removed the custom User field, that was creating a lot of problems. Use
 # the email as UUID. In case we need it, we can do a couple of south migrations
@@ -144,19 +144,27 @@ class Link(m.Model):
     output = m.ForeignKey('DbNode',related_name='input_links')
     #label for data input for calculation
     label = m.CharField(max_length=255, db_index=True, blank=True)
-
     # a field to choose if this link is considered to build a transitive
-    # closure or not
-
-    # TODO: implement deletion from TC table
-    # TODO: implement triggers on TC on UPDATE
-
-    # TODO: remember to choose hierarchical names for types of dbnodes,
-    #       starting with calculation. data. or code.
-    # This depends on how workflow objects are implemented
-    
+    # closure or not; NOT IMPLEMENTED FOR NOW
     include_in_tc = m.BooleanField()
 
+    # TODO: implement deletion from TC table
+    # TODO: implement TC using the include_in_tc field, and trigger a delete when
+    #     include_in_tc is changed
+
+    class Meta:
+        # I cannot add twice the same link
+        # I want unique labels among all inputs of a node
+        # NOTE!
+        # I cannot add ('input', 'label') because in general
+        # if the input is a 'data' and I want to add it more than
+        # once to different calculations, the different links must be
+        # allowed to have the same name. For calculations, it is the
+        # rensponsibility of the output plugin to avoid to have many
+        # times the same name.
+        unique_together = (("input",  "output"),
+                           ("output", "label"),
+                           )
     
     # TODO: I also want to check some more logic e.g. to avoid having
     #       two calculations as input of a data object.

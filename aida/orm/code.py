@@ -6,7 +6,7 @@ class Code(Node):
     It can either be 'local', or 'remote'.
 
     Local code:
-        it is a collection of files (added using the add_file() method), where one
+        it is a collection of files/dirs (added using the add_path() method), where one
         file is flagged as executable (using the set_local_executable() method).
     Remote code:
         it is a pair (remotecomputer, remotepath_of_executable) set using the
@@ -47,7 +47,7 @@ class Code(Node):
         if isinstance(files, basestring):
             files=[files]
         for f in files:
-            self.add_file(f,os.path.split(f)[1])
+            self.add_path(f,os.path.split(f)[1])
 
         # By default I set a local code
         self._set_local()
@@ -86,11 +86,12 @@ class Code(Node):
             if not self.get_local_executable():
                 raise ValidationError("You have to set which file is the local executable "
                                       "using the set_exec_filename() method")
-            if self.get_local_executable() not in self.get_file_list():
+                # c[1] is True if the element is a file
+            if self.get_local_executable() not in self.get_path_list():
                 raise ValidationError("The local executable '{}' is not in the list of "
                                       "files of this code".format(self.get_local_executable()))
         else:
-            if self.get_file_list():
+            if self.get_path_list():
                 raise ValidationError("The code is remote but it has files inside")
             if not self.get_remote_machine():
                 raise ValidationError("You did not specify a remote machine")
@@ -100,6 +101,19 @@ class Code(Node):
         
     def add_link_from(self,src,label=None):
         raise ValueError("A code node cannot have any input nodes")
+
+    def can_link_as_output(self,dest):
+        """
+        Raise a ValueError if a link from self to dest is not allowed.
+        
+        An output of a code can only be a calculation
+        """
+        from aida.orm import Calculation
+        
+        if not isinstance(dest, Calculation):
+            raise ValueError("The output of a code node can only be a calculation")
+
+        return super(Code, self).can_link_as_output(dest)
 
     def set_prepend_text(self,code):
         """

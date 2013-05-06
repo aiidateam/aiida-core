@@ -1,5 +1,14 @@
 #!/usr/bin/env python
 import sys
+import os
+
+try:
+    remoteuser = sys.argv[1]
+except IndexError:
+    print >> sys.stderr, "Remote Username automatically set to the local username"
+    import getpass
+    remoteuser = getpass.getuser()
+
 
 from aida.common.utils import load_django
 load_django()
@@ -23,9 +32,9 @@ from aida.orm.dataplugins.remote import RemoteData
 
 computername = "bellatrix.epfl.ch"
 # A string with the version of this script, used to recreate a code when necessary
-current_version = "1.0.2"
-#queue = None
-queue = "P_share_queue"
+current_version = "1.0.4"
+queue = None
+#queue = "P_share_queue"
 
 
 def get_or_create_machine():
@@ -33,7 +42,10 @@ def get_or_create_machine():
     from aida.common.exceptions import NotExistent
 
 #    # I can delete the computer first
-#    Computer.objects.filter(hostname=computername).delete()
+#### DON'T DO THIS! WILL ALSO DELETE ALL CALCULATIONS THAT WERE USING
+#### THIS COMPUTER!
+#    from aida.djsite.db.models import DbComputer
+#    DbComputer.objects.filter(hostname=computername).delete()
     
     try:
         computer = Computer.get(computername)
@@ -46,13 +58,18 @@ def get_or_create_machine():
         computer.store()
 
     from aida.djsite.db.models import AuthInfo
+    auth_params = {'username': remoteuser,
+             'load_system_host_keys': True}
+
+    if os.path.exists('~/.ssh/id_rsa'):
+        auth_params['key_filename'] = os.path.expanduser('~/.ssh/id_rsa')
+    elif os.path.exists('~/.ssh.id_dsa'):
+        auth_params['key_filename'] = os.path.expanduser('~/.ssh/id_rsa')
+
     authinfo, created = AuthInfo.objects.get_or_create(
         aidauser=get_automatic_user(),
         computer=computer.dbcomputer, 
-        defaults={'auth_params': json.dumps(
-            {'username': 'pizzi',
-             'load_system_host_keys': True},
-            )}
+        defaults= {'auth_params': json.dumps(auth_params)},
         )
 
     if created:
@@ -106,7 +123,7 @@ except IOError:
             f.flush()
             code = Code(local_executable = "sum.py", 
                         input_plugin='simpleplugins.templatereplacer')
-            code.add_file(f.name, "sum.py")
+            code.add_path(f.name, "sum.py")
             code.store()
             code.set_metadata("version", current_version)
         return code
@@ -146,7 +163,7 @@ with tempfile.NamedTemporaryFile() as f:
     fileparam = SinglefileData(filename=f.name).store()
 
 remoteparam = RemoteData(remote_machine="bellatrix.epfl.ch",
-    remote_path="/home/pizzi/.bashrc").store()
+    remote_path="/home/{}/.bashrc".format(remoteuser) ).store()
 
 calc = Calculation(computer=computer)
 calc.set_max_wallclock_seconds(12*60) # 12 min

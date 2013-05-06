@@ -37,7 +37,7 @@ class SinglefileData(Data):
             return
 
         if filename is not None:
-            self.add_file(filename)
+            self.add_path(filename)
 
     @property
     def filename(self):
@@ -46,13 +46,19 @@ class SinglefileData(Data):
     def get_file_abs_path(self):
         import os
 
-        return os.path.join(self.current_folder.abspath,self.filename)
+        return os.path.join(self.path_subfolder.abspath,self.filename)
 
-    def add_file(self,src_abs,dst_filename=None):
+    def add_path(self,src_abs,dst_filename=None):
         """
         Add a single file
         """
-        old_file_list = self.get_file_list()
+        old_file_list = self.get_path_list()
+
+        if not os.path.isabs(src_abs):
+            raise ValueError("Pass an absolute path for src_abs")
+
+        if not os.path.isfile(src_abs):
+            raise ValueError("src_abs must exist and must be a single file")
 
         if dst_filename is None:
             final_filename = os.path.split(src_abs)[1]
@@ -67,19 +73,20 @@ class SinglefileData(Data):
             # filename is not there: no problem, it simply means
             pass
             
-        super(SinglefileData,self).add_file(src_abs,final_filename)
+        super(SinglefileData,self).add_path(src_abs,final_filename)
 
         for delete_me in old_file_list:
-            self.remove_file(delete_me)
+            self.remove_path(delete_me)
 
         self.set_attr('filename', final_filename)
 
-    def remove_file(self,filename):
-        try:
-            self.del_attr('filename', filename)
-        except AttributeError:
-            ## There was not file set
-            pass
+    def remove_path(self,filename):
+        if filename == self.get_attr('filename',None):
+            try:
+                self.del_attr('filename')
+            except AttributeError:
+                ## There was not file set
+                pass
 
     def validate(self):
         from aida.common.exceptions import ValidationError
@@ -91,10 +98,10 @@ class SinglefileData(Data):
         except AttributeError:
             raise ValidationError("attribute 'filename' not set.")
 
-        if [filename] != self.get_file_list():
+        if [filename] != self.get_path_list():
             raise ValidationError("The list of files in the folder does not "
                 "match the 'filename' attribute. "
-                "_filename='{}', files: {}".format(
-                    filename, self.get_file_list()))
+                "_filename='{}', content: {}".format(
+                    filename, self.get_path_list()))
         
     

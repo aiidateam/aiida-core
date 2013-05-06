@@ -1,0 +1,31 @@
+# To install these requirements, run
+# pip install -U -r requirements.txt
+# (the -U option also upgrades packages; from the second time on,
+# just run
+# pip install -r requirements.txt
+
+# Django
+django>=1.5.1,<1.6
+
+# For data/schema migrations
+south>=0.7.6
+
+# For the UUID field
+django_extensions>=0.9
+
+# For timezone support
+pytz >= 2013b
+
+# For the daemon
+celery>=3.0
+django-celery >= 3.0
+supervisor>=3.0b1
+
+# ONLY if using mysql? 
+#sudo easy_install mysql-python
+#sudo apt-get install python-mysqldb on ubuntu 
+# For the documentation
+#sphinx>=1.1.3
+
+# For sqlite?
+#pysqlite==2.6.3

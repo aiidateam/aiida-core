@@ -41,21 +41,17 @@ class Data(Node):
         
         return super(Data,self).add_link_from(src,label)
     
-  
-    #    def store(self):
-    #   '''
-    #   Depending on type, data object will serialize itself into a fileset, and insert data into the db.
-    #   This is defined in the data plugin. The API needs to be defined.
-    #   '''
-    #   NEVER CALL PASS! ALWAYS CALL THE SUPERCLASS STORE() METHOD
-    
-    
-    def retrieve(self):
-        #TODO
-        '''
-        Depending on type, data object will read from fileset and DB to recreate the Aiida object.
-        This is defined in the data plugin.
-        '''
-        super(Data,self).retrieve()
+    def can_link_as_output(self,dest):
+        """
+        Raise a ValueError if a link from self to dest is not allowed.
+        
+        An output of a data can only be a calculation
+        """
+        from aida.orm import Calculation
+        
+        if not isinstance(dest, Calculation):
+            raise ValueError("The output of a data node can only be a calculation")
+
+        return super(Data, self).can_link_as_output(dest)
     
     

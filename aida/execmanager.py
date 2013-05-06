@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from aida.common.datastructures import calcStates
 from aida.scheduler.datastructures import jobStates
 from aida.djsite.db.models import DbComputer, AuthInfo
-from aida.common.exceptions import ConfigurationError, AuthenticationError
+from aida.common.exceptions import AuthenticationError, ConfigurationError, PluginInternalError
 from aida.common import aidalogger
 from aida.djsite.utils import get_automatic_user
     
@@ -67,7 +67,7 @@ def update_running_calcs_status(authinfo):
                             c._set_state(calcStates.FINISHED)
                         elif jobinfo.jobState == jobStates.UNDETERMINED:
                             c._set_state(calcStates.UNDETERMINED)
-                            self.logger.error("There is an undetermined calc with uuid {}".format(
+                            execlogger.error("There is an undetermined calc with uuid {}".format(
                                 c.calc.uuid))
                         else:
                             c._set_state(calcStates.WITHSCHEDULER)
@@ -82,7 +82,6 @@ def update_running_calcs_status(authinfo):
 
                         # calculation c is not found in the output of qstat
                         finished.append(c)
-                        c._set_state(calcStates.FINISHED)
                         c._set_scheduler_state(jobStates.DONE)
                 except Exception as e:
                     # TODO: implement a counter, after N retrials set it to a status that
@@ -93,7 +92,12 @@ def update_running_calcs_status(authinfo):
     
             for c in finished:
                 try:
-                    detailed_jobinfo = s.get_detailed_jobinfo(jobid=c.get_job_id())
+                    try:
+                        detailed_jobinfo = s.get_detailed_jobinfo(jobid=c.get_job_id())
+                    except NotImplementedError:
+                        detailed_jobinfo = (u"AIDA MESSAGE: This scheduler does not implement "
+                            u"the routine get_detailed_jobinfo to retrieve the information on "
+                            u"a job after it has finished.")
                     last_jobinfo = c.get_last_jobinfo()
                     if last_jobinfo is None:    
                         last_jobinfo = JobInfo()
@@ -106,11 +110,16 @@ def update_running_calcs_status(authinfo):
                                        "for calculation {} ({}): {}".format(
                                        c.uuid, e.__class__.__name__, e.message))
                     continue
+                finally:
+                    # Set the state to FINISHED as the very last thing of this routine; no further
+                    # change should be done after this, so that in general the retriever can just 
+                    # poll for this state, if we want to.
+                    c._set_state(calcStates.FINISHED)
+
             
     return finished
 
 def get_authinfo(computer, aidauser):
-    from aida.djsite.db.models import DbComputer
     try:
         authinfo = AuthInfo.objects.get(computer=DbComputer.get_dbcomputer(computer),aidauser=aidauser)
     except ObjectDoesNotExist:
@@ -206,7 +215,7 @@ def submit_calc(calc):
     from aida.common.exceptions import InputValidationError, MissingPluginError, ValidationError
     from aida.scheduler.datastructures import JobTemplate
     from aida.common.utils import validate_list_of_string_tuples
-
+    from aida.orm.dataplugins.remote import RemoteData
     
     if not isinstance(calc,Calculation):
         raise ValueError("calc must be a Calculation")
@@ -235,7 +244,7 @@ def submit_calc(calc):
 
         if not code.can_run_on(computer):
             raise InputValidationError("The selected code {} cannot run on machine {}".format(
-                code.uuid, calc.get_computer().hostname))
+                code.uuid, computer.hostname))
     
         # load dynamically the input plugin
         Plugin = load_plugin(InputPlugin, 'aida.codeplugins.input', code.get_input_plugin())
@@ -245,7 +254,7 @@ def submit_calc(calc):
             calcinfo = plugin.create(calc, calc.get_inputs(type=Data,also_labels=True), folder)
     
             if code.is_local():
-                if code.get_local_executable() in folder.get_content_list(only_filenames=True):
+                if code.get_local_executable() in folder.get_content_list():
                     raise PluginInternalError("The plugin created a file {} that is also "
                                               "the executable name!".format(code.get_local_executable()))
 
@@ -321,7 +330,10 @@ def submit_calc(calc):
             subfolder = folder.get_subfolder('.aida',create=True)
             subfolder.create_file_from_filelike(StringIO.StringIO(json.dumps(job_tmpl)),'job_tmpl.json')
             subfolder.create_file_from_filelike(StringIO.StringIO(json.dumps(calcinfo)),'calcinfo.json')
-            
+
+            # After this call, no modifications to the folder should be done
+            calc._store_raw_input_folder(folder.abspath)
+
             with t:
                 s.set_transport(t)
                 remote_user = t.whoami()
@@ -329,15 +341,28 @@ def submit_calc(calc):
                 remote_working_directory = calc.get_computer().get_workdir().format(username=remote_user)
                 if not remote_working_directory.strip():
                     raise ConfigurationError("No remote_working_directory configured for the computer")
-    
-                t.chdir(remote_working_directory)
+
+                # If it already exists, no exception is raised
+                try:
+                    t.chdir(remote_working_directory)
+                except IOError:
+                    execlogger.debug("Unable to chdkir in {}, trying to create it".format(
+                        remote_working_directory))
+                    try:
+                        t.makedirs(remote_working_directory)
+                        t.chdir(remote_working_directory)
+                    except IOError as e:
+                        raise ConfigurationError(
+                            "Unable to create the remote directory {} on {}".format(
+                                remote_working_directory, computer.hostname))
                 # Sharding
                 t.mkdir(calcinfo.uuid[:2],ignore_existing=True)
                 t.chdir(calcinfo.uuid[:2])
                 t.mkdir(calcinfo.uuid[2:])
                 t.chdir(calcinfo.uuid[2:])
+                workdir = t.getcwd()
                 # I store the workdir of the calculation for later file retrieval
-                calc._set_remote_workdir(t.getcwd())
+                calc._set_remote_workdir(workdir)
 
                 # I first create the code files, so that the code can put
                 # default files to be overwritten by the plugin itself.
@@ -345,14 +370,14 @@ def submit_calc(calc):
                 # But I checked for this earlier.
                 if code.is_local():
                     # Note: this will possibly overwrite files
-                    for f, _ in code.repo_folder.get_content_list():
-                        t.put(code.repo_folder.get_file_path(f), f)
+                    for f in code.get_path_list():
+                        t.put(code.get_abs_path(f), f)
                     t.chmod(code.get_local_executable(), 0755) # rwxr-xr-x
 
                 # copy all files, recursively with folders
-                for f, _ in folder.get_content_list():
+                for f in folder.get_content_list():
                     execlogger.debug("copying file/folder {}...".format(f))
-                    t.put(folder.get_file_path(f), f)
+                    t.put(folder.get_abs_path(f), f)
 
                 # local_copy_list is a list of tuples, each with (src_abs_path, dest_rel_path)
                 local_copy_list = calcinfo.local_copy_list
@@ -388,8 +413,12 @@ def submit_calc(calc):
                         # TODO: implement copy between two different machines!
                         raise NotImplementedError("Remote copy between two different machines "
                             "is not implemented yet")
-
         
+                remotedata = RemoteData(remote_machine = computer.hostname, 
+                        remote_path = workdir).store()
+
+                calc.add_link_to(remotedata, label='remote_folder')
+
                 job_id = s.submit_from_script(t.getcwd(),script_filename)
                 calc._set_job_id(job_id)
                 calc._set_state(calcStates.WITHSCHEDULER)
@@ -397,13 +426,10 @@ def submit_calc(calc):
                     calc._set_scheduler_state(jobStates.QUEUED_HELD)
                 else:
                     calc._set_scheduler_state(jobStates.QUEUED)
-
     
                 execlogger.debug("submitted calculation {} with job id {}".format(
                     calc.uuid, job_id))
 
-                # TODO: decide where to store the whole folder
-                #       with the files created by the input plugin
     except:
         calc._set_state(calcStates.SUBMISSIONFAILED)
         raise
@@ -411,6 +437,8 @@ def submit_calc(calc):
 def retrieve_finished_for_authinfo(authinfo):
     from aida.orm import Calculation
     from aida.common.folders import SandboxFolder
+    from aida.orm.dataplugins.folder import FolderData
+
     import os
     
     calcs_to_retrieve = Calculation.get_all_with_state(
@@ -426,33 +454,49 @@ def retrieve_finished_for_authinfo(authinfo):
         # Open connection
         with authinfo.get_transport() as t:
             for calc in calcs_to_retrieve:
+                calc._set_state(calcStates.RETRIEVING)
                 try:
-                    # TODO: MOVE THE FOLLOWING CODE IN A NEW FUNCTION,
-                    # receiving the open transport and the calculation.
-                    # TODO: 
                     execlogger.debug("Retrieving calc {} ({})".format(calc.dbnode.pk, calc.uuid))
                     workdir = calc.get_remote_workdir()
                     retrieve_list = calc.get_retrieve_list()
                     execlogger.debug("chdir {}".format(workdir))
                     t.chdir(workdir)
-                    # TODO: create remote_output node always
-                    # TODO: decide what to do: one node per element in the retrieve_list, or
-                    #       one node for everything (problem of overwriting; we can say that we
-                    #       write in order, so following things overwrite previous things;
-                    #       or change the way in which we store the retrieve list so that it is
-                    #       a tuple of two elements, with source and dest.
+
+                    retrieved_files = FolderData()
 
                     with SandboxFolder() as folder:
                         for item in retrieve_list:
                             t.get(item,
-                                  os.path.join(folder.abspath,os.path.split(item)[1]))
+                                  os.path.join(folder.abspath,os.path.split(item)[1]),
+                                  ignore_nonexisting=True)
+                        # Here I retrieved everything; now I store them inside the calculation
+                        retrieved_files.replace_with_folder(folder.abspath,overwrite=True)
+
+                    execlogger.debug("Storing retrieved_files={} of calc {}".format(retrieved_files.dbnode.pk, calc.dbnode.pk))
+                    retrieved_files.store()
+                    calc.add_link_to(retrieved_files, label="retrieved")
+
+                    calc._set_state(calcStates.PARSING)
+
+                    # TODO: parse here
 
                     calc._set_state(calcStates.RETRIEVED)
                     retrieved.append(calc)
                 except:
-                    execlogger.error("Error retrieving calc {}".format(calc.uuid))
-                    calc._set_state(calcStates.RETRIEVALFAILED)
-                    raise
+                    import traceback
+                    import StringIO
+                    buf = StringIO.StringIO()
+                    traceback.print_exc(file=buf)
+                    buf.seek(0)
+                    if calc.get_state() == calcStates.PARSING:
+                        execlogger.error("Error parsing calc {}, I set it to RETRIEVED anyway. "
+                            "Traceback: {}".format(calc.uuid, buf.read()))
+                        # TODO: add a 'comment' to the calculation
+                        calc._set_state(calcStates.RETRIEVED)
+                    else:
+                        execlogger.error("Error retrieving calc {}".format(calc.uuid))
+                        calc._set_state(calcStates.RETRIEVALFAILED)
+                        raise
 
             
     return retrieved

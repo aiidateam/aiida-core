@@ -133,6 +133,7 @@ INSERT INTO purge_list
     SELECT id FROM """+closure_table_name+"""
     WHERE depth > 0
     AND ( entry_edge_id IN ( SELECT Id FROM purge_list ) 
+    OR direct_edge_id IN ( SELECT Id FROM purge_list )
     OR exit_edge_id IN ( SELECT Id FROM purge_list ) )
     AND Id NOT IN (SELECT Id FROM purge_list );
 
@@ -158,6 +159,7 @@ EXISTS(
   SELECT id FROM """+closure_table_name+"""
     WHERE depth > 0
     AND ( entry_edge_id IN ( SELECT Id FROM purge_list ) 
+    OR direct_edge_id IN ( SELECT Id FROM purge_list ) 
     OR exit_edge_id IN ( SELECT Id FROM purge_list ) )
     AND Id NOT IN (SELECT Id FROM purge_list )
 ) AND EXISTS (
@@ -170,6 +172,7 @@ BEGIN
     SELECT id FROM """+closure_table_name+"""
     WHERE depth > 0
     AND ( entry_edge_id IN ( SELECT Id FROM purge_list ) 
+    OR direct_edge_id IN ( SELECT Id FROM purge_list )
     OR exit_edge_id IN ( SELECT Id FROM purge_list ) )
     AND Id NOT IN (SELECT Id FROM purge_list );
 
@@ -327,6 +330,7 @@ BEGIN
         SELECT id FROM """+closure_table_name+"""
           WHERE depth > 0
           AND ( entry_edge_id IN ( SELECT Id FROM PurgeList ) 
+          OR direct_edge_id IN ( SELECT Id FROM PurgeList ) 
           OR exit_edge_id IN ( SELECT Id FROM PurgeList ) )
           AND Id NOT IN (SELECT Id FROM PurgeList );
           

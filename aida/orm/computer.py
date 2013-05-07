@@ -159,15 +159,20 @@ class Computer(object):
         Store the computer in the DB.
         Can be called only once. 
         """
-        from django.db import IntegrityError
+        from django.db import IntegrityError, transaction
         
         if self.to_be_stored:
 
             # As a first thing, I check if the data is valid
             self.validate()
             try:
+                # transactions are needed here for Postgresql:
+                # https://docs.djangoproject.com/en/1.5/topics/db/transactions/#handling-exceptions-within-postgresql-transactions
+                sid = transaction.savepoint()
                 self.dbcomputer.save()
+                transaction.savepoint_commit(sid)
             except IntegrityError:
+                transaction.savepoint_rollback(sid)
                 raise ValueError("Integrity error, probably the hostname already exists in the DB")
         else:
             self.logger.error("Trying to store an already saved computer")

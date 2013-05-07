@@ -163,7 +163,7 @@ class Node(object):
         In subclasses, change only this.
         """
         from aida.djsite.db.models import Link, Path
-        from django.db import IntegrityError
+        from django.db import IntegrityError, transaction
 
         if self._to_be_stored:
             raise ModificationNotAllowed("You have to store the destination node to make link")
@@ -206,16 +206,26 @@ class Node(object):
                     raise InternalError("Hey! We found more than 100 concurrent adds of links "
                         "to the same nodes! Are you really doing that??")
                 try:
+                    # transactions are needed here for Postgresql:
+                    # https://docs.djangoproject.com/en/1.5/topics/db/transactions/#handling-exceptions-within-postgresql-transactions
+                    sid = transaction.savepoint()
                     Link.objects.create(input=src.dbnode, output=self.dbnode,
                         label="link_{}".format(autolabel_idx))
+                    transaction.savepoint_commit(sid)
                     break
                 except IntegrityError as e:
+                    transaction.savepoint_rollback(sid)
                     # Retry loop until you find a new loop
                     autolabel_idx += 1
         else:
             try:
+                # transactions are needed here for Postgresql:
+                # https://docs.djangoproject.com/en/1.5/topics/db/transactions/#handling-exceptions-within-postgresql-transactions
+                sid = transaction.savepoint()
                 Link.objects.create(input=src.dbnode, output=self.dbnode, label=label)
+                transaction.savepoint_commit(sid)
             except IntegrityError as e:
+                transaction.savepoint_rollback(sid)
                 raise ValueError("There is already a link with the same name "
                     "(raw message was {})".format(e.message))
 

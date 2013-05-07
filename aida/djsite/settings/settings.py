@@ -11,8 +11,8 @@ sys.path = [BASE_DIR] + sys.path
 
 try:
     confs = get_config()
-except:
-    raise ImproperlyConfigured("Please run the AIDA Installation")
+except ConfigurationError:
+    raise ConfigurationError("Please run the AIDA Installation")
           
 #put all database specific portions of settings here
 DBENGINE = confs.get('AIDADB_ENGINE', '')

@@ -767,30 +767,3 @@ class LocalTransport(aida.transport.Transport):
         retval = local_proc.returncode
 
         return retval, output_text, stderr_text
-            
-    
-if __name__ == '__main__':
-    import unittest
-    import logging
-
-    class TestBasicConnection(unittest.TestCase):
-        """
-        Test basic connections.
-        """
-        def test_closed_connection(self):
-            with self.assertRaises(aida.transport.TransportInternalError):
-                t = LocalTransport()
-                t.listdir()
-                
-        def test_invalid_param(self):
-            with self.assertRaises(ValueError):
-                LocalTransport(unrequired_var='something')
-                             
-        def test_basic(self):
-            with LocalTransport() as t:
-                pass
-
-    from test import *
-    run_tests('local')
-
-    unittest.main()

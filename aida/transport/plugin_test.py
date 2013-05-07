@@ -10,7 +10,7 @@ Plugin specific tests will be written in the plugin itself.
 # TODO : silly cases of copy/put/get from self to self
 
 import unittest
-from aida.common.pluginloader import load_plugin
+#from aida.common.pluginloader import load_plugin
 
 custom_transport = None
 
@@ -977,33 +977,5 @@ class TestExecuteCommandWait(unittest.TestCase):
                 retcode, stdout, stderr = t.exec_command_wait(
                     'cat', stdin=1)
 
-
-def run_tests(transport_to_test):
-    """
-    This function has to be called in the transport plugin.
-    It loads the correct transport class that will be called in the test classes.
-    """
-    if transport_to_test == 'ssh':
-        import paramiko
-        from aida.transport import Transport
-        global custom_transport
-        PluginTransport = load_plugin(
-            Transport,'aida.transport.plugins', transport_to_test)
-        custom_transport = PluginTransport(
-            machine='localhost', timeout=30, 
-            load_system_host_keys=True,
-            key_policy = paramiko.AutoAddPolicy())
-
-    elif transport_to_test == 'local':
-        from aida.transport import Transport
-        global custom_transport
-        PluginTransport = load_plugin(
-            Transport,'aida.transport.plugins', transport_to_test)
-        custom_transport = PluginTransport()
-    
-    else:
-        raise ValueError("The transport {} is not implemented.".format(
-            transport_to_test))
-    
 
 

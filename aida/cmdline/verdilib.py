@@ -2,12 +2,13 @@
 Command line commands for the main executable 'verdi' of aiida
 
 If you want to define a new command line parameter, just define a new
-function whose name starts with cmd_NAME and accepts a variable-length
-number of parameters (the command-line parameters),
-which will be invoked when this executable is called as
+class inheriting from VerdiCommand, and define a run(self,*args) method
+accepting a variable-length number of parameters args
+(the command-line parameters), which will be invoked when
+this executable is called as
 verdi NAME
 
-Don't forget to add the docstring: the first line will be the
+Don't forget to add the docstring to the class: the first line will be the
 short description, the following ones the long description.
 
 ## TODO: implement bash completion
@@ -18,64 +19,74 @@ import getpass
 
 import aida
 from aida.common.exceptions import ConfigurationError
+from aida.cmdline.baseclass import VerdiCommand
+
+## Import here from other files
+from aida.cmdline.commands.daemon import Daemon
 
 # default execname; can be substituted later in the call from
 # exec_from_cmdline
 execname = 'verdi'
 
-# prefix for command functions
-command_prefix = "cmd_"
-
 ########################################################################
 # HERE STARTS THE COMMAND FUNCTION LIST
 ########################################################################
 
-def cmd_listparamsshort(*args):
+class Completion(VerdiCommand):
     """
-    List available commands in short format.
+    Manages bash completion. 
 
-    List available commands on stdout, all on the same line, separated by
-    spaces. Useful for scripting (e.g., bash completion).
+    Return a list of available commands.
     """
-    print " ".join(list_commands)
+    # TODO: manage completion at a deeper level
 
-def cmd_listparams(*args):
+    def run(self,*args):
+        print " ".join(sorted(short_doc.keys()))
+
+class ListParams(VerdiCommand):
     """
     List available commands.
 
     List available commands and their short description.
     For the long description, use the 'help' command.
     """
-    print get_listparams()
+    
+    def run(self,*args):
+        print get_listparams()
 
-def cmd_help(*args):
+class Help(VerdiCommand):
     """
     Describe a specific command.
 
     Pass a further argument to get a description of a given command.
     """
-    try:
-        command = args[0]
-    except IndexError:
-        cmd_listparams()
-        print >> sys.stderr, ""
-        print >> sys.stderr, ("Use '{} help <command>' for more information "
-                              "on a specific command.".format(execname))
-        sys.exit(1)
-
-    try:
-        command_index = list_commands.index(command)
-        print "Description for '%s %s'" % (execname, command)
-        print ""
-        print "**", short_cmd_descriptions[command_index]
-        if long_cmd_descriptions[command_index]:
-            print long_cmd_descriptions[command_index]
-    except IndexError:
-        print >> sys.stderr, (
-            "{}: '{}' is not a recognized command.".format(execname, command))
-        sys.exit(1)
-
-def cmd_syncdb(*args):
+    
+    def run(self, *args):
+        try:
+            command = args[0]
+        except IndexError:
+            print get_listparams()
+            print ""
+            print ("Use '{} help <command>' for more information "
+                   "on a specific command.".format(execname))
+            sys.exit(1)
+    
+        if command in short_doc:
+            print "Description for '%s %s'" % (execname, command)
+            print ""
+            print "**", short_doc[command]
+            if command in long_doc:
+                print long_doc[command]
+        else:
+            print >> sys.stderr, (
+                "{}: '{}' is not a valid command. "
+                "See '{} help' for more help.".format(
+                    execname, command, execname))
+            get_command_suggestion(command)
+            sys.exit(1)
+            
+    
+class SyncDB(VerdiCommand):
     """
     Create new tables in the database.
 
@@ -84,18 +95,21 @@ def cmd_syncdb(*args):
     Pass a --migrate option to automatically also migrate the tables
     managed using South migrations.
     """
-    pass_to_django_manage([execname, 'syncdb'] + list(args))
 
-def cmd_migrate(*args):
+    def run(self,*args):
+        pass_to_django_manage([execname, 'syncdb'] + list(args))
+
+class Migrate(VerdiCommand):
     """
     Migrates the tables in the database to the most recent schema.
-
+    
     This command calls the Django 'manage.py migrate' command to migrate
     tables managed by django-south to their most recent version.
     """
-    pass_to_django_manage([execname, 'migrate'] + list(args))
+    def run(self,*args):
+        pass_to_django_manage([execname, 'migrate'] + list(args))
 
-def cmd_djangotests(*args):
+class DjangoTest(VerdiCommand):
     """
     Runs the django tests.
 
@@ -103,29 +117,20 @@ def cmd_djangotests(*args):
     unittests of django. Pass the name of an application to restrict
     the tests to those of the specific application.
     """
-    pass_to_django_manage([execname, 'test'] + list(args))
+    def run(self,*args):
+        pass_to_django_manage([execname, 'test'] + list(args))
 
-def cmd_shell(*args):
+class Shell(VerdiCommand):
     """
     Runs the interactive shell with the Django environment loaded.
 
     This command runs the 'manage.py shell' command, that opens a
     IPython shell with the Django environment loaded.
     """
-    pass_to_django_manage([execname, 'shell'] + list(args))
+    def run(self,*args):
+        pass_to_django_manage([execname, 'shell'] + list(args))
 
-def cmd_daemon(*args):
-    """
-    Manage the aida daemon.
-
-    This command allows to start, stop or restart the aida daemon,
-    and to inquire its status.
-    """
-    # TODO: move code here?
-
-    pass_to_django_manage([execname, 'daemon'] + list(args))
-
-def cmd_test(*args):
+class Test(VerdiCommand):
     """
     Runs all aiida tests.
 
@@ -136,48 +141,49 @@ def cmd_test(*args):
     run. An invalid parameter will make the code print the list of all
     valid parameters.
     """
-    import unittest
+    def run(self,*args):
+        import unittest
 
-    # TODO: add all test folders
+        # TODO: add all test folders
 
-    allowed_test_folders = ['aida.scheduler', 'aida.transport']
+        allowed_test_folders = ['aida.scheduler', 'aida.transport']
 
-    test_folders = []
-    do_db = False
-    if args:
-        for arg in args:
-            if arg in allowed_test_folders:
-                test_folders.append(arg)
-            elif arg == 'db':
-                do_db = True
-            else:
-                print >> sys.stderr, (
-                    "{} is not a valid test folder. "
-                    "Allowed test folders are:".format(arg))
-                print >> sys.stderr, "\n".join(
-                    '  * {}'.format(a) for a in allowed_test_folders)
-                print >> sys.stderr, '  * db'
-    else:
-        # Without arguments, run all tests
-        test_folders = allowed_test_folders
-        do_db = True
+        test_folders = []
+        do_db = False
+        if args:
+            for arg in args:
+                if arg in allowed_test_folders:
+                    test_folders.append(arg)
+                elif arg == 'db':
+                    do_db = True
+                else:
+                    print >> sys.stderr, (
+                        "{} is not a valid test folder. "
+                        "Allowed test folders are:".format(arg))
+                    print >> sys.stderr, "\n".join(
+                        '  * {}'.format(a) for a in allowed_test_folders)
+                    print >> sys.stderr, '  * db'
+        else:
+            # Without arguments, run all tests
+            test_folders = allowed_test_folders
+            do_db = True
 
-    for test_folder in test_folders:
-        print "v"*75
-        print ">>> Tests for module {} <<<".format(test_folder.ljust(50))
-        print "^"*75
-        testsuite = unittest.defaultTestLoader.discover(test_folder)
-        test_runner = unittest.TextTestRunner()
-        test_runner.run( testsuite )
+        for test_folder in test_folders:
+            print "v"*75
+            print ">>> Tests for module {} <<<".format(test_folder.ljust(50))
+            print "^"*75
+            testsuite = unittest.defaultTestLoader.discover(test_folder)
+            test_runner = unittest.TextTestRunner()
+            test_runner.run( testsuite )
 
-    if do_db:
-        print "v"*75
-        print (">>> Tests for django db application   "
-               "                                  <<<")
-        print "^"*75
-        pass_to_django_manage([execname, 'test', 'db'])
+        if do_db:
+            print "v"*75
+            print (">>> Tests for django db application   "
+                   "                                  <<<")
+            print "^"*75
+            pass_to_django_manage([execname, 'test', 'db'])
 
-def cmd_install(*args):
+class Install(VerdiCommand):
     """
     Install/setup aida for the current user.
 
@@ -186,11 +192,13 @@ def cmd_install(*args):
     the repository location, does a setup of the daemon and runs
     a syncdb + migrate command to create/setup the database.
     """
-    create_base_dirs()
-    create_configuration()
+    def run(self,*args):
 
-    print "Executing now a syncdb --migrate command..."
-    pass_to_django_manage([execname, 'syncdb', '--migrate'])
+        create_base_dirs()
+        create_configuration()
+
+        print "Executing now a syncdb --migrate command..."
+        pass_to_django_manage([execname, 'syncdb', '--migrate'])
 
 
 ########################################################################
@@ -215,15 +223,16 @@ def get_listparams():
     The advantage of this function is that the calling routine can
     choose to print it on stdout or stderr, depending on the needs.
     """
-    max_length = max(len(i) for i in list_commands)
+    max_length = max(len(i) for i in short_doc.keys())
 
-    name_desc = [(cmd.ljust(max_length+2), desc.split('\n')[0]) 
-                 for cmd, desc in zip(list_commands, short_cmd_descriptions)]
+    name_desc = [(cmd.ljust(max_length+2), desc.strip()) 
+                 for cmd, desc in short_doc.iteritems()]
 
     name_desc = sorted(name_desc)
     
-    return ("List of available commands:\n" +
-            "\n".join(["  * %s %s" % i for i in name_desc]))
+    return ("List of available commands:" + os.linesep +
+            os.linesep.join(["  * {} {}".format(name, desc) 
+                             for name, desc in name_desc]))
 
 
 def get_command_suggestion(command):
@@ -232,7 +241,7 @@ def get_command_suggestion(command):
     """ 
     import difflib 
 
-    similar_cmds = difflib.get_close_matches(command, list_commands)
+    similar_cmds = difflib.get_close_matches(command, short_doc.keys())
     if similar_cmds:
         print >> sys.stderr, ""
         print >> sys.stderr, "Did you mean this?"
@@ -420,40 +429,39 @@ def exec_from_cmdline(argv):
     ### It defines a few global variables
 
     global execname
-    global list_commands
-    global list_docstrings
-    global description_lines
-    global short_cmd_descriptions
-    global long_cmd_descriptions
+    global short_doc
+    global long_doc
 
     # import itself
     from aida.cmdline import verdilib
+    import inspect
 
     # Retrieve the list of commands
     verdilib_namespace = verdilib.__dict__
-    list_commands = [c[len(command_prefix):] for c in verdilib_namespace.keys()
-                     if c.startswith(command_prefix)]
+
+    list_commands ={k.lower(): v for k, v in verdilib_namespace.iteritems()
+                    if inspect.isclass(v) and not v==VerdiCommand and 
+                    issubclass(v,VerdiCommand)}
+
     # Retrieve the list of docstrings, managing correctly the 
-    # case of empty docstrings.
-    list_docstrings = [verdilib_namespace[command_prefix+c].func_doc 
-                       for c in list_commands]
-    list_docstrings = [d if d else "No description available." 
-                       for d in list_docstrings]
+    # case of empty docstrings. Each value is a list of lines
+    raw_docstrings = {k: (v.__doc__ if v.__doc__ else "").splitlines()
+                       for k, v in list_commands.iteritems()}
 
-    description_lines = [[l.strip() for l in d.split('\n')] 
-                         for d in list_docstrings] 
-
-    # I remove empty lines at the beginning
-    for desc_idx in range(len(description_lines)):
-        for idx, l in enumerate(description_lines[desc_idx]):
-            if l.strip(): # non-empty line
-                break
-        description_lines[desc_idx] = description_lines[desc_idx][idx:]
-
-    # I obtain short and long command line descriptions
-    short_cmd_descriptions = [d[0] for d in description_lines]
-    long_cmd_descriptions = ["\n".join(d[1:]) for d in description_lines]
-
+    short_doc = {}
+    long_doc = {}
+    for k, v in raw_docstrings.iteritems():
+        lines = [l.strip() for l in v] 
+        empty_lines = [bool(l) for l in lines]
+        try:
+            first_idx = empty_lines.index(True) # The first non-empty line
+        except ValueError:
+            # All False
+            short_doc[k] = "No description available"
+            log_doc[k] = ""
+            continue
+        short_doc[k] = lines[first_idx]
+        long_doc[k]  = os.linesep.join(lines[first_idx+1:])
 
     execname = os.path.basename(argv[0])
 
@@ -463,13 +471,15 @@ def exec_from_cmdline(argv):
         print >> sys.stderr,  "Usage: {} COMMAND [<args>]".format(execname)
         print >> sys.stderr, ""
         print >> sys.stderr, get_listparams()
+        print >> sys.stderr, "See '{} help' for more help.".format(execname)
         sys.exit(1)
         
     if command in list_commands:
-        verdilib_namespace[command_prefix+command](*argv[2:])
+        CommandClass = list_commands[command]()
+        CommandClass.run(*argv[2:])
     else:
         print >> sys.stderr, ("{}: '{}' is not a valid command. "
-            "See '{} help' for more help."(execname, command, execname))
+            "See '{} help' for more help.".format(execname, command, execname))
         get_command_suggestion(command)
         sys.exit(1)
     

@@ -37,7 +37,13 @@ DATABASES = {
 
 ## Setup a sqlite3 DB for tests (WAY faster, since it remains in-memory
 ## and not on disk.
-if 'test' in sys.argv:
+try:
+    calledcommand = sys.argv[1]
+except IndexError:
+    calledcommand = ''
+# check if the command called contains the string 'test' (both for 'test' 
+# and 'djangotest')
+if 'test' in calledcommand:
     # if you define such a variable to False, it will use the same backend
     # that you have already configured also for tests. Otherwise, 
     # Setup a sqlite3 DB for tests (WAY faster, since it remains in-memory)

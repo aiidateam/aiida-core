@@ -11,6 +11,10 @@ verdi NAME
 Don't forget to add the docstring to the class: the first line will be the
 short description, the following ones the long description.
 
+NOTE! Commands that run tests should ALWAYS contain the string 'test'.
+NOTE! Command that do NOT run tests must NOT contain the string 'test'.
+(This is due to how it is implemented the logic on tests in settings.py)
+
 ## TODO: implement bash completion
 """
 import sys

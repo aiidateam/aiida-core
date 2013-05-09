@@ -36,16 +36,94 @@ execname = 'verdi'
 # HERE STARTS THE COMMAND FUNCTION LIST
 ########################################################################
 
+class CompletionCommand(VerdiCommand):
+    """
+    Return the bash completion function to put in ~/.bashrc.
+
+    This command prints on screen the function to be inserted in 
+    your .bashrc command. You can copy and paste the output, or simply
+    add 
+    eval `verdi completioncommand`
+    to your .bashrc, *AFTER* having added the aiida/bin directory to the path.
+    """
+    def run(self, *args):
+        """
+        I put the documentation here, and I don't print it, so we
+        don't clutter too much the .bashrc.
+
+        * "${THE_WORDS[@]}" (with the @) puts each element as a different
+          parameter; note that the variable expansion etc. is performed
+
+        * I add a 'x' at the end and then remove it; in this way, $( ) will
+          not remove trailing spaces
+
+        * If the completion command did not print anything, we use
+          the default bash completion for filenames
+          
+        * If instead the code prints something empty, thanks to the workaround
+          above $OUTPUT is not empty, so we do go the the 'else' case
+          and then, no substitution is suggested.
+        """
+
+        print """
+function _aiida_verdi_completion
+{
+    OUTPUT=$( $1 completion "$COMP_CWORD" "${COMP_WORDS[@]}" ; echo 'x')
+    OUTPUT=${OUTPUT%x}
+    if [ -z "$OUTPUT" ]
+    then
+        COMPREPLY=( $(compgen -o default -- "${COMP_WORDS[COMP_CWORD]}" ) )
+    else
+        COMPREPLY=( $(compgen -W "$OUTPUT" -- "${COMP_WORDS[COMP_CWORD]}" ) )
+    fi
+}
+complete -F _aiida_verdi_completion verdi
+"""
+
+    def complete(self, subargs_idx, subargs):
+        # disable further completion
+        print ""
+
+
 class Completion(VerdiCommand):
     """
     Manages bash completion. 
 
-    Return a list of available commands.
+    Return a list of available commands, separated by spaces.
+    Calls the correct function of the command if the TAB has been
+    pressed after the first command.
+
+    Returning without printing will use the default bash completion.
     """
     # TODO: manage completion at a deeper level
 
     def run(self,*args):
-        print " ".join(sorted(short_doc.keys()))
+        try:
+            cword = int(args[0])
+            if cword <= 0:
+                cword = 1
+        except IndexError:
+            cword = 1
+        except ValueError:
+            return
+
+        if cword == 1:
+            print " ".join(sorted(short_doc.keys()))
+            return
+        else:
+            try:
+                # args[0] is cword;
+                # args[1] is the executable (verdi)
+                # args[2] is the command for verdi
+                # args[3:] are the following subargs
+                command = args[2]
+            except IndexError:
+                return
+            try:
+                CommandClass = list_commands[command]
+            except KeyError:
+                return
+            CommandClass().complete(subargs_idx=cword-2, subargs=args[3:])
 
 class ListParams(VerdiCommand):
     """
@@ -88,7 +166,12 @@ class Help(VerdiCommand):
                     execname, command, execname))
             get_command_suggestion(command)
             sys.exit(1)
-            
+
+    def complete(self, subargs_idx, subargs):
+        if subargs_idx == 0:
+            print " ".join(sorted(short_doc.keys()))
+        else:
+            print ""
     
 class SyncDB(VerdiCommand):
     """
@@ -105,7 +188,7 @@ class SyncDB(VerdiCommand):
 
 class Migrate(VerdiCommand):
     """
-    Migrates the tables in the database to the most recent schema.
+    Migrate tables and data using django-south.
     
     This command calls the Django 'manage.py migrate' command to migrate
     tables managed by django-south to their most recent version.
@@ -126,13 +209,17 @@ class DjangoTest(VerdiCommand):
 
 class Shell(VerdiCommand):
     """
-    Runs the interactive shell with the Django environment loaded.
+    Runs the interactive shell with the Django environment.
 
     This command runs the 'manage.py shell' command, that opens a
     IPython shell with the Django environment loaded.
     """
     def run(self,*args):
         pass_to_django_manage([execname, 'shell'] + list(args))
+
+    def complete(self, subargs_idx, subargs):
+        # disable further completion
+        print ""
 
 class Test(VerdiCommand):
     """
@@ -145,18 +232,18 @@ class Test(VerdiCommand):
     run. An invalid parameter will make the code print the list of all
     valid parameters.
     """
+
+    # TODO: add all test folders
+    allowed_test_folders = ['aida.scheduler', 'aida.transport']
+
     def run(self,*args):
         import unittest
-
-        # TODO: add all test folders
-
-        allowed_test_folders = ['aida.scheduler', 'aida.transport']
 
         test_folders = []
         do_db = False
         if args:
             for arg in args:
-                if arg in allowed_test_folders:
+                if arg in self.allowed_test_folders:
                     test_folders.append(arg)
                 elif arg == 'db':
                     do_db = True
@@ -165,18 +252,20 @@ class Test(VerdiCommand):
                         "{} is not a valid test folder. "
                         "Allowed test folders are:".format(arg))
                     print >> sys.stderr, "\n".join(
-                        '  * {}'.format(a) for a in allowed_test_folders)
+                        '  * {}'.format(a) for a in self.allowed_test_folders)
                     print >> sys.stderr, '  * db'
+                    sys.exit(1)
         else:
             # Without arguments, run all tests
-            test_folders = allowed_test_folders
+            test_folders = self.allowed_test_folders
             do_db = True
 
         for test_folder in test_folders:
             print "v"*75
             print ">>> Tests for module {} <<<".format(test_folder.ljust(50))
             print "^"*75
-            testsuite = unittest.defaultTestLoader.discover(test_folder)
+            testsuite = unittest.defaultTestLoader.discover(
+                test_folder,top_level_dir = os.path.dirname(aida.__file__))
             test_runner = unittest.TextTestRunner()
             test_runner.run( testsuite )
 
@@ -186,6 +275,19 @@ class Test(VerdiCommand):
                    "                                  <<<")
             print "^"*75
             pass_to_django_manage([execname, 'test', 'db'])
+
+    def complete(self, subargs_idx, subargs):
+        """
+        I complete with subargs that were not used yet.
+        """
+        # I remove the one on which I am, so if I wrote all of it but
+        # did not press space, it will get completed
+        other_subargs = subargs[:subargs_idx] + subargs[subargs_idx+1:]
+        # I create a list of the tests that are not already written on the 
+        # command line
+        remaining_tests = (
+            set(self.allowed_test_folders + ['db']) - set(other_subargs))
+        print " ".join(sorted(remaining_tests))
 
 class Install(VerdiCommand):
     """
@@ -433,6 +535,7 @@ def exec_from_cmdline(argv):
     ### It defines a few global variables
 
     global execname
+    global list_commands
     global short_doc
     global long_doc
 

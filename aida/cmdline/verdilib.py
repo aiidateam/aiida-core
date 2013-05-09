@@ -43,7 +43,7 @@ class CompletionCommand(VerdiCommand):
     This command prints on screen the function to be inserted in 
     your .bashrc command. You can copy and paste the output, or simply
     add 
-    eval `verdi completioncommand`
+    eval "`verdi completioncommand`"
     to your .bashrc, *AFTER* having added the aiida/bin directory to the path.
     """
     def run(self, *args):

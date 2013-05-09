@@ -5,7 +5,6 @@ from aida.transport.plugins.ssh import *
 import unittest
 import logging
 
-from test import *
 import aida.transport.plugin_test
 from aida.transport.plugin_test import *
 

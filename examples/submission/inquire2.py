@@ -1,6 +1,18 @@
+#!/usr/bin/env python
+import sys
 from aida.orm import Calculation
+from aida.common.utils import load_django
 
-for pk in [154, 160, 166]:
+load_django()
+
+calcs = []
+for i in sys.argv[1:]:
+  try:
+    calcs.append(int(i))
+  except ValueError:
+    print >> sys.stderr, "Ignoring invalid pk={}".format(i)
+
+for pk in calcs:
   print '#'*20
   print '### CALC pk={}'.format(pk)
   print '#'*20

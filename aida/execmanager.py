@@ -44,6 +44,10 @@ def update_running_calcs_status(authinfo):
             # I had to remove the check on the retval for getJobs, because if the
             # job has finished and is not in the output of qstat, it gives a nonzero
             # retval)
+            
+            # TODO: catch SchedulerError exception and do something sensible (at least,
+            # skip this computer but continue with following ones, and set a counter; 
+            # set calculations to UNKNOWN after a while?
             found_jobs = s.getJobs(jobs=jobids_to_inquire, as_dict = True)
     
             # I update the status of jobs
@@ -408,7 +412,13 @@ def submit_calc(calc):
                     if remote_machine == computer.hostname:
                         execlogger.debug('copying {} remotely, directly on the machine {}'.format(
                             dest_rel_path, remote_machine))
-                        t.copy(remote_abs_path, dest_rel_path)
+                        try:
+                            t.copy(remote_abs_path, dest_rel_path)
+                        except (IOError,OSError):
+                            execlogger.warning("Unable to copy remote resource from {} to {}, "
+                                "skipping it".format(
+                                    remote_abs_path,dest_rel_path))
+
                     else:
                         # TODO: implement copy between two different machines!
                         raise NotImplementedError("Remote copy between two different machines "

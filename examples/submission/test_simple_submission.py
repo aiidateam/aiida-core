@@ -35,7 +35,7 @@ computername = "bellatrix.epfl.ch"
 current_version = "1.0.4"
 queue = None
 #queue = "P_share_queue"
-
+use_localhost=True
 
 def get_or_create_machine():
     import json
@@ -47,36 +47,62 @@ def get_or_create_machine():
 #    from aida.djsite.db.models import DbComputer
 #    DbComputer.objects.filter(hostname=computername).delete()
     
-    try:
-        computer = Computer.get(computername)
-        print >> sys.stderr, "Using the existing computer {}...".format(computername)
-    except NotExistent:
-        print >> sys.stderr, "Creating a new computer..."
-        computer = Computer(hostname=computername,transport_type='ssh',
-                            scheduler_type='pbspro')
-        computer.set_workdir("/scratch/{username}/aida")
-        computer.store()
+    if use_localhost:
+        try:
+            computer = Computer.get("localhost")
+            print >> sys.stderr, "Using the existing computer {localhost}..."
+        except NotExistent:
+            print >> sys.stderr, "Creating a new localhostcomputer..."
+            computer = Computer(hostname="localhost",transport_type='local',
+                                scheduler_type='pbspro')
+            computer.set_workdir("/tmp/{username}/aida")
+            computer.store()
 
-    from aida.djsite.db.models import AuthInfo
-    auth_params = {'username': remoteuser,
-             'load_system_host_keys': True}
+        from aida.djsite.db.models import AuthInfo
+        auth_params = {}
 
-    if os.path.exists('~/.ssh/id_rsa'):
-        auth_params['key_filename'] = os.path.expanduser('~/.ssh/id_rsa')
-    elif os.path.exists('~/.ssh.id_dsa'):
-        auth_params['key_filename'] = os.path.expanduser('~/.ssh/id_rsa')
+        authinfo, created = AuthInfo.objects.get_or_create(
+            aidauser=get_automatic_user(),
+            computer=computer.dbcomputer, 
+            defaults= {'auth_params': json.dumps(auth_params)},
+            )
 
-    authinfo, created = AuthInfo.objects.get_or_create(
-        aidauser=get_automatic_user(),
-        computer=computer.dbcomputer, 
-        defaults= {'auth_params': json.dumps(auth_params)},
-        )
+        if created:
+            print "  (Created authinfo)"
+        else:
+            print "  (Retrieved authinfo)"
 
-    if created:
-        print "  (Created authinfo)"
     else:
-        print "  (Retrieved authinfo)"
-    
+        try:
+            computer = Computer.get(computername)
+            print >> sys.stderr, "Using the existing computer {}...".format(computername)
+        except NotExistent:
+            print >> sys.stderr, "Creating a new computer..."
+            computer = Computer(hostname=computername,transport_type='ssh',
+                                scheduler_type='pbspro')
+            computer.set_workdir("/scratch/{username}/aida")
+            computer.store()
+
+        from aida.djsite.db.models import AuthInfo
+        auth_params = {'username': remoteuser,
+                       'load_system_host_keys': True}
+
+        if os.path.exists('~/.ssh/id_rsa'):
+            auth_params['key_filename'] = os.path.expanduser('~/.ssh/id_rsa')
+        elif os.path.exists('~/.ssh.id_dsa'):
+            auth_params['key_filename'] = os.path.expanduser('~/.ssh/id_rsa')
+
+        authinfo, created = AuthInfo.objects.get_or_create(
+            aidauser=get_automatic_user(),
+            computer=computer.dbcomputer, 
+            defaults= {'auth_params': json.dumps(auth_params)},
+            )
+
+        if created:
+            print "  (Created authinfo)"
+        else:
+            print "  (Retrieved authinfo)"
+
     return computer
 
 def get_or_create_code():
@@ -162,8 +188,12 @@ with tempfile.NamedTemporaryFile() as f:
     # I don't worry of the name with which it is internally stored
     fileparam = SinglefileData(filename=f.name).store()
 
-remoteparam = RemoteData(remote_machine="bellatrix.epfl.ch",
-    remote_path="/home/{}/.bashrc".format(remoteuser) ).store()
+if use_localhost:
+    remoteparam = RemoteData(remote_machine="localhost",
+        remote_path="/home/{}/.bashrc".format(remoteuser) ).store()
+else:
+    remoteparam = RemoteData(remote_machine="bellatrix.epfl.ch",
+        remote_path="/home/{}/.bashrc".format(remoteuser) ).store()
 
 calc = Calculation(computer=computer)
 calc.set_max_wallclock_seconds(12*60) # 12 min

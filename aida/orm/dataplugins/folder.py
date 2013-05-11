@@ -16,6 +16,8 @@ class FolderData(Data):
 
         uuid = kwargs.pop('uuid', None)
         if uuid is not None:
+            # TODO: check that there are no further args;
+            # do the same in other classes
             return
 
     def replace_with_folder(self,folder,overwrite=True):

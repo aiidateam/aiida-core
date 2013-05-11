@@ -1,7 +1,9 @@
 """
-This module defines the classes for structures (called Sites, being a 
-collection of sites) and all related functions to operate on them.
+This module defines the classes for structures and all related
+functions to operate on them.
 """
+
+from aida.orm import Node
 import itertools
 import copy
 
@@ -11,8 +13,6 @@ _mass_threshold = 1.e-3
 _sum_threshold = 1.e-6
 # Threshold used to check if the cell volume is not zero.
 _volume_threshold = 1.e-6
-
-
 
 # Element table
 elements = {
@@ -124,7 +124,59 @@ elements = {
 _valid_symbols = tuple(i['symbol'] for i in elements.values())
 _atomic_masses = {el['symbol']: el['mass'] for el in elements.values()}
 
-def _has_ase():
+def _get_valid_cell(inputcell):
+    """
+    Return the cell in a valid format from a generic input.
+
+    Raise ValueError if the format is not valid.
+    """
+    try:
+        the_cell = tuple(tuple(float(c) for c in i) for i in inputcell)
+        if len(the_cell) != 3:
+            raise ValueError
+        if any(len(i) != 3 for i in the_cell):
+            raise ValueError
+    except (IndexError,ValueError,TypeError):
+        raise ValueError("Cell must be a list of the three vectors, each "
+                         "defined as a list of three coordinates.") 
+    
+    if abs(calc_cell_volume(the_cell)) < _volume_threshold:
+        raise ValueError("The cell volume is zero. Invalid cell.")
+
+    return the_cell
+
+def _get_valid_pbc(inputpbc):
+    """
+    Return a list of three booleans for the periodic boundary conditions,
+    in a valid format from a generic input.
+
+    Raise ValueError if the format is not valid.
+    """
+    if isinstance(inputpbc,bool):
+        the_pbc = (inputpbc,inputpbc,inputpbc)
+    elif (hasattr(inputpbc,'__iter__')):
+        # To manage numpy lists of bools, whose elements are of type numpy.bool_
+        # and for which isinstance(i,bool) return False...
+        if hasattr(inputpbc,'tolist'):
+            the_value = inputpbc.tolist()
+        else:
+            the_value = inputpbc
+        if all(isinstance(i,bool) for i in the_value):
+            if len(the_value) == 3:
+                the_pbc = tuple(i for i in the_value)
+            elif len(the_value) == 1:
+                the_pbc = (the_value[0],the_value[0],the_value[0])
+            else:
+                raise ValueError("pbc length must be either one or three.")
+        else:
+            raise ValueError("pbc elements are not booleans.")
+    else:
+        raise ValueError("pbc must be a boolean or a list of three "
+                         "booleans.", inputpbc)
+
+    return the_pbc
+
+def has_ase():
     """
     Returns True if the ase module can be imported, False otherwise.
     """
@@ -135,7 +187,7 @@ def _has_ase():
     return True
 
 
-def _calc_cell_volume(cell):
+def calc_cell_volume(cell):
     """
     Calculates the volume of a cell given the three lattice vectors.
 
@@ -230,7 +282,7 @@ def validate_symbols_tuple(symbols_tuple):
         raise ValueError("At least one element of the symbol list has "
                          "not been recognized.")
 
-def _is_ase_atoms(ase_atoms):
+def is_ase_atoms(ase_atoms):
     """
     Check if the ase_atoms parameter is actually a ase.Atoms object.
     
@@ -242,92 +294,112 @@ def _is_ase_atoms(ase_atoms):
     import ase
     return isinstance(ase_atoms, ase.Atoms)
 
-class Sites(object):
+class StructureData(Node):
     """
     This class contains the information about a given structure, i.e. a
     collection of sites together with a cell, the 
     boundary conditions (whether they are periodic or not) and other
     related useful information.
     """
-    def __init__(self,cell,pbc=None):
+    def __init__(self,**kwargs):
         """
-        Initializes the Sites object with a given cell.
+        Initializes the StructureData object with a given cell.
         
         Args:
             cell: It can be:
                 1. the three real-space lattice vectors, in angstrom.
                 cell[i] gives the three coordinates of the i-th vector,
                 with i=0,1,2.
-                2. an ase.atoms object, using the ASE python library.
-                3. an aida 'raw_sites' dictionary as saved in the database
+                Default: [[1,0,0],
+                          [0,1,0],
+                          [0,0,1]]
             pbc: if we want periodic boundary conditions on each of the
                 three real-space directions.
-                If this variable is set, only case 1 of cell is accepted.
                 Default: [True, True, True]
+            ase: a ase.atoms object, using the ASE python library. If this 
+            parameter is passed, the one above cannot be specified.
         """
+        super(StructureData,self).__init__(**kwargs)
         # Initial values
-        self._sites = []
-        self._cell = None
-        self._pbc = None
+        # self._sites = []
+        # self._cell = None
+        # self._pbc = None
 
-        if pbc is not None:
-            self.cell = cell
-            self.pbc = pbc
-        elif isinstance(cell,Sites):
-            self.cell = cell.cell
-            self.pbc = cell.pbc
-            for site in cell.sites:
-                self.appendSite(Site(site=site))
-        elif _is_ase_atoms(cell):
-            # Read the ase structure
-            self.cell = cell.cell
-            self.pbc = cell.pbc
-            for atom in cell:
-                self.appendSite(Site(ase=atom),reset_type_if_needed=True)
-        elif isinstance(cell,dict):
-            try:
-                self.cell = cell['cell']
-            except (KeyError, ValueError):
-                raise ValueError("Invalid 'cell' section in raw_sites cell")
-            
-            try:
-                self.pbc = cell['pbc']
-            except (KeyError, ValueError):
-                raise ValueError("Invalid 'pbc' section in raw_sites cell")
-                
-            try:
-                for site in cell['sites']:
-                    s = Site(raw=site)
-                    self.appendSite(s)
-            except (KeyError, ValueError) as e:
-                raise ValueError("Invalid 'sites' section in raw_sites cell. "
-                                 "Error was: '{}'".format(e.message))
+        uuid = kwargs.pop('uuid', None)
+        if uuid is not None:
+            return
 
+        cell = kwargs.pop('cell',None)
+        pbc = kwargs.pop('pbc',None)
+        aseatoms = kwargs.pop('ase',None)
+
+        if kwargs:
+            raise ValueError("There are unrecognized flags passed to the constructor: {}".format(
+                kwargs.keys()))
+
+        self.set_attr('sites',[])
+        if aseatoms is not None:
+            if cell is not None or pbc is not None:
+                raise ValueError("If you pass 'ase', you cannot pass also 'cell' or 'pbc'")
+            if is_ase_atoms(aseatoms):
+                # Read the ase structure
+                self.cell = aseatoms.cell
+                self.pbc = aseatoms.pbc
+                for atom in aseatoms:
+                    self.append_site(Site(ase=atom),reset_type_if_needed=True)
+            else:
+                raise ValueError('an ase flag was passed, but the value is not a ase.Atoms object')
         else:
-            self.cell = cell
-            self.pbc = [True,True,True]
-            
-    def get_raw(self):
-        """
-        Return the raw version of the Sites object, mapped to a suitable
-        dictionary. 
+            if pbc is not None:
+                self.pbc = pbc
+            else:
+                self.pbc = [True, True, True]
+            if cell is not None:
+                self.cell = cell
+            else:
+                self.cell = [[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]
 
-        This is the structure that is actually stored (after serialization)
-        in the DB.
-        
-        Returns:
-            a python dictionary with the sites.
-        """
-        return {
-            'cell': self.cell,
-            'pbc': self.pbc,
-            'sites': [site.get_raw() for site in self.sites],
-            }
+    def validate(self):
+        from aida.common.exceptions import ValidationError
+        super(StructureData,self).validate()
+
+        try:
+            _get_valid_cell(self.cell)
+        except ValueError as e:
+            raise ValidationError("Invalid cell: {}".format(e.message))
+
+        try:
+            _get_valid_pbc(self.pbc)
+        except ValueError as e:
+            raise ValidationError("Invalid periodic boundary conditions: {}".format(e.message))
+
+        try:
+            # This will try to create the sites objects
+            _ = self.sites
+        except ValueError as e:
+            raise ValidationError("Unable to validate the sites: {}".format(e.message))
+
+#    def get_raw(self):
+#        """
+#        Return the raw version of the StructureData object, mapped to a suitable
+#        dictionary. 
+#
+#        This is the structure that is actually stored (after serialization)
+#        in the DB.
+#        
+#        Returns:
+#            a python dictionary with the sites.
+#        """
+#        return {
+#            'cell': self.cell,
+#            'pbc': self.pbc,
+#            'sites': [site.get_raw() for site in self.sites],
+#            }
 
     def get_elements(self):
         """
         Return a list of elements, as obtained by reading all sites of the
-        Sites object, keeping all duplicates.
+        StructureData object, keeping all duplicates.
         """
         return list(itertools.chain.from_iterable(
                 site.symbols for site in self.sites))
@@ -343,7 +415,7 @@ class Sites(object):
 
     def get_ase(self):
         """
-        Return a ASE object corresponding to this Sites object. Requires to be
+        Return a ASE object corresponding to this StructureData object. Requires to be
         able to import ase.
 
         Note: If any site is an alloy or has vacancies, a ValueError is raised
@@ -354,18 +426,6 @@ class Sites(object):
         for site in self.sites:
             asecell.append(site.get_ase())
         return asecell
-
-    def get_raw_json(self):
-        """
-        Return a JSON-serialized version of the raw_sites
-
-        Returns:
-            a string that contains the JSON-serialized python dictionary as
-            given by get_raw().
-        """
-        import json
-        raw = self.get_raw()
-        return json.dumps(raw)
 
     def get_types(self):
         """
@@ -394,9 +454,9 @@ class Sites(object):
 
         return final_list
 
-    def appendSite(self,site,reset_type_if_needed=False):
+    def append_site(self,site,reset_type_if_needed=False):
         """
-        Append a site to the Sites. It makes a copy of the site.
+        Append a site to the StructureData. It makes a copy of the site.
 
         Args:
             site: the site to append, must be a Site object.
@@ -407,21 +467,27 @@ class Sites(object):
                 Then, the same type is set. Otherwise, a new type name is chosen adding a number to the site
                 name such that the type is different from the existing ones.
         """
+        from aida.common.exceptions import ModificationNotAllowed
+        
+        if not self._to_be_stored:
+            raise ModificationNotAllowed("The StructureData object cannot be modified, "
+                "it has already been stored")
+
         new_site = Site(site=site) # So we make a copy
         
-        self._validate_site_type(new_site, reset_type_if_needed=reset_type_if_needed)
+        self._set_site_type(new_site, reset_type_if_needed=reset_type_if_needed)
 
         # If here, no exceptions have been raised, so I store. Note that the new_site.type value may 
         # have been changed by the previous function.
-        self._sites.append(new_site) 
+        # I join two lists. Do not use .append, that would work in-place
+        self.set_attr('sites',self.get_attr('sites',[]) + [new_site.get_raw()])
+        #self._sites.append(new_site) 
 
-    def _validate_site_type(self, new_site, reset_type_if_needed):
+    def _set_site_type(self, new_site, reset_type_if_needed):
         """
-        Validate if the site can be added (i.e., if no other sites with the same type exist, or if
-        they exist, then they are equal).
+        Check if the site can be added (i.e., if no other sites with the same type exist, or if
+        they exist, then they are equal) and possibly sets its type.
         
-        Note: this may change the attribute 'type' of the site object, so be careful!!
-
         Args:
             new_site: the new site to check, must be a Site object.
             reset_type_if_needed: if False, an exception is raised if a site with same type but different
@@ -431,6 +497,12 @@ class Sites(object):
                 Then, the same type is set. Otherwise, a new type name is chosen adding a number to the site
                 name such that the type is different from the existing ones.
         """
+        from aida.common.exceptions import ModificationNotAllowed
+
+        if not self._to_be_stored:
+            raise ModificationNotAllowed("The StructureData object cannot be modified, "
+                "it has already been stored")
+
         type_list = self.get_types()
         if type_list:
             types, positions = zip(*type_list)
@@ -478,71 +550,80 @@ class Sites(object):
             append_int += 1
         new_site.type = new_typename
 
-    def clearSites(self):
+    def clear_sites(self):
         """
-        Removes all sites for the Sites object.
+        Removes all sites for the StructureData object.
         """
-        self._sites = []
+        from aida.common.exceptions import ModificationNotAllowed
+
+        if not self._to_be_stored:
+            raise ModificationNotAllowed("The StructureData object cannot be modified, "
+                "it has already been stored")
+
+        self.set_attr('sites', [])
+        #_sites = []
 
     @property
     def sites(self):
-        return copy.deepcopy(self._sites)
+        try:
+            raw_sites = self.get_attr('sites')
+        except AttributeError:
+            raw_sites = []
+        return [Site(raw=i) for i in raw_sites]
+        #return copy.deepcopy(self._sites)
     
     @property
     def cell(self):
-        return copy.deepcopy(self._cell)
+        #return copy.deepcopy(self._cell)
+        return copy.deepcopy(self.get_attr('cell'))
     
     @cell.setter
     def cell(self,value):
-        try:
-            the_cell = tuple(tuple(float(c) for c in i) for i in value)
-            if len(the_cell) != 3:
-                raise ValueError
-            if any(len(i) != 3 for i in the_cell):
-                raise ValueError
-        except (IndexError,ValueError,TypeError):
-            raise ValueError("Cell must be a list of the three vectors, each "
-                             "defined as a list of three coordinates.") 
-        
-        if abs(_calc_cell_volume(the_cell)) < _volume_threshold:
-            raise ValueError("The cell volume is zero. Invalid cell.")
+        from aida.common.exceptions import ModificationNotAllowed
 
-        self._cell = the_cell
+        if not self._to_be_stored:
+            raise ModificationNotAllowed("The StructureData object cannot be modified, "
+                "it has already been stored")
+
+        the_cell = _get_valid_cell(value)
+
+        #self._cell = the_cell
+        self.set_attr('cell', the_cell)
 
     @property
     def pbc(self):
-        return copy.deepcopy(self._pbc)
+        """
+        Return a tuple of three booleans, each one tells if there are periodic
+        boundary conditions for the i-th real-space direction (i=1,2,3)
+        """
+        #return copy.deepcopy(self._pbc)
+        return (self.get_attr('pbc1'),self.get_attr('pbc2'),self.get_attr('pbc3'))
 
     @pbc.setter
     def pbc(self,value):
-        if isinstance(value,bool):
-            the_pbc = (value,value,value)
-        elif (hasattr(value,'__iter__')):
-            # To manage numpy lists of bools, whose elements are of type numpy.bool_
-            # and for which isinstance(i,bool) return False...
-            if hasattr(value,'tolist'):
-                the_value = value.tolist()
-            else:
-                the_value = value
-            if all(isinstance(i,bool) for i in the_value):
-                if len(the_value) == 3:
-                    the_pbc = tuple(i for i in the_value)
-                elif len(value) == 1:
-                    the_pbc = (the_value[0],the_value[0],the_value[0])
-                else:
-                    raise ValueError("pbc length must be either one or three.")
-            else:
-                raise ValueError("pbc elements are not booleans.")
-        else:
-            raise ValueError("pbc must be a boolean or a list of three "
-                             "booleans.", value)
-        self._pbc = the_pbc
+        from aida.common.exceptions import ModificationNotAllowed
+
+        if not self._to_be_stored:
+            raise ModificationNotAllowed("The StructureData object cannot be modified, "
+                "it has already been stored")
+        the_pbc = _get_valid_pbc(value)
+
+        #self._pbc = the_pbc
+        self.set_attr('pbc1',the_pbc[0])
+        self.set_attr('pbc2',the_pbc[1])
+        self.set_attr('pbc3',the_pbc[2])
 
     def is_alloy(self):
-        return any(s.is_alloy() for s in self._sites)
+        return any(s.is_alloy() for s in self.sites)
 
     def has_vacancies(self):
-        return any(s.has_vacancies() for s in self._sites)
+        return any(s.has_vacancies() for s in self.sites)
+
+    def get_cell_volume(self):
+        """
+        Return the cell volume in angstrom^3
+        """
+        return calc_cell_volume(self.cell)
 
 class Site(object):
     """
@@ -912,556 +993,3 @@ class Site(object):
         w_sum = sum(self._weights)
         return not(1. - w_sum < _sum_threshold)
 
-if __name__ == "__main__":
-    import unittest
-    
-    class ValidSymbols(unittest.TestCase):
-        """
-        Tests the symbol validation.
-        """
-        def test_bad_symbol(self):
-            """
-            Should not accept a non-existing symbol.
-            """
-            with self.assertRaises(ValueError):
-                validate_symbols_tuple(['Hxx'])
-        
-        def test_empty_list(self):
-            """
-            Should not accept an empty list
-            """
-            with self.assertRaises(ValueError):
-                validate_symbols_tuple([])
-        
-        def test_valid_list(self):
-            """
-            Should not raise any error.
-            """
-            validate_symbols_tuple(['H','He'])
-
-    class ValidWeights(unittest.TestCase):
-        """
-        Tests valid weight lists.
-        """        
-        def test_isnot_list(self):
-            """
-            Should not accept a non-list, non-number weight
-            """
-            with self.assertRaises(ValueError):
-                a = Site(position=(0.,0.,0.),symbols='Ba',weights='aaa')
-        
-        def test_empty_list(self):
-            """
-            Should not accept an empty list
-            """
-            with self.assertRaises(ValueError):
-                a = Site(position=(0.,0.,0.),symbols='Ba',weights=[])
-
-        def test_symbol_weight_mismatch(self):
-            """
-            Should not accept a size mismatch of the symbols and weights
-            list.
-            """
-            with self.assertRaises(ValueError):
-                a = Site(position=(0.,0.,0.),symbols=['Ba','C'],weights=[1.])
-
-            with self.assertRaises(ValueError):
-                a = Site(position=(0.,0.,0.),symbols=['Ba'],weights=[0.1,0.2])
-
-        def test_negative_value(self):
-            """
-            Should not accept a negative weight
-            """
-            with self.assertRaises(ValueError):
-                a = Site(position=(0.,0.,0.),symbols=['Ba','C'],weights=[-0.1,0.3])
-
-        def test_sum_greater_one(self):
-            """
-            Should not accept a sum of weights larger than one
-            """
-            with self.assertRaises(ValueError):
-                a = Site(position=(0.,0.,0.),symbols=['Ba','C'],
-                         weights=[0.5,0.6])
-
-        def test_sum_one(self):
-            """
-            Should accept a sum equal to one
-            """
-            a = Site(position=(0.,0.,0.),symbols=['Ba','C'],
-                     weights=[1./3.,2./3.])
-
-        def test_sum_less_one(self):
-            """
-            Should accept a sum equal less than one
-            """
-            a = Site(position=(0.,0.,0.),symbols=['Ba','C'],
-                     weights=[1./3.,1./3.])
-        
-        def test_none(self):
-            """
-            Should accept None.
-            """
-            a = Site(position=(0.,0.,0.),symbols='Ba',weights=None)
-
-
-    class TestSite(unittest.TestCase):
-        """
-        Tests the creation of Site objects and their methods.
-        """
-        def test_sum_one(self):
-            """
-            Should accept a sum equal to one
-            """
-            a = Site(position=(0.,0.,0.),symbols=['Ba','C'],
-                     weights=[1./3.,2./3.])
-            self.assertTrue(a.is_alloy())
-            self.assertFalse(a.has_vacancies())
-
-        def test_sum_less_one(self):
-            """
-            Should accept a sum equal less than one
-            """
-            a = Site(position=(0.,0.,0.),symbols=['Ba','C'],
-                     weights=[1./3.,1./3.])
-            self.assertTrue(a.is_alloy())
-            self.assertTrue(a.has_vacancies())
-        
-        def test_simple(self):
-            """
-            Should recognize a simple element.
-            """
-            a = Site(position=(0.,0.,0.),symbols='Ba',weights=None)
-            self.assertFalse(a.is_alloy())
-            self.assertFalse(a.has_vacancies())
-
-            b = Site(position=(0.,0.,0.),symbols='Ba',weights=1.)
-            self.assertFalse(b.is_alloy())
-            self.assertFalse(b.has_vacancies())
-
-        def test_automatic_type(self):
-            """
-            Check the automatic type generator.
-            """
-            a = Site(position=(0.,0.,0.),symbols='Ba')
-            self.assertEqual(a.type,'Ba')
-
-            a = Site(position=(0.,0.,0.),symbols=('Si','Ge'),weights=(1./3.,2./3.))
-            self.assertEqual(a.type,'GeSi')
-
-            a = Site(position=(0.,0.,0.),symbols=('Si','Ge'),weights=(0.4,0.5))
-            self.assertEqual(a.type,'GeSiX')
-            
-            a.type = 'newstring'
-            self.assertEqual(a.type,'newstring')
-
-    class TestMasses(unittest.TestCase):
-        """
-        Tests the management of masses during the creation of Site objects.
-        """
-        def test_auto_mass_one(self):
-            """
-            mass for elements with sum one
-            """
-            a = Site(position=(0.,0.,0.),symbols=['Ba','C'],
-                              weights=[1./3.,2./3.])
-            self.assertAlmostEqual(a.mass, 
-                                   (_atomic_masses['Ba'] + 
-                                    2.* _atomic_masses['C'])/3.)
-
-        def test_sum_less_one(self):
-            """
-            mass for elements with sum less than one
-            """
-            a = Site(position=(0.,0.,0.),symbols=['Ba','C'],
-                     weights=[1./3.,1./3.])
-            self.assertAlmostEqual(a.mass, 
-                                   (_atomic_masses['Ba'] + 
-                                    _atomic_masses['C'])/2.)
-
-        def test_sum_less_one(self):
-            """
-            mass for a single element
-            """
-            a = Site(position=(0.,0.,0.),symbols=['Ba'])
-            self.assertAlmostEqual(a.mass, 
-                                   _atomic_masses['Ba'])
-            
-        def test_manual_mass(self):
-            """
-            mass set manually
-            """
-            a = Site(position=(0.,0.,0.),symbols=['Ba','C'],
-                     weights=[1./3.,1./3.],
-                     mass = 1000.)
-            self.assertAlmostEqual(a.mass, 1000.)
-
-    class TestSitesInit(unittest.TestCase):
-        """
-        Tests the creation of Sites objects (cell and pbc).
-        """
-        def test_cell_wrong_size_1(self):
-            """
-            Wrong cell size (not 3x3)
-            """
-            with self.assertRaises(ValueError):
-                a = Sites(cell=((0.,0.,0.),))
-
-        def test_cell_wrong_size_2(self):
-            """
-            Wrong cell size (not 3x3)
-            """
-            with self.assertRaises(ValueError):
-                a = Sites(cell=((0.,0.,0.),(0.,0.,0.),(0.,0.)))
-
-        def test_cell_zero_vector(self):
-            """
-            Wrong cell (one vector has zero length)
-            """
-            with self.assertRaises(ValueError):
-                a = Sites(cell=((0.,0.,0.),(0.,1.,0.),(0.,0.,1.)))
-
-        def test_cell_zero_volume(self):
-            """
-            Wrong cell (volume is zero)
-            """
-            with self.assertRaises(ValueError):
-                a = Sites(cell=((1.,0.,0.),(0.,1.,0.),(1.,1.,0.)))
-
-        def test_cell_ok(self):
-            """
-            Correct cell
-            """
-            cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
-            a = Sites(cell=cell)
-            out_cell = a.cell
-            
-            for i in range(3):
-                for j in range(3):
-                    self.assertAlmostEqual(cell[i][j],out_cell[i][j])
-        
-        def test_volume(self):
-            """
-            Check the volume calculation
-            """
-            cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
-            self.assertAlmostEqual(_calc_cell_volume(cell), 6.)
-
-            cell = ((1.,0.,0.),(0.,1.,0.),(1.,1.,0.))
-            self.assertAlmostEqual(_calc_cell_volume(cell), 0.)
-
-
-        def test_wrong_pbc_1(self):
-            """
-            Wrong pbc parameter (not bool or iterable)
-            """
-            with self.assertRaises(ValueError):
-                cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
-                a = Sites(cell=cell,pbc=1)
-
-        def test_wrong_pbc_2(self):
-            """
-            Wrong pbc parameter (iterable but with wrong len)
-            """
-            with self.assertRaises(ValueError):
-                cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
-                a = Sites(cell=cell,pbc=[True,True])
-
-        def test_wrong_pbc_3(self):
-            """
-            Wrong pbc parameter (iterable but with wrong len)
-            """
-            with self.assertRaises(ValueError):
-                cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
-                a = Sites(cell=cell,pbc=[])
-
-        def test_ok_pbc_1(self):
-            """
-            Single pbc value
-            """
-            cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
-            a = Sites(cell=cell,pbc=True)
-            self.assertEqual(a.pbc,tuple([True,True,True]))
-
-            a = Sites(cell=cell,pbc=False)
-            self.assertEqual(a.pbc,tuple([False,False,False]))
-
-        def test_ok_pbc_2(self):
-            """
-            One-element list
-            """
-            cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
-            a = Sites(cell=cell,pbc=[True])
-            self.assertEqual(a.pbc,tuple([True,True,True]))
-
-            a = Sites(cell=cell,pbc=[False])
-            self.assertEqual(a.pbc,tuple([False,False,False]))
-
-        def test_ok_pbc_3(self):
-            """
-            Three-element list
-            """
-            cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
-            a = Sites(cell=cell,pbc=[True,False,True])
-            self.assertEqual(a.pbc,tuple([True,False,True]))
-            
-
-    class TestSites(unittest.TestCase):
-        """
-        Tests the creation of Sites objects (cell and pbc).
-        """
-
-        def test_cell_ok(self):
-            """
-            Test the creation of a cell and the appending of sites
-            """
-            cell = ((2.,0.,0.),(0.,2.,0.),(0.,0.,2.))
-            a = Sites(cell=cell)
-            out_cell = a.cell
-            
-            s = Site(position=(0.,0.,0.),symbols=['Ba'])
-            a.appendSite(s)
-            s = Site(position=(1.,1.,1.),symbols=['Ti'])
-            a.appendSite(s)
-            self.assertFalse(a.is_alloy())
-            self.assertFalse(a.has_vacancies())
-
-            s= Site(position=(0.5,1.,1.5), symbols=['O', 'C'], 
-                             weights=[0.5,0.5])
-            a.appendSite(s)
-            self.assertTrue(a.is_alloy())
-            self.assertFalse(a.has_vacancies())
-
-            s= Site(position=(0.5,1.,1.5), symbols=['O'], weights=[0.5])
-            a.appendSite(s)
-            self.assertTrue(a.is_alloy())
-            self.assertTrue(a.has_vacancies())
-
-            a.clearSites()
-            a.appendSite(s)
-            self.assertFalse(a.is_alloy())
-            self.assertTrue(a.has_vacancies())
-
-        def test_type_1(self):
-            """
-            Test the management of types.
-            """
-            a = Sites(cell=((2.,0.,0.),(0.,2.,0.),(0.,0.,2.)))
-            
-            s = Site(position=(0.,0.,0.),symbols=['Ba'])
-            a.appendSite(s)
-            s = Site(position=(0.5,0.5,0.5),symbols=['Ba'])
-            a.appendSite(s)
-            # Shouldn't complain, I added twice the same atom, with same mass etc.
-            s = Site(position=(1.,1.,1.),symbols=['Ti'])
-            a.appendSite(s)
-            
-            type_list = a.get_types()
-            self.assertEqual(len(type_list),2) # I should only have two types
-
-        def test_type_2(self):
-            """
-            Test the management of types.
-            """
-            a = Sites(cell=((2.,0.,0.),(0.,2.,0.),(0.,0.,2.)))
-            
-            s = Site(position=(0.,0.,0.),symbols=['Ba'],type='Ba1')
-            a.appendSite(s)
-            s = Site(position=(0.5,0.5,0.5),symbols=['Ba'],type='Ba2')
-            a.appendSite(s)
-            s = Site(position=(1.,1.,1.),symbols=['Ti'])
-            a.appendSite(s)
-            
-            type_list = a.get_types()
-            self.assertEqual(len(type_list),3) # I should have now three types
-            # i[0] is the type name, while i[0] is the list of indices
-            self.assertEqual(set(i[0] for i in type_list), set(('Ba1', 'Ba2', 'Ti')))
-
-        def test_type_3(self):
-            """
-            Test the management of types.
-            """
-            a = Sites(cell=((2.,0.,0.),(0.,2.,0.),(0.,0.,2.)))
-            
-            s = Site(position=(0.,0.,0.),symbols=['Ba'],mass=100.)
-            a.appendSite(s)
-            s = Site(position=(0.5,0.5,0.5),symbols=['Ba'],mass=101.)
-            with self.assertRaises(ValueError):
-                # Shouldn't allow, I am adding two sites with the same automatic tag 'Ba'
-                # but with different masses
-                a.appendSite(s) 
-
-            # now it should work
-            s = Site(position=(0.5,0.5,0.5),symbols=['Ba'],mass=101.,type='Ba2')
-            a.appendSite(s) 
-                
-            s = Site(position=(1.,1.,1.),symbols=['Ti'])
-            a.appendSite(s)
-            
-            type_list = a.get_types()
-            self.assertEqual(len(type_list),3) # I should have now three types
-            self.assertEqual(set(i[0] for i in type_list), set(('Ba', 'Ba2', 'Ti')))
-
-        def test_type_4(self):
-            """
-            Test the management of types.
-            """
-            a = Sites(cell=((2.,0.,0.),(0.,2.,0.),(0.,0.,2.)))
-            
-            s = Site(position=(0.,0.,0.),symbols=['Ba','Ti'],weights=(1.,0.),type='mytype')
-            a.appendSite(s)
-
-            s = Site(position=(0.5,0.5,0.5),symbols=['Ba','Ti'],weights=(0.9,0.1),type='mytype')
-            with self.assertRaises(ValueError):
-                # Shouldn't allow, different weights
-                a.appendSite(s) 
-
-            s = Site(position=(0.5,0.5,0.5),symbols=['Ba','Ti'],weights=(0.8,0.1),type='mytype')
-            with self.assertRaises(ValueError):
-                # Shouldn't allow, different weights (with vacancy)
-                a.appendSite(s) 
-
-            s = Site(position=(0.5,0.5,0.5),symbols=['Ba'],type='mytype')
-            with self.assertRaises(ValueError):
-                # Shouldn't allow, different symbols list
-                a.appendSite(s) 
-
-            s = Site(position=(0.5,0.5,0.5),symbols=['Si','Ti'],weights=(1.,0.),type='mytype')
-            with self.assertRaises(ValueError):
-                # Shouldn't allow, different symbols list
-                a.appendSite(s) 
-
-        def test_type_5(self):
-            """
-            Test the management of types.
-            """
-            a = Sites(cell=((2.,0.,0.),(0.,2.,0.),(0.,0.,2.)))
-            
-            s = Site(position=(0.,0.,0.),symbols='Ba',mass=100.)
-            a.appendSite(s)
-
-            s = Site(position=(0.,0.,0.),symbols='Ti')
-            a.appendSite(s)
-
-            s = Site(position=(0.,0.,0.),symbols='Ti',type='Ti2')
-            a.appendSite(s)
-
-            # Should not complain
-            s = Site(position=(0.,0.,0.),symbols='Ba',mass=150.)
-            a.appendSite(s,reset_type_if_needed=True)
-
-            type_list = a.get_types()
-            # There should be 4 different types
-            self.assertEqual(len(type_list), 4)
-
-            # Type name of the fourth atom
-            self.assertEqual(type_list[3][0],'Ba1')
-            
-
-        def test_get_types(self):
-            """
-            Test the get_types method
-            """
-            a = Sites(cell=((2.,0.,0.),(0.,2.,0.),(0.,0.,2.)))
-            
-            s = Site(position=(0.,0.,0.),symbols=['Ba'])
-            a.appendSite(s)
-
-            s = Site(position=(0.,0.,0.),symbols=['Ba'])
-            a.appendSite(s)
-
-            s = Site(position=(0.,0.,0.),symbols=['Ti'])
-            a.appendSite(s)
-
-            s = Site(position=(0.,0.,0.),symbols=['Ti'], type='Ti2')
-            a.appendSite(s)
-
-            s = Site(position=(0.,0.,0.),symbols=['O'])
-            a.appendSite(s)
-
-            s = Site(position=(0.,0.,0.),symbols=['O'])
-            a.appendSite(s)
-
-            s = Site(position=(0.,0.,0.),symbols=['O'], type='O2')
-            a.appendSite(s)
-
-            s = Site(position=(0.,0.,0.),symbols=['O'], type='O3')
-            a.appendSite(s)
-
-            sites_list = a.sites
-            
-            found_sites = []
-            for the_type, the_sites in a.get_types():
-                for the_site_idx in the_sites:
-                    already_in_list = the_site_idx in found_sites
-                    # Check that a site is not present twice
-                    self.assertFalse(already_in_list)
-                    # Check that we are pointing to a site with correct type
-                    self.assertEqual(the_type, sites_list[the_site_idx].type)
-                    found_sites.append(the_site_idx)
-            
-            # Check that all sites were present
-            self.assertEqual(sorted(found_sites), range(len(a.sites)))
-
-
-    class TestRawSites(unittest.TestCase):
-        """
-        Tests the creation of Sites, converting it to a raw format and
-        converting it back.
-        """
-        def test_to_from_raw(self):
-            """
-            Start from a Sites object, convert to raw and then back
-            """
-            cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
-            a = Sites(cell=cell)
-            out_cell = a.cell
-            
-            a.pbc = [False,True,True]
-
-            s = Site(position=(0.,0.,0.),symbols=['Ba'])
-            a.appendSite(s)
-            s = Site(position=(1.,1.,1.),symbols=['Ti'])
-            a.appendSite(s)
-
-            raw = a.get_raw()           
-            b = Sites(raw)
-            
-            for i in range(3):
-                for j in range(3):
-                    self.assertAlmostEqual(cell[i][j], b.cell[i][j])
-            
-            self.assertEqual(b.pbc, (False,True,True))
-            self.assertEqual(len(b.sites), 2)
-            self.assertEqual(b.sites[0].symbols[0], 'Ba')
-            self.assertEqual(b.sites[1].symbols[0], 'Ti')
-            for i in range(3):
-                self.assertAlmostEqual(b.sites[1].position[i], 1.)
-
-    class TestAseSites(unittest.TestCase):
-        """
-        Tests the creation of Sites from/to a ASE object.
-        """
-        @unittest.skipIf(not _has_ase(),"Unable to import ase")
-        def test_ase(self):
-            import ase
-            a = ase.Atoms('SiGe',cell=(1.,2.,3.),pbc=(True,False,False))
-            a.set_positions(
-                ((0.,0.,0.),
-                 (0.5,0.7,0.9),)
-                )
-            a[1].mass = 110.2
-
-            b = Sites(a)
-            c = b.get_ase()
-
-            self.assertEqual(a[0].symbol, c[0].symbol)
-            self.assertEqual(a[1].symbol, c[1].symbol)
-            for i in range(3):
-                self.assertAlmostEqual(a[0].position[i], c[0].position[i])
-            for i in range(3):
-                for j in range(3):
-                    self.assertAlmostEqual(a.cell[i][j], c.cell[i][j])
-               
-            self.assertAlmostEqual(c[1].mass, 110.2)
-
-    unittest.main()

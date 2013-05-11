@@ -37,11 +37,11 @@ class Daemon(VerdiCommand):
             
         function_to_call()
 
-    def complete(self,*subargs):
-        if len(subargs) == 0:
-            return self.valid_subcommands.keys()
+    def complete(self,subargs_idx, subargs):
+        if subargs_idx == 0:
+            print "\n".join(self.valid_subcommands.keys())
         else:
-            return []
+            print ""
 
     def get_daemon_pid(self):
         """

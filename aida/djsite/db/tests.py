@@ -8,31 +8,44 @@ from django.utils import unittest
 from aida.orm import Node
 from aida.common.exceptions import ModificationNotAllowed
 
-class TransitiveNoLoops(unittest.TestCase):
+class AiidaTestCase(unittest.TestCase):
     """
-    Test the creation of the transitive closure table
+    Automatically takes care of the setUpClass and TearDownClass, when needed.
     """
     @classmethod
     def setUpClass(cls):
         import getpass
         from django.contrib.auth.models import User
+        from aida.orm import Computer
 
-        User.objects.create_user(getpass.getuser(), 'unknown@mail.com', 'fakepwd')
+        cls.user = User.objects.create_user(getpass.getuser(), 'unknown@mail.com', 'fakepwd')
+        cls.computer = Computer(hostname='localhost',
+                                transport_type='ssh',
+                                scheduler_type='pbspro',
+                                workdir='/tmp/aida')
+        cls.computer.store()
 
     @classmethod
     def tearDownClass(cls):
         import getpass
         from django.contrib.auth.models import User
         from django.core.exceptions import ObjectDoesNotExist
+        from aida.djsite.db.models import DbComputer
 
         try:
             User.objects.get(username=getpass.getuser).delete()
         except ObjectDoesNotExist:
             pass
 
+        DbComputer.objects.filter().delete()
+
         from aida.djsite.db.models import DbNode
         DbNode.objects.filter().delete()
 
+class TransitiveNoLoops(AiidaTestCase):
+    """
+    Test the creation of the transitive closure table
+    """
     def test_loop_not_allowed(self):
         n1 = Node().store()
         n2 = Node().store()
@@ -51,32 +64,10 @@ class TransitiveNoLoops(unittest.TestCase):
             src = 4
             dest = 1
 
-class TransitiveClosureDeletion(unittest.TestCase):
+class TransitiveClosureDeletion(AiidaTestCase):
     """
     Test the creation of the transitive closure table
     """
-    @classmethod
-    def setUpClass(cls):
-        import getpass
-        from django.contrib.auth.models import User
-
-        User.objects.create_user(getpass.getuser(), 'unknown@mail.com', 'fakepwd')
-
-    @classmethod
-    def tearDownClass(cls):
-        import getpass
-        from django.contrib.auth.models import User
-        from django.core.exceptions import ObjectDoesNotExist
-
-        try:
-            User.objects.get(username=getpass.getuser).delete()
-        except ObjectDoesNotExist:
-            pass
-
-        from aida.djsite.db.models import DbNode
-        DbNode.objects.filter().delete()
-
-
     def test_creation_and_deletion(self):
         from aida.djsite.db.models import Link # Direct links
         from aida.djsite.db.models import Path # The transitive closure table
@@ -142,33 +133,11 @@ class TransitiveClosureDeletion(unittest.TestCase):
         n3.add_link_to(n4)
         self.assertEquals(len(Path.objects.filter(parent=n1,child=n8).distinct()),1)          
 
-class TestQueryWithAidaObjects(unittest.TestCase):
+class TestQueryWithAidaObjects(AiidaTestCase):
     """
     Test if queries work properly also with aida.orm.Node classes instead of
     aida.djsite.db.models.DbNode objects.
     """
-    @classmethod
-    def setUpClass(cls):
-        import getpass
-        from django.contrib.auth.models import User
-
-        User.objects.create_user(getpass.getuser(), 'unknown@mail.com', 'fakepwd')
-
-    @classmethod
-    def tearDownClass(cls):
-        import getpass
-        from django.contrib.auth.models import User
-        from django.core.exceptions import ObjectDoesNotExist
-
-        try:
-            User.objects.get(username=getpass.getuser).delete()
-        except ObjectDoesNotExist:
-            pass
-
-        from aida.djsite.db.models import DbNode
-        DbNode.objects.filter().delete()
-
-
     def test_get_inputs_and_outputs(self):
         a1 = Node().store()
         a2 = Node().store()        
@@ -264,7 +233,7 @@ class TestQueryWithAidaObjects(unittest.TestCase):
         self.assertEquals(nodes_with_given_attribute[0].uuid,a3.uuid)
 
 
-class TestNodeBasic(unittest.TestCase):
+class TestNodeBasic(AiidaTestCase):
     """
     These tests check the basic features of nodes (setting of attributes, copying of files, ...)
     """
@@ -274,28 +243,8 @@ class TestNodeBasic(unittest.TestCase):
     stringval = "aaaa"
     dictval = {'num': 3, 'something': 'else'}
     listval = [1, "s", True]
-
-    @classmethod
-    def setUpClass(cls):
-        import getpass
-        from django.contrib.auth.models import User
-
-        cls.user = User.objects.create_user(getpass.getuser(), 'unknown@mail.com', 'fakepwd')
-
-    @classmethod
-    def tearDownClass(cls):
-        import getpass
-        from django.contrib.auth.models import User
-        from django.core.exceptions import ObjectDoesNotExist
-
-        try:
-            User.objects.get(username=getpass.getuser).delete()
-        except ObjectDoesNotExist:
-            pass
-
-        from aida.djsite.db.models import DbNode
-        DbNode.objects.filter().delete()
-
+    emptydict = {}
+    emptylist = []
 
     def test_attr_before_storing(self):
         a = Node()
@@ -305,6 +254,8 @@ class TestNodeBasic(unittest.TestCase):
         a.set_attr('k4', self.stringval)
         a.set_attr('k5', self.dictval)
         a.set_attr('k6', self.listval)
+        a.set_attr('k7', self.emptydict)
+        a.set_attr('k8', self.emptylist)
 
         # Now I check if I can retrieve them, before the storage
         self.assertEquals(self.boolval,   a.get_attr('k1'))
@@ -313,6 +264,8 @@ class TestNodeBasic(unittest.TestCase):
         self.assertEquals(self.stringval, a.get_attr('k4'))
         self.assertEquals(self.dictval,   a.get_attr('k5'))
         self.assertEquals(self.listval,   a.get_attr('k6'))
+        self.assertEquals(self.emptydict, a.get_attr('k7'))
+        self.assertEquals(self.emptylist, a.get_attr('k8'))
 
         # And now I try to delete the keys
         a.del_attr('k1')
@@ -321,6 +274,8 @@ class TestNodeBasic(unittest.TestCase):
         a.del_attr('k4')
         a.del_attr('k5')
         a.del_attr('k6')
+        a.del_attr('k7')
+        a.del_attr('k8')
 
         with self.assertRaises(AttributeError):
             # I delete twice the same attribute
@@ -370,6 +325,8 @@ class TestNodeBasic(unittest.TestCase):
             'string': self.stringval,
             'dict': self.dictval,
             'list': self.listval,
+            'emptydict': {},
+            'emptylist': [],
             }
 
         for k,v in attrs_to_set.iteritems():
@@ -833,39 +790,7 @@ class TestNodeBasic(unittest.TestCase):
                            (self.user.username, self.user.email, 'text2'),])
         
         
-class TestSubNodes(unittest.TestCase):
-    
-    @classmethod
-    def setUpClass(cls):
-        import getpass
-        from django.contrib.auth.models import User
-        from aida.orm import Computer
-
-        User.objects.create_user(getpass.getuser(), 'unknown@mail.com', 'fakepwd')
-        cls.computer = Computer(hostname='localhost',
-                                transport_type='ssh',
-                                scheduler_type='pbspro',
-                                workdir='/tmp/aida')
-        cls.computer.store()
-
-    @classmethod
-    def tearDownClass(cls):
-        import getpass
-        from django.contrib.auth.models import User
-        from django.core.exceptions import ObjectDoesNotExist
-        from aida.djsite.db.models import DbComputer
-
-        try:
-            User.objects.get(username=getpass.getuser).delete()
-        except ObjectDoesNotExist:
-            pass
-
-        DbComputer.objects.filter().delete()
-
-        from aida.djsite.db.models import DbNode
-        DbNode.objects.filter().delete()
-
-
+class TestSubNodes(AiidaTestCase):
     def test_set_code(self):
         from aida.orm import Node, Calculation, Data, Code
         from aida.orm import Computer
@@ -1067,42 +992,10 @@ class TestSubNodes(unittest.TestCase):
         with self.assertRaises(ValueError):
             d1.add_link_from(calc2)
 
-class TestCode(unittest.TestCase):
+class TestCode(AiidaTestCase):
     """
     Test the Code class.
-    """    
-    @classmethod
-    def setUpClass(cls):
-        import getpass
-        from django.contrib.auth.models import User
-        from aida.orm import Computer
-
-        User.objects.create_user(getpass.getuser(), 'unknown@mail.com', 'fakepwd')
-        cls.computer = Computer(hostname='localhost',
-                                transport_type='ssh',
-                                scheduler_type='pbspro',
-                                workdir='/tmp/aida')
-        cls.computer.store()
-
-    @classmethod
-    def tearDownClass(cls):
-        import getpass
-        from django.contrib.auth.models import User
-        from django.core.exceptions import ObjectDoesNotExist
-        from aida.djsite.db.models import DbComputer
-
-        try:
-            User.objects.get(username=getpass.getuser).delete()
-        except ObjectDoesNotExist:
-            pass
-
-        DbComputer.objects.filter().delete()
-
-        from aida.djsite.db.models import DbNode
-        DbNode.objects.filter().delete()
-
-        
-        
+    """            
     def test_code_local(self):
         import tempfile
 
@@ -1174,33 +1067,11 @@ class TestCode(unittest.TestCase):
         self.assertTrue(code.can_run_on(self.computer))         
         self.assertFalse(code.can_run_on('another.computer.com'))
         
-class TestSinglefileData(unittest.TestCase):
+class TestSinglefileData(AiidaTestCase):
     """
     Test the SinglefileData class.
     """    
-    @classmethod
-    def setUpClass(cls):
-        import getpass
-        from django.contrib.auth.models import User
-
-        User.objects.create_user(getpass.getuser(), 'unknown@mail.com', 'fakepwd')
-
-    @classmethod
-    def tearDownClass(cls):
-        import getpass
-        from django.contrib.auth.models import User
-        from django.core.exceptions import ObjectDoesNotExist
-
-        try:
-            User.objects.get(username=getpass.getuser).delete()
-        except ObjectDoesNotExist:
-            pass
-
-        from aida.djsite.db.models import DbNode
-        DbNode.objects.filter().delete()
-
-        
-    def test_reload(self):
+    def test_reload_singlefiledata(self):
         import os
         import tempfile
 
@@ -1235,4 +1106,750 @@ class TestSinglefileData(unittest.TestCase):
         self.assertEquals(b.get_path_list(),[basename])
         with open(b.get_abs_path(basename)) as f:
             self.assertEquals(f.read(), file_content)
+
+class SiteValidSymbols(AiidaTestCase):
+    """
+    Tests the symbol validation of the aida.orm.dataplugins.structure.Site class.
+    """
+    def test_bad_symbol(self):
+        """
+        Should not accept a non-existing symbol.
+        """
+        from aida.orm.dataplugins.structure import validate_symbols_tuple
+
+        with self.assertRaises(ValueError):
+            validate_symbols_tuple(['Hxx'])
+    
+    def test_empty_list_symbols(self):
+        """
+        Should not accept an empty list
+        """
+        from aida.orm.dataplugins.structure import validate_symbols_tuple
+
+        with self.assertRaises(ValueError):
+            validate_symbols_tuple([])
+    
+    def test_valid_list(self):
+        """
+        Should not raise any error.
+        """
+        from aida.orm.dataplugins.structure import validate_symbols_tuple
+
+        validate_symbols_tuple(['H','He'])
+
+class SiteValidWeights(AiidaTestCase):
+    """
+    Tests valid weight lists.
+    """        
+    def test_isnot_list(self):
+        """
+        Should not accept a non-list, non-number weight
+        """
+        from aida.orm.dataplugins.structure import Site
+
+        with self.assertRaises(ValueError):
+            a = Site(position=(0.,0.,0.),symbols='Ba',weights='aaa')
+    
+    def test_empty_list_weights(self):
+        """
+        Should not accept an empty list
+        """
+        from aida.orm.dataplugins.structure import Site
+
+        with self.assertRaises(ValueError):
+            a = Site(position=(0.,0.,0.),symbols='Ba',weights=[])
+
+    def test_symbol_weight_mismatch(self):
+        """
+        Should not accept a size mismatch of the symbols and weights
+        list.
+        """
+        from aida.orm.dataplugins.structure import Site
+
+        with self.assertRaises(ValueError):
+            a = Site(position=(0.,0.,0.),symbols=['Ba','C'],weights=[1.])
+
+        with self.assertRaises(ValueError):
+            a = Site(position=(0.,0.,0.),symbols=['Ba'],weights=[0.1,0.2])
+
+    def test_negative_value(self):
+        """
+        Should not accept a negative weight
+        """
+        from aida.orm.dataplugins.structure import Site
+
+        with self.assertRaises(ValueError):
+            a = Site(position=(0.,0.,0.),symbols=['Ba','C'],weights=[-0.1,0.3])
+
+    def test_sum_greater_one(self):
+        """
+        Should not accept a sum of weights larger than one
+        """
+        from aida.orm.dataplugins.structure import Site
+
+        with self.assertRaises(ValueError):
+            a = Site(position=(0.,0.,0.),symbols=['Ba','C'],
+                     weights=[0.5,0.6])
+
+    def test_sum_one_weights(self):
+        """
+        Should accept a sum equal to one
+        """
+        from aida.orm.dataplugins.structure import Site
+
+        a = Site(position=(0.,0.,0.),symbols=['Ba','C'],
+                 weights=[1./3.,2./3.])
+
+    def test_sum_less_one_weights(self):
+        """
+        Should accept a sum equal less than one
+        """
+        from aida.orm.dataplugins.structure import Site
+
+        a = Site(position=(0.,0.,0.),symbols=['Ba','C'],
+                 weights=[1./3.,1./3.])
+    
+    def test_none(self):
+        """
+        Should accept None.
+        """
+        from aida.orm.dataplugins.structure import Site
+
+        a = Site(position=(0.,0.,0.),symbols='Ba',weights=None)
+
+
+class SiteTestGeneral(AiidaTestCase):
+    """
+    Tests the creation of Site objects and their methods.
+    """
+    def test_sum_one_general(self):
+        """
+        Should accept a sum equal to one
+        """
+        from aida.orm.dataplugins.structure import Site
+
+        a = Site(position=(0.,0.,0.),symbols=['Ba','C'],
+                 weights=[1./3.,2./3.])
+        self.assertTrue(a.is_alloy())
+        self.assertFalse(a.has_vacancies())
+
+    def test_sum_less_one_general(self):
+        """
+        Should accept a sum equal less than one
+        """
+        from aida.orm.dataplugins.structure import Site
+
+        a = Site(position=(0.,0.,0.),symbols=['Ba','C'],
+                 weights=[1./3.,1./3.])
+        self.assertTrue(a.is_alloy())
+        self.assertTrue(a.has_vacancies())
+    
+    def test_simple(self):
+        """
+        Should recognize a simple element.
+        """
+        from aida.orm.dataplugins.structure import Site
+
+        a = Site(position=(0.,0.,0.),symbols='Ba',weights=None)
+        self.assertFalse(a.is_alloy())
+        self.assertFalse(a.has_vacancies())
+
+        b = Site(position=(0.,0.,0.),symbols='Ba',weights=1.)
+        self.assertFalse(b.is_alloy())
+        self.assertFalse(b.has_vacancies())
+
+    def test_automatic_type(self):
+        """
+        Check the automatic type generator.
+        """
+        from aida.orm.dataplugins.structure import Site
+
+        a = Site(position=(0.,0.,0.),symbols='Ba')
+        self.assertEqual(a.type,'Ba')
+
+        a = Site(position=(0.,0.,0.),symbols=('Si','Ge'),weights=(1./3.,2./3.))
+        self.assertEqual(a.type,'GeSi')
+
+        a = Site(position=(0.,0.,0.),symbols=('Si','Ge'),weights=(0.4,0.5))
+        self.assertEqual(a.type,'GeSiX')
+        
+        a.type = 'newstring'
+        self.assertEqual(a.type,'newstring')
+
+class SiteTestMasses(AiidaTestCase):
+    """
+    Tests the management of masses during the creation of Site objects.
+    """
+    def test_auto_mass_one(self):
+        """
+        mass for elements with sum one
+        """
+        from aida.orm.dataplugins.structure import Site, _atomic_masses
+
+        a = Site(position=(0.,0.,0.),symbols=['Ba','C'],
+                          weights=[1./3.,2./3.])
+        self.assertAlmostEqual(a.mass, 
+                               (_atomic_masses['Ba'] + 
+                                2.* _atomic_masses['C'])/3.)
+
+    def test_sum_less_one_masses(self):
+        """
+        mass for elements with sum less than one
+        """
+        from aida.orm.dataplugins.structure import Site, _atomic_masses
+
+        a = Site(position=(0.,0.,0.),symbols=['Ba','C'],
+                 weights=[1./3.,1./3.])
+        self.assertAlmostEqual(a.mass, 
+                               (_atomic_masses['Ba'] + 
+                                _atomic_masses['C'])/2.)
+
+    def test_sum_less_one_singleelem(self):
+        """
+        mass for a single element
+        """
+        from aida.orm.dataplugins.structure import Site, _atomic_masses
+
+        a = Site(position=(0.,0.,0.),symbols=['Ba'])
+        self.assertAlmostEqual(a.mass, 
+                               _atomic_masses['Ba'])
+        
+    def test_manual_mass(self):
+        """
+        mass set manually
+        """
+        from aida.orm.dataplugins.structure import Site
+
+        a = Site(position=(0.,0.,0.),symbols=['Ba','C'],
+                 weights=[1./3.,1./3.],
+                 mass = 1000.)
+        self.assertAlmostEqual(a.mass, 1000.)
+
+
+class TestStructureDataInit(AiidaTestCase):
+    """
+    Tests the creation of StructureData objects (cell and pbc).
+    """
+    def test_cell_wrong_size_1(self):
+        """
+        Wrong cell size (not 3x3)
+        """
+        from aida.orm.dataplugins.structure import StructureData
+
+        with self.assertRaises(ValueError):
+            a = StructureData(cell=((1.,2.,3.),))
+
+    def test_cell_wrong_size_2(self):
+        """
+        Wrong cell size (not 3x3)
+        """
+        from aida.orm.dataplugins.structure import StructureData
+
+        with self.assertRaises(ValueError):
+            a = StructureData(cell=((1.,0.,0.),(0.,0.,3.),(0.,3.)))
+
+    def test_cell_zero_vector(self):
+        """
+        Wrong cell (one vector has zero length)
+        """
+        from aida.orm.dataplugins.structure import StructureData
+
+        with self.assertRaises(ValueError):
+            a = StructureData(cell=((0.,0.,0.),(0.,1.,0.),(0.,0.,1.)))
+
+    def test_cell_zero_volume(self):
+        """
+        Wrong cell (volume is zero)
+        """
+        from aida.orm.dataplugins.structure import StructureData
+
+        with self.assertRaises(ValueError):
+            a = StructureData(cell=((1.,0.,0.),(0.,1.,0.),(1.,1.,0.)))
+
+    def test_cell_ok_init(self):
+        """
+        Correct cell
+        """
+        from aida.orm.dataplugins.structure import StructureData
+
+        cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
+        a = StructureData(cell=cell)
+        out_cell = a.cell
+        
+        for i in range(3):
+            for j in range(3):
+                self.assertAlmostEqual(cell[i][j],out_cell[i][j])
+    
+    def test_volume(self):
+        """
+        Check the volume calculation
+        """
+        from aida.orm.dataplugins.structure import StructureData
+
+        a = StructureData(cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.)))
+        self.assertAlmostEqual(a.get_cell_volume(), 6.)
+
+    def test_wrong_pbc_1(self):
+        """
+        Wrong pbc parameter (not bool or iterable)
+        """
+        from aida.orm.dataplugins.structure import StructureData
+
+        with self.assertRaises(ValueError):
+            cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
+            a = StructureData(cell=cell,pbc=1)
+
+    def test_wrong_pbc_2(self):
+        """
+        Wrong pbc parameter (iterable but with wrong len)
+        """
+        from aida.orm.dataplugins.structure import StructureData
+
+        with self.assertRaises(ValueError):
+            cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
+            a = StructureData(cell=cell,pbc=[True,True])
+
+    def test_wrong_pbc_3(self):
+        """
+        Wrong pbc parameter (iterable but with wrong len)
+        """
+        from aida.orm.dataplugins.structure import StructureData
+
+        with self.assertRaises(ValueError):
+            cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
+            a = StructureData(cell=cell,pbc=[])
+
+    def test_ok_pbc_1(self):
+        """
+        Single pbc value
+        """
+        from aida.orm.dataplugins.structure import StructureData
+
+        cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
+        a = StructureData(cell=cell,pbc=True)
+        self.assertEquals(a.pbc,tuple([True,True,True]))
+
+        a = StructureData(cell=cell,pbc=False)
+        self.assertEquals(a.pbc,tuple([False,False,False]))
+
+    def test_ok_pbc_2(self):
+        """
+        One-element list
+        """
+        from aida.orm.dataplugins.structure import StructureData
+
+        cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
+        a = StructureData(cell=cell,pbc=[True])
+        self.assertEqual(a.pbc,tuple([True,True,True]))
+
+        a = StructureData(cell=cell,pbc=[False])
+        self.assertEqual(a.pbc,tuple([False,False,False]))
+
+    def test_ok_pbc_3(self):
+        """
+        Three-element list
+        """
+        from aida.orm.dataplugins.structure import StructureData
+
+        cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
+        a = StructureData(cell=cell,pbc=[True,False,True])
+        self.assertEqual(a.pbc,tuple([True,False,True]))
+
+class TestStructureData(AiidaTestCase):
+    """
+    Tests the creation of StructureData objects (cell and pbc).
+    """
+
+    def test_cell_ok(self):
+        """
+        Test the creation of a cell and the appending of sites
+        """
+        from aida.orm.dataplugins.structure import StructureData, Site
+
+        cell = ((2.,0.,0.),(0.,2.,0.),(0.,0.,2.))
+        a = StructureData(cell=cell)
+        out_cell = a.cell
+        
+        s = Site(position=(0.,0.,0.),symbols=['Ba'])
+        a.append_site(s)
+        s = Site(position=(1.,1.,1.),symbols=['Ti'])
+        a.append_site(s)
+        self.assertFalse(a.is_alloy())
+        self.assertFalse(a.has_vacancies())
+
+        s= Site(position=(0.5,1.,1.5), symbols=['O', 'C'], 
+                         weights=[0.5,0.5])
+        a.append_site(s)
+        self.assertTrue(a.is_alloy())
+        self.assertFalse(a.has_vacancies())
+
+        s= Site(position=(0.5,1.,1.5), symbols=['O'], weights=[0.5])
+        a.append_site(s)
+        self.assertTrue(a.is_alloy())
+        self.assertTrue(a.has_vacancies())
+
+        a.clear_sites()
+        a.append_site(s)
+        self.assertFalse(a.is_alloy())
+        self.assertTrue(a.has_vacancies())
+
+    def test_type_1(self):
+        """
+        Test the management of types.
+        """
+        from aida.orm.dataplugins.structure import StructureData, Site
+
+        a = StructureData(cell=((2.,0.,0.),(0.,2.,0.),(0.,0.,2.)))
+        
+        s = Site(position=(0.,0.,0.),symbols=['Ba'])
+        a.append_site(s)
+        s = Site(position=(0.5,0.5,0.5),symbols=['Ba'])
+        a.append_site(s)
+        # Shouldn't complain, I added twice the same atom, with same mass etc.
+        s = Site(position=(1.,1.,1.),symbols=['Ti'])
+        a.append_site(s)
+        
+        type_list = a.get_types()
+        self.assertEqual(len(type_list),2) # I should only have two types
+
+    def test_type_2(self):
+        """
+        Test the management of types.
+        """
+        from aida.orm.dataplugins.structure import StructureData, Site
+
+        a = StructureData(cell=((2.,0.,0.),(0.,2.,0.),(0.,0.,2.)))
+        
+        s = Site(position=(0.,0.,0.),symbols=['Ba'],type='Ba1')
+        a.append_site(s)
+        s = Site(position=(0.5,0.5,0.5),symbols=['Ba'],type='Ba2')
+        a.append_site(s)
+        s = Site(position=(1.,1.,1.),symbols=['Ti'])
+        a.append_site(s)
+        
+        type_list = a.get_types()
+        self.assertEqual(len(type_list),3) # I should have now three types
+        # i[0] is the type name, while i[0] is the list of indices
+        self.assertEqual(set(i[0] for i in type_list), set(('Ba1', 'Ba2', 'Ti')))
+
+    def test_type_3(self):
+        """
+        Test the management of types.
+        """
+        from aida.orm.dataplugins.structure import StructureData, Site
+
+        a = StructureData(cell=((2.,0.,0.),(0.,2.,0.),(0.,0.,2.)))
+        
+        s = Site(position=(0.,0.,0.),symbols=['Ba'],mass=100.)
+        a.append_site(s)
+        s = Site(position=(0.5,0.5,0.5),symbols=['Ba'],mass=101.)
+        with self.assertRaises(ValueError):
+            # Shouldn't allow, I am adding two sites with the same automatic tag 'Ba'
+            # but with different masses
+            a.append_site(s) 
+
+        # now it should work
+        s = Site(position=(0.5,0.5,0.5),symbols=['Ba'],mass=101.,type='Ba2')
+        a.append_site(s) 
+            
+        s = Site(position=(1.,1.,1.),symbols=['Ti'])
+        a.append_site(s)
+        
+        type_list = a.get_types()
+        self.assertEqual(len(type_list),3) # I should have now three types
+        self.assertEqual(set(i[0] for i in type_list), set(('Ba', 'Ba2', 'Ti')))
+
+    def test_type_4(self):
+        """
+        Test the management of types.
+        """
+        from aida.orm.dataplugins.structure import StructureData, Site
+
+        a = StructureData(cell=((2.,0.,0.),(0.,2.,0.),(0.,0.,2.)))
+        
+        s = Site(position=(0.,0.,0.),symbols=['Ba','Ti'],weights=(1.,0.),type='mytype')
+        a.append_site(s)
+
+        s = Site(position=(0.5,0.5,0.5),symbols=['Ba','Ti'],weights=(0.9,0.1),type='mytype')
+        with self.assertRaises(ValueError):
+            # Shouldn't allow, different weights
+            a.append_site(s) 
+
+        s = Site(position=(0.5,0.5,0.5),symbols=['Ba','Ti'],weights=(0.8,0.1),type='mytype')
+        with self.assertRaises(ValueError):
+            # Shouldn't allow, different weights (with vacancy)
+            a.append_site(s) 
+
+        s = Site(position=(0.5,0.5,0.5),symbols=['Ba'],type='mytype')
+        with self.assertRaises(ValueError):
+            # Shouldn't allow, different symbols list
+            a.append_site(s) 
+
+        s = Site(position=(0.5,0.5,0.5),symbols=['Si','Ti'],weights=(1.,0.),type='mytype')
+        with self.assertRaises(ValueError):
+            # Shouldn't allow, different symbols list
+            a.append_site(s) 
+
+    def test_type_5(self):
+        """
+        Test the management of types.
+        """
+        from aida.orm.dataplugins.structure import StructureData, Site
+
+        a = StructureData(cell=((2.,0.,0.),(0.,2.,0.),(0.,0.,2.)))
+        
+        s = Site(position=(0.,0.,0.),symbols='Ba',mass=100.)
+        a.append_site(s)
+
+        s = Site(position=(0.,0.,0.),symbols='Ti')
+        a.append_site(s)
+
+        s = Site(position=(0.,0.,0.),symbols='Ti',type='Ti2')
+        a.append_site(s)
+
+        # Should not complain
+        s = Site(position=(0.,0.,0.),symbols='Ba',mass=150.)
+        a.append_site(s,reset_type_if_needed=True)
+
+        type_list = a.get_types()
+        # There should be 4 different types
+        self.assertEqual(len(type_list), 4)
+
+        # Type name of the fourth atom
+        self.assertEqual(type_list[3][0],'Ba1')
+        
+
+    def test_get_types(self):
+        """
+        Test the get_types method
+        """
+        from aida.orm.dataplugins.structure import StructureData, Site
+
+        a = StructureData(cell=((2.,0.,0.),(0.,2.,0.),(0.,0.,2.)))
+        
+        s = Site(position=(0.,0.,0.),symbols=['Ba'])
+        a.append_site(s)
+
+        s = Site(position=(0.,0.,0.),symbols=['Ba'])
+        a.append_site(s)
+
+        s = Site(position=(0.,0.,0.),symbols=['Ti'])
+        a.append_site(s)
+
+        s = Site(position=(0.,0.,0.),symbols=['Ti'], type='Ti2')
+        a.append_site(s)
+
+        s = Site(position=(0.,0.,0.),symbols=['O'])
+        a.append_site(s)
+
+        s = Site(position=(0.,0.,0.),symbols=['O'])
+        a.append_site(s)
+
+        s = Site(position=(0.,0.,0.),symbols=['O'], type='O2')
+        a.append_site(s)
+
+        s = Site(position=(0.,0.,0.),symbols=['O'], type='O3')
+        a.append_site(s)
+
+        sites_list = a.sites
+        
+        found_sites = []
+        for the_type, the_sites in a.get_types():
+            for the_site_idx in the_sites:
+                already_in_list = the_site_idx in found_sites
+                # Check that a site is not present twice
+                self.assertFalse(already_in_list)
+                # Check that we are pointing to a site with correct type
+                self.assertEqual(the_type, sites_list[the_site_idx].type)
+                found_sites.append(the_site_idx)
+        
+        # Check that all sites were present
+        self.assertEqual(sorted(found_sites), range(len(a.sites)))
+
+class TestStructureDataLock(AiidaTestCase):
+    """
+    Tests that the structure is locked after storage
+    """
+    def test_lock(self):
+        """
+        Start from a StructureData object, convert to raw and then back
+        """
+        from aida.orm.dataplugins.structure import StructureData, Site
+        from aida.common.exceptions import ModificationNotAllowed
+
+        cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
+        a = StructureData(cell=cell)
+        out_cell = a.cell
+        
+        a.pbc = [False,True,True]
+
+        s = Site(position=(0.,0.,0.),symbols=['Ba'])
+        a.append_site(s)
+        s = Site(position=(1.,1.,1.),symbols=['Ti'])
+        a.append_site(s)
+
+        a.store()
+
+        # Nothing should be changed after store()
+        with self.assertRaises(ModificationNotAllowed):
+            a.append_site(s)
+        with self.assertRaises(ModificationNotAllowed):
+            a.clear_sites()
+        with self.assertRaises(ModificationNotAllowed):
+            a.cell = cell
+        with self.assertRaises(ModificationNotAllowed):
+            a.pbc = [True,True,True]
+
+        _ = a.get_cell_volume()
+        _ = a.is_alloy()
+        _ = a.has_vacancies()
+
+        b = a.copy()
+        # I check that I can edit after copy
+        b.append_site(s)
+        b.clear_sites()
+        b.cell = cell
+        b.pbc = [True,True,True]
+
+class TestStructureDataReload(AiidaTestCase):
+    """
+    Tests the creation of StructureData, converting it to a raw format and
+    converting it back.
+    """
+    def test_reload(self):
+        """
+        Start from a StructureData object, convert to raw and then back
+        """
+        from aida.orm.dataplugins.structure import StructureData, Site
+
+        cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
+        a = StructureData(cell=cell)
+        out_cell = a.cell
+        
+        a.pbc = [False,True,True]
+
+        s = Site(position=(0.,0.,0.),symbols=['Ba'])
+        a.append_site(s)
+        s = Site(position=(1.,1.,1.),symbols=['Ti'])
+        a.append_site(s)
+
+        a.store()
+
+        b = StructureData(uuid=a.uuid)
+        
+        for i in range(3):
+            for j in range(3):
+                self.assertAlmostEqual(cell[i][j], b.cell[i][j])
+        
+        self.assertEqual(b.pbc, (False,True,True))
+        self.assertEqual(len(b.sites), 2)
+        self.assertEqual(b.sites[0].symbols[0], 'Ba')
+        self.assertEqual(b.sites[1].symbols[0], 'Ti')
+        for i in range(3):
+            self.assertAlmostEqual(b.sites[1].position[i], 1.)
+
+    def test_copy(self):
+        """
+        Start from a StructureData object, convert to raw and then back
+        """
+        from aida.orm.dataplugins.structure import StructureData, Site
+
+        cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
+        a = StructureData(cell=cell)
+        out_cell = a.cell
+        
+        a.pbc = [False,True,True]
+
+        s = Site(position=(0.,0.,0.),symbols=['Ba'])
+        a.append_site(s)
+        s = Site(position=(1.,1.,1.),symbols=['Ti'])
+        a.append_site(s)
+
+        b = a.copy()        
+        
+        for i in range(3):
+            for j in range(3):
+                self.assertAlmostEqual(cell[i][j], b.cell[i][j])
+        
+        self.assertEqual(b.pbc, (False,True,True))
+        self.assertEqual(len(b.sites), 2)
+        self.assertEqual(b.sites[0].symbols[0], 'Ba')
+        self.assertEqual(b.sites[1].symbols[0], 'Ti')
+        for i in range(3):
+            self.assertAlmostEqual(b.sites[1].position[i], 1.)
+
+        a.store()
+
+        # Copy after store()
+        c = a.copy()
+        for i in range(3):
+            for j in range(3):
+                self.assertAlmostEqual(cell[i][j], c.cell[i][j])
+        
+        self.assertEqual(c.pbc, (False,True,True))
+        self.assertEqual(len(c.sites), 2)
+        self.assertEqual(c.sites[0].symbols[0], 'Ba')
+        self.assertEqual(c.sites[1].symbols[0], 'Ti')
+        for i in range(3):
+            self.assertAlmostEqual(c.sites[1].position[i], 1.)
+
+class TestStructureDataFromAse(AiidaTestCase):
+    """
+    Tests the creation of Sites from/to a ASE object.
+    """
+    from aida.orm.dataplugins.structure import has_ase
+
+    @unittest.skipIf(not has_ase(),"Unable to import ase")
+    def test_ase(self):
+        from aida.orm.dataplugins.structure import StructureData
+        import ase
+
+        a = ase.Atoms('SiGe',cell=(1.,2.,3.),pbc=(True,False,False))
+        a.set_positions(
+            ((0.,0.,0.),
+             (0.5,0.7,0.9),)
+            )
+        a[1].mass = 110.2
+
+        b = StructureData(ase=a)
+        c = b.get_ase()
+
+        self.assertEqual(a[0].symbol, c[0].symbol)
+        self.assertEqual(a[1].symbol, c[1].symbol)
+        for i in range(3):
+            self.assertAlmostEqual(a[0].position[i], c[0].position[i])
+        for i in range(3):
+            for j in range(3):
+                self.assertAlmostEqual(a.cell[i][j], c.cell[i][j])
+           
+        self.assertAlmostEqual(c[1].mass, 110.2)
+
+    @unittest.skipIf(not has_ase(),"Unable to import ase")
+    def test_conversion_of_types(self):
+        from aida.orm.dataplugins.structure import StructureData
+        import ase
+
+        a = ase.Atoms('Si4Ge4',cell=(1.,2.,3.),pbc=(True,False,False))
+        a.set_positions(
+            ((0.0,0.0,0.0),
+             (0.1,0.1,0.1),
+             (0.2,0.2,0.2),
+             (0.3,0.3,0.3),
+             (0.4,0.4,0.4),
+             (0.5,0.5,0.5),
+             (0.6,0.6,0.6),
+             (0.7,0.7,0.7),
+             )
+            )
+
+        a.set_tags((0,1,2,3,4,5,6,7))
+
+        b = StructureData(ase=a)
+        c = b.get_ase()
+
+        a_tags = list(a.get_tags())
+        c_tags = list(c.get_tags())
+        self.assertEqual(a_tags, c_tags)
+
+        # TODO: implement this
 

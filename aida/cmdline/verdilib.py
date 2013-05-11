@@ -234,7 +234,11 @@ class Test(VerdiCommand):
     """
 
     # TODO: add all test folders
-    allowed_test_folders = ['aida.scheduler', 'aida.transport']
+    allowed_test_folders = [
+        'aida.scheduler', 
+        'aida.transport',
+        'aida.common',
+        ]
 
     def run(self,*args):
         import unittest
@@ -546,7 +550,7 @@ def exec_from_cmdline(argv):
     # Retrieve the list of commands
     verdilib_namespace = verdilib.__dict__
 
-    list_commands ={k.lower(): v for k, v in verdilib_namespace.iteritems()
+    list_commands ={v.get_command_name(): v for k, v in verdilib_namespace.iteritems()
                     if inspect.isclass(v) and not v==VerdiCommand and 
                     issubclass(v,VerdiCommand)}
 

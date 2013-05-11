@@ -2,9 +2,9 @@ class VerdiCommand(object):
     """
     This command has no documentation yet.
     """
-    @property
-    def command_name(self):
-        return self.__class__.__name__.lower()
+    @classmethod
+    def get_command_name(cls):
+        return cls.__name__.lower()
     
     def run(self,*args):
         """

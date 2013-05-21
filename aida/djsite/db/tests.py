@@ -56,13 +56,8 @@ class TransitiveNoLoops(AiidaTestCase):
         n2.add_link_to(n3)
         n3.add_link_to(n4)
 
-        from aida.djsite.db.models import Path
-
         with self.assertRaises(ValueError): # This would generate a loop
             n4.add_link_to(n1)
-
-            src = 4
-            dest = 1
 
 class TransitiveClosureDeletion(AiidaTestCase):
     """
@@ -792,10 +787,8 @@ class TestNodeBasic(AiidaTestCase):
         
 class TestSubNodes(AiidaTestCase):
     def test_set_code(self):
-        from aida.orm import Node, Calculation, Data, Code
-        from aida.orm import Computer
-        from aida.common.pluginloader import load_plugin
-        from aida.djsite.db.models import DbComputer
+        from aida.orm import Calculation, Code
+        #from aida.common.pluginloader import load_plugin
         
         code = Code(remote_machine_exec=('localhost','/bin/true'),
                     input_plugin='simple_plugins.template_replacer')#.store()
@@ -824,8 +817,6 @@ class TestSubNodes(AiidaTestCase):
         
 
     def test_links_label_constraints(self):
-        from aida.orm import Node
-
         n1 = Node().store()
         n2 = Node().store()
         n3 = Node().store()
@@ -847,10 +838,6 @@ class TestSubNodes(AiidaTestCase):
 
 
     def test_links_label_autogenerator(self):
-        from django.db import transaction
-
-        from aida.orm import Node
-
         n1 = Node().store()
         n2 = Node().store()
         n3 = Node().store()
@@ -877,7 +864,7 @@ class TestSubNodes(AiidaTestCase):
     def test_valid_links(self):
         import tempfile
 
-        from aida.orm import Node, Calculation, Data, Code
+        from aida.orm import Calculation, Data, Code
         from aida.orm import Computer
         from aida.common.pluginloader import load_plugin
         from aida.djsite.db.models import DbComputer
@@ -897,7 +884,7 @@ class TestSubNodes(AiidaTestCase):
 
         with self.assertRaises(ValueError):
             # I need to save the localhost entry first
-            calc = Calculation(computer=unsavedcomputer,
+            _ = Calculation(computer=unsavedcomputer,
                 num_nodes=1,num_cpus_per_node=1).store()
 
         # I check both with a string or with an object
@@ -908,7 +895,7 @@ class TestSubNodes(AiidaTestCase):
         with self.assertRaises(TypeError):
             # I don't want to call it with things that are neither
             # strings nor Computer instances
-            calc3 = Calculation(computer=1,
+            _ = Calculation(computer=1,
                 num_nodes=1,num_cpus_per_node=1).store()
         
         d1.add_link_to(calc)
@@ -969,7 +956,7 @@ class TestSubNodes(AiidaTestCase):
         """
         Each data node can only have one input calculation
         """
-        from aida.orm import Node, Calculation, Data, Code
+        from aida.orm import Calculation, Data
         from aida.common.datastructures import calcStates
 
         d1 = Data().store()
@@ -1027,22 +1014,22 @@ class TestCode(AiidaTestCase):
 
         with self.assertRaises(ValueError):
             # remote_machine_exec has length 2 but is not a list or tuple
-            code = Code(remote_machine_exec='ab',
+            _ = Code(remote_machine_exec='ab',
                         input_plugin='simple_plugins.template_replacer')
 
         # invalid code path
         with self.assertRaises(ValueError):
-            code = Code(remote_machine_exec=('localhost', ''),
+            _ = Code(remote_machine_exec=('localhost', ''),
                         input_plugin='simple_plugins.template_replacer')
 
         # Relative path is invalid for remote code
         with self.assertRaises(ValueError):
-            code = Code(remote_machine_exec=('localhost', 'subdir/run.exe'),
+            _ = Code(remote_machine_exec=('localhost', 'subdir/run.exe'),
                         input_plugin='simple_plugins.template_replacer')
 
         # No input plugin specified
         with self.assertRaises(ValueError):
-            code = Code(remote_machine_exec=('localhost', 'subdir/run.exe'))
+            _ = Code(remote_machine_exec=('localhost', 'subdir/run.exe'))
         
         code = Code(remote_machine_exec=('localhost', '/bin/ls'),
                     input_plugin='simple_plugins.template_replacer')
@@ -1107,35 +1094,35 @@ class TestSinglefileData(AiidaTestCase):
         with open(b.get_abs_path(basename)) as f:
             self.assertEquals(f.read(), file_content)
 
-class SiteValidSymbols(AiidaTestCase):
+class KindValidSymbols(AiidaTestCase):
     """
-    Tests the symbol validation of the aida.orm.dataplugins.structure.Site class.
+    Tests the symbol validation of the aida.orm.dataplugins.structure.Kind class.
     """
     def test_bad_symbol(self):
         """
         Should not accept a non-existing symbol.
         """
-        from aida.orm.dataplugins.structure import validate_symbols_tuple
+        from aida.orm.dataplugins.structure import Kind
 
         with self.assertRaises(ValueError):
-            validate_symbols_tuple(['Hxx'])
+            _ = Kind(symbols='Hxx')
     
     def test_empty_list_symbols(self):
         """
         Should not accept an empty list
         """
-        from aida.orm.dataplugins.structure import validate_symbols_tuple
+        from aida.orm.dataplugins.structure import Kind
 
         with self.assertRaises(ValueError):
-            validate_symbols_tuple([])
+            _ = Kind(symbols=[])
     
     def test_valid_list(self):
         """
         Should not raise any error.
         """
-        from aida.orm.dataplugins.structure import validate_symbols_tuple
+        from aida.orm.dataplugins.structure import Kind
 
-        validate_symbols_tuple(['H','He'])
+        _ = Kind(symbols=['H','He'],weights=[0.5,0.5])
 
 class SiteValidWeights(AiidaTestCase):
     """
@@ -1145,90 +1132,90 @@ class SiteValidWeights(AiidaTestCase):
         """
         Should not accept a non-list, non-number weight
         """
-        from aida.orm.dataplugins.structure import Site
+        from aida.orm.dataplugins.structure import Kind
 
         with self.assertRaises(ValueError):
-            a = Site(position=(0.,0.,0.),symbols='Ba',weights='aaa')
+            _ = Kind(symbols='Ba',weights='aaa')
     
     def test_empty_list_weights(self):
         """
         Should not accept an empty list
         """
-        from aida.orm.dataplugins.structure import Site
+        from aida.orm.dataplugins.structure import Kind
 
         with self.assertRaises(ValueError):
-            a = Site(position=(0.,0.,0.),symbols='Ba',weights=[])
+            _ = Kind(symbols='Ba',weights=[])
 
     def test_symbol_weight_mismatch(self):
         """
         Should not accept a size mismatch of the symbols and weights
         list.
         """
-        from aida.orm.dataplugins.structure import Site
+        from aida.orm.dataplugins.structure import Kind
 
         with self.assertRaises(ValueError):
-            a = Site(position=(0.,0.,0.),symbols=['Ba','C'],weights=[1.])
+            _ = Kind(symbols=['Ba','C'],weights=[1.])
 
         with self.assertRaises(ValueError):
-            a = Site(position=(0.,0.,0.),symbols=['Ba'],weights=[0.1,0.2])
+            _ = Kind(symbols=['Ba'],weights=[0.1,0.2])
 
     def test_negative_value(self):
         """
         Should not accept a negative weight
         """
-        from aida.orm.dataplugins.structure import Site
+        from aida.orm.dataplugins.structure import Kind
 
         with self.assertRaises(ValueError):
-            a = Site(position=(0.,0.,0.),symbols=['Ba','C'],weights=[-0.1,0.3])
+            _ = Kind(symbols=['Ba','C'],weights=[-0.1,0.3])
 
     def test_sum_greater_one(self):
         """
         Should not accept a sum of weights larger than one
         """
-        from aida.orm.dataplugins.structure import Site
+        from aida.orm.dataplugins.structure import Kind
 
         with self.assertRaises(ValueError):
-            a = Site(position=(0.,0.,0.),symbols=['Ba','C'],
+            _ = Kind(symbols=['Ba','C'],
                      weights=[0.5,0.6])
 
     def test_sum_one_weights(self):
         """
         Should accept a sum equal to one
         """
-        from aida.orm.dataplugins.structure import Site
+        from aida.orm.dataplugins.structure import Kind
 
-        a = Site(position=(0.,0.,0.),symbols=['Ba','C'],
+        _ = Kind(symbols=['Ba','C'],
                  weights=[1./3.,2./3.])
 
     def test_sum_less_one_weights(self):
         """
         Should accept a sum equal less than one
         """
-        from aida.orm.dataplugins.structure import Site
+        from aida.orm.dataplugins.structure import Kind
 
-        a = Site(position=(0.,0.,0.),symbols=['Ba','C'],
+        _ = Kind(symbols=['Ba','C'],
                  weights=[1./3.,1./3.])
     
     def test_none(self):
         """
         Should accept None.
         """
-        from aida.orm.dataplugins.structure import Site
+        from aida.orm.dataplugins.structure import Kind
 
-        a = Site(position=(0.,0.,0.),symbols='Ba',weights=None)
+        _ = Kind(symbols='Ba',weights=None)
 
 
-class SiteTestGeneral(AiidaTestCase):
+class KindTestGeneral(AiidaTestCase):
     """
-    Tests the creation of Site objects and their methods.
+    Tests the creation of Kind objects and their methods.
     """
     def test_sum_one_general(self):
         """
         Should accept a sum equal to one
         """
-        from aida.orm.dataplugins.structure import Site
+        from aida.orm.dataplugins.structure import Kind
 
-        a = Site(position=(0.,0.,0.),symbols=['Ba','C'],
+        a = Kind(symbols=['Ba','C'],
                  weights=[1./3.,2./3.])
         self.assertTrue(a.is_alloy())
         self.assertFalse(a.has_vacancies())
@@ -1237,56 +1224,72 @@ class SiteTestGeneral(AiidaTestCase):
         """
         Should accept a sum equal less than one
         """
-        from aida.orm.dataplugins.structure import Site
+        from aida.orm.dataplugins.structure import Kind
 
-        a = Site(position=(0.,0.,0.),symbols=['Ba','C'],
+        a = Kind(symbols=['Ba','C'],
                  weights=[1./3.,1./3.])
         self.assertTrue(a.is_alloy())
         self.assertTrue(a.has_vacancies())
+
+    def test_no_position(self):
+        """
+        Should not accept a 'positions' parameter
+        """
+        from aida.orm.dataplugins.structure import Kind
+
+        with self.assertRaises(ValueError):
+            _ = Kind(position=[0.,0.,0.],symbols=['Ba'],
+                     weights=[1.])
     
     def test_simple(self):
         """
         Should recognize a simple element.
         """
-        from aida.orm.dataplugins.structure import Site
+        from aida.orm.dataplugins.structure import Kind
 
-        a = Site(position=(0.,0.,0.),symbols='Ba',weights=None)
+        a = Kind(symbols='Ba')
         self.assertFalse(a.is_alloy())
         self.assertFalse(a.has_vacancies())
 
-        b = Site(position=(0.,0.,0.),symbols='Ba',weights=1.)
+        b = Kind(symbols='Ba',weights=1.)
         self.assertFalse(b.is_alloy())
         self.assertFalse(b.has_vacancies())
 
-    def test_automatic_type(self):
+        c = Kind(symbols='Ba',weights=None)
+        self.assertFalse(c.is_alloy())
+        self.assertFalse(c.has_vacancies())
+
+
+    def test_automatic_name(self):
         """
-        Check the automatic type generator.
+        Check the automatic name generator.
         """
-        from aida.orm.dataplugins.structure import Site
+        from aida.orm.dataplugins.structure import Kind
 
-        a = Site(position=(0.,0.,0.),symbols='Ba')
-        self.assertEqual(a.type,'Ba')
+        a = Kind(symbols='Ba')
+        self.assertEqual(a.name,'Ba')
 
-        a = Site(position=(0.,0.,0.),symbols=('Si','Ge'),weights=(1./3.,2./3.))
-        self.assertEqual(a.type,'GeSi')
+        a = Kind(symbols=('Si','Ge'),weights=(1./3.,2./3.))
+        self.assertEqual(a.name,'GeSi')
 
-        a = Site(position=(0.,0.,0.),symbols=('Si','Ge'),weights=(0.4,0.5))
-        self.assertEqual(a.type,'GeSiX')
+        a = Kind(symbols=('Si','Ge'),weights=(0.4,0.5))
+        self.assertEqual(a.name,'GeSiX')
         
-        a.type = 'newstring'
-        self.assertEqual(a.type,'newstring')
+        # Manually setting the name of the species
+        a.name = 'newstring'
+        self.assertEqual(a.name,'newstring')
 
-class SiteTestMasses(AiidaTestCase):
+class KindTestMasses(AiidaTestCase):
     """
-    Tests the management of masses during the creation of Site objects.
+    Tests the management of masses during the creation of Kind objects.
     """
     def test_auto_mass_one(self):
         """
         mass for elements with sum one
         """
-        from aida.orm.dataplugins.structure import Site, _atomic_masses
+        from aida.orm.dataplugins.structure import Kind, _atomic_masses
 
-        a = Site(position=(0.,0.,0.),symbols=['Ba','C'],
+        a = Kind(symbols=['Ba','C'],
                           weights=[1./3.,2./3.])
         self.assertAlmostEqual(a.mass, 
                                (_atomic_masses['Ba'] + 
@@ -1296,9 +1299,9 @@ class SiteTestMasses(AiidaTestCase):
         """
         mass for elements with sum less than one
         """
-        from aida.orm.dataplugins.structure import Site, _atomic_masses
+        from aida.orm.dataplugins.structure import Kind, _atomic_masses
 
-        a = Site(position=(0.,0.,0.),symbols=['Ba','C'],
+        a = Kind(symbols=['Ba','C'],
                  weights=[1./3.,1./3.])
         self.assertAlmostEqual(a.mass, 
                                (_atomic_masses['Ba'] + 
@@ -1308,9 +1311,9 @@ class SiteTestMasses(AiidaTestCase):
         """
         mass for a single element
         """
-        from aida.orm.dataplugins.structure import Site, _atomic_masses
+        from aida.orm.dataplugins.structure import Kind, _atomic_masses
 
-        a = Site(position=(0.,0.,0.),symbols=['Ba'])
+        a = Kind(symbols=['Ba'])
         self.assertAlmostEqual(a.mass, 
                                _atomic_masses['Ba'])
         
@@ -1318,13 +1321,12 @@ class SiteTestMasses(AiidaTestCase):
         """
         mass set manually
         """
-        from aida.orm.dataplugins.structure import Site
+        from aida.orm.dataplugins.structure import Kind
 
-        a = Site(position=(0.,0.,0.),symbols=['Ba','C'],
+        a = Kind(symbols=['Ba','C'],
                  weights=[1./3.,1./3.],
                  mass = 1000.)
         self.assertAlmostEqual(a.mass, 1000.)
-
 
 class TestStructureDataInit(AiidaTestCase):
     """
@@ -1337,7 +1339,7 @@ class TestStructureDataInit(AiidaTestCase):
         from aida.orm.dataplugins.structure import StructureData
 
         with self.assertRaises(ValueError):
-            a = StructureData(cell=((1.,2.,3.),))
+            _ = StructureData(cell=((1.,2.,3.),))
 
     def test_cell_wrong_size_2(self):
         """
@@ -1346,7 +1348,7 @@ class TestStructureDataInit(AiidaTestCase):
         from aida.orm.dataplugins.structure import StructureData
 
         with self.assertRaises(ValueError):
-            a = StructureData(cell=((1.,0.,0.),(0.,0.,3.),(0.,3.)))
+            _ = StructureData(cell=((1.,0.,0.),(0.,0.,3.),(0.,3.)))
 
     def test_cell_zero_vector(self):
         """
@@ -1355,7 +1357,7 @@ class TestStructureDataInit(AiidaTestCase):
         from aida.orm.dataplugins.structure import StructureData
 
         with self.assertRaises(ValueError):
-            a = StructureData(cell=((0.,0.,0.),(0.,1.,0.),(0.,0.,1.)))
+            _ = StructureData(cell=((0.,0.,0.),(0.,1.,0.),(0.,0.,1.)))
 
     def test_cell_zero_volume(self):
         """
@@ -1364,7 +1366,7 @@ class TestStructureDataInit(AiidaTestCase):
         from aida.orm.dataplugins.structure import StructureData
 
         with self.assertRaises(ValueError):
-            a = StructureData(cell=((1.,0.,0.),(0.,1.,0.),(1.,1.,0.)))
+            _ = StructureData(cell=((1.,0.,0.),(0.,1.,0.),(1.,1.,0.)))
 
     def test_cell_ok_init(self):
         """
@@ -1397,7 +1399,7 @@ class TestStructureDataInit(AiidaTestCase):
 
         with self.assertRaises(ValueError):
             cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
-            a = StructureData(cell=cell,pbc=1)
+            _ = StructureData(cell=cell,pbc=1)
 
     def test_wrong_pbc_2(self):
         """
@@ -1407,7 +1409,7 @@ class TestStructureDataInit(AiidaTestCase):
 
         with self.assertRaises(ValueError):
             cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
-            a = StructureData(cell=cell,pbc=[True,True])
+            _ = StructureData(cell=cell,pbc=[True,True])
 
     def test_wrong_pbc_3(self):
         """
@@ -1417,7 +1419,7 @@ class TestStructureDataInit(AiidaTestCase):
 
         with self.assertRaises(ValueError):
             cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
-            a = StructureData(cell=cell,pbc=[])
+            _ = StructureData(cell=cell,pbc=[])
 
     def test_ok_pbc_1(self):
         """
@@ -1460,211 +1462,163 @@ class TestStructureData(AiidaTestCase):
     Tests the creation of StructureData objects (cell and pbc).
     """
 
-    def test_cell_ok(self):
+    def test_cell_ok_and_atoms(self):
         """
-        Test the creation of a cell and the appending of sites
+        Test the creation of a cell and the appending of atoms
         """
-        from aida.orm.dataplugins.structure import StructureData, Site
+        from aida.orm.dataplugins.structure import StructureData
 
         cell = ((2.,0.,0.),(0.,2.,0.),(0.,0.,2.))
         a = StructureData(cell=cell)
         out_cell = a.cell
+        self.assertAlmostEquals(cell, out_cell)
         
-        s = Site(position=(0.,0.,0.),symbols=['Ba'])
-        a.append_site(s)
-        s = Site(position=(1.,1.,1.),symbols=['Ti'])
-        a.append_site(s)
+        a.append_atom(position=(0.,0.,0.),symbols=['Ba'])
+        a.append_atom(position=(1.,1.,1.),symbols=['Ti'])
+        a.append_atom(position=(1.2,1.4,1.6),symbols=['Ti'])
         self.assertFalse(a.is_alloy())
         self.assertFalse(a.has_vacancies())
+        # There should be only two kinds! (two atoms of kind Ti should
+        # belong to the same kind)
+        self.assertEquals(len(a.kinds), 2) 
 
-        s= Site(position=(0.5,1.,1.5), symbols=['O', 'C'], 
+        a.append_atom(position=(0.5,1.,1.5), symbols=['O', 'C'], 
                          weights=[0.5,0.5])
-        a.append_site(s)
         self.assertTrue(a.is_alloy())
         self.assertFalse(a.has_vacancies())
 
-        s= Site(position=(0.5,1.,1.5), symbols=['O'], weights=[0.5])
-        a.append_site(s)
+        a.append_atom(position=(0.5,1.,1.5), symbols=['O'], weights=[0.5])
         self.assertTrue(a.is_alloy())
         self.assertTrue(a.has_vacancies())
 
-        a.clear_sites()
-        a.append_site(s)
+        a.clear_kinds()
+        a.append_atom(position=(0.5,1.,1.5), symbols=['O'], weights=[0.5])
         self.assertFalse(a.is_alloy())
         self.assertTrue(a.has_vacancies())
 
-    def test_type_1(self):
+    def test_kind_1(self):
         """
-        Test the management of types.
+        Test the management of kinds (automatic detection of kind of 
+        simple atoms).
         """
-        from aida.orm.dataplugins.structure import StructureData, Site
+        from aida.orm.dataplugins.structure import StructureData
 
         a = StructureData(cell=((2.,0.,0.),(0.,2.,0.),(0.,0.,2.)))
         
-        s = Site(position=(0.,0.,0.),symbols=['Ba'])
-        a.append_site(s)
-        s = Site(position=(0.5,0.5,0.5),symbols=['Ba'])
-        a.append_site(s)
-        # Shouldn't complain, I added twice the same atom, with same mass etc.
-        s = Site(position=(1.,1.,1.),symbols=['Ti'])
-        a.append_site(s)
+        a.append_atom(position=(0.,0.,0.),symbols=['Ba'])
+        a.append_atom(position=(0.5,0.5,0.5),symbols=['Ba'])
+        a.append_atom(position=(1.,1.,1.),symbols=['Ti'])
         
-        type_list = a.get_types()
-        self.assertEqual(len(type_list),2) # I should only have two types
+        self.assertEqual(len(a.kinds),2) # I should only have two types
+        # I check for the default names of kinds
+        self.assertEqual(set(k.name for k in a.kinds),
+                         set(('Ba', 'Ti')))
 
-    def test_type_2(self):
+    def test_kind_2(self):
         """
-        Test the management of types.
+        Test the management of kinds (manual specification of kind name).
         """
-        from aida.orm.dataplugins.structure import StructureData, Site
+        from aida.orm.dataplugins.structure import StructureData
 
         a = StructureData(cell=((2.,0.,0.),(0.,2.,0.),(0.,0.,2.)))
         
-        s = Site(position=(0.,0.,0.),symbols=['Ba'],type='Ba1')
-        a.append_site(s)
-        s = Site(position=(0.5,0.5,0.5),symbols=['Ba'],type='Ba2')
-        a.append_site(s)
-        s = Site(position=(1.,1.,1.),symbols=['Ti'])
-        a.append_site(s)
+        a.append_atom(position=(0.,0.,0.),symbols=['Ba'],name='Ba1')
+        a.append_atom(position=(0.5,0.5,0.5),symbols=['Ba'],name='Ba2')
+        a.append_atom(position=(1.,1.,1.),symbols=['Ti'])
         
-        type_list = a.get_types()
-        self.assertEqual(len(type_list),3) # I should have now three types
-        # i[0] is the type name, while i[0] is the list of indices
-        self.assertEqual(set(i[0] for i in type_list), set(('Ba1', 'Ba2', 'Ti')))
+        kind_list = a.kinds
+        self.assertEqual(len(kind_list),3) # I should have now three kinds
+        self.assertEqual(set(k.name for k in kind_list),
+                         set(('Ba1', 'Ba2', 'Ti')))
 
-    def test_type_3(self):
+    def test_kind_3(self):
         """
-        Test the management of types.
+        Test the management of kinds (adding an atom with different mass).
         """
-        from aida.orm.dataplugins.structure import StructureData, Site
+        from aida.orm.dataplugins.structure import StructureData
 
         a = StructureData(cell=((2.,0.,0.),(0.,2.,0.),(0.,0.,2.)))
         
-        s = Site(position=(0.,0.,0.),symbols=['Ba'],mass=100.)
-        a.append_site(s)
-        s = Site(position=(0.5,0.5,0.5),symbols=['Ba'],mass=101.)
+        a.append_atom(position=(0.,0.,0.),symbols=['Ba'],mass=100.)
         with self.assertRaises(ValueError):
-            # Shouldn't allow, I am adding two sites with the same automatic tag 'Ba'
-            # but with different masses
-            a.append_site(s) 
+            # Shouldn't allow, I am adding two sites with the same name 'Ba'
+            a.append_atom(position=(0.5,0.5,0.5),symbols=['Ba'],
+                          mass=101., name='Ba') 
 
-        # now it should work
-        s = Site(position=(0.5,0.5,0.5),symbols=['Ba'],mass=101.,type='Ba2')
-        a.append_site(s) 
+        # now it should work because I am using a different kind name
+        a.append_atom(position=(0.5,0.5,0.5),
+                      symbols=['Ba'],mass=101.,name='Ba2') 
             
-        s = Site(position=(1.,1.,1.),symbols=['Ti'])
-        a.append_site(s)
+        a.append_atom(position=(1.,1.,1.),symbols=['Ti'])
         
-        type_list = a.get_types()
-        self.assertEqual(len(type_list),3) # I should have now three types
-        self.assertEqual(set(i[0] for i in type_list), set(('Ba', 'Ba2', 'Ti')))
+        self.assertEqual(len(a.kinds),3) # I should have now three types
+        self.assertEqual(len(a.sites),3) # and 3 sites
+        self.assertEqual(set(k.name for k in a.kinds), set(('Ba', 'Ba2', 'Ti')))
 
-    def test_type_4(self):
+    def test_kind_4(self):
         """
-        Test the management of types.
+        Test the management of kind (adding an atom with different symbols
+        or weights).
         """
-        from aida.orm.dataplugins.structure import StructureData, Site
+        from aida.orm.dataplugins.structure import StructureData
 
         a = StructureData(cell=((2.,0.,0.),(0.,2.,0.),(0.,0.,2.)))
         
-        s = Site(position=(0.,0.,0.),symbols=['Ba','Ti'],weights=(1.,0.),type='mytype')
-        a.append_site(s)
+        a.append_atom(position=(0.,0.,0.),symbols=['Ba','Ti'],
+                      weights=(1.,0.),name='mytype')
 
-        s = Site(position=(0.5,0.5,0.5),symbols=['Ba','Ti'],weights=(0.9,0.1),type='mytype')
         with self.assertRaises(ValueError):
             # Shouldn't allow, different weights
-            a.append_site(s) 
+            a.append_atom(position=(0.5,0.5,0.5),symbols=['Ba','Ti'],
+                          weights=(0.9,0.1),name='mytype') 
 
-        s = Site(position=(0.5,0.5,0.5),symbols=['Ba','Ti'],weights=(0.8,0.1),type='mytype')
         with self.assertRaises(ValueError):
             # Shouldn't allow, different weights (with vacancy)
-            a.append_site(s) 
+            a.append_atom(position=(0.5,0.5,0.5),symbols=['Ba','Ti'],
+                          weights=(0.8,0.1),name='mytype') 
 
-        s = Site(position=(0.5,0.5,0.5),symbols=['Ba'],type='mytype')
         with self.assertRaises(ValueError):
             # Shouldn't allow, different symbols list
-            a.append_site(s) 
+            a.append_atom(position=(0.5,0.5,0.5),symbols=['Ba'],
+                          name='mytype') 
 
-        s = Site(position=(0.5,0.5,0.5),symbols=['Si','Ti'],weights=(1.,0.),type='mytype')
         with self.assertRaises(ValueError):
             # Shouldn't allow, different symbols list
-            a.append_site(s) 
+            a.append_atom(position=(0.5,0.5,0.5),symbols=['Si','Ti'],
+                          weights=(1.,0.),name='mytype') 
 
-    def test_type_5(self):
+        # should allow because every property is identical
+        a.append_atom(position=(0.,0.,0.),symbols=['Ba','Ti'],
+                      weights=(1.,0.),name='mytype')
+        
+        self.assertEquals(len(a.kinds), 1)
+
+    def test_kind_5(self):
         """
-        Test the management of types.
+        Test the management of kinds (automatic creation of new kind
+        if name is not specified and properties are different).
         """
-        from aida.orm.dataplugins.structure import StructureData, Site
+        from aida.orm.dataplugins.structure import StructureData
 
         a = StructureData(cell=((2.,0.,0.),(0.,2.,0.),(0.,0.,2.)))
         
-        s = Site(position=(0.,0.,0.),symbols='Ba',mass=100.)
-        a.append_site(s)
+        a.append_atom(position=(0.,0.,0.),symbols='Ba',mass=100.)
+        a.append_atom(position=(0.,0.,0.),symbols='Ti')
+        # The name does not exist
+        a.append_atom(position=(0.,0.,0.),symbols='Ti',name='Ti2')
+        # The name already exists, but the properties are identical => OK
+        a.append_atom(position=(1.,1.,1.),symbols='Ti',name='Ti2')
+        # The name already exists, but the properties are different!
+        with self.assertRaises(ValueError):
+            a.append_atom(position=(1.,1.,1.),symbols='Ti',mass=100.,name='Ti2')
+        # Should not complain, should create a new type
+        a.append_atom(position=(0.,0.,0.),symbols='Ba',mass=150.)
 
-        s = Site(position=(0.,0.,0.),symbols='Ti')
-        a.append_site(s)
-
-        s = Site(position=(0.,0.,0.),symbols='Ti',type='Ti2')
-        a.append_site(s)
-
-        # Should not complain
-        s = Site(position=(0.,0.,0.),symbols='Ba',mass=150.)
-        a.append_site(s,reset_type_if_needed=True)
-
-        type_list = a.get_types()
-        # There should be 4 different types
-        self.assertEqual(len(type_list), 4)
-
-        # Type name of the fourth atom
-        self.assertEqual(type_list[3][0],'Ba1')
-        
-
-    def test_get_types(self):
-        """
-        Test the get_types method
-        """
-        from aida.orm.dataplugins.structure import StructureData, Site
-
-        a = StructureData(cell=((2.,0.,0.),(0.,2.,0.),(0.,0.,2.)))
-        
-        s = Site(position=(0.,0.,0.),symbols=['Ba'])
-        a.append_site(s)
-
-        s = Site(position=(0.,0.,0.),symbols=['Ba'])
-        a.append_site(s)
-
-        s = Site(position=(0.,0.,0.),symbols=['Ti'])
-        a.append_site(s)
-
-        s = Site(position=(0.,0.,0.),symbols=['Ti'], type='Ti2')
-        a.append_site(s)
-
-        s = Site(position=(0.,0.,0.),symbols=['O'])
-        a.append_site(s)
-
-        s = Site(position=(0.,0.,0.),symbols=['O'])
-        a.append_site(s)
-
-        s = Site(position=(0.,0.,0.),symbols=['O'], type='O2')
-        a.append_site(s)
-
-        s = Site(position=(0.,0.,0.),symbols=['O'], type='O3')
-        a.append_site(s)
-
-        sites_list = a.sites
-        
-        found_sites = []
-        for the_type, the_sites in a.get_types():
-            for the_site_idx in the_sites:
-                already_in_list = the_site_idx in found_sites
-                # Check that a site is not present twice
-                self.assertFalse(already_in_list)
-                # Check that we are pointing to a site with correct type
-                self.assertEqual(the_type, sites_list[the_site_idx].type)
-                found_sites.append(the_site_idx)
-        
-        # Check that all sites were present
-        self.assertEqual(sorted(found_sites), range(len(a.sites)))
+        # There should be 4 kinds, the automatic name for the last one
+        # should be Ba1
+        self.assertEquals([k.name for k in a.kinds],
+                          ['Ba', 'Ti', 'Ti2', 'Ba1'])
+        self.assertEquals(len(a.sites),5)
 
 class TestStructureDataLock(AiidaTestCase):
     """
@@ -1674,27 +1628,32 @@ class TestStructureDataLock(AiidaTestCase):
         """
         Start from a StructureData object, convert to raw and then back
         """
-        from aida.orm.dataplugins.structure import StructureData, Site
-        from aida.common.exceptions import ModificationNotAllowed
+        from aida.orm.dataplugins.structure import StructureData, Kind, Site
 
         cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
         a = StructureData(cell=cell)
-        out_cell = a.cell
         
         a.pbc = [False,True,True]
 
-        s = Site(position=(0.,0.,0.),symbols=['Ba'])
+        k = Kind(symbols='Ba',name='Ba')       
+        s = Site(position=(0.,0.,0.),kind='Ba')
+        a.append_kind(k)
         a.append_site(s)
-        s = Site(position=(1.,1.,1.),symbols=['Ti'])
-        a.append_site(s)
+
+        a.append_atom(symbols='Ti', position=[0.,0.,0.])
 
         a.store()
 
+        k2 = Kind(symbols='Ba',name='Ba')
         # Nothing should be changed after store()
+        with self.assertRaises(ModificationNotAllowed):
+            a.append_kind(k2)
         with self.assertRaises(ModificationNotAllowed):
             a.append_site(s)
         with self.assertRaises(ModificationNotAllowed):
             a.clear_sites()
+        with self.assertRaises(ModificationNotAllowed):
+            a.clear_kinds()
         with self.assertRaises(ModificationNotAllowed):
             a.cell = cell
         with self.assertRaises(ModificationNotAllowed):
@@ -1708,6 +1667,8 @@ class TestStructureDataLock(AiidaTestCase):
         # I check that I can edit after copy
         b.append_site(s)
         b.clear_sites()
+        # I check that the original did not change
+        self.assertNotEquals(len(a.sites), 0)
         b.cell = cell
         b.pbc = [True,True,True]
 
@@ -1720,18 +1681,15 @@ class TestStructureDataReload(AiidaTestCase):
         """
         Start from a StructureData object, convert to raw and then back
         """
-        from aida.orm.dataplugins.structure import StructureData, Site
+        from aida.orm.dataplugins.structure import StructureData
 
         cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
         a = StructureData(cell=cell)
-        out_cell = a.cell
         
         a.pbc = [False,True,True]
 
-        s = Site(position=(0.,0.,0.),symbols=['Ba'])
-        a.append_site(s)
-        s = Site(position=(1.,1.,1.),symbols=['Ti'])
-        a.append_site(s)
+        a.append_atom(position=(0.,0.,0.),symbols=['Ba'])
+        a.append_atom(position=(1.,1.,1.),symbols=['Ti'])
 
         a.store()
 
@@ -1743,27 +1701,26 @@ class TestStructureDataReload(AiidaTestCase):
         
         self.assertEqual(b.pbc, (False,True,True))
         self.assertEqual(len(b.sites), 2)
-        self.assertEqual(b.sites[0].symbols[0], 'Ba')
-        self.assertEqual(b.sites[1].symbols[0], 'Ti')
+        self.assertEqual(b.kinds[0].symbols[0], 'Ba')
+        self.assertEqual(b.kinds[1].symbols[0], 'Ti')
+        for i in range(3):
+            self.assertAlmostEqual(b.sites[0].position[i], 0.)
         for i in range(3):
             self.assertAlmostEqual(b.sites[1].position[i], 1.)
 
     def test_copy(self):
         """
-        Start from a StructureData object, convert to raw and then back
+        Start from a StructureData object, copy it and see if it is preserved
         """
-        from aida.orm.dataplugins.structure import StructureData, Site
+        from aida.orm.dataplugins.structure import StructureData
 
         cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
         a = StructureData(cell=cell)
-        out_cell = a.cell
         
         a.pbc = [False,True,True]
 
-        s = Site(position=(0.,0.,0.),symbols=['Ba'])
-        a.append_site(s)
-        s = Site(position=(1.,1.,1.),symbols=['Ti'])
-        a.append_site(s)
+        a.append_atom(position=(0.,0.,0.),symbols=['Ba'])
+        a.append_atom(position=(1.,1.,1.),symbols=['Ti'])
 
         b = a.copy()        
         
@@ -1772,9 +1729,12 @@ class TestStructureDataReload(AiidaTestCase):
                 self.assertAlmostEqual(cell[i][j], b.cell[i][j])
         
         self.assertEqual(b.pbc, (False,True,True))
+        self.assertEqual(len(b.kinds), 2)
         self.assertEqual(len(b.sites), 2)
-        self.assertEqual(b.sites[0].symbols[0], 'Ba')
-        self.assertEqual(b.sites[1].symbols[0], 'Ti')
+        self.assertEqual(b.kinds[0].symbols[0], 'Ba')
+        self.assertEqual(b.kinds[1].symbols[0], 'Ti')
+        for i in range(3):
+            self.assertAlmostEqual(b.sites[0].position[i], 0.)
         for i in range(3):
             self.assertAlmostEqual(b.sites[1].position[i], 1.)
 
@@ -1787,9 +1747,12 @@ class TestStructureDataReload(AiidaTestCase):
                 self.assertAlmostEqual(cell[i][j], c.cell[i][j])
         
         self.assertEqual(c.pbc, (False,True,True))
+        self.assertEqual(len(c.kinds), 2)
         self.assertEqual(len(c.sites), 2)
-        self.assertEqual(c.sites[0].symbols[0], 'Ba')
-        self.assertEqual(c.sites[1].symbols[0], 'Ti')
+        self.assertEqual(c.kinds[0].symbols[0], 'Ba')
+        self.assertEqual(c.kinds[1].symbols[0], 'Ti')
+        for i in range(3):
+            self.assertAlmostEqual(c.sites[0].position[i], 0.)
         for i in range(3):
             self.assertAlmostEqual(c.sites[1].position[i], 1.)
 
@@ -1825,7 +1788,7 @@ class TestStructureDataFromAse(AiidaTestCase):
         self.assertAlmostEqual(c[1].mass, 110.2)
 
     @unittest.skipIf(not has_ase(),"Unable to import ase")
-    def test_conversion_of_types(self):
+    def test_conversion_of_types_1(self):
         from aida.orm.dataplugins.structure import StructureData
         import ase
 
@@ -1845,11 +1808,75 @@ class TestStructureDataFromAse(AiidaTestCase):
         a.set_tags((0,1,2,3,4,5,6,7))
 
         b = StructureData(ase=a)
+        self.assertEquals([k.name for k in b.kinds],
+                          ["Si", "Si1", "Si2", "Si3",
+                           "Ge4", "Ge5", "Ge6", "Ge7"])
         c = b.get_ase()
 
         a_tags = list(a.get_tags())
         c_tags = list(c.get_tags())
         self.assertEqual(a_tags, c_tags)
 
-        # TODO: implement this
+    @unittest.skipIf(not has_ase(),"Unable to import ase")
+    def test_conversion_of_types_2(self):
+        from aida.orm.dataplugins.structure import StructureData
+        import ase
 
+        a = ase.Atoms('Si4',cell=(1.,2.,3.),pbc=(True,False,False))
+        a.set_positions(
+            ((0.0,0.0,0.0),
+             (0.1,0.1,0.1),
+             (0.2,0.2,0.2),
+             (0.3,0.3,0.3),
+             )
+            )
+
+        a.set_tags((0,1,0,1))
+        a[2].mass = 100.
+        a[3].mass = 300.
+        
+        b = StructureData(ase=a)
+        # This will give funny names to the kinds, because I am using
+        # both tags and different properties (mass). I just check to have
+        # 4 kinds
+        self.assertEquals(len(b.kinds), 4)
+
+        # Do I get the same tags after one full iteration back and forth?
+        c = b.get_ase()
+        d = StructureData(ase=c)
+        e = d.get_ase()       
+        c_tags = list(c.get_tags())
+        e_tags = list(e.get_tags())
+        self.assertEqual(c_tags, e_tags)      
+        
+        
+    @unittest.skipIf(not has_ase(),"Unable to import ase")
+    def test_conversion_of_types_3(self):
+        from aida.orm.dataplugins.structure import StructureData
+
+        a = StructureData()
+        a.append_atom(position=(0.,0.,0.), symbols='Ba', name='Ba')
+        a.append_atom(position=(0.,0.,0.), symbols='Ba', name='Ba1')
+        a.append_atom(position=(0.,0.,0.), symbols='Cu', name='Cu')
+        # continues with a number
+        a.append_atom(position=(0.,0.,0.), symbols='Cu', name='Cu2')
+        # does not continue with a number
+        a.append_atom(position=(0.,0.,0.), symbols='Cu', name='Cu_my')
+        # random string
+        a.append_atom(position=(0.,0.,0.), symbols='Cu', name='a_name')
+        # a name of another chemical symbol
+        a.append_atom(position=(0.,0.,0.), symbols='Cu', name='Fe')
+        # lowercase! as if it were a random string
+        a.append_atom(position=(0.,0.,0.), symbols='Cu', name='cu1') 
+        
+        # Just to be sure that the species were saved with the correct name
+        # in the first place
+        self.assertEquals([k.name for k in a.kinds], 
+                          ['Ba', 'Ba1', 'Cu', 'Cu2', 'Cu_my',
+                           'a_name', 'Fe', 'cu1'])
+        
+        b = a.get_ase()
+        self.assertEquals(b.get_chemical_symbols(), ['Ba', 'Ba', 'Cu', 
+                                                     'Cu', 'Cu', 'Cu', 
+                                                     'Cu', 'Cu'])
+        self.assertEquals(list(b.get_tags()), [0, 1, 0, 2, 3, 4, 5, 6])

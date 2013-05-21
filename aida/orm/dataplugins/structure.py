@@ -320,10 +320,6 @@ class StructureData(Node):
             parameter is passed, the one above cannot be specified.
         """
         super(StructureData,self).__init__(**kwargs)
-        # Initial values
-        # self._sites = []
-        # self._cell = None
-        # self._pbc = None
 
         uuid = kwargs.pop('uuid', None)
         if uuid is not None:
@@ -334,21 +330,24 @@ class StructureData(Node):
         aseatoms = kwargs.pop('ase',None)
 
         if kwargs:
-            raise ValueError("There are unrecognized flags passed to the constructor: {}".format(
-                kwargs.keys()))
+            raise ValueError("There are unrecognized flags passed to the "
+                             "constructor: {}".format(kwargs.keys()))
 
+        self.set_attr('kinds',[])
         self.set_attr('sites',[])
         if aseatoms is not None:
             if cell is not None or pbc is not None:
-                raise ValueError("If you pass 'ase', you cannot pass also 'cell' or 'pbc'")
+                raise ValueError(
+                    "If you pass 'ase', you cannot pass also 'cell' or 'pbc'")
             if is_ase_atoms(aseatoms):
                 # Read the ase structure
                 self.cell = aseatoms.cell
                 self.pbc = aseatoms.pbc
                 for atom in aseatoms:
-                    self.append_site(Site(ase=atom),reset_type_if_needed=True)
+                    self.append_atom(ase=atom)
             else:
-                raise ValueError('an ase flag was passed, but the value is not a ase.Atoms object')
+                raise ValueError("an ase flag was passed, but the value is not "
+                    "a ase.Atoms object")
         else:
             if pbc is not None:
                 self.pbc = pbc
@@ -371,38 +370,51 @@ class StructureData(Node):
         try:
             _get_valid_pbc(self.pbc)
         except ValueError as e:
-            raise ValidationError("Invalid periodic boundary conditions: {}".format(e.message))
+            raise ValidationError(
+                "Invalid periodic boundary conditions: {}".format(e.message))
+
+        try:
+            # This will try to create the kinds objects
+            kinds = self.kinds
+        except ValueError as e:
+            raise ValidationError(
+                "Unable to validate the kinds: {}".format(e.message))
+
+        from collections import Counter
+        counts = Counter([k.name for k in kinds])
+        for c in counts:
+            if counts[c] != 1:
+                raise ValidationError("Kind with name '{}' appears {} times "
+                                      "instead of only one".format(
+                                        c, counts[c]))
 
         try:
             # This will try to create the sites objects
-            _ = self.sites
+            sites = self.sites
         except ValueError as e:
-            raise ValidationError("Unable to validate the sites: {}".format(e.message))
+            raise ValidationError(
+                "Unable to validate the sites: {}".format(e.message))
 
-#    def get_raw(self):
-#        """
-#        Return the raw version of the StructureData object, mapped to a suitable
-#        dictionary. 
-#
-#        This is the structure that is actually stored (after serialization)
-#        in the DB.
-#        
-#        Returns:
-#            a python dictionary with the sites.
-#        """
-#        return {
-#            'cell': self.cell,
-#            'pbc': self.pbc,
-#            'sites': [site.get_raw() for site in self.sites],
-#            }
-
+        for site in sites:
+            if site.kind not in [k.name for k in kinds]:
+                raise ValidationError(
+                    "A site has kind {}, but no specie with that name exists"
+                    "".format(site.kind)) 
+        
+        kinds_without_sites = (
+            set(k.name for k in kinds) - set(s.kind for s in sites))
+        if kinds_without_sites:
+            raise ValidationError("The following kinds are defined, but there "
+                                  "are no sites with that kind: {}".format(
+                                      list(kinds_without_sites)))
+                
     def get_elements(self):
         """
         Return a list of elements, as obtained by reading all sites of the
         StructureData object, keeping all duplicates.
         """
         return list(itertools.chain.from_iterable(
-                site.symbols for site in self.sites))
+                kind.symbols for kind in self.kinds))
 
     def get_formula(self):
         """
@@ -423,132 +435,234 @@ class StructureData(Node):
         """
         import ase
         asecell = ase.Atoms(cell=self.cell, pbc=self.pbc)
+        _kinds = self.kinds
+        
         for site in self.sites:
-            asecell.append(site.get_ase())
+            asecell.append(site.get_ase(kinds=_kinds))
         return asecell
 
-    def get_types(self):
+    def append_kind(self,kind):
         """
-        Return a list of types. Each type is a tuple, the first element is the
-        type string, the second element is a list of the indices of the sites
-        referring to this type.
+        Append a kind to the StructureData. It makes a copy of the kind.
+
+        Args:
+            kind: the site to append, must be a Kind object.
+        """
+        from aida.common.exceptions import ModificationNotAllowed
         
-        The second element should never be an empty list! At least an element
-        should be present.
-        """       
-        positions = {}
-        types = []
+        if not self._to_be_stored:
+            raise ModificationNotAllowed(
+                "The StructureData object cannot be modified, "
+                "it has already been stored")
+
+        new_kind = Kind(kind=kind) # So we make a copy
         
-        # * positions is a dictionary that maps each type to a list, containing the positions of the sites
-        #   in the self.sites list.
-        # * types keeps track of the order in which the types were found
-        for i, the_type in enumerate([site.type for site in self.sites]):
-            if the_type in positions:
-                positions[the_type].append(i)
-            else:
-                positions[the_type] = [i]
-                types.append(the_type)
+        if kind.name in [k.name for k in self.kinds]:
+            raise ValueError("A kind with the same name ({}) already exists."
+                             "".format(kind.name))
+            
+        # If here, no exceptions have been raised, so I add the site.
+        # I join two lists. Do not use .append, which would work in-place
+        self.set_attr('kinds',self.get_attr('kinds',[]) + [new_kind.get_raw()])
 
-        # I return the final object
-        final_list = [(the_type, positions[the_type]) for the_type in types]
-
-        return final_list
-
-    def append_site(self,site,reset_type_if_needed=False):
+    def append_site(self,site):
         """
         Append a site to the StructureData. It makes a copy of the site.
 
         Args:
             site: the site to append, must be a Site object.
-            reset_type_if_needed: if False, an exception is raised if a site with same type but different
-                properties (mass, symbols, weights, ...) is found.
-                If True, and an atom with same type but different properties is found, all the sites
-                already present in self.sites are checked to see if there is a site with the same properties.
-                Then, the same type is set. Otherwise, a new type name is chosen adding a number to the site
-                name such that the type is different from the existing ones.
         """
         from aida.common.exceptions import ModificationNotAllowed
         
         if not self._to_be_stored:
-            raise ModificationNotAllowed("The StructureData object cannot be modified, "
+            raise ModificationNotAllowed(
+                "The StructureData object cannot be modified, "
                 "it has already been stored")
 
         new_site = Site(site=site) # So we make a copy
         
-        self._set_site_type(new_site, reset_type_if_needed=reset_type_if_needed)
-
-        # If here, no exceptions have been raised, so I store. Note that the new_site.type value may 
-        # have been changed by the previous function.
-        # I join two lists. Do not use .append, that would work in-place
+        if site.kind not in [k.name for k in self.kinds]:
+            raise ValueError("No kind with name '{}', available kinds are: "
+                             "{}".format(site.kind,
+                                         [k.name for k in self.kinds]))
+            
+        # If here, no exceptions have been raised, so I add the site.
+        # I join two lists. Do not use .append, which would work in-place
         self.set_attr('sites',self.get_attr('sites',[]) + [new_site.get_raw()])
-        #self._sites.append(new_site) 
 
-    def _set_site_type(self, new_site, reset_type_if_needed):
+    def append_atom(self,**kwargs):
         """
-        Check if the site can be added (i.e., if no other sites with the same type exist, or if
-        they exist, then they are equal) and possibly sets its type.
+        Append an atom to the Structure, taking care of creating the 
+        corresponding kind.
         
         Args:
-            new_site: the new site to check, must be a Site object.
-            reset_type_if_needed: if False, an exception is raised if a site with same type but different
-                properties (mass, symbols, weights, ...) is found.
-                If True, and an atom with same type but different properties is found, all the sites
-                already present in self.sites are checked to see if there is a site with the same properties.
-                Then, the same type is set. Otherwise, a new type name is chosen adding a number to the site
-                name such that the type is different from the existing ones.
+            ase: the ase Atom object from which we want to create a new atom
+                (if present, this must be the only parameter)
+            position: the position of the atom (three numbers in angstrom)
+            symbols, weights, name, ...: any further parameter is passed 
+                to the constructor of the Kind object. For the 'name' parameter,
+                see the note below.
+                
+        Note on the 'name' parameter (that is, the name of the kind):
+            * if specified, no checks are done on existing species. Simply,
+              a new kind with that name is created. If there is a name
+              clash, a check is done: if the kinds are identical, no error
+              is issued; otherwise, an error is issued because you are trying
+              to store two different kinds with the same name.
+            * if not specified, the name is automatically generated. Before
+              adding the kind, a check is done. If other species with the 
+              same properties already exist, no new kinds are created, but 
+              the site is added to the existing (identical) kind. 
+              (Actually, the first kind that is encountered).
+              Otherwise, the name is made unique first, by adding to the string
+              containing the list of chemical symbols a number starting from 1,
+              until an unique name is found
+        """
+        aseatom = kwargs.pop('ase',None)
+        if aseatom is not None:
+            if kwargs:
+                raise ValueError("If you pass 'ase' as a parameter to "
+                                 "append_atom, you cannot pass any further"
+                                 "parameter")
+            position = aseatom.position
+            kind = Kind(ase=aseatom)
+        else:
+            position = kwargs.pop('position',None)
+            if position is None:
+                raise ValueError("You have to specify the position of the "
+                                 "new atom")
+            # all remaining parmeters
+            kind = Kind(**kwargs)
+            
+        # I look for identical species only if the name is not specified
+        _kinds = self.kinds
+        if 'name' not in kwargs:
+            # If the kind is identical to an existing one, I use the existing
+            # one, otherwise I replace it
+            exists_already = False
+            for existing_kind in _kinds:
+                if (kind.compare_with(existing_kind)[0] and
+                    kind.name == existing_kind.name):
+                    kind = existing_kind
+                    exists_already = True
+                    break
+            if not exists_already:
+                # There is not an identical kind.
+                # By default, the name of 'kind' just contains the elements.
+                # I then check that the name of 'kind' does not already exist,
+                # and if it exists I add a number (starting from 1) until I 
+                # find a non-used name.
+                existing_names = [k.name for k in _kinds]
+                simplename = kind.name
+                counter = 1
+                while kind.name in existing_names:
+                    kind.name = "{}{}".format(simplename, counter)
+                    counter += 1
+                self.append_kind(kind)
+        else: # 'name' was specified
+            old_kind = None
+            for existing_kind in _kinds:
+                if existing_kind.name == kwargs['name']:
+                    old_kind = existing_kind
+                    break
+            if old_kind is None:
+                self.append_kind(kind)
+            else:
+                is_the_same, firstdiff = kind.compare_with(old_kind)
+                if is_the_same:
+                    kind=old_kind
+                else:
+                    raise ValueError("You are explicitly setting the name "
+                                     "of the kind to '{}', that already "
+                                     "exists, but the two kinds are different!"
+                                     " (first difference: {})".format(
+                                        kind.name, firstdiff))
+                 
+        site = Site(kind=kind.name, position=position)
+        self.append_site(site)
+        
+#     def _set_site_type(self, new_site, reset_type_if_needed):
+#         """
+#         Check if the site can be added (i.e., if no other sites with the same type exist, or if
+#         they exist, then they are equal) and possibly sets its type.
+#         
+#         Args:
+#             new_site: the new site to check, must be a Site object.
+#             reset_type_if_needed: if False, an exception is raised if a site with same type but different
+#                 properties (mass, symbols, weights, ...) is found.
+#                 If True, and an atom with same type but different properties is found, all the sites
+#                 already present in self.sites are checked to see if there is a site with the same properties.
+#                 Then, the same type is set. Otherwise, a new type name is chosen adding a number to the site
+#                 name such that the type is different from the existing ones.
+#         """
+#         from aida.common.exceptions import ModificationNotAllowed
+# 
+#         if not self._to_be_stored:
+#             raise ModificationNotAllowed("The StructureData object cannot be modified, "
+#                 "it has already been stored")
+# 
+#         type_list = self.get_types()
+#         if type_list:
+#             types, positions = zip(*type_list)
+#         else:
+#             types = []
+#             positions = []
+# 
+#         if new_site.type not in types:
+#             # There is no element with this type, OK to insert
+#             return
+# 
+#         # I get the index of the type, and the
+#         # first atom of this type (there should always be at least one!)
+#         type_idx = types.index(new_site.type)
+#         site_idx = positions[type_idx][0] 
+#         
+#         # If it is of the same type, I am happy
+#         is_same_type, differences_str = new_site.compare_type(self.sites[site_idx])
+#         if is_same_type:
+#             return
+# 
+#         # If I am here, the type string is the same, but they are actually of different type!
+# 
+#         if not reset_type_if_needed:
+#             errstr = ("The site you are trying to insert is of type '{}'. However, another site already "
+#                       "exists with same type, but with different properties! ({})".format(
+#                          new_site.type, differences_str))
+#             raise ValueError(errstr)
+# 
+#         # I check if there is a atom of the same type
+#         for site in self.sites:
+#             is_same_type, _ = new_site.compare_type(site)
+#             if is_same_type:
+#                 new_site.type = site.type
+#                 return
+# 
+#         # If I am here, I didn't find any existing site which is of the same type
+#         existing_type_names = [the_type for the_type in types if the_type.startswith(new_site.type)]
+# 
+#         append_int = 1
+#         while True:
+#             new_typename = "{:s}{:d}".format(new_site.type, append_int) 
+#             if new_typename not in existing_type_names:
+#                 break
+#             append_int += 1
+#         new_site.type = new_typename
+
+    def clear_kinds(self):
+        """
+        Removes all kinds for the StructureData object.
+        
+        Note: Also clear all sites!
         """
         from aida.common.exceptions import ModificationNotAllowed
 
         if not self._to_be_stored:
-            raise ModificationNotAllowed("The StructureData object cannot be modified, "
+            raise ModificationNotAllowed(
+                "The StructureData object cannot be modified, "
                 "it has already been stored")
 
-        type_list = self.get_types()
-        if type_list:
-            types, positions = zip(*type_list)
-        else:
-            types = []
-            positions = []
-
-        if new_site.type not in types:
-            # There is no element with this type, OK to insert
-            return
-
-        # I get the index of the type, and the
-        # first atom of this type (there should always be at least one!)
-        type_idx = types.index(new_site.type)
-        site_idx = positions[type_idx][0] 
-        
-        # If it is of the same type, I am happy
-        is_same_type, differences_str = new_site.compare_type(self.sites[site_idx])
-        if is_same_type:
-            return
-
-        # If I am here, the type string is the same, but they are actually of different type!
-
-        if not reset_type_if_needed:
-            errstr = ("The site you are trying to insert is of type '{}'. However, another site already "
-                      "exists with same type, but with different properties! ({})".format(
-                         new_site.type, differences_str))
-            raise ValueError(errstr)
-
-        # I check if there is a atom of the same type
-        for site in self.sites:
-            is_same_type, _ = new_site.compare_type(site)
-            if is_same_type:
-                new_site.type = site.type
-                return
-
-        # If I am here, I didn't find any existing site which is of the same type
-        existing_type_names = [the_type for the_type in types if the_type.startswith(new_site.type)]
-
-        append_int = 1
-        while True:
-            new_typename = "{:s}{:d}".format(new_site.type, append_int) 
-            if new_typename not in existing_type_names:
-                break
-            append_int += 1
-        new_site.type = new_typename
+        self.set_attr('kinds', [])
+        self.clear_sites()
 
     def clear_sites(self):
         """
@@ -557,11 +671,11 @@ class StructureData(Node):
         from aida.common.exceptions import ModificationNotAllowed
 
         if not self._to_be_stored:
-            raise ModificationNotAllowed("The StructureData object cannot be modified, "
+            raise ModificationNotAllowed(
+                "The StructureData object cannot be modified, "
                 "it has already been stored")
 
         self.set_attr('sites', [])
-        #_sites = []
 
     @property
     def sites(self):
@@ -570,11 +684,17 @@ class StructureData(Node):
         except AttributeError:
             raw_sites = []
         return [Site(raw=i) for i in raw_sites]
-        #return copy.deepcopy(self._sites)
+
+    @property
+    def kinds(self):
+        try:
+            raw_kinds = self.get_attr('kinds')
+        except AttributeError:
+            raw_kinds = []
+        return [Kind(raw=i) for i in raw_kinds]
     
     @property
     def cell(self):
-        #return copy.deepcopy(self._cell)
         return copy.deepcopy(self.get_attr('cell'))
     
     @cell.setter
@@ -582,12 +702,11 @@ class StructureData(Node):
         from aida.common.exceptions import ModificationNotAllowed
 
         if not self._to_be_stored:
-            raise ModificationNotAllowed("The StructureData object cannot be modified, "
+            raise ModificationNotAllowed(
+                "The StructureData object cannot be modified, "
                 "it has already been stored")
 
         the_cell = _get_valid_cell(value)
-
-        #self._cell = the_cell
         self.set_attr('cell', the_cell)
 
     @property
@@ -614,10 +733,10 @@ class StructureData(Node):
         self.set_attr('pbc3',the_pbc[2])
 
     def is_alloy(self):
-        return any(s.is_alloy() for s in self.sites)
+        return any(s.is_alloy() for s in self.kinds)
 
     def has_vacancies(self):
-        return any(s.has_vacancies() for s in self.sites)
+        return any(s.has_vacancies() for s in self.kinds)
 
     def get_cell_volume(self):
         """
@@ -625,9 +744,9 @@ class StructureData(Node):
         """
         return calc_cell_volume(self.cell)
 
-class Site(object):
+class Kind(object):
     """
-    This class contains the information about a given site of the system.
+    This class contains the information about the species (kinds) of the system.
 
     It can be a single atom, or an alloy, or even contain vacancies.
     """
@@ -638,28 +757,27 @@ class Site(object):
         Args:
            One can either pass:
                raw: the raw python dictionary that will be converted to a
-               Site object.
+               Kind object.
                ase: an ase Atom object
-               site: a Site object (to get a copy)
+               kind: a Kind object (to get a copy)
            Or alternatively the following parameters:
-               position: the absolute position (three floats) in angstrom
                symbols: a single string for the symbol of this site, or a list
                    of symbol strings
-               weights (optional): the weights for each atomic species of this site.
-                  If only a single symbol is provided, then this value is
-                  optional and the weight is set to 1.
-               mass (optional): the mass for this site in atomic mass units. If not provided,
-                   the mass is set by the self.reset_mass() function.
-               type (optional): a string that uniquely identifies the Site type. Two sites with the
-                   same 'type' string are treated as the same atom type (e.g. for symmetry detection, ...)
-                   By default, it is set to a string with the symbols appended one to the other, without
-                   spaces, in alphabetical order; if the site has a vacancy, a X is appended at the end too.
+               weights (optional): the weights for each atomic species of
+                   this site.
+                   If only a single symbol is provided, then this value is
+                   optional and the weight is set to 1.
+               mass (optional): the mass for this site in atomic mass units.
+                   If not provided, the mass is set by the
+                   self.reset_mass() function.
+               name: a string that uniquely identifies the kind, and that
+                   is used to identify the sites. 
         """
         # Internal variables
         self._mass = None
         self._symbols = None
         self._weights = None
-        self._type = None
+        self._name = None
 
         # Logic to create the site from the raw format
         if 'raw' in kwargs:
@@ -668,10 +786,6 @@ class Site(object):
                                  "any other parameter.")
 
             raw = kwargs['raw']
-            try:
-                self.position = raw['position']
-            except KeyError:
-                raise ValueError("No 'position' key in raw site data.")
 
             try:
                 self.set_symbols_and_weights(raw['symbols'],raw['weights'])
@@ -685,89 +799,94 @@ class Site(object):
                                  "raw site data.")
 
             try:
-                self.type = raw['type']
+                self.name = raw['name']
             except KeyError:
-                raise ValueError("You didn't specify the site type in the "
+                raise ValueError("You didn't specify the name in the "
                                  "raw site data.")
 
-        elif 'site' in kwargs:
+        elif 'kind' in kwargs:
             if len(kwargs) != 1:
-                raise ValueError("If you pass 'site', then you cannot pass "
+                raise ValueError("If you pass 'kind', then you cannot pass "
                                  "any other parameter.")
-            oldsite = kwargs['site']
+            oldkind = kwargs['kind']
 
             try:
-                self.position = oldsite.position
-                self.set_symbols_and_weights(oldsite.symbols,oldsite.weights)
-                self.mass = oldsite.mass
-                self.type = oldsite.type
+                self.set_symbols_and_weights(oldkind.symbols,oldkind.weights)
+                self.mass = oldkind.mass
+                self.name = oldkind.name
             except AttributeError:
-                raise ValueError("Error using the Site object. Are you sure "
-                    "it is a aida.common.classes.structure.Site object? [Introspection says it is "
-                    "{}]".format(str(type(oldsite))))
+                raise ValueError("Error using the Kind object. Are you sure "
+                    "it is a Kind object? [Introspection says it is "
+                    "{}]".format(str(type(oldkind))))
 
         elif 'ase' in kwargs:
             aseatom = kwargs['ase']
             if len(kwargs) != 1:
-                raise ValueError("If you pass 'ase', then you cannot pass any other parameter.")
+                raise ValueError("If you pass 'ase', then you cannot pass "
+                                 "any other parameter.")
             
             try:
-                self.position = aseatom.position
                 self.set_symbols_and_weights([aseatom.symbol],[1.])
                 self.mass = aseatom.mass
-                self.set_automatic_type()
             except AttributeError:
                 raise ValueError("Error using the aseatom object. Are you sure "
                     "it is a ase.atom.Atom object? [Introspection says it is "
                     "{}]".format(str(type(aseatom))))
-
+            if aseatom.tag != 0:
+                self.set_automatic_kind_name(tag=aseatom.tag)
+            else:
+                self.set_automatic_kind_name()
         else:
-            if 'position' not in kwargs or 'symbols' not in kwargs:
-                raise ValueError("Both 'position' and 'symbols' need to be "
+            if 'symbols' not in kwargs:
+                raise ValueError("'symbols' need to be "
                     "specified (at least) to create a Site object. Otherwise, "
                     "pass a raw site using the 'raw' parameter.")
-            self.position = kwargs['position']
-            weights = kwargs.get('weights',None)
-            self.set_symbols_and_weights(kwargs['symbols'],weights)
-            if 'mass' not in kwargs:
+            weights = kwargs.pop('weights',None)
+            self.set_symbols_and_weights(kwargs.pop('symbols'),weights)
+            try:
+                self.mass = kwargs.pop('mass')
+            except KeyError:
                 self.reset_mass()
-            else:
-                self.mass = kwargs['mass']
-            if 'type' not in kwargs:
-                self.set_automatic_type()
-            else:
-                self.type = kwargs['type']
+            try:
+                self.name = kwargs.pop('name')
+            except KeyError:
+                self.set_automatic_kind_name()
+            if kwargs:
+                raise ValueError("Unrecognized parameters passed to Kind "
+                                 "constructor: {}".format(kwargs.keys()))
 
     def get_raw(self):
         """
         Return the raw version of the site, mapped to a suitable dictionary. 
 
-        This is the format that is actually used to store each site of the 
+        This is the format that is actually used to store each kind of the 
         structure in the DB.
         
         Returns:
-            a python dictionary with the site.
+            a python dictionary with the kind.
         """
         return {
             'symbols': self.symbols,
             'weights': self.weights,
-            'position': self.position,
             'mass': self.mass,
-            'type': self.type,
+            'name': self.name,
             }
 
-    def get_ase(self):
-        """
-        Return a ase.Atom object for this site.
-
-        Note: If any site is an alloy or has vacancies, a ValueError is raised (from the
-            site.get_ase() routine).
-        """
-        import ase
-        if self.is_alloy() or self.has_vacancies():
-            raise ValueError("Cannot convert to ASE if the site is an alloy or has vacancies.")
-        aseatom = ase.Atom(position=self.position, symbol=self.symbols[0], mass=self.mass)
-        return aseatom
+#     def get_ase(self):
+#         """
+#         Return a ase.Atom object for this kind, setting the position to 
+#         the origin.
+# 
+#         Note: If any site is an alloy or has vacancies, a ValueError is
+#             raised (from the site.get_ase() routine).
+#         """
+#         import ase
+#         if self.is_alloy() or self.has_vacancies():
+#             raise ValueError("Cannot convert to ASE if the site is an alloy "
+#                              "or has vacancies.")
+#         aseatom = ase.Atom(position=[0.,0.,0.], symbol=self.symbols[0],
+#                            mass=self.mass)
+#         return aseatom
 
     def reset_mass(self):
         """
@@ -792,84 +911,87 @@ class Site(object):
         normalized_weights = (i/w_sum for i in self._weights)
         element_masses = (_atomic_masses[sym] for sym in self._symbols)
         # Weighted mass
-        self._mass = sum([i*j for i,j in zip(normalized_weights, element_masses)])
+        self._mass = sum([i*j for i,j in 
+                         zip(normalized_weights, element_masses)])
 
     @property
-    def type(self):
+    def name(self):
         """
-        Return the type of this site (a string).
+        Return the name of this kind (a string).
         
-        The type of a site is used to decide whether two sites are identical (same mass, symbols,
-        weights, ...) or not.
+        The name of a kind is used to identify the species of a site.
         """
-        return self._type
+        return self._name
 
-    @type.setter
-    def type(self, value):
+    @name.setter
+    def name(self, value):
         """
-        Set the type of this site (a string).
-        
-        Note that if the weights or the symbols are changed, the type is overwritten with the
-        automatic one.
+        Set the name of this site (a string).
         """
-        self._type = str(value)
+        self._name = unicode(value)
 
-    def set_automatic_type(self):
+    def set_automatic_kind_name(self,tag=None):
         """
-        Set the type to a string obtained with the symbols appended one after the other, without
-        spaces, in alphabetical order; if the site has a vacancy, a X is appended at the end too.
+        Set the type to a string obtained with the symbols appended one
+        after the other, without spaces, in alphabetical order;
+        if the site has a vacancy, a X is appended at the end too.
         """
         sorted_symbol_list = list(set(self.symbols))
         sorted_symbol_list.sort() # In-place sort
-        type_string = "".join(sorted_symbol_list)
+        name_string = "".join(sorted_symbol_list)
         if self.has_vacancies():
-            type_string += "X"
-        
-        self.type = type_string
+            name_string += "X"
+        if tag is None:
+            self.name = name_string
+        else:
+            self.name = "{}{}".format(name_string, tag)
 
-    def compare_type(self, other_site):
+    def compare_with(self, other_kind):
         """
         Compare with another Site object to check if they are different.
         
-        Note! This does NOT check the 'type' attribute. Instead, it compares (with reasonable thresholds,
-        where applicable): the mass, and the list of symbols and of weights.
+        Note! This does NOT check the 'type' attribute. Instead, it compares
+        (with reasonable thresholds, where applicable): the mass, and the list
+        of symbols and of weights.
 
         Return:
-            A tuple with two elements. The first one is True if the two sites are 'equivalent' (same mass,
-                symbols and weights), False otherwise. The second element of the tuple is a string, 
-                which is either None (if the first element was True), or contains a 'human-readable'
-                description of the first difference encountered between the two sites.
+            A tuple with two elements. The first one is True if the two sites
+            are 'equivalent' (same mass, symbols and weights), False otherwise.
+            The second element of the tuple is a string, 
+            which is either None (if the first element was True), or contains
+            a 'human-readable' description of the first difference encountered
+            between the two sites.
         """
         # Check length of symbols
-        if len(self.symbols) != len(other_site.symbols):
+        if len(self.symbols) != len(other_kind.symbols):
             return (False, "Different length of symbols list")
         
         # Check list of symbols
         for i in range(len(self.symbols)):
-            if self.symbols[i] != other_site.symbols[i]:
-                return (False, "Symbol at position {:d} are different ({} vs. {})".format(
-                        i+1, self.symbols[i], other_site.symbols[i]))
-
-        # Check weights (assuming length of weights and of symbols have same length, which should
-        # always be true
+            if self.symbols[i] != other_kind.symbols[i]:
+                return (False, "Symbol at position {:d} are different "
+                        "({} vs. {})".format(
+                        i+1, self.symbols[i], other_kind.symbols[i]))
+        # Check weights (assuming length of weights and of symbols have same
+        # length, which should be always true
         for i in range(len(self.weights)):
-            if self.weights[i] != other_site.weights[i]:
-                return (False, "Weight at position {:d} are different ({} vs. {})".format(
-                        i+1, self.weights[i], other_site.weights[i]))
-            
-
+            if self.weights[i] != other_kind.weights[i]:
+                return (False, "Weight at position {:d} are different "
+                        "({} vs. {})".format(
+                        i+1, self.weights[i], other_kind.weights[i]))
         # Check masses
-        if abs(self.mass - other_site.mass) > _mass_threshold:
-            return (False, "Masses are different ({} vs. {})".format(self.mass, other_site.mass))
+        if abs(self.mass - other_kind.mass) > _mass_threshold:
+            return (False, "Masses are different ({} vs. {})"
+                    "".format(self.mass, other_kind.mass))
     
-        # If we got here, the two Site objects are similar enough to be considered of the same type
-        return (True, None)
-        
+        # If we got here, the two Site objects are similar enough
+        # to be considered of the same kind
+        return (True, "")
 
     @property
     def mass(self):
         """
-        The mass of this site.
+        The mass of this species kind.
         """
         return self._mass
 
@@ -881,36 +1003,10 @@ class Site(object):
         self._mass = the_mass
 
     @property
-    def position(self):
-        """
-        Return the position of this site in absolute coordinates, 
-        in angstrom.
-        """
-        return copy.deepcopy(self._position)
-
-    @position.setter
-    def position(self,value):
-        """
-        Set the position of this site in absolute coordinates, 
-        in angstrom.
-        """
-        try:
-            internal_pos = tuple(float(i) for i in value)
-            if len(internal_pos) != 3:
-                raise ValueError
-        # value is not iterable or elements are not floats or len != 3
-        except (ValueError,TypeError), e:
-            raise ValueError("Wrong format for position, must be a list of "
-                             "three float numbers.")
-        self._position = internal_pos
-
-    @property
     def weights(self):
         """
-        Weights for this site. Refer also to
+        Weights for this species kind. Refer also to
         :func:validate_symbols_tuple for the validation rules on the weights.
-
-        Note that when the weights are changed, the type is automatically regenerated.
         """
         return copy.deepcopy(self._weights)
 
@@ -929,7 +1025,6 @@ class Site(object):
         validate_weights_tuple(weights_tuple, _sum_threshold)
 
         self._weights = weights_tuple
-        self.set_automatic_type()
 
     @property
     def symbols(self):
@@ -937,8 +1032,9 @@ class Site(object):
         List of symbols for this site. If the site is a single atom,
         pass a list of one element only, or simply the string for that atom.
         For alloys, a list of elements.
-
-        Note that when the symbols are changed, the type is automatically regenerated.
+        
+        Note that if you change the list of symbols, the kind name remains
+        unchanged.
         """
         return copy.deepcopy(self._symbols)
     
@@ -959,13 +1055,12 @@ class Site(object):
         validate_symbols_tuple(symbols_tuple)
 
         self._symbols = symbols_tuple
-        self.set_automatic_type()
 
     def set_symbols_and_weights(self,symbols,weights):
         """
         Set the chemical symbols and the weights for the site.
 
-        Note that this function also resets the type to the automatically generated one.
+        Note that the kind name remains unchanged.
         """
         symbols_tuple = _create_symbols_tuple(symbols)
         weights_tuple = _create_weights_tuple(weights)
@@ -975,11 +1070,10 @@ class Site(object):
         validate_weights_tuple(weights_tuple,_sum_threshold)
         self._symbols = symbols_tuple
         self._weights = weights_tuple
-        self.set_automatic_type()
 
     def is_alloy(self):
         """
-        Returns True if the site has more than one element (i.e., 
+        Returns True if the kind has more than one element (i.e., 
         len(self.symbols) != 1), False otherwise.
         """
         return len(self._symbols) != 1
@@ -993,3 +1087,194 @@ class Site(object):
         w_sum = sum(self._weights)
         return not(1. - w_sum < _sum_threshold)
 
+    def __repr__(self):
+        # TODO: change this to have it more 'unique'
+        return u"Kind with name '{}'".format(self.name)
+
+
+class Site(object):
+    """
+    This class contains the information about a given site of the system.
+
+    It can be a single atom, or an alloy, or even contain vacancies.
+    """
+    def __init__(self, **kwargs):
+        """
+        Create a site.
+
+        Args:
+            kind: a string that identifies the kind (species) of this site.
+                This has to be found in the list of kinds of the StructureData
+                object. 
+                Validation will be done at the StructureData level.
+            position: the absolute position (three floats) in angstrom
+        """
+        self._kind = None
+        self._position = None
+        
+        if 'site' in kwargs:
+            site = kwargs.pop('site')
+            if kwargs:
+                raise ValueError("If you pass 'site', you cannot pass any "
+                                 "further parameter to the Site constructor")
+            if not isinstance(site, Site):
+                raise ValueError("'site' must be of type Site")
+            self.kind = site.kind
+            self.position = site.position
+        elif 'raw' in kwargs:
+            raw = kwargs.pop('raw')
+            if kwargs:
+                raise ValueError("If you pass 'raw', you cannot pass any "
+                                 "further parameter to the Site constructor")
+            try:
+                self.kind = raw['kind']
+                self.position = raw['position']
+            except KeyError as e:
+                raise ValueError("Invalid raw object, it does not contain any "
+                                 "key {}".format(e.message))
+            except TypeError:
+                raise ValueError("Invalid raw object, it is not a dictionary")
+
+        else:
+            try:
+                self.kind = kwargs.pop('kind')
+                self.position = kwargs.pop('position')
+            except KeyError as e:
+                raise ValueError("You need to specify {}".format(e.message))
+            if kwargs:
+                raise ValueError("Unrecognized parameters: {}".format(
+                    kwargs.keys))
+
+    def get_raw(self):
+        """
+        Return the raw version of the site, mapped to a suitable dictionary. 
+
+        This is the format that is actually used to store each site of the 
+        structure in the DB.
+        
+        Returns:
+            a python dictionary with the site.
+        """
+        return {
+            'position': self.position,
+            'kind': self.kind,
+            }
+
+    def get_ase(self, kinds):
+        """
+        Return a ase.Atom object for this site.
+        
+        Args: 
+            kinds: the list of kinds from the StructureData object.
+
+        Note: If any site is an alloy or has vacancies, a ValueError is raised
+            (from the site.get_ase() routine).
+        """
+        from collections import defaultdict
+        import ase
+        
+        # I create the list of tags
+        tag_list = []
+        used_tags = defaultdict(list)
+        for k in kinds:
+            # Skip alloys and vacancies
+            if k.is_alloy() or k.has_vacancies():
+                tag_list.append(None)
+            # If the kind name is equal to the specie name, 
+            # then no tag should be set
+            elif unicode(k.name) == unicode(k.symbols[0]):
+                tag_list.append(None)
+            else:
+                # Name is not the specie name
+                if k.name.startswith(k.symbols[0]):
+                    try:
+                        new_tag = int(k.name[len(k.symbols[0])])
+                        tag_list.append(new_tag)
+                        used_tags[k.symbols[0]].append(new_tag)
+                        continue
+                    except ValueError:
+                        pass
+                tag_list.append(k.symbols[0]) # I use a string as a placeholder
+        
+        for i in range(len(tag_list)):            
+            # If it is a string, it is the name of the element,
+            # and I have to generate a new integer for this element
+            # and replace tag_list[i] with this new integer
+            if isinstance(tag_list[i],basestring):
+                # I get a list of used tags for this element
+                existing_tags = used_tags[tag_list[i]]
+                if existing_tags:
+                    new_tag = max(existing_tags)+1
+                else: # empty list
+                    new_tag = 1
+                # I store it also as a used tag!
+                used_tags[tag_list[i]].append(new_tag)
+                # I update the tag
+                tag_list[i] = new_tag
+        
+        found = False
+        for k, t in zip(kinds,tag_list):
+            if k.name == self.kind:
+                kind=k
+                tag=t
+                found = True
+                break
+        if not found:
+            raise ValueError("No kind '{}' has been found in the list of kinds"
+                             "".format(self.kind))
+        
+        if kind.is_alloy() or kind.has_vacancies():
+            raise ValueError("Cannot convert to ASE if the kind represents "
+                             "an alloy or it has vacancies.")
+        aseatom = ase.Atom(position=self.position, 
+                           symbol=kind.symbols[0], 
+                           mass=kind.mass)
+        if tag is not None:
+            aseatom.tag = tag
+        return aseatom
+
+    @property
+    def kind(self):
+        """
+        Return the kind of this site (a string).
+        
+        The type of a site is used to decide whether two sites are identical
+        (same mass, symbols, weights, ...) or not.
+        """
+        return self._kind
+
+    @kind.setter
+    def kind(self, value):
+        """
+        Set the type of this site (a string).
+        """
+        self._kind = unicode(value)
+
+    @property
+    def position(self):
+        """
+        Return the position of this site in absolute coordinates, 
+        in angstrom.
+        """
+        return copy.deepcopy(self._position)
+
+    @position.setter
+    def position(self,value):
+        """
+        Set the position of this site in absolute coordinates, 
+        in angstrom.
+        """
+        try:
+            internal_pos = tuple(float(i) for i in value)
+            if len(internal_pos) != 3:
+                raise ValueError
+        # value is not iterable or elements are not floats or len != 3
+        except (ValueError,TypeError):
+            raise ValueError("Wrong format for position, must be a list of "
+                             "three float numbers.")
+        self._position = internal_pos
+
+    def __repr__(self):
+        return u"'{}' site @ {},{},{}".format(self.kind, self.position[0],
+                                              self.position[1],
+                                              self.position[2])

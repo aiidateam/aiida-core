@@ -106,7 +106,7 @@ def update_running_calcs_status(authinfo):
                     if last_jobinfo is None:    
                         last_jobinfo = JobInfo()
                         last_jobinfo.jobId = c.get_job_id()
-                        last_jobinfo.jobState = jobStates.FINISHED
+                        last_jobinfo.jobState = jobStates.DONE
                     last_jobinfo.detailedJobinfo = detailed_jobinfo
                     c._set_last_jobinfo(last_jobinfo)
                 except Exception as e:

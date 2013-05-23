@@ -21,7 +21,20 @@ except IndexError:
     sys.exit(1)
 
 c = Calculation(uuid=uuid)
+print "INPUTS:"
+for label, node in c.get_inputs(also_labels=True):
+    print "* input of type {} with link name {}".format(
+        node.__class__.__name__, label)
+print ""
+print "OUTPUTS:"
+for label, node in c.get_outputs(also_labels=True):
+    print "* output of type {} with link name {}".format(
+        node.__class__.__name__, label)
+
 lj = c.get_last_jobinfo()
-print "\n".join("{} = {}".format(*i) for i in lj.iteritems())
+if lj:
+    print "\n".join("{} = {}".format(*i) for i in lj.iteritems())
+else:
+    print "unable to get last_jobinfo"
 
 

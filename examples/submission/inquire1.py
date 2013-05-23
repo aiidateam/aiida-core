@@ -15,12 +15,19 @@ import sys
 from aida.orm import Node, Calculation
 
 try:
-    uuid = sys.argv[1]
+    idstr = sys.argv[1]
 except IndexError:
-    print >> sys.stderr, "Pass a UUID"
+    print >> sys.stderr, "Pass a UUID or a ID"
     sys.exit(1)
 
-c = Calculation(uuid=uuid)
+try:
+    print idstr
+    the_id = int(idstr)
+except ValueError:
+    c = Calculation(uuid=idstr)
+else:
+    c = Calculation.get_subclass_from_pk(the_id)
+
 print "INPUTS:"
 for label, node in c.get_inputs(also_labels=True):
     print "* input of type {} with link name {}".format(

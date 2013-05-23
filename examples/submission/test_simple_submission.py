@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 import sys
 import os
+import paramiko
 
 try:
-    remoteuser = sys.argv[1]
+    machine = sys.argv[1]
 except IndexError:
-    print >> sys.stderr, "Remote Username automatically set to the local username"
-    import getpass
-    remoteuser = getpass.getuser()
-
+    print >> sys.stderr, "Pass the machine name."
+    sys.exit(1)
 
 from aida.common.utils import load_django
 load_django()
@@ -30,12 +29,10 @@ from aida.orm.dataplugins.parameter import ParameterData
 from aida.orm.dataplugins.singlefile import SinglefileData
 from aida.orm.dataplugins.remote import RemoteData
 
-computername = "bellatrix.epfl.ch"
 # A string with the version of this script, used to recreate a code when necessary
 current_version = "1.0.4"
 queue = None
 #queue = "P_share_queue"
-use_localhost=True
 
 def get_or_create_machine():
     import json
@@ -47,7 +44,7 @@ def get_or_create_machine():
 #    from aida.djsite.db.models import DbComputer
 #    DbComputer.objects.filter(hostname=computername).delete()
     
-    if use_localhost:
+    if machine == 'localhost':
         try:
             computer = Computer.get("localhost")
             print >> sys.stderr, "Using the existing computer {localhost}..."
@@ -72,25 +69,58 @@ def get_or_create_machine():
         else:
             print "  (Retrieved authinfo)"
 
-    else:
+    else: # ssh case
+        if machine.startswith('bellatrix'):
+            computername = "bellatrix.epfl.ch"
+            schedulertype = 'pbspro'
+            workdir = "/scratch/{username}/aida"
+        elif machine.startswith('rosa'):
+            computername = "rosa.cscs.ch"
+            schedulertype = 'slurm'
+            workdir = "/scratch/rosa/{username}/aida"
+        else:
+            print >> sys.stderr, "Unkown computer!"
+            sys.exit(1)
+            
         try:
             computer = Computer.get(computername)
             print >> sys.stderr, "Using the existing computer {}...".format(computername)
         except NotExistent:
             print >> sys.stderr, "Creating a new computer..."
             computer = Computer(hostname=computername,transport_type='ssh',
-                                scheduler_type='pbspro')
-            computer.set_workdir("/scratch/{username}/aida")
+                                scheduler_type=schedulertype)
+            computer.set_workdir(workdir)
             computer.store()
 
         from aida.djsite.db.models import AuthInfo
-        auth_params = {'username': remoteuser,
-                       'load_system_host_keys': True}
+        auth_params = {'load_system_host_keys': True}
 
-        if os.path.exists('~/.ssh/id_rsa'):
-            auth_params['key_filename'] = os.path.expanduser('~/.ssh/id_rsa')
-        elif os.path.exists('~/.ssh.id_dsa'):
-            auth_params['key_filename'] = os.path.expanduser('~/.ssh/id_rsa')
+
+        config = paramiko.SSHConfig()
+        try:
+            config.parse(open(os.path.expanduser('~/.ssh/config')))
+        except IOError:
+            # No file found, so empty configuration
+            pass
+        # machine_config is a dict with only relevant properties set
+        machine_config = config.lookup(computername)
+
+        try:
+            auth_params['username'] = machine_config['user']
+        except KeyError:
+            # No user set up in the config file: I explicitly set the local username
+            auth_params['username'] = getpass.getuser()
+
+        try:
+           auth_params['key_filename'] = os.path.expanduser(
+                machine_config['identityfile'])
+        except KeyError:
+            pass 
+        
+        try:
+            auth_params['port'] = machine_config['port']
+        except KeyError:
+            pass       
 
         authinfo, created = AuthInfo.objects.get_or_create(
             aidauser=get_automatic_user(),
@@ -102,6 +132,10 @@ def get_or_create_machine():
             print "  (Created authinfo)"
         else:
             print "  (Retrieved authinfo)"
+        print "*** AuthInfo: "
+        for k,v in json.loads(authinfo.auth_params).iteritems():
+            print "{} = {}".format(k, v)
+        print ""
 
     return computer
 
@@ -188,12 +222,8 @@ with tempfile.NamedTemporaryFile() as f:
     # I don't worry of the name with which it is internally stored
     fileparam = SinglefileData(filename=f.name).store()
 
-if use_localhost:
-    remoteparam = RemoteData(remote_machine="localhost",
-        remote_path="/home/{}/.bashrc".format(remoteuser) ).store()
-else:
-    remoteparam = RemoteData(remote_machine="bellatrix.epfl.ch",
-        remote_path="/home/{}/.bashrc".format(remoteuser) ).store()
+remoteparam = RemoteData(remote_machine=computer.hostname,
+                         remote_path="/etc/inittab").store()
 
 calc = Calculation(computer=computer)
 calc.set_max_wallclock_seconds(12*60) # 12 min

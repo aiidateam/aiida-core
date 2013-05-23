@@ -12,11 +12,9 @@ jobStates = JobState((
         'RUNNING',
         'SUSPENDED',
         'DONE',
-        'FAILED',
         ))
-    
-#class QueueInfo(DefaultFieldsAttributeDict):
-#    _default_fields = ('name',)
+# for the moment, I don't define FAILED (I put everything in DONE)
+#        'FAILED',
 
 
 class JobTemplate(DefaultFieldsAttributeDict):

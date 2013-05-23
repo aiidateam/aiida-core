@@ -2,7 +2,7 @@
 Plugin for PBSPro.
 This has been tested on PBSPro v. 12.
 """
-
+from __future__ import division
 import aida.scheduler
 from aida.common.utils import escape_for_bash
 from aida.scheduler import SchedulerError, SchedulerParsingError
@@ -198,10 +198,10 @@ class PbsproScheduler(aida.scheduler.Scheduler):
                 raise ValueError(
                     "maxWallclockSeconds must be "
                     "a positive integer (in seconds)! It is instead '{}'"
-                    "".format((job_tmpl.maxWallclockTime)))
-            hours = tot_secs / 3600
+                    "".format((job_tmpl.maxWallclockSeconds)))
+            hours = tot_secs // 3600
             tot_minutes = tot_secs % 3600
-            minutes = tot_minutes / 60
+            minutes = tot_minutes // 60
             seconds = tot_minutes % 60
             lines.append("#PBS -l walltime={:02d}:{:02d}:{:02d}".format(
                 hours, minutes, seconds))
@@ -216,7 +216,7 @@ class PbsproScheduler(aida.scheduler.Scheduler):
                     "maxMemoryKb must be "
                     "a positive integer (in kB)! It is instead '{}'"
                     "".format((job_tmpl.MaxMemoryKb)))
-                select_string += ":mem={}kb".format(virtualMemoryKb)
+            select_string += ":mem={}kb".format(virtualMemoryKb)
                 
         lines.append("#PBS -l {}".format(select_string))
 
@@ -381,7 +381,7 @@ class PbsproScheduler(aida.scheduler.Scheduler):
                 except KeyError:
                     self.logger.warning("Unrecognized job_state '{}' for job "
                                         "id {}".format(job_state_string,
-                                                       this_job.jobID))
+                                                       this_job.jobId))
                     this_job.jobState = jobStates.UNDETERMINED
             except KeyError:
                 self.logger.debug("No 'job_state' field for job id {}".format(
@@ -454,8 +454,8 @@ class PbsproScheduler(aida.scheduler.Scheduler):
             except KeyError:
                 self.logger.debug("No 'resource_list.ncpus' field for job id "
                     "{}".format(this_job.jobId))
-            except IndexError:
-                self.logger.warning(";resource_list.ncpus' is not an integer "
+            except ValueError:
+                self.logger.warning("'resource_list.ncpus' is not an integer "
                                     "({}) for job id {}!".format(
                         raw_data['resource_list.ncpus'],
                         this_job.jobId))
@@ -465,8 +465,8 @@ class PbsproScheduler(aida.scheduler.Scheduler):
             except KeyError:
                 self.logger.debug("No 'resource_list.nodect' field for job id "
                     "{}".format(this_job.jobId))
-            except IndexError:
-                self.logger.warning(";resource_list.nodect' is not an integer "
+            except ValueError:
+                self.logger.warning("'resource_list.nodect' is not an integer "
                                     "({}) for job id {}!".format(
                         raw_data['resource_list.nodect'],
                         this_job.jobId))

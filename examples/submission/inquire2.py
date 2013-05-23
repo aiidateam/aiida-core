@@ -6,6 +6,9 @@ from aida.common.utils import load_django
 load_django()
 
 calcs = []
+if not sys.argv[1:]:
+  print >> sys.stderr, "pass at least on pk"
+  sys.exit(1)
 for i in sys.argv[1:]:
   try:
     calcs.append(int(i))

@@ -102,9 +102,61 @@ class TestParserSqueue(unittest.TestCase):
         #                self.assertTrue( j.numNodes==num_nodes )
         #                self.assertTrue( j.numCores==num_cores )
 
+class TestTimes(unittest.TestCase):
+    def test_time_conversion(self):
+        """
+        Test conversion of (relative) times.
+        
+        From docs,
+        acceptable  time  formats include 
+        "minutes",  "minutes:seconds",  "hours:minutes:seconds", 
+        "days-hours",  "days-hours:minutes" and "days-hours:minutes:seconds".
+        """
+        s = SlurmScheduler()
+        self.assertEquals(s._convert_time("2"), 2*60)
+        self.assertEquals(s._convert_time("02"), 2*60)
+        
+        self.assertEquals(s._convert_time("02:3"), 2*60+3)
+        self.assertEquals(s._convert_time("02:03"), 2*60+3)
+
+        self.assertEquals(s._convert_time("1:02:03"), 3600+2*60+3)
+        self.assertEquals(s._convert_time("01:02:03"), 3600+2*60+3)
+
+        self.assertEquals(s._convert_time("1-3"), 86400 + 3*3600)
+        self.assertEquals(s._convert_time("01-3"), 86400 + 3*3600)
+        self.assertEquals(s._convert_time("01-03"), 86400 + 3*3600)
+
+        self.assertEquals(s._convert_time("1-3:5"), 86400 + 3*3600 + 5*60)
+        self.assertEquals(s._convert_time("01-3:05"), 86400 + 3*3600 + 5*60)
+        self.assertEquals(s._convert_time("01-03:05"), 86400 + 3*3600 + 5*60)
+
+        self.assertEquals(s._convert_time("1-3:5:7"), 
+                          86400 + 3*3600 + 5*60 + 7)
+        self.assertEquals(s._convert_time("01-3:05:7"), 
+                          86400 + 3*3600 + 5*60 + 7)
+        self.assertEquals(s._convert_time("01-03:05:07"), 
+                          86400 + 3*3600 + 5*60 + 7)
+
+        # Disable logging to avoid excessive output during test
+        logging.disable(logging.ERROR)
+        with self.assertRaises(ValueError):
+            # Empty string not valid
+            s._convert_time("")
+        with self.assertRaises(ValueError):
+            # there should be something after the dash
+            s._convert_time("1-")
+        with self.assertRaises(ValueError):
+            # there should be something after the dash
+            # there cannot be a dash after the colons
+            s._convert_time("1:2-3")
+        # Reset logging level
+        logging.disable(logging.NOTSET)
+
+
 class TestSubmitScript(unittest.TestCase):
     def test_submit_script(self):
         """
+        Test the creation of a simple submission script.
         """
         from aida.scheduler.datastructures import JobTemplate
         s = SlurmScheduler()

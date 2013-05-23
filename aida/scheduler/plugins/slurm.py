@@ -54,29 +54,41 @@ _map_status_slurm = {
 _slurm_submitted_regexp = re.compile(
     r'(.*:\s*)?([Gg]ranted job allocation|[Ss]ubmitted batch job)\s+(?P<jobid>\d+)')
 
+# From docs,
+# acceptable  time  formats include 
+# "minutes",  "minutes:seconds",  "hours:minutes:seconds", 
+# "days-hours",  "days-hours:minutes" and "days-hours:minutes:seconds".
 _time_regexp = re.compile(
     r"""
-    ^                        # beginning of string
-    \s*                      # any number of white spaces
-    ((?P<days>\d+)-)?        # the number of days, if a dash is present,
-                             # composed by any number of digits;
-                             # may be absent
-    ((?P<hours>\d{1,2}):(?=\d{1,2}:\d{1,2}))?  # the number of hours; one or
-                                               # two digits; may be
-                                               # absent. Note that I have to
-                                               # look ahead without consuming
-                                               # the string ( using (?=) )
-                                               # to check that it is followed
-                                               # by two more fields, otherwise
-                                               # XX:YY will match hours=XX and
-                                               # seconds=YY instead of 
-                                               # minutes=XX
-    ((?P<minutes>\d{1,2}):)?  # number of minutes (one or two digits)
-                              # again, I assume it can be absent
-    (?P<seconds>\d{1,2})      # number of seconds
-                              # (at least this must be present)
-    \s*                       # any number of whitespaces
-    $                         # end of line
+    ^                            # beginning of string
+    \s*                          # any number of white spaces
+    (?=\d)                       # I check that there is at least a digit
+                                 # in the string, without consuming it
+    ((?P<days>\d+)(?P<dash>-)    # the number of days, if a dash is present,
+                                 # composed by any number of digits;
+                                 # may be absent
+     (?=\d))?                    # in any case, I check that there is at least
+                                 # a digit afterwards, without consuming it
+    ((?P<hours>\d{1,2})          # match an hour (one or two digits)
+     (?(dash)                    # check if the dash was found
+       |                         # match nothing if the dash was found: 
+                                 # if the dash was found, we are sure that 
+                                 # the first number is a hour
+       (?=:\d{1,2}:\d{1,2})))?   # if no dash was found, the first
+                                 # element found is an hour only if
+                                 # it is followed by two more fields (mm:ss)
+       (?P<firstcolon>:)?        # there (can) possibly be a further colon,
+                                 # consume it
+    ((?<!-)(?P<minutes>\d{1,2})
+     (:(?P<seconds>\d{1,2}))?)?  # number of minutes (one or two digits)
+                                 # and seconds. A number only means minutes.
+                                 # (?<!-) means that the location BEFORE
+                                 # the current position does NOT
+                                 # match a dash, because the string 1-2 
+                                 # means 1 day and 2 hours, NOT one day and
+                                 # 2 minutes
+    \s*                          # any number of whitespaces
+    $                            # end of line
    """, re.VERBOSE)
 
 # Separator between fields in the output of squeue
@@ -572,7 +584,8 @@ class SlurmScheduler(aida.scheduler.Scheduler):
                     else 0)
         mins  = int(groupdict['minutes'] if groupdict['minutes'] is not None 
                     else 0)
-        secs  = int(groupdict['seconds'])
+        secs  = int(groupdict['seconds'] if groupdict['seconds'] is not None
+                    else 0)
         
         return days * 86400 + hours * 3600 + mins * 60 + secs
 

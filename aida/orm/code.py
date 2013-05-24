@@ -173,7 +173,6 @@ class Code(Node):
         """
         return self.get_attr('output_plugin',None)
 
-
     def set_local_executable(self,exec_name):
         """
         Set the filename of the local executable.

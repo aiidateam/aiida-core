@@ -325,7 +325,18 @@ class Calculation(Node):
                 'computer__id', 'user__id')
         else:
             return queryresults
-            
+
+    def set_code(self, code):
+        """
+        Set the code for this calculation
+        """
+        from aida.orm import Code
+
+        if not isinstance(code, Code):
+            raise ValueError("the code must be an instance of the Code class")
+
+        self.replace_link_from(code, "code")
+        
 
 ## SOME OLD COMMENTS
 # Each calculation object should be defined by analogy of a function 

@@ -235,7 +235,7 @@ calc.store()
 print "created calculation; calc=Calculation(uuid='{}') # ID={}".format(
     calc.uuid,calc.dbnode.pk)
 
-calc.add_link_from(code)
+calc.set_code(code)
 
 calc.add_link_from(template_data, label="template")
 calc.add_link_from(parameters, label="parameters")

@@ -5,7 +5,8 @@ from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 import aida.common
 #from aida.djsite.db.models import DbNode, Attribute
 from aida.common.exceptions import (
-    DbContentError, InternalError, ModificationNotAllowed, NotExistent, ValidationError )
+    DbContentError, InternalError, ModificationNotAllowed,
+    NotExistent, UniquenessError, ValidationError )
 from aida.common.folders import RepositoryFolder, SandboxFolder
 
 # Name to be used for the section
@@ -155,6 +156,25 @@ class Node(object):
     def get_user(self):
         return self.dbnode.user
 
+    def replace_link_from(self,src,label):
+        """
+        Replace an input link with the given label, or simply creates it
+        if it does not exist.
+        """
+        try:
+            self.add_link_from(src, label)
+        except UniquenessError:
+            # I have to replace the link; I do it within a transaction
+            try:
+                sid = transaction.savepoint()
+                Link.objects.delete(output=self.dbnode,
+                                    label=label)
+                self.add_link_from(src, label)
+                transaction.savepoint_commit(sid)
+            except:
+                transaction.savepoint_rollback(sid)
+                raise
+
     def add_link_from(self,src,label=None):
         """
         Add a link to the current node from the 'src' node.
@@ -226,8 +246,9 @@ class Node(object):
                 transaction.savepoint_commit(sid)
             except IntegrityError as e:
                 transaction.savepoint_rollback(sid)
-                raise ValueError("There is already a link with the same name "
-                    "(raw message was {})".format(e.message))
+                raise UniquenessError("There is already a link with the same "
+                                      "name (raw message was {})"
+                                      "".format(e.message))
 
     def add_link_to(self,dest,label=None):
         """

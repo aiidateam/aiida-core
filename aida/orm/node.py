@@ -161,14 +161,17 @@ class Node(object):
         Replace an input link with the given label, or simply creates it
         if it does not exist.
         """
+        from django.db import transaction        
+        from aida.djsite.db.models import Link
+        
         try:
             self.add_link_from(src, label)
         except UniquenessError:
             # I have to replace the link; I do it within a transaction
             try:
                 sid = transaction.savepoint()
-                Link.objects.delete(output=self.dbnode,
-                                    label=label)
+                Link.objects.filter(output=self.dbnode,
+                                    label=label).delete()
                 self.add_link_from(src, label)
                 transaction.savepoint_commit(sid)
             except:

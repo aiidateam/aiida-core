@@ -236,6 +236,8 @@ print "created calculation; calc=Calculation(uuid='{}') # ID={}".format(
     calc.uuid,calc.dbnode.pk)
 
 calc.set_code(code)
+## Just for debugging purposes, I check that I can 'reset' the code
+#calc.set_code(code)
 
 calc.add_link_from(template_data, label="template")
 calc.add_link_from(parameters, label="parameters")

@@ -44,8 +44,6 @@ class SinglefileData(Data):
         return self.get_attr('filename')
 
     def get_file_abs_path(self):
-        import os
-
         return os.path.join(self.path_subfolder.abspath,self.filename)
 
     def add_path(self,src_abs,dst_filename=None):

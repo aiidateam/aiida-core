@@ -1,6 +1,6 @@
 import os
 
-from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
+from django.core.exceptions import ObjectDoesNotExist
 
 import aida.common
 #from aida.djsite.db.models import DbNode, Attribute
@@ -573,8 +573,8 @@ class Node(object):
         from aida.djsite.db.models import Attribute
                 
         if incrementversion:
-             self._increment_version_number_db()
-        attr, created = Attribute.objects.get_or_create(dbnode=self.dbnode, key=key)
+            self._increment_version_number_db()
+        attr, _ = Attribute.objects.get_or_create(dbnode=self.dbnode, key=key)
         ## TODO: create a get_or_create_with_value method in the djsite.db.models.Attribute class
         attr.setvalue(value)
 

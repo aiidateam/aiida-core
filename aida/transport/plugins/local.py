@@ -8,11 +8,8 @@
 
 import os,shutil,subprocess
 import aida.transport
-from aida.common.utils import escape_for_bash
-from aida.common import aidalogger
 from aida.transport import FileAttribute
 import StringIO
-import fnmatch
 import glob
 
 
@@ -753,14 +750,14 @@ class LocalTransport(aida.transport.Transport):
             try:
                 for l in filelike_stdin.readlines():
                     local_proc.stdin.write(l)
-            except AttributeError as e:
+            except AttributeError:
                 raise ValueError("stdin can only be either a string of a "
                                  "file-like object!")
         else:
             filelike_stdin = None
 
         local_stdin.flush()
-        # TODO : instead of strinIO use cstringIO
+        # TODO : instead of stringIO use cstringIO
         # TODO : use input option of communicate()
         output_text, stderr_text = local_proc.communicate()
 

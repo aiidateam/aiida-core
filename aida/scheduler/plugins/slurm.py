@@ -5,9 +5,8 @@ This has been tested on SLURM 2.5.4 on the CSCS.ch machines.
 from __future__ import division
 import aida.scheduler
 from aida.common.utils import escape_for_bash
-from aida.scheduler import SchedulerError, SchedulerParsingError
-from aida.scheduler.datastructures import (
-    JobInfo, jobStates, NodeInfo)
+from aida.scheduler import SchedulerError
+from aida.scheduler.datastructures import JobInfo, jobStates
 import re
 
 # This maps SLURM state codes to our own status list
@@ -169,9 +168,7 @@ class SlurmScheduler(aida.scheduler.Scheduler):
 
         TODO: truncate the title if too long
         """
-        import re 
         import string
-        import copy
 
         empty_line = ""
         

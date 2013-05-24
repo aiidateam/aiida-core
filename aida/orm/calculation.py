@@ -34,7 +34,7 @@ class Calculation(Node):
 
         # For new calculations
         self._set_state(calcStates.NEW)
-    	self.set_label("Calculation {}".format(self.uuid))
+        self.set_label("Calculation {}".format(self.uuid))
 
         computer = kwargs.pop('computer', None)
         if computer is not None:
@@ -62,17 +62,17 @@ class Calculation(Node):
         if self.get_state() not in calcStates:
             raise ValidationError("Calculation state '{}' is not valid".format(self.get_state()))
 
-	try:
-	    if int(self.get_num_nodes()) <= 0:
-		raise ValueError
-	except (ValueError,TypeError):
-		raise ValidationError("The number of nodes must be specified and must be positive")
-	    
-	try:
-	    if int(self.get_num_cpus_per_node()) <= 0:
-		raise ValueError
-	except (ValueError,TypeError):
-		raise ValidationError("The number of CPUs per node must be specified and must be positive")
+        try:
+            if int(self.get_num_nodes()) <= 0:
+                raise ValueError
+        except (ValueError,TypeError):
+            raise ValidationError("The number of nodes must be specified and must be positive")
+
+        try:
+            if int(self.get_num_cpus_per_node()) <= 0:
+                raise ValueError
+        except (ValueError,TypeError):
+            raise ValidationError("The number of CPUs per node must be specified and must be positive")
 
     def can_link_as_output(self,dest):
         """
@@ -186,12 +186,6 @@ class Calculation(Node):
 
         return super(Calculation,self).add_link_from(src, label)
 
-    def set_code(self,code):
-        from aida.orm import Code
-        if not isinstance(code, Code):
-            raise ValueError("Codes entering in calculation can only be of type Code()")
-        self.add_link_from(code)
-
     def set_computer(self,computer):
         """
         TODO: probably this method should be in the base class, and check for the type
@@ -199,7 +193,7 @@ class Calculation(Node):
         from aida.djsite.db.models import DbComputer
 
         if self._to_be_stored:
-	       self.dbnode.computer = DbComputer.get_dbcomputer(computer)
+            self.dbnode.computer = DbComputer.get_dbcomputer(computer)
         else:
             self.logger.error("Trying to change the computer of an already saved node: {}".format(
                 self.uuid))
@@ -218,24 +212,24 @@ class Calculation(Node):
         return self.get_attr('state', None)
 
     def _set_remote_workdir(self, remote_workdir):
-	if self.get_state() != calcStates.SUBMITTING:
-	    raise ModificationNotAllowed("Cannot set the remote workdir if you are not "
-					 "submitting the calculation (current state is "
-					 "{})".format(self.get_state()))
+        if self.get_state() != calcStates.SUBMITTING:   
+            raise ModificationNotAllowed("Cannot set the remote workdir if you are not "
+			                             "submitting the calculation (current state is "
+					                     "{})".format(self.get_state()))
         self.set_attr('remote_workdir', remote_workdir)
 
     def get_remote_workdir(self):
         return self.get_attr('remote_workdir', None)
 
     def _set_retrieve_list(self, retrieve_list):
-	if self.get_state() != calcStates.SUBMITTING:
-	    raise ModificationNotAllowed("Cannot set the retrieve_list if you are not "
+        if self.get_state() != calcStates.SUBMITTING:
+            raise ModificationNotAllowed("Cannot set the retrieve_list if you are not "
 					 "submitting the calculation (current state is "
 					 "{})".format(self.get_state()))
-	
-	if (not(isinstance(retrieve_list,(tuple,list))) or
-	      not(all(isinstance(i,basestring) for i in retrieve_list))):
-	    raise ValueError("You have to pass a list (or tuple) of strings as retrieve_list")
+
+        if (not(isinstance(retrieve_list,(tuple,list))) or
+	           not(all(isinstance(i,basestring) for i in retrieve_list))):
+            raise ValueError("You have to pass a list (or tuple) of strings as retrieve_list")
         self.set_attr('retrieve_list', retrieve_list)
 
     def get_retrieve_list(self):
@@ -245,8 +239,8 @@ class Calculation(Node):
         """
         Always set as a string
         """
-	if self.get_state() != calcStates.SUBMITTING:
-	    raise ModificationNotAllowed("Cannot set the job id if you are not "
+        if self.get_state() != calcStates.SUBMITTING:
+            raise ModificationNotAllowed("Cannot set the job id if you are not "
 					 "submitting the calculation (current state is "
 					 "{})".format(self.get_state()))
 
@@ -333,7 +327,7 @@ class Calculation(Node):
         from aida.orm import Code
 
         if not isinstance(code, Code):
-            raise ValueError("the code must be an instance of the Code class")
+            raise ValueError("The code must be an instance of the Code class")
 
         self.replace_link_from(code, "code")
         

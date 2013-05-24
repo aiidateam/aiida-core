@@ -25,7 +25,8 @@ import aida
 from aida.common.exceptions import ConfigurationError
 from aida.cmdline.baseclass import VerdiCommand
 
-## Import here from other files
+## Import here from other files; once imported, it will be found and
+## used as a command-line parameter
 from aida.cmdline.commands.daemon import Daemon
 
 # default execname; can be substituted later in the call from
@@ -531,8 +532,6 @@ def exec_from_cmdline(argv):
     """
     The main function to be called. Pass as paramater the sys.argv.
     """
-    import os
-
     ### This piece of code takes care of creating a list of valid
     ### commands and of their docstrings for dynamic management of
     ### the code.
@@ -550,7 +549,7 @@ def exec_from_cmdline(argv):
     # Retrieve the list of commands
     verdilib_namespace = verdilib.__dict__
 
-    list_commands ={v.get_command_name(): v for k, v in verdilib_namespace.iteritems()
+    list_commands ={v.get_command_name(): v for v in verdilib_namespace.itervalues()
                     if inspect.isclass(v) and not v==VerdiCommand and 
                     issubclass(v,VerdiCommand)}
 
@@ -569,7 +568,7 @@ def exec_from_cmdline(argv):
         except ValueError:
             # All False
             short_doc[k] = "No description available"
-            log_doc[k] = ""
+            long_doc[k] = ""
             continue
         short_doc[k] = lines[first_idx]
         long_doc[k]  = os.linesep.join(lines[first_idx+1:])

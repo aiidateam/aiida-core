@@ -2,12 +2,10 @@ from stat import S_ISDIR,S_ISREG
 import StringIO
 import paramiko
 import os
-import fnmatch
 import glob
 
 import aida.transport
 from aida.common.utils import escape_for_bash
-from aida.common import aidalogger
 from aida.transport import FileAttribute
 
 # TODO : callback functions in paramiko are currently not used much and probably broken
@@ -494,13 +492,11 @@ class SshTransport(aida.transport.Transport):
         elif not self.isdir(remotepath):
             self.mkdir(remotepath)
         
-        base_name = localpath
-        
         for this_source in os.walk(localpath):
             this_basename = this_source[0].lstrip(localpath)
             try:
                 self.sftp.stat( os.path.join(remotepath,this_basename) )
-            except IOError as e:
+            except IOError:
                 self.mkdir( os.path.join(remotepath,this_basename) )
                 
             for this_file in this_source[2]:
@@ -681,7 +677,7 @@ class SshTransport(aida.transport.Transport):
         remotesource,remotedestination
         """
         cp_flags = '-f'
-        return copy(remotesource,remotedestination,dereference,cp_flags,pattern)
+        return self.copy(remotesource,remotedestination,dereference,cp_flags,pattern)
 
 
     def copytree(self,remotesource,remotedestination,dereference=False,
@@ -694,7 +690,7 @@ class SshTransport(aida.transport.Transport):
         remotesource,remotedestination
         """
         cp_flags = '-r -f'
-        return copy(remotesource,remotedestination,dereference,cp_flags,pattern)
+        return self.copy(remotesource,remotedestination,dereference,cp_flags,pattern)
 
 
     def copy(self,remotesource,remotedestination,dereference=False, cp_flags='-r -f',

@@ -1,14 +1,11 @@
-import getpass
-import os
-
 from django.db import models as m
 from django_extensions.db.fields import UUIDField
 from django.contrib.auth.models import User
 
 from django.db.models.query import QuerySet
 
-from aida.djsite.settings.settings import LOCAL_REPOSITORY
-from aida.common.exceptions import DbContentError, MissingPluginError
+from aida.common.exceptions import (
+    ConfigurationError, DbContentError, MissingPluginError)
 
 # Removed the custom User field, that was creating a lot of problems. Use
 # the email as UUID. In case we need it, we can do a couple of south migrations
@@ -372,7 +369,7 @@ class DbComputer(m.Model):
     @classmethod
     def get_dbcomputer(cls,computer):
         from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
-        from aida.common.exceptions import DbContentError, NotExistent
+        from aida.common.exceptions import NotExistent
         from aida.orm import Computer
 
         if isinstance(computer, basestring):
@@ -411,8 +408,8 @@ class AuthInfo(m.Model):
     """
     aidauser = m.ForeignKey(User)
     computer = m.ForeignKey(DbComputer)
-    auth_params = m.TextField(default='{}')  # Will store a json; contains mainly the remoteuser
-                                             # and the private_key
+    auth_params = m.TextField(default='{}') # Will store a json; contains mainly the remoteuser
+                                            # and the private_key
 
     class Meta:
         unique_together = (("aidauser", "computer"),)

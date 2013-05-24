@@ -39,7 +39,8 @@ class Computer(object):
             self._dbcomputer = dbcomputer
 
             if kwargs:
-               raise ValueError("If you pass a dbcomputer parameter, you cannot pass any further parameter")
+                raise ValueError("If you pass a dbcomputer parameter, "
+                                 "you cannot pass any further parameter")
         else:
             self._dbcomputer = DbComputer()
 
@@ -76,7 +77,7 @@ class Computer(object):
                 self.set_scheduler_type(scheduler_type)
 
             if kwargs:
-                 raise ValueError("Unrecognized parameters: {}".format(kwargs.keys()))
+                raise ValueError("Unrecognized parameters: {}".format(kwargs.keys()))
 
     @property
     def to_be_stored(self):
@@ -247,10 +248,10 @@ class Computer(object):
         import json
 
         if self.to_be_stored:
-             try:
-                 self.dbcomputer.transport_params = json.dumps(val)
-             except ValueError:
-                 raise ValueError("The set of transport_params are not JSON-able")
+            try:
+                self.dbcomputer.transport_params = json.dumps(val)
+            except ValueError:
+                raise ValueError("The set of transport_params are not JSON-able")
         else:
             raise ModificationNotAllowed("Cannot set a property after having stored the entry")
 

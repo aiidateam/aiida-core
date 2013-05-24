@@ -43,6 +43,7 @@ class Scheduler(object):
         try:
             return self._logger
         except AttributeError:
+            from aida.common.exceptions import InternalError
             raise InternalError("No self._logger configured for {}!")
 
     def get_submit_script(self, job_tmpl):
@@ -68,7 +69,6 @@ class Scheduler(object):
         postpend_code
         postpend_computer
         """
-        from aida.scheduler.datastructures import JobTemplate
         from aida.common.exceptions import InternalError
         
         if not isinstance(job_tmpl, JobTemplate):

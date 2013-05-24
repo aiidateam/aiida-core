@@ -10,6 +10,8 @@ class VerdiCommand(object):
         """
         Method executed when the command is called from the command line.
         """
+        import sys
+        
         print >> sys.stderr, "This command has not been implemented yet"
 
     def complete(self, subargs_idx, subargs):

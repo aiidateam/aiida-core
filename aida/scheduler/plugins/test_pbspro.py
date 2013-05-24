@@ -1,6 +1,6 @@
 from aida.scheduler.plugins.pbspro import *
 import unittest
-import logging
+#import logging
 import uuid
         
 text_qstat_f_to_test = """Job Id: 68350.mycluster

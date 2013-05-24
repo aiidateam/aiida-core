@@ -374,37 +374,34 @@ def install_tc(sender, **kwargs):
     closure_table_child_field = "child_id"
       
     if "postgresql" in settings.DATABASES['default']['ENGINE']:
-      print '== Postegres found, installing transitive closure engine =='
+        print '== Postegres found, installing transitive closure engine =='
       
-      cursor.execute(get_pg_tc(links_table_name, links_table_input_field, links_table_output_field, 
-              closure_table_name, closure_table_parent_field, closure_table_child_field))
+        cursor.execute(get_pg_tc(links_table_name, links_table_input_field, links_table_output_field, 
+                                 closure_table_name, closure_table_parent_field, closure_table_child_field))
 
-      transaction.commit_unless_managed()
-
+        transaction.commit_unless_managed()
     elif "sqlite3" in settings.DATABASES['default']['ENGINE']:
-      print '== SQLite3 found, installing transitive closure engine =='
+        print '== SQLite3 found, installing transitive closure engine =='
       
-      cursor.execute("DROP TABLE IF EXISTS purge_list;");
-      cursor.execute(get_sqlite_tc_create_purgelist(links_table_name, links_table_input_field, links_table_output_field, 
-              closure_table_name, closure_table_parent_field, closure_table_child_field))
+        cursor.execute("DROP TABLE IF EXISTS purge_list;");
+        cursor.execute(get_sqlite_tc_create_purgelist(links_table_name, links_table_input_field, links_table_output_field, 
+                                                      closure_table_name, closure_table_parent_field, closure_table_child_field))
       
-      cursor.execute("DROP TRIGGER IF EXISTS update_tc;");
-      cursor.execute(get_sqlite_tc_create_trigger_update(links_table_name, links_table_input_field, links_table_output_field, 
-              closure_table_name, closure_table_parent_field, closure_table_child_field))
+        cursor.execute("DROP TRIGGER IF EXISTS update_tc;");
+        cursor.execute(get_sqlite_tc_create_trigger_update(links_table_name, links_table_input_field, links_table_output_field, 
+                                                           closure_table_name, closure_table_parent_field, closure_table_child_field))
       
-      cursor.execute("DROP TRIGGER IF EXISTS deleted_from;");
-      cursor.execute(get_sqlite_tc_create_trigger_delete(links_table_name, links_table_input_field, links_table_output_field, 
-              closure_table_name, closure_table_parent_field, closure_table_child_field))
+        cursor.execute("DROP TRIGGER IF EXISTS deleted_from;");
+        cursor.execute(get_sqlite_tc_create_trigger_delete(links_table_name, links_table_input_field, links_table_output_field, 
+                                                           closure_table_name, closure_table_parent_field, closure_table_child_field))
       
-      cursor.execute("DROP TRIGGER IF EXISTS purge_list.update_purgelist;");
-      cursor.execute(get_sqlite_tc_create_trigger_loop(links_table_name, links_table_input_field, links_table_output_field, 
-              closure_table_name, closure_table_parent_field, closure_table_child_field))
+        cursor.execute("DROP TRIGGER IF EXISTS purge_list.update_purgelist;");
+        cursor.execute(get_sqlite_tc_create_trigger_loop(links_table_name, links_table_input_field, links_table_output_field, 
+                                                       closure_table_name, closure_table_parent_field, closure_table_child_field))
       
-      transaction.commit_unless_managed()
-
-    
+        transaction.commit_unless_managed()
     else:
-      print '== No transitive closure installed =='
+        print '== No transitive closure installed =='
 
 # dispatch_uid used to avoid to install twice the signal if this
 # module is loaded twice (it happens e.g. when tests are run)

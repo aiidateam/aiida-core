@@ -93,7 +93,6 @@ class PbsproScheduler(aida.scheduler.Scheduler):
         """
         import re 
         import string
-        import copy
 
         empty_line = ""
         

@@ -6,7 +6,7 @@ They are executed when when you run "manage.py test" or
 from django.utils import unittest
 
 from aida.orm import Node
-from aida.common.exceptions import ModificationNotAllowed
+from aida.common.exceptions import ModificationNotAllowed, UniquenessError
 
 class AiidaTestCase(unittest.TestCase):
     """
@@ -828,7 +828,7 @@ class TestSubNodes(AiidaTestCase):
         n3.add_link_to(n4, label='label1')
 
         # An input link with that name already exists
-        with self.assertRaises(ValueError):
+        with self.assertRaises(UniquenessError):
             n3.add_link_from(n2, label='label1')
 
         # instead, for outputs, I can have multiple times the same label

@@ -181,7 +181,7 @@ def has_ase():
     Returns True if the ase module can be imported, False otherwise.
     """
     try:
-        import ase as _
+        import ase
     except ImportError:
         return False
     return True

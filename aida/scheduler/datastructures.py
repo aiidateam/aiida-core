@@ -1,5 +1,5 @@
 from aida.common.extendeddicts import (
-    FixedFieldsAttributeDict,
+#    FixedFieldsAttributeDict,
     DefaultFieldsAttributeDict, Enumerate)
 
 class JobState(Enumerate):

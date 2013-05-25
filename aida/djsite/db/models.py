@@ -52,15 +52,16 @@ class DbNode(m.Model):
     label = m.CharField(max_length=255, db_index=True, blank=True)
     description = m.TextField(blank=True)
     time = m.DateTimeField(auto_now_add=True, editable=False)
-    user = m.ForeignKey(User)
+    # Cannot delete a user if something is associated to it
+    user = m.ForeignKey(User, on_delete=m.PROTECT)
 
     # Direct links
     outputs = m.ManyToManyField('self', symmetrical=False, related_name='inputs', through='Link')  
     # Transitive closure
     children = m.ManyToManyField('self', symmetrical=False, related_name='parents', through='Path')
     
-    # Used only if dbnode is a calculation
-    computer = m.ForeignKey('DbComputer', null=True)  # only for calculations
+    # Used only if dbnode is a calculation, or remotedata
+    computer = m.ForeignKey('DbComputer', null=True, on_delete=m.PROTECT)
 
     # Index that is incremented every time a modification is done on itself or on attributes.
     # Managed by the aida.orm.Node class. Do not modify
@@ -466,7 +467,7 @@ class DbWorkflowScript(m.Model):
     time        = m.DateTimeField(auto_now_add=True, editable=False)
     name        = m.CharField(max_length=255, editable=False, blank=False, unique=True)
     version     = m.IntegerField()
-    user        = m.ForeignKey(User)
+    user        = m.ForeignKey(User, on_delete=m.PROTECT)
     comment     = m.TextField(blank=True)  
     repo_folder = m.CharField(max_length=255)
 
@@ -475,7 +476,7 @@ class DbWorkflow(m.Model):
     uuid        = UUIDField(auto=True)
     time        = m.DateTimeField(auto_now_add=True, editable=False)
     version     = m.IntegerField()
-    user        = m.ForeignKey(User)
+    user        = m.ForeignKey(User, on_delete=m.PROTECT)
     script      = m.ForeignKey(DbWorkflowScript, related_name='instances')
     status       = m.CharField(max_length=255, choices=workflow_status, default='running')
     
@@ -510,7 +511,7 @@ class DbWorkflowStep(m.Model):
 
     workflow     = m.ForeignKey(DbWorkflow, related_name='steps')
     name         = m.CharField(max_length=255, blank=False)
-    user         = m.ForeignKey(User)
+    user         = m.ForeignKey(User, on_delete=m.PROTECT)
     time         = m.DateTimeField(auto_now_add=True, editable=False)
     nextcall     = m.CharField(max_length=255, blank=False, default=workflow_step_exit)
     calculations = m.ManyToManyField('DbNode', symmetrical=False, related_name="steps")

@@ -119,8 +119,19 @@ class TestTransitiveClosureDeletion(AiidaTestCase):
         self.assertEquals(
             len(Path.objects.filter(parent=n1,child=n8).distinct()),2)
 
+        #print "\n".join([str((i.pk, i.input.pk, i.output.pk))
+        #                 for i in Link.objects.filter()])
+        #print "\n".join([str((i.pk, i.parent.pk, i.child.pk, i.depth,
+        #                      i.entry_edge_id, i.direct_edge_id,
+        #                      i.exit_edge_id)) for i in Path.objects.filter()])
+
         # I cut another branch above: I should loose one more link
         Link.objects.filter(input=n2, output=n4).delete()
+        #print "\n".join([str((i.pk, i.input.pk, i.output.pk))
+        #                 for i in Link.objects.filter()])
+        #print "\n".join([str((i.pk, i.parent.pk, i.child.pk, i.depth,
+        #                      i.entry_edge_id, i.direct_edge_id,
+        #                      i.exit_edge_id)) for i in Path.objects.filter()])
         self.assertEquals(
             len(Path.objects.filter(parent=n1,child=n8).distinct()),1)
         

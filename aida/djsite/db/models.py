@@ -136,19 +136,13 @@ class DbNode(m.Model):
 
 class Link(m.Model):
     '''
-    Direct connection between two dbnodes. The label is identifying the link type.
+    Direct connection between two dbnodes. The label is identifying the
+    link type.
     '''
     input = m.ForeignKey('DbNode',related_name='output_links')
     output = m.ForeignKey('DbNode',related_name='input_links')
     #label for data input for calculation
     label = m.CharField(max_length=255, db_index=True, blank=True)
-    # a field to choose if this link is considered to build a transitive
-    # closure or not; NOT IMPLEMENTED FOR NOW
-    include_in_tc = m.BooleanField()
-
-    # TODO: implement deletion from TC table
-    # TODO: implement TC using the include_in_tc field, and trigger a delete when
-    #     include_in_tc is changed
 
     class Meta:
         # I cannot add twice the same link
@@ -164,22 +158,12 @@ class Link(m.Model):
                            ("output", "label"),
                            )
     
-    # TODO: I also want to check some more logic e.g. to avoid having
-    #       two calculations as input of a data object.
-    def save(self,*args,**kwargs):
-        if self.pk is None:
-            if ((self.input.type.startswith('calculation') or
-                 self.input.type.startswith('data')) and
-                (self.output.type.startswith('calculation') or
-                 self.output.type.startswith('data'))):
-                self.include_in_tc = True
-            else:
-                self.include_in_tc = False
-        super(Link,self).save(*args,**kwargs)
 
 class Path(m.Model):
     """
     Transitive closure table for all dbnode paths.
+    
+    # TODO: implement Transitive closure with MySql!
     """
     parent = m.ForeignKey('DbNode',related_name='child_paths',editable=False)
     child = m.ForeignKey('DbNode',related_name='parent_paths',editable=False)
@@ -189,7 +173,6 @@ class Path(m.Model):
     entry_edge_id = m.IntegerField(null=True,editable=False)
     direct_edge_id = m.IntegerField(null=True,editable=False)
     exit_edge_id = m.IntegerField(null=True,editable=False)
-
 
 attrdatatype_choice = (
     ('float', 'float'),

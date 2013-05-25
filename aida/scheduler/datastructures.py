@@ -27,9 +27,9 @@ class JobTemplate(DefaultFieldsAttributeDict):
           of the program to run. The first one is the executable name. For
           MPI runs, this will probably be mpirun or a similar program; 
           this has to be chosen at a upper level.
-    * maxMemoryKb: The maximum amount of memory the job is allowed
+    * max_memory_kb: The maximum amount of memory the job is allowed
          to allocate ON EACH NODE, in kilobyte
-    * maxWallclockSeconds: The maximum wall clock time that all processes of 
+    * max_wallclock_seconds: The maximum wall clock time that all processes of 
          a job are allowed to exist, in seconds
 
     * TODO: refine this list and choose what we want to support.
@@ -38,29 +38,29 @@ class JobTemplate(DefaultFieldsAttributeDict):
     _default_fields = (
         'submit_as_hold',
         'rerunnable',
-        'jobEnvironment',
-        'workingDirectory', 
+        'job_environment',
+        'working_directory', 
         'email',
-        'emailOnStarted',
-        'emailOnTerminated',
-        'jobName',
-        'schedOutputPath',    
-        'schedErrorPath',     
-        'schedJoinFiles',     
-        'queueName',
-        'numNodes',
-        'numCpusPerNode',
+        'email_on_started',
+        'email_on_terminated',
+        'job_name',
+        'sched_output_path',    
+        'sched_error_path',     
+        'sched_join_files',     
+        'queue_name',
+        'num_nodes',
+        'num_cpus_per_node',
         'priority',
-        'maxMemoryKb', 
-        'maxWallclockSeconds',
+        'max_memory_kb', 
+        'max_wallclock_seconds',
 
-        'prependText',
-        'appendText',
+        'prepend_text',
+        'append_text',
         'argv',
-        'stdinName',
-        'stdoutName',
-        'stderrName',
-        'joinFiles',
+        'stdin_name',
+        'stdout_name',
+        'stderr_name',
+        'join_files',
         )
  
 
@@ -130,12 +130,12 @@ class JobInfo(DefaultFieldsAttributeDict):
        jobOwner: the job owner as reported by the scheduler
        numCores: the number of requested cores (this more or less is what
            is called 'slots' in DRMAAv2)
-       numNodes: the number of nodes, required by the job.
+       num_nodes: the number of nodes, required by the job.
            If allocatedNodes is not None, this number must be equal to
            len(allocatedNodes). Otherwise, for schedulers not supporting
            the retrieval of the full list of allocated nodes, this 
            attribute can be used to know at least the number of nodes
-       queueName: The name of the queue in which the job was queued or started
+       queue_name: The name of the queue in which the job was queued or started
        wallclockTime: the accumulated wallclock time, in seconds
        requestedWallclockTime: the requested wallclock time, in seconds
        cpuTime: the accumulated cpu time, in seconds
@@ -158,8 +158,8 @@ class JobInfo(DefaultFieldsAttributeDict):
         'submissionMachine',
         'jobOwner',
         'numCores',
-        'numNodes',
-        'queueName',
+        'num_nodes',
+        'queue_name',
         'wallclockTime',
         'requestedWallclockTime',
         'cpuTime',

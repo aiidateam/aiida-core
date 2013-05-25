@@ -146,16 +146,16 @@ class TemplatereplacerInputPlugin(InputPlugin):
         calcinfo.local_copy_list = local_copy_list
         calcinfo.remote_copy_list = remote_copy_list
         if input_through_stdin is not None:
-            calcinfo.stdinName = input_file_name
+            calcinfo.stdin_name = input_file_name
         if output_file_name:
-            calcinfo.stdoutName = output_file_name
+            calcinfo.stdout_name = output_file_name
             calcinfo.retrieve_list.append(output_file_name)
 
         # TODO: implement
-        #        'jobEnvironment',
-        #        'prependText',
-        #        'appendText', 
-        #        'stderrName',
-        #        'joinFiles',
+        #        'job_environment',
+        #        'prepend_text',
+        #        'append_text', 
+        #        'stderr_name',
+        #        'join_files',
         
         return calcinfo

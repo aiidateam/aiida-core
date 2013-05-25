@@ -86,18 +86,18 @@ class Scheduler(object):
         script_lines.append(self._get_submit_script_header(job_tmpl))
         script_lines.append(empty_line)
 
-        if job_tmpl.prependText:
-            script_lines.append(job_tmpl.prependText)
+        if job_tmpl.prepend_text:
+            script_lines.append(job_tmpl.prepend_text)
             script_lines.append(empty_line)
 
         script_lines.append(self._get_run_line(
-                job_tmpl.argv, job_tmpl.stdinName,
-                job_tmpl.stdoutName, job_tmpl.stderrName,
-                job_tmpl.joinFiles))
+                job_tmpl.argv, job_tmpl.stdin_name,
+                job_tmpl.stdout_name, job_tmpl.stderr_name,
+                job_tmpl.join_files))
         script_lines.append(empty_line)
 
-        if job_tmpl.appendText:
-            script_lines.append(job_tmpl.appendText)
+        if job_tmpl.append_text:
+            script_lines.append(job_tmpl.append_text)
             script_lines.append(empty_line)
 
         return "\n".join(script_lines)

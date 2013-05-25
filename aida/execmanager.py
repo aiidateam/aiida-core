@@ -271,20 +271,20 @@ def submit_calc(calc):
             ## TODO: in the future, allow to customize the following variables
             job_tmpl.submit_as_hold = False
             job_tmpl.rerunnable = False
-            job_tmpl.jobEnvironment = {}
-            #'email', 'emailOnStarted', 'emailOnTerminated',
-            job_tmpl.jobName = 'aida-{}'.format(calc.uuid) 
-            job_tmpl.schedOutputPath = '_scheduler-stdout.txt'
-            job_tmpl.schedErrorPath = '_scheduler-stderr.txt'
-            job_tmpl.schedJoinFiles = False
+            job_tmpl.job_environment = {}
+            #'email', 'email_on_started', 'email_on_terminated',
+            job_tmpl.job_name = 'aida-{}'.format(calc.uuid) 
+            job_tmpl.sched_output_path = '_scheduler-stdout.txt'
+            job_tmpl.sched_error_path = '_scheduler-stderr.txt'
+            job_tmpl.sched_join_files = False
             
             # TODO: add also code from the machine + u'\n\n'
-            job_tmpl.prependText = (
+            job_tmpl.prepend_text = (
                 ((computer.get_prepend_text() + u"\n\n") if computer.get_prepend_text() else u"") + 
                 ((code.get_prepend_text() + u"\n\n") if code.get_prepend_text() else u"") + 
-                (calcinfo.prependText if calcinfo.prependText is not None else u""))
-            job_tmpl.appendText = (
-                (calcinfo.appendText if calcinfo.appendText is not None else u"") +
+                (calcinfo.prepend_text if calcinfo.prepend_text is not None else u""))
+            job_tmpl.append_text = (
+                (calcinfo.append_text if calcinfo.append_text is not None else u"") +
                 ((code.get_append_text() + u"\n\n") if code.get_append_text() else u"") +
                 ((computer.get_append_text() + u"\n\n") if computer.get_append_text() else u""))
 
@@ -301,29 +301,29 @@ def submit_calc(calc):
             job_tmpl.argv = mpi_args + [code.get_execname()] + (
                 calcinfo.cmdlineParams if calcinfo.cmdlineParams is not None else [])
     
-            job_tmpl.stdinName = calcinfo.stdinName
-            job_tmpl.stdoutName = calcinfo.stdoutName
-            job_tmpl.stderrName = calcinfo.stderrName
-            job_tmpl.joinFiles = calcinfo.joinFiles
+            job_tmpl.stdin_name = calcinfo.stdin_name
+            job_tmpl.stdout_name = calcinfo.stdout_name
+            job_tmpl.stderr_name = calcinfo.stderr_name
+            job_tmpl.join_files = calcinfo.join_files
 
             queue_name = calc.get_queue_name()
             if queue_name is not None:
-                job_tmpl.queueName = queue_name
+                job_tmpl.queue_name = queue_name
             priority = calc.get_priority()
             if priority is not None:
                 job_tmpl.priority = priority
-            maxMemoryKb = calc.get_max_memory_kb()
-            if maxMemoryKb is not None:
-                job_tmpl.maxMemoryKb = maxMemoryKb
-            maxWallclockSeconds = calc.get_max_wallclock_seconds()
-            if maxWallclockSeconds is not None:
-                job_tmpl.maxWallclockSeconds = maxWallclockSeconds
-            maxMemoryKb = calc.get_max_memory_kb()
-            if maxMemoryKb is not None:
-                job_tmpl.maxMemoryKb = maxMemoryKb
+            max_memory_kb = calc.get_max_memory_kb()
+            if max_memory_kb is not None:
+                job_tmpl.max_memory_kb = max_memory_kb
+            max_wallclock_seconds = calc.get_max_wallclock_seconds()
+            if max_wallclock_seconds is not None:
+                job_tmpl.max_wallclock_seconds = max_wallclock_seconds
+            max_memory_kb = calc.get_max_memory_kb()
+            if max_memory_kb is not None:
+                job_tmpl.max_memory_kb = max_memory_kb
 
-            job_tmpl.numNodes = num_nodes
-            job_tmpl.numCpusPerNode = num_cpus_per_node
+            job_tmpl.num_nodes = num_nodes
+            job_tmpl.num_cpus_per_node = num_cpus_per_node
     
             # TODO: give possibility to use a different name??
             script_filename = '_aidasubmit.sh'

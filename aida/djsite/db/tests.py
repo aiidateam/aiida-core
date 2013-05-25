@@ -33,15 +33,17 @@ class AiidaTestCase(unittest.TestCase):
         from django.core.exceptions import ObjectDoesNotExist
         from aida.djsite.db.models import DbComputer
 
+        # I first delete the nodes, otherwise I cannot delete computers and
+        # users
+        from aida.djsite.db.models import DbNode
+        DbNode.objects.filter().delete()
+
         try:
             User.objects.get(username=getpass.getuser).delete()
         except ObjectDoesNotExist:
             pass
-
+        
         DbComputer.objects.filter().delete()
-
-        from aida.djsite.db.models import DbNode
-        DbNode.objects.filter().delete()
 
 class TestTransitiveNoLoops(AiidaTestCase):
     """

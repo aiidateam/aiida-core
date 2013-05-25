@@ -4,11 +4,11 @@ from aida.common.exceptions import ModificationNotAllowed
 
 #TODO: set the following as properties of the Calculation
 #        'email',
-#        'emailOnStarted',
-#        'emailOnTerminated',
+#        'email_on_started',
+#        'email_on_terminated',
 #        'rerunnable',
-#        'queueName', 
-#        'numNodes',
+#        'queue_name', 
+#        'num_nodes',
 #        'priority',
 #        'resourceLimits',
 

@@ -132,7 +132,7 @@ class Computer(object):
                 raise ValidationError("the mpirun_command must be a list of strings")
         try:
             for arg in mpirun_command:
-                arg.format(num_nodes=12,num_cpus_per_node=2,tot_num_cpus=24)
+                arg.format(num_machines=12,num_cpus_per_machine=2,tot_num_cpus=24)
         except KeyError as e:
             raise ValidationError("In workdir there is an unknown replacement field '{}'".format(
                 e.message))

@@ -376,14 +376,14 @@ class TestParserQstat(unittest.TestCase):
         self.assertEquals( set(running_jobs) , set(parsed_running_jobs) )
         
         for j in job_list:
-            if j.allocated_nodes:
-                num_nodes = 0
+            if j.allocated_machines:
+                num_machines = 0
                 num_cpus = 0
-                for n in j.allocated_nodes:
-                    num_nodes += 1
+                for n in j.allocated_machines:
+                    num_machines += 1
                     num_cpus += n.num_cpus
                     
-                self.assertTrue( j.num_nodes==num_nodes )
+                self.assertTrue( j.num_machines==num_machines )
                 self.assertTrue( j.num_cpus==num_cpus )
         # TODO : parse the env_vars
 
@@ -425,7 +425,7 @@ class TestSubmitScript(unittest.TestCase):
         job_tmpl = JobTemplate()
         job_tmpl.argv = ["mpirun", "-np", "23", "pw.x", "-npool", "1"]
         job_tmpl.stdin_name = 'aida.in'
-        job_tmpl.num_nodes = 1
+        job_tmpl.num_machines = 1
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.max_wallclock_seconds = 24 * 3600 
 

@@ -7,7 +7,7 @@ import aida.scheduler
 from aida.common.utils import escape_for_bash
 from aida.scheduler import SchedulerError, SchedulerParsingError
 from aida.scheduler.datastructures import (
-    JobInfo, job_states, NodeInfo)
+    JobInfo, job_states, MachineInfo)
 
 # This maps PbsPro status letters to our own status list
 
@@ -181,12 +181,12 @@ class PbsproScheduler(aida.scheduler.Scheduler):
             lines.append("#PBS -p {}".format(job_tmpl.priority))
 
         
-        if not job_tmpl.num_nodes:
-            raise ValueError("num_nodes is required for the PBSPro scheduler "
+        if not job_tmpl.num_machines:
+            raise ValueError("num_machines is required for the PBSPro scheduler "
                              "plugin")
-        select_string = "select={}".format(job_tmpl.num_nodes)
-        if job_tmpl.num_cpus_per_node:
-            select_string += ":ncpus={}".format(job_tmpl.num_cpus_per_node)
+        select_string = "select={}".format(job_tmpl.num_machines)
+        if job_tmpl.num_cpus_per_machine:
+            select_string += ":ncpus={}".format(job_tmpl.num_cpus_per_machine)
 
         if job_tmpl.max_wallclock_seconds is not None:
             try:
@@ -409,8 +409,8 @@ class PbsproScheduler(aida.scheduler.Scheduler):
                 try:
                     exec_host_list = []
                     for exec_host in exec_hosts:
-                        node = NodeInfo()
-                        node.node_name, data = exec_host.split('/')
+                        node = MachineInfo()
+                        node.name, data = exec_host.split('/')
                         data = data.split('*')
                         if len(data) == 1:
                             node.jobIndex = int(data[0])
@@ -423,7 +423,7 @@ class PbsproScheduler(aida.scheduler.Scheduler):
                                              "instead of 1 or 2 in exec_hosts: "
                                              "{}".format(len(data), exec_hosts))
                         exec_host_list.append(node)
-                    this_job.allocated_nodes = exec_host_list
+                    this_job.allocated_machines = exec_host_list
                 except Exception as e:
                     self.logger.debug("Problem parsing the node names, I "
                                       "got Exception {} with message {}; "
@@ -451,7 +451,7 @@ class PbsproScheduler(aida.scheduler.Scheduler):
                         this_job.job_id))
 
             try:
-                this_job.num_nodes = int(raw_data['resource_list.nodect'])
+                this_job.num_machines = int(raw_data['resource_list.nodect'])
             except KeyError:
                 self.logger.debug("No 'resource_list.nodect' field for job id "
                     "{}".format(this_job.job_id))
@@ -462,13 +462,13 @@ class PbsproScheduler(aida.scheduler.Scheduler):
                         this_job.job_id))
 
             # Double check of redundant info
-            if (this_job.allocated_nodes is not None and 
-                this_job.num_nodes is not None):
-                if len(this_job.allocated_nodes) != this_job.num_nodes:
+            if (this_job.allocated_machines is not None and 
+                this_job.num_machines is not None):
+                if len(this_job.allocated_machines) != this_job.num_machines:
                     self.logger.error("The length of the list of allocated "
                                       "nodes ({}) is different from the "
                                       "expected number of nodes ({})!".format(
-                        len(this_job.allocated_nodes), this_job.num_nodes))
+                        len(this_job.allocated_machines), this_job.num_machines))
 
             try:
                 this_job.queue_name = raw_data['queue']

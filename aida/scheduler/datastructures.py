@@ -48,8 +48,8 @@ class JobTemplate(DefaultFieldsAttributeDict):
         'sched_error_path',     
         'sched_join_files',     
         'queue_name',
-        'num_nodes',
-        'num_cpus_per_node',
+        'num_machines',
+        'num_cpus_per_machine',
         'priority',
         'max_memory_kb', 
         'max_wallclock_seconds',
@@ -64,32 +64,18 @@ class JobTemplate(DefaultFieldsAttributeDict):
         )
  
 
-class NodeInfo(DefaultFieldsAttributeDict):
+class MachineInfo(DefaultFieldsAttributeDict):
     """
     Similarly to what is defined in the DRMAA v.2 as SlotInfo; this identifies
-    each node on which a job is running, and how many CPUs are being
-    used.
+    each machine (also called 'node' on some schedulers)
+    on which a job is running, and how many CPUs are being used.
 
-    * node_name: name of the node
-    * num_cpus: number of cores used by the job on this node
+    * name: name of the machine
+    * num_cpus: number of cores used by the job on this machine
     """
     _default_fields = (
-        'node_name',
+        'name',
         'num_cpus',
-        )
-
-class MachineResource(DefaultFieldsAttributeDict):
-    # These should be the same defined in the DB for storage.
-    # At some point we may decide to create dynamically the _default_fields
-    # tuple from the DB model.
-    _default_fields = (
-        'hostname',         # FQDN
-        'workdir',          # where to store, accepts {username} field
-        'scheduler_type',   # a string to pick up the correct scheduler
-        'transport_type',   # a string to pick up the correct transport
-        'transport_options',# a dictionary with further options to be passed to the
-                            # transport
-        'active',           # set to False to disable the use of this machine
         )
 
 
@@ -103,7 +89,6 @@ class MachineResource(DefaultFieldsAttributeDict):
 #long physMemory;
 #long virtMemory;
 
-## To be changed/adapted/improved!!
 class JobInfo(DefaultFieldsAttributeDict):
     """
     Contains properties for a job in the queue.
@@ -125,15 +110,15 @@ class JobInfo(DefaultFieldsAttributeDict):
            being in the current state or substate.
        job_state: the job state (one of those defined in aida.scheduler.states)
        job_substate: a string with the implementation-specific sub-state
-       allocated_nodes: a list of nodes used for the current job.
+       allocated_machines: a list of machines used for the current job.
        job_owner: the job owner as reported by the scheduler
        num_cpus: the number of requested cores (this more or less is what
            is called 'slots' in DRMAAv2)
-       num_nodes: the number of nodes, required by the job.
-           If allocated_nodes is not None, this number must be equal to
-           len(allocated_nodes). Otherwise, for schedulers not supporting
-           the retrieval of the full list of allocated nodes, this 
-           attribute can be used to know at least the number of nodes
+       num_machines: the number of machines (i.e., nodes), required by the job.
+           If allocated_machines is not None, this number must be equal to
+           len(allocated_machines). Otherwise, for schedulers not supporting
+           the retrieval of the full list of allocated machines, this 
+           attribute can be used to know at least the number of machines
        queue_name: The name of the queue in which the job was queued or started
        wallclock_time_seconds: the accumulated wallclock time, in seconds
        requested_wallclock_time_seconds: the requested wallclock time, in seconds
@@ -153,10 +138,10 @@ class JobInfo(DefaultFieldsAttributeDict):
         'annotation',
         'job_state',
         'job_substate',
-        'allocated_nodes',
+        'allocated_machines',
         'job_owner',
         'num_cpus',
-        'num_nodes',
+        'num_machines',
         'queue_name',
         'wallclock_time_seconds',
         'requested_wallclock_time_seconds',

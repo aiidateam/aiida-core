@@ -8,7 +8,7 @@ from aida.common.exceptions import ModificationNotAllowed
 #        'email_on_terminated',
 #        'rerunnable',
 #        'queue_name', 
-#        'num_nodes',
+#        'num_machines',
 #        'priority',
 #        'resourceLimits',
 
@@ -22,7 +22,7 @@ class Calculation(Node):
     def __init__(self,*args,**kwargs):
         """
         Possible arguments:
-        computer, num_nodes, num_cpus_per_node, code
+        computer, num_machines, num_cpus_per_machine, code
         """
         self._logger = super(Calculation,self).logger.getChild('calculation')
         super(Calculation,self).__init__(*args, **kwargs)
@@ -40,13 +40,13 @@ class Calculation(Node):
         if computer is not None:
             self.set_computer(computer)
 
-        num_nodes = kwargs.pop('num_nodes',None)
-        if num_nodes is not None:
-            self.set_num_nodes(num_nodes)        
+        num_machines = kwargs.pop('num_machines',None)
+        if num_machines is not None:
+            self.set_num_machines(num_machines)        
 
-        num_cpus_per_node = kwargs.pop('num_cpus_per_node',None)
-        if num_cpus_per_node is not None:
-            self.set_num_cpus_per_node(num_cpus_per_node)        
+        num_cpus_per_machine = kwargs.pop('num_cpus_per_machine',None)
+        if num_cpus_per_machine is not None:
+            self.set_num_cpus_per_machine(num_cpus_per_machine)        
 
         if kwargs:
             raise ValueError("Invalid parameters found in the __init__: "
@@ -65,14 +65,14 @@ class Calculation(Node):
                 self.get_state()))
 
         try:
-            if int(self.get_num_nodes()) <= 0:
+            if int(self.get_num_machines()) <= 0:
                 raise ValueError
         except (ValueError,TypeError):
             raise ValidationError("The number of nodes must be specified "
                                   "and must be positive")
 
         try:
-            if int(self.get_num_cpus_per_node()) <= 0:
+            if int(self.get_num_cpus_per_machine()) <= 0:
                 raise ValueError
         except (ValueError,TypeError):
             raise ValidationError("The number of CPUs per node must be "
@@ -152,11 +152,11 @@ class Calculation(Node):
     def set_max_wallclock_seconds(self,val):    
         self.set_attr('max_wallclock_seconds',int(val))
 
-    def set_num_nodes(self,val):
-        self.set_attr('num_nodes',int(val))
+    def set_num_machines(self,val):
+        self.set_attr('num_machines',int(val))
 
-    def set_num_cpus_per_node(self,val):
-        self.set_attr('num_cpus_per_node',int(val))
+    def set_num_cpus_per_machine(self,val):
+        self.set_attr('num_cpus_per_machine',int(val))
 
     def get_queue_name(self):
         return self.get_attr('queue_name', None)
@@ -170,11 +170,11 @@ class Calculation(Node):
     def get_max_wallclock_seconds(self):	
         return self.get_attr('max_wallclock_seconds', None)
 
-    def get_num_nodes(self):
-        return self.get_attr('num_nodes', None)
+    def get_num_machines(self):
+        return self.get_attr('num_machines', None)
 
-    def get_num_cpus_per_node(self):
-        return self.get_attr('num_cpus_per_node', None)
+    def get_num_cpus_per_machine(self):
+        return self.get_attr('num_cpus_per_machine', None)
         
     def add_link_from(self,src,label=None):
         '''

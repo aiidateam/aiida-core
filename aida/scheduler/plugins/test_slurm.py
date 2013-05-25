@@ -77,7 +77,7 @@ class TestParserSqueue(unittest.TestCase):
         self.assertEquals( [j.annotation for j in job_list
                             if j.job_id == '863100'][0], 
                            'Resources' )
-        self.assertEquals( [j.num_nodes for j in job_list
+        self.assertEquals( [j.num_machines for j in job_list
                             if j.job_id == '863100'][0], 
                            32 )
         self.assertEquals( [j.num_cpus for j in job_list
@@ -90,16 +90,16 @@ class TestParserSqueue(unittest.TestCase):
                             if j.job_id == '861352'][0], 
                            'Pressure_PBEsol_0' )
 
-        # allocated_nodes is not implemented in this version of the plugin       
+        # allocated_machines is not implemented in this version of the plugin       
         #        for j in job_list:
-        #            if j.allocated_nodes:
-        #                num_nodes = 0
+        #            if j.allocated_machines:
+        #                num_machines = 0
         #                num_cpus = 0
-        #                for n in j.allocated_nodes:
-        #                    num_nodes += 1
+        #                for n in j.allocated_machines:
+        #                    num_machines += 1
         #                    num_cpus += n.num_cpus
         #                    
-        #                self.assertTrue( j.num_nodes==num_nodes )
+        #                self.assertTrue( j.num_machines==num_machines )
         #                self.assertTrue( j.num_cpus==num_cpus )
 
 class TestTimes(unittest.TestCase):
@@ -164,7 +164,7 @@ class TestSubmitScript(unittest.TestCase):
         job_tmpl = JobTemplate()
         job_tmpl.argv = ["mpirun", "-np", "23", "pw.x", "-npool", "1"]
         job_tmpl.stdin_name = 'aida.in'
-        job_tmpl.num_nodes = 1
+        job_tmpl.num_machines = 1
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.max_wallclock_seconds = 24 * 3600 
 

@@ -229,8 +229,8 @@ remoteparam = RemoteData(remote_machine=computer.hostname,
 
 calc = Calculation(computer=computer)
 calc.set_max_wallclock_seconds(12*60) # 12 min
-calc.set_num_nodes(1)
-calc.set_num_cpus_per_node(1)
+calc.set_num_machines(1)
+calc.set_num_cpus_per_machine(1)
 if queue is not None:
     calc.set_queue_name(queue)
 calc.store()

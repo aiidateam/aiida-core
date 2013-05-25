@@ -290,12 +290,12 @@ def submit_calc(calc):
 
             # The Calculation validation should take care of always having a sensible value here
             # so I don't need to check
-            num_nodes = calc.get_num_nodes()
-            num_cpus_per_node = calc.get_num_cpus_per_node()
-            tot_num_cpus = num_nodes * num_cpus_per_node
+            num_machines = calc.get_num_machines()
+            num_cpus_per_machine = calc.get_num_cpus_per_machine()
+            tot_num_cpus = num_machines * num_cpus_per_machine
     
-            mpi_args = [arg.format(num_nodes=num_nodes,
-                                   num_cpus_per_node=num_cpus_per_node,
+            mpi_args = [arg.format(num_machines=num_machines,
+                                   num_cpus_per_machine=num_cpus_per_machine,
                                    tot_num_cpus=tot_num_cpus) for arg in
                         computer.get_mpirun_command()]
             job_tmpl.argv = mpi_args + [code.get_execname()] + (
@@ -322,8 +322,8 @@ def submit_calc(calc):
             if max_memory_kb is not None:
                 job_tmpl.max_memory_kb = max_memory_kb
 
-            job_tmpl.num_nodes = num_nodes
-            job_tmpl.num_cpus_per_node = num_cpus_per_node
+            job_tmpl.num_machines = num_machines
+            job_tmpl.num_cpus_per_machine = num_cpus_per_machine
     
             # TODO: give possibility to use a different name??
             script_filename = '_aidasubmit.sh'

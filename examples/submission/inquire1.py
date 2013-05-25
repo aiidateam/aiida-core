@@ -28,6 +28,8 @@ except ValueError:
 else:
     c = Calculation.get_subclass_from_pk(the_id)
 
+print "CALCULATION STATE:", c.get_state()
+
 print "INPUTS:"
 for label, node in c.get_inputs(also_labels=True):
     print "* input of type {} with link name {}".format(

@@ -246,13 +246,13 @@ class SlurmScheduler(aida.scheduler.Scheduler):
             lines.append("#SBATCH --nice={}".format(job_tmpl.priority))
 
         
-        if not job_tmpl.num_nodes:
-            raise ValueError("num_nodes is required for the SLURM scheduler "
+        if not job_tmpl.num_machines:
+            raise ValueError("num_machines is required for the SLURM scheduler "
                              "plugin")
-        lines.append("#SBATCH --nodes={}".format(job_tmpl.num_nodes))
-        if job_tmpl.num_cpus_per_node:
+        lines.append("#SBATCH --nodes={}".format(job_tmpl.num_machines))
+        if job_tmpl.num_cpus_per_machine:
             lines.append("#SBATCH --ntasks-per-node={}".format(
-                    job_tmpl.num_cpus_per_node))
+                    job_tmpl.num_cpus_per_machine))
 
         if job_tmpl.max_wallclock_seconds is not None:
             try:
@@ -481,7 +481,7 @@ class SlurmScheduler(aida.scheduler.Scheduler):
             # I used split(_field_separator, num_fields) before
             # when creting 'job'
             (_, _, _, executing_host, username, number_nodes,
-             number_cpus, allocated_nodes, partition, 
+             number_cpus, allocated_machines, partition, 
              time_limit, time_used, dispatch_time, job_name ) = job
 
             # TODO: store executing_host?
@@ -489,7 +489,7 @@ class SlurmScheduler(aida.scheduler.Scheduler):
             this_job.job_owner = username
 
             try:
-                this_job.num_nodes = int(number_nodes)
+                this_job.num_machines = int(number_nodes)
             except ValueError:
                 self.logger.warning("The number of allocated nodes is not "
                                     "an integer ({}) for job id {}!".format(
@@ -509,9 +509,9 @@ class SlurmScheduler(aida.scheduler.Scheduler):
             # nid00[684-685,722-723,748-749,958-959]
             # therefore it requires some parsing, that is unnecessary now.
             # I just store is as a raw string for the moment, and I leave
-            # this_job.allocated_nodes undefined
+            # this_job.allocated_machines undefined
             if this_job.job_state == job_states.RUNNING:
-                this_job.allocated_nodes_raw = allocated_nodes
+                this_job.allocated_machines_raw = allocated_machines
 
             this_job.queue_name = partition
 
@@ -545,15 +545,15 @@ class SlurmScheduler(aida.scheduler.Scheduler):
             this_job.rawData = job
 
             # Double check of redundant info
-            # Not really useful now, allocated_nodes in this
+            # Not really useful now, allocated_machines in this
             # version of the plugin is never set
-            if (this_job.allocated_nodes is not None and 
-                this_job.num_nodes is not None):
-                if len(this_job.allocated_nodes) != this_job.num_nodes:
+            if (this_job.allocated_machines is not None and 
+                this_job.num_machines is not None):
+                if len(this_job.allocated_machines) != this_job.num_machines:
                     self.logger.error("The length of the list of allocated "
                                       "nodes ({}) is different from the "
                                       "expected number of nodes ({})!".format(
-                        len(this_job.allocated_nodes), this_job.num_nodes))
+                        len(this_job.allocated_machines), this_job.num_machines))
 
 
             # I append to the list of jobs to return

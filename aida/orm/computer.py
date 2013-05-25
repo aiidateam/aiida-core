@@ -1,7 +1,7 @@
 import aida.common
 from aida.common.exceptions import (
     ConfigurationError, DbContentError, InvalidOperation,
-    MissingPluginError, ModificationNotAllowed)
+    MissingPluginError)
 
 class Computer(object):
     """
@@ -158,26 +158,28 @@ class Computer(object):
     def store(self):
         """
         Store the computer in the DB.
-        Can be called only once. 
+        
+        Differently from Nodes, a computer can be re-stored if its properties
+        are to be changed (e.g. a new mpirun command, etc.) 
         """
         from django.db import IntegrityError, transaction
         
-        if self.to_be_stored:
+#        if self.to_be_stored:
 
-            # As a first thing, I check if the data is valid
-            self.validate()
-            try:
-                # transactions are needed here for Postgresql:
-                # https://docs.djangoproject.com/en/1.5/topics/db/transactions/#handling-exceptions-within-postgresql-transactions
-                sid = transaction.savepoint()
-                self.dbcomputer.save()
-                transaction.savepoint_commit(sid)
-            except IntegrityError:
-                transaction.savepoint_rollback(sid)
-                raise ValueError("Integrity error, probably the hostname already exists in the DB")
-        else:
-            self.logger.error("Trying to store an already saved computer")
-            raise ModificationNotAllowed("The computer was already stored")
+        # As a first thing, I check if the data is valid
+        self.validate()
+        try:
+            # transactions are needed here for Postgresql:
+            # https://docs.djangoproject.com/en/1.5/topics/db/transactions/#handling-exceptions-within-postgresql-transactions
+            sid = transaction.savepoint()
+            self.dbcomputer.save()
+            transaction.savepoint_commit(sid)
+        except IntegrityError:
+            transaction.savepoint_rollback(sid)
+            raise ValueError("Integrity error, probably the hostname already exists in the DB")
+
+        #self.logger.error("Trying to store an already saved computer")
+        #raise ModificationNotAllowed("The computer was already stored")
 
         # This is useful because in this way I can do
         # c = Computer().store()
@@ -193,8 +195,8 @@ class Computer(object):
 
     def _set_metadata(self,metadata_dict):
         import json
-        if self.to_be_stored:
-            raise ModificationNotAllowed("Cannot set a property after having stored the entry")
+#        if not self.to_be_stored:
+#            raise ModificationNotAllowed("Cannot set a property after having stored the entry")
         self.dbcomputer.metadata = json.dumps(metadata_dict)
 
     def _set_property(self,k,v):
@@ -247,49 +249,49 @@ class Computer(object):
     def set_transport_params(self,val):
         import json
 
-        if self.to_be_stored:
-            try:
-                self.dbcomputer.transport_params = json.dumps(val)
-            except ValueError:
-                raise ValueError("The set of transport_params are not JSON-able")
-        else:
-            raise ModificationNotAllowed("Cannot set a property after having stored the entry")
+#        if self.to_be_stored:
+        try:
+            self.dbcomputer.transport_params = json.dumps(val)
+        except ValueError:
+            raise ValueError("The set of transport_params are not JSON-able")
+#        else:
+#            raise ModificationNotAllowed("Cannot set a property after having stored the entry")
 
     def get_workdir(self):
         return self.dbcomputer.workdir
 
     def set_workdir(self,val):
-        if self.to_be_stored:
-            self.dbcomputer.workdir = val
-        else:
-            raise ModificationNotAllowed("Cannot set a property after having stored the entry")
+        #if self.to_be_stored:
+        self.dbcomputer.workdir = val
+        #else:
+        #    raise ModificationNotAllowed("Cannot set a property after having stored the entry")
 
     def get_hostname(self):
         return self.dbcomputer.hostname
 
     def set_hostname(self,val):
-        if self.to_be_stored:
+        #if self.to_be_stored:
             self.dbcomputer.hostname = val
-        else:
-            raise ModificationNotAllowed("Cannot set a property after having stored the entry")
+        #else:
+        #    raise ModificationNotAllowed("Cannot set a property after having stored the entry")
 
     def get_scheduler_type(self):
         return self.dbcomputer.scheduler_type
 
     def set_scheduler_type(self,val):
-        if self.to_be_stored:
+        #if self.to_be_stored:
             self.dbcomputer.scheduler_type = val
-        else:
-            raise ModificationNotAllowed("Cannot set a property after having stored the entry")
+        #else:
+        #    raise ModificationNotAllowed("Cannot set a property after having stored the entry")
 
     def get_transport_type(self):
         return self.dbcomputer.transport_type
 
     def set_transport_type(self,val):
-        if self.to_be_stored:
+        #if self.to_be_stored:
             self.dbcomputer.transport_type = val
-        else:
-            raise ModificationNotAllowed("Cannot set a property after having stored the entry")
+        #else:
+        #    raise ModificationNotAllowed("Cannot set a property after having stored the entry")
         
     def get_scheduler(self):
         import aida.scheduler

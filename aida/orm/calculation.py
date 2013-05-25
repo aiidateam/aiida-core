@@ -16,8 +16,8 @@ _input_subfolder = 'raw_input'
 
 class Calculation(Node):
     _plugin_type_string = "calculation"
-    _updatable_attributes = ('state', 'job_id', 'scheduler_state', 'last_jobinfo',
-			     'remote_workdir', 'retrieve_list')
+    _updatable_attributes = ('state', 'job_id', 'scheduler_state',
+                             'last_jobinfo', 'remote_workdir', 'retrieve_list')
     
     def __init__(self,*args,**kwargs):
         """
@@ -49,7 +49,8 @@ class Calculation(Node):
             self.set_num_cpus_per_node(num_cpus_per_node)        
 
         if kwargs:
-            raise ValueError("Invalid parameters found in the __init__: {}".format(kwargs.keys()))
+            raise ValueError("Invalid parameters found in the __init__: "
+                             "{}".format(kwargs.keys()))
 
     def validate(self):
         from aida.common.exceptions import ValidationError
@@ -60,26 +61,30 @@ class Calculation(Node):
             raise ValidationError("You did not specify any computer")
 
         if self.get_state() not in calcStates:
-            raise ValidationError("Calculation state '{}' is not valid".format(self.get_state()))
+            raise ValidationError("Calculation state '{}' is not valid".format(
+                self.get_state()))
 
         try:
             if int(self.get_num_nodes()) <= 0:
                 raise ValueError
         except (ValueError,TypeError):
-            raise ValidationError("The number of nodes must be specified and must be positive")
+            raise ValidationError("The number of nodes must be specified "
+                                  "and must be positive")
 
         try:
             if int(self.get_num_cpus_per_node()) <= 0:
                 raise ValueError
         except (ValueError,TypeError):
-            raise ValidationError("The number of CPUs per node must be specified and must be positive")
+            raise ValidationError("The number of CPUs per node must be "
+                                  "specified and must be positive")
 
     def can_link_as_output(self,dest):
         """
         Raise a ValueError if a link from self to dest is not allowed.
         
         An output of a calculation can only be a data, and can only be set 
-        when the calculation is in the SUBMITTING or RETRIEVING or PARSING state.
+        when the calculation is in the SUBMITTING or RETRIEVING or
+        PARSING state.
         (during SUBMITTING, the execmanager adds a link to the remote folder; 
          all other links are added while in the retrieving phase)
         """
@@ -92,30 +97,38 @@ class Calculation(Node):
               ]
         
         if not isinstance(dest, Data):
-            raise ValueError("The output of a calculation node can only be a data node")
+            raise ValueError(
+                "The output of a calculation node can only be a data node")
 
         if self.get_state() not in valid_states:
-            raise ValueError("Can add an output node to a calculation only if it is in one "
-                "of the following states: {}, it is instead {}".format(valid_states,
-                    self.get_state()))
+            raise ModificationNotAllowed(
+                "Can add an output node to a calculation only if it is in one "
+                "of the following states: {}, it is instead {}".format(
+                    valid_states, self.get_state()))
 
         return super(Calculation, self).can_link_as_output(dest)
 
     def _store_raw_input_folder(self, folder_path):
         """
-        Copy the content of the folder internally, in a subfolder called 'raw_input'
+        Copy the content of the folder internally, in a subfolder called
+        'raw_input'
 
         Args:
-            folder_path: the path to the folder from which the content should be taken
+            folder_path: the path to the folder from which the content
+                should be taken
         """
         # This function can be called only if the state is SUBMITTING
         if self.get_state() != calcStates.SUBMITTING:
-            raise ModificationNotAllowed("The raw input folder can be stored only if the "
-                "state is SUBMITTING, it is instead {}".format(self.get_state()))
+            raise ModificationNotAllowed(
+                "The raw input folder can be stored only if the "
+                "state is SUBMITTING, it is instead {}".format(
+                    self.get_state()))
 
         # get subfolder and replace with copy
-        raw_input_folder = self.current_folder.get_subfolder(_input_subfolder,create=True)
-        raw_input_folder.replace_with_folder(folder_path, move=False, overwrite=True)
+        raw_input_folder = self.current_folder.get_subfolder(
+            _input_subfolder,create=True)
+        raw_input_folder.replace_with_folder(
+            folder_path, move=False, overwrite=True)
 
     @property
     def raw_input_folder(self):
@@ -166,8 +179,8 @@ class Calculation(Node):
     def add_link_from(self,src,label=None):
         '''
         Add a link with a code as destination.
-        You can use the parameters of the base Node class, in particular the label
-        parameter to label the link.
+        You can use the parameters of the base Node class, in particular the
+        label parameter to label the link.
         '''
         
         from aida.orm.data import Data
@@ -175,29 +188,33 @@ class Calculation(Node):
         
         
         if not isinstance(src,(Data, Code)):
-            raise ValueError("Nodes entering in calculation can only be of type data or code")
+            raise ValueError("Nodes entering in calculation can only be of "
+                             "type data or code")
         
         valid_states = [calcStates.NEW]
 
         if self.get_state() not in valid_states:
-            raise ValueError("Can add an input node to a calculation only if it is in one "
-                "of the following states: {}, it is instead {}".format(valid_states,
-                    self.get_state()))
+            raise ModificationNotAllowed(
+                "Can add an input node to a calculation only if it is in one "
+                "of the following states: {}, it is instead {}".format(
+                    valid_states, self.get_state()))
 
         return super(Calculation,self).add_link_from(src, label)
 
     def set_computer(self,computer):
         """
-        TODO: probably this method should be in the base class, and check for the type
+        TODO: probably this method should be in the base class, and
+        check for the type
         """
         from aida.djsite.db.models import DbComputer
 
         if self._to_be_stored:
             self.dbnode.computer = DbComputer.get_dbcomputer(computer)
         else:
-            self.logger.error("Trying to change the computer of an already saved node: {}".format(
-                self.uuid))
-            raise ModificationNotAllowed("Node with uuid={} was already stored".format(self.uuid))
+            self.logger.error("Trying to change the computer of an already "
+                              "saved node: {}".format(self.uuid))
+            raise ModificationNotAllowed(
+                "Node with uuid={} was already stored".format(self.uuid))
 
     def get_computer(self):
         from aida.orm import Computer
@@ -205,7 +222,8 @@ class Calculation(Node):
 
     def _set_state(self, state):
         if state not in calcStates:
-            raise ValueError("'{}' is not a valid calculation status".format(state))
+            raise ValueError(
+                "'{}' is not a valid calculation status".format(state))
         self.set_attr('state', state)
 
     def get_state(self):
@@ -213,9 +231,10 @@ class Calculation(Node):
 
     def _set_remote_workdir(self, remote_workdir):
         if self.get_state() != calcStates.SUBMITTING:   
-            raise ModificationNotAllowed("Cannot set the remote workdir if you are not "
-			                             "submitting the calculation (current state is "
-					                     "{})".format(self.get_state()))
+            raise ModificationNotAllowed(
+                "Cannot set the remote workdir if you are not "
+			    "submitting the calculation (current state is "
+				"{})".format(self.get_state()))
         self.set_attr('remote_workdir', remote_workdir)
 
     def get_remote_workdir(self):
@@ -223,13 +242,15 @@ class Calculation(Node):
 
     def _set_retrieve_list(self, retrieve_list):
         if self.get_state() != calcStates.SUBMITTING:
-            raise ModificationNotAllowed("Cannot set the retrieve_list if you are not "
-					 "submitting the calculation (current state is "
-					 "{})".format(self.get_state()))
+            raise ModificationNotAllowed(
+                "Cannot set the retrieve_list if you are not "
+				"submitting the calculation (current state is "
+		        "{})".format(self.get_state()))
 
         if (not(isinstance(retrieve_list,(tuple,list))) or
 	           not(all(isinstance(i,basestring) for i in retrieve_list))):
-            raise ValueError("You have to pass a list (or tuple) of strings as retrieve_list")
+            raise ValueError("You have to pass a list (or tuple) of strings "
+                             "as retrieve_list")
         self.set_attr('retrieve_list', retrieve_list)
 
     def get_retrieve_list(self):
@@ -273,37 +294,42 @@ class Calculation(Node):
     
 
     @classmethod
-    def get_all_with_state(cls, state, computer=None, user=None, only_computer_user_pairs = False):
+    def get_all_with_state(cls, state, computer=None, user=None, 
+                           only_computer_user_pairs = False):
         """
         Filter all calculations with a given state.
 
         Issue a warning if the state is not in the list of valid states.
 
         Args:
-            state: The state to be used to filter (should be a string among those defined in
-                aida.common.datastructures.calcStates)
-            computer: a Django DbComputer entry, or a Computer object, of a computer in the DbComputer table.
+            state: The state to be used to filter (should be a string among 
+                those defined in aida.common.datastructures.calcStates)
+            computer: a Django DbComputer entry, or a Computer object, of a
+                computer in the DbComputer table.
                 A string for the hostname is also valid.
             user: a Django entry (or its pk) of a user in the User table;
                 if present, the results are restricted to calculations of that
                 specific user
-            only_computer_user_pairs: if False (default) return a queryset where each element
-                is a suitable instance of Node (it should be an instance of Calculation, if
-                everything goes right!)
-                If True, return only a list of tuples, where each tuple is in the format
-                ('computer__id', 'user__id') [where the IDs are the IDs of the respective tables]
+            only_computer_user_pairs: if False (default) return a queryset 
+                where each element is a suitable instance of Node (it should
+                be an instance of Calculation, if everything goes right!)
+                If True, return only a list of tuples, where each tuple is
+                in the format
+                ('computer__id', 'user__id')
+                [where the IDs are the IDs of the respective tables]
         """
-        # I assume that calcStates are strings. If this changes in the future, update the
-        # filter below from attributes__tval to the correct field.
+        # I assume that calcStates are strings. If this changes in the future,
+        # update the filter below from attributes__tval to the correct field.
         from aida.orm import Computer
 
         if state not in calcStates:
-            cls.logger.warning("querying for calculation state='{}', but it is not a "
-                              "valid calculation state".format(state))
+            cls.logger.warning("querying for calculation state='{}', but it "
+                "is not a valid calculation state".format(state))
 
         kwargs = {}
         if computer is not None:
-            # I convert it from various type of inputs (string, DbComputer, Computer)
+            # I convert it from various type of inputs
+            # (string, DbComputer, Computer)
             # to a Computer type
             kwargs['computer'] = Computer.get(computer)
         if user is not None:

@@ -595,7 +595,7 @@ class PbsproScheduler(aida.scheduler.Scheduler):
         return hours * 3600 + mins * 60 + secs
 
 
-    def _parse_time_string(self,string,format='%a %b %d %H:%M:%S %Y'):
+    def _parse_time_string(self,string,fmt='%a %b %d %H:%M:%S %Y'):
         """
         Parse a time string in the format returned from qstat -f and
         returns a datetime object.
@@ -603,7 +603,7 @@ class PbsproScheduler(aida.scheduler.Scheduler):
         import time, datetime
 
         try:
-            time_struct = time.strptime(string,format)
+            time_struct = time.strptime(string,fmt)
         except Exception as e:
             self.logger.debug("Unable to parse time string {}, the message "
                 "was {}".format(string, e.message))

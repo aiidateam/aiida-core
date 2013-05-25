@@ -587,7 +587,7 @@ class SlurmScheduler(aida.scheduler.Scheduler):
         return days * 86400 + hours * 3600 + mins * 60 + secs
 
 
-    def _parse_time_string(self,string,format='%Y-%m-%dT%H:%M:%S'):
+    def _parse_time_string(self,string,fmt='%Y-%m-%dT%H:%M:%S'):
         """
         Parse a time string in the format returned from qstat -f and
         returns a datetime object.
@@ -595,7 +595,7 @@ class SlurmScheduler(aida.scheduler.Scheduler):
         import time, datetime
 
         try:
-            time_struct = time.strptime(string,format)
+            time_struct = time.strptime(string,fmt)
         except Exception as e:
             self.logger.debug("Unable to parse time string {}, the message "
                 "was {}".format(string, e.message))

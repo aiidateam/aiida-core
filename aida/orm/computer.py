@@ -304,6 +304,6 @@ class Computer(object):
             return ThisPlugin()
         except MissingPluginError as e:
             raise ConfigurationError('No scheduler found for {} [type {}], message: {}'.format(
-                self.hostname, self.scheduler_type, e.message))
+                self.hostname, self.get_scheduler_type(), e.message))
 
 

@@ -7,7 +7,7 @@ import aida.scheduler
 from aida.common.utils import escape_for_bash
 from aida.scheduler import SchedulerError, SchedulerParsingError
 from aida.scheduler.datastructures import (
-    JobInfo, jobStates, NodeInfo)
+    JobInfo, job_states, NodeInfo)
 
 # This maps PbsPro status letters to our own status list
 
@@ -26,18 +26,18 @@ from aida.scheduler.datastructures import (
 #X  Subjob has completed execution or has been deleted.
 
 _map_status_pbspro = {
-    'B': jobStates.RUNNING,
-    'E': jobStates.RUNNING, # If exiting, for our purposes it is still running
-    'F': jobStates.DONE,
-    'H': jobStates.QUEUED_HELD,
-    'M': jobStates.UNDETERMINED, # TODO: check if this is ok?
-    'Q': jobStates.QUEUED,
-    'R': jobStates.RUNNING,
-    'S': jobStates.SUSPENDED,
-#    'T': jobStates., # TODO: what to do here?
-    'U': jobStates.SUSPENDED,
-    'W': jobStates.QUEUED,
-    'X': jobStates.DONE,
+    'B': job_states.RUNNING,
+    'E': job_states.RUNNING, # If exiting, for our purposes it is still running
+    'F': job_states.DONE,
+    'H': job_states.QUEUED_HELD,
+    'M': job_states.UNDETERMINED, # TODO: check if this is ok?
+    'Q': job_states.QUEUED,
+    'R': job_states.RUNNING,
+    'S': job_states.SUSPENDED,
+#    'T': job_states., # TODO: what to do here?
+    'U': job_states.SUSPENDED,
+    'W': job_states.QUEUED,
+    'X': job_states.DONE,
     }
 
 
@@ -337,7 +337,7 @@ class PbsproScheduler(aida.scheduler.Scheduler):
         job_list = []
         for job in jobdata_raw:
             this_job = JobInfo()
-            this_job.jobId = job['id']
+            this_job.job_id = job['id']
 
             lines_without_equals_sign = [i for i in job['lines']
                 if '=' not in i]
@@ -354,7 +354,7 @@ class PbsproScheduler(aida.scheduler.Scheduler):
                 i.split('=',1)[1].lstrip()
                 for i in job['lines'] if '=' in i}
 
-            # I believe that exitStatus and terminatingSignal cannot be
+            # I believe that exit_status and terminating_signal cannot be
             # retrieved from the qstat -f output.
             
             # I wrap calls in try-except clauses to avoid errors if a field
@@ -363,7 +363,7 @@ class PbsproScheduler(aida.scheduler.Scheduler):
                 this_job.title = raw_data['job_name']
             except KeyError:
                 self.logger.debug("No 'job_name' field for job id "
-                    "{}".format(this_job.jobId))
+                    "{}".format(this_job.job_id))
 
             try:
                 this_job.annotation = raw_data['comment']
@@ -371,36 +371,27 @@ class PbsproScheduler(aida.scheduler.Scheduler):
                 # Many jobs do not have a comment; I do not complain about it.
                 pass
                 #self.logger.debug("No 'comment' field for job id {}".format(
-                #    this_job.jobId))
+                #    this_job.job_id))
             
             try:
                 job_state_string = raw_data['job_state']
                 try:
-                    this_job.jobState = _map_status_pbspro[job_state_string]
+                    this_job.job_state = _map_status_pbspro[job_state_string]
                 except KeyError:
                     self.logger.warning("Unrecognized job_state '{}' for job "
                                         "id {}".format(job_state_string,
-                                                       this_job.jobId))
-                    this_job.jobState = jobStates.UNDETERMINED
+                                                       this_job.job_id))
+                    this_job.job_state = job_states.UNDETERMINED
             except KeyError:
                 self.logger.debug("No 'job_state' field for job id {}".format(
-                    this_job.jobId))
-                this_job.jobState = jobStates.UNDETERMINED
+                    this_job.job_id))
+                this_job.job_state = job_states.UNDETERMINED
 
             try:
-                this_job.jobSubState = raw_data['substate']
+                this_job.job_substate = raw_data['substate']
             except KeyError:
                 self.logger.debug("No 'substate' field for job id {}".format(
-                    this_job.jobId))
-
-
-            # TODO: we are not setting it because probably the assumption
-            #       submissionMachine == raw_data['server'] is not correct
-#            try:
-#                this_job.submissionMachine = raw_data['server']
-#            except KeyError:
-#                # No 'server' found; I skip
-#                pass
+                    this_job.job_id))
 
             try:
                 exec_hosts = raw_data['exec_host'].split('+')
@@ -419,20 +410,20 @@ class PbsproScheduler(aida.scheduler.Scheduler):
                     exec_host_list = []
                     for exec_host in exec_hosts:
                         node = NodeInfo()
-                        node.nodeName, data = exec_host.split('/')
+                        node.node_name, data = exec_host.split('/')
                         data = data.split('*')
                         if len(data) == 1:
                             node.jobIndex = int(data[0])
-                            node.numCores = 1
+                            node.num_cpus = 1
                         elif len(data) == 2:
                             node.jobIndex = int(data[0])
-                            node.numCores = int(data[1])
+                            node.num_cpus = int(data[1])
                         else:
                             raise ValueError("Wrong number of pieces: {} "
                                              "instead of 1 or 2 in exec_hosts: "
                                              "{}".format(len(data), exec_hosts))
                         exec_host_list.append(node)
-                    this_job.allocatedNodes = exec_host_list
+                    this_job.allocated_nodes = exec_host_list
                 except Exception as e:
                     self.logger.debug("Problem parsing the node names, I "
                                       "got Exception {} with message {}; "
@@ -441,79 +432,79 @@ class PbsproScheduler(aida.scheduler.Scheduler):
 
             try:
                 # I strip the part after the @: is this always ok?
-                this_job.jobOwner = raw_data['job_owner'].split('@')[0]
+                this_job.job_owner = raw_data['job_owner'].split('@')[0]
             except KeyError:
                 self.logger.debug("No 'job_owner' field for job id {}".format(
-                    this_job.jobId))
+                    this_job.job_id))
 
             try:
-                this_job.numCores = int(raw_data['resource_list.ncpus'])
+                this_job.num_cpus = int(raw_data['resource_list.ncpus'])
                 # TODO: understand if this is the correct field also for
                 #       multithreaded (OpenMP) jobs.
             except KeyError:
                 self.logger.debug("No 'resource_list.ncpus' field for job id "
-                    "{}".format(this_job.jobId))
+                    "{}".format(this_job.job_id))
             except ValueError:
                 self.logger.warning("'resource_list.ncpus' is not an integer "
                                     "({}) for job id {}!".format(
                         raw_data['resource_list.ncpus'],
-                        this_job.jobId))
+                        this_job.job_id))
 
             try:
                 this_job.num_nodes = int(raw_data['resource_list.nodect'])
             except KeyError:
                 self.logger.debug("No 'resource_list.nodect' field for job id "
-                    "{}".format(this_job.jobId))
+                    "{}".format(this_job.job_id))
             except ValueError:
                 self.logger.warning("'resource_list.nodect' is not an integer "
                                     "({}) for job id {}!".format(
                         raw_data['resource_list.nodect'],
-                        this_job.jobId))
+                        this_job.job_id))
 
             # Double check of redundant info
-            if (this_job.allocatedNodes is not None and 
+            if (this_job.allocated_nodes is not None and 
                 this_job.num_nodes is not None):
-                if len(this_job.allocatedNodes) != this_job.num_nodes:
+                if len(this_job.allocated_nodes) != this_job.num_nodes:
                     self.logger.error("The length of the list of allocated "
                                       "nodes ({}) is different from the "
                                       "expected number of nodes ({})!".format(
-                        len(this_job.allocatedNodes), this_job.num_nodes))
+                        len(this_job.allocated_nodes), this_job.num_nodes))
 
             try:
                 this_job.queue_name = raw_data['queue']
             except KeyError:
                 self.logger.debug("No 'queue' field for job id "
-                    "{}".format(this_job.jobId))
+                    "{}".format(this_job.job_id))
 
             try:
                 this_job.RequestedWallclockTime = (self._convert_time(
                     raw_data['resource_list.walltime']))
             except KeyError:
                 self.logger.debug("No 'resource_list.walltime' field for "
-                    "job id {}".format(this_job.jobId))
+                    "job id {}".format(this_job.job_id))
             except ValueError:
                 self.logger.warning("Error parsing 'resource_list.walltime' "
-                    "for job id {}".format(this_job.jobId))
+                    "for job id {}".format(this_job.job_id))
 
             try:
-                this_job.wallclockTime = (self._convert_time(
+                this_job.wallclock_time_seconds = (self._convert_time(
                     raw_data['resources_used.walltime']))
             except KeyError:
                 # May not have started yet
                 pass
             except ValueError:
                 self.logger.warning("Error parsing 'resources_used.walltime' "
-                    "for job id {}".format(this_job.jobId))
+                    "for job id {}".format(this_job.job_id))
 
             try:
-                this_job.cpuTime = (self._convert_time(
+                this_job.cpu_time = (self._convert_time(
                     raw_data['resources_used.cput']))
             except KeyError:
                 # May not have started yet
                 pass
             except ValueError:
                 self.logger.warning("Error parsing 'resources_used.cput' "
-                    "for job id {}".format(this_job.jobId))
+                    "for job id {}".format(this_job.job_id))
 
             #
             # ctime: The time that the job was created
@@ -525,26 +516,26 @@ class PbsproScheduler(aida.scheduler.Scheduler):
             #        queued state while residing in an execution queue.
 
             try:
-                this_job.submissionTime = self._parse_time_string(
+                this_job.submission_time = self._parse_time_string(
                     raw_data['ctime'])
             except KeyError:
                 self.logger.debug("No 'ctime' field for job id "
-                    "{}".format(this_job.jobId))
+                    "{}".format(this_job.job_id))
             except ValueError:
                 self.logger.warning("Error parsing 'ctime' for job id "
-                    "{}".format(this_job.jobId))
+                    "{}".format(this_job.job_id))
 
             try:
-                this_job.dispatchTime = self._parse_time_string(
+                this_job.dispatch_time = self._parse_time_string(
                     raw_data['stime'])
             except KeyError:
                 # The job may not have been started yet
                 pass
             except ValueError:
                 self.logger.warning("Error parsing 'stime' for job id "
-                    "{}".format(this_job.jobId))
+                    "{}".format(this_job.job_id))
             
-            # TODO: see if we want to set also finishTime for finished jobs,
+            # TODO: see if we want to set also finish_time for finished jobs,
             # if there are any
 
             # Everything goes here anyway for debugging purposes

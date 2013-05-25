@@ -2,6 +2,7 @@
 import sys
 import os
 import paramiko
+import getpass
 
 try:
     machine = sys.argv[1]
@@ -19,7 +20,7 @@ aidalogger.setLevel(logging.INFO)
 import tempfile
 import datetime
 
-from aida.orm import Calculation, Code, Data, Computer
+from aida.orm import Calculation, Code, Computer
 from aida.execmanager import submit_calc
 from aida.djsite.utils import get_automatic_user
 
@@ -30,14 +31,15 @@ from aida.orm.dataplugins.singlefile import SinglefileData
 from aida.orm.dataplugins.remote import RemoteData
 
 # A string with the version of this script, used to recreate a code when necessary
-current_version = "1.0.4"
+current_version = "1.0.5"
 queue = None
 #queue = "P_share_queue"
 
 def get_or_create_machine():
     import json
     from aida.common.exceptions import NotExistent
-
+    from aida.djsite.db.models import AuthInfo
+        
 #    # I can delete the computer first
 #### DON'T DO THIS! WILL ALSO DELETE ALL CALCULATIONS THAT WERE USING
 #### THIS COMPUTER!
@@ -53,9 +55,9 @@ def get_or_create_machine():
             computer = Computer(hostname="localhost",transport_type='local',
                                 scheduler_type='pbspro')
             computer.set_workdir("/tmp/{username}/aida")
+            computer.set_mpirun_command("mpirun", "-np", "{tot_num_cpus}")
             computer.store()
 
-        from aida.djsite.db.models import AuthInfo
         auth_params = {}
 
         authinfo, created = AuthInfo.objects.get_or_create(
@@ -74,10 +76,12 @@ def get_or_create_machine():
             computername = "bellatrix.epfl.ch"
             schedulertype = 'pbspro'
             workdir = "/scratch/{username}/aida"
+            mpirun_command = ['mpirun', '-np', '{tot_num_cpus}']
         elif machine.startswith('rosa'):
             computername = "rosa.cscs.ch"
             schedulertype = 'slurm'
             workdir = "/scratch/rosa/{username}/aida"
+            mpirun_command = ['aprun', '-n', '{tot_num_cpus}']
         else:
             print >> sys.stderr, "Unkown computer!"
             sys.exit(1)
@@ -90,9 +94,9 @@ def get_or_create_machine():
             computer = Computer(hostname=computername,transport_type='ssh',
                                 scheduler_type=schedulertype)
             computer.set_workdir(workdir)
+            computer.set_mpirun_command(mpirun_command)
             computer.store()
 
-        from aida.djsite.db.models import AuthInfo
         auth_params = {'load_system_host_keys': True}
 
 
@@ -112,7 +116,7 @@ def get_or_create_machine():
             auth_params['username'] = getpass.getuser()
 
         try:
-           auth_params['key_filename'] = os.path.expanduser(
+            auth_params['key_filename'] = os.path.expanduser(
                 machine_config['identityfile'])
         except KeyError:
             pass 
@@ -140,8 +144,6 @@ def get_or_create_machine():
     return computer
 
 def get_or_create_code():
-    import tempfile
-
     useful_codes = Code.query(attributes__key="_local_executable",
                               attributes__tval="sum.py").filter(
                                   attributes__key="version", attributes__tval=current_version)

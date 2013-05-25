@@ -383,7 +383,7 @@ class TestParserQstat(unittest.TestCase):
                     num_nodes += 1
                     num_cores += n.numCores
                     
-                self.assertTrue( j.numNodes==num_nodes )
+                self.assertTrue( j.num_nodes==num_nodes )
                 self.assertTrue( j.numCores==num_cores )
         # TODO : parse the env_vars
 
@@ -424,10 +424,10 @@ class TestSubmitScript(unittest.TestCase):
 
         job_tmpl = JobTemplate()
         job_tmpl.argv = ["mpirun", "-np", "23", "pw.x", "-npool", "1"]
-        job_tmpl.stdinName = 'aida.in'
-        job_tmpl.numNodes = 1
+        job_tmpl.stdin_name = 'aida.in'
+        job_tmpl.num_nodes = 1
         job_tmpl.uuid = str(uuid.uuid4())
-        job_tmpl.maxWallclockSeconds = 24 * 3600 
+        job_tmpl.max_wallclock_seconds = 24 * 3600 
 
         submit_script_text = s.get_submit_script(job_tmpl)
 

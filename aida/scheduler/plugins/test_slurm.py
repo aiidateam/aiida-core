@@ -77,13 +77,13 @@ class TestParserSqueue(unittest.TestCase):
         self.assertEquals( [j.annotation for j in job_list
                             if j.jobId == '863100'][0], 
                            'Resources' )
-        self.assertEquals( [j.numNodes for j in job_list
+        self.assertEquals( [j.num_nodes for j in job_list
                             if j.jobId == '863100'][0], 
                            32 )
         self.assertEquals( [j.numCores for j in job_list
                             if j.jobId == '863100'][0], 
                            1024 )
-        self.assertEquals( [j.queueName for j in job_list
+        self.assertEquals( [j.queue_name for j in job_list
                             if j.jobId == '863100'][0], 
                            'normal' )
         self.assertEquals( [j.title for j in job_list
@@ -99,7 +99,7 @@ class TestParserSqueue(unittest.TestCase):
         #                    num_nodes += 1
         #                    num_cores += n.numCores
         #                    
-        #                self.assertTrue( j.numNodes==num_nodes )
+        #                self.assertTrue( j.num_nodes==num_nodes )
         #                self.assertTrue( j.numCores==num_cores )
 
 class TestTimes(unittest.TestCase):
@@ -163,10 +163,10 @@ class TestSubmitScript(unittest.TestCase):
 
         job_tmpl = JobTemplate()
         job_tmpl.argv = ["mpirun", "-np", "23", "pw.x", "-npool", "1"]
-        job_tmpl.stdinName = 'aida.in'
-        job_tmpl.numNodes = 1
+        job_tmpl.stdin_name = 'aida.in'
+        job_tmpl.num_nodes = 1
         job_tmpl.uuid = str(uuid.uuid4())
-        job_tmpl.maxWallclockSeconds = 24 * 3600 
+        job_tmpl.max_wallclock_seconds = 24 * 3600 
 
         submit_script_text = s.get_submit_script(job_tmpl)
 

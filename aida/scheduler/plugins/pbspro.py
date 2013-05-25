@@ -111,9 +111,9 @@ class PbsproScheduler(aida.scheduler.Scheduler):
             lines.append('#PBS -M {}'.format(job_tmpl.email))
             
         email_events = ""
-        if job_tmpl.emailOnStarted:
+        if job_tmpl.email_on_started:
             email_events += "b"
-        if job_tmpl.emailOnTerminated:
+        if job_tmpl.email_on_terminated:
             email_events += "ea"
         if email_events:
             lines.append("#PBS -m {}".format(email_events))
@@ -125,7 +125,7 @@ class PbsproScheduler(aida.scheduler.Scheduler):
         else:
             lines.append("#PBS -m n")
             
-        if job_tmpl.jobName:
+        if job_tmpl.job_name:
             # From qsub man page:
             # string, up to 15 characters in length.  It must
             # consist of an  alphabetic  or  numeric  character 
@@ -136,7 +136,7 @@ class PbsproScheduler(aida.scheduler.Scheduler):
             #
             # I leave only letters, numbers, dots, dashes and underscores
             # Note: I don't compile the regexp, I am going to use it only once
-            job_title = re.sub(r'[^a-zA-Z0-9_.-]+', '', job_tmpl.jobName)
+            job_title = re.sub(r'[^a-zA-Z0-9_.-]+', '', job_tmpl.job_name)
 
             # prepend a 'j' (for 'job') before the string if the string
             # is now empty or does not start with a valid charachter
@@ -150,10 +150,10 @@ class PbsproScheduler(aida.scheduler.Scheduler):
             
             lines.append("#PBS -N {}".format(job_title))
             
-        if job_tmpl.schedOutputPath:
-            lines.append("#PBS -o {}".format(job_tmpl.schedOutputPath))
+        if job_tmpl.sched_output_path:
+            lines.append("#PBS -o {}".format(job_tmpl.sched_output_path))
 
-        if job_tmpl.schedJoinFiles:
+        if job_tmpl.sched_join_files:
             # from qsub man page:
             # 'oe': Standard error and standard output are merged  into 
             #       standard output
@@ -161,16 +161,16 @@ class PbsproScheduler(aida.scheduler.Scheduler):
             #       standard error
             # 'n' : Standard error and standard output are not merged (default)
             lines.append("#PBS -j oe")
-            if job_tmpl.schedErrorPath:
+            if job_tmpl.sched_error_path:
                 self.logger.info(
-                    "schedJoinFiles is True, but schedErrorPath is set in "
-                    "PBSPro script; ignoring schedErrorPath")
+                    "sched_join_files is True, but sched_error_path is set in "
+                    "PBSPro script; ignoring sched_error_path")
         else:
-            if job_tmpl.schedErrorPath:
-                lines.append("#PBS -e {}".format(job_tmpl.schedErrorPath))
+            if job_tmpl.sched_error_path:
+                lines.append("#PBS -e {}".format(job_tmpl.sched_error_path))
 
-        if job_tmpl.queueName:
-            lines.append("#PBS -q {}".format(job_tmpl.queueName))
+        if job_tmpl.queue_name:
+            lines.append("#PBS -q {}".format(job_tmpl.queue_name))
             
         if job_tmpl.priority:
             # Priority of the job.  Format: host-dependent integer.  Default:
@@ -181,23 +181,23 @@ class PbsproScheduler(aida.scheduler.Scheduler):
             lines.append("#PBS -p {}".format(job_tmpl.priority))
 
         
-        if not job_tmpl.numNodes:
-            raise ValueError("numNodes is required for the PBSPro scheduler "
+        if not job_tmpl.num_nodes:
+            raise ValueError("num_nodes is required for the PBSPro scheduler "
                              "plugin")
-        select_string = "select={}".format(job_tmpl.numNodes)
-        if job_tmpl.numCpusPerNode:
-            select_string += ":ncpus={}".format(job_tmpl.numCpusPerNode)
+        select_string = "select={}".format(job_tmpl.num_nodes)
+        if job_tmpl.num_cpus_per_node:
+            select_string += ":ncpus={}".format(job_tmpl.num_cpus_per_node)
 
-        if job_tmpl.maxWallclockSeconds is not None:
+        if job_tmpl.max_wallclock_seconds is not None:
             try:
-                tot_secs = int(job_tmpl.maxWallclockSeconds)
+                tot_secs = int(job_tmpl.max_wallclock_seconds)
                 if tot_secs <= 0:
                     raise ValueError
             except ValueError:
                 raise ValueError(
-                    "maxWallclockSeconds must be "
+                    "max_wallclock_seconds must be "
                     "a positive integer (in seconds)! It is instead '{}'"
-                    "".format((job_tmpl.maxWallclockSeconds)))
+                    "".format((job_tmpl.max_wallclock_seconds)))
             hours = tot_secs // 3600
             tot_minutes = tot_secs % 3600
             minutes = tot_minutes // 60
@@ -205,14 +205,14 @@ class PbsproScheduler(aida.scheduler.Scheduler):
             lines.append("#PBS -l walltime={:02d}:{:02d}:{:02d}".format(
                 hours, minutes, seconds))
 
-        if job_tmpl.maxMemoryKb:
+        if job_tmpl.max_memory_kb:
             try:
-                virtualMemoryKb = int(job_tmpl.maxMemoryKb)
+                virtualMemoryKb = int(job_tmpl.max_memory_kb)
                 if virtualMemoryKb <= 0:
                     raise ValueError
             except ValueError:
                 raise ValueError(
-                    "maxMemoryKb must be "
+                    "max_memory_kb must be "
                     "a positive integer (in kB)! It is instead '{}'"
                     "".format((job_tmpl.MaxMemoryKb)))
             select_string += ":mem={}kb".format(virtualMemoryKb)
@@ -225,13 +225,13 @@ class PbsproScheduler(aida.scheduler.Scheduler):
         # Therefore, I assume that this is bash and export variables by
         # and.
         
-        if job_tmpl.jobEnvironment:
+        if job_tmpl.job_environment:
             lines.append(empty_line)
             lines.append("# ENVIRONMENT VARIABLES BEGIN ###")
-            if not isinstance(job_tmpl.jobEnvironment, dict):
-                raise ValueError("If you provide jobEnvironment, it must be "
+            if not isinstance(job_tmpl.job_environment, dict):
+                raise ValueError("If you provide job_environment, it must be "
                                  "a dictionary")
-            for k, v in job_tmpl.jobEnvironment.iteritems():
+            for k, v in job_tmpl.job_environment.iteritems():
                 lines.append("export {}={}".format(
                         k.strip(),
                         escape_for_bash(v)))
@@ -460,7 +460,7 @@ class PbsproScheduler(aida.scheduler.Scheduler):
                         this_job.jobId))
 
             try:
-                this_job.numNodes = int(raw_data['resource_list.nodect'])
+                this_job.num_nodes = int(raw_data['resource_list.nodect'])
             except KeyError:
                 self.logger.debug("No 'resource_list.nodect' field for job id "
                     "{}".format(this_job.jobId))
@@ -472,15 +472,15 @@ class PbsproScheduler(aida.scheduler.Scheduler):
 
             # Double check of redundant info
             if (this_job.allocatedNodes is not None and 
-                this_job.numNodes is not None):
-                if len(this_job.allocatedNodes) != this_job.numNodes:
+                this_job.num_nodes is not None):
+                if len(this_job.allocatedNodes) != this_job.num_nodes:
                     self.logger.error("The length of the list of allocated "
                                       "nodes ({}) is different from the "
                                       "expected number of nodes ({})!".format(
-                        len(this_job.allocatedNodes), this_job.numNodes))
+                        len(this_job.allocatedNodes), this_job.num_nodes))
 
             try:
-                this_job.queueName = raw_data['queue']
+                this_job.queue_name = raw_data['queue']
             except KeyError:
                 self.logger.debug("No 'queue' field for job id "
                     "{}".format(this_job.jobId))

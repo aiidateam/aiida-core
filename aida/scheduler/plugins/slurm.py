@@ -186,13 +186,13 @@ class SlurmScheduler(aida.scheduler.Scheduler):
             # sends the mail to the job owner by default
             lines.append('#SBATCH --mail-user={}'.format(job_tmpl.email))
             
-        if job_tmpl.emailOnStarted:            
+        if job_tmpl.email_on_started:            
             lines.append("#SBATCH --mail-type=BEGIN")
-        if job_tmpl.emailOnTerminated:
+        if job_tmpl.email_on_terminated:
             lines.append("#SBATCH --mail-type=FAIL")
             lines.append("#SBATCH --mail-type=END")
             
-        if job_tmpl.jobName:
+        if job_tmpl.job_name:
             # The man page does not specify any specific limitation
             # on the job name.
             # Just to be sure, I remove unwanted characters, and I
@@ -200,7 +200,7 @@ class SlurmScheduler(aida.scheduler.Scheduler):
 
             # I leave only letters, numbers, dots, dashes and underscores
             # Note: I don't compile the regexp, I am going to use it only once
-            job_title = re.sub(r'[^a-zA-Z0-9_.-]+', '', job_tmpl.jobName)
+            job_title = re.sub(r'[^a-zA-Z0-9_.-]+', '', job_tmpl.job_name)
 
             # prepend a 'j' (for 'job') before the string if the string
             # is now empty or does not start with a valid charachter
@@ -214,29 +214,29 @@ class SlurmScheduler(aida.scheduler.Scheduler):
             
             lines.append('#SBATCH --job-name="{}"'.format(job_title))
             
-        if job_tmpl.schedOutputPath:
-            lines.append("#SBATCH --output={}".format(job_tmpl.schedOutputPath))
+        if job_tmpl.sched_output_path:
+            lines.append("#SBATCH --output={}".format(job_tmpl.sched_output_path))
 
-        if job_tmpl.schedJoinFiles:
+        if job_tmpl.sched_join_files:
             # TODO: manual says:
             #By  default both standard output and standard error are directed
             #to a file of the name "slurm-%j.out", where the "%j" is replaced
             #with  the  job  allocation  number. 
             # See that this automatic redirection works also if 
             # I specify a different --output file
-            if job_tmpl.schedErrorPath:
+            if job_tmpl.sched_error_path:
                 self.logger.info(
-                    "schedJoinFiles is True, but schedErrorPath is set in "
-                    "SLURM script; ignoring schedErrorPath")
+                    "sched_join_files is True, but sched_error_path is set in "
+                    "SLURM script; ignoring sched_error_path")
         else:
-            if job_tmpl.schedErrorPath:
-                lines.append("#SBATCH --error={}".format(job_tmpl.schedErrorPath))
+            if job_tmpl.sched_error_path:
+                lines.append("#SBATCH --error={}".format(job_tmpl.sched_error_path))
             else:
                 # To avoid automatic join of files
                 lines.append("#SBATCH --error=slurm-%j.err")
 
-        if job_tmpl.queueName:
-            lines.append("#SBATCH --partition={}".format(job_tmpl.queueName))
+        if job_tmpl.queue_name:
+            lines.append("#SBATCH --partition={}".format(job_tmpl.queue_name))
             
         if job_tmpl.priority:
             #  Run the job with an adjusted scheduling priority  within  SLURM.
@@ -246,24 +246,24 @@ class SlurmScheduler(aida.scheduler.Scheduler):
             lines.append("#SBATCH --nice={}".format(job_tmpl.priority))
 
         
-        if not job_tmpl.numNodes:
-            raise ValueError("numNodes is required for the SLURM scheduler "
+        if not job_tmpl.num_nodes:
+            raise ValueError("num_nodes is required for the SLURM scheduler "
                              "plugin")
-        lines.append("#SBATCH --nodes={}".format(job_tmpl.numNodes))
-        if job_tmpl.numCpusPerNode:
+        lines.append("#SBATCH --nodes={}".format(job_tmpl.num_nodes))
+        if job_tmpl.num_cpus_per_node:
             lines.append("#SBATCH --ntasks-per-node={}".format(
-                    job_tmpl.numCpusPerNode))
+                    job_tmpl.num_cpus_per_node))
 
-        if job_tmpl.maxWallclockSeconds is not None:
+        if job_tmpl.max_wallclock_seconds is not None:
             try:
-                tot_secs = int(job_tmpl.maxWallclockSeconds)
+                tot_secs = int(job_tmpl.max_wallclock_seconds)
                 if tot_secs <= 0:
                     raise ValueError
             except ValueError:
                 raise ValueError(
-                    "maxWallclockSeconds must be "
+                    "max_wallclock_seconds must be "
                     "a positive integer (in seconds)! It is instead '{}'"
-                    "".format((job_tmpl.maxWallclockSeconds)))
+                    "".format((job_tmpl.max_wallclock_seconds)))
             days = tot_secs // 86400
             tot_hours = tot_secs % 86400
             hours = tot_hours // 3600
@@ -278,14 +278,14 @@ class SlurmScheduler(aida.scheduler.Scheduler):
                         days, hours, minutes, seconds))
 
         # It is the memory per node, not per cpu!
-        if job_tmpl.maxMemoryKb:
+        if job_tmpl.max_memory_kb:
             try:
-                virtualMemoryKb = int(job_tmpl.maxMemoryKb)
+                virtualMemoryKb = int(job_tmpl.max_memory_kb)
                 if virtualMemoryKb <= 0:
                     raise ValueError
             except ValueError:
                 raise ValueError(
-                    "maxMemoryKb must be "
+                    "max_memory_kb must be "
                     "a positive integer (in kB)! It is instead '{}'"
                     "".format((job_tmpl.MaxMemoryKb)))
             # --mem: Specify the real memory required per node in MegaBytes. 
@@ -298,13 +298,13 @@ class SlurmScheduler(aida.scheduler.Scheduler):
         # Therefore, I assume that this is bash and export variables by
         # and.
         
-        if job_tmpl.jobEnvironment:
+        if job_tmpl.job_environment:
             lines.append(empty_line)
             lines.append("# ENVIRONMENT VARIABLES BEGIN ###")
-            if not isinstance(job_tmpl.jobEnvironment, dict):
-                raise ValueError("If you provide jobEnvironment, it must be "
+            if not isinstance(job_tmpl.job_environment, dict):
+                raise ValueError("If you provide job_environment, it must be "
                                  "a dictionary")
-            for k, v in job_tmpl.jobEnvironment.iteritems():
+            for k, v in job_tmpl.job_environment.iteritems():
                 lines.append("export {}={}".format(
                         k.strip(),
                         escape_for_bash(v)))
@@ -491,7 +491,7 @@ class SlurmScheduler(aida.scheduler.Scheduler):
             this_job.jobOwner = username
 
             try:
-                this_job.numNodes = int(number_nodes)
+                this_job.num_nodes = int(number_nodes)
             except ValueError:
                 self.logger.warning("The number of allocated nodes is not "
                                     "an integer ({}) for job id {}!".format(
@@ -515,7 +515,7 @@ class SlurmScheduler(aida.scheduler.Scheduler):
             if this_job.jobState == jobStates.RUNNING:
                 this_job.allocated_nodes_raw = allocated_nodes
 
-            this_job.queueName = partition
+            this_job.queue_name = partition
 
             try:
                 this_job.requestedWallclockTime = (self._convert_time(
@@ -550,12 +550,12 @@ class SlurmScheduler(aida.scheduler.Scheduler):
             # Not really useful now, allocatedNodes in this
             # version of the plugin is never set
             if (this_job.allocatedNodes is not None and 
-                this_job.numNodes is not None):
-                if len(this_job.allocatedNodes) != this_job.numNodes:
+                this_job.num_nodes is not None):
+                if len(this_job.allocatedNodes) != this_job.num_nodes:
                     self.logger.error("The length of the list of allocated "
                                       "nodes ({}) is different from the "
                                       "expected number of nodes ({})!".format(
-                        len(this_job.allocatedNodes), this_job.numNodes))
+                        len(this_job.allocatedNodes), this_job.num_nodes))
 
 
             # I append to the list of jobs to return

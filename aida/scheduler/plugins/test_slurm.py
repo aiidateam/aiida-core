@@ -41,66 +41,66 @@ class TestParserSqueue(unittest.TestCase):
         self.assertEquals(job_parsed, job_on_cluster)
 
         job_running = 3
-        job_running_parsed = len([ j for j in job_list if j.jobState \
-                                   and j.jobState == jobStates.RUNNING ])
+        job_running_parsed = len([ j for j in job_list if j.job_state \
+                                   and j.job_state == job_states.RUNNING ])
         self.assertEquals(job_running,job_running_parsed)
 
         job_held = 2
-        job_held_parsed = len([ j for j in job_list if j.jobState 
-                                   and j.jobState == jobStates.QUEUED_HELD ])
+        job_held_parsed = len([ j for j in job_list if j.job_state 
+                                   and j.job_state == job_states.QUEUED_HELD ])
         self.assertEquals(job_held,job_held_parsed)
 
         job_queued = 2
-        job_queued_parsed = len([ j for j in job_list if j.jobState 
-                                   and j.jobState == jobStates.QUEUED ])
+        job_queued_parsed = len([ j for j in job_list if j.job_state 
+                                   and j.job_state == job_states.QUEUED ])
         self.assertEquals(job_queued,job_queued_parsed)
 
         running_users = ['user5','user6']
-        parsed_running_users = [ j.jobOwner for j in job_list if j.jobState 
-                                 and j.jobState == jobStates.RUNNING ]
+        parsed_running_users = [ j.job_owner for j in job_list if j.job_state 
+                                 and j.job_state == job_states.RUNNING ]
         self.assertEquals( set(running_users) , set(parsed_running_users) )
 
         running_jobs = ['862538','861352', '863553']
-        parsed_running_jobs = [ j.jobId for j in job_list if j.jobState 
-                                 and j.jobState == jobStates.RUNNING ]
+        parsed_running_jobs = [ j.job_id for j in job_list if j.job_state 
+                                 and j.job_state == job_states.RUNNING ]
         self.assertEquals( set(running_jobs) , set(parsed_running_jobs) )
  
-        self.assertEquals( [j.requestedWallclockTime for j in job_list
-                            if j.jobId == '863553'][0], 
+        self.assertEquals( [j.requested_wallclock_time_seconds for j in job_list
+                            if j.job_id == '863553'][0], 
                            30*60 )
-        self.assertEquals( [j.wallclockTime for j in job_list
-                            if j.jobId == '863553'][0], 
+        self.assertEquals( [j.wallclock_time_seconds for j in job_list
+                            if j.job_id == '863553'][0], 
                            29*60 + 29 )
-        self.assertEquals( [j.submissionTime for j in job_list
-                            if j.jobId == '863553'][0], 
+        self.assertEquals( [j.submission_time for j in job_list
+                            if j.job_id == '863553'][0], 
                            datetime.datetime(2013,05,23,11,44,11) )
         self.assertEquals( [j.annotation for j in job_list
-                            if j.jobId == '863100'][0], 
+                            if j.job_id == '863100'][0], 
                            'Resources' )
         self.assertEquals( [j.num_nodes for j in job_list
-                            if j.jobId == '863100'][0], 
+                            if j.job_id == '863100'][0], 
                            32 )
-        self.assertEquals( [j.numCores for j in job_list
-                            if j.jobId == '863100'][0], 
+        self.assertEquals( [j.num_cpus for j in job_list
+                            if j.job_id == '863100'][0], 
                            1024 )
         self.assertEquals( [j.queue_name for j in job_list
-                            if j.jobId == '863100'][0], 
+                            if j.job_id == '863100'][0], 
                            'normal' )
         self.assertEquals( [j.title for j in job_list
-                            if j.jobId == '861352'][0], 
+                            if j.job_id == '861352'][0], 
                            'Pressure_PBEsol_0' )
 
-        # allocatedNodes is not implemented in this version of the plugin       
+        # allocated_nodes is not implemented in this version of the plugin       
         #        for j in job_list:
-        #            if j.allocatedNodes:
+        #            if j.allocated_nodes:
         #                num_nodes = 0
-        #                num_cores = 0
-        #                for n in j.allocatedNodes:
+        #                num_cpus = 0
+        #                for n in j.allocated_nodes:
         #                    num_nodes += 1
-        #                    num_cores += n.numCores
+        #                    num_cpus += n.num_cpus
         #                    
         #                self.assertTrue( j.num_nodes==num_nodes )
-        #                self.assertTrue( j.numCores==num_cores )
+        #                self.assertTrue( j.num_cpus==num_cpus )
 
 class TestTimes(unittest.TestCase):
     def test_time_conversion(self):

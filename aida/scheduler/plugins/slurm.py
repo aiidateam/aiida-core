@@ -6,7 +6,7 @@ from __future__ import division
 import aida.scheduler
 from aida.common.utils import escape_for_bash
 from aida.scheduler import SchedulerError
-from aida.scheduler.datastructures import JobInfo, jobStates
+from aida.scheduler.datastructures import JobInfo, job_states
 import re
 
 # This maps SLURM state codes to our own status list
@@ -32,17 +32,17 @@ import re
 ## TO  TIMEOUT         Job terminated upon reaching its time limit.
 
 _map_status_slurm = {
-    'CA': jobStates.DONE,
-    'CD': jobStates.DONE,
-    'CF': jobStates.QUEUED,
-    'CG': jobStates.RUNNING,
-    'F':  jobStates.DONE,
-    'NF': jobStates.DONE,
-    'PD': jobStates.QUEUED,
-    'PR': jobStates.DONE,
-    'R': jobStates.RUNNING,
-    'S': jobStates.SUSPENDED,
-    'TO': jobStates.DONE,
+    'CA': job_states.DONE,
+    'CD': job_states.DONE,
+    'CF': job_states.QUEUED,
+    'CG': job_states.RUNNING,
+    'F':  job_states.DONE,
+    'NF': job_states.DONE,
+    'PD': job_states.QUEUED,
+    'PR': job_states.DONE,
+    'R': job_states.RUNNING,
+    'S': job_states.SUSPENDED,
+    'TO': job_states.DONE,
     }
 
 # From the manual,
@@ -427,7 +427,7 @@ class SlurmScheduler(aida.scheduler.Scheduler):
                                   "".format(job))
                 continue
             this_job = JobInfo()
-            this_job.jobId = job[0]
+            this_job.job_id = job[0]
 
             this_job.annotation = job[2]
             job_state_raw = job[1]
@@ -436,8 +436,8 @@ class SlurmScheduler(aida.scheduler.Scheduler):
             except KeyError:
                 self.logger.warning("Unrecognized job_state '{}' for job "
                                     "id {}".format(job_state_raw,
-                                                   this_job.jobId))
-                job_state_string = jobStates.UNDETERMINED
+                                                   this_job.job_id))
+                job_state_string = job_states.UNDETERMINED
             # QUEUED_HELD states are not specific states in SLURM;
             # they are instead set with state QUEUED, and then the
             # annotation tells if the job is held.
@@ -453,12 +453,12 @@ class SlurmScheduler(aida.scheduler.Scheduler):
             # There are actually a few others, like possible
             # failures, or partition-related reasons, but for the moment I 
             # leave them in the QUEUED state.
-            if (job_state_string == jobStates.QUEUED and
+            if (job_state_string == job_states.QUEUED and
                   this_job.annotation in 
                   ['Dependency', 'JobHeldUser', 'JobHeldAdmin', 'BeginTime']):
-                job_state_string = jobStates.QUEUED_HELD
+                job_state_string = job_states.QUEUED_HELD
             
-            this_job.jobState = job_state_string
+            this_job.job_state = job_state_string
 
             ####
             # Up to here, I just made sure that there were at least three
@@ -481,14 +481,12 @@ class SlurmScheduler(aida.scheduler.Scheduler):
             # I used split(_field_separator, num_fields) before
             # when creting 'job'
             (_, _, _, executing_host, username, number_nodes,
-             number_cores, allocated_nodes, partition, 
+             number_cpus, allocated_nodes, partition, 
              time_limit, time_used, dispatch_time, job_name ) = job
 
-            # TODO: we are not setting it because probably the assumption
-            #       submissionMachine == executing_host is not correct
-            #this_job.submissionMachine = executing_host
+            # TODO: store executing_host?
 
-            this_job.jobOwner = username
+            this_job.job_owner = username
 
             try:
                 this_job.num_nodes = int(number_nodes)
@@ -496,50 +494,50 @@ class SlurmScheduler(aida.scheduler.Scheduler):
                 self.logger.warning("The number of allocated nodes is not "
                                     "an integer ({}) for job id {}!".format(
                         number_nodes,
-                        this_job.jobId))
+                        this_job.job_id))
 
             try:
-                this_job.numCores = int(number_cores)
+                this_job.num_cpus = int(number_cpus)
             except ValueError:
                 self.logger.warning("The number of allocated cores is not "
                                     "an integer ({}) for job id {}!".format(
-                        number_cores,
-                        this_job.jobId))
+                        number_cpus,
+                        this_job.job_id))
 
             # ALLOCATED NODES HERE
             # string may be in the format
             # nid00[684-685,722-723,748-749,958-959]
             # therefore it requires some parsing, that is unnecessary now.
             # I just store is as a raw string for the moment, and I leave
-            # this_job.allocatedNodes undefined
-            if this_job.jobState == jobStates.RUNNING:
+            # this_job.allocated_nodes undefined
+            if this_job.job_state == job_states.RUNNING:
                 this_job.allocated_nodes_raw = allocated_nodes
 
             this_job.queue_name = partition
 
             try:
-                this_job.requestedWallclockTime = (self._convert_time(
+                this_job.requested_wallclock_time_seconds = (self._convert_time(
                     time_limit))
             except ValueError:
                 self.logger.warning("Error parsing the time limit "
-                    "for job id {}".format(this_job.jobId))
+                    "for job id {}".format(this_job.job_id))
 
             # Only if it is RUNNING; otherwise it is not meaningful,
             # and may be not set (in my test, it is set to zero)
-            if this_job.jobState == jobStates.RUNNING:
+            if this_job.job_state == job_states.RUNNING:
                 try:
-                    this_job.wallclockTime = (self._convert_time(
+                    this_job.wallclock_time_seconds = (self._convert_time(
                             time_used))
                 except ValueError:
                     self.logger.warning("Error parsing time_used "
-                                        "for job id {}".format(this_job.jobId))
+                                        "for job id {}".format(this_job.job_id))
 
                 try:
-                    this_job.submissionTime = self._parse_time_string(
+                    this_job.submission_time = self._parse_time_string(
                         dispatch_time)
                 except ValueError:
                     self.logger.warning("Error parsing dispatch_time for job "
-                                        "id {}".format(this_job.jobId))
+                                        "id {}".format(this_job.job_id))
 
             this_job.title = job_name
 
@@ -547,15 +545,15 @@ class SlurmScheduler(aida.scheduler.Scheduler):
             this_job.rawData = job
 
             # Double check of redundant info
-            # Not really useful now, allocatedNodes in this
+            # Not really useful now, allocated_nodes in this
             # version of the plugin is never set
-            if (this_job.allocatedNodes is not None and 
+            if (this_job.allocated_nodes is not None and 
                 this_job.num_nodes is not None):
-                if len(this_job.allocatedNodes) != this_job.num_nodes:
+                if len(this_job.allocated_nodes) != this_job.num_nodes:
                     self.logger.error("The length of the list of allocated "
                                       "nodes ({}) is different from the "
                                       "expected number of nodes ({})!".format(
-                        len(this_job.allocatedNodes), this_job.num_nodes))
+                        len(this_job.allocated_nodes), this_job.num_nodes))
 
 
             # I append to the list of jobs to return

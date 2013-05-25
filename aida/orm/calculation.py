@@ -1,5 +1,5 @@
 from aida.orm import Node
-from aida.common.datastructures import calcStates
+from aida.common.datastructures import calc_states
 from aida.common.exceptions import ModificationNotAllowed
 
 #TODO: set the following as properties of the Calculation
@@ -33,7 +33,7 @@ class Calculation(Node):
             return
 
         # For new calculations
-        self._set_state(calcStates.NEW)
+        self._set_state(calc_states.NEW)
         self.set_label("Calculation {}".format(self.uuid))
 
         computer = kwargs.pop('computer', None)
@@ -60,7 +60,7 @@ class Calculation(Node):
         if self.get_computer() is None:
             raise ValidationError("You did not specify any computer")
 
-        if self.get_state() not in calcStates:
+        if self.get_state() not in calc_states:
             raise ValidationError("Calculation state '{}' is not valid".format(
                 self.get_state()))
 
@@ -91,9 +91,9 @@ class Calculation(Node):
         from aida.orm import Data
 
         valid_states = [
-              calcStates.SUBMITTING,
-              calcStates.RETRIEVING,
-              calcStates.PARSING,
+              calc_states.SUBMITTING,
+              calc_states.RETRIEVING,
+              calc_states.PARSING,
               ]
         
         if not isinstance(dest, Data):
@@ -118,7 +118,7 @@ class Calculation(Node):
                 should be taken
         """
         # This function can be called only if the state is SUBMITTING
-        if self.get_state() != calcStates.SUBMITTING:
+        if self.get_state() != calc_states.SUBMITTING:
             raise ModificationNotAllowed(
                 "The raw input folder can be stored only if the "
                 "state is SUBMITTING, it is instead {}".format(
@@ -191,7 +191,7 @@ class Calculation(Node):
             raise ValueError("Nodes entering in calculation can only be of "
                              "type data or code")
         
-        valid_states = [calcStates.NEW]
+        valid_states = [calc_states.NEW]
 
         if self.get_state() not in valid_states:
             raise ModificationNotAllowed(
@@ -221,7 +221,7 @@ class Calculation(Node):
         return Computer(dbcomputer=self.dbnode.computer)
 
     def _set_state(self, state):
-        if state not in calcStates:
+        if state not in calc_states:
             raise ValueError(
                 "'{}' is not a valid calculation status".format(state))
         self.set_attr('state', state)
@@ -230,7 +230,7 @@ class Calculation(Node):
         return self.get_attr('state', None)
 
     def _set_remote_workdir(self, remote_workdir):
-        if self.get_state() != calcStates.SUBMITTING:   
+        if self.get_state() != calc_states.SUBMITTING:   
             raise ModificationNotAllowed(
                 "Cannot set the remote workdir if you are not "
 			    "submitting the calculation (current state is "
@@ -241,7 +241,7 @@ class Calculation(Node):
         return self.get_attr('remote_workdir', None)
 
     def _set_retrieve_list(self, retrieve_list):
-        if self.get_state() != calcStates.SUBMITTING:
+        if self.get_state() != calc_states.SUBMITTING:
             raise ModificationNotAllowed(
                 "Cannot set the retrieve_list if you are not "
 				"submitting the calculation (current state is "
@@ -260,7 +260,7 @@ class Calculation(Node):
         """
         Always set as a string
         """
-        if self.get_state() != calcStates.SUBMITTING:
+        if self.get_state() != calc_states.SUBMITTING:
             raise ModificationNotAllowed("Cannot set the job id if you are not "
 					 "submitting the calculation (current state is "
 					 "{})".format(self.get_state()))
@@ -303,7 +303,7 @@ class Calculation(Node):
 
         Args:
             state: The state to be used to filter (should be a string among 
-                those defined in aida.common.datastructures.calcStates)
+                those defined in aida.common.datastructures.calc_states)
             computer: a Django DbComputer entry, or a Computer object, of a
                 computer in the DbComputer table.
                 A string for the hostname is also valid.
@@ -318,11 +318,11 @@ class Calculation(Node):
                 ('computer__id', 'user__id')
                 [where the IDs are the IDs of the respective tables]
         """
-        # I assume that calcStates are strings. If this changes in the future,
+        # I assume that calc_states are strings. If this changes in the future,
         # update the filter below from attributes__tval to the correct field.
         from aida.orm import Computer
 
-        if state not in calcStates:
+        if state not in calc_states:
             cls.logger.warning("querying for calculation state='{}', but it "
                 "is not a valid calculation state".format(state))
 

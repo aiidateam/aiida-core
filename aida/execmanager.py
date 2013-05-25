@@ -1,8 +1,8 @@
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from django.contrib.auth.models import User
 
-from aida.common.datastructures import calcStates
-from aida.scheduler.datastructures import jobStates
+from aida.common.datastructures import calc_states
+from aida.scheduler.datastructures import job_states
 from aida.djsite.db.models import DbComputer, AuthInfo
 from aida.common.exceptions import AuthenticationError, ConfigurationError, PluginInternalError
 from aida.common import aidalogger
@@ -22,7 +22,7 @@ def update_running_calcs_status(authinfo):
 
     # This returns an iterator over aida Calculation objects
     calcs_to_inquire = Calculation.get_all_with_state(
-        state=calcStates.WITHSCHEDULER,
+        state=calc_states.WITHSCHEDULER,
         computer=authinfo.computer,
         user=authinfo.aidauser)
     
@@ -63,29 +63,29 @@ def update_running_calcs_status(authinfo):
                     if jobid in found_jobs:
                         # jobinfo: the information returned by qstat for this job
                         jobinfo = found_jobs[jobid]
-                        execlogger.debug("Inquirying calculation {} ({}): it has jobState={}".format(
-                            c.uuid, jobid, jobinfo.jobState))
-                        if jobinfo.jobState in [jobStates.DONE, jobStates.FAILED]:
+                        execlogger.debug("Inquirying calculation {} ({}): it has job_state={}".format(
+                            c.uuid, jobid, jobinfo.job_state))
+                        if jobinfo.job_state in [job_states.DONE, job_states.FAILED]:
                             finished.append(c)
-                            c._set_state(calcStates.FINISHED)
-                        elif jobinfo.jobState == jobStates.UNDETERMINED:
-                            c._set_state(calcStates.UNDETERMINED)
+                            c._set_state(calc_states.FINISHED)
+                        elif jobinfo.job_state == job_states.UNDETERMINED:
+                            c._set_state(calc_states.UNDETERMINED)
                             execlogger.error("There is an undetermined calc with uuid {}".format(
                                 c.calc.uuid))
                         else:
-                            c._set_state(calcStates.WITHSCHEDULER)
+                            c._set_state(calc_states.WITHSCHEDULER)
     
-                        c._set_scheduler_state(jobinfo.jobState)
+                        c._set_scheduler_state(jobinfo.job_state)
     
                         c._set_last_jobinfo(jobinfo)
                     else:
                         execlogger.debug("Inquirying calculation {} ({}): not found, assuming "
-                                         "jobState={}".format(
-                            c.uuid, jobid, jobStates.DONE))
+                                         "job_state={}".format(
+                            c.uuid, jobid, job_states.DONE))
 
                         # calculation c is not found in the output of qstat
                         finished.append(c)
-                        c._set_scheduler_state(jobStates.DONE)
+                        c._set_scheduler_state(job_states.DONE)
                 except Exception as e:
                     # TODO: implement a counter, after N retrials set it to a status that
                     # requires the user intervention
@@ -104,8 +104,8 @@ def update_running_calcs_status(authinfo):
                     last_jobinfo = c.get_last_jobinfo()
                     if last_jobinfo is None:    
                         last_jobinfo = JobInfo()
-                        last_jobinfo.jobId = c.get_job_id()
-                        last_jobinfo.jobState = jobStates.DONE
+                        last_jobinfo.job_id = c.get_job_id()
+                        last_jobinfo.job_state = job_states.DONE
                     last_jobinfo.detailedJobinfo = detailed_jobinfo
                     c._set_last_jobinfo(last_jobinfo)
                 except Exception as e:
@@ -117,7 +117,7 @@ def update_running_calcs_status(authinfo):
                     # Set the state to FINISHED as the very last thing of this routine; no further
                     # change should be done after this, so that in general the retriever can just 
                     # poll for this state, if we want to.
-                    c._set_state(calcStates.FINISHED)
+                    c._set_state(calc_states.FINISHED)
 
             
     return finished
@@ -146,7 +146,7 @@ def retrieve_jobs():
     # I create a unique set of pairs (computer, aidauser)
     computers_users_to_check = set(
         Calculation.get_all_with_state(
-            state=calcStates.FINISHED,
+            state=calc_states.FINISHED,
             only_computer_user_pairs = True)
         )
     
@@ -178,7 +178,7 @@ def update_jobs():
     # I create a unique set of pairs (computer, aidauser)
     computers_users_to_check = set(
         Calculation.get_all_with_state(
-            state=calcStates.WITHSCHEDULER,
+            state=calc_states.WITHSCHEDULER,
             only_computer_user_pairs = True)
         )
     
@@ -223,7 +223,7 @@ def submit_calc(calc):
     if not isinstance(calc,Calculation):
         raise ValueError("calc must be a Calculation")
     
-    if calc.get_state() != calcStates.NEW:
+    if calc.get_state() != calc_states.NEW:
         raise ValueError("Can only submit calculations with state=NEW! "
                          "(state is {} instead)".format(
                              calc.get_state()))
@@ -231,7 +231,7 @@ def submit_calc(calc):
     # TODO: do some sort of blocking call, to be sure that the submit function is not called
     # twice for the same calc?
     # I start to submit the calculation: I set the state
-    calc._set_state(calcStates.SUBMITTING)
+    calc._set_state(calc_states.SUBMITTING)
          
     try:
         authinfo = get_authinfo(calc.get_computer(), calc.get_user())
@@ -430,17 +430,17 @@ def submit_calc(calc):
 
                 job_id = s.submit_from_script(t.getcwd(),script_filename)
                 calc._set_job_id(job_id)
-                calc._set_state(calcStates.WITHSCHEDULER)
+                calc._set_state(calc_states.WITHSCHEDULER)
                 if job_tmpl.submit_as_hold:
-                    calc._set_scheduler_state(jobStates.QUEUED_HELD)
+                    calc._set_scheduler_state(job_states.QUEUED_HELD)
                 else:
-                    calc._set_scheduler_state(jobStates.QUEUED)
+                    calc._set_scheduler_state(job_states.QUEUED)
     
                 execlogger.debug("submitted calculation {} with job id {}".format(
                     calc.uuid, job_id))
 
     except:
-        calc._set_state(calcStates.SUBMISSIONFAILED)
+        calc._set_state(calc_states.SUBMISSIONFAILED)
         raise
             
 def retrieve_finished_for_authinfo(authinfo):
@@ -451,7 +451,7 @@ def retrieve_finished_for_authinfo(authinfo):
     import os
     
     calcs_to_retrieve = Calculation.get_all_with_state(
-        state=calcStates.FINISHED,
+        state=calc_states.FINISHED,
         computer=authinfo.computer,
         user=authinfo.aidauser)
     
@@ -463,7 +463,7 @@ def retrieve_finished_for_authinfo(authinfo):
         # Open connection
         with authinfo.get_transport() as t:
             for calc in calcs_to_retrieve:
-                calc._set_state(calcStates.RETRIEVING)
+                calc._set_state(calc_states.RETRIEVING)
                 try:
                     execlogger.debug("Retrieving calc {} ({})".format(calc.dbnode.pk, calc.uuid))
                     workdir = calc.get_remote_workdir()
@@ -485,11 +485,11 @@ def retrieve_finished_for_authinfo(authinfo):
                     retrieved_files.store()
                     calc.add_link_to(retrieved_files, label="retrieved")
 
-                    calc._set_state(calcStates.PARSING)
+                    calc._set_state(calc_states.PARSING)
 
                     # TODO: parse here
 
-                    calc._set_state(calcStates.RETRIEVED)
+                    calc._set_state(calc_states.RETRIEVED)
                     retrieved.append(calc)
                 except:
                     import traceback
@@ -497,14 +497,14 @@ def retrieve_finished_for_authinfo(authinfo):
                     buf = StringIO.StringIO()
                     traceback.print_exc(file=buf)
                     buf.seek(0)
-                    if calc.get_state() == calcStates.PARSING:
+                    if calc.get_state() == calc_states.PARSING:
                         execlogger.error("Error parsing calc {}, I set it to RETRIEVED anyway. "
                             "Traceback: {}".format(calc.uuid, buf.read()))
                         # TODO: add a 'comment' to the calculation
-                        calc._set_state(calcStates.RETRIEVED)
+                        calc._set_state(calc_states.RETRIEVED)
                     else:
                         execlogger.error("Error retrieving calc {}".format(calc.uuid))
-                        calc._set_state(calcStates.RETRIEVALFAILED)
+                        calc._set_state(calc_states.RETRIEVALFAILED)
                         raise
 
             

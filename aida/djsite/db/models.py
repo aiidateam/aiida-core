@@ -525,10 +525,10 @@ class DbWorkflowStep(m.Model):
 
     def update_status(self, extended = False):
 
-        from aida.common.datastructures import calcStates
+        from aida.common.datastructures import calc_states
 
         calc_status = self.calculations.filter(attributes__key="_state").values_list("uuid", "attributes__tval")
         s = set([l[1] for l in calc_status])
-        if len(s)==1 and s[0]==calcStates.RETRIEVED:
+        if len(s)==1 and s[0]==calc_states.RETRIEVED:
             self.status = 'finished'
         

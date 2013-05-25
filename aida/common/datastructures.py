@@ -3,7 +3,7 @@ from aida.common.extendeddicts import DefaultFieldsAttributeDict, Enumerate
 class CalcState(Enumerate):
     pass
 
-calcStates = CalcState((
+calc_states = CalcState((
         'UNDETERMINED',
         'NEW', # just created
         'SUBMITTING', # being submitted to cluster

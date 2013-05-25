@@ -5,7 +5,7 @@ from aida.common.extendeddicts import (
 class JobState(Enumerate):
     pass
 
-jobStates = JobState((
+job_states = JobState((
         'UNDETERMINED',
         'QUEUED',
         'QUEUED_HELD',
@@ -70,12 +70,12 @@ class NodeInfo(DefaultFieldsAttributeDict):
     each node on which a job is running, and how many CPUs are being
     used.
 
-    * nodeName: name of the node
-    * numCores: number of cores used by the job on this node
+    * node_name: name of the node
+    * num_cpus: number of cores used by the job on this node
     """
     _default_fields = (
-        'nodeName',
-        'numCores',
+        'node_name',
+        'num_cpus',
         )
 
 class MachineResource(DefaultFieldsAttributeDict):
@@ -111,59 +111,57 @@ class JobInfo(DefaultFieldsAttributeDict):
 
     Note that upon request, default fields may be undefined. This
     is an expected behavior and the application must cope with this
-    case. An example for instance is the exitStatus for jobs that have
+    case. An example for instance is the exit_status for jobs that have
     not finished yet; or features not supported by the given scheduler.
 
     Fields:
-       jobId: the job ID on the scheduler
+       job_id: the job ID on the scheduler
        title: the job title, as known by the scheduler
-       exitStatus: the exit status of the job as reported by the operating
+       exit_status: the exit status of the job as reported by the operating
            system on the execution host
-       terminatingSignal: the UNIX signal that was responsible for the end of
+       terminating_signal: the UNIX signal that was responsible for the end of
            the job.
        annotation: human-readable description of the reason for the job
            being in the current state or substate.
-       jobState: the job state (one of those defined in aida.scheduler.states)
-       jobSubState: a string with the implementation-specific sub-state
-       allocatedNodes: a list of nodes used for the current job.
-       submissionMachine: Name of the submission host for this job.
-       jobOwner: the job owner as reported by the scheduler
-       numCores: the number of requested cores (this more or less is what
+       job_state: the job state (one of those defined in aida.scheduler.states)
+       job_substate: a string with the implementation-specific sub-state
+       allocated_nodes: a list of nodes used for the current job.
+       job_owner: the job owner as reported by the scheduler
+       num_cpus: the number of requested cores (this more or less is what
            is called 'slots' in DRMAAv2)
        num_nodes: the number of nodes, required by the job.
-           If allocatedNodes is not None, this number must be equal to
-           len(allocatedNodes). Otherwise, for schedulers not supporting
+           If allocated_nodes is not None, this number must be equal to
+           len(allocated_nodes). Otherwise, for schedulers not supporting
            the retrieval of the full list of allocated nodes, this 
            attribute can be used to know at least the number of nodes
        queue_name: The name of the queue in which the job was queued or started
-       wallclockTime: the accumulated wallclock time, in seconds
-       requestedWallclockTime: the requested wallclock time, in seconds
-       cpuTime: the accumulated cpu time, in seconds
-       submissionTime: the absolute time at which the job was submitted,
+       wallclock_time_seconds: the accumulated wallclock time, in seconds
+       requested_wallclock_time_seconds: the requested wallclock time, in seconds
+       cpu_time: the accumulated cpu time, in seconds
+       submission_time: the absolute time at which the job was submitted,
            of type datetime.datetime
-       dispatchTime: the absolute time at which the job first entered the
+       dispatch_time: the absolute time at which the job first entered the
            'started' state, of type datetime.datetime
-       finishTime: the absolute time at which the job first entered the 
+       finish_time: the absolute time at which the job first entered the 
            'finished' state, of type datetime.datetime
     """
     _default_fields = (
-        'jobId',
+        'job_id',
         'title',
-        'exitStatus',
-        'terminatingSignal',
+        'exit_status',
+        'terminating_signal',
         'annotation',
-        'jobState',
-        'jobSubState',
-        'allocatedNodes',
-        'submissionMachine',
-        'jobOwner',
-        'numCores',
+        'job_state',
+        'job_substate',
+        'allocated_nodes',
+        'job_owner',
+        'num_cpus',
         'num_nodes',
         'queue_name',
-        'wallclockTime',
-        'requestedWallclockTime',
-        'cpuTime',
-        'submissionTime',
-        'dispatchTime',
-        'finishTime',
+        'wallclock_time_seconds',
+        'requested_wallclock_time_seconds',
+        'cpu_time',
+        'submission_time',
+        'dispatch_time',
+        'finish_time',
         )

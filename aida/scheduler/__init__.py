@@ -218,7 +218,7 @@ stderr:
         Args:
             jobs: a list of jobs to check; only these are checked
             as_dict: if False (default), a list of JobInfo objects is returned. If
-                True, a dictionary is returned, having as key the jobId and as value the
+                True, a dictionary is returned, having as key the job_id and as value the
                 JobInfo object.
         """
         retval, stdout, stderr = self.transport.exec_command_wait(
@@ -226,7 +226,7 @@ stderr:
         
         joblist = self._parse_joblist_output(retval, stdout, stderr)
         if as_dict:
-            jobdict = {j.jobId: j for j in joblist}
+            jobdict = {j.job_id: j for j in joblist}
             if None in jobdict:
                 raise SchedulerError("Found at least a job without jobid")
             return jobdict

@@ -935,7 +935,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         from aida.orm import Computer
         from aida.common.pluginloader import load_plugin
         from aida.djsite.db.models import DbComputer
-        from aida.common.datastructures import calcStates
+        from aida.common.datastructures import calc_states
 
         SinglefileData = load_plugin(Data, 'aida.orm.dataplugins', 'singlefile')
 
@@ -997,8 +997,8 @@ class TestSubNodesAndLinks(AiidaTestCase):
         data_node = Data().store()
 
         # I do a trick to set it to a state that allows writing
-        calc_a._set_state(calcStates.RETRIEVING) 
-        calc_b._set_state(calcStates.RETRIEVING) 
+        calc_a._set_state(calc_states.RETRIEVING) 
+        calc_b._set_state(calc_states.RETRIEVING) 
 
         data_node.add_link_from(calc_a)
         # A data cannot have two input calculations
@@ -1033,7 +1033,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         Each data node can only have one input calculation
         """
         from aida.orm import Calculation, Data
-        from aida.common.datastructures import calcStates
+        from aida.common.datastructures import calc_states
 
         d1 = Data().store()
         
@@ -1047,8 +1047,8 @@ class TestSubNodesAndLinks(AiidaTestCase):
             d1.add_link_from(calc)
 
         # I do a trick to set it to a state that allows setting the link
-        calc._set_state(calcStates.RETRIEVING) 
-        calc2._set_state(calcStates.RETRIEVING) 
+        calc._set_state(calc_states.RETRIEVING) 
+        calc2._set_state(calc_states.RETRIEVING) 
 
         d1.add_link_from(calc)
 

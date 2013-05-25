@@ -6,7 +6,6 @@ from aida.scheduler.datastructures import jobStates
 from aida.djsite.db.models import DbComputer, AuthInfo
 from aida.common.exceptions import AuthenticationError, ConfigurationError, PluginInternalError
 from aida.common import aidalogger
-from aida.djsite.utils import get_automatic_user
     
 execlogger = aidalogger.getChild('execmanager')
 
@@ -270,7 +269,7 @@ def submit_calc(calc):
             # I create the job template to pass to the scheduler
             job_tmpl = JobTemplate()
             ## TODO: in the future, allow to customize the following variables
-            job_tmpl.submitAsHold = False
+            job_tmpl.submit_as_hold = False
             job_tmpl.rerunnable = False
             job_tmpl.jobEnvironment = {}
             #'email', 'emailOnStarted', 'emailOnTerminated',
@@ -432,7 +431,7 @@ def submit_calc(calc):
                 job_id = s.submit_from_script(t.getcwd(),script_filename)
                 calc._set_job_id(job_id)
                 calc._set_state(calcStates.WITHSCHEDULER)
-                if job_tmpl.submitAsHold:
+                if job_tmpl.submit_as_hold:
                     calc._set_scheduler_state(jobStates.QUEUED_HELD)
                 else:
                     calc._set_scheduler_state(jobStates.QUEUED)

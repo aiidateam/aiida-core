@@ -164,6 +164,7 @@ class Path(m.Model):
     Transitive closure table for all dbnode paths.
     
     # TODO: implement Transitive closure with MySql!
+    # TODO: if a link is updated, the TC should be updated accordingly
     """
     parent = m.ForeignKey('DbNode',related_name='child_paths',editable=False)
     child = m.ForeignKey('DbNode',related_name='parent_paths',editable=False)

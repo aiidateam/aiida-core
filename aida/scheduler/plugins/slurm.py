@@ -173,7 +173,7 @@ class SlurmScheduler(aida.scheduler.Scheduler):
         empty_line = ""
         
         lines = []
-        if job_tmpl.submitAsHold:
+        if job_tmpl.submit_as_hold:
             lines.append("#SBATCH -H")
 
         if job_tmpl.rerunnable:

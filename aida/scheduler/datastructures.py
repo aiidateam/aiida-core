@@ -36,7 +36,7 @@ class JobTemplate(DefaultFieldsAttributeDict):
     * TODO: validation? also call the validate function in the proper place then.
     """
     _default_fields = (
-        'submitAsHold',
+        'submit_as_hold',
         'rerunnable',
         'jobEnvironment',
         'workingDirectory', 

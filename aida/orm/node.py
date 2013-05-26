@@ -176,15 +176,11 @@ class Node(object):
             self.add_link_from(src, label)
         except UniquenessError:
             # I have to replace the link; I do it within a transaction
-            try:
-                sid = transaction.savepoint()
+            with transaction.commit_on_success():
                 Link.objects.filter(output=self.dbnode,
                                     label=label).delete()
                 self.add_link_from(src, label)
-                transaction.savepoint_commit(sid)
-            except:
-                transaction.savepoint_rollback(sid)
-                raise
+
 
     def add_link_from(self,src,label=None):
         """

@@ -357,6 +357,40 @@ class Calculation(Node):
 
         self.replace_link_from(code, "code")
         
+    def _prepare_for_submission(self,tempfolder):        
+        """
+        This is the routine to be called when you want to create
+        the input files and related stuff with a plugin.
+        
+        Args:
+            tempfolder: a aida.common.folders.Folder subclass where
+                the plugin should put all its files.
+
+        TODO: document what it has to return (probably a CalcInfo object)
+              and what is the behavior on the tempfolder
+        """
+        raise NotImplementedError
+
+    def submit(self):
+        """
+        Submit the calculation.
+        """ 
+        from aida.execmanager import submit_calc
+        
+        submit_calc(self)
+
+#       output_plugin = kwargs.pop('output_plugin', None)
+#       self.set_output_plugin(output_plugin)
+
+#    def set_output_plugin(self, output_plugin):
+#        """
+#        Set a string for the output plugin
+#        Can be none if no output plugin is available/needed
+#
+#        TODO: check that the plugin referenced by th string input_plugin actually exists
+#        """
+#        self.set_attr('output_plugin', output_plugin)
+
 
 ## SOME OLD COMMENTS
 # Each calculation object should be defined by analogy of a function 

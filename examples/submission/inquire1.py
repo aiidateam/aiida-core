@@ -12,7 +12,7 @@ def shorten(v):
         return text
 
 import sys
-from aida.orm import Node, Calculation
+from aida.orm import Calculation
 
 try:
     idstr = sys.argv[1]
@@ -24,7 +24,7 @@ try:
     print idstr
     the_id = int(idstr)
 except ValueError:
-    c = Calculation(uuid=idstr)
+    c = Calculation.get_subclass_from_uuid(idstr)
 else:
     c = Calculation.get_subclass_from_pk(the_id)
 

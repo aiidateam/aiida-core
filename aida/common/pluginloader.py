@@ -1,7 +1,4 @@
-import sys
-import os
 import importlib
-import imp
 
 import aida.common
 from aida.common.exceptions import MissingPluginError

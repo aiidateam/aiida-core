@@ -96,7 +96,7 @@ class DbNode(m.Model):
         if baseclass == Calculation._plugin_type_string:
             if pluginclass:
                 try:
-                    PluginClass = load_plugin(Calculation, 'aida.orm.calculationplugins', pluginclass)
+                    PluginClass = load_plugin(Calculation, 'aida.orm.calculation', pluginclass)
                 except MissingPluginError:
                     aidalogger.warning("Unable to find calculation plugin for type '{}' (node={}), "
                                        "will use base Calculation class".format(self.type,self.uuid))
@@ -107,7 +107,7 @@ class DbNode(m.Model):
         elif baseclass == Code._plugin_type_string:
             if pluginclass:
                 try:
-                    PluginClass = load_plugin(Code, 'aida.orm.codeplugins', pluginclass)
+                    PluginClass = load_plugin(Code, 'aida.orm.code', pluginclass)
                 except MissingPluginError:
                     aidalogger.warning("Unable to find code plugin for type '{}' (node={}), "
                                        "will use base Code class".format(self.type,self.uuid))
@@ -118,7 +118,7 @@ class DbNode(m.Model):
         elif baseclass == Data._plugin_type_string:
             if pluginclass:
                 try:
-                    PluginClass = load_plugin(Data, 'aida.orm.dataplugins', pluginclass)
+                    PluginClass = load_plugin(Data, 'aida.orm.data', pluginclass)
                 except MissingPluginError:
                     aidalogger.warning("Unable to find data plugin for type '{}' (node={}), "
                                        "will use base Data class".format(self.type,self.uuid))

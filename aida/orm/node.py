@@ -47,9 +47,13 @@ class Node(object):
         """
         from aida.djsite.db.models import DbNode
         try:
-            return DbNode.objects.get(uuid=uuid).get_aida_class()
+            node = DbNode.objects.get(uuid=uuid).get_aida_class()
         except ObjectDoesNotExist:
             raise NotExistent("No entry with UUID={} found".format(uuid))
+        if not isinstance(node, cls):
+            raise NotExistent("UUID={} is not an instance of {}".format(
+                uuid,cls.__name__))
+        return node
 
     @classmethod
     def get_subclass_from_pk(cls,pk):
@@ -59,9 +63,13 @@ class Node(object):
         """
         from aida.djsite.db.models import DbNode
         try:
-            return DbNode.objects.get(pk=pk).get_aida_class()
+            node = DbNode.objects.get(pk=pk).get_aida_class()
         except ObjectDoesNotExist:
             raise NotExistent("No entry with pk={} found".format(pk))
+        if not isinstance(node, cls):
+            raise NotExistent("pk={} is not an instance of {}".format(
+                pk,cls.__name__))        
+        return node
         
     def __int__(self):
         """
@@ -270,6 +278,22 @@ class Node(object):
         Implement in subclasses
         """
         return True
+
+    def get_inputs_dict(self):
+        """
+        Return a dictionary where the key is the label of the input link, and
+        the value is the input node.
+        """
+        return dict(self.get_inputs(also_labels=True))
+
+    def get_inputdata_dict(self):
+        """
+        Return a dictionary where the key is the label of the input link, and
+        the value is the input node. Includes only the data nodes, no
+        calculations or codes.
+        """
+        from aida.orm import Data
+        return dict(self.get_inputs(type=Data, also_labels=True))
 
 
     def get_inputs(self,type=None,also_labels=False):

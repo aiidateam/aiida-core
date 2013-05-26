@@ -20,15 +20,18 @@ aidalogger.setLevel(logging.INFO)
 import tempfile
 import datetime
 
+from aida.common.pluginloader import load_plugin 
 from aida.orm import Calculation, Code, Computer
 from aida.execmanager import submit_calc
 from aida.djsite.utils import get_automatic_user
 
 #from aida.common.pluginloader import load_plugin
-#ParameterData = load_plugin(Data, 'aida.orm.dataplugins', 'parameter')
-from aida.orm.dataplugins.parameter import ParameterData
-from aida.orm.dataplugins.singlefile import SinglefileData
-from aida.orm.dataplugins.remote import RemoteData
+#ParameterData = load_plugin(Data, 'aida.orm.data', 'parameter')
+from aida.orm.data.parameter import ParameterData
+from aida.orm.data.singlefile import SinglefileData
+from aida.orm.data.remote import RemoteData
+
+#print ParameterData.__module__
 
 # A string with the version of this script, used to recreate a code when necessary
 current_version = "1.0.5"
@@ -183,8 +186,7 @@ except IOError:
     sys.exit(1)
 """)
             f.flush()
-            code = Code(local_executable = "sum.py", 
-                        input_plugin='simpleplugins.templatereplacer')
+            code = Code(local_executable = "sum.py")
             code.add_path(f.name, "sum.py")
             code.store()
             code.set_metadata("version", current_version)
@@ -227,7 +229,9 @@ with tempfile.NamedTemporaryFile() as f:
 remoteparam = RemoteData(remote_machine=computer.hostname,
                          remote_path="/etc/inittab").store()
 
-calc = Calculation(computer=computer)
+CustomCalc = load_plugin(Calculation, 'aida.orm.calculation',
+                         'simpleplugins.templatereplacer')
+calc = CustomCalc(computer=computer)
 calc.set_max_wallclock_seconds(12*60) # 12 min
 calc.set_num_machines(1)
 calc.set_num_cpus_per_machine(1)
@@ -246,7 +250,7 @@ calc.add_link_from(parameters, label="parameters")
 calc.add_link_from(fileparam, label="the_only_local_file")
 calc.add_link_from(remoteparam, label="the_only_remote_node")
 
-submit_calc(calc)
+calc.submit()
 print "submitted calculation; calc=Calculation(uuid='{}') # ID={}".format(
     calc.uuid,calc.dbnode.pk)
 

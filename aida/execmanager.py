@@ -211,14 +211,13 @@ def submit_calc(calc):
     import json
     import os
     
-    from aida.codeplugins.input import InputPlugin
-    from aida.orm import Calculation, Code, Data
-    from aida.common.pluginloader import load_plugin
+    from aida.orm import Calculation, Code
+    #from aida.common.pluginloader import load_plugin
     from aida.common.folders import SandboxFolder
-    from aida.common.exceptions import InputValidationError, MissingPluginError, ValidationError
+    from aida.common.exceptions import InputValidationError, ValidationError
     from aida.scheduler.datastructures import JobTemplate
     from aida.common.utils import validate_list_of_string_tuples
-    from aida.orm.dataplugins.remote import RemoteData
+    from aida.orm.data.remote import RemoteData
     
     if not isinstance(calc,Calculation):
         raise ValueError("calc must be a Calculation")
@@ -248,13 +247,9 @@ def submit_calc(calc):
         if not code.can_run_on(computer):
             raise InputValidationError("The selected code {} cannot run on machine {}".format(
                 code.uuid, computer.hostname))
-    
-        # load dynamically the input plugin
-        Plugin = load_plugin(InputPlugin, 'aida.codeplugins.input', code.get_input_plugin())
-    
+        
         with SandboxFolder() as folder:
-            plugin = Plugin()
-            calcinfo = plugin.create(calc, calc.get_inputs(type=Data,also_labels=True), folder)
+            calcinfo = calc._prepare_for_submission(folder)
     
             if code.is_local():
                 if code.get_local_executable() in folder.get_content_list():
@@ -446,7 +441,7 @@ def submit_calc(calc):
 def retrieve_finished_for_authinfo(authinfo):
     from aida.orm import Calculation
     from aida.common.folders import SandboxFolder
-    from aida.orm.dataplugins.folder import FolderData
+    from aida.orm.data.folder import FolderData
 
     import os
     

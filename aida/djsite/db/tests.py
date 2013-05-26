@@ -948,7 +948,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         from aida.djsite.db.models import DbComputer
         from aida.common.datastructures import calc_states
 
-        SinglefileData = load_plugin(Data, 'aida.orm.dataplugins', 'singlefile')
+        SinglefileData = load_plugin(Data, 'aida.orm.data', 'singlefile')
 
         # I create some objects
         d1 = Data().store()
@@ -1150,7 +1150,7 @@ class TestSinglefileData(AiidaTestCase):
         import os
         import tempfile
 
-        from aida.orm.dataplugins.singlefile import SinglefileData
+        from aida.orm.data.singlefile import SinglefileData
 
 
         file_content = 'some text ABCDE'
@@ -1185,13 +1185,13 @@ class TestSinglefileData(AiidaTestCase):
 class TestKindValidSymbols(AiidaTestCase):
     """
     Tests the symbol validation of the
-    aida.orm.dataplugins.structure.Kind class.
+    aida.orm.data.structure.Kind class.
     """
     def test_bad_symbol(self):
         """
         Should not accept a non-existing symbol.
         """
-        from aida.orm.dataplugins.structure import Kind
+        from aida.orm.data.structure import Kind
 
         with self.assertRaises(ValueError):
             _ = Kind(symbols='Hxx')
@@ -1200,7 +1200,7 @@ class TestKindValidSymbols(AiidaTestCase):
         """
         Should not accept an empty list
         """
-        from aida.orm.dataplugins.structure import Kind
+        from aida.orm.data.structure import Kind
 
         with self.assertRaises(ValueError):
             _ = Kind(symbols=[])
@@ -1209,7 +1209,7 @@ class TestKindValidSymbols(AiidaTestCase):
         """
         Should not raise any error.
         """
-        from aida.orm.dataplugins.structure import Kind
+        from aida.orm.data.structure import Kind
 
         _ = Kind(symbols=['H','He'],weights=[0.5,0.5])
 
@@ -1221,7 +1221,7 @@ class TestSiteValidWeights(AiidaTestCase):
         """
         Should not accept a non-list, non-number weight
         """
-        from aida.orm.dataplugins.structure import Kind
+        from aida.orm.data.structure import Kind
 
         with self.assertRaises(ValueError):
             _ = Kind(symbols='Ba',weights='aaa')
@@ -1230,7 +1230,7 @@ class TestSiteValidWeights(AiidaTestCase):
         """
         Should not accept an empty list
         """
-        from aida.orm.dataplugins.structure import Kind
+        from aida.orm.data.structure import Kind
 
         with self.assertRaises(ValueError):
             _ = Kind(symbols='Ba',weights=[])
@@ -1240,7 +1240,7 @@ class TestSiteValidWeights(AiidaTestCase):
         Should not accept a size mismatch of the symbols and weights
         list.
         """
-        from aida.orm.dataplugins.structure import Kind
+        from aida.orm.data.structure import Kind
 
         with self.assertRaises(ValueError):
             _ = Kind(symbols=['Ba','C'],weights=[1.])
@@ -1252,7 +1252,7 @@ class TestSiteValidWeights(AiidaTestCase):
         """
         Should not accept a negative weight
         """
-        from aida.orm.dataplugins.structure import Kind
+        from aida.orm.data.structure import Kind
 
         with self.assertRaises(ValueError):
             _ = Kind(symbols=['Ba','C'],weights=[-0.1,0.3])
@@ -1261,7 +1261,7 @@ class TestSiteValidWeights(AiidaTestCase):
         """
         Should not accept a sum of weights larger than one
         """
-        from aida.orm.dataplugins.structure import Kind
+        from aida.orm.data.structure import Kind
 
         with self.assertRaises(ValueError):
             _ = Kind(symbols=['Ba','C'],
@@ -1271,7 +1271,7 @@ class TestSiteValidWeights(AiidaTestCase):
         """
         Should accept a sum equal to one
         """
-        from aida.orm.dataplugins.structure import Kind
+        from aida.orm.data.structure import Kind
 
         _ = Kind(symbols=['Ba','C'],
                  weights=[1./3.,2./3.])
@@ -1280,7 +1280,7 @@ class TestSiteValidWeights(AiidaTestCase):
         """
         Should accept a sum equal less than one
         """
-        from aida.orm.dataplugins.structure import Kind
+        from aida.orm.data.structure import Kind
 
         _ = Kind(symbols=['Ba','C'],
                  weights=[1./3.,1./3.])
@@ -1289,7 +1289,7 @@ class TestSiteValidWeights(AiidaTestCase):
         """
         Should accept None.
         """
-        from aida.orm.dataplugins.structure import Kind
+        from aida.orm.data.structure import Kind
 
         _ = Kind(symbols='Ba',weights=None)
 
@@ -1302,7 +1302,7 @@ class TestKindTestGeneral(AiidaTestCase):
         """
         Should accept a sum equal to one
         """
-        from aida.orm.dataplugins.structure import Kind
+        from aida.orm.data.structure import Kind
 
         a = Kind(symbols=['Ba','C'],
                  weights=[1./3.,2./3.])
@@ -1313,7 +1313,7 @@ class TestKindTestGeneral(AiidaTestCase):
         """
         Should accept a sum equal less than one
         """
-        from aida.orm.dataplugins.structure import Kind
+        from aida.orm.data.structure import Kind
 
         a = Kind(symbols=['Ba','C'],
                  weights=[1./3.,1./3.])
@@ -1324,7 +1324,7 @@ class TestKindTestGeneral(AiidaTestCase):
         """
         Should not accept a 'positions' parameter
         """
-        from aida.orm.dataplugins.structure import Kind
+        from aida.orm.data.structure import Kind
 
         with self.assertRaises(ValueError):
             _ = Kind(position=[0.,0.,0.],symbols=['Ba'],
@@ -1334,7 +1334,7 @@ class TestKindTestGeneral(AiidaTestCase):
         """
         Should recognize a simple element.
         """
-        from aida.orm.dataplugins.structure import Kind
+        from aida.orm.data.structure import Kind
 
         a = Kind(symbols='Ba')
         self.assertFalse(a.is_alloy())
@@ -1353,7 +1353,7 @@ class TestKindTestGeneral(AiidaTestCase):
         """
         Check the automatic name generator.
         """
-        from aida.orm.dataplugins.structure import Kind
+        from aida.orm.data.structure import Kind
 
         a = Kind(symbols='Ba')
         self.assertEqual(a.name,'Ba')
@@ -1376,7 +1376,7 @@ class TestKindTestMasses(AiidaTestCase):
         """
         mass for elements with sum one
         """
-        from aida.orm.dataplugins.structure import Kind, _atomic_masses
+        from aida.orm.data.structure import Kind, _atomic_masses
 
         a = Kind(symbols=['Ba','C'],
                           weights=[1./3.,2./3.])
@@ -1388,7 +1388,7 @@ class TestKindTestMasses(AiidaTestCase):
         """
         mass for elements with sum less than one
         """
-        from aida.orm.dataplugins.structure import Kind, _atomic_masses
+        from aida.orm.data.structure import Kind, _atomic_masses
 
         a = Kind(symbols=['Ba','C'],
                  weights=[1./3.,1./3.])
@@ -1400,7 +1400,7 @@ class TestKindTestMasses(AiidaTestCase):
         """
         mass for a single element
         """
-        from aida.orm.dataplugins.structure import Kind, _atomic_masses
+        from aida.orm.data.structure import Kind, _atomic_masses
 
         a = Kind(symbols=['Ba'])
         self.assertAlmostEqual(a.mass, 
@@ -1410,7 +1410,7 @@ class TestKindTestMasses(AiidaTestCase):
         """
         mass set manually
         """
-        from aida.orm.dataplugins.structure import Kind
+        from aida.orm.data.structure import Kind
 
         a = Kind(symbols=['Ba','C'],
                  weights=[1./3.,1./3.],
@@ -1425,7 +1425,7 @@ class TestStructureDataInit(AiidaTestCase):
         """
         Wrong cell size (not 3x3)
         """
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
 
         with self.assertRaises(ValueError):
             _ = StructureData(cell=((1.,2.,3.),))
@@ -1434,7 +1434,7 @@ class TestStructureDataInit(AiidaTestCase):
         """
         Wrong cell size (not 3x3)
         """
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
 
         with self.assertRaises(ValueError):
             _ = StructureData(cell=((1.,0.,0.),(0.,0.,3.),(0.,3.)))
@@ -1443,7 +1443,7 @@ class TestStructureDataInit(AiidaTestCase):
         """
         Wrong cell (one vector has zero length)
         """
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
 
         with self.assertRaises(ValueError):
             _ = StructureData(cell=((0.,0.,0.),(0.,1.,0.),(0.,0.,1.)))
@@ -1452,7 +1452,7 @@ class TestStructureDataInit(AiidaTestCase):
         """
         Wrong cell (volume is zero)
         """
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
 
         with self.assertRaises(ValueError):
             _ = StructureData(cell=((1.,0.,0.),(0.,1.,0.),(1.,1.,0.)))
@@ -1461,7 +1461,7 @@ class TestStructureDataInit(AiidaTestCase):
         """
         Correct cell
         """
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
 
         cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
         a = StructureData(cell=cell)
@@ -1475,7 +1475,7 @@ class TestStructureDataInit(AiidaTestCase):
         """
         Check the volume calculation
         """
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
 
         a = StructureData(cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.)))
         self.assertAlmostEqual(a.get_cell_volume(), 6.)
@@ -1484,7 +1484,7 @@ class TestStructureDataInit(AiidaTestCase):
         """
         Wrong pbc parameter (not bool or iterable)
         """
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
 
         with self.assertRaises(ValueError):
             cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
@@ -1494,7 +1494,7 @@ class TestStructureDataInit(AiidaTestCase):
         """
         Wrong pbc parameter (iterable but with wrong len)
         """
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
 
         with self.assertRaises(ValueError):
             cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
@@ -1504,7 +1504,7 @@ class TestStructureDataInit(AiidaTestCase):
         """
         Wrong pbc parameter (iterable but with wrong len)
         """
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
 
         with self.assertRaises(ValueError):
             cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
@@ -1514,7 +1514,7 @@ class TestStructureDataInit(AiidaTestCase):
         """
         Single pbc value
         """
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
 
         cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
         a = StructureData(cell=cell,pbc=True)
@@ -1527,7 +1527,7 @@ class TestStructureDataInit(AiidaTestCase):
         """
         One-element list
         """
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
 
         cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
         a = StructureData(cell=cell,pbc=[True])
@@ -1540,7 +1540,7 @@ class TestStructureDataInit(AiidaTestCase):
         """
         Three-element list
         """
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
 
         cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
         a = StructureData(cell=cell,pbc=[True,False,True])
@@ -1555,7 +1555,7 @@ class TestStructureData(AiidaTestCase):
         """
         Test the creation of a cell and the appending of atoms
         """
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
 
         cell = ((2.,0.,0.),(0.,2.,0.),(0.,0.,2.))
         a = StructureData(cell=cell)
@@ -1590,7 +1590,7 @@ class TestStructureData(AiidaTestCase):
         Test the management of kinds (automatic detection of kind of 
         simple atoms).
         """
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
 
         a = StructureData(cell=((2.,0.,0.),(0.,2.,0.),(0.,0.,2.)))
         
@@ -1607,7 +1607,7 @@ class TestStructureData(AiidaTestCase):
         """
         Test the management of kinds (manual specification of kind name).
         """
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
 
         a = StructureData(cell=((2.,0.,0.),(0.,2.,0.),(0.,0.,2.)))
         
@@ -1624,7 +1624,7 @@ class TestStructureData(AiidaTestCase):
         """
         Test the management of kinds (adding an atom with different mass).
         """
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
 
         a = StructureData(cell=((2.,0.,0.),(0.,2.,0.),(0.,0.,2.)))
         
@@ -1649,7 +1649,7 @@ class TestStructureData(AiidaTestCase):
         Test the management of kind (adding an atom with different symbols
         or weights).
         """
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
 
         a = StructureData(cell=((2.,0.,0.),(0.,2.,0.),(0.,0.,2.)))
         
@@ -1687,7 +1687,7 @@ class TestStructureData(AiidaTestCase):
         Test the management of kinds (automatic creation of new kind
         if name is not specified and properties are different).
         """
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
 
         a = StructureData(cell=((2.,0.,0.),(0.,2.,0.),(0.,0.,2.)))
         
@@ -1717,7 +1717,7 @@ class TestStructureDataLock(AiidaTestCase):
         """
         Start from a StructureData object, convert to raw and then back
         """
-        from aida.orm.dataplugins.structure import StructureData, Kind, Site
+        from aida.orm.data.structure import StructureData, Kind, Site
 
         cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
         a = StructureData(cell=cell)
@@ -1770,7 +1770,7 @@ class TestStructureDataReload(AiidaTestCase):
         """
         Start from a StructureData object, convert to raw and then back
         """
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
 
         cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
         a = StructureData(cell=cell)
@@ -1801,7 +1801,7 @@ class TestStructureDataReload(AiidaTestCase):
         """
         Start from a StructureData object, copy it and see if it is preserved
         """
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
 
         cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
         a = StructureData(cell=cell)
@@ -1849,11 +1849,11 @@ class TestStructureDataFromAse(AiidaTestCase):
     """
     Tests the creation of Sites from/to a ASE object.
     """
-    from aida.orm.dataplugins.structure import has_ase
+    from aida.orm.data.structure import has_ase
 
     @unittest.skipIf(not has_ase(),"Unable to import ase")
     def test_ase(self):
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
         import ase
 
         a = ase.Atoms('SiGe',cell=(1.,2.,3.),pbc=(True,False,False))
@@ -1878,7 +1878,7 @@ class TestStructureDataFromAse(AiidaTestCase):
 
     @unittest.skipIf(not has_ase(),"Unable to import ase")
     def test_conversion_of_types_1(self):
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
         import ase
 
         a = ase.Atoms('Si4Ge4',cell=(1.,2.,3.),pbc=(True,False,False))
@@ -1908,7 +1908,7 @@ class TestStructureDataFromAse(AiidaTestCase):
 
     @unittest.skipIf(not has_ase(),"Unable to import ase")
     def test_conversion_of_types_2(self):
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
         import ase
 
         a = ase.Atoms('Si4',cell=(1.,2.,3.),pbc=(True,False,False))
@@ -1941,7 +1941,7 @@ class TestStructureDataFromAse(AiidaTestCase):
         
     @unittest.skipIf(not has_ase(),"Unable to import ase")
     def test_conversion_of_types_3(self):
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
 
         a = StructureData()
         a.append_atom(position=(0.,0.,0.), symbols='Ba', name='Ba')

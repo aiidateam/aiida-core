@@ -16,11 +16,11 @@ for i in sys.argv[1:]:
     print >> sys.stderr, "Ignoring invalid pk={}".format(i)
 
 for pk in calcs:
+  c = Calculation.get_subclass_from_pk(pk)
   print '#'*20
-  print '### CALC pk={}'.format(pk)
+  print '### CALC pk={}'.format(pk), c.__class__.__name__
   print '#'*20
 
-  c = Calculation.get_subclass_from_pk(pk)
   print "*** INPUTS:"
   for label, obj in c.get_inputs(also_labels=True):
       print '  {} -> {}[{}]'.format(label, type(obj).__name__,obj.pk),

@@ -20,10 +20,10 @@ class Daemon(VerdiCommand):
     # A dictionary with valid commands and functions to be called
     def __init__(self):
         self.valid_subcommands = {
-            '--start': self.daemon_start,
-            '--stop' : self.daemon_stop,
-            '--status': self.daemon_status,
-            '--restart': self.daemon_restart,
+            'start': self.daemon_start,
+            'stop' : self.daemon_stop,
+            'status': self.daemon_status,
+            'restart': self.daemon_restart,
             }
 
     def run(self,*args):       

@@ -27,27 +27,24 @@ what is written in 'template' (see below).
 TODO: probably use Python's Template strings instead??
 TODO: catch exceptions
 """
-from aida.codeplugins.input import InputPlugin
+from aida.orm import Calculation
 from aida.common.exceptions import InputValidationError
 from aida.common.datastructures import CalcInfo
 
 # TODO: write a 'input_type_checker' routine to automatically check the existence
 # and type of inputs + default values etc.
-class TemplatereplacerInputPlugin(InputPlugin):
-    _logger = InputPlugin._logger.getChild("templatereplacer")
+class TemplatereplacerCalculation(Calculation):
+    _logger = Calculation._logger.getChild("templatereplacer")
     
-    def create(self,calculation,inputdata,tempfolder):        
+    _plugin_type_string = ".".join([Calculation._plugin_type_string,
+                                    'simpleplugins','templatereplacer'])
+    
+    def _prepare_for_submission(self,tempfolder):        
         """
         This is the routine to be called when you want to create
         the input files and related stuff with a plugin.
         
         Args:
-            calculation: a aida.orm.Calculation object for the
-                calculation to be submitted
-            inputdata: a list of pairs ('label', DataObject)
-                where 'label' is the label of the input link
-                for this data object, and DataObject is (a subclass 
-                of) the aida.orm.Data class.
             tempfolder: a aida.common.folders.Folder subclass where
                 the plugin should put all its files.
 
@@ -56,13 +53,13 @@ class TemplatereplacerInputPlugin(InputPlugin):
         """
         import StringIO
 
-        from aida.orm.dataplugins.parameter import ParameterData
-        from aida.orm.dataplugins.singlefile import SinglefileData
-        from aida.orm.dataplugins.remote import RemoteData
+        from aida.orm.data.parameter import ParameterData
+        from aida.orm.data.singlefile import SinglefileData
+        from aida.orm.data.remote import RemoteData
         from aida.common.utils import validate_list_of_string_tuples
         from aida.common.exceptions import ValidationError
         
-        inputdict = dict(inputdata)
+        inputdict = self.get_inputdata_dict()
 
         parameters_node = inputdict.pop('parameters', None)
         if parameters_node is None:
@@ -141,7 +138,7 @@ class TemplatereplacerInputPlugin(InputPlugin):
         calcinfo = CalcInfo()
         calcinfo.retrieve_list = []
 
-        calcinfo.uuid = calculation.uuid
+        calcinfo.uuid = self.uuid
         calcinfo.cmdlineParams = cmdline_params
         calcinfo.local_copy_list = local_copy_list
         calcinfo.remote_copy_list = remote_copy_list

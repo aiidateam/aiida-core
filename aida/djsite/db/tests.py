@@ -849,8 +849,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         from aida.orm import Calculation, Code
         #from aida.common.pluginloader import load_plugin
         
-        code = Code(remote_machine_exec=('localhost','/bin/true'),
-                    input_plugin='simple_plugins.template_replacer')#.store()
+        code = Code(remote_machine_exec=('localhost','/bin/true'))#.store()
         
         computer = self.computer
 
@@ -955,8 +954,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         with tempfile.NamedTemporaryFile() as f:
             d2 = SinglefileData(f.name).store()
 
-        code = Code(remote_machine_exec=('localhost','/bin/true'),
-                    input_plugin='simple_plugins.template_replacer').store()
+        code = Code(remote_machine_exec=('localhost','/bin/true')).store()
 
         unsavedcomputer = Computer(dbcomputer=DbComputer(hostname='localhost'))
 
@@ -1077,8 +1075,7 @@ class TestCode(AiidaTestCase):
         from aida.orm import Code
         from aida.common.exceptions import ValidationError
 
-        code = Code(local_executable='test.sh',
-                    input_plugin='simple_plugins.template_replacer')
+        code = Code(local_executable='test.sh')
         with self.assertRaises(ValidationError):
             # No file with name test.sh
             code.store()
@@ -1102,25 +1099,21 @@ class TestCode(AiidaTestCase):
 
         with self.assertRaises(ValueError):
             # remote_machine_exec has length 2 but is not a list or tuple
-            _ = Code(remote_machine_exec='ab',
-                        input_plugin='simple_plugins.template_replacer')
+            _ = Code(remote_machine_exec='ab')
 
         # invalid code path
         with self.assertRaises(ValueError):
-            _ = Code(remote_machine_exec=('localhost', ''),
-                        input_plugin='simple_plugins.template_replacer')
+            _ = Code(remote_machine_exec=('localhost', ''))
 
         # Relative path is invalid for remote code
         with self.assertRaises(ValueError):
-            _ = Code(remote_machine_exec=('localhost', 'subdir/run.exe'),
-                        input_plugin='simple_plugins.template_replacer')
+            _ = Code(remote_machine_exec=('localhost', 'subdir/run.exe'))
 
         # No input plugin specified
         with self.assertRaises(ValueError):
             _ = Code(remote_machine_exec=('localhost', 'subdir/run.exe'))
         
-        code = Code(remote_machine_exec=('localhost', '/bin/ls'),
-                    input_plugin='simple_plugins.template_replacer')
+        code = Code(remote_machine_exec=('localhost', '/bin/ls'))
         with tempfile.NamedTemporaryFile() as f:
             f.write("#/bin/bash\n\necho test run\n")
             f.flush()

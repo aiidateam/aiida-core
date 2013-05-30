@@ -21,7 +21,7 @@ def Data_use():
     '''attributes (user) and parameters (internal)'''
     mystruc.junk = 55   # should be able to use attributes only for coding, not to be saved
     mystruc.attr.tag = 'something'  # set meta using attributes - to be saved
-    mystruc.attr['tag'] = 'somthing else' #redefine using dictlike access
+    mystruc.attr['tag'] = 'something else' #redefine using dictlike access
     mystruc.attr['tag'].append('second item') # TBD: appending several values would make a list 
     print mystruc.attr.all() #print a list of key-value pairs of the attrs
     mystruc.store()
@@ -37,12 +37,22 @@ def Data_use():
     energy1.set_parent(calc1)
     energy1.attr['energy'] = 45.6
     
-    '''Use subclassing'''
-    energy1 = Energy_data.create(45.6) # this requires a subclass definition
+    '''create object with subclassing'''
+    energy1 = Energy.create(45.6) # this requires a subclass definition for each datatype
+    struc1 = Struc.create(ase_struc) #initiates from an ASE object
     
-    #find all
+    '''find all energies of a certain range'''
+    Energy.filter(value_in=[1.0, 5.0])
+
+
+    '''find all structures less than a certain energy'''
+    struclist = Struc.filter(child__type__startswith = 'calculation', child__attr__key = 'energy', child__attr__fval__lte = 10.4)
+    Struc.filter(child.Energy__lte=10.4)
+    Struc.filter(child.Lowest_Frequency__gt=0.1) #need to directly associate a data object to a descendant for querying
     
+       
     
+#------------------- WORK IN PROGRESS BELOW ------------------------------------    
     
 def MD_use():
     
@@ -69,9 +79,6 @@ def Template_use():
     #both temporary and persistant attributes should be substituted using templates
     
 
-def Code_use():
-    mycode = Code.query(name='Espresso-4.2')   #gets code object
-    
     
 def Job_use():    
     myjobparams = Jobparams.create() # a subclass of Data with a preset schema
@@ -218,8 +225,7 @@ def RestartWorkflow():
 
 
 def QueryWorkflow():
-    struclist = Struc.filter(child__type__startswith = 'calculation', child__attr__key = 'energy', child__attr__fval__lte = 10.4)
-
+    
     
 
 def Queries():

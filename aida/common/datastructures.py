@@ -3,7 +3,7 @@ from aida.common.extendeddicts import DefaultFieldsAttributeDict, Enumerate
 class CalcState(Enumerate):
     pass
 
-calcStates = CalcState((
+calc_states = CalcState((
         'UNDETERMINED',
         'NEW', # just created
         'SUBMITTING', # being submitted to cluster
@@ -19,8 +19,6 @@ calcStates = CalcState((
         ))
 
 
-from aida.common.extendeddicts import DefaultFieldsAttributeDict
-
 class CalcInfo(DefaultFieldsAttributeDict):
     """
     This object will store the data returned by the code plugin and to be
@@ -30,24 +28,24 @@ class CalcInfo(DefaultFieldsAttributeDict):
     * dynresources_info
     """
     _default_fields = (
-        'jobEnvironment', # TODO UNDERSTAND THIS!
+        'job_environment', # TODO UNDERSTAND THIS!
         'email',
-        'emailOnStarted',
-        'emailOnTerminated',
+        'email_on_started',
+        'email_on_terminated',
         'uuid',
-        'prependText', 
-        'appendText',  
+        'prepend_text', 
+        'append_text',  
         'cmdlineParams',  # as a list of strings
-        'stdinName',
-        'stdoutName',
-        'stderrName',
-        'joinFiles',
-        'queueName', 
-        'numNodes',
-        'numCpusPerNode',
+        'stdin_name',
+        'stdout_name',
+        'stderr_name',
+        'join_files',
+        'queue_name', 
+        'num_machines',
+        'num_cpus_per_machine',
         'priority',
-        'maxWallclockSeconds',
-        'maxMemoryKb',
+        'max_wallclock_seconds',
+        'max_memory_kb',
         'rerunnable',
         'retrieve_list', # a list of files or patterns to retrieve
         'local_file_list', # a list of length-two tuples with (localabspath, relativedestpath)

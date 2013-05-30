@@ -6,7 +6,7 @@ They are executed when when you run "manage.py test" or
 from django.utils import unittest
 
 from aida.orm import Node
-from aida.common.exceptions import ModificationNotAllowed
+from aida.common.exceptions import ModificationNotAllowed, UniquenessError
 
 class AiidaTestCase(unittest.TestCase):
     """
@@ -18,7 +18,8 @@ class AiidaTestCase(unittest.TestCase):
         from django.contrib.auth.models import User
         from aida.orm import Computer
 
-        cls.user = User.objects.create_user(getpass.getuser(), 'unknown@mail.com', 'fakepwd')
+        cls.user = User.objects.create_user(getpass.getuser(),
+                                            'unknown@mail.com', 'fakepwd')
         cls.computer = Computer(hostname='localhost',
                                 transport_type='ssh',
                                 scheduler_type='pbspro',
@@ -32,17 +33,19 @@ class AiidaTestCase(unittest.TestCase):
         from django.core.exceptions import ObjectDoesNotExist
         from aida.djsite.db.models import DbComputer
 
+        # I first delete the nodes, otherwise I cannot delete computers and
+        # users
+        from aida.djsite.db.models import DbNode
+        DbNode.objects.filter().delete()
+
         try:
             User.objects.get(username=getpass.getuser).delete()
         except ObjectDoesNotExist:
             pass
-
+        
         DbComputer.objects.filter().delete()
 
-        from aida.djsite.db.models import DbNode
-        DbNode.objects.filter().delete()
-
-class TransitiveNoLoops(AiidaTestCase):
+class TestTransitiveNoLoops(AiidaTestCase):
     """
     Test the creation of the transitive closure table
     """
@@ -59,7 +62,7 @@ class TransitiveNoLoops(AiidaTestCase):
         with self.assertRaises(ValueError): # This would generate a loop
             n4.add_link_to(n1)
 
-class TransitiveClosureDeletion(AiidaTestCase):
+class TestTransitiveClosureDeletion(AiidaTestCase):
     """
     Test the creation of the transitive closure table
     """
@@ -91,42 +94,64 @@ class TransitiveClosureDeletion(AiidaTestCase):
         n7.add_link_to(n8)
 
         # Yet, no links from 1 to 8
-        self.assertEquals(len(Path.objects.filter(parent=n1,child=n8).distinct()),0)
+        self.assertEquals(
+            len(Path.objects.filter(parent=n1,child=n8).distinct()),0)
 
         n5.add_link_to(n6)
         # Yet, now 2 links from 1 to 8
-        self.assertEquals(len(Path.objects.filter(parent=n1,child=n8).distinct()),2)
+        self.assertEquals(
+            len(Path.objects.filter(parent=n1,child=n8).distinct()),2)
 
         n9.add_link_to(n7)
         # Still two links...
-        self.assertEquals(len(Path.objects.filter(parent=n1,child=n8).distinct()),2)
+        self.assertEquals(
+            len(Path.objects.filter(parent=n1,child=n8).distinct()),2)
 
         n6.add_link_to(n9)
         # And now there should be 4 nodes
-        self.assertEquals(len(Path.objects.filter(parent=n1,child=n8).distinct()),4)
+        self.assertEquals(
+            len(Path.objects.filter(parent=n1,child=n8).distinct()),4)
         
         ### I start deleting now
 
         # I cut one branch below: I should loose 2 links
         Link.objects.filter(input=n6, output=n9).delete()
-        self.assertEquals(len(Path.objects.filter(parent=n1,child=n8).distinct()),2)
+        self.assertEquals(
+            len(Path.objects.filter(parent=n1,child=n8).distinct()),2)
+
+        #print "\n".join([str((i.pk, i.input.pk, i.output.pk))
+        #                 for i in Link.objects.filter()])
+        #print "\n".join([str((i.pk, i.parent.pk, i.child.pk, i.depth,
+        #                      i.entry_edge_id, i.direct_edge_id,
+        #                      i.exit_edge_id)) for i in Path.objects.filter()])
 
         # I cut another branch above: I should loose one more link
         Link.objects.filter(input=n2, output=n4).delete()
-        self.assertEquals(len(Path.objects.filter(parent=n1,child=n8).distinct()),1)
+        #print "\n".join([str((i.pk, i.input.pk, i.output.pk))
+        #                 for i in Link.objects.filter()])
+        #print "\n".join([str((i.pk, i.parent.pk, i.child.pk, i.depth,
+        #                      i.entry_edge_id, i.direct_edge_id,
+        #                      i.exit_edge_id)) for i in Path.objects.filter()])
+        self.assertEquals(
+            len(Path.objects.filter(parent=n1,child=n8).distinct()),1)
         
         # Another cut should delete all links
         Link.objects.filter(input=n3, output=n5).delete()
-        self.assertEquals(len(Path.objects.filter(parent=n1,child=n8).distinct()),0)
+        self.assertEquals(
+            len(Path.objects.filter(parent=n1,child=n8).distinct()),0)
 
-        # But I did not delete everything! For instance, I can check the following links
-        self.assertEquals(len(Path.objects.filter(parent=n4,child=n8).distinct()),1)
-        self.assertEquals(len(Path.objects.filter(parent=n5,child=n7).distinct()),1)
+        # But I did not delete everything! For instance, I can check
+        # the following links
+        self.assertEquals(
+            len(Path.objects.filter(parent=n4,child=n8).distinct()),1)
+        self.assertEquals(
+            len(Path.objects.filter(parent=n5,child=n7).distinct()),1)
 
-        # Finally, I reconnect in a different way the two graphs and check that 1 and
-        # 8 are again connected
+        # Finally, I reconnect in a different way the two graphs and 
+        # check that 1 and 8 are again connected
         n3.add_link_to(n4)
-        self.assertEquals(len(Path.objects.filter(parent=n1,child=n8).distinct()),1)          
+        self.assertEquals(
+            len(Path.objects.filter(parent=n1,child=n8).distinct()),1)          
 
 class TestQueryWithAidaObjects(AiidaTestCase):
     """
@@ -145,17 +170,25 @@ class TestQueryWithAidaObjects(AiidaTestCase):
         a3.add_link_to(a4)
 
         # I check that I get the correct links
-        self.assertEquals(set([n.uuid for n in a1.get_inputs()]),set([]))
-        self.assertEquals(set([n.uuid for n in a1.get_outputs()]),set([a2.uuid]))
+        self.assertEquals(set([n.uuid for n in a1.get_inputs()]),
+                          set([]))
+        self.assertEquals(set([n.uuid for n in a1.get_outputs()]),
+                          set([a2.uuid]))
 
-        self.assertEquals(set([n.uuid for n in a2.get_inputs()]),set([a1.uuid]))
-        self.assertEquals(set([n.uuid for n in a2.get_outputs()]),set([a3.uuid, a4.uuid]))
+        self.assertEquals(set([n.uuid for n in a2.get_inputs()]),
+                          set([a1.uuid]))
+        self.assertEquals(set([n.uuid for n in a2.get_outputs()]),
+                          set([a3.uuid, a4.uuid]))
 
-        self.assertEquals(set([n.uuid for n in a3.get_inputs()]),set([a2.uuid]))
-        self.assertEquals(set([n.uuid for n in a3.get_outputs()]),set([a4.uuid]))
+        self.assertEquals(set([n.uuid for n in a3.get_inputs()]),
+                          set([a2.uuid]))
+        self.assertEquals(set([n.uuid for n in a3.get_outputs()]),
+                          set([a4.uuid]))
 
-        self.assertEquals(set([n.uuid for n in a4.get_inputs()]),set([a2.uuid, a3.uuid]))
-        self.assertEquals(set([n.uuid for n in a4.get_outputs()]),set([]))
+        self.assertEquals(set([n.uuid for n in a4.get_inputs()]),
+                          set([a2.uuid, a3.uuid]))
+        self.assertEquals(set([n.uuid for n in a4.get_outputs()]),
+                          set([]))
         
     def test_links_and_queries(self):
         from aida.djsite.db.models import DbNode, Link
@@ -196,7 +229,8 @@ class TestQueryWithAidaObjects(AiidaTestCase):
         self.assertEquals(len(going_out_from_a2_db), 2)
         self.assertTrue(isinstance(going_out_from_a2_db[0],DbNode))
         self.assertTrue(isinstance(going_out_from_a2_db[1],DbNode))
-        uuid_set_db = set([going_out_from_a2_db[0].uuid, going_out_from_a2_db[1].uuid])
+        uuid_set_db = set([going_out_from_a2_db[0].uuid,
+                           going_out_from_a2_db[1].uuid])
 
         # I check that doing the query with a Node or DbNode instance,
         # I get the same nodes
@@ -213,7 +247,8 @@ class TestQueryWithAidaObjects(AiidaTestCase):
         self.assertEquals(len(output_links_b), 2)
         self.assertTrue(isinstance(output_links_b[0],Link))
         self.assertTrue(isinstance(output_links_b[1],Link))
-        uuid_set_db_link = set([output_links_b[0].output.uuid, output_links_b[1].output.uuid])
+        uuid_set_db_link = set([output_links_b[0].output.uuid,
+                                output_links_b[1].output.uuid])
         self.assertEquals(uuid_set, uuid_set_db_link)        
         
 
@@ -230,13 +265,17 @@ class TestQueryWithAidaObjects(AiidaTestCase):
 
 class TestNodeBasic(AiidaTestCase):
     """
-    These tests check the basic features of nodes (setting of attributes, copying of files, ...)
+    These tests check the basic features of nodes
+    (setting of attributes, copying of files, ...)
     """
     boolval = True
     intval = 123
     floatval = 4.56
     stringval = "aaaa"
-    dictval = {'num': 3, 'something': 'else'}
+    # A recursive dictionary
+    dictval = {'num': 3, 'something': 'else', 'emptydict': {},
+               'recursive': {'a': 1, 'b': True, 'c': 1.2, 'd': [1,2], 
+                             'e': {'z': 'z', 'xx': {}, 'yy': []}}}
     listval = [1, "s", True]
     emptydict = {}
     emptylist = []
@@ -290,7 +329,8 @@ class TestNodeBasic(AiidaTestCase):
 
     def test_datetime_attribute(self):
         import datetime
-        from django.utils.timezone import make_aware, get_current_timezone, is_naive
+        from django.utils.timezone import (
+            get_current_timezone, is_naive, make_aware)
 
         a = Node()
 
@@ -348,7 +388,8 @@ class TestNodeBasic(AiidaTestCase):
         b_expected_attributes['new'] = 'cvb'
 
         # I check before storing that the attributes are ok
-        self.assertEquals({k: v for k,v in b.iterattrs()}, b_expected_attributes)
+        self.assertEquals({k: v for k,v in b.iterattrs()},
+                          b_expected_attributes)
         # Note that during copy, I do not copy the metadata!
         self.assertEquals({k: v for k,v in b.itermetadata()}, {})
         
@@ -364,8 +405,10 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals({k: v for k,v in a.itermetadata()}, metadata_to_set)
 
         # I check then on the 'b' copy
-        self.assertEquals({k: v for k,v in b.iterattrs()}, b_expected_attributes)
-        self.assertEquals({k: v for k,v in b.itermetadata()}, b_expected_metadata)
+        self.assertEquals({k: v for k,v in b.iterattrs()},
+                          b_expected_attributes)
+        self.assertEquals({k: v for k,v in b.itermetadata()},
+                          b_expected_metadata)
 
     def test_files(self):
         import tempfile
@@ -419,7 +462,8 @@ class TestNodeBasic(AiidaTestCase):
         with open(b.get_abs_path('file3.txt')) as f:
             self.assertEquals(f.read(), file_content_different)
 
-        # This should in principle change the location of the files, so I recheck
+        # This should in principle change the location of the files,
+        # so I recheck
         a.store()
 
         # I now copy after storing
@@ -486,12 +530,14 @@ class TestNodeBasic(AiidaTestCase):
 
         # verify if the node has the structure I expect
         self.assertEquals(set(a.get_path_list()),set(['tree_1']))
-        self.assertEquals( set( a.get_path_list('tree_1') ), set(['file1.txt','dir1']) )
-        self.assertEquals( set( a.get_path_list( os.path.join('tree_1','dir1')) ),
+        self.assertEquals( set( a.get_path_list('tree_1') ),
+                           set(['file1.txt','dir1']) )
+        self.assertEquals( set( a.get_path_list(os.path.join('tree_1','dir1'))),
                            set(['dir2','file2.txt']) )
         with open(a.get_abs_path( os.path.join('tree_1','file1.txt') )) as f:
             self.assertEquals(f.read(), file_content)
-        with open(a.get_abs_path( os.path.join('tree_1','dir1','file2.txt') )) as f:
+        with open(a.get_abs_path(
+                    os.path.join('tree_1','dir1','file2.txt') )) as f:
             self.assertEquals(f.read(), file_content)
 
         # try to exit from the folder
@@ -504,12 +550,14 @@ class TestNodeBasic(AiidaTestCase):
 
         # Check that the content is there
         self.assertEquals(set(b.get_path_list('.')),set(['tree_1']))
-        self.assertEquals( set( b.get_path_list('tree_1') ), set(['file1.txt','dir1']) )
-        self.assertEquals( set( b.get_path_list( os.path.join('tree_1','dir1')) ),
+        self.assertEquals( set(b.get_path_list('tree_1')),
+                           set(['file1.txt','dir1']) )
+        self.assertEquals( set(b.get_path_list(os.path.join('tree_1','dir1'))),
                            set(['dir2','file2.txt']) )
         with open(b.get_abs_path( os.path.join('tree_1','file1.txt') )) as f:
             self.assertEquals(f.read(), file_content)
-        with open(b.get_abs_path( os.path.join('tree_1','dir1','file2.txt') )) as f:
+        with open(b.get_abs_path(os.path.join(
+                    'tree_1','dir1','file2.txt'))) as f:
             self.assertEquals(f.read(), file_content)
 
         # I overwrite a file and create a new one in the copy only
@@ -529,29 +577,36 @@ class TestNodeBasic(AiidaTestCase):
         # I check the new content, and that the old one has not changed
         # old
         self.assertEquals(set(a.get_path_list('.')),set(['tree_1']))
-        self.assertEquals( set( a.get_path_list('tree_1') ), set(['file1.txt','dir1']) )
-        self.assertEquals( set( a.get_path_list( os.path.join('tree_1','dir1')) ),
+        self.assertEquals( set( a.get_path_list('tree_1') ),
+                           set(['file1.txt','dir1']) )
+        self.assertEquals( set( a.get_path_list(os.path.join('tree_1','dir1'))),
                            set(['dir2','file2.txt']) )
         with open(a.get_abs_path( os.path.join('tree_1','file1.txt') )) as f:
             self.assertEquals(f.read(), file_content)
-        with open(a.get_abs_path( os.path.join('tree_1','dir1','file2.txt') )) as f:
+        with open(a.get_abs_path( os.path.join(
+                'tree_1','dir1','file2.txt') )) as f:
             self.assertEquals(f.read(), file_content)
-            #new
-        self.assertEquals(set(b.get_path_list('.')),set(['tree_1','file3.txt']))
-        self.assertEquals( set( b.get_path_list('tree_1') ), set(['file1.txt','dir1','dir3']) )
-        self.assertEquals( set( b.get_path_list( os.path.join('tree_1','dir1')) ),
+        #new
+        self.assertEquals(set(b.get_path_list('.')),
+                          set(['tree_1','file3.txt']))
+        self.assertEquals( set( b.get_path_list('tree_1') ),
+                           set(['file1.txt','dir1','dir3']) )
+        self.assertEquals( set( b.get_path_list(os.path.join('tree_1','dir1'))),
                            set(['dir2','file2.txt']) )
         with open(b.get_abs_path( os.path.join('tree_1','file1.txt') )) as f:
             self.assertEquals(f.read(), file_content)
-        with open(b.get_abs_path( os.path.join('tree_1','dir1','file2.txt') )) as f:
+        with open(b.get_abs_path( os.path.join(
+                'tree_1','dir1','file2.txt') )) as f:
             self.assertEquals(f.read(), file_content)
 
-        # This should in principle change the location of the files, so I recheck
+        # This should in principle change the location of the files,
+        # so I recheck
         a.store()
 
         # I now copy after storing
         c = a.copy()
-        # I overwrite a file, create a new one and remove a directory in the copy only
+        # I overwrite a file, create a new one and remove a directory
+        # in the copy only
         with tempfile.NamedTemporaryFile() as f:
             f.write(file_content_different)
             f.flush()
@@ -561,22 +616,26 @@ class TestNodeBasic(AiidaTestCase):
 
         # check old
         self.assertEquals(set(a.get_path_list('.')),set(['tree_1']))
-        self.assertEquals( set( a.get_path_list('tree_1') ), set(['file1.txt','dir1']) )
-        self.assertEquals( set( a.get_path_list( os.path.join('tree_1','dir1')) ),
+        self.assertEquals( set( a.get_path_list('tree_1') ),
+                           set(['file1.txt','dir1']) )
+        self.assertEquals( set(a.get_path_list( os.path.join('tree_1','dir1'))),
                            set(['dir2','file2.txt']) )
         with open(a.get_abs_path( os.path.join('tree_1','file1.txt') )) as f:
             self.assertEquals(f.read(), file_content)
-        with open(a.get_abs_path( os.path.join('tree_1','dir1','file2.txt') )) as f:
+        with open(a.get_abs_path( os.path.join(
+                'tree_1','dir1','file2.txt') )) as f:
             self.assertEquals(f.read(), file_content)
 
         # check new
         self.assertEquals( set( c.get_path_list('.')),set(['tree_1']))
-        self.assertEquals( set( c.get_path_list('tree_1') ), set(['file1.txt','dir1']) )
-        self.assertEquals( set( c.get_path_list( os.path.join('tree_1','dir1')) ),
+        self.assertEquals( set( c.get_path_list('tree_1') ),
+                           set(['file1.txt','dir1']) )
+        self.assertEquals( set( c.get_path_list(os.path.join('tree_1','dir1'))),
                            set(['file2.txt','file4.txt']) )
         with open(c.get_abs_path( os.path.join('tree_1','file1.txt') )) as f:
             self.assertEquals(f.read(), file_content_different)
-        with open(c.get_abs_path( os.path.join('tree_1','dir1','file2.txt') )) as f:
+        with open(c.get_abs_path( os.path.join(
+                'tree_1','dir1','file2.txt') )) as f:
             self.assertEquals(f.read(), file_content)
 
         # garbage cleaning
@@ -785,20 +844,19 @@ class TestNodeBasic(AiidaTestCase):
                            (self.user.username, self.user.email, 'text2'),])
         
         
-class TestSubNodes(AiidaTestCase):
+class TestSubNodesAndLinks(AiidaTestCase):
     def test_set_code(self):
         from aida.orm import Calculation, Code
         #from aida.common.pluginloader import load_plugin
         
-        code = Code(remote_machine_exec=('localhost','/bin/true'),
-                    input_plugin='simple_plugins.template_replacer')#.store()
+        code = Code(remote_machine_exec=('localhost','/bin/true'))#.store()
         
         computer = self.computer
 
         unstoredcalc = Calculation(computer=computer,
-                           num_nodes=1,num_cpus_per_node=1)
+                           num_machines=1,num_cpus_per_machine=1)
         calc = Calculation(computer=computer,
-                           num_nodes=1,num_cpus_per_node=1).store()
+                           num_machines=1,num_cpus_per_machine=1).store()
         # calc is not stored, and code is not (can't add links to node)
         with self.assertRaises(ModificationNotAllowed):
             unstoredcalc.set_code(code)
@@ -813,8 +871,7 @@ class TestSubNodes(AiidaTestCase):
             unstoredcalc.set_code(code)
 
         # code and calc are stored
-        calc.set_code(code)
-        
+        calc.set_code(code) 
 
     def test_links_label_constraints(self):
         n1 = Node().store()
@@ -828,14 +885,13 @@ class TestSubNodes(AiidaTestCase):
         n3.add_link_to(n4, label='label1')
 
         # An input link with that name already exists
-        with self.assertRaises(ValueError):
+        with self.assertRaises(UniquenessError):
             n3.add_link_from(n2, label='label1')
 
         # instead, for outputs, I can have multiple times the same label
         # (think to the case where n3 is a StructureData, and both n4 and n5
         #  are calculations that use as label 'input_cell')
         n3.add_link_to(n5, label='label1')
-
 
     def test_links_label_autogenerator(self):
         n1 = Node().store()
@@ -860,6 +916,27 @@ class TestSubNodes(AiidaTestCase):
         n10.add_link_from(n7)
         n10.add_link_from(n8)
         n10.add_link_from(n9)
+  
+    def test_link_replace(self):
+        n1 = Node().store()
+        n2 = Node().store()
+        n3 = Node().store()
+        
+        n3.add_link_from(n1,label='the_label')
+        with self.assertRaises(UniquenessError):
+            # A link with the same name already exists
+            n3.add_link_from(n1,label='the_label')
+        
+        # I can replace the link and check that it was replaced
+        n3.replace_link_from(n2, label='the_label')
+        the_parent = dict(n3.get_inputs(also_labels=True))['the_label']
+        self.assertEquals(n2.uuid, the_parent.uuid)
+        
+        # replace_link_from should work also if there is no previous link 
+        n2 .replace_link_from(n1, label='the_label_2')
+        the_parent = dict(n2.get_inputs(also_labels=True))['the_label_2']
+        self.assertEquals(n1.uuid, the_parent.uuid)
+        
     
     def test_valid_links(self):
         import tempfile
@@ -868,39 +945,38 @@ class TestSubNodes(AiidaTestCase):
         from aida.orm import Computer
         from aida.common.pluginloader import load_plugin
         from aida.djsite.db.models import DbComputer
-        from aida.common.datastructures import calcStates
+        from aida.common.datastructures import calc_states
 
-        SinglefileData = load_plugin(Data, 'aida.orm.dataplugins', 'singlefile')
+        SinglefileData = load_plugin(Data, 'aida.orm.data', 'singlefile')
 
         # I create some objects
         d1 = Data().store()
         with tempfile.NamedTemporaryFile() as f:
             d2 = SinglefileData(f.name).store()
 
-        code = Code(remote_machine_exec=('localhost','/bin/true'),
-                    input_plugin='simple_plugins.template_replacer').store()
+        code = Code(remote_machine_exec=('localhost','/bin/true')).store()
 
         unsavedcomputer = Computer(dbcomputer=DbComputer(hostname='localhost'))
 
         with self.assertRaises(ValueError):
             # I need to save the localhost entry first
             _ = Calculation(computer=unsavedcomputer,
-                num_nodes=1,num_cpus_per_node=1).store()
+                num_machines=1,num_cpus_per_machine=1).store()
 
         # I check both with a string or with an object
         calc = Calculation(computer=self.computer,
-            num_nodes=1,num_cpus_per_node=1).store()
+            num_machines=1,num_cpus_per_machine=1).store()
         calc2 = Calculation(computer='localhost',
-            num_nodes=1,num_cpus_per_node=1).store()
+            num_machines=1,num_cpus_per_machine=1).store()
         with self.assertRaises(TypeError):
             # I don't want to call it with things that are neither
             # strings nor Computer instances
             _ = Calculation(computer=1,
-                num_nodes=1,num_cpus_per_node=1).store()
+                num_machines=1,num_cpus_per_machine=1).store()
         
         d1.add_link_to(calc)
-        calc.add_link_from(d2)
-        calc.add_link_from(code)
+        calc.add_link_from(d2,label='some_label')
+        calc.set_code(code)
 
         # Cannot link to itself
         with self.assertRaises(ValueError):
@@ -923,25 +999,34 @@ class TestSubNodes(AiidaTestCase):
             calc.add_link_from(calc2)
 
         calc_a = Calculation(computer=self.computer,
-            num_nodes=1,num_cpus_per_node=1).store()
+            num_machines=1,num_cpus_per_machine=1).store()
         calc_b = Calculation(computer=self.computer,
-            num_nodes=1,num_cpus_per_node=1).store()
+            num_machines=1,num_cpus_per_machine=1).store()
 
         data_node = Data().store()
 
         # I do a trick to set it to a state that allows writing
-        calc_a._set_state(calcStates.RETRIEVING) 
-        calc_b._set_state(calcStates.RETRIEVING) 
+        calc_a._set_state(calc_states.RETRIEVING) 
+        calc_b._set_state(calc_states.RETRIEVING) 
 
         data_node.add_link_from(calc_a)
-        # A data cannot have to input calculations
+        # A data cannot have two input calculations
         with self.assertRaises(ValueError):
             data_node.add_link_from(calc_b)
 
         newdata = Data()
         # Cannot add an input link if the calculation is not in status NEW
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ModificationNotAllowed):
             calc_a.add_link_from(newdata)
+
+        # Cannot replace input nodes if the calculation is not in status NEW    
+        with self.assertRaises(ModificationNotAllowed):
+            calc_a.replace_link_from(d2, label='some_label')
+
+        # Cannot (re)set the code if the calculation is not in status NEW
+        with self.assertRaises(ModificationNotAllowed):
+            calc_a.set_code(code)
+        
 
         calculation_inputs = calc.get_inputs()
         inputs_type_data = [i for i in calculation_inputs if isinstance(i,Data)]
@@ -957,25 +1042,26 @@ class TestSubNodes(AiidaTestCase):
         Each data node can only have one input calculation
         """
         from aida.orm import Calculation, Data
-        from aida.common.datastructures import calcStates
+        from aida.common.datastructures import calc_states
 
         d1 = Data().store()
         
         calc = Calculation(computer=self.computer,
-            num_nodes=1,num_cpus_per_node=1).store()
+            num_machines=1,num_cpus_per_machine=1).store()
         calc2 = Calculation(computer=self.computer,
-            num_nodes=1,num_cpus_per_node=1).store()
+            num_machines=1,num_cpus_per_machine=1).store()
 
         # I cannot, calc it is in state NEW
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ModificationNotAllowed):
             d1.add_link_from(calc)
 
         # I do a trick to set it to a state that allows setting the link
-        calc._set_state(calcStates.RETRIEVING) 
-        calc2._set_state(calcStates.RETRIEVING) 
+        calc._set_state(calc_states.RETRIEVING) 
+        calc2._set_state(calc_states.RETRIEVING) 
 
         d1.add_link_from(calc)
 
+        # more than on input to the same data object!
         with self.assertRaises(ValueError):
             d1.add_link_from(calc2)
 
@@ -989,8 +1075,7 @@ class TestCode(AiidaTestCase):
         from aida.orm import Code
         from aida.common.exceptions import ValidationError
 
-        code = Code(local_executable='test.sh',
-                    input_plugin='simple_plugins.template_replacer')
+        code = Code(local_executable='test.sh')
         with self.assertRaises(ValidationError):
             # No file with name test.sh
             code.store()
@@ -1014,25 +1099,21 @@ class TestCode(AiidaTestCase):
 
         with self.assertRaises(ValueError):
             # remote_machine_exec has length 2 but is not a list or tuple
-            _ = Code(remote_machine_exec='ab',
-                        input_plugin='simple_plugins.template_replacer')
+            _ = Code(remote_machine_exec='ab')
 
         # invalid code path
         with self.assertRaises(ValueError):
-            _ = Code(remote_machine_exec=('localhost', ''),
-                        input_plugin='simple_plugins.template_replacer')
+            _ = Code(remote_machine_exec=('localhost', ''))
 
         # Relative path is invalid for remote code
         with self.assertRaises(ValueError):
-            _ = Code(remote_machine_exec=('localhost', 'subdir/run.exe'),
-                        input_plugin='simple_plugins.template_replacer')
+            _ = Code(remote_machine_exec=('localhost', 'subdir/run.exe'))
 
         # No input plugin specified
         with self.assertRaises(ValueError):
             _ = Code(remote_machine_exec=('localhost', 'subdir/run.exe'))
         
-        code = Code(remote_machine_exec=('localhost', '/bin/ls'),
-                    input_plugin='simple_plugins.template_replacer')
+        code = Code(remote_machine_exec=('localhost', '/bin/ls'))
         with tempfile.NamedTemporaryFile() as f:
             f.write("#/bin/bash\n\necho test run\n")
             f.flush()
@@ -1062,7 +1143,7 @@ class TestSinglefileData(AiidaTestCase):
         import os
         import tempfile
 
-        from aida.orm.dataplugins.singlefile import SinglefileData
+        from aida.orm.data.singlefile import SinglefileData
 
 
         file_content = 'some text ABCDE'
@@ -1094,15 +1175,16 @@ class TestSinglefileData(AiidaTestCase):
         with open(b.get_abs_path(basename)) as f:
             self.assertEquals(f.read(), file_content)
 
-class KindValidSymbols(AiidaTestCase):
+class TestKindValidSymbols(AiidaTestCase):
     """
-    Tests the symbol validation of the aida.orm.dataplugins.structure.Kind class.
+    Tests the symbol validation of the
+    aida.orm.data.structure.Kind class.
     """
     def test_bad_symbol(self):
         """
         Should not accept a non-existing symbol.
         """
-        from aida.orm.dataplugins.structure import Kind
+        from aida.orm.data.structure import Kind
 
         with self.assertRaises(ValueError):
             _ = Kind(symbols='Hxx')
@@ -1111,7 +1193,7 @@ class KindValidSymbols(AiidaTestCase):
         """
         Should not accept an empty list
         """
-        from aida.orm.dataplugins.structure import Kind
+        from aida.orm.data.structure import Kind
 
         with self.assertRaises(ValueError):
             _ = Kind(symbols=[])
@@ -1120,11 +1202,11 @@ class KindValidSymbols(AiidaTestCase):
         """
         Should not raise any error.
         """
-        from aida.orm.dataplugins.structure import Kind
+        from aida.orm.data.structure import Kind
 
         _ = Kind(symbols=['H','He'],weights=[0.5,0.5])
 
-class SiteValidWeights(AiidaTestCase):
+class TestSiteValidWeights(AiidaTestCase):
     """
     Tests valid weight lists.
     """        
@@ -1132,7 +1214,7 @@ class SiteValidWeights(AiidaTestCase):
         """
         Should not accept a non-list, non-number weight
         """
-        from aida.orm.dataplugins.structure import Kind
+        from aida.orm.data.structure import Kind
 
         with self.assertRaises(ValueError):
             _ = Kind(symbols='Ba',weights='aaa')
@@ -1141,7 +1223,7 @@ class SiteValidWeights(AiidaTestCase):
         """
         Should not accept an empty list
         """
-        from aida.orm.dataplugins.structure import Kind
+        from aida.orm.data.structure import Kind
 
         with self.assertRaises(ValueError):
             _ = Kind(symbols='Ba',weights=[])
@@ -1151,7 +1233,7 @@ class SiteValidWeights(AiidaTestCase):
         Should not accept a size mismatch of the symbols and weights
         list.
         """
-        from aida.orm.dataplugins.structure import Kind
+        from aida.orm.data.structure import Kind
 
         with self.assertRaises(ValueError):
             _ = Kind(symbols=['Ba','C'],weights=[1.])
@@ -1163,7 +1245,7 @@ class SiteValidWeights(AiidaTestCase):
         """
         Should not accept a negative weight
         """
-        from aida.orm.dataplugins.structure import Kind
+        from aida.orm.data.structure import Kind
 
         with self.assertRaises(ValueError):
             _ = Kind(symbols=['Ba','C'],weights=[-0.1,0.3])
@@ -1172,7 +1254,7 @@ class SiteValidWeights(AiidaTestCase):
         """
         Should not accept a sum of weights larger than one
         """
-        from aida.orm.dataplugins.structure import Kind
+        from aida.orm.data.structure import Kind
 
         with self.assertRaises(ValueError):
             _ = Kind(symbols=['Ba','C'],
@@ -1182,7 +1264,7 @@ class SiteValidWeights(AiidaTestCase):
         """
         Should accept a sum equal to one
         """
-        from aida.orm.dataplugins.structure import Kind
+        from aida.orm.data.structure import Kind
 
         _ = Kind(symbols=['Ba','C'],
                  weights=[1./3.,2./3.])
@@ -1191,7 +1273,7 @@ class SiteValidWeights(AiidaTestCase):
         """
         Should accept a sum equal less than one
         """
-        from aida.orm.dataplugins.structure import Kind
+        from aida.orm.data.structure import Kind
 
         _ = Kind(symbols=['Ba','C'],
                  weights=[1./3.,1./3.])
@@ -1200,12 +1282,12 @@ class SiteValidWeights(AiidaTestCase):
         """
         Should accept None.
         """
-        from aida.orm.dataplugins.structure import Kind
+        from aida.orm.data.structure import Kind
 
         _ = Kind(symbols='Ba',weights=None)
 
 
-class KindTestGeneral(AiidaTestCase):
+class TestKindTestGeneral(AiidaTestCase):
     """
     Tests the creation of Kind objects and their methods.
     """
@@ -1213,7 +1295,7 @@ class KindTestGeneral(AiidaTestCase):
         """
         Should accept a sum equal to one
         """
-        from aida.orm.dataplugins.structure import Kind
+        from aida.orm.data.structure import Kind
 
         a = Kind(symbols=['Ba','C'],
                  weights=[1./3.,2./3.])
@@ -1224,7 +1306,7 @@ class KindTestGeneral(AiidaTestCase):
         """
         Should accept a sum equal less than one
         """
-        from aida.orm.dataplugins.structure import Kind
+        from aida.orm.data.structure import Kind
 
         a = Kind(symbols=['Ba','C'],
                  weights=[1./3.,1./3.])
@@ -1235,7 +1317,7 @@ class KindTestGeneral(AiidaTestCase):
         """
         Should not accept a 'positions' parameter
         """
-        from aida.orm.dataplugins.structure import Kind
+        from aida.orm.data.structure import Kind
 
         with self.assertRaises(ValueError):
             _ = Kind(position=[0.,0.,0.],symbols=['Ba'],
@@ -1245,7 +1327,7 @@ class KindTestGeneral(AiidaTestCase):
         """
         Should recognize a simple element.
         """
-        from aida.orm.dataplugins.structure import Kind
+        from aida.orm.data.structure import Kind
 
         a = Kind(symbols='Ba')
         self.assertFalse(a.is_alloy())
@@ -1264,7 +1346,7 @@ class KindTestGeneral(AiidaTestCase):
         """
         Check the automatic name generator.
         """
-        from aida.orm.dataplugins.structure import Kind
+        from aida.orm.data.structure import Kind
 
         a = Kind(symbols='Ba')
         self.assertEqual(a.name,'Ba')
@@ -1279,7 +1361,7 @@ class KindTestGeneral(AiidaTestCase):
         a.name = 'newstring'
         self.assertEqual(a.name,'newstring')
 
-class KindTestMasses(AiidaTestCase):
+class TestKindTestMasses(AiidaTestCase):
     """
     Tests the management of masses during the creation of Kind objects.
     """
@@ -1287,7 +1369,7 @@ class KindTestMasses(AiidaTestCase):
         """
         mass for elements with sum one
         """
-        from aida.orm.dataplugins.structure import Kind, _atomic_masses
+        from aida.orm.data.structure import Kind, _atomic_masses
 
         a = Kind(symbols=['Ba','C'],
                           weights=[1./3.,2./3.])
@@ -1299,7 +1381,7 @@ class KindTestMasses(AiidaTestCase):
         """
         mass for elements with sum less than one
         """
-        from aida.orm.dataplugins.structure import Kind, _atomic_masses
+        from aida.orm.data.structure import Kind, _atomic_masses
 
         a = Kind(symbols=['Ba','C'],
                  weights=[1./3.,1./3.])
@@ -1311,7 +1393,7 @@ class KindTestMasses(AiidaTestCase):
         """
         mass for a single element
         """
-        from aida.orm.dataplugins.structure import Kind, _atomic_masses
+        from aida.orm.data.structure import Kind, _atomic_masses
 
         a = Kind(symbols=['Ba'])
         self.assertAlmostEqual(a.mass, 
@@ -1321,7 +1403,7 @@ class KindTestMasses(AiidaTestCase):
         """
         mass set manually
         """
-        from aida.orm.dataplugins.structure import Kind
+        from aida.orm.data.structure import Kind
 
         a = Kind(symbols=['Ba','C'],
                  weights=[1./3.,1./3.],
@@ -1336,7 +1418,7 @@ class TestStructureDataInit(AiidaTestCase):
         """
         Wrong cell size (not 3x3)
         """
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
 
         with self.assertRaises(ValueError):
             _ = StructureData(cell=((1.,2.,3.),))
@@ -1345,7 +1427,7 @@ class TestStructureDataInit(AiidaTestCase):
         """
         Wrong cell size (not 3x3)
         """
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
 
         with self.assertRaises(ValueError):
             _ = StructureData(cell=((1.,0.,0.),(0.,0.,3.),(0.,3.)))
@@ -1354,7 +1436,7 @@ class TestStructureDataInit(AiidaTestCase):
         """
         Wrong cell (one vector has zero length)
         """
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
 
         with self.assertRaises(ValueError):
             _ = StructureData(cell=((0.,0.,0.),(0.,1.,0.),(0.,0.,1.)))
@@ -1363,7 +1445,7 @@ class TestStructureDataInit(AiidaTestCase):
         """
         Wrong cell (volume is zero)
         """
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
 
         with self.assertRaises(ValueError):
             _ = StructureData(cell=((1.,0.,0.),(0.,1.,0.),(1.,1.,0.)))
@@ -1372,7 +1454,7 @@ class TestStructureDataInit(AiidaTestCase):
         """
         Correct cell
         """
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
 
         cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
         a = StructureData(cell=cell)
@@ -1386,7 +1468,7 @@ class TestStructureDataInit(AiidaTestCase):
         """
         Check the volume calculation
         """
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
 
         a = StructureData(cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.)))
         self.assertAlmostEqual(a.get_cell_volume(), 6.)
@@ -1395,7 +1477,7 @@ class TestStructureDataInit(AiidaTestCase):
         """
         Wrong pbc parameter (not bool or iterable)
         """
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
 
         with self.assertRaises(ValueError):
             cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
@@ -1405,7 +1487,7 @@ class TestStructureDataInit(AiidaTestCase):
         """
         Wrong pbc parameter (iterable but with wrong len)
         """
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
 
         with self.assertRaises(ValueError):
             cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
@@ -1415,7 +1497,7 @@ class TestStructureDataInit(AiidaTestCase):
         """
         Wrong pbc parameter (iterable but with wrong len)
         """
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
 
         with self.assertRaises(ValueError):
             cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
@@ -1425,7 +1507,7 @@ class TestStructureDataInit(AiidaTestCase):
         """
         Single pbc value
         """
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
 
         cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
         a = StructureData(cell=cell,pbc=True)
@@ -1438,7 +1520,7 @@ class TestStructureDataInit(AiidaTestCase):
         """
         One-element list
         """
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
 
         cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
         a = StructureData(cell=cell,pbc=[True])
@@ -1451,7 +1533,7 @@ class TestStructureDataInit(AiidaTestCase):
         """
         Three-element list
         """
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
 
         cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
         a = StructureData(cell=cell,pbc=[True,False,True])
@@ -1466,7 +1548,7 @@ class TestStructureData(AiidaTestCase):
         """
         Test the creation of a cell and the appending of atoms
         """
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
 
         cell = ((2.,0.,0.),(0.,2.,0.),(0.,0.,2.))
         a = StructureData(cell=cell)
@@ -1501,7 +1583,7 @@ class TestStructureData(AiidaTestCase):
         Test the management of kinds (automatic detection of kind of 
         simple atoms).
         """
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
 
         a = StructureData(cell=((2.,0.,0.),(0.,2.,0.),(0.,0.,2.)))
         
@@ -1518,7 +1600,7 @@ class TestStructureData(AiidaTestCase):
         """
         Test the management of kinds (manual specification of kind name).
         """
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
 
         a = StructureData(cell=((2.,0.,0.),(0.,2.,0.),(0.,0.,2.)))
         
@@ -1535,7 +1617,7 @@ class TestStructureData(AiidaTestCase):
         """
         Test the management of kinds (adding an atom with different mass).
         """
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
 
         a = StructureData(cell=((2.,0.,0.),(0.,2.,0.),(0.,0.,2.)))
         
@@ -1560,7 +1642,7 @@ class TestStructureData(AiidaTestCase):
         Test the management of kind (adding an atom with different symbols
         or weights).
         """
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
 
         a = StructureData(cell=((2.,0.,0.),(0.,2.,0.),(0.,0.,2.)))
         
@@ -1598,7 +1680,7 @@ class TestStructureData(AiidaTestCase):
         Test the management of kinds (automatic creation of new kind
         if name is not specified and properties are different).
         """
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
 
         a = StructureData(cell=((2.,0.,0.),(0.,2.,0.),(0.,0.,2.)))
         
@@ -1628,7 +1710,7 @@ class TestStructureDataLock(AiidaTestCase):
         """
         Start from a StructureData object, convert to raw and then back
         """
-        from aida.orm.dataplugins.structure import StructureData, Kind, Site
+        from aida.orm.data.structure import StructureData, Kind, Site
 
         cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
         a = StructureData(cell=cell)
@@ -1681,7 +1763,7 @@ class TestStructureDataReload(AiidaTestCase):
         """
         Start from a StructureData object, convert to raw and then back
         """
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
 
         cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
         a = StructureData(cell=cell)
@@ -1712,7 +1794,7 @@ class TestStructureDataReload(AiidaTestCase):
         """
         Start from a StructureData object, copy it and see if it is preserved
         """
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
 
         cell = ((1.,0.,0.),(0.,2.,0.),(0.,0.,3.))
         a = StructureData(cell=cell)
@@ -1760,11 +1842,11 @@ class TestStructureDataFromAse(AiidaTestCase):
     """
     Tests the creation of Sites from/to a ASE object.
     """
-    from aida.orm.dataplugins.structure import has_ase
+    from aida.orm.data.structure import has_ase
 
     @unittest.skipIf(not has_ase(),"Unable to import ase")
     def test_ase(self):
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
         import ase
 
         a = ase.Atoms('SiGe',cell=(1.,2.,3.),pbc=(True,False,False))
@@ -1789,7 +1871,7 @@ class TestStructureDataFromAse(AiidaTestCase):
 
     @unittest.skipIf(not has_ase(),"Unable to import ase")
     def test_conversion_of_types_1(self):
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
         import ase
 
         a = ase.Atoms('Si4Ge4',cell=(1.,2.,3.),pbc=(True,False,False))
@@ -1819,7 +1901,7 @@ class TestStructureDataFromAse(AiidaTestCase):
 
     @unittest.skipIf(not has_ase(),"Unable to import ase")
     def test_conversion_of_types_2(self):
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
         import ase
 
         a = ase.Atoms('Si4',cell=(1.,2.,3.),pbc=(True,False,False))
@@ -1852,7 +1934,7 @@ class TestStructureDataFromAse(AiidaTestCase):
         
     @unittest.skipIf(not has_ase(),"Unable to import ase")
     def test_conversion_of_types_3(self):
-        from aida.orm.dataplugins.structure import StructureData
+        from aida.orm.data.structure import StructureData
 
         a = StructureData()
         a.append_atom(position=(0.,0.,0.), symbols='Ba', name='Ba')

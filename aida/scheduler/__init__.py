@@ -43,6 +43,7 @@ class Scheduler(object):
         try:
             return self._logger
         except AttributeError:
+            from aida.common.exceptions import InternalError
             raise InternalError("No self._logger configured for {}!")
 
     def get_submit_script(self, job_tmpl):
@@ -68,7 +69,6 @@ class Scheduler(object):
         postpend_code
         postpend_computer
         """
-        from aida.scheduler.datastructures import JobTemplate
         from aida.common.exceptions import InternalError
         
         if not isinstance(job_tmpl, JobTemplate):
@@ -86,18 +86,18 @@ class Scheduler(object):
         script_lines.append(self._get_submit_script_header(job_tmpl))
         script_lines.append(empty_line)
 
-        if job_tmpl.prependText:
-            script_lines.append(job_tmpl.prependText)
+        if job_tmpl.prepend_text:
+            script_lines.append(job_tmpl.prepend_text)
             script_lines.append(empty_line)
 
         script_lines.append(self._get_run_line(
-                job_tmpl.argv, job_tmpl.stdinName,
-                job_tmpl.stdoutName, job_tmpl.stderrName,
-                job_tmpl.joinFiles))
+                job_tmpl.argv, job_tmpl.stdin_name,
+                job_tmpl.stdout_name, job_tmpl.stderr_name,
+                job_tmpl.join_files))
         script_lines.append(empty_line)
 
-        if job_tmpl.appendText:
-            script_lines.append(job_tmpl.appendText)
+        if job_tmpl.append_text:
+            script_lines.append(job_tmpl.append_text)
             script_lines.append(empty_line)
 
         return "\n".join(script_lines)
@@ -218,7 +218,7 @@ stderr:
         Args:
             jobs: a list of jobs to check; only these are checked
             as_dict: if False (default), a list of JobInfo objects is returned. If
-                True, a dictionary is returned, having as key the jobId and as value the
+                True, a dictionary is returned, having as key the job_id and as value the
                 JobInfo object.
         """
         retval, stdout, stderr = self.transport.exec_command_wait(
@@ -226,7 +226,7 @@ stderr:
         
         joblist = self._parse_joblist_output(retval, stdout, stderr)
         if as_dict:
-            jobdict = {j.jobId: j for j in joblist}
+            jobdict = {j.job_id: j for j in joblist}
             if None in jobdict:
                 raise SchedulerError("Found at least a job without jobid")
             return jobdict

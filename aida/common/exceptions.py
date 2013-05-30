@@ -20,6 +20,13 @@ class ModificationNotAllowed(AidaException):
     """
     pass
 
+class UniquenessError(AidaException):
+    """
+    Raised when the user tries to violate a uniqueness constraint (on the 
+    DB, for instance).
+    """
+    pass
+
 class MissingPluginError(AidaException):
     """
     Raised when the user tries to use a plugin that is not available or does not exist.

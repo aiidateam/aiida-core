@@ -1,6 +1,6 @@
 from aida.scheduler.plugins.pbspro import *
 import unittest
-import logging
+#import logging
 import uuid
         
 text_qstat_f_to_test = """Job Id: 68350.mycluster
@@ -351,40 +351,40 @@ class TestParserQstat(unittest.TestCase):
         self.assertEquals(job_parsed, job_on_cluster)
 
         job_running = 2
-        job_running_parsed = len([ j for j in job_list if j.jobState \
-                                   and j.jobState == jobStates.RUNNING ])
+        job_running_parsed = len([ j for j in job_list if j.job_state \
+                                   and j.job_state == job_states.RUNNING ])
         self.assertEquals(job_running,job_running_parsed)
 
         job_held = 2
-        job_held_parsed = len([ j for j in job_list if j.jobState \
-                                   and j.jobState == jobStates.QUEUED_HELD ])
+        job_held_parsed = len([ j for j in job_list if j.job_state \
+                                   and j.job_state == job_states.QUEUED_HELD ])
         self.assertEquals(job_held,job_held_parsed)
 
         job_queued = 2
-        job_queued_parsed = len([ j for j in job_list if j.jobState \
-                                   and j.jobState == jobStates.QUEUED ])
+        job_queued_parsed = len([ j for j in job_list if j.job_state \
+                                   and j.job_state == job_states.QUEUED ])
         self.assertEquals(job_queued,job_queued_parsed)
 
         running_users = ['user02','user3']
-        parsed_running_users = [ j.jobOwner for j in job_list if j.jobState \
-                                 and j.jobState == jobStates.RUNNING ]
+        parsed_running_users = [ j.job_owner for j in job_list if j.job_state \
+                                 and j.job_state == job_states.RUNNING ]
         self.assertEquals( set(running_users) , set(parsed_running_users) )
 
         running_jobs = ['69301.mycluster','74164.mycluster']
-        parsed_running_jobs = [ j.jobId for j in job_list if j.jobState \
-                                 and j.jobState == jobStates.RUNNING ]
+        parsed_running_jobs = [ j.job_id for j in job_list if j.job_state \
+                                 and j.job_state == job_states.RUNNING ]
         self.assertEquals( set(running_jobs) , set(parsed_running_jobs) )
         
         for j in job_list:
-            if j.allocatedNodes:
-                num_nodes = 0
-                num_cores = 0
-                for n in j.allocatedNodes:
-                    num_nodes += 1
-                    num_cores += n.numCores
+            if j.allocated_machines:
+                num_machines = 0
+                num_cpus = 0
+                for n in j.allocated_machines:
+                    num_machines += 1
+                    num_cpus += n.num_cpus
                     
-                self.assertTrue( j.numNodes==num_nodes )
-                self.assertTrue( j.numCores==num_cores )
+                self.assertTrue( j.num_machines==num_machines )
+                self.assertTrue( j.num_cpus==num_cpus )
         # TODO : parse the env_vars
 
 # TODO: WHEN WE USE THE CORRECT ERROR MANAGEMENT, REIMPLEMENT THIS TEST
@@ -424,10 +424,10 @@ class TestSubmitScript(unittest.TestCase):
 
         job_tmpl = JobTemplate()
         job_tmpl.argv = ["mpirun", "-np", "23", "pw.x", "-npool", "1"]
-        job_tmpl.stdinName = 'aida.in'
-        job_tmpl.numNodes = 1
+        job_tmpl.stdin_name = 'aida.in'
+        job_tmpl.num_machines = 1
         job_tmpl.uuid = str(uuid.uuid4())
-        job_tmpl.maxWallclockSeconds = 24 * 3600 
+        job_tmpl.max_wallclock_seconds = 24 * 3600 
 
         submit_script_text = s.get_submit_script(job_tmpl)
 

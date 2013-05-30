@@ -1,11 +1,12 @@
 import os
 
-from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
+from django.core.exceptions import ObjectDoesNotExist
 
 import aida.common
 #from aida.djsite.db.models import DbNode, Attribute
 from aida.common.exceptions import (
-    DbContentError, InternalError, ModificationNotAllowed, NotExistent, ValidationError )
+    DbContentError, InternalError, ModificationNotAllowed,
+    NotExistent, UniquenessError, ValidationError )
 from aida.common.folders import RepositoryFolder, SandboxFolder
 
 # Name to be used for the section
@@ -46,9 +47,13 @@ class Node(object):
         """
         from aida.djsite.db.models import DbNode
         try:
-            return DbNode.objects.get(uuid=uuid).get_aida_class()
+            node = DbNode.objects.get(uuid=uuid).get_aida_class()
         except ObjectDoesNotExist:
             raise NotExistent("No entry with UUID={} found".format(uuid))
+        if not isinstance(node, cls):
+            raise NotExistent("UUID={} is not an instance of {}".format(
+                uuid,cls.__name__))
+        return node
 
     @classmethod
     def get_subclass_from_pk(cls,pk):
@@ -58,9 +63,13 @@ class Node(object):
         """
         from aida.djsite.db.models import DbNode
         try:
-            return DbNode.objects.get(pk=pk).get_aida_class()
+            node = DbNode.objects.get(pk=pk).get_aida_class()
         except ObjectDoesNotExist:
             raise NotExistent("No entry with pk={} found".format(pk))
+        if not isinstance(node, cls):
+            raise NotExistent("pk={} is not an instance of {}".format(
+                pk,cls.__name__))        
+        return node
         
     def __int__(self):
         """
@@ -155,6 +164,24 @@ class Node(object):
     def get_user(self):
         return self.dbnode.user
 
+    def replace_link_from(self,src,label):
+        """
+        Replace an input link with the given label, or simply creates it
+        if it does not exist.
+        """
+        from django.db import transaction        
+        from aida.djsite.db.models import Link
+        
+        try:
+            self.add_link_from(src, label)
+        except UniquenessError:
+            # I have to replace the link; I do it within a transaction
+            with transaction.commit_on_success():
+                Link.objects.filter(output=self.dbnode,
+                                    label=label).delete()
+                self.add_link_from(src, label)
+
+
     def add_link_from(self,src,label=None):
         """
         Add a link to the current node from the 'src' node.
@@ -226,8 +253,9 @@ class Node(object):
                 transaction.savepoint_commit(sid)
             except IntegrityError as e:
                 transaction.savepoint_rollback(sid)
-                raise ValueError("There is already a link with the same name "
-                    "(raw message was {})".format(e.message))
+                raise UniquenessError("There is already a link with the same "
+                                      "name (raw message was {})"
+                                      "".format(e.message))
 
     def add_link_to(self,dest,label=None):
         """
@@ -246,6 +274,22 @@ class Node(object):
         Implement in subclasses
         """
         return True
+
+    def get_inputs_dict(self):
+        """
+        Return a dictionary where the key is the label of the input link, and
+        the value is the input node.
+        """
+        return dict(self.get_inputs(also_labels=True))
+
+    def get_inputdata_dict(self):
+        """
+        Return a dictionary where the key is the label of the input link, and
+        the value is the input node. Includes only the data nodes, no
+        calculations or codes.
+        """
+        from aida.orm import Data
+        return dict(self.get_inputs(type=Data, also_labels=True))
 
 
     def get_inputs(self,type=None,also_labels=False):
@@ -549,8 +593,8 @@ class Node(object):
         from aida.djsite.db.models import Attribute
                 
         if incrementversion:
-             self._increment_version_number_db()
-        attr, created = Attribute.objects.get_or_create(dbnode=self.dbnode, key=key)
+            self._increment_version_number_db()
+        attr, _ = Attribute.objects.get_or_create(dbnode=self.dbnode, key=key)
         ## TODO: create a get_or_create_with_value method in the djsite.db.models.Attribute class
         attr.setvalue(value)
 

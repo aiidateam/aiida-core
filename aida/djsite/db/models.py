@@ -1,14 +1,11 @@
-import getpass
-import os
-
 from django.db import models as m
 from django_extensions.db.fields import UUIDField
 from django.contrib.auth.models import User
 
 from django.db.models.query import QuerySet
 
-from aida.djsite.settings.settings import LOCAL_REPOSITORY
-from aida.common.exceptions import DbContentError, MissingPluginError
+from aida.common.exceptions import (
+    ConfigurationError, DbContentError, MissingPluginError)
 
 # Removed the custom User field, that was creating a lot of problems. Use
 # the email as UUID. In case we need it, we can do a couple of south migrations
@@ -55,15 +52,16 @@ class DbNode(m.Model):
     label = m.CharField(max_length=255, db_index=True, blank=True)
     description = m.TextField(blank=True)
     time = m.DateTimeField(auto_now_add=True, editable=False)
-    user = m.ForeignKey(User)
+    # Cannot delete a user if something is associated to it
+    user = m.ForeignKey(User, on_delete=m.PROTECT)
 
     # Direct links
     outputs = m.ManyToManyField('self', symmetrical=False, related_name='inputs', through='Link')  
     # Transitive closure
     children = m.ManyToManyField('self', symmetrical=False, related_name='parents', through='Path')
     
-    # Used only if dbnode is a calculation
-    computer = m.ForeignKey('DbComputer', null=True)  # only for calculations
+    # Used only if dbnode is a calculation, or remotedata
+    computer = m.ForeignKey('DbComputer', null=True, on_delete=m.PROTECT)
 
     # Index that is incremented every time a modification is done on itself or on attributes.
     # Managed by the aida.orm.Node class. Do not modify
@@ -98,7 +96,7 @@ class DbNode(m.Model):
         if baseclass == Calculation._plugin_type_string:
             if pluginclass:
                 try:
-                    PluginClass = load_plugin(Calculation, 'aida.orm.calculationplugins', pluginclass)
+                    PluginClass = load_plugin(Calculation, 'aida.orm.calculation', pluginclass)
                 except MissingPluginError:
                     aidalogger.warning("Unable to find calculation plugin for type '{}' (node={}), "
                                        "will use base Calculation class".format(self.type,self.uuid))
@@ -109,7 +107,7 @@ class DbNode(m.Model):
         elif baseclass == Code._plugin_type_string:
             if pluginclass:
                 try:
-                    PluginClass = load_plugin(Code, 'aida.orm.codeplugins', pluginclass)
+                    PluginClass = load_plugin(Code, 'aida.orm.code', pluginclass)
                 except MissingPluginError:
                     aidalogger.warning("Unable to find code plugin for type '{}' (node={}), "
                                        "will use base Code class".format(self.type,self.uuid))
@@ -120,7 +118,7 @@ class DbNode(m.Model):
         elif baseclass == Data._plugin_type_string:
             if pluginclass:
                 try:
-                    PluginClass = load_plugin(Data, 'aida.orm.dataplugins', pluginclass)
+                    PluginClass = load_plugin(Data, 'aida.orm.data', pluginclass)
                 except MissingPluginError:
                     aidalogger.warning("Unable to find data plugin for type '{}' (node={}), "
                                        "will use base Data class".format(self.type,self.uuid))
@@ -138,19 +136,13 @@ class DbNode(m.Model):
 
 class Link(m.Model):
     '''
-    Direct connection between two dbnodes. The label is identifying the link type.
+    Direct connection between two dbnodes. The label is identifying the
+    link type.
     '''
     input = m.ForeignKey('DbNode',related_name='output_links')
     output = m.ForeignKey('DbNode',related_name='input_links')
     #label for data input for calculation
     label = m.CharField(max_length=255, db_index=True, blank=True)
-    # a field to choose if this link is considered to build a transitive
-    # closure or not; NOT IMPLEMENTED FOR NOW
-    include_in_tc = m.BooleanField()
-
-    # TODO: implement deletion from TC table
-    # TODO: implement TC using the include_in_tc field, and trigger a delete when
-    #     include_in_tc is changed
 
     class Meta:
         # I cannot add twice the same link
@@ -166,22 +158,13 @@ class Link(m.Model):
                            ("output", "label"),
                            )
     
-    # TODO: I also want to check some more logic e.g. to avoid having
-    #       two calculations as input of a data object.
-    def save(self,*args,**kwargs):
-        if self.pk is None:
-            if ((self.input.type.startswith('calculation') or
-                 self.input.type.startswith('data')) and
-                (self.output.type.startswith('calculation') or
-                 self.output.type.startswith('data'))):
-                self.include_in_tc = True
-            else:
-                self.include_in_tc = False
-        super(Link,self).save(*args,**kwargs)
 
 class Path(m.Model):
     """
     Transitive closure table for all dbnode paths.
+    
+    # TODO: implement Transitive closure with MySql!
+    # TODO: if a link is updated, the TC should be updated accordingly
     """
     parent = m.ForeignKey('DbNode',related_name='child_paths',editable=False)
     child = m.ForeignKey('DbNode',related_name='parent_paths',editable=False)
@@ -191,7 +174,6 @@ class Path(m.Model):
     entry_edge_id = m.IntegerField(null=True,editable=False)
     direct_edge_id = m.IntegerField(null=True,editable=False)
     exit_edge_id = m.IntegerField(null=True,editable=False)
-
 
 attrdatatype_choice = (
     ('float', 'float'),
@@ -372,7 +354,7 @@ class DbComputer(m.Model):
     @classmethod
     def get_dbcomputer(cls,computer):
         from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
-        from aida.common.exceptions import DbContentError, NotExistent
+        from aida.common.exceptions import NotExistent
         from aida.orm import Computer
 
         if isinstance(computer, basestring):
@@ -411,8 +393,8 @@ class AuthInfo(m.Model):
     """
     aidauser = m.ForeignKey(User)
     computer = m.ForeignKey(DbComputer)
-    auth_params = m.TextField(default='{}')  # Will store a json; contains mainly the remoteuser
-                                             # and the private_key
+    auth_params = m.TextField(default='{}') # Will store a json; contains mainly the remoteuser
+                                            # and the private_key
 
     class Meta:
         unique_together = (("aidauser", "computer"),)
@@ -469,7 +451,7 @@ class DbWorkflowScript(m.Model):
     time        = m.DateTimeField(auto_now_add=True, editable=False)
     name        = m.CharField(max_length=255, editable=False, blank=False, unique=True)
     version     = m.IntegerField()
-    user        = m.ForeignKey(User)
+    user        = m.ForeignKey(User, on_delete=m.PROTECT)
     comment     = m.TextField(blank=True)  
     repo_folder = m.CharField(max_length=255)
 
@@ -478,7 +460,7 @@ class DbWorkflow(m.Model):
     uuid        = UUIDField(auto=True)
     time        = m.DateTimeField(auto_now_add=True, editable=False)
     version     = m.IntegerField()
-    user        = m.ForeignKey(User)
+    user        = m.ForeignKey(User, on_delete=m.PROTECT)
     script      = m.ForeignKey(DbWorkflowScript, related_name='instances')
     status       = m.CharField(max_length=255, choices=workflow_status, default='running')
     
@@ -513,7 +495,7 @@ class DbWorkflowStep(m.Model):
 
     workflow     = m.ForeignKey(DbWorkflow, related_name='steps')
     name         = m.CharField(max_length=255, blank=False)
-    user         = m.ForeignKey(User)
+    user         = m.ForeignKey(User, on_delete=m.PROTECT)
     time         = m.DateTimeField(auto_now_add=True, editable=False)
     nextcall     = m.CharField(max_length=255, blank=False, default=workflow_step_exit)
     calculations = m.ManyToManyField('DbNode', symmetrical=False, related_name="steps")
@@ -543,10 +525,10 @@ class DbWorkflowStep(m.Model):
 
     def update_status(self, extended = False):
 
-        from aida.common.datastructures import calcStates
+        from aida.common.datastructures import calc_states
 
         calc_status = self.calculations.filter(attributes__key="_state").values_list("uuid", "attributes__tval")
         s = set([l[1] for l in calc_status])
-        if len(s)==1 and s[0]==calcStates.RETRIEVED:
+        if len(s)==1 and s[0]==calc_states.RETRIEVED:
             self.status = 'finished'
         

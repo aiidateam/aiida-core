@@ -68,12 +68,6 @@ class Code(Node):
                                  "name")
             self.set_remote_machine_exec(*remote_machine_exec)
 
-        input_plugin = kwargs.pop('input_plugin', None)
-        self.set_input_plugin(input_plugin)
-
-        output_plugin = kwargs.pop('output_plugin', None)
-        self.set_output_plugin(output_plugin)
-
         if kwargs:
             raise ValueError("Invalid parameters found in the __init__: {}".format(kwargs.keys()))
 
@@ -141,38 +135,6 @@ class Code(Node):
         Return the postexec_code, or an empty string if no post-exec code was defined.
         """
         return self.get_attr('append_text',u"")
-
-    def set_input_plugin(self, input_plugin):
-        """
-        Set a string for the input plugin
-
-        TODO: check that the plugin referenced by th string input_plugin actually exists
-        """
-        if input_plugin is None:
-            raise ValueError("You need to specify an input plugin")
-        self.set_attr('input_plugin', input_plugin)
-        
-    def get_input_plugin(self):
-        """
-        Return the input plugin
-        """
-        return self.get_attr('input_plugin')
-
-    def set_output_plugin(self, output_plugin):
-        """
-        Set a string for the output plugin
-        Can be none if no output plugin is available/needed
-
-        TODO: check that the plugin referenced by th string input_plugin actually exists
-        """
-        self.set_attr('output_plugin', output_plugin)
-        
-    def get_output_plugin(self):
-        """
-        Return the output plugin
-        """
-        return self.get_attr('output_plugin',None)
-
 
     def set_local_executable(self,exec_name):
         """

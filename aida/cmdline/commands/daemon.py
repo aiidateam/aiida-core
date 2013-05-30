@@ -2,8 +2,6 @@ import sys
 import os
 import subprocess
 
-import aida
-from aida.common.utils import get_config
 from aida.cmdline.baseclass import VerdiCommand
 
 daemon_subdir    = "daemon"
@@ -22,10 +20,10 @@ class Daemon(VerdiCommand):
     # A dictionary with valid commands and functions to be called
     def __init__(self):
         self.valid_subcommands = {
-            '--start': self.daemon_start,
-            '--stop' : self.daemon_stop,
-            '--status': self.daemon_status,
-            '--restart': self.daemon_restart,
+            'start': self.daemon_start,
+            'stop' : self.daemon_stop,
+            'status': self.daemon_status,
+            'restart': self.daemon_restart,
             }
 
     def run(self,*args):       
@@ -55,7 +53,7 @@ class Daemon(VerdiCommand):
                 return int(open(
                         os.path.join(aida_dir, daemon_subdir,
                                      "supervisord.pid"), 'r').read().strip())
-            except ValueError, IOError:
+            except (ValueError, IOError):
                 return None
         else:
             return None

@@ -1,6 +1,5 @@
-import unittest
-import logging
-import aida
+import unittest 
+
 from aida.transport.plugins.local import *
 from aida.common.pluginloader import load_plugin
 from aida.transport.plugin_test import *
@@ -10,12 +9,22 @@ PluginTransport = load_plugin(
     Transport,'aida.transport.plugins', 'local')
 aida.transport.plugin_test.custom_transport = PluginTransport()
     
+class TestGeneric(unittest.TestCase):
+    """
+    Test whoami on localhost.
+    """
+    def test_whoami(self):
+        import getpass
+        with LocalTransport() as t:
+            self.assertEquals( t.whoami() , getpass.getuser() )    
+    
 class TestBasicConnection(unittest.TestCase):
     """
     Test basic connections.
     """
     def test_closed_connection(self):
-        with self.assertRaises(aida.transport.TransportInternalError):
+        from aida.transport import TransportInternalError
+        with self.assertRaises(TransportInternalError):
             t = LocalTransport()
             t.listdir()
             
@@ -24,7 +33,7 @@ class TestBasicConnection(unittest.TestCase):
             LocalTransport(unrequired_var='something')
             
     def test_basic(self):
-        with LocalTransport() as t:
+        with LocalTransport():
             pass
 
 if __name__ == '__main__':

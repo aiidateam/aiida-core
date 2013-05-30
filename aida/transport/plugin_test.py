@@ -203,7 +203,7 @@ class TestDirectoryManipulation(unittest.TestCase):
         # Imports required later
         import random
         import string
-        import os,stat
+        import os
 
         with custom_transport as t:
             location = t.normalize(os.path.join('/','tmp'))
@@ -261,7 +261,7 @@ class TestDirectoryManipulation(unittest.TestCase):
         # Imports required later
         import random
         import string
-        import os,stat
+        import os
 
         with custom_transport as t:
             location = t.normalize(os.path.join('/','tmp'))
@@ -974,7 +974,7 @@ class TestExecuteCommandWait(unittest.TestCase):
         # I pass a number
         with custom_transport as t:
             with self.assertRaises(ValueError):
-                retcode, stdout, stderr = t.exec_command_wait(
+                _ = t.exec_command_wait(
                     'cat', stdin=1)
 
 

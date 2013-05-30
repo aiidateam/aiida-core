@@ -1,5 +1,3 @@
-import os
-
 from aida.orm import Data
 
 class ParameterData(Data):

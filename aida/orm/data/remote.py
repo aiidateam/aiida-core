@@ -1,5 +1,3 @@
-import os
-
 from aida.orm import Data
 
 
@@ -44,6 +42,7 @@ class RemoteData(Data):
         """
         Disable adding files or directories to a RemoteData
         """
+        from aida.common.exceptions import ModificationNotAllowed
         raise ModificationNotAllowed("Cannot add files or directories to a RemoteData object")
 
     def validate(self):

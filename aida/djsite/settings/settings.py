@@ -283,5 +283,9 @@ CELERYBEAT_SCHEDULE = {
         'task':'aida.djsite.db.tasks.update_and_retrieve',
         'schedule': timedelta(seconds=30),
         },
+    'workflow_stepper': {
+        'task':'aida.djsite.db.tasks.workflow_stepper',
+        'schedule': timedelta(seconds=10),
+        },
 }
 

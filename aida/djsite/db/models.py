@@ -440,29 +440,63 @@ class Comment(m.Model):
 # Workflows
 #
 
-workflow_step_exit = "wf_exit"
-workflow_status = (('running', 'running'),
-    ('finished', 'finished'),
-)
+#WF_RUNNING +
+#workflow_step_exit = "wf_exit"
+#workflow_status = (('running', 'running'),
+#    ('finished', 'finished'),
+#)
 
-class DbWorkflowScript(m.Model):
-    
-    uuid        = UUIDField(auto=True)
-    time        = m.DateTimeField(auto_now_add=True, editable=False)
-    name        = m.CharField(max_length=255, editable=False, blank=False, unique=True)
-    version     = m.IntegerField()
-    user        = m.ForeignKey(User, on_delete=m.PROTECT)
-    comment     = m.TextField(blank=True)  
-    repo_folder = m.CharField(max_length=255)
+# class DbWorkflow(m.Model):
+#     
+#     uuid        = UUIDField(auto=True)
+#     time        = m.DateTimeField(auto_now_add=True, editable=False)
+#     name        = m.CharField(max_length=255, editable=False, blank=False, unique=True)
+#     version     = m.IntegerField()
+#     user        = m.ForeignKey(User, on_delete=m.PROTECT)
+#     comment     = m.TextField(blank=True)  
+#     repo_folder = m.CharField(max_length=255)
 
 class DbWorkflow(m.Model):
     
-    uuid        = UUIDField(auto=True)
-    time        = m.DateTimeField(auto_now_add=True, editable=False)
-    version     = m.IntegerField()
-    user        = m.ForeignKey(User, on_delete=m.PROTECT)
-    script      = m.ForeignKey(DbWorkflowScript, related_name='instances')
-    status       = m.CharField(max_length=255, choices=workflow_status, default='running')
+    from aida.common.datastructures import wf_states
+    
+    uuid         = UUIDField(auto=True)
+    time         = m.DateTimeField(auto_now_add=True, editable=False)
+    user         = m.ForeignKey(User, on_delete=m.PROTECT)
+    # File variables, script is the complete dump of the workflow python script
+    module       = m.TextField(blank=False)
+    module_class = m.TextField(blank=False)
+    script_path  = m.TextField(blank=False)
+    script_md5   = m.CharField(max_length=255, blank=False)
+    
+    status       = m.CharField(max_length=255, choices=zip(list(wf_states), list(wf_states)), default=wf_states.RUNNING)
+    
+    def set_status(self, _status):
+        
+        self.status = _status;
+        self.save()
+        
+    def add_parameters(self, dict):
+        
+        import json
+        try:
+            
+            for k in dict.keys():            
+                p = DbWorkflowParameters.objects.create(workflow=self,name = k, value = json.dumps(dict[k]))
+                self.params.add(p)
+                
+        except:
+            raise ValueError("Error adding parameters")
+        
+    def get_parameters(self):
+        
+        try:
+            dict = {}
+            for p in DbWorkflowParameters.objects.filter(workflow=self):
+                dict[p.name] = p.deserialize()
+            return dict
+        except:
+            raise ValueError("Error retrieving parameters")
     
     def get_calculations(self):
         
@@ -471,7 +505,8 @@ class DbWorkflow(m.Model):
 
     def finish(self):
         self.status = 'finished'
-    
+
+        
 class DbWorkflowParameters(m.Model):
 
     workflow     = m.ForeignKey(DbWorkflow, related_name='params')
@@ -490,16 +525,18 @@ class DbWorkflowParameters(m.Model):
         except:
             raise ValueError("Cannot rebuild the parameter {}".format(self.name))
         
-    
+        
 class DbWorkflowStep(m.Model):
 
+    from aida.common.datastructures import wf_states, wf_exit_call
+    
     workflow     = m.ForeignKey(DbWorkflow, related_name='steps')
     name         = m.CharField(max_length=255, blank=False)
     user         = m.ForeignKey(User, on_delete=m.PROTECT)
     time         = m.DateTimeField(auto_now_add=True, editable=False)
-    nextcall     = m.CharField(max_length=255, blank=False, default=workflow_step_exit)
+    nextcall     = m.CharField(max_length=255, blank=False, default=wf_exit_call)
     calculations = m.ManyToManyField('DbNode', symmetrical=False, related_name="steps")
-    status       = m.CharField(max_length=255, choices=workflow_status, default='running')
+    status       = m.CharField(max_length=255, choices=zip(list(wf_states), list(wf_states)), default=wf_states.RUNNING)
 
     class Meta:
         unique_together = (("workflow", "name"))
@@ -523,12 +560,33 @@ class DbWorkflowStep(m.Model):
         
         return Calculation.query(steps=self)#pk__in = step.calculations.values_list("pk", flat=True))
 
-    def update_status(self, extended = False):
+    def get_calculations_status(self, extended=False):
 
-        from aida.common.datastructures import calc_states
+        from aida.common.datastructures import calc_states, wf_states, wf_exit_call
 
         calc_status = self.calculations.filter(attributes__key="_state").values_list("uuid", "attributes__tval")
+        if (extended):
+            for c in calc_status:
+                print "Calculation {0} is {1}".format(c[0], c[1])
+                
         s = set([l[1] for l in calc_status])
-        if len(s)==1 and s[0]==calc_states.RETRIEVED:
-            self.status = 'finished'
+        if len(s)==1 and calc_states.RETRIEVED in s:
+            return wf_states.FINISHED
+        else: 
+            return wf_states.RUNNING
+    
+    def is_finished(self):
         
+        from aida.common.datastructures import calc_states, wf_states, wf_exit_call
+        
+        return self.status==wf_states.FINISHED
+        
+    def set_nextcall(self, _nextcall):
+        
+        self.nextcall = _nextcall;
+        self.save()
+        
+    def set_status(self, _status):
+        
+        self.status = _status;
+        self.save()

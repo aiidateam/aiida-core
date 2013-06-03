@@ -1,11 +1,26 @@
-from aida.orm import Calculation
+#!/usr/bin/env python
+import sys
+from aiida.orm import Calculation
+from aiida.common.utils import load_django
 
-for pk in [154, 160, 166]:
-  print '#'*20
-  print '### CALC pk={}'.format(pk)
-  print '#'*20
+load_django()
 
+calcs = []
+if not sys.argv[1:]:
+  print >> sys.stderr, "pass at least on pk"
+  sys.exit(1)
+for i in sys.argv[1:]:
+  try:
+    calcs.append(int(i))
+  except ValueError:
+    print >> sys.stderr, "Ignoring invalid pk={}".format(i)
+
+for pk in calcs:
   c = Calculation.get_subclass_from_pk(pk)
+  print '#'*20
+  print '### CALC pk={}'.format(pk), c.__class__.__name__
+  print '#'*20
+
   print "*** INPUTS:"
   for label, obj in c.get_inputs(also_labels=True):
       print '  {} -> {}[{}]'.format(label, type(obj).__name__,obj.pk),

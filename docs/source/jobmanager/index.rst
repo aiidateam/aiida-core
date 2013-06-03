@@ -1,9 +1,9 @@
-.. aida documentation master file, created by
+.. aiida documentation master file, created by
    sphinx-quickstart on Wed Oct 24 11:33:37 2012.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-aida.jobmanager documentation
+aiida.jobmanager documentation
 =============================
 
 Contents:

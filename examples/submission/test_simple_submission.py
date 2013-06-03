@@ -1,87 +1,152 @@
 #!/usr/bin/env python
 import sys
 import os
+import paramiko
+import getpass
 
 try:
-    remoteuser = sys.argv[1]
+    machine = sys.argv[1]
 except IndexError:
-    print >> sys.stderr, "Remote Username automatically set to the local username"
-    import getpass
-    remoteuser = getpass.getuser()
+    print >> sys.stderr, "Pass the machine name."
+    sys.exit(1)
 
-
-from aida.common.utils import load_django
+from aiida.common.utils import load_django
 load_django()
 
-from aida.common import aidalogger
+from aiida.common import aiidalogger
 import logging
-aidalogger.setLevel(logging.INFO)
+aiidalogger.setLevel(logging.INFO)
 
 import tempfile
 import datetime
 
-from aida.orm import Calculation, Code, Data, Computer
-from aida.execmanager import submit_calc
-from aida.djsite.utils import get_automatic_user
+from aiida.common.pluginloader import load_plugin 
+from aiida.orm import Calculation, Code, Computer
+from aiida.execmanager import submit_calc
+from aiida.djsite.utils import get_automatic_user
 
-#from aida.common.pluginloader import load_plugin
-#ParameterData = load_plugin(Data, 'aida.orm.dataplugins', 'parameter')
-from aida.orm.dataplugins.parameter import ParameterData
-from aida.orm.dataplugins.singlefile import SinglefileData
-from aida.orm.dataplugins.remote import RemoteData
+#from aiida.common.pluginloader import load_plugin
+#ParameterData = load_plugin(Data, 'aiida.orm.data', 'parameter')
+from aiida.orm.data.parameter import ParameterData
+from aiida.orm.data.singlefile import SinglefileData
+from aiida.orm.data.remote import RemoteData
 
-computername = "bellatrix.epfl.ch"
+#print ParameterData.__module__
+
 # A string with the version of this script, used to recreate a code when necessary
-current_version = "1.0.4"
+current_version = "1.0.5"
 queue = None
 #queue = "P_share_queue"
 
-
 def get_or_create_machine():
     import json
-    from aida.common.exceptions import NotExistent
-
+    from aiida.common.exceptions import NotExistent
+    from aiida.djsite.db.models import AuthInfo
+        
 #    # I can delete the computer first
 #### DON'T DO THIS! WILL ALSO DELETE ALL CALCULATIONS THAT WERE USING
 #### THIS COMPUTER!
-#    from aida.djsite.db.models import DbComputer
+#    from aiida.djsite.db.models import DbComputer
 #    DbComputer.objects.filter(hostname=computername).delete()
     
-    try:
-        computer = Computer.get(computername)
-        print >> sys.stderr, "Using the existing computer {}...".format(computername)
-    except NotExistent:
-        print >> sys.stderr, "Creating a new computer..."
-        computer = Computer(hostname=computername,transport_type='ssh',
-                            scheduler_type='pbspro')
-        computer.set_workdir("/scratch/{username}/aida")
-        computer.store()
+    if machine == 'localhost':
+        try:
+            computer = Computer.get("localhost")
+            print >> sys.stderr, "Using the existing computer {localhost}..."
+        except NotExistent:
+            print >> sys.stderr, "Creating a new localhostcomputer..."
+            computer = Computer(hostname="localhost",transport_type='local',
+                                scheduler_type='pbspro')
+            computer.set_workdir("/tmp/{username}/aiida")
+            computer.set_mpirun_command("mpirun", "-np", "{tot_num_cpus}")
+            computer.store()
 
-    from aida.djsite.db.models import AuthInfo
-    auth_params = {'username': remoteuser,
-             'load_system_host_keys': True}
+        auth_params = {}
 
-    if os.path.exists('~/.ssh/id_rsa'):
-        auth_params['key_filename'] = os.path.expanduser('~/.ssh/id_rsa')
-    elif os.path.exists('~/.ssh.id_dsa'):
-        auth_params['key_filename'] = os.path.expanduser('~/.ssh/id_rsa')
+        authinfo, created = AuthInfo.objects.get_or_create(
+            aiidauser=get_automatic_user(),
+            computer=computer.dbcomputer, 
+            defaults= {'auth_params': json.dumps(auth_params)},
+            )
 
-    authinfo, created = AuthInfo.objects.get_or_create(
-        aidauser=get_automatic_user(),
-        computer=computer.dbcomputer, 
-        defaults= {'auth_params': json.dumps(auth_params)},
-        )
+        if created:
+            print "  (Created authinfo)"
+        else:
+            print "  (Retrieved authinfo)"
 
-    if created:
-        print "  (Created authinfo)"
-    else:
-        print "  (Retrieved authinfo)"
-    
+    else: # ssh case
+        if machine.startswith('bellatrix'):
+            computername = "bellatrix.epfl.ch"
+            schedulertype = 'pbspro'
+            workdir = "/scratch/{username}/aiida"
+            mpirun_command = ['mpirun', '-np', '{tot_num_cpus}']
+        elif machine.startswith('rosa'):
+            computername = "rosa.cscs.ch"
+            schedulertype = 'slurm'
+            workdir = "/scratch/rosa/{username}/aiida"
+            mpirun_command = ['aprun', '-n', '{tot_num_cpus}']
+        else:
+            print >> sys.stderr, "Unkown computer!"
+            sys.exit(1)
+            
+        try:
+            computer = Computer.get(computername)
+            print >> sys.stderr, "Using the existing computer {}...".format(computername)
+        except NotExistent:
+            print >> sys.stderr, "Creating a new computer..."
+            computer = Computer(hostname=computername,transport_type='ssh',
+                                scheduler_type=schedulertype)
+            computer.set_workdir(workdir)
+            computer.set_mpirun_command(mpirun_command)
+            computer.store()
+
+        auth_params = {'load_system_host_keys': True}
+
+
+        config = paramiko.SSHConfig()
+        try:
+            config.parse(open(os.path.expanduser('~/.ssh/config')))
+        except IOError:
+            # No file found, so empty configuration
+            pass
+        # machine_config is a dict with only relevant properties set
+        machine_config = config.lookup(computername)
+
+        try:
+            auth_params['username'] = machine_config['user']
+        except KeyError:
+            # No user set up in the config file: I explicitly set the local username
+            auth_params['username'] = getpass.getuser()
+
+        try:
+            auth_params['key_filename'] = os.path.expanduser(
+                machine_config['identityfile'])
+        except KeyError:
+            pass 
+        
+        try:
+            auth_params['port'] = machine_config['port']
+        except KeyError:
+            pass       
+
+        authinfo, created = AuthInfo.objects.get_or_create(
+            aiidauser=get_automatic_user(),
+            computer=computer.dbcomputer, 
+            defaults= {'auth_params': json.dumps(auth_params)},
+            )
+
+        if created:
+            print "  (Created authinfo)"
+        else:
+            print "  (Retrieved authinfo)"
+        print "*** AuthInfo: "
+        for k,v in json.loads(authinfo.auth_params).iteritems():
+            print "{} = {}".format(k, v)
+        print ""
+
     return computer
 
 def get_or_create_code():
-    import tempfile
-
     useful_codes = Code.query(attributes__key="_local_executable",
                               attributes__tval="sum.py").filter(
                                   attributes__key="version", attributes__tval=current_version)
@@ -121,8 +186,7 @@ except IOError:
     sys.exit(1)
 """)
             f.flush()
-            code = Code(local_executable = "sum.py", 
-                        input_plugin='simpleplugins.templatereplacer')
+            code = Code(local_executable = "sum.py")
             code.add_path(f.name, "sum.py")
             code.store()
             code.set_metadata("version", current_version)
@@ -162,27 +226,31 @@ with tempfile.NamedTemporaryFile() as f:
     # I don't worry of the name with which it is internally stored
     fileparam = SinglefileData(filename=f.name).store()
 
-remoteparam = RemoteData(remote_machine="bellatrix.epfl.ch",
-    remote_path="/home/{}/.bashrc".format(remoteuser) ).store()
+remoteparam = RemoteData(remote_machine=computer.hostname,
+                         remote_path="/etc/inittab").store()
 
-calc = Calculation(computer=computer)
+CustomCalc = load_plugin(Calculation, 'aiida.orm.calculation',
+                         'simpleplugins.templatereplacer')
+calc = CustomCalc(computer=computer)
 calc.set_max_wallclock_seconds(12*60) # 12 min
-calc.set_num_nodes(1)
-calc.set_num_cpus_per_node(1)
+calc.set_num_machines(1)
+calc.set_num_cpus_per_machine(1)
 if queue is not None:
     calc.set_queue_name(queue)
 calc.store()
 print "created calculation; calc=Calculation(uuid='{}') # ID={}".format(
     calc.uuid,calc.dbnode.pk)
 
-calc.add_link_from(code)
+calc.set_code(code)
+## Just for debugging purposes, I check that I can 'reset' the code
+#calc.set_code(code)
 
 calc.add_link_from(template_data, label="template")
 calc.add_link_from(parameters, label="parameters")
 calc.add_link_from(fileparam, label="the_only_local_file")
 calc.add_link_from(remoteparam, label="the_only_remote_node")
 
-submit_calc(calc)
+calc.submit()
 print "submitted calculation; calc=Calculation(uuid='{}') # ID={}".format(
     calc.uuid,calc.dbnode.pk)
 

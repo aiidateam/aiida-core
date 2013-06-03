@@ -1,6 +1,6 @@
 ####################
-AIDADB Complex Views
+AiiDADB Complex Views
 ####################
 
-.. automodule:: aidadb.data.views
+.. automodule:: aiidadb.data.views
    :members:

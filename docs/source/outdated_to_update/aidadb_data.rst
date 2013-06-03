@@ -1,18 +1,18 @@
 ##########################
-AIDADB Data Modules 
+AiiDADB Data Modules 
 ##########################
 
 .. toctree::
    :maxdepth: 2
 
-   ORM Models <aidadb_data_models>
+   ORM Models <aiidadb_data_models>
 
-   Data Changelist Items <aidadb_data_myadmin>
+   Data Changelist Items <aiidadb_data_myadmin>
 
-   Calculation Forms for use in Views <aidadb_data_calcforms>
+   Calculation Forms for use in Views <aiidadb_data_calcforms>
 
-   Simple Views <aidadb_data_simpleviews>
+   Simple Views <aiidadb_data_simpleviews>
 
-   More complex views for action items <aidadb_data_views>
+   More complex views for action items <aiidadb_data_views>
 
 

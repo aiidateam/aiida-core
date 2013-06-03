@@ -1,6 +1,6 @@
 ##########################
-AIDADB Data MyAdmin
+AiiDADB Data MyAdmin
 ##########################
 
-.. automodule:: aidadb.data.myadmin
+.. automodule:: aiidadb.data.myadmin
    :members:

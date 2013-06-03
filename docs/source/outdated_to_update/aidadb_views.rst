@@ -1,6 +1,6 @@
 ############
-AIDADB Views
+AiiDADB Views
 ############
 
-.. automodule:: aidadb.views
+.. automodule:: aiidadb.views
    :members:

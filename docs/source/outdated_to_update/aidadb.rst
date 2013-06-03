@@ -1,16 +1,16 @@
 ##########
-AIDADB ORM
+AiiDADB ORM
 ##########
 
-Details of the DJANGO ORM for AIDADB
+Details of the DJANGO ORM for AiiDADB
 ------------------------------------
 .. toctree::
    :maxdepth: 3
 
-   aidadb_urls 
+   aiidadb_urls 
 
-   aidadb_views
+   aiidadb_views
 
-   aidadb_data
+   aiidadb_data
 
-   aidadb_utils
+   aiidadb_utils

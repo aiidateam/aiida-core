@@ -1,11 +1,11 @@
 #############
-AIDADB Utils 
+AiiDADB Utils 
 #############
 
-Details of the utilities for AIDA
+Details of the utilities for AiiDA
 ---------------------------------
 .. toctree::
    :maxdepth: 3
 
-   aidadb_utils_dirlist
+   aiidadb_utils_dirlist
 

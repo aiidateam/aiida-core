@@ -1,5 +1,5 @@
 ==============================================
-Installation and Deployment of AIDA
+Installation and Deployment of AiiDA
 ==============================================
 
 1. Download the Community python edition of ActiveState Python from
@@ -24,12 +24,12 @@ install ActiveState using :program:`install.sh`.
 
 .. _GoogleCode: http://code.google.com/p/modwsgi/
 
-6. Download the AIDA distribution to /usr/local/www/aida using svn.
+6. Download the AiiDA distribution to /usr/local/www/aiida using svn.
 
 7. Copy the following files::
 
-      $ cp /usr/local/www/aida/aidadb/apache/mod_wsgi.conf  /etc/httpd/conf.d/
-      $ cp /usr/local/www/aida/aidadb/apache/z_aida_wsgi.conf  /etc/httpd/conf.d/
+      $ cp /usr/local/www/aiida/aiidadb/apache/mod_wsgi.conf  /etc/httpd/conf.d/
+      $ cp /usr/local/www/aiida/aiidadb/apache/z_aiida_wsgi.conf  /etc/httpd/conf.d/
 
    and edit them as you see fit.
 

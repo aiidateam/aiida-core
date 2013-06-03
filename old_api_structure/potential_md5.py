@@ -3,15 +3,15 @@ This module manages the pseudopotentials in the local repository and their
 maintainance also in the database table 'potential'.
 """
 import hashlib
-from aida.djsite.main.models import Potential, PotAttrTxt, PotAttrTxtVal
-from aida.djsite.main.models import Element
+from aiida.djsite.main.models import Potential, PotAttrTxt, PotAttrTxtVal
+from aiida.djsite.main.models import Element
 import logging
 import os, os.path
 import re
-from aida.repository.utils.files import RepositoryFolder
+from aiida.repository.utils.files import RepositoryFolder
 from django.core.exceptions import ObjectDoesNotExist
-from aida.common.exceptions import ValidationError
-from aida.repository.utils.files import SandboxFolder
+from aiida.common.exceptions import ValidationError
+from aiida.repository.utils.files import SandboxFolder
 
 logger = logging.getLogger(__name__)
 
@@ -149,7 +149,7 @@ def get_potential_from_uuid(uuid):
     Args:
         uuid: a string with the uuid.
     Returns:
-        a aida.djsite.main.Potential object.
+        a aiida.djsite.main.Potential object.
     Raises:
         ValueError if no Potential entry could be found with that UUID.
             (The field has the unique attribute, so no more than one
@@ -166,7 +166,7 @@ def get_potential_from_uuid(uuid):
  
 ##"""
 ##    Note that the 'title' field of the Potential entry corresponds
-##    to the filename in the 'potentials' section of the aida local repository.
+##    to the filename in the 'potentials' section of the aiida local repository.
 ##    This title is generated starting from the provided filename, using the
 ##    following rule:
 ##    * the basename (without extensions) is retrieved

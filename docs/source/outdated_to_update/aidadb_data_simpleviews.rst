@@ -1,6 +1,6 @@
 ###################
-AIDADB Simple Views
+AiiDADB Simple Views
 ###################
 
-.. automodule:: aidadb.data.simple_views
+.. automodule:: aiidadb.data.simple_views
    :members:

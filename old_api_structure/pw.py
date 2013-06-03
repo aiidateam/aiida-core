@@ -55,14 +55,14 @@ def get_input_data_text(key,val):
 
 
 
-from aida.common.exceptions import InputValidationError
-from aida.common.classes.structure import Sites
-from aida.common.utils import get_suggestion
-from aida.codeplugins.quantumespresso import (
+from aiida.common.exceptions import InputValidationError
+from aiida.common.classes.structure import Sites
+from aiida.common.utils import get_suggestion
+from aiida.codeplugins.quantumespresso import (
     conv_to_fortran, get_input_data_text)
-from aida.common.utils import get_unique_filename
-from aida.repository.structure import get_sites_from_uuid
-from aida.repository.potential import get_potential_from_uuid
+from aiida.common.utils import get_unique_filename
+from aiida.repository.structure import get_sites_from_uuid
+from aiida.repository.potential import get_potential_from_uuid
 import os
 
 # List of namelists (uppercase) that are allowed to be found in the
@@ -131,13 +131,13 @@ def create_calc_input(calc, work_folder):
         calc: the calculation object for which we want to create the 
             input file.
         work_folder: the folder where we want to create the files. Should
-            be a aida.common.classes.folder.Folder object.
+            be a aiida.common.classes.folder.Folder object.
 
     Returns:
         a dictionary with the following keys:
             retrieve_output: a list of files, directories or patterns to be
                 retrieved from the cluster scratch dir and copied in the
-                permanent aida repository.
+                permanent aiida repository.
             cmdline_params: a (possibly empty) string with the command line
                 parameters to pass to the code.
             stdin: a string with the file name to be used as standard input,
@@ -165,12 +165,12 @@ def create_calc_input(calc, work_folder):
     """
     PSEUDO_SUBFOLDER = './pseudo/'
     OUTPUT_SUBFOLDER = './out/'
-    PREFIX = 'aida'
+    PREFIX = 'aiida'
 
     retdict = {}
     retdict['cmdline_params'] = "" # possibly -npool and similar
-    retdict['stdin'] = 'aida.in'
-    retdict['stdout'] = 'aida.out'
+    retdict['stdin'] = 'aiida.in'
+    retdict['stdout'] = 'aiida.out'
     retdict['stderr'] = None
     retdict['preexec'] = ""
     retdict['postexec'] = ""
@@ -277,7 +277,7 @@ def create_calc_input(calc, work_folder):
                          if i[1]]
         if len(pot_file_list) != 1:
             raise InputValidationError(
-                "The potential folder on the AIDA repository "
+                "The potential folder on the AiiDA repository "
                 "contains {:d} files, while I can manage only 1 file for "
                 "Quantum Espresso.".format(len(pot_file_list)))
         # I create a unique filename. This is only the file name

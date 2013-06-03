@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from aida.common.utils import load_django
+from aiida.common.utils import load_django
 load_django()
 
 def shorten(v):
@@ -12,7 +12,7 @@ def shorten(v):
         return text
 
 import sys
-from aida.orm import Calculation
+from aiida.orm import Calculation
 
 try:
     idstr = sys.argv[1]

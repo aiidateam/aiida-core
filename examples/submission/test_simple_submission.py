@@ -10,26 +10,26 @@ except IndexError:
     print >> sys.stderr, "Pass the machine name."
     sys.exit(1)
 
-from aida.common.utils import load_django
+from aiida.common.utils import load_django
 load_django()
 
-from aida.common import aidalogger
+from aiida.common import aiidalogger
 import logging
-aidalogger.setLevel(logging.INFO)
+aiidalogger.setLevel(logging.INFO)
 
 import tempfile
 import datetime
 
-from aida.common.pluginloader import load_plugin 
-from aida.orm import Calculation, Code, Computer
-from aida.execmanager import submit_calc
-from aida.djsite.utils import get_automatic_user
+from aiida.common.pluginloader import load_plugin 
+from aiida.orm import Calculation, Code, Computer
+from aiida.execmanager import submit_calc
+from aiida.djsite.utils import get_automatic_user
 
-#from aida.common.pluginloader import load_plugin
-#ParameterData = load_plugin(Data, 'aida.orm.data', 'parameter')
-from aida.orm.data.parameter import ParameterData
-from aida.orm.data.singlefile import SinglefileData
-from aida.orm.data.remote import RemoteData
+#from aiida.common.pluginloader import load_plugin
+#ParameterData = load_plugin(Data, 'aiida.orm.data', 'parameter')
+from aiida.orm.data.parameter import ParameterData
+from aiida.orm.data.singlefile import SinglefileData
+from aiida.orm.data.remote import RemoteData
 
 #print ParameterData.__module__
 
@@ -40,13 +40,13 @@ queue = None
 
 def get_or_create_machine():
     import json
-    from aida.common.exceptions import NotExistent
-    from aida.djsite.db.models import AuthInfo
+    from aiida.common.exceptions import NotExistent
+    from aiida.djsite.db.models import AuthInfo
         
 #    # I can delete the computer first
 #### DON'T DO THIS! WILL ALSO DELETE ALL CALCULATIONS THAT WERE USING
 #### THIS COMPUTER!
-#    from aida.djsite.db.models import DbComputer
+#    from aiida.djsite.db.models import DbComputer
 #    DbComputer.objects.filter(hostname=computername).delete()
     
     if machine == 'localhost':
@@ -57,14 +57,14 @@ def get_or_create_machine():
             print >> sys.stderr, "Creating a new localhostcomputer..."
             computer = Computer(hostname="localhost",transport_type='local',
                                 scheduler_type='pbspro')
-            computer.set_workdir("/tmp/{username}/aida")
+            computer.set_workdir("/tmp/{username}/aiida")
             computer.set_mpirun_command("mpirun", "-np", "{tot_num_cpus}")
             computer.store()
 
         auth_params = {}
 
         authinfo, created = AuthInfo.objects.get_or_create(
-            aidauser=get_automatic_user(),
+            aiidauser=get_automatic_user(),
             computer=computer.dbcomputer, 
             defaults= {'auth_params': json.dumps(auth_params)},
             )
@@ -78,12 +78,12 @@ def get_or_create_machine():
         if machine.startswith('bellatrix'):
             computername = "bellatrix.epfl.ch"
             schedulertype = 'pbspro'
-            workdir = "/scratch/{username}/aida"
+            workdir = "/scratch/{username}/aiida"
             mpirun_command = ['mpirun', '-np', '{tot_num_cpus}']
         elif machine.startswith('rosa'):
             computername = "rosa.cscs.ch"
             schedulertype = 'slurm'
-            workdir = "/scratch/rosa/{username}/aida"
+            workdir = "/scratch/rosa/{username}/aiida"
             mpirun_command = ['aprun', '-n', '{tot_num_cpus}']
         else:
             print >> sys.stderr, "Unkown computer!"
@@ -130,7 +130,7 @@ def get_or_create_machine():
             pass       
 
         authinfo, created = AuthInfo.objects.get_or_create(
-            aidauser=get_automatic_user(),
+            aiidauser=get_automatic_user(),
             computer=computer.dbcomputer, 
             defaults= {'auth_params': json.dumps(auth_params)},
             )
@@ -229,7 +229,7 @@ with tempfile.NamedTemporaryFile() as f:
 remoteparam = RemoteData(remote_machine=computer.hostname,
                          remote_path="/etc/inittab").store()
 
-CustomCalc = load_plugin(Calculation, 'aida.orm.calculation',
+CustomCalc = load_plugin(Calculation, 'aiida.orm.calculation',
                          'simpleplugins.templatereplacer')
 calc = CustomCalc(computer=computer)
 calc.set_max_wallclock_seconds(12*60) # 12 min

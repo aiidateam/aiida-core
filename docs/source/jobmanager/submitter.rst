@@ -1,8 +1,8 @@
-aida.jobmanager.submitter
+aiida.jobmanager.submitter
 +++++++++++++++++++++++++
 
 .. toctree::
    :maxdepth: 2
 
-.. automodule:: aida.jobmanager.submitter
+.. automodule:: aiida.jobmanager.submitter
    :members: 

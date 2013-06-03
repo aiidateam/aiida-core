@@ -1,6 +1,6 @@
 #########################
-AIDADB Data Models
+AiiDADB Data Models
 #########################
 
-.. automodule:: aidadb.data.models
+.. automodule:: aiidadb.data.models
    :members:

@@ -1,31 +1,31 @@
 """
-This file contains tests for AIDA.
+This file contains tests for AiiDA.
 They are executed when when you run "manage.py test" or
 "manage.py test main" (much faster)
 
 """
 from django.utils import unittest
-import aida
-from aida.djsite.main.models import CalcStatus, CalcType, Code, CodeStatus
-from aida.djsite.main.models import CodeType, Computer, Project, Calculation
-from aida.djsite.main.models import Element, Potential, PotStatus, PotType
-from aida.djsite.main.models import PotAttrTxtVal
+import aiida
+from aiida.djsite.main.models import CalcStatus, CalcType, Code, CodeStatus
+from aiida.djsite.main.models import CodeType, Computer, Project, Calculation
+from aiida.djsite.main.models import Element, Potential, PotStatus, PotType
+from aiida.djsite.main.models import PotAttrTxtVal
 from django.contrib.auth.models import User as AuthUser
 import getpass
 from django.db import IntegrityError
 from django.core import management
 import json
 import os, os.path
-import aida.djsite.main
-from aida.repository.potential import add_pseudo_file
-from aida.common.exceptions import ValidationError
-from aida.common.classes import structure
-from aida.repository.structure import add_structure
-from aida.repository.calculation import add_calculation
+import aiida.djsite.main
+from aiida.repository.potential import add_pseudo_file
+from aiida.common.exceptions import ValidationError
+from aiida.common.classes import structure
+from aiida.repository.structure import add_structure
+from aiida.repository.calculation import add_calculation
 
-# Get the absolute path of the testdata folder, related to the aida module
+# Get the absolute path of the testdata folder, related to the aiida module
 testdata_folder = os.path.join(
-    os.path.dirname(os.path.abspath(aida.__file__)),os.path.pardir,'testdata')
+    os.path.dirname(os.path.abspath(aiida.__file__)),os.path.pardir,'testdata')
 
 
 class PseudoTest(unittest.TestCase):

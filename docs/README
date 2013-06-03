@@ -1,44 +1,44 @@
-AIDA (Ab Initio DAtabase)
+AiiDA (Ab Initio DAtabase)
 
 Nov 18, 2011
 --------------------------------------------------
-This is the django implementation of AIDA.
+This is the django implementation of AiiDA.
 
-Here is a quick description of the start of the AIDA project layout.
+Here is a quick description of the start of the AiiDA project layout.
 
 The directory tree (for now) is roughly as follows:
 
-aida/       -- top-level dir
- aidadb/    -- django directory containing settings.py, manage.py, and
+aiida/       -- top-level dir
+ aiidadb/    -- django directory containing settings.py, manage.py, and
                ORM models, urls and views
  docs/      -- documentation directory
  SQL/       -- contains initial db creation scripts, a backup and
                restore script, and will eventually contain stored
                procedures if needed
  templates/ -- contains html, css, js, img elements for rendering the
-               AIDA site
+               AiiDA site
 
-The MySQL database is called aidadb. See the creation script for this
-in SQL/scripts/create_aida_db.sql. aidadj was an earlier database for
+The MySQL database is called aiidadb. See the creation script for this
+in SQL/scripts/create_aiida_db.sql. aiidadj was an earlier database for
 django specific tables, that is no longer being created. As the root
 MySQL user, source this sql file from within MySQL.
 
-To restore the version of the aidab with all tables as currently
+To restore the version of the aiidab with all tables as currently
 available in my developemnt tree, cd to SQL directory, and run:
 
 $ python restore.py
 
-It will ask for confirmation, and ask you to enter the aida_user
-password for aidadb.
+It will ask for confirmation, and ask you to enter the aiida_user
+password for aiidadb.
 
-Now from the aidadb directory, you can run the development server:
+Now from the aiidadb directory, you can run the development server:
 
 $ python manage.py runserver
 
 and then you can browse to the following urls on your web browser:
 
-http://localhost:8000/aida/
-http://localhost:8000/aida/admin/
+http://localhost:8000/aiida/
+http://localhost:8000/aiida/admin/
 
 This is the just the start of the implementation of the full GUI. More
 to be added soon.

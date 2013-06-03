@@ -1,15 +1,15 @@
-aida.common documentation
+aiida.common documentation
 =========================
 
 .. toctree::
    :maxdepth: 2
 
-.. automodule:: aida.common
+.. automodule:: aiida.common
    
 Exceptions
 ++++++++++
 
-.. automodule:: aida.common.exceptions
+.. automodule:: aiida.common.exceptions
    :members:
 
 

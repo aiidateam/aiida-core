@@ -1,7 +1,7 @@
 ##############
-AIDADB Dirlist
+AiiDADB Dirlist
 ##############
 
-.. automodule:: aidadb.utils.dirlist
+.. automodule:: aiidadb.utils.dirlist
    :members:
 

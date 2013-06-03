@@ -1,11 +1,11 @@
 from tastypie import fields
 from tastypie.resources import ModelResource, ALL, ALL_WITH_RELATIONS
 
-from aida.djsite.main.models import Structure, Calculation, CalcAttrNum, CalcAttrNumVal
+from aiida.djsite.main.models import Structure, Calculation, CalcAttrNum, CalcAttrNumVal
 
 class StructureResource(ModelResource):
-    incalculations = fields.ToManyField('aida.djsite.main.api.CalculationResource', 'incalculations',related_name='instructures')
-    outcalculations = fields.ToManyField('aida.djsite.main.api.CalculationResource', 'outcalculations', related_name='outstructures')
+    incalculations = fields.ToManyField('aiida.djsite.main.api.CalculationResource', 'incalculations',related_name='instructures')
+    outcalculations = fields.ToManyField('aiida.djsite.main.api.CalculationResource', 'outcalculations', related_name='outstructures')
 
     class Meta:
         queryset = Structure.objects.all()
@@ -24,7 +24,7 @@ class StructureResource(ModelResource):
 
 class CalculationResource(ModelResource):
      # Set full=True if you want to put the value instead of the URI
-    calcattrnumval=fields.ToManyField('aida.djsite.main.api.CalcAttrNumValResource', 'calcattrnumval',related_name='calcattrnumval')
+    calcattrnumval=fields.ToManyField('aiida.djsite.main.api.CalcAttrNumValResource', 'calcattrnumval',related_name='calcattrnumval')
 
     class Meta:
         queryset = Calculation.objects.all()
@@ -38,9 +38,9 @@ class CalculationResource(ModelResource):
         #authorization = DjangoAuthorization()
 
 class CalcAttrNumValResource(ModelResource):
-    calculation = fields.ToOneField('aida.djsite.main.api.CalculationResource',
+    calculation = fields.ToOneField('aiida.djsite.main.api.CalculationResource',
                                     'calculation')
-    attribute = fields.ToOneField('aida.djsite.main.api.CalcAttrNumResource', 
+    attribute = fields.ToOneField('aiida.djsite.main.api.CalcAttrNumResource', 
                                   'attribute')
 
     class Meta:
@@ -54,7 +54,7 @@ class CalcAttrNumValResource(ModelResource):
         include_resource_uri = True
 
 class CalcAttrNumResource(ModelResource):
-    calcattrnumval_set = fields.ToManyField('aida.djsite.main.api.CalcAttrNumValResource', 'calcattrnumval_set', related_name='attribute')
+    calcattrnumval_set = fields.ToManyField('aiida.djsite.main.api.CalcAttrNumValResource', 'calcattrnumval_set', related_name='attribute')
 
     class Meta:
         queryset = CalcAttrNum.objects.all()

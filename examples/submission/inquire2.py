@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import sys
-from aida.orm import Calculation
-from aida.common.utils import load_django
+from aiida.orm import Calculation
+from aiida.common.utils import load_django
 
 load_django()
 

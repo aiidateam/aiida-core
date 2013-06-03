@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 import sys
 
-from aida.common.utils import load_django
+from aiida.common.utils import load_django
 load_django()
 
 from django.db.models import Q
-from aida.orm import Calculation
-from aida.common.datastructures import calc_states
+from aiida.orm import Calculation
+from aiida.common.datastructures import calc_states
 
 print_all = False
 try:

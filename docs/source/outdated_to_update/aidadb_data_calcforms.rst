@@ -1,6 +1,6 @@
 ########################
-AIDADB Data Forms
+AiiDADB Data Forms
 ########################
 
-.. automodule:: aidadb.data.calcforms
+.. automodule:: aiidadb.data.calcforms
    :members:

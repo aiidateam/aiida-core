@@ -1,6 +1,6 @@
 ###############
-AIDADB Url Conf
+AiiDADB Url Conf
 ###############
 
-.. automodule:: aidadb.urls
+.. automodule:: aiidadb.urls
    :members:

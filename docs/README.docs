@@ -1,4 +1,4 @@
-To build the documentation in sphinx, from the aida top level
+To build the documentation in sphinx, from the aiida top level
 directory, run:
 
 $ python setup.py build_sphinx
@@ -14,5 +14,5 @@ $ python setup.py build_sphinx -b latex
 $ cd docs/build/latex
 $ make all-pdf
 
-Then you will have a aida.pdf documentation file.
+Then you will have a aiida.pdf documentation file.
 

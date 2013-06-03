@@ -52,7 +52,17 @@ class CalcInfo(DefaultFieldsAttributeDict):
         'remote_file_list', # a list of length-three tuples with (remotemachinename, remoteabspath, relativedestpath)
         )
 
+class WorkflowState(Enumerate):
+    pass
 
+wf_states = WorkflowState((
+        'INITIATED',
+        'RUNNING',
+        'FINISHED',
+        ))
+
+wf_start_call = "start"
+wf_exit_call = "exit"
 
 #TODO Improve/implement this!
 #class DynResourcesInfo(AttributeDict):

@@ -15,7 +15,6 @@ from aiida.common.exceptions import ModificationNotAllowed
 _input_subfolder = 'raw_input'
 
 class Calculation(Node):
-    _plugin_type_string = "calculation"
     _updatable_attributes = ('state', 'job_id', 'scheduler_state',
                              'last_jobinfo', 'remote_workdir', 'retrieve_list')
     
@@ -24,7 +23,6 @@ class Calculation(Node):
         Possible arguments:
         computer, num_machines, num_cpus_per_machine, code
         """
-        self._logger = super(Calculation,self).logger.getChild('calculation')
         super(Calculation,self).__init__(*args, **kwargs)
 
         uuid = kwargs.pop('uuid', None)
@@ -68,14 +66,14 @@ class Calculation(Node):
             if int(self.get_num_machines()) <= 0:
                 raise ValueError
         except (ValueError,TypeError):
-            raise ValidationError("The number of nodes must be specified "
+            raise ValidationError("The number of machines must be specified "
                                   "and must be positive")
 
         try:
             if int(self.get_num_cpus_per_machine()) <= 0:
                 raise ValueError
         except (ValueError,TypeError):
-            raise ValidationError("The number of CPUs per node must be "
+            raise ValidationError("The number of CPUs per machine must be "
                                   "specified and must be positive")
 
     def can_link_as_output(self,dest):

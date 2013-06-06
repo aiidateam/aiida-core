@@ -5,8 +5,6 @@ class RemoteData(Data):
     """
     Store a link to a file or folder on a remote machine
     """
-    _plugin_type_string = ".".join([Data._plugin_type_string,'remote'])
-
     def __init__(self,filename=None,**kwargs):
         super(RemoteData,self).__init__(**kwargs)
 

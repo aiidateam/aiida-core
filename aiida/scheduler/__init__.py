@@ -3,6 +3,14 @@ from aiida.common.utils import escape_for_bash
 from aiida.common.exceptions import AiidaException
 from aiida.scheduler.datastructures import JobTemplate
 
+def SchedulerFactory(module):
+    """
+    Return a suitable Scheduler subclass.
+    """
+    from aiida.common.pluginloader import BaseFactory
+    
+    return BaseFactory(module, Scheduler, "aiida.scheduler.plugins")
+
 class SchedulerError(AiidaException):
     pass
 

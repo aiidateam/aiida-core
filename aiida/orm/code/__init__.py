@@ -17,7 +17,6 @@ class Code(Node):
     methods (e.g., the set_preexec_code() can be used to load specific modules required
     for the code to be run).
     """
-    _plugin_type_string = "code"
     _updatable_attributes = tuple() 
     
     def __init__(self,**kwargs):
@@ -30,11 +29,10 @@ class Code(Node):
             local_executable: a filename of the file that should be set as local executable
             files: a list of files to be added to this Code node; pass absolute paths here, and
                 files will be copied within this node. This can be used also if you specify
-            remote_machine_exec: a list or tuple of length 2 with (computer, remote_exec_path)
+            remote_computer_exec: a list or tuple of length 2 with (computer, remote_exec_path)
                 as accepted by the set_remote_computer_exec() method.
         """
         import os
-        self._logger = super(Code,self).logger.getChild('code')
         super(Code,self).__init__(**kwargs)
 
         uuid = kwargs.pop('uuid',None)
@@ -56,17 +54,17 @@ class Code(Node):
         if local_executable is not None:
             self.set_local_executable(local_executable)
         
-        remote_machine_exec = kwargs.pop('remote_machine_exec', None)
-        if remote_machine_exec is not None:
+        remote_computer_exec = kwargs.pop('remote_computer_exec', None)
+        if remote_computer_exec is not None:
             if local_executable is not None:
                 raise ValueError("You cannot specify both local_executable and "
-                                 "remote_machine_exec")
-            if (not isinstance(remote_machine_exec,(list,tuple))
-                or len(remote_machine_exec) != 2):
-                raise ValueError("remote_machine_exec must be a list or tuple "
+                                 "remote_computer_exec")
+            if (not isinstance(remote_computer_exec,(list,tuple))
+                or len(remote_computer_exec) != 2):
+                raise ValueError("remote_computer_exec must be a list or tuple "
                                  "of length 2, with machine and executable "
                                  "name")
-            self.set_remote_computer_exec(*remote_machine_exec)
+            self.set_remote_computer_exec(*remote_computer_exec)
 
         if kwargs:
             raise ValueError("Invalid parameters found in the __init__: {}".format(kwargs.keys()))

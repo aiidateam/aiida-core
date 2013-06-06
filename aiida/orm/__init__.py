@@ -3,25 +3,17 @@ from aiida.orm.calculation import Calculation
 from aiida.orm.data import Data
 from aiida.orm.code import Code
 from aiida.orm.computer import Computer
+from aiida.common.pluginloader import BaseFactory
 
 def CalculationFactory(module):
     """
-    Return a given subclass of Calculation, loading the correct plugin.
-    
-    Args:
-        module: a string with the module of the calculation plugin to load, e.g.
-        'quantumespresso.pw'.
+    Return a suitable Calculation subclass.
     """
-    from aiida.common.pluginloader import load_plugin 
-    return load_plugin(Calculation, 'aiida.orm.calculation',module)
-    
+    return BaseFactory(module, Calculation, "aiida.orm.calculation")
+
 def DataFactory(module):
     """
-    Return a given subclass of Data, loading the correct plugin.
-    
-    Args:
-        module: a string with the module of the data plugin to load, e.g.
-        'quantumespresso.pw'.
+    Return a suitable Data subclass.
     """
-    from aiida.common.pluginloader import load_plugin 
-    return load_plugin(Data, 'aiida.orm.data', module)
+    return BaseFactory(module, Data, "aiida.orm.data")
+

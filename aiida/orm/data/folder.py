@@ -9,8 +9,6 @@ class FolderData(Data):
 
     No special attributes are set.
     """
-    _plugin_type_string = ".".join([Data._plugin_type_string,'folder'])
-
     def __init__(self,**kwargs):
         super(FolderData,self).__init__(**kwargs)
 

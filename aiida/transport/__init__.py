@@ -24,6 +24,14 @@ import aiida.common
 from aiida.common.exceptions import InternalError
 from aiida.common.extendeddicts import FixedFieldsAttributeDict
 
+def TransportFactory(module):
+    """
+    Return a suitable Transport subclass.
+    """
+    from aiida.common.pluginloader import BaseFactory
+    
+    return BaseFactory(module, Transport, "aiida.transport.plugins")
+
 class FileAttribute(FixedFieldsAttributeDict):
     """
     A class with attributes of a file, that is returned by get_attribute()

@@ -1,4 +1,3 @@
-import aiida.common
 from aiida.common.exceptions import (
     ConfigurationError, DbContentError, InvalidOperation,
     MissingPluginError)
@@ -19,13 +18,21 @@ class Computer(object):
 
     In the plugin, also set the _plugin_type_string, to be set in the DB in the 'type' field.
     """
-    _logger = aiida.common.aiidalogger.getChild('computer')
+    import logging
+    _logger = logging.getLogger(__name__)
         
     def __int__(self):
         """
         Convert the class to an integer. This is needed to allow querying with Django.
         Be careful, though, not to pass it to a wrong field! This only returns the
         local DB principal key value.
+        """
+        return self.pk
+    
+    @property
+    def pk(self):
+        """
+        Return the principal key in the DB.
         """
         return self._dbcomputer.pk
     
@@ -43,6 +50,10 @@ class Computer(object):
                                  "you cannot pass any further parameter")
         else:
             self._dbcomputer = DbComputer()
+
+            name = kwargs.pop('name', None)
+            if name is not None:
+                self.set_name(name)
 
             hostname = kwargs.pop('hostname', None)
             if hostname is not None:
@@ -266,6 +277,13 @@ class Computer(object):
         #else:
         #    raise ModificationNotAllowed("Cannot set a property after having stored the entry")
 
+    def get_name(self):
+        return self.dbcomputer.name
+
+    def set_name(self,val):
+        #if self.to_be_stored:
+            self.dbcomputer.name = val
+
     def get_hostname(self):
         return self.dbcomputer.hostname
 
@@ -295,11 +313,10 @@ class Computer(object):
         
     def get_scheduler(self):
         import aiida.scheduler
-        from aiida.common.pluginloader import load_plugin
+        from aiida.scheduler import SchedulerFactory
 
         try:
-            ThisPlugin = load_plugin(aiida.scheduler.Scheduler, 'aiida.scheduler.plugins',
-                               self.get_scheduler_type())
+            ThisPlugin = SchedulerFactory(self.get_scheduler_type())
             # I call the init without any parameter
             return ThisPlugin()
         except MissingPluginError as e:

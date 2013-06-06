@@ -20,7 +20,8 @@ class AiidaTestCase(unittest.TestCase):
 
         cls.user = User.objects.create_user(getpass.getuser(),
                                             'unknown@mail.com', 'fakepwd')
-        cls.computer = Computer(hostname='localhost',
+        cls.computer = Computer(name='localhost-example',
+                                hostname='localhost',
                                 transport_type='ssh',
                                 scheduler_type='pbspro',
                                 workdir='/tmp/aiida')
@@ -158,6 +159,65 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
     Test if queries work properly also with aiida.orm.Node classes instead of
     aiida.djsite.db.models.DbNode objects.
     """
+    def test_with_subclasses(self):
+        from aiida.orm import Calculation, CalculationFactory, Data, DataFactory
+        
+        attribute_name = self.__class__.__name__ + ".test_with_subclasses"
+        calc_params = {
+            'computer': self.computer,
+            'num_machines': 1,
+            'num_cpus_per_machine': 1}
+        
+        TemplateReplacerCalc = CalculationFactory('simpleplugins.templatereplacer')
+        ParameterData = DataFactory('parameter')
+        
+        a1 = Calculation(**calc_params).store()
+        # To query only these nodes later
+        a1.set_metadata(attribute_name, True)
+        a2 = TemplateReplacerCalc(**calc_params).store()
+        # To query only these nodes later
+        a2.set_metadata(attribute_name, True)
+        a3 = Data().store()        
+        a3.set_metadata(attribute_name, True)
+        a4 = ParameterData({'a':'b'}).store()        
+        a4.set_metadata(attribute_name, True)
+        a5 = Node().store()
+        a5.set_metadata(attribute_name, True)
+        # I don't set the metadata, just to be sure that the filtering works
+        # The filtering is needed because other tests will put stuff int he DB
+        a6 = Calculation(**calc_params)
+        a6.store()
+        a7 = Node()
+        a7.store()
+
+        # Query by calculation
+        results = list(Calculation.query(attributes__key=attribute_name))
+        # a3, a4, a5 should not be found because they are not Calculations.
+        # a6, a7 should not be found because they have not the attribute set.
+        self.assertEquals(set([i.pk for i in results]),
+                          set([a1.pk, a2.pk]))        
+        
+        # Same query, but by the generic Node class
+        results = list(Node.query(attributes__key=attribute_name))
+        self.assertEquals(set([i.pk for i in results]),
+                          set([a1.pk, a2.pk, a3.pk, a4.pk, a5.pk]))
+        
+        # Same query, but by the Data class
+        results = list(Data.query(attributes__key=attribute_name))
+        self.assertEquals(set([i.pk for i in results]),
+                          set([a3.pk, a4.pk]))
+        
+        # Same query, but by the ParameterData subclass
+        results = list(ParameterData.query(attributes__key=attribute_name))
+        self.assertEquals(set([i.pk for i in results]),
+                          set([a4.pk]))
+        
+        # Same query, but by the TemplateReplacerCalc subclass
+        results = list(TemplateReplacerCalc.query(attributes__key=attribute_name))
+        self.assertEquals(set([i.pk for i in results]),
+                          set([a2.pk]))
+
+    
     def test_get_inputs_and_outputs(self):
         a1 = Node().store()
         a2 = Node().store()        
@@ -761,9 +821,7 @@ class TestNodeBasic(AiidaTestCase):
         """
         Checks the versioning.
         """
-        class myNodeWithFields(Node):
-            # State can be updated even after storing
-            _updatable_attributes = ('state',) 
+        from aiida.orm.test import myNodeWithFields
         
         a = myNodeWithFields()
         attrs_to_set = {
@@ -847,12 +905,11 @@ class TestNodeBasic(AiidaTestCase):
 class TestSubNodesAndLinks(AiidaTestCase):
     def test_set_code(self):
         from aiida.orm import Calculation, Code
-        #from aiida.common.pluginloader import load_plugin
-        
-        code = Code(remote_machine_exec=('localhost','/bin/true'))#.store()
-        
-        computer = self.computer
 
+        computer = self.computer
+        
+        code = Code(remote_computer_exec=(computer, '/bin/true'))#.store()
+        
         unstoredcalc = Calculation(computer=computer,
                            num_machines=1,num_cpus_per_machine=1)
         calc = Calculation(computer=computer,
@@ -942,21 +999,19 @@ class TestSubNodesAndLinks(AiidaTestCase):
         import tempfile
 
         from aiida.orm import Calculation, Data, Code
-        from aiida.orm import Computer
-        from aiida.common.pluginloader import load_plugin
-        from aiida.djsite.db.models import DbComputer
+        from aiida.orm import Computer, DataFactory
         from aiida.common.datastructures import calc_states
 
-        SinglefileData = load_plugin(Data, 'aiida.orm.data', 'singlefile')
+        SinglefileData = DataFactory('singlefile')
 
         # I create some objects
         d1 = Data().store()
         with tempfile.NamedTemporaryFile() as f:
             d2 = SinglefileData(f.name).store()
 
-        code = Code(remote_machine_exec=('localhost','/bin/true')).store()
+        code = Code(remote_computer_exec=(self.computer,'/bin/true')).store()
 
-        unsavedcomputer = Computer(dbcomputer=DbComputer(hostname='localhost'))
+        unsavedcomputer = Computer(name='somecomputername', hostname='localhost')
 
         with self.assertRaises(ValueError):
             # I need to save the localhost entry first
@@ -1094,26 +1149,26 @@ class TestCode(AiidaTestCase):
     def test_remote(self):
         import tempfile
 
-        from aiida.orm import Code
+        from aiida.orm import Code, Computer
         from aiida.common.exceptions import ValidationError
 
         with self.assertRaises(ValueError):
-            # remote_machine_exec has length 2 but is not a list or tuple
-            _ = Code(remote_machine_exec='ab')
+            # remote_computer_exec has length 2 but is not a list or tuple
+            _ = Code(remote_computer_exec='ab')
 
         # invalid code path
         with self.assertRaises(ValueError):
-            _ = Code(remote_machine_exec=('localhost', ''))
+            _ = Code(remote_computer_exec=(self.computer, ''))
 
         # Relative path is invalid for remote code
         with self.assertRaises(ValueError):
-            _ = Code(remote_machine_exec=('localhost', 'subdir/run.exe'))
+            _ = Code(remote_computer_exec=(self.computer, 'subdir/run.exe'))
 
-        # No input plugin specified
-        with self.assertRaises(ValueError):
-            _ = Code(remote_machine_exec=('localhost', 'subdir/run.exe'))
+        # first argument should be a computer, not a string
+        with self.assertRaises(TypeError):
+            _ = Code(remote_computer_exec=('localhost', '/bin/ls'))
         
-        code = Code(remote_machine_exec=('localhost', '/bin/ls'))
+        code = Code(remote_computer_exec=(self.computer, '/bin/ls'))
         with tempfile.NamedTemporaryFile() as f:
             f.write("#/bin/bash\n\necho test run\n")
             f.flush()
@@ -1127,13 +1182,18 @@ class TestCode(AiidaTestCase):
         code.remove_path('test.sh')
         code.store()
 
-        self.assertEquals(code.get_remote_machine(), 'localhost')
-        self.assertEquals(code.get_remote_executable(), '/bin/ls')
+        self.assertEquals(code.get_remote_computer().pk, self.computer.pk)
+        self.assertEquals(code.get_remote_exec_path(), '/bin/ls')
         self.assertEquals(code.get_execname(), '/bin/ls')
 
-        self.assertTrue(code.can_run_on('localhost')) 
+        self.assertTrue(code.can_run_on(self.computer.dbcomputer)) 
         self.assertTrue(code.can_run_on(self.computer))         
-        self.assertFalse(code.can_run_on('another.computer.com'))
+        othercomputer = Computer(name='another_localhost',
+                                 hostname='localhost',
+                                 transport_type='ssh',
+                                 scheduler_type='pbspro',
+                                 workdir='/tmp/aiida').store()
+        self.assertFalse(code.can_run_on(othercomputer))
         
 class TestSinglefileData(AiidaTestCase):
     """

@@ -27,8 +27,6 @@ class SinglefileData(Data):
     Internally must have a single file, and stores as internal attribute
     the filename in the '_filename' attribute.
     """
-    _plugin_type_string = ".".join([Data._plugin_type_string,'singlefile'])
-
     def __init__(self,filename=None,**kwargs):
         super(SinglefileData,self).__init__(**kwargs)
 

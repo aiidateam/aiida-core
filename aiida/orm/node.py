@@ -130,6 +130,19 @@ class Node(object):
         return DbNode.aiidaobjects.filter(*args,type__startswith=cls._plugin_type_string,**kwargs)
 
     @property
+    def computer(self):
+        """
+        Return the Computer associated to this node, or None if no computer
+        is associated.
+        """
+        from aiida.orm import Computer
+        
+        if self.dbnode.computer is None:
+            return None
+        else:
+            return Computer(dbcomputer=self.dbnode.computer)
+
+    @property
     def logger(self):
         return self._logger
 

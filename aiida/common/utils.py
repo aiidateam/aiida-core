@@ -176,3 +176,29 @@ def get_unique_filename(filename, list_of_filenames):
         append_int += 1
     return new_filename
 
+def md5_file(filename, block_size_factor=128):
+    """
+    Open a file and return its md5sum (hexdigested).
+
+    Args:
+        filename: the filename of the file for which we want the md5sum
+        block_size_factor: the file is read at chunks of size
+            block_size_factor * md5.block_size,
+        where md5.block_size is the block_size used internally by the
+        hashlib module.
+
+    Returns:
+        a string with the hexdigest md5.
+
+    Raises:
+        No checks are done on the file, so if it doesn't exists it may
+        raise IOError.
+    """
+    import hashlib
+    md5 = hashlib.md5()
+    with open(filename,'rb') as f:
+        # I read 128 bytes at a time until it returns the empty string b''
+        for chunk in iter(
+            lambda: f.read(block_size_factor*md5.block_size), b''):
+            md5.update(chunk)
+    return md5.hexdigest()

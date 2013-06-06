@@ -68,7 +68,8 @@ class SinglefileData(Data):
             # if I am overwriting the file, I don't want to delete if afterwards
             old_file_list.remove(dst_filename)
         except ValueError:
-            # filename is not there: no problem, it simply means
+            # filename is not there: no problem, it simply means I don't have
+            # to delete it
             pass
             
         super(SinglefileData,self).add_path(src_abs,final_filename)

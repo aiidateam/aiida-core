@@ -212,7 +212,6 @@ def submit_calc(calc):
     import os
     
     from aiida.orm import Calculation, Code
-    #from aiida.common.pluginloader import load_plugin
     from aiida.common.folders import SandboxFolder
     from aiida.common.exceptions import InputValidationError, ValidationError
     from aiida.scheduler.datastructures import JobTemplate
@@ -294,7 +293,7 @@ def submit_calc(calc):
                                    tot_num_cpus=tot_num_cpus) for arg in
                         computer.get_mpirun_command()]
             job_tmpl.argv = mpi_args + [code.get_execname()] + (
-                calcinfo.cmdlineParams if calcinfo.cmdlineParams is not None else [])
+                calcinfo.cmdline_params if calcinfo.cmdline_params is not None else [])
     
             job_tmpl.stdin_name = calcinfo.stdin_name
             job_tmpl.stdout_name = calcinfo.stdout_name

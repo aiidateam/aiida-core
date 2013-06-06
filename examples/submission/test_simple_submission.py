@@ -20,13 +20,9 @@ aiidalogger.setLevel(logging.INFO)
 import tempfile
 import datetime
 
-from aiida.common.pluginloader import load_plugin 
-from aiida.orm import Calculation, Code, Computer
-from aiida.execmanager import submit_calc
+from aiida.orm import Code, Computer, CalculationFactory
 from aiida.djsite.utils import get_automatic_user
 
-#from aiida.common.pluginloader import load_plugin
-#ParameterData = load_plugin(Data, 'aiida.orm.data', 'parameter')
 from aiida.orm.data.parameter import ParameterData
 from aiida.orm.data.singlefile import SinglefileData
 from aiida.orm.data.remote import RemoteData
@@ -229,8 +225,7 @@ with tempfile.NamedTemporaryFile() as f:
 remoteparam = RemoteData(remote_machine=computer.hostname,
                          remote_path="/etc/inittab").store()
 
-CustomCalc = load_plugin(Calculation, 'aiida.orm.calculation',
-                         'simpleplugins.templatereplacer')
+CustomCalc = CalculationFactory('simpleplugins.templatereplacer')
 calc = CustomCalc(computer=computer)
 calc.set_max_wallclock_seconds(12*60) # 12 min
 calc.set_num_machines(1)

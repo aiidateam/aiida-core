@@ -4,8 +4,6 @@ This module manages the UPF pseudopotentials in the local repository.
 from aiida.orm.data.singlefile import SinglefileData
 
 class UpfData(SinglefileData): 
-    from aiida.orm.data import Data
-    _plugin_type_string = ".".join([Data._plugin_type_string,'upf'])
     
     @classmethod
     def get_or_create(cls,filename,element,pot_type,use_first = False):

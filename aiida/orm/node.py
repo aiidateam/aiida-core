@@ -341,6 +341,12 @@ class Node(object):
         from aiida.orm import Data
         return dict(self.get_inputs(type=Data, also_labels=True))
 
+    def get_input(self, name):
+        """
+        Return the input with a given name, or None if no input with that name
+        is set.
+        """
+        return self.get_inputdata_dict().get(name, None)
 
     def get_inputs(self,type=None,also_labels=False):
         """

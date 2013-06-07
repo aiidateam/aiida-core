@@ -35,36 +35,6 @@ DATABASES = {
         }
     }
 
-## Setup a sqlite3 DB for tests (WAY faster, since it remains in-memory
-## and not on disk.
-try:
-    calledcommand = sys.argv[1]
-except IndexError:
-    calledcommand = ''
-# check if the command called contains the string 'test' (both for 'test' 
-# and 'djangotest')
-if 'test' in calledcommand:
-    # if you define such a variable to False, it will use the same backend
-    # that you have already configured also for tests. Otherwise, 
-    # Setup a sqlite3 DB for tests (WAY faster, since it remains in-memory)
-    if confs.get('use_inmemory_sqlite_for_tests', True):
-        DATABASES['default'] = {'ENGINE': 'django.db.backends.sqlite3'}
-    ###################################################################
-    # IMPORTANT! Choose a different repository location, otherwise 
-    # real data will be destroyed during tests!!
-    # The location is automatically created with the tempfile module
-    # Typically, under linux this is created under /tmp
-    # and is not deleted at the end of the run.
-    import tempfile
-    LOCAL_REPOSITORY = tempfile.mkdtemp(prefix='aiida_repository_')
-    # I write the local repository on stderr, so that the user running
-    # the tests knows where the files are being stored
-    print >> sys.stderr, "########################################"
-    print >> sys.stderr,  "# LOCAL AiiDA REPOSITORY FOR TESTS:"
-    print >> sys.stderr, "# {}".format(LOCAL_REPOSITORY)
-    print >> sys.stderr, "########################################"
-    ##################################################################
-
 ## Checks on the LOCAL_REPOSITORY
 try:
     LOCAL_REPOSITORY

@@ -10,12 +10,6 @@ verdi NAME
 
 Don't forget to add the docstring to the class: the first line will be the
 short description, the following ones the long description.
-
-NOTE! Commands that run tests should ALWAYS contain the string 'test'.
-NOTE! Command that do NOT run tests must NOT contain the string 'test'.
-(This is due to how it is implemented the logic on tests in settings.py)
-
-## TODO: implement bash completion
 """
 import sys
 import os
@@ -197,17 +191,6 @@ class Migrate(VerdiCommand):
     def run(self,*args):
         pass_to_django_manage([execname, 'migrate'] + list(args))
 
-class DjangoTest(VerdiCommand):
-    """
-    Runs the django tests.
-
-    This command calls the Django 'manage.py test' command to run the
-    unittests of django. Pass the name of an application to restrict
-    the tests to those of the specific application.
-    """
-    def run(self,*args):
-        pass_to_django_manage([execname, 'test'] + list(args))
-
 class Shell(VerdiCommand):
     """
     Runs the interactive shell with the Django environment.
@@ -224,46 +207,81 @@ class Shell(VerdiCommand):
 
 class Test(VerdiCommand):
     """
-    Runs all aiida tests.
+    Runs aiida tests.
 
-    This will run both the django tests for the db application, plus
-    the unittests of a few aiida modules.
+    If no parameters are specified, both the django tests for the db application
+    and the unittests of the aiida modules are run.
+    
     If you want to limit the tests to a specific subset of modules,
-    pass them as further parameters. Without parameters, all tests are
-    run. An invalid parameter will make the code print the list of all
+    pass them as parameters. 
+    
+    An invalid parameter will make the code print the list of all
     valid parameters.
+    
+    Note: the test called 'db' will run all db.* tests.
     """
-
-    # TODO: add all test folders
-    allowed_test_folders = [
+    base_allowed_test_folders = [
         'aiida.scheduler', 
         'aiida.transport',
         'aiida.common',
         ]
+    
+    _dbrawprefix = "db"
+    _dbprefix = _dbrawprefix + "."
 
+    def __init__(self,*args,**kwargs):
+        from aiida.djsite.db.testbase import db_test_list
+        
+        super(Test, self).__init__(*args, **kwargs)
+        
+        # The content of the dict is:
+        #   None for a simple folder test
+        #   a list of strings for db tests, one for each test to run
+        self.allowed_test_folders = {}
+        for k in self.base_allowed_test_folders:
+            self.allowed_test_folders[k] = None
+        for dbtest in db_test_list:
+            self.allowed_test_folders["{}{}".format(self._dbprefix, dbtest)] = [dbtest]
+        self.allowed_test_folders[self._dbrawprefix] = db_test_list
+    
     def run(self,*args):
         import unittest
+        import tempfile
+        from aiida.djsite.settings import settings
 
+        db_test_list = []
         test_folders = []
         do_db = False
         if args:
             for arg in args:
                 if arg in self.allowed_test_folders:
-                    test_folders.append(arg)
-                elif arg == 'db':
-                    do_db = True
+                    dbtests = self.allowed_test_folders[arg]
+                    # Anything that has been added is a DB test                    
+                    if dbtests is not None:
+                        do_db = True
+                        for dbtest in dbtests:
+                            db_test_list.append(dbtest)
+                    else:
+                        test_folders.append(arg)
                 else:
                     print >> sys.stderr, (
-                        "{} is not a valid test folder. "
+                        "{} is not a valid test. "
                         "Allowed test folders are:".format(arg))
                     print >> sys.stderr, "\n".join(
-                        '  * {}'.format(a) for a in self.allowed_test_folders)
-                    print >> sys.stderr, '  * db'
+                        '  * {}'.format(a) for a in sorted(
+                            self.allowed_test_folders.keys()))
                     sys.exit(1)
         else:
             # Without arguments, run all tests
-            test_folders = self.allowed_test_folders
             do_db = True
+            for k, v in self.allowed_test_folders.iteritems():
+                if v is None:
+                    # Non-db tests
+                    test_folders.append(k)
+                else:
+                    # DB test
+                    for dbtest in v:
+                        db_test_list.append(dbtest)                    
 
         for test_folder in test_folders:
             print "v"*75
@@ -275,10 +293,39 @@ class Test(VerdiCommand):
             test_runner.run( testsuite )
 
         if do_db:
+            # As a first thing, I want to set the correct flags.
+            # This allow to work on temporary DBs and a temporary repository.
+
+            ## Setup a sqlite3 DB for tests (WAY faster, since it remains in-memory
+            ## and not on disk.
+            # if you define such a variable to False, it will use the same backend
+            # that you have already configured also for tests. Otherwise, 
+            # Setup a sqlite3 DB for tests (WAY faster, since it remains in-memory)
+
+            # TODO: allow the use of this flag
+            #if confs.get('use_inmemory_sqlite_for_tests', True):
+            settings.DATABASES['default'] = {'ENGINE': 'django.db.backends.sqlite3'}
+            ###################################################################
+            # IMPORTANT! Choose a different repository location, otherwise 
+            # real data will be destroyed during tests!!
+            # The location is automatically created with the tempfile module
+            # Typically, under linux this is created under /tmp
+            # and is not deleted at the end of the run.
+            settings.LOCAL_REPOSITORY = tempfile.mkdtemp(prefix='aiida_repository_')
+            # I write the local repository on stderr, so that the user running
+            # the tests knows where the files are being stored
+            print >> sys.stderr, "########################################"
+            print >> sys.stderr,  "# LOCAL AiiDA REPOSITORY FOR TESTS:"
+            print >> sys.stderr, "# {}".format(settings.LOCAL_REPOSITORY)
+            print >> sys.stderr, "########################################"
+            ##################################################################
+            ## Only now I set the aiida_test_list variable so that tests can run
+            settings.aiida_test_list = db_test_list
+            
             print "v"*75
             print (">>> Tests for django db application   "
                    "                                  <<<")
-            print "^"*75
+            print "^"*75            
             pass_to_django_manage([execname, 'test', 'db'])
 
     def complete(self, subargs_idx, subargs):
@@ -291,7 +338,7 @@ class Test(VerdiCommand):
         # I create a list of the tests that are not already written on the 
         # command line
         remaining_tests = (
-            set(self.allowed_test_folders + ['db']) - set(other_subargs))
+            set(self.allowed_test_folders) - set(other_subargs))
         print " ".join(sorted(remaining_tests))
 
 class Install(VerdiCommand):

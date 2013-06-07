@@ -3,7 +3,7 @@ This module defines the classes for structures and all related
 functions to operate on them.
 """
 
-from aiida.orm import Node
+from aiida.orm import Data
 import itertools
 import copy
 
@@ -294,7 +294,7 @@ def is_ase_atoms(ase_atoms):
     import ase
     return isinstance(ase_atoms, ase.Atoms)
 
-class StructureData(Node):
+class StructureData(Data):
     """
     This class contains the information about a given structure, i.e. a
     collection of sites together with a cell, the 

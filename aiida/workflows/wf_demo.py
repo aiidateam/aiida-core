@@ -111,4 +111,50 @@ class WorkflowDemoBranch(Workflow):
             aiidalogger.info("All the steps have been done")
             self.next(self.exit)
             
+
+class WorkflowDemoLoop(Workflow):
+
+    def __init__(self,**kwargs):
+        
+        super(WorkflowDemo, self).__init__(**kwargs)
+        
     
+    def start(self):
+        
+        from aiida.orm import Calculation, Code, Computer
+        
+        computer = Computer.get("localhost")
+        
+        calc     =  Calculation(computer=computer,num_machines=self.params['nmachine'],num_cpus_per_machine=1).store()
+        self.add_calculation(calc)
+        
+        self.next(self.second_step)        
+    
+    def convergence(self):
+        
+        calcs_init = self.get_calculations(self.start)
+        
+        calcs_convergence = self.get_calculations(self.convergence)
+        
+        if calcs_convergence == None or len(calcs_convergence) < 5:
+            computer = Computer.get("localhost")
+            calc     =  Calculation(computer=computer,num_machines=self.params['nmachine']*4,num_cpus_per_machine=1).store()
+            self.add_calculation(calc)
+            self.next(self.convergence)
+        
+        else:
+            
+            aiidalogger.info("Enough calculations runned, going to the next step")
+            self.next(self.third_step)
+    
+        
+    def third_step(self):
+        
+        calcs_init = self.get_calculations(self.second_step)
+        
+        aiidalogger.info("Third runned and retived calculation:")
+        for c in calcs_init:
+            aiidalogger.info("  Calculation {0}".format(c.uuid))
+            
+        
+        self.next(self.exit)

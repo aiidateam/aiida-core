@@ -14,15 +14,8 @@ method. This is done independently in order to allow cross-validation of plugins
 '''
 
 class Data(Node):
-    # IMPORTANT! define it here, and not in the __init__, otherwise the classmethod query()
-    # will not filter correctly
-    _plugin_type_string = "data"
     _updatable_attributes = tuple() 
         
-    def __init__(self,**kwargs):
-        self._logger = super(Data,self).logger.getChild('data')
-        super(Data,self).__init__(**kwargs)
-
     def validate(self):
         '''
         Each datatype has functionality to validate itself according to a schema or 

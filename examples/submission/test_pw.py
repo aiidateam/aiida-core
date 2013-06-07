@@ -17,15 +17,15 @@ from aiida.common import aiidalogger
 import logging
 aiidalogger.setLevel(logging.INFO)
 
-import tempfile
-import datetime
-
-from aiida.orm import Code, Computer, CalculationFactory
+from aiida.orm import Code, Computer
 from aiida.djsite.utils import get_automatic_user
+import aiida.common.utils
+from aiida.orm import CalculationFactory, DataFactory
 
-from aiida.orm.data.parameter import ParameterData
-from aiida.orm.data.singlefile import SinglefileData
-from aiida.orm.data.remote import RemoteData
+#from aiida.orm.data.upf import UpfData
+#from aiida.orm.data.parameter import ParameterData
+UpfData = DataFactory('upf')
+ParameterData = DataFactory('parameter')
 
 #print ParameterData.__module__
 
@@ -142,54 +142,24 @@ def get_or_create_machine():
 
     return computer
 
-def get_or_create_code():
-    useful_codes = Code.query(attributes__key="_local_executable",
-                              attributes__tval="sum.py").filter(
-                                  attributes__key="version", attributes__tval=current_version)
+def get_or_create_code(computer):
+    if not computer.hostname.startswith("rosa"):
+        raise ValueError("Only rosa is supported at the momen.")
+    code_path = "/project/s337/espresso-svn/bin/pw.x"
+    code_version = "5.0.3a1"
+    useful_codes = Code.query(computer=computer.dbcomputer,
+                              attributes__key="_remote_exec_path",
+                              attributes__tval=code_path).filter(
+                                  attributes__key="version", attributes__tval=code_version)
 
     if not(useful_codes):
         print >> sys.stderr, "Creating the code..."
-        with tempfile.NamedTemporaryFile() as f:
-            f.write("""#!/usr/bin/env python
-import sys
-
-try:
-    with open('factor.dat') as f:
-       factor = float(f.read().strip())
-except IOError:
-    print >> sys.stderr, "No factor file found, using factor = 1"
-except ValueError:
-    print >> sys.stderr, "The value in factor.dat is not a valid number"
-    sys.exit(1)
-
-try:
-    print factor*float(sys.argv[1])+float(sys.argv[2])
-except KeyError:
-    print >> sys.stderr, "Pass two numbers on the command line"
-    sys.exit(1)
-except ValueError:
-    print >> sys.stderr, "The values on the command line are not valid numbers"
-    sys.exit(1)
-
-try:
-    with open('check.txt') as f:
-        print '*'*80
-        print "Read from file check.txt:"
-        print f.read()
-        print '*'*80
-except IOError:
-    print >> sys.stderr, "No check file found!"
-    sys.exit(1)
-""")
-            f.flush()
-            code = Code(local_executable = "sum.py")
-            code.add_path(f.name, "sum.py")
-            code.store()
-            code.set_metadata("version", current_version)
+        code = Code(remote_computer_exec=(computer, code_path)).store()
+        code.set_metadata("version", code_version)
         return code
     
     elif len(useful_codes) == 1:
-        print >> sys.stderr, "Using the existing code {}...".format(useful_codes[0].uuid)
+        print >> sys.stderr, "Using the existing code {}...".format(useful_codes[0].pk)
         return useful_codes[0]
     else:
         raise ValueError("More than one valid code!")
@@ -198,38 +168,34 @@ except IOError:
 #####
 
 computer = get_or_create_machine()
-code = get_or_create_code()
+code = get_or_create_code(computer)
 
-template_data = ParameterData({
-    'input_file_template': "{factor}\n",
-    # TODO: pass only input_file_name and no template and see if an error is raised
-    'input_file_name': "factor.dat",
-    'cmdline_params': ["{add1}", "{add2}"],
-    'output_file_name': "result.txt",
-    'files_to_copy': [('the_only_local_file','check.txt'),
-                      ('the_only_remote_node','bashrc-copy')],
-    }).store()
+raw_pseudos = [
+    ("Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF", 'Ba', 'pbesol'),
+    ("Ti.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF", 'Ti', 'pbesol'),
+    ("O.pbesol-n-rrkjus_psl.0.1-tested-pslib030.UPF", 'O', 'pbesol')]
+
+pseudos_to_use = {}
+for fname, elem, pot_type in raw_pseudos:
+    absname = os.path.realpath(os.path.join(os.path.dirname(__file__),"data",fname))
+    pseudo, created = UpfData.get_or_create(
+        absname, element=elem,pot_type=pot_type,use_first=True)
+    if created:
+        print "Created the pseudo for {}".format(elem)
+    else:
+        print "Using the pseudo for {} from DB: {}".format(elem,pseudo.pk)
+    pseudos_to_use[elem] = pseudo
 
 parameters = ParameterData({
-    'add1': 3.45,
-    'add2': 7.89,
-    'factor': 2,
+    'ecutwfc': 45.,
+    'ecutrho': 300.,
     }).store()
 
-with tempfile.NamedTemporaryFile() as f:
-    f.write("double check, created @ {}".format(datetime.datetime.now()))
-    f.flush()
-    # I don't worry of the name with which it is internally stored
-    fileparam = SinglefileData(filename=f.name).store()
-
-remoteparam = RemoteData(remote_machine=computer.hostname,
-                         remote_path="/etc/inittab").store()
-
-CustomCalc = CalculationFactory('simpleplugins.templatereplacer')
-calc = CustomCalc(computer=computer)
-calc.set_max_wallclock_seconds(12*60) # 12 min
-calc.set_num_machines(1)
-calc.set_num_cpus_per_machine(1)
+QECalc = CalculationFactory('quantumespresso.pw')
+calc = QECalc(computer=computer)
+calc.set_max_wallclock_seconds(1*3600) # 1 hour
+calc.set_num_machines(2)
+calc.set_num_cpus_per_machine(32)
 if queue is not None:
     calc.set_queue_name(queue)
 calc.store()
@@ -239,11 +205,14 @@ print "created calculation; calc=Calculation(uuid='{}') # ID={}".format(
 calc.set_code(code)
 ## Just for debugging purposes, I check that I can 'reset' the code
 #calc.set_code(code)
+calc.set_parameters(parameters)
+for k, v in pseudos_to_use.iteritems():
+    calc.set_pseudo(v, kind=k)
 
-calc.add_link_from(template_data, label="template")
-calc.add_link_from(parameters, label="parameters")
-calc.add_link_from(fileparam, label="the_only_local_file")
-calc.add_link_from(remoteparam, label="the_only_remote_node")
+calc.set_kpoints(kpoints)
+calc.set_settings(settings)
+#from aiida.orm.data.remote import RemoteData
+#calc.set_outdir(remotedata)
 
 calc.submit()
 print "submitted calculation; calc=Calculation(uuid='{}') # ID={}".format(

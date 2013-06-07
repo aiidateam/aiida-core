@@ -35,7 +35,7 @@ class CalcInfo(DefaultFieldsAttributeDict):
         'uuid',
         'prepend_text', 
         'append_text',  
-        'cmdlineParams',  # as a list of strings
+        'cmdline_params',  # as a list of strings
         'stdin_name',
         'stdout_name',
         'stderr_name',

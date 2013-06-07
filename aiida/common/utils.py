@@ -176,41 +176,29 @@ def get_unique_filename(filename, list_of_filenames):
         append_int += 1
     return new_filename
 
-if __name__=='__main__':
-    import unittest
-    
-    class UniqueTest(unittest.TestCase):
-        """
-        Tests for the get_unique_filename function.
-        """
+def md5_file(filename, block_size_factor=128):
+    """
+    Open a file and return its md5sum (hexdigested).
 
-        def test_unique_1(self):
-            filename = "different.txt"
-            filename_list = ["file1.txt", "file2.txt"]
-            
-            self.assertEqual(filename,
-                             get_unique_filename(filename, filename_list))
+    Args:
+        filename: the filename of the file for which we want the md5sum
+        block_size_factor: the file is read at chunks of size
+            block_size_factor * md5.block_size,
+        where md5.block_size is the block_size used internally by the
+        hashlib module.
 
-        def test_unique_2(self):
-            filename = "file1.txt"
-            filename_list = ["file1.txt", "file2.txt"]
-            
-            self.assertEqual("file1-1.txt",
-                             get_unique_filename(filename, filename_list))
+    Returns:
+        a string with the hexdigest md5.
 
-
-        def test_unique_3(self):
-            filename = "file1.txt"
-            filename_list = ["file1.txt", "file1-1.txt"]
-            
-            self.assertEqual("file1-2.txt",
-                             get_unique_filename(filename, filename_list))
-
-        def test_unique_4(self):
-            filename = "file1.txt"
-            filename_list = ["file1.txt", "file1-2.txt"]
-            
-            self.assertEqual("file1-1.txt",
-                             get_unique_filename(filename, filename_list))
-
-    unittest.main()
+    Raises:
+        No checks are done on the file, so if it doesn't exists it may
+        raise IOError.
+    """
+    import hashlib
+    md5 = hashlib.md5()
+    with open(filename,'rb') as f:
+        # I read 128 bytes at a time until it returns the empty string b''
+        for chunk in iter(
+            lambda: f.read(block_size_factor*md5.block_size), b''):
+            md5.update(chunk)
+    return md5.hexdigest()

@@ -1,13 +1,9 @@
 import unittest 
 
 from aiida.transport.plugins.local import *
-from aiida.common.pluginloader import load_plugin
 from aiida.transport.plugin_test import *
 
-from aiida.transport import Transport
-PluginTransport = load_plugin(
-    Transport,'aiida.transport.plugins', 'local')
-aiida.transport.plugin_test.custom_transport = PluginTransport()
+aiida.transport.plugin_test.custom_transport = LocalTransport()
     
 class TestGeneric(unittest.TestCase):
     """

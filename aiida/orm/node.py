@@ -2,7 +2,6 @@ import os
 
 from django.core.exceptions import ObjectDoesNotExist
 
-import aiida.common
 #from aiida.djsite.db.models import DbNode, Attribute
 from aiida.common.exceptions import (
     DbContentError, InternalError, ModificationNotAllowed,
@@ -31,12 +30,36 @@ class Node(object):
 
     In the plugin, also set the _plugin_type_string, to be set in the DB in the 'type' field.
     """
-    _logger = aiida.common.aiidalogger.getChild('node')
+    class __metaclass__(type):
+        """
+        Some python black magic to set correctly the logger also in subclasses.
+        """
+        def __new__(cls, name, bases, attrs):
+            import logging
+            newcls = type.__new__(cls, name, bases, attrs)
+            newcls._logger = logging.getLogger(
+                '{:s}.{:s}'.format(attrs['__module__'], name))
+            
+            prefix = "aiida.orm."
+            if attrs['__module__'].startswith(prefix):
+                # Strip aiida.orm.
+                # Append a dot at the end, always
+                newcls._plugin_type_string = "{}.{}.".format(
+                    attrs['__module__'][len(prefix):], name)
+                if newcls._plugin_type_string == 'node.Node.':
+                    newcls._plugin_type_string = ''
+            else:
+                raise InternalError("Class {} is not in a module under "
+                                    "aiida.orm.".format(name))
+            
+            return newcls
 
     # A tuple with attributes that can be updated even after the call of the store() method
     _updatable_attributes = tuple() 
-
-    _plugin_type_string = "" # For base nodes, it is an empty string; to be subclassed
+    
+    @property
+    def logger(self):
+        return self._logger
     
     @classmethod
     def get_subclass_from_uuid(cls,uuid):
@@ -124,14 +147,41 @@ class Node(object):
         """
         Map to the aiidaobjects manager of the DbNode, that returns
         Node objects (or their subclasses) instead of DbNode entities.
+        
+        # TODO: VERY IMPORTANT: the recognition of a subclass from the type
+        #       does not work if the modules defining the subclasses are not
+        #       put in subfolders.
+        #       In the future, fix it either to make a cache and to store the
+        #       full dependency tree, or save also the path.
         """
         from aiida.djsite.db.models import DbNode
 
-        return DbNode.aiidaobjects.filter(*args,type__startswith=cls._plugin_type_string,**kwargs)
+        if cls._plugin_type_string:
+            if not cls._plugin_type_string.endswith('.'):
+                raise InternalError("The plugin type string does not finish with a dot??")
+            
+            # If it is 'calculation.Calculation.', we want to filter
+            # for things that start with 'calculation.' and so on
+            pre, sep, _ = cls._plugin_type_string[:-1].rpartition('.')
+            superclass_string = "".join([pre,sep])
+            return DbNode.aiidaobjects.filter(
+                *args,type__startswith=superclass_string,**kwargs)
+        else:
+            # Base Node class, with empty string
+            return DbNode.aiidaobjects.filter(*args,**kwargs)
 
     @property
-    def logger(self):
-        return self._logger
+    def computer(self):
+        """
+        Return the Computer associated to this node, or None if no computer
+        is associated.
+        """
+        from aiida.orm import Computer
+        
+        if self.dbnode.computer is None:
+            return None
+        else:
+            return Computer(dbcomputer=self.dbnode.computer)
 
     def set_label(self,label):
         """

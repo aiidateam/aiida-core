@@ -11,8 +11,6 @@ class ParameterData(Data):
     You can then change/delete/add more attributes before storing with the
     usual methods of aiida.orm.Node
     """
-    _plugin_type_string = ".".join([Data._plugin_type_string,'parameter'])
-
     def __init__(self,dictionary=None,**kwargs):
         super(ParameterData,self).__init__(**kwargs)
 

@@ -344,7 +344,7 @@ class Calculation(Node):
         else:
             return queryresults
 
-    def set_code(self, code):
+    def use_code(self, code):
         """
         Set the code for this calculation
         """
@@ -353,7 +353,13 @@ class Calculation(Node):
         if not isinstance(code, Code):
             raise ValueError("The code must be an instance of the Code class")
 
-        self.replace_link_from(code, "code")
+        self.replace_link_from(code, self.get_linkname_code())
+        
+    def get_linkname_code(self):
+        """
+        The name of the link used for the code
+        """
+        return "code"
         
     def _prepare_for_submission(self,tempfolder):        
         """

@@ -19,7 +19,6 @@ aiidalogger.setLevel(logging.INFO)
 
 from aiida.orm import Code, Computer
 from aiida.djsite.utils import get_automatic_user
-import aiida.common.utils
 from aiida.orm import CalculationFactory, DataFactory
 
 #from aiida.orm.data.upf import UpfData
@@ -202,15 +201,15 @@ calc.store()
 print "created calculation; calc=Calculation(uuid='{}') # ID={}".format(
     calc.uuid,calc.dbnode.pk)
 
-calc.set_code(code)
+calc.use_code(code)
 ## Just for debugging purposes, I check that I can 'reset' the code
-#calc.set_code(code)
-calc.set_parameters(parameters)
+#calc.use_code(code)
+calc.use_parameters(parameters)
 for k, v in pseudos_to_use.iteritems():
-    calc.set_pseudo(v, kind=k)
+    calc.use_pseudo(v, kind=k)
 
-calc.set_kpoints(kpoints)
-calc.set_settings(settings)
+calc.use_kpoints(kpoints)
+calc.use_settings(settings)
 #from aiida.orm.data.remote import RemoteData
 #calc.set_outdir(remotedata)
 

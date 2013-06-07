@@ -33,11 +33,7 @@ from aiida.common.datastructures import CalcInfo
 
 # TODO: write a 'input_type_checker' routine to automatically check the existence
 # and type of inputs + default values etc.
-class TemplatereplacerCalculation(Calculation):
-    _logger = Calculation._logger.getChild("templatereplacer")
-    
-    _plugin_type_string = ".".join([Calculation._plugin_type_string,
-                                    'simpleplugins','templatereplacer'])
+class TemplatereplacerCalculation(Calculation):   
     
     def _prepare_for_submission(self,tempfolder):        
         """
@@ -139,7 +135,7 @@ class TemplatereplacerCalculation(Calculation):
         calcinfo.retrieve_list = []
 
         calcinfo.uuid = self.uuid
-        calcinfo.cmdlineParams = cmdline_params
+        calcinfo.cmdline_params = cmdline_params
         calcinfo.local_copy_list = local_copy_list
         calcinfo.remote_copy_list = remote_copy_list
         if input_through_stdin is not None:

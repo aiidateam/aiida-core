@@ -436,25 +436,10 @@ class Comment(m.Model):
     content = m.TextField(blank=True)
 
 
-#
-# Workflows
-#
+#-------------------------------------
+#         Workflows
+#-------------------------------------
 
-#WF_RUNNING +
-#workflow_step_exit = "wf_exit"
-#workflow_status = (('running', 'running'),
-#    ('finished', 'finished'),
-#)
-
-# class DbWorkflow(m.Model):
-#     
-#     uuid        = UUIDField(auto=True)
-#     time        = m.DateTimeField(auto_now_add=True, editable=False)
-#     name        = m.CharField(max_length=255, editable=False, blank=False, unique=True)
-#     version     = m.IntegerField()
-#     user        = m.ForeignKey(User, on_delete=m.PROTECT)
-#     comment     = m.TextField(blank=True)  
-#     repo_folder = m.CharField(max_length=255)
 
 class DbWorkflow(m.Model):
     
@@ -463,6 +448,7 @@ class DbWorkflow(m.Model):
     uuid         = UUIDField(auto=True)
     time         = m.DateTimeField(auto_now_add=True, editable=False)
     user         = m.ForeignKey(User, on_delete=m.PROTECT)
+    
     # File variables, script is the complete dump of the workflow python script
     module       = m.TextField(blank=False)
     module_class = m.TextField(blank=False)

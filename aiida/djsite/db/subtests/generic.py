@@ -1572,6 +1572,7 @@ class TestStructureData(AiidaTestCase):
         from aiida.orm.data.structure import StructureData
 
         cell = ((2.,0.,0.),(0.,2.,0.),(0.,0.,2.))
+        
         a = StructureData(cell=cell)
         out_cell = a.cell
         self.assertAlmostEquals(cell, out_cell)

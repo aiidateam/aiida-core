@@ -45,7 +45,7 @@ class PwCalculation(Calculation):
             raise InputValidationError("parameters is not of type ParameterDa")
         
         try:
-            structure = inputdict.pop(self.get_linkname_parameters())
+            structure = inputdict.pop(self.get_linkname_structure())
         except KeyError:
             raise InputValidationError("No parameters specified for this calculation")
         if not isinstance(structure,  StructureData):
@@ -75,8 +75,15 @@ class PwCalculation(Calculation):
             raise InputValidationError("The following input data nodes are "
                 "unrecognized: {}".format(inputdict.keys()))
 
-        # TODO: Check parameters here
         # Check structure, get species, check peudos
+        kinds = [k.name for k in structure.kinds]
+        if set(kinds) != set(pseudos.keys()):
+            err_msg = ("Mismatch between the defined pseudos and the list of "
+                       "kinds of the structure. Pseudos: {}; kinds: {}".format(
+                        ",".join(pseudos.keys()), ",".join(list(kinds))))
+            raise InputValidationError(err_msg)
+
+        # TODO: Check parameters here
         # Check also pseudo type? Maybe not
 
 

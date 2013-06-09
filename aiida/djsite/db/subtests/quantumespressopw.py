@@ -1,5 +1,14 @@
 """
 Tests for the pw input plugin.
+
+TODO: to test:
+- association species->pseudos
+- two pseudos with the same filename
+- IFPOS (FIXED_COORDS in SETTINGS)
+- automatic namelists
+- manually specified namelists
+- empty namelists
+- content for non-existent namelists specified
 """
 import os
 

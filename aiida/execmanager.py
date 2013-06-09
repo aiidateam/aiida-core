@@ -65,7 +65,8 @@ def update_running_calcs_status(authinfo):
                         jobinfo = found_jobs[jobid]
                         execlogger.debug("Inquirying calculation {} ({}): it has job_state={}".format(
                             c.uuid, jobid, jobinfo.job_state))
-                        if jobinfo.job_state in [job_states.DONE, job_states.FAILED]:
+                        # For the moment, FAILED is not defined
+                        if jobinfo.job_state in [job_states.DONE]: #, job_states.FAILED]:
                             finished.append(c)
                             c._set_state(calc_states.FINISHED)
                         elif jobinfo.job_state == job_states.UNDETERMINED:
@@ -469,6 +470,8 @@ def retrieve_finished_for_authinfo(authinfo):
 
                     with SandboxFolder() as folder:
                         for item in retrieve_list:
+                            execlogger.debug(
+                                "Trying to retrieve remote item '{}' of calc {}".format(item, calc.dbnode.pk))
                             t.get(item,
                                   os.path.join(folder.abspath,os.path.split(item)[1]),
                                   ignore_nonexisting=True)

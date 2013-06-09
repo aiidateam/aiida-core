@@ -10,7 +10,6 @@ Plugin specific tests will be written in the plugin itself.
 # TODO : silly cases of copy/put/get from self to self
 
 import unittest
-#from aiida.common.pluginloader import load_plugin
 
 custom_transport = None
 

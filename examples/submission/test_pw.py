@@ -21,12 +21,9 @@ from aiida.orm import Code, Computer
 from aiida.djsite.utils import get_automatic_user
 from aiida.orm import CalculationFactory, DataFactory
 
-#from aiida.orm.data.upf import UpfData
-#from aiida.orm.data.parameter import ParameterData
 UpfData = DataFactory('upf')
 ParameterData = DataFactory('parameter')
-
-#print ParameterData.__module__
+StructureData = DataFactory('structure')
 
 # A string with the version of this script, used to recreate a code when necessary
 current_version = "1.0.5"
@@ -185,10 +182,39 @@ for fname, elem, pot_type in raw_pseudos:
         print "Using the pseudo for {} from DB: {}".format(elem,pseudo.pk)
     pseudos_to_use[elem] = pseudo
 
+alat = 4. # angstrom
+cell = [[alat, 0., 0.,],
+        [0., alat, 0.,],
+        [0., 0., alat,],
+       ]
+
+# BaTiO3 cubic structure
+s = StructureData(cell=cell)
+s.append_atom(position=(0.,0.,0.),symbols=['Ba'])
+s.append_atom(position=(alat/2.,alat/2.,alat/2.),symbols=['Ti'])
+s.append_atom(position=(alat/2.,alat/2.,0.),symbols=['O'])
+s.append_atom(position=(alat/2.,0.,alat/2.),symbols=['O'])
+s.append_atom(position=(0.,alat/2.,alat/2.),symbols=['O'])
+s.store()
+
 parameters = ParameterData({
-    'ecutwfc': 45.,
-    'ecutrho': 300.,
-    }).store()
+            'CONTROL': {
+                'calculation': 'scf',
+                'restart_mode': 'from_scratch',
+                'wf_collect': True,
+                },
+            'SYSTEM': {
+                'ecutwfc': 30.,
+                'ecutrho': 240.,
+                },
+            'ELECTRONS': {
+                'conv_thr': 1.e-6,
+                }}).store()
+                
+kpoints = ParameterData({
+                'type': 'automatic',
+                'points': [4, 4, 4, 0, 0, 0],
+                }).store()
 
 QECalc = CalculationFactory('quantumespresso.pw')
 calc = QECalc(computer=computer)
@@ -201,15 +227,14 @@ calc.store()
 print "created calculation; calc=Calculation(uuid='{}') # ID={}".format(
     calc.uuid,calc.dbnode.pk)
 
+calc.use_structure(s)
 calc.use_code(code)
-## Just for debugging purposes, I check that I can 'reset' the code
-#calc.use_code(code)
 calc.use_parameters(parameters)
 for k, v in pseudos_to_use.iteritems():
     calc.use_pseudo(v, kind=k)
 
 calc.use_kpoints(kpoints)
-calc.use_settings(settings)
+#calc.use_settings(settings)
 #from aiida.orm.data.remote import RemoteData
 #calc.set_outdir(remotedata)
 

@@ -22,6 +22,12 @@ class ParameterData(Data):
         for k, v in dictionary.iteritems():
             self.set_attr(k, v)
 
+    def get_dict(self):
+        """
+        Return a dict with the parameters
+        """
+        return dict(self.iterattrs())
+
     def add_path(self, *args, **kwargs):
         from aiida.common.exceptions import ModificationNotAllowed
         raise ModificationNotAllowed("Cannot add files or directories to a ParameterData object")

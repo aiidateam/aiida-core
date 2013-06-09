@@ -25,8 +25,6 @@ UpfData = DataFactory('upf')
 ParameterData = DataFactory('parameter')
 StructureData = DataFactory('structure')
 
-# A string with the version of this script, used to recreate a code when necessary
-current_version = "1.0.5"
 queue = None
 #queue = "P_share_queue"
 
@@ -38,8 +36,10 @@ def get_or_create_machine():
 #    # I can delete the computer first
 #### DON'T DO THIS! WILL ALSO DELETE ALL CALCULATIONS THAT WERE USING
 #### THIS COMPUTER!
-#    from aiida.djsite.db.models import DbComputer
-#    DbComputer.objects.filter(hostname=computername).delete()
+#    from aiida.djsite.db.models import DbComputer, DbNode
+#    DbNode.objects.filter(computer__hostname=machine).delete()
+#    DbComputer.objects.filter(hostname=machine).delete()
+
     
     if machine == 'localhost':
         try:
@@ -92,7 +92,8 @@ def get_or_create_machine():
             computer.set_mpirun_command(mpirun_command)
             computer.store()
 
-        auth_params = {'load_system_host_keys': True}
+        auth_params = {'load_system_host_keys': True,
+                       'compress': True}
 
 
         config = paramiko.SSHConfig()

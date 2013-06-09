@@ -10,14 +10,13 @@ class Code(Node):
         file is flagged as executable (using the set_local_executable() method).
     Remote code:
         it is a pair (remotecomputer, remotepath_of_executable) set using the
-        set_remote_machine_exec() method.
+        set_remote_computer_exec() method.
 
     For both codes, one can set some code to be executed right before or right after
     the execution of the code, using the set_preexec_code() and set_postexec_code()
     methods (e.g., the set_preexec_code() can be used to load specific modules required
     for the code to be run).
     """
-    _plugin_type_string = "code"
     _updatable_attributes = tuple() 
     
     def __init__(self,**kwargs):
@@ -30,11 +29,10 @@ class Code(Node):
             local_executable: a filename of the file that should be set as local executable
             files: a list of files to be added to this Code node; pass absolute paths here, and
                 files will be copied within this node. This can be used also if you specify
-            remote_machine_exec: a list or tuple of length 2 with (machinename, remote_executable)
-                as accepted by the set_remote_machine_exec() method.
+            remote_computer_exec: a list or tuple of length 2 with (computer, remote_exec_path)
+                as accepted by the set_remote_computer_exec() method.
         """
         import os
-        self._logger = super(Code,self).logger.getChild('code')
         super(Code,self).__init__(**kwargs)
 
         uuid = kwargs.pop('uuid',None)
@@ -56,17 +54,17 @@ class Code(Node):
         if local_executable is not None:
             self.set_local_executable(local_executable)
         
-        remote_machine_exec = kwargs.pop('remote_machine_exec', None)
-        if remote_machine_exec is not None:
+        remote_computer_exec = kwargs.pop('remote_computer_exec', None)
+        if remote_computer_exec is not None:
             if local_executable is not None:
                 raise ValueError("You cannot specify both local_executable and "
-                                 "remote_machine_exec")
-            if (not isinstance(remote_machine_exec,(list,tuple))
-                or len(remote_machine_exec) != 2):
-                raise ValueError("remote_machine_exec must be a list or tuple "
+                                 "remote_computer_exec")
+            if (not isinstance(remote_computer_exec,(list,tuple))
+                or len(remote_computer_exec) != 2):
+                raise ValueError("remote_computer_exec must be a list or tuple "
                                  "of length 2, with machine and executable "
                                  "name")
-            self.set_remote_machine_exec(*remote_machine_exec)
+            self.set_remote_computer_exec(*remote_computer_exec)
 
         if kwargs:
             raise ValueError("Invalid parameters found in the __init__: {}".format(kwargs.keys()))
@@ -87,9 +85,9 @@ class Code(Node):
         else:
             if self.get_path_list():
                 raise ValidationError("The code is remote but it has files inside")
-            if not self.get_remote_machine():
-                raise ValidationError("You did not specify a remote machine")
-            if not self.get_remote_executable():
+            if not self.get_remote_computer():
+                raise ValidationError("You did not specify a remote computer")
+            if not self.get_remote_exec_path():
                 raise ValidationError("You did not specify a remote executable")
             
         
@@ -147,33 +145,47 @@ class Code(Node):
     def get_local_executable(self):
         return self.get_attr('local_executable', u"")
 
-    def set_remote_machine_exec(self,machine,exec_path):
+    def set_remote_computer_exec(self,computer,remote_exec_path):
         """
-        Set the code as remote, and pass the machine on which it resides and the absolute
-        path on that machine.
+        Set the code as remote, and pass the computer on which it resides
+        and the absolute path on that computer.
+        
+        Args:
+            computer: a aiida.orm.Computer or an
+                aiida.djsite.db.models.DbComputer object.
+            remote_exec_path: the absolute path of the main executable on the
+                computer.
         """
         import os
+        from aiida.orm import Computer
         from aiida.djsite.db.models import DbComputer
         
-        if not os.path.isabs(exec_path):
+        if not os.path.isabs(remote_exec_path):
             raise ValueError("exec_path must be an absolute path (on the remote machine)")
 
-        if isinstance(machine, basestring):
-            machinename = machine
-        else:
-            # I retrieve the hostname of a DbComputer or Computer object
-            machinename = DbComputer.get_dbcomputer(machine).hostname
+        remote_dbcomputer = computer
+        if isinstance(remote_dbcomputer, Computer):
+            remote_dbcomputer = remote_dbcomputer.dbcomputer
+        if not(isinstance(remote_dbcomputer, DbComputer)):
+            raise TypeError("computer must be either a Computer or DbComputer object")
 
         self._set_remote()
 
-        self.set_attr('remote_machine',unicode(machinename).lower().strip())
-        self.set_attr('remote_exec_path', exec_path)
+        self.dbnode.computer = remote_dbcomputer
+        self.set_attr('remote_exec_path', remote_exec_path)
 
-    def get_remote_executable(self):
-        return self.get_attr('remote_exec_path', u"")
+    def get_remote_exec_path(self):
+        if self.is_local():
+            raise ValueError("The code is local")
+        return self.get_attr('remote_exec_path', "")
 
-    def get_remote_machine(self):
-        return self.get_attr('remote_machine', None)
+    def get_remote_computer(self):
+        from aiida.orm import Computer
+
+        if self.is_local():
+            raise ValueError("The code is local")
+        
+        return self.computer
 
     def _set_local(self):
         """
@@ -184,10 +196,7 @@ class Code(Node):
         It also deletes the flags related to the local case (if any)
         """
         self.set_attr('is_local', True)
-        try:
-            self.del_attr('remote_machine')
-        except AttributeError:
-            pass
+        self.dbnode.computer = None
         try:
             self.del_attr('remote_exec_path')
         except AttributeError:
@@ -223,20 +232,20 @@ class Code(Node):
 
         TODO: add filters to mask the remote machines on which a local code can run.
         """
+        from aiida.orm import Computer
         from aiida.djsite.db.models import DbComputer
-        if isinstance(computer, basestring):
-            machinename = computer
-        else:
-            # I retrieve the hostname of a DbComputer or Computer object
-            machinename = DbComputer.get_dbcomputer(computer).hostname
-        
+                
         if self.is_local():
             return True
         else:
-            return (
-                unicode(machinename).lower().strip() ==
-                self.get_remote_machine()
-                )
+            dbcomputer = computer
+            if isinstance(dbcomputer, Computer):
+                dbcomputer = dbcomputer.dbcomputer
+            if not isinstance(dbcomputer, DbComputer):
+                raise ValueError("computer must be either a Computer or DbComputer object")
+            dbcomputer = DbComputer.get_dbcomputer(computer)
+            return (dbcomputer.pk ==
+                self.get_remote_computer().dbcomputer.pk)
         
     def get_execname(self):
         """
@@ -247,5 +256,5 @@ class Code(Node):
         if self.is_local():
             return u"./{}".format(self.get_local_executable())
         else:
-            return self.get_remote_executable()
+            return self.get_remote_exec_path()
 

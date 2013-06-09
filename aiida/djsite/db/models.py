@@ -82,56 +82,27 @@ class DbNode(m.Model):
         Return the corresponding aiida instance of class aiida.orm.Node or a
         appropriate subclass.
         """
-        from aiida.orm import Node, Calculation, Code, Data
+        from aiida.orm import Node
         from aiida.common.pluginloader import load_plugin
         from aiida.common import aiidalogger
 
-        thistype = self.type.split('.',1)
-        baseclass = thistype[0]
-        try:
-            pluginclass = thistype[1]
-        except IndexError:
-            pluginclass = ""
+        thistype = self.type
+        # Fix for base class
+        if thistype == "":
+            thistype = "node.Node."
+        if not thistype.endswith("."):
+            raise DbContentError("The type name of node with pk={} is "
+                                "not valid: '{}'".format(self.pk, self.type))
+        thistype = thistype[:-1] # Strip final dot
 
-        if baseclass == Calculation._plugin_type_string:
-            if pluginclass:
-                try:
-                    PluginClass = load_plugin(Calculation, 'aiida.orm.calculation', pluginclass)
-                except MissingPluginError:
-                    aiidalogger.warning("Unable to find calculation plugin for type '{}' (node={}), "
-                                       "will use base Calculation class".format(self.type,self.uuid))
-                    PluginClass = Calculation
-            else:
-                PluginClass = Calculation
-            return PluginClass(uuid=self.uuid)
-        elif baseclass == Code._plugin_type_string:
-            if pluginclass:
-                try:
-                    PluginClass = load_plugin(Code, 'aiida.orm.code', pluginclass)
-                except MissingPluginError:
-                    aiidalogger.warning("Unable to find code plugin for type '{}' (node={}), "
-                                       "will use base Code class".format(self.type,self.uuid))
-                    PluginClass = Code
-            else:
-                PluginClass = Code
-            return PluginClass(uuid=self.uuid)
-        elif baseclass == Data._plugin_type_string:
-            if pluginclass:
-                try:
-                    PluginClass = load_plugin(Data, 'aiida.orm.data', pluginclass)
-                except MissingPluginError:
-                    aiidalogger.warning("Unable to find data plugin for type '{}' (node={}), "
-                                       "will use base Data class".format(self.type,self.uuid))
-                    PluginClass = Data
-            else:
-                PluginClass = Data
-            return PluginClass(uuid=self.uuid)
-        else:
-            if baseclass:
-                # I do not print a warning for a basic node with type="".
-                aiidalogger.warning("Unable to find plugin for type '{}' (node={}), "
-                                   "will use base Node class".format(self.type,self.uuid))
-            return Node(uuid=self.uuid)
+        try:
+            PluginClass = load_plugin(Node, 'aiida.orm', thistype)
+        except MissingPluginError:
+            aiidalogger.error("Unable to find plugin for type '{}' (node={}), "
+                "will use base Node class".format(self.type,self.pk))
+            PluginClass = Node
+
+        return PluginClass(uuid=self.uuid)
             
 
 class Link(m.Model):
@@ -322,7 +293,8 @@ class DbComputer(m.Model):
     # TODO: understand if we want that this becomes simply another type of dbnode.
 
     Attributes:
-        hostname: Full hostname of the host
+        name: A name to be used to refer to this computer. Must be unique.
+        hostname: Fully-qualified hostname of the host
         workdir: Full path of the aiida folder on the host. It can contain
             the string {username} that will be substituted by the username
             of the user on that machine.
@@ -341,7 +313,8 @@ class DbComputer(m.Model):
         - ... (further limits per user etc.)
     """
     uuid = UUIDField(auto=True)
-    hostname = m.CharField(max_length=255, unique=True) # FQDN
+    name = m.CharField(max_length=255, unique=True)
+    hostname = m.CharField(max_length=255)
     description = m.TextField(blank=True)
     # TODO: next three fields should not be blank...
     workdir = m.CharField(max_length=255)
@@ -414,13 +387,11 @@ class AuthInfo(m.Model):
         Given a computer and an aiida user (as entries of the DB) return a configured
         transport to connect to the computer.
         """    
-        from aiida.common.pluginloader import load_plugin
-        import aiida.transport
+        from aiida.transport import TransportFactory
         from aiida.orm import Computer
 
         try:
-            ThisTransport = load_plugin(aiida.transport.Transport, 'aiida.transport.plugins',
-                                        self.computer.transport_type)
+            ThisTransport = TransportFactory(self.computer.transport_type)
         except MissingPluginError as e:
             raise ConfigurationError('No transport found for {} [type {}], message: {}'.format(
                 self.computer.hostname, self.computer.transport_type, e.message))
@@ -436,25 +407,10 @@ class Comment(m.Model):
     content = m.TextField(blank=True)
 
 
-#
-# Workflows
-#
+#-------------------------------------
+#         Workflows
+#-------------------------------------
 
-#WF_RUNNING +
-#workflow_step_exit = "wf_exit"
-#workflow_status = (('running', 'running'),
-#    ('finished', 'finished'),
-#)
-
-# class DbWorkflow(m.Model):
-#     
-#     uuid        = UUIDField(auto=True)
-#     time        = m.DateTimeField(auto_now_add=True, editable=False)
-#     name        = m.CharField(max_length=255, editable=False, blank=False, unique=True)
-#     version     = m.IntegerField()
-#     user        = m.ForeignKey(User, on_delete=m.PROTECT)
-#     comment     = m.TextField(blank=True)  
-#     repo_folder = m.CharField(max_length=255)
 
 class DbWorkflow(m.Model):
     
@@ -463,6 +419,7 @@ class DbWorkflow(m.Model):
     uuid         = UUIDField(auto=True)
     time         = m.DateTimeField(auto_now_add=True, editable=False)
     user         = m.ForeignKey(User, on_delete=m.PROTECT)
+    
     # File variables, script is the complete dump of the workflow python script
     module       = m.TextField(blank=False)
     module_class = m.TextField(blank=False)

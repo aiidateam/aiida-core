@@ -7,27 +7,205 @@ TODO: implement pre_... and post_... hooks to add arbitrary strings before
       and after a namelist, and a 'final_string' (all optional); useful 
       for development when new cards are needed
 """
-def conv_to_fortran(val):
-    """
-    val: the value to be read and converted to a Fortran-friendly string.
-    """   
-    # Note that bool should come before integer, because a boolean matches also
-    # isinstance(...,int)
-    if (isinstance(val,bool)):
-        if val:
-            val_str='.true.'
-        else:
-            val_str='.false.'
-    elif (isinstance(val,int)): 
-        val_str = "%d" % val
-    elif (isinstance(val,float)):
-        val_str = ("%18.10e" % val).replace('e','d')
-    elif (isinstance(val,basestring)):
-        val_str="'%s'" % val
-    else:
-        raise ValueError
 
-    return val_str
+from aiida.orm import Calculation, DataFactory
+from aiida.common.exceptions import InputValidationError
+from aiida.common.datastructures import CalcInfo
+
+StructureData = DataFactory('structure')
+ParameterData = DataFactory('parameter')
+UpfData = DataFactory('upf')
+
+
+class PwCalculation(Calculation):   
+    
+    def _prepare_for_submission(self,tempfolder):        
+        """
+        This is the routine to be called when you want to create
+        the input files and related stuff with a plugin.
+        
+        Args:
+            tempfolder: a aiida.common.folders.Folder subclass where
+                the plugin should put all its files.
+
+        TODO: document what it has to return (probably a CalcInfo object)
+              and what is the behavior on the tempfolder
+        """
+        input_file_name = 'aiida.in'
+        output_file_name = 'aiida.out'
+        
+        # The code is not here        
+        inputdict = self.get_inputdata_dict()
+
+        try:
+            parameters = inputdict.pop(self.get_linkname_parameters())
+        except KeyError:
+            raise InputValidationError("No parameters specified for this calculation")
+        if not isinstance(parameters, ParameterData):
+            raise InputValidationError("parameters is not of type ParameterDa")
+        
+        try:
+            structure = inputdict.pop(self.get_linkname_structure())
+        except KeyError:
+            raise InputValidationError("No parameters specified for this calculation")
+        if not isinstance(structure,  StructureData):
+            raise InputValidationError("structure is not of type StructureData")
+        
+        try:
+            kpoints = inputdict.pop(self.get_linkname_kpoints())
+        except KeyError:
+            raise InputValidationError("No kpoints specified for this calculation")
+        if not isinstance(kpoints,  ParameterData):
+            raise InputValidationError("kpoints is not of type ParameterData")
+
+        # Settings can be undefined, and defaults to an empty dictionary
+        settings = inputdict.pop(self.get_linkname_settings(),{})
+        
+        pseudos = {}
+        for link in inputdict.keys():
+            if link.startswith(self.get_linkname_pseudo_prefix()):
+                kind = link[len(self.get_linkname_pseudo_prefix()):]
+                pseudos[kind] = inputdict.pop(link)
+                if not isinstance(pseudos[kind], UpfData):
+                    raise InputValidationError("Pseudo for kind {} is not of "
+                                               "type UpfData".format(kind))
+        
+        # Here, there should be no more parameters...
+        if inputdict:
+            raise InputValidationError("The following input data nodes are "
+                "unrecognized: {}".format(inputdict.keys()))
+
+        # Check structure, get species, check peudos
+        kinds = [k.name for k in structure.kinds]
+        if set(kinds) != set(pseudos.keys()):
+            err_msg = ("Mismatch between the defined pseudos and the list of "
+                       "kinds of the structure. Pseudos: {}; kinds: {}".format(
+                        ",".join(pseudos.keys()), ",".join(list(kinds))))
+            raise InputValidationError(err_msg)
+
+        # TODO: Check parameters here
+        # Check also pseudo type? Maybe not
+
+
+
+        local_copy_list = []
+        remote_copy_list = []
+        cmdline_params = []
+        
+        # local_copy_list.append((fileobj.get_file_abs_path(),dest_rel_path))
+        # remote_copy_list.append(
+        # (fileobj.get_remote_machine(), fileobj.get_remote_path(),dest_rel_path))
+
+
+        # raise InputValidationError
+
+        calcinfo = CalcInfo()
+        calcinfo.retrieve_list = []
+
+        calcinfo.uuid = self.uuid
+        calcinfo.cmdline_params = cmdline_params
+        calcinfo.local_copy_list = local_copy_list
+        calcinfo.remote_copy_list = remote_copy_list
+        calcinfo.stdin_name = input_file_name
+        calcinfo.stdout_name = output_file_name
+        calcinfo.retrieve_list.append(output_file_name)
+        
+        return calcinfo
+
+
+    def use_kpoints(self, data):
+        """
+        Set the kpoints for this calculation
+        """
+        if not isinstance(data, ParameterData):
+            raise ValueError("The data must be an instance of the ParameterData class")
+
+        self.replace_link_from(data, self.get_linkname_kpoints())
+
+    def get_linkname_kpoints(self):
+        """
+        The name of the link used for the kpoints
+        """
+        return "kpoints"
+
+    def use_structure(self, data):
+        """
+        Set the structure for this calculation
+        """
+        if not isinstance(data, StructureData):
+            raise ValueError("The data must be an instance of the StructureData class")
+
+        self.replace_link_from(data, self.get_linkname_structure())
+
+    def get_linkname_structure(self):
+        """
+        The name of the link used for the structure
+        """
+        return "structure"
+
+    def use_settings(self, data):
+        """
+        Set the settings for this calculation
+        """
+        if not isinstance(data, ParameterData):
+            raise ValueError("The data must be an instance of the ParameterData class")
+
+        self.replace_link_from(data, self.get_linkname_settings())
+
+    def get_linkname_settings(self):
+        """
+        The name of the link used for the settings
+        """
+        return "settings"
+
+    def use_parameters(self, data):
+        """
+        Set the parameters for this calculation
+        """
+        if not isinstance(data, ParameterData):
+            raise ValueError("The data must be an instance of the ParameterData class")
+
+        self.replace_link_from(data, self.get_linkname_parameters())
+
+    def get_linkname_parameters(self):
+        """
+        The name of the link used for the parameters
+        """
+        return "parameters"
+
+    def use_pseudo(self, data, kind):
+        """
+        Set the pseudo to use for the atomic kind 'kind' for this calculation
+        
+        Args:
+            data: the Data object of type UpfData
+            kind: a string identifying the kind for which this pseudo should be used
+        """
+        if not isinstance(data, UpfData):
+            raise ValueError("The data must be an instance of the UpfData class")
+
+        self.replace_link_from(data, self.get_linkname_pseudo(kind))
+        
+    def get_linkname_pseudo(self, kind):
+        """
+        The name of the link used for the pseudo for kind 'kind'. 
+        It appends the pseudo name to the pseudo_prefix, as returned by the
+        get_linkname_pseudo_prefix() method.
+        
+        Args:
+            kind: a string for the atomic kind for which we want to get the link name
+        """
+        return "{}{}".format(self.get_linkname_pseudo_prefix(),kind)
+
+
+    def get_linkname_pseudo_prefix(self):
+        """
+        The prefix for the name of the link used for the pseudo for kind 'kind'
+        
+        Args:
+            kind: a string for the atomic kind for which we want to get the link name
+        """
+        return "pseudo_"
 
 def get_input_data_text(key,val):
     """
@@ -40,6 +218,7 @@ def get_input_data_text(key,val):
             is produced, with variable indexing starting from 1.
             Each value is formatted using the conv_to_fortran function.
     """
+    from aiida.common.utils import conv_to_fortran
     # I don't try to do iterator=iter(val) and catch TypeError because
     # it would also match strings
     if hasattr(val,'__iter__'):
@@ -54,7 +233,7 @@ def get_input_data_text(key,val):
         return "  {0} = {1}\n".format(key, conv_to_fortran(val))
 
 
-
+comment = '''
 from aiida.common.exceptions import InputValidationError
 from aiida.common.classes.structure import Sites
 from aiida.common.utils import get_suggestion
@@ -453,4 +632,4 @@ def create_calc_input(calc, work_folder):
             input_data.keys())
 
     return retdict
-
+'''

@@ -3,8 +3,13 @@ from aiida.common.utils import escape_for_bash
 from aiida.common.exceptions import AiidaException
 from aiida.scheduler.datastructures import JobTemplate
 
-# TODO: define some high-level priority values to be used independent
-#       of the scheduler plugin
+def SchedulerFactory(module):
+    """
+    Return a suitable Scheduler subclass.
+    """
+    from aiida.common.pluginloader import BaseFactory
+    
+    return BaseFactory(module, Scheduler, "aiida.scheduler.plugins")
 
 class SchedulerError(AiidaException):
     pass
@@ -14,14 +19,7 @@ class SchedulerParsingError(SchedulerError):
 
 class Scheduler(object):
     """
-    Note: probably we want to inherit from some more reasonable class.
-
     Base class for all schedulers.
-    
-    Note: _parse functions are not class methods because in this way they can
-          access the instance information (e.g. the transport info) for useful debug
-          messages. Instead, the functions that only generate the commands are 
-          class methods.
     """
     _logger = aiida.common.aiidalogger.getChild('scheduler')
     
@@ -38,7 +36,7 @@ class Scheduler(object):
     @property
     def logger(self):
         """
-        Return the internal logger
+        Return the internal logger.
         """
         try:
             return self._logger
@@ -102,7 +100,6 @@ class Scheduler(object):
 
         return "\n".join(script_lines)
         
-
     def _get_submit_script_header(self, job_tmpl):
         """
         Return the submit script header, using the parameters from the
@@ -113,24 +110,26 @@ class Scheduler(object):
         """
         raise NotImplementedError
 
-    def _get_run_line(self, argv, stdin_name, stdout_name, stderr_name, join_files):
+    def _get_run_line(self, argv, stdin_name, stdout_name, 
+                      stderr_name, join_files):
         """
-        Return a string with the line to execute a specific code with specific arguments.
+        Return a string with the line to execute a specific code with
+        specific arguments.
         
         Args:  
             argv: an array with the executable and the command line arguments.
-                  The first argument is the executable. This should contain everything,
-                  including the mpirun command etc.
-            stdin_name: the filename to be used as stdin, relative to the working dir,
-                        or None if no stdin redirection is required.
+              The first argument is the executable. This should contain
+              everything, including the mpirun command etc.
+            stdin_name: the filename to be used as stdin, relative to the
+              working dir, or None if no stdin redirection is required.
             stdout_name: the filename to be used to store the standard output,
-                         relative to the working dir,
-                         or None if no stdout redirection is required.
+              relative to the working dir,
+              or None if no stdout redirection is required.
             stderr_name: the filename to be used to store the standard error,
-                         relative to the working dir,
-                         or None if no stderr redirection is required.
+              relative to the working dir,
+              or None if no stderr redirection is required.
             join_files: if True, stderr is redirected to stdout; the value of 
-                        stderr_name is ignored.
+              stderr_name is ignored.
         
         Return a string with the following format:
         [executable] [args] {[ < stdin ]} {[ < stdout ]} {[2>&1 | 2> stderr]}
@@ -159,31 +158,39 @@ class Scheduler(object):
     
     def _get_joblist_command(self,jobs=None):
         """
-        Return a list with the qsub (or equivalent) command to run + 
-        required parameters to get the most complete description possible;
-        the format will be the one used by the parse_queue_output.
+        Return the qsub (or equivalent) command to run with the required
+        command-line parameters to get the most complete description possible;
+        also specifies the output format of qsub to be the one to be used
+        by the parse_queue_output method.
 
         Must be implemented in the plugin. 
         Args:
-            jobs: either None to get a list of all jobs in the machine, or a list 
-                  of jobs.
-            user: a string with the username to filter, or None (default) for all users.
-    
-        TODO: specify here how the filters should work, to have an API that is
-              plugin-independent.
+            jobs: either None to get a list of all jobs in the machine,
+               or a list of jobs.
         """
         raise NotImplementedError
 
     def _get_detailed_jobinfo_command(self,jobid):
         """
-        Return the command to run to get the detailed information on a job,
-        even after the job has finished.
+        Return the command to run to get the detailed information on a job.
+        This is typically called after the job has finished, to retrieve
+        the most detailed information possible about the job. This is done
+        because most schedulers just make finished jobs disappear from the
+        'qstat' command, and instead sometimes it is useful to know some
+        more detailed information about the job exit status, etc.
 
-        The output text is just retrieved, and returned for logging purposes.
         """
         raise NotImplementedError
 
     def get_detailed_jobinfo(self, jobid):
+        """
+        Return a string with the output of the detailed_jobinfo command.
+
+        At the moment, the output text is just retrieved
+        and stored for logging purposes, but no parsing is performed.
+
+        TODO: Parsing?
+        """
         command = self._get_detailed_jobinfo_command(jobid=jobid)
         retval, stdout, stderr = self.transport.exec_command_wait(
             command)
@@ -199,8 +206,8 @@ stderr:
 
     def _parse_joblist_output(self, retval, stdout, stderr):
         """
-        Parse the queue output string, as returned by executing the
-        command returned by _get_joblist_command command.
+        Parse the joblist output ('qstat'), as returned by executing the
+        command returned by _get_joblist_command method.
         
         To be implemented by the plugin.
         
@@ -216,10 +223,10 @@ stderr:
         Typically, this function does not need to be modified by the plugins.
         
         Args:
-            jobs: a list of jobs to check; only these are checked
-            as_dict: if False (default), a list of JobInfo objects is returned. If
-                True, a dictionary is returned, having as key the job_id and as value the
-                JobInfo object.
+          * jobs: a list of jobs to check; only these are checked
+          * as_dict: if False (default), a list of JobInfo objects is
+             returned. If True, a dictionary is returned, having as key the
+             job_id and as value the JobInfo object.
         """
         retval, stdout, stderr = self.transport.exec_command_wait(
             self._get_joblist_command(jobs=jobs))
@@ -235,6 +242,9 @@ stderr:
 
     @property
     def transport(self):
+        """
+        Return the transport set for this scheduler.
+        """
         if self._transport is None:
             raise SchedulerError("Use the set_transport function to set the "
                                  "transport for the scheduler first.")
@@ -246,9 +256,9 @@ stderr:
         Return the string to execute to submit a given script.
         
         Args:
-            submit_script: the path of the submit script relative to the working
-                directory. 
-                IMPORTANT: submit_script should be already escaped.
+          * submit_script: the path of the submit script relative to the
+              working directory. 
+            IMPORTANT: submit_script should be already escaped.
         
         To be implemented by the plugin.
         """
@@ -269,7 +279,8 @@ stderr:
         """
         Goes in the working directory and submits the submit_script.
         
-        Return a string with the JobID in a valid format to be used for querying.
+        Return a string with the JobID in a valid format to be used for
+        querying.
         
         Typically, this function does not need to be modified by the plugins.
         """
@@ -279,10 +290,3 @@ stderr:
             self._get_submit_command(escape_for_bash(submit_script)))
         return self._parse_submit_output(retval, stdout, stderr)
         
-
-#if __name__ == '__main__':
-#    import logging
-#    aiida.common.aiidalogger.setLevel(logging.DEBUG)
-#    
-#    s = Scheduler._get_run_line(argv=['mpirun', '-np', '8', 'pw.x'],
-#        stdin_name=None, stdout_name=None, stderr_name=None, join_files=True)

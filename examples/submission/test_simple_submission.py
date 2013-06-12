@@ -51,10 +51,11 @@ def get_or_create_machine():
             print >> sys.stderr, "Using the existing computer {localhost}..."
         except NotExistent:
             print >> sys.stderr, "Creating a new localhostcomputer..."
-            computer = Computer(hostname="localhost",transport_type='local',
+            computer = Computer(name="localhost",
+                                hostname="localhost",transport_type='local',
                                 scheduler_type='pbspro')
             computer.set_workdir("/tmp/{username}/aiida")
-            computer.set_mpirun_command("mpirun", "-np", "{tot_num_cpus}")
+            computer.set_mpirun_command(["mpirun", "-np", "{tot_num_cpus}"])
             computer.store()
 
         auth_params = {}
@@ -90,7 +91,7 @@ def get_or_create_machine():
             print >> sys.stderr, "Using the existing computer {}...".format(computername)
         except NotExistent:
             print >> sys.stderr, "Creating a new computer..."
-            computer = Computer(hostname=computername,transport_type='ssh',
+            computer = Computer(name=computername,hostname=computername,transport_type='ssh',
                                 scheduler_type=schedulertype)
             computer.set_workdir(workdir)
             computer.set_mpirun_command(mpirun_command)

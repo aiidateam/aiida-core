@@ -216,7 +216,10 @@ class Calculation(Node):
 
     def get_computer(self):
         from aiida.orm import Computer
-        return Computer(dbcomputer=self.dbnode.computer)
+        if self.dbnode.computer is None:
+            return None
+        else:
+            return Computer(dbcomputer=self.dbnode.computer)
 
     def _set_state(self, state):
         if state not in calc_states:
@@ -374,6 +377,23 @@ class Calculation(Node):
               and what is the behavior on the tempfolder
         """
         raise NotImplementedError
+
+    def _get_authinfo(self):
+        import aiida.execmanager
+        from aiida.common.exceptions import NotExistent
+        
+        computer = self.get_computer()
+        if computer is None:
+            raise  NotExistent("No computer has been set for this calculation")
+        
+        return aiida.execmanager.get_authinfo(computer=computer,
+                                              aiidauser=self.dbnode.user)
+    
+    def _get_transport(self):
+        """
+        Return the transport for this calculation
+        """
+        return self._get_authinfo().get_transport()
 
     def submit(self):
         """

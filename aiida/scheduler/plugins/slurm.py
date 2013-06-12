@@ -101,7 +101,12 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
     """
     _logger = aiida.scheduler.Scheduler._logger.getChild('slurm')
 
-    def _get_joblist_command(self,jobs=None): 
+    # Query only by list of jobs and not by user
+    _features = {
+        'can_query_by_user': False,
+        }
+
+    def _get_joblist_command(self,jobs=None,user=None): 
         """
         The command to report full information on existing jobs.
 
@@ -109,6 +114,8 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
         order: jobnum, state, walltime, queue[=partition],
                user, numnodes, numcores, title
         """
+        from aiida.common.exceptions import FeatureNotAvailable
+        
         # Unavailable fields: substate, cputime, submissiontime
         # Note! If you change the fields or fields length, update accordingly
         # also the parsing function!
@@ -132,6 +139,8 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
         command = ("SLURM_TIME_FORMAT='standard' "
                    "squeue --noheader -o '{}'".format(
                 _field_separator.join(fields)))
+        if user:
+            raise FeatureNotAvailable("Cannot query by user in SLURM")
         if jobs:
             joblist = []
             if isinstance(jobs, basestring):

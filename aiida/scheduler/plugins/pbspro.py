@@ -49,15 +49,24 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
     TODO: implement __unicode__ and __str__ methods.
     """
     _logger = aiida.scheduler.Scheduler._logger.getChild('pbspro')
+    
+    # Query only by list of jobs and not by user
+    _features = {
+        'can_query_by_user': False,
+        }
 
-
-    def _get_joblist_command(self,jobs=None): 
+    def _get_joblist_command(self,jobs=None,user=None): 
         """
         The command to report full information on existing jobs.
 
         TODO: in the case of job arrays, decide what to do (i.e., if we want
               to pass the -t options to list each subjob).
         """
+        from aiida.common.exceptions import FeatureNotAvailable
+
+        if user:
+            raise FeatureNotAvailable("Cannot query by user in SLURM")
+        
         command = 'qstat -f'
         if jobs:
             if isinstance(jobs, basestring):

@@ -47,7 +47,10 @@ def update_running_calcs_status(authinfo):
             # TODO: catch SchedulerError exception and do something sensible (at least,
             # skip this computer but continue with following ones, and set a counter; 
             # set calculations to UNKNOWN after a while?
-            found_jobs = s.getJobs(jobs=jobids_to_inquire, as_dict = True)
+            if s.get_feature('can_query_by_user'):
+                found_jobs = s.getJobs(user="$USER", as_dict = True)
+            else:
+                found_jobs = s.getJobs(jobs=jobids_to_inquire, as_dict = True)
     
             # I update the status of jobs
 

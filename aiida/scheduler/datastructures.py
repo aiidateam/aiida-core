@@ -40,7 +40,7 @@ class JobTemplate(DefaultFieldsAttributeDict):
     Fields:
       * submit_as_hold: if set, the job will be in a 'hold' status right
           after the submission
-      * rerunnable: if the job is rerunnable
+      * rerunnable: if the job is rerunnable (boolean)
       * job_environment: a dictionary with environment variables to set
           before the execution of the code.
       * working_directory: the working directory for this job. During

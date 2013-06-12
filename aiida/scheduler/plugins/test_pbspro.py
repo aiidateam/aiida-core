@@ -437,5 +437,4 @@ class TestSubmitScript(unittest.TestCase):
         self.assertTrue( '#PBS -l select=1' in submit_script_text )
         self.assertTrue( "'mpirun' '-np' '23' 'pw.x' '-npool' '1'" + \
                          " < 'aiida.in'" in submit_script_text )
-if __name__ == '__main__':        
-    unittest.main()
+

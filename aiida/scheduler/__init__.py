@@ -158,7 +158,7 @@ class Scheduler(object):
     
     def _get_joblist_command(self,jobs=None):
         """
-        Return the qsub (or equivalent) command to run with the required
+        Return the qstat (or equivalent) command to run with the required
         command-line parameters to get the most complete description possible;
         also specifies the output format of qsub to be the one to be used
         by the parse_queue_output method.

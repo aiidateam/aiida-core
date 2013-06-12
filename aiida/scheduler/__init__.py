@@ -22,6 +22,13 @@ class Scheduler(object):
     Base class for all schedulers.
     """
     _logger = aiida.common.aiidalogger.getChild('scheduler')
+
+    # A list of features
+    # Features that should be defined in the plugins:
+    # 'can_query_by_user': True if I can pass the 'user' argument to
+    # get_joblist_command (and in this case, no 'jobs' should be given).
+    # Otherwise, if False, a list of jobs is passed, and no 'user' is given.
+    _features = {}
     
     def __init__(self):
         self._transport = None
@@ -32,6 +39,14 @@ class Scheduler(object):
         This class assumes that the transport is open and active.
         """
         self._transport = transport        
+
+    def get_feature(self, feature_name):
+        try:
+            return self._features[feature_name]
+        except KeyError:
+            raise NotImplementedError(
+                "Feature {} not implemented for this scheduler".format(
+                    feature_name))
 
     @property
     def logger(self):
@@ -156,7 +171,7 @@ class Scheduler(object):
         self.logger.debug('_get_run_line output: {}'.format(output_string))
         return output_string
     
-    def _get_joblist_command(self,jobs=None):
+    def _get_joblist_command(self,jobs=None,user=None):
         """
         Return the qsub (or equivalent) command to run with the required
         command-line parameters to get the most complete description possible;
@@ -167,6 +182,12 @@ class Scheduler(object):
         Args:
             jobs: either None to get a list of all jobs in the machine,
                or a list of jobs.
+            user: either None, or a string with the username (to show only
+               jobs of the specific user).
+        
+        Note: typically one can pass only either jobs or user, depending on the
+            specific plugin. The choice can be done according to the value 
+            returned by self.get_feature('can_query_by_user')
         """
         raise NotImplementedError
 
@@ -216,7 +237,7 @@ stderr:
         """
         raise NotImplementedError
         
-    def getJobs(self, jobs=None, as_dict=False):
+    def getJobs(self, jobs=None, user=None, as_dict=False):
         """
         Get the list of jobs and return it.
         
@@ -224,12 +245,16 @@ stderr:
         
         Args:
           * jobs: a list of jobs to check; only these are checked
+          * user: a string with a user: only jobs of this user are checked
           * as_dict: if False (default), a list of JobInfo objects is
              returned. If True, a dictionary is returned, having as key the
              job_id and as value the JobInfo object.
+        
+        Note: typically, only either jobs or user can be specified. See also
+        comments in _get_joblist_command.
         """
         retval, stdout, stderr = self.transport.exec_command_wait(
-            self._get_joblist_command(jobs=jobs))
+            self._get_joblist_command(jobs=jobs,user=user))
         
         joblist = self._parse_joblist_output(retval, stdout, stderr)
         if as_dict:

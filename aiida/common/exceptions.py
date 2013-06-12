@@ -89,3 +89,8 @@ class InputValidationError(ValidationError):
     """
     pass
 
+class FeatureNotAvailable(AiidaException):
+    """
+    Raised when a feature is requested from a plugin, that is not available.
+    """
+    pass

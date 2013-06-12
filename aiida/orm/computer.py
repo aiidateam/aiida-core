@@ -39,8 +39,8 @@ class Computer(object):
     def __init__(self,**kwargs):
         from aiida.djsite.db.models import DbComputer
 
-        dbcomputer = kwargs.pop('dbcomputer', None)
-        if dbcomputer is not None:
+        if 'dbcomputer' in kwargs:
+            dbcomputer = kwargs.pop('dbcomputer')            
             if not(isinstance(dbcomputer, DbComputer)):
                 raise TypeError("dbcomputer must be of type DbComputer")
             self._dbcomputer = dbcomputer

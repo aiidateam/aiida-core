@@ -1,5 +1,4 @@
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
-from django.contrib.auth.models import User
 
 from aiida.common.datastructures import calc_states
 from aiida.scheduler.datastructures import job_states
@@ -146,6 +145,7 @@ def daemon_main_loop():
 
 def retrieve_jobs():
     from aiida.orm import Calculation
+    from django.contrib.auth.models import User
     
     # I create a unique set of pairs (computer, aiidauser)
     computers_users_to_check = set(
@@ -178,7 +178,8 @@ def update_jobs():
     calls an update for each set of pairs (machine, aiidauser)
     """
     from aiida.orm import Calculation
-    
+    from django.contrib.auth.models import User
+
     # I create a unique set of pairs (computer, aiidauser)
     computers_users_to_check = set(
         Calculation.get_all_with_state(

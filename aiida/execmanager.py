@@ -1,8 +1,9 @@
+"""
+No documentation yet!
+"""
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
-
 from aiida.common.datastructures import calc_states
 from aiida.scheduler.datastructures import job_states
-from aiida.djsite.db.models import DbComputer, AuthInfo
 from aiida.common.exceptions import AuthenticationError, ConfigurationError, PluginInternalError
 from aiida.common import aiidalogger
     
@@ -126,6 +127,7 @@ def update_running_calcs_status(authinfo):
     return finished
 
 def get_authinfo(computer, aiidauser):
+    from aiida.djsite.db.models import DbComputer, AuthInfo
     try:
         authinfo = AuthInfo.objects.get(computer=DbComputer.get_dbcomputer(computer),aiidauser=aiidauser)
     except ObjectDoesNotExist:
@@ -146,6 +148,7 @@ def daemon_main_loop():
 def retrieve_jobs():
     from aiida.orm import Calculation
     from django.contrib.auth.models import User
+    from aiida.djsite.db.models import DbComputer
     
     # I create a unique set of pairs (computer, aiidauser)
     computers_users_to_check = set(
@@ -179,6 +182,7 @@ def update_jobs():
     """
     from aiida.orm import Calculation
     from django.contrib.auth.models import User
+    from aiida.djsite.db.models import DbComputer
 
     # I create a unique set of pairs (computer, aiidauser)
     computers_users_to_check = set(

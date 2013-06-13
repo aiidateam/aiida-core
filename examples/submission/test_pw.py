@@ -220,8 +220,7 @@ kpoints = ParameterData({
 QECalc = CalculationFactory('quantumespresso.pw')
 calc = QECalc(computer=computer)
 calc.set_max_wallclock_seconds(1*3600) # 1 hour
-calc.set_num_machines(2)
-calc.set_num_cpus_per_machine(32)
+calc.set_resources(num_machines=2, num_cpus_per_machine=32)
 if queue is not None:
     calc.set_queue_name(queue)
 calc.store()

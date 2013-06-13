@@ -7,7 +7,7 @@ import aiida.scheduler
 from aiida.common.utils import escape_for_bash
 from aiida.scheduler import SchedulerError, SchedulerParsingError
 from aiida.scheduler.datastructures import (
-    JobInfo, job_states, MachineInfo)
+    JobInfo, job_states, MachineInfo, NodeNumberJobResource)
 
 # This maps PbsPro status letters to our own status list
 
@@ -40,7 +40,8 @@ _map_status_pbspro = {
     'X': job_states.DONE,
     }
 
-
+class PbsproJobResource(NodeNumberJobResource):
+    pass
 
 class PbsproScheduler(aiida.scheduler.Scheduler):
     """
@@ -54,6 +55,9 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
     _features = {
         'can_query_by_user': False,
         }
+
+    # The class to be used for the job resource.
+    _job_resource_class = PbsproJobResource
 
     def _get_joblist_command(self,jobs=None,user=None): 
         """
@@ -189,13 +193,13 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
             # format. To fix.
             lines.append("#PBS -p {}".format(job_tmpl.priority))
 
-        
-        if not job_tmpl.num_machines:
-            raise ValueError("num_machines is required for the PBSPro scheduler "
-                             "plugin")
-        select_string = "select={}".format(job_tmpl.num_machines)
-        if job_tmpl.num_cpus_per_machine:
-            select_string += ":ncpus={}".format(job_tmpl.num_cpus_per_machine)
+        if not job_tmpl.job_resource:
+            raise ValueError("Job resources (as the num_machines) are required "
+                             "for the PBSPro scheduler plugin")
+                    
+        select_string = "select={}".format(job_tmpl.job_resource.num_machines)
+        if job_tmpl.job_resource.num_cpus_per_machine:
+            select_string += ":ncpus={}".format(job_tmpl.job_resource.num_cpus_per_machine)
 
         if job_tmpl.max_wallclock_seconds is not None:
             try:

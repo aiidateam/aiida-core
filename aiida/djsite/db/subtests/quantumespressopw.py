@@ -30,9 +30,11 @@ class QETestCase(AiidaTestCase):
     def setUpClass(cls):
         super(QETestCase,cls).setUpClass()
         cls.calc_params = {
-                           'computer': cls.computer,
-                           'num_machines': 1,
-                           'num_cpus_per_machine': 1}
+            'computer': cls.computer,
+            'resources': {
+                'num_machines': 1,
+                'num_cpus_per_machine': 1}
+            }
 
 class TestQEPWInputGeneration(QETestCase):
     """

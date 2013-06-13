@@ -287,15 +287,12 @@ def submit_calc(calc):
                 ((code.get_append_text() + u"\n\n") if code.get_append_text() else u"") +
                 ((computer.get_append_text() + u"\n\n") if computer.get_append_text() else u""))
 
-            # The Calculation validation should take care of always having a sensible value here
-            # so I don't need to check
-            num_machines = calc.get_num_machines()
-            num_cpus_per_machine = calc.get_num_cpus_per_machine()
-            tot_num_cpus = num_machines * num_cpus_per_machine
-    
-            mpi_args = [arg.format(num_machines=num_machines,
-                                   num_cpus_per_machine=num_cpus_per_machine,
-                                   tot_num_cpus=tot_num_cpus) for arg in
+            job_tmpl.job_resource = s.create_job_resource(**calc.get_jobresource_params())
+
+            subst_dict = {'tot_num_cpus': job_tmpl.job_resource.get_tot_num_cpus()}
+            for k,v in job_tmpl.job_resource.iteritems():
+                subst_dict[k] = v
+            mpi_args = [arg.format(**subst_dict) for arg in
                         computer.get_mpirun_command()]
             job_tmpl.argv = mpi_args + [code.get_execname()] + (
                 calcinfo.cmdline_params if calcinfo.cmdline_params is not None else [])
@@ -321,9 +318,6 @@ def submit_calc(calc):
             if max_memory_kb is not None:
                 job_tmpl.max_memory_kb = max_memory_kb
 
-            job_tmpl.num_machines = num_machines
-            job_tmpl.num_cpus_per_machine = num_cpus_per_machine
-    
             # TODO: give possibility to use a different name??
             script_filename = '_aiidasubmit.sh'
             script_content = s.get_submit_script(job_tmpl)

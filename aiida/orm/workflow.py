@@ -7,7 +7,7 @@ from aiida.common.exceptions import (InternalError, ModificationNotAllowed, NotE
 from aiida.common.folders import RepositoryFolder, SandboxFolder
 from aiida.common.datastructures import wf_states, wf_exit_call
 
-from aiida.djsite.utils import get_automatic_user
+
 
 # Name to be used for the section
 _section_name = 'workflow'
@@ -99,7 +99,7 @@ class Workflow(object):
 		"""
 		Stores the object data in the database
 		"""
-		
+		from aiida.djsite.utils import get_automatic_user
 		from aiida.djsite.db.models import DbWorkflow
 		import hashlib
 		
@@ -161,7 +161,7 @@ class Workflow(object):
 		linked. In case no step if found None is returned, useful for loop configuration to
 		test whether is the first time the method gets called. 
 		"""
-		
+		from aiida.djsite.utils import get_automatic_user
 		if isinstance(method, basestring):
 			method_name = method
 		else:

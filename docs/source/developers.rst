@@ -2,6 +2,9 @@
 Developer's Guide For AiiDA
 ##########################
 
+DJsite
+++++
+
 All urls are defined in the urlconf file :mod:`aiida.djsite.main.urls`.  Most views
 are found within :mod:`aiida.djsite.main.data.views` and :mod:`aiida.djsite.main.data.simple_views`.
 The views within :mod:`aiida.djsite.main.data.views` use the `ModelAdmin` classes
@@ -20,3 +23,14 @@ If you want to change the root aiida url, change the AiiDA_ROOT_URL
 variable in `settings.py` in `aiida.djsite.settings` directory. Currently it is set
 so that links like http://host/aiida/ work.
 
+Python style
++++++++
+When writing python code, a more than reasonable guideline is given by
+the Google python styleguide
+http://google-styleguide.googlecode.com/svn/trunk/pyguide.html.
+The documentation should be written consistently in the style of
+sphinx.
+
+And more generally, write verbose! Will you remember
+after a month why you had to write that check on that line? (Hint: no)
+Write comments!

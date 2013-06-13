@@ -1,3 +1,6 @@
+"""
+This module defines the main data structures used by the Calculation.
+"""
 from aiida.common.extendeddicts import DefaultFieldsAttributeDict, Enumerate
 
 class CalcState(Enumerate):

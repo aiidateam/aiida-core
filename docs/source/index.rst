@@ -17,6 +17,8 @@ Contents:
    scheduler/index
    cmdline/index
    execmanager/index
+   djsite/index
+   orm/index
 
    Installation and Deployment [OUTDATED] <installation> 
    aiida.common Modules [OUTDATED] <aiida.common>
@@ -37,4 +39,5 @@ Modules provided with aiida
 * :doc:`aiida.common <common/index>` module
 * :doc:`aiida.transport <transport/index>` module
 * :doc:`aiida.scheduler <scheduler/index>` module
-
+* :doc:`aiida.djsite <djsite/index>` module
+* :doc:`aiida.orm <orm/index>` module

@@ -1,4 +1,4 @@
-aiida.orm documentation
+ORM documentation: generic aiida.orm
 =========================
 
 .. toctree::
@@ -6,7 +6,11 @@ aiida.orm documentation
 
 This section describes the aiida/django object-relational mapping.
 
+Some generic methods of the module aiida.orm
+
 .. automodule:: aiida.orm
+   :members:
+   :special-members: __init__
 
 Computer
 +++++++++++++++++++++++++
@@ -21,4 +25,76 @@ Node
 Workflow
 ++++++++++
 .. automodule:: aiida.orm.workflow
+   :members:
+
+
+Code
+++++++
+.. automodule:: aiida.orm.code
+   :members:
+   :special-members: __init__
+
+
+
+
+ORM documentation: Data
+=======
+
+.. automodule:: aiida.orm.data
+
+Structure
+++++++
+.. automodule:: aiida.orm.data.structure
+   :members:
+
+Folder
+++++++
+.. automodule:: aiida.orm.data.folder
+   :members:
+
+Upf
+++++++
+.. automodule:: aiida.orm.data.upf
+   :members:
+
+Parameter
+++++++
+.. automodule:: aiida.orm.data.parameter
+   :members:
+
+Remote
+++++++
+.. automodule:: aiida.orm.data.remote
+   :members:
+
+Singlefile
+++++++
+.. automodule:: aiida.orm.data.singlefile
+   :members:
+
+
+
+
+
+
+
+
+
+
+ORM documentation: Calculation
+=======
+
+.. automodule:: aiida.orm.calculation
+   :members:
+   :special-members: __init__
+   :undoc-members:
+
+Quantum Espresso - PW
+++++++++
+.. automodule:: aiida.orm.calculation.quantumespresso.pw
+   :members:
+
+TemplateReplacer
+++++++++
+.. automodule:: aiida.orm.calculation.simpleplugins.templatereplacer
    :members:

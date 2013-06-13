@@ -14,6 +14,9 @@ Contents:
    jobmanager/index
    common/index
    transport/index
+   scheduler/index
+   cmdline/index
+   execmanager/index
 
    Installation and Deployment [OUTDATED] <installation> 
    aiida.common Modules [OUTDATED] <aiida.common>
@@ -33,3 +36,5 @@ Modules provided with aiida
 * :doc:`aiida.jobmanager <jobmanager/index>` module
 * :doc:`aiida.common <common/index>` module
 * :doc:`aiida.transport <transport/index>` module
+* :doc:`aiida.scheduler <scheduler/index>` module
+

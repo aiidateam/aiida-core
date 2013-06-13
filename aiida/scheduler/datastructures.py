@@ -1,5 +1,5 @@
 """
-This module defines the main data structures used by the scheduler.
+This module defines the main data structures used by the Scheduler.
 
 In particular, there is the definition of possible job states (job_states),
 the data structure to be filled for job submission (JobTemplate), and

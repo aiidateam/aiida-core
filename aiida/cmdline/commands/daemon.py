@@ -17,8 +17,12 @@ class Daemon(VerdiCommand):
     and to inquire its status.
     """
 
-    # A dictionary with valid commands and functions to be called
+
     def __init__(self):
+        """
+        A dictionary with valid commands and functions to be called:
+        start, stop, status and restart.
+        """
         self.valid_subcommands = {
             'start': self.daemon_start,
             'stop' : self.daemon_stop,

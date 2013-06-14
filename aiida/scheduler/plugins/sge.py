@@ -1,73 +1,428 @@
 """
 Plugin for SGE.
-This has been tested on XXX.
+This has been tested on GE 6.2u3.
 """
 from __future__ import division
 import aiida.scheduler
+import xml.parsers.expat
 from aiida.common.utils import escape_for_bash
 from aiida.scheduler import SchedulerError, SchedulerParsingError
 from aiida.scheduler.datastructures import (
     JobInfo, job_states, MachineInfo)
 
-# You may want to follow the way PBSPro and SLURM plugins are done.
+#Jobs Status:
+#    'qw' - Queued and waiting,
+#    'w' - Job waiting,
+#    's' - Job suspended,
+#    't' - Job transferring and about to start,
+#    'r' - Job running,
+#    'h' - Job hold,
+#    'R' - Job restarted,
+#    'd' - Job has been marked for deletion,
+#    'Eqw' - An error occurred with the job.
 
-# At the end (or, rather, maybe even at the beginning, before writing the code)
-# you should write test cases in a file called test_sge.py (follow what is
-# done for the other test_*.py files, and improve if you want!) to test if
-# the plugin is working as expected.
-# The best is to take an actual output from you cluster, anonymize it removing
-# real usernames, and reducing the actual output to a small enough number of
-# jobs, that are however still representative (e.g. one running, one queued, 
-# one held, ...)
-
-# Moreover: while writing the plugin, try to make full use of the manual pages
-# and manuals of the scheduler. If there is something that is not documented,
-# mark it in the code with a # TODO: xxx explanation xxx
-# inside the code, for later improvement.
-
-# As far as I understand, sge has a -xml option; I think that this is
-# the best way to get the output to be then parsed.
-# To parse XML, use
-#    import xml.dom.minidom
-# and the parsing function
-#    dom = xml.dom.minidom.parse(f)
-# (this is for file-like objects f, I think there is also a function for 
-# strings, otherwise you can convert a string to a file-like using StringIO)
-# Then you can get tags and their content using things like:
-#   var = dom.getElementsByTagName('var')
-#   var.getAttribute('name').lower()
-# etc. Refer to the xml.dom.minidom documentation for more details. 
-
-# Note that there are the following functions defined in the slurm and pbspro
-# schedulers: you may want to copy them here and adapt them for the sge
-# scheduler.
-#slurm.py:    def _convert_time(self,string):
-#slurm.py:    def _parse_time_string(self,string,fmt='%Y-%m-%dT%H:%M:%S'):
-#pbspro.py:    def _convert_time(self,string):
-#pbspro.py:    def _parse_time_string(self,string,fmt='%a %b %d %H:%M:%S %Y'):
+# TODO: check if all make sense!
+_map_status_sge = {
+    'qw' : job_states.QUEUED,
+    'w'  : job_states.QUEUED, 
+    's'  : job_states.SUSPENDED,
+    't'  : job_states.QUEUED, 
+    'r'  : job_states.RUNNING,
+    'h'  : job_states.QUEUED_HELD,
+    'R'  : job_states.RUNNING,
+    'd'  : job_states.UNDETERMINED, 
+    'Eqw': job_states.UNDETERMINED,
+    }
 
 class SgeScheduler(aiida.scheduler.Scheduler):
     """
     SGE implementation of the scheduler functions.
     """
     _logger = aiida.scheduler.Scheduler._logger.getChild('sge')
+    
+    # For SGE, we can have a good qstat xml output by querying by
+    # user, but not by job id
+    _features = {
+        'can_query_by_user': True,
+        }
+    
+    def _get_joblist_command(self,jobs=None,user=None):
+        """
+        The command to report full information on existing jobs.
 
-    def _get_joblist_command(self,jobs=None): 
-        raise NotImplementedError
+        TODO: in the case of job arrays, decide what to do (i.e., if we want
+              to pass the -t options to list each subjob).
+        
+        !!!ALL COPIED FROM PBSPRO!!!
+        TODO: understand if it is worth escaping the username, 
+        or rather leave it unescaped to allow to pass $USER
+        """
+        from aiida.common.exceptions import FeatureNotAvailable
+        
+        if jobs:
+            raise FeatureNotAvailable("Cannot query by jobid in SGE")
+
+        command = "qstat -ext -xml "
+
+        if user:
+            command += "-u {}".format(str(user))
+        else:
+            # All users if no user is specified
+            command += "-u '*'"
+            
+        self.logger.debug("qstat command: {}".format(command))
+        return command 
+        #raise NotImplementedError
 
     def _get_detailed_jobinfo_command(self,jobid):
-        raise NotImplementedError
+        command = "qacct -j {}".format(escape_for_bash(jobid))
+        return command
 
     def _get_submit_script_header(self, job_tmpl):
-        raise NotImplementedError
+        """
+        Return the submit script header, using the parameters from the
+        job_tmpl.
 
+        Args:
+           job_tmpl: an JobTemplate instance with relevant parameters set.
+
+        TODO: truncate the title if too long
+        """
+        import re 
+        import string
+
+        empty_line = ""
+        
+        lines = []
+        
+        # SGE provides flags for wd and cwd
+        if job_tmpl.working_directory:
+            lines.append('#$ -wd {}'.format(job_tmpl.working_directory))
+        else:
+            lines.append('#$ -cwd')
+                 
+        
+        if job_tmpl.submit_as_hold:
+            #if isinstance(job_tmpl.submit_as_hold, str):
+            lines.append('#$ -h {}'.format(job_tmpl.submit_as_hold))
+            
+        if job_tmpl.rerunnable:
+            #if isinstance(job_tmpl.rerunnable, str):
+            lines.append('#$ -r {}'.format(job_tmpl.rerunnable))
+              
+        if job_tmpl.email:
+            # If not specified, but email events are set, PBSPro
+            # sends the mail to the job owner by default
+            lines.append('#$ -M {}'.format(job_tmpl.email))
+            
+        email_events = ""
+        if job_tmpl.email_on_started:
+            email_events += "b"
+        if job_tmpl.email_on_terminated:
+            email_events += "ea"
+        if email_events:
+            lines.append("#$ -m {}".format(email_events))
+            if not job_tmpl.email:
+                self.logger.info(
+                    "Email triggers provided to SGE script for job,"
+                    "but no email field set; will send emails to "
+                    "the job owner as set in the scheduler")
+        else:
+            lines.append("#$ -m n")
+        
+        #From the qsub man page:
+        #"The name may be any arbitrary alphanumeric ASCII string, but
+        # may  not contain  "\n", "\t", "\r", "/", ":", "@", "\", "*",
+        # or "?"."
+        if job_tmpl.job_name:
+            job_title = re.sub(r'[^a-zA-Z0-9_.-]+', '', job_tmpl.job_name)
+
+            # prepend a 'j' (for 'job') before the string if the string
+            # is now empty or does not start with a valid charachter
+            if not job_title or (
+                job_title[0] not in string.letters + string.digits):
+                job_title = 'j' + job_title
+                
+            lines.append('#$ -N {}'.format(job_tmpl.job_name))
+        
+        if job_tmpl.sched_output_path:
+            lines.append("#$ -o {}".format(job_tmpl.sched_output_path))
+        
+        if job_tmpl.sched_join_files:
+            # from qsub man page:
+            # 'y': Standard error and standard output are merged  into 
+            #       standard output
+            # 'n' : Standard error and standard output are not merged (default)
+            lines.append("#$ -j y")
+            if job_tmpl.sched_error_path:
+                self.logger.info(
+                    "sched_join_files is True, but sched_error_path is set in "
+                    "SGE script; ignoring sched_error_path")
+        else:
+            if job_tmpl.sched_error_path:
+                lines.append("#$ -e {}".format(job_tmpl.sched_error_path))
+                
+        if job_tmpl.queue_name:
+            lines.append("#$ -q {}".format(job_tmpl.queue_name))
+            
+        if job_tmpl.priority:
+            # Priority of the job.  Format: host-dependent integer.  Default:
+            # zero.   Range:  [-1023,  +1024].  Sets job's Priority
+            # attribute to priority.
+            lines.append("#$ -p {}".format(job_tmpl.priority))
+        #####################################################    
+        #Parallel Environment???
+        #if not job_tmpl.job_resource:
+            #raise ValueError("num_machines is required for the PBSPro scheduler "
+        #                     "plugin")
+        
+        #job_tmpl.job_resource.parallel_env
+        #job_tmpl.job_resource.tot_num_cpus
+        ######################################################
+        #select_string = "select={}".format(job_tmpl.num_machines)
+        #if job_tmpl.num_cpus_per_machine:
+        #    select_string += ":ncpus={}".format(job_tmpl.num_cpus_per_machine)
+            
+        if job_tmpl.max_wallclock_seconds is not None:
+            try:
+                tot_secs = int(job_tmpl.max_wallclock_seconds)
+                if tot_secs <= 0:
+                    raise ValueError
+            except ValueError:
+                raise ValueError(
+                    "max_wallclock_seconds must be "
+                    "a positive integer (in seconds)! It is instead '{}'"
+                    "".format((job_tmpl.max_wallclock_seconds)))
+            hours = tot_secs // 3600
+            tot_minutes = tot_secs % 3600
+            minutes = tot_minutes // 60
+            seconds = tot_minutes % 60
+            lines.append("#$ -l h_rt={:02d}:{:02d}:{:02d}".format(
+                hours, minutes, seconds))
+
+        #if job_tmpl.max_memory_kb:
+        #    try:
+        #        virtualMemoryKb = int(job_tmpl.max_memory_kb)
+        #        if virtualMemoryKb <= 0:
+        #            raise ValueError
+        #    except ValueError:
+        #        raise ValueError(
+        #            "max_memory_kb must be "
+        #            "a positive integer (in kB)! It is instead '{}'"
+        #            "".format((job_tmpl.MaxMemoryKb)))
+        #    select_string += ":mem={}kb".format(virtualMemoryKb)
+        #        
+        #lines.append("#PBS -l {}".format(select_string))
+        
+        
+            
+        #TAKEN FROM PBSPRO:  
+        # Job environment variables are to be set on one single line. 
+        # This is a tough job due to the escaping of commas, etc.
+        # moreover, I am having issues making it work.
+        # Therefore, I assume that this is bash and export variables by
+        # and.
+        if job_tmpl.job_environment:
+            lines.append(empty_line)
+            lines.append("# ENVIRONMENT VARIABLES BEGIN ###")
+            if not isinstance(job_tmpl.job_environment, dict):
+                raise ValueError("If you provide job_environment, it must be "
+                                 "a dictionary")
+            for k, v in job_tmpl.job_environment.iteritems():
+                lines.append("export {}={}".format(
+                        k.strip(),
+                        escape_for_bash(v)))
+            lines.append("# ENVIRONMENT VARIABLES  END  ###")
+            lines.append(empty_line)
+            
+        return "\n".join(lines)
+        
     def _get_submit_command(self, submit_script):
-        raise NotImplementedError
+        """
+        Return the string to execute to submit a given script.
+        
+        Args:
+            submit_script: the path of the submit script relative to the working
+                directory.
+                IMPORTANT: submit_script should be already escaped.
+        """
+        submit_command = 'qsub -terse {}'.format(submit_script)
+
+        self.logger.info("submitting with: " + submit_command)
+
+        return submit_command
 
     def _parse_joblist_output(self, retval, stdout, stderr):
-        raise NotImplementedError
+        import xml.dom.minidom
+        
+        if retval != 0:
+            self.logger.error("Error in _parse_joblist_output: retval={}; "
+                "stdout={}; stderr={}".format(retval, stdout, stderr))
+            raise SchedulerError("Error during joblist retrieval, retval={}".\
+                                 format(retval))
+
+        if stderr.strip():
+            self.logger.warning("in _parse_joblist_output for {}: "
+                "there was some text in stderr: {}".format(
+                    str(self.transport),stderr))
+           
+        if stdout:
+            try:
+                xmldata = xml.dom.minidom.parseString(stdout)
+            except xml.parsers.expat.ExpatError:
+                self.logger.error("in sge._parse_joblist_output: "
+                "xml parsing of stdout failed:"
+                "{}".format(stdout))
+                raise SchedulerParsingError("Error during joblist retrieval,"
+                                            "xml parsing of stdout failed")
+        else:
+            self.logger.error("Error in sge._parse_joblist_output: retval={}; "
+                "stdout={}; stderr={}".format(retval, stdout, stderr))
+            raise SchedulerError("Error during joblist retrieval,"
+                                 "no stdout produced")
+        
+        try:
+            first_child = xmldata.firstChild
+            second_childs = first_child.childNodes
+            tag_names_sec = [elem.tagName for elem in second_childs \
+                             if elem.nodeType == 1]
+            if not 'queue_info' in tag_names_sec:
+                self.logger.warning("in sge._parse_joblist_output: Is the xml"
+                                     "format of the qstat command correct?")
+            if not 'job_info' in tag_names_sec:
+                raise SchedulerError
+            elif 'job_info' in tag_names_sec:
+                jobinfo =  first_child.getElementsByTagName('job_info').pop(0)
+                if not jobinfo:
+                    raise SchedulerError
+        except SchedulerError:
+            self.logger.error("Error in sge._parse_joblist_output: stdout={}"\
+                              .format(stdout))
+            raise SchedulerError("Error during xml processing, of stdout:"
+                                 "There is no 'job_list' element or"
+                                 "there are no jobs in the 'job_list' element!")
+        #If something weird happens while firstChild,pop, etc:
+        except Exception: 
+            self.logger.error("Error in sge._parse_joblist_output: stdout={}"\
+                              .format(stdout))
+            raise SchedulerError("Error during xml processing, of stdout")
+            
+        jobs = [i for i in jobinfo.getElementsByTagName('job_list')]
+        #print [i[0].childNodes[0].data for i in job_numbers if i]
+        joblist = []
+        for job in jobs:
+            this_job = JobInfo()
+             
+            try:
+                job_element = job.getElementsByTagName('JB_job_number').pop(0)
+                element_child = job_element.childNodes.pop(0)
+                this_job.job_id = str(element_child.data).strip()
+                if not this_job.job_id:
+                    raise SchedulerError
+            except SchedulerError:
+                self.logger.error("Error in sge._parse_joblist_output:"
+                                  "no job id is given, stdout={}"\
+                                  .format(stdout))
+                raise SchedulerError("Error in sge._parse_joblist_output:"
+                "no job id is given")
+            except IndexError:
+                self.logger.error("No 'job_number' given for job index {} in "
+                                  "job list, stdout={}".format(jobs.index(job)\
+                                  ,stdout))
+                raise IndexError("Error in sge._parse_joblist_output:"
+                "no job id is given")
+            
+            try:
+                job_element = job.getElementsByTagName('state').pop(0)
+                element_child = job_element.childNodes.pop(0)
+                job_state_string = str(element_child.data).strip()
+                try:
+                    this_job.job_state = _map_status_sge[job_state_string]
+                except KeyError:
+                    self.logger.warning("Unrecognized job_state '{}' for job "
+                                        "id {}".format(job_state_string,
+                                                       this_job.job_id))
+                    this_job.job_state = job_states.UNDETERMINED
+            except IndexError:
+                self.logger.warning("No 'job_state' field for job id {} in" 
+                                  "stdout={}".format(this_job.job_id,stdout))
+                this_job.job_state = job_states.UNDETERMINED
+            
+            try:
+                job_element = job.getElementsByTagName('JB_owner').pop(0)
+                element_child = job_element.childNodes.pop(0)
+                this_job.job_owner = str(element_child.data).strip()
+            except IndexError:
+                self.logger.warning("No 'job_owner' field for job "
+                                  "id {}".format(this_job.job_id))
+            
+            try:
+                job_element = job.getElementsByTagName('JB_name').pop(0)
+                element_child = job_element.childNodes.pop(0)
+                this_job.title = str(element_child.data).strip()
+            except IndexError:
+                self.logger.warning("No 'title' field for job "
+                                  "id {}".format(this_job.job_id))
+             
+            try:
+                job_element = job.getElementsByTagName('queue_name').pop(0)
+                element_child = job_element.childNodes.pop(0)
+                this_job.queue_name = str(element_child.data).strip()
+            except IndexError:
+                self.logger.warning("No 'queue_name' field for job "
+                                  "id {}".format(this_job.job_id))
+            
+            try:
+                job_element = job.getElementsByTagName('JB_submission_time').pop(0)
+                element_child = job_element.childNodes.pop(0)
+                this_job.submission_time = str(element_child.data).strip()
+            except IndexError:
+                self.logger.warning("No 'JB_submission_time' field for job "
+                                  "id {}".format(this_job.job_id))
+                
+            #The following is untested:
+            try:
+                job_element = job.getElementsByTagName('cpu').pop(0)
+                element_child = job_element.childNodes.pop(0)
+                this_job.cpu_time = str(element_child.data).strip()
+            except IndexError:
+                self.logger.warning("No 'cpu' field for job "
+                                  "id {}".format(this_job.job_id))
+            
+            try:
+                job_element = job.getElementsByTagName('io').pop(0)
+                element_child = job_element.childNodes.pop(0)
+                this_job.queue_name = str(element_child.data).strip()
+            except IndexError:
+                self.logger.warning("No 'io' field for job "
+                                  "id {}".format(this_job.job_id))
+            
+            joblist.append(this_job)
+        #self.logger.debug("joblist final: {}".format(joblist))
+        return joblist
 
     def _parse_submit_output(self, retval, stdout, stderr):
-        raise NotImplementedError
+        """
+        Parse the output of the submit command, as returned by executing the
+        command returned by _get_submit_command command.
+        
+        To be implemented by the plugin.
+        
+        Return a string with the JobID.
+        """
+        import re
+        
+        if retval != 0:
+            self.logger.error("Error in _parse_submit_output: retval={}; "
+                "stdout={}; stderr={}".format(retval, stdout, stderr))
+            raise SchedulerError("Error during submission, retval={}".format(
+                retval))
+
+        if stderr.strip():
+            self.logger.warning("in _parse_submit_output for {}: "
+                "there was some text in stderr: {}".format(
+                    str(self.transport),stderr))
+        
+        return stdout.strip()
 
 

@@ -1372,13 +1372,16 @@ def parse_pw_text_output(data, xml_data):
     return parsed_data
 
 
-def parse_raw_output(out_file, xml_file=None, dir_with_bands=None):
+def parse_raw_output(out_file, input_dict, xml_file=None, dir_with_bands=None):
     """
     Parses the output of a calculation
     Receives in input the paths to the output file and the xml file.
     
-    Args: (str) out_file: path to pw std output
-          (str) xml_file: path to QE data-file.xml
+    Args: 
+        (str) out_file: 
+            path to pw std output
+        (str) xml_file: 
+            path to QE data-file.xml
     
     Returns a dictionary with parsed data
 
@@ -1391,6 +1394,8 @@ def parse_raw_output(out_file, xml_file=None, dir_with_bands=None):
     """
     # TODO : a lot of ifs could be cleaned out
     
+    # TODO : input_dict should be used as well
+    
     parser_version = '0.1'
     parser_info = {}
     parser_info['parser_warnings'] = []
@@ -1399,9 +1404,8 @@ def parse_raw_output(out_file, xml_file=None, dir_with_bands=None):
     # if xml_file is not given in input, skip its parsing
     if xml_file is not None:
         try:
-            file = open(xml_file,'r')
-            xml_lines = file.read() # read() instead of readlines() is needed
-            file.close()
+            with open(xml_file,'r') as f:
+                xml_lines = f.read() # read() instead of readlines() is needed
         except IOError:
             raise QEOutputParsingError("Failed to open xml file: {}.".format(xml_file))
 
@@ -1419,9 +1423,8 @@ def parse_raw_output(out_file, xml_file=None, dir_with_bands=None):
     
     # load QE out file
     try:
-        file = open(out_file,'r')
-        out_lines = file.readlines()
-        file.close()
+        with open(out_file,'r') as f:
+            out_lines = f.readlines()
     except IOError:
         # if the file cannot be open, the error is severe.
         raise QEOutputParsingError("Failed to open output file: {}.".format(out_file))

@@ -353,9 +353,11 @@ class Node(object):
         Return a list of nodes that enter (directly) in this node
 
         Args:
-            type: if specified, should be a class, and it filters only elements of that
+            type
+                If specified, should be a class, and it filters only elements of that
                 specific type (or a subclass of 'type')
-            also_labels: if False (default) only return a list of input nodes.
+            also_labels
+                If False (default) only return a list of input nodes.
                 If True, return a list of tuples, where each tuple has the following
                 format: ('label', Node)
                 with 'label' the link label, and Node a Node instance or subclass

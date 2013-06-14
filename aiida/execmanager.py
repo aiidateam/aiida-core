@@ -1,9 +1,9 @@
+"""
+No documentation yet!
+"""
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
-from django.contrib.auth.models import User
-
 from aiida.common.datastructures import calc_states
 from aiida.scheduler.datastructures import job_states
-from aiida.djsite.db.models import DbComputer, AuthInfo
 from aiida.common.exceptions import AuthenticationError, ConfigurationError, PluginInternalError
 from aiida.common import aiidalogger
     
@@ -127,6 +127,7 @@ def update_running_calcs_status(authinfo):
     return finished
 
 def get_authinfo(computer, aiidauser):
+    from aiida.djsite.db.models import DbComputer, AuthInfo
     try:
         authinfo = AuthInfo.objects.get(computer=DbComputer.get_dbcomputer(computer),aiidauser=aiidauser)
     except ObjectDoesNotExist:
@@ -146,6 +147,8 @@ def daemon_main_loop():
 
 def retrieve_jobs():
     from aiida.orm import Calculation
+    from django.contrib.auth.models import User
+    from aiida.djsite.db.models import DbComputer
     
     # I create a unique set of pairs (computer, aiidauser)
     computers_users_to_check = set(
@@ -178,7 +181,9 @@ def update_jobs():
     calls an update for each set of pairs (machine, aiidauser)
     """
     from aiida.orm import Calculation
-    
+    from django.contrib.auth.models import User
+    from aiida.djsite.db.models import DbComputer
+
     # I create a unique set of pairs (computer, aiidauser)
     computers_users_to_check = set(
         Calculation.get_all_with_state(
@@ -286,15 +291,12 @@ def submit_calc(calc):
                 ((code.get_append_text() + u"\n\n") if code.get_append_text() else u"") +
                 ((computer.get_append_text() + u"\n\n") if computer.get_append_text() else u""))
 
-            # The Calculation validation should take care of always having a sensible value here
-            # so I don't need to check
-            num_machines = calc.get_num_machines()
-            num_cpus_per_machine = calc.get_num_cpus_per_machine()
-            tot_num_cpus = num_machines * num_cpus_per_machine
-    
-            mpi_args = [arg.format(num_machines=num_machines,
-                                   num_cpus_per_machine=num_cpus_per_machine,
-                                   tot_num_cpus=tot_num_cpus) for arg in
+            job_tmpl.job_resource = s.create_job_resource(**calc.get_jobresource_params())
+
+            subst_dict = {'tot_num_cpus': job_tmpl.job_resource.get_tot_num_cpus()}
+            for k,v in job_tmpl.job_resource.iteritems():
+                subst_dict[k] = v
+            mpi_args = [arg.format(**subst_dict) for arg in
                         computer.get_mpirun_command()]
             job_tmpl.argv = mpi_args + [code.get_execname()] + (
                 calcinfo.cmdline_params if calcinfo.cmdline_params is not None else [])
@@ -320,9 +322,6 @@ def submit_calc(calc):
             if max_memory_kb is not None:
                 job_tmpl.max_memory_kb = max_memory_kb
 
-            job_tmpl.num_machines = num_machines
-            job_tmpl.num_cpus_per_machine = num_cpus_per_machine
-    
             # TODO: give possibility to use a different name??
             script_filename = '_aiidasubmit.sh'
             script_content = s.get_submit_script(job_tmpl)

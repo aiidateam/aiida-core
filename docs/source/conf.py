@@ -40,8 +40,8 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'aiida'
-copyright = u'2012, Boris Kozinsky, Andrea Cepellotti & Giovanni Pizzi'
+project = u'AiiDA'
+copyright = u'2012, Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini & Boris Kozinsky'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -183,8 +183,8 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'aiida.tex', u'aiida Documentation',
-   u'Boris Kozinsky, Andrea Cepellotti \\& Giovanni Pizzi', 'manual'),
+  ('index', 'aiida.tex', u'AiiDA Documentation',
+   u'G. Pizzi, A. Cepellotti, R. Sabatini \\& B. Kozinsky', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -206,6 +206,12 @@ latex_documents = [
 
 # If false, no module index is generated.
 #latex_domain_indices = True
+
+# Note by Andrea Cepellotti:
+# Sphinx tries to load every module that is trying to document
+# some of them requires the DJANGO_SETTINGS_MODULE variable to be set
+from aiida.common.utils import load_django
+load_django()
 
 
 # -- Options for manual page output --------------------------------------------

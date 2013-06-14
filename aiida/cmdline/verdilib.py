@@ -205,6 +205,71 @@ class Shell(VerdiCommand):
         # disable further completion
         print ""
 
+class GoToComputer(VerdiCommand):
+    """
+    Opens a new shell on the cluster going directly to the folder
+
+    This command runs the 'manage.py shell' command, that opens a
+    IPython shell with the Django environment loaded.
+    """
+    def run(self,*args):
+        from aiida.common.exceptions import NotExistent
+        from aiida.orm import Node, Calculation
+        from aiida.common.utils import load_django
+        
+        try:
+            calc_id = args[0]
+        except IndexError:
+            print >> sys.stderr, "Pass as further argument a calculation ID or UUID."
+            sys.exit(1)
+        try:
+            pk=int(calc_id)
+            is_pk=True
+        except ValueError:
+            uuid = calc_id
+            is_pk=False
+
+        print "Loading environment..."
+        load_django()
+
+        try:
+            if is_pk:
+                calc = Node.get_subclass_from_pk(pk)
+            else:
+                calc = Node.get_subclass_from_pk(uuid)
+        except NotExistent:
+            print >> sys.stderr, "No node exists with ID={}.".format(calc_id)
+            sys.exit(1)
+
+        if not isinstance(calc,Calculation):
+            print >> sys.stderr, "Node with ID={} is not a calculation; it is a {}".format(
+                calc_id, calc.__class__.__name__)
+            sys.exit(1)
+
+        # get the transport
+        try:
+            t = calc._get_transport()
+        except NotExistent as e:
+            print >> sys.stderr, e.message
+            sys.exit(1)
+        # get the remote directory
+        remotedir = calc.get_remote_workdir()
+        if not remotedir:
+            print >> sys.stderr, "No remote work directory is set for this calculation!"
+            sys.exit(1)
+        
+        # get the command to run (does not require to open the connection!)
+        cmd_to_run = t.gotocomputer_command(remotedir)
+        # Connect (execute command)
+        print "Going the the remote folder..."
+        #print cmd_to_run
+        os.system(cmd_to_run)
+        
+    def complete(self, subargs_idx, subargs):
+        # disable further completion
+        print ""
+
+
 class Test(VerdiCommand):
     """
     Runs aiida tests.

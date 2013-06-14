@@ -462,6 +462,19 @@ class Transport(object):
         """
         raise NotImplementedError
     
+    def gotocomputer_command(self, remotedir):
+        """
+        Return a string to be run using os.system in order to connect
+        via the transport to the remote directory.
+
+        Expected behaviors:
+        * A new bash session is opened
+        * A reasonable error message is produced if the folder does not exist
+
+        Args:
+            remotedir: the full path of the remote directory
+        """
+        raise NotImplementedError
     
     def whoami(self):
         """

@@ -148,10 +148,9 @@ class Daemon(VerdiCommand):
                                shell=True) #, stdout=subprocess.PIPE)
             process.wait()
         except KeyboardInterrupt:
-            process.kill()
             # exit on CTRL+C
-            pass 
-
+            process.kill()
+ 
     def daemon_restart(self):
         """
         Restart the daemon. Before restarting, wait for the daemon to really

@@ -3,11 +3,14 @@ Plugin for SLURM.
 This has been tested on SLURM 2.5.4 on the CSCS.ch machines.
 """
 from __future__ import division
+import re
+
 import aiida.scheduler
 from aiida.common.utils import escape_for_bash
 from aiida.scheduler import SchedulerError
-from aiida.scheduler.datastructures import JobInfo, job_states
-import re
+from aiida.scheduler.datastructures import (
+    JobInfo, job_states, NodeNumberJobResource)
+
 
 # This maps SLURM state codes to our own status list
 
@@ -93,6 +96,9 @@ _time_regexp = re.compile(
 # Separator between fields in the output of squeue
 _field_separator = "^^^"
 
+class SlurmJobResource(NodeNumberJobResource):
+    pass
+
 class SlurmScheduler(aiida.scheduler.Scheduler):
     """
     SLURM implementation of the scheduler functions.
@@ -105,6 +111,9 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
     _features = {
         'can_query_by_user': False,
         }
+    
+    # The class to be used for the job resource.
+    _job_resource_class = SlurmJobResource
 
     def _get_joblist_command(self,jobs=None,user=None): 
         """
@@ -253,15 +262,15 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
             #  100. The adjustment range is from -10000 (highest  priority)  to
             #  10000  (lowest  priority). 
             lines.append("#SBATCH --nice={}".format(job_tmpl.priority))
-
-        
-        if not job_tmpl.num_machines:
-            raise ValueError("num_machines is required for the SLURM scheduler "
-                             "plugin")
-        lines.append("#SBATCH --nodes={}".format(job_tmpl.num_machines))
-        if job_tmpl.num_cpus_per_machine:
+      
+        if not job_tmpl.job_resource:
+            raise ValueError("Job resources (as the num_machines) are required "
+                             "for the SLURM scheduler plugin")
+                    
+        lines.append("#SBATCH --nodes={}".format(job_tmpl.job_resource.num_machines))
+        if job_tmpl.job_resource.num_cpus_per_machine:
             lines.append("#SBATCH --ntasks-per-node={}".format(
-                    job_tmpl.num_cpus_per_machine))
+                    job_tmpl.job_resource.num_cpus_per_machine))
 
         if job_tmpl.max_wallclock_seconds is not None:
             try:

@@ -8,9 +8,6 @@ import logging
 import aiida.transport.plugin_test
 from aiida.transport.plugin_test import *
 
-FORMAT = '[%(name)s@%(levelname)s] %(message)s'
-logging.basicConfig(format=FORMAT)
-
 import paramiko
 from aiida.transport import Transport
 global custom_transport

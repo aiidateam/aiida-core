@@ -7,9 +7,6 @@ from aiida.common.exceptions import ModificationNotAllowed
 #        'email_on_started',
 #        'email_on_terminated',
 #        'rerunnable',
-#        'queue_name', 
-#        'num_machines',
-#        'priority',
 #        'resourceLimits',
 
 _input_subfolder = 'raw_input'
@@ -21,7 +18,7 @@ class Calculation(Node):
     def __init__(self,*args,**kwargs):
         """
         Possible arguments:
-        computer, num_machines, num_cpus_per_machine, code
+        computer, resources
         """
         super(Calculation,self).__init__(*args, **kwargs)
 
@@ -38,13 +35,9 @@ class Calculation(Node):
         if computer is not None:
             self.set_computer(computer)
 
-        num_machines = kwargs.pop('num_machines',None)
-        if num_machines is not None:
-            self.set_num_machines(num_machines)        
-
-        num_cpus_per_machine = kwargs.pop('num_cpus_per_machine',None)
-        if num_cpus_per_machine is not None:
-            self.set_num_cpus_per_machine(num_cpus_per_machine)        
+        resources = kwargs.pop('resources',None)
+        if resources is not None:
+            self.set_resources(**resources)
 
         if kwargs:
             raise ValueError("Invalid parameters found in the __init__: "
@@ -62,19 +55,14 @@ class Calculation(Node):
             raise ValidationError("Calculation state '{}' is not valid".format(
                 self.get_state()))
 
+        computer = self.get_computer()        
+        s = computer.get_scheduler()
         try:
-            if int(self.get_num_machines()) <= 0:
-                raise ValueError
-        except (ValueError,TypeError):
-            raise ValidationError("The number of machines must be specified "
-                                  "and must be positive")
-
-        try:
-            if int(self.get_num_cpus_per_machine()) <= 0:
-                raise ValueError
-        except (ValueError,TypeError):
-            raise ValidationError("The number of CPUs per machine must be "
-                                  "specified and must be positive")
+            job_resource = s.create_job_resource(**self.get_jobresource_params())
+        except (TypeError, ValueError) as e:
+            raise ValidationError("Invalid resources for the scheduler of the "
+                                  "specified computer: {}".format(e.message))
+        
 
     def can_link_as_output(self,dest):
         """
@@ -150,11 +138,11 @@ class Calculation(Node):
     def set_max_wallclock_seconds(self,val):    
         self.set_attr('max_wallclock_seconds',int(val))
 
-    def set_num_machines(self,val):
-        self.set_attr('num_machines',int(val))
-
-    def set_num_cpus_per_machine(self,val):
-        self.set_attr('num_cpus_per_machine',int(val))
+    def set_resources(self, **kwargs):
+        self.set_attr('jobresource_params', kwargs)
+    
+    def get_jobresource_params(self):
+        return self.get_attr('jobresource_params', {})
 
     def get_queue_name(self):
         return self.get_attr('queue_name', None)
@@ -167,12 +155,6 @@ class Calculation(Node):
 
     def get_max_wallclock_seconds(self):	
         return self.get_attr('max_wallclock_seconds', None)
-
-    def get_num_machines(self):
-        return self.get_attr('num_machines', None)
-
-    def get_num_cpus_per_machine(self):
-        return self.get_attr('num_cpus_per_machine', None)
         
     def add_link_from(self,src,label=None):
         '''
@@ -216,7 +198,10 @@ class Calculation(Node):
 
     def get_computer(self):
         from aiida.orm import Computer
-        return Computer(dbcomputer=self.dbnode.computer)
+        if self.dbnode.computer is None:
+            return None
+        else:
+            return Computer(dbcomputer=self.dbnode.computer)
 
     def _set_state(self, state):
         if state not in calc_states:
@@ -374,6 +359,23 @@ class Calculation(Node):
               and what is the behavior on the tempfolder
         """
         raise NotImplementedError
+
+    def _get_authinfo(self):
+        import aiida.execmanager
+        from aiida.common.exceptions import NotExistent
+        
+        computer = self.get_computer()
+        if computer is None:
+            raise  NotExistent("No computer has been set for this calculation")
+        
+        return aiida.execmanager.get_authinfo(computer=computer,
+                                              aiidauser=self.dbnode.user)
+    
+    def _get_transport(self):
+        """
+        Return the transport for this calculation
+        """
+        return self._get_authinfo().get_transport()
 
     def submit(self):
         """

@@ -764,3 +764,7 @@ class LocalTransport(aiida.transport.Transport):
         retval = local_proc.returncode
 
         return retval, output_text, stderr_text
+
+    def gotocomputer_command(self, remotedir):
+        return """bash -c "if [ -d {escaped_remotedir} ] ; then cd {escaped_remotedir} ; bash --rcfile <(echo 'if [ -e ~/.bashrc ] ; then source ~/.bashrc ; fi ; export PS1="'"\[\033[01;31m\][AiiDA]\033[00m\]$PS1"'"') ; else echo  '  ** The directory' ; echo '  ** {remotedir}' ; echo '  ** seems to have been deleted, I logout...' ; fi" """.format(
+        escaped_remotedir="'{}'".format(remotedir), remotedir=remotedir)

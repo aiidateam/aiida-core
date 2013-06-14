@@ -29,7 +29,10 @@ class Scheduler(object):
     # get_joblist_command (and in this case, no 'jobs' should be given).
     # Otherwise, if False, a list of jobs is passed, and no 'user' is given.
     _features = {}
-    
+
+    # The class to be used for the job resource.
+    _job_resource_class = None
+
     def __init__(self):
         self._transport = None
 
@@ -58,6 +61,15 @@ class Scheduler(object):
         except AttributeError:
             from aiida.common.exceptions import InternalError
             raise InternalError("No self._logger configured for {}!")
+
+    def create_job_resource(self, **kwargs):
+        """
+        Create a suitable job resource from the kwargs specified
+        """
+        if self._job_resource_class is None:
+            raise NotImplementedError
+        else:
+            return self._job_resource_class(**kwargs)
 
     def get_submit_script(self, job_tmpl):
         """

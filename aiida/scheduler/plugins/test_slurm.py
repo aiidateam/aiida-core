@@ -164,8 +164,8 @@ class TestSubmitScript(unittest.TestCase):
         job_tmpl = JobTemplate()
         job_tmpl.argv = ["mpirun", "-np", "23", "pw.x", "-npool", "1"]
         job_tmpl.stdin_name = 'aiida.in'
-        job_tmpl.num_machines = 1
         job_tmpl.uuid = str(uuid.uuid4())
+        job_tmpl.job_resource = s.create_job_resource(num_machines=1, num_cpus_per_machine=1)
         job_tmpl.max_wallclock_seconds = 24 * 3600 
 
         submit_script_text = s.get_submit_script(job_tmpl)

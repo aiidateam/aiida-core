@@ -945,3 +945,14 @@ class SshTransport(aiida.transport.Transport):
 
         return retval, output_text, stderr_text
 
+    def gotocomputer_command(self, remotedir):
+
+        return """ssh -Y -t {machine} "if [ -d {escaped_remotedir} ] ; then cd {escaped_remotedir} ; bash ; else echo '  ** The directory' ; echo '  ** {remotedir}' ; echo '  ** seems to have been deleted, I logout...' ; fi" """.format(
+            machine=self._machine, escaped_remotedir="'{}'".format(remotedir), remotedir=remotedir)
+
+        
+        #return """ssh -Y -t {machine} "if [ -d {escaped_remotedir} ] ; then cd {escaped_remotedir} ; bash -c "{bash_call_escaped}" ; else echo '  ** The directory' ; echo '  ** {remotedir}' ; echo '  ** seems to have been deleted, I logout...' ; fi" """.format(
+        #    machine=self._machine, escaped_remotedir="'{}'".format(remotedir), remotedir=remotedir,
+        #    bash_call_escaped=escape_for_bash("""bash --rcfile <(echo 'if [ -e ~/.bashrc ] ; then source ~/.bashrc ; fi ; export PS1="\[\033[01;31m\][AiiDA]\033[00m\]$PS1"')"""))
+        
+        

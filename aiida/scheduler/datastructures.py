@@ -117,12 +117,18 @@ class NodeNumberJobResource(JobResource):
                 raise TypeError("At least two among num_machines, "
                     "num_cpus_per_machine or tot_num_cpus must be specified")
             else:
+                # To avoid divisions by zero
+                if num_cpus_per_machine <= 0:
+                    raise ValueError("num_cpus_per_machine must be >= 1")
                 num_machines = tot_num_cpus // num_cpus_per_machine
         elif num_cpus_per_machine is None:
             if num_machines is None or tot_num_cpus is None:
                 raise TypeError("At least two among num_machines, "
                     "num_cpus_per_machine or tot_num_cpus must be specified")
             else:
+                # To avoid divisions by zero
+                if num_machines <= 0:
+                    raise ValueError("num_machines must be >= 1")
                 num_cpus_per_machine = tot_num_cpus // num_machines
         
         self.num_machines = num_machines
@@ -132,7 +138,7 @@ class NodeNumberJobResource(JobResource):
             if tot_num_cpus != self.num_cpus_per_machine * self.num_machines:
                 raise ValueError("tot_num_cpus must be equal to "
                     "num_cpus_per_machine * num_machines, and in particular it "
-                    "should be a multiple of num_cpus_per_machine and/or"
+                    "should be a multiple of num_cpus_per_machine and/or "
                     "num_machines")
         
         if self.num_cpus_per_machine <= 0:

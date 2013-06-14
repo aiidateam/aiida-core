@@ -8,7 +8,7 @@ import xml.parsers.expat
 from aiida.common.utils import escape_for_bash
 from aiida.scheduler import SchedulerError, SchedulerParsingError
 from aiida.scheduler.datastructures import (
-    JobInfo, job_states, MachineInfo)
+    JobInfo, job_states, MachineInfo, ParEnvJobResource)
 
 #Jobs Status:
 #    'qw' - Queued and waiting,
@@ -34,6 +34,9 @@ _map_status_sge = {
     'Eqw': job_states.UNDETERMINED,
     }
 
+class SgeJobResource(ParEnvJobResource):
+    pass
+
 class SgeScheduler(aiida.scheduler.Scheduler):
     """
     SGE implementation of the scheduler functions.
@@ -45,6 +48,9 @@ class SgeScheduler(aiida.scheduler.Scheduler):
     _features = {
         'can_query_by_user': True,
         }
+    
+    # The class to be used for the job resource.
+    _job_resource_class = SgeJobResource
     
     def _get_joblist_command(self,jobs=None,user=None):
         """
@@ -90,6 +96,10 @@ class SgeScheduler(aiida.scheduler.Scheduler):
         """
         import re 
         import string
+
+        if not job_tmpl.job_resource:
+            raise ValueError("Job resources (as the tot_num_cpus) are required "
+                             "for the SGE scheduler plugin")
 
         empty_line = ""
         
@@ -170,19 +180,12 @@ class SgeScheduler(aiida.scheduler.Scheduler):
             # zero.   Range:  [-1023,  +1024].  Sets job's Priority
             # attribute to priority.
             lines.append("#$ -p {}".format(job_tmpl.priority))
-        #####################################################    
-        #Parallel Environment???
-        #if not job_tmpl.job_resource:
-            #raise ValueError("num_machines is required for the PBSPro scheduler "
-        #                     "plugin")
         
-        #job_tmpl.job_resource.parallel_env
-        #job_tmpl.job_resource.tot_num_cpus
-        ######################################################
-        #select_string = "select={}".format(job_tmpl.num_machines)
-        #if job_tmpl.num_cpus_per_machine:
-        #    select_string += ":ncpus={}".format(job_tmpl.num_cpus_per_machine)
-            
+        #Setting up the parallel environment
+        lines.append('#$ -pe {} {}'.\
+                     format(str(job_tmpl.job_resource.parallel_env),\
+                            int(job_tmpl.job_resource.tot_num_cpus)))
+        
         if job_tmpl.max_wallclock_seconds is not None:
             try:
                 tot_secs = int(job_tmpl.max_wallclock_seconds)
@@ -199,22 +202,6 @@ class SgeScheduler(aiida.scheduler.Scheduler):
             seconds = tot_minutes % 60
             lines.append("#$ -l h_rt={:02d}:{:02d}:{:02d}".format(
                 hours, minutes, seconds))
-
-        #if job_tmpl.max_memory_kb:
-        #    try:
-        #        virtualMemoryKb = int(job_tmpl.max_memory_kb)
-        #        if virtualMemoryKb <= 0:
-        #            raise ValueError
-        #    except ValueError:
-        #        raise ValueError(
-        #            "max_memory_kb must be "
-        #            "a positive integer (in kB)! It is instead '{}'"
-        #            "".format((job_tmpl.MaxMemoryKb)))
-        #    select_string += ":mem={}kb".format(virtualMemoryKb)
-        #        
-        #lines.append("#PBS -l {}".format(select_string))
-        
-        
             
         #TAKEN FROM PBSPRO:  
         # Job environment variables are to be set on one single line. 

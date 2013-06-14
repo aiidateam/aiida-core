@@ -3,9 +3,9 @@ import unittest
 import logging
 import uuid
 
-from aiida.common import aiidalogger
+#from aiida.common import aiidalogger
 
-aiidalogger.setLevel(logging.DEBUG)
+#aiidalogger.setLevel(logging.DEBUG)
 
 text_qstat_ext_urg_xml_test="""<?xml version='1.0'?>
 <job_info  xmlns:xsd="http://www.w3.org/2001/XMLSchema">
@@ -250,10 +250,50 @@ class TestCommand(unittest.TestCase):
         with self.assertRaises(IndexError) as e:
             job_list_raise=sge._parse_joblist_output(retval, stdout, stderr)
         logging.disable(logging.NOTSET)
+        
+    def test_submit_script(self):
+        """
+        """
+        from aiida.scheduler.datastructures import JobTemplate
+        
+        sge=SgeScheduler()
+        
+        job_tmpl = JobTemplate()
+        job_tmpl.job_resource = sge.create_job_resource(parallel_env="mpi8", \
+                                                        tot_num_cpus=16)
+        job_tmpl.working_directory = "/home/users/dorigm7s/test"
+        job_tmpl.submit_as_hold = None
+        job_tmpl.rerunnable = None
+        job_tmpl.email = None
+        job_tmpl.email_on_started = None
+        job_tmpl.email_on_terminated = None
+        job_tmpl.job_name = "BestJobEver"
+        job_tmpl.sched_output_path = None
+        job_tmpl.sched_join_files = None
+        job_tmpl.queue_name = "FavQ.q"
+        job_tmpl.priority = None
+        job_tmpl.max_wallclock_seconds = "3600"#"23:59:59"
+        job_tmpl.job_environment = {"HOME":"/home/users/dorigm7s/",
+                                    "WIENROOT":"$HOME:/WIEN2k"}
             
-
+        submit_script_text = sge._get_submit_script_header(job_tmpl)
         
-        
+        self.assertTrue( '#$ -wd /home/users/dorigm7s/test' 
+                         in submit_script_text )
+        self.assertTrue( '#$ -N BestJobEver' 
+                         in submit_script_text )
+        self.assertTrue( '#$ -q FavQ.q' 
+                         in submit_script_text )
+        self.assertTrue( '#$ -l h_rt=01:00:00' 
+                         in submit_script_text )
+        #self.assertTrue( 'export HOME=/home/users/dorigm7s/' 
+        #                 in submit_script_text )
+        self.assertTrue( "# ENVIRONMENT VARIABLES BEGIN ###"
+                         in submit_script_text )
+        self.assertTrue( "export HOME='/home/users/dorigm7s/'"
+                         in submit_script_text )
+        self.assertTrue( "export WIENROOT='$HOME:/WIEN2k'"
+                         in submit_script_text )
         
         
         

@@ -113,7 +113,7 @@ class Link(m.Model):
     input = m.ForeignKey('DbNode',related_name='output_links')
     output = m.ForeignKey('DbNode',related_name='input_links')
     #label for data input for calculation
-    label = m.CharField(max_length=255, db_index=True, blank=True)
+    label = m.CharField(max_length=255, db_index=True, blank=False)
 
     class Meta:
         # I cannot add twice the same link
@@ -163,7 +163,7 @@ class Attribute(m.Model):
     time = m.DateTimeField(auto_now_add=True, editable=False)
     dbnode = m.ForeignKey('DbNode', related_name='attributes')
     # max_length is required by MySql to have indexes and unique constraints
-    key = m.CharField(max_length=255,db_index=True)
+    key = m.CharField(max_length=255,db_index=True,blank=False)
     datatype = m.CharField(max_length=10, choices=attrdatatype_choice, db_index=True)
     tval = m.TextField( default='', blank=True)
     fval = m.FloatField( default=None, null=True)
@@ -313,7 +313,7 @@ class DbComputer(m.Model):
         - ... (further limits per user etc.)
     """
     uuid = UUIDField(auto=True)
-    name = m.CharField(max_length=255, unique=True)
+    name = m.CharField(max_length=255, unique=True, blank=False)
     hostname = m.CharField(max_length=255)
     description = m.TextField(blank=True)
     # TODO: next three fields should not be blank...
@@ -321,24 +321,26 @@ class DbComputer(m.Model):
     transport_type = m.CharField(max_length=255)
     scheduler_type = m.CharField(max_length=255)
     transport_params = m.TextField(default="{}") # Will store a json
-
     metadata = m.TextField(default="{}") # Will store a json
 
     @classmethod
     def get_dbcomputer(cls,computer):
+        """
+        Return a DbComputer from its name (or from another Computer or DbComputer instance)
+        """
         from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
         from aiida.common.exceptions import NotExistent
         from aiida.orm import Computer
 
         if isinstance(computer, basestring):
             try:
-                dbcomputer = DbComputer.objects.get(hostname=computer)
+                dbcomputer = DbComputer.objects.get(name=computer)
             except ObjectDoesNotExist:
                 raise NotExistent("No computer found in the table of computers with "
                                  "the given name '{}'".format(computer))
             except MultipleObjectsReturned:
                 raise DbContentError("There is more than one computer with name '{}', "
-                                 "pass a Django Computer instance".format(computer))
+                                     "pass a Django Computer instance".format(computer))
         elif isinstance(computer, DbComputer):
             if computer.pk is None:
                 raise ValueError("The computer instance you are passing has not been stored yet")

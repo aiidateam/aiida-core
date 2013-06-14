@@ -91,6 +91,12 @@ class Transport(object):
     def __unicode__(self):
         return u"[Transport class or subclass]"
 
+    @classmethod
+    def get_valid_transports(cls):
+        from aiida.common.pluginloader import existing_plugins
+        
+        return existing_plugins(Transport, "aiida.transport.plugins")
+
     @property
     def logger(self):
         """

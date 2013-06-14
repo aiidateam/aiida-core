@@ -973,7 +973,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
 
         code = Code(remote_computer_exec=(self.computer,'/bin/true')).store()
 
-        unsavedcomputer = Computer(name='somecomputername', hostname='localhost')
+        unsavedcomputer = Computer(name='localhost2', hostname='localhost')
 
         with self.assertRaises(ValueError):
             # I need to save the localhost entry first

@@ -72,6 +72,11 @@ def get_or_create_machine():
             schedulertype = 'pbspro'
             workdir = "/scratch/{username}/aiida"
             mpirun_command = ['mpirun', '-np', '{tot_num_cpus}']
+        if machine.startswith('aries'):
+            computername = "aries.epfl.ch"
+            schedulertype = 'pbspro'
+            workdir = "/scratch/{username}/aiida"
+            mpirun_command = ['mpirun', '-np', '{tot_num_cpus}']
         elif machine.startswith('rosa'):
             computername = "rosa.cscs.ch"
             schedulertype = 'slurm'
@@ -140,10 +145,10 @@ def get_or_create_machine():
     return computer
 
 def get_or_create_code(computer):
-    if not computer.hostname.startswith("rosa"):
-        raise ValueError("Only rosa is supported at the momen.")
-    code_path = "/project/s337/espresso-svn/bin/pw.x"
-    code_version = "5.0.3a1"
+    if not computer.hostname.startswith("aries"):
+        raise ValueError("Only aries is supported at the moment.")
+    code_path = "/home/cepellot/software/espresso-5.0.2/bin/pw.x"
+    code_version = "5.0.2"
     useful_codes = Code.query(computer=computer.dbcomputer,
                               attributes__key="_remote_exec_path",
                               attributes__tval=code_path).filter(
@@ -219,8 +224,8 @@ kpoints = ParameterData({
 
 QECalc = CalculationFactory('quantumespresso.pw')
 calc = QECalc(computer=computer)
-calc.set_max_wallclock_seconds(1*3600) # 1 hour
-calc.set_resources(num_machines=2, num_cpus_per_machine=32)
+calc.set_max_wallclock_seconds(30*60) # 30 min
+calc.set_resources(num_machines=1, num_cpus_per_machine=48)
 if queue is not None:
     calc.set_queue_name(queue)
 calc.store()

@@ -43,6 +43,12 @@ class Scheduler(object):
         """
         self._transport = transport        
 
+    @classmethod
+    def get_valid_schedulers(cls):
+        from aiida.common.pluginloader import existing_plugins
+        
+        return existing_plugins(Scheduler, "aiida.scheduler.plugins")
+
     def get_feature(self, feature_name):
         try:
             return self._features[feature_name]

@@ -2,6 +2,7 @@ from aiida.common.exceptions import (
     ConfigurationError, DbContentError, InvalidOperation,
     MissingPluginError)
 
+
 class Computer(object):
     """
     Base class to map a node in the DB + its permanent repository counterpart.
@@ -19,7 +20,46 @@ class Computer(object):
     In the plugin, also set the _plugin_type_string, to be set in the DB in the 'type' field.
     """
     import logging
+    from aiida.transport import Transport
+    from aiida.scheduler import Scheduler
+    
     _logger = logging.getLogger(__name__)
+    
+    # This is the list of attributes to be automatically configured
+    
+    # It is a list of tuples. Each tuple has three elements:
+    # 1. an internal name (used to find the 
+    #    _set_internalname_string, and get_internalname_string methods)
+    # 2. a short human-readable name
+    # 3. A long human-readable description 
+    # IMPORTANT!
+    # for each entry, remember to define the 
+    # _set_internalname_string and get_internalname_string methods.
+    # Moreover, the _set_internalname_string method should also immediately
+    # validate the value. 
+    _conf_attributes = [
+        ("hostname",
+         "Hostname",
+         "The fully qualified host-name of this computer",
+        ),
+        ("transport_type",
+         "Transport type",
+         "The name of the transport to be used. Valid names are: {}".format(
+            ",".join(Transport.get_valid_transports())),
+         ),
+        ("scheduler_type",
+         "Scheduler type",
+         "The name of the scheduler to be used. Valid names are: {}".format(
+            ",".join(Scheduler.get_valid_schedulers())),
+         ),
+        ("workdir",
+         "AiiDA work directory",
+         "The absolute path of the directory on the computer where AiiDA will\n"
+         "run the calculation (typically, the scratch of the computer). You\n"
+         "can use the {username} replacement, that will be replaced by your\n"
+         "username on the remote computer",
+         ),
+        ] 
         
     def __int__(self):
         """
@@ -28,6 +68,13 @@ class Computer(object):
         local DB principal key value.
         """
         return self.pk
+
+    @property
+    def uuid(self):
+        """
+        Return the UUID in the DB.
+        """
+        return self._dbcomputer.uuid
     
     @property
     def pk(self):
@@ -90,6 +137,45 @@ class Computer(object):
             if kwargs:
                 raise ValueError("Unrecognized parameters: {}".format(kwargs.keys()))
 
+    @classmethod
+    def list_names(cls):
+        """
+        Return a list with all the names of the computers in the DB.
+        """
+        from aiida.djsite.db.models import DbComputer
+        return list(DbComputer.objects.filter().values_list('name',flat=True))
+
+    @property
+    def full_text_info(self):
+        """
+        Return a (multiline) string with a human-readable detailed information
+        on this computer.
+        """
+        ret_lines = []
+        ret_lines.append("Computer name:     {}".format(self.get_name()))
+        ret_lines.append(" * PK:             {}".format(self.pk))
+        ret_lines.append(" * UUID:           {}".format(self.uuid))
+        ret_lines.append(" * Hostname:       {}".format(self.hostname))
+        ret_lines.append(" * Transport type: {}".format(self.get_transport_type()))
+        ret_lines.append(" * Scheduler type: {}".format(self.get_scheduler_type()))
+        ret_lines.append(" * Work directory: {}".format(self.get_workdir()))
+        ret_lines.append(" * mpirun command: {}".format(" ".join(
+            self.get_mpirun_command())))
+        ret_lines.append(" * prepend text:")
+        if self.get_prepend_text().strip():
+            for l in self.get_prepend_text().split('\n'):
+                ret_lines.append("   {}".format(l))
+        else:
+            ret_lines.append("   # No prepend text.")
+        ret_lines.append(" * append text:")
+        if self.get_prepend_text().strip():
+            for l in self.get_append_text().split('\n'):
+                ret_lines.append("   {}".format(l))
+        else:
+            ret_lines.append("   # No append text.")
+
+        return "\n".join(ret_lines)
+
     @property
     def to_be_stored(self):
         return (self._dbcomputer.pk is None)
@@ -97,7 +183,7 @@ class Computer(object):
     @classmethod
     def get(cls,computer):
         """
-        Return a computer from hostname (or from another Computer or DbComputer instance)
+        Return a computer from its name (or from another Computer or DbComputer instance)
         """
         from aiida.djsite.db.models import DbComputer
         return cls(dbcomputer=DbComputer.get_dbcomputer(computer))
@@ -106,6 +192,108 @@ class Computer(object):
     def logger(self):
         return self._logger
 
+    @classmethod
+    def _name_validator(cls,name):
+        """
+        Validates the name.
+        """
+        from aiida.common.exceptions import ValidationError
+    
+        if not name.strip():
+            raise ValidationError("No name specified")
+
+    def _get_hostname_string(self):
+        return self.get_hostname()
+
+    def _set_hostname_string(self,string):
+        """
+        Set the hostname starting from a string.
+        """
+        self._hostname_validator(string)
+        self.set_hostname(string)
+        
+    @classmethod
+    def _hostname_validator(cls,hostname):
+        """
+        Validates the hostname.
+        """
+        from aiida.common.exceptions import ValidationError
+    
+        if not hostname.strip():
+            raise ValidationError("No hostname specified")
+
+    def _get_transport_type_string(self):
+        return self.get_transport_type()
+
+    def _set_transport_type_string(self,string):
+        """
+        Set the transport_type starting from a string.
+        """
+        self._transport_type_validator(string)
+        self.set_transport_type(string)
+
+    @classmethod
+    def _transport_type_validator(cls, transport_type):
+        """
+        Validates the transport string.
+        """
+        from aiida.common.exceptions import ValidationError
+        from aiida.transport import Transport
+        
+        if transport_type not in Transport.get_valid_transports():
+            raise ValidationError("The specified transport is not a valid one")
+
+    def _get_scheduler_type_string(self):
+        return self.get_scheduler_type()
+
+    def _set_scheduler_type_string(self,string):
+        """
+        Set the scheduler_type starting from a string.
+        """
+        self._scheduler_type_validator(string)
+        self.set_scheduler_type(string)
+
+    @classmethod
+    def _scheduler_type_validator(cls, scheduler_type):
+        """
+        Validates the transport string.
+        """
+        from aiida.common.exceptions import ValidationError
+        from aiida.scheduler import Scheduler
+        
+        if scheduler_type not in Scheduler.get_valid_schedulers():
+            raise ValidationError("The specified scheduler is not a valid one")
+
+    def _get_workdir_string(self):
+        return self.get_workdir()
+
+    def _set_workdir_string(self,string):
+        """
+        Set the workdir starting from a string.
+        """
+        self._workdir_validator(string)
+        self.set_workdir(string)
+
+    @classmethod
+    def _workdir_validator(cls, workdir):
+        """
+        Validates the transport string.
+        """
+        from aiida.common.exceptions import ValidationError
+        import os
+
+        if not workdir.strip():
+            raise ValidationError("No workdir specified")
+        
+        try:
+            convertedwd = workdir.format(username="test")
+        except KeyError as e:
+            raise ValidationError("In workdir there is an unknown replacement field '{}'".format(
+                e.message))
+        
+        if not os.path.isabs(convertedwd):
+            raise ValidationError("The workdir must be an absolute path")
+    
     def validate(self):
         """
         Check if the attributes and files retrieved from the DB are valid.
@@ -119,19 +307,17 @@ class Computer(object):
         """
         from aiida.common.exceptions import ValidationError
         
-        if not self.get_hostname().strip():
-            raise ValidationError("No hostname specified")
-        if not self.get_transport_type().strip():
-            raise ValidationError("No transport_type specified")
-        if not self.get_scheduler_type().strip():
-            raise ValidationError("No scheduler_type specified")
-        if not self.get_workdir().strip():
-            raise ValidationError("No workdir specified")
-        try:
-            self.get_workdir().format(username="test")
-        except KeyError as e:
-            raise ValidationError("In workdir there is an unknown replacement field '{}'".format(
-                e.message))
+        if not self.get_name().strip():
+            raise ValidationError("No name specified")
+
+        self._hostname_validator(self.get_hostname())
+
+        self._transport_type_validator(self.get_transport_type())
+
+        self._scheduler_type_validator(self.get_scheduler_type())
+
+        self._workdir_validator(self.get_workdir())
+
         try:
             self.get_transport_params()
         except DbContentError:
@@ -312,7 +498,6 @@ class Computer(object):
         #    raise ModificationNotAllowed("Cannot set a property after having stored the entry")
         
     def get_scheduler(self):
-        import aiida.scheduler
         from aiida.scheduler import SchedulerFactory
 
         try:

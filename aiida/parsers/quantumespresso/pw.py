@@ -98,7 +98,8 @@ class PwParser(Parser):
         # look for bands
         has_bands = False
         if glob.glob( os.path.join(out_folder.get_abs_path('.'),'K[0-9][0-9][0-9][0-9][0-9]')):
-            # Note: I assume that the format of the kpoints subfolder is Kxxxxx
+            # Note: I hard-code that the format of the kpoints subfolder is Kxxxxx
+            # I don't know what happens to QE in the case of 99999> points
             has_bands = True
             # TODO: maybe it can be more general than bands only?
         out_file = os.path.join( out_folder.get_abs_path('.'), self.calc.OUTPUT_FILE_NAME )

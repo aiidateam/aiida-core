@@ -23,7 +23,7 @@ class AiidaTestCase(unittest.TestCase):
 
         cls.user = User.objects.create_user(getpass.getuser(),
                                             'unknown@mail.com', 'fakepwd')
-        cls.computer = Computer(name='localhost-example',
+        cls.computer = Computer(name='localhost',
                                 hostname='localhost',
                                 transport_type='ssh',
                                 scheduler_type='pbspro',

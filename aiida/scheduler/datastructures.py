@@ -51,11 +51,12 @@ class JobResource(DefaultFieldsAttributeDict):
     """
     _default_fields = tuple()
     
-    def get_valid_keys(self):
+    @classmethod
+    def get_valid_keys(cls):
         """
         Return a list of valid keys to be passed to the __init__
         """
-        return list(self._default_fields)
+        return list(cls._default_fields)
     
     def get_tot_num_cpus(self):
         """
@@ -73,11 +74,12 @@ class NodeNumberJobResource(JobResource):
         'num_cpus_per_machine',
         )
     
-    def get_valid_keys(self):
+    @classmethod
+    def get_valid_keys(cls):
         """
         Return a list of valid keys to be passed to the __init__
         """
-        return super(NodeNumberJobResource,self).get_valid_keys() + [
+        return super(NodeNumberJobResource,cls).get_valid_keys() + [
             "tot_num_cpus"]
     
     def __init__(self,**kwargs):

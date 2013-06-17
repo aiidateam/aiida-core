@@ -10,13 +10,226 @@ from aiida.transport import FileAttribute
 
 # TODO : callback functions in paramiko are currently not used much and probably broken
 
+def parse_sshconfig(computername):
+    config = paramiko.SSHConfig()
+    try:
+        config.parse(open(os.path.expanduser('~/.ssh/config')))
+    except IOError:
+        # No file found, so empty configuration
+        pass
+    
+    return config.lookup(computername)
+
+def convert_to_bool(string):
+    upstring = str(string).upper()
+    
+    if upstring in ['Y', 'YES', 'T', 'TRUE']:
+        return True
+    elif upstring in ['N', 'NO', 'F', 'FALSE']:
+        return False
+    else:
+        raise ValueError("Invalid boolean value provided")
+
 class SshTransport(aiida.transport.Transport):
     # Valid keywords accepted by the connect method of paramiko.SSHClient
-    # I disable 'password'
-    _valid_connect_params = ['port', 'username', 'pkey',
+    # I disable 'password' and 'pkey' to avoid these data to get logged in the
+    # aiida log file.
+    _valid_connect_params = ['username', 'port',
                              'key_filename', 'timeout', 'allow_agent',
                              'look_for_keys', 'compress']
     
+    # Valid parameters for the ssh transport
+    # For each param, a class method with name
+    # _convert_PARAMNAME_fromstring
+    # should be defined, that returns the value converted from a string to
+    # a correct type, or raise a ValidationError 
+    #
+    # moreover, if you want to help in the default configuration, you can 
+    # define a _get_PARAMNAME_suggestion_string
+    # to return a suggestion; it must accept only one parameter, being a Computer
+    # instance
+    _valid_auth_params = _valid_connect_params + [
+        'load_system_host_keys',
+        'key_policy',
+        ]
+    
+    @classmethod
+    def _convert_username_fromstring(cls, string):
+        """
+        Convert the username from string.
+        """
+        return string
+
+    @classmethod
+    def _get_username_suggestion_string(cls, computer):
+        """
+        Return a suggestion for the specific field.
+        """
+        import getpass
+        
+        config = parse_sshconfig(computer.hostname)
+        # Either the configured user in the .ssh/config, or the current username
+        return str(config.get('user',getpass.getuser())) 
+    
+
+    @classmethod
+    def _convert_port_fromstring(cls, string):
+        """
+        Convert the port from string.
+        """
+        from aiida.common.exceptions import ValidationError
+        
+        try:
+            return int(string)
+        except ValueError:
+            raise ValidationError("The port must be an integer")
+
+    @classmethod
+    def _get_port_suggestion_string(cls, computer):
+        """
+        Return a suggestion for the specific field.
+        """
+        config = parse_sshconfig(computer.hostname)
+        # Either the configured user in the .ssh/config, or the default SSH port
+        return str(config.get('port',22))
+
+    @classmethod
+    def _convert_key_filename_fromstring(cls, string):
+        """
+        Convert the port from string.
+        """
+        from aiida.common.exceptions import ValidationError
+        
+        path = os.path.expanduser(string)
+        
+        if not os.path.isabs(path):
+            raise ValidationError("The key filename must be an absolute path")
+
+        if not os.path.exists(path):
+            raise ValidationError("The key filename must exist")
+
+        return path
+    
+    @classmethod
+    def _get_key_filename_suggestion_string(cls, computer):        
+        """
+        Return a suggestion for the specific field.
+        """
+        config = parse_sshconfig(computer.hostname)
+        return os.path.expanduser(config.get('identityfile', ""))
+
+
+    @classmethod
+    def _convert_timeout_fromstring(cls, string):
+        """
+        Convert the port from string.
+        """
+        from aiida.common.exceptions import ValidationError
+        
+        try:
+            return int(string)
+        except ValueError:
+            raise ValidationError("The timeout must be an integer")
+
+    @classmethod
+    def _get_timeout_suggestion_string(cls, computer):
+        """
+        Return a suggestion for the specific field.
+        """
+        config = parse_sshconfig(computer.hostname)
+        return str(config.get('connecttimeout',""))
+
+    @classmethod
+    def _convert_allow_agent_fromstring(cls, string):
+        """
+        Convert the port from string.
+        """
+        from aiida.common.exceptions import ValidationError
+        
+        try:
+            return convert_to_bool(string)
+        except ValueError:
+            raise ValidationError("Allow_agent must be an boolean")
+
+    @classmethod
+    def _get_allow_agent_suggestion_string(cls, computer):
+        """
+        Return a suggestion for the specific field.
+        """
+        return ""
+
+    @classmethod
+    def _convert_look_for_keys_fromstring(cls, string):
+        """
+        Convert the port from string.
+        """
+        from aiida.common.exceptions import ValidationError
+        
+        try:
+            return convert_to_bool(string)
+        except ValueError:
+            raise ValidationError("look_for_keys must be an boolean")
+
+    @classmethod
+    def _get_look_for_keys_suggestion_string(cls, computer):
+        """
+        Return a suggestion for the specific field.
+        """
+        return ""
+
+    @classmethod
+    def _convert_compress_fromstring(cls, string):
+        """
+        Convert the port from string.
+        """
+        from aiida.common.exceptions import ValidationError
+        
+        try:
+            return convert_to_bool(string)
+        except ValueError:
+            raise ValidationError("compress must be an boolean")
+
+    @classmethod
+    def _get_compress_suggestion_string(cls, computer):
+        """
+        Return a suggestion for the specific field.
+        """
+        return "True"
+    
+    @classmethod
+    def _convert_load_system_host_keys_fromstring(cls, string):
+        """
+        Convert the port from string.
+        """
+        from aiida.common.exceptions import ValidationError
+        
+        try:
+            return convert_to_bool(string)
+        except ValueError:
+            raise ValidationError("compress must be an boolean")
+
+    @classmethod
+    def _get_load_system_host_keys_suggestion_string(cls, computer):
+        """
+        Return a suggestion for the specific field.
+        """
+        return "True"
+    
+    @classmethod
+    def _convert_key_policy_fromstring(cls, string):
+        """
+        Convert the port from string.
+        """
+        return string
+    
+    @classmethod
+    def _get_key_policy_suggestion_string(cls, computer):
+        """
+        Return a suggestion for the specific field.
+        """
+        return "RejectPolicy"
+    
+        
     def __init__(self, machine, **kwargs):
         """
         Initialize the SshTransport class.
@@ -53,8 +266,16 @@ class SshTransport(aiida.transport.Transport):
             self._client.load_system_host_keys()
 
         self._missing_key_policy = kwargs.pop(
-            'key_policy',paramiko.RejectPolicy()) # This is paramiko default
-        self._client.set_missing_host_key_policy(self._missing_key_policy)
+            'key_policy','RejectPolicy') # This is paramiko default
+        if self._missing_key_policy == 'RejectPolicy':
+            self._client.set_missing_host_key_policy(paramiko.RejectPolicy())
+        elif self._missing_key_policy == 'WarningPolicy':
+            self._client.set_missing_host_key_policy(paramiko.WarningPolicy())
+        elif self._missing_key_policy == 'AutoAddPolicy':
+            self._client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        else:
+            raise ValueError("Unknown value of the key policy, allowed values "
+                             "are: RejectPolicy, WarningPolicy, AutoAddPolicy")
 
         self._connect_args = {}
         for k in self._valid_connect_params:

@@ -36,7 +36,8 @@ class MissingPluginError(AiidaException):
 class InvalidOperation(AiidaException):
     """
     The allowed operation is not valid (e.g., when trying to add a non-internal attribute
-    before saving the entry)
+    before saving the entry), or deleting an entry that is protected (e.g., 
+    because it is referenced by foreign keys)
     """
     pass
 
@@ -92,5 +93,12 @@ class InputValidationError(ValidationError):
 class FeatureNotAvailable(AiidaException):
     """
     Raised when a feature is requested from a plugin, that is not available.
+    """
+    pass
+
+class FeatureDisabled(AiidaException):
+    """
+    Raised when a feature is requested, but the used chose to disabled it
+    (e.g., for submissions on disabled computers).
     """
     pass

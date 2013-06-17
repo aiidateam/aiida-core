@@ -51,7 +51,10 @@ class DbNode(m.Model):
     type = m.CharField(max_length=255,db_index=True) 
     label = m.CharField(max_length=255, db_index=True, blank=True)
     description = m.TextField(blank=True)
-    time = m.DateTimeField(auto_now_add=True, editable=False)
+    # creation time
+    ctime = m.DateTimeField(auto_now_add=True, editable=False)
+    # last-modified time
+    mtime = m.DateTimeField(auto_now=True, editable=False)
     # Cannot delete a user if something is associated to it
     user = m.ForeignKey(User, on_delete=m.PROTECT)
 
@@ -113,7 +116,7 @@ class Link(m.Model):
     input = m.ForeignKey('DbNode',related_name='output_links')
     output = m.ForeignKey('DbNode',related_name='input_links')
     #label for data input for calculation
-    label = m.CharField(max_length=255, db_index=True, blank=True)
+    label = m.CharField(max_length=255, db_index=True, blank=False)
 
     class Meta:
         # I cannot add twice the same link
@@ -163,7 +166,7 @@ class Attribute(m.Model):
     time = m.DateTimeField(auto_now_add=True, editable=False)
     dbnode = m.ForeignKey('DbNode', related_name='attributes')
     # max_length is required by MySql to have indexes and unique constraints
-    key = m.CharField(max_length=255,db_index=True)
+    key = m.CharField(max_length=255,db_index=True,blank=False)
     datatype = m.CharField(max_length=10, choices=attrdatatype_choice, db_index=True)
     tval = m.TextField( default='', blank=True)
     fval = m.FloatField( default=None, null=True)
@@ -313,32 +316,35 @@ class DbComputer(m.Model):
         - ... (further limits per user etc.)
     """
     uuid = UUIDField(auto=True)
-    name = m.CharField(max_length=255, unique=True)
+    name = m.CharField(max_length=255, unique=True, blank=False)
     hostname = m.CharField(max_length=255)
     description = m.TextField(blank=True)
+    enabled = m.BooleanField(default=True)
     # TODO: next three fields should not be blank...
     workdir = m.CharField(max_length=255)
     transport_type = m.CharField(max_length=255)
     scheduler_type = m.CharField(max_length=255)
     transport_params = m.TextField(default="{}") # Will store a json
-
     metadata = m.TextField(default="{}") # Will store a json
 
     @classmethod
     def get_dbcomputer(cls,computer):
+        """
+        Return a DbComputer from its name (or from another Computer or DbComputer instance)
+        """
         from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
         from aiida.common.exceptions import NotExistent
         from aiida.orm import Computer
 
         if isinstance(computer, basestring):
             try:
-                dbcomputer = DbComputer.objects.get(hostname=computer)
+                dbcomputer = DbComputer.objects.get(name=computer)
             except ObjectDoesNotExist:
                 raise NotExistent("No computer found in the table of computers with "
                                  "the given name '{}'".format(computer))
             except MultipleObjectsReturned:
                 raise DbContentError("There is more than one computer with name '{}', "
-                                 "pass a Django Computer instance".format(computer))
+                                     "pass a Django Computer instance".format(computer))
         elif isinstance(computer, DbComputer):
             if computer.pk is None:
                 raise ValueError("The computer instance you are passing has not been stored yet")
@@ -380,6 +386,12 @@ class AuthInfo(m.Model):
             raise DbContentError(
                 "Error while reading auth_params for authinfo, aiidauser={}, computer={}".format(
                     self.aiidauser.username, self.computer.hostname))
+
+    def set_auth_params(self,auth_params):
+        import json
+        
+        # Raises ValueError if data is not JSON-serializable
+        self.auth_params = json.dumps(auth_params)
 
     # a method of AuthInfo
     def get_transport(self):

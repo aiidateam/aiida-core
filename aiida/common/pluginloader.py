@@ -1,9 +1,121 @@
 import importlib
 
 import aiida.common
-from aiida.common.exceptions import MissingPluginError, InternalError
+from aiida.common.exceptions import MissingPluginError
 
 logger = aiida.common.aiidalogger.getChild('pluginloader')
+
+def _existing_plugins_with_module(base_class, plugins_module_path, pkgname, basename, max_depth):
+    """
+        Recursive function to return the existing plugins within a given module.
+        
+        Args:
+        base_class
+            Identify all subclasses of the base_class
+        plugins_module
+            a python module object (*not* a string) within which to look for a plugin.
+        max_depth
+            (default=5) Maximum depth (of nested modules) to be used when
+            looking for plugins
+        Return:
+            a list of valid strings that can be used using a Factory or with
+            load_plugin.
+    """
+    import pkgutil
+    import os
+    
+    if max_depth == 0:
+        return []
+    else:
+        retlist = _find_module(base_class, pkgname, basename) 
+        
+        for _, name, ismod in pkgutil.walk_packages([plugins_module_path]):
+            if ismod:
+                retlist += _existing_plugins_with_module(
+                     base_class, os.path.join(plugins_module_path,name),
+                     "{}.{}".format(pkgname, name),
+                     "{}.{}".format(basename, name) if basename else name,
+                     max_depth-1)
+
+            # This has to be done anyway, for classes in the __init__ file.
+            this_pkgname = "{}.{}".format(pkgname, name)
+            this_basename = "{}.{}".format(basename, name) if basename else name
+
+            retlist += _find_module(base_class, this_pkgname, this_basename)
+
+                
+        return list(set(retlist))
+
+def _find_module(base_class, pkgname, this_basename):
+    """
+    Given a base class object, looks for its subclasses inside the package
+    with name pkgname (must be importable), and prepends to the class name
+    the string 'this_basename'.
+    
+    Return a list of valid strings, acceptable by the *Factory functions.
+    Does not return the class itself.
+    
+    If the name of the class complies with the syntax
+    AaaBbb
+    where Aaa is the capitalized name of the containing module (aaa), and
+    Bbb is base_class.__name__, then only 'aaa' is returned instead of
+    'aaa.AaaBbb', to have a shorter name that is anyway accepted by the *Factory
+    functions. 
+    """
+    import inspect
+
+    retlist = []
+            
+    #print ' '*(5-max_depth), '>', pkgname
+    #print ' '*(5-max_depth), ' ', this_basename
+
+    pkg = importlib.import_module(pkgname)
+    for k, v in pkg.__dict__.iteritems():
+        if (inspect.isclass(v) and # A class
+            v != base_class and # Not the class itself
+            issubclass(v, base_class) and # a proper subclass
+            pkgname == v.__module__):   # We are importing it from its
+                                        # module: avoid to import it
+                                        # from another module, if it
+                                        # was simply imported there
+            # Try to return the shorter name if the subclass name
+            # has the correct pattern, as expected by the Factory
+            # functions
+            if k == "{}{}".format(
+              pkgname.rpartition('.')[2].capitalize(),
+              base_class.__name__):
+                retlist.append(this_basename)
+            else:
+                retlist.append(
+                   ("{}.{}".format(this_basename, k) if this_basename
+                    else k))
+        #print ' '*(5-max_depth), ' ->', "{}.{}".format(this_basename, k)
+    return retlist        
+
+def existing_plugins(base_class, plugins_module_name, max_depth=5):
+    """
+    Return a list of strings of valid plugins.
+    
+    Args:
+        base_class
+            Identify all subclasses of the base_class
+        plugins_module_name
+            a string with the full module name separated with dots
+            that points to the folder with plugins. It must be importable by python.
+        max_depth
+            (default=5) Maximum depth (of nested modules) to be used when
+            looking for plugins
+    
+    TODO: unify this function, the load_plugin function, and possibly think to
+        a caching/registering method for plugins.
+    """
+    try:
+        pluginmod = importlib.import_module(plugins_module_name)
+    except ImportError:
+        raise MissingPluginError("Unable to load the plugin module {}".format(
+            plugins_module_name))
+
+    return _existing_plugins_with_module(base_class,pluginmod.__path__[0],plugins_module_name,"",max_depth)
 
 def load_plugin(base_class, plugins_module, plugin_type):
     """
@@ -11,17 +123,21 @@ def load_plugin(base_class, plugins_module, plugin_type):
 
     This is general and works for any plugin used in AiiDA.
 
-    Args:
-        base_class: the abstract base class of the plugin.
-        plugins_module: a string with the full module name separated with dots
-            that points to the folder with plugins. It must be importable by python.
-        plugin_type: the name of the plugin.
     NOTE: actually, now plugins_module and plugin_type are joined with a dot,
         and the plugin is retrieved splitting using the last dot of the resulting
         string.
     TODO: understand if it is probably better to join the two parameters above
         to a single one.
 
+    Args:
+        base_class
+            the abstract base class of the plugin.
+        plugins_module
+            a string with the full module name separated with dots
+            that points to the folder with plugins. It must be importable by python.
+        plugin_type
+            the name of the plugin.
+            
     Return: 
         the class of the required plugin.
 

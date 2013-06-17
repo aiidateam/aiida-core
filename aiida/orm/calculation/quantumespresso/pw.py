@@ -124,6 +124,7 @@ class PwCalculation(Calculation):
     PREFIX = 'aiida'
     INPUT_FILE_NAME = 'aiida.in'
     OUTPUT_FILE_NAME = 'aiida.out'
+    OUTPUT_XML_FILE_NAME = 'data-file.xml'
 
     def _prepare_for_submission(self,tempfolder):        
         """
@@ -446,7 +447,7 @@ class PwCalculation(Calculation):
         calcinfo.retrieve_list.append(self.OUTPUT_FILE_NAME)
         calcinfo.retrieve_list.append(
             os.path.join(self.OUTPUT_SUBFOLDER, 
-                         '{}.save'.format(self.PREFIX), 'data-file.xml'))
+                         '{}.save'.format(self.PREFIX), self.OUTPUT_XML_FILE_NAME))
         
         if settings_dict:
             raise InputValidationError("The following keys have been found in "

@@ -30,7 +30,7 @@ else:
                                   )
 
 for c in calclist:
-    print "{} {} {} {} {} {}".format(int(c), c.label, c.get_state(), c.get_scheduler_state(), c.get_job_id(), c.dbnode.time)
+    print "{} {} {} {} {} {}".format(int(c), c.label, c.get_state(), c.get_scheduler_state(), c.get_job_id(), c.dbnode.ctime)
 
 
 

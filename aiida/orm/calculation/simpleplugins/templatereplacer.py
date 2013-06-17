@@ -56,7 +56,7 @@ class TemplatereplacerCalculation(Calculation):
         from aiida.common.exceptions import ValidationError
         
         inputdict = self.get_inputdata_dict()
-
+        
         parameters_node = inputdict.pop('parameters', None)
         if parameters_node is None:
             parameters = {}
@@ -68,8 +68,8 @@ class TemplatereplacerCalculation(Calculation):
         template_node = inputdict.pop('template', None)
         if template_node is None:
             raise InputValidationError("No 'template' input data")
-        if not isinstance(parameters_node,ParameterData):
-            raise InputValidationError("'parameters' data is not of type ParameterData")
+        if not isinstance(template_node,ParameterData):
+            raise InputValidationError("'template' data is not of type ParameterData")
         template = dict(template_node.iterattrs())
 
         input_file_template = template.pop('input_file_template', "")

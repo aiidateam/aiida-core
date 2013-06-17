@@ -222,7 +222,8 @@ def submit_calc(calc):
     
     from aiida.orm import Calculation, Code
     from aiida.common.folders import SandboxFolder
-    from aiida.common.exceptions import InputValidationError, ValidationError
+    from aiida.common.exceptions import (
+        FeatureDisabled, InputValidationError, ValidationError)
     from aiida.scheduler.datastructures import JobTemplate
     from aiida.common.utils import validate_list_of_string_tuples
     from aiida.orm.data.remote import RemoteData
@@ -234,6 +235,14 @@ def submit_calc(calc):
         raise ValueError("Can only submit calculations with state=NEW! "
                          "(state is {} instead)".format(
                              calc.get_state()))
+
+    computer = calc.computer
+    if computer is None:
+        raise ValueError("No computer specified for this calculation")
+    if not computer.is_enabled():
+        raise FeatureDisabled("The computer '{}' associated to this "
+          "calculation is disabled: cannot submit".format(computer.name))
+        
 
     # TODO: do some sort of blocking call, to be sure that the submit function is not called
     # twice for the same calc?

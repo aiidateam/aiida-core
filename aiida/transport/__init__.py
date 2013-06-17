@@ -70,7 +70,11 @@ class Transport(object):
 
     """
     _logger = aiida.common.aiidalogger.getChild('transport')
-        
+    
+    # To be defined in the subclass
+    # See the ssh or local plugin to see the format 
+    _valid_auth_params = None
+    
     def __enter__(self):
         """
         For transports that require opening a connection, open
@@ -90,6 +94,22 @@ class Transport(object):
     # Remember to define this in each plugin!
     def __unicode__(self):
         return u"[Transport class or subclass]"
+
+    @classmethod
+    def get_valid_transports(cls):
+        from aiida.common.pluginloader import existing_plugins
+        
+        return existing_plugins(Transport, "aiida.transport.plugins")
+    
+    @classmethod
+    def get_valid_auth_params(cls):
+        """
+        Return the internal list of valid auth_params
+        """
+        if cls._valid_auth_params is None:
+            raise NotImplementedError
+        else:
+            return cls._valid_auth_params
 
     @property
     def logger(self):

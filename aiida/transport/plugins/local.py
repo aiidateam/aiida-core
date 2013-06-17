@@ -14,6 +14,9 @@ import glob
 
 
 class LocalTransport(aiida.transport.Transport):
+    
+    # There are no valid parameters for the local transport
+    _valid_auth_params = []
 
     def __init__(self,**kwargs):
         super(LocalTransport,self).__init__()
@@ -26,7 +29,7 @@ class LocalTransport(aiida.transport.Transport):
         self._internal_dir = None
         # Just to avoid errors
         self._machine = kwargs.pop('machine', None)
-        if self._machine and self._machine is not 'localhost':
+        if self._machine and self._machine != 'localhost':
             # TODO: check if we want a different logic
             self.logger.warning('machine was passed, but it is not localhost')
         if kwargs:

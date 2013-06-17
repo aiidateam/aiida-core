@@ -149,6 +149,7 @@ def get_or_create_code(computer):
         raise ValueError("Only aries is supported at the moment.")
     code_path = "/home/cepellot/software/espresso-5.0.2/bin/pw.x"
     code_version = "5.0.2"
+    prepend_text = 'module load intel/mpi/4.0.3 intel/12.1.2'
     useful_codes = Code.query(computer=computer.dbcomputer,
                               attributes__key="_remote_exec_path",
                               attributes__tval=code_path).filter(
@@ -158,6 +159,7 @@ def get_or_create_code(computer):
         print >> sys.stderr, "Creating the code..."
         code = Code(remote_computer_exec=(computer, code_path)).store()
         code.set_metadata("version", code_version)
+        code.set_prepend_text(prepend_text)
         return code
     
     elif len(useful_codes) == 1:

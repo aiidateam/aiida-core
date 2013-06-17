@@ -2,6 +2,26 @@ from aiida.common.exceptions import (
     ConfigurationError, DbContentError, InvalidOperation,
     MissingPluginError)
 
+def delete_computer(computer):
+    """
+    Delete a computer from the DB. 
+    It assumes that the DB backend does the proper checks and avoids
+    to delete computers that have nodes attached to them.
+    
+    Implemented as a function on purpose, otherwise complicated logic would be
+    needed to set the internal state of the object after calling 
+    computer.delete(). 
+    """
+    from django.db.models.deletion import ProtectedError
+    if not isinstance(computer, Computer):
+        raise TypeError("computer must be an instance of "
+                        "aiida.orm.computer.Computer")
+
+    try:    
+        computer.dbcomputer.delete()
+    except ProtectedError:
+        raise InvalidOperation("Unable to delete the requested computer: there"
+                               "is at least one node using this computer")
 
 class Computer(object):
     """
@@ -31,7 +51,8 @@ class Computer(object):
     # 1. an internal name (used to find the 
     #    _set_internalname_string, and get_internalname_string methods)
     # 2. a short human-readable name
-    # 3. A long human-readable description 
+    # 3. A long human-readable description
+    # 4. True if it is a multi-line input, False otherwise  
     # IMPORTANT!
     # for each entry, remember to define the 
     # _set_internalname_string and get_internalname_string methods.
@@ -39,25 +60,63 @@ class Computer(object):
     # validate the value. 
     _conf_attributes = [
         ("hostname",
-         "Hostname",
+         "Fully-qualified hostname",
          "The fully qualified host-name of this computer",
+         False,
         ),
+        ("description",
+         "Description",
+         "A human-readable description of this computer",
+         False,
+        ),                        
+        ("enabled_state",
+         "Enabled",
+         "True or False; if False, the computer is disabled and calculations\n"
+         "associated with it will not be submitted",
+         False,
+        ), 
         ("transport_type",
          "Transport type",
          "The name of the transport to be used. Valid names are: {}".format(
             ",".join(Transport.get_valid_transports())),
+         False,
          ),
         ("scheduler_type",
          "Scheduler type",
          "The name of the scheduler to be used. Valid names are: {}".format(
             ",".join(Scheduler.get_valid_schedulers())),
+         False,
          ),
         ("workdir",
          "AiiDA work directory",
          "The absolute path of the directory on the computer where AiiDA will\n"
-         "run the calculation (typically, the scratch of the computer). You\n"
+         "run the calculations (typically, the scratch of the computer). You\n"
          "can use the {username} replacement, that will be replaced by your\n"
          "username on the remote computer",
+         False,
+         ),
+        # Must be called after the scheduler!
+        ("mpirun_command",
+         "mpirun command",
+         "The mpirun command needed on the cluster to run parallel MPI\n"
+         "programs. You can use the {tot_num_cpus} replacement, that will be \n"
+         "replaced by the total number of cpus, or the other scheduler-dependent\n"
+         "replacement fields (see the scheduler docs for more information)",
+         False,
+         ),
+        ("prepend_text",
+         "Text to prepend to each command execution",
+         "This is a multiline string, whose content will be prepended inside\n"
+         "the submission script before the real execution of the job. It is\n"
+         "your responsibility to write proper bash code!",
+         True,
+         ),
+        ("append_text",
+         "Text to append to each command execution",
+         "This is a multiline string, whose content will be appended inside\n"
+         "the submission script after the real execution of the job. It is\n"
+         "your responsibility to write proper bash code!",
+         True,
          ),
         ] 
         
@@ -168,7 +227,7 @@ class Computer(object):
         else:
             ret_lines.append("   # No prepend text.")
         ret_lines.append(" * append text:")
-        if self.get_prepend_text().strip():
+        if self.get_append_text().strip():
             for l in self.get_append_text().split('\n'):
                 ret_lines.append("   {}".format(l))
         else:
@@ -222,6 +281,57 @@ class Computer(object):
         if not hostname.strip():
             raise ValidationError("No hostname specified")
 
+    def _get_enabled_state_string(self):
+        return "True" if self.is_enabled() else "False"
+
+    def _set_enabled_state_string(self,string):
+        """
+        Set the enabled state starting from a string.
+        """
+        from aiida.common.exceptions import ValidationError
+        
+        upper_string = string.upper()
+        if upper_string in ['YES', 'Y', 'T', 'TRUE']:
+            enabled_state = True
+        elif upper_string in ['NO', 'N', 'F', 'FALSE']:
+            enabled_state = False
+        else:
+            raise ValidationError("Invalid value '{}' for the enabled state, must "
+                                  "be a boolean".format(str(enabled_state)))
+            
+        self._enabled_state_validator(enabled_state)
+        
+        self.set_enabled_state(enabled_state)
+        
+    @classmethod
+    def _enabled_state_validator(cls,enabled_state):
+        """
+        Validates the hostname.
+        """
+        from aiida.common.exceptions import ValidationError
+    
+        if not isinstance(enabled_state,bool):
+            raise ValidationError("Invalid value '{}' for the enabled state, must "
+                                  "be a boolean".format(str(enabled_state)))
+
+    def _get_description_string(self):
+        return self.get_description()
+
+    def _set_description_string(self,string):
+        """
+        Set the description starting from a string.
+        """
+        self._description_validator(string)
+        self.set_description(string)
+        
+    @classmethod
+    def _description_validator(cls,description):
+        """
+        Validates the description.
+        """
+        # The description is always valid 
+        pass
+
     def _get_transport_type_string(self):
         return self.get_transport_type()
 
@@ -264,6 +374,42 @@ class Computer(object):
         if scheduler_type not in Scheduler.get_valid_schedulers():
             raise ValidationError("The specified scheduler is not a valid one")
 
+    def _get_prepend_text_string(self):
+        return self.get_prepend_text()
+
+    def _set_prepend_text_string(self,string):
+        """
+        Set the prepend_text starting from a string.
+        """
+        self._prepend_text_validator(string)
+        self.set_prepend_text(string)
+
+    @classmethod
+    def _prepend_text_validator(cls, prepend_text):
+        """
+        Validates the prepend text string.
+        """
+        # no validation done
+        pass
+
+    def _get_append_text_string(self):
+        return self.get_append_text()
+
+    def _set_append_text_string(self,string):
+        """
+        Set the append_text starting from a string.
+        """
+        self._append_text_validator(string)
+        self.set_append_text(string)
+
+    @classmethod
+    def _append_text_validator(cls, append_text):
+        """
+        Validates the append text string.
+        """
+        # no validation done
+        pass
+
     def _get_workdir_string(self):
         return self.get_workdir()
 
@@ -293,7 +439,45 @@ class Computer(object):
         
         if not os.path.isabs(convertedwd):
             raise ValidationError("The workdir must be an absolute path")
-    
+
+    def _get_mpirun_command_string(self):
+        return " ".join(self.get_mpirun_command())
+
+    def _set_mpirun_command_string(self,string):
+        """
+        Set the workdir starting from a string.
+        """
+        converted_cmd = str(string).strip().split(" ")
+        self._mpirun_command_validator(converted_cmd)
+        self.set_mpirun_command(converted_cmd)
+
+    def _mpirun_command_validator(self, mpirun_cmd):
+        """
+        Validates the mpirun_command variable. MUST be called after properly
+        checking for a valid scheduler.
+        """
+        from aiida.common.exceptions import ValidationError
+
+        if not isinstance(mpirun_cmd,(tuple,list)) or not(
+            all(isinstance(i,basestring) for i in mpirun_cmd)):
+                raise ValidationError("the mpirun_command must be a list of strings")
+
+        try:
+            job_resource_keys = self.get_scheduler()._job_resource_class.get_valid_keys()
+        except MissingPluginError:
+            raise ValidationError("Unable to load the scheduler for this computer")
+        
+        subst = {i: 'value' for i in job_resource_keys}
+        subst['tot_num_cpus'] = 'value'        
+
+        try:
+            for arg in mpirun_cmd:
+                arg.format(**subst)
+        except KeyError as e:
+            raise ValidationError("In workdir there is an unknown replacement field '{}'".format(
+                e.message))
+
+
     def validate(self):
         """
         Check if the attributes and files retrieved from the DB are valid.
@@ -312,6 +496,10 @@ class Computer(object):
 
         self._hostname_validator(self.get_hostname())
 
+        self._description_validator(self.get_description())
+
+        self._enabled_state_validator(self.is_enabled())
+
         self._transport_type_validator(self.get_transport_type())
 
         self._scheduler_type_validator(self.get_scheduler_type())
@@ -319,20 +507,13 @@ class Computer(object):
         self._workdir_validator(self.get_workdir())
 
         try:
-            self.get_transport_params()
+            mpirun_cmd = self.get_mpirun_command()
         except DbContentError:
             raise ValidationError("Error in the DB content of the transport_params")
 
-        mpirun_command = self.get_mpirun_command()
-        if not isinstance(mpirun_command,(tuple,list)) or not(
-            all(isinstance(i,basestring) for i in mpirun_command)):
-                raise ValidationError("the mpirun_command must be a list of strings")
-        try:
-            for arg in mpirun_command:
-                arg.format(num_machines=12,num_cpus_per_machine=2,tot_num_cpus=24)
-        except KeyError as e:
-            raise ValidationError("In workdir there is an unknown replacement field '{}'".format(
-                e.message))
+        # To be called AFTER the validation of the scheduler
+        self._mpirun_command_validator(mpirun_cmd)
+
 
     def copy(self):
         """
@@ -381,6 +562,10 @@ class Computer(object):
         # This is useful because in this way I can do
         # c = Computer().store()
         return self
+
+    @property
+    def name(self):
+        return self.dbcomputer.name
 
     @property
     def hostname(self):
@@ -479,6 +664,21 @@ class Computer(object):
         #else:
         #    raise ModificationNotAllowed("Cannot set a property after having stored the entry")
 
+    def get_description(self):
+        return self.dbcomputer.description
+
+    def set_description(self,val):
+        #if self.to_be_stored:
+            self.dbcomputer.description = val
+        #else:
+        #    raise ModificationNotAllowed("Cannot set a property after having stored the entry")
+
+    def is_enabled(self):
+        return self.dbcomputer.enabled
+
+    def set_enabled_state(self, enabled):
+        self.dbcomputer.enabled = enabled
+
     def get_scheduler_type(self):
         return self.dbcomputer.scheduler_type
 
@@ -496,7 +696,18 @@ class Computer(object):
             self.dbcomputer.transport_type = val
         #else:
         #    raise ModificationNotAllowed("Cannot set a property after having stored the entry")
+    
+    def get_transport_class(self):
+        from aiida.transport import TransportFactory
         
+        try:
+            # I return the class, not an instance
+            return TransportFactory(self.get_transport_type())
+        except MissingPluginError as e:
+            raise ConfigurationError('No transport found for {} [type {}], message: {}'.format(
+                self.name, self.get_transport_type(), e.message))
+        
+    
     def get_scheduler(self):
         from aiida.scheduler import SchedulerFactory
 
@@ -506,6 +717,6 @@ class Computer(object):
             return ThisPlugin()
         except MissingPluginError as e:
             raise ConfigurationError('No scheduler found for {} [type {}], message: {}'.format(
-                self.hostname, self.get_scheduler_type(), e.message))
+                self.name, self.get_scheduler_type(), e.message))
 
 

@@ -68,14 +68,15 @@ class Scheduler(object):
             from aiida.common.exceptions import InternalError
             raise InternalError("No self._logger configured for {}!")
 
-    def create_job_resource(self, **kwargs):
+    @classmethod
+    def create_job_resource(cls, **kwargs):
         """
         Create a suitable job resource from the kwargs specified
         """
-        if self._job_resource_class is None:
+        if cls._job_resource_class is None:
             raise NotImplementedError
         else:
-            return self._job_resource_class(**kwargs)
+            return cls._job_resource_class(**kwargs)
 
     def get_submit_script(self, job_tmpl):
         """

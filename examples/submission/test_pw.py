@@ -5,9 +5,9 @@ import paramiko
 import getpass
 
 try:
-    machine = sys.argv[1]
+    computername = sys.argv[1]
 except IndexError:
-    print >> sys.stderr, "Pass the machine name."
+    print >> sys.stderr, "Pass the computer name."
     sys.exit(1)
 
 from aiida.common.utils import load_django
@@ -28,121 +28,6 @@ StructureData = DataFactory('structure')
 queue = None
 #queue = "P_share_queue"
 
-def get_or_create_machine():
-    import json
-    from aiida.common.exceptions import NotExistent
-    from aiida.djsite.db.models import AuthInfo
-        
-#    # I can delete the computer first
-#### DON'T DO THIS! WILL ALSO DELETE ALL CALCULATIONS THAT WERE USING
-#### THIS COMPUTER!
-#    from aiida.djsite.db.models import DbComputer, DbNode
-#    DbNode.objects.filter(computer__hostname=machine).delete()
-#    DbComputer.objects.filter(hostname=machine).delete()
-
-    
-    if machine == 'localhost':
-        try:
-            computer = Computer.get("localhost")
-            print >> sys.stderr, "Using the existing computer {localhost}..."
-        except NotExistent:
-            print >> sys.stderr, "Creating a new localhostcomputer..."
-            computer = Computer(hostname="localhost",transport_type='local',
-                                scheduler_type='pbspro')
-            computer.set_workdir("/tmp/{username}/aiida")
-            computer.set_mpirun_command("mpirun", "-np", "{tot_num_cpus}")
-            computer.store()
-
-        auth_params = {}
-
-        authinfo, created = AuthInfo.objects.get_or_create(
-            aiidauser=get_automatic_user(),
-            computer=computer.dbcomputer, 
-            defaults= {'auth_params': json.dumps(auth_params)},
-            )
-
-        if created:
-            print "  (Created authinfo)"
-        else:
-            print "  (Retrieved authinfo)"
-
-    else: # ssh case
-        if machine.startswith('bellatrix'):
-            computername = "bellatrix.epfl.ch"
-            schedulertype = 'pbspro'
-            workdir = "/scratch/{username}/aiida"
-            mpirun_command = ['mpirun', '-np', '{tot_num_cpus}']
-        if machine.startswith('aries'):
-            computername = "aries.epfl.ch"
-            schedulertype = 'pbspro'
-            workdir = "/scratch/{username}/aiida"
-            mpirun_command = ['mpirun', '-np', '{tot_num_cpus}']
-        elif machine.startswith('rosa'):
-            computername = "rosa.cscs.ch"
-            schedulertype = 'slurm'
-            workdir = "/scratch/rosa/{username}/aiida"
-            mpirun_command = ['aprun', '-n', '{tot_num_cpus}']
-        else:
-            print >> sys.stderr, "Unkown computer!"
-            sys.exit(1)
-            
-        try:
-            computer = Computer.get(computername)
-            print >> sys.stderr, "Using the existing computer {}...".format(computername)
-        except NotExistent:
-            print >> sys.stderr, "Creating a new computer..."
-            computer = Computer(hostname=computername,transport_type='ssh',
-                                scheduler_type=schedulertype)
-            computer.set_workdir(workdir)
-            computer.set_mpirun_command(mpirun_command)
-            computer.store()
-
-        auth_params = {'load_system_host_keys': True,
-                       'compress': True}
-
-
-        config = paramiko.SSHConfig()
-        try:
-            config.parse(open(os.path.expanduser('~/.ssh/config')))
-        except IOError:
-            # No file found, so empty configuration
-            pass
-        # machine_config is a dict with only relevant properties set
-        machine_config = config.lookup(computername)
-
-        try:
-            auth_params['username'] = machine_config['user']
-        except KeyError:
-            # No user set up in the config file: I explicitly set the local username
-            auth_params['username'] = getpass.getuser()
-
-        try:
-            auth_params['key_filename'] = os.path.expanduser(
-                machine_config['identityfile'])
-        except KeyError:
-            pass 
-        
-        try:
-            auth_params['port'] = machine_config['port']
-        except KeyError:
-            pass       
-
-        authinfo, created = AuthInfo.objects.get_or_create(
-            aiidauser=get_automatic_user(),
-            computer=computer.dbcomputer, 
-            defaults= {'auth_params': json.dumps(auth_params)},
-            )
-
-        if created:
-            print "  (Created authinfo)"
-        else:
-            print "  (Retrieved authinfo)"
-        print "*** AuthInfo: "
-        for k,v in json.loads(authinfo.auth_params).iteritems():
-            print "{} = {}".format(k, v)
-        print ""
-
-    return computer
 
 def get_or_create_code(computer):
     if not computer.hostname.startswith("aries"):
@@ -169,7 +54,7 @@ def get_or_create_code(computer):
 
 #####
 
-computer = get_or_create_machine()
+computer = Computer.get(computername)
 code = get_or_create_code(computer)
 
 raw_pseudos = [

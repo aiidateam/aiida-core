@@ -51,7 +51,10 @@ class DbNode(m.Model):
     type = m.CharField(max_length=255,db_index=True) 
     label = m.CharField(max_length=255, db_index=True, blank=True)
     description = m.TextField(blank=True)
-    time = m.DateTimeField(auto_now_add=True, editable=False)
+    # creation time
+    ctime = m.DateTimeField(auto_now_add=True, editable=False)
+    # last-modified time
+    mtime = m.DateTimeField(auto_now=True, editable=False)
     # Cannot delete a user if something is associated to it
     user = m.ForeignKey(User, on_delete=m.PROTECT)
 
@@ -316,6 +319,7 @@ class DbComputer(m.Model):
     name = m.CharField(max_length=255, unique=True, blank=False)
     hostname = m.CharField(max_length=255)
     description = m.TextField(blank=True)
+    enabled = m.BooleanField(default=True)
     # TODO: next three fields should not be blank...
     workdir = m.CharField(max_length=255)
     transport_type = m.CharField(max_length=255)
@@ -382,6 +386,12 @@ class AuthInfo(m.Model):
             raise DbContentError(
                 "Error while reading auth_params for authinfo, aiidauser={}, computer={}".format(
                     self.aiidauser.username, self.computer.hostname))
+
+    def set_auth_params(self,auth_params):
+        import json
+        
+        # Raises ValueError if data is not JSON-serializable
+        self.auth_params = json.dumps(auth_params)
 
     # a method of AuthInfo
     def get_transport(self):

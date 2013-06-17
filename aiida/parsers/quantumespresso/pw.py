@@ -6,8 +6,9 @@ from aiida.orm.data.parameter import ParameterData
 from aiida.orm.data.folder import FolderData
 from aiida.common.folders import SandboxFolder
 from aiida.orm import DataFactory
+from aiida.parsers.parser import Parser
 
-class PwscfParser(Parser):
+class PwParser(Parser):
     """
     This class is the implementation of the Parser class for PWscf.
     """

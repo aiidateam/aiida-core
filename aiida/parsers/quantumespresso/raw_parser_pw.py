@@ -1372,7 +1372,7 @@ def parse_pw_text_output(data, xml_data):
     return parsed_data
 
 
-def parse_raw_output(out_file, input_dict, xml_file=None, dir_with_bands=None):
+def parse_raw_output(out_file, input_dict, parser_opts=None, xml_file=None, dir_with_bands=None):
     """
     Parses the output of a calculation
     Receives in input the paths to the output file and the xml file.
@@ -1428,7 +1428,11 @@ def parse_raw_output(out_file, input_dict, xml_file=None, dir_with_bands=None):
     except IOError:
         # if the file cannot be open, the error is severe.
         raise QEOutputParsingError("Failed to open output file: {}.".format(out_file))
-    
+
+    # in case of executable failures, check if there is any output at all
+    if not out_lines:
+        raise QEOutputParsingError("the output file appears to be empty")
+     
     # check if the job has finished (that doesn't mean without errors)
     finished_run = False
     for line in out_lines[::-1]:

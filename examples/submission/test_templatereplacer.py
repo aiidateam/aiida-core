@@ -151,7 +151,7 @@ def get_or_create_machine():
 def get_or_create_code(computer):
     #if not computer.hostname.startswith("aries"):
     #    raise ValueError("Only aries is supported at the moment.")
-    code_path = "/bin/sleep 150 | /usr/bin/less"
+    code_path = "/usr/bin/less"
     code_version = "5.0.2"
     useful_codes = Code.query(computer=computer.dbcomputer,
                               attributes__key="_remote_exec_path",
@@ -172,20 +172,19 @@ def get_or_create_code(computer):
         
 
 #####
-
 computer = get_or_create_machine()
 code = get_or_create_code(computer)
 
 SimpleCalc = CalculationFactory('simpleplugins.templatereplacer')
 calc = SimpleCalc(computer=computer)
-calc.set_max_wallclock_seconds(1*60) # 1 min
+calc.set_max_wallclock_seconds(4*60) # 1 min
 calc.set_resources(parallel_env='smp',tot_num_cpus=1)
 calc.set_queue_name('serial.q') #No parallel needed. 
 calc.store()
 calc.use_code(code)
 
 from aiida.orm.data.parameter import ParameterData
-input_dict = {'input_file_template':'Content to be copied',
+input_dict = {'input_file_template':'Content to be copied: TEST',
               'input_file_name':'aiida.in',
               'output_file_name':'aiida.out'}
 params = ParameterData(input_dict).store()

@@ -46,7 +46,6 @@ def get_or_create_code(computer):
         code.set_prepend_text(prepend_text)
         code.store()
         code.set_metadata("version", code_version)
-        code.set_prepend_text(prepend_text)
         return code
     
     elif len(useful_codes) == 1:

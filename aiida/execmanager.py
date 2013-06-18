@@ -491,13 +491,22 @@ def retrieve_finished_for_authinfo(authinfo):
 
                     execlogger.debug("Storing retrieved_files={} of calc {}".format(retrieved_files.dbnode.pk, calc.dbnode.pk))
                     retrieved_files.store()
-                    calc.add_link_to(retrieved_files, label="retrieved")
+                    calc.add_link_to(retrieved_files, label=calc.get_linkname_retrieved())
 
                     calc._set_state(calc_states.PARSING)
 
-                    # TODO: parse here
+                    Parser = calc.get_parser()
+                    # If no parser is set, the calculation is successful
+                    successful = True 
+                    if Parser is not None:
+                        # TODO: parse here
+                        parser = Parser()
+                        successful = parser.parse_from_calc(calc)
 
-                    calc._set_state(calc_states.RETRIEVED)
+                    if successful:
+                        calc._set_state(calc_states.RETRIEVED)
+                    else:
+                        calc._set_state(calc_states.FAILED)
                     retrieved.append(calc)
                 except:
                     import traceback
@@ -506,10 +515,10 @@ def retrieve_finished_for_authinfo(authinfo):
                     traceback.print_exc(file=buf)
                     buf.seek(0)
                     if calc.get_state() == calc_states.PARSING:
-                        execlogger.error("Error parsing calc {}, I set it to RETRIEVED anyway. "
+                        execlogger.error("Error parsing calc {}. "
                             "Traceback: {}".format(calc.uuid, buf.read()))
                         # TODO: add a 'comment' to the calculation
-                        calc._set_state(calc_states.RETRIEVED)
+                        calc._set_state(calc_states.PARSINGFAILED)
                     else:
                         execlogger.error("Error retrieving calc {}".format(calc.uuid))
                         calc._set_state(calc_states.RETRIEVALFAILED)

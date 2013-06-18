@@ -15,15 +15,34 @@ class Parser(object):
     Get the child Folderdata, parse it and store the parsed data.
     """
 
-    def __init__(self,calc):
+    _linkname_outparams = 'output_parameters'
+
+    def __init__(self):
         """
-        Makes the checks that everything exists and is consistent
+        Init
         """
         raise NotImplementedError
 
-    def parse_local(self):
+    def parse_from_data(self,data):
         """
-        Returns:
-            parameter data object
+        Receives in input a datanode.
+        To be implemented.
+        Will be used by the user for eventual re-parsing of out-data,
+        for example with another or updated version of the parser
         """
         raise NotImplementedError
+            
+    def parse_from_calc(self,calc):
+        """
+        Parses the datafolder, stores results.
+        Used by the Execmanager.
+        """
+        raise NotImplementedError
+
+        
+    @classmethod
+    def get_linkname_outparams(self):
+        """
+        The name of the link used for the output parameters
+        """
+        return self._linkname_outparams

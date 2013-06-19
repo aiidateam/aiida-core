@@ -126,6 +126,9 @@ class PwCalculation(Calculation):
     OUTPUT_FILE_NAME = 'aiida.out'
     OUTPUT_XML_FILE_NAME = 'data-file.xml'
 
+    # Default PW output parser provided by AiiDA
+    _default_parser = 'quantumespresso.pw'
+    
     def _prepare_for_submission(self,tempfolder):        
         """
         This is the routine to be called when you want to create

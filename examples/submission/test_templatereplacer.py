@@ -91,7 +91,11 @@ def get_or_create_machine():
             sys.exit(1)
             
         try:
-            computer = Computer.get(computername)
+            # TODO: check if this is correct:
+            #computer = Computer.get(computername) #this gave an error, since the
+            #computer is not identified by the computername 'name.address.address', 
+            #but by 'name' only.
+            computer = Computer.get(machine)
             print >> sys.stderr, "Using the existing computer {}...".format(computername)
         except NotExistent:
             print >> sys.stderr, "Creating a new computer..."

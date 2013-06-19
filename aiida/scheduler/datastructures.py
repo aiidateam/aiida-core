@@ -362,5 +362,5 @@ class JobInfo(DefaultFieldsAttributeDict):
         'cpu_time',
         'submission_time',
         'dispatch_time',
-        'finish_time',
+        'finish_time'
         )

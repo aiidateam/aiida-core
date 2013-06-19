@@ -104,15 +104,28 @@ Typing verdi test will run the entire suite of tests.
 Further notes
 ^^^^
 
-For some reasons, on some machines (often Mac OS X) there is no default locale defined, and when you run verdi syncdb for the first time it fails (see also this issue of django). 
-To solve, first remove the sqlite database that was created.
+* For some reasons, on some machines (often Mac OS X) there is no
+  default locale defined, and when you run verdi syncdb for the first
+  time it fails (see also this issue of django).  To solve, first
+  remove the sqlite database that was created. 
+  Then, run in your terminal (or add to your .bashrc) before running
+  syncdb for the first time::
 
-Then, run in your terminal (or add to your .bashrc) before running syncdb for the first time::
+     export LANG="en_US.UTF-8"
+     export LC_ALL="en_US.UTF-8"
 
-export LANG="en_US.UTF-8"
-export LC_ALL="en_US.UTF-8"
+  and then run syncdb again.
 
-and then run syncdb again.
+* The tests of the transport plugins are done connecting the localhost to localhost. The tests may fail if this operation is not allowed. To add the ssh key, simply install the ssh server on your computer::
+
+     sudo apt-get install openssh-server
+
+  And then add the key to the set of authorized keys::
+
+     ssh-copy-id localhost
+
+  Note: we haven't yet tested what happens in case of firewalls blocks.
+
 
 Temporarily disabled
 ^^^^^^^^

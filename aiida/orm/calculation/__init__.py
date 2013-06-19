@@ -15,6 +15,11 @@ class Calculation(Node):
     _updatable_attributes = ('state', 'job_id', 'scheduler_state',
                              'last_jobinfo', 'remote_workdir', 'retrieve_list')
     
+    # By default, no output parser
+    _default_parser = None
+    # Set default for the link to the retrieved folder (after calc is done)
+    _linkname_retrieved = 'retrieved' 
+    
     def __init__(self,*args,**kwargs):
         """
         Possible arguments:
@@ -45,12 +50,18 @@ class Calculation(Node):
         if resources is not None:
             self.set_resources(**resources)
 
+        parser = kwargs.pop('parser', self._default_parser)
+        self.set_parser(parser)
+        
+        # hard code the output folder to be a single one
+        self.set_linkname_retrieved(self._linkname_retrieved)
+
         if kwargs:
             raise ValueError("Invalid parameters found in the __init__: "
                              "{}".format(kwargs.keys()))
 
     def validate(self):
-        from aiida.common.exceptions import ValidationError
+        from aiida.common.exceptions import MissingPluginError, ValidationError
         
         super(Calculation,self).validate()
 
@@ -61,10 +72,17 @@ class Calculation(Node):
             raise ValidationError("Calculation state '{}' is not valid".format(
                 self.get_state()))
 
+        try:
+            _ = self.get_parser()
+        except MissingPluginError:
+            raise ValidationError("No valid plugin found for the parser '{}'. "
+                "Set the parser to None if you do not need an automatic "
+                "parser.".format(self.get_parser_name()))
+
         computer = self.get_computer()        
         s = computer.get_scheduler()
         try:
-            job_resource = s.create_job_resource(**self.get_jobresource_params())
+            _ = s.create_job_resource(**self.get_jobresource_params())
         except (TypeError, ValueError) as e:
             raise ValidationError("Invalid resources for the scheduler of the "
                                   "specified computer: {}".format(e.message))
@@ -400,19 +418,59 @@ class Calculation(Node):
         
         submit_calc(self)
 
-#       output_plugin = kwargs.pop('output_plugin', None)
-#       self.set_output_plugin(output_plugin)
+    def set_parser(self, parser):
+        """
+        Set a string for the output parser
+        Can be None if no output plugin is available or needed
+        """                
+        self.set_attr('parser', parser)
 
-#    def set_output_plugin(self, output_plugin):
-#        """
-#        Set a string for the output plugin
-#        Can be none if no output plugin is available/needed
-#
-#        TODO: check that the plugin referenced by th string input_plugin actually exists
-#        """
-#        self.set_attr('output_plugin', output_plugin)
+    def get_parser_name(self):
+        """
+        Return a string for the output parser of this calculation, or None
+        if no parser is needed.
+        """
+        from aiida.parsers import ParserFactory
+                
+        return self.get_attr('parser')
 
+    def get_parser(self):
+        """
+        Return the output parser object for this calculation, or None
+        if no parser is set.
+        
+        ParserFactory raises MissingPluginError if the plugin is not found.
+        """
+        from aiida.parsers import ParserFactory
+        
+        parser_name = self.get_parser_name()
+        
+        if parser_name is not None:
+            return ParserFactory(parser_name)
+        else:
+            return None
 
+    def set_linkname_retrieved(self,linkname):
+        """
+        set the linkname of the retrieved data folder object
+        """
+        self.set_attr('linkname_retrieved',linkname)
+
+    def get_linkname_retrieved(self):
+        """
+        get the linkname of the retrieved data folder object
+        """
+        return self.get_attr('linkname_retrieved')
+        
+    def get_retrieved(self):
+        """
+        return the retrieved data folder, if present.
+        Note: we are assuming only one retrieved folder exists
+        """
+        from aiida.orm import DataFactory
+        
+        return DataFactory(self.get_linkname_retrieved)
+        
 ## SOME OLD COMMENTS
 # Each calculation object should be defined by analogy of a function 
 # with a fixed set of labeled and declared inputs.

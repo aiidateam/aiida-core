@@ -19,6 +19,8 @@ calc_states = CalcState((
         'RETRIEVED',  # data retrieved, no more need to connect to scheduler
         'SUBMISSIONFAILED', # error occurred during submission phase
         'RETRIEVALFAILED', # error occurred during retrieval phase
+        'PARSINGFAILED', # error occurred during parsing phase due to a problem in the parse
+        'FAILED', # The parser recognized the calculation as failed
         ))
 
 

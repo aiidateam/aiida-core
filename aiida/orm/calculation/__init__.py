@@ -427,8 +427,13 @@ class Calculation(Node):
         ParserFactory raises MissingPluginError if the plugin is not found.
         """
         from aiida.parsers import ParserFactory
-                
-        return ParserFactory(self.get_parser_name())
+        
+        parser_name = self.get_parser_name()
+        
+        if parser_name is not None:
+            return ParserFactory(parser_name)
+        else:
+            return None
 
     def set_linkname_retrieved(self,linkname):
         """

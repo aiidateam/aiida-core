@@ -709,6 +709,60 @@ class StructureData(Data):
         the_cell = _get_valid_cell(value)
         self.set_attr('cell', the_cell)
 
+    def reset_cell(self,new_cell):
+        """
+        Reset the cell of a structure not yet stored to a new value
+        """
+        from aiida.common.exceptions import ModificationNotAllowed
+
+        if not self._to_be_stored:
+            raise ModificationNotAllowed()
+
+        self.set_attr('cell', new_cell)
+        
+    def reset_sites_positions(self,new_positions,conserve_particle=True):
+        """
+        Replace all the Site positions attached to the Structure
+        NOTE: I assume that the order of the new_positions is given in the same 
+              order of the one I'm substituting, i.e. the kind of the site
+              will not be checked.
+        """
+        from aiida.common.exceptions import ModificationNotAllowed
+
+        if not self._to_be_stored:
+            raise ModificationNotAllowed()
+        
+        if not conserve_particle:
+            raise NotImplementedError
+        else:
+
+            # test consistency of th enew input
+            n_sites = len(self.sites)
+            if n_sites != len(new_positions) and conserve_particle:
+                raise ValueError("the new positions should be as many as the previous structure.")
+        
+            new_sites = []
+            for i in range(n_sites):
+                try:
+                    this_pos = [ float(j) for j in new_positions[i]]
+                except ValueError:
+                    raise ValueError("Expecting a list of floats. Found instead {}"
+                                  .format(new_positions[i]) )
+                
+                if len(this_pos) != 3:
+                    raise ValueError("Expecting a list of lists of length 3. "
+                                     "found instead {}".format(len(this_pos)))
+                
+                # now append this Site to the new_site list.
+                new_site = Site(site=self.sites[i]) # So we make a copy
+                new_site.position = copy.deepcopy(this_pos)
+                new_sites.append(new_site)
+
+            # now clear the old sites, and substitute with the new ones
+            self.clear_sites()
+            for this_new_site in new_sites:
+                self.append_site(this_new_site)
+        
     @property
     def pbc(self):
         """
@@ -891,12 +945,12 @@ class Kind(object):
     def reset_mass(self):
         """
         Reset the mass to the automatic calculated value.
-
+        
         The mass can be set manually; by default, if not provided,
         it is the mass of the constituent atoms, weighted with their
         weight (after the weight has been normalized to one to take
         correctly into account vacancies).
-
+        
         This function uses the internal _symbols and _weights values and
         thus assumes that the values are validated.
         

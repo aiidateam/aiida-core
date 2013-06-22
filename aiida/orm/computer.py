@@ -220,6 +220,7 @@ class Computer(object):
         ret_lines.append(" * Work directory: {}".format(self.get_workdir()))
         ret_lines.append(" * mpirun command: {}".format(" ".join(
             self.get_mpirun_command())))
+        
         ret_lines.append(" * prepend text:")
         if self.get_prepend_text().strip():
             for l in self.get_prepend_text().split('\n'):
@@ -448,6 +449,8 @@ class Computer(object):
         Set the workdir starting from a string.
         """
         converted_cmd = str(string).strip().split(" ")
+        if converted_cmd == ['']:
+            converted_cmd = []
         self._mpirun_command_validator(converted_cmd)
         self.set_mpirun_command(converted_cmd)
 

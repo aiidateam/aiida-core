@@ -40,6 +40,12 @@ class Calculation(Node):
         if computer is not None:
             self.set_computer(computer)
 
+        # Default value: True
+        # If True, adds the machine-dependent mpirun command in front of the
+        # executable name.
+        withmpi = kwargs.pop('withmpi', True)
+        self.set_withmpi(withmpi)
+
         resources = kwargs.pop('resources',None)
         if resources is not None:
             self.set_resources(**resources)
@@ -61,7 +67,7 @@ class Calculation(Node):
 
         if self.get_computer() is None:
             raise ValidationError("You did not specify any computer")
-
+        
         if self.get_state() not in calc_states:
             raise ValidationError("Calculation state '{}' is not valid".format(
                 self.get_state()))
@@ -80,7 +86,10 @@ class Calculation(Node):
         except (TypeError, ValueError) as e:
             raise ValidationError("Invalid resources for the scheduler of the "
                                   "specified computer: {}".format(e.message))
-        
+
+        if not isinstance(self.get_withmpi(), bool):
+            raise ValidationError("withmpi property must be boolean! It in instead {}".format(str(type(self.get_withmpi()))))
+            
 
     def can_link_as_output(self,dest):
         """
@@ -158,6 +167,12 @@ class Calculation(Node):
 
     def set_resources(self, **kwargs):
         self.set_attr('jobresource_params', kwargs)
+    
+    def set_withmpi(self,val):        
+        self.set_attr('withmpi',val)
+
+    def get_withmpi(self):        
+        return self.get_attr('withmpi',True)
     
     def get_jobresource_params(self):
         return self.get_attr('jobresource_params', {})

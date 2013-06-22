@@ -711,7 +711,13 @@ class StructureData(Data):
 
     def reset_cell(self,new_cell):
         """
-        Reset the cell of a structure not yet stored to a new value
+        Reset the cell of a structure not yet stored to a new value.
+
+        Args:
+            new_cell: list specifying the cell vectors
+
+        Raises:
+            ModificationNotAllowed: if object is already stored
         """
         from aiida.common.exceptions import ModificationNotAllowed
 
@@ -723,6 +729,17 @@ class StructureData(Data):
     def reset_sites_positions(self,new_positions,conserve_particle=True):
         """
         Replace all the Site positions attached to the Structure
+
+        Args:
+            new_positions: list of (3D) positions for every sites.
+
+            conserve_particle: if True, allows the possibility of removing a site.
+            currently not implemented.
+
+        Raises:
+            ModificationNotAllowed: if object is stored already
+            ValueError: if positions are invalid
+        
         NOTE: I assume that the order of the new_positions is given in the same 
               order of the one I'm substituting, i.e. the kind of the site
               will not be checked.
@@ -733,6 +750,7 @@ class StructureData(Data):
             raise ModificationNotAllowed()
         
         if not conserve_particle:
+            # TODO:
             raise NotImplementedError
         else:
 
@@ -787,14 +805,23 @@ class StructureData(Data):
         self.set_attr('pbc3',the_pbc[2])
 
     def is_alloy(self):
+        """
+        Returns:
+            a boolean, True if at least one kind is an alloy 
+        """
         return any(s.is_alloy() for s in self.kinds)
 
     def has_vacancies(self):
+        """
+        Returns:
+            a boolean, True if at least one kind has a vacancy
+        """
         return any(s.has_vacancies() for s in self.kinds)
 
     def get_cell_volume(self):
         """
-        Return the cell volume in angstrom^3
+        Returns:
+            (float) the cell volume in angstrom^3
         """
         return calc_cell_volume(self.cell)
 

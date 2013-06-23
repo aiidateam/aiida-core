@@ -14,18 +14,13 @@ def launch_ws():
     wf.retrieve_by_uuid(uuid_wf).finish_step_calculations(methohd_wf)
     
     """
-        
+            
     import aiida.orm.workflow as wf
-    from aiida.workflows import wf_demo
+    from aiida.workflows import wf_sub_demo
     from aiida.common.datastructures import wf_states
     
     params = {}
     params['nmachine']=2
 
-    w = wf_demo.WorkflowDemo()
-    w.set_params(params)
-    w.start()
-    
-    w = wf_demo.WorkflowDemoBranch()
-    w.set_params(params)
+    w = wf_sub_demo.WorkflowDemoSubWorkflow()
     w.start()

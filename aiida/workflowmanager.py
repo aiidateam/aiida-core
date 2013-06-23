@@ -50,7 +50,8 @@ def execute_steps():
         
             for s in steps:
                 
-                if (not s.get_calculations() or s.get_calculations_status()==wf_states.FINISHED):
+                if (not s.get_calculations() or s.get_calculations_status()==wf_states.FINISHED) and \
+                   (not s.get_sub_workflows() or s.get_sub_workflows_status()==wf_states.FINISHED):
                     
                     logger.info("[{0}] Step: {1} ready to step".format(w.uuid,s.name))
                     s.set_status(wf_states.FINISHED)

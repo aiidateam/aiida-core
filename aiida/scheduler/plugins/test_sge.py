@@ -266,7 +266,7 @@ class TestCommand(unittest.TestCase):
         self.assertEquals( set(submission_times) , set(parsed_submission_times) )
         
         running_jobs = [test_raw_data]
-        parsed_running_jobs = [ j.raw_data for j in job_list if j.job_state \
+        parsed_running_jobs = [ j.rawData for j in job_list if j.job_state \
                                  and j.job_state == job_states.RUNNING ]
         self.assertEquals( set(running_jobs) , set(parsed_running_jobs) )
         

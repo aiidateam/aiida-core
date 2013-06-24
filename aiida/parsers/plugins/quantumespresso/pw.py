@@ -8,6 +8,7 @@ from aiida.orm.data.folder import FolderData
 #from aiida.orm import DataFactory
 from aiida.parsers.parser import Parser
 #from aiida.parsers.plugins.quantumespresso import QEOutputParsingError
+from aiida.parsers.plugins.quantumespresso import convert_qe2aiida_structure
 
 #import copy
 
@@ -16,10 +17,13 @@ class PwParser(Parser):
     This class is the implementation of the Parser class for PWscf.
     """
 
+    _outstruc_name = 'output_structure'
+
     def __init__(self):
         """
         Initialize the instance of PwParser
         """
+        self.set_linkname_outstructure(None)
         
     def parse_from_data(self,data):
         """
@@ -128,8 +132,37 @@ class PwParser(Parser):
         output_params.store()
         calc.add_link_to(output_params, label=self.get_linkname_outparams() )
 
-        # TODO: if the calculation is a relax or vc-relax, I should create one node structure
-
+        # TODO: if the calculation is a relax or vc-relax, 
+        #       I should create one node structure
+        in_struc = calc.get_inputs_dict()['structure']
+        type_calc = input_dict['CONTROL']['calculation']
+        if type_calc=='relax' or type_calc=='vc-relax':
+            self.set_linkname_outstructure(self._outstruc_name)
+            struc = convert_qe2aiida_structure(out_dict,input_structure=in_struc)
+            struc.store()
+            calc.add_link_to(struc, label=self.get_linkname_outstructure() )
+        
         # TODO: 'output_parameters' is the name of the link that the parser decides.
         # How does the Calculation know it?
         return successful
+
+    def get_linkname_outstructure(self):
+        """
+        Returns the name of the link to the output_structure (None if not present)
+        """
+        return self.linkname_outstructure
+    
+    def set_linkname_outstructure(self,linkname):
+        """
+        Set the name of the link to the output_structure
+        """
+        setattr(self,'linkname_outstructure',linkname)
+        
+# TODO: maybe the parser could give a list of the names of the expected output nodes    
+#    def get_expected_nodes(self,calc):
+#        """
+#        Get the name of the expected output nodes to the calculation that the 
+#        parser will create, if the calculation ends successfully
+#        """
+    
+    

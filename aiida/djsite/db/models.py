@@ -451,7 +451,7 @@ class DbWorkflow(m.Model):
         try:
             
             for k in dict.keys():            
-                p = DbWorkflowParameters.objects.create(workflow=self,name = k, value = json.dumps(dict[k]))
+                p = DbWorkflowParameters.objects.create(parent=self, name = k, value = json.dumps(dict[k]))
                 self.params.add(p)
                 
         except:
@@ -461,7 +461,7 @@ class DbWorkflow(m.Model):
         
         try:
             dict = {}
-            for p in DbWorkflowParameters.objects.filter(workflow=self):
+            for p in DbWorkflowParameters.objects.filter(parent=self):
                 dict[p.name] = p.deserialize()
             return dict
         except:
@@ -470,21 +470,44 @@ class DbWorkflow(m.Model):
     def get_calculations(self):
         
         from aiida.orm import Calculation
-        return Calculation.query(steps=self.steps)
+        return Calculation.query(workflow_step=self.steps)
+    
+    def get_calculations_status(self):
 
+        from aiida.common.datastructures import calc_states, wf_states, wf_exit_call
+
+        calc_status = self.get_calculations().filter(attributes__key="_state").values_list("uuid", "attributes__tval")
+        s = set([l[1] for l in calc_status])
+        if len(s)==1 and calc_states.RETRIEVED in s:
+            return wf_states.FINISHED
+        else: 
+            return wf_states.RUNNING
+    
+    def get_sub_workflows(self):
+        
+        from aiida.orm import Calculation
+        return DbWorkflow.objects.filter(parent_workflow_step=self.steps.all())
+    
+    def get_sub_workflows_status(self):
+        
+        from aiida.common.datastructures import calc_states, wf_states, wf_exit_call
+
+        calc_status = self.get_calculations().filter(attributes__key="_state").values_list("uuid", "attributes__tval")
+        
+            
     def finish(self):
         self.status = 'finished'
 
         
 class DbWorkflowParameters(m.Model):
 
-    workflow     = m.ForeignKey(DbWorkflow, related_name='params')
+    parent       = m.ForeignKey(DbWorkflow, related_name='params')
     name         = m.CharField(max_length=255, blank=False)
     time         = m.DateTimeField(auto_now_add=True, editable=False)
     value        = m.TextField(blank=False)
 
     class Meta:
-        unique_together = (("workflow", "name"))
+        unique_together = (("parent", "name"))
 
     def deserialize(self):
         
@@ -499,18 +522,26 @@ class DbWorkflowStep(m.Model):
 
     from aiida.common.datastructures import wf_states, wf_exit_call
     
-    workflow     = m.ForeignKey(DbWorkflow, related_name='steps')
-    name         = m.CharField(max_length=255, blank=False)
-    user         = m.ForeignKey(User, on_delete=m.PROTECT)
-    time         = m.DateTimeField(auto_now_add=True, editable=False)
-    nextcall     = m.CharField(max_length=255, blank=False, default=wf_exit_call)
-    calculations = m.ManyToManyField('DbNode', symmetrical=False, related_name="steps")
-    status       = m.CharField(max_length=255, choices=zip(list(wf_states), list(wf_states)), default=wf_states.RUNNING)
+    parent        = m.ForeignKey(DbWorkflow, related_name='steps')
+    name          = m.CharField(max_length=255, blank=False)
+    user          = m.ForeignKey(User, on_delete=m.PROTECT)
+    time          = m.DateTimeField(auto_now_add=True, editable=False)
+    nextcall      = m.CharField(max_length=255, blank=False, default=wf_exit_call)
+    
+    calculations  = m.ManyToManyField(DbNode, symmetrical=False, related_name="workflow_step")
+    sub_workflows = m.ManyToManyField(DbWorkflow, symmetrical=False, related_name="parent_workflow_step")
+    
+    
+    status        = m.CharField(max_length=255, choices=zip(list(wf_states), list(wf_states)), default=wf_states.RUNNING)
 
     class Meta:
-        unique_together = (("workflow", "name"))
+        unique_together = (("parent", "name"))
 
 
+    # ---------------------------------
+    #    Calculations
+    # ---------------------------------
+    
     def add_calculation(self, step_calculation):
         
         from aiida.orm import Calculation
@@ -527,7 +558,7 @@ class DbWorkflowStep(m.Model):
         
         from aiida.orm import Calculation
         
-        return Calculation.query(steps=self)#pk__in = step.calculations.values_list("pk", flat=True))
+        return Calculation.query(workflow_step=self)#pk__in = step.calculations.values_list("pk", flat=True))
 
     def get_calculations_status(self, extended=False):
 
@@ -543,7 +574,37 @@ class DbWorkflowStep(m.Model):
             return wf_states.FINISHED
         else: 
             return wf_states.RUNNING
-    
+
+    # ---------------------------------
+    #    Subworkflows
+    # ---------------------------------
+
+    def add_sub_workflow(self, step_workflow):
+         
+        if (not isinstance(step_workflow, DbWorkflow)):
+            raise ValueError("Cannot add a non-DbWorkflow object to a workflow step")          
+ 
+        try:
+            self.sub_workflows.add(step_workflow)
+        except:
+            raise ValueError("Error adding calculation to step")                      
+ 
+    def get_sub_workflows(self):
+         
+        return self.sub_workflows.all()#pk__in = step.calculations.values_list("pk", flat=True))
+ 
+    def get_sub_workflows_status(self):
+        
+        from aiida.common.datastructures import wf_states
+        
+        wf_status = self.sub_workflows.all().values_list("uuid", "status")
+        s = set([l[1] for l in wf_status])
+        
+        if len(s)==1 and wf_states.FINISHED in s:
+            return wf_states.FINISHED
+        else: 
+            return wf_states.RUNNING
+        
     def is_finished(self):
         
         from aiida.common.datastructures import calc_states, wf_states, wf_exit_call

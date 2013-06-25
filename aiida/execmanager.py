@@ -307,8 +307,12 @@ def submit_calc(calc):
                 subst_dict[k] = v
             mpi_args = [arg.format(**subst_dict) for arg in
                         computer.get_mpirun_command()]
-            job_tmpl.argv = mpi_args + [code.get_execname()] + (
-                calcinfo.cmdline_params if calcinfo.cmdline_params is not None else [])
+            if calc.get_withmpi():
+                job_tmpl.argv = mpi_args + [code.get_execname()] + (
+                    calcinfo.cmdline_params if calcinfo.cmdline_params is not None else [])
+            else:
+                job_tmpl.argv = [code.get_execname()] + (
+                    calcinfo.cmdline_params if calcinfo.cmdline_params is not None else [])
     
             job_tmpl.stdin_name = calcinfo.stdin_name
             job_tmpl.stdout_name = calcinfo.stdout_name

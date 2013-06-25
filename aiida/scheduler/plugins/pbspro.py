@@ -552,7 +552,7 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
             # if there are any
 
             # Everything goes here anyway for debugging purposes
-            this_job.rawData = raw_data
+            this_job.raw_data = raw_data
 
             # I append to the list of jobs to return
             job_list.append(this_job)

@@ -349,7 +349,7 @@ class SgeScheduler(aiida.scheduler.Scheduler):
             
             #In case the user needs more information the xml-data for 
             #each job is stored:
-            this_job.rawData = job.toxml()
+            this_job.raw_data = job.toxml()
             
             try:
                 job_element = job.getElementsByTagName('JB_job_number').pop(0)

@@ -210,13 +210,16 @@ class TestCommand(unittest.TestCase):
         
         #TEST 1:
         sge_parse_submit_output=sge._parse_submit_output(0,' 1176936','')
-        self.assertTrue('1176936' in sge_parse_submit_output)#176936
+        self.assertTrue('1176936' in sge_parse_submit_output)
         
         #TEST 2:
+        logging.disable(logging.ERROR)
         with self.assertRaises(SchedulerError) as e:
             sge_parse_submit_output=sge._parse_submit_output(1,'','')
+        logging.disable(logging.NOTSET)
         
-        self.assertEqual(e.exception.message, 'Error during submission, retval=1')
+        self.assertEqual(e.exception.message, 
+                         'Error during submission, retval=1')
         
     def test_parse_joblist_output(self):
         sge=SgeScheduler()
@@ -266,7 +269,7 @@ class TestCommand(unittest.TestCase):
         self.assertEquals( set(submission_times) , set(parsed_submission_times) )
         
         running_jobs = [test_raw_data]
-        parsed_running_jobs = [ j.rawData for j in job_list if j.job_state \
+        parsed_running_jobs = [ j.raw_data for j in job_list if j.job_state \
                                  and j.job_state == job_states.RUNNING ]
         self.assertEquals( set(running_jobs) , set(parsed_running_jobs) )
         

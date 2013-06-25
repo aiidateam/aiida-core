@@ -560,7 +560,7 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
             this_job.title = job_name
 
             # Everything goes here anyway for debugging purposes
-            this_job.rawData = job
+            this_job.raw_data = job
 
             # Double check of redundant info
             # Not really useful now, allocated_machines in this

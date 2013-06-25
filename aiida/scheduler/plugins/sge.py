@@ -1,6 +1,9 @@
 """
 Plugin for SGE.
 This has been tested on GE 6.2u3.
+
+Written by Marco Dorigo 
+Email: marco(DOT)dorigo(AT)rub(DOT)de
 """
 from __future__ import division
 import aiida.scheduler
@@ -10,28 +13,69 @@ from aiida.scheduler import SchedulerError, SchedulerParsingError
 from aiida.scheduler.datastructures import (
     JobInfo, job_states, MachineInfo, ParEnvJobResource)
 
-#Jobs Status:
-#    'qw' - Queued and waiting,
-#    'w' - Job waiting,
-#    's' - Job suspended,
-#    't' - Job transferring and about to start,
-#    'r' - Job running,
-#    'h' - Job hold,
-#    'R' - Job restarted,
-#    'd' - Job has been marked for deletion,
-#    'Eqw' - An error occurred with the job.
+"""
+'http://www.loni.ucla.edu/twiki/bin/view/Infrastructure/GridComputing?skin=plain':
+Jobs Status:
+    'qw' - Queued and waiting,
+    'w' - Job waiting,
+    's' - Job suspended,
+    't' - Job transferring and about to start,
+    'r' - Job running,
+    'h' - Job hold,
+    'R' - Job restarted,
+    'd' - Job has been marked for deletion,
+    'Eqw' - An error occurred with the job.
 
+'http://confluence.rcs.griffith.edu.au:8080/display/v20zCluster/
+Sun+Grid+Engine+SGE+state+letter+symbol+codes+meanings':
+
+Category     State     SGE Letter Code
+Pending:     pending     qw
+Pending:     pending, user hold     qw
+Pending:     pending, system hold     hqw
+Pending:     pending, user and system hold     hqw
+Pending:     pending, user hold, re-queue     hRwq
+Pending:     pending, system hold, re-queue     hRwq
+Pending:     pending, user and system hold, re-queue     hRwq
+Pending:     pending, user hold     qw
+Pending:     pending, user hold     qw
+Running     running     r
+Running     transferring     t
+Running     running, re-submit     Rr
+Running     transferring, re-submit     Rt
+Suspended     job suspended     s, ts
+Suspended     queue suspended     S, tS
+Suspended     queue suspended by alarm     T, tT
+Suspended     all suspended with re-submit     Rs, Rts, RS, RtS, RT, RtT
+Error     all pending states with error     Eqw, Ehqw, EhRqw
+Deleted     all running and suspended states with deletion     dr, dt, dRr, dRt, 
+                                                               ds, dS, dT, dRs, 
+                                                               dRS, dRT
+"""
 # TODO: check if all make sense!
 _map_status_sge = {
-    'qw' : job_states.QUEUED,
-    'w'  : job_states.QUEUED, 
-    's'  : job_states.SUSPENDED,
-    't'  : job_states.QUEUED, 
-    'r'  : job_states.RUNNING,
-    'h'  : job_states.QUEUED_HELD,
-    'R'  : job_states.RUNNING,
-    'd'  : job_states.UNDETERMINED, 
-    'Eqw': job_states.UNDETERMINED,
+    'qw'    : job_states.QUEUED,
+    'w'     : job_states.QUEUED,
+    'hqw'   : job_states.QUEUED_HELD,
+    'hRwq'  : job_states.QUEUED_HELD,
+    'r'     : job_states.RUNNING,
+    't'     : job_states.RUNNING,
+    'R'     : job_states.RUNNING,
+    'Rr'    : job_states.RUNNING,
+    'Rt'    : job_states.RUNNING,
+    's'     : job_states.SUSPENDED,
+    'st'    : job_states.SUSPENDED,
+    'Rs'    : job_states.SUSPENDED,
+    'Rts'   : job_states.SUSPENDED,  
+    'dr'    : job_states.UNDETERMINED,
+    'dt'    : job_states.UNDETERMINED,
+    'ds'    : job_states.UNDETERMINED,
+    'dRr'   : job_states.UNDETERMINED,
+    'dRt'   : job_states.UNDETERMINED,
+    'dRs'   : job_states.UNDETERMINED, 
+    'Eqw'   : job_states.UNDETERMINED,
+    'Ehqw'  : job_states.UNDETERMINED,
+    'EhRqw' : job_states.UNDETERMINED
     }
 
 class SgeJobResource(ParEnvJobResource):
@@ -68,7 +112,7 @@ class SgeScheduler(aiida.scheduler.Scheduler):
         if jobs:
             raise FeatureNotAvailable("Cannot query by jobid in SGE")
 
-        command = "qstat -ext -xml "
+        command = "qstat -ext -urg -xml "
 
         if user:
             command += "-u {}".format(str(user))
@@ -97,9 +141,7 @@ class SgeScheduler(aiida.scheduler.Scheduler):
         import re 
         import string
 
-        if not job_tmpl.job_resource:
-            raise ValueError("Job resources (as the tot_num_cpus) are required "
-                             "for the SGE scheduler plugin")
+        
 
         empty_line = ""
         
@@ -181,6 +223,9 @@ class SgeScheduler(aiida.scheduler.Scheduler):
             # attribute to priority.
             lines.append("#$ -p {}".format(job_tmpl.priority))
         
+        if not job_tmpl.job_resource:
+            raise ValueError("Job resources (as the tot_num_cpus) are required "
+                             "for the SGE scheduler plugin")
         #Setting up the parallel environment
         lines.append('#$ -pe {} {}'.\
                      format(str(job_tmpl.job_resource.parallel_env),\
@@ -274,32 +319,38 @@ class SgeScheduler(aiida.scheduler.Scheduler):
             tag_names_sec = [elem.tagName for elem in second_childs \
                              if elem.nodeType == 1]
             if not 'queue_info' in tag_names_sec:
-                self.logger.warning("in sge._parse_joblist_output: Is the xml"
-                                     "format of the qstat command correct?")
-            if not 'job_info' in tag_names_sec:
+                self.logger.error("Error in sge._parse_joblist_output: "
+                                  "no queue_info: {}".\
+                                  format(stdout))
                 raise SchedulerError
-            elif 'job_info' in tag_names_sec:
-                jobinfo =  first_child.getElementsByTagName('job_info').pop(0)
-                if not jobinfo:
-                    raise SchedulerError
+            if not 'job_info' in tag_names_sec:
+                self.logger.error("Error in sge._parse_joblist_output: "
+                                  "no job_info: {}".\
+                                  format(stdout))
+                raise SchedulerError
         except SchedulerError:
             self.logger.error("Error in sge._parse_joblist_output: stdout={}"\
                               .format(stdout))
             raise SchedulerError("Error during xml processing, of stdout:"
-                                 "There is no 'job_list' element or"
-                                 "there are no jobs in the 'job_list' element!")
-        #If something weird happens while firstChild,pop, etc:
+                                 "There is no 'job_info' or no 'queue_info'"
+                                 "element or there are no jobs!")
+        #If something weird happens while firstChild, pop, etc:
         except Exception: 
             self.logger.error("Error in sge._parse_joblist_output: stdout={}"\
                               .format(stdout))
             raise SchedulerError("Error during xml processing, of stdout")
             
-        jobs = [i for i in jobinfo.getElementsByTagName('job_list')]
+        jobs = [i for i in first_child.getElementsByTagName('job_list')]
+        #jobs = [i for i in jobinfo.getElementsByTagName('job_list')]
         #print [i[0].childNodes[0].data for i in job_numbers if i]
         joblist = []
         for job in jobs:
             this_job = JobInfo()
-             
+            
+            #In case the user needs more information the xml-data for 
+            #each job is stored:
+            this_job.rawData = job.toxml()
+            
             try:
                 job_element = job.getElementsByTagName('JB_job_number').pop(0)
                 element_child = job_element.childNodes.pop(0)
@@ -356,34 +407,48 @@ class SgeScheduler(aiida.scheduler.Scheduler):
                 element_child = job_element.childNodes.pop(0)
                 this_job.queue_name = str(element_child.data).strip()
             except IndexError:
-                self.logger.warning("No 'queue_name' field for job "
-                                  "id {}".format(this_job.job_id))
+                if this_job.job_state == job_states.RUNNING:
+                    self.logger.warning("No 'queue_name' field for job "
+                                        "id {}".format(this_job.job_id))
             
             try:
                 job_element = job.getElementsByTagName('JB_submission_time').pop(0)
                 element_child = job_element.childNodes.pop(0)
-                this_job.submission_time = str(element_child.data).strip()
+                time_string = str(element_child.data).strip()
+                try:
+                    this_job.submission_time = self._parse_time_string(
+                       time_string)
+                except ValueError:
+                    self.logger.warning("Error parsing 'JB_submission_time' "
+                        "for job id {} ('{}')".format(this_job.job_id,
+                                                      time_string)) 
             except IndexError:
-                self.logger.warning("No 'JB_submission_time' field for job "
+                try:
+                    job_element = job.getElementsByTagName('JAT_start_time').pop(0)
+                    element_child = job_element.childNodes.pop(0)
+                    time_string = str(element_child.data).strip()
+                    try:
+                        this_job.dispatch_time = self._parse_time_string(
+                                                            time_string)
+                    except ValueError:
+                        self.logger.warning("Error parsing 'JAT_start_time'"
+                        "for job id {} ('{}')".format(this_job.job_id,
+                                                      time_string))
+                except IndexError:
+                    self.logger.warning("No 'JB_submission_time' and no "
+                                        "'JAT_start_time' field for job "
+                                        "id {}".format(this_job.job_id))
+                
+            #There is also cpu_usage, mem_usage, io_usage information available:
+            if this_job.job_state == job_states.RUNNING:
+                try:
+                    job_element = job.getElementsByTagName('slots').pop(0)
+                    element_child = job_element.childNodes.pop(0)
+                    this_job.num_cpus = str(element_child.data).strip()
+                except IndexError:
+                    self.logger.warning("No 'slots' field for job "
                                   "id {}".format(this_job.job_id))
                 
-            #The following is untested:
-            try:
-                job_element = job.getElementsByTagName('cpu').pop(0)
-                element_child = job_element.childNodes.pop(0)
-                this_job.cpu_time = str(element_child.data).strip()
-            except IndexError:
-                self.logger.warning("No 'cpu' field for job "
-                                  "id {}".format(this_job.job_id))
-            
-            try:
-                job_element = job.getElementsByTagName('io').pop(0)
-                element_child = job_element.childNodes.pop(0)
-                this_job.queue_name = str(element_child.data).strip()
-            except IndexError:
-                self.logger.warning("No 'io' field for job "
-                                  "id {}".format(this_job.job_id))
-            
             joblist.append(this_job)
         #self.logger.debug("joblist final: {}".format(joblist))
         return joblist
@@ -412,4 +477,22 @@ class SgeScheduler(aiida.scheduler.Scheduler):
         
         return stdout.strip()
 
+    def _parse_time_string(self,string,fmt='%Y-%m-%dT%H:%M:%S'):
+        """
+        Parse a time string in the format returned from qstat -xml -ext and
+        returns a datetime object.
+        Example format: 2013-06-13T11:53:11
+        """
+        import time, datetime
 
+        try:
+            time_struct = time.strptime(string,fmt)
+        except Exception as e:
+            self.logger.debug("Unable to parse time string {}, the message "
+                "was {}".format(string, e.message))
+            raise ValueError("Problem parsing the time string.")
+
+        # I convert from a time_struct to a datetime object going through
+        # the seconds since epoch, as suggested on stackoverflow:
+        # http://stackoverflow.com/questions/1697815
+        return datetime.datetime.fromtimestamp(time.mktime(time_struct))

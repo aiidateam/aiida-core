@@ -11,16 +11,22 @@ class WorkflowDemo(Workflow):
     def __init__(self,**kwargs):
         
         super(WorkflowDemo, self).__init__(**kwargs)
-        
+    
     
     def start(self):
         
-        from aiida.orm import Calculation, Code, Computer
+        from aiida.orm import Code, Computer, CalculationFactory
+        CustomCalc = CalculationFactory('simpleplugins.templatereplacer')
         
         computer = Computer.get("localhost")
         
-        calc     =  Calculation(computer=computer,num_machines=self.params['nmachine'],num_cpus_per_machine=1).store()
-        calc2     = Calculation(computer=computer,num_machines=self.params['nmachine']*2,num_cpus_per_machine=1).store()
+        calc = CustomCalc(computer=computer,withmpi=True)
+        calc.set_resources(num_machines=1, num_cpus_per_machine=1)
+        calc.store()
+        
+        calc2 = CustomCalc(computer=computer,withmpi=True)
+        calc2.set_resources(num_machines=1, num_cpus_per_machine=1)
+        calc2.store()
         
         self.add_calculation(calc)
         self.add_calculation(calc2)
@@ -37,14 +43,16 @@ class WorkflowDemo(Workflow):
         for c in calcs_init:
             aiidalogger.info("  Calculation {0}".format(c.uuid))
         
-        from aiida.orm import Calculation, Code, Computer
-            
+        from aiida.orm import CalculationFactory
+        CustomCalc = CalculationFactory('simpleplugins.templatereplacer')
+        
         computer = Computer.get("localhost")
-        calc     =  Calculation(computer=computer,num_machines=self.params['nmachine']*4,num_cpus_per_machine=1).store()
-        calc2     = Calculation(computer=computer,num_machines=self.params['nmachine']*8,num_cpus_per_machine=1).store()
+        
+        calc = CustomCalc(computer=computer,withmpi=True)
+        calc.set_resources(num_machines=1, num_cpus_per_machine=1)
+        calc.store()
         
         self.add_calculation(calc)
-        self.add_calculation(calc2)
         
         self.next(self.third_step)
     
@@ -63,9 +71,6 @@ class WorkflowDemo(Workflow):
 
 class WorkflowDemoBranch(Workflow):
     
-    def __init__(self,**kwargs):
-        super(WorkflowDemoBranch, self).__init__(**kwargs)
-    
     def start(self):
     
         self.branch_a_one()
@@ -75,8 +80,15 @@ class WorkflowDemoBranch(Workflow):
         
         aiidalogger.info("branch_a_one launched")
         
+        from aiida.orm import CalculationFactory
+        CustomCalc = CalculationFactory('simpleplugins.templatereplacer')
+        
         computer = Computer.get("localhost")
-        calc     = Calculation(computer=computer,num_machines=self.params['nmachine']*4,num_cpus_per_machine=1).store()
+        
+        calc = CustomCalc(computer=computer,withmpi=True)
+        calc.set_resources(num_machines=1, num_cpus_per_machine=1)
+        calc.store()
+        
         self.add_calculation(calc)
         
         self.next(self.branch_a_two)
@@ -85,8 +97,15 @@ class WorkflowDemoBranch(Workflow):
         
         aiidalogger.info("branch_a_two launched")
         
+        from aiida.orm import CalculationFactory
+        CustomCalc = CalculationFactory('simpleplugins.templatereplacer')
+        
         computer = Computer.get("localhost")
-        calc     = Calculation(computer=computer,num_machines=self.params['nmachine']*4,num_cpus_per_machine=1).store()
+        
+        calc = CustomCalc(computer=computer,withmpi=True)
+        calc.set_resources(num_machines=1, num_cpus_per_machine=1)
+        calc.store()
+        
         self.add_calculation(calc)
         
         self.next(self.recollect)
@@ -95,8 +114,15 @@ class WorkflowDemoBranch(Workflow):
         
         aiidalogger.info("branch_b_one launched")
         
+        from aiida.orm import CalculationFactory
+        CustomCalc = CalculationFactory('simpleplugins.templatereplacer')
+        
         computer = Computer.get("localhost")
-        calc     = Calculation(computer=computer,num_machines=self.params['nmachine']*4,num_cpus_per_machine=1).store()
+        
+        calc = CustomCalc(computer=computer,withmpi=True)
+        calc.set_resources(num_machines=1, num_cpus_per_machine=1)
+        calc.store()
+        
         self.add_calculation(calc)
         
         self.next(self.recollect)
@@ -114,21 +140,22 @@ class WorkflowDemoBranch(Workflow):
 
 class WorkflowDemoLoop(Workflow):
 
-    def __init__(self,**kwargs):
-        
-        super(WorkflowDemo, self).__init__(**kwargs)
-        
-    
     def start(self):
         
         from aiida.orm import Calculation, Code, Computer
         
+        from aiida.orm import CalculationFactory
+        CustomCalc = CalculationFactory('simpleplugins.templatereplacer')
+        
         computer = Computer.get("localhost")
         
-        calc     =  Calculation(computer=computer,num_machines=self.params['nmachine'],num_cpus_per_machine=1).store()
+        calc = CustomCalc(computer=computer,withmpi=True)
+        calc.set_resources(num_machines=1, num_cpus_per_machine=1)
+        calc.store()
+        
         self.add_calculation(calc)
         
-        self.next(self.second_step)        
+        self.next(self.convergence)        
     
     def convergence(self):
         
@@ -137,8 +164,15 @@ class WorkflowDemoLoop(Workflow):
         calcs_convergence = self.get_calculations(self.convergence)
         
         if calcs_convergence == None or len(calcs_convergence) < 5:
+            from aiida.orm import CalculationFactory
+            CustomCalc = CalculationFactory('simpleplugins.templatereplacer')
+            
             computer = Computer.get("localhost")
-            calc     =  Calculation(computer=computer,num_machines=self.params['nmachine']*4,num_cpus_per_machine=1).store()
+            
+            calc = CustomCalc(computer=computer,withmpi=True)
+            calc.set_resources(num_machines=1, num_cpus_per_machine=1)
+            calc.store()
+            
             self.add_calculation(calc)
             self.next(self.convergence)
         
@@ -150,7 +184,7 @@ class WorkflowDemoLoop(Workflow):
         
     def third_step(self):
         
-        calcs_init = self.get_calculations(self.second_step)
+        calcs_init = self.get_calculations(self.convergence)
         
         aiidalogger.info("Third runned and retived calculation:")
         for c in calcs_init:

@@ -14,12 +14,6 @@ LOCK_EXPIRE = 60 * 1000 # Expire time for the retriever, in seconds; should
 def update_and_retrieve():
 
     from aiida.execmanager import daemon_main_loop
-
-    import uuid
-    aiidalogger.debug('random uuid: {}'.format(uuid.uuid4()))
-
-    print "aiidalogger handlers print:", aiidalogger.handlers
-    aiidalogger.debug("aiidalogger handlers log: {}".format(aiidalogger.handlers))
     
     pid = os.getpid()
         
@@ -39,7 +33,6 @@ def update_and_retrieve():
 
 @task
 def workflow_stepper():
-    
     from aiida.workflowmanager import daemon_main_loop
     
     pid = os.getpid()

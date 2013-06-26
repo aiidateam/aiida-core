@@ -183,7 +183,6 @@ INSTALLED_APPS = (
 # See http://docs.djangoproject.com/en/dev/topics/logging for
 # more details on how to customize your logging configuration.
 #
-# Added logging on console for >=DEBUG signals from aiida.repository module
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': True,
@@ -223,7 +222,7 @@ LOGGING = {
         'aiida': {
             'handlers': ['console'],
             'level': 'DEBUG',
-            'propagate': True,
+            'propagate': False,
             },
         },
 }
@@ -241,10 +240,12 @@ import djcelery
 
 djcelery.setup_loader()
 
-BROKER_URL = "django://";
-CELERY_RESULT_BACKEND = "database";
+BROKER_URL = "django://"
+CELERY_RESULT_BACKEND = "database"
 
-CELERYBEAT_SCHEDULER = "djcelery.schedulers.DatabaseScheduler";
+#CELERYD_HIJACK_ROOT_LOGGER = False
+
+CELERYBEAT_SCHEDULER = "djcelery.schedulers.DatabaseScheduler"
 
 # Every 30 seconds it is started, but for how it is done internally, if the previous loop
 # is still working, it won't restart twice at the same time.

@@ -5,8 +5,8 @@ import uuid
 import datetime
 
 from aiida.scheduler.plugins.slurm import *
-from aiida.common import aiidalogger
-aiidalogger.addHandler(logging.StreamHandler(sys.stderr))
+#from aiida.common import aiidalogger
+#aiidalogger.addHandler(logging.StreamHandler(sys.stderr))
 
 text_squeue_to_test = """862540^^^PD^^^Dependency^^^n/a^^^user1^^^20^^^640^^^(Dependency)^^^normal^^^1-00:00:00^^^0:00^^^N/A^^^longsqw_L24_q_10_0
 863100^^^PD^^^Resources^^^n/a^^^user2^^^32^^^1024^^^(Resources)^^^normal^^^10:00^^^0:00^^^2013-05-23T14:44:44^^^eq_solve_e4.slm

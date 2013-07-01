@@ -115,9 +115,6 @@ class Workflow(object):
                     sub_stack_frame.f_locals.get("self",None).get_step(sub_caller_funct).add_sub_workflow(self.dbworkflowinstance)
 #                     print "I AM A SUB MODULE !!"
                 
-                
-                
-                print self.uuid()
     
     @property
     def logger(self):

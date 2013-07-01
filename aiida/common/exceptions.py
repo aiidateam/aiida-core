@@ -102,3 +102,10 @@ class FeatureDisabled(AiidaException):
     (e.g., for submissions on disabled computers).
     """
     pass
+
+class LockPresent(AiidaException):
+    """
+    Raised when a feature is requested, but the used chose to disabled it
+    (e.g., for submissions on disabled computers).
+    """
+    pass

@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from django.db.models.query import QuerySet
 
 from aiida.common.exceptions import (
-    ConfigurationError, DbContentError, MissingPluginError)
+    ConfigurationError, DbContentError, MissingPluginError, InternalError)
 
 # Removed the custom User field, that was creating a lot of problems. Use
 # the email as UUID. In case we need it, we can do a couple of south migrations
@@ -418,7 +418,17 @@ class Comment(m.Model):
     user = m.ForeignKey(User)
     content = m.TextField(blank=True)
 
+#-------------------------------------
+#         Lock
+#-------------------------------------
 
+class DbLock(m.Model):
+    
+    key        = m.TextField(primary_key=True)
+    creation   = m.DateTimeField(auto_now_add=True, editable=False)
+    timeout    = m.IntegerField(editable=False)
+    owner      = m.CharField(max_length=255, blank=False)
+            
 #-------------------------------------
 #         Workflows
 #-------------------------------------

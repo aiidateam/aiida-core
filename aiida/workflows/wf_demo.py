@@ -28,8 +28,8 @@ class WorkflowDemo(Workflow):
         calc2.set_resources(num_machines=1, num_cpus_per_machine=1)
         calc2.store()
         
-        self.add_calculation(calc)
-        self.add_calculation(calc2)
+        #self.add_calculation(calc)
+        #self.add_calculation(calc2)
         
         self.next(self.second_step)
         
@@ -52,7 +52,7 @@ class WorkflowDemo(Workflow):
         calc.set_resources(num_machines=1, num_cpus_per_machine=1)
         calc.store()
         
-        self.add_calculation(calc)
+        #self.add_calculation(calc)
         
         self.next(self.third_step)
     
@@ -89,7 +89,7 @@ class WorkflowDemoBranch(Workflow):
         calc.set_resources(num_machines=1, num_cpus_per_machine=1)
         calc.store()
         
-        self.add_calculation(calc)
+        #self.add_calculation(calc)
         
         self.next(self.branch_a_two)
     
@@ -106,7 +106,7 @@ class WorkflowDemoBranch(Workflow):
         calc.set_resources(num_machines=1, num_cpus_per_machine=1)
         calc.store()
         
-        self.add_calculation(calc)
+        #self.add_calculation(calc)
         
         self.next(self.recollect)
         
@@ -123,7 +123,7 @@ class WorkflowDemoBranch(Workflow):
         calc.set_resources(num_machines=1, num_cpus_per_machine=1)
         calc.store()
         
-        self.add_calculation(calc)
+        #self.add_calculation(calc)
         
         self.next(self.recollect)
     
@@ -153,7 +153,7 @@ class WorkflowDemoLoop(Workflow):
         calc.set_resources(num_machines=1, num_cpus_per_machine=1)
         calc.store()
         
-        self.add_calculation(calc)
+        #self.add_calculation(calc)
         
         self.next(self.convergence)        
     
@@ -173,7 +173,7 @@ class WorkflowDemoLoop(Workflow):
             calc.set_resources(num_machines=1, num_cpus_per_machine=1)
             calc.store()
             
-            self.add_calculation(calc)
+            #self.add_calculation(calc)
             self.next(self.convergence)
         
         else:

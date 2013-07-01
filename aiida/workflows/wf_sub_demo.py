@@ -26,7 +26,7 @@ class WorkflowDemoSubWorkflow(Workflow):
         calc.set_resources(num_machines=1, num_cpus_per_machine=1)
         calc.store()
         
-        self.add_calculation(calc)
+        #self.add_calculation(calc)
         
         params = {}
         params['nmachine']=2

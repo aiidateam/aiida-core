@@ -20,16 +20,16 @@ class SingleTask(celery.Task):
         
         try:
             self.lock = LockManager().aquire(self.name, timeout=LOCK_EXPIRE, owner=self.request.id)
-            logger.info("GOT lock for {0} by {1}".format(self.name, self.request.id))
+            logger.debug("GOT lock for {0} by {1}".format(self.name, self.request.id))
             return self.run(*args, **kwargs)
         
         except LockPresent:
-            logger.info("LOCK: Another task is running, I {0} can't start.".format(self.request.id))
+            logger.debug("LOCK: Another task is running, I {0} can't start.".format(self.request.id))
             self.lock = None
             return
         
         except InternalError:
-            logger.info("ERROR: A lock went over the limit timeout, this could mine the integrity of the system. Reload the Daemon to fix the problem.")
+            logger.debug("ERROR: A lock went over the limit timeout, this could mine the integrity of the system. Reload the Daemon to fix the problem.")
             self.lock = None
             return
             
@@ -39,27 +39,20 @@ class SingleTask(celery.Task):
             
             try:
                 self.lock.release(owner=self.request.id)
-                logger.info("RELEASED lock for {0} by {1}".format(self.name, self.request.id))
+                logger.debug("RELEASED lock for {0} by {1}".format(self.name, self.request.id))
             except ModificationNotAllowed:
-                logger.info("ERROR cannot remove the lock for {0} by {1}".format(self.lock.key, self.request.id))
+                logger.debug("ERROR cannot remove the lock for {0} by {1}".format(self.lock.key, self.request.id))
     
     
 @celery.task(base=SingleTask)
 def update_and_retrieve():
     
     from aiida.execmanager import daemon_main_loop
-    import time
-    logger.info("Running the update_and_retrieve")
-    #daemon_main_loop()
-    time.sleep(10)
+    daemon_main_loop()
         
 @celery.task(base=SingleTask)
 def workflow_stepper():
     
     from aiida.workflowmanager import daemon_main_loop
-    import time
+    daemon_main_loop()
     
-    logger.info("Running the workflow_stepper")
-    #daemon_main_loop()
-        
-    time.sleep(10)

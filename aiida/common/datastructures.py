@@ -12,11 +12,11 @@ calc_states = CalcState((
         'SUBMITTING', # being submitted to cluster
         'WITHSCHEDULER', # on the scheduler (on any unfinished status:
                          # QUEUED, QUEUED_HELD, SUSPENDED, RUNNING)
-        'FINISHED',   # Calculation finished on scheduler, not yet retrieved
+        'COMPUTED',   # Calculation finished on scheduler, not yet retrieved
                       # (both DONE and FAILED)
         'RETRIEVING', # while retrieving data
         'PARSING', # while parsing data
-        'RETRIEVED',  # data retrieved, no more need to connect to scheduler
+        'FINISHED',  # Final state of the calculation: data retrieved and eventually parsed
         'SUBMISSIONFAILED', # error occurred during submission phase
         'RETRIEVALFAILED', # error occurred during retrieval phase
         'PARSINGFAILED', # error occurred during parsing phase due to a problem in the parse

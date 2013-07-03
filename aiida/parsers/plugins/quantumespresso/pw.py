@@ -9,6 +9,7 @@ from aiida.orm.data.folder import FolderData
 from aiida.parsers.parser import Parser
 #from aiida.parsers.plugins.quantumespresso import QEOutputParsingError
 from aiida.parsers.plugins.quantumespresso import convert_qe2aiida_structure
+from aiida.common.datastructures import calc_states
 
 #import copy
 
@@ -39,16 +40,18 @@ class PwParser(Parser):
         Parses the datafolder, stores results.
         Main functionality of the class.
         """
+        from aiida.common.exceptions import UniquenessError,InvalidOperation
         import os
         import glob
         
         # check for valid input
         if not isinstance(calc,PwCalculation):
-            raise ValueError("Input must calc must be a PwCalculation")
+            raise QEOutputParsingError("Input must calc must be a PwCalculation")
         # check if I'm not to overwrite anything
         state = calc.get_state()
-        if state != 'PARSING':
-            raise QEOutputParsingError("Calculation not in PARSING state")
+        if state != calc_states.PARSING:
+            raise InvalidOperation("Calculation not in {} state"
+                                   .format(calc_states.PARSING) )
         
         # retrieve the whole list of input links
         calc_input_parameterdata = calc.get_inputs(type=ParameterData,
@@ -58,7 +61,7 @@ class PwParser(Parser):
         # TODO: count how many occurences of the same input params happen
         params = [i[1] for i in calc_input_parameterdata if i[0]==input_param_name]
         if len(params) != 1:
-            raise QEOutputParsingError("Too many input_params are found: {}"
+            raise UniquenessError("Found {} input_params instead of one"
                                        .format(params))
         calc_input = params[0]
 
@@ -66,7 +69,7 @@ class PwParser(Parser):
         parser_opts_query = [i[1] for i in calc_input_parameterdata if i[0]=='parser_opts']
         # TODO: there should be a function returning the name of parser_opts
         if len(parser_opts_query)>1:
-            raise QEOutputParsingError("Too many parser_opts attached are found: {}"
+            raise UniquenessError("Too many parser_opts attached are found: {}"
                                        .format(parser_opts_query))
         if parser_opts_query:
             parser_opts = parser_opts_query[0]
@@ -96,7 +99,7 @@ class PwParser(Parser):
         list_of_files = out_folder.get_path_list()
         # at least the stdout should exist
         if not calc.OUTPUT_FILE_NAME in list_of_files:
-            raise QEOutputParsingError()
+            raise QEOutputParsingError("Standard output not found")
         # if there is something more, I note it down, so to call the raw parser
         # with the right options
         # look for xml
@@ -158,6 +161,59 @@ class PwParser(Parser):
         """
         setattr(self,'linkname_outstructure',linkname)
         
+    def get_energy_ev(self,calc,all_values=False):
+        """
+        Returns the float value of energy.
+
+        Args:
+            calc: calculation object
+            all_values: if true returns a list of energies, else only a float
+                (default=False)
+
+        Raises:
+            FailedError: calculation is failed
+            InvalidOperation: calculation has not been parsed yet
+            NotExistent: no output found
+            UniquenessError: more than one output found
+            ContentNotExistent: no key energy found in the results
+        """
+        from aiida.common.exceptions import InvalidOperation, FailedError
+        from aiida.common.exceptions import NotExistent,UniquenessError,ContentNotExistent
+        
+        calc_state = calc.get_state()
+        
+        if 'FAILED' in calc_state:  # SUBMISSIONFAILED','RETRIEVALFAILED','PARSINGFAILED','FAILED',
+            raise FailedError('Calculation is in state {}'
+                              .format(calc_state))
+        
+        if calc_state != calc_states.FINISHED:
+            raise InvalidOperation("Calculation is in state {}: "
+                                   "doesn't have results yet".format(calc_state))
+        
+        out_parameters = calc.get_outputs(type=ParameterData,also_labels=True)
+        out_parameterdata = [ i[1] for i in out_parameters if i[0]==self.get_linkname_outparams() ]
+        
+        if not out_parameterdata:
+            raise NotExistent("No output ParameterData found")
+        
+        if len(out_parameterdata) > 1:
+            raise UniquenessError("Output ParameterData should be found once, "
+                              "found it instead {} times"
+                              .format(len(out_parameterdata)) )
+            
+        out_parameterdata = out_parameterdata[0]
+        #out_dict = out_parameterdata.get_dict()
+        try:
+            if not all_values:
+                energy = out_parameterdata.get_attr('energy')[-1]
+            else:
+                energy = out_parameterdata.get_attr('energy')
+            # NOTE: in one case I return a list, in the other a float
+        except AttributeError:
+            raise ContentNotExistent("Key energy not found in results")
+        
+        return energy
+
 # TODO: maybe the parser could give a list of the names of the expected output nodes    
 #    def get_expected_nodes(self,calc):
 #        """

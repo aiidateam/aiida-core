@@ -13,6 +13,19 @@ class NotExistent(AiidaException):
     """
     pass
 
+class ContentNotExistent(NotExistent):
+    """
+    Raised when trying to access an attribute, a key or a file in the result
+    nodes that is not present
+    """
+    pass
+
+class FailedError(AiidaException):
+    """
+    Raised when accessing a calculation that is in the FAILED status
+    """
+    pass
+
 class ModificationNotAllowed(AiidaException):
     """
     Raised when the user tries to modify a field, object, property, ... that should not

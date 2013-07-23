@@ -1463,6 +1463,10 @@ def parse_pw_text_output(data, xml_data):
             warning='SCF correction compared to forces is too large, reduce conv_thr'
             parsed_data['warnings'].append(warning)
             
+        elif 'incommensurate with FFT grid' in line:
+            warning='incommensurate FFT: some symmetries are lost'
+            parsed_data['warnings'].append(warning)
+
         elif 'Warning:' in line:
             parsed_data['warnings'].append(str(line))
     

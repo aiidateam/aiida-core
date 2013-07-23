@@ -15,6 +15,7 @@ load_django()
 
 from aiida.common import aiidalogger
 import logging
+from aiida.common.exceptions import NotExistent
 aiidalogger.setLevel(logging.INFO)
 
 from aiida.orm import Code, Computer
@@ -25,16 +26,28 @@ UpfData = DataFactory('upf')
 ParameterData = DataFactory('parameter')
 StructureData = DataFactory('structure')
 
+# If True, load the pseudos from the family specified below
+# Otherwise, use static files provided
+auto_pseudos = True
+pseudo_family = 'pslib030-pbesol-rrkjus'
+
 queue = None
 #queue = "P_share_queue"
 
 
 def get_or_create_code(computer):
-    if not computer.hostname.startswith("aries"):
-        raise ValueError("Only aries is supported at the moment.")
-    code_path = "/home/cepellot/software/espresso-5.0.2/bin/pw.x"
-    code_version = "5.0.2"
-    prepend_text = 'module load intel/mpi/4.0.3 intel/12.1.2'
+    if computer.hostname.startswith("aries"):
+        code_path = "/home/cepellot/software/espresso-5.0.2/bin/pw.x"
+        code_version = "5.0.2"
+        prepend_text = 'module load intel/mpi/4.0.3 intel/12.1.2'
+    elif computer.hostname.startswith("rosa"):
+        code_path = "/project/s337/espresso-svn/bin/pw.x"
+        code_version = "5.0.2"
+        prepend_text = ''        
+    else:
+        raise ValueError("Only aries and rosa are supported at the moment.")
+
+    
     useful_codes = Code.query(computer=computer.dbcomputer,
                               attributes__key="_remote_exec_path",
                               attributes__tval=code_path).filter(
@@ -60,21 +73,13 @@ def get_or_create_code(computer):
 computer = Computer.get(computername)
 code = get_or_create_code(computer)
 
-raw_pseudos = [
-    ("Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF", 'Ba', 'pbesol'),
-    ("Ti.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF", 'Ti', 'pbesol'),
-    ("O.pbesol-n-rrkjus_psl.0.1-tested-pslib030.UPF", 'O', 'pbesol')]
+if computer.hostname.startswith("aries"):
+    num_cpus_per_machine = 48
+elif computer.hostname.startswith("rosa"):
+    num_cpus_per_machine = 32
+else:
+    raise ValueError("num_cpus_per_machine not specified for the current machine")
 
-pseudos_to_use = {}
-for fname, elem, pot_type in raw_pseudos:
-    absname = os.path.realpath(os.path.join(os.path.dirname(__file__),"data",fname))
-    pseudo, created = UpfData.get_or_create(
-        absname, element=elem,pot_type=pot_type,use_first=True)
-    if created:
-        print "Created the pseudo for {}".format(elem)
-    else:
-        print "Using the pseudo for {} from DB: {}".format(elem,pseudo.pk)
-    pseudos_to_use[elem] = pseudo
 
 alat = 4. # angstrom
 cell = [[alat, 0., 0.,],
@@ -113,7 +118,7 @@ kpoints = ParameterData({
 QECalc = CalculationFactory('quantumespresso.pw')
 calc = QECalc(computer=computer)
 calc.set_max_wallclock_seconds(30*60) # 30 min
-calc.set_resources(num_machines=1, num_cpus_per_machine=48)
+calc.set_resources(num_machines=1, num_cpus_per_machine=num_cpus_per_machine)
 if queue is not None:
     calc.set_queue_name(queue)
 calc.store()
@@ -123,8 +128,35 @@ print "created calculation; calc=Calculation(uuid='{}') # ID={}".format(
 calc.use_structure(s)
 calc.use_code(code)
 calc.use_parameters(parameters)
-for k, v in pseudos_to_use.iteritems():
-    calc.use_pseudo(v, kind=k)
+
+if auto_pseudos:
+    try:
+        calc.use_pseudo_from_family(pseudo_family)
+        print "Pseudos successfully loaded from family {}".format(pseudo_family)
+    except NotExistent:
+        print ("Pseudo or pseudo family not found. You may want to load the "
+               "pseudo family, or set auto_pseudos to False.")
+        raise
+else:
+    raw_pseudos = [
+       ("Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF", 'Ba', 'pbesol'),
+       ("Ti.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF", 'Ti', 'pbesol'),
+       ("O.pbesol-n-rrkjus_psl.0.1-tested-pslib030.UPF", 'O', 'pbesol')]
+
+    pseudos_to_use = {}
+    for fname, elem, pot_type in raw_pseudos:
+        absname = os.path.realpath(os.path.join(os.path.dirname(__file__),
+                                                "data",fname))
+        pseudo, created = UpfData.get_or_create(
+            absname, element=elem,pot_type=pot_type,use_first=True)
+        if created:
+            print "Created the pseudo for {}".format(elem)
+        else:
+            print "Using the pseudo for {} from DB: {}".format(elem,pseudo.pk)
+        pseudos_to_use[elem] = pseudo
+
+    for k, v in pseudos_to_use.iteritems():
+        calc.use_pseudo(v, kind=k)
 
 calc.use_kpoints(kpoints)
 #calc.use_settings(settings)

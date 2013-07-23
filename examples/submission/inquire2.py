@@ -1,7 +1,19 @@
 #!/usr/bin/env python
 import sys
 from aiida.orm import Calculation
+import json
+
 from aiida.common.utils import load_django
+
+def string_shorten(string, length):
+  ellipsis = " [...]"
+  if length < len(ellipsis):
+    raise ValueError("length must be >= {}".format(len(ellipsis)))
+
+  if len(string) <= length:
+    return string
+  else:
+    return string[:length-len(ellipsis)] + ellipsis
 
 load_django()
 
@@ -36,9 +48,13 @@ for pk in calcs:
       elif type(obj).__name__ == 'FolderData':
           #          print list(o for o in dir(obj) if 'list' in o)#.list_folder_content()
           print obj.get_path_list()
-          print r"   / BEGIN Content of first file"
-          print "\n".join("   | {}".format(l.strip()) for l in open(obj.get_abs_path(obj.get_path_list()[0])).readlines())
-          print r"   \ END Content of first file"
+          print r"   / BEGIN Last 10 lines of the first file"
+          print "\n".join("   | {}".format(l.strip()) for l in open(obj.get_abs_path(obj.get_path_list()[0])).readlines()[-10:])
+          print r"   \ END of first file"
+      elif type(obj).__name__ == 'ParameterData':
+          for k, v in obj.iterattrs():
+              print "    {} -> {}".format(k.ljust(10), 
+                                          string_shorten(json.dumps(v),50))
       else:
           print ""
 

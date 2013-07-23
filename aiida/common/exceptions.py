@@ -13,6 +13,13 @@ class NotExistent(AiidaException):
     """
     pass
 
+class MultipleObjectsError(AiidaException):
+    """
+    Raised when more than one entity is found in the DB, but only one was
+    excepted.
+    """
+    pass
+
 class ModificationNotAllowed(AiidaException):
     """
     Raised when the user tries to modify a field, object, property, ... that should not
@@ -38,6 +45,12 @@ class InvalidOperation(AiidaException):
     The allowed operation is not valid (e.g., when trying to add a non-internal attribute
     before saving the entry), or deleting an entry that is protected (e.g., 
     because it is referenced by foreign keys)
+    """
+    pass
+
+class ParsingError(AiidaException):
+    """
+    Generic error raised when there is a parsing error
     """
     pass
 
@@ -89,6 +102,14 @@ class InputValidationError(ValidationError):
     required input data, wrong data, ...)
     """
     pass
+
+class WorkflowInputValidationError(ValidationError):
+    """
+    The input data for a workflow did not validate (e.g., missing
+    required input data, wrong data, ...)
+    """
+    pass
+
 
 class FeatureNotAvailable(AiidaException):
     """

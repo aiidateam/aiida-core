@@ -19,11 +19,13 @@ import os
 from aiida.orm import Calculation, DataFactory
 from aiida.common.exceptions import InputValidationError
 from aiida.common.datastructures import CalcInfo
+from aiida.orm.calculation.quantumespresso import (
+    _lowercase_dict, _uppercase_dict, get_input_data_text)
 
 StructureData = DataFactory('structure')
 ParameterData = DataFactory('parameter')
 UpfData = DataFactory('upf')
-
+RemoteData = DataFactory('remote') 
 
 # List of namelists (uppercase) that are allowed to be found in the
 # input_data, in the correct order
@@ -47,31 +49,6 @@ _blocked_keywords = [('CONTROL', 'pseudo_dir'), # set later
     ('SYSTEM', 'cosab'), ('SYSTEM', 'cosac'), ('SYSTEM', 'cosbc'),
     ]
 
-def get_input_data_text(key,val):
-    """
-    Given a key and a value, return a string (possibly multiline for arrays)
-    with the text to be added to the input file.
-    
-    Args:
-        key: the flag name
-        val: the flag value. If it is an array, a line for each element
-            is produced, with variable indexing starting from 1.
-            Each value is formatted using the conv_to_fortran function.
-    """
-    from aiida.common.utils import conv_to_fortran
-    # I don't try to do iterator=iter(val) and catch TypeError because
-    # it would also match strings
-    if hasattr(val,'__iter__'):
-        # a list/array/tuple of values
-        list_of_strings = [
-            "  {0}({2}) = {1}\n".format(key, conv_to_fortran(itemval),
-                                        idx+1)
-            for idx, itemval in enumerate(val)]
-        return "".join(list_of_strings)
-    else:
-        # single value
-        return "  {0} = {1}\n".format(key, conv_to_fortran(val))
-
 def _if_pos(fixed):
     """
     Simple function that returns 0 if fixed is True, 1 otherwise.
@@ -82,40 +59,7 @@ def _if_pos(fixed):
         return 0
     else:
         return 1
-
-def _lowercase_dict(d, dict_name):
-    from collections import Counter
-    
-    if isinstance(d,dict):
-        new_dict = dict((str(k).lower(), v) for k, v in d.iteritems())
-        if len(new_dict) != len(d):
-            num_items = Counter(str(k).lower() for k in d.keys())
-            double_keys = ",".join([k for k, v in num_items if v > 1])
-            raise InputValidationError(
-                "Inside the dictionary '{}' there are the following keys that "
-                "are repeated more than once when compared case-insensitively: {}."
-                "This is not allowed.".format(dict_name, double_keys))
-        return new_dict
-    else:
-        raise TypeError("_lowercase_dict accepts only dictionaries as argument")
-    
-def _uppercase_dict(d, dict_name):
-    from collections import Counter
-    
-    if isinstance(d,dict):
-        new_dict = dict((str(k).upper(), v) for k, v in d.iteritems())
-        if len(new_dict) != len(d):
-            
-            num_items = Counter(str(k).upper() for k in d.keys())
-            double_keys = ",".join([k for k, v in num_items if v > 1])
-            raise InputValidationError(
-                "Inside the dictionary '{}' there are the following keys that "
-                "are repeated more than once when compared case-insensitively: {}."
-                "This is not allowed.".format(dict_name, double_keys))
-        return new_dict
-    else:
-        raise TypeError("_lowercase_dict accepts only dictionaries as argument")
-    
+ 
     
 class PwCalculation(Calculation):   
 
@@ -128,6 +72,10 @@ class PwCalculation(Calculation):
 
     # Default PW output parser provided by AiiDA
     _default_parser = 'quantumespresso.pw'
+    
+    # Default output folder of a parent calculation, used if nothing else is
+    # specified
+    _default_parent_output_folder = OUTPUT_SUBFOLDER
     
     def _prepare_for_submission(self,tempfolder):        
         """
@@ -151,7 +99,7 @@ class PwCalculation(Calculation):
         except KeyError:
             raise InputValidationError("No parameters specified for this calculation")
         if not isinstance(parameters, ParameterData):
-            raise InputValidationError("parameters is not of type ParameterDa")
+            raise InputValidationError("parameters is not of type ParameterData")
         
         try:
             structure = inputdict.pop(self.get_linkname_structure())
@@ -187,7 +135,13 @@ class PwCalculation(Calculation):
                 if not isinstance(pseudos[kind], UpfData):
                     raise InputValidationError("Pseudo for kind {} is not of "
                                                "type UpfData".format(kind))
-        
+
+        parent_calc_folder = inputdict.pop(self.get_linkname_parent_calc_folder(),None)
+        if parent_calc_folder is not None:
+            if not isinstance(parent_calc_folder,  RemoteData):
+                raise InputValidationError("parent_calc_folder, if specified,"
+                    "must be of type RemoteData")
+
         # Here, there should be no more parameters...
         if inputdict:
             raise InputValidationError("The following input data nodes are "
@@ -431,6 +385,17 @@ class PwCalculation(Calculation):
                 "not valid namelists for the current type of calculation: "
                 "{}".format(",".join(input_params.keys())))
 
+        parent_calc_out_subfolder = settings_dict.pop('parent_calc_out_subfolder',
+            self._default_parent_output_folder)
+
+        # copy remote output dir, if specified
+        if parent_calc_folder is not None:
+            remote_copy_list.append(
+                (parent_calc_folder.get_remote_machine(),
+                 os.path.join(parent_calc_folder.get_remote_path(),
+                              parent_calc_out_subfolder),
+                 self.OUTPUT_SUBFOLDER))
+
         # TODO: copy remote output dir, if specified
         # remote_copy_list.append(
         # (fileobj.get_remote_machine(), fileobj.get_remote_path(),dest_rel_path))
@@ -451,6 +416,9 @@ class PwCalculation(Calculation):
         calcinfo.retrieve_list.append(
             os.path.join(self.OUTPUT_SUBFOLDER, 
                          '{}.save'.format(self.PREFIX), self.OUTPUT_XML_FILE_NAME))
+        settings_retrieve_list = settings_dict.pop('additional_retrieve_list', [])
+        calcinfo.retrieve_list += settings_retrieve_list
+
         
         if settings_dict:
             raise InputValidationError("The following keys have been found in "
@@ -505,6 +473,21 @@ class PwCalculation(Calculation):
         """
         return "settings"
 
+    def use_parent_folder(self, data):
+        """
+        Set the folder of the parent calculation, if any
+        """
+        if not isinstance(data, RemoteData):
+            raise ValueError("The data must be an instance of the RemoteData class")
+
+        self.replace_link_from(data, self.get_linkname_parent_calc_folder())
+
+    def get_linkname_parent_calc_folder(self):
+        """
+        The name of the link used for the calculation folder of the parent (if any)
+        """
+        return "parent_calc_folder"
+
     def use_parameters(self, data):
         """
         Set the parameters for this calculation
@@ -532,6 +515,33 @@ class PwCalculation(Calculation):
             raise ValueError("The data must be an instance of the UpfData class")
 
         self.replace_link_from(data, self.get_linkname_pseudo(kind))
+
+    def use_pseudo_from_family(self, family_name):
+        """
+        Set the pseudo to use for all atomic kinds, picking pseudos from the
+        family with name family_name.
+        
+        Note: The structure must already be set.
+        
+        Args:
+            family_name: the name of the group containing the pseudos
+        """
+        from aiida.orm.data.upf import get_upf_from_family
+        
+        try:
+            structure = self.get_input(self.get_linkname_structure())
+        except AttributeError:
+            raise ValueError("structure is not set yet!")
+        
+        pseudo_list = {}
+        for kind in structure.kinds:
+            symbol = kind.symbol
+            # Will raise the correct exception if not found, or too many found
+            pseudo_list[kind.name] = get_upf_from_family(family_name, symbol)
+        
+        for kindname, pseudo in pseudo_list.iteritems():
+            self.replace_link_from(pseudo, self.get_linkname_pseudo(kindname))
+
         
     def get_linkname_pseudo(self, kind):
         """

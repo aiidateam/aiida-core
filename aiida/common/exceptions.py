@@ -19,6 +19,19 @@ class MultipleObjectsError(AiidaException):
     excepted.
     """
     pass
+    
+class ContentNotExistent(NotExistent):
+    """
+    Raised when trying to access an attribute, a key or a file in the result
+    nodes that is not present
+    """
+    pass
+
+class FailedError(AiidaException):
+    """
+    Raised when accessing a calculation that is in the FAILED status
+    """
+    pass
 
 class ModificationNotAllowed(AiidaException):
     """
@@ -118,6 +131,13 @@ class FeatureNotAvailable(AiidaException):
     pass
 
 class FeatureDisabled(AiidaException):
+    """
+    Raised when a feature is requested, but the used chose to disabled it
+    (e.g., for submissions on disabled computers).
+    """
+    pass
+
+class LockPresent(AiidaException):
     """
     Raised when a feature is requested, but the used chose to disabled it
     (e.g., for submissions on disabled computers).

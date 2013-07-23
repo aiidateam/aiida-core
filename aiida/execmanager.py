@@ -30,7 +30,7 @@ def update_running_calcs_status(authinfo):
     s = Computer(dbcomputer=authinfo.computer).get_scheduler()
     t = authinfo.get_transport()
 
-    finished = []
+    computed = []
 
     # I avoid to open an ssh connection if there are no calcs with state WITHSCHEDULER
     if len(calcs_to_inquire):
@@ -41,7 +41,7 @@ def update_running_calcs_status(authinfo):
             s.set_transport(t)
             # TODO: Check if we are ok with filtering by job (to make this work,
             # I had to remove the check on the retval for getJobs, because if the
-            # job has finished and is not in the output of qstat, it gives a nonzero
+            # job has computed and is not in the output of qstat, it gives a nonzero
             # retval)
             
             # TODO: catch SchedulerError exception and do something sensible (at least,
@@ -70,8 +70,8 @@ def update_running_calcs_status(authinfo):
                             c.uuid, jobid, jobinfo.job_state))
                         # For the moment, FAILED is not defined
                         if jobinfo.job_state in [job_states.DONE]: #, job_states.FAILED]:
-                            finished.append(c)
-                            c._set_state(calc_states.FINISHED)
+                            computed.append(c)
+                            c._set_state(calc_states.COMPUTED)
                         elif jobinfo.job_state == job_states.UNDETERMINED:
                             c._set_state(calc_states.UNDETERMINED)
                             execlogger.error("There is an undetermined calc with uuid {}".format(
@@ -88,7 +88,7 @@ def update_running_calcs_status(authinfo):
                             c.uuid, jobid, job_states.DONE))
 
                         # calculation c is not found in the output of qstat
-                        finished.append(c)
+                        computed.append(c)
                         c._set_scheduler_state(job_states.DONE)
                 except Exception as e:
                     # TODO: implement a counter, after N retrials set it to a status that
@@ -97,7 +97,7 @@ def update_running_calcs_status(authinfo):
                         c.uuid, e.__class__.__name__, e.message))
                     continue
     
-            for c in finished:
+            for c in computed:
                 try:
                     try:
                         detailed_jobinfo = s.get_detailed_jobinfo(jobid=c.get_job_id())
@@ -118,13 +118,13 @@ def update_running_calcs_status(authinfo):
                                        c.uuid, e.__class__.__name__, e.message))
                     continue
                 finally:
-                    # Set the state to FINISHED as the very last thing of this routine; no further
+                    # Set the state to COMPUTED as the very last thing of this routine; no further
                     # change should be done after this, so that in general the retriever can just 
                     # poll for this state, if we want to.
-                    c._set_state(calc_states.FINISHED)
+                    c._set_state(calc_states.COMPUTED)
 
             
-    return finished
+    return computed
 
 def get_authinfo(computer, aiidauser):
     from aiida.djsite.db.models import DbComputer, AuthInfo
@@ -153,7 +153,7 @@ def retrieve_jobs():
     # I create a unique set of pairs (computer, aiidauser)
     computers_users_to_check = set(
         Calculation.get_all_with_state(
-            state=calc_states.FINISHED,
+            state=calc_states.COMPUTED,
             only_computer_user_pairs = True)
         )
     
@@ -165,7 +165,7 @@ def retrieve_jobs():
             aiidauser.username, dbcomputer.hostname))
         try:
             authinfo = get_authinfo(dbcomputer, aiidauser)
-            retrieve_finished_for_authinfo(authinfo)
+            retrieve_computed_for_authinfo(authinfo)
         except Exception as e:
             msg = ("Error while retrieving calculation status for aiidauser={} on computer={}, "
                    "error type is {}, error message: {}".format(
@@ -200,7 +200,7 @@ def update_jobs():
 
         try:
             authinfo = get_authinfo(dbcomputer, aiidauser)
-            finished_calcs = update_running_calcs_status(authinfo)
+            computed_calcs = update_running_calcs_status(authinfo)
         except Exception as e:
             msg = ("Error while updating calculation status for aiidauser={} on computer={}, "
                    "error type is {}, error message: {}".format(
@@ -453,7 +453,7 @@ def submit_calc(calc):
         calc._set_state(calc_states.SUBMISSIONFAILED)
         raise
             
-def retrieve_finished_for_authinfo(authinfo):
+def retrieve_computed_for_authinfo(authinfo):
     from aiida.orm import Calculation
     from aiida.common.folders import SandboxFolder
     from aiida.orm.data.folder import FolderData
@@ -461,13 +461,13 @@ def retrieve_finished_for_authinfo(authinfo):
     import os
     
     calcs_to_retrieve = Calculation.get_all_with_state(
-        state=calc_states.FINISHED,
+        state=calc_states.COMPUTED,
         computer=authinfo.computer,
         user=authinfo.aiidauser)
     
     retrieved = []
     
-    # I avoid to open an ssh connection if there are no calcs with state FINISHED
+    # I avoid to open an ssh connection if there are no calcs with state not COMPUTED
     if len(calcs_to_retrieve):
 
         # Open connection
@@ -508,7 +508,7 @@ def retrieve_finished_for_authinfo(authinfo):
                         successful = parser.parse_from_calc(calc)
 
                     if successful:
-                        calc._set_state(calc_states.RETRIEVED)
+                        calc._set_state(calc_states.FINISHED)
                     else:
                         calc._set_state(calc_states.FAILED)
                     retrieved.append(calc)

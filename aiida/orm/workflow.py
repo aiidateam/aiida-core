@@ -22,8 +22,8 @@ class Workflow(object):
     The typical use case are workflow stored in the aiida.workflow packages, that are initiated
     either by the user in the shell or by some scripts, and that are monitored by the aiida daemon.
 
-    Worflow can have steps, and each step must contain some calculations to be executed. At the
-    end of the step's calculations the workflow is reloaded in memory and the next methids is called.
+    Workflow can have steps, and each step must contain some calculations to be executed. At the
+    end of the step's calculations the workflow is reloaded in memory and the next methods is called.
 
     """
     
@@ -32,12 +32,12 @@ class Workflow(object):
     def __init__(self,**kwargs):
         
             """
-            Is initialized with an uuid the Worflow is loaded fom the DB, if not a new
-            worflow is generated and added to the DB following the stack frameworks.
+            If initialized with an uuid the Workflow is loaded from the DB, if not a new
+            workflow is generated and added to the DB following the stack frameworks.
             
             This means that only modules inside aiida.worflows are allowed to implements
-            the worflow super calls and be stored. The caller names, modules and files are
-            retrived from the stack.
+            the workflow super calls and be stored. The caller names, modules and files are
+            retrieved from the stack.
             """
             from aiida.djsite.utils import get_automatic_user
             from aiida.djsite.db.models import DbWorkflow
@@ -64,8 +64,6 @@ class Workflow(object):
                 
                 # ATTENTION: Do not move this code outside or encapsulate it in a function
                 
-                print "Getting started"
-            
                 import inspect
                 stack = inspect.stack()
                 
@@ -115,9 +113,6 @@ class Workflow(object):
                     sub_stack_frame.f_locals.get("self",None).get_step(sub_caller_funct).add_sub_workflow(self.dbworkflowinstance)
 #                     print "I AM A SUB MODULE !!"
                 
-                
-                
-                print self.uuid()
     
     @property
     def logger(self):
@@ -171,7 +166,7 @@ class Workflow(object):
     def set_params(self, params):
         
         """
-        Adds parameters to the workflow that are both stored and used everytime
+        Adds parameters to the workflow that are both stored and used every time
         the workflow engine re-initialize the specific workflow to launch the new methods.  
         """
         
@@ -306,7 +301,7 @@ class Workflow(object):
         from aiida.common.datastructures import calc_states
         
         for c in self.dbworkflowinstance.steps.get(name=stepname).get_calculations():
-            c._set_state(calc_states.RETRIEVED)
+            c._set_state(calc_states.FINISHED)
 
 
 

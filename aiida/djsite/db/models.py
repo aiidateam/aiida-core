@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from django.db.models.query import QuerySet
 
 from aiida.common.exceptions import (
-    ConfigurationError, DbContentError, MissingPluginError)
+    ConfigurationError, DbContentError, MissingPluginError, InternalError)
 
 # Removed the custom User field, that was creating a lot of problems. Use
 # the email as UUID. In case we need it, we can do a couple of south migrations
@@ -418,7 +418,17 @@ class Comment(m.Model):
     user = m.ForeignKey(User)
     content = m.TextField(blank=True)
 
+#-------------------------------------
+#         Lock
+#-------------------------------------
 
+class DbLock(m.Model):
+    
+    key        = m.TextField(primary_key=True)
+    creation   = m.DateTimeField(auto_now_add=True, editable=False)
+    timeout    = m.IntegerField(editable=False)
+    owner      = m.CharField(max_length=255, blank=False)
+            
 #-------------------------------------
 #         Workflows
 #-------------------------------------
@@ -478,7 +488,7 @@ class DbWorkflow(m.Model):
 
         calc_status = self.get_calculations().filter(attributes__key="_state").values_list("uuid", "attributes__tval")
         s = set([l[1] for l in calc_status])
-        if len(s)==1 and calc_states.RETRIEVED in s:
+        if len(s)==1 and calc_states.FINISHED in s:
             return wf_states.FINISHED
         else: 
             return wf_states.RUNNING
@@ -570,7 +580,7 @@ class DbWorkflowStep(m.Model):
                 print "Calculation {0} is {1}".format(c[0], c[1])
                 
         s = set([l[1] for l in calc_status])
-        if len(s)==1 and calc_states.RETRIEVED in s:
+        if len(s)==1 and calc_states.FINISHED in s:
             return wf_states.FINISHED
         else: 
             return wf_states.RUNNING

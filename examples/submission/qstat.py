@@ -21,7 +21,7 @@ except IndexError:
 if print_all:
     calclist = Calculation.query()
 else:
-    calclist = Calculation.query(~Q(attributes__tval=calc_states.RETRIEVED),
+    calclist = Calculation.query(~Q(attributes__tval=calc_states.FINISHED),
                                   ~Q(attributes__tval=calc_states.SUBMISSIONFAILED),
                                   ~Q(attributes__tval=calc_states.RETRIEVALFAILED),
                                   ~Q(attributes__tval=calc_states.UNDETERMINED),

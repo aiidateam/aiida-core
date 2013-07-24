@@ -104,7 +104,7 @@ class PwParser(Parser):
         # with the right options
         # look for xml
         has_xml = False
-        if calc.OUTPUT_XML_FILE_NAME in list_of_files:
+        if calc.DATAFILE_XML_BASENAME in list_of_files:
             has_xml = True
         # look for bands
         has_bands = False
@@ -117,7 +117,7 @@ class PwParser(Parser):
         out_file = os.path.join( out_folder.get_abs_path('.'), 
                                  calc.OUTPUT_FILE_NAME )
         xml_file = os.path.join( out_folder.get_abs_path('.'), 
-                                 calc.OUTPUT_XML_FILE_NAME )
+                                 calc.DATAFILE_XML_BASENAME )
         dir_with_bands = out_folder.get_abs_path('.')
         
         # call the raw parsing function

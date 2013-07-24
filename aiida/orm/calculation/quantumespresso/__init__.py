@@ -1,3 +1,5 @@
+from aiida.common.exceptions import InputValidationError
+
 def get_input_data_text(key,val):
     """
     Given a key and a value, return a string (possibly multiline for arrays)

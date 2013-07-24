@@ -78,15 +78,15 @@ class TestQEPWInputGeneration(QETestCase):
                      'testdata','qepseudos')
         
         raw_pseudos = [
-            ("Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF", 'Ba', 'pbesol'),
-            ("Ti.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF", 'Ti', 'pbesol'),
-            ("O.pbesol-n-rrkjus_psl.0.1-tested-pslib030.UPF", 'O', 'pbesol'),
+            ("Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF", 'Ba'),
+            ("Ti.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF", 'Ti'),
+            ("O.pbesol-n-rrkjus_psl.0.1-tested-pslib030.UPF", 'O'),
             ]
 
         pseudos = {}
         # suppress debug messages
         logging.disable(logging.ERROR)
-        for fname, elem, pot_type in raw_pseudos:
+        for fname, elem in raw_pseudos:
             absname = os.path.realpath(os.path.join(pseudo_dir,fname))
             pseudo, _ = UpfData.get_or_create(
                 absname, use_first=True)

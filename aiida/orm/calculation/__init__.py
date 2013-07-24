@@ -85,6 +85,8 @@ class Calculation(Node):
         if issubclass(caller_module_class, Workflow):
             #uuid = caller_frame.f_locals.get('self', None).uuid()
             caller_frame.f_locals.get('self', None).get_step(caller_funct).add_calculation(self)
+        
+        return self
             
     def validate(self):
         from aiida.common.exceptions import MissingPluginError, ValidationError

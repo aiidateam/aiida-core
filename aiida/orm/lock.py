@@ -6,7 +6,7 @@ from django.utils import timezone
 
 class LockManager(object):
     
-    def aquire(self, key, timeout=60, owner="None"):
+    def aquire(self, key, timeout=3600, owner="None"):
         
         from django.db import IntegrityError, transaction
         

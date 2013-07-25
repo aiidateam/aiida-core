@@ -7,6 +7,8 @@ import glob
 import aiida.transport
 from aiida.common.utils import escape_for_bash
 from aiida.transport import FileAttribute
+from aiida.common import aiidalogger
+execlogger = aiidalogger.getChild('transport')
 
 # TODO : callback functions in paramiko are currently not used much and probably broken
 
@@ -781,6 +783,8 @@ class SshTransport(aiida.transport.Transport):
                     self.getfile( this_src,this_dst,callback,dereference,overwrite )
                 else:
                     if ignore_nonexisting:
+                        execlogger.debug(
+                              "File {} not found on the remote machine".format(this_src))
                         pass
                     else:
                         raise IOError("The remote path {} does not exist"
@@ -793,6 +797,8 @@ class SshTransport(aiida.transport.Transport):
                 self.getfile( remotepath,localpath,callback,dereference,overwrite )
             else:
                 if ignore_nonexisting:
+                    execlogger.debug(
+                        "File {} not found on the remote machine".format(remotepath))
                     pass
                 else:
                     raise IOError("The remote path {} does not exist".format(

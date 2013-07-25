@@ -70,7 +70,7 @@ def parse_raw_ph_output(out_file, tensor_file=None, dynmat_files=[]):
         with open(tensor_file,'r') as f:
             tensor_lines = f.read()
         try:
-            tensor_data = parse_ph_tensor()
+            tensor_data = parse_ph_tensor(tensor_lines)
         except QEOutputParsingError:
             parser_info['parser_warnings'].append('Error while parsing the tensor files')
             pass
@@ -88,27 +88,37 @@ def parse_raw_ph_output(out_file, tensor_file=None, dynmat_files=[]):
     # parse dynamical matrices if present
     dynmat_data = {}
     if dynmat_files:
-        for this_dynmat in dynmat_files:
+        for dynmat_counter,this_dynmat in enumerate(dynmat_files):
             # read it
             with open(this_dynmat,'r') as f:
                 lines = f.readlines()
             
             # check if the file contains frequencies (i.e. is useful) or not
-            dynmat_to_parse = True
+            dynmat_to_parse = False
             try:
-                _ = [ float(i) for i in line.split()]
+                _ = [ float(i) for i in lines[0].split()]
             except ValueError:
-                dynmat_to_parse = False
-            
+                dynmat_to_parse = True
+            if not dynmat_to_parse:
+                continue
+
             # parse it
             this_dynmat_data = parse_ph_dynmat(lines) 
-            
+
             # join it with the previous dynmat info
-            
+            dynmat_data['dynamical_matrix_%s' % dynmat_counter] = this_dynmat_data
+            # TODO: I am not too happy about this format. Any idea on how to improve it?
+            # work in analogy with bands?
 
     # join dictionaries
-    final_data = {}#dict(tensor_data.items() + out_data.items() + parser_info.items())
-    
+    # there should not be any twice repeated key
+    for key in out_data.keys():
+        if key in tensor_data.keys():
+            raise AssertionError('{} found in two dictionaries'.format(key))
+    # I don't check the dynmat_data and parser_info keys 
+    final_data = dict(dynmat_data.items() + out_data.items() + 
+                      tensor_data.items() + parser_info.items())
+
     return final_data,job_successful
 
 
@@ -145,11 +155,21 @@ def parse_ph_tensor(data):
     if parsed_data[tagname.lower()]:
         try:
             second_tagname = 'EFFECTIVE_CHARGES_EU'
-            parsed_data[second_tagname.lower()] = parse_xml_matrices(second_tagname,
-                                                                     target_tags)
+            dumb_matrix = parse_xml_matrices(second_tagname,target_tags)
+            # separate the elements of the messy matrix, with a matrix 3x3 for each element
+            new_matrix = []
+            this_at = []
+            for i in dumb_matrix:
+                this_at.append(i)
+                if len(this_at) == 3:
+                    new_matrix.append(this_at)
+                    this_at = []
+                    
+            parsed_data[second_tagname.lower()] = new_matrix
         except:
             raise QEOutputParsingError('Failed to parse effective charges eu')
 
+    return parsed_data
     
 def parse_xml_matrices(tagname,target_tags):
     """
@@ -163,7 +183,6 @@ def parse_xml_matrices(tagname,target_tags):
     list_tuple = zip(*[iter(flat_array)]*3)
     return [list(i) for i in list_tuple]
 
-
 def parse_ph_text_output(lines):
     """
     Parses the stdout of QE-PH.
@@ -173,10 +192,9 @@ def parse_ph_text_output(lines):
     
     parsed_data = {}
     parsed_data['warnings'] = []
-    
     # parse time, starting from the end
     # apparently, the time is written multiple times
-    for line in lines[::-1]:
+    for line in reversed(lines):
         if 'PHONON' in line and 'WALL' in line:
             try:
                 time = line.split('CPU')[1].split('WALL')[0]
@@ -189,7 +207,7 @@ def parse_ph_text_output(lines):
                     convert_qe_time_to_sec(parsed_data['wall_time'])
             except ValueError:
                 raise QEOutputParsingError("Unable to convert wall_time in seconds.")
-        break
+            break
     
     # TODO: find a list of the common errors of ph
     for line in lines:
@@ -197,7 +215,6 @@ def parse_ph_text_output(lines):
             parsed_data['warnings'].append('Phonon did not reach end of self consistency')
     
     return parsed_data
-
 
 def parse_ph_dynmat(data):
     """
@@ -232,7 +249,6 @@ def parse_ph_dynmat(data):
             
             this_eigenvectors = []
             for new_line in data[line_counter+1:]:
-                print new_line
                 if 'freq' in new_line or '************************************************' in new_line:
                     break
                 this_things = new_line.split('(')[1].split(')')[0].split()
@@ -251,7 +267,9 @@ def parse_ph_dynmat(data):
             eigenvectors.append(this_eigenvectors)
             
     parsed_data['frequencies'] = frequencies
-    parsed_data['eigenvectors'] = eigenvectors
+    # TODO: the eigenvectors should be written in the database according to a parser_opts.
+    # for now, I don't store them, otherwise I get too much stuff
+    #parsed_data['eigenvectors'] = eigenvectors
     
     return parsed_data
 

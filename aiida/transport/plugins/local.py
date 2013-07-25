@@ -11,6 +11,8 @@ import aiida.transport
 from aiida.transport import FileAttribute
 import StringIO
 import glob
+from aiida.common import aiidalogger
+execlogger = aiidalogger.getChild('transport')
 
 
 class LocalTransport(aiida.transport.Transport):
@@ -424,6 +426,8 @@ class LocalTransport(aiida.transport.Transport):
                     self.getfile( this_src,this_dst,overwrite )
                 else:
                     if ignore_nonexisting:
+                        execlogger.debug(
+                                "File {} not found on the remote machine".format(this_src))
                         pass
                     else:
                         raise IOError("The remote path {} does not exist".format(
@@ -436,6 +440,8 @@ class LocalTransport(aiida.transport.Transport):
                 self.getfile( source,destination,overwrite )
             else:
                 if ignore_nonexisting:
+                    execlogger.debug(
+                        "File {} not found on the remote machine".format(source))
                     pass
                 else:
                     raise IOError("The remote path {} does not exist".format(

@@ -1,7 +1,7 @@
 #from aiida.orm import Calculation
-from aiida.orm.calculation.quantumespresso.pw import PwCalculation
+from aiida.orm.calculation.quantumespresso.cp import CpCalculation
 #from aiida.common.datastructures import calc_states
-from aiida.parsers.plugins.quantumespresso.raw_parser_pw import *
+from aiida.parsers.plugins.quantumespresso.raw_parser_cp import *
 from aiida.orm.data.parameter import ParameterData
 from aiida.orm.data.folder import FolderData
 #from aiida.common.folders import SandboxFolder
@@ -13,16 +13,16 @@ from aiida.common.datastructures import calc_states
 
 #import copy
 
-class PwParser(Parser):
+class CpParser(Parser):
     """
-    This class is the implementation of the Parser class for PWscf.
+    This class is the implementation of the Parser class for Cp.
     """
-
+    
     _outstruc_name = 'output_structure'
-
+    
     def __init__(self):
         """
-        Initialize the instance of PwParser
+        Initialize the instance of CpParser
         """
         self.set_linkname_outstructure(None)
         
@@ -42,11 +42,10 @@ class PwParser(Parser):
         """
         from aiida.common.exceptions import UniquenessError,InvalidOperation
         import os
-        import glob
         
         # check for valid input
-        if not isinstance(calc,PwCalculation):
-            raise QEOutputParsingError("Input must calc must be a PwCalculation")
+        if not isinstance(calc,CpCalculation):
+            raise QEOutputParsingError("Input must calc must be a CpCalculation")
         # check if I'm not to overwrite anything
         state = calc.get_state()
         if state != calc_states.PARSING:
@@ -101,30 +100,23 @@ class PwParser(Parser):
         # if there is something more, I note it down, so to call the raw parser
         # with the right options
         # look for xml
-        has_xml = False
-        if calc.DATAFILE_XML_BASENAME in list_of_files:
-            has_xml = True
-        # look for bands
-        has_bands = False
-        if glob.glob( os.path.join(out_folder.get_abs_path('.'),
-                                   'K[0-9][0-9][0-9][0-9][0-9]')):
-            # Note: assuming format of kpoints subfolder is Kxxxxx
-            # I don't know what happens to QE in the case of 99999> points
-            has_bands = True
-            # TODO: maybe it can be more general than bands only?
         out_file = os.path.join( out_folder.get_abs_path('.'), 
                                  calc.OUTPUT_FILE_NAME )
-        xml_file = os.path.join( out_folder.get_abs_path('.'), 
-                                 calc.DATAFILE_XML_BASENAME )
-        dir_with_bands = out_folder.get_abs_path('.')
+
+        xml_file = None
+        if calc.DATAFILE_XML_BASENAME in list_of_files:
+            xml_file = os.path.join( out_folder.get_abs_path('.'), 
+                                     calc.DATAFILE_XML_BASENAME )
+        
+        xml_counter_file = None
+        if calc.FILE_XML_PRINT_COUNTER in list_of_files:
+            xml_counter_file = os.path.join( out_folder.get_abs_path('.'), 
+                                     calc.FILE_XML_PRINT_COUNTER )
+        
+        parsing_args = [out_file,xml_file,xml_counter_file]
         
         # call the raw parsing function
-        parsing_args = [out_file,input_dict,parser_opts]
-        if has_xml:
-            parsing_args.append(xml_file)
-        if has_bands:
-            parsing_args.append(dir_with_bands)
-        out_dict,successful = parse_raw_output(*parsing_args)
+        out_dict,successful = parse_cp_raw_output(*parsing_args)
         
         # convert the dictionary into an AiiDA object
         output_params = ParameterData(out_dict)
@@ -133,14 +125,10 @@ class PwParser(Parser):
         output_params.store()
         calc.add_link_to(output_params, label=self.get_linkname_outparams() )
 
-        in_struc = calc.get_inputs_dict()['structure']
-        type_calc = input_dict['CONTROL']['calculation']
-        if type_calc=='relax' or type_calc=='vc-relax':
-            self.set_linkname_outstructure(self._outstruc_name)
-            struc = convert_qe2aiida_structure(out_dict,input_structure=in_struc)
-            struc.store()
-            calc.add_link_to(struc, label=self.get_linkname_outstructure() )
-        
+        # TODO: if the calculation is a relax 
+        #       I should create one node structure
+
+        # TODO: node for trajectories
         return successful
 
     def get_linkname_outstructure(self):
@@ -199,9 +187,9 @@ class PwParser(Parser):
         #out_dict = out_parameterdata.get_dict()
         try:
             if not all_values:
-                energy = out_parameterdata.get_attr('energy')[-1]
+                energy = out_parameterdata.get_attr('etot')[-1]
             else:
-                energy = out_parameterdata.get_attr('energy')
+                energy = out_parameterdata.get_attr('etot')
             # NOTE: in one case I return a list, in the other a float
         except AttributeError:
             raise ContentNotExistent("Key energy not found in results")

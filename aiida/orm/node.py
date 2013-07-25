@@ -183,20 +183,47 @@ class Node(object):
         else:
             return Computer(dbcomputer=self.dbnode.computer)
 
-    def set_label(self,label):
-        """
-        Set the label of the calculation
-        """
-        if self._to_be_stored:
-            self.dbnode.label = label
-        else:
-            self.logger.error("Trying to change the label of an already saved node: {}".format(
-                self.uuid))
-            raise ModificationNotAllowed("Node with uuid={} was already stored".format(self.uuid))
 
     @property
     def label(self):
         return self.dbnode.label
+
+    @label.setter
+    def label(self,label):
+        """
+        Set the label of the node
+        """
+        self._update_db_label_field(label)
+            
+    def _update_db_label_field(self, field_value):
+        from django.db import transaction        
+
+        self._dbnode.label = field_value
+        if not self._to_be_stored:
+            with transaction.commit_on_success():
+                self._dbnode.save()
+                self._increment_version_number_db()
+            
+    @property
+    def description(self):
+        return self.dbnode.description
+
+    @description.setter
+    def description(self,desc):
+        """
+        Set the description of the node
+        """
+        self._update_db_description_field(desc)
+
+    def _update_db_description_field(self, field_value):
+        from django.db import transaction        
+
+        self._dbnode.description = field_value
+        if not self._to_be_stored:
+            with transaction.commit_on_success():
+                self._dbnode.save()
+                self._increment_version_number_db()
+
 
     def validate(self):
         """

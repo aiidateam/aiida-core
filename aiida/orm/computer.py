@@ -211,9 +211,12 @@ class Computer(object):
         on this computer.
         """
         ret_lines = []
-        ret_lines.append("Computer name:     {}".format(self.get_name()))
+        ret_lines.append("Computer name:     {}".format(self.name))
         ret_lines.append(" * PK:             {}".format(self.pk))
         ret_lines.append(" * UUID:           {}".format(self.uuid))
+        ret_lines.append(" * Description:    {}".format(self.description))
+        ret_lines.append(" * Used by:        {} nodes".format(
+            len(self.dbcomputer.dbnode_set.all())))
         ret_lines.append(" * Hostname:       {}".format(self.hostname))
         ret_lines.append(" * Transport type: {}".format(self.get_transport_type()))
         ret_lines.append(" * Scheduler type: {}".format(self.get_scheduler_type()))
@@ -569,6 +572,10 @@ class Computer(object):
     @property
     def name(self):
         return self.dbcomputer.name
+
+    @property
+    def description(self):
+        return self.dbcomputer.description
 
     @property
     def hostname(self):

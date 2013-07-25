@@ -30,8 +30,14 @@ class CpCalculation(BasePwCpInputGenerator, Calculation):
                                                    _cp_unit_number), 
                                BasePwCpInputGenerator.DATAFILE_XML_BASENAME)
 
+    FILE_XML_PRINT_COUNTER_BASENAME = 'print_counter.xml'
+    FILE_XML_PRINT_COUNTER = os.path.join(BasePwCpInputGenerator.OUTPUT_SUBFOLDER, 
+                               '{}_{}.save'.format(BasePwCpInputGenerator.PREFIX,
+                                                   _cp_unit_number), 
+                                          FILE_XML_PRINT_COUNTER_BASENAME)
+
     # Default PW output parser provided by AiiDA
-    _default_parser = 'quantumespresso.pw'
+    _default_parser = 'quantumespresso.cp'
     
     _automatic_namelists = {
         'scf':   ['CONTROL', 'SYSTEM', 'ELECTRONS'],
@@ -67,4 +73,4 @@ class CpCalculation(BasePwCpInputGenerator, Calculation):
                                  BasePwCpInputGenerator.OUTPUT_SUBFOLDER, 
                                  '{}.{}'.format(BasePwCpInputGenerator.PREFIX,
                                  ext)) for ext in _cp_ext_list]
-    
+    _internal_retrieve_list += [FILE_XML_PRINT_COUNTER]

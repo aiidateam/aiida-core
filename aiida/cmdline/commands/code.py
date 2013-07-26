@@ -145,7 +145,21 @@ class CodeInputValidationClass(object):
          "is just a link to a remote computer and an absolute path there",
          False,
         )]
-    _conf_attributes_local = []
+    _conf_attributes_local = [
+        ("folder_with_code",
+         "Folder with the code",
+         "The folder on your local computer in which there are the files to be "
+         "stored in the AiiDA repository and then copied over for every "
+         "submitted calculation",
+         False,
+         ),
+        ("local_rel_path",
+         "Relative path of the executable",
+         "The relative path of the executable file inside the folder entered "
+         "in the previous step",
+         False,
+         ),
+        ]
     _conf_attributes_remote = [
         ("computer",
          "Remote computer name",
@@ -188,8 +202,7 @@ class CodeInputValidationClass(object):
         self._label_validator(string)
         self.label = string
         
-    @classmethod
-    def _label_validator(cls,label):
+    def _label_validator(self,label):
         """
         Validates the label.
         """
@@ -210,13 +223,59 @@ class CodeInputValidationClass(object):
         self._description_validator(string)
         self.description = string
         
-    @classmethod
-    def _description_validator(cls,description):
+    def _description_validator(self,folder_with_code):
         """
-        Validates the description.
+        Validates the folder_with_code.
         """
         pass
 
+    folder_with_code = ""
+    
+    def _get_folder_with_code_string(self):
+        return self.folder_with_code
+
+    def _set_folder_with_code_string(self,string):
+        """
+        Set the folder_with_code starting from a string.
+        """
+        self._folder_with_code_validator(string)
+        self.folder_with_code = string
+        
+    def _folder_with_code_validator(self,folder_with_code):
+        """
+        Validates the folder_with_code.
+        """
+        import os.path
+        from aiida.common.exceptions import ValidationError
+        
+        if not os.path.isdir(folder_with_code):
+            raise ValidationError("'{}' is not a valid directory".format(
+                 folder_with_code))
+
+    local_rel_path = ""
+    
+    def _get_local_rel_path_string(self):
+        return self.local_rel_path
+
+    def _set_local_rel_path_string(self,string):
+        """
+        Set the local_rel_path starting from a string.
+        """
+        self._local_rel_path_validator(string)
+        self.local_rel_path = string
+        
+    def _local_rel_path_validator(self,local_rel_path):
+        """
+        Validates the local_rel_path.
+        """
+        import os.path
+        from aiida.common.exceptions import ValidationError
+        
+        if not os.path.isfile(os.path.join(self.folder_with_code,
+                                           local_rel_path)):
+            raise ValidationError("'{}' is not a valid file within '{}'".format(
+                 local_rel_path, self.folder_with_code))
+            
     computer = None
     
     def _get_computer_string(self):
@@ -242,6 +301,16 @@ class CodeInputValidationClass(object):
         self._computer_validator(computer)
         self.computer = computer
 
+    def _computer_validator(self,computer):
+        """
+        Validates the computer.
+        """
+        from aiida.common.exceptions import ValidationError
+        from aiida.orm import Computer as AiidaOrmComputer
+            
+        if not isinstance(computer, AiidaOrmComputer):
+            raise ValidationError("The computer is not a valid Computer instance")  
+
     remote_abs_path = ""
     
     def _get_remote_abs_path_string(self):
@@ -254,8 +323,7 @@ class CodeInputValidationClass(object):
         self._remote_abs_path_validator(string)
         self.remote_abs_path = string
         
-    @classmethod
-    def _remote_abs_path_validator(cls,remote_abs_path):
+    def _remote_abs_path_validator(self,remote_abs_path):
         """
         Validates the remote_abs_path.
         """
@@ -265,18 +333,7 @@ class CodeInputValidationClass(object):
         if not os.path.isabs(remote_abs_path):
             raise ValidationError("This is not a valid absolute path")
         if not os.path.split(remote_abs_path)[1]:
-            raise ValidationError("This is a folder, not an executable")
-        
-    @classmethod
-    def _computer_validator(cls,computer):
-        """
-        Validates the computer.
-        """
-        from aiida.common.exceptions import ValidationError
-        from aiida.orm import Computer as AiidaOrmComputer
-            
-        if not isinstance(computer, AiidaOrmComputer):
-            raise ValidationError("The computer is not a valid Computer instance")  
+            raise ValidationError("This is a folder, not an executable")       
 
     is_local = False
     
@@ -301,8 +358,7 @@ class CodeInputValidationClass(object):
         self._is_local_validator(is_local)        
         self.is_local = is_local
         
-    @classmethod
-    def _is_local_validator(cls,is_local):
+    def _is_local_validator(self,is_local):
         """
         Validates the is_local.
         """
@@ -324,8 +380,7 @@ class CodeInputValidationClass(object):
         self._prepend_text_validator(string)
         self.prepend_text = string
         
-    @classmethod
-    def _prepend_text_validator(cls,prepend_text):
+    def _prepend_text_validator(self,prepend_text):
         """
         Validates the prepend_text.
         """
@@ -343,8 +398,7 @@ class CodeInputValidationClass(object):
         self._append_text_validator(string)
         self.append_text = string
         
-    @classmethod
-    def _append_text_validator(cls,append_text):
+    def _append_text_validator(self,append_text):
         """
         Validates the append_text.
         """
@@ -355,9 +409,14 @@ class CodeInputValidationClass(object):
         Create a code with the information contained in this class,
         BUT DOES NOT STORE IT.
         """
+        import os.path
         from aiida.orm import Code as AiidaOrmCode
+        
         if self.is_local:
-            raise NotImplementedError
+            file_list = [os.path.realpath(os.path.join(self.folder_with_code,f))
+                         for f in os.listdir(self.folder_with_code)]
+            code = AiidaOrmCode(local_executable=self.local_rel_path,
+                                files=file_list)
         else:
             code = AiidaOrmCode(remote_computer_exec = (self.computer,
                                                 self.remote_abs_path))

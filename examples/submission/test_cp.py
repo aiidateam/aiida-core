@@ -158,7 +158,7 @@ else:
         absname = os.path.realpath(os.path.join(os.path.dirname(__file__),
                                                 "data",fname))
         pseudo, created = UpfData.get_or_create(
-            absname, element=elem,pot_type=pot_type,use_first=True)
+            absname,use_first=True)
         if created:
             print "Created the pseudo for {}".format(elem)
         else:

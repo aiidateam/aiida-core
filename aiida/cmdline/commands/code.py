@@ -175,7 +175,8 @@ class CodeInputValidationClass(object):
         ]
     _conf_attributes_end = [ 
         ("prepend_text",
-         "Text to prepend to each command execution",
+         "Text to prepend to each command execution\n"
+         "FOR INSTANCE, MODULES TO BE LOADED FOR THIS CODE",
          "This is a multiline string, whose content will be prepended inside\n"
          "the submission script before the real execution of the job. It is\n"
          "your responsibility to write proper bash code!",

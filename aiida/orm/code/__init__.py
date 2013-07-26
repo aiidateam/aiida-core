@@ -28,7 +28,7 @@ class Code(Node):
                 specified
             local_executable: a filename of the file that should be set as local executable
             files: a list of files to be added to this Code node; pass absolute paths here, and
-                files will be copied within this node. This can be used also if you specify
+                files will be copied within this node. 
             remote_computer_exec: a list or tuple of length 2 with (computer, remote_exec_path)
                 as accepted by the set_remote_computer_exec() method.
         """
@@ -68,6 +68,24 @@ class Code(Node):
 
         if kwargs:
             raise ValueError("Invalid parameters found in the __init__: {}".format(kwargs.keys()))
+
+    @classmethod
+    def get(cls,label):
+        """
+        Get a code from its label. Raises NotExistent or MultipleObjectsError in
+        case of zero or multiple matches.
+        """
+        from aiida.common.exceptions import NotExistent, MultipleObjectsError
+        
+        valid_codes = list(cls.query(label=label))
+        if len(valid_codes) == 0:
+            raise NotExistent("No code in the DB with name '{}'".format(label))
+        elif len(valid_codes) > 1:
+            raise MultipleObjectsError("More than one code in the DB with name "
+                                       "'{}', please rename at least one of "
+                                       "them".format(label))
+        else:
+            return valid_codes[0]
 
     def validate(self):
         from aiida.common.exceptions import ValidationError
@@ -276,8 +294,9 @@ class Code(Node):
             ret_lines.append(" * Type:           {}".format("local"))
             ret_lines.append(" * Exec name:      {}".format(self.get_execname()))
             ret_lines.append(" * List of files/folders:")
-            for fname in self.current_folder().get_content_list():
-                ret_lines.append("   * {}".format(fname))
+            for fname in self.path_subfolder.get_content_list():
+                ret_lines.append("   * [{}] {}".format(" dir" if
+                    self.path_subfolder.isdir(fname) else "file", fname))
         else:
             ret_lines.append(" * Type:           {}".format("remote"))
             ret_lines.append(" * Remote machine: {}".format(

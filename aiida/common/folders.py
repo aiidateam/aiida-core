@@ -264,6 +264,20 @@ class Folder(object):
         return os.path.exists(self.abspath)
 
 
+    def isfile(self, relpath):
+        """
+        Return True if 'relpath' exists inside the folder and is a file,
+        False otherwise.
+        """
+        return os.path.isfile(os.path.join(self.abspath, relpath))
+
+    def isdir(self, relpath):
+        """
+        Return True if 'relpath' exists inside the folder and is a directory,
+        False otherwise.
+        """
+        return os.path.isdir(os.path.join(self.abspath, relpath))
+
     def erase(self,create_empty_folder=False):
         """
         Erases the folder. Should be called only in very specific cases,

@@ -22,27 +22,21 @@ StructureData = DataFactory('structure')
 try:
     codename = sys.argv[1]
 except IndexError:
-    print >> sys.stderr, "Pass the code label."
-    sys.exit(1)
+    codename = None
 
 # If True, load the pseudos from the family specified below
 # Otherwise, use static files provided
 expected_exec_name='pw.x'
 auto_pseudos = True
-pseudo_family = ' pslib030-pbesol-rrkjus'
 
 queue = None
 #queue = "P_share_queue"
      
 #####
 
-if auto_pseudos:
-    if not Group.objects.filter(name=pseudo_family):
-        print >> sys.stderr, "auto_pseudos is set to True and pseudo_family='{}',".format(pseudo_family)
-        print >> sys.stderr, "but no group with such a name found in the DB. Please set it up first."
-        sys.exit(1)
-
 try:
+    if codename is None:
+        raise ValueError
     code = Code.get(codename)
     if not code.get_remote_exec_path().endswith('pw.x'):
         raise ValueError
@@ -51,13 +45,35 @@ except (NotExistent, ValueError):
             attributes__key="_remote_exec_path",
             attributes__tval__endswith="/{}".format(expected_exec_name))]
     if valid_code_labels:
-        print >> sys.stderr, "Code not valid. Valid code labels with a pw.x executable are:"
+        print >> sys.stderr, "Pass as first parameter a valid code label."
+        print >> sys.stderr, "Valid labels with a {} executable are:".format(expected_exec_name)
         for l in valid_code_labels:
             print >> sys.stderr, "*", l
     else:
         print >> sys.stderr, "Code not valid, and no valid codes for pw.x. Configure at least one first using"
         print >> sys.stderr, "    verdi code setup"
     sys.exit(1)
+
+if auto_pseudos:
+    valid_pseudo_groups = Group.objects.filter(dbnodes__type__contains='.upf.').distinct().values_list('name',flat=True)
+
+    try:
+        pseudo_family = sys.argv[2]
+    except IndexError:
+        print >> sys.stderr, "Error, auto_pseudos set to True. You therefore need to pass as second parameter"
+        print >> sys.stderr, "the pseudo family name."
+        print >> sys.stderr, "Valid groups containing at least one UPFData object are:"
+        print >> sys.stderr, "\n".join("* {}".format(i) for i in valid_pseudo_groups)
+        sys.exit(1)
+        
+
+    if not Group.objects.filter(name=pseudo_family):
+        print >> sys.stderr, "auto_pseudos is set to True and pseudo_family='{}',".format(pseudo_family)
+        print >> sys.stderr, "but no group with such a name found in the DB."
+        print >> sys.stderr, "Valid groups containing at least one UPFData object are:"
+        print >> sys.stderr, ",".join(valid_pseudo_groups)
+        sys.exit(1)
+
 
 computer = code.get_remote_computer()
 

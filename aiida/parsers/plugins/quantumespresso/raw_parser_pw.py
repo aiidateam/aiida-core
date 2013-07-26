@@ -8,7 +8,8 @@ import os #, sys
 import string
 #from distutils.version import StrictVersion
 #from aiida.common.extendeddicts import FixedFieldsAttributeDict
-from aiida.parsers.plugins.quantumespresso.constants import *
+#from aiida.parsers.plugins.quantumespresso.constants import *
+from aiida.parsers.plugins.quantumespresso.constants import ry_to_ev,hartree_to_ev,bohr_to_ang
 #from aiida.parsers.exceptions import FailedJobError
 from aiida.parsers.plugins.quantumespresso import QEOutputParsingError
 
@@ -255,22 +256,9 @@ def convert_qe_time_to_sec(timestr):
 
     return num_seconds
 
-def parse_pw_xml_output(data,dir_with_bands=None):
-    """
-    Parse the xml data of QE v5.0.x
-    Input data must be a single string, as returned by file.read()
-    Returns a dictionary with parsed values
-    """
-    # NOTE : I often assume that if the xml file has been written, it has no
-    # internal errors.
-    
-    dom = parseString(data)
-    
-    parsed_data = {}
-    
-    parsed_data['xml_warnings'] = []
-    
-    #CARD CELL
+
+def xml_card_cell(parsed_data,dom):
+    #CARD CELL of QE output
     
     cardname = 'CELL'
     target_tags = read_xml_card(dom,cardname)
@@ -372,9 +360,129 @@ def parse_pw_xml_output(data,dir_with_bands=None):
     except Exception:
         raise QEOutputParsingError('Error parsing tag {} inside {}.'
                                    .format(tagname,target_tags.tagName) )
-                
-    #CARD HEADER
+    return parsed_data,lattice_vectors,volume
 
+
+def xml_card_ions(parsed_data,dom,lattice_vectors,volume):
+    cardname='IONS'
+    target_tags=read_xml_card(dom,cardname)
+
+    tagname='NUMBER_OF_ATOMS'
+    parsed_data[tagname.lower()]=parse_xml_child_integer(tagname,target_tags)
+
+    tagname='NUMBER_OF_SPECIES'
+    parsed_data[tagname.lower()]=parse_xml_child_integer(tagname,target_tags)
+
+    tagname='UNITS_FOR_ATOMIC_MASSES'
+    attrname='UNITS'
+    parsed_data[tagname.lower()]=parse_xml_child_attribute_str(tagname,attrname,target_tags)
+
+    try:
+        parsed_data['species']={}
+        parsed_data['species']['index'] =[]
+        parsed_data['species']['type']  =[]
+        parsed_data['species']['mass']  =[]
+        parsed_data['species']['pseudo']=[]
+        for i in range(parsed_data['number_of_species']):
+            tagname='SPECIE.'+str(i+1)
+            parsed_data['species']['index'].append(i+1)
+
+            a=target_tags.getElementsByTagName(tagname)[0]
+            
+            tagname2='ATOM_TYPE'
+            parsed_data['species']['type'].append(parse_xml_child_str(tagname2,a))
+
+            tagname2='MASS'
+            parsed_data['species']['mass'].append(parse_xml_child_float(tagname2,a))
+
+            tagname2='PSEUDO'
+            parsed_data['species']['pseudo'].append(parse_xml_child_str(tagname2,a))
+
+        tagname='UNITS_FOR_ATOMIC_POSITIONS'
+        attrname='UNITS'
+        parsed_data[tagname.lower()]=parse_xml_child_attribute_str(tagname,attrname,target_tags)
+    except:
+        raise QEOutputParsingError('Error parsing tag SPECIE.# inside %s.'% (target_tags.tagName ) )
+# TODO convert the units
+# if parsed_data['units_for_atomic_positions'] not in ['alat','bohr','angstrom']:
+
+    try:
+        atomlist=[]
+        atoms_index_list=[]
+        atoms_if_pos_list=[]
+        tagslist=[]
+        for i in range(parsed_data['number_of_atoms']):
+            tagname='ATOM.'+str(i+1)
+            # USELESS AT THE MOMENT, I DON'T SAVE IT
+            # parsed_data['atoms']['list_index']=i
+            a=target_tags.getElementsByTagName(tagname)[0]
+            tagname2='INDEX'
+            b=int(a.getAttribute(tagname2))
+            atoms_index_list.append(b)
+            tagname2='SPECIES'
+
+            chem_symbol=str(a.getAttribute(tagname2)).rstrip().replace("\n","")
+            # I check if it is a subspecie
+            chem_symbol_digits = "".join([i for i in chem_symbol if i in string.digits])
+            try:
+                tagslist.append(int(chem_symbol_digits))
+            except ValueError:
+                # If I can't parse the digit, it is probably not there: I add a None to the tagslist
+                tagslist.append(None)
+            # I remove the symbols
+            chem_symbol = chem_symbol.translate(None, string.digits)
+
+            tagname2='tau'
+            b=a.getAttribute(tagname2)
+            tau=[float(s) for s in b.rstrip().replace("\n","").split()]
+            metric=parsed_data['units_for_atomic_positions']
+            if metric not in ['alat','bohr','angstrom']:
+                raise QEOutputParsingError('Error parsing tag %s inside %s'% (tagname, target_tags.tagName ) )
+            if metric=='alat':
+                tau=[ parsed_data['lattice_parameter_xml']*float(s) for s in tau ]
+            elif metric=='bohr':
+                tau=[ bohr_to_ang*float(s) for s in tau ]
+            atomlist.append([chem_symbol,tau])
+            tagname2='if_pos'
+            b=a.getAttribute(tagname2)
+            if_pos=[int(s) for s in b.rstrip().replace("\n","").split()]
+            atoms_if_pos_list.append(if_pos)
+        parsed_data['atoms']=atomlist
+        parsed_data['atoms_index_list']=atoms_index_list
+        parsed_data['atoms_if_pos_list']=atoms_if_pos_list
+        cell={}
+        cell['lattice_vectors']=lattice_vectors
+        cell['volume']=volume
+        cell['atoms']=atomlist
+        cell['tagslist'] = tagslist
+        parsed_data['cell']=cell
+    except Exception as e:
+        #import traceback
+        #traceback.print_exc()
+        raise QEOutputParsingError('Error parsing tag ATOM.# inside %s.'% (target_tags.tagName ) )
+    # saving data together with cell parameters. Did so for better compatibility with ASE.
+    return parsed_data
+
+    
+def xml_card_spin(parsed_data,dom):
+    cardname='SPIN'
+    target_tags=read_xml_card(dom,cardname)
+
+    tagname='LSDA'
+    parsed_data[tagname.lower()]=parse_xml_child_bool(tagname,target_tags)
+
+    tagname='NON-COLINEAR_CALCULATION'
+    parsed_data[tagname.replace('-','_').lower()]=parse_xml_child_bool(tagname,target_tags)
+
+    tagname='SPIN-ORBIT_CALCULATION'
+    parsed_data[tagname.replace('-','_').lower()]=parse_xml_child_bool(tagname,target_tags)
+
+    tagname='SPIN-ORBIT_DOMAG'
+    parsed_data[tagname.replace('-','_').lower()]=parse_xml_child_bool(tagname,target_tags)
+    return parsed_data
+
+
+def xml_card_header(parsed_data,dom):
     cardname='HEADER'
     target_tags=read_xml_card(dom,cardname)
     
@@ -395,7 +503,176 @@ def parse_pw_xml_output(data,dir_with_bands=None):
     attrname='VERSION'
     parsed_data[(tagname+'_'+attrname).lower()] = \
         parse_xml_child_attribute_str(tagname,attrname,target_tags)
+    return parsed_data
 
+
+def xml_card_planewaves(parsed_data,dom,calctype):
+    if calctype not in ['pw','cp']:
+        raise ValueError("Input flag not accepted, must be 'cp' or 'pw'")
+    
+    cardname='PLANE_WAVES'
+    target_tags=read_xml_card(dom,cardname)
+
+    tagname = 'UNITS_FOR_CUTOFF'
+    attrname = 'UNITS'
+    units = parse_xml_child_attribute_str(tagname,attrname,target_tags).lower()
+    if 'hartree' not in units:
+        if 'rydberg' not in units:
+            raise QEOutputParsingError("Units {} are not supported by parser".format(units))
+    else:
+        if 'hartree' in units:
+            conv_fac = hartree_to_ev
+        else:
+            conv_fac = ry_to_ev
+
+        tagname='WFC_CUTOFF' 
+        parsed_data[tagname.lower()] = parse_xml_child_float(tagname,target_tags)*conv_fac
+
+        tagname='RHO_CUTOFF' 
+        parsed_data[tagname.lower()] = parse_xml_child_float(tagname,target_tags)*conv_fac
+    
+    tagname='FFT_GRID'
+    fft_grid=[]
+    attrname='nr1'
+    fft_grid.append(parse_xml_child_attribute_int(tagname,attrname,target_tags))
+    attrname='nr2'
+    fft_grid.append(parse_xml_child_attribute_int(tagname,attrname,target_tags))
+    attrname='nr3'
+    fft_grid.append(parse_xml_child_attribute_int(tagname,attrname,target_tags))
+    parsed_data[tagname.lower()]=fft_grid
+
+    tagname='SMOOTH_FFT_GRID'
+    fft_grid=[]
+    attrname='nr1s'
+    fft_grid.append(parse_xml_child_attribute_int(tagname,attrname,target_tags))
+    attrname='nr2s'
+    fft_grid.append(parse_xml_child_attribute_int(tagname,attrname,target_tags))
+    attrname='nr3s'
+    fft_grid.append(parse_xml_child_attribute_int(tagname,attrname,target_tags))
+    parsed_data[tagname.lower()]=fft_grid
+
+    if calctype == 'cp':
+
+        tagname='MAX_NUMBER_OF_GK-VECTORS' 
+        parsed_data[tagname.lower()] = parse_xml_child_integer(tagname,target_tags)
+
+        tagname='GVECT_NUMBER'
+        parsed_data[tagname.lower()] = parse_xml_child_integer(tagname,target_tags)
+
+        tagname='SMOOTH_GVECT_NUMBER'
+        parsed_data[tagname.lower()] = parse_xml_child_integer(tagname,target_tags)
+
+        tagname='GAMMA_ONLY' 
+        parsed_data[tagname.lower()] = parse_xml_child_bool(tagname,target_tags)
+
+        tagname='SMALLBOX_FFT_GRID'
+        fft_grid=[]
+        attrname='nr1b'
+        fft_grid.append(parse_xml_child_attribute_int(tagname,attrname,target_tags))
+        attrname='nr2b'
+        fft_grid.append(parse_xml_child_attribute_int(tagname,attrname,target_tags))
+        attrname='nr3b'
+        fft_grid.append(parse_xml_child_attribute_int(tagname,attrname,target_tags))
+        parsed_data[tagname.lower()]=fft_grid
+        
+    return parsed_data
+
+
+def xml_card_exchangecorrelation(parsed_data,dom):
+    cardname='EXCHANGE_CORRELATION'
+    target_tags=read_xml_card(dom,cardname)
+
+    tagname='DFT'
+    parsed_data[(tagname+'_exchange_correlation').lower()] = \
+        parse_xml_child_str(tagname,target_tags)
+
+    tagname='LDA_PLUS_U_CALCULATION'
+    parsed_data[tagname.lower()] = parse_xml_child_bool(tagname,target_tags)
+    
+    if parsed_data[tagname.lower()]: # if it is a plus U calculation, I expect more infos
+        tagname = 'HUBBARD_L'
+        try:
+            a = target_tags.getElementsByTagName(tagname)[0]
+            b = a.childNodes[0]
+            c = b.data.replace('\n','').split()
+            value = [int(i) for i in c]
+            parsed_data[tagname.replace('-','_').lower()]=value
+        except Exception:
+            raise QEOutputParsingError('Error parsing tag '+\
+                                       '{} inside {}.'.format(tagname, target_tags.tagName) )
+        
+        for tagname in ['HUBBARD_U','HUBBARD_ALPHA','HUBBARD_BETA','HUBBARD_J0']:
+            try:
+                a = target_tags.getElementsByTagName(tagname)[0]
+                b = a.childNodes[0]
+                c = b.data.replace('\n',' ').split() # note the need of a white space!
+                value = [float(i)*ry_to_ev for i in c]
+                parsed_data[tagname.replace('-','_').lower()]=value
+            except Exception:
+                raise QEOutputParsingError('Error parsing tag '+\
+                                           '{} inside {}.'.format(tagname, target_tags.tagName))
+        
+        tagname = 'LDA_PLUS_U_KIND'
+        try:
+            parsed_data[tagname.lower()] = parse_xml_child_integer(tagname,target_tags)
+        except Exception:
+            pass
+
+        tagname = 'U_PROJECTION_TYPE'
+        try:
+            parsed_data[tagname.lower()] = \
+                parse_xml_child_str(tagname,target_tags)
+        except Exception:
+            pass
+
+        tagname = 'HUBBARD_J'
+        try:
+            a=target_tags.getElementsByTagName(tagname)[0]
+            b=a.childNodes[0]
+            c=b.data.replace('\n','').split()
+            value=[]
+            list_of_3 = []
+            for i in range(len(c)):
+                list_of_3.append(float(c[i]))
+                if (i+1)%3 == 0:
+                    value.append(list_of_3)
+                    list_of_3=[]
+
+            parsed_data[tagname.replace('-','_').lower()]=value
+        except Exception:
+            pass
+    
+    try:
+        tagname='NON_LOCAL_DF'
+        parsed_data[tagname.lower()] = parse_xml_child_integer(tagname,target_tags)
+    except Exception:
+        pass
+
+    return parsed_data
+
+
+def parse_pw_xml_output(data,dir_with_bands=None):
+    """
+    Parse the xml data of QE v5.0.x
+    Input data must be a single string, as returned by file.read()
+    Returns a dictionary with parsed values
+    """
+    import copy
+    # NOTE : I often assume that if the xml file has been written, it has no
+    # internal errors.
+    
+    dom = parseString(data)
+    
+    parsed_data = {}
+    
+    parsed_data['xml_warnings'] = []
+    
+    # parse card CELL
+    parsed_data,lattice_vectors,volume = copy.deepcopy(xml_card_cell(parsed_data,dom))
+    
+    #CARD HEADER
+    parsed_data = copy.deepcopy(xml_card_header(parsed_data,dom))
+    
     # CARD CONTROL
 
     cardname='CONTROL'
@@ -426,111 +703,7 @@ def parse_pw_xml_output(data,dir_with_bands=None):
 
     # CARD IONS
 
-    cardname='IONS'
-    target_tags=read_xml_card(dom,cardname)
-
-    tagname='NUMBER_OF_ATOMS'
-    parsed_data[tagname.lower()]=parse_xml_child_integer(tagname,target_tags)
-
-    tagname='NUMBER_OF_SPECIES'
-    parsed_data[tagname.lower()]=parse_xml_child_integer(tagname,target_tags)
-
-    tagname='UNITS_FOR_ATOMIC_MASSES'
-    attrname='UNITS'
-    parsed_data['atomic_masses_units'] = \
-        parse_xml_child_attribute_str(tagname,attrname,target_tags)
-
-    try:
-        parsed_data['species'] = {}
-        parsed_data['species']['index'] = []
-        parsed_data['species']['type'] = []
-        parsed_data['species']['mass'] = []
-        parsed_data['species']['pseudo'] = []
-        for i in range(parsed_data['number_of_species']):
-            tagname = 'SPECIE.'+str(i+1)
-            parsed_data['species']['index'].append(i+1)
-
-            a = target_tags.getElementsByTagName(tagname)[0]
-            
-            tagname2 = 'ATOM_TYPE'
-            parsed_data['species']['type'].append(parse_xml_child_str(tagname2,a))
-
-            tagname2 = 'MASS'
-            parsed_data['species']['mass'].append(parse_xml_child_float(tagname2,a))
-
-            tagname2 = 'PSEUDO'
-            parsed_data['species']['pseudo'].append(parse_xml_child_str(tagname2,a))
-
-        tagname = 'UNITS_FOR_ATOMIC_POSITIONS'
-        attrname = 'UNITS'
-        parsed_data['atomic_positions_units'] = \
-            parse_xml_child_attribute_str(tagname,attrname,target_tags)
-    except Exception:
-        raise QEOutputParsingError('Error parsing tag SPECIE.# inside {}.'.format(tagname))
-    # TODO: For calculations launched with AiiDA, angstrom is the unit used.
-    # but for other imports, we don't know.
-    if parsed_data['atomic_positions_units'] not in ['angstrom','bohr']:
-        parsed_data['xml_warnings'].append('Angstrom Units for atomic ' + \
-                    'positions were expected.' + \
-                    'Found instead {}'.format(parsed_data['atomic_positions_units']) )
-
-    try:
-        atomlist = []
-        atoms_index_list = []
-        atoms_if_pos_list = []
-        tagslist = []
-        for i in range(parsed_data['number_of_atoms']):
-            tagname='ATOM.'+str(i+1)
-            a=target_tags.getElementsByTagName(tagname)[0]
-            tagname2='INDEX'
-            b=int(a.getAttribute(tagname2))
-            atoms_index_list.append(b)
-            tagname2='SPECIES'
-
-            chem_symbol=str(a.getAttribute(tagname2)).rstrip().replace("\n","")
-            # I check if it is a subspecie
-            chem_symbol_digits = "".join([i for i in chem_symbol if i in string.digits])
-            try:
-                tagslist.append(int(chem_symbol_digits))
-            except ValueError:
-                # If I can't parse the digit, it is probably not there:
-                # I add a None to the tagslist
-                tagslist.append(None)
-            # I remove the symbols
-            chem_symbol = chem_symbol.translate(None, string.digits)
-            tagname2 = 'tau'
-            b=a.getAttribute(tagname2)
-            tau=[float(s) for s in b.rstrip().replace("\n","").split()]
-            metric=parsed_data['atomic_positions_units']
-            if metric not in ['alat','bohr','angstrom']:
-                raise QEOutputParsingError('Error parsing tag {}'.format(tagname) + \
-                                           ' inside {}'.format(target_tags.tagName) )
-            if metric=='alat':
-                tau = [ parsed_data['lattice_parameter_xml']*float(s) for s in tau ]
-            elif metric=='bohr':
-                tau = [ bohr_to_ang*float(s) for s in tau ]
-            atomlist.append([chem_symbol,tau])
-            tagname2='if_pos'
-            b=a.getAttribute(tagname2)
-            if_pos=[int(s) for s in b.rstrip().replace("\n","").split()]
-            atoms_if_pos_list.append(if_pos)
-            
-        parsed_data['atoms']=atomlist
-        parsed_data['atoms_index_list'] = atoms_index_list
-        parsed_data['atoms_if_pos_list'] = atoms_if_pos_list
-        # NOTE: saving a bunch of data together to have an object analogous
-        # to the AiiDA cell object
-        cell = {}
-        cell['lattice_vectors'] = lattice_vectors
-        cell['volume'] = volume
-        cell['atoms'] = atomlist
-        cell['tagslist'] = tagslist
-        parsed_data['cell'] = cell
-    except Exception:
-        import traceback
-        traceback.print_exc()
-        raise QEOutputParsingError('Error parsing tag ATOM.# inside' + \
-                                   ' {}.'.format(target_tags.tagName) )
+    parsed_data = copy.deepcopy(xml_card_ions(parsed_data,dom,lattice_vectors,volume))
     
     # CARD ELECTRIC_FIELD
 
@@ -557,59 +730,11 @@ def parse_pw_xml_output(data,dir_with_bands=None):
         parsed_data[tagname.lower()]=parse_xml_child_float(tagname,target_tags)
 
     # CARD PLANE_WAVES
-
-    cardname='PLANE_WAVES'
-    target_tags=read_xml_card(dom,cardname)
-
-    tagname='UNITS_FOR_CUTOFF'
-    attrname='UNITS'
-    parsed_data['cutoff_units']=parse_xml_child_attribute_str(tagname,attrname,target_tags)
-
-    tagname='WFC_CUTOFF'
-    parsed_data[tagname.lower()]=parse_xml_child_float(tagname,target_tags)
-
-    tagname='RHO_CUTOFF'
-    parsed_data[tagname.lower()]=parse_xml_child_float(tagname,target_tags)
-
-#    tagname='MAX_NUMBER_OF_GK-VECTORS'
-#    parsed_data[tagname.replace('-','_').lower()]=parse_xml_child_integer(tagname,target_tags)
-
-    tagname='FFT_GRID'
-    fft_grid=[]
-    attrname='nr1'
-    fft_grid.append(parse_xml_child_attribute_int(tagname,attrname,target_tags))
-    attrname='nr2'
-    fft_grid.append(parse_xml_child_attribute_int(tagname,attrname,target_tags))
-    attrname='nr3'
-    fft_grid.append(parse_xml_child_attribute_int(tagname,attrname,target_tags))
-    parsed_data[tagname.lower()]=fft_grid
-
-    tagname='SMOOTH_FFT_GRID'
-    fft_grid=[]
-    attrname='nr1s'
-    fft_grid.append(parse_xml_child_attribute_int(tagname,attrname,target_tags))
-    attrname='nr2s'
-    fft_grid.append(parse_xml_child_attribute_int(tagname,attrname,target_tags))
-    attrname='nr3s'
-    fft_grid.append(parse_xml_child_attribute_int(tagname,attrname,target_tags))
-    parsed_data[tagname.lower()]=fft_grid
-
+    parsed_data = copy.deepcopy(xml_card_planewaves(parsed_data,dom,'pw'))
+    
     # CARD SPIN
 
-    cardname='SPIN'
-    target_tags=read_xml_card(dom,cardname)
-
-    tagname='LSDA'
-    parsed_data[tagname.lower()]=parse_xml_child_bool(tagname,target_tags)
-
-    tagname='NON-COLINEAR_CALCULATION'
-    parsed_data[tagname.replace('-','_').lower()]=parse_xml_child_bool(tagname,target_tags)
-
-    tagname='SPIN-ORBIT_CALCULATION'
-    parsed_data[tagname.replace('-','_').lower()]=parse_xml_child_bool(tagname,target_tags)
-
-    tagname='SPIN-ORBIT_DOMAG'
-    parsed_data[tagname.replace('-','_').lower()]=parse_xml_child_bool(tagname,target_tags)
+    parsed_data = copy.deepcopy(xml_card_spin(parsed_data,dom))
 
     # CARD BRILLOUIN ZONE
     
@@ -965,76 +1090,7 @@ def parse_pw_xml_output(data,dir_with_bands=None):
         raise QEOutputParsingError('Error parsing card {}.'.format(tagname)) 
     
     # CARD EXCHANGE_CORRELATION
-    
-    cardname='EXCHANGE_CORRELATION'
-    target_tags=read_xml_card(dom,cardname)
-
-    tagname='DFT'
-    parsed_data[(tagname+'_exchange_correlation').lower()] = \
-        parse_xml_child_str(tagname,target_tags)
-
-    tagname='LDA_PLUS_U_CALCULATION'
-    parsed_data[tagname.lower()] = parse_xml_child_bool(tagname,target_tags)
-    
-    if parsed_data[tagname.lower()]: # if it is a plus U calculation, I expect more infos
-        tagname = 'HUBBARD_L'
-        try:
-            a = target_tags.getElementsByTagName(tagname)[0]
-            b = a.childNodes[0]
-            c = b.data.replace('\n','').split()
-            value = [int(i) for i in c]
-            parsed_data[tagname.replace('-','_').lower()]=value
-        except Exception:
-            raise QEOutputParsingError('Error parsing tag '+\
-                                       '{} inside {}.'.format(tagname, target_tags.tagName) )
-        
-        for tagname in ['HUBBARD_U','HUBBARD_ALPHA','HUBBARD_BETA','HUBBARD_J0']:
-            try:
-                a = target_tags.getElementsByTagName(tagname)[0]
-                b = a.childNodes[0]
-                c = b.data.replace('\n',' ').split() # note the need of a white space!
-                value = [float(i)*ry_to_ev for i in c]
-                parsed_data[tagname.replace('-','_').lower()]=value
-            except Exception:
-                raise QEOutputParsingError('Error parsing tag '+\
-                                           '{} inside {}.'.format(tagname, target_tags.tagName))
-        
-        tagname = 'LDA_PLUS_U_KIND'
-        try:
-            parsed_data[tagname.lower()] = parse_xml_child_integer(tagname,target_tags)
-        except Exception:
-            pass
-
-        tagname = 'U_PROJECTION_TYPE'
-        try:
-            parsed_data[tagname.lower()] = \
-                parse_xml_child_attribute_str(tagname,attrname,target_tags)
-        except Exception:
-            pass
-
-        tagname = 'HUBBARD_J'
-        try:
-            a=target_tags.getElementsByTagName(tagname)[0]
-            b=a.childNodes[0]
-            c=b.data.replace('\n','').split()
-            value=[]
-            list_of_3 = []
-            for i in range(len(c)):
-                list_of_3.append(float(c[i]))
-                if (i+1)%3 == 0:
-                    value.append(list_of_3)
-                    list_of_3=[]
-
-            parsed_data[tagname.replace('-','_').lower()]=value
-        except Exception:
-            pass
-    
-    try:
-        tagname='NON_LOCAL_DF'
-        parsed_data[tagname.lower()] = parse_xml_child_integer(tagname,target_tags)
-    except Exception:
-        pass
-        # print >> sys.stderr, 'Skipping non-local df...'
+    parsed_data = copy.deepcopy(xml_card_exchangecorrelation(parsed_data,dom))
 
     return parsed_data
  
@@ -1463,6 +1519,10 @@ def parse_pw_text_output(data, xml_data):
             warning='SCF correction compared to forces is too large, reduce conv_thr'
             parsed_data['warnings'].append(warning)
             
+        elif 'incommensurate with FFT grid' in line:
+            warning='incommensurate FFT: some symmetries are lost'
+            parsed_data['warnings'].append(warning)
+
         elif 'Warning:' in line:
             parsed_data['warnings'].append(str(line))
     

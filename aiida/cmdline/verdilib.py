@@ -23,6 +23,7 @@ from aiida.cmdline.baseclass import VerdiCommand
 ## used as a command-line parameter
 from aiida.cmdline.commands.daemon import Daemon
 from aiida.cmdline.commands.computer import Computer
+from aiida.cmdline.commands.code import Code
 
 # default execname; can be substituted later in the call from
 # exec_from_cmdline

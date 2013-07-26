@@ -1,6 +1,14 @@
 #!/usr/bin/env python
 import sys
 import os
+import paramiko
+import getpass
+
+try:
+    computername = sys.argv[1]
+except IndexError:
+    print >> sys.stderr, "Pass the computer name."
+    sys.exit(1)
 
 from aiida.common.utils import load_django
 load_django()
@@ -10,72 +18,60 @@ import logging
 from aiida.common.exceptions import NotExistent
 aiidalogger.setLevel(logging.INFO)
 
-from aiida.orm import Code
+from aiida.orm import Code, Computer
+from aiida.djsite.utils import get_automatic_user
 from aiida.orm import CalculationFactory, DataFactory
-from aiida.djsite.db.models import Group
+
 UpfData = DataFactory('upf')
 ParameterData = DataFactory('parameter')
 StructureData = DataFactory('structure')
 
-################################################################
-
-try:
-    codename = sys.argv[1]
-except IndexError:
-    codename = None
-
 # If True, load the pseudos from the family specified below
 # Otherwise, use static files provided
-expected_exec_name='pw.x'
 auto_pseudos = True
+pseudo_family = 'pslib030-pbesol-rrkjus'
 
 queue = None
 #queue = "P_share_queue"
-     
-#####
 
-try:
-    if codename is None:
-        raise ValueError
-    code = Code.get(codename)
-    if not code.get_remote_exec_path().endswith('pw.x'):
-        raise ValueError
-except (NotExistent, ValueError):
-    valid_code_labels = [c.label for c in Code.query(
-            attributes__key="_remote_exec_path",
-            attributes__tval__endswith="/{}".format(expected_exec_name))]
-    if valid_code_labels:
-        print >> sys.stderr, "Pass as first parameter a valid code label."
-        print >> sys.stderr, "Valid labels with a {} executable are:".format(expected_exec_name)
-        for l in valid_code_labels:
-            print >> sys.stderr, "*", l
+
+def get_or_create_code(computer):
+    if computer.hostname.startswith("aries"):
+        code_path = "/home/cepellot/software/espresso-5.0.2/bin/cp.x"
+        code_version = "5.0.2"
+        prepend_text = 'module load intel/mpi/4.0.3 intel/12.1.2'
+    elif computer.hostname.startswith("rosa"):
+        code_path = "/project/s337/espresso-svn/bin/cp.x"
+        code_version = "5.0.2"
+        prepend_text = ''        
     else:
-        print >> sys.stderr, "Code not valid, and no valid codes for pw.x. Configure at least one first using"
-        print >> sys.stderr, "    verdi code setup"
-    sys.exit(1)
+        raise ValueError("Only aries and rosa are supported at the moment.")
 
-if auto_pseudos:
-    valid_pseudo_groups = Group.objects.filter(dbnodes__type__contains='.upf.').distinct().values_list('name',flat=True)
+    
+    useful_codes = Code.query(computer=computer.dbcomputer,
+                              attributes__key="_remote_exec_path",
+                              attributes__tval=code_path).filter(
+                                  attributes__key="version", attributes__tval=code_version)
 
-    try:
-        pseudo_family = sys.argv[2]
-    except IndexError:
-        print >> sys.stderr, "Error, auto_pseudos set to True. You therefore need to pass as second parameter"
-        print >> sys.stderr, "the pseudo family name."
-        print >> sys.stderr, "Valid groups containing at least one UPFData object are:"
-        print >> sys.stderr, "\n".join("* {}".format(i) for i in valid_pseudo_groups)
-        sys.exit(1)
+    if not(useful_codes):
+        print >> sys.stderr, "Creating the code..."
+        code = Code(remote_computer_exec=(computer, code_path))
+        code.set_prepend_text(prepend_text)
+        code.store()
+        code.set_metadata("version", code_version)
+        return code
+    
+    elif len(useful_codes) == 1:
+        print >> sys.stderr, "Using the existing code {}...".format(useful_codes[0].pk)
+        return useful_codes[0]
+    else:
+        raise ValueError("More than one valid code!")
         
 
-    if not Group.objects.filter(name=pseudo_family):
-        print >> sys.stderr, "auto_pseudos is set to True and pseudo_family='{}',".format(pseudo_family)
-        print >> sys.stderr, "but no group with such a name found in the DB."
-        print >> sys.stderr, "Valid groups containing at least one UPFData object are:"
-        print >> sys.stderr, ",".join(valid_pseudo_groups)
-        sys.exit(1)
+#####
 
-
-computer = code.get_remote_computer()
+computer = Computer.get(computername)
+code = get_or_create_code(computer)
 
 if computer.hostname.startswith("aries"):
     num_cpus_per_machine = 48
@@ -102,24 +98,34 @@ s.store()
 
 parameters = ParameterData({
             'CONTROL': {
-                'calculation': 'scf',
+                'calculation': 'cp',
                 'restart_mode': 'from_scratch',
-                'wf_collect': True,
+                'wf_collect': False,
+                'iprint': 1,
+                'isave': 100,
+                'dt': 3.,
+                'max_seconds': 25*60,
+                'nstep': 10,
                 },
             'SYSTEM': {
                 'ecutwfc': 30.,
                 'ecutrho': 240.,
+                'nr1b': 24,
+                'nr2b': 24,
+                'nr3b': 24,
                 },
             'ELECTRONS': {
-                'conv_thr': 1.e-6,
-                }}).store()
+                'electron_damping': 1.e-1,
+                'electron_dynamics': 'damp', 
+                'emass': 400.,
+                'emass_cutoff': 3.,
+                },
+            'IONS': {
+                'ion_dynamics': 'none',
+            }}).store()
                 
-kpoints = ParameterData({
-                'type': 'automatic',
-                'points': [4, 4, 4, 0, 0, 0],
-                }).store()
 
-QECalc = CalculationFactory('quantumespresso.pw')
+QECalc = CalculationFactory('quantumespresso.cp')
 calc = QECalc(computer=computer)
 calc.set_max_wallclock_seconds(30*60) # 30 min
 calc.set_resources(num_machines=1, num_cpus_per_machine=num_cpus_per_machine)
@@ -162,7 +168,6 @@ else:
     for k, v in pseudos_to_use.iteritems():
         calc.use_pseudo(v, kind=k)
 
-calc.use_kpoints(kpoints)
 #calc.use_settings(settings)
 #from aiida.orm.data.remote import RemoteData
 #calc.set_outdir(remotedata)

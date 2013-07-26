@@ -301,7 +301,7 @@ class Workflow(object):
         from aiida.common.datastructures import calc_states
         
         for c in self.dbworkflowinstance.steps.get(name=stepname).get_calculations():
-            c._set_state(calc_states.RETRIEVED)
+            c._set_state(calc_states.FINISHED)
 
 
 

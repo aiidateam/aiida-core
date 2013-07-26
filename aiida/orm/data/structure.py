@@ -1108,6 +1108,19 @@ class Kind(object):
         self._weights = weights_tuple
 
     @property
+    def symbol(self):
+        """
+        If the kind has only one symbol, return it; otherwise, raise a
+        ValueError.
+        """
+        if len(self._symbols) == 1:
+            return self._symbols[0]
+        else:
+            raise ValueError("This kind has more than one symbol (it is an "
+                             "alloy): {}".format(self._symbols))
+
+
+    @property
     def symbols(self):
         """
         List of symbols for this site. If the site is a single atom,

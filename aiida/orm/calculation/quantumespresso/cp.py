@@ -21,23 +21,32 @@ from aiida.orm.calculation.quantumespresso import BasePwCpInputGenerator
 
 ParameterData = DataFactory('parameter')
   
-class PwCalculation(BasePwCpInputGenerator, Calculation):   
+class CpCalculation(BasePwCpInputGenerator, Calculation):   
+
+    _cp_unit_number = 50
 
     DATAFILE_XML = os.path.join(BasePwCpInputGenerator.OUTPUT_SUBFOLDER, 
-                               '{}.save'.format(BasePwCpInputGenerator.PREFIX), 
+                               '{}_{}.save'.format(BasePwCpInputGenerator.PREFIX,
+                                                   _cp_unit_number), 
                                BasePwCpInputGenerator.DATAFILE_XML_BASENAME)
 
+    FILE_XML_PRINT_COUNTER_BASENAME = 'print_counter.xml'
+    FILE_XML_PRINT_COUNTER = os.path.join(BasePwCpInputGenerator.OUTPUT_SUBFOLDER, 
+                               '{}_{}.save'.format(BasePwCpInputGenerator.PREFIX,
+                                                   _cp_unit_number), 
+                                          FILE_XML_PRINT_COUNTER_BASENAME)
+
     # Default PW output parser provided by AiiDA
-    _default_parser = 'quantumespresso.pw'
+    _default_parser = 'quantumespresso.cp'
     
     _automatic_namelists = {
         'scf':   ['CONTROL', 'SYSTEM', 'ELECTRONS'],
         'nscf':  ['CONTROL', 'SYSTEM', 'ELECTRONS'],
-        'bands': ['CONTROL', 'SYSTEM', 'ELECTRONS'],
         'relax': ['CONTROL', 'SYSTEM', 'ELECTRONS', 'IONS'],
-        'md':    ['CONTROL', 'SYSTEM', 'ELECTRONS', 'IONS'],
-        'vc-md':    ['CONTROL', 'SYSTEM', 'ELECTRONS', 'IONS', 'CELL'],
+        'cp':    ['CONTROL', 'SYSTEM', 'ELECTRONS', 'IONS'],
+        'vc-cp':    ['CONTROL', 'SYSTEM', 'ELECTRONS', 'IONS', 'CELL'],
         'vc-relax': ['CONTROL', 'SYSTEM', 'ELECTRONS', 'IONS', 'CELL'],
+        'vc-wf': ['CONTROL', 'SYSTEM', 'ELECTRONS', 'WANNIER'],
         }
 
     # Keywords that cannot be set
@@ -50,22 +59,18 @@ class PwCalculation(BasePwCpInputGenerator, Calculation):
          ('SYSTEM', 'ntyp'),  # set later
          ('SYSTEM', 'a'), ('SYSTEM', 'b'), ('SYSTEM', 'c'),
          ('SYSTEM', 'cosab'), ('SYSTEM', 'cosac'), ('SYSTEM', 'cosbc'),
+         ('CONTROL', 'ndr', _cp_unit_number),
+         ('CONTROL', 'ndw', _cp_unit_number),
     ]
     
-    _use_kpoints = True
+    _use_kpoints = False
     
-
-    def use_kpoints(self, data):
-        """
-        Set the kpoints for this calculation
-        """
-        if not isinstance(data, ParameterData):
-            raise ValueError("The data must be an instance of the ParameterData class")
-
-        self.replace_link_from(data, self.get_linkname_kpoints())
-
-    def get_linkname_kpoints(self):
-        """
-        The name of the link used for the kpoints
-        """
-        return "kpoints"
+    _cp_ext_list = ['cel', 'con', 'eig', 'evp', 'for', 'nos', 'pol', 
+                    'pos', 'spr', 'str', 'the', 'vel', 'wfc']
+    
+    # I retrieve them all, even if I don't parse all of them
+    _internal_retrieve_list = [os.path.join(
+                                 BasePwCpInputGenerator.OUTPUT_SUBFOLDER, 
+                                 '{}.{}'.format(BasePwCpInputGenerator.PREFIX,
+                                 ext)) for ext in _cp_ext_list]
+    _internal_retrieve_list += [FILE_XML_PRINT_COUNTER]

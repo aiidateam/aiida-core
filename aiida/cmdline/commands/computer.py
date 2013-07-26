@@ -7,7 +7,7 @@ class Computer(VerdiCommand):
     """
     Manage computers to be used.
 
-    This command allows to list, add 
+    This command allows to list, add, modify and configure computers.
     """
     def __init__(self):
         """
@@ -289,12 +289,12 @@ class Computer(VerdiCommand):
         from aiida.djsite.utils import get_automatic_user
         from aiida.djsite.db.models import AuthInfo
 
-        
-        try:
-            computername = args[0]
-        except IndexError:
-            print >> sys.stderr, "Pass as parameters the old and the new name"
+        if len(args) != 1:
+            print >> sys.stderr, ("after 'computer configure' there should be one "
+                                  "argument only, being the computer name.")
             sys.exit(1)
+        
+        computername = args[0]
             
         try:
             computer = self.get_computer(name=computername)
@@ -393,12 +393,13 @@ class Computer(VerdiCommand):
         from aiida.common.exceptions import (
             NotExistent, InvalidOperation)
         from aiida.orm.computer import delete_computer
-        
-        try:
-            computername = args[0]
-        except IndexError:
-            print >> sys.stderr, "Pass as parameters the old and the new name"
+
+        if len(args) != 1:
+            print >> sys.stderr, ("after 'computer delete' there should be one "
+                                  "argument only, being the computer name.")
             sys.exit(1)
+        
+        computername = args[0]
             
         try:
             computer = self.get_computer(name=computername)

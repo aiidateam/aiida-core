@@ -1,6 +1,6 @@
-from aiida.common.exceptions import ValidationError
+from aiida.common.exceptions import ValidationError, ParsingError
 
-class OutputParsingError(ValidationError):
+class OutputParsingError(ParsingError):
     pass
 
 class FailedJobError(ValidationError):

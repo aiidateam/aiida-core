@@ -488,7 +488,7 @@ class DbWorkflow(m.Model):
 
         calc_status = self.get_calculations().filter(attributes__key="_state").values_list("uuid", "attributes__tval")
         s = set([l[1] for l in calc_status])
-        if len(s)==1 and calc_states.RETRIEVED in s:
+        if len(s)==1 and calc_states.FINISHED in s:
             return wf_states.FINISHED
         else: 
             return wf_states.RUNNING
@@ -580,7 +580,7 @@ class DbWorkflowStep(m.Model):
                 print "Calculation {0} is {1}".format(c[0], c[1])
                 
         s = set([l[1] for l in calc_status])
-        if len(s)==1 and calc_states.RETRIEVED in s:
+        if len(s)==1 and calc_states.FINISHED in s:
             return wf_states.FINISHED
         else: 
             return wf_states.RUNNING

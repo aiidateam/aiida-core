@@ -28,7 +28,7 @@ class Code(Node):
                 specified
             local_executable: a filename of the file that should be set as local executable
             files: a list of files to be added to this Code node; pass absolute paths here, and
-                files will be copied within this node. This can be used also if you specify
+                files will be copied within this node. 
             remote_computer_exec: a list or tuple of length 2 with (computer, remote_exec_path)
                 as accepted by the set_remote_computer_exec() method.
         """
@@ -68,6 +68,24 @@ class Code(Node):
 
         if kwargs:
             raise ValueError("Invalid parameters found in the __init__: {}".format(kwargs.keys()))
+
+    @classmethod
+    def get(cls,label):
+        """
+        Get a code from its label. Raises NotExistent or MultipleObjectsError in
+        case of zero or multiple matches.
+        """
+        from aiida.common.exceptions import NotExistent, MultipleObjectsError
+        
+        valid_codes = list(cls.query(label=label))
+        if len(valid_codes) == 0:
+            raise NotExistent("No code in the DB with name '{}'".format(label))
+        elif len(valid_codes) > 1:
+            raise MultipleObjectsError("More than one code in the DB with name "
+                                       "'{}', please rename at least one of "
+                                       "them".format(label))
+        else:
+            return valid_codes[0]
 
     def validate(self):
         from aiida.common.exceptions import ValidationError
@@ -257,4 +275,77 @@ class Code(Node):
             return u"./{}".format(self.get_local_executable())
         else:
             return self.get_remote_exec_path()
+
+    @property
+    def full_text_info(self):
+        """
+        Return a (multiline) string with a human-readable detailed information
+        on this computer.
+        """
+        
+        ret_lines = []
+        ret_lines.append(" * PK:             {}".format(self.pk))
+        ret_lines.append(" * UUID:           {}".format(self.uuid))
+        ret_lines.append(" * Label:          {}".format(self.label))
+        ret_lines.append(" * Description:    {}".format(self.description))
+        ret_lines.append(" * Used by:        {} calculations".format(
+             len(self.get_outputs())))
+        if self.is_local():
+            ret_lines.append(" * Type:           {}".format("local"))
+            ret_lines.append(" * Exec name:      {}".format(self.get_execname()))
+            ret_lines.append(" * List of files/folders:")
+            for fname in self.path_subfolder.get_content_list():
+                ret_lines.append("   * [{}] {}".format(" dir" if
+                    self.path_subfolder.isdir(fname) else "file", fname))
+        else:
+            ret_lines.append(" * Type:           {}".format("remote"))
+            ret_lines.append(" * Remote machine: {}".format(
+                self.get_remote_computer().name))
+            ret_lines.append(" * Remote absolute path: ")
+            ret_lines.append("   " + self.get_remote_exec_path())
+        
+        ret_lines.append(" * prepend text:")
+        if self.get_prepend_text().strip():
+            for l in self.get_prepend_text().split('\n'):
+                ret_lines.append("   {}".format(l))
+        else:
+            ret_lines.append("   # No prepend text.")
+        ret_lines.append(" * append text:")
+        if self.get_append_text().strip():
+            for l in self.get_append_text().split('\n'):
+                ret_lines.append("   {}".format(l))
+        else:
+            ret_lines.append("   # No append text.")
+
+        return "\n".join(ret_lines)
+    
+def delete_code(code):
+    """
+    Delete a code from the DB. 
+    Check before that there are no output nodes. 
+    
+    NOTE! Not thread safe... Do not use with many users accessing the DB
+    at the same time.
+    
+    Implemented as a function on purpose, otherwise complicated logic would be
+    needed to set the internal state of the object after calling 
+    computer.delete(). 
+    """
+    from django.db import transaction
+    from aiida.common.exceptions import InvalidOperation
+    if not isinstance(code, Code):
+        raise TypeError("code must be an instance of "
+                        "aiida.orm.computer.Code")
+
+    existing_outputs = code.get_outputs()
+
+    if len(existing_outputs) != 0:    
+        raise InvalidOperation("Unable to delete the requested code because it "
+                               "has {} output links".format(
+                                len(existing_outputs)))
+    else:
+        repo_folder = code.repo_folder
+        with transaction.commit_on_success():
+            code.dbnode.delete()
+            repo_folder.erase()
 

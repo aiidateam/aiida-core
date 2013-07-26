@@ -828,6 +828,14 @@ class TestNodeBasic(AiidaTestCase):
         # I check that the counter was not incremented
         self.assertEquals(a.dbnode.nodeversion, 3)
 
+        # In both cases, the node version must increase
+        a.label = 'test'
+        self.assertEquals(a.dbnode.nodeversion, 4)
+
+        a.description = 'test description'
+        self.assertEquals(a.dbnode.nodeversion, 5)
+
+
         b = a.copy()
         # updatable attributes are not copied
         with self.assertRaises(AttributeError):

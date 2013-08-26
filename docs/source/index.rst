@@ -4,14 +4,13 @@
    contain the root `toctree` directive.
 
 Welcome to aiida's documentation!
-================================
+=================================
 
 Contents:
 
 .. toctree::
    :maxdepth: 2
 
-   jobmanager/index
    common/index
    transport/index
    scheduler/index
@@ -21,7 +20,7 @@ Contents:
    orm/index
 
    Installation and Deployment [OUTDATED] <installation> 
-   aiida.common Modules [OUTDATED] <aiida.common>
+   aiida.common Modules [OUTDATED] <common/index>
    Developer's Guide <developers> 
 
 
@@ -33,9 +32,8 @@ Indices and tables
 * :ref:`search`
 
 Modules provided with aiida
-++++++++++++++++++++++++++
++++++++++++++++++++++++++++
 
-* :doc:`aiida.jobmanager <jobmanager/index>` module
 * :doc:`aiida.common <common/index>` module
 * :doc:`aiida.transport <transport/index>` module
 * :doc:`aiida.scheduler <scheduler/index>` module

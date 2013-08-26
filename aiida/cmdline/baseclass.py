@@ -4,6 +4,10 @@ class VerdiCommand(object):
     """
     @classmethod
     def get_command_name(cls):
+        """
+        Return the name of the verdi command associated to this
+        class. By default, the lower-case version of the class name.
+        """
         return cls.__name__.lower()
     
     def run(self,*args):

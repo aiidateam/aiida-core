@@ -1,9 +1,9 @@
-##########################
+###########################
 Developer's Guide For AiiDA
-##########################
+###########################
 
 Python style
-+++++++
+++++++++++++
 When writing python code, a more than reasonable guideline is given by
 the Google python styleguide
 http://google-styleguide.googlecode.com/svn/trunk/pyguide.html.

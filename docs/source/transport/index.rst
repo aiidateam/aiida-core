@@ -1,5 +1,5 @@
 aiida.transport documentation
-=========================
+=============================
 
 .. toctree::
    :maxdepth: 2
@@ -12,7 +12,7 @@ Every new plugin should possibly implement all these function for optimal compat
 A generic set of tests is contained in plugin_test.py, while plugin-specific tests have to be written in separate files.
 
 Generic transport class
---------
+-----------------------
 
 .. automodule:: aiida.transport.__init__
    :members:

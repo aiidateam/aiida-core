@@ -1,6 +1,6 @@
-==============================================
+====================================
 Installation and Deployment of AiiDA
-==============================================
+====================================
 
 1. Download the Community python edition of ActiveState Python from
 ActiveState_. Choose the appropiate distribution corresponding to your 
@@ -39,7 +39,7 @@ install ActiveState using :program:`install.sh`.
 
 
 Verdi install
-++++
++++++++++++++
 
 We need to install some basic packages::
 
@@ -102,7 +102,7 @@ Note that the DB (and repository folder) used for the tests are different; in pa
 Typing verdi test will run the entire suite of tests.
 
 Further notes
-^^^^
+^^^^^^^^^^^^^
 
 * For some reasons, on some machines (often Mac OS X) there is no
   default locale defined, and when you run verdi syncdb for the first
@@ -128,5 +128,5 @@ Further notes
 
 
 Temporarily disabled
-^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^
 Run (in the main folder) verdi migrate to apply south migrations to our djsite.db.models tables.

@@ -1,5 +1,5 @@
 aiida.common documentation
-=========================
+==========================
 
 .. toctree::
    :maxdepth: 2
@@ -7,7 +7,7 @@ aiida.common documentation
 .. automodule:: aiida.common
 
 Calculation datastructures
-+++++++++++++++++++++++++
+++++++++++++++++++++++++++
 .. automodule:: aiida.common.datastructures
    :members:
 
@@ -22,22 +22,22 @@ Exceptions
    :members:
 
 Extended dictionaries
-++++++++++++++
++++++++++++++++++++++
 .. automodule:: aiida.common.extendeddicts
    :members:
 
 Folders
-++++++++++
++++++++
 .. automodule:: aiida.common.folders
    :members:
 
 Plugin loaders
-++++++++++
+++++++++++++++
 .. automodule:: aiida.common.pluginloader
    :members:
 
 Utilities
-++++++++++
++++++++++
 .. automodule:: aiida.common.utils
    :members:
 

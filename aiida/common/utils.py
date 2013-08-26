@@ -59,10 +59,14 @@ def escape_for_bash(str_to_escape):
     quotes. Therefore, the only thing that I have to escape in bash is the
     single quote character. To do this, I substitute every single
     quote ' with '"'"' which means:
-                 12345
-    1: exit from the enclosing single quotes
-    234: "'" is a single quote character, escaped by double quotes
-    5: reopen the single quote to continue the string
+                 
+    First single quote: exit from the enclosing single quotes
+
+    Second, third and fourth character: "'" is a single quote character,
+    escaped by double quotes
+    
+    Last single quote: reopen the single quote to continue the string
+
     Finally, note that for python I have to enclose the string '"'"'
     within triple quotes to make it work, getting finally: the complicated
     string found below.
@@ -100,8 +104,10 @@ def get_suggestion(provided_string,allowed_strings):
 def validate_list_of_string_tuples(val, tuple_length):
     """
     Check that:
-    1. val is a list or tuple
+
+    1. ``val`` is a list or tuple
     2. each element of the list:
+
       a. is a list or tuple
       b. is of length equal to the parameter tuple_length
       c. each of the two elements is a string
@@ -125,7 +131,7 @@ def validate_list_of_string_tuples(val, tuple_length):
 
 def conv_to_fortran(val):
     """
-    val: the value to be read and converted to a Fortran-friendly string.
+    :param val: the value to be read and converted to a Fortran-friendly string.
     """   
     # Note that bool should come before integer, because a boolean matches also
     # isinstance(...,int)
@@ -154,13 +160,12 @@ def get_unique_filename(filename, list_of_filenames):
     string itself. Otherwise, it appends a integer number to the filename
     (before the extension) until it finds a unique filename.
 
-    Args:
-        filename: the filename to add
-        list_of_filenames: the list of filenames to which filename
-            should be added, without name duplicates
-    Returns:
-        Either filename or its modification, with a number appended between
-        the name and the extension.
+    :param filename: the filename to add
+    :param list_of_filenames: the list of filenames to which filename
+        should be added, without name duplicates
+    
+    :returns: Either filename or its modification, with a number appended
+        between the name and the extension.
     """
     if filename not in list_of_filenames:
         return filename
@@ -180,18 +185,15 @@ def md5_file(filename, block_size_factor=128):
     """
     Open a file and return its md5sum (hexdigested).
 
-    Args:
-        filename: the filename of the file for which we want the md5sum
-        block_size_factor: the file is read at chunks of size
-            block_size_factor * md5.block_size,
-        where md5.block_size is the block_size used internally by the
+    :param filename: the filename of the file for which we want the md5sum
+    :param block_size_factor: the file is read at chunks of size
+        ``block_size_factor * md5.block_size``,
+        where ``md5.block_size`` is the block_size used internally by the
         hashlib module.
 
-    Returns:
-        a string with the hexdigest md5.
+    :returns: a string with the hexdigest md5.
 
-    Raises:
-        No checks are done on the file, so if it doesn't exists it may
+    :raises: No checks are done on the file, so if it doesn't exists it may
         raise IOError.
     """
     import hashlib

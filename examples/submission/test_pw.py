@@ -38,7 +38,7 @@ try:
     if codename is None:
         raise ValueError
     code = Code.get(codename)
-    if not code.get_remote_exec_path().endswith('pw.x'):
+    if not code.get_remote_exec_path().endswith(expected_exec_name):
         raise ValueError
 except (NotExistent, ValueError):
     valid_code_labels = [c.label for c in Code.query(
@@ -50,7 +50,7 @@ except (NotExistent, ValueError):
         for l in valid_code_labels:
             print >> sys.stderr, "*", l
     else:
-        print >> sys.stderr, "Code not valid, and no valid codes for pw.x. Configure at least one first using"
+        print >> sys.stderr, "Code not valid, and no valid codes for {}. Configure at least one first using".format(expected_exec_name)
         print >> sys.stderr, "    verdi code setup"
     sys.exit(1)
 
@@ -81,6 +81,8 @@ if computer.hostname.startswith("aries"):
     num_cpus_per_machine = 48
 elif computer.hostname.startswith("rosa"):
     num_cpus_per_machine = 32
+elif computer.hostname.startswith("bellatrix"):
+    num_cpus_per_machine = 16
 else:
     raise ValueError("num_cpus_per_machine not specified for the current machine")
 

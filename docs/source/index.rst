@@ -11,6 +11,7 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
+   examples/pw_tutorial
    common/index
    transport/index
    scheduler/index

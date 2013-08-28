@@ -318,7 +318,9 @@ def submit_calc(calc):
             job_tmpl.stdout_name = calcinfo.stdout_name
             job_tmpl.stderr_name = calcinfo.stderr_name
             job_tmpl.join_files = calcinfo.join_files
-
+            
+            job_tmpl.import_sys_environment = calc.get_import_sys_environment()
+            
             queue_name = calc.get_queue_name()
             if queue_name is not None:
                 job_tmpl.queue_name = queue_name

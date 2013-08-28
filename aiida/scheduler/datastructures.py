@@ -254,6 +254,7 @@ class JobTemplate(DefaultFieldsAttributeDict):
           for stdout.
       * append_text: a (possibly multi-line) string to be inserted 
           in the scheduler script after the main execution line
+      * import_sys_environment: import the system environment variables
     * TODO: validation? also call the validate function in the proper
           place then.
     """
@@ -283,6 +284,7 @@ class JobTemplate(DefaultFieldsAttributeDict):
         'stdout_name',
         'stderr_name',
         'join_files',
+        'import_sys_environment',
         )
  
 

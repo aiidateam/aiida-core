@@ -9,7 +9,7 @@ def import_cif(fname):
     import ase.io
     import aiida.orm.data.structure as struct
     
-    ase_s = ase.io.read("icsd_246817.cif", format="cif")
+    ase_s = ase.io.read(fname, format="cif")
     s = struct.StructureData(ase=ase_s)
     s.store()
     s.add_comment("Origin: "+fname)

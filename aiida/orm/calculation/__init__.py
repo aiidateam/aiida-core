@@ -184,6 +184,12 @@ class Calculation(Node):
     def set_queue_name(self,val):
         self.set_attr('queue_name',unicode(val))
 
+    def set_import_sys_environment(self,val):
+        self.set_attr('import_sys_environment',bool(val))
+
+    def get_import_sys_environment(self):
+        return self.get_attr('import_sys_environment',True)
+                
     def set_priority(self,val):
         self.set_attr('priority',unicode(val))
     

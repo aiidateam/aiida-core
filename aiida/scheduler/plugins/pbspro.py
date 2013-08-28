@@ -163,6 +163,9 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
             
             lines.append("#PBS -N {}".format(job_title))
             
+        if job_tmpl.import_sys_environment:
+            lines.append("#PBS -V")
+            
         if job_tmpl.sched_output_path:
             lines.append("#PBS -o {}".format(job_tmpl.sched_output_path))
 

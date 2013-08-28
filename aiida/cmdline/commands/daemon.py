@@ -11,8 +11,8 @@ aiida_dir = os.path.expanduser("~/.aiida")
 
 class Daemon(VerdiCommand):
     """
-    Manage the aiida daemon.
-
+    Manage the AiiDA daemon
+    
     This command allows to interact with the AiiDA daemon.
     Valid subcommands are:
     * start: start the daemon
@@ -39,6 +39,9 @@ class Daemon(VerdiCommand):
             }
 
     def run(self,*args):       
+        """
+        Run the specified daemon subcommand.
+        """
         try:
             function_to_call = self.valid_subcommands.get(
                 args[0], self.invalid_subcommand)
@@ -48,6 +51,9 @@ class Daemon(VerdiCommand):
         function_to_call()
 
     def complete(self,subargs_idx, subargs):
+        """
+        Complete the daemon subcommand.
+        """
         if subargs_idx == 0:
             print "\n".join(self.valid_subcommands.keys())
         else:

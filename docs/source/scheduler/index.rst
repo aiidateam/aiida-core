@@ -2,6 +2,8 @@
 AiiDA schedulers
 ################
 
+.. _my-reference-to-scheduler:
+
 Supported schedulers
 ++++++++++++++++++++
 

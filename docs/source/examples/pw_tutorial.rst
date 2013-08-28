@@ -1,15 +1,17 @@
-PWscf user-tutorial
-=============
+Quantum Espresso PWscf user-tutorial
+====================================
 
 .. toctree::
    :maxdepth: 2
    
-This chapter will show how to launch a single PWscf calculation. It is assumed that you have already performed the installation, and that you already setup a computer and installed Quantum Espresso on the cluster. Although the code could be quite readable, a basic knowledge of Python and object programming is useful.
+This chapter will show how to launch a single PWscf (``pw.x``) calculation. It is assumed that you have already performed the installation, and that you already setup a computer (with ``verdi``), installed Quantum Espresso on the cluster and in AiiDA. Although the code could be quite readable, a basic knowledge of Python and object programming is useful.
 
-Your classic pw input file
---------------------------
+Your classic pw.x input file
+----------------------------
 
-This is the input file of Quantum Espresso that we will try to execute. It consists in the total energy calculation of a 5 atom cubic cell of BaTiO3. Note also that AiiDA is a tool to use other codes: if the following input is not clear to you, please refer to the Quantum Espresso Documentation.::
+This is the input file of Quantum Espresso that we will try to execute. It consists in the total energy calculation of a 5 atom cubic cell of BaTiO3. Note also that AiiDA is a tool to use other codes: if the following input is not clear to you, please refer to the Quantum Espresso Documentation.
+
+::
 
     &CONTROL
       calculation = 'scf'
@@ -54,6 +56,9 @@ Quantum Espresso Pw Walkthrough
 -------------------------------
 
 We've got to prepare a script to submit a job to your local installation of AiiDA.
+This example will be a rather long script: in fact there is still nothing in your database, so that we will have to load everything, like the pseudopotential files and the structure.
+In a more practical situation, you might load data from the database and perform small modification to re-use it.
+
 Let's say that through the ``verdi`` command you have already installed a cluster, say ``TheHive``, and that you also compiled Quantum Espresso on the cluster, and installed the code pw.x with ``verdi``, that we will call ``pw_on_TheHive``.
 
 Let's start writing the python script.
@@ -78,7 +83,19 @@ If you setup the code ``pw_on_TheHive`` correctly, then it is sufficient to writ
   code = Code.get(codename)
 
 Where in the last line we just load the database object representing the code.
-Anyway, this is not the way one should write code in Python! There are so many errors that could happen when trying to load this code... Therefore we rewrite this part, so that we 1) load the codename from the command line, 2) check if the codename is a valid string, 3) if we find a code, check that it is a pw.x file, as you should have from a standard QE distribution, 4) if exceptions are raised, try to interpret them and then stop smoothly::
+
+This is not a exception tolerant code: there are so many errors that could happen when trying to load this code... 
+It is not strictly necessary, but we can rewrite this part, so that we 
+
+1) load the codename from the command line, 
+
+2) check if the codename is a valid string, 
+
+3) if we find a code, check that it is a pw.x file, as you should have from a standard QE distribution, 
+
+4) if exceptions are raised, try to interpret them and then stop smoothly.
+
+::
 
   expected_exec_name='pw.x'
   try:
@@ -117,7 +134,7 @@ We now proceed in setting up the structure.
 We first have to load the abstract object class that describes a structure. 
 We do it in the following way: we load the DataFactory, which is a tool to load the classes by their name, and then call StructureData the abstract class that we loaded. 
 (NB: it's not yet a class instance!) 
-(If you are not familiar with the terminology of object programming, we could take Wikipedia and see their short explanation: in common speech that one refers to *a* file as a class, while *the* file is the object or the class instance. In other words, the class is our definition of the object Structure, while its instance is what will be saved as an object in the database)::
+(If you are not familiar with the terminology of object programming, we could take `Wikipedia <http://en.wikipedia.org/wiki/Object_(computer_science)>`_ and see their short explanation: in common speech that one refers to *a* file as a class, while *the* file is the object or the class instance. In other words, the class is our definition of the object Structure, while its instance is what will be saved as an object in the database)::
 
   from aiida.orm import DataFactory
   StructureData = DataFactory('structure')
@@ -210,6 +227,7 @@ Then, we load the abstract class QECalc with the CalculationFactory function (th
 
 We have to specify the details required by the scheduler.
 For example, on a slurm or pbs scheduler, we have to specify the number of nodes (``num_machines``), the number of cpus per node (``num_cpus_per_machine``), the job walltime, the queue name (if desired).
+For the complete scheduler documentation, see :ref:`my-reference-to-scheduler`
 
 ::
 
@@ -282,6 +300,9 @@ As the last step, we make a loop over the atomic species, and attach its pseudop
     for k, v in pseudos_to_use.iteritems():
         calc.use_pseudo(v, kind=k)
 
+In this example, we loaded the files directly from the hard disk. 
+For a more practical use, it is convenient to use the pseudopotential families: they are implemented in the full script at the end of the page.
+
 
 Execute
 -------
@@ -299,7 +320,9 @@ Everything else will be managed by AiiDA: the inputs will be checked to verify t
 
 
 
-If for example you want to check for the state of the calculation, you can execute a script like this one, where you just need to specify the uuid of the calculation under investigation (or use the id with .get_subclass_from_pk() )::
+If for example you want to check for the state of the calculation, you can execute a script like this one, where you just need to specify the id of the calculation under investigation (or use the uuid with ``.get_subclass_from_uuid()``, note that the id may change after a sync of two databases, while the uuid is a unique identifier)
+
+::
 
   import paramiko
 
@@ -309,7 +332,7 @@ If for example you want to check for the state of the calculation, you can execu
   from aiida.orm import CalculationFactory
 
   QECalc = CalculationFactory('quantumespresso.pw')
-  calc = QECalc.get_subclass_from_uuid('...............')
+  calc = QECalc.get_subclass_from_pk('...............')
   print calc.get_state()
 
 The calculation could be in several states.
@@ -332,15 +355,109 @@ You will be able to query the database for the energies that you computed!
 
 
 Script: source code
----------------------------
+-------------------
 
-This script is the object that we described in the previous tutorial.
-You can copy and paste it to start using it, executing by::
+In this section you'll find two scripts that do what explained in the tutorial.
+The compact is a script with a minimal configuration required
+You can copy and paste it to start using it, executing as::
 
-  python your_pw_codename
+  python your_pw_codename pseudo_family_name
 
-In addition to what the tutorial explained, there is also the possibility to use the pseudo code families, if you set auto_pseudos to True. In that case, execute it also passing the family name.
+It requires to have one family of pseudopotentials configured.
 
+You will also find a longer version, with more exception checks and with the possibility to load the pseudopotentials from hard disk.
+Note that the configuration of the computer resources (like number of nodes and machines) is hardware and scheduler dependent. The configuration used below should work for a pbspro or slurm cluster, asking 1 node of 16 cpus.
+
+Compact script
+--------------
+
+::
+
+    #!/usr/bin/env python
+    import sys
+    from aiida.common.utils import load_django
+    load_django()
+    from aiida.orm import Code
+    from aiida.orm import CalculationFactory, DataFactory
+    from aiida.djsite.db.models import Group
+    UpfData = DataFactory('upf')
+    ParameterData = DataFactory('parameter')
+    StructureData = DataFactory('structure')
+
+    ################################################################
+
+    try:
+	codename = sys.argv[1]
+    except IndexError:
+	codename = None
+
+    try:
+        pseudo_family = sys.argv[2]
+    except IndexError:
+	sys.exit(1)
+
+    #####
+
+    code = Code.get(codename)
+    computer = code.get_remote_computer()
+    
+    ####
+
+    alat = 4. # angstrom
+    cell = [[alat, 0., 0.,],
+	    [0., alat, 0.,],
+	    [0., 0., alat,],
+	   ]
+
+    # BaTiO3 cubic structure
+    s = StructureData(cell=cell)
+    s.append_atom(position=(0.,0.,0.),symbols=['Ba'])
+    s.append_atom(position=(alat/2.,alat/2.,alat/2.),symbols=['Ti'])
+    s.append_atom(position=(alat/2.,alat/2.,0.),symbols=['O'])
+    s.append_atom(position=(alat/2.,0.,alat/2.),symbols=['O'])
+    s.append_atom(position=(0.,alat/2.,alat/2.),symbols=['O'])
+    s.store()
+
+    parameters = ParameterData({
+		'CONTROL': {
+		    'calculation': 'scf',
+		    'restart_mode': 'from_scratch',
+		    'wf_collect': True,
+		    },
+		'SYSTEM': {
+		    'ecutwfc': 30.,
+		    'ecutrho': 240.,
+		    },
+		'ELECTRONS': {
+		    'conv_thr': 1.e-6,
+		    }}).store()
+
+    kpoints = ParameterData({
+		    'type': 'automatic',
+		    'points': [4, 4, 4, 0, 0, 0],
+		    }).store()
+
+    QECalc = CalculationFactory('quantumespresso.pw')
+    calc = QECalc(computer=computer)
+    calc.set_max_wallclock_seconds(30*60) # 30 min
+    calc.set_resources(num_machines=1, num_cpus_per_machine=16)
+    calc.store()
+
+    calc.use_structure(s)
+    calc.use_code(code)
+    calc.use_parameters(parameters)
+    calc.use_pseudo_from_family(pseudo_family)
+    calc.use_kpoints(kpoints)
+
+    calc.submit()
+
+
+
+
+
+
+Exception tolerant code
+-----------------------
 ::
 
     #!/usr/bin/env python
@@ -422,14 +539,7 @@ In addition to what the tutorial explained, there is also the possibility to use
 
     computer = code.get_remote_computer()
 
-    if computer.hostname.startswith("aries"):
-	num_cpus_per_machine = 48
-    elif computer.hostname.startswith("rosa"):
-	num_cpus_per_machine = 32
-    elif computer.hostname.startswith("bellatrix"):
-	num_cpus_per_machine = 16
-    else:
-	raise ValueError("num_cpus_per_machine not specified for the current machine")
+    num_cpus_per_machine = 16
 
 
     alat = 4. # angstrom

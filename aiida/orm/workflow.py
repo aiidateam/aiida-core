@@ -55,7 +55,7 @@ class Workflow(object):
                         self.params                = self.get_parameters()
                         self._to_be_stored         = False
                         
-                        self.logger.info("Workflow found in the database, now retrieved")
+                        #self.logger.info("Workflow found in the database, now retrieved")
                         
                 except ObjectDoesNotExist:
                         raise NotExistent("No entry with the UUID {} found".format(uuid))
@@ -113,7 +113,25 @@ class Workflow(object):
                     sub_stack_frame.f_locals.get("self",None).get_step(sub_caller_funct).add_sub_workflow(self.dbworkflowinstance)
 #                     print "I AM A SUB MODULE !!"
                 
-    
+                # Test if there are parameters as input
+                
+                params = kwargs.pop('params', None)
+                
+                if params is not None:
+                    if type(params) is dict:
+                        self.set_params(params)
+                
+   
+    @classmethod
+    def query(cls,*args,**kwargs):
+        """
+        Map to the aiidaobjects manager of the DbWorkflow, that returns
+        Workflow objects instead of DbWorkflow entities.
+        
+        """
+        from aiida.djsite.db.models import DbWorkflow
+        return DbWorkflow.aiidaobjects.filter(*args,**kwargs)
+         
     @property
     def logger(self):
         return self._logger
@@ -136,12 +154,6 @@ class Workflow(object):
                                                         script_md5 = hashlib.md5(self.caller_file).hexdigest()
                                                         )
         
-                
-    @classmethod
-    def query(cls,**kwargs):
-                
-        from aiida.djsite.db.models import DbWorkflow
-        return DbWorkflow.objects.filter(**kwargs)
 
     def uuid(self):
         return self.dbworkflowinstance.uuid
@@ -173,6 +185,10 @@ class Workflow(object):
         self.params = params
         self.dbworkflowinstance.add_parameters(self.params)
     
+    def set_status(self, status):
+        
+        self.dbworkflowinstance.set_status(status)
+        
     def get_parameters(self):
         
         return self.dbworkflowinstance.get_parameters()
@@ -200,12 +216,13 @@ class Workflow(object):
         step, created = self.dbworkflowinstance.steps.get_or_create(name=method_name, user=get_automatic_user())
         return step
 
-    def list_steps(self):
+    def get_steps(self, state = None):
+        
+        if state == None:
+            return self.dbworkflowinstance.steps.all()#.values_list('name',flat=True)
+        else:
+            return self.dbworkflowinstance.steps.filter(status=state)    
 
-        try:
-                return self.dbworkflowinstance.steps.all()
-        except ObjectDoesNotExist:
-                raise AttributeError("No steps found for the workflow")
 
     def next(self, method):
         
@@ -232,6 +249,7 @@ class Workflow(object):
         
         if (caller_funct==wf_start_call):
             self.dbworkflowinstance.set_status(wf_states.RUNNING)
+
 
     def start(self,*args,**kwargs):
         pass
@@ -263,25 +281,27 @@ class Workflow(object):
         curframe = inspect.currentframe()
         calframe = inspect.getouterframes(curframe, 2)
         caller_funct = calframe[1][3]
-
+        
+        print "caller_funct", caller_funct
+        
         self.get_step(caller_funct).add_calculation(calc)
     
     
-    def get_calculations(self, method):
+    def get_step_calculations(self, step, calc_state = None):
         
         """
         Retrieve the calculations connected to a specific step in the database. If the step
         is not existent it returns None, useful for simpler grammatic in the worflow definition.
         """
         
-        if isinstance(method, basestring):
-            method_name = method
+        if isinstance(step, basestring):
+            method_name = step
         else:
-            method_name = method.__name__
+            method_name = step.__name__
         
         try:
             stp = self.dbworkflowinstance.steps.get(name=method_name)
-            return stp.get_calculations()
+            return stp.get_calculations(state = calc_state)
         except ObjectDoesNotExist:
             return None
         except:
@@ -292,19 +312,26 @@ class Workflow(object):
     #         Support methods
     # ----------------------------
 
-    def finish_step_calculations(self, stepname):
+    def kill_step_calculations(self, step):
         
-        """
-        Support methid to remove
-        """
-    
         from aiida.common.datastructures import calc_states
-        
-        for c in self.dbworkflowinstance.steps.get(name=stepname).get_calculations():
+            
+        for c in step.get_calculations():
             c._set_state(calc_states.FINISHED)
 
 
-
+    def kill(self):
+         
+        from aiida.common.datastructures import calc_states, wf_states, wf_exit_call
+         
+        for s in self.get_steps(state=wf_states.RUNNING):
+            self.kill_step_calculations(s)
+            
+            for w in s.get_sub_workflows():
+                w.kill()
+        
+        self.dbworkflowinstance.set_status(wf_states.FINISHED)
+        
 # ------------------------------------------------------
 #         Module functions for monitor and control
 # ------------------------------------------------------
@@ -384,7 +411,6 @@ def retrieve(wf_db):
     for elem_name, elem in wf_mod.__dict__.iteritems():
         
         if module_class==elem_name: #and issubclass(elem, Workflow):
-        
             return  getattr(wf_mod,elem_name)(uuid=wf_db.uuid)
                        
             
@@ -404,3 +430,12 @@ def retrieve_by_uuid(uuid):
     except ObjectDoesNotExist:
         raise NotExistent("No entry with the UUID {} found".format(uuid))
                         
+def kill_by_uuid(uuid):
+    
+    """
+    Simple method to use retrieve starting from uuid
+    """
+    
+    wf = retrieve_by_uuid(uuid)
+    wf.kill()
+    

@@ -11,7 +11,7 @@ def launch_ws():
     
     and to force the retrival of some calculation you can use the function
     
-    wf.retrieve_by_uuid(uuid_wf).finish_step_calculations(methohd_wf)
+    wf.retrieve_by_uuid(uuid_wf).kill_step_calculations(methohd_wf)
     
     """
             

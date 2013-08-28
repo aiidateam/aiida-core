@@ -27,7 +27,7 @@ except IndexError:
 # If True, load the pseudos from the family specified below
 # Otherwise, use static files provided
 expected_exec_name='pw.x'
-auto_pseudos = True
+auto_pseudos = False
 
 queue = None
 #queue = "P_share_queue"
@@ -83,8 +83,10 @@ elif computer.hostname.startswith("rosa"):
     num_cpus_per_machine = 32
 elif computer.hostname.startswith("bellatrix"):
     num_cpus_per_machine = 16
+elif computer.hostname.startswith("theospc12"):
+    num_cpus_per_machine = 8
 else:
-    raise ValueError("num_cpus_per_machine not specified for the current machine")
+    raise ValueError("num_cpus_per_machine not specified for the current machine: {0}".format(computer.hostname))
 
 
 alat = 4. # angstrom

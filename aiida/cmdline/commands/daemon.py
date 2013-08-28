@@ -11,8 +11,8 @@ aiida_dir = os.path.expanduser("~/.aiida")
 
 class Daemon(VerdiCommand):
     """
-    Manage the aiida daemon.
-
+    Manage the AiiDA daemon
+    
     This command allows to interact with the AiiDA daemon.
     Valid subcommands are:
     * start: start the daemon

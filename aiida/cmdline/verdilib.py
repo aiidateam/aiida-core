@@ -35,7 +35,7 @@ execname = 'verdi'
 
 class CompletionCommand(VerdiCommand):
     """
-    Return the bash completion function to put in ~/.bashrc.
+    Return the bash completion function to put in ~/.bashrc
 
     This command prints on screen the function to be inserted in 
     your .bashrc command. You can copy and paste the output, or simply
@@ -84,7 +84,7 @@ complete -F _aiida_verdi_completion verdi
 
 class Completion(VerdiCommand):
     """
-    Manages bash completion. 
+    Manage bash completion 
 
     Return a list of available commands, separated by spaces.
     Calls the correct function of the command if the TAB has been
@@ -124,7 +124,7 @@ class Completion(VerdiCommand):
 
 class ListParams(VerdiCommand):
     """
-    List available commands.
+    List available commands
 
     List available commands and their short description.
     For the long description, use the 'help' command.
@@ -135,7 +135,7 @@ class ListParams(VerdiCommand):
 
 class Help(VerdiCommand):
     """
-    Describe a specific command.
+    Describe a specific command
 
     Pass a further argument to get a description of a given command.
     """
@@ -172,7 +172,7 @@ class Help(VerdiCommand):
     
 class SyncDB(VerdiCommand):
     """
-    Create new tables in the database.
+    Create new tables in the database
 
     This command calls the Django 'manage.py syncdb' command to create
     new tables in the database, and possibly install triggers.
@@ -185,7 +185,7 @@ class SyncDB(VerdiCommand):
 
 class Migrate(VerdiCommand):
     """
-    Migrate tables and data using django-south.
+    Migrate tables and data using django-south
     
     This command calls the Django 'manage.py migrate' command to migrate
     tables managed by django-south to their most recent version.
@@ -195,7 +195,7 @@ class Migrate(VerdiCommand):
 
 class Shell(VerdiCommand):
     """
-    Runs the interactive shell with the Django environment.
+    Run the interactive shell with the Django environment
 
     This command runs the 'manage.py shell' command, that opens a
     IPython shell with the Django environment loaded.
@@ -209,7 +209,7 @@ class Shell(VerdiCommand):
 
 class GoToComputer(VerdiCommand):
     """
-    Opens a new shell on the cluster going directly to the folder
+    Open a shell to the calc folder on the cluster
 
     This command runs the 'manage.py shell' command, that opens a
     IPython shell with the Django environment loaded.
@@ -274,7 +274,7 @@ class GoToComputer(VerdiCommand):
 
 class Test(VerdiCommand):
     """
-    Runs aiida tests.
+    Runs aiida developer tests
 
     If no parameters are specified, both the django tests for the db application
     and the unittests of the aiida modules are run.
@@ -410,7 +410,7 @@ class Test(VerdiCommand):
 
 class Install(VerdiCommand):
     """
-    Install/setup aiida for the current user.
+    Install/setup aiida for the current user
 
     This command creates the ~/.aiida folder in the home directory 
     of the user, interactively asks for the database settings and
@@ -443,7 +443,7 @@ def pass_to_django_manage(argv):
 
 def get_listparams():
     """
-    Return a string with the list of parameters, to be printed.
+    Return a string with the list of parameters, to be printed
     
     The advantage of this function is that the calling routine can
     choose to print it on stdout or stderr, depending on the needs.

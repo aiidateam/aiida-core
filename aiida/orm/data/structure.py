@@ -1321,7 +1321,7 @@ class Site(object):
             raise ValueError("Cannot convert to ASE if the kind represents "
                              "an alloy or it has vacancies.")
         aseatom = ase.Atom(position=self.position, 
-                           symbol=kind.symbols[0], 
+                           symbol=str(kind.symbols[0]), 
                            mass=kind.mass)
         if tag is not None:
             aseatom.tag = tag

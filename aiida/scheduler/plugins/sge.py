@@ -197,6 +197,9 @@ class SgeScheduler(aiida.scheduler.Scheduler):
                 
             lines.append('#$ -N {}'.format(job_tmpl.job_name))
         
+        if job_tmpl.import_sys_environment:
+            lines.append("#$ -V")
+            
         if job_tmpl.sched_output_path:
             lines.append("#$ -o {}".format(job_tmpl.sched_output_path))
         

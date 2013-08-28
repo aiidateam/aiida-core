@@ -209,7 +209,7 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
         if job_tmpl.email_on_terminated:
             lines.append("#SBATCH --mail-type=FAIL")
             lines.append("#SBATCH --mail-type=END")
-            
+        
         if job_tmpl.job_name:
             # The man page does not specify any specific limitation
             # on the job name.
@@ -231,6 +231,9 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
             job_title = job_title[:128]
             
             lines.append('#SBATCH --job-name="{}"'.format(job_title))
+        
+        if job_tmpl.import_sys_environment:
+            lines.append("#SBATCH --get-user-env")
             
         if job_tmpl.sched_output_path:
             lines.append("#SBATCH --output={}".format(job_tmpl.sched_output_path))

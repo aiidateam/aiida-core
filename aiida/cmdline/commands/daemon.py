@@ -99,7 +99,15 @@ class Daemon(VerdiCommand):
         if pid is not None:
             print "Deamon already running, try ask for status"
             return
-
+        
+        print "Loading Django ..."
+        from aiida.common.utils import load_django
+        load_django()
+        
+        print "Clearing all locks ..."
+        from aiida.orm.lock import LockManager
+        LockManager().clear_all()
+        
         print "Starting AiiDA Daemon ..."
         process = subprocess.Popen(
             "supervisord -c {}".format(os.path.join(

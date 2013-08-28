@@ -25,8 +25,7 @@ class WorkflowDemoSubWorkflow(Workflow):
         calc = CustomCalc(computer=computer,withmpi=True)
         calc.set_resources(num_machines=1, num_cpus_per_machine=1)
         calc.store()
-        
-        #self.add_calculation(calc)
+        self.attach_calculation(calc)
         
         params = {}
         params['nmachine']=2
@@ -34,11 +33,13 @@ class WorkflowDemoSubWorkflow(Workflow):
         w = WorkflowDemo()
         w.set_params(params)
         w.start()
+        self.attach_workflow(w)
         
         params['nmachine']=4
         w = WorkflowDemo()
         w.set_params(params)
         w.start()
+        self.attach_workflow(w)
         
         self.next(self.second)
     

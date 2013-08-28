@@ -1,3 +1,5 @@
+.. _my-ref-to-pw-tutorial:
+
 Quantum Espresso PWscf user-tutorial
 ====================================
 

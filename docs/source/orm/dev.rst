@@ -1,5 +1,5 @@
 ORM documentation: generic aiida.orm
-=========================
+====================================
 
 .. toctree::
    :maxdepth: 2
@@ -13,23 +13,23 @@ Some generic methods of the module aiida.orm
    :special-members: __init__
 
 Computer
-+++++++++++++++++++++++++
+++++++++
 .. automodule:: aiida.orm.computer
    :members:
 
 Node
-++++++++++++++
+++++
 .. automodule:: aiida.orm.node
    :members:
    
 Workflow
-++++++++++
+++++++++
 .. automodule:: aiida.orm.workflow
    :members:
 
 
 Code
-++++++
+++++
 .. automodule:: aiida.orm.code
    :members:
    :special-members: __init__
@@ -38,12 +38,12 @@ Code
 
 
 ORM documentation: Data
-=======
+=======================
 
 .. automodule:: aiida.orm.data
 
 Structure
-++++++
++++++++++
 .. automodule:: aiida.orm.data.structure
    :members:
 
@@ -53,12 +53,12 @@ Folder
    :members:
 
 Upf
-++++++
++++
 .. automodule:: aiida.orm.data.upf
    :members:
 
 Parameter
-++++++
++++++++++
 .. automodule:: aiida.orm.data.parameter
    :members:
 
@@ -68,7 +68,7 @@ Remote
    :members:
 
 Singlefile
-++++++
+++++++++++
 .. automodule:: aiida.orm.data.singlefile
    :members:
 
@@ -82,7 +82,7 @@ Singlefile
 
 
 ORM documentation: Calculation
-=======
+==============================
 
 .. automodule:: aiida.orm.calculation
    :members:
@@ -90,11 +90,11 @@ ORM documentation: Calculation
    :undoc-members:
 
 Quantum Espresso - PW
-++++++++
++++++++++++++++++++++
 .. automodule:: aiida.orm.calculation.quantumespresso.pw
    :members:
 
 TemplateReplacer
-++++++++
+++++++++++++++++
 .. automodule:: aiida.orm.calculation.simpleplugins.templatereplacer
    :members:

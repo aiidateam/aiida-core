@@ -463,7 +463,7 @@ class CodeInputValidationClass(object):
 
 class Code(VerdiCommand):
     """
-    Manage codes to be used.
+    Setup and manage codes to be used
 
     This command allows to list, add, modify, configure codes.
     """

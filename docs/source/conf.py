@@ -27,6 +27,8 @@ import sys, os
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.todo', 'sphinx.ext.coverage', 'sphinx.ext.pngmath', 'sphinx.ext.ifconfig', 'sphinx.ext.viewcode']
 
+todo_include_todos = True
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
@@ -41,7 +43,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'AiiDA'
-copyright = u'2012, Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini & Boris Kozinsky'
+copyright = u'2012-2013, Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini & Boris Kozinsky'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -120,7 +122,8 @@ html_theme = 'default'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+# TEMPORARILY DISABLED
+#html_static_path = ['_static']
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
@@ -220,7 +223,7 @@ load_django()
 # (source start file, name, description, authors, manual section).
 man_pages = [
     ('index', 'aiida', u'aiida Documentation',
-     [u'Boris Kozinsky, Andrea Cepellotti & Giovanni Pizzi'], 1)
+     [u'Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Boris Kozinsky'], 1)
 ]
 
 # If true, show URL addresses after external links.
@@ -234,7 +237,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
   ('index', 'aiida', u'aiida Documentation',
-   u'Boris Kozinsky, Andrea Cepellotti & Giovanni Pizzi', 'aiida', 'One line description of project.',
+   u'Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Boris Kozinsky', 'aiida', 'One line description of project.',
    'Miscellaneous'),
 ]
 
@@ -252,9 +255,9 @@ texinfo_documents = [
 
 # Bibliographic Dublin Core info.
 epub_title = u'aiida'
-epub_author = u'Boris Kozinsky, Andrea Cepellotti & Giovanni Pizzi'
-epub_publisher = u'Boris Kozinsky, Andrea Cepellotti & Giovanni Pizzi'
-epub_copyright = u'2012, Boris Kozinsky, Andrea Cepellotti & Giovanni Pizzi'
+epub_author = u'Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Boris Kozinsky'
+epub_publisher = u'Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Boris Kozinsky'
+epub_copyright = u'2012-2013, Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Boris Kozinsky'
 
 # The language of the text. It defaults to the language option
 # or en if the language is not set.

@@ -172,7 +172,7 @@ The Quantum Espresso Pw plugin requires to pass these informations with the obje
 This object is more or less the representation of a Python dictionary in the database.
 We first load the class through the DataFactory, just like we did for the Structure.
 Then we create the instance of the object ``parameter`` and we store it in the DB.
-To represent closely the structure of the QE input file, ParameterData is a nested dictionary, at the first level the cards, and then the variables with their values.
+To represent closely the structure of the QE input file, ParameterData is a nested dictionary, at the first level the namelists, and then the variables with their values.
 Note also that numbers and booleans are written in Python, i.e. not ``.false.`` but ``False``!.
 ::
 
@@ -192,6 +192,7 @@ Note also that numbers and booleans are written in Python, i.e. not ``.false.`` 
                 'conv_thr': 1.e-6,
                 }}).store()
 
+( The experienced QE user will have noticed also that a couple of variables are missing: the prefix, the pseudo directory and the scratch directory are reserved to the plugin which will use default values: in case you want to use the scratch of a previous calculation, it must be specified)
 The k-points have to be saved in a different ParameterData, analogously as before::
                 
   kpoints = ParameterData({
@@ -350,6 +351,8 @@ The most common you should see:
 Eventually, if the calculation is finished, you will find the computed quantities in the database.
 You will be able to query the database for the energies that you computed!
 
+
+Jump to :ref:`my-ref-to-ph-tutorial`.
 
 
 

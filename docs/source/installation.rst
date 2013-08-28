@@ -40,14 +40,14 @@ Database
 --------
 
 As a first thing, :doc:`choose and setup the database that you want to
-use<database/database>`.
+use<database/index>`.
 
 Other core dependencies
 -----------------------
 
 Before continuing, you still need to install a few more programs. Some of them 
 are mandatory, while others are optional (but often strongly suggested), also
-depending for instance on the :doc:`type of database <database/database>`
+depending for instance on the :doc:`type of database <database/index>`
 that you plan to use.
 
 Here is a list of packages/programs that you need to install (for each of them,

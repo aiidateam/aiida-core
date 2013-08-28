@@ -5,7 +5,7 @@ from aiida.common.utils import load_django
 
 class Computer(VerdiCommand):
     """
-    Manage computers to be used.
+    Setup and manage computers to be used
 
     This command allows to list, add, modify and configure computers.
     """

@@ -130,10 +130,14 @@ Now that we loaded the parent calculation, we can set the phonon calc to inherit
     
     calc.set_parent_calc( parentcalc )
 
+Note that in our database schema relations between two calculation objects are prohibited. The link between the two is indirect and is mediated by a third Data object, which represent the scratch-folder on the remote cluster. Therefore the relation between the parent Pw and the child Ph appears like: Pw -> remotescratch -> Ph.
+
 Execution
 ---------
 
 Now, everything is ready, and just like PWscf, you just need to submit this input to AiiDA, and the calculation will launch!
+
+::
 
     calc.submit()
 

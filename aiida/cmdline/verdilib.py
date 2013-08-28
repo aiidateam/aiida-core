@@ -272,7 +272,7 @@ class GoToComputer(VerdiCommand):
         print ""
 
 
-class Test(VerdiCommand):
+class Developertest(VerdiCommand):
     """
     Runs aiida developer tests
 
@@ -299,7 +299,7 @@ class Test(VerdiCommand):
     def __init__(self,*args,**kwargs):
         from aiida.djsite.db.testbase import db_test_list
         
-        super(Test, self).__init__(*args, **kwargs)
+        super(Developertest, self).__init__(*args, **kwargs)
         
         # The content of the dict is:
         #   None for a simple folder test

@@ -37,7 +37,7 @@ class WorkflowDemo(Workflow):
     
     def second_step(self):
         
-        calcs_init = self.get_calculations(self.start)
+        calcs_init = self.get_step_calculations(self.start)
         
         aiidalogger.info("Second runned and retived calculation:")
         for c in calcs_init:
@@ -59,7 +59,7 @@ class WorkflowDemo(Workflow):
         
     def third_step(self):
         
-        calcs_init = self.get_calculations(self.second_step)
+        calcs_init = self.get_step_calculations(self.second_step)
         
         aiidalogger.info("Third runned and retived calculation:")
         for c in calcs_init:
@@ -159,9 +159,9 @@ class WorkflowDemoLoop(Workflow):
     
     def convergence(self):
         
-        calcs_init = self.get_calculations(self.start)
+        calcs_init = self.get_step_calculations(self.start)
         
-        calcs_convergence = self.get_calculations(self.convergence)
+        calcs_convergence = self.get_step_calculations(self.convergence)
         
         if calcs_convergence == None or len(calcs_convergence) < 5:
             from aiida.orm import CalculationFactory
@@ -184,7 +184,7 @@ class WorkflowDemoLoop(Workflow):
         
     def third_step(self):
         
-        calcs_init = self.get_calculations(self.convergence)
+        calcs_init = self.get_step_calculations(self.convergence)
         
         aiidalogger.info("Third runned and retived calculation:")
         for c in calcs_init:

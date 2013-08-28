@@ -36,9 +36,9 @@ class SshTransport(aiida.transport.Transport):
     # Valid keywords accepted by the connect method of paramiko.SSHClient
     # I disable 'password' and 'pkey' to avoid these data to get logged in the
     # aiida log file.
-    _valid_connect_params = ['username', 'port',
+    _valid_connect_params = ['username', 'port', 'look_for_keys', 
                              'key_filename', 'timeout', 'allow_agent',
-                             'look_for_keys', 'compress']
+                             'compress']
     
     # Valid parameters for the ssh transport
     # For each param, a class method with name

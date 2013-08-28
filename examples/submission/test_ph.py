@@ -4,12 +4,6 @@ import os
 import paramiko
 import getpass
 
-try:
-    computername = sys.argv[1]
-except IndexError:
-    print >> sys.stderr, "Pass the computer name."
-    sys.exit(1)
-
 from aiida.common.utils import load_django
 load_django()
 
@@ -27,57 +21,66 @@ ParameterData = DataFactory('parameter')
 StructureData = DataFactory('structure')
 RemoteData = DataFactory('remote')
 
+
+
+################################################################
+
+try:
+    parent_id = sys.argv[1]
+except IndexError:
+    parent_id = None
+
+try:
+    codename = sys.argv[2]
+except IndexError:
+    codename = None
+
 # If True, load the pseudos from the family specified below
 # Otherwise, use static files provided
-auto_pseudos = True
-pseudo_family = 'pslib030-pbesol-rrkjus'
+expected_exec_name='ph.x'
 
 queue = None
 #queue = "P_share_queue"
-
-
-def get_or_create_code(computer):
-    if computer.hostname.startswith("aries"):
-#        code_path = "/home/cepellot/software/espresso-5.0.2/bin/ph.x"
-        code_path = "/home/cepellot/software/espresso-svn/espresso/bin/ph.x"
-        code_version = "5.0.3"
-        prepend_text = 'module load intel/mpi/4.0.3 intel/12.1.2'
-    elif computer.hostname.startswith("rosa"):
-        code_path = "/project/s337/espresso-svn/bin/ph.x"
-        code_version = "5.0.3"
-        prepend_text = ''        
-    else:
-        raise ValueError("Only aries and rosa are supported at the moment.")
-    
-    useful_codes = Code.query(computer=computer.dbcomputer,
-                              attributes__key="_remote_exec_path",
-                              attributes__tval=code_path).filter(
-                                  attributes__key="version", attributes__tval=code_version)
-
-    if not(useful_codes):
-        print >> sys.stderr, "Creating the code..."
-        code = Code(remote_computer_exec=(computer, code_path))
-        code.set_prepend_text(prepend_text)
-        code.store()
-        code.set_metadata("version", code_version)
-        return code
-    
-    elif len(useful_codes) == 1:
-        print >> sys.stderr, "Using the existing code {}...".format(useful_codes[0].pk)
-        return useful_codes[0]
-    else:
-        raise ValueError("More than one valid code!")
-        
-
+     
 #####
 
-computer = Computer.get(computername)
-code = get_or_create_code(computer)
+if parent_id is None:
+    raise ValueError
+try:
+    int(parent_id)
+except ValueError:
+    raise ValueError('Parent_id not an integer: {}'.format(parent_id))
+
+try:
+    if codename is None:
+        raise ValueError
+    code = Code.get(codename)
+    if not code.get_remote_exec_path().endswith(expected_exec_name):
+        raise ValueError
+except (NotExistent, ValueError):
+    valid_code_labels = [c.label for c in Code.query(
+            attributes__key="_remote_exec_path",
+            attributes__tval__endswith="/{}".format(expected_exec_name))]
+    if valid_code_labels:
+        print >> sys.stderr, "Pass as first parameter a valid code label."
+        print >> sys.stderr, "Valid labels with a {} executable are:".format(expected_exec_name)
+        for l in valid_code_labels:
+            print >> sys.stderr, "*", l
+    else:
+        print >> sys.stderr, "Code not valid, and no valid codes for {}. Configure at least one first using".format(expected_exec_name)
+        print >> sys.stderr, "    verdi code setup"
+    sys.exit(1)
+
+######
+
+computer = code.get_remote_computer()
 
 if computer.hostname.startswith("aries"):
     num_cpus_per_machine = 48
 elif computer.hostname.startswith("rosa"):
     num_cpus_per_machine = 32
+elif computer.hostname.startswith("bellatrix"):
+    num_cpus_per_machine = 16
 else:
     raise ValueError("num_cpus_per_machine not specified for the current machine")
 
@@ -93,7 +96,7 @@ parameters = ParameterData({
 
 QEPhCalc = CalculationFactory('quantumespresso.ph')
 QEPwCalc = CalculationFactory('quantumespresso.pw')
-parentcalc = QEPwCalc.get_subclass_from_uuid('9265f520-f478-11e2-95a0-00259024cefd')
+parentcalc = QEPwCalc.get_subclass_from_pk(parent_id)
 calc = QEPhCalc(computer=computer)
 
 calc.set_max_wallclock_seconds(30*60) # 30 min

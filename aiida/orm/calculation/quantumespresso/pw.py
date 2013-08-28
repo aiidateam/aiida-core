@@ -9,7 +9,7 @@ TODO: preexec, postexec
 TODO: Check that no further parameters are passed in SETTINGS
 TODO: many cards missing: check and implement
       e.g.: ['CONSTRAINTS', 'OCCUPATIONS']
-TODO: implement pre_... and post_... hooks to add arbitrary strings before
+TODO: implement pre... and post... hooks to add arbitrary strings before
       and after a namelist, and a 'final_string' (all optional); useful 
       for development when new cards are needed
 TODO: all a lot of logger.debug stuff

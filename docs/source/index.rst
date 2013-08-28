@@ -22,6 +22,8 @@ User's guide
    installation
    setup/computerandcodes
    examples/pw_tutorial
+   examples/ph_tutorial
+   examples/cp_tutorial
 
    scheduler/index
     

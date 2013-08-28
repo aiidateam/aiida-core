@@ -23,13 +23,12 @@ class WorkflowDemo(Workflow):
         calc = CustomCalc(computer=computer,withmpi=True)
         calc.set_resources(num_machines=1, num_cpus_per_machine=1)
         calc.store()
+        self.attach_calculation(calc)
         
         calc2 = CustomCalc(computer=computer,withmpi=True)
         calc2.set_resources(num_machines=1, num_cpus_per_machine=1)
         calc2.store()
-        
-        #self.add_calculation(calc)
-        #self.add_calculation(calc2)
+        self.attach_calculation(calc2)
         
         self.next(self.second_step)
         
@@ -51,8 +50,7 @@ class WorkflowDemo(Workflow):
         calc = CustomCalc(computer=computer,withmpi=True)
         calc.set_resources(num_machines=1, num_cpus_per_machine=1)
         calc.store()
-        
-        #self.add_calculation(calc)
+        self.attach_calculation(calc)
         
         self.next(self.third_step)
     
@@ -88,8 +86,7 @@ class WorkflowDemoBranch(Workflow):
         calc = CustomCalc(computer=computer,withmpi=True)
         calc.set_resources(num_machines=1, num_cpus_per_machine=1)
         calc.store()
-        
-        #self.add_calculation(calc)
+        self.attach_calculation(calc)
         
         self.next(self.branch_a_two)
     
@@ -105,8 +102,7 @@ class WorkflowDemoBranch(Workflow):
         calc = CustomCalc(computer=computer,withmpi=True)
         calc.set_resources(num_machines=1, num_cpus_per_machine=1)
         calc.store()
-        
-        #self.add_calculation(calc)
+        self.attach_calculation(calc)
         
         self.next(self.recollect)
         
@@ -122,8 +118,7 @@ class WorkflowDemoBranch(Workflow):
         calc = CustomCalc(computer=computer,withmpi=True)
         calc.set_resources(num_machines=1, num_cpus_per_machine=1)
         calc.store()
-        
-        #self.add_calculation(calc)
+        self.attach_calculation(calc)
         
         self.next(self.recollect)
     
@@ -152,8 +147,7 @@ class WorkflowDemoLoop(Workflow):
         calc = CustomCalc(computer=computer,withmpi=True)
         calc.set_resources(num_machines=1, num_cpus_per_machine=1)
         calc.store()
-        
-        #self.add_calculation(calc)
+        self.attach_calculation(calc)
         
         self.next(self.convergence)        
     
@@ -172,8 +166,8 @@ class WorkflowDemoLoop(Workflow):
             calc = CustomCalc(computer=computer,withmpi=True)
             calc.set_resources(num_machines=1, num_cpus_per_machine=1)
             calc.store()
+            self.attach_calculation(calc)
             
-            #self.add_calculation(calc)
             self.next(self.convergence)
         
         else:

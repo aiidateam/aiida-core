@@ -34,6 +34,18 @@ class LockManager(object):
         
         except:
             raise InternalError("Something went wrong, try to keep on.")
+    
+    def clear_all(self):
+        
+        from django.db import IntegrityError, transaction
+        
+        try:
+            
+            sid = transaction.savepoint()
+            DbLock.objects.all().delete()
+        except IntegrityError:
+            transaction.savepoint_rollback(sid)
+            
         
 class Lock(object):
     

@@ -18,13 +18,14 @@ User's guide
 .. toctree::
    :maxdepth: 2
 
-   database/database
+   database/index
    installation
    setup/computerandcodes
    examples/pw_tutorial
 
    scheduler/index
-
+    
+   workflow/index
 
 Developer's guide
 +++++++++++++++++
@@ -40,13 +41,13 @@ Modules provided with aiida
 .. toctree::
    :maxdepth: 2
    
-   aiida.common Modules [OUTDATED] <common/index>
-   transport/index
+   aiida.common Modules [OUTDATED] <common/dev>
+   transport/dev
    scheduler/dev
-   cmdline/index
-   execmanager/index
-   djsite/index
-   orm/index
+   cmdline/dev
+   execmanager/dev
+   djsite/dev
+   orm/dev
 
 Indices and tables
 ==================

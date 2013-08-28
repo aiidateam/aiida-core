@@ -99,22 +99,8 @@ class Workflow(object):
                 self.caller_funct  = caller_funct
                 
                 self.store()
-                
-                # Test is this is a sub-workflow
-                sub_stack_frame  = stack[2][0]
-                sub_caller_funct = stack[2][3]
-                sub_module_class = sub_stack_frame.f_locals.get('self', None).__class__
-                
-#                 print "sub_module_class", sub_module_class
-#                 print "sub_caller_funct", sub_caller_funct
-                
-                if inspect.getclasstree([sub_module_class])[0][0]==Workflow:
-                    wf_parent_uuid = sub_stack_frame.f_locals.get("self",None).uuid()
-                    sub_stack_frame.f_locals.get("self",None).get_step(sub_caller_funct).add_sub_workflow(self.dbworkflowinstance)
-#                     print "I AM A SUB MODULE !!"
-                
+                                
                 # Test if there are parameters as input
-                
                 params = kwargs.pop('params', None)
                 
                 if params is not None:
@@ -261,7 +247,8 @@ class Workflow(object):
     #         Calculations
     # ----------------------------
     
-    def add_calculation(self, calc):
+    def attach_calculation(self, calc):
+        
         
         """
         Adds a calculation to the caller step in the database. For a step to be completed all
@@ -275,14 +262,12 @@ class Workflow(object):
 
         import inspect
 
-        if (not isinstance(calc,Calculation)):
+        if (not issubclass(calc.__class__,Calculation) and not isinstance(calc, Calculation)):
             raise AiidaException("Cannot add a calculation not of type Calculation")                        
 
         curframe = inspect.currentframe()
         calframe = inspect.getouterframes(curframe, 2)
         caller_funct = calframe[1][3]
-        
-        print "caller_funct", caller_funct
         
         self.get_step(caller_funct).add_calculation(calc)
     
@@ -306,6 +291,24 @@ class Workflow(object):
             return None
         except:
             raise AiidaException("Cannot retrive step's calculations")
+
+    # ----------------------------
+    #      Subworkflows
+    # ----------------------------
+
+    def attach_workflow(self, sub_wf):
+        
+        from aiida.orm import Calculation
+        from celery.task import task
+        from aiida.djsite.db import tasks
+
+        import inspect
+
+        curframe = inspect.currentframe()
+        calframe = inspect.getouterframes(curframe, 2)
+        caller_funct = calframe[1][3]
+        
+        self.get_step(caller_funct).add_sub_workflow(sub_wf)
 
 
     # ----------------------------

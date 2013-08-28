@@ -64,28 +64,6 @@ class Calculation(Node):
         
         super(Calculation, self).store()
         
-        from aiida.orm.workflow import Workflow
-        import inspect
-        stack = inspect.stack()
-        
-        
-        #cur_fr  = inspect.currentframe()
-        #call_fr = inspect.getouterframes(cur_fr, 2)
-        
-        # Get all the caller data
-        caller_frame        = stack[1][0]
-        caller_file         = stack[1][1]
-        caller_funct        = stack[1][3]
-        
-        caller_module       = inspect.getmodule(caller_frame)
-        caller_module_class = caller_frame.f_locals.get('self', None).__class__
-        
-        #print inspect.getclasstree([caller_module_class])[0][0]
-        
-        if issubclass(caller_module_class, Workflow):
-            #uuid = caller_frame.f_locals.get('self', None).uuid()
-            caller_frame.f_locals.get('self', None).get_step(caller_funct).add_calculation(self)
-        
         return self
             
     def validate(self):

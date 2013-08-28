@@ -460,7 +460,6 @@ class DbWorkflow(m.Model):
         Return the corresponding aiida instance of class aiida.worflow
         """
         from aiida.orm.workflow import Workflow
-        print "Returning Aiida Workflow class"
         return Workflow(uuid=self.uuid)
     
     #  ------------------------------------------------
@@ -566,9 +565,6 @@ class DbWorkflowStep(m.Model):
             raise ValueError("Cannot add a non-Calculation object to a workflow step")          
 
         try:
-            print "step_calculation", step_calculation
-            print "name", step_calculation
-            
             self.calculations.add(step_calculation)
         except:
             raise ValueError("Error adding calculation to step")                      
@@ -593,13 +589,15 @@ class DbWorkflowStep(m.Model):
     #    Subworkflows
     # ---------------------------------
 
-    def add_sub_workflow(self, step_workflow):
-         
-        if (not isinstance(step_workflow, DbWorkflow)):
-            raise ValueError("Cannot add a non-DbWorkflow object to a workflow step")          
- 
+    def add_sub_workflow(self, sub_wf):
+        
+        from aiida.orm.workflow import Workflow
+        
+        if (not issubclass(sub_wf.__class__,Workflow) and not isinstance(sub_wf, Workflow)):
+            raise ValueError("Cannot add a workflow not of type Workflow")                        
+
         try:
-            self.sub_workflows.add(step_workflow)
+            self.sub_workflows.add(sub_wf.dbworkflowinstance)
         except:
             raise ValueError("Error adding calculation to step")                      
  

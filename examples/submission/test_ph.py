@@ -4,12 +4,6 @@ import os
 import paramiko
 import getpass
 
-try:
-    computername = sys.argv[1]
-except IndexError:
-    print >> sys.stderr, "Pass the computer name."
-    sys.exit(1)
-
 from aiida.common.utils import load_django
 load_django()
 

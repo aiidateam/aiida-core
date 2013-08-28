@@ -96,16 +96,6 @@ def upload_upf_family(folder, group_name, group_description,
              os.path.isfile(os.path.join(folder,i)) and 
              i.lower().endswith('.upf')]
 
-    if stop_if_existing:
-        for f in files:
-            md5sum = aiida.common.utils.md5_file(f)
-            existing_upf = UpfData.query(attributes__key="_md5",
-                                          attributes__tval = md5sum)
-            if len(existing_upf) != 0:
-                raise MultipleObjectsError("Pseudo with filename {} already "
-                    "found at least once in the DB (uuid={})".format(
-                     f, existing_upf[0].uuid))
-
     group, created = Group.objects.get_or_create(name=group_name, defaults=
         {'user': get_automatic_user()})
     if len(group.dbnodes.all()) != 0:
@@ -117,16 +107,26 @@ def upload_upf_family(folder, group_name, group_description,
         group.save()
 
     
-    for f in files: 
-        pseudo, created = UpfData.get_or_create(f, use_first = True)
+    for f in files:
+        
+        pseudo  = None
+        created = None
+        
+        if stop_if_existing:
+            md5sum = aiida.common.utils.md5_file(f)
+            existing_upf = UpfData.query(attributes__key="_md5",attributes__tval = md5sum)
+            
+            if len(existing_upf) == 0:
+                pseudo, created = UpfData.get_or_create(f, use_first = True)
+            else:
+                pseudo = existing_upf[0]
+                
         group.dbnodes.add(pseudo.dbnode)
 
         if created:
-            aiidalogger.debug("New node {} created for file {}".format(
-                pseudo.uuid, f))
+            aiidalogger.debug("New node {} created for file {}".format(pseudo.uuid, f))
         else:
-            aiidalogger.debug("Reusing node {} for file {}".format(
-                pseudo.uuid, f))            
+            aiidalogger.debug("Reusing node {} for file {}".format(pseudo.uuid, f))            
         
             
 def parse_upf(fname, check_filename = True):

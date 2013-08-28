@@ -450,6 +450,21 @@ class DbWorkflow(m.Model):
     
     status       = m.CharField(max_length=255, choices=zip(list(wf_states), list(wf_states)), default=wf_states.RUNNING)
     
+    objects = m.Manager()
+    # Return aiida Node instances or their subclasses instead of DbNode instances
+    aiidaobjects = AiidaObjectManager()
+    
+    def get_aiida_class(self):
+        
+        """
+        Return the corresponding aiida instance of class aiida.worflow
+        """
+        from aiida.orm.workflow import Workflow
+        print "Returning Aiida Workflow class"
+        return Workflow(uuid=self.uuid)
+    
+    #  ------------------------------------------------
+    
     def set_status(self, _status):
         
         self.status = _status;
@@ -487,23 +502,14 @@ class DbWorkflow(m.Model):
         from aiida.common.datastructures import calc_states, wf_states, wf_exit_call
 
         calc_status = self.get_calculations().filter(attributes__key="_state").values_list("uuid", "attributes__tval")
-        s = set([l[1] for l in calc_status])
-        if len(s)==1 and calc_states.FINISHED in s:
-            return wf_states.FINISHED
-        else: 
-            return wf_states.RUNNING
+        return set([l[1] for l in calc_status])
+
     
     def get_sub_workflows(self):
         
         from aiida.orm import Calculation
         return DbWorkflow.objects.filter(parent_workflow_step=self.steps.all())
     
-    def get_sub_workflows_status(self):
-        
-        from aiida.common.datastructures import calc_states, wf_states, wf_exit_call
-
-        calc_status = self.get_calculations().filter(attributes__key="_state").values_list("uuid", "attributes__tval")
-        
             
     def finish(self):
         self.status = 'finished'
@@ -560,30 +566,28 @@ class DbWorkflowStep(m.Model):
             raise ValueError("Cannot add a non-Calculation object to a workflow step")          
 
         try:
+            print "step_calculation", step_calculation
+            print "name", step_calculation
+            
             self.calculations.add(step_calculation)
         except:
             raise ValueError("Error adding calculation to step")                      
 
-    def get_calculations(self):
+    def get_calculations(self, state=None):
         
         from aiida.orm import Calculation
         
-        return Calculation.query(workflow_step=self)#pk__in = step.calculations.values_list("pk", flat=True))
+        if (state==None):
+            return Calculation.query(workflow_step=self)#pk__in = step.calculations.values_list("pk", flat=True))
+        else:
+            return Calculation.query(workflow_step=self).filter(attributes__key="_state",attributes__tval=state)
 
-    def get_calculations_status(self, extended=False):
+    def get_calculations_status(self):
 
         from aiida.common.datastructures import calc_states, wf_states, wf_exit_call
 
         calc_status = self.calculations.filter(attributes__key="_state").values_list("uuid", "attributes__tval")
-        if (extended):
-            for c in calc_status:
-                print "Calculation {0} is {1}".format(c[0], c[1])
-                
-        s = set([l[1] for l in calc_status])
-        if len(s)==1 and calc_states.FINISHED in s:
-            return wf_states.FINISHED
-        else: 
-            return wf_states.RUNNING
+        return set([l[1] for l in calc_status])
 
     # ---------------------------------
     #    Subworkflows
@@ -600,21 +604,19 @@ class DbWorkflowStep(m.Model):
             raise ValueError("Error adding calculation to step")                      
  
     def get_sub_workflows(self):
-         
-        return self.sub_workflows.all()#pk__in = step.calculations.values_list("pk", flat=True))
+        
+        from aiida.orm.workflow import Workflow
+        return Workflow.query(uuid__in=self.sub_workflows.values_list("uuid", flat=True))
+        #return self.sub_workflows.all()#pk__in = step.calculations.values_list("pk", flat=True))
  
     def get_sub_workflows_status(self):
         
         from aiida.common.datastructures import wf_states
         
         wf_status = self.sub_workflows.all().values_list("uuid", "status")
-        s = set([l[1] for l in wf_status])
+        return set([l[1] for l in wf_status])
         
-        if len(s)==1 and wf_states.FINISHED in s:
-            return wf_states.FINISHED
-        else: 
-            return wf_states.RUNNING
-        
+
     def is_finished(self):
         
         from aiida.common.datastructures import calc_states, wf_states, wf_exit_call

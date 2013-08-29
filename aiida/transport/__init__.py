@@ -1,32 +1,13 @@
-#
-# TODO: move copyfile in the ExecutionManager
-# def copyfile(src, dst):
-#     """
-#     a function that does the correct thing depending on whether src and
-#     dst are on the same remote machine or not.
-    
-#     src and dst will be urls to be parsed using the functions in
-#     aiida.common.aiidaurl.
-
-#     Will do something like:
-#     if src.protocol == dst.protocol and src.computer == dst.computer:
-#        transport = src.transport
-#        transport.copyfile(src.path,dst.path)
-#     else:
-#        raise NotImplementedError
-#        ## in the future, first copy from src to local sandbox, then back to dst
-#        ## (or possibly directly btw src and dst? understand how rsync works
-#        ## in this case)
-#     """
-#     pass
-
 import aiida.common
 from aiida.common.exceptions import InternalError
 from aiida.common.extendeddicts import FixedFieldsAttributeDict
 
 def TransportFactory(module):
     """
-    Return a suitable Transport subclass.
+    Used to return a suitable Transport subclass.
+
+    :param str module: name of the module containing the Transport subclass
+    :return: the transport subclass located in module 'module'
     """
     from aiida.common.pluginloader import BaseFactory
     
@@ -34,7 +15,9 @@ def TransportFactory(module):
 
 class FileAttribute(FixedFieldsAttributeDict):
     """
-    A class with attributes of a file, that is returned by get_attribute()
+    A class, resembling a dictionary, to describe the attributes of a file,
+    that is returned by get_attribute().
+    Possible keys: st_size, st_uid, st_gid, st_mode, st_atime, st_mtime
     """
     _valid_fields = (
         'st_size',
@@ -56,19 +39,19 @@ class TransportInternalError(InternalError):
 class Transport(object):
     """
     Abstract class for a generic transport (ssh, local, ...)
-    
-    TODO: * decide if we want chdir and get_pwd (see discussion in the
-            docstring of chdir)
-          * exec_command: decide how 'low-level' we want this to be:
-            probably we want something higher-level, where we give the command
-            to run, and it automatically waits for the calculation to finish
-            and return stdout, stderr and retval (maybe with timeout?)
-            Possibly, we may want to have a counterpart for more low-level
-            interaction with the job.
-          * we probably need a command to copy files between two folders on
-            the same remote server. To understand how to do it.
-
+    Contains the set of minimal methods
     """
+    # #TODO: * decide if we want chdir and get_pwd (see discussion in the
+    #         docstring of chdir)
+    #       * exec_command: decide how 'low-level' we want this to be:
+    #         probably we want something higher-level, where we give the command
+    #         to run, and it automatically waits for the calculation to finish
+    #         and return stdout, stderr and retval (maybe with timeout?)
+    #         Possibly, we may want to have a counterpart for more low-level
+    #         interaction with the job.
+    #       * we probably need a command to copy files between two folders on
+    #         the same remote server. To understand how to do it.
+
     _logger = aiida.common.aiidalogger.getChild('transport')
     
     # To be defined in the subclass
@@ -77,14 +60,14 @@ class Transport(object):
     
     def __enter__(self):
         """
-        For transports that require opening a connection, open
+        For transports that require opening a connection, opens
         all required channels.
         """
         raise NotImplementedError
 
     def __exit__(self, type, value, traceback):
         """
-        Close connections, if needed.
+        Closes connections, if needed.
         """
         raise NotImplementedError
 
@@ -97,6 +80,9 @@ class Transport(object):
 
     @classmethod
     def get_valid_transports(cls):
+        """
+        :return: a list of existing plugin names
+        """
         from aiida.common.pluginloader import existing_plugins
         
         return existing_plugins(Transport, "aiida.transport.plugins")
@@ -125,19 +111,17 @@ class Transport(object):
         """
         Change directory to 'path'
         
-        TODO: understand if we want this behavior: this is emulated
-            by paramiko, and we should emulate it also for the local
-            transport, since we do not want a global chdir for the whole
-            code (the same holds for get_pwd).
-            However, it could be useful to execute by default the
-            codes from that specific directory.
-
-        Args: 
-            path (str) - path to change working directory into.
-
-        Raises:
-            IOError - if the requested path does not exist
+        :param str path: path to change working directory into.
+        :raises: IOError, if the requested path does not exist
+        :rtype: string
         """
+        # #TODO: understand if we want this behavior: this is emulated
+        #        by paramiko, and we should emulate it also for the local
+        #        transport, since we do not want a global chdir for the whole
+        #        code (the same holds for get_pwd).
+        #        However, it could be useful to execute by default the
+        #        codes from that specific directory.
+
         raise NotImplementedError
 
 
@@ -145,9 +129,8 @@ class Transport(object):
         """
         Change permissions of a path.
 
-        Args:
-            path (str) - path to file
-            mode (int) - new permissions
+        :param str path: path to file
+        :param int mode: new permissions
         """
         raise NotImplementedError
 
@@ -159,10 +142,9 @@ class Transport(object):
         so if you only want to change one, use stat first to retrieve the 
         current owner and group.
 
-        Args:
-            path (str) - path of the file to change the owner and group of
-            uid (int) - new owner's uid
-            gid (int) - new group id
+        :param str path: path to the file to change the owner and group of
+        :param int uid: new owner's uid
+        :param int gid: new group id
         """
         raise NotImplementedError
 
@@ -172,11 +154,10 @@ class Transport(object):
         Copy a file or a directory from remote source to remote destination 
         (On the same remote machine)
         
-        Args:
-            remotesource (str) - path of the remote source directory / file
-            remotedestination (str) - path of the remote destination directory / file
+        :param str remotesource: path of the remote source directory / file
+        :param str remotedestination: path of the remote destination directory / file
 
-        Raises: IOError if one of src or dst does not exist
+        :raises: IOError, if one of src or dst does not exist
         """
         raise NotImplementedError
     
@@ -186,11 +167,10 @@ class Transport(object):
         Copy a file from remote source to remote destination 
         (On the same remote machine)
         
-        Args:
-            remotesource (str) - path of the remote source directory / file
-            remotedestination (str) - path of the remote destination directory / file
+        :param str remotesource: path of the remote source directory / file
+        :param str remotedestination: path of the remote destination directory / file
 
-        Raises: IOError if one of src or dst does not exist
+        :raises IOError: if one of src or dst does not exist
         """
         raise NotImplementedError
 
@@ -200,11 +180,10 @@ class Transport(object):
         Copy a folder from remote source to remote destination 
         (On the same remote machine)
         
-        Args:
-            remotesource (str) - path of the remote source directory / file
-            remotedestination (str) - path of the remote destination directory / file
-        
-        Raises: IOError if one of src or dst does not exist
+        :param str remotesource: path of the remote source directory / file
+        :param str remotedestination: path of the remote destination directory / file
+
+        :raise IOError: if one of src or dst does not exist
         """
         raise NotImplementedError
 
@@ -216,12 +195,12 @@ class Transport(object):
         Enforce the execution to be run from the cwd (as given by
         self.getcwd), if this is not None.
 
-        Return stdin, stdout, stderr and the session, when this exists
-        (can be None). If possible, use the higher-level
+        If possible, use the higher-level
         exec_command_wait function.
         
-        Args:
-            command (str) - execute the command given as a string
+        :param str command: execute the command given as a string
+        :return: stdin, stdout, stderr and the session, when this exists \
+                 (can be None).
         """
         raise NotImplementedError
 
@@ -233,12 +212,9 @@ class Transport(object):
 
         Enforce the execution to be run from the pwd (as given by
         self.getcwd), if this is not None.
-        
-        Return the retcode, stdout and stderr.
-            stdout and stderr are strings.
 
-        Args:
-            command (str) - execute the command given as a string
+        :param str command: execute the command given as a string
+        :return: a list: the retcode (int), stdout (str) and stderr (str).
         """
         raise NotImplementedError
     
@@ -248,9 +224,8 @@ class Transport(object):
         Retrieve a file or folder from remote source to local destination
         dst must be an absolute path (src not necessarily)
         
-        Args:
-            remotepath (str) - remote_folder_path
-            localpath (str) - local_folder_path
+        :param remotepath: (str) remote_folder_path
+        :param localpath: (str) local_folder_path
         """
         raise NotImplementedError
 
@@ -260,9 +235,8 @@ class Transport(object):
         Retrieve a file from remote source to local destination
         dst must be an absolute path (src not necessarily)
         
-        Args:
-            remotepath (str) - remote_folder_path
-            localpath (str) - local_folder_path
+        :param str remotepath: remote_folder_path
+        :param str localpath: local_folder_path
         """
         raise NotImplementedError
 
@@ -272,9 +246,8 @@ class Transport(object):
         Retrieve a folder recursively from remote source to local destination
         dst must be an absolute path (src not necessarily)
         
-        Args:
-            remotepath (str) - remote_folder_path
-            localpath (str) - local_folder_path
+        :param str remotepath: remote_folder_path
+        :param str localpath: local_folder_path
         """
         raise NotImplementedError
 
@@ -282,9 +255,6 @@ class Transport(object):
     def getcwd(self):
         """
         Return a string identifying the current working directory
-
-        Args:
-            None
         """
         raise NotImplementedError
 
@@ -294,15 +264,21 @@ class Transport(object):
         Return an object FixedFieldsAttributeDict for file in a given path,
         as defined in aiida.common.extendeddicts 
         Each attribute object consists in a dictionary with the following keys:
-            - st_size: size of files, in bytes 
-            - st_uid: user id of owner
-            - st_gid: group id of owner
-            - st_mode: protection bits
-            - st_atime: time of most recent access
-            - st_mtime: time of most recent modification
+        
+        * st_size: size of files, in bytes 
 
-        Args:
-            path (str) - path to file
+        * st_uid: user id of owner
+
+        * st_gid: group id of owner
+
+        * st_mode: protection bits
+
+        * st_atime: time of most recent access
+
+        * st_mtime: time of most recent modification
+
+        :param str path: path to file
+        :return: object FixedFieldsAttributeDict
         """
         raise NotImplementedError
 
@@ -310,16 +286,19 @@ class Transport(object):
     def get_mode(self,path):
         """
         Return the portion of the file's mode that can be set by chmod().
+
+        :param str path: path to file
+        :return: the portion of the file's mode that can be set by chmod()
         """
         import stat
         return stat.S_IMODE(self.get_attribute(path).st_mode)
 
     def isdir(self,path):
         """
-        Return True if path is an existing directory.
+        True if path is an existing directory.
 
-        Args:
-            path (str) - path to directory
+        :param str path: path to directory
+        :return: boolean
         """
         raise NotImplementedError
 
@@ -328,8 +307,8 @@ class Transport(object):
         """
         Return True if path is an existing file.
 
-        Args:
-            path (str) - path to file
+        :param str path: path to file
+        :return: boolean
         """
         raise NotImplementedError
 
@@ -340,13 +319,10 @@ class Transport(object):
         The list is in arbitrary order. It does not include the special 
         entries '.' and '..' even if they are present in the directory.
         
-        Args: 
-            path (str) - path to list (default to '.')
-            pattern (str) - return list of files matching filters
-                            in Unix style. Tested on unix only.
-                            default = None
-                            Works only on the cwd, e.g.
-                            listdir('.',*/*.txt) will not work
+        :param str path: path to list (default to '.')
+        :param str pattern: if used, listdir returns a list of files matching
+                            filters in Unix style. Unix only.
+        :return: a list of strings
         """
         raise NotImplementedError
 
@@ -357,13 +333,11 @@ class Transport(object):
         Works like mkdir, except that any intermediate path segment (not
         just the rightmost) will be created if it does not exist.
 
-        Args:
-            path (str) - directory to create
-            ignore_existing (bool) - if set to true, it doesn't give any error
-            if the leaf directory does already exist
+        :param str path: directory to create
+        :param bool ignore_existing: if set to true, it doesn't give any error
+                                     if the leaf directory does already exist
 
-        Raises:
-            If the directory already exists, OSError is raised.
+        :raises: OSError, if directory at path already exists
         """
         raise NotImplementedError
     
@@ -372,12 +346,11 @@ class Transport(object):
         """
         Create a folder (directory) named path.
 
-        Args:
-            path (str) - name of the folder to create
-            ignore_existing: if True, does not give any error if the directory
-                already exists
-        Raises:
-            If the directory already exists, OSError is raised.
+        :param str path: name of the folder to create
+        :param bool ignore_existing: if True, does not give any error if the
+                                     directory already exists
+
+        :raises: OSError, if directory at path already exists
         """
         raise NotImplementedError
 
@@ -388,11 +361,9 @@ class Transport(object):
         This can be used to quickly resolve symbolic links or determine 
         what the server is considering to be the "current folder".
 
-        Args:
-            path (str) - path to be normalized
+        :param str path: path to be normalized
 
-        Raises:
-            IOError - if the path can't be resolved on the server
+        :raise IOError: if the path can't be resolved on the server
         """
         raise NotImplementedError
 
@@ -403,9 +374,8 @@ class Transport(object):
         src must be an absolute path (dst not necessarily))
         Redirects to putfile and puttree.
        
-        Args:
-           localpath (str) - remote_path
-           remotepath (str) - local_path
+        :param str localpath: path to remote destination
+        :param str remotepath: absolute path to local source
         """
         raise NotImplementedError
 
@@ -415,9 +385,8 @@ class Transport(object):
         Put a file from local src to remote dst.
         src must be an absolute path (dst not necessarily))
         
-        Args:
-           localpath (str) - remote_file_path
-           remotepath (str) - local_file_path
+        :param str localpath: path to remote file
+        :param str remotepath: absolute path to local file
         """
         raise NotImplementedError
 
@@ -427,9 +396,8 @@ class Transport(object):
         Put a folder recursively from local src to remote dst.
         src must be an absolute path (dst not necessarily))
         
-        Args:
-           localpath (str) - remote_folder_path
-           remotepath (str) - local_folder_path
+        :param str localpath: path to remote folder
+        :param str remotepath: absolute path to local folder
         """
         raise NotImplementedError
 
@@ -439,11 +407,9 @@ class Transport(object):
         Remove the file at the given path. This only works on files; 
         for removing folders (directories), use rmdir.
 
-        Args: 
-            path: path to file to remove
+        :param str path: path to file to remove
 
-        Raises:
-            IOError: if the path is a directory
+        :raise IOError: if the path is a directory
         """
         raise NotImplementedError
 
@@ -452,12 +418,10 @@ class Transport(object):
         """
         Rename a file or folder from oldpath to newpath.
 
-        Parameters:
-            oldpath (str) - existing name of the file or folder
-            newpath (str) - new name for the file or folder
+        :param str oldpath: existing name of the file or folder
+        :param str newpath: new name for the file or folder
 
-        Raises:
-            IOError - if something goes wrong
+        :raises IOError: if something goes wrong
         """
         raise NotImplementedError
 
@@ -467,8 +431,7 @@ class Transport(object):
         Remove the folder named path.
         This works only for empty folders. For recursive remove, use rmtree.
 
-        Args:
-            path (str) - absolute path to the folder to remove
+        :param str path: absolute path to the folder to remove
         """
         raise NotImplementedError
 
@@ -477,8 +440,7 @@ class Transport(object):
         """
         Remove recursively the content at path
 
-        Args:
-            path (str): absolute path to remove
+        :param str path: absolute path to remove
         """
         raise NotImplementedError
     
@@ -491,8 +453,7 @@ class Transport(object):
         * A new bash session is opened
         * A reasonable error message is produced if the folder does not exist
 
-        Args:
-            remotedir: the full path of the remote directory
+        :param str remotedir: the full path of the remote directory
         """
         raise NotImplementedError
     
@@ -500,12 +461,11 @@ class Transport(object):
         """
         Get the remote username
 
-        Returns:
-            username (str)
-            retval (int)
-            stderr (sStr)
+        :return: list of username (str),
+                 retval (int),
+                 stderr (str)
         """
-        # TODO : add tests for this class
+        #TODO : add tests for this method
         
         command = 'whoami'
         retval, username, stderr = self.exec_command_wait(command)

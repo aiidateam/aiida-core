@@ -112,14 +112,16 @@ def upload_upf_family(folder, group_name, group_description,
         pseudo  = None
         created = None
         
-        if stop_if_existing:
-            md5sum = aiida.common.utils.md5_file(f)
-            existing_upf = UpfData.query(attributes__key="_md5",attributes__tval = md5sum)
-            
-            if len(existing_upf) == 0:
-                pseudo, created = UpfData.get_or_create(f, use_first = True)
-            else:
-                pseudo = existing_upf[0]
+    
+        md5sum = aiida.common.utils.md5_file(f)
+        existing_upf = UpfData.query(attributes__key="_md5",attributes__tval = md5sum)
+        
+        if len(existing_upf) == 0:
+            pseudo, created = UpfData.get_or_create(f, use_first = True)
+        else:
+            if stop_if_existing:
+                raise ValueError("A UPF with identical MD5 to "+f+" cannot be added with stop_if_existing")
+            pseudo = existing_upf[0]
                 
         group.dbnodes.add(pseudo.dbnode)
 

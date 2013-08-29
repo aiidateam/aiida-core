@@ -105,7 +105,7 @@ class Workflow(object):
                 
                 if params is not None:
                     if type(params) is dict:
-                        self.set_params(params)
+                        self.set_parameters(params)
                 
    
     @classmethod
@@ -161,7 +161,7 @@ class Workflow(object):
     #         Parameters
     # ----------------------------
     
-    def set_params(self, params):
+    def set_parameters(self, params):
         
         """
         Adds parameters to the workflow that are both stored and used every time
@@ -171,14 +171,23 @@ class Workflow(object):
         self.params = params
         self.dbworkflowinstance.add_parameters(self.params)
     
-    def set_status(self, status):
+    def add_parameters(self, params):
         
-        self.dbworkflowinstance.set_status(status)
+        self.dbworkflowinstance.add_parameters(params)
+        self.params = self.dbworkflowinstance.get_parameters()
+        
         
     def get_parameters(self):
         
         return self.dbworkflowinstance.get_parameters()
 
+    def get_status(self, status):
+        
+        return self.dbworkflowinstance.status
+    
+    def set_status(self, status):
+        
+        self.dbworkflowinstance.set_status(status)
     # ----------------------------
     #         Steps
     # ----------------------------
@@ -334,13 +343,99 @@ class Workflow(object):
                 w.kill()
         
         self.dbworkflowinstance.set_status(wf_states.FINISHED)
+    
+    
+    # ------------------------------------------------------
+    #         Report
+    # ------------------------------------------------------
+    
+    def get_report(self):
+        
+        if len(self.dbworkflowinstance.parent_workflow_step.all())==0:
+            return self.dbworkflowinstance.report.splitlines()
+        else:
+            return Workflow(uuid=self.dbworkflowinstance.parent_workflow_step.get().parent.uuid).get_report()
+    
+    def clear_report(self):
+        
+        if len(self.dbworkflowinstance.parent_workflow_step.all())==0:
+            self.dbworkflowinstance.clear_report()
+        else:
+            Workflow(uuid=self.dbworkflowinstance.parent_workflow_step.get().parent.uuid).clear_report()
+            
+    
+    def append_to_report(self, text):
+        
+        if len(self.dbworkflowinstance.parent_workflow_step.all())==0:
+            self.dbworkflowinstance.append_to_report(text)
+        else:
+            Workflow(uuid=self.dbworkflowinstance.parent_workflow_step.get().parent.uuid).append_to_report(text)
+        
+    # ------------------------------------------------------
+    #         Retrieval
+    # ------------------------------------------------------
+    
+    @classmethod
+    def get_subclass_from_dbnode(cls,wf_db):
+        
+        """
+        Core of the workflow next engine. The workflow is checked against MD5 hash of the stored script, 
+        if the match is found the python script is reload in memory with the importlib library, the
+        main class is searched and then loaded, parameters are added and the new methid is launched.
+        """
+        
+        from aiida.djsite.db.models import DbWorkflow
+        import importlib
+        import hashlib
+        
+        module       = wf_db.module
+        module_class = wf_db.module_class
+        md5          = wf_db.script_md5
+        script_path  = wf_db.script_path
+         
+        if not md5==hashlib.md5(script_path).hexdigest():
+            raise ValidationError("Unable to load the original workflow module {}, MD5 has changed".format(module))
+         
+        try:
+            wf_mod = importlib.import_module(module)
+        except ImportError:
+            raise InternalError("Unable to load the workflow module {}".format(module))
+        
+        for elem_name, elem in wf_mod.__dict__.iteritems():
+            
+            if module_class==elem_name: #and issubclass(elem, Workflow):
+                return getattr(wf_mod,elem_name)(uuid=wf_db.uuid)
+                           
+    @classmethod      
+    def get_subclass_from_uuid(cls,uuid):
+        
+        """
+        Simple method to use retrieve starting from uuid
+        """
+        
+        from aiida.djsite.db.models import DbWorkflow
+        
+        try:
+            
+            dbworkflowinstance    = DbWorkflow.objects.get(uuid=uuid)
+            return cls.get_subclass_from_dbnode(dbworkflowinstance)
+                  
+        except ObjectDoesNotExist:
+            raise NotExistent("No entry with the UUID {} found".format(uuid))
+    
+    @classmethod 
+    def kill_by_uuid(cls,uuid):
+    
+        cls.retrieve_by_uuid(uuid).kill()
         
 # ------------------------------------------------------
 #         Module functions for monitor and control
 # ------------------------------------------------------
 
-
-def list_workflows(expired=False):
+accumulated_tab = 0
+tab_size = 2
+    
+def list_workflows(ext=False,expired=False):
     
     """
     Simple printer witht all the workflow status, to remove when REST APIs will be ready.
@@ -349,96 +444,82 @@ def list_workflows(expired=False):
     from aiida.djsite.utils import get_automatic_user
     from aiida.djsite.db.models import DbWorkflow
     from django.db.models import Q
-    
+    import datetime
+    from django.utils.timezone import utc
     import ntpath
     
-    if expired:
-        w_list = DbWorkflow.objects.filter(Q(user=get_automatic_user()))
-    else:
-        w_list = DbWorkflow.objects.filter(Q(user=get_automatic_user()) & (Q(status=wf_states.RUNNING)))
+    now = datetime.datetime.utcnow().replace(tzinfo=utc)
     
-    for w in w_list:
-        print ""
-        print "Workflow {0}.{1} [uuid: {3}] started at {2} is {4}".format(w.module,w.module_class, w.time, w.uuid, w.status)
+    
+    def str_timedelta(dt):
         
-        if w.parent_workflow_step.all():
-            print "[subworkflow of {0} from {1}]".format(w.parent_workflow_step.get().name, w.parent_workflow_step.get().parent.uuid)
+        s = dt.seconds
+        hours, remainder = divmod(s, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        return '%sh :%sm :%ss' % (hours, minutes, seconds)
+    
+    def get_separator(accumulated_tab,tab_size, title=None):
+        
+        if title:
+            out = "+"
+            for i in range(accumulated_tab):
+                out+='-'*(tab_size)
+            return out
+        
+        else:
+            
+            out = "|"+' '*(tab_size)
+            for i in range(accumulated_tab-1):
+                out+=' '*tab_size
+            return out
+        
+    def print_workflow(w,ext=False):
+        
+        global accumulated_tab, tab_size
+        
+        print get_separator(accumulated_tab,tab_size, title=True)+" Workflow {0} ({1}) is {2} [{3}]".format(w.module_class, w.uuid, w.status, str_timedelta(now-w.time))
             
         if expired:
             steps = w.steps.all()
         else:
             steps = w.steps.filter(status=wf_states.RUNNING)
-            
+        
+        accumulated_tab+=1
         for s in steps:
-            print "- Running step: {0} [{1}] -> {2}".format(s.name,s.status, s.nextcall)
             
+            print get_separator(accumulated_tab,tab_size)+" Step: {0} is {1}".format(s.name,s.status)
+            
+            ## Calculations
             calcs  = s.get_calculations().filter(attributes__key="_state").values_list("uuid", "ctime", "attributes__tval")
-            wflows = s.get_sub_workflows().values_list("uuid", "module", "module_class", "status")
             
+            accumulated_tab+=1
             for c in calcs:
-                print "   Calculation {0} started at {1} is {2}".format(c[0], c[1], c[2])
-            
-            for w in wflows:
-                print "   Workflow {0} from {1} {2} is {3}".format(w[0], w[1], w[2], w[3])
-
-
-# ------------------------------------------------------
-#         Retrieval
-# ------------------------------------------------------
-
-def retrieve(wf_db):
-    
-    """
-    Core of the workflow next engine. The workflow is checked against MD5 hash of the stored script, 
-    if the match is found the python script is reload in memory with the importlib library, the
-    main class is searched and then loaded, parameters are added and the new methid is launched.
-    """
-    
-    from aiida.djsite.db.models import DbWorkflow
-    import importlib
-    import hashlib
-    
-    module       = wf_db.module
-    module_class = wf_db.module_class
-    md5          = wf_db.script_md5
-    script_path  = wf_db.script_path
-     
-    if not md5==hashlib.md5(script_path).hexdigest():
-        raise ValidationError("Unable to load the original workflow module {}, MD5 has changed".format(module))
-     
-    try:
-        wf_mod = importlib.import_module(module)
-    except ImportError:
-        raise InternalError("Unable to load the workflow module {}".format(module))
-    
-    for elem_name, elem in wf_mod.__dict__.iteritems():
+                print get_separator(accumulated_tab,tab_size)+" Calculation ({0}) is {1}".format(c[0], c[2])
+            accumulated_tab-=1
         
-        if module_class==elem_name: #and issubclass(elem, Workflow):
-            return  getattr(wf_mod,elem_name)(uuid=wf_db.uuid)
-                       
+            ## SubWorkflows
+            wflows = s.get_sub_workflows()
             
-def retrieve_by_uuid(uuid):
-    
-    """
-    Simple method to use retrieve starting from uuid
-    """
-    
-    from aiida.djsite.db.models import DbWorkflow
-    
-    try:
+            accumulated_tab+=1
+            for sw in wflows:
+                print_workflow(sw.dbworkflowinstance, ext=ext)
+            accumulated_tab-=1
+            
+        accumulated_tab-=1
         
-        dbworkflowinstance    = DbWorkflow.objects.get(uuid=uuid)
-        return  retrieve(dbworkflowinstance)
-              
-    except ObjectDoesNotExist:
-        raise NotExistent("No entry with the UUID {} found".format(uuid))
-                        
-def kill_by_uuid(uuid):
+    if expired:
+        w_list = DbWorkflow.objects.filter(Q(user=get_automatic_user()))
+    else:
+        w_list = DbWorkflow.objects.filter(Q(user=get_automatic_user()) & (Q(status=wf_states.RUNNING)))
     
-    """
-    Simple method to use retrieve starting from uuid
-    """
     
-    wf = retrieve_by_uuid(uuid)
-    wf.kill()
+    for w in w_list:
+        
+        accumulated_tab = 0
+        print ""
+        
+        if len(w.parent_workflow_step.all())==0:
+            print_workflow(w, ext=ext)
+        
+                
     

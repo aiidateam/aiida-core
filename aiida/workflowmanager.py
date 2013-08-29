@@ -74,7 +74,7 @@ def execute_steps():
 
 def advance_workflow(w, step):
     
-    import aiida.orm.workflow as wf
+    from aiida.orm.workflow import Workflow
     from aiida.common.exceptions import ValidationError
     
     if (step.nextcall==wf_exit_call):
@@ -87,7 +87,7 @@ def advance_workflow(w, step):
         logger.info("[{0}] Running call: {1} after {2}".format(w.uuid,step.nextcall,step.name))
         
         try:
-            w_obj = wf.retrieve_by_uuid(w.uuid)
+            w_obj = Workflow.get_subclass_from_uuid(w.uuid)
             getattr(w_obj,step.nextcall)()
         except ValidationError:
             logger.error("[{0}] Closing the workflow due to reload ERROR ".format(w.uuid))

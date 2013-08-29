@@ -175,7 +175,7 @@ And we impose the input data to the calculation, (and therefore set the links in
   calc.use_code(code)
   calc.use_parameters(parameters)
   
-If you have installed a pseudopotential family, then setting the pseudopotentials for this calculation is extremely easy, there's a function for that::
+If you have installed a pseudopotential family (see :ref:`my-ref-to-pseudo-tutorial`), then setting the pseudopotentials for this calculation is extremely easy, there's a function for that::
   
   pseudo_family = 'lda_pslib'
   calc.use_pseudo_from_family(pseudo_family)

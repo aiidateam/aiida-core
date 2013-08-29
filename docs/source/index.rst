@@ -24,6 +24,7 @@ User's guide
    examples/pw_tutorial
    examples/ph_tutorial
    examples/cp_tutorial
+   examples/pseudo_tutorial
 
    scheduler/index
     

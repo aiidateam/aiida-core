@@ -304,7 +304,14 @@ As the last step, we make a loop over the atomic species, and attach its pseudop
         calc.use_pseudo(v, kind=k)
 
 In this example, we loaded the files directly from the hard disk. 
-For a more practical use, it is convenient to use the pseudopotential families: they are implemented in the full script at the end of the page.
+For a more practical use, it is convenient to use the pseudopotential families. Its use is documented in :ref:`my-ref-to-pseudo-tutorial`.
+If you got one installed, you can simply tell the calculation to use the pseudopotential family, then AiiDA will take care of attaching the proper pseudopotential to the element::
+
+  calc.use_pseudo_from_family('my_pseudo_family')
+
+
+
+
 
 
 Execute
@@ -379,42 +386,27 @@ Compact script
 ::
 
     #!/usr/bin/env python
-    import sys
     from aiida.common.utils import load_django
     load_django()
     from aiida.orm import Code
     from aiida.orm import CalculationFactory, DataFactory
-    from aiida.djsite.db.models import Group
-    UpfData = DataFactory('upf')
+    
     ParameterData = DataFactory('parameter')
     StructureData = DataFactory('structure')
-
-    ################################################################
-
-    try:
-	codename = sys.argv[1]
-    except IndexError:
-	codename = None
-
-    try:
-        pseudo_family = sys.argv[2]
-    except IndexError:
-	sys.exit(1)
-
-    #####
+    
+    codename = 'your_pw.x'
+    
+    pseudo_family = 'lda_pslib'
 
     code = Code.get(codename)
     computer = code.get_remote_computer()
-    
-    ####
 
+    # BaTiO3 cubic structure
     alat = 4. # angstrom
     cell = [[alat, 0., 0.,],
 	    [0., alat, 0.,],
 	    [0., 0., alat,],
 	   ]
-
-    # BaTiO3 cubic structure
     s = StructureData(cell=cell)
     s.append_atom(position=(0.,0.,0.),symbols=['Ba'])
     s.append_atom(position=(alat/2.,alat/2.,alat/2.),symbols=['Ti'])

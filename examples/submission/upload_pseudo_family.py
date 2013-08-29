@@ -7,28 +7,22 @@ from aiida.common.utils import load_django
 load_django()
 from aiida.orm.data.upf import upload_upf_family
 
-#upload_upf_family('pz-rrkjus', 'pslib030-pz-rrkjus', "PSLibrary by Andrea Dal Corso, version 0.3.0; PZ functional, rrkjus")
-#upload_upf_family('pbe-rrkjus', 'pslib030-pbe-rrkjus', "PSLibrary by Andrea Dal Corso, version 0.3.0; PBE functional, rrkjus")
-#upload_upf_family('pbesol-rrkjus', 'pslib030-pbesol-rrkjus', "PSLibrary by Andrea Dal Corso, version 0.3.0; PBEsol functional, rrkjus")
-
 parser = optparse.OptionParser()
 parser.add_option("-f", "--folder", dest="folder",
                   help="Folder containing the UPF files", metavar="FOLDER")
-parser.add_option("-n", "--name",
-                  dest="name", help="Name of the pseudo family", metavar="NAME")
-parser.add_option("-d", "--description",
-                  dest="description", help="Name of the pseudo family", metavar="DESCRIPTION")
+parser.add_option("-n", "--name", dest="name",
+                  help="Name of the pseudo family", metavar="NAME")
+parser.add_option("-d", "--description", dest="description", 
+                  help="Name of the pseudo family", metavar="DESCRIPTION")
 
 (options, args) = parser.parse_args()
 
 if options.folder is None:
-    print "You have to specify the folder"
-    print ""
+    print "You have to specify the folder\n"
     parser.print_help()
     sys.exit(1)
 if options.name is None:
-    print "You have to specify the family name"
-    print ""
+    print "You have to specify the family name\n"
     parser.print_help()
     sys.exit(1)
 

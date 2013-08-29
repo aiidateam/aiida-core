@@ -441,6 +441,7 @@ class DbWorkflow(m.Model):
     uuid         = UUIDField(auto=True)
     time         = m.DateTimeField(auto_now_add=True, editable=False)
     user         = m.ForeignKey(User, on_delete=m.PROTECT)
+    report       = m.TextField(blank=True)
     
     # File variables, script is the complete dump of the workflow python script
     module       = m.TextField(blank=False)
@@ -472,13 +473,21 @@ class DbWorkflow(m.Model):
     def add_parameters(self, dict):
         
         import json
+        from django.db import IntegrityError, transaction
+        
         try:
             
-            for k in dict.keys():            
-                p = DbWorkflowParameters.objects.create(parent=self, name = k, value = json.dumps(dict[k]))
+            sid = transaction.savepoint()
+            for k in dict.keys():
+                p, created = DbWorkflowParameters.objects.get_or_create(parent=self, name = k)
+                p.value = json.dumps(dict[k])
+                p.save()
                 self.params.add(p)
-                
+            transaction.savepoint_commit(sid)
+            
         except:
+            
+            transaction.savepoint_rollback(sid)
             raise ValueError("Error adding parameters")
         
     def get_parameters(self):
@@ -491,6 +500,24 @@ class DbWorkflow(m.Model):
         except:
             raise ValueError("Error retrieving parameters")
     
+    ## Reporting
+
+    def clear_report(self):
+        
+        self.report = None
+        self.save()
+    
+    def append_to_report(self, _text):
+        
+        from django.utils.timezone import utc
+        import datetime
+        
+        now = datetime.datetime.utcnow().replace(tzinfo=utc)
+        self.report += str(now)+"] "+_text+"\n";
+        self.save()
+
+    ## Calculations
+            
     def get_calculations(self):
         
         from aiida.orm import Calculation

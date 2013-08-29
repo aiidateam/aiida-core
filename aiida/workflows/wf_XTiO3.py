@@ -71,8 +71,8 @@ class WorkflowXTiO3(Workflow):
     def start(self):
         
         params = self.get_parameters()
-        #elements_alat = [('Ba',4.0),('Sr', 3.89), ('Pb', 3.9)]
-        elements_alat = [('Ba',4.0)]
+        elements_alat = [('Ba',4.0),('Sr', 3.89), ('Pb', 3.9)]
+        #elements_alat = [('Ba',4.0)]
         
         for x in elements_alat:
             
@@ -101,10 +101,22 @@ class WorkflowXTiO3(Workflow):
             ph_calc = self.get_ph_calculation(pw_calc, self.get_ph_parameters())
             self.attach_calculation(ph_calc)
             
-            
         self.next(self.final_step)
         
     def final_step(self):
+        
+        #self.append_to_report(x_material+"Ti03 EOS started")
+        from aiida.orm.data.parameter import ParameterData
+        import aiida.tools.physics as ps
+        
+        params = self.get_parameters()
+        
+        # Get calculations
+        start_calcs = self.get_step(self.run_ph).get_calculations()
+        
+        for c in start_calcs:
+            dm = c.get_outputs(type=ParameterData)[0].get_dict()['dynamical_matrix_1']
+            self.append_to_report("Point q: {0} Frequencies: {1}".format(dm['q_point'],dm['frequencies']))
         
         self.next(self.exit)
     
@@ -123,14 +135,6 @@ class WorkflowXTiO3_EOS(Workflow):
     ##    Structure generators
     ## ===============================================
     
-    def linspace(self, start, stop, n):
-        if n == 1:
-            yield stop
-            return
-        h = (stop - start) / (n - 1)
-        for i in range(n):
-            yield start + h * i
-        
     def get_structure(self, alat = 4, x_material = 'Ba'):
         
         cell = [[alat, 0., 0.,],
@@ -217,7 +221,16 @@ class WorkflowXTiO3_EOS(Workflow):
     
     def start(self):
         
+        params = self.get_parameters()
+        x_material             = params.pop('x_material', 'Ba')
+        
+        self.append_to_report(x_material+"Ti03 EOS started")
+        self.next(self.eos)
+    
+    def eos(self):
+        
         from aiida.orm import Code, Computer, CalculationFactory
+        import numpy as np
         
         params = self.get_parameters()
         
@@ -225,10 +238,15 @@ class WorkflowXTiO3_EOS(Workflow):
         starting_alat          = float(params.pop('starting_alat', 4.0))
         alat_steps             = int(params.pop('alat_steps', 5))
         
-
-        for a in self.linspace(starting_alat*0.85,starting_alat*1.15,alat_steps):
+        
+        a_sweep = np.linspace(starting_alat*0.85,starting_alat*1.15,alat_steps).tolist()
+        
+        aiidalogger.info("Storing a_sweep as "+str(a_sweep))
+        self.add_parameters({'a_sweep':a_sweep})
+        
+        for a in a_sweep:
             
-            aiidalogger.info("Preparing structure {0} with alat {1}".format(x_material+"TiO3",a))
+            self.append_to_report("Preparing structure {0} with alat {1}".format(x_material+"TiO3",a))
             
             calc = self.get_pw_calculation(self.get_structure(alat=a, x_material=x_material),
                                       self.get_pw_parameters(),
@@ -245,8 +263,14 @@ class WorkflowXTiO3_EOS(Workflow):
         from aiida.orm.data.parameter import ParameterData
         import aiida.tools.physics as ps
         
+        params = self.get_parameters()
+        x_material   = params.pop('x_material', 'Ba')
+        a_sweep      = params.pop('a_sweep',[])
+        
+        aiidalogger.info("Retrieving a_sweep as "+str(a_sweep))
+        
         # Get calculations
-        start_calcs = self.get_step(self.start).get_calculations()
+        start_calcs = self.get_step(self.eos).get_calculations()
         
         #  Calculate results
         #-----------------------------------------
@@ -254,17 +278,25 @@ class WorkflowXTiO3_EOS(Workflow):
         e_calcs = [c.get_outputs(type=ParameterData)[0].get_dict()['energy'][-1] for c in start_calcs]
         v_calcs = [c.get_outputs(type=ParameterData)[0].get_dict()['cell']['volume'] for c in start_calcs]
         
-        v_calcs, e_calcs = zip(*sorted(zip(v_calcs, e_calcs)))
+        e_calcs = zip(*sorted(zip(a_sweep, e_calcs)))[1]
+        v_calcs = zip(*sorted(zip(a_sweep, v_calcs)))[1]
+        
+        #  Add to report
+        #-----------------------------------------
+        for i in range (len(a_sweep)):
+            self.append_to_report(x_material+"Ti03 simulated with a="+str(a_sweep[i])+", e="+str(e_calcs[i]))
+        
+        #  Find optimal alat
+        #-----------------------------------------
+        
         murnpars, ier = ps.Murnaghan_fit(e_calcs, v_calcs)
         
         # New optimal alat
         optimal_alat  = murnpars[3]** (1 / 3.0)
+        self.add_parameters({'optimal_alat':optimal_alat})
         
         #  Build last calculation
         #-----------------------------------------
-        
-        params = self.get_parameters()
-        x_material             = params.pop('x_material', 'Ba')
         
         calc = self.get_pw_calculation(self.get_structure(alat=optimal_alat, x_material=x_material),
                                       self.get_pw_parameters(),
@@ -276,6 +308,15 @@ class WorkflowXTiO3_EOS(Workflow):
         
     def final_step(self):
         
+        params = self.get_parameters()
+        x_material   = params.pop('x_material', 'Ba')
+        optimal_alat   = params.pop('optimal_alat', -1.0)
+        
+        opt_calc = self.get_step(self.optimize).get_calculations()[0]
+        opt_e = opt_calc.get_outputs(type=ParameterData)[0].get_dict()['energy'][-1]
+        
+        self.append_to_report(x_material+"Ti03 optimal with a="+str(optimal_alat)+", e="+str(opt_e))
+            
         self.next(self.exit)
 
 

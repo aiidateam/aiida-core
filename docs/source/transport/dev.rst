@@ -320,7 +320,7 @@ Below, you can find a template to fill for a new transport plugin, with a minima
 
    def rename(src,dst):
         """
-        Rename a file or folder from oldpath to newpath.
+        Rename a file or folder from src to dst.
 
         :param str oldpath: existing name of the file or folder
         :param str newpath: new name for the file or folder
@@ -354,6 +354,4 @@ Below, you can find a template to fill for a new transport plugin, with a minima
 
         :param str path: absolute path to remove
         """
-
-
 

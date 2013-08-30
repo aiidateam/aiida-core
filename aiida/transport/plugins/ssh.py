@@ -1052,6 +1052,28 @@ class SshTransport(aiida.transport.Transport):
         """
         return self.sftp.remove(path)
 
+    def rename(self,src,dst):
+        """
+        Rename a file or folder from src to dst.
+
+        :param str oldpath: existing name of the file or folder
+        :param str newpath: new name for the file or folder
+
+        :raises IOError: if src/dst is not found
+        :raises ValueError: if src/dst is not a valid string
+        """
+        if not src:
+            raise ValueError("Source {} is not a valid string".format(src))
+        if not dst:
+            raise ValueError("Destination {} is not a valid string".format(dst))
+        if not self.isfile( src ):
+            if not self.isdir( src ):
+                raise IOError("Source {} does not exist".format(src))
+        if not self.isfile( dst ):
+            if not self.isdir( dst ):
+                raise IOError("Destination {} does not exist".format(dst))
+
+        return self.sftp.rename(src,dst)
     
     def isfile(self,path):
         """

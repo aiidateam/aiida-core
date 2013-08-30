@@ -254,7 +254,9 @@ class Transport(object):
 
     def getcwd(self):
         """
-        Return a string identifying the current working directory
+        Get working directory
+
+        :return: a string identifying the current working directory
         """
         raise NotImplementedError
 

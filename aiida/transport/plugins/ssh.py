@@ -236,21 +236,19 @@ class SshTransport(aiida.transport.Transport):
         """
         Initialize the SshTransport class.
         
-        Args:
-            machine: the machine to connect to
-            load_system_host_keys (optional, default False): if False, do not
+        :param machine: the machine to connect to
+        :param load_system_host_keys: (optional, default False): if False, do not
                 load the system host keys
-            key_policy (optional, default = paramiko.RejectPolicy()): the
+        :param key_policy: (optional, default = paramiko.RejectPolicy()): the
                 policy to use for unknown keys
-            Other parameters valid for the ssh connect function (see the 
-            self._valid_connect_params list) are passed to the connect
-            function (as port, username, password, ...); taken from the
-            accepted paramiko.SSHClient.connect() params)
-
-            TODO : implement a property self.sftp that raises a reasonable
-               exception if the channel has not been opened. Understand if
-               we need explicit open() and close() functions.
+        Other parameters valid for the ssh connect function (see the 
+        self._valid_connect_params list) are passed to the connect
+        function (as port, username, password, ...); taken from the
+        accepted paramiko.SSHClient.connect() params)
         """
+        # #TODO: implement a property self.sftp that raises a reasonable
+        #        exception if the channel has not been opened. Understand if
+        #        we need explicit open() and close() functions.
 
         ## First call the parent __init__ to setup the logger!
         super(SshTransport,self).__init__()

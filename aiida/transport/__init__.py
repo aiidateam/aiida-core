@@ -295,6 +295,7 @@ class Transport(object):
         import stat
         return stat.S_IMODE(self.get_attribute(path).st_mode)
 
+
     def isdir(self,path):
         """
         True if path is an existing directory.
@@ -423,7 +424,8 @@ class Transport(object):
         :param str oldpath: existing name of the file or folder
         :param str newpath: new name for the file or folder
 
-        :raises IOError: if something goes wrong
+        :raises IOError: if oldpath/newpath is not found
+        :raises ValueError: if oldpath/newpath is not a valid string
         """
         raise NotImplementedError
 
@@ -452,7 +454,9 @@ class Transport(object):
         via the transport to the remote directory.
 
         Expected behaviors:
+
         * A new bash session is opened
+
         * A reasonable error message is produced if the folder does not exist
 
         :param str remotedir: the full path of the remote directory

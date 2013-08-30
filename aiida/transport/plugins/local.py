@@ -774,6 +774,42 @@ class LocalTransport(aiida.transport.Transport):
 
         return retval, output_text, stderr_text
 
+
     def gotocomputer_command(self, remotedir):
+        """
+        Return a string to be run using os.system in order to connect
+        via the transport to the remote directory.
+
+        Expected behaviors:
+
+        * A new bash session is opened
+
+        * A reasonable error message is produced if the folder does not exist
+
+        :param str remotedir: the full path of the remote directory
+        """
         return """bash -c "if [ -d {escaped_remotedir} ] ; then cd {escaped_remotedir} ; bash --rcfile <(echo 'if [ -e ~/.bashrc ] ; then source ~/.bashrc ; fi ; export PS1="'"\[\033[01;31m\][AiiDA]\033[00m\]$PS1"'"') ; else echo  '  ** The directory' ; echo '  ** {remotedir}' ; echo '  ** seems to have been deleted, I logout...' ; fi" """.format(
         escaped_remotedir="'{}'".format(remotedir), remotedir=remotedir)
+
+
+    def rename(src,dst):
+        """
+        Rename a file or folder from oldpath to newpath.
+
+        :param str oldpath: existing name of the file or folder
+        :param str newpath: new name for the file or folder
+
+        :raises IOError: if src/dst is not found
+        :raises ValueError: if src/dst is not a valid string
+        """
+        if not src:
+            raise ValueError("Source {} is not a valid string".format(src))
+        if not dst:
+            raise ValueError("Destination {} is not a valid string".format(dst))
+        if not os.path.exists( src ):
+            raise IOError("Source {} does not exist".format(src))
+        if not os.path.exists( dst ):
+            raise IOError("Destination {} does not exist".format(dst))
+        
+        shutil.move(src,dst)
+

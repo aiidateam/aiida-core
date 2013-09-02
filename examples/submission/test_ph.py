@@ -33,7 +33,8 @@ except IndexError:
 try:
     codename = sys.argv[2]
 except IndexError:
-    codename = None
+    raise IOError("Must provide codename in input")
+#codename = None
 
 # If True, load the pseudos from the family specified below
 # Otherwise, use static files provided
@@ -45,7 +46,7 @@ queue = None
 #####
 
 if parent_id is None:
-    raise ValueError
+    raise ValueError("Must provide parent_id")
 try:
     int(parent_id)
 except ValueError:

@@ -29,7 +29,7 @@ If you don't have python installed, or your version is outdated, please install
 a suitable version of python (either refer to the manual of your Linux 
 distribution, or for instance you can download the ActiveState Python from
 ActiveState_. Choose the appropriate distribution corresponding to your 
-architecture, and with version 2.7.x.x.
+architecture, and with version 2.7.x.x).
 
 .. _ActiveState: http://www.activestate.com/activepython/downloads
 
@@ -52,8 +52,8 @@ that you plan to use.
 
 Here is a list of packages/programs that you need to install (for each of them,
 there may be a specific/easier way to install them in your distribution, as
-for instance ``apt-get`` in Debian/Ubuntu (see below for the specific names
-of packages to install) or ``yum`` in RedHat/Fedora.
+for instance ``apt-get`` in Debian/Ubuntu -see below for the specific names
+of packages to install- or ``yum`` in RedHat/Fedora).
 
 * `git`_ (required to download the code)
 * `python-pip`_ (required to automatically download and install further
@@ -72,7 +72,7 @@ of packages to install) or ``yum`` in RedHat/Fedora.
 .. _SQLite3 development files: http://www.sqlite.org/
 
 For Ubuntu, you can install the above packages using (tested on Ubuntu 12.04,
-names may change if different releases)::
+names may change in different releases)::
 
       sudo apt-get install git
       sudo apt-get install python-pip
@@ -90,7 +90,7 @@ following command::
     git clone https://pizzi@bitbucket.org/aiida_team/aiida.git ~/git/aiida
 
 (or use ``git@bitbucket.org:aiida_team/aiida.git`` if you are downloading
-through SSH; not that this requires your ssh key to be added on the
+through SSH; note that this requires your ssh key to be added on the
 Bitbucket account.)
 
 Python dependencies
@@ -99,7 +99,7 @@ Python dependencies are managed using ``pip``, that you have installed in the
 previous steps. Install the python dependencies is as simple as this::
 
       cd ~/git/aiida # or the folder where you downloaded AiiDA
-      pip install -U -r requirements.txt
+      sudo pip install -U -r requirements.txt
 
 (this will download and install requirements that are listed in the
 ``requirements.txt`` file).
@@ -188,7 +188,7 @@ the database, the repository location, and it will finally (automatically) run
 a ``verdi syncdb`` command, that creates the required tables in the database
 and installs the database triggers.
 
-.. note:: If this is you first installation, the code (Django, actually)
+.. note:: If this is your first installation, the code (Django, actually)
   will ask to setup an admin user ("Would you like to create one now?" prompt).
   In this case chose ``yes`` and type the required information. Some notes:
 

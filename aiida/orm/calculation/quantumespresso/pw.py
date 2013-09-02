@@ -1,19 +1,18 @@
 """
 Plugin to create a Quantum Espresso pw.x file.
-
-TODO: COPY OUTDIR FROM PREVIOUS CALCULATION! Should be an input node of type
-     RemoteData (or maybe subclass it?).
-TODO: tests!
-TODO: DOC + implementation of SETTINGS
-TODO: preexec, postexec
-TODO: Check that no further parameters are passed in SETTINGS
-TODO: many cards missing: check and implement
-      e.g.: ['CONSTRAINTS', 'OCCUPATIONS']
-TODO: implement pre... and post... hooks to add arbitrary strings before
-      and after a namelist, and a 'final_string' (all optional); useful 
-      for development when new cards are needed
-TODO: all a lot of logger.debug stuff
 """
+# TODO: COPY OUTDIR FROM PREVIOUS CALCULATION! Should be an input node of type
+#      RemoteData (or maybe subclass it?).
+# TODO: tests!
+# TODO: DOC + implementation of SETTINGS
+# TODO: preexec, postexec
+# TODO: Check that no further parameters are passed in SETTINGS
+# TODO: many cards missing: check and implement
+#       e.g.: ['CONSTRAINTS', 'OCCUPATIONS']
+# TODO: implement pre... and post... hooks to add arbitrary strings before
+#       and after a namelist, and a 'final_string' (all optional); useful 
+#       for development when new cards are needed
+# TODO: all a lot of logger.debug stuff
 import os
 
 from aiida.orm import Calculation, DataFactory
@@ -57,7 +56,9 @@ class PwCalculation(BasePwCpInputGenerator, Calculation):
 
     def use_kpoints(self, data):
         """
-        Set the kpoints for this calculation
+        Set the kpoints for this calculation.
+
+        :param data: Object ParameterData that represents the kpoints
         """
         if not isinstance(data, ParameterData):
             raise ValueError("The data must be an instance of the ParameterData class")
@@ -66,6 +67,6 @@ class PwCalculation(BasePwCpInputGenerator, Calculation):
 
     def get_linkname_kpoints(self):
         """
-        The name of the link used for the kpoints
+        :return: the name of the link used for the kpoints
         """
         return "kpoints"

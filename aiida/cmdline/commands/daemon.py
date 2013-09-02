@@ -15,12 +15,17 @@ class Daemon(VerdiCommand):
     
     This command allows to interact with the AiiDA daemon.
     Valid subcommands are:
+
     * start: start the daemon
+
     * stop: restart the daemon
-    * restart: restart the aiida daemon, waiting for it to cleanly exit
+
+    * restart: restart the aiida daemon, waiting for it to cleanly exit\
         before restarting it.
+
     * status: inquire the status of the deamon.
-    * showlog: show the log in a continuous fashion, similar to the 'tail -f' 
+
+    * showlog: show the log in a continuous fashion, similar to the 'tail -f' \
         command. Press CTRL+C to exit.
     """
 

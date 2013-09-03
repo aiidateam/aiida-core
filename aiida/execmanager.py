@@ -213,8 +213,7 @@ def update_jobs():
 def submit_calc(calc):
     """
     Submit a calculation
-    Args:
-        calc: the calculation to submit (an instance of the aiida.orm.Calculation class)
+    :param calc: the calculation to submit (an instance of the aiida.orm.Calculation class)
     """
     import StringIO
     import json

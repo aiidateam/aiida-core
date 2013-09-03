@@ -99,13 +99,14 @@ class Calculation(Node):
 
     def can_link_as_output(self,dest):
         """
-        Raise a ValueError if a link from self to dest is not allowed.
-        
         An output of a calculation can only be a data, and can only be set 
         when the calculation is in the SUBMITTING or RETRIEVING or
         PARSING state.
         (during SUBMITTING, the execmanager adds a link to the remote folder; 
-         all other links are added while in the retrieving phase)
+        all other links are added while in the retrieving phase)
+
+        :param dest: a Data object instance of the database
+        :raise: ValueError if a link from self to dest is not allowed.
         """
         from aiida.orm import Data
 

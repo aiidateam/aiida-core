@@ -25,24 +25,33 @@ class DbNode(m.Model):
     '''
     Generic node: data or calculation (or code - tbd). There will be several types of connections.
     Naming convention (NOT FINAL): A --> C --> B. 
-      A is 'input' of C.
-      C is 'output' of A. 
-      A is 'parent' of B,C
-      C,B are 'children' of A.
+
+    * A is 'input' of C.
+
+    * C is 'output' of A. 
+
+    * A is 'parent' of B,C
+
+    * C,B are 'children' of A.
 
     FINAL DECISION:
     All attributes are stored in the Attribute table.
-    * internal attributes (that are used by the Data subclass and similar) are stored
-      starting with an underscore.
-      These (internal) attributes cannot be changed except when defining the object
+
+    * internal attributes (that are used by the Data subclass and similar) are stored\
+      starting with an underscore.\
+      These (internal) attributes cannot be changed except when defining the object\
       the first time.
-    * other attributes MUST start WITHOUT an underscore. These are user-defined and
+
+    * other attributes MUST start WITHOUT an underscore. These are user-defined and\
       can be appended even after the calculation has run, since they just are metadata.
+
     * There is no json metadata attached to the DbNode entries. This can go into an attribute if needed.
-    * Attributes in the Attribute table have to be thought as belonging to the DbNode,
+
+    * Attributes in the Attribute table have to be thought as belonging to the DbNode,\
       and this is the reason for which there is no 'user' field in the Attribute field.
-    * For a Data node, attributes will /define/ the data and hence should be immutable.
-      User-defined attributes are metadata for convenience of tagging and searching only.
+
+    * For a Data node, attributes will /define/ the data and hence should be immutable.\
+      User-defined attributes are metadata for convenience of tagging and searching only.\
       User should be careful not to attach data computed from data as metadata. 
     '''
     uuid = UUIDField(auto=True)
@@ -291,30 +300,37 @@ class Group(m.Model):
     user = m.ForeignKey(User)  # The owner of the group, not of the calculations
 
 class DbComputer(m.Model):
-    """Table of computers or clusters.
-
-    # TODO: understand if we want that this becomes simply another type of dbnode.
+    """
+    Table of computers or clusters.
 
     Attributes:
-        name: A name to be used to refer to this computer. Must be unique.
-        hostname: Fully-qualified hostname of the host
-        workdir: Full path of the aiida folder on the host. It can contain
-            the string {username} that will be substituted by the username
-            of the user on that machine.
-            The actual workdir is then obtained as
-            workdir.format(username=THE_ACTUAL_USERNAME)
-            Example: 
+    * name: A name to be used to refer to this computer. Must be unique.
+    * hostname: Fully-qualified hostname of the host
+    * workdir: Full path of the aiida folder on the host. It can contain\
+            the string {username} that will be substituted by the username\
+            of the user on that machine.\
+            The actual workdir is then obtained as\
+            workdir.format(username=THE_ACTUAL_USERNAME)\
+            Example: \
             workdir = "/scratch/{username}/aiida/"
-        transport_type: a string with a valid transport type
+    * transport_type: a string with a valid transport type
 
 
     Note: other things that may be set in the metadata:
-        - mpirun command
-        - num cores per node
-        - max num cores
-        - allocate full node = True or False
-        - ... (further limits per user etc.)
+
+        * mpirun command
+
+        * num cores per node
+
+        * max num cores
+
+        * allocate full node = True or False
+
+        * ... (further limits per user etc.)
+
     """
+    #TODO: understand if we want that this becomes simply another type of dbnode.
+
     uuid = UUIDField(auto=True)
     name = m.CharField(max_length=255, unique=True, blank=False)
     hostname = m.CharField(max_length=255)

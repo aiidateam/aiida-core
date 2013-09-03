@@ -321,19 +321,19 @@ database (the ``pk``, i.e. the principal key, and the ``uuid``).
 
 .. note:: You can change the label of a code by using the::
 
-   verdi relabel
+   verdi code relabel
    
   command; you can also list all available codes with::
 
-   verdi list
+   verdi code list
    
   and then get the information of a specific code with::
 
-   verdi show
+   verdi code show
    
   Finally, to delete a code (only if it not used by any calculation) use::
 
-   verdi delete
+   verdi code delete
    
    
 And now, you are ready to launch your calculations! You may want to follow to

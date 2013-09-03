@@ -361,15 +361,16 @@ def submit_calc(calc):
                 try:
                     t.chdir(remote_working_directory)
                 except IOError:
-                    execlogger.debug("Unable to chdkir in {}, trying to create it".format(
+                    execlogger.debug("Unable to chdir in {}, trying to create it".format(
                         remote_working_directory))
                     try:
                         t.makedirs(remote_working_directory)
                         t.chdir(remote_working_directory)
-                    except IOError as e:
+                    except (IOError, OSError) as e:
                         raise ConfigurationError(
-                            "Unable to create the remote directory {} on {}".format(
-                                remote_working_directory, computer.hostname))
+                            "Unable to create the remote directory {} on {}: {}".format(
+                                remote_working_directory, computer.hostname, 
+                                e.message))
                 # Sharding
                 t.mkdir(calcinfo.uuid[:2],ignore_existing=True)
                 t.chdir(calcinfo.uuid[:2])

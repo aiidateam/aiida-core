@@ -35,10 +35,9 @@ def get_upf_from_family(family_name, element):
     Given a family name (a group in the DB) and the element name, return
     the corresponding UpfData node.
     
-    Raise:
-        MultipleObjectsError: if more than one UPF for the given element is
+    :raise MultipleObjectsError: if more than one UPF for the given element is
             found in the group.
-        NotExistent: if no UPF for the given element are found in the group.
+    :raise NotExistent: if no UPF for the given element are found in the group.
     """
     from aiida.djsite.db.models import Group
     from django.core.exceptions import ObjectDoesNotExist
@@ -228,14 +227,12 @@ class UpfData(SinglefileData):
         Pass the same parameter of the init; if a file with the same md5
         is found, that UpfData is returned. 
         
-        Args:
-            filename: an absolute filename on disk
-            use_first: if False (default), raise an exception if more than 
-                one potential is found.
+        :param filename: an absolute filename on disk
+        :param use_first: if False (default), raise an exception if more than \
+                one potential is found.\
                 If it is True, instead, use the first available pseudopotential.
-        Return:
-            (upf, created), where upf is the UpfData object, and create is either
-            True if the object was created, or False if the object was retrieved
+        :return (upf, created): where upf is the UpfData object, and create is either\
+            True if the object was created, or False if the object was retrieved\
             from the DB.
         """
         import aiida.common.utils

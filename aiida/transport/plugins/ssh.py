@@ -464,9 +464,18 @@ class SshTransport(aiida.transport.Transport):
         try:
             self.sftp.mkdir(path)
         except IOError as e:
-            raise OSError("Error during mkdir of '{}' in '{}', maybe the directory "
-                          "already exists? ({})".format(
-                              path,self.getcwd(), e.message))
+            if os.path.isabs(path):
+                raise OSError(
+                    "Error during mkdir of '{}', "
+                    "maybe you don't have the permissions to do it, "
+                    "or the directory already exists? ({})".format(
+                        path, e.message))
+            else:
+                raise OSError(
+                    "Error during mkdir of '{}' from folder '{}', "
+                    "maybe you don't have the permissions to do it, "
+                    "or the directory already exists? ({})".format(
+                        path, self.getcwd(), e.message))
 
     # TODO : implement rmtree
     def rmtree(self,path):

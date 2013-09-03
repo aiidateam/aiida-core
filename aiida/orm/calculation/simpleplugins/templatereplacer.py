@@ -3,25 +3,32 @@ This is a simple plugin that takes two node inputs, both of type ParameterData,
 with the following labels: template and parameters.
 You can also add other SinglefileData nodes as input, that will be copied according to
 what is written in 'template' (see below).
+
 * parameters: a set of parameters that will be used for substitution.
-  You can 
-* template: can contain three parameters:
-    * input_file_template: a string with substitutions to be managed with the format()
-      function of python, i.e. if you want to substitute a variable called 'varname', you write
-      {varname} in the text. See http://www.python.org/dev/peps/pep-3101/ for more
+
+* template: can contain the following parameters:
+
+    * input_file_template: a string with substitutions to be managed with the format()\
+      function of python, i.e. if you want to substitute a variable called 'varname', you write\
+      {varname} in the text. See http://www.python.org/dev/peps/pep-3101/ for more\
       details. The replaced file will be the input file.
-    * input_file_name: a string with the file name for the input. If it is not provided, no
+
+    * input_file_name: a string with the file name for the input. If it is not provided, no\
       file will be created.
-    * output_file_name: a string with the file name for the output. If it is not provided, no
+
+    * output_file_name: a string with the file name for the output. If it is not provided, no\
       redirection will be done and the output will go in the scheduler output file.
-    * cmdline_params: a list of strings, to be passed as command line parameters.
+
+    * cmdline_params: a list of strings, to be passed as command line parameters.\
       Each one is substituted with the same rule of input_file_template. Optional
-    * input_through_stdin: if True, the input file name is passed via stdin. Default is
+
+    * input_through_stdin: if True, the input file name is passed via stdin. Default is\
       False if missing.
-    * files_to_copy: if defined, a list of tuple pairs, with format ('link_name', 'dest_rel_path');
-         for each tuple, an input link to this calculation is looked for, with link labeled 'link_label', 
-         and with file type 'Singlefile', and the content is copied to a remote file named 'dest_rel_path'
-         Errors are raised in the input links are non-existent, or of the wrong type, or if there are 
+
+    * files_to_copy: if defined, a list of tuple pairs, with format ('link_name', 'dest_rel_path');\
+         for each tuple, an input link to this calculation is looked for, with link labeled 'link_label',\ 
+         and with file type 'Singlefile', and the content is copied to a remote file named 'dest_rel_path'\
+         Errors are raised in the input links are non-existent, or of the wrong type, or if there are \
          unused input files.
 
 TODO: probably use Python's Template strings instead??

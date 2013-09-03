@@ -5,12 +5,11 @@ class Code(Node):
     A code entity.
     It can either be 'local', or 'remote'.
 
-    Local code:
-        it is a collection of files/dirs (added using the add_path() method), where one
-        file is flagged as executable (using the set_local_executable() method).
-    Remote code:
-        it is a pair (remotecomputer, remotepath_of_executable) set using the
-        set_remote_computer_exec() method.
+    * Local code: it is a collection of files/dirs (added using the add_path() method), where one \
+    file is flagged as executable (using the set_local_executable() method).
+
+    * Remote code: it is a pair (remotecomputer, remotepath_of_executable) set using the \
+    set_remote_computer_exec() method.
 
     For both codes, one can set some code to be executed right before or right after
     the execution of the code, using the set_preexec_code() and set_postexec_code()
@@ -24,13 +23,13 @@ class Code(Node):
         Initialize a Code node.
  
         Args:
-            uuid: an existing entry is loaded from the DB. No further parameters can be
-                specified
-            local_executable: a filename of the file that should be set as local executable
-            files: a list of files to be added to this Code node; pass absolute paths here, and
-                files will be copied within this node. 
-            remote_computer_exec: a list or tuple of length 2 with (computer, remote_exec_path)
-                as accepted by the set_remote_computer_exec() method.
+        :param uuid: an existing entry is loaded from the DB. No further parameters can be \
+            specified
+        :param local_executable: a filename of the file that should be set as local executable
+        :param files: a list of files to be added to this Code node; pass absolute paths here, and\
+            files will be copied within this node. 
+        :param remote_computer_exec: a list or tuple of length 2 with (computer, remote_exec_path)\
+            as accepted by the set_remote_computer_exec() method.
         """
         import os
         super(Code,self).__init__(**kwargs)

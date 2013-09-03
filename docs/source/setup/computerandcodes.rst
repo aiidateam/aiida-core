@@ -71,7 +71,7 @@ The configuration of computers happens in two steps.
    
    .. note:: For multiline inputs (like the preprend text and the append text, see below)
      you have to press ``<CTRL>+D`` to complete the input, even if you do not want
-     any test.
+     any text.
    
    Here is a list of what is asked, together with an explanation.
    
@@ -315,25 +315,25 @@ database (the ``pk``, i.e. the principal key, and the ``uuid``).
    be extremely useful for querying: for instance, you can attach the version
    of the code as an attribute, or the code family (for instance: "pw.x code of 
    Quantum Espresso") to later query for all runs done with a pw.x code and
-   version larger than 5.0.0, for instance.  However, in the
+   version more recent than 5.0.0, for instance.  However, in the
    present AiiDA version you cannot add attributes from the command line using
    ``verdi``, but you have to do it using Python code.
 
 .. note:: You can change the label of a code by using the::
 
-   verdi relabel
+   verdi code relabel
    
   command; you can also list all available codes with::
 
-   verdi list
+   verdi code list
    
   and then get the information of a specific code with::
 
-   verdi show
+   verdi code show
    
   Finally, to delete a code (only if it not used by any calculation) use::
 
-   verdi delete
+   verdi code delete
    
    
 And now, you are ready to launch your calculations! You may want to follow to

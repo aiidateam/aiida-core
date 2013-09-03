@@ -495,20 +495,21 @@ class StructureData(Data):
         Append an atom to the Structure, taking care of creating the 
         corresponding kind.
         
-        Args:
-            ase: the ase Atom object from which we want to create a new atom
+        :param ase: the ase Atom object from which we want to create a new atom
                 (if present, this must be the only parameter)
-            position: the position of the atom (three numbers in angstrom)
-            symbols, weights, name, ...: any further parameter is passed 
+        :param position: the position of the atom (three numbers in angstrom)
+        :param symbols, weights, name, ...: any further parameter is passed 
                 to the constructor of the Kind object. For the 'name' parameter,
                 see the note below.
                 
         Note on the 'name' parameter (that is, the name of the kind):
+
             * if specified, no checks are done on existing species. Simply,
               a new kind with that name is created. If there is a name
               clash, a check is done: if the kinds are identical, no error
               is issued; otherwise, an error is issued because you are trying
               to store two different kinds with the same name.
+
             * if not specified, the name is automatically generated. Before
               adding the kind, a check is done. If other species with the 
               same properties already exist, no new kinds are created, but 

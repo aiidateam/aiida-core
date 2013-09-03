@@ -96,14 +96,24 @@ Bitbucket account.)
 Python dependencies
 +++++++++++++++++++
 Python dependencies are managed using ``pip``, that you have installed in the
-previous steps. Install the python dependencies is as simple as this::
+previous steps.
+
+As a first step, check that ``pip`` is at its most recent version.
+
+One possible way of doing this is to update ``pip`` with itself, with
+a command similar to the following::
+
+  sudo pip install -U pip
+
+Then, install the python dependencies is as simple as this::
 
       cd ~/git/aiida # or the folder where you downloaded AiiDA
-      sudo pip install -U -r requirements.txt
+      pip install --user -U -r requirements.txt
 
 (this will download and install requirements that are listed in the
-``requirements.txt`` file).
-
+``requirements.txt`` file; the ``--user`` option allows to install
+the packages as a normal user, without the need of using ``sudo`` or
+becoming root).
 
 If everything went smoothly, congratulations! Now the code is installed!
 However, we need still a few steps to properly configure AiiDA for your user.

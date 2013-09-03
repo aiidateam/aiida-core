@@ -64,7 +64,7 @@ In a more practical situation, you might load data from the database and perform
 Let's say that through the ``verdi`` command you have already installed a cluster, say ``TheHive``, and that you also compiled Quantum Espresso on the cluster, and installed the code pw.x with ``verdi``, that we will call ``pw_on_TheHive``.
 
 Let's start writing the python script.
-First of all, we need to load the configuration converning your particular installation, in particular, the details of your database installation::
+First of all, we need to load the configuration concerning your particular installation, in particular, the details of your database installation::
 
   #!/usr/bin/env python
   import sys
@@ -170,7 +170,7 @@ Parameters
 ----------
 
 Now we need to provide also the parameters of a Quantum Espresso calculation, like saying that we need a certain cutoff for the wfc, some convergence threshold, etc...
-The Quantum Espresso Pw plugin requires to pass these informations with the object ParameterData.
+The Quantum Espresso Pw plugin requires to pass this information with the object ParameterData.
 This object is more or less the representation of a Python dictionary in the database.
 We first load the class through the DataFactory, just like we did for the Structure.
 Then we create the instance of the object ``parameter`` and we store it in the DB.
@@ -214,7 +214,7 @@ Calculation
 -----------
 
 Now we proceed to set up the calculation.
-We first get the object representing the computer: since it is uniquely identified by the code, there is a practicle method to load the computer from the code directly.
+We first get the object representing the computer: since it is uniquely identified by the code, there is a practical method to load the computer from the code directly.
 
 ::
 
@@ -286,16 +286,12 @@ Then, we loop over the filenames and
 
 ::
 
+    UpfData = DataFactory('upf')
     pseudos_to_use = {}
+
     for fname, elem in raw_pseudos:
-        absname = os.path.realpath(os.path.join(os.path.dirname(__file__),
-                                                "data",fname))
-        pseudo, created = UpfData.get_or_create(
-            absname,use_first=True)
-        if created:
-            print "Created the pseudo for {}".format(elem)
-        else:
-            print "Using the pseudo for {} from DB: {}".format(elem,pseudo.pk)
+        absname = os.path.realpath(os.path.join(os.path.dirname(__file__), "data",fname))
+        pseudo, created = UpfData.get_or_create(absname,use_first=True)
         pseudos_to_use[elem] = pseudo
 
 As the last step, we make a loop over the atomic species, and attach its pseudopotential object to the calculation::

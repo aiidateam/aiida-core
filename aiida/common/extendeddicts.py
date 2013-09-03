@@ -45,6 +45,9 @@ class AttributeDict(dict):
         dict.__init__(self, init)
 
     def __repr__(self):
+        """
+        Representation of the object.
+        """
         return "%s(%s)" % (self.__class__.__name__, dict.__repr__(self))
 
     def __getattr__(self, attr):
@@ -104,12 +107,14 @@ class AttributeDict(dict):
 
 class FixedFieldsAttributeDict(AttributeDict):
     """
-    A dictionary with access to the keys as attributes, and with filtering of valid
-    attributes. This is only the base class, without valid attributes;
+    A dictionary with access to the keys as attributes, and with filtering
+    of valid attributes. 
+    This is only the base class, without valid attributes;
     use a derived class to do the actual work.
-    E.g.:
-    class TestExample(FixedFieldsAttributeDict):
-        _valid_fields = ('a','b','c')
+    E.g.::
+
+        class TestExample(FixedFieldsAttributeDict):
+            _valid_fields = ('a','b','c')
     """
     _valid_fields = tuple()
     def __init__(self,init={}):
@@ -149,51 +154,63 @@ class FixedFieldsAttributeDict(AttributeDict):
 
 class DefaultFieldsAttributeDict(AttributeDict):
     """
-    A dictionary with access to the keys as attributes, and with an internal value
-    storing the 'default' keys to be distinguished from extra fields.
+    A dictionary with access to the keys as attributes, and with an
+    internal value storing the 'default' keys to be distinguished
+    from extra fields.
     
-    Extra methods defaultkeys() and extrakeys() divide the set returned by keys()
-    in default keys (i.e. those defined at definition time) and other keys.
+    Extra methods defaultkeys() and extrakeys() divide the set returned by
+    keys() in default keys (i.e. those defined at definition time)
+    and other keys.
     There is also a method get_default_fields() to return the internal list.
     
     Moreover, for undefined default keys, it returns None instead of raising a
     KeyError/AttributeError exception.
 
-    Define the _default_fields in a subclass!    
-    E.g.:
-    class TestExample(DefaultFieldsAttributeDict):
-        _default_fields = ('a','b','c')
+    Remember to define the _default_fields in a subclass!    
+    E.g.::
+        
+        class TestExample(DefaultFieldsAttributeDict):
+            _default_fields = ('a','b','c')
     
     When the validate() method is called, it calls in turn all validate_KEY
     methods, where KEY is one of the default keys.
     If the method is not present, the field is considered to be always valid.
     Each validate_KEY method should accept a single argument 'value' that will
     contain the value to be checked.
+
     It raises a ValidationError if any of the validate_KEY
     function raises an exception, otherwise it simply returns.
-    NOTE: the validate_ functions are called also for unset fields, so if the
+    NOTE: the validate\_ functions are called also for unset fields, so if the
     field can be empty on validation, you have to start your validation
-    function with something similar to
-    if value is None:
-        return
+    function with something similar to::
 
-    TODO: decide behavior if I set to None a field. Current behavior, if
-        a is an instanec and 'def_field' one of the default fields, that is 
+        if value is None:
+            return
+
+    .. todo:: 
+        Decide behavior if I set to None a field.
+        Current behavior, if
+        ``a`` is an instance and 'def_field' one of the default fields, that is 
         undefined, we get:
-           a.get('def_field') -> None
-           a.get('def_field','whatever') -> 'whatever'
-           a.defaultkeys() does NOT contain 'def_field'
+        
+        * ``a.get('def_field')``: None
+        * ``a.get('def_field','whatever')``: 'whatever'
+        * Note that ``a.defaultkeys()`` does NOT contain 'def_field'
 
-       if we do a.def_field = None, then the behavior becomes
-           a.get('def_field') -> None
-           a.get('def_field','whatever') -> None
-           a.defaultkeys() DOES contain 'def_field'
+        if we do ``a.def_field = None``, then the behavior becomes
+ 
+        * ``a.get('def_field')``: None
+        * ``a.get('def_field','whatever')``: None
+        * Note that ``a.defaultkeys()`` DOES contain 'def_field'
 
-       See if we want that setting a default field to None means deleting it.
+        See if we want that setting a default field to None means deleting it.
     """
     _default_fields = tuple()
 
     def validate(self):
+        """
+        Validate the keys, if any ``validate_*`` method is available.
+        """
         for key in self.get_default_fields():
             # I get the attribute starting with validate_ and containing the name of the key
             # I set a dummy function if there is no validate_KEY function defined

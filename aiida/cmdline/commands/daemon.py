@@ -11,22 +11,42 @@ aiida_dir = os.path.expanduser("~/.aiida")
 
 class Daemon(VerdiCommand):
     """
-    Manage the aiida daemon.
+    Manage the AiiDA daemon
+    
+    This command allows to interact with the AiiDA daemon.
+    Valid subcommands are:
 
-    This command allows to start, stop or restart the aiida daemon,
-    and to inquire its status.
+    * start: start the daemon
+
+    * stop: restart the daemon
+
+    * restart: restart the aiida daemon, waiting for it to cleanly exit\
+        before restarting it.
+
+    * status: inquire the status of the deamon.
+
+    * showlog: show the log in a continuous fashion, similar to the 'tail -f' \
+        command. Press CTRL+C to exit.
     """
 
-    # A dictionary with valid commands and functions to be called
+
     def __init__(self):
+        """
+        A dictionary with valid commands and functions to be called:
+        start, stop, status and restart.
+        """
         self.valid_subcommands = {
             'start': self.daemon_start,
             'stop' : self.daemon_stop,
             'status': self.daemon_status,
+            'showlog': self.daemon_showlog,
             'restart': self.daemon_restart,
             }
 
     def run(self,*args):       
+        """
+        Run the specified daemon subcommand.
+        """
         try:
             function_to_call = self.valid_subcommands.get(
                 args[0], self.invalid_subcommand)
@@ -36,6 +56,9 @@ class Daemon(VerdiCommand):
         function_to_call()
 
     def complete(self,subargs_idx, subargs):
+        """
+        Complete the daemon subcommand.
+        """
         if subargs_idx == 0:
             print "\n".join(self.valid_subcommands.keys())
         else:
@@ -81,7 +104,15 @@ class Daemon(VerdiCommand):
         if pid is not None:
             print "Deamon already running, try ask for status"
             return
-
+        
+        print "Loading Django ..."
+        from aiida.common.utils import load_django
+        load_django()
+        
+        print "Clearing all locks ..."
+        from aiida.orm.lock import LockManager
+        LockManager().clear_all()
+        
         print "Starting AiiDA Daemon ..."
         process = subprocess.Popen(
             "supervisord -c {}".format(os.path.join(
@@ -120,6 +151,25 @@ class Daemon(VerdiCommand):
         process.wait()
         print process.stdout.read()
 
+    def daemon_showlog(self):
+        """
+        Show the log of the daemon, press CTRL+C to quit.
+        """
+        pid = self.get_daemon_pid()
+        if (pid==None):
+            print "Deamon not running (cannot find the PID for it)"
+            return
+
+        try:
+            process = subprocess.Popen(
+               "supervisorctl -c {} tail -f aiida-daemon:0".format(
+                   os.path.join(aiida_dir,daemon_subdir,"aiida_daemon.conf")),
+                               shell=True) #, stdout=subprocess.PIPE)
+            process.wait()
+        except KeyboardInterrupt:
+            # exit on CTRL+C
+            process.kill()
+ 
     def daemon_restart(self):
         """
         Restart the daemon. Before restarting, wait for the daemon to really

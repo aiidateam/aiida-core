@@ -74,7 +74,7 @@ MANAGERS = ADMINS
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
 # although not all choices may be available on all operating systems.
 # In a Windows environment this must be set to your system time zone.
-TIME_ZONE = 'America/New_York'
+#TIME_ZONE = 'America/New_York'
 
 # Language code for this installation. All choices can be found here:
 # http://www.i18nguy.com/unicode/language-identifiers.html
@@ -183,7 +183,6 @@ INSTALLED_APPS = (
 # See http://docs.djangoproject.com/en/dev/topics/logging for
 # more details on how to customize your logging configuration.
 #
-# Added logging on console for >=DEBUG signals from aiida.repository module
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': True,
@@ -223,7 +222,7 @@ LOGGING = {
         'aiida': {
             'handlers': ['console'],
             'level': 'DEBUG',
-            'propagate': True,
+            'propagate': False,
             },
         },
 }
@@ -241,10 +240,12 @@ import djcelery
 
 djcelery.setup_loader()
 
-BROKER_URL = "django://";
-CELERY_RESULT_BACKEND = "database";
+BROKER_URL = "django://"
+CELERY_RESULT_BACKEND = "database"
 
-CELERYBEAT_SCHEDULER = "djcelery.schedulers.DatabaseScheduler";
+#CELERYD_HIJACK_ROOT_LOGGER = False
+
+CELERYBEAT_SCHEDULER = "djcelery.schedulers.DatabaseScheduler"
 
 # Every 30 seconds it is started, but for how it is done internally, if the previous loop
 # is still working, it won't restart twice at the same time.
@@ -255,7 +256,7 @@ CELERYBEAT_SCHEDULE = {
         },
     'workflow_stepper': {
         'task':'aiida.djsite.db.tasks.workflow_stepper',
-        'schedule': timedelta(seconds=10),
+        'schedule': timedelta(seconds=5),
         },
 }
 

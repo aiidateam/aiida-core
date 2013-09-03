@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from django.db.models.query import QuerySet
 
 from aiida.common.exceptions import (
-    ConfigurationError, DbContentError, MissingPluginError)
+    ConfigurationError, DbContentError, MissingPluginError, InternalError)
 
 # Removed the custom User field, that was creating a lot of problems. Use
 # the email as UUID. In case we need it, we can do a couple of south migrations
@@ -25,24 +25,33 @@ class DbNode(m.Model):
     '''
     Generic node: data or calculation (or code - tbd). There will be several types of connections.
     Naming convention (NOT FINAL): A --> C --> B. 
-      A is 'input' of C.
-      C is 'output' of A. 
-      A is 'parent' of B,C
-      C,B are 'children' of A.
+
+    * A is 'input' of C.
+
+    * C is 'output' of A. 
+
+    * A is 'parent' of B,C
+
+    * C,B are 'children' of A.
 
     FINAL DECISION:
     All attributes are stored in the Attribute table.
-    * internal attributes (that are used by the Data subclass and similar) are stored
-      starting with an underscore.
-      These (internal) attributes cannot be changed except when defining the object
+
+    * internal attributes (that are used by the Data subclass and similar) are stored\
+      starting with an underscore.\
+      These (internal) attributes cannot be changed except when defining the object\
       the first time.
-    * other attributes MUST start WITHOUT an underscore. These are user-defined and
+
+    * other attributes MUST start WITHOUT an underscore. These are user-defined and\
       can be appended even after the calculation has run, since they just are metadata.
+
     * There is no json metadata attached to the DbNode entries. This can go into an attribute if needed.
-    * Attributes in the Attribute table have to be thought as belonging to the DbNode,
+
+    * Attributes in the Attribute table have to be thought as belonging to the DbNode,\
       and this is the reason for which there is no 'user' field in the Attribute field.
-    * For a Data node, attributes will /define/ the data and hence should be immutable.
-      User-defined attributes are metadata for convenience of tagging and searching only.
+
+    * For a Data node, attributes will /define/ the data and hence should be immutable.\
+      User-defined attributes are metadata for convenience of tagging and searching only.\
       User should be careful not to attach data computed from data as metadata. 
     '''
     uuid = UUIDField(auto=True)
@@ -51,7 +60,10 @@ class DbNode(m.Model):
     type = m.CharField(max_length=255,db_index=True) 
     label = m.CharField(max_length=255, db_index=True, blank=True)
     description = m.TextField(blank=True)
-    time = m.DateTimeField(auto_now_add=True, editable=False)
+    # creation time
+    ctime = m.DateTimeField(auto_now_add=True, editable=False)
+    # last-modified time
+    mtime = m.DateTimeField(auto_now=True, editable=False)
     # Cannot delete a user if something is associated to it
     user = m.ForeignKey(User, on_delete=m.PROTECT)
 
@@ -113,7 +125,7 @@ class Link(m.Model):
     input = m.ForeignKey('DbNode',related_name='output_links')
     output = m.ForeignKey('DbNode',related_name='input_links')
     #label for data input for calculation
-    label = m.CharField(max_length=255, db_index=True, blank=True)
+    label = m.CharField(max_length=255, db_index=True, blank=False)
 
     class Meta:
         # I cannot add twice the same link
@@ -163,7 +175,7 @@ class Attribute(m.Model):
     time = m.DateTimeField(auto_now_add=True, editable=False)
     dbnode = m.ForeignKey('DbNode', related_name='attributes')
     # max_length is required by MySql to have indexes and unique constraints
-    key = m.CharField(max_length=255,db_index=True)
+    key = m.CharField(max_length=255,db_index=True,blank=False)
     datatype = m.CharField(max_length=10, choices=attrdatatype_choice, db_index=True)
     tval = m.TextField( default='', blank=True)
     fval = m.FloatField( default=None, null=True)
@@ -288,57 +300,67 @@ class Group(m.Model):
     user = m.ForeignKey(User)  # The owner of the group, not of the calculations
 
 class DbComputer(m.Model):
-    """Table of computers or clusters.
-
-    # TODO: understand if we want that this becomes simply another type of dbnode.
+    """
+    Table of computers or clusters.
 
     Attributes:
-        name: A name to be used to refer to this computer. Must be unique.
-        hostname: Fully-qualified hostname of the host
-        workdir: Full path of the aiida folder on the host. It can contain
-            the string {username} that will be substituted by the username
-            of the user on that machine.
-            The actual workdir is then obtained as
-            workdir.format(username=THE_ACTUAL_USERNAME)
-            Example: 
+    * name: A name to be used to refer to this computer. Must be unique.
+    * hostname: Fully-qualified hostname of the host
+    * workdir: Full path of the aiida folder on the host. It can contain\
+            the string {username} that will be substituted by the username\
+            of the user on that machine.\
+            The actual workdir is then obtained as\
+            workdir.format(username=THE_ACTUAL_USERNAME)\
+            Example: \
             workdir = "/scratch/{username}/aiida/"
-        transport_type: a string with a valid transport type
+    * transport_type: a string with a valid transport type
 
 
     Note: other things that may be set in the metadata:
-        - mpirun command
-        - num cores per node
-        - max num cores
-        - allocate full node = True or False
-        - ... (further limits per user etc.)
+
+        * mpirun command
+
+        * num cores per node
+
+        * max num cores
+
+        * allocate full node = True or False
+
+        * ... (further limits per user etc.)
+
     """
+    #TODO: understand if we want that this becomes simply another type of dbnode.
+
     uuid = UUIDField(auto=True)
-    name = m.CharField(max_length=255, unique=True)
+    name = m.CharField(max_length=255, unique=True, blank=False)
     hostname = m.CharField(max_length=255)
     description = m.TextField(blank=True)
+    enabled = m.BooleanField(default=True)
     # TODO: next three fields should not be blank...
     workdir = m.CharField(max_length=255)
     transport_type = m.CharField(max_length=255)
     scheduler_type = m.CharField(max_length=255)
     transport_params = m.TextField(default="{}") # Will store a json
-
     metadata = m.TextField(default="{}") # Will store a json
 
     @classmethod
     def get_dbcomputer(cls,computer):
+        """
+        Return a DbComputer from its name (or from another Computer or DbComputer instance)
+        """
         from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
         from aiida.common.exceptions import NotExistent
         from aiida.orm import Computer
 
         if isinstance(computer, basestring):
             try:
-                dbcomputer = DbComputer.objects.get(hostname=computer)
+                dbcomputer = DbComputer.objects.get(name=computer)
             except ObjectDoesNotExist:
                 raise NotExistent("No computer found in the table of computers with "
                                  "the given name '{}'".format(computer))
             except MultipleObjectsReturned:
                 raise DbContentError("There is more than one computer with name '{}', "
-                                 "pass a Django Computer instance".format(computer))
+                                     "pass a Django Computer instance".format(computer))
         elif isinstance(computer, DbComputer):
             if computer.pk is None:
                 raise ValueError("The computer instance you are passing has not been stored yet")
@@ -381,6 +403,12 @@ class AuthInfo(m.Model):
                 "Error while reading auth_params for authinfo, aiidauser={}, computer={}".format(
                     self.aiidauser.username, self.computer.hostname))
 
+    def set_auth_params(self,auth_params):
+        import json
+        
+        # Raises ValueError if data is not JSON-serializable
+        self.auth_params = json.dumps(auth_params)
+
     # a method of AuthInfo
     def get_transport(self):
         """
@@ -406,7 +434,17 @@ class Comment(m.Model):
     user = m.ForeignKey(User)
     content = m.TextField(blank=True)
 
+#-------------------------------------
+#         Lock
+#-------------------------------------
 
+class DbLock(m.Model):
+    
+    key        = m.TextField(primary_key=True)
+    creation   = m.DateTimeField(auto_now_add=True, editable=False)
+    timeout    = m.IntegerField(editable=False)
+    owner      = m.CharField(max_length=255, blank=False)
+            
 #-------------------------------------
 #         Workflows
 #-------------------------------------
@@ -419,6 +457,7 @@ class DbWorkflow(m.Model):
     uuid         = UUIDField(auto=True)
     time         = m.DateTimeField(auto_now_add=True, editable=False)
     user         = m.ForeignKey(User, on_delete=m.PROTECT)
+    report       = m.TextField(blank=True)
     
     # File variables, script is the complete dump of the workflow python script
     module       = m.TextField(blank=False)
@@ -428,6 +467,20 @@ class DbWorkflow(m.Model):
     
     status       = m.CharField(max_length=255, choices=zip(list(wf_states), list(wf_states)), default=wf_states.RUNNING)
     
+    objects = m.Manager()
+    # Return aiida Node instances or their subclasses instead of DbNode instances
+    aiidaobjects = AiidaObjectManager()
+    
+    def get_aiida_class(self):
+        
+        """
+        Return the corresponding aiida instance of class aiida.worflow
+        """
+        from aiida.orm.workflow import Workflow
+        return Workflow(uuid=self.uuid)
+    
+    #  ------------------------------------------------
+    
     def set_status(self, _status):
         
         self.status = _status;
@@ -436,43 +489,83 @@ class DbWorkflow(m.Model):
     def add_parameters(self, dict):
         
         import json
+        from django.db import IntegrityError, transaction
+        
         try:
             
-            for k in dict.keys():            
-                p = DbWorkflowParameters.objects.create(workflow=self,name = k, value = json.dumps(dict[k]))
+            sid = transaction.savepoint()
+            for k in dict.keys():
+                p, created = DbWorkflowParameters.objects.get_or_create(parent=self, name = k)
+                p.value = json.dumps(dict[k])
+                p.save()
                 self.params.add(p)
-                
+            transaction.savepoint_commit(sid)
+            
         except:
+            
+            transaction.savepoint_rollback(sid)
             raise ValueError("Error adding parameters")
         
     def get_parameters(self):
         
         try:
             dict = {}
-            for p in DbWorkflowParameters.objects.filter(workflow=self):
+            for p in DbWorkflowParameters.objects.filter(parent=self):
                 dict[p.name] = p.deserialize()
             return dict
         except:
             raise ValueError("Error retrieving parameters")
     
+    ## Reporting
+
+    def clear_report(self):
+        
+        self.report = None
+        self.save()
+    
+    def append_to_report(self, _text):
+        
+        from django.utils.timezone import utc
+        import datetime
+        
+        now = datetime.datetime.utcnow().replace(tzinfo=utc)
+        self.report += str(now)+"] "+_text+"\n";
+        self.save()
+
+    ## Calculations
+            
     def get_calculations(self):
         
         from aiida.orm import Calculation
-        return Calculation.query(steps=self.steps)
+        return Calculation.query(workflow_step=self.steps)
+    
+    def get_calculations_status(self):
 
+        from aiida.common.datastructures import calc_states, wf_states, wf_exit_call
+
+        calc_status = self.get_calculations().filter(attributes__key="_state").values_list("uuid", "attributes__tval")
+        return set([l[1] for l in calc_status])
+
+    
+    def get_sub_workflows(self):
+        
+        from aiida.orm import Calculation
+        return DbWorkflow.objects.filter(parent_workflow_step=self.steps.all())
+    
+            
     def finish(self):
         self.status = 'finished'
 
         
 class DbWorkflowParameters(m.Model):
 
-    workflow     = m.ForeignKey(DbWorkflow, related_name='params')
+    parent       = m.ForeignKey(DbWorkflow, related_name='params')
     name         = m.CharField(max_length=255, blank=False)
     time         = m.DateTimeField(auto_now_add=True, editable=False)
     value        = m.TextField(blank=False)
 
     class Meta:
-        unique_together = (("workflow", "name"))
+        unique_together = (("parent", "name"))
 
     def deserialize(self):
         
@@ -487,18 +580,26 @@ class DbWorkflowStep(m.Model):
 
     from aiida.common.datastructures import wf_states, wf_exit_call
     
-    workflow     = m.ForeignKey(DbWorkflow, related_name='steps')
-    name         = m.CharField(max_length=255, blank=False)
-    user         = m.ForeignKey(User, on_delete=m.PROTECT)
-    time         = m.DateTimeField(auto_now_add=True, editable=False)
-    nextcall     = m.CharField(max_length=255, blank=False, default=wf_exit_call)
-    calculations = m.ManyToManyField('DbNode', symmetrical=False, related_name="steps")
-    status       = m.CharField(max_length=255, choices=zip(list(wf_states), list(wf_states)), default=wf_states.RUNNING)
+    parent        = m.ForeignKey(DbWorkflow, related_name='steps')
+    name          = m.CharField(max_length=255, blank=False)
+    user          = m.ForeignKey(User, on_delete=m.PROTECT)
+    time          = m.DateTimeField(auto_now_add=True, editable=False)
+    nextcall      = m.CharField(max_length=255, blank=False, default=wf_exit_call)
+    
+    calculations  = m.ManyToManyField(DbNode, symmetrical=False, related_name="workflow_step")
+    sub_workflows = m.ManyToManyField(DbWorkflow, symmetrical=False, related_name="parent_workflow_step")
+    
+    
+    status        = m.CharField(max_length=255, choices=zip(list(wf_states), list(wf_states)), default=wf_states.RUNNING)
 
     class Meta:
-        unique_together = (("workflow", "name"))
+        unique_together = (("parent", "name"))
 
 
+    # ---------------------------------
+    #    Calculations
+    # ---------------------------------
+    
     def add_calculation(self, step_calculation):
         
         from aiida.orm import Calculation
@@ -511,27 +612,52 @@ class DbWorkflowStep(m.Model):
         except:
             raise ValueError("Error adding calculation to step")                      
 
-    def get_calculations(self):
+    def get_calculations(self, state=None):
         
         from aiida.orm import Calculation
         
-        return Calculation.query(steps=self)#pk__in = step.calculations.values_list("pk", flat=True))
+        if (state==None):
+            return Calculation.query(workflow_step=self)#pk__in = step.calculations.values_list("pk", flat=True))
+        else:
+            return Calculation.query(workflow_step=self).filter(attributes__key="_state",attributes__tval=state)
 
-    def get_calculations_status(self, extended=False):
+    def get_calculations_status(self):
 
         from aiida.common.datastructures import calc_states, wf_states, wf_exit_call
 
         calc_status = self.calculations.filter(attributes__key="_state").values_list("uuid", "attributes__tval")
-        if (extended):
-            for c in calc_status:
-                print "Calculation {0} is {1}".format(c[0], c[1])
-                
-        s = set([l[1] for l in calc_status])
-        if len(s)==1 and calc_states.RETRIEVED in s:
-            return wf_states.FINISHED
-        else: 
-            return wf_states.RUNNING
-    
+        return set([l[1] for l in calc_status])
+
+    # ---------------------------------
+    #    Subworkflows
+    # ---------------------------------
+
+    def add_sub_workflow(self, sub_wf):
+        
+        from aiida.orm.workflow import Workflow
+        
+        if (not issubclass(sub_wf.__class__,Workflow) and not isinstance(sub_wf, Workflow)):
+            raise ValueError("Cannot add a workflow not of type Workflow")                        
+
+        try:
+            self.sub_workflows.add(sub_wf.dbworkflowinstance)
+        except:
+            raise ValueError("Error adding calculation to step")                      
+ 
+    def get_sub_workflows(self):
+        
+        from aiida.orm.workflow import Workflow
+        return Workflow.query(uuid__in=self.sub_workflows.values_list("uuid", flat=True))
+        #return self.sub_workflows.all()#pk__in = step.calculations.values_list("pk", flat=True))
+ 
+    def get_sub_workflows_status(self):
+        
+        from aiida.common.datastructures import wf_states
+        
+        wf_status = self.sub_workflows.all().values_list("uuid", "status")
+        return set([l[1] for l in wf_status])
+        
+
     def is_finished(self):
         
         from aiida.common.datastructures import calc_states, wf_states, wf_exit_call

@@ -4,6 +4,10 @@ class VerdiCommand(object):
     """
     @classmethod
     def get_command_name(cls):
+        """
+        Return the name of the verdi command associated to this
+        class. By default, the lower-case version of the class name.
+        """
         return cls.__name__.lower()
     
     def run(self,*args):
@@ -20,8 +24,8 @@ class VerdiCommand(object):
         Print a list of valid keywords.
         Returning without printing will use standard bash completion.
         
-        subargs_idx: the index of the subargs where the TAB key was pressed
+        :param subargs_idx: the index of the subargs where the TAB key was pressed\
             (0 is the first element of subargs)
-        subargs: a list of subarguments to this command
+        :param subargs: a list of subarguments to this command
         """
         return

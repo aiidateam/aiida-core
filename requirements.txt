@@ -33,3 +33,6 @@ supervisor>=3.0b1
 # This is because we need recursive triggers in sqlite, present
 # only after sqlite 3.6.18
 pysqlite>=2.6.3
+
+# Paramiko, for ssh connections
+paramiko>=1.10

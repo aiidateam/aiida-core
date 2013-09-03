@@ -3,21 +3,54 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to aiida's documentation!
-================================
+Welcome to AiiDA's documentation!
+=================================
 
-Contents:
+This is the documenation of the AiiDA framework. For the basic configuration and
+simple usage, refer to the user's guide below.
+
+If, instead, you plan to add new plugins, or you simply want to understand
+AiiDA internals, refer to the developer's guide.
+
+User's guide
+++++++++++++
 
 .. toctree::
    :maxdepth: 2
 
-   jobmanager/index
-   common/index
+   database/index
+   installation
+   setup/computerandcodes
+   examples/pw_tutorial
+   examples/ph_tutorial
+   examples/cp_tutorial
+   examples/pseudo_tutorial
 
-   Installation and Deployment [OUTDATED] <installation> 
-   aiida.common Modules [OUTDATED] <aiida.common>
-   Developer's Guide <developers> 
+   scheduler/index
+    
+   workflow/index
 
+Developer's guide
++++++++++++++++++
+
+.. toctree::
+    :maxdepth: 2
+    
+    Developer's Guide <developers> 
+
+Modules provided with aiida
+---------------------------
+
+.. toctree::
+   :maxdepth: 2
+   
+   aiida.common Modules [OUTDATED] <common/dev>
+   transport/dev
+   scheduler/dev
+   cmdline/dev
+   execmanager/dev
+   djsite/dev
+   orm/dev
 
 Indices and tables
 ==================
@@ -26,8 +59,3 @@ Indices and tables
 * :ref:`modindex`
 * :ref:`search`
 
-Modules provided with aiida
-++++++++++++++++++++++++++
-
-* :doc:`aiida.jobmanager <jobmanager/index>` module
-* :doc:`aiida.common <common/index>` module

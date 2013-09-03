@@ -1,11 +1,8 @@
 #!/usr/bin/env python
 import sys
-import os
-import paramiko
-import getpass
 
 try:
-    machine = sys.argv[1]
+    computername = sys.argv[1]
 except IndexError:
     print >> sys.stderr, "Pass the machine name."
     sys.exit(1)
@@ -21,11 +18,11 @@ import tempfile
 import datetime
 
 from aiida.orm import Code, Computer, CalculationFactory
-from aiida.djsite.utils import get_automatic_user
-
 from aiida.orm.data.parameter import ParameterData
 from aiida.orm.data.singlefile import SinglefileData
 from aiida.orm.data.remote import RemoteData
+
+from aiida.common.exceptions import NotExistent
 
 #print ParameterData.__module__
 
@@ -34,113 +31,6 @@ current_version = "1.0.5"
 queue = None
 #queue = "P_share_queue"
 
-def get_or_create_machine():
-    import json
-    from aiida.common.exceptions import NotExistent
-    from aiida.djsite.db.models import AuthInfo
-        
-#    # I can delete the computer first
-#### DON'T DO THIS! WILL ALSO DELETE ALL CALCULATIONS THAT WERE USING
-#### THIS COMPUTER!
-#    from aiida.djsite.db.models import DbComputer
-#    DbComputer.objects.filter(hostname=computername).delete()
-    
-    if machine == 'localhost':
-        try:
-            computer = Computer.get("localhost")
-            print >> sys.stderr, "Using the existing computer {localhost}..."
-        except NotExistent:
-            print >> sys.stderr, "Creating a new localhostcomputer..."
-            computer = Computer(hostname="localhost",transport_type='local',
-                                scheduler_type='pbspro')
-            computer.set_workdir("/tmp/{username}/aiida")
-            computer.set_mpirun_command("mpirun", "-np", "{tot_num_cpus}")
-            computer.store()
-
-        auth_params = {}
-
-        authinfo, created = AuthInfo.objects.get_or_create(
-            aiidauser=get_automatic_user(),
-            computer=computer.dbcomputer, 
-            defaults= {'auth_params': json.dumps(auth_params)},
-            )
-
-        if created:
-            print "  (Created authinfo)"
-        else:
-            print "  (Retrieved authinfo)"
-
-    else: # ssh case
-        if machine.startswith('bellatrix'):
-            computername = "bellatrix.epfl.ch"
-            schedulertype = 'pbspro'
-            workdir = "/scratch/{username}/aiida"
-            mpirun_command = ['mpirun', '-np', '{tot_num_cpus}']
-        elif machine.startswith('rosa'):
-            computername = "rosa.cscs.ch"
-            schedulertype = 'slurm'
-            workdir = "/scratch/rosa/{username}/aiida"
-            mpirun_command = ['aprun', '-n', '{tot_num_cpus}']
-        else:
-            print >> sys.stderr, "Unkown computer!"
-            sys.exit(1)
-            
-        try:
-            computer = Computer.get(computername)
-            print >> sys.stderr, "Using the existing computer {}...".format(computername)
-        except NotExistent:
-            print >> sys.stderr, "Creating a new computer..."
-            computer = Computer(hostname=computername,transport_type='ssh',
-                                scheduler_type=schedulertype)
-            computer.set_workdir(workdir)
-            computer.set_mpirun_command(mpirun_command)
-            computer.store()
-
-        auth_params = {'load_system_host_keys': True}
-
-
-        config = paramiko.SSHConfig()
-        try:
-            config.parse(open(os.path.expanduser('~/.ssh/config')))
-        except IOError:
-            # No file found, so empty configuration
-            pass
-        # machine_config is a dict with only relevant properties set
-        machine_config = config.lookup(computername)
-
-        try:
-            auth_params['username'] = machine_config['user']
-        except KeyError:
-            # No user set up in the config file: I explicitly set the local username
-            auth_params['username'] = getpass.getuser()
-
-        try:
-            auth_params['key_filename'] = os.path.expanduser(
-                machine_config['identityfile'])
-        except KeyError:
-            pass 
-        
-        try:
-            auth_params['port'] = machine_config['port']
-        except KeyError:
-            pass       
-
-        authinfo, created = AuthInfo.objects.get_or_create(
-            aiidauser=get_automatic_user(),
-            computer=computer.dbcomputer, 
-            defaults= {'auth_params': json.dumps(auth_params)},
-            )
-
-        if created:
-            print "  (Created authinfo)"
-        else:
-            print "  (Retrieved authinfo)"
-        print "*** AuthInfo: "
-        for k,v in json.loads(authinfo.auth_params).iteritems():
-            print "{} = {}".format(k, v)
-        print ""
-
-    return computer
 
 def get_or_create_code():
     useful_codes = Code.query(attributes__key="_local_executable",
@@ -197,7 +87,12 @@ except IOError:
 
 #####
 
-computer = get_or_create_machine()
+try:
+    computer = Computer.get(computername)
+except NotExistent:
+    print >> sys.stderr, ("Unknown computer '{0}'. Use "
+      "'verdi computer setup {0}' first.".format(computername))
+    sys.exit(1)
 code = get_or_create_code()
 
 template_data = ParameterData({
@@ -226,10 +121,20 @@ remoteparam = RemoteData(remote_machine=computer.hostname,
                          remote_path="/etc/inittab").store()
 
 CustomCalc = CalculationFactory('simpleplugins.templatereplacer')
-calc = CustomCalc(computer=computer)
+calc = CustomCalc(computer=computer,withmpi=True)
 calc.set_max_wallclock_seconds(12*60) # 12 min
-calc.set_num_machines(1)
-calc.set_num_cpus_per_machine(1)
+jr_class = computer.get_scheduler()._job_resource_class
+
+from aiida.scheduler.datastructures import NodeNumberJobResource, ParEnvJobResource
+
+if issubclass(jr_class, NodeNumberJobResource):
+    calc.set_resources(num_machines=1, num_cpus_per_machine=1)
+elif issubclass(jr_class, ParEnvJobResource):
+    calc.set_resources(parallel_env='smp', tot_num_cpus=1)
+else:
+    print >> sys.stderr, "Unknown Job resource type: {}".format(str(jr_class))
+    sys.exit(1)
+    
 if queue is not None:
     calc.set_queue_name(queue)
 calc.store()

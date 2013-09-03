@@ -11,15 +11,10 @@ def launch_ws():
     
     and to force the retrival of some calculation you can use the function
     
-    wf.retrieve_by_uuid(uuid_wf).finish_step_calculations(methohd_wf)
+    wf.retrieve_by_uuid(uuid_wf).kill_step_calculations(methohd_wf)
     
     """
         
-    from aiida.orm import Calculation, Code, Computer
-    computer = Computer(hostname="localhost",transport_type='local',scheduler_type='pbspro')
-    computer.set_workdir("/tmp/{username}/aida")
-    computer.store()
-    
     import aiida.orm.workflow as wf
     from aiida.workflows import wf_demo
     from aiida.common.datastructures import wf_states

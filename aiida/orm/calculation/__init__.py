@@ -7,9 +7,6 @@ from aiida.common.exceptions import ModificationNotAllowed
 #        'email_on_started',
 #        'email_on_terminated',
 #        'rerunnable',
-#        'queue_name', 
-#        'num_machines',
-#        'priority',
 #        'resourceLimits',
 
 _input_subfolder = 'raw_input'
@@ -18,10 +15,15 @@ class Calculation(Node):
     _updatable_attributes = ('state', 'job_id', 'scheduler_state',
                              'last_jobinfo', 'remote_workdir', 'retrieve_list')
     
+    # By default, no output parser
+    _default_parser = None
+    # Set default for the link to the retrieved folder (after calc is done)
+    _linkname_retrieved = 'retrieved' 
+    
     def __init__(self,*args,**kwargs):
         """
         Possible arguments:
-        computer, num_machines, num_cpus_per_machine, code
+        computer, resources
         """
         super(Calculation,self).__init__(*args, **kwargs)
 
@@ -32,59 +34,79 @@ class Calculation(Node):
 
         # For new calculations
         self._set_state(calc_states.NEW)
-        self.set_label("Calculation {}".format(self.uuid))
+        self.label = "Calculation {}".format(self.uuid)
 
         computer = kwargs.pop('computer', None)
         if computer is not None:
             self.set_computer(computer)
 
-        num_machines = kwargs.pop('num_machines',None)
-        if num_machines is not None:
-            self.set_num_machines(num_machines)        
+        # Default value: True
+        # If True, adds the machine-dependent mpirun command in front of the
+        # executable name.
+        withmpi = kwargs.pop('withmpi', True)
+        self.set_withmpi(withmpi)
 
-        num_cpus_per_machine = kwargs.pop('num_cpus_per_machine',None)
-        if num_cpus_per_machine is not None:
-            self.set_num_cpus_per_machine(num_cpus_per_machine)        
+        resources = kwargs.pop('resources',None)
+        if resources is not None:
+            self.set_resources(**resources)
+
+        parser = kwargs.pop('parser', self._default_parser)
+        self.set_parser(parser)
+        
+        # hard code the output folder to be a single one
+        self.set_linkname_retrieved(self._linkname_retrieved)
 
         if kwargs:
             raise ValueError("Invalid parameters found in the __init__: "
                              "{}".format(kwargs.keys()))
 
+    def store(self):
+        
+        super(Calculation, self).store()
+        
+        return self
+            
     def validate(self):
-        from aiida.common.exceptions import ValidationError
+        from aiida.common.exceptions import MissingPluginError, ValidationError
         
         super(Calculation,self).validate()
 
         if self.get_computer() is None:
             raise ValidationError("You did not specify any computer")
-
+        
         if self.get_state() not in calc_states:
             raise ValidationError("Calculation state '{}' is not valid".format(
                 self.get_state()))
 
         try:
-            if int(self.get_num_machines()) <= 0:
-                raise ValueError
-        except (ValueError,TypeError):
-            raise ValidationError("The number of machines must be specified "
-                                  "and must be positive")
+            _ = self.get_parser()
+        except MissingPluginError:
+            raise ValidationError("No valid plugin found for the parser '{}'. "
+                "Set the parser to None if you do not need an automatic "
+                "parser.".format(self.get_parser_name()))
 
+        computer = self.get_computer()        
+        s = computer.get_scheduler()
         try:
-            if int(self.get_num_cpus_per_machine()) <= 0:
-                raise ValueError
-        except (ValueError,TypeError):
-            raise ValidationError("The number of CPUs per machine must be "
-                                  "specified and must be positive")
+            _ = s.create_job_resource(**self.get_jobresource_params())
+        except (TypeError, ValueError) as e:
+            raise ValidationError("Invalid resources for the scheduler of the "
+                                  "specified computer: {}".format(e.message))
+
+        if not isinstance(self.get_withmpi(), bool):
+            raise ValidationError("withmpi property must be boolean! It in instead {}".format(str(type(self.get_withmpi()))))
+            
 
     def can_link_as_output(self,dest):
         """
-        Raise a ValueError if a link from self to dest is not allowed.
-        
         An output of a calculation can only be a data, and can only be set 
         when the calculation is in the SUBMITTING or RETRIEVING or
         PARSING state.
         (during SUBMITTING, the execmanager adds a link to the remote folder; 
-         all other links are added while in the retrieving phase)
+        all other links are added while in the retrieving phase)
+
+        :param dest: a Data object instance of the database
+        :raise: ValueError if a link from self to dest is not allowed.
         """
         from aiida.orm import Data
 
@@ -141,6 +163,12 @@ class Calculation(Node):
     def set_queue_name(self,val):
         self.set_attr('queue_name',unicode(val))
 
+    def set_import_sys_environment(self,val):
+        self.set_attr('import_sys_environment',bool(val))
+
+    def get_import_sys_environment(self):
+        return self.get_attr('import_sys_environment',True)
+                
     def set_priority(self,val):
         self.set_attr('priority',unicode(val))
     
@@ -150,11 +178,17 @@ class Calculation(Node):
     def set_max_wallclock_seconds(self,val):    
         self.set_attr('max_wallclock_seconds',int(val))
 
-    def set_num_machines(self,val):
-        self.set_attr('num_machines',int(val))
+    def set_resources(self, **kwargs):
+        self.set_attr('jobresource_params', kwargs)
+    
+    def set_withmpi(self,val):        
+        self.set_attr('withmpi',val)
 
-    def set_num_cpus_per_machine(self,val):
-        self.set_attr('num_cpus_per_machine',int(val))
+    def get_withmpi(self):        
+        return self.get_attr('withmpi',True)
+    
+    def get_jobresource_params(self):
+        return self.get_attr('jobresource_params', {})
 
     def get_queue_name(self):
         return self.get_attr('queue_name', None)
@@ -167,12 +201,6 @@ class Calculation(Node):
 
     def get_max_wallclock_seconds(self):	
         return self.get_attr('max_wallclock_seconds', None)
-
-    def get_num_machines(self):
-        return self.get_attr('num_machines', None)
-
-    def get_num_cpus_per_machine(self):
-        return self.get_attr('num_cpus_per_machine', None)
         
     def add_link_from(self,src,label=None):
         '''
@@ -216,7 +244,10 @@ class Calculation(Node):
 
     def get_computer(self):
         from aiida.orm import Computer
-        return Computer(dbcomputer=self.dbnode.computer)
+        if self.dbnode.computer is None:
+            return None
+        else:
+            return Computer(dbcomputer=self.dbnode.computer)
 
     def _set_state(self, state):
         if state not in calc_states:
@@ -375,6 +406,23 @@ class Calculation(Node):
         """
         raise NotImplementedError
 
+    def _get_authinfo(self):
+        import aiida.execmanager
+        from aiida.common.exceptions import NotExistent
+        
+        computer = self.get_computer()
+        if computer is None:
+            raise  NotExistent("No computer has been set for this calculation")
+        
+        return aiida.execmanager.get_authinfo(computer=computer,
+                                              aiidauser=self.dbnode.user)
+    
+    def _get_transport(self):
+        """
+        Return the transport for this calculation
+        """
+        return self._get_authinfo().get_transport()
+
     def submit(self):
         """
         Submit the calculation.
@@ -383,19 +431,59 @@ class Calculation(Node):
         
         submit_calc(self)
 
-#       output_plugin = kwargs.pop('output_plugin', None)
-#       self.set_output_plugin(output_plugin)
+    def set_parser(self, parser):
+        """
+        Set a string for the output parser
+        Can be None if no output plugin is available or needed
+        """                
+        self.set_attr('parser', parser)
 
-#    def set_output_plugin(self, output_plugin):
-#        """
-#        Set a string for the output plugin
-#        Can be none if no output plugin is available/needed
-#
-#        TODO: check that the plugin referenced by th string input_plugin actually exists
-#        """
-#        self.set_attr('output_plugin', output_plugin)
+    def get_parser_name(self):
+        """
+        Return a string for the output parser of this calculation, or None
+        if no parser is needed.
+        """
+        from aiida.parsers import ParserFactory
+                
+        return self.get_attr('parser')
 
+    def get_parser(self):
+        """
+        Return the output parser object for this calculation, or None
+        if no parser is set.
+        
+        ParserFactory raises MissingPluginError if the plugin is not found.
+        """
+        from aiida.parsers import ParserFactory
+        
+        parser_name = self.get_parser_name()
+        
+        if parser_name is not None:
+            return ParserFactory(parser_name)
+        else:
+            return None
 
+    def set_linkname_retrieved(self,linkname):
+        """
+        set the linkname of the retrieved data folder object
+        """
+        self.set_attr('linkname_retrieved',linkname)
+
+    def get_linkname_retrieved(self):
+        """
+        get the linkname of the retrieved data folder object
+        """
+        return self.get_attr('linkname_retrieved')
+        
+    def get_retrieved(self):
+        """
+        return the retrieved data folder, if present.
+        Note: we are assuming only one retrieved folder exists
+        """
+        from aiida.orm import DataFactory
+        
+        return DataFactory(self.get_linkname_retrieved)
+        
 ## SOME OLD COMMENTS
 # Each calculation object should be defined by analogy of a function 
 # with a fixed set of labeled and declared inputs.

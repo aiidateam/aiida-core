@@ -1,9 +1,9 @@
+"""
+No documentation yet!
+"""
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
-from django.contrib.auth.models import User
-
 from aiida.common.datastructures import calc_states
 from aiida.scheduler.datastructures import job_states
-from aiida.djsite.db.models import DbComputer, AuthInfo
 from aiida.common.exceptions import AuthenticationError, ConfigurationError, PluginInternalError
 from aiida.common import aiidalogger
     
@@ -30,7 +30,7 @@ def update_running_calcs_status(authinfo):
     s = Computer(dbcomputer=authinfo.computer).get_scheduler()
     t = authinfo.get_transport()
 
-    finished = []
+    computed = []
 
     # I avoid to open an ssh connection if there are no calcs with state WITHSCHEDULER
     if len(calcs_to_inquire):
@@ -41,13 +41,16 @@ def update_running_calcs_status(authinfo):
             s.set_transport(t)
             # TODO: Check if we are ok with filtering by job (to make this work,
             # I had to remove the check on the retval for getJobs, because if the
-            # job has finished and is not in the output of qstat, it gives a nonzero
+            # job has computed and is not in the output of qstat, it gives a nonzero
             # retval)
             
             # TODO: catch SchedulerError exception and do something sensible (at least,
             # skip this computer but continue with following ones, and set a counter; 
             # set calculations to UNKNOWN after a while?
-            found_jobs = s.getJobs(jobs=jobids_to_inquire, as_dict = True)
+            if s.get_feature('can_query_by_user'):
+                found_jobs = s.getJobs(user="$USER", as_dict = True)
+            else:
+                found_jobs = s.getJobs(jobs=jobids_to_inquire, as_dict = True)
     
             # I update the status of jobs
 
@@ -65,9 +68,10 @@ def update_running_calcs_status(authinfo):
                         jobinfo = found_jobs[jobid]
                         execlogger.debug("Inquirying calculation {} ({}): it has job_state={}".format(
                             c.uuid, jobid, jobinfo.job_state))
-                        if jobinfo.job_state in [job_states.DONE, job_states.FAILED]:
-                            finished.append(c)
-                            c._set_state(calc_states.FINISHED)
+                        # For the moment, FAILED is not defined
+                        if jobinfo.job_state in [job_states.DONE]: #, job_states.FAILED]:
+                            computed.append(c)
+                            c._set_state(calc_states.COMPUTED)
                         elif jobinfo.job_state == job_states.UNDETERMINED:
                             c._set_state(calc_states.UNDETERMINED)
                             execlogger.error("There is an undetermined calc with uuid {}".format(
@@ -84,7 +88,7 @@ def update_running_calcs_status(authinfo):
                             c.uuid, jobid, job_states.DONE))
 
                         # calculation c is not found in the output of qstat
-                        finished.append(c)
+                        computed.append(c)
                         c._set_scheduler_state(job_states.DONE)
                 except Exception as e:
                     # TODO: implement a counter, after N retrials set it to a status that
@@ -93,7 +97,7 @@ def update_running_calcs_status(authinfo):
                         c.uuid, e.__class__.__name__, e.message))
                     continue
     
-            for c in finished:
+            for c in computed:
                 try:
                     try:
                         detailed_jobinfo = s.get_detailed_jobinfo(jobid=c.get_job_id())
@@ -114,15 +118,16 @@ def update_running_calcs_status(authinfo):
                                        c.uuid, e.__class__.__name__, e.message))
                     continue
                 finally:
-                    # Set the state to FINISHED as the very last thing of this routine; no further
+                    # Set the state to COMPUTED as the very last thing of this routine; no further
                     # change should be done after this, so that in general the retriever can just 
                     # poll for this state, if we want to.
-                    c._set_state(calc_states.FINISHED)
+                    c._set_state(calc_states.COMPUTED)
 
             
-    return finished
+    return computed
 
 def get_authinfo(computer, aiidauser):
+    from aiida.djsite.db.models import DbComputer, AuthInfo
     try:
         authinfo = AuthInfo.objects.get(computer=DbComputer.get_dbcomputer(computer),aiidauser=aiidauser)
     except ObjectDoesNotExist:
@@ -142,11 +147,13 @@ def daemon_main_loop():
 
 def retrieve_jobs():
     from aiida.orm import Calculation
+    from django.contrib.auth.models import User
+    from aiida.djsite.db.models import DbComputer
     
     # I create a unique set of pairs (computer, aiidauser)
     computers_users_to_check = set(
         Calculation.get_all_with_state(
-            state=calc_states.FINISHED,
+            state=calc_states.COMPUTED,
             only_computer_user_pairs = True)
         )
     
@@ -158,7 +165,7 @@ def retrieve_jobs():
             aiidauser.username, dbcomputer.hostname))
         try:
             authinfo = get_authinfo(dbcomputer, aiidauser)
-            retrieve_finished_for_authinfo(authinfo)
+            retrieve_computed_for_authinfo(authinfo)
         except Exception as e:
             msg = ("Error while retrieving calculation status for aiidauser={} on computer={}, "
                    "error type is {}, error message: {}".format(
@@ -174,7 +181,9 @@ def update_jobs():
     calls an update for each set of pairs (machine, aiidauser)
     """
     from aiida.orm import Calculation
-    
+    from django.contrib.auth.models import User
+    from aiida.djsite.db.models import DbComputer
+
     # I create a unique set of pairs (computer, aiidauser)
     computers_users_to_check = set(
         Calculation.get_all_with_state(
@@ -191,7 +200,7 @@ def update_jobs():
 
         try:
             authinfo = get_authinfo(dbcomputer, aiidauser)
-            finished_calcs = update_running_calcs_status(authinfo)
+            computed_calcs = update_running_calcs_status(authinfo)
         except Exception as e:
             msg = ("Error while updating calculation status for aiidauser={} on computer={}, "
                    "error type is {}, error message: {}".format(
@@ -204,8 +213,7 @@ def update_jobs():
 def submit_calc(calc):
     """
     Submit a calculation
-    Args:
-        calc: the calculation to submit (an instance of the aiida.orm.Calculation class)
+    :param calc: the calculation to submit (an instance of the aiida.orm.Calculation class)
     """
     import StringIO
     import json
@@ -213,7 +221,8 @@ def submit_calc(calc):
     
     from aiida.orm import Calculation, Code
     from aiida.common.folders import SandboxFolder
-    from aiida.common.exceptions import InputValidationError, ValidationError
+    from aiida.common.exceptions import (
+        FeatureDisabled, InputValidationError, ValidationError)
     from aiida.scheduler.datastructures import JobTemplate
     from aiida.common.utils import validate_list_of_string_tuples
     from aiida.orm.data.remote import RemoteData
@@ -225,6 +234,14 @@ def submit_calc(calc):
         raise ValueError("Can only submit calculations with state=NEW! "
                          "(state is {} instead)".format(
                              calc.get_state()))
+
+    computer = calc.computer
+    if computer is None:
+        raise ValueError("No computer specified for this calculation")
+    if not computer.is_enabled():
+        raise FeatureDisabled("The computer '{}' associated to this "
+          "calculation is disabled: cannot submit".format(computer.name))
+        
 
     # TODO: do some sort of blocking call, to be sure that the submit function is not called
     # twice for the same calc?
@@ -282,24 +299,27 @@ def submit_calc(calc):
                 ((code.get_append_text() + u"\n\n") if code.get_append_text() else u"") +
                 ((computer.get_append_text() + u"\n\n") if computer.get_append_text() else u""))
 
-            # The Calculation validation should take care of always having a sensible value here
-            # so I don't need to check
-            num_machines = calc.get_num_machines()
-            num_cpus_per_machine = calc.get_num_cpus_per_machine()
-            tot_num_cpus = num_machines * num_cpus_per_machine
-    
-            mpi_args = [arg.format(num_machines=num_machines,
-                                   num_cpus_per_machine=num_cpus_per_machine,
-                                   tot_num_cpus=tot_num_cpus) for arg in
+            job_tmpl.job_resource = s.create_job_resource(**calc.get_jobresource_params())
+
+            subst_dict = {'tot_num_cpus': job_tmpl.job_resource.get_tot_num_cpus()}
+            for k,v in job_tmpl.job_resource.iteritems():
+                subst_dict[k] = v
+            mpi_args = [arg.format(**subst_dict) for arg in
                         computer.get_mpirun_command()]
-            job_tmpl.argv = mpi_args + [code.get_execname()] + (
-                calcinfo.cmdline_params if calcinfo.cmdline_params is not None else [])
+            if calc.get_withmpi():
+                job_tmpl.argv = mpi_args + [code.get_execname()] + (
+                    calcinfo.cmdline_params if calcinfo.cmdline_params is not None else [])
+            else:
+                job_tmpl.argv = [code.get_execname()] + (
+                    calcinfo.cmdline_params if calcinfo.cmdline_params is not None else [])
     
             job_tmpl.stdin_name = calcinfo.stdin_name
             job_tmpl.stdout_name = calcinfo.stdout_name
             job_tmpl.stderr_name = calcinfo.stderr_name
             job_tmpl.join_files = calcinfo.join_files
-
+            
+            job_tmpl.import_sys_environment = calc.get_import_sys_environment()
+            
             queue_name = calc.get_queue_name()
             if queue_name is not None:
                 job_tmpl.queue_name = queue_name
@@ -316,9 +336,6 @@ def submit_calc(calc):
             if max_memory_kb is not None:
                 job_tmpl.max_memory_kb = max_memory_kb
 
-            job_tmpl.num_machines = num_machines
-            job_tmpl.num_cpus_per_machine = num_cpus_per_machine
-    
             # TODO: give possibility to use a different name??
             script_filename = '_aiidasubmit.sh'
             script_content = s.get_submit_script(job_tmpl)
@@ -343,15 +360,16 @@ def submit_calc(calc):
                 try:
                     t.chdir(remote_working_directory)
                 except IOError:
-                    execlogger.debug("Unable to chdkir in {}, trying to create it".format(
+                    execlogger.debug("Unable to chdir in {}, trying to create it".format(
                         remote_working_directory))
                     try:
                         t.makedirs(remote_working_directory)
                         t.chdir(remote_working_directory)
-                    except IOError as e:
+                    except (IOError, OSError) as e:
                         raise ConfigurationError(
-                            "Unable to create the remote directory {} on {}".format(
-                                remote_working_directory, computer.hostname))
+                            "Unable to create the remote directory {} on {}: {}".format(
+                                remote_working_directory, computer.hostname, 
+                                e.message))
                 # Sharding
                 t.mkdir(calcinfo.uuid[:2],ignore_existing=True)
                 t.chdir(calcinfo.uuid[:2])
@@ -437,7 +455,7 @@ def submit_calc(calc):
         calc._set_state(calc_states.SUBMISSIONFAILED)
         raise
             
-def retrieve_finished_for_authinfo(authinfo):
+def retrieve_computed_for_authinfo(authinfo):
     from aiida.orm import Calculation
     from aiida.common.folders import SandboxFolder
     from aiida.orm.data.folder import FolderData
@@ -445,13 +463,13 @@ def retrieve_finished_for_authinfo(authinfo):
     import os
     
     calcs_to_retrieve = Calculation.get_all_with_state(
-        state=calc_states.FINISHED,
+        state=calc_states.COMPUTED,
         computer=authinfo.computer,
         user=authinfo.aiidauser)
     
     retrieved = []
     
-    # I avoid to open an ssh connection if there are no calcs with state FINISHED
+    # I avoid to open an ssh connection if there are no calcs with state not COMPUTED
     if len(calcs_to_retrieve):
 
         # Open connection
@@ -469,6 +487,8 @@ def retrieve_finished_for_authinfo(authinfo):
 
                     with SandboxFolder() as folder:
                         for item in retrieve_list:
+                            execlogger.debug(
+                                "Trying to retrieve remote item '{}' of calc {}".format(item, calc.dbnode.pk))
                             t.get(item,
                                   os.path.join(folder.abspath,os.path.split(item)[1]),
                                   ignore_nonexisting=True)
@@ -477,13 +497,22 @@ def retrieve_finished_for_authinfo(authinfo):
 
                     execlogger.debug("Storing retrieved_files={} of calc {}".format(retrieved_files.dbnode.pk, calc.dbnode.pk))
                     retrieved_files.store()
-                    calc.add_link_to(retrieved_files, label="retrieved")
+                    calc.add_link_to(retrieved_files, label=calc.get_linkname_retrieved())
 
                     calc._set_state(calc_states.PARSING)
 
-                    # TODO: parse here
+                    Parser = calc.get_parser()
+                    # If no parser is set, the calculation is successful
+                    successful = True 
+                    if Parser is not None:
+                        # TODO: parse here
+                        parser = Parser()
+                        successful = parser.parse_from_calc(calc)
 
-                    calc._set_state(calc_states.RETRIEVED)
+                    if successful:
+                        calc._set_state(calc_states.FINISHED)
+                    else:
+                        calc._set_state(calc_states.FAILED)
                     retrieved.append(calc)
                 except:
                     import traceback
@@ -492,10 +521,10 @@ def retrieve_finished_for_authinfo(authinfo):
                     traceback.print_exc(file=buf)
                     buf.seek(0)
                     if calc.get_state() == calc_states.PARSING:
-                        execlogger.error("Error parsing calc {}, I set it to RETRIEVED anyway. "
+                        execlogger.error("Error parsing calc {}. "
                             "Traceback: {}".format(calc.uuid, buf.read()))
                         # TODO: add a 'comment' to the calculation
-                        calc._set_state(calc_states.RETRIEVED)
+                        calc._set_state(calc_states.PARSINGFAILED)
                     else:
                         execlogger.error("Error retrieving calc {}".format(calc.uuid))
                         calc._set_state(calc_states.RETRIEVALFAILED)

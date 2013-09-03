@@ -5,7 +5,10 @@ from aiida.scheduler.datastructures import JobTemplate
 
 def SchedulerFactory(module):
     """
-    Return a suitable Scheduler subclass.
+    Used to load a suitable Scheduler subclass.
+
+    :param str module: a string with the module name
+    :return: the scheduler subclass contained in module 'module'
     """
     from aiida.common.pluginloader import BaseFactory
     
@@ -22,7 +25,17 @@ class Scheduler(object):
     Base class for all schedulers.
     """
     _logger = aiida.common.aiidalogger.getChild('scheduler')
-    
+
+    # A list of features
+    # Features that should be defined in the plugins:
+    # 'can_query_by_user': True if I can pass the 'user' argument to
+    # get_joblist_command (and in this case, no 'jobs' should be given).
+    # Otherwise, if False, a list of jobs is passed, and no 'user' is given.
+    _features = {}
+
+    # The class to be used for the job resource.
+    _job_resource_class = None
+
     def __init__(self):
         self._transport = None
 
@@ -32,6 +45,20 @@ class Scheduler(object):
         This class assumes that the transport is open and active.
         """
         self._transport = transport        
+
+    @classmethod
+    def get_valid_schedulers(cls):
+        from aiida.common.pluginloader import existing_plugins
+        
+        return existing_plugins(Scheduler, "aiida.scheduler.plugins")
+
+    def get_feature(self, feature_name):
+        try:
+            return self._features[feature_name]
+        except KeyError:
+            raise NotImplementedError(
+                "Feature {} not implemented for this scheduler".format(
+                    feature_name))
 
     @property
     def logger(self):
@@ -44,29 +71,38 @@ class Scheduler(object):
             from aiida.common.exceptions import InternalError
             raise InternalError("No self._logger configured for {}!")
 
+    @classmethod
+    def create_job_resource(cls, **kwargs):
+        """
+        Create a suitable job resource from the kwargs specified
+        """
+        if cls._job_resource_class is None:
+            raise NotImplementedError
+        else:
+            return cls._job_resource_class(**kwargs)
+
     def get_submit_script(self, job_tmpl):
         """
         Return the submit script as a string.
-        Args:
-           job_tmpl: a aiida.scheduler.datastrutures.JobTemplate object.
+        :parameter job_tmpl: a aiida.scheduler.datastrutures.JobTemplate object.
         
-        TODO: understand if, in the future, we want to pass more
-        than one calculation, e.g. for job arrays.
-
         The plugin returns something like
 
         #!/bin/bash <- this shebang line could be configurable in the future
         scheduler_dependent stuff to choose numnodes, numcores, walltime, ...
         prepend_computer [also from calcinfo, joined with the following?]
         prepend_code [from calcinfo]
-        in the future: environment_variables [from calcinfo, possibly,
-            and from scheduler_requirements e.g. for OpenMP? or maybe
-            the openmp part is better managed in the scheduler_dependent
-            part above since it will be machine-dependent]
         output of _get_script_main_content
         postpend_code
         postpend_computer
         """
+        # #TODO: understand if, in the future, we want to pass more
+        #        than one calculation, e.g. for job arrays.
+        # #TODO: in the future: environment_variables [from calcinfo, possibly,
+        #        and from scheduler_requirements e.g. for OpenMP? or maybe
+        #        the openmp part is better managed in the scheduler_dependent
+        #        part above since it will be machine-dependent]
+
         from aiida.common.exceptions import InternalError
         
         if not isinstance(job_tmpl, JobTemplate):
@@ -105,8 +141,7 @@ class Scheduler(object):
         Return the submit script header, using the parameters from the
         job_tmpl.
 
-        Args:
-           job_tmpl: an JobTemplate instance with relevant parameters set.
+        :param job_tmpl: a JobTemplate instance with relevant parameters set.
         """
         raise NotImplementedError
 
@@ -156,17 +191,23 @@ class Scheduler(object):
         self.logger.debug('_get_run_line output: {}'.format(output_string))
         return output_string
     
-    def _get_joblist_command(self,jobs=None):
+    def _get_joblist_command(self,jobs=None,user=None):
         """
-        Return the qsub (or equivalent) command to run with the required
+        Return the qstat (or equivalent) command to run with the required
         command-line parameters to get the most complete description possible;
         also specifies the output format of qsub to be the one to be used
         by the parse_queue_output method.
 
         Must be implemented in the plugin. 
-        Args:
-            jobs: either None to get a list of all jobs in the machine,
+
+        :param jobs: either None to get a list of all jobs in the machine,
                or a list of jobs.
+        :param user: either None, or a string with the username (to show only
+                     jobs of the specific user).
+        
+        Note: typically one can pass only either jobs or user, depending on the
+            specific plugin. The choice can be done according to the value 
+            returned by self.get_feature('can_query_by_user')
         """
         raise NotImplementedError
 
@@ -188,9 +229,9 @@ class Scheduler(object):
 
         At the moment, the output text is just retrieved
         and stored for logging purposes, but no parsing is performed.
-
-        TODO: Parsing?
         """
+        #TODO: Parsing?
+        
         command = self._get_detailed_jobinfo_command(jobid=jobid)
         retval, stdout, stderr = self.transport.exec_command_wait(
             command)
@@ -216,20 +257,23 @@ stderr:
         """
         raise NotImplementedError
         
-    def getJobs(self, jobs=None, as_dict=False):
+    def getJobs(self, jobs=None, user=None, as_dict=False):
         """
         Get the list of jobs and return it.
         
         Typically, this function does not need to be modified by the plugins.
         
-        Args:
-          * jobs: a list of jobs to check; only these are checked
-          * as_dict: if False (default), a list of JobInfo objects is
+        :param list jobs: a list of jobs to check; only these are checked
+        :param str user: a string with a user: only jobs of this user are checked
+        :param list as_dict: if False (default), a list of JobInfo objects is
              returned. If True, a dictionary is returned, having as key the
              job_id and as value the JobInfo object.
+        
+        Note: typically, only either jobs or user can be specified. See also
+        comments in _get_joblist_command.
         """
         retval, stdout, stderr = self.transport.exec_command_wait(
-            self._get_joblist_command(jobs=jobs))
+            self._get_joblist_command(jobs=jobs,user=user))
         
         joblist = self._parse_joblist_output(retval, stdout, stderr)
         if as_dict:
@@ -254,13 +298,12 @@ stderr:
     def _get_submit_command(self, submit_script):
         """
         Return the string to execute to submit a given script.
+        To be implemented by the plugin.
         
-        Args:
-          * submit_script: the path of the submit script relative to the
+        :param str submit_script: the path of the submit script relative to the
               working directory. 
             IMPORTANT: submit_script should be already escaped.
-        
-        To be implemented by the plugin.
+        :return: the string to execute to submit a given script.
         """
         raise NotImplementedError
         
@@ -271,7 +314,7 @@ stderr:
         
         To be implemented by the plugin.
         
-        Return a string with the JobID.
+        :return: a string with the JobID.
         """
         raise NotImplementedError
         

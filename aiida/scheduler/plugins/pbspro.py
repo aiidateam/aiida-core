@@ -7,7 +7,7 @@ import aiida.scheduler
 from aiida.common.utils import escape_for_bash
 from aiida.scheduler import SchedulerError, SchedulerParsingError
 from aiida.scheduler.datastructures import (
-    JobInfo, job_states, MachineInfo)
+    JobInfo, job_states, MachineInfo, NodeNumberJobResource)
 
 # This maps PbsPro status letters to our own status list
 
@@ -40,7 +40,8 @@ _map_status_pbspro = {
     'X': job_states.DONE,
     }
 
-
+class PbsproJobResource(NodeNumberJobResource):
+    pass
 
 class PbsproScheduler(aiida.scheduler.Scheduler):
     """
@@ -49,15 +50,27 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
     TODO: implement __unicode__ and __str__ methods.
     """
     _logger = aiida.scheduler.Scheduler._logger.getChild('pbspro')
+    
+    # Query only by list of jobs and not by user
+    _features = {
+        'can_query_by_user': False,
+        }
 
+    # The class to be used for the job resource.
+    _job_resource_class = PbsproJobResource
 
-    def _get_joblist_command(self,jobs=None): 
+    def _get_joblist_command(self,jobs=None,user=None): 
         """
         The command to report full information on existing jobs.
 
         TODO: in the case of job arrays, decide what to do (i.e., if we want
               to pass the -t options to list each subjob).
         """
+        from aiida.common.exceptions import FeatureNotAvailable
+
+        if user:
+            raise FeatureNotAvailable("Cannot query by user in SLURM")
+        
         command = 'qstat -f'
         if jobs:
             if isinstance(jobs, basestring):
@@ -150,6 +163,9 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
             
             lines.append("#PBS -N {}".format(job_title))
             
+        if job_tmpl.import_sys_environment:
+            lines.append("#PBS -V")
+            
         if job_tmpl.sched_output_path:
             lines.append("#PBS -o {}".format(job_tmpl.sched_output_path))
 
@@ -180,13 +196,13 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
             # format. To fix.
             lines.append("#PBS -p {}".format(job_tmpl.priority))
 
-        
-        if not job_tmpl.num_machines:
-            raise ValueError("num_machines is required for the PBSPro scheduler "
-                             "plugin")
-        select_string = "select={}".format(job_tmpl.num_machines)
-        if job_tmpl.num_cpus_per_machine:
-            select_string += ":ncpus={}".format(job_tmpl.num_cpus_per_machine)
+        if not job_tmpl.job_resource:
+            raise ValueError("Job resources (as the num_machines) are required "
+                             "for the PBSPro scheduler plugin")
+                    
+        select_string = "select={}".format(job_tmpl.job_resource.num_machines)
+        if job_tmpl.job_resource.num_cpus_per_machine:
+            select_string += ":ncpus={}".format(job_tmpl.job_resource.num_cpus_per_machine)
 
         if job_tmpl.max_wallclock_seconds is not None:
             try:
@@ -539,7 +555,7 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
             # if there are any
 
             # Everything goes here anyway for debugging purposes
-            this_job.rawData = raw_data
+            this_job.raw_data = raw_data
 
             # I append to the list of jobs to return
             job_list.append(this_job)

@@ -495,20 +495,21 @@ class StructureData(Data):
         Append an atom to the Structure, taking care of creating the 
         corresponding kind.
         
-        Args:
-            ase: the ase Atom object from which we want to create a new atom
+        :param ase: the ase Atom object from which we want to create a new atom
                 (if present, this must be the only parameter)
-            position: the position of the atom (three numbers in angstrom)
-            symbols, weights, name, ...: any further parameter is passed 
+        :param position: the position of the atom (three numbers in angstrom)
+        :param symbols, weights, name, ...: any further parameter is passed 
                 to the constructor of the Kind object. For the 'name' parameter,
                 see the note below.
                 
         Note on the 'name' parameter (that is, the name of the kind):
+
             * if specified, no checks are done on existing species. Simply,
               a new kind with that name is created. If there is a name
               clash, a check is done: if the kinds are identical, no error
               is issued; otherwise, an error is issued because you are trying
               to store two different kinds with the same name.
+
             * if not specified, the name is automatically generated. Before
               adding the kind, a check is done. If other species with the 
               same properties already exist, no new kinds are created, but 
@@ -709,6 +710,78 @@ class StructureData(Data):
         the_cell = _get_valid_cell(value)
         self.set_attr('cell', the_cell)
 
+    def reset_cell(self,new_cell):
+        """
+        Reset the cell of a structure not yet stored to a new value.
+
+        Args:
+            new_cell: list specifying the cell vectors
+
+        Raises:
+            ModificationNotAllowed: if object is already stored
+        """
+        from aiida.common.exceptions import ModificationNotAllowed
+
+        if not self._to_be_stored:
+            raise ModificationNotAllowed()
+
+        self.set_attr('cell', new_cell)
+        
+    def reset_sites_positions(self,new_positions,conserve_particle=True):
+        """
+        Replace all the Site positions attached to the Structure
+
+        Args:
+            new_positions: list of (3D) positions for every sites.
+
+            conserve_particle: if True, allows the possibility of removing a site.
+            currently not implemented.
+
+        Raises:
+            ModificationNotAllowed: if object is stored already
+            ValueError: if positions are invalid
+        
+        NOTE: I assume that the order of the new_positions is given in the same 
+              order of the one I'm substituting, i.e. the kind of the site
+              will not be checked.
+        """
+        from aiida.common.exceptions import ModificationNotAllowed
+
+        if not self._to_be_stored:
+            raise ModificationNotAllowed()
+        
+        if not conserve_particle:
+            # TODO:
+            raise NotImplementedError
+        else:
+
+            # test consistency of th enew input
+            n_sites = len(self.sites)
+            if n_sites != len(new_positions) and conserve_particle:
+                raise ValueError("the new positions should be as many as the previous structure.")
+        
+            new_sites = []
+            for i in range(n_sites):
+                try:
+                    this_pos = [ float(j) for j in new_positions[i]]
+                except ValueError:
+                    raise ValueError("Expecting a list of floats. Found instead {}"
+                                  .format(new_positions[i]) )
+                
+                if len(this_pos) != 3:
+                    raise ValueError("Expecting a list of lists of length 3. "
+                                     "found instead {}".format(len(this_pos)))
+                
+                # now append this Site to the new_site list.
+                new_site = Site(site=self.sites[i]) # So we make a copy
+                new_site.position = copy.deepcopy(this_pos)
+                new_sites.append(new_site)
+
+            # now clear the old sites, and substitute with the new ones
+            self.clear_sites()
+            for this_new_site in new_sites:
+                self.append_site(this_new_site)
+        
     @property
     def pbc(self):
         """
@@ -733,14 +806,23 @@ class StructureData(Data):
         self.set_attr('pbc3',the_pbc[2])
 
     def is_alloy(self):
+        """
+        Returns:
+            a boolean, True if at least one kind is an alloy 
+        """
         return any(s.is_alloy() for s in self.kinds)
 
     def has_vacancies(self):
+        """
+        Returns:
+            a boolean, True if at least one kind has a vacancy
+        """
         return any(s.has_vacancies() for s in self.kinds)
 
     def get_cell_volume(self):
         """
-        Return the cell volume in angstrom^3
+        Returns:
+            (float) the cell volume in angstrom^3
         """
         return calc_cell_volume(self.cell)
 
@@ -891,12 +973,12 @@ class Kind(object):
     def reset_mass(self):
         """
         Reset the mass to the automatic calculated value.
-
+        
         The mass can be set manually; by default, if not provided,
         it is the mass of the constituent atoms, weighted with their
         weight (after the weight has been normalized to one to take
         correctly into account vacancies).
-
+        
         This function uses the internal _symbols and _weights values and
         thus assumes that the values are validated.
         
@@ -1025,6 +1107,19 @@ class Kind(object):
         validate_weights_tuple(weights_tuple, _sum_threshold)
 
         self._weights = weights_tuple
+
+    @property
+    def symbol(self):
+        """
+        If the kind has only one symbol, return it; otherwise, raise a
+        ValueError.
+        """
+        if len(self._symbols) == 1:
+            return self._symbols[0]
+        else:
+            raise ValueError("This kind has more than one symbol (it is an "
+                             "alloy): {}".format(self._symbols))
+
 
     @property
     def symbols(self):
@@ -1227,7 +1322,7 @@ class Site(object):
             raise ValueError("Cannot convert to ASE if the kind represents "
                              "an alloy or it has vacancies.")
         aseatom = ase.Atom(position=self.position, 
-                           symbol=kind.symbols[0], 
+                           symbol=str(kind.symbols[0]), 
                            mass=kind.mass)
         if tag is not None:
             aseatom.tag = tag

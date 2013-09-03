@@ -12,9 +12,11 @@ _valid_sections = ['node', 'workflow']
 
 class Folder(object):
     """
-    A class to manage generic folders, avoiding to get out of specific given folder borders.
+    A class to manage generic folders, avoiding to get out of
+    specific given folder borders.
     
-    .. todo:: fix this, os.path.commonprefix of /a/b/c and /a/b2/c will give
+    .. todo::
+        fix this, os.path.commonprefix of /a/b/c and /a/b2/c will give
         a/b, check if this is wanted or if we want to put trailing slashes.
         (or if we want to use os.path.relpath and check for a string starting
         with os.pardir?)
@@ -38,18 +40,16 @@ class Folder(object):
         """
         Return a Folder object pointing to a subfolder.
 
-        Args:
-            subfolder: a string with the relative path of the subfolder,
+        :param subfolder: a string with the relative path of the subfolder,
                 relative to the absolute path of this object. Note that
                 this may also contain '..' parts,
                 as far as this does not go beyond the folder_limit.
-            create: if True, the new subfolder is created, if it does not exist.
-            reset_limit: when doing b = a.get_subfolder('xxx', reset_limit=False),
+        :param create: if True, the new subfolder is created, if it does not exist.
+        :param reset_limit: when doing ``b = a.get_subfolder('xxx', reset_limit=False)``,
                 the limit of b will be the same limit of a.
                 if True, the limit will be set to the boundaries of folder b.
             
-        Returns:
-            a Folder object pointing to the subfolder.
+        :Returns: a Folder object pointing to the subfolder.
         """
         dest_abs_dir = os.path.realpath(os.path.join(
                 self.abspath,unicode(subfolder)))
@@ -77,15 +77,15 @@ class Folder(object):
         matching a given pattern.
 
         Example: If you want to exclude files starting with a dot, you can
-        call this method with pattern='[!.]*'
+        call this method with ``pattern='[!.]*'``
 
-        Args:
-            pattern: a pattern for the file/folder names, using Unix filename
+        :param pattern: a pattern for the file/folder names, using Unix filename
                 pattern matching (see Python standard module fnmatch).
                 By default, pattern is '*', matching all files and folders.
-            only_filenames: if False (default), return pairs (name, is_file).
+        :param only_filenames: if False (default), return pairs (name, is_file).
                 if True, return only a flat list.
-        Returns:
+
+        :Returns:
             a list of tuples of two elements, the first is the file name and
             the second is True if the element is a file, False if it is a
             directory.
@@ -103,12 +103,11 @@ class Folder(object):
         """
         Create a symlink inside the folder to the location 'src'.
 
-        Args:
-            src: the location to which the symlink must point. Can be
+        :param src: the location to which the symlink must point. Can be
                 either a relative or an absolute path. Should, however, 
                 be relative to work properly also when the repository is
                 moved!
-            name: the filename of the symlink to be created.
+        :param name: the filename of the symlink to be created.
         """
         dest_abs_path = self.get_abs_path(name)
         os.symlink(src,dest_abs_path)
@@ -117,12 +116,11 @@ class Folder(object):
         """
         Copy a file to the folder.
         
-        Args:
-            src: the source filename to copy
-            dest_name: if None, the same basename of src is used. Otherwise,
+        :param src: the source filename to copy
+        :param dest_name: if None, the same basename of src is used. Otherwise,
                 the destination filename will have this file name.
-            if overwrite == False, raises an error on existing destination;
-            otherwise, delete it first.
+        :param overwrite: if ``False``, raises an error on existing destination;
+                otherwise, delete it first.
         """
         if dest_name is None:
             filename = unicode(os.path.basename(src))
@@ -178,10 +176,9 @@ class Folder(object):
         """
         Create a file from a file-like object.
         
-        Args:
-            src_filelike: the file-like object (e.g., if you have
-                a string called s, you can pass StringIO.StringIO(s))
-            dest_name: the destination filename will have this file name.
+        :param src_filelike: the file-like object (e.g., if you have
+            a string called s, you can pass ``StringIO.StringIO(s)``)
+        :param dest_name: the destination filename will have this file name.
         """
         filename = unicode(dest_name)
 
@@ -199,8 +196,7 @@ class Folder(object):
         """
         Remove a file or folder from the folder.
         
-        Args:
-            filename: the relative path name to remove
+        :param filename: the relative path name to remove
         """
         # I get the full path of the filename, checking also that I don't
         # go beyond the folder limits
@@ -217,13 +213,14 @@ class Folder(object):
         """
         Return an absolute path for a file or folder in this folder.
         
-        The advantage of using this method is that it checks that filename is a valid
-        filename within this folder, and not something e.g. containing slashes.
-        
-        Args:
-            filename: The file or directory.
-            check_existence: if False, just return the file path. Otherwise, also
-                check if the file or directory actually exists. Raise OSError if it does not.
+        The advantage of using this method is that it checks that filename
+        is a valid filename within this folder, 
+        and not something e.g. containing slashes.
+               
+        :param filename: The file or directory.
+        :param check_existence: if False, just return the file path.
+            Otherwise, also check if the file or directory actually exists.
+            Raise OSError if it does not.
         """
         if os.path.isabs(relpath):
             raise ValueError("relpath must be a relative path")
@@ -264,6 +261,20 @@ class Folder(object):
         return os.path.exists(self.abspath)
 
 
+    def isfile(self, relpath):
+        """
+        Return True if 'relpath' exists inside the folder and is a file,
+        False otherwise.
+        """
+        return os.path.isfile(os.path.join(self.abspath, relpath))
+
+    def isdir(self, relpath):
+        """
+        Return True if 'relpath' exists inside the folder and is a directory,
+        False otherwise.
+        """
+        return os.path.isdir(os.path.join(self.abspath, relpath))
+
     def erase(self,create_empty_folder=False):
         """
         Erases the folder. Should be called only in very specific cases,
@@ -271,8 +282,7 @@ class Folder(object):
 
         Doesn't complain if the folder does not exist.
 
-        Args:
-            create_empty_folder: if True, after erasing, creates an empty dir.
+        :param create_empty_folder: if True, after erasing, creates an empty dir.
         """
         if self.exists():
             shutil.rmtree(self.abspath)
@@ -299,19 +309,19 @@ class Folder(object):
         This routine copies or moves the source folder 'srcdir' to the local
         folder pointed by this Folder object.
         
-        Args:
-            srcdir: the source folder on the disk; this must be a string with
+        :param srcdir: the source folder on the disk; this must be a string with
                 an absolute path
-            move: if True, the srcdir is moved to the repository. Otherwise, it
+        :param move: if True, the srcdir is moved to the repository. Otherwise, it
                 is only copied.
-            overwrite: if True, the folder will be erased first.
+        :param overwrite: if True, the folder will be erased first.
                 if False, a IOError is raised if the folder already exists.
                 Whatever the value of this flag, parent directories will be
                 created, if needed.
 
-        Raises:
+        :Raises:
             OSError or IOError: in case of problems accessing or writing
-                the files.
+            the files.
+        :Raises:
             ValueError: if the section is not recognized.
         """
         if not os.path.isabs(srcdir):

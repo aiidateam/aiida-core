@@ -11,9 +11,14 @@ import aiida.transport
 from aiida.transport import FileAttribute
 import StringIO
 import glob
+from aiida.common import aiidalogger
+execlogger = aiidalogger.getChild('transport')
 
 
 class LocalTransport(aiida.transport.Transport):
+    
+    # There are no valid parameters for the local transport
+    _valid_auth_params = []
 
     def __init__(self,**kwargs):
         super(LocalTransport,self).__init__()
@@ -26,7 +31,7 @@ class LocalTransport(aiida.transport.Transport):
         self._internal_dir = None
         # Just to avoid errors
         self._machine = kwargs.pop('machine', None)
-        if self._machine and self._machine is not 'localhost':
+        if self._machine and self._machine != 'localhost':
             # TODO: check if we want a different logic
             self.logger.warning('machine was passed, but it is not localhost')
         if kwargs:
@@ -421,6 +426,8 @@ class LocalTransport(aiida.transport.Transport):
                     self.getfile( this_src,this_dst,overwrite )
                 else:
                     if ignore_nonexisting:
+                        execlogger.debug(
+                                "File {} not found on the remote machine".format(this_src))
                         pass
                     else:
                         raise IOError("The remote path {} does not exist".format(
@@ -433,6 +440,8 @@ class LocalTransport(aiida.transport.Transport):
                 self.getfile( source,destination,overwrite )
             else:
                 if ignore_nonexisting:
+                    execlogger.debug(
+                        "File {} not found on the remote machine".format(source))
                     pass
                 else:
                     raise IOError("The remote path {} does not exist".format(
@@ -764,3 +773,43 @@ class LocalTransport(aiida.transport.Transport):
         retval = local_proc.returncode
 
         return retval, output_text, stderr_text
+
+
+    def gotocomputer_command(self, remotedir):
+        """
+        Return a string to be run using os.system in order to connect
+        via the transport to the remote directory.
+
+        Expected behaviors:
+
+        * A new bash session is opened
+
+        * A reasonable error message is produced if the folder does not exist
+
+        :param str remotedir: the full path of the remote directory
+        """
+        return """bash -c "if [ -d {escaped_remotedir} ] ; then cd {escaped_remotedir} ; bash --rcfile <(echo 'if [ -e ~/.bashrc ] ; then source ~/.bashrc ; fi ; export PS1="'"\[\033[01;31m\][AiiDA]\033[00m\]$PS1"'"') ; else echo  '  ** The directory' ; echo '  ** {remotedir}' ; echo '  ** seems to have been deleted, I logout...' ; fi" """.format(
+        escaped_remotedir="'{}'".format(remotedir), remotedir=remotedir)
+
+
+    def rename(src,dst):
+        """
+        Rename a file or folder from oldpath to newpath.
+
+        :param str oldpath: existing name of the file or folder
+        :param str newpath: new name for the file or folder
+
+        :raises IOError: if src/dst is not found
+        :raises ValueError: if src/dst is not a valid string
+        """
+        if not src:
+            raise ValueError("Source {} is not a valid string".format(src))
+        if not dst:
+            raise ValueError("Destination {} is not a valid string".format(dst))
+        if not os.path.exists( src ):
+            raise IOError("Source {} does not exist".format(src))
+        if not os.path.exists( dst ):
+            raise IOError("Destination {} does not exist".format(dst))
+        
+        shutil.move(src,dst)
+

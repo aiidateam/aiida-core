@@ -114,6 +114,7 @@ def AbstractWorkflow():
         
     struc1 = Struc.create(type='abstract')
     struc2 = Struc.create(type='abstract')
+    
     calc1 = Relaxation(inputs={'input.struc':struc0, 'input.param':param_rel}, 
                        outputs={'output.first_struc':struc1, 'output.last_struc':struc2})
     calc1.execute()
@@ -195,8 +196,6 @@ class DoSomething(Workflow):
     
 
 
-
-
 def DynamicWorkflow():
     '''
     In case of dynamic workflows, nodes are created on the fly.
@@ -242,3 +241,51 @@ def Queries():
     #would be better to do
     results = Data.
     
+
+###########################################################################    
+    
+
+class Relax_calc(Calculation):
+    def __init__(self, *args, **kwds):
+        Calculation.__init__(self, *args, **kwds)
+        self.code.set('Espresso_pw')
+        #define input and output labels
+        self.inputs.declare('struc_in')
+        self.inputs.declare('params')
+        self.outputs.declare('struc_out')
+        self.outputs.declare('Freqs')
+        self.outputs.declare('Modes')
+    
+    def run(self):
+        struc_in = kwds['struc_in']
+        params = kwds['params']
+        Calculation.run(self)
+
+
+class Phonon_calc(Calculation): 
+    def __init__(self):
+        self.code.set('Espresso_phonon')
+        self.inputs.declare('struc_in')
+        self.inputs.declare('params')
+        self.outputs.declare('Freqs')
+        self.outputs.declare('Modes')    
+
+    def run(self):
+        Calculation.run(self)
+
+
+class PH_Workflow(Calculation):
+    def __init__(self):
+        self.inputs.declare('struc_in')
+        self.outputs.declare('Freqs')
+    
+    def run(self):
+        struc0 = Structure('0')
+        calc1 = Relax_calc({'struc_in':struc0, 'params':param_rel,
+                            'output.first_struc':struc1, 'output.last_struc':struc2})
+        calc1.run()
+        
+        calc2 =       
+
+##############################################
+

@@ -1,5 +1,14 @@
 """
 Tests for the pw input plugin.
+
+TODO: to test:
+- association species->pseudos
+- two pseudos with the same filename
+- IFPOS (FIXED_COORDS in SETTINGS)
+- automatic namelists
+- manually specified namelists
+- empty namelists
+- content for non-existent namelists specified
 """
 import os
 
@@ -21,15 +30,18 @@ class QETestCase(AiidaTestCase):
     def setUpClass(cls):
         super(QETestCase,cls).setUpClass()
         cls.calc_params = {
-                           'computer': cls.computer,
-                           'num_machines': 1,
-                           'num_cpus_per_machine': 1}
+            'computer': cls.computer,
+            'resources': {
+                'num_machines': 1,
+                'num_cpus_per_machine': 1}
+            }
 
 class TestQEPWInputGeneration(QETestCase):
     """
     Test if the input is correctly generated
     """
     def test_inputs(self):        
+        import logging
         cell = ((2.,0.,0.),(0.,2.,0.),(0.,0.,2.))
 
         k_points = {
@@ -66,17 +78,22 @@ class TestQEPWInputGeneration(QETestCase):
                      'testdata','qepseudos')
         
         raw_pseudos = [
-            ("Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF", 'Ba', 'pbesol'),
-            ("Ti.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF", 'Ti', 'pbesol'),
-            ("O.pbesol-n-rrkjus_psl.0.1-tested-pslib030.UPF", 'O', 'pbesol'),
+            ("Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF", 'Ba'),
+            ("Ti.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF", 'Ti'),
+            ("O.pbesol-n-rrkjus_psl.0.1-tested-pslib030.UPF", 'O'),
             ]
 
         pseudos = {}
-        for fname, elem, pot_type in raw_pseudos:
+        # suppress debug messages
+        logging.disable(logging.ERROR)
+        for fname, elem in raw_pseudos:
             absname = os.path.realpath(os.path.join(pseudo_dir,fname))
             pseudo, _ = UpfData.get_or_create(
-                absname, element=elem,pot_type=pot_type,use_first=True)
+                absname, use_first=True)
             pseudos[elem] = pseudo
+        # Reset logging level
+        logging.disable(logging.NOTSET)
+
         
         with SandboxFolder() as f:
             # I use the same SandboxFolder more than once because nothing

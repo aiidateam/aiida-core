@@ -5,8 +5,8 @@ import uuid
 import datetime
 
 from aiida.scheduler.plugins.slurm import *
-from aiida.common import aiidalogger
-aiidalogger.addHandler(logging.StreamHandler(sys.stderr))
+#from aiida.common import aiidalogger
+#aiidalogger.addHandler(logging.StreamHandler(sys.stderr))
 
 text_squeue_to_test = """862540^^^PD^^^Dependency^^^n/a^^^user1^^^20^^^640^^^(Dependency)^^^normal^^^1-00:00:00^^^0:00^^^N/A^^^longsqw_L24_q_10_0
 863100^^^PD^^^Resources^^^n/a^^^user2^^^32^^^1024^^^(Resources)^^^normal^^^10:00^^^0:00^^^2013-05-23T14:44:44^^^eq_solve_e4.slm
@@ -164,8 +164,8 @@ class TestSubmitScript(unittest.TestCase):
         job_tmpl = JobTemplate()
         job_tmpl.argv = ["mpirun", "-np", "23", "pw.x", "-npool", "1"]
         job_tmpl.stdin_name = 'aiida.in'
-        job_tmpl.num_machines = 1
         job_tmpl.uuid = str(uuid.uuid4())
+        job_tmpl.job_resource = s.create_job_resource(num_machines=1, num_cpus_per_machine=1)
         job_tmpl.max_wallclock_seconds = 24 * 3600 
 
         submit_script_text = s.get_submit_script(job_tmpl)

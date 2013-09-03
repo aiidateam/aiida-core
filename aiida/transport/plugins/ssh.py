@@ -7,35 +7,248 @@ import glob
 import aiida.transport
 from aiida.common.utils import escape_for_bash
 from aiida.transport import FileAttribute
+from aiida.common import aiidalogger
+execlogger = aiidalogger.getChild('transport')
 
 # TODO : callback functions in paramiko are currently not used much and probably broken
 
+def parse_sshconfig(computername):
+    config = paramiko.SSHConfig()
+    try:
+        config.parse(open(os.path.expanduser('~/.ssh/config')))
+    except IOError:
+        # No file found, so empty configuration
+        pass
+    
+    return config.lookup(computername)
+
+def convert_to_bool(string):
+    upstring = str(string).upper()
+    
+    if upstring in ['Y', 'YES', 'T', 'TRUE']:
+        return True
+    elif upstring in ['N', 'NO', 'F', 'FALSE']:
+        return False
+    else:
+        raise ValueError("Invalid boolean value provided")
+
 class SshTransport(aiida.transport.Transport):
     # Valid keywords accepted by the connect method of paramiko.SSHClient
-    # I disable 'password'
-    _valid_connect_params = ['port', 'username', 'pkey',
+    # I disable 'password' and 'pkey' to avoid these data to get logged in the
+    # aiida log file.
+    _valid_connect_params = ['username', 'port', 'look_for_keys', 
                              'key_filename', 'timeout', 'allow_agent',
-                             'look_for_keys', 'compress']
+                             'compress']
     
+    # Valid parameters for the ssh transport
+    # For each param, a class method with name
+    # _convert_PARAMNAME_fromstring
+    # should be defined, that returns the value converted from a string to
+    # a correct type, or raise a ValidationError 
+    #
+    # moreover, if you want to help in the default configuration, you can 
+    # define a _get_PARAMNAME_suggestion_string
+    # to return a suggestion; it must accept only one parameter, being a Computer
+    # instance
+    _valid_auth_params = _valid_connect_params + [
+        'load_system_host_keys',
+        'key_policy',
+        ]
+    
+    @classmethod
+    def _convert_username_fromstring(cls, string):
+        """
+        Convert the username from string.
+        """
+        return string
+
+    @classmethod
+    def _get_username_suggestion_string(cls, computer):
+        """
+        Return a suggestion for the specific field.
+        """
+        import getpass
+        
+        config = parse_sshconfig(computer.hostname)
+        # Either the configured user in the .ssh/config, or the current username
+        return str(config.get('user',getpass.getuser())) 
+    
+
+    @classmethod
+    def _convert_port_fromstring(cls, string):
+        """
+        Convert the port from string.
+        """
+        from aiida.common.exceptions import ValidationError
+        
+        try:
+            return int(string)
+        except ValueError:
+            raise ValidationError("The port must be an integer")
+
+    @classmethod
+    def _get_port_suggestion_string(cls, computer):
+        """
+        Return a suggestion for the specific field.
+        """
+        config = parse_sshconfig(computer.hostname)
+        # Either the configured user in the .ssh/config, or the default SSH port
+        return str(config.get('port',22))
+
+    @classmethod
+    def _convert_key_filename_fromstring(cls, string):
+        """
+        Convert the port from string.
+        """
+        from aiida.common.exceptions import ValidationError
+        
+        path = os.path.expanduser(string)
+        
+        if not os.path.isabs(path):
+            raise ValidationError("The key filename must be an absolute path")
+
+        if not os.path.exists(path):
+            raise ValidationError("The key filename must exist")
+
+        return path
+    
+    @classmethod
+    def _get_key_filename_suggestion_string(cls, computer):        
+        """
+        Return a suggestion for the specific field.
+        """
+        config = parse_sshconfig(computer.hostname)
+        return os.path.expanduser(config.get('identityfile', ""))
+
+
+    @classmethod
+    def _convert_timeout_fromstring(cls, string):
+        """
+        Convert the port from string.
+        """
+        from aiida.common.exceptions import ValidationError
+        
+        try:
+            return int(string)
+        except ValueError:
+            raise ValidationError("The timeout must be an integer")
+
+    @classmethod
+    def _get_timeout_suggestion_string(cls, computer):
+        """
+        Return a suggestion for the specific field.
+        """
+        config = parse_sshconfig(computer.hostname)
+        return str(config.get('connecttimeout',""))
+
+    @classmethod
+    def _convert_allow_agent_fromstring(cls, string):
+        """
+        Convert the port from string.
+        """
+        from aiida.common.exceptions import ValidationError
+        
+        try:
+            return convert_to_bool(string)
+        except ValueError:
+            raise ValidationError("Allow_agent must be an boolean")
+
+    @classmethod
+    def _get_allow_agent_suggestion_string(cls, computer):
+        """
+        Return a suggestion for the specific field.
+        """
+        return ""
+
+    @classmethod
+    def _convert_look_for_keys_fromstring(cls, string):
+        """
+        Convert the port from string.
+        """
+        from aiida.common.exceptions import ValidationError
+        
+        try:
+            return convert_to_bool(string)
+        except ValueError:
+            raise ValidationError("look_for_keys must be an boolean")
+
+    @classmethod
+    def _get_look_for_keys_suggestion_string(cls, computer):
+        """
+        Return a suggestion for the specific field.
+        """
+        return ""
+
+    @classmethod
+    def _convert_compress_fromstring(cls, string):
+        """
+        Convert the port from string.
+        """
+        from aiida.common.exceptions import ValidationError
+        
+        try:
+            return convert_to_bool(string)
+        except ValueError:
+            raise ValidationError("compress must be an boolean")
+
+    @classmethod
+    def _get_compress_suggestion_string(cls, computer):
+        """
+        Return a suggestion for the specific field.
+        """
+        return "True"
+    
+    @classmethod
+    def _convert_load_system_host_keys_fromstring(cls, string):
+        """
+        Convert the port from string.
+        """
+        from aiida.common.exceptions import ValidationError
+        
+        try:
+            return convert_to_bool(string)
+        except ValueError:
+            raise ValidationError("compress must be an boolean")
+
+    @classmethod
+    def _get_load_system_host_keys_suggestion_string(cls, computer):
+        """
+        Return a suggestion for the specific field.
+        """
+        return "True"
+    
+    @classmethod
+    def _convert_key_policy_fromstring(cls, string):
+        """
+        Convert the port from string.
+        """
+        return string
+    
+    @classmethod
+    def _get_key_policy_suggestion_string(cls, computer):
+        """
+        Return a suggestion for the specific field.
+        """
+        return "RejectPolicy"
+    
+        
     def __init__(self, machine, **kwargs):
         """
         Initialize the SshTransport class.
         
-        Args:
-            machine: the machine to connect to
-            load_system_host_keys (optional, default False): if False, do not
+        :param machine: the machine to connect to
+        :param load_system_host_keys: (optional, default False): if False, do not
                 load the system host keys
-            key_policy (optional, default = paramiko.RejectPolicy()): the
+        :param key_policy: (optional, default = paramiko.RejectPolicy()): the
                 policy to use for unknown keys
-            Other parameters valid for the ssh connect function (see the 
-            self._valid_connect_params list) are passed to the connect
-            function (as port, username, password, ...); taken from the
-            accepted paramiko.SSHClient.connect() params)
-
-            TODO : implement a property self.sftp that raises a reasonable
-               exception if the channel has not been opened. Understand if
-               we need explicit open() and close() functions.
+        Other parameters valid for the ssh connect function (see the 
+        self._valid_connect_params list) are passed to the connect
+        function (as port, username, password, ...); taken from the
+        accepted paramiko.SSHClient.connect() params)
         """
+        # #TODO: implement a property self.sftp that raises a reasonable
+        #        exception if the channel has not been opened. Understand if
+        #        we need explicit open() and close() functions.
 
         ## First call the parent __init__ to setup the logger!
         super(SshTransport,self).__init__()
@@ -53,8 +266,16 @@ class SshTransport(aiida.transport.Transport):
             self._client.load_system_host_keys()
 
         self._missing_key_policy = kwargs.pop(
-            'key_policy',paramiko.RejectPolicy()) # This is paramiko default
-        self._client.set_missing_host_key_policy(self._missing_key_policy)
+            'key_policy','RejectPolicy') # This is paramiko default
+        if self._missing_key_policy == 'RejectPolicy':
+            self._client.set_missing_host_key_policy(paramiko.RejectPolicy())
+        elif self._missing_key_policy == 'WarningPolicy':
+            self._client.set_missing_host_key_policy(paramiko.WarningPolicy())
+        elif self._missing_key_policy == 'AutoAddPolicy':
+            self._client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        else:
+            raise ValueError("Unknown value of the key policy, allowed values "
+                             "are: RejectPolicy, WarningPolicy, AutoAddPolicy")
 
         self._connect_args = {}
         for k in self._valid_connect_params:
@@ -243,9 +464,18 @@ class SshTransport(aiida.transport.Transport):
         try:
             self.sftp.mkdir(path)
         except IOError as e:
-            raise OSError("Error during mkdir of '{}' in '{}', maybe the directory "
-                          "already exists? ({})".format(
-                              path,self.getcwd(), e.message))
+            if os.path.isabs(path):
+                raise OSError(
+                    "Error during mkdir of '{}', "
+                    "maybe you don't have the permissions to do it, "
+                    "or the directory already exists? ({})".format(
+                        path, e.message))
+            else:
+                raise OSError(
+                    "Error during mkdir of '{}' from folder '{}', "
+                    "maybe you don't have the permissions to do it, "
+                    "or the directory already exists? ({})".format(
+                        path, self.getcwd(), e.message))
 
     # TODO : implement rmtree
     def rmtree(self,path):
@@ -560,6 +790,8 @@ class SshTransport(aiida.transport.Transport):
                     self.getfile( this_src,this_dst,callback,dereference,overwrite )
                 else:
                     if ignore_nonexisting:
+                        execlogger.debug(
+                              "File {} not found on the remote machine".format(this_src))
                         pass
                     else:
                         raise IOError("The remote path {} does not exist"
@@ -572,6 +804,8 @@ class SshTransport(aiida.transport.Transport):
                 self.getfile( remotepath,localpath,callback,dereference,overwrite )
             else:
                 if ignore_nonexisting:
+                    execlogger.debug(
+                        "File {} not found on the remote machine".format(remotepath))
                     pass
                 else:
                     raise IOError("The remote path {} does not exist".format(
@@ -827,6 +1061,28 @@ class SshTransport(aiida.transport.Transport):
         """
         return self.sftp.remove(path)
 
+    def rename(self,src,dst):
+        """
+        Rename a file or folder from src to dst.
+
+        :param str oldpath: existing name of the file or folder
+        :param str newpath: new name for the file or folder
+
+        :raises IOError: if src/dst is not found
+        :raises ValueError: if src/dst is not a valid string
+        """
+        if not src:
+            raise ValueError("Source {} is not a valid string".format(src))
+        if not dst:
+            raise ValueError("Destination {} is not a valid string".format(dst))
+        if not self.isfile( src ):
+            if not self.isdir( src ):
+                raise IOError("Source {} does not exist".format(src))
+        if not self.isfile( dst ):
+            if not self.isdir( dst ):
+                raise IOError("Destination {} does not exist".format(dst))
+
+        return self.sftp.rename(src,dst)
     
     def isfile(self,path):
         """
@@ -945,3 +1201,14 @@ class SshTransport(aiida.transport.Transport):
 
         return retval, output_text, stderr_text
 
+    def gotocomputer_command(self, remotedir):
+
+        return """ssh -Y -t {machine} "if [ -d {escaped_remotedir} ] ; then cd {escaped_remotedir} ; bash ; else echo '  ** The directory' ; echo '  ** {remotedir}' ; echo '  ** seems to have been deleted, I logout...' ; fi" """.format(
+            machine=self._machine, escaped_remotedir="'{}'".format(remotedir), remotedir=remotedir)
+
+        
+        #return """ssh -Y -t {machine} "if [ -d {escaped_remotedir} ] ; then cd {escaped_remotedir} ; bash -c "{bash_call_escaped}" ; else echo '  ** The directory' ; echo '  ** {remotedir}' ; echo '  ** seems to have been deleted, I logout...' ; fi" """.format(
+        #    machine=self._machine, escaped_remotedir="'{}'".format(remotedir), remotedir=remotedir,
+        #    bash_call_escaped=escape_for_bash("""bash --rcfile <(echo 'if [ -e ~/.bashrc ] ; then source ~/.bashrc ; fi ; export PS1="\[\033[01;31m\][AiiDA]\033[00m\]$PS1"')"""))
+        
+        

@@ -126,8 +126,9 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
         attribute_name = self.__class__.__name__ + ".test_with_subclasses"
         calc_params = {
             'computer': self.computer,
-            'num_machines': 1,
+            'resources': {'num_machines': 1,
             'num_cpus_per_machine': 1}
+            }
         
         TemplateReplacerCalc = CalculationFactory('simpleplugins.templatereplacer')
         ParameterData = DataFactory('parameter')
@@ -827,6 +828,14 @@ class TestNodeBasic(AiidaTestCase):
         # I check that the counter was not incremented
         self.assertEquals(a.dbnode.nodeversion, 3)
 
+        # In both cases, the node version must increase
+        a.label = 'test'
+        self.assertEquals(a.dbnode.nodeversion, 4)
+
+        a.description = 'test description'
+        self.assertEquals(a.dbnode.nodeversion, 5)
+
+
         b = a.copy()
         # updatable attributes are not copied
         with self.assertRaises(AttributeError):
@@ -872,9 +881,9 @@ class TestSubNodesAndLinks(AiidaTestCase):
         code = Code(remote_computer_exec=(computer, '/bin/true'))#.store()
         
         unstoredcalc = Calculation(computer=computer,
-                           num_machines=1,num_cpus_per_machine=1)
+                                   resources={'num_machines': 1, 'num_cpus_per_machine': 1})
         calc = Calculation(computer=computer,
-                           num_machines=1,num_cpus_per_machine=1).store()
+                           resources={'num_machines': 1, 'num_cpus_per_machine': 1}).store()
         # calc is not stored, and code is not (can't add links to node)
         with self.assertRaises(ModificationNotAllowed):
             unstoredcalc.use_code(code)
@@ -972,23 +981,23 @@ class TestSubNodesAndLinks(AiidaTestCase):
 
         code = Code(remote_computer_exec=(self.computer,'/bin/true')).store()
 
-        unsavedcomputer = Computer(name='somecomputername', hostname='localhost')
+        unsavedcomputer = Computer(name='localhost2', hostname='localhost')
 
         with self.assertRaises(ValueError):
             # I need to save the localhost entry first
             _ = Calculation(computer=unsavedcomputer,
-                num_machines=1,num_cpus_per_machine=1).store()
+                            resources={'num_machines': 1, 'num_cpus_per_machine': 1}).store()
 
         # I check both with a string or with an object
         calc = Calculation(computer=self.computer,
-            num_machines=1,num_cpus_per_machine=1).store()
+                           resources={'num_machines': 1, 'num_cpus_per_machine': 1}).store()
         calc2 = Calculation(computer='localhost',
-            num_machines=1,num_cpus_per_machine=1).store()
+                            resources={'num_machines': 1, 'num_cpus_per_machine': 1}).store()
         with self.assertRaises(TypeError):
             # I don't want to call it with things that are neither
             # strings nor Computer instances
             _ = Calculation(computer=1,
-                num_machines=1,num_cpus_per_machine=1).store()
+                            resources={'num_machines': 1, 'num_cpus_per_machine': 1}).store()
         
         d1.add_link_to(calc)
         calc.add_link_from(d2,label='some_label')
@@ -1015,9 +1024,9 @@ class TestSubNodesAndLinks(AiidaTestCase):
             calc.add_link_from(calc2)
 
         calc_a = Calculation(computer=self.computer,
-            num_machines=1,num_cpus_per_machine=1).store()
+                             resources={'num_machines':1,'num_cpus_per_machine':1}).store()
         calc_b = Calculation(computer=self.computer,
-            num_machines=1,num_cpus_per_machine=1).store()
+                             resources={'num_machines':1,'num_cpus_per_machine':1}).store()
 
         data_node = Data().store()
 
@@ -1063,9 +1072,9 @@ class TestSubNodesAndLinks(AiidaTestCase):
         d1 = Data().store()
         
         calc = Calculation(computer=self.computer,
-            num_machines=1,num_cpus_per_machine=1).store()
+                           resources={'num_machines':1,'num_cpus_per_machine':1}).store()
         calc2 = Calculation(computer=self.computer,
-            num_machines=1,num_cpus_per_machine=1).store()
+                            resources={'num_machines':1,'num_cpus_per_machine':1}).store()
 
         # I cannot, calc it is in state NEW
         with self.assertRaises(ModificationNotAllowed):
@@ -1080,6 +1089,35 @@ class TestSubNodesAndLinks(AiidaTestCase):
         # more than on input to the same data object!
         with self.assertRaises(ValueError):
             d1.add_link_from(calc2)
+
+class TestComputer(AiidaTestCase):
+    """
+    Test the Computer class.
+    """
+    def test_deletion(self):
+        from aiida.orm.computer import Computer, delete_computer
+        from aiida.orm import Calculation
+        from aiida.common.exceptions import InvalidOperation
+    
+        newcomputer = Computer(name="testdeletioncomputer", hostname='localhost',
+                              transport_type='ssh',
+                              scheduler_type='pbspro',
+                              workdir='/tmp/aiida').store()
+
+        # This should be possible, because nothing is using this computer
+        delete_computer(newcomputer)
+        
+        calc_params = {
+            'computer': self.computer,
+            'resources': {'num_machines': 1,
+            'num_cpus_per_machine': 1}
+            }
+    
+        _ = Calculation(**calc_params).store()
+        # This should fail, because there is at least a calculation
+        # using this computer (the one created just above)
+        with self.assertRaises(InvalidOperation):
+            delete_computer(self.computer)
 
 class TestCode(AiidaTestCase):
     """

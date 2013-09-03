@@ -3,11 +3,14 @@ Plugin for SLURM.
 This has been tested on SLURM 2.5.4 on the CSCS.ch machines.
 """
 from __future__ import division
+import re
+
 import aiida.scheduler
 from aiida.common.utils import escape_for_bash
 from aiida.scheduler import SchedulerError
-from aiida.scheduler.datastructures import JobInfo, job_states
-import re
+from aiida.scheduler.datastructures import (
+    JobInfo, job_states, NodeNumberJobResource)
+
 
 # This maps SLURM state codes to our own status list
 
@@ -93,6 +96,9 @@ _time_regexp = re.compile(
 # Separator between fields in the output of squeue
 _field_separator = "^^^"
 
+class SlurmJobResource(NodeNumberJobResource):
+    pass
+
 class SlurmScheduler(aiida.scheduler.Scheduler):
     """
     SLURM implementation of the scheduler functions.
@@ -101,7 +107,15 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
     """
     _logger = aiida.scheduler.Scheduler._logger.getChild('slurm')
 
-    def _get_joblist_command(self,jobs=None): 
+    # Query only by list of jobs and not by user
+    _features = {
+        'can_query_by_user': False,
+        }
+    
+    # The class to be used for the job resource.
+    _job_resource_class = SlurmJobResource
+
+    def _get_joblist_command(self,jobs=None,user=None): 
         """
         The command to report full information on existing jobs.
 
@@ -109,6 +123,8 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
         order: jobnum, state, walltime, queue[=partition],
                user, numnodes, numcores, title
         """
+        from aiida.common.exceptions import FeatureNotAvailable
+        
         # Unavailable fields: substate, cputime, submissiontime
         # Note! If you change the fields or fields length, update accordingly
         # also the parsing function!
@@ -132,6 +148,8 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
         command = ("SLURM_TIME_FORMAT='standard' "
                    "squeue --noheader -o '{}'".format(
                 _field_separator.join(fields)))
+        if user:
+            raise FeatureNotAvailable("Cannot query by user in SLURM")
         if jobs:
             joblist = []
             if isinstance(jobs, basestring):
@@ -191,7 +209,7 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
         if job_tmpl.email_on_terminated:
             lines.append("#SBATCH --mail-type=FAIL")
             lines.append("#SBATCH --mail-type=END")
-            
+        
         if job_tmpl.job_name:
             # The man page does not specify any specific limitation
             # on the job name.
@@ -213,6 +231,9 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
             job_title = job_title[:128]
             
             lines.append('#SBATCH --job-name="{}"'.format(job_title))
+        
+        if job_tmpl.import_sys_environment:
+            lines.append("#SBATCH --get-user-env")
             
         if job_tmpl.sched_output_path:
             lines.append("#SBATCH --output={}".format(job_tmpl.sched_output_path))
@@ -244,15 +265,15 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
             #  100. The adjustment range is from -10000 (highest  priority)  to
             #  10000  (lowest  priority). 
             lines.append("#SBATCH --nice={}".format(job_tmpl.priority))
-
-        
-        if not job_tmpl.num_machines:
-            raise ValueError("num_machines is required for the SLURM scheduler "
-                             "plugin")
-        lines.append("#SBATCH --nodes={}".format(job_tmpl.num_machines))
-        if job_tmpl.num_cpus_per_machine:
+      
+        if not job_tmpl.job_resource:
+            raise ValueError("Job resources (as the num_machines) are required "
+                             "for the SLURM scheduler plugin")
+                    
+        lines.append("#SBATCH --nodes={}".format(job_tmpl.job_resource.num_machines))
+        if job_tmpl.job_resource.num_cpus_per_machine:
             lines.append("#SBATCH --ntasks-per-node={}".format(
-                    job_tmpl.num_cpus_per_machine))
+                    job_tmpl.job_resource.num_cpus_per_machine))
 
         if job_tmpl.max_wallclock_seconds is not None:
             try:
@@ -542,7 +563,7 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
             this_job.title = job_name
 
             # Everything goes here anyway for debugging purposes
-            this_job.rawData = job
+            this_job.raw_data = job
 
             # Double check of redundant info
             # Not really useful now, allocated_machines in this

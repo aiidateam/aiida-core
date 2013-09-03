@@ -1,24 +1,21 @@
 """
 Test ssh plugin on localhost
 """
-from aiida.transport.plugins.ssh import *
 import unittest
 import logging
+
+from aiida.transport.plugins.ssh import *
 
 import aiida.transport.plugin_test
 from aiida.transport.plugin_test import *
 
-FORMAT = '[%(name)s@%(levelname)s] %(message)s'
-logging.basicConfig(format=FORMAT)
-
-import paramiko
 from aiida.transport import Transport
 global custom_transport
 
 aiida.transport.plugin_test.custom_transport = SshTransport(
     machine='localhost', timeout=30, 
     load_system_host_keys=True,
-    key_policy = paramiko.AutoAddPolicy())
+    key_policy = 'AutoAddPolicy')
 
 class TestBasicConnection(unittest.TestCase):
     """
@@ -43,7 +40,7 @@ class TestBasicConnection(unittest.TestCase):
     def test_auto_add_policy(self):
         with SshTransport(machine='localhost', timeout=30, 
                           load_system_host_keys=True,
-                          key_policy=paramiko.AutoAddPolicy()) as t:
+                          key_policy='AutoAddPolicy') as t:
             pass
 
     def test_no_host_key(self):

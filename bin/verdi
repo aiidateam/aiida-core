@@ -3,5 +3,7 @@ import sys
 import aiida.cmdline.verdilib
 
 # Everything in a different module to speed-up the startup time
-aiida.cmdline.verdilib.exec_from_cmdline(sys.argv)
-  
+try:
+    aiida.cmdline.verdilib.exec_from_cmdline(sys.argv)
+except KeyboardInterrupt:
+    print "CTRL+C caught, exiting from verdi..."

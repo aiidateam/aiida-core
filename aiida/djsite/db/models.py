@@ -55,7 +55,10 @@ class DbNode(m.Model):
       User should be careful not to attach data computed from data as metadata. 
     '''
     uuid = UUIDField(auto=True)
-    # in the form data.upffile, data.structure, calculation, code.quantumespresso.pw, ...
+    # in the form data.upffile., data.structure., calculation., code.quantumespresso.pw., ...
+    # Note that there is always a final dot, to allow to do queries of the
+    # type (type__startswith="calculation.") and avoid problems with classes
+    # starting with the same string
     # max_length required for index by MySql
     type = m.CharField(max_length=255,db_index=True) 
     label = m.CharField(max_length=255, db_index=True, blank=True)

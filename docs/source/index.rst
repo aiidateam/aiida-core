@@ -37,6 +37,7 @@ Developer's guide
     :maxdepth: 2
     
     Developer's Guide <developers> 
+    devel_tutorial/code_plugin    
 
 Modules provided with aiida
 ---------------------------

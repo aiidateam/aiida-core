@@ -484,38 +484,41 @@ class Calculation(Node):
         
         return DataFactory(self.get_linkname_retrieved)
         
-## SOME OLD COMMENTS
-# Each calculation object should be defined by analogy of a function 
-# with a fixed set of labeled and declared inputs.
-# 
-# mystruc = Struc(...)
-# myinputparam = InputParam(...)
-# myjobparam = JobParam(...)
-# myupfA = UPF(...)
-# myupfB = UPF(...)
-# 
-# MyCalc = Calc({'struc': Struc(), 'upfA': UPF(),...})
-# This will define the abstract object with labeled input ports of defined type. 
-# 
-# MyCalc({'struc':mystruc, 'upfA':myupfA, ...})
-# 
-# Calculations can exist in the db as empty entities of state 'Abstract'.
-# Also Data can exist in the db with 'Abstract' state. This can be used to pre-define a workflow.
-# 
-# Calculation can only be submitted if all the data inputs are filled with concrete data objects.
-# It then changes status to 'Prepared' and so on.
-# Note: a calculation is set to 'retrieved' when all output nodes are validated and stored (TBD). 
-# 
-# When dealing with workflows g(f(A,B),C) = h(A,B,C)
-# however g(f(A,B=5),C) = h(A,C) since B is concrete.
-# 
-# To repeat an existing (static) workflow, take the set of calculation nodes, 
-# copy them and related data nodes and set everything to abstract. Then run throught the static workflow manager.
-# User can choose new data inputs.
-# 
-# A dynamic workflow is a script that creates calc and data on the fly. 
-# The script can be stored as an attribute of a previously generated workflow.
-# Here each calculation needs to be hashed in order to be reused on restarts.
-# 
-# NOTE: Need to include functionality of an observer method in calc or data plugins, to check the data 
-# while the calculation is running, to make sure that everything is going as planned, otherwise stop.
+    def kill(self):
+        """
+        Kill a calculation on the cluster.
+        
+        Can only be called if the calculation is in status WITHSCHEDULER.
+        
+        The command tries to run the kill command as provided by the scheduler,
+        and raises an exception is something goes wrong. 
+        No changes of calculation status are done (they will be done later by
+        the calculation manager).
+        
+        ..todo:: Check if we want to add a status "KILLED" or something similar.
+        """
+        from aiida.common.exceptions import InvalidOperation, RemoteOperationError
+        
+        if self.get_state() != calc_states.WITHSCHEDULER:
+            raise InvalidOperation("Cannot kill a calculation not in {} state"
+                                   .format(calc_states.WITHSCHEDULER) )
+        
+        # I get the scheduler plugin class and initialize it with the correct
+        # transport
+        computer = self.get_computer()
+        t = self._get_transport()
+        s = computer.get_scheduler()
+        s.set_transport(t)
+        
+        # And I call the proper kill method for the job ID of this calculation
+        with t:
+            retval = s.kill(self.get_job_id())
+        
+        # Raise error is something went wrong
+        if not retval:
+            raise RemoteOperationError("An error occurred while trying to kill "
+                                       "calculation {} (jobid {}), see log "
+                                       "(maybe the calculation already finished?)"
+                                       .format(self.pk, self.get_job_id()))
+        
+

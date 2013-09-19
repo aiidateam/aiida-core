@@ -333,3 +333,37 @@ stderr:
             self._get_submit_command(escape_for_bash(submit_script)))
         return self._parse_submit_output(retval, stdout, stderr)
         
+    def kill(self, jobid):
+        """
+        Kill a remote job, and try to parse the output message of the scheduler
+        to check if the scheduler accepted the command.
+        
+        ..note:: On some schedulers, even if the command is accepted, it may
+        take some seconds for the job to actually disappear from the queue.
+        
+        :param str jobid: the job id to be killed
+        
+        :return: True if everything seems ok, False otherwise.
+        """
+        retval, stdout, stderr = self.transport.exec_command_wait(
+            self._get_kill_command(jobid))
+        return self._parse_kill_output(retval, stdout, stderr)
+
+    def _get_kill_command(self, jobid):
+        """
+        Return the command to kill the job with specified jobid.
+        
+        To be implemented by the plugin.
+        """
+        raise NotImplementedError
+
+
+    def _parse_kill_output(self, retval, stdout, stderr):
+        """
+        Parse the output of the kill command.
+        
+        To be implemented by the plugin.
+
+        :return: True if everything seems ok, False otherwise.
+        """
+        raise NotImplementedError

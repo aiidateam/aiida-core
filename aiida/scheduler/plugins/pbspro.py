@@ -643,3 +643,38 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
         
         return stdout.strip()
 
+    def _get_kill_command(self, jobid):
+        """
+        Return the command to kill the job with specified jobid.
+        """
+        submit_command = 'qdel {}'.format(jobid)
+
+        self.logger.info("killing job {}".format(jobid))
+
+        return submit_command
+
+
+    def _parse_kill_output(self, retval, stdout, stderr):
+        """
+        Parse the output of the kill command.
+        
+        To be implemented by the plugin.
+
+        :return: True if everything seems ok, False otherwise.
+        """
+        if retval != 0:
+            self.logger.error("Error in _parse_kill_output: retval={}; "
+                "stdout={}; stderr={}".format(retval, stdout, stderr))
+            return False
+
+        if stderr.strip():
+            self.logger.warning("in _parse_kill_output for {}: "
+                "there was some text in stderr: {}".format(
+                    str(self.transport),stderr))
+
+        if stdout.strip():
+            self.logger.warning("in _parse_kill_output for {}: "
+                "there was some text in stdout: {}".format(
+                    str(self.transport),stdout))
+
+        return True

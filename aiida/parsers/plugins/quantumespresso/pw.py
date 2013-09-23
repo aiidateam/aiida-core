@@ -1,17 +1,12 @@
-#from aiida.orm import Calculation
 from aiida.orm.calculation.quantumespresso.pw import PwCalculation
-#from aiida.common.datastructures import calc_states
 from aiida.parsers.plugins.quantumespresso.raw_parser_pw import *
 from aiida.orm.data.parameter import ParameterData
 from aiida.orm.data.folder import FolderData
-#from aiida.common.folders import SandboxFolder
-#from aiida.orm import DataFactory
 from aiida.parsers.parser import Parser
-#from aiida.parsers.plugins.quantumespresso import QEOutputParsingError
 from aiida.parsers.plugins.quantumespresso import convert_qe2aiida_structure
 from aiida.common.datastructures import calc_states
-
-#import copy
+from aiida.orm.data.structure import StructureData
+from aiida.common.exceptions import UniquenessError,ValidationError
 
 class PwParser(Parser):
     """
@@ -20,11 +15,32 @@ class PwParser(Parser):
 
     _outstruc_name = 'output_structure'
 
-    def __init__(self):
+    def __init__(self,calculation):
         """
         Initialize the instance of PwParser
         """
-        self.set_linkname_outstructure(None)
+        # check for valid input
+        if not isinstance(calculation,PwCalculation):
+            raise QEOutputParsingError("Input must calc must be a PwCalculation")
+
+        # save calc for later use
+        self._calc = calculation
+        # here a complicated logic to decide whether
+        # the parser has the linkname for output structure or not.
+        if calculation.get_state is calc_states.PARSING: # if coming from the execmanager
+            self._set_linkname_outstructure(None)
+        else: # already parsed
+            # find existing outputs of kind structuredata
+            out_struc = calculation.get_outputs(type=StructureData,also_labels=True)
+            # get only those with the linkame of this parser plugin
+            parser_out_struc = [ i for i in out_struc if i[0] == self._outstruc_name ]
+            if not parser_out_struc: # case with no struc found
+                self._set_linkname_outstructure(None)
+            elif len(parser_out_struc)>1: # case with too many struc found
+                raise UniquenessError("Multiple output StructureData found ({})"
+                                      "with same linkname".format(len(parser_out_struc)))
+            else: # one structure is found, with the right name
+                self._set_linkname_outstructure(self._outstruc_name)
         
     def parse_from_data(self,data):
         """
@@ -35,33 +51,30 @@ class PwParser(Parser):
         """
         raise NotImplementedError
             
-    def parse_from_calc(self,calc):
+    def parse_from_calc(self):
         """
         Parses the datafolder, stores results.
         Main functionality of the class.
         """
-        from aiida.common.exceptions import UniquenessError,InvalidOperation
+        from aiida.common.exceptions import InvalidOperation
         import os
         import glob
         
-        # check for valid input
-        if not isinstance(calc,PwCalculation):
-            raise QEOutputParsingError("Input must calc must be a PwCalculation")
         # check if I'm not to overwrite anything
-        state = calc.get_state()
+        state = self._calc.get_state()
         if state != calc_states.PARSING:
             raise InvalidOperation("Calculation not in {} state"
                                    .format(calc_states.PARSING) )
         
         # retrieve the whole list of input links
-        calc_input_parameterdata = calc.get_inputs(type=ParameterData,
-                                                   also_labels=True)
+        calc_input_parameterdata = self._calc.get_inputs(type=ParameterData,
+                                                         also_labels=True)
         # then look for parameterdata only
-        input_param_name = calc.get_linkname_parameters()
+        input_param_name = self._calc.get_linkname_parameters()
         params = [i[1] for i in calc_input_parameterdata if i[0]==input_param_name]
         if len(params) != 1:
             raise UniquenessError("Found {} input_params instead of one"
-                                       .format(params))
+                                  .format(params))
         calc_input = params[0]
 
         # look for eventual flags of the parser
@@ -69,10 +82,10 @@ class PwParser(Parser):
         # TODO: there should be a function returning the name of parser_opts
         if len(parser_opts_query)>1:
             raise UniquenessError("Too many parser_opts attached are found: {}"
-                                       .format(parser_opts_query))
+                                  .format(parser_opts_query))
         if parser_opts_query:
             parser_opts = parser_opts_query[0]
-            # TODO this feature could be a set of flags to pass to the raw_parser
+            # TODO: this feature could be a set of flags to pass to the raw_parser
             # in order to moderate its verbosity (like storing bands in teh database
             raise NotImplementedError("The parser_options feature is not yet implemented")
         else:
@@ -83,9 +96,9 @@ class PwParser(Parser):
         input_dict = calc_input.get_dict()
         
         # load all outputs
-        calc_outputs = calc.get_outputs(type=FolderData,also_labels=True)
+        calc_outputs = self._calc.get_outputs(type=FolderData,also_labels=True)
         # look for retrieved files only
-        retrieved_files = [i[1] for i in calc_outputs if i[0]==calc.get_linkname_retrieved()]
+        retrieved_files = [i[1] for i in calc_outputs if i[0]==self._calc.get_linkname_retrieved()]
         if len(retrieved_files)!=1:
             raise QEOutputParsingError("Output folder should be found once, "
                                        "found it instead {} times"
@@ -96,13 +109,13 @@ class PwParser(Parser):
         # check what is inside the folder
         list_of_files = out_folder.get_path_list()
         # at least the stdout should exist
-        if not calc.OUTPUT_FILE_NAME in list_of_files:
+        if not self._calc.OUTPUT_FILE_NAME in list_of_files:
             raise QEOutputParsingError("Standard output not found")
         # if there is something more, I note it down, so to call the raw parser
         # with the right options
         # look for xml
         has_xml = False
-        if calc.DATAFILE_XML_BASENAME in list_of_files:
+        if self._calc.DATAFILE_XML_BASENAME in list_of_files:
             has_xml = True
         # look for bands
         has_bands = False
@@ -113,9 +126,9 @@ class PwParser(Parser):
             has_bands = True
             # TODO: maybe it can be more general than bands only?
         out_file = os.path.join( out_folder.get_abs_path('.'), 
-                                 calc.OUTPUT_FILE_NAME )
+                                 self._calc.OUTPUT_FILE_NAME )
         xml_file = os.path.join( out_folder.get_abs_path('.'), 
-                                 calc.DATAFILE_XML_BASENAME )
+                                 self._calc.DATAFILE_XML_BASENAME )
         dir_with_bands = out_folder.get_abs_path('.')
         
         # call the raw parsing function
@@ -131,15 +144,15 @@ class PwParser(Parser):
         
         # save it into db
         output_params.store()
-        calc.add_link_to(output_params, label=self.get_linkname_outparams() )
+        self._calc.add_link_to(output_params, label=self.get_linkname_outparams() )
 
-        in_struc = calc.get_inputs_dict()['structure']
+        in_struc = self._calc.get_inputs_dict()['structure']
         type_calc = input_dict['CONTROL']['calculation']
         if type_calc=='relax' or type_calc=='vc-relax':
-            self.set_linkname_outstructure(self._outstruc_name)
+            self._set_linkname_outstructure(self._outstruc_name)
             struc = convert_qe2aiida_structure(out_dict,input_structure=in_struc)
             struc.store()
-            calc.add_link_to(struc, label=self.get_linkname_outstructure() )
+            self._calc.add_link_to(struc, label=self.get_linkname_outstructure() )
         
         return successful
 
@@ -149,7 +162,7 @@ class PwParser(Parser):
         """
         return self.linkname_outstructure
     
-    def set_linkname_outstructure(self,linkname):
+    def _set_linkname_outstructure(self,linkname):
         """
         Set the name of the link to the output_structure
         """

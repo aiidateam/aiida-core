@@ -506,9 +506,9 @@ def retrieve_computed_for_authinfo(authinfo):
                     successful = True 
                     if Parser is not None:
                         # TODO: parse here
-                        parser = Parser()
-                        successful = parser.parse_from_calc(calc)
-
+                        parser = Parser(calc)
+                        successful = parser.parse_from_calc()
+                        
                     if successful:
                         calc._set_state(calc_states.FINISHED)
                     else:

@@ -501,7 +501,7 @@ def retrieve_computed_for_authinfo(authinfo):
 
                     calc._set_state(calc_states.PARSING)
 
-                    Parser = calc.get_parser()
+                    Parser = calc.get_parserclass()
                     # If no parser is set, the calculation is successful
                     successful = True 
                     if Parser is not None:

@@ -2,11 +2,13 @@ from aiida.orm.calculation.quantumespresso.pw import PwCalculation
 from aiida.parsers.plugins.quantumespresso.raw_parser_pw import *
 from aiida.orm.data.parameter import ParameterData
 from aiida.orm.data.folder import FolderData
-from aiida.parsers.parser import Parser
+from aiida.parsers.parser import Parser#, ParserParamManager
 from aiida.parsers.plugins.quantumespresso import convert_qe2aiida_structure
 from aiida.common.datastructures import calc_states
 from aiida.orm.data.structure import StructureData
 from aiida.common.exceptions import UniquenessError,ValidationError
+
+#TODO: I don't like the generic class always returning a name for the link to the output structure
 
 class PwParser(Parser):
     """
@@ -22,14 +24,15 @@ class PwParser(Parser):
         # check for valid input
         if not isinstance(calculation,PwCalculation):
             raise QEOutputParsingError("Input must calc must be a PwCalculation")
-
+        
         # save calc for later use
         self._calc = calculation
         # here a complicated logic to decide whether
         # the parser has the linkname for output structure or not.
         if calculation.get_state is calc_states.PARSING: # if coming from the execmanager
             self._set_linkname_outstructure(None)
-        else: # already parsed
+        elif calculation.get_state in self._possible_after_parsing:
+            # can have been already parsed: check for outstructure
             # find existing outputs of kind structuredata
             out_struc = calculation.get_outputs(type=StructureData,also_labels=True)
             # get only those with the linkame of this parser plugin
@@ -145,7 +148,7 @@ class PwParser(Parser):
         # save it into db
         output_params.store()
         self._calc.add_link_to(output_params, label=self.get_linkname_outparams() )
-
+        
         in_struc = self._calc.get_inputs_dict()['structure']
         type_calc = input_dict['CONTROL']['calculation']
         if type_calc=='relax' or type_calc=='vc-relax':
@@ -168,12 +171,11 @@ class PwParser(Parser):
         """
         setattr(self,'linkname_outstructure',linkname)
         
-    def get_energy_ev(self,calc,all_values=False):
+    def get_energy_ev(self,all_values=False):
         """
         Returns the float value of energy.
 
         Args:
-            calc: calculation object
             all_values: if true returns a list of energies, else only a float
                 (default=False)
 
@@ -187,7 +189,7 @@ class PwParser(Parser):
         from aiida.common.exceptions import InvalidOperation, FailedError
         from aiida.common.exceptions import NotExistent,UniquenessError,ContentNotExistent
         
-        calc_state = calc.get_state()
+        calc_state = self._calc.get_state()
         
         if 'FAILED' in calc_state:  # SUBMISSIONFAILED','RETRIEVALFAILED','PARSINGFAILED','FAILED',
             raise FailedError('Calculation is in state {}'
@@ -197,7 +199,7 @@ class PwParser(Parser):
             raise InvalidOperation("Calculation is in state {}: "
                                    "doesn't have results yet".format(calc_state))
         
-        out_parameters = calc.get_outputs(type=ParameterData,also_labels=True)
+        out_parameters = self._calc.get_outputs(type=ParameterData,also_labels=True)
         out_parameterdata = [ i[1] for i in out_parameters if i[0]==self.get_linkname_outparams() ]
         
         if not out_parameterdata:
@@ -209,7 +211,7 @@ class PwParser(Parser):
                               .format(len(out_parameterdata)) )
             
         out_parameterdata = out_parameterdata[0]
-        #out_dict = out_parameterdata.get_dict()
+        
         try:
             if not all_values:
                 energy = out_parameterdata.get_attr('energy')[-1]
@@ -220,12 +222,33 @@ class PwParser(Parser):
             raise ContentNotExistent("Key energy not found in results")
         
         return energy
+    
+    
+    # def get_parsed_nodes(self,also_labels=False):
+    #     """
+    #     returns a list of the nodes created by the parser
+    #     """
+    #     if not self._is_res_unlocked():
+    #         from aiida.common.exceptions import InvalidOperation
+    #         raise InvalidOperation("Calculation not yet parsed")
+    #     else:
+    #         to_return = []
+            
+    #         all_params = self._calc.get_outputs(type=ParameterData,also_labels=True)
+    #         this_params = [ i[1] for i in all_params if i[0]==self.get_linkname_outparams() ]
+    #         if this_params is not None:
+    #             if also_labels:
+    #                 to_return.append( (self.get_linkname_outparams(),this_params) )
+    #             else:
+    #                 to_return.append( this_params )
+                    
+    #         all_structures = self._calc.get_outputs(type=StructureData,also_labels=True)
+    #         this_structure = [ i[1] for i in all_structures if i[0]==self.get_linkname_outstructure() ]
+    #         if this_structure is not None:
+    #             if also_labels:
+    #                 to_return.append( (self.get_linkname_outstructure(),this_structure) )
+    #             else:
+    #                 to_return.append( (self.get_linkname_outstructure(),this_structure) )
 
-# TODO: maybe the parser could give a list of the names of the expected output nodes    
-#    def get_expected_nodes(self,calc):
-#        """
-#        Get the name of the expected output nodes to the calculation that the 
-#        parser will create, if the calculation ends successfully
-#        """
-    
-    
+    #         return to_return
+

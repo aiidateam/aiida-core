@@ -275,8 +275,8 @@ class WorkflowXTiO3_EOS(Workflow):
         #  Calculate results
         #-----------------------------------------
         
-        e_calcs = [c.get_outputs(type=ParameterData)[0].get_dict()['energy'][-1] for c in start_calcs]
-        v_calcs = [c.get_outputs(type=ParameterData)[0].get_dict()['cell']['volume'] for c in start_calcs]
+        e_calcs = [c.res.energy[-1] for c in start_calcs]
+        v_calcs = [c.res.cell['volume'] for c in start_calcs]
         
         e_calcs = zip(*sorted(zip(a_sweep, e_calcs)))[1]
         v_calcs = zip(*sorted(zip(a_sweep, v_calcs)))[1]

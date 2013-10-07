@@ -79,7 +79,7 @@ class Calculation(Node):
                 self.get_state()))
 
         try:
-            _ = self.get_parser()
+            _ = self.get_parserclass()
         except MissingPluginError:
             raise ValidationError("No valid plugin found for the parser '{}'. "
                 "Set the parser to None if you do not need an automatic "
@@ -447,7 +447,7 @@ class Calculation(Node):
                 
         return self.get_attr('parser')
 
-    def get_parser(self):
+    def get_parserclass(self):
         """
         Return the output parser object for this calculation, or None
         if no parser is set.
@@ -521,4 +521,29 @@ class Calculation(Node):
                                        "(maybe the calculation already finished?)"
                                        .format(self.pk, self.get_job_id()))
         
+
+    @property
+    def res(self):
+        """
+        Returns an instance of the CalculationResultManager.
+        It is used to access the parsed parameters directly from the calculation
+        """
+        return CalculationResultManager(self)
+
+class CalculationResultManager(object):
+    def __init__(self, calc):
+        # Possibly add checks here
+        self._calc = calc
+        ParserClass = calc.get_parserclass()
+        self._parser = ParserClass(calc)
+        
+    def __getattr__(self,name):
+        """
+        interface to get to the parser results.
+        """
+        try:
+            return self._parser.get_results(name)
+        except AttributeError:
+            raise AttributeError("Parser '{}' didn't provide a result '{}'"
+                                 .format(self._parser.__class__, name))
 

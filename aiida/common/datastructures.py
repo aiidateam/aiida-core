@@ -57,13 +57,33 @@ class CalcInfo(DefaultFieldsAttributeDict):
         'remote_file_list', # a list of length-three tuples with (remotemachinename, remoteabspath, relativedestpath)
         )
 
+
 class WorkflowState(Enumerate):
     pass
 
 wf_states = WorkflowState((
-        'INITIATED',
+        'INITIALIZED',
         'RUNNING',
         'FINISHED',
+        'ERROR'
+        ))
+
+class WorkflowDataType(Enumerate):
+    pass
+
+wf_data_types = WorkflowDataType((
+        'PARAMETER',
+        'RESULT',
+        'ATTRIBUTE',
+        ))
+
+class WorkflowDataValueType(Enumerate):
+    pass
+
+wf_data_value_types = WorkflowDataValueType((
+        'NONE',
+        'JSON',
+        'AIIDA',
         ))
 
 wf_start_call = "start"

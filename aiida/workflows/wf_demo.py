@@ -12,62 +12,135 @@ class WorkflowDemo(Workflow):
         
         super(WorkflowDemo, self).__init__(**kwargs)
     
-    
-    def start(self):
+    def generate_calc(self):
         
         from aiida.orm import Code, Computer, CalculationFactory
+        from aiida.common.datastructures import calc_states
+        
         CustomCalc = CalculationFactory('simpleplugins.templatereplacer')
         
         computer = Computer.get("localhost")
         
         calc = CustomCalc(computer=computer,withmpi=True)
         calc.set_resources(num_machines=1, num_cpus_per_machine=1)
+        calc._set_state(calc_states.FINISHED)
         calc.store()
-        self.attach_calculation(calc)
         
-        calc2 = CustomCalc(computer=computer,withmpi=True)
-        calc2.set_resources(num_machines=1, num_cpus_per_machine=1)
-        calc2.store()
-        self.attach_calculation(calc2)
-        
-        self.next(self.second_step)
-        
-        # Run calculations
+        return calc
     
+    @Workflow.step
+    def start(self):
+        
+        from aiida.orm.node import Node
+        
+        # Testing parameters
+        p = self.get_parameters()
+        
+        # Testing calculations
+        self.attach_calculation(self.generate_calc())
+        self.attach_calculation(self.generate_calc())
+        
+        # Testing report
+        self.append_to_report("Starting workflow with params: {0}".format(p))
+        
+        # Testing attachments
+        n = Node()
+        attrs = {"a": [1,2,3], "n": n}
+        self.add_attributes(attrs)
+
+        # Test process
+        self.next(self.second_step)
+    
+    @Workflow.step
     def second_step(self):
         
-        calcs_init = self.get_step_calculations(self.start)
+        # Test retrieval
+        calcs = self.get_step_calculations(self.start)
+        self.append_to_report("Retrieved calculation 0 (uuid): {0}".format(calcs[0].uuid))
         
-        aiidalogger.info("Second runned and retived calculation:")
-        for c in calcs_init:
-            aiidalogger.info("  Calculation {0}".format(c.uuid))
+        # Testing report
+        a = self.get_attributes()
+        self.append_to_report("Execution second_step with attachments: {0}".format(a))
         
-        from aiida.orm import CalculationFactory
-        CustomCalc = CalculationFactory('simpleplugins.templatereplacer')
-        
-        computer = Computer.get("localhost")
-        
-        calc = CustomCalc(computer=computer,withmpi=True)
-        calc.set_resources(num_machines=1, num_cpus_per_machine=1)
-        calc.store()
-        self.attach_calculation(calc)
-        
-        self.next(self.third_step)
-    
-        
-    def third_step(self):
-        
-        calcs_init = self.get_step_calculations(self.second_step)
-        
-        aiidalogger.info("Third runned and retived calculation:")
-        for c in calcs_init:
-            aiidalogger.info("  Calculation {0}".format(c.uuid))
-            
+        # Test results
+        self.add_result("scf.converged", calcs[0])
         
         self.next(self.exit)
 
 
-class WorkflowDemoBranch(Workflow):
+class SubWorkflowDemo(Workflow):
+    
+    def __init__(self,**kwargs):
+        
+        super(SubWorkflowDemo, self).__init__(**kwargs)
+        
+    def generate_calc(self):
+        
+        from aiida.orm import Code, Computer, CalculationFactory
+        from aiida.common.datastructures import calc_states
+        
+        CustomCalc = CalculationFactory('simpleplugins.templatereplacer')
+        
+        computer = Computer.get("localhost")
+        
+        calc = CustomCalc(computer=computer,withmpi=True)
+        calc.set_resources(num_machines=1, num_cpus_per_machine=1)
+        calc._set_state(calc_states.FINISHED)
+        calc.store()
+        
+        return calc
+    
+    def start(self):
+        
+        self.attach_calculation(self.generate_calc())
+        
+        params = {}
+        params['nmachine']=2
+    
+        w = WorkflowDemo(params=params)
+        w.start()
+        self.attach_workflow(w)
+        self.append_to_report("Workflow attached: {0}".format(w.uuid()))
+        
+        params['nmachine']=4
+        w = WorkflowDemo(params=params)
+        w.start()
+        self.attach_workflow(w)
+        self.append_to_report("Workflow attached: {0}".format(w.uuid()))
+        
+        self.next(self.second)
+    
+    def second(self):
+        
+        s_wfs = self.get_step(self.start).get_sub_workflows()
+        
+        for s_wf in s_wfs:
+            self.append_to_report("Workflow {0} has results {1}".format(s_wf.uuid(), s_wf.get_result("scf.converged")))
+        
+        self.next(self.exit)
+
+
+class BranchWorkflowDemo(Workflow):
+    
+    def __init__(self,**kwargs):
+        
+        super(BranchWorkflowDemo, self).__init__(**kwargs)
+        
+    def generate_calc(self):
+        
+        from aiida.orm import Code, Computer, CalculationFactory
+        from aiida.common.datastructures import calc_states
+        
+        CustomCalc = CalculationFactory('simpleplugins.templatereplacer')
+        
+        computer = Computer.get("localhost")
+        
+        calc = CustomCalc(computer=computer,withmpi=True)
+        calc.set_resources(num_machines=1, num_cpus_per_machine=1)
+        calc._set_state(calc_states.FINISHED)
+        calc.store()
+        
+        return calc
     
     def start(self):
     
@@ -76,103 +149,88 @@ class WorkflowDemoBranch(Workflow):
         
     def branch_a_one(self):
         
-        aiidalogger.info("branch_a_one launched")
+        self.append_to_report("branch_a_one launched")
         
-        from aiida.orm import CalculationFactory
-        CustomCalc = CalculationFactory('simpleplugins.templatereplacer')
-        
-        computer = Computer.get("localhost")
-        
-        calc = CustomCalc(computer=computer,withmpi=True)
-        calc.set_resources(num_machines=1, num_cpus_per_machine=1)
-        calc.store()
-        self.attach_calculation(calc)
+        self.attach_calculation(self.generate_calc())
         
         self.next(self.branch_a_two)
     
     def branch_a_two(self):
         
-        aiidalogger.info("branch_a_two launched")
+        self.append_to_report("branch_a_two launched")
         
-        from aiida.orm import CalculationFactory
-        CustomCalc = CalculationFactory('simpleplugins.templatereplacer')
-        
-        computer = Computer.get("localhost")
-        
-        calc = CustomCalc(computer=computer,withmpi=True)
-        calc.set_resources(num_machines=1, num_cpus_per_machine=1)
-        calc.store()
-        self.attach_calculation(calc)
+        self.attach_calculation(self.generate_calc())
         
         self.next(self.recollect)
         
     def branch_b_one(self):
         
-        aiidalogger.info("branch_b_one launched")
+        self.append_to_report("branch_b_one launched")
         
-        from aiida.orm import CalculationFactory
-        CustomCalc = CalculationFactory('simpleplugins.templatereplacer')
-        
-        computer = Computer.get("localhost")
-        
-        calc = CustomCalc(computer=computer,withmpi=True)
-        calc.set_resources(num_machines=1, num_cpus_per_machine=1)
-        calc.store()
-        self.attach_calculation(calc)
+        self.attach_calculation(self.generate_calc())
         
         self.next(self.recollect)
     
     def recollect(self):
         
-        aiidalogger.info("recollect launched")
+        self.append_to_report("recollect launched")
         
         if (self.get_step(self.branch_b_one).is_finished() and 
             self.get_step(self.branch_a_two).is_finished()):
         
-            aiidalogger.info("All the steps have been done")
-            self.next(self.exit)
-            
-
-class WorkflowDemoLoop(Workflow):
-
-    def start(self):
+            self.append_to_report("All the steps have been done")
+            self.next(self.finalize)
+        else:
+            self.append_to_report("Some step are still running, waiting to recollect")
+    
+    def finalize(self):
         
-        from aiida.orm import Calculation, Code, Computer
+        self.append_to_report("Nothing else to do")
         
-        from aiida.orm import CalculationFactory
+        self.next(self.exit)
+                
+
+class LoopBranchWorkflowDemo(Workflow):
+    
+    def __init__(self,**kwargs):
+        
+        super(LoopBranchWorkflowDemo, self).__init__(**kwargs)
+        
+    def generate_calc(self):
+        
+        from aiida.orm import Code, Computer, CalculationFactory
+        from aiida.common.datastructures import calc_states
+        
         CustomCalc = CalculationFactory('simpleplugins.templatereplacer')
         
         computer = Computer.get("localhost")
         
         calc = CustomCalc(computer=computer,withmpi=True)
         calc.set_resources(num_machines=1, num_cpus_per_machine=1)
+        calc._set_state(calc_states.FINISHED)
         calc.store()
-        self.attach_calculation(calc)
+        
+        return calc
+    
+    def start(self):
+        
+        self.attach_calculation(self.generate_calc())
         
         self.next(self.convergence)        
     
-    def convergence(self):
+    def loop(self):
         
-        calcs_init = self.get_step_calculations(self.start)
-        
-        calcs_convergence = self.get_step_calculations(self.convergence)
+        calcs_init        = self.get_step_calculations(self.start)
+        calcs_convergence = self.get_step_calculations(self.loop)
         
         if calcs_convergence == None or len(calcs_convergence) < 5:
-            from aiida.orm import CalculationFactory
-            CustomCalc = CalculationFactory('simpleplugins.templatereplacer')
-            
-            computer = Computer.get("localhost")
-            
-            calc = CustomCalc(computer=computer,withmpi=True)
-            calc.set_resources(num_machines=1, num_cpus_per_machine=1)
-            calc.store()
-            self.attach_calculation(calc)
-            
+            self.append_to_report("Not enough calculations, looping")
+            self.attach_calculation(self.generate_calc())
             self.next(self.convergence)
         
         else:
             
-            aiidalogger.info("Enough calculations runned, going to the next step")
+            self.append_to_report("Enough calculations run, going to the next step")
             self.next(self.third_step)
     
         
@@ -180,9 +238,8 @@ class WorkflowDemoLoop(Workflow):
         
         calcs_init = self.get_step_calculations(self.convergence)
         
-        aiidalogger.info("Third runned and retived calculation:")
+        self.append_to_report("Third runned and retived calculation:")
         for c in calcs_init:
-            aiidalogger.info("  Calculation {0}".format(c.uuid))
-            
+            self.append_to_report("Calculation {0}".format(c.uuid))
         
         self.next(self.exit)

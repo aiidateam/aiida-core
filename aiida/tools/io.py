@@ -16,6 +16,21 @@ def import_cif(fname):
     
     return s
 
+def import_icsd(q={"elements":"Pd H C"}, id=None):
+
+    from aiida.tools.icsd import query, download
+    
+    if id==None:
+        
+        j = query(q)
+        c = j["structures"][0]
+        
+        print c["id"]
+        fname = download(c["id"])
+    else:
+        fname = download(str(id))
+    
+    return import_cif(fname)
 
 def dirty_qe(s, fout=None):
     
@@ -46,10 +61,12 @@ def dirty_qe(s, fout=None):
      
     for i in range(3):
         output.write("{0:15.10f}\t{1:15.10f}\t{2:15.10f}\n".format(s.cell[i][0], s.cell[i][1], s.cell[i][2]))
-        
+   
+    data =  output.getvalue()
+    output.close()
+    
     if not fout==None:
          with open(fout, "w") as f:
-            f.write(output.getvalue())
-    else:
-        print output.getvalue()
-    output.close()
+            f.write(data)
+   
+    return data

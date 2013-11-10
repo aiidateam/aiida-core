@@ -328,12 +328,17 @@ class StructureData(Data):
         cell = kwargs.pop('cell',None)
         pbc = kwargs.pop('pbc',None)
         aseatoms = kwargs.pop('ase',None)
-
+        raw_kinds = kwargs.pop('raw_kinds',None)
+        
         if kwargs:
             raise ValueError("There are unrecognized flags passed to the "
                              "constructor: {}".format(kwargs.keys()))
-
-        self.set_attr('kinds',[])
+        
+        if raw_kinds is not None: 
+            self.set_attr('kinds',raw_kinds)
+        else:
+            self.set_attr('kinds',[])
+            
         self.set_attr('sites',[])
         if aseatoms is not None:
             if cell is not None or pbc is not None:
@@ -342,7 +347,7 @@ class StructureData(Data):
             if is_ase_atoms(aseatoms):
                 # Read the ase structure
                 self.cell = aseatoms.cell
-                self.pbc = aseatoms.pbc
+                self.pbc  = aseatoms.pbc
                 for atom in aseatoms:
                     self.append_atom(ase=atom)
             else:
@@ -533,14 +538,16 @@ class StructureData(Data):
                                  "new atom")
             # all remaining parmeters
             kind = Kind(**kwargs)
-            
+        
         # I look for identical species only if the name is not specified
         _kinds = self.kinds
+        
         if 'name' not in kwargs:
             # If the kind is identical to an existing one, I use the existing
             # one, otherwise I replace it
             exists_already = False
             for existing_kind in _kinds:
+                
                 if (kind.compare_with(existing_kind)[0] and
                     kind.name == existing_kind.name):
                     kind = existing_kind

@@ -90,6 +90,7 @@ class SubWorkflowDemo(Workflow):
         
         return calc
     
+    @Workflow.step
     def start(self):
         
         self.attach_calculation(self.generate_calc())
@@ -97,6 +98,7 @@ class SubWorkflowDemo(Workflow):
         params = {}
         params['nmachine']=2
     
+        # Testing subworkflow with input parameters
         w = WorkflowDemo(params=params)
         w.start()
         self.attach_workflow(w)
@@ -110,6 +112,7 @@ class SubWorkflowDemo(Workflow):
         
         self.next(self.second)
     
+    @Workflow.step
     def second(self):
         
         s_wfs = self.get_step(self.start).get_sub_workflows()
@@ -146,7 +149,8 @@ class BranchWorkflowDemo(Workflow):
     
         self.branch_a_one()
         self.branch_b_one()
-        
+    
+    @Workflow.step    
     def branch_a_one(self):
         
         self.append_to_report("branch_a_one launched")
@@ -155,6 +159,7 @@ class BranchWorkflowDemo(Workflow):
         
         self.next(self.branch_a_two)
     
+    @Workflow.step
     def branch_a_two(self):
         
         self.append_to_report("branch_a_two launched")
@@ -162,7 +167,8 @@ class BranchWorkflowDemo(Workflow):
         self.attach_calculation(self.generate_calc())
         
         self.next(self.recollect)
-        
+    
+    @Workflow.step
     def branch_b_one(self):
         
         self.append_to_report("branch_b_one launched")
@@ -171,9 +177,11 @@ class BranchWorkflowDemo(Workflow):
         
         self.next(self.recollect)
     
+    @Workflow.step
     def recollect(self):
         
         self.append_to_report("recollect launched")
+        print "Here in recollect"
         
         if (self.get_step(self.branch_b_one).is_finished() and 
             self.get_step(self.branch_a_two).is_finished()):
@@ -182,9 +190,11 @@ class BranchWorkflowDemo(Workflow):
             self.next(self.finalize)
         else:
             self.append_to_report("Some step are still running, waiting to recollect")
+            self.sleep()
     
+    @Workflow.step
     def finalize(self):
-        
+        print "Here in finalize"
         self.append_to_report("Nothing else to do")
         
         self.next(self.exit)
@@ -212,34 +222,39 @@ class LoopBranchWorkflowDemo(Workflow):
         
         return calc
     
+    @Workflow.step
     def start(self):
         
         self.attach_calculation(self.generate_calc())
         
         self.next(self.convergence)        
     
-    def loop(self):
+    @Workflow.step
+    def convergence(self):
         
-        calcs_init        = self.get_step_calculations(self.start)
-        calcs_convergence = self.get_step_calculations(self.loop)
+        calcs_init            = self.get_step_calculations(self.start)
+        calcs_convergence     = self.get_step_calculations(self.convergence)
+        tot_calcs_convergence = len(calcs_convergence)
         
-        if calcs_convergence == None or len(calcs_convergence) < 5:
-            self.append_to_report("Not enough calculations, looping")
+        if calcs_convergence == None or tot_calcs_convergence < 5:
+            self.append_to_report("Not enough calculations (only {0}), looping".format(tot_calcs_convergence))
             self.attach_calculation(self.generate_calc())
             self.next(self.convergence)
         
         else:
             
             self.append_to_report("Enough calculations run, going to the next step")
-            self.next(self.third_step)
+            self.next(self.final)
     
+    @Workflow.step  
+    def final(self):
         
-    def third_step(self):
-        
-        calcs_init = self.get_step_calculations(self.convergence)
+        calcs_convergence = self.get_step_calculations(self.convergence)
         
         self.append_to_report("Third runned and retived calculation:")
-        for c in calcs_init:
+        for c in calcs_convergence:
             self.append_to_report("Calculation {0}".format(c.uuid))
+        
+        self.add_result("scf:cnverged", calcs_convergence[len(calcs_convergence)-1])
         
         self.next(self.exit)

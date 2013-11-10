@@ -65,6 +65,7 @@ wf_states = WorkflowState((
         'INITIALIZED',
         'RUNNING',
         'FINISHED',
+        'SLEEP',
         'ERROR'
         ))
 
@@ -88,6 +89,7 @@ wf_data_value_types = WorkflowDataValueType((
 
 wf_start_call = "start"
 wf_exit_call = "exit"
+wf_default_call = "none"
 
 #TODO Improve/implement this!
 #class DynResourcesInfo(AttributeDict):

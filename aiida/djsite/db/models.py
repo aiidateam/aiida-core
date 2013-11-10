@@ -692,13 +692,13 @@ class DbWorkflowData(m.Model):
            
 class DbWorkflowStep(m.Model):
 
-    from aiida.common.datastructures import wf_states, wf_exit_call
+    from aiida.common.datastructures import wf_states, wf_exit_call, wf_default_call
     
     parent        = m.ForeignKey(DbWorkflow, related_name='steps')
     name          = m.CharField(max_length=255, blank=False)
     user          = m.ForeignKey(User, on_delete=m.PROTECT)
     time          = m.DateTimeField(auto_now_add=True, editable=False)
-    nextcall      = m.CharField(max_length=255, blank=False, default=wf_exit_call)
+    nextcall      = m.CharField(max_length=255, blank=False, default=wf_default_call)
     
     calculations  = m.ManyToManyField(DbNode, symmetrical=False, related_name="workflow_step")
     sub_workflows = m.ManyToManyField(DbWorkflow, symmetrical=False, related_name="parent_workflow_step")
@@ -799,6 +799,12 @@ class DbWorkflowStep(m.Model):
         self.status = _status;
         self.save()
         
-    def revive(self):
+    def reinitialize(self):
         
-        self.set_status(wf_states.RUNNING)
+        from aiida.common.datastructures import calc_states, wf_states, wf_exit_call
+        self.set_status(wf_states.INITIALIZED)
+
+    def finish(self):
+        
+        from aiida.common.datastructures import calc_states, wf_states, wf_exit_call
+        self.set_status(wf_states.FINISHED)

@@ -13,7 +13,7 @@ import aiida.common
 
 
 icsd_addr = "theospc12.epfl.ch"
-apiUrl    ="http://"+icsd_addr+"/icsd/api/"
+apiUrl    = "http://"+icsd_addr+"/icsd/api/"
 debug     = False
 
 db        = pymysql.connect(host=icsd_addr, port=3306, user='dba', passwd='sql', database='icsd')

@@ -29,6 +29,7 @@ User's guide
    scheduler/index
     
    workflow/index
+   troubleshooting/index
 
 Developer's guide
 +++++++++++++++++

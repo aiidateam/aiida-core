@@ -51,7 +51,7 @@ class Workflow(VerdiCommand):
                                        for sc in self.valid_subcommands)
         sys.exit(1)
 
-    def invalid_subcommand(self):
+    def invalid_subcommand(self,*args):
         print >> sys.stderr, ("You passed an invalid subcommand to 'workflow'. "
                               "Valid subcommands are:")
         print >> sys.stderr, "\n".join("  {}".format(sc) 

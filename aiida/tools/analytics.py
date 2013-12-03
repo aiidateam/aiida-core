@@ -4,7 +4,16 @@ Created on Oct 30, 2013
 @author: riki
 '''
 
-RyToBhor = 0.52917720859
+RyToBhor         = 0.52917720859
+k_boltzmann_si   = 1.3806504E-23
+hartree_si       = 4.35974394E-18
+electronmass_si  = 9.10938215E-31
+amu_si           = 1.660538782E-27
+k_boltzmann_au   = k_boltzmann_si / hartree_si
+
+autoev           = hartree_si / electronmass_si
+rytoev           = autoev / 2.0
+amu_au           = amu_si / electronmass_si
 
 class StepArray(object):
     
@@ -64,12 +73,12 @@ class SimpleTrajectory(object):
     def append(self, step, time, cell, pos, data, vel=None):
         
         self.steps.append(step)
-        self.steps.append(time)
+        self.times.append(time)
         self.cells.append(cell)
         self.pos.append(pos)
         self.datas.append(data)
         
-        if vel:
+        if vel is not None:
             self.velocities = vel
         
     def get_snapshot(self, step): 
@@ -92,7 +101,7 @@ class SimpleTrajectory(object):
                 return self.df
             else:
                 
-                self.df = pd.DataFrame(self.datas, columns=self.datas_attrs)
+                self.df = pd.DataFrame(self.datas, columns=self.datas_attrs, index=self.times)
                 return self.df
             
         elif name in self.datas_attrs:
@@ -104,6 +113,49 @@ class SimpleTrajectory(object):
         else:
             # Default behaviour
             return object.__getattribute__(self, name)
+    
+    def generate_species_data(self):
+        
+        import ase.data
+        import numpy as np
+        
+        ekins = {}
+        et    = {}
+        all_temp = []
+        
+        for t in range(len(self.times)):
+            
+            masses = np.take(self.struct.get_ase().get_masses(), np.concatenate(self.ordering))
+            all_temp.append(getIonT(masses,self.velocities[t].get_array()))
+            
+            for i in range(len(self.ordering)):
+            
+                at_num   = self.struct.get_ase().get_atomic_numbers()[self.ordering[i][0]]
+                w_name   = ase.data.chemical_symbols[at_num]
+            
+                for at in range(len(self.ordering[i])):
+                
+                    ion_key        = w_name+"_"+str(self.ordering[i][at])
+                    ekins["ekin_"+ion_key] = []
+                    et["temp_"+ion_key]    = []
+                    
+                    mi  = [self.struct.get_ase().get_masses()[self.ordering[i][at]]]
+                    vi  = [self.velocities[t].get_array()[self.ordering[i][at]]]
+                    
+                    eki = getIonEkin(mi,vi)
+                    ekins["ekin_"+ion_key].append(eki)
+                    
+                    eti = getIonT(mi,vi)
+                    et["temp_"+ion_key].append(eti)
+            
+        
+        for k in ekins.keys():
+            self.df[k] = ekins[k]
+        
+        for k in et.keys():
+            self.df[k] = et[k]
+        
+        self.df['all_temp'] = all_temp
     
     def plot_dynamics_data(self, start=0):
         
@@ -118,7 +170,38 @@ class SimpleTrajectory(object):
         self.df.tempp[start:len(self.df)].plot(ax3)
         plt.show()
     
-    
+    def plot_ekin_data(self, start=0):
+        
+        import matplotlib.pyplot as plt
+        import ase.data
+        
+        ax1 = plt.subplot2grid((2,2), (0,0), colspan=2)
+        ax2 = plt.subplot2grid((2,2), (1,0))
+        ax3 = plt.subplot2grid((2,2), (1,1))
+        
+        ekins = []
+        et    = []
+        
+        for i in range(len(self.ordering)):
+            at_num   = self.struct.get_ase().get_atomic_numbers()[self.ordering[i][0]]
+            w_name   = ase.data.chemical_symbols[at_num]
+            
+            for at in range(len(self.ordering[i])):
+                ion_key        = w_name+"_"+str(self.ordering[i][at])
+                
+                if "ekin_"+ion_key not in self.df:
+                    print "Generating"
+                    self.generate_species_data()
+                    
+                ekins.append("ekin_"+ion_key)
+                et.append("temp_"+ion_key)
+                
+        self.df[ekins].plot(ax=ax1, legend=False)
+        self.df[ekins].mean().plot(kind='bar', ax=ax2, yerr=self.df[ekins].std())
+        #self.df[et.keys()].values().hist(ax=ax3, bins=50)
+        
+        plt.show()
+        
     def export_to_vft(self, fname=None):
         
         
@@ -242,8 +325,6 @@ def import_array(fname, mul=1.0):
     pos_all = []
     pos_this = []
     
-    reading_pos = False
-    
     while 1:
         
         ## Buffer read
@@ -267,7 +348,14 @@ def import_array(fname, mul=1.0):
                 pos_this = []
             elif len(parts)==3:
                 pos_this.append([float(p)*mul for p in parts])
-    
+        
+    if d_time>pos_all[-1].get_time():
+        nsp = StepArray()
+        nsp.set_step(d_step)
+        nsp.set_time(d_time)
+        nsp.set_array(pos_this)
+        pos_all.append(nsp)
+        
     f.close()
     
     return pos_all
@@ -286,9 +374,11 @@ def import_cp(s, dir, prefix, vel=False):
 #         return
 #     
     pos_all  = import_array(dir+os.sep+prefix+".pos", mul=RyToBhor)
-    if vel: vel_all  = import_array(dir+os.sep+prefix+".vel")
     cell_all = import_array(dir+os.sep+prefix+".cel", mul=RyToBhor)
     evp      = import_table(dir+os.sep+prefix+".evp")
+    
+    vel_all = None
+    if vel: vel_all  = import_array(dir+os.sep+prefix+".vel")
     
     old_step = 0
     trajectories_all = []
@@ -311,16 +401,42 @@ def import_cp(s, dir, prefix, vel=False):
             if (i+shift>=len(pos_all)):
                 print "Something went wrong, files are not synced at {0} even with shift".format(i)
                 break
-        
-        
+            
         new_step = pos_all[i].get_step()
         if (new_step<=old_step):
             trajectories_all.append(trajectories_this)
             trajectories_this = SimpleTrajectory(s)
         
-        trajectories_this.append(pos_all[i].get_step(), pos_all[i].get_time(), cell_all[i].get_array(), pos_all[i].get_array(), evp[i])
-    
+        trajectories_this.append(pos_all[i].get_step(), pos_all[i].get_time(), cell_all[i].get_array(), pos_all[i].get_array(), evp[i], vel=vel_all)
+            
     trajectories_all.append(trajectories_this)
             
     return trajectories_all
-      
+
+
+def getIonEkin(mi, vi):
+    
+    import numpy as np
+    return 0.5 * np.dot(mi, np.sum(np.square(vi), axis=1))
+
+def getIonT(mi, vi):
+    
+    import numpy as np
+    return 0.5 * np.dot(mi, np.sum(np.square(vi), axis=1)) / (len(mi)) / (1.5*k_boltzmann_au)
+
+def MaxwellBoltzmannDistribution(masses_amu, temp, kb=k_boltzmann_au, seed=None): 
+        
+        import numpy as np
+            
+        mi     = masses_amu*amu_au
+            
+        if seed is not None: np.random.seed(seed)
+    
+        ri     = np.random.standard_normal((len(mi), 3))
+        vi     = ri * np.sqrt((kb * temp)/(mi[:, np.newaxis]))
+        T0     = getIonT(mi, vi)
+        gamma  = temp / T0
+        vi     = vi * np.sqrt(gamma/3.0)
+        
+        return vi
+    

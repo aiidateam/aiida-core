@@ -168,6 +168,15 @@ class BranchWorkflowDemo(Workflow):
         
         self.next(self.recollect)
     
+#     @Workflow.step
+#     def branch_a_three(self):
+#         
+#         self.append_to_report("branch_a_two launched")
+#         
+#         self.attach_calculation(self.generate_calc())
+#         
+#         self.next(self.recollect)
+        
     @Workflow.step
     def branch_b_one(self):
         
@@ -181,14 +190,14 @@ class BranchWorkflowDemo(Workflow):
     def recollect(self):
         
         self.append_to_report("recollect launched")
-        print "Here in recollect"
         
         if (self.get_step(self.branch_b_one).is_finished() and 
             self.get_step(self.branch_a_two).is_finished()):
-        
+            
             self.append_to_report("All the steps have been done")
             self.next(self.finalize)
         else:
+            
             self.append_to_report("Some step are still running, waiting to recollect")
             self.sleep()
     

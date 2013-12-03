@@ -304,12 +304,19 @@ class Workflow(object):
             if len(args)>0:
                 raise AiidaException("A step method cannot have any argument, use add_attribute to the workflow")
             
-            # If a methos is lauched and the step is RUNNING or INITIALIZED we should stop
-            if cls.has_step(caller_method) and not cls.get_step(caller_method).status == wf_states.ERROR and not cls.get_step(caller_method).next == wf_default_call:
+            # If a method is launched and the step is RUNNING or INITIALIZED we should stop
+            if cls.has_step(caller_method) and \
+               not (cls.get_step(caller_method).status == wf_states.ERROR or \
+                    cls.get_step(caller_method).status == wf_states.SLEEP or \
+                    cls.get_step(caller_method).nextcall == wf_default_call or \
+                    cls.get_step(caller_method).nextcall == caller_method):
+                
                 raise AiidaException("The method {0} has already been initialized and has a next pointer, cannot change this !".format(caller_method))
             
             # If a method is launched and the step is halted for ERROR, then clean the step and re-launch
-            if cls.has_step(caller_method) and cls.get_step(caller_method).status == wf_states.ERROR:
+            if cls.has_step(caller_method) and \
+               ( cls.get_step(caller_method).status == wf_states.ERROR or\
+                 cls.get_step(caller_method).status == wf_states.SLEEP ):
                 
                 for w in cls.get_step(caller_method).get_sub_workflows():
                     w.kill()
@@ -369,7 +376,7 @@ class Workflow(object):
         calframe      = inspect.getouterframes(curframe, 2)
         caller_method = calframe[1][3]
         
-        print "We are in next of {0} in {1}".format(caller_method, self.uuid())
+        logger.info("We are in next call of {0} in {1}".format(caller_method, self.uuid()))
         
         if not self.has_step(caller_method):
             raise AiidaException("The caller method is either not a step or has not been registered as one")
@@ -401,7 +408,7 @@ class Workflow(object):
         else:
             next_method_name = wf_exit_call
             
-        print "Adding {0} after {1} in {2}".format(next_method_name, caller_method, self.uuid())
+        logger.info("Adding step {0} after {1} in {2}".format(next_method_name, caller_method, self.uuid()))
         method_step.set_nextcall(next_method_name)
         
         #method_step.set_status(wf_states.RUNNING)
@@ -503,8 +510,19 @@ class Workflow(object):
     
     def sleep(self):
         
+        import inspect
+        from aiida.common.datastructures import wf_start_call, wf_states, wf_exit_call
         from aiida.common.datastructures import calc_states, wf_states
-        self.set_status(wf_states.SLEEP)
+        
+        # ATTENTION: Do not move this code outside or encapsulate it in a function
+        curframe      = inspect.currentframe()
+        calframe      = inspect.getouterframes(curframe, 2)
+        caller_method = calframe[1][3]
+        
+        if not self.has_step(caller_method):
+            raise AiidaException("The caller method is either not a step or has not been registered as one")
+ 
+        self.get_step(caller_method).set_status(wf_states.SLEEP)
         
         
     # ------------------------------------------------------
@@ -670,7 +688,7 @@ def list_workflows(ext=False,expired=False):
         accumulated_tab+=1
         for s in steps:
             
-            print get_separator(accumulated_tab,tab_size)+" Step: {0} is {1}".format(s.name,s.status)
+            print get_separator(accumulated_tab,tab_size)+" Step: {0} (->{1}) is {2}".format(s.name,s.nextcall,s.status)
             
             ## Calculations
             calcs  = s.get_calculations().filter(attributes__key="_state").values_list("uuid", "ctime", "attributes__tval")

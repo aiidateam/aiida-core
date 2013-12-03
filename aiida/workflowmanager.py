@@ -57,7 +57,7 @@ def execute_steps():
             if (not s_calcs or (len(s_calc_states) == 1 and calc_states.FINISHED in s_calc_states)) and \
                (not s_sub_wf or (len(s_sub_wf_states) == 1 and wf_states.FINISHED in s_sub_wf_states)):
                 
-                logger.info("[{0}] Step: {1} ready to step".format(w.uuid(),s.name))
+                logger.info("[{0}] Step: {1} ready to move".format(w.uuid(),s.name))
                 
                 s.set_status(wf_states.FINISHED)
                 advance_workflow(w, s)
@@ -113,16 +113,17 @@ def advance_workflow(w_superclass, step):
             
             return False
     elif step.nextcall==wf_default_call:
+            logger.info("Step: {0} is not finished and has no next call, waiting for other methods to kick.".format(step.name))
             w_superclass.append_to_report("Step: {0} is not finished and has no next call, waiting for other methods to kick.".format(step.name))
             return True
         
     elif not step.nextcall==None:
         
+        logger.info("In  advance_workflow the step {0} goes to nextcall {1}".format(step.name, step.nextcall))
+        
         try:
             w = Workflow.get_subclass_from_uuid(w_superclass.uuid())
-            print "AAAA {0}".format(step.nextcall)
             getattr(w,step.nextcall)()
-            
             return True
         
         except:
@@ -140,6 +141,7 @@ def advance_workflow(w_superclass, step):
             return False
     else:
         
+        logger.error("Step: {0} ERROR, no nextcall".format(step.name))
         w.append_to_report("Step: {0} ERROR, no nextcall".format(step.name))
         w.set_status(wf_states.ERROR)
 

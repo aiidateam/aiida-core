@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from aiida.common.datastructures import calc_states
 from aiida.scheduler.datastructures import job_states
 from aiida.common import aiidalogger
-from aiida.common.datastructures import wf_states, wf_exit_call
+from aiida.common.datastructures import wf_states, wf_exit_call, wf_default_call
 
 logger = aiidalogger.getChild('workflowmanager')
 
@@ -39,57 +39,118 @@ def execute_steps():
     
     for w in w_list:
         
-        logger.info("[{0}] Found active workflow: ".format(w.uuid))
-        steps = w.get_steps(state=wf_states.RUNNING)
+        logger.info("Found active workflow: {0}".format(w.uuid()))
         
-        if len(steps) == 0:
+        # Launch INITIALIZED Workflows
+        #
+        running_steps    = w.get_steps(state=wf_states.RUNNING)
+        for s in running_steps:
             
-            # Finish the worflow in case there are no running steps
-            w.set_status(wf_states.FINISHED)
+            logger.info("[{0}] Found active step: {1}".format(w.uuid(),s.name))
             
-        else :
+            s_calcs       = s.get_calculations()
+            s_calc_states = s.get_calculations_status()
+            
+            s_sub_wf        = s.get_sub_workflows()
+            s_sub_wf_states = s.get_sub_workflows_status()
+            
+            if (not s_calcs or (len(s_calc_states) == 1 and calc_states.FINISHED in s_calc_states)) and \
+               (not s_sub_wf or (len(s_sub_wf_states) == 1 and wf_states.FINISHED in s_sub_wf_states)):
+                
+                logger.info("[{0}] Step: {1} ready to move".format(w.uuid(),s.name))
+                
+                s.set_status(wf_states.FINISHED)
+                advance_workflow(w, s)
+            
+            elif calc_states.NEW in s_calc_states:
+                    
+                for s_calc in s.get_calculations(calc_states.NEW):
+                    obj_calc = Calculation.get_subclass_from_uuid(uuid=s_calc.uuid)
+                    obj_calc.submit()
+                    logger.info("[{0}] Step: {1} launching calculation {2}".format(w.uuid,s.name, s_calc.uuid))
+                    
+        # Launch INITIALIZED Workflows with all calculations and subworkflows
+        #
+        initialized_steps    = w.get_steps(state=wf_states.INITIALIZED)
+        for s in initialized_steps:
+            
+            logger.info("[{0}] Found initialized step: {1}".format(w.uuid(),s.name))
+            
+            got_any_error = False
+            for s_calc in s.get_calculations(calc_states.NEW):
+                    
+                obj_calc = Calculation.get_subclass_from_uuid(uuid=s_calc.uuid)
+                try:
+                    logger.info("[{0}] Step: {1} launching calculation {2}".format(w.uuid(),s.name, s_calc.uuid))
+                    obj_calc.submit()
+                except:
+                    logger.error("[{0}] Step: {1} cannot launch calculation {2}".format(w.uuid(),s.name, s_calc.uuid))
+                    got_any_error = True
+            
+            if not got_any_error:
+                s.set_status(wf_states.RUNNING)
+            else:
+                s.set_status(wf_states.ERROR)        
         
-            for s in steps:
-                
-                s_calcs       = s.get_calculations()
-                s_calc_states = s.get_calculations_status()
-                
-                s_sub_wf        = s.get_sub_workflows()
-                s_sub_wf_states = s.get_sub_workflows_status()
-                
-                if (not s_calcs or (len(s_calc_states) == 1 and calc_states.FINISHED in s_calc_states)) and \
-                   (not s_sub_wf or (len(s_sub_wf_states) == 1 and wf_states.FINISHED in s_sub_wf_states)):
-                    
-                    logger.info("[{0}] Step: {1} ready to step".format(w.uuid,s.name))
-                    s.set_status(wf_states.FINISHED)
-                    advance_workflow(w, s)
-                    
-                elif calc_states.NEW in calc_states:
-                    
-                    for s_calc in s.get_calculations(calc_states.NEW):
-                        obj_calc = Calculation.get_subclass_from_uuid(uuid=s_calc.uuid)
-                        obj_calc.submit()
-                        logger.info("[{0}] Step: {1} launching calculation {2}".format(w.uuid,s.name, s_calc.uuid))
-
-
-def advance_workflow(w, step):
+        
+#         if len(w.get_steps(state=wf_states.RUNNING))==0 and \
+#            len(w.get_steps(state=wf_states.INITIALIZED))==0 and \
+#            len(w.get_steps(state=wf_states.ERROR))==0 and \
+#            w.get_status()==wf_states.RUNNING:
+#               w.set_status(wf_states.FINISHED)
+              
+        
+def advance_workflow(w_superclass, step):
     
     from aiida.orm.workflow import Workflow
-    from aiida.common.exceptions import ValidationError
+    import sys, os
     
-    if (step.nextcall==wf_exit_call):
+    if step.nextcall==wf_exit_call:
+        logger.info("[{0}] Step: {1} has an exit call".format(w_superclass.uuid(),step.name))
+        if len(w_superclass.get_steps(wf_states.RUNNING))==0 and len(w_superclass.get_steps(wf_states.ERROR))==0:
+            logger.info("[{0}] Step: {1} is really finished, going out".format(w_superclass.uuid(),step.name))
+            w_superclass.set_status(wf_states.FINISHED)
+            return True
+        else:
+            logger.error("[{0}] Step: {1} is NOT finished, stopping workflow with error".format(w_superclass.uuid(),step.name))
+            w_superclass.append_to_report("""Step: {1} is NOT finished, some calculations or workflows 
+            are still running and there is a next call, stopping workflow with error""".format(step.name))
+            w_superclass.set_status(wf_states.ERROR)
+            
+            return False
+    elif step.nextcall==wf_default_call:
+            logger.info("Step: {0} is not finished and has no next call, waiting for other methods to kick.".format(step.name))
+            w_superclass.append_to_report("Step: {0} is not finished and has no next call, waiting for other methods to kick.".format(step.name))
+            return True
         
-        logger.info("[{0}] Closing the workflow".format(w.uuid))
-        w.set_status(wf_states.FINISHED)
-    
-    elif (not step.nextcall==None):
+    elif not step.nextcall==None:
         
-        logger.info("[{0}] Running call: {1} after {2}".format(w.uuid,step.nextcall,step.name))
+        logger.info("In  advance_workflow the step {0} goes to nextcall {1}".format(step.name, step.nextcall))
         
         try:
-            w_obj = Workflow.get_subclass_from_uuid(w.uuid)
-            getattr(w_obj,step.nextcall)()
-        except ValidationError:
-            logger.error("[{0}] Closing the workflow due to reload ERROR ".format(w.uuid))
-            w.set_status(wf_states.FINISHED)
-    
+            w = Workflow.get_subclass_from_uuid(w_superclass.uuid())
+            getattr(w,step.nextcall)()
+            return True
+        
+        except:
+            
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            w.append_to_report("ERROR ! This workflow got and error in the {0} method, we report down the stack trace".format(step.nextcall))
+            w.append_to_report("filename: {0}".format(exc_traceback.tb_frame.f_code.co_filename))
+            w.append_to_report("lineno: {0}".format(exc_traceback.tb_lineno))
+            w.append_to_report("name: {0}".format(exc_traceback.tb_frame.f_code.co_name))
+            w.append_to_report("type: {0}".format(exc_type.__name__))
+            w.append_to_report("message: {0}".format(exc_value.message))
+            
+            w.set_status(wf_states.ERROR)
+            
+            return False
+    else:
+        
+        logger.error("Step: {0} ERROR, no nextcall".format(step.name))
+        w.append_to_report("Step: {0} ERROR, no nextcall".format(step.name))
+        w.set_status(wf_states.ERROR)
+
+        return False
+
+

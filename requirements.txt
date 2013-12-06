@@ -36,3 +36,6 @@ pysqlite>=2.6.3
 
 # Paramiko, for ssh connections
 paramiko>=1.10
+
+#ICSD tools
+PyMySQL>=0.6.1

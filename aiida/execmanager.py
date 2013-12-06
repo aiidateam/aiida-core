@@ -284,7 +284,7 @@ def submit_calc(calc):
             job_tmpl.rerunnable = False
             job_tmpl.job_environment = {}
             #'email', 'email_on_started', 'email_on_terminated',
-            job_tmpl.job_name = 'aiida-{}'.format(calc.uuid) 
+            job_tmpl.job_name = 'aiida-{}'.format(calc.pk) 
             job_tmpl.sched_output_path = '_scheduler-stdout.txt'
             job_tmpl.sched_error_path = '_scheduler-stderr.txt'
             job_tmpl.sched_join_files = False

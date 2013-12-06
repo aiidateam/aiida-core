@@ -8,10 +8,12 @@ from aiida.common.folders import RepositoryFolder, SandboxFolder
 from aiida.common.datastructures import wf_states, wf_exit_call
 
 from aiida.djsite.utils import get_automatic_user
+from aiida.common import aiidalogger
+
+logger = aiidalogger.getChild('Workflow')
 
 # Name to be used for the section
 _section_name = 'workflow'
-WF_STEP_EXIT = 'exit'
 
 class Workflow(object):
     
@@ -26,8 +28,6 @@ class Workflow(object):
     end of the step's calculations the workflow is reloaded in memory and the next methods is called.
 
     """
-    
-    _logger       = aiida.common.aiidalogger.getChild('workflow')
     
     def __init__(self,**kwargs):
         
@@ -52,7 +52,6 @@ class Workflow(object):
                 
                 try:
                         self.dbworkflowinstance    = DbWorkflow.objects.get(uuid=uuid)
-                        self.params                = self.get_parameters()
                         self._to_be_stored         = False
                         
                         #self.logger.info("Workflow found in the database, now retrieved")
@@ -105,9 +104,31 @@ class Workflow(object):
                 
                 if params is not None:
                     if type(params) is dict:
-                        self.set_parameters(params)
+                        self._set_parameters(params)
                 
-   
+            
+            self.attach_calc_lazy_storage  = {}
+            self.attach_subwf_lazy_storage = {}
+            
+#     def __getattribute__(self,name):
+#         
+#         try:
+#             attr = object.__getattribute__(self, name)
+#         except:
+#             raise AttributeError()
+#         
+#         if hasattr(attr, '__call__') and name=="start":
+#             
+#             self.logger.debug("Start attributes: {0}".format(attr.__dict__))
+#             
+#             if self.get_status() == wf_states.INITIALIZED:
+#                 self.set_status(wf_states.RUNNING)
+#                 return attr
+#             else:
+#                raise AiidaException("Cannot start an already started workflow")   
+#         else:
+#             return attr
+        
     @classmethod
     def query(cls,*args,**kwargs):
         """
@@ -118,10 +139,6 @@ class Workflow(object):
         from aiida.djsite.db.models import DbWorkflow
         return DbWorkflow.aiidaobjects.filter(*args,**kwargs)
          
-    @property
-    def logger(self):
-        return self._logger
-        
     def store(self):
         
         """
@@ -139,8 +156,11 @@ class Workflow(object):
                                                         script_path = self.caller_file,
                                                         script_md5 = hashlib.md5(self.caller_file).hexdigest()
                                                         )
-        
-
+        self._to_be_stored      = False
+    
+    def _get_dbworkflowinstance(self):
+        return self.dbworkflowinstance
+    
     def uuid(self):
         return self.dbworkflowinstance.uuid
     
@@ -157,42 +177,72 @@ class Workflow(object):
             self.dbworkflowinstance.time,
             self.dbworkflowinstance.status]
     
-    # ----------------------------
-    #         Parameters
-    # ----------------------------
+    # --------------------------------------------
+    #         Parameters, attribute, results
+    # --------------------------------------------
     
-    def set_parameters(self, params):
+    def _set_parameters(self, params, force=False):
         
         """
         Adds parameters to the workflow that are both stored and used every time
         the workflow engine re-initialize the specific workflow to launch the new methods.  
         """
         
-        self.params = params
-        self.dbworkflowinstance.add_parameters(self.params)
+        #self.params = params
+        self.dbworkflowinstance.add_parameters(params, force=force)
     
-    def add_parameters(self, params):
-        
-        self.dbworkflowinstance.add_parameters(params)
-        self.params = self.dbworkflowinstance.get_parameters()
-        
-        
     def get_parameters(self):
-        
         return self.dbworkflowinstance.get_parameters()
+    
+    def get_parameter(self, _name):
+        return self.dbworkflowinstance.get_parameter(_name)
+    
+    # ----------------------------
+    
+    def get_attributes(self):
+        return self.dbworkflowinstance.get_attributes()
+    
+    def get_attribute(self, _name):
+        return self.dbworkflowinstance.get_attribute(_name)
+    
+    def add_attributes(self, _params):
+        self.dbworkflowinstance.add_attributes(_params)
+    
+    def add_attribute(self, _name, _value):
+        self.dbworkflowinstance.add_attribute(_name, _value)
+    
+    # ----------------------------
+    
+    def get_results(self):
+        return self.dbworkflowinstance.get_results()
+    
+    def get_result(self, _name):
+        return self.dbworkflowinstance.get_result(_name)
+    
+    def add_results(self, _params):
+        self.dbworkflowinstance.add_results(_params)
+    
+    def add_result(self, _name, _value):
+        self.dbworkflowinstance.add_result(_name, _value)
+    
+        
+    # ----------------------------
+    #         Parameters
+    # ----------------------------
 
-    def get_status(self, status):
+    def get_status(self):
         
         return self.dbworkflowinstance.status
     
     def set_status(self, status):
         
         self.dbworkflowinstance.set_status(status)
+    
     # ----------------------------
     #         Steps
     # ----------------------------
 
-    def get_step(self,method):
+    def get_step(self,step_method):
 
         """
         Query the database to return the step object, on which calculations and next step are
@@ -200,16 +250,23 @@ class Workflow(object):
         test whether is the first time the method gets called. 
         """
         
-        if isinstance(method, basestring):
-            method_name = method
+        if isinstance(step_method, basestring):
+            step_method_name = step_method
         else:
-            method_name = method.__name__
+            
+            if not getattr(step_method,"is_wf_step"):
+                raise AiidaException("Cannot get step calculations from a method not decorated as Workflow method")
         
-        if (method_name==WF_STEP_EXIT):
-            raise InternalError("Cannot query a step with name {}, reserved string".format(method_name))            
-    
-        step, created = self.dbworkflowinstance.steps.get_or_create(name=method_name, user=get_automatic_user())
-        return step
+            step_method_name = step_method.wf_step_name
+        
+        if (step_method_name==wf_exit_call):
+            raise InternalError("Cannot query a step with name {0}, reserved string".format(step_method_name))            
+        
+        try:
+            step = self.dbworkflowinstance.steps.get(name=step_method_name, user=get_automatic_user())
+            return step
+        except ObjectDoesNotExist:
+            return None
 
     def get_steps(self, state = None):
         
@@ -217,9 +274,96 @@ class Workflow(object):
             return self.dbworkflowinstance.steps.all()#.values_list('name',flat=True)
         else:
             return self.dbworkflowinstance.steps.filter(status=state)    
-
-
-    def next(self, method):
+    
+    def has_step(self,method):
+        
+        return not self.get_step(method)==None
+    
+    # ----------------------------
+    #         Next
+    # ----------------------------
+    
+    @classmethod
+    def step(cls, fun):
+        from aiida.common.datastructures import wf_start_call, wf_states, wf_exit_call, wf_default_call
+        
+        wrapped_method = fun.__name__
+        logger.info("ME: {0}".format(wrapped_method))
+        
+        # This function gets called only if the method is launched with the execution brakets ()
+        # Otherwise, when the methid is addressed in a next() call this never gets called and only the 
+        # attributes are added
+        def wrapper(cls, *args, **kwargs):
+            
+            """
+            """
+            # Start the workflow if this is the start method
+            
+            if (cls._get_dbworkflowinstance().status==wf_states.INITIALIZED):
+                cls._get_dbworkflowinstance().set_status(wf_states.RUNNING)
+            
+            if len(args)>0:
+                raise AiidaException("A step method cannot have any argument, use add_attribute to the workflow")
+            
+            # If a method is launched and the step is RUNNING or INITIALIZED we should stop
+            if cls.has_step(wrapped_method) and \
+               not (cls.get_step(wrapped_method).status == wf_states.ERROR or \
+                    cls.get_step(wrapped_method).status == wf_states.SLEEP or \
+                    cls.get_step(wrapped_method).nextcall == wf_default_call or \
+                    cls.get_step(wrapped_method).nextcall == wrapped_method \
+                    #cls.has_step(wrapped_method) \
+                    ):
+                
+                raise AiidaException("The step {0} has already been initialized, cannot change this outside the parent workflow !".format(wrapped_method))
+            
+            # If a method is launched and the step is halted for ERROR, then clean the step and re-launch
+            if cls.has_step(wrapped_method) and \
+               ( cls.get_step(wrapped_method).status == wf_states.ERROR or\
+                 cls.get_step(wrapped_method).status == wf_states.SLEEP ):
+                
+                for w in cls.get_step(wrapped_method).get_sub_workflows():
+                    w.kill()
+                cls.get_step(wrapped_method).remove_sub_workflows()
+                
+                for c in cls.get_step(wrapped_method).get_calculations():
+                    #c.kill()
+                    logger.error("TODO - Implement kill function in calculation")
+                cls.get_step(wrapped_method).remove_calculations()
+                
+                #self.get_steps(wrapped_method).set_nextcall(wf_exit_call)
+            
+            method_step, created = cls.dbworkflowinstance.steps.get_or_create(name=wrapped_method, user=get_automatic_user())    
+            
+            if not created:
+                method_step.set_status(wf_states.INITIALIZED)
+            
+            try:
+                fun(cls)
+            except:
+                
+                import sys, os, traceback
+                exc_type, exc_value, exc_traceback = sys.exc_info()                
+                cls.append_to_report("ERROR ! This workflow got and error in the {0} method, we report down the stack trace".format(caller_method))
+#                cls.append_to_report("filename: {0}".format(exc_traceback.tb_frame.f_code.co_filename))
+#                cls.append_to_report("lineno: {0}".format(exc_traceback.tb_lineno))
+#                cls.append_to_report("name: {0}".format(exc_traceback.tb_frame.f_code.co_name))
+#                cls.append_to_report("type: {0}".format(exc_type.__name__))
+#                cls.append_to_report("message: {0}".format(exc_value.message))
+                cls.append_to_report("full traceback: {0}".format(traceback.format_exc()))
+                method_step.set_status(wf_states.ERROR)
+            
+            return None 
+        
+        
+        out = wrapper
+        
+        wrapper.is_wf_step = True
+        wrapper.wf_step_name = fun.__name__
+        
+        return wrapper
+        
+        
+    def next(self, next_method):
         
         """
         Add to the database the next step to be called after the completion of the calculation.
@@ -227,33 +371,56 @@ class Workflow(object):
         or a method.
         """
         
-        if isinstance(method, basestring):
-            method_name = method
-        else:
-            method_name = method.__name__
-            
         import inspect
         from aiida.common.datastructures import wf_start_call, wf_states, wf_exit_call
-
+ 
         # ATTENTION: Do not move this code outside or encapsulate it in a function
-        curframe = inspect.currentframe()
-        calframe = inspect.getouterframes(curframe, 2)
-        caller_funct = calframe[1][3]
+        curframe      = inspect.currentframe()
+        calframe      = inspect.getouterframes(curframe, 2)
+        caller_method = calframe[1][3]
         
-        self.get_step(caller_funct).set_nextcall(method_name)
+#         logger.info("We are in next call of {0} in {1}".format(caller_method, self.uuid()))
         
-        if (caller_funct==wf_start_call):
-            self.dbworkflowinstance.set_status(wf_states.RUNNING)
-
-
-    def start(self,*args,**kwargs):
-        pass
-
-    def exit(self):
-        pass
-#
+        if next_method is None:
+            raise AiidaException("The next method is None, probably you passed a method with parenthesis ??")
+             
+        if not self.has_step(caller_method):
+            raise AiidaException("The caller method is either not a step or has not been registered as one")
+        
+        if not next_method.__name__== wf_exit_call:
+            try:
+                is_wf_step = getattr(next_method,"is_wf_step", None)
+            except AttributeError:
+                raise AiidaException("Cannot add as next call a method not decorated as Workflow method")
+        else:
+            print "Next is an end call of {0} in {1}".format(caller_method, self.uuid())
+            
+        # Retrieve the caller method
+        method_step = self.dbworkflowinstance.steps.get(name=caller_method, user=get_automatic_user())
+        
+        # Attach calculations
+        if caller_method in self.attach_calc_lazy_storage:
+            for c in self.attach_calc_lazy_storage[caller_method]:
+                method_step.add_calculation(c)
+        
+        # Attach sub-workflows
+        if caller_method in self.attach_subwf_lazy_storage:
+            for w in self.attach_subwf_lazy_storage[caller_method]:
+                method_step.add_sub_workflow(w)
+        
+        # Set the next method
+        if not next_method.__name__== wf_exit_call:
+            next_method_name = next_method.wf_step_name
+        else:
+            next_method_name = wf_exit_call
+            
+#         logger.info("Adding step {0} after {1} in {2}".format(next_method_name, caller_method, self.uuid()))
+        method_step.set_nextcall(next_method_name)
+        
+        #method_step.set_status(wf_states.RUNNING)
+        
     # ----------------------------
-    #         Calculations
+    #         Attachments
     # ----------------------------
     
     def attach_calculation(self, calc):
@@ -278,33 +445,10 @@ class Workflow(object):
         calframe = inspect.getouterframes(curframe, 2)
         caller_funct = calframe[1][3]
         
-        self.get_step(caller_funct).add_calculation(calc)
-    
-    
-    def get_step_calculations(self, step, calc_state = None):
+        if not caller_funct in self.attach_calc_lazy_storage:
+            self.attach_calc_lazy_storage[caller_funct] = []
+        self.attach_calc_lazy_storage[caller_funct].append(calc)
         
-        """
-        Retrieve the calculations connected to a specific step in the database. If the step
-        is not existent it returns None, useful for simpler grammatic in the worflow definition.
-        """
-        
-        if isinstance(step, basestring):
-            method_name = step
-        else:
-            method_name = step.__name__
-        
-        try:
-            stp = self.dbworkflowinstance.steps.get(name=method_name)
-            return stp.get_calculations(state = calc_state)
-        except ObjectDoesNotExist:
-            return None
-        except:
-            raise AiidaException("Cannot retrive step's calculations")
-
-    # ----------------------------
-    #      Subworkflows
-    # ----------------------------
-
     def attach_workflow(self, sub_wf):
         
         from aiida.orm import Calculation
@@ -317,12 +461,34 @@ class Workflow(object):
         calframe = inspect.getouterframes(curframe, 2)
         caller_funct = calframe[1][3]
         
-        self.get_step(caller_funct).add_sub_workflow(sub_wf)
+        if not caller_funct in self.attach_subwf_lazy_storage:
+            self.attach_subwf_lazy_storage[caller_funct] = []
+        self.attach_subwf_lazy_storage[caller_funct].append(sub_wf)
+        
+    
+    # ----------------------------
+    #      Subworkflows
+    # ----------------------------
 
 
-    # ----------------------------
-    #         Support methods
-    # ----------------------------
+    def get_step_calculations(self, step_method, calc_state = None):
+        
+        """
+        Retrieve the calculations connected to a specific step in the database. If the step
+        is not existent it returns None, useful for simpler grammatic in the worflow definition.
+        """
+       
+        if not getattr(step_method,"is_wf_step"):
+            raise AiidaException("Cannot get step calculations from a method not decorated as Workflow method")
+        
+        step_method_name = step_method.wf_step_name
+        
+        try:
+            stp = self.get_step(step_method_name)
+            return stp.get_calculations(state = calc_state)
+        except:
+            raise AiidaException("Cannot retrieve step's calculations")
+        
 
     def kill_step_calculations(self, step):
         
@@ -330,6 +496,10 @@ class Workflow(object):
             
         for c in step.get_calculations():
             c._set_state(calc_states.FINISHED)
+    
+    # ----------------------------
+    #         Support methods
+    # ----------------------------
 
 
     def kill(self):
@@ -344,7 +514,23 @@ class Workflow(object):
         
         self.dbworkflowinstance.set_status(wf_states.FINISHED)
     
-    
+    def sleep(self):
+        
+        import inspect
+        from aiida.common.datastructures import wf_start_call, wf_states, wf_exit_call
+        from aiida.common.datastructures import calc_states, wf_states
+        
+        # ATTENTION: Do not move this code outside or encapsulate it in a function
+        curframe      = inspect.currentframe()
+        calframe      = inspect.getouterframes(curframe, 2)
+        caller_method = calframe[1][3]
+        
+        if not self.has_step(caller_method):
+            raise AiidaException("The caller method is either not a step or has not been registered as one")
+ 
+        self.get_step(caller_method).set_status(wf_states.SLEEP)
+        
+        
     # ------------------------------------------------------
     #         Report
     # ------------------------------------------------------
@@ -405,6 +591,23 @@ class Workflow(object):
             
             if module_class==elem_name: #and issubclass(elem, Workflow):
                 return getattr(wf_mod,elem_name)(uuid=wf_db.uuid)
+    
+    @classmethod      
+    def get_subclass_from_pk(cls,pk):
+        
+        """
+        Simple method to use retrieve starting from pk
+        """
+        
+        from aiida.djsite.db.models import DbWorkflow
+        
+        try:
+            
+            dbworkflowinstance    = DbWorkflow.objects.get(pk=pk)
+            return cls.get_subclass_from_dbnode(dbworkflowinstance)
+                  
+        except ObjectDoesNotExist:
+            raise NotExistent("No entry with pk={} found".format(pk))
                            
     @classmethod      
     def get_subclass_from_uuid(cls,uuid):
@@ -427,11 +630,31 @@ class Workflow(object):
     def kill_by_uuid(cls,uuid):
     
         cls.retrieve_by_uuid(uuid).kill()
+    
+    def exit(self):
+        pass
+    
+    def revive(self):
         
+        self.set_status(wf_states.RUNNING)
+    
 # ------------------------------------------------------
 #         Module functions for monitor and control
 # ------------------------------------------------------
 
+def kill_all():
+    
+    from aiida.djsite.utils import get_automatic_user
+    from aiida.djsite.db.models import DbWorkflow
+    from django.db.models import Q
+    
+    q_object = Q(user=get_automatic_user())
+    q_object.add(~Q(status=wf_states.FINISHED), Q.AND)
+    w_list = DbWorkflow.objects.filter(q_object)
+    
+    for w in w_list:
+        Workflow(uuid=w.uuid).kill()
+        
 accumulated_tab = 0
 tab_size = 2
     
@@ -477,24 +700,29 @@ def list_workflows(ext=False,expired=False):
         
         global accumulated_tab, tab_size
         
-        print get_separator(accumulated_tab,tab_size, title=True)+" Workflow {0} ({1}) is {2} [{3}]".format(w.module_class, w.uuid, w.status, str_timedelta(now-w.time))
+#        print get_separator(accumulated_tab,tab_size, title=True)+" Workflow {0} ({1}) is {2} [{3}]".format(w.module_class, w.uuid, w.status, str_timedelta(now-w.time))
+# Print PK instead of UUID
+        print get_separator(accumulated_tab,tab_size, title=True)+" Workflow {0} (pk={1}) is {2} [{3}]".format(w.module_class, w.pk, w.status, str_timedelta(now-w.time))
             
-        if expired:
-            steps = w.steps.all()
-        else:
-            steps = w.steps.filter(status=wf_states.RUNNING)
-        
+#         if expired:
+#             steps = w.steps.all()
+#         else:
+#             steps = w.steps.filter(status=wf_states.RUNNING)
+        steps = w.steps.all()
+
         accumulated_tab+=1
         for s in steps:
             
-            print get_separator(accumulated_tab,tab_size)+" Step: {0} is {1}".format(s.name,s.status)
+            print get_separator(accumulated_tab,tab_size)+" Step: {0} (->{1}) is {2}".format(s.name,s.nextcall,s.status)
             
             ## Calculations
-            calcs  = s.get_calculations().filter(attributes__key="_state").values_list("uuid", "ctime", "attributes__tval")
+            calcs  = s.get_calculations().filter(attributes__key="_state").values_list("uuid", "ctime", "attributes__tval", "pk")
             
             accumulated_tab+=1
             for c in calcs:
-                print get_separator(accumulated_tab,tab_size)+" Calculation ({0}) is {1}".format(c[0], c[2])
+                #print get_separator(accumulated_tab,tab_size)+" Calculation ({0}) is {1}".format(c[0], c[2])                
+                print get_separator(accumulated_tab,tab_size)+" Calculation (pk={0}) is {1}".format(c[3], c[2])                
+
             accumulated_tab-=1
         
             ## SubWorkflows
@@ -506,11 +734,15 @@ def list_workflows(ext=False,expired=False):
             accumulated_tab-=1
             
         accumulated_tab-=1
-        
+    
+    q_object = Q(user=get_automatic_user())
+    
     if expired:
-        w_list = DbWorkflow.objects.filter(Q(user=get_automatic_user()))
+        w_list = DbWorkflow.objects.filter(q_object)
     else:
-        w_list = DbWorkflow.objects.filter(Q(user=get_automatic_user()) & (Q(status=wf_states.RUNNING)))
+        
+        q_object.add(~Q(status=wf_states.FINISHED), Q.AND)
+        w_list = DbWorkflow.objects.filter(q_object)
     
     
     for w in w_list:

@@ -287,7 +287,8 @@ class Workflow(object):
     def step(cls, fun):
         from aiida.common.datastructures import wf_start_call, wf_states, wf_exit_call, wf_default_call
         
-        caller_method = fun.__name__
+        wrapped_method = fun.__name__
+        logger.info("ME: {0}".format(wrapped_method))
         
         # This function gets called only if the method is launched with the execution brakets ()
         # Otherwise, when the methid is addressed in a next() call this never gets called and only the 
@@ -305,31 +306,33 @@ class Workflow(object):
                 raise AiidaException("A step method cannot have any argument, use add_attribute to the workflow")
             
             # If a method is launched and the step is RUNNING or INITIALIZED we should stop
-            if cls.has_step(caller_method) and \
-               not (cls.get_step(caller_method).status == wf_states.ERROR or \
-                    cls.get_step(caller_method).status == wf_states.SLEEP or \
-                    cls.get_step(caller_method).nextcall == wf_default_call or \
-                    cls.get_step(caller_method).nextcall == caller_method):
+            if cls.has_step(wrapped_method) and \
+               not (cls.get_step(wrapped_method).status == wf_states.ERROR or \
+                    cls.get_step(wrapped_method).status == wf_states.SLEEP or \
+                    cls.get_step(wrapped_method).nextcall == wf_default_call or \
+                    cls.get_step(wrapped_method).nextcall == wrapped_method \
+                    #cls.has_step(wrapped_method) \
+                    ):
                 
-                raise AiidaException("The method {0} has already been initialized and has a next pointer, cannot change this !".format(caller_method))
+                raise AiidaException("The step {0} has already been initialized, cannot change this outside the parent workflow !".format(wrapped_method))
             
             # If a method is launched and the step is halted for ERROR, then clean the step and re-launch
-            if cls.has_step(caller_method) and \
-               ( cls.get_step(caller_method).status == wf_states.ERROR or\
-                 cls.get_step(caller_method).status == wf_states.SLEEP ):
+            if cls.has_step(wrapped_method) and \
+               ( cls.get_step(wrapped_method).status == wf_states.ERROR or\
+                 cls.get_step(wrapped_method).status == wf_states.SLEEP ):
                 
-                for w in cls.get_step(caller_method).get_sub_workflows():
+                for w in cls.get_step(wrapped_method).get_sub_workflows():
                     w.kill()
-                cls.get_step(caller_method).remove_sub_workflows()
+                cls.get_step(wrapped_method).remove_sub_workflows()
                 
-                for c in cls.get_step(caller_method).get_calculations():
+                for c in cls.get_step(wrapped_method).get_calculations():
                     #c.kill()
                     logger.error("TODO - Implement kill function in calculation")
-                cls.get_step(caller_method).remove_calculations()
+                cls.get_step(wrapped_method).remove_calculations()
                 
-                #self.get_steps(caller_method).set_nextcall(wf_exit_call)
+                #self.get_steps(wrapped_method).set_nextcall(wf_exit_call)
             
-            method_step, created = cls.dbworkflowinstance.steps.get_or_create(name=caller_method, user=get_automatic_user())    
+            method_step, created = cls.dbworkflowinstance.steps.get_or_create(name=wrapped_method, user=get_automatic_user())    
             
             if not created:
                 method_step.set_status(wf_states.INITIALIZED)
@@ -376,8 +379,11 @@ class Workflow(object):
         calframe      = inspect.getouterframes(curframe, 2)
         caller_method = calframe[1][3]
         
-        logger.info("We are in next call of {0} in {1}".format(caller_method, self.uuid()))
+#         logger.info("We are in next call of {0} in {1}".format(caller_method, self.uuid()))
         
+        if next_method is None:
+            raise AiidaException("The next method is None, probably you passed a method with parenthesis ??")
+             
         if not self.has_step(caller_method):
             raise AiidaException("The caller method is either not a step or has not been registered as one")
         
@@ -408,7 +414,7 @@ class Workflow(object):
         else:
             next_method_name = wf_exit_call
             
-        logger.info("Adding step {0} after {1} in {2}".format(next_method_name, caller_method, self.uuid()))
+#         logger.info("Adding step {0} after {1} in {2}".format(next_method_name, caller_method, self.uuid()))
         method_step.set_nextcall(next_method_name)
         
         #method_step.set_status(wf_states.RUNNING)

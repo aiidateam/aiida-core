@@ -37,6 +37,8 @@ def launch_ws():
 
     w = WorkflowCustomEOS(params=params)
     w.start()
+
+    return w
     
 if __name__ == "__main__":
     if sys.argv[1:] == ["--run"]:

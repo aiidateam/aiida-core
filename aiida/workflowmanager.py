@@ -61,7 +61,13 @@ def execute_steps():
                 
                 s.set_status(wf_states.FINISHED)
                 advance_workflow(w, s)
-
+            
+            elif calc_states.NEW in s_calc_states:
+                    
+                for s_calc in s.get_calculations(calc_states.NEW):
+                    obj_calc = Calculation.get_subclass_from_uuid(uuid=s_calc.uuid)
+                    obj_calc.submit()
+                    logger.info("[{0}] Step: {1} launching calculation {2}".format(w.uuid,s.name, s_calc.uuid))
                     
         # Launch INITIALIZED Workflows with all calculations and subworkflows
         #

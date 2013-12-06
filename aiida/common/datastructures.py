@@ -9,6 +9,7 @@ class CalcState(Enumerate):
 calc_states = CalcState((
         'UNDETERMINED',
         'NEW', # just created
+        'TOSUBMIT', # used by the executionmanager to submit new calculations scheduled to be submitted
         'SUBMITTING', # being submitted to cluster
         'WITHSCHEDULER', # on the scheduler (on any unfinished status:
                          # QUEUED, QUEUED_HELD, SUSPENDED, RUNNING)

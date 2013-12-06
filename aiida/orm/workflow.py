@@ -51,7 +51,7 @@ class Workflow(object):
                         raise ValueError("If you pass a UUID, you cannot pass any further parameter")
                 
                 try:
-                        self.dbworkflowinstance    = DbWorkflow.objects.get(uuid=uuid)
+                        self._dbworkflowinstance   = DbWorkflow.objects.get(uuid=uuid)
                         self._to_be_stored         = False
                         
                         #self.logger.info("Workflow found in the database, now retrieved")
@@ -128,7 +128,17 @@ class Workflow(object):
 #                raise AiidaException("Cannot start an already started workflow")   
 #         else:
 #             return attr
+    
+    @property
+    def dbworkflowinstance(self):
+        from aiida.djsite.db.models import DbWorkflow
         
+        if self._dbworkflowinstance.pk is None:
+            return self._dbworkflowinstance
+        else:
+            self._dbworkflowinstance = DbWorkflow.objects.get(pk=self._dbworkflowinstance.pk)
+            return self._dbworkflowinstance
+    
     @classmethod
     def query(cls,*args,**kwargs):
         """
@@ -150,7 +160,7 @@ class Workflow(object):
         
         
         # This stores the MD5 as well, to test in case the workflow has been modified after the launch 
-        self.dbworkflowinstance = DbWorkflow.objects.create(user=get_automatic_user(),
+        self._dbworkflowinstance = DbWorkflow.objects.create(user=get_automatic_user(),
                                                         module = self.caller_module,
                                                         module_class = self.caller_module_class,
                                                         script_path = self.caller_file,
@@ -540,7 +550,7 @@ class Workflow(object):
         if len(self.dbworkflowinstance.parent_workflow_step.all())==0:
             return self.dbworkflowinstance.report.splitlines()
         else:
-            return Workflow(uuid=self.dbworkflowinstance.parent_workflow_step.get().parent.uuid).get_report()
+            return Workflow.get_subclass_from_uuid(self.dbworkflowinstance.parent_workflow_step.get().parent.uuid).get_report()
     
     def clear_report(self):
         

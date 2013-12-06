@@ -258,6 +258,21 @@ class Calculation(Node):
     def get_state(self):
         return self.get_attr('state', None)
 
+    def is_new(self):
+        return self.get_state() in [self.NEW]
+
+    def is_running(self):
+        return self.get_state() in [
+            self.TOSUBMIT, self.SUBMITTING, self.WITHSCHEDULER,
+            self.COMPUTED, self.RETRIEVING, self.PARSING]
+
+    def has_finished_ok(self):
+        return self.get_state() in [self.FINISHED]
+
+    def has_failed(self):
+        return self.get_state() in [self.UNDETERMINED, self.SUBMISSIONFAILED,
+            self.RETRIEVALFAILED, self.PARSINGFAILED, self.FAILED]
+
     def _set_remote_workdir(self, remote_workdir):
         if self.get_state() != calc_states.SUBMITTING:   
             raise ModificationNotAllowed(

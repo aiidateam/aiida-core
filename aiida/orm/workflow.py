@@ -338,15 +338,15 @@ class Workflow(object):
                 fun(cls)
             except:
                 
-                import sys, os
+                import sys, os, traceback
                 exc_type, exc_value, exc_traceback = sys.exc_info()                
                 cls.append_to_report("ERROR ! This workflow got and error in the {0} method, we report down the stack trace".format(caller_method))
-                cls.append_to_report("filename: {0}".format(exc_traceback.tb_frame.f_code.co_filename))
-                cls.append_to_report("lineno: {0}".format(exc_traceback.tb_lineno))
-                cls.append_to_report("name: {0}".format(exc_traceback.tb_frame.f_code.co_name))
-                cls.append_to_report("type: {0}".format(exc_type.__name__))
-                cls.append_to_report("message: {0}".format(exc_value.message))
-                
+#                cls.append_to_report("filename: {0}".format(exc_traceback.tb_frame.f_code.co_filename))
+#                cls.append_to_report("lineno: {0}".format(exc_traceback.tb_lineno))
+#                cls.append_to_report("name: {0}".format(exc_traceback.tb_frame.f_code.co_name))
+#                cls.append_to_report("type: {0}".format(exc_type.__name__))
+#                cls.append_to_report("message: {0}".format(exc_value.message))
+                cls.append_to_report("full traceback: {0}".format(traceback.format_exc()))
                 method_step.set_status(wf_states.ERROR)
             
             return None 
@@ -585,6 +585,23 @@ class Workflow(object):
             
             if module_class==elem_name: #and issubclass(elem, Workflow):
                 return getattr(wf_mod,elem_name)(uuid=wf_db.uuid)
+    
+    @classmethod      
+    def get_subclass_from_pk(cls,pk):
+        
+        """
+        Simple method to use retrieve starting from pk
+        """
+        
+        from aiida.djsite.db.models import DbWorkflow
+        
+        try:
+            
+            dbworkflowinstance    = DbWorkflow.objects.get(pk=pk)
+            return cls.get_subclass_from_dbnode(dbworkflowinstance)
+                  
+        except ObjectDoesNotExist:
+            raise NotExistent("No entry with pk={} found".format(pk))
                            
     @classmethod      
     def get_subclass_from_uuid(cls,uuid):
@@ -677,7 +694,9 @@ def list_workflows(ext=False,expired=False):
         
         global accumulated_tab, tab_size
         
-        print get_separator(accumulated_tab,tab_size, title=True)+" Workflow {0} ({1}) is {2} [{3}]".format(w.module_class, w.uuid, w.status, str_timedelta(now-w.time))
+#        print get_separator(accumulated_tab,tab_size, title=True)+" Workflow {0} ({1}) is {2} [{3}]".format(w.module_class, w.uuid, w.status, str_timedelta(now-w.time))
+# Print PK instead of UUID
+        print get_separator(accumulated_tab,tab_size, title=True)+" Workflow {0} (pk={1}) is {2} [{3}]".format(w.module_class, w.pk, w.status, str_timedelta(now-w.time))
             
 #         if expired:
 #             steps = w.steps.all()
@@ -691,11 +710,13 @@ def list_workflows(ext=False,expired=False):
             print get_separator(accumulated_tab,tab_size)+" Step: {0} (->{1}) is {2}".format(s.name,s.nextcall,s.status)
             
             ## Calculations
-            calcs  = s.get_calculations().filter(attributes__key="_state").values_list("uuid", "ctime", "attributes__tval")
+            calcs  = s.get_calculations().filter(attributes__key="_state").values_list("uuid", "ctime", "attributes__tval", "pk")
             
             accumulated_tab+=1
             for c in calcs:
-                print get_separator(accumulated_tab,tab_size)+" Calculation ({0}) is {1}".format(c[0], c[2])
+                #print get_separator(accumulated_tab,tab_size)+" Calculation ({0}) is {1}".format(c[0], c[2])                
+                print get_separator(accumulated_tab,tab_size)+" Calculation (pk={0}) is {1}".format(c[3], c[2])                
+
             accumulated_tab-=1
         
             ## SubWorkflows

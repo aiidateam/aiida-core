@@ -9,7 +9,7 @@ UpfData = DataFactory('upf')
 ParameterData = DataFactory('parameter')
 StructureData = DataFactory('structure')
 
-logger = aiidalogger.getChild('WorkflowDemo')
+logger = aiidalogger.getChild('WorkflowXTiO3')
 
 ## ===============================================
 ##    WorkflowXTiO3
@@ -68,6 +68,7 @@ class WorkflowXTiO3(Workflow):
     ##    Wf steps
     ## ===============================================
     
+    @Workflow.step
     def start(self):
         
         params = self.get_parameters()
@@ -86,7 +87,8 @@ class WorkflowXTiO3(Workflow):
             self.attach_workflow(w)
         
         self.next(self.run_ph)
-
+        
+    @Workflow.step
     def run_ph(self):
         
         # Get calculations
@@ -102,7 +104,8 @@ class WorkflowXTiO3(Workflow):
             self.attach_calculation(ph_calc)
             
         self.next(self.final_step)
-        
+    
+    @Workflow.step
     def final_step(self):
         
         #self.append_to_report(x_material+"Ti03 EOS started")
@@ -218,7 +221,7 @@ class WorkflowXTiO3_EOS(Workflow):
     ##    Wf steps
     ## ===============================================
     
-    
+    @Workflow.step
     def start(self):
         
         params = self.get_parameters()
@@ -227,6 +230,7 @@ class WorkflowXTiO3_EOS(Workflow):
         self.append_to_report(x_material+"Ti03 EOS started")
         self.next(self.eos)
     
+    @Workflow.step
     def eos(self):
         
         from aiida.orm import Code, Computer, CalculationFactory
@@ -257,7 +261,7 @@ class WorkflowXTiO3_EOS(Workflow):
             
         self.next(self.optimize)
         
-        
+    @Workflow.step  
     def optimize(self):
         
         from aiida.orm.data.parameter import ParameterData
@@ -304,7 +308,8 @@ class WorkflowXTiO3_EOS(Workflow):
         
         
         self.next(self.final_step)
-        
+     
+    @Workflow.step   
     def final_step(self):
         
         x_material   = self.get_parameter("x_material")

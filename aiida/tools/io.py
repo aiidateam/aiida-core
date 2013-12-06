@@ -440,7 +440,7 @@ def dirty_qe(s, fout=None, force_kind_order = False, velocities=None):
     data =  output.getvalue()
     output.close()
     
-    if not fout==None:
+    if fout is not None:
          with open(fout, "w") as f:
             f.write(data)
    

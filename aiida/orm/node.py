@@ -758,7 +758,7 @@ class Node(object):
         Can be called only before storing.
         """
         if not self._to_be_stored:
-            raise ValueError("Cannot delete a path after storing the node")
+            raise ModificationNotAllowed("Cannot delete a path after storing the node")
         
         if os.path.isabs(path):
             raise ValueError("The destination path in remove_path must be a relative path")
@@ -777,7 +777,7 @@ class Node(object):
         Decide also how to store. If in two separate subfolders, remember to reset the limit.
         """
         if not self._to_be_stored:
-            raise ValueError("Cannot insert a path after storing the node")
+            raise ModificationNotAllowed("Cannot insert a path after storing the node")
         
         if not os.path.isabs(src_abs):
             raise ValueError("The source path in add_path must be absolute")

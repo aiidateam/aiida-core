@@ -323,17 +323,17 @@ database (the ``pk``, i.e. the principal key, and the ``uuid``).
 
    verdi code relabel
    
-  command; you can also list all available codes with::
+  command; you can also list all available codes (and their relative IDs) with::
 
    verdi code list
    
   and then get the information of a specific code with::
 
-   verdi code show
+   verdi code show "ID"
    
-  Finally, to delete a code (only if it not used by any calculation) use::
+  (Without the quotation marks!) Finally, to delete a code (only if it wasn't used by any calculation) use::
 
-   verdi code delete
+   verdi code delete "ID"
    
    
 And now, you are ready to launch your calculations! You may want to follow to

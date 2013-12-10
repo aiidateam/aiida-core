@@ -7,9 +7,21 @@ class ArrayData(Data):
     installed).
     
     Each array is stored within the Node folder as a different .npy file.
+    
+    :note: Before storing, no caching is done: if you perform a
+      :py:meth:`.get_array` call, the array will be re-read from disk.
+      If instead the ArrayData node has already been stored,
+      the array is cached in memory after the first read, and the cached array
+      is used thereafter.
+      If too much RAM memory is used, you can clear the
+      cache with the :py:meth:`.clear_internal_cache` method. 
     """
 
-    def __init__(self,dictionary=None,**kwargs):
+    def __init__(self,**kwargs):
+        # Will cache arrays (after storing) so that they are read from file only
+        # once
+        self._cached_arrays = {}
+        
         super(ArrayData,self).__init__(**kwargs)
 
         uuid = kwargs.pop('uuid', None)
@@ -45,9 +57,10 @@ class ArrayData(Data):
         """
         return [i[:-4] for i in self.get_path_list() if i.endswith('.npy')]
 
-    def get_cached_shape(self, name):
+    def get_shape(self, name):
         """
-        Return the shape of an array from the value cached in the properties.
+        Return the shape of an array (read from the value cached in the
+        properties for efficiency reasons).
         
         :param name: The name of the array.
         """
@@ -68,15 +81,36 @@ class ArrayData(Data):
         :param name: The name of the array to return.
         """
         import numpy
+
+        # raw function used only internally
+        def get_array_from_file(self, name):
+            fname = '{}.npy'.format(name)
+            if fname not in self.get_path_list():
+                raise KeyError("Array with name '{}' not found in node pk={}".format(
+                    name, self.pk))
         
-        fname = '{}.npy'.format(name)
-        if fname not in self.get_path_list():
-            raise KeyError("Array with name '{}' not found in node pk={}".format(
-                name, self.pk))
+            array = numpy.load(self.get_abs_path(fname))
+            return array
+
         
-        array = numpy.load(self.get_abs_path(fname))
-        return array
+        # Return with proper caching, but only after storing. Before, instead,
+        # always re-read from disk
+        if self._to_be_stored:
+            return get_array_from_file(self,name)
+        else:
+            if name not in self._cached_arrays:
+                self._cached_arrays[name] = get_array_from_file(self,name)
+            return self._cached_arrays[name]
     
+    def clear_internal_cache(self):
+        """
+        Clear the internal memory cache where the arrays are stored after being
+        read from disk (used in order to reduce at minimum the readings from
+        disk).
+        This function is useful if you want to keep the node in memory, but you
+        do not want to waste memory to cache the arrays in RAM.
+        """
+        self._cached_arrays = {}
     
     def set_array(self, name, array):
         """

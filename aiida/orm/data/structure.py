@@ -330,17 +330,11 @@ class StructureData(Data):
         cell = kwargs.pop('cell',None)
         pbc = kwargs.pop('pbc',None)
         aseatoms = kwargs.pop('ase',None)
-        raw_kinds = kwargs.pop('raw_kinds',None)
         
         if kwargs:
             raise ValueError("There are unrecognized flags passed to the "
                              "constructor: {}".format(kwargs.keys()))
-        
-        if raw_kinds is not None: 
-            self.set_attr('kinds',raw_kinds)
-        else:
-            self.set_attr('kinds',[])
-            
+                    
         self.set_attr('sites',[])
         if aseatoms is not None:
             if cell is not None or pbc is not None:
@@ -513,7 +507,7 @@ class StructureData(Data):
                 to the constructor of the Kind object. For the 'name' parameter,
                 see the note below.
                 
-        Note on the 'name' parameter (that is, the name of the kind):
+        .. note :: Note on the 'name' parameter (that is, the name of the kind):
 
             * if specified, no checks are done on existing species. Simply,
               a new kind with that name is created. If there is a name
@@ -543,7 +537,7 @@ class StructureData(Data):
             if position is None:
                 raise ValueError("You have to specify the position of the "
                                  "new atom")
-            # all remaining parmeters
+            # all remaining parameters
             kind = Kind(**kwargs)
         
         # I look for identical species only if the name is not specified
@@ -712,6 +706,25 @@ class StructureData(Data):
         except AttributeError:
             raw_kinds = []
         return [Kind(raw=i) for i in raw_kinds]
+    
+    def get_kind(self, kind_name):
+        """
+        Return the kind object associated with the given kind name.
+        
+        :param kind_name: String, the name of the kind you want to get
+        
+        :return: The Kind object associated with the given kind_name, if
+           a Kind with the given name is present in the structure.
+        
+        :raise: ValueError if the kind_name is not present.
+        """
+        kinds = self.kinds
+        kind_names = [k.name for k in kinds]
+        
+        # Will raise ValueError if the kind is not present
+        return kinds[kind_names.index(kind_name)]
+            
+        
     
     @property
     def cell(self):

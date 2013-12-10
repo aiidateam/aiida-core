@@ -18,14 +18,16 @@ l = w.get_step_calculations(w.start)
 a = []
 b = []
 en = []
+jid = []
 
 for c in l:
     a.append(c.res.cell['lattice_vectors'][0][0])
     b.append(c.res.cell['lattice_vectors'][1][1])
     en.append(c.res.energy[-1])
+    jid.append(c.pk)
 
 print "# a b en"
-for aa, bb, een in  sorted(zip(a,b,en)):
-    print aa, bb, een
+for bb, aa, een, pk in  sorted(zip(b,a,en,jid)):
+    print aa, bb, een, pk
 
 

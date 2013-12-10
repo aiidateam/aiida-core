@@ -507,7 +507,7 @@ class StructureData(Data):
                 to the constructor of the Kind object. For the 'name' parameter,
                 see the note below.
                 
-        Note on the 'name' parameter (that is, the name of the kind):
+        .. note :: Note on the 'name' parameter (that is, the name of the kind):
 
             * if specified, no checks are done on existing species. Simply,
               a new kind with that name is created. If there is a name

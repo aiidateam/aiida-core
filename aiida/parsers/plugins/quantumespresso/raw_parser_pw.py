@@ -4,13 +4,9 @@ The function that needs to be called from outside is parse_raw_output().
 Ideally, the functions should work even without aiida and will return a dictionary with parsed keys.
 """
 from xml.dom.minidom import parseString
-import os #, sys
+import os
 import string
-#from distutils.version import StrictVersion
-#from aiida.common.extendeddicts import FixedFieldsAttributeDict
-#from aiida.parsers.plugins.quantumespresso.constants import *
 from aiida.parsers.plugins.quantumespresso.constants import ry_to_ev,hartree_to_ev,bohr_to_ang
-#from aiida.parsers.exceptions import FailedJobError
 from aiida.parsers.plugins.quantumespresso import QEOutputParsingError
 
 # TODO: need to check the units of energy 

@@ -2022,3 +2022,118 @@ class TestStructureDataFromAse(AiidaTestCase):
                                                      'Cu', 'Cu', 'Cu', 
                                                      'Cu', 'Cu'])
         self.assertEquals(list(b.get_tags()), [0, 1, 0, 2, 3, 4, 5, 6])
+
+
+class TestArrayData(AiidaTestCase):
+    """
+    Tests the ArrayData objects.
+    """
+
+    def test_creation(self):
+        """
+        Check the methods to add, remove, modify, and get arrays and
+        array shapes.
+        """
+        from aiida.orm.data.array import ArrayData
+        import numpy
+        
+        # Create a node with two arrays
+        n = ArrayData()
+        first = numpy.random.rand(2,3,4)
+        n.set_array('first', first)
+        
+        second = numpy.arange(10)
+        n.set_array('second', second)
+
+        third = numpy.random.rand(6,6)
+        n.set_array('third', third)
+
+        
+        # Check if the arrays are there
+        self.assertEquals(set(['first', 'second', 'third']), set(n.arraynames()))
+        self.assertAlmostEquals(abs(first-n.get_array('first')).max(), 0.)
+        self.assertAlmostEquals(abs(second-n.get_array('second')).max(), 0.)
+        self.assertAlmostEquals(abs(third-n.get_array('third')).max(), 0.)
+        self.assertEquals(first.shape, n.get_cached_shape('first'))
+        self.assertEquals(second.shape, n.get_cached_shape('second')) 
+        self.assertEquals(third.shape, n.get_cached_shape('third')) 
+        
+        with self.assertRaises(KeyError):
+            n.get_array('nonexistent_array')
+        
+        # Delete an array, and try to delete a non-existing one
+        n.delete_array('third')
+        with self.assertRaises(KeyError):
+            n.delete_array('nonexistent_array')
+          
+        # Overwrite an array
+        first = numpy.random.rand(4,5,6)
+        n.set_array('first', first)
+        
+        # Check if the arrays are there, and if I am getting the new one
+        self.assertEquals(set(['first', 'second']), set(n.arraynames()))
+        self.assertAlmostEquals(abs(first-n.get_array('first')).max(), 0.)
+        self.assertAlmostEquals(abs(second-n.get_array('second')).max(), 0.)
+        self.assertEquals(first.shape, n.get_cached_shape('first'))
+        self.assertEquals(second.shape, n.get_cached_shape('second')) 
+        
+        n.store()
+        
+        # Same checks, after storing
+        self.assertEquals(set(['first', 'second']), set(n.arraynames()))
+        self.assertAlmostEquals(abs(first-n.get_array('first')).max(), 0.)
+        self.assertAlmostEquals(abs(second-n.get_array('second')).max(), 0.)
+        self.assertEquals(first.shape, n.get_cached_shape('first'))
+        self.assertEquals(second.shape, n.get_cached_shape('second')) 
+
+        n2 = ArrayData(uuid=n.uuid)
+        
+        # Same checks, after reloading
+        self.assertEquals(set(['first', 'second']), set(n2.arraynames()))
+        self.assertAlmostEquals(abs(first-n2.get_array('first')).max(), 0.)
+        self.assertAlmostEquals(abs(second-n2.get_array('second')).max(), 0.)
+        self.assertEquals(first.shape, n2.get_cached_shape('first'))
+        self.assertEquals(second.shape, n2.get_cached_shape('second')) 
+
+        # Check that I cannot modify the node after storing
+        with self.assertRaises(ModificationNotAllowed):
+            n.delete_array('first')
+        with self.assertRaises(ModificationNotAllowed):
+            n.set_array('second', first)
+            
+        # Again same checks, to verify that the attempts to delete/overwrite
+        # arrays did not damage the node content
+        self.assertEquals(set(['first', 'second']), set(n.arraynames()))
+        self.assertAlmostEquals(abs(first-n.get_array('first')).max(), 0.)
+        self.assertAlmostEquals(abs(second-n.get_array('second')).max(), 0.)
+        self.assertEquals(first.shape, n.get_cached_shape('first'))
+        self.assertEquals(second.shape, n.get_cached_shape('second')) 
+        
+    def test_iteration(self):
+        """
+        Check the functionality of the iterarrays() iterator
+        """
+        from aiida.orm.data.array import ArrayData
+        import numpy
+        
+        # Create a node with two arrays
+        n = ArrayData()
+        first = numpy.random.rand(2,3,4)
+        n.set_array('first', first)
+        
+        second = numpy.arange(10)
+        n.set_array('second', second)
+
+        third = numpy.random.rand(6,6)
+        n.set_array('third', third)
+    
+        for name, array in n.iterarrays():
+            if name == 'first':
+                self.assertAlmostEquals(abs(first-array).max(), 0.)
+            if name == 'second':
+                self.assertAlmostEquals(abs(second-array).max(), 0.)
+            if name == 'third':
+                self.assertAlmostEquals(abs(third-array).max(), 0.)
+        
+        
+        

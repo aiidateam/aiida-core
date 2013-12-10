@@ -86,6 +86,7 @@ class WorkflowCustomEOS(Workflow):
                 'calculation': 'vc-relax',
                 'restart_mode': 'from_scratch',
                 'wf_collect': True,
+                'forc_conv_thr': 1.e-5,
                 },
             'SYSTEM': {
                 'ecutwfc': 60.,

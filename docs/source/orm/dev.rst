@@ -42,10 +42,13 @@ ORM documentation: Data
 
 .. automodule:: aiida.orm.data
 
+.. _my-ref-to-structure:
+
 Structure
 +++++++++
 .. automodule:: aiida.orm.data.structure
    :members:
+   :special-members: __init__
 
 Folder
 ++++++
@@ -87,7 +90,6 @@ ORM documentation: Calculation
 .. automodule:: aiida.orm.calculation
    :members:
    :special-members: __init__
-   :undoc-members:
 
 Quantum Espresso - PW
 +++++++++++++++++++++

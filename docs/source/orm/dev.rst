@@ -21,7 +21,8 @@ Node
 ++++
 .. automodule:: aiida.orm.node
    :members:
-   
+   :special-members: __init__
+
 Workflow
 ++++++++
 .. automodule:: aiida.orm.workflow

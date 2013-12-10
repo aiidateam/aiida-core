@@ -3,6 +3,10 @@
 # (the -U option also upgrades packages; from the second time on,
 # just run
 # pip install -r requirements.txt
+#
+# NOTE: before running the command above, you need to install a recent version
+# of pip from the website, and then possibly install/upgrade setuptools using
+# sudo pip install --upgrade setuptools
 
 # Django
 django>=1.5.1,<1.6
@@ -39,3 +43,7 @@ paramiko>=1.10
 
 #ICSD tools
 PyMySQL>=0.6.1
+
+# NumPy, mainly for the ArrayData objects but sometimes
+# used also for arrays in other parts of the code
+numpy

@@ -302,7 +302,11 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
         # issue a warning if there is any stderr output
         # but I strip lines containing "Unknown Job Id", that happens
         # also when I ask for a calculation that has finished
-        filtered_stderr = '\n'.join(l for l in stderr.split('\n') if "Unknown Job Id" not in l)
+        #
+        # I also strip for "Job has finished" because this happens for
+        # those schedulers configured to leave the job in the output
+        # of qstat for some time after job completion.
+        filtered_stderr = '\n'.join(l for l in stderr.split('\n') if "Unknown Job Id" not in l and "Job has finished" not in l)
         if filtered_stderr.strip():
             self.logger.warning("Warning in _parse_joblist_output, non-empty "
                 "(filtered) stderr='{}'".format(filtered_stderr))

@@ -56,6 +56,11 @@ Folder
 .. automodule:: aiida.orm.data.folder
    :members:
 
+Singlefile
+++++++++++
+.. automodule:: aiida.orm.data.singlefile
+   :members:
+
 Upf
 +++
 .. automodule:: aiida.orm.data.upf
@@ -71,9 +76,14 @@ Remote
 .. automodule:: aiida.orm.data.remote
    :members:
 
-Singlefile
-++++++++++
-.. automodule:: aiida.orm.data.singlefile
+ArrayData
++++++++++
+.. automodule:: aiida.orm.data.array
+   :members:
+
+TrajectoryData
+++++++++++++++
+.. automodule:: aiida.orm.data.array.trajectory
    :members:
 
 

@@ -490,6 +490,11 @@ class DbWorkflow(m.Model):
         self.status = _status;
         self.save()
     
+    def set_script_md5(self, _md5):
+        
+        self.script_md5 = _md5
+        self.save()
+        
     # ------------------------------------------------
     #     Get data
     # ------------------------------------------------
@@ -723,7 +728,7 @@ class DbWorkflowStep(m.Model):
     sub_workflows = m.ManyToManyField(DbWorkflow, symmetrical=False, related_name="parent_workflow_step")
     
     
-    status        = m.CharField(max_length=255, choices=zip(list(wf_states), list(wf_states)), default=wf_states.INITIALIZED)
+    status        = m.CharField(max_length=255, choices=zip(list(wf_states), list(wf_states)), default=wf_states.CREATED)
 
     class Meta:
         unique_together = (("parent", "name"))

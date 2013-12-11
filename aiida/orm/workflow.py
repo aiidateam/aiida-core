@@ -779,20 +779,26 @@ class Workflow(object):
 # ------------------------------------------------------
 
 def kill_from_pk(pk):
+    """
+    Kills a workflow without loading the class, useful when there was a problem
+    and the workflow definition module was changed/deleted (and the workflow
+    cannot be reloaded).
     
-    try:
-        w = Workflow.get_subclass_from_pk(pk, no_check=True)
-        w.kill()
-    except:
-        raise InternalError("Cannot kill the workflows with PK {}".format(pk))
+    :param pk: the principal key (id) of the workflow to kill
+    """
+    
+    w = Workflow.query(pk=pk)[0].kill()
     
 def kill_from_uuid(uuid):
+    """
+    Kills a workflow without loading the class, useful when there was a problem
+    and the workflow definition module was changed/deleted (and the workflow
+    cannot be reloaded).
     
-    try:
-        w = Workflow.get_subclass_from_uuid(uuid, no_check=True)
-        w.kill()
-    except:
-        raise InternalError("Cannot kill the workflows with UUID {}".format(uuid))
+    :param uuid: the UUID of the workflow to kill
+    """
+    
+    w = Workflow.query(uuid=uuid)[0].kill()
     
 def kill_all():
     

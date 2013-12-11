@@ -69,7 +69,9 @@ class SimpleTrajectory(object):
                 if str(self.struct.sites[s].kind) == elems[k]:
                     self.ordering[k].append(s)
                     count+=1
-         
+        
+        print self.ordering
+        
     def append(self, step, time, cell, pos, data, vel=None):
         
         self.steps.append(step)
@@ -123,29 +125,35 @@ class SimpleTrajectory(object):
         et    = {}
         all_temp = []
         
+        _masses = self.struct.get_ase().get_masses()
+        _at_nums = self.struct.get_ase().get_atomic_numbers()
         for t in range(len(self.times)):
             
-            masses = np.take(self.struct.get_ase().get_masses(), np.concatenate(self.ordering))
-            all_temp.append(getIonT(masses,self.velocities[t].get_array()))
+            masses = np.take(_masses, np.concatenate(self.ordering))
+            all_temp.append(getIonT_K(masses,self.velocities[t].get_array()))
             
             for i in range(len(self.ordering)):
             
-                at_num   = self.struct.get_ase().get_atomic_numbers()[self.ordering[i][0]]
+                at_num   = _at_nums[self.ordering[i][0]]
                 w_name   = ase.data.chemical_symbols[at_num]
             
                 for at in range(len(self.ordering[i])):
                 
                     ion_key        = w_name+"_"+str(self.ordering[i][at])
-                    ekins["ekin_"+ion_key] = []
-                    et["temp_"+ion_key]    = []
                     
-                    mi  = [self.struct.get_ase().get_masses()[self.ordering[i][at]]]
-                    vi  = [self.velocities[t].get_array()[self.ordering[i][at]]]
+                    if "ekin_"+ion_key not in ekins: 
+                        ekins["ekin_"+ion_key] = []
                     
-                    eki = getIonEkin(mi,vi)
+                    if "temp_"+ion_key not in et:
+                        et["temp_"+ion_key]    = []
+                    
+                    mi  = np.array([_masses[self.ordering[i][at]]])
+                    vi  = np.array([self.velocities[t].get_array()[self.ordering[i][at]]])
+                    
+                    eki = getIonEkin_SI(mi,vi)
                     ekins["ekin_"+ion_key].append(eki)
                     
-                    eti = getIonT(mi,vi)
+                    eti = getIonT_K(mi,vi)
                     et["temp_"+ion_key].append(eti)
             
         
@@ -170,7 +178,7 @@ class SimpleTrajectory(object):
         self.df.tempp[start:len(self.df)].plot(ax3)
         plt.show()
     
-    def plot_ekin_data(self, start=0):
+    def plot_temp_data(self, start=0):
         
         import matplotlib.pyplot as plt
         import ase.data
@@ -196,10 +204,41 @@ class SimpleTrajectory(object):
                 ekins.append("ekin_"+ion_key)
                 et.append("temp_"+ion_key)
                 
-        self.df[ekins].plot(ax=ax1, legend=False)
-        self.df[ekins].mean().plot(kind='bar', ax=ax2, yerr=self.df[ekins].std())
-        #self.df[et.keys()].values().hist(ax=ax3, bins=50)
+        self.df[et].plot(ax=ax1, legend=False)
+        self.df[et].mean().plot(kind='bar', ax=ax2, yerr=self.df[et].std())
+        self.df.all_temp.plot(ax=ax3)
+        self.df.tempp.plot(ax=ax3)
         
+        plt.show()
+    
+    def plot_temp_data_by_species(self, start=0):
+        
+        import matplotlib.pyplot as plt
+        import ase.data
+        
+        specs = len(self.ordering)
+        
+        axes = []
+        axes_2 = []
+        for i in range(specs):
+            axes.append(plt.subplot2grid((specs,2), (i,0)))
+            axes_2.append(plt.subplot2grid((specs,2), (i,1)))
+        
+        for i in range(len(self.ordering)):
+            
+            et    = []
+            
+            at_num   = self.struct.get_ase().get_atomic_numbers()[self.ordering[i][0]]
+            w_name   = ase.data.chemical_symbols[at_num]
+            
+            for at in range(len(self.ordering[i])):
+                ion_key        = w_name+"_"+str(self.ordering[i][at])
+                et.append("temp_"+ion_key)
+                
+            
+            self.df[et].plot(ax=axes[i], legend=False)
+            (self.df[et].sum(axis=1)/len(self.ordering[i])).plot(ax=axes_2[i], legend=False)
+            
         plt.show()
         
     def export_to_vft(self, fname=None):
@@ -414,15 +453,17 @@ def import_cp(s, dir, prefix, vel=False):
     return trajectories_all
 
 
-def getIonEkin(mi, vi):
+def getIonEkin_SI(mi, vi):
     
     import numpy as np
-    return 0.5 * np.dot(mi, np.sum(np.square(vi), axis=1))
+    conv = amu_si/electronmass_si
+    return 0.5 * np.dot(mi*conv, np.sum(np.square(vi), axis=1))
 
-def getIonT(mi, vi):
+def getIonT_K(mi, vi):
     
     import numpy as np
-    return 0.5 * np.dot(mi, np.sum(np.square(vi), axis=1)) / (len(mi)) / (1.5*k_boltzmann_au)
+    conv = amu_si/electronmass_si
+    return 0.5 * np.dot(mi*conv, np.sum(np.square(vi), axis=1)) / (len(mi)) / (1.5*k_boltzmann_au)
 
 def MaxwellBoltzmannDistribution(masses_amu, temp, kb=k_boltzmann_au, seed=None): 
         
@@ -434,7 +475,7 @@ def MaxwellBoltzmannDistribution(masses_amu, temp, kb=k_boltzmann_au, seed=None)
     
         ri     = np.random.standard_normal((len(mi), 3))
         vi     = ri * np.sqrt((kb * temp)/(mi[:, np.newaxis]))
-        T0     = getIonT(mi, vi)
+        T0     = getIonT_K(mi, vi)
         gamma  = temp / T0
         vi     = vi * np.sqrt(gamma/3.0)
         

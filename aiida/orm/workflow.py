@@ -674,12 +674,10 @@ def list_workflows(ext=False,expired=False):
     Simple printer witht all the workflow status, to remove when REST APIs will be ready.
     """
     
-    from aiida.djsite.utils import get_automatic_user
     from aiida.djsite.db.models import DbWorkflow
     from django.db.models import Q
     import datetime
     from django.utils.timezone import utc
-    import ntpath
     
     now = datetime.datetime.utcnow().replace(tzinfo=utc)
     

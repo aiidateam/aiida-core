@@ -64,7 +64,6 @@ class Workflow(VerdiCommand):
         from aiida.common.utils import load_django
         load_django()
         
-        
         extended   = False
         expired    = False
         
@@ -75,4 +74,4 @@ class Workflow(VerdiCommand):
             expired   = True
             
         import aiida.orm.workflow as wfs
-        wfs.list_workflows(ext=extended, expired=expired) 
+        print wfs.list_workflows(ext=extended, expired=expired) 

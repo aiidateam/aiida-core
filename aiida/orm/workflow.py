@@ -15,6 +15,9 @@ logger = aiidalogger.getChild('Workflow')
 # Name to be used for the section
 _section_name = 'workflow'
 
+# The name of the subfolder in which to put the files/directories added with add_path
+_path_subfolder_name = 'path'
+
 class Workflow(object):
     
     """
@@ -55,6 +58,7 @@ class Workflow(object):
                         self._to_be_stored         = False
                         
                         #self.logger.info("Workflow found in the database, now retrieved")
+                        self._repo_folder = RepositoryFolder(section=_section_name, uuid=self.uuid)
                         
                 except ObjectDoesNotExist:
                         raise NotExistent("No entry with the UUID {} found".format(uuid))
@@ -97,7 +101,9 @@ class Workflow(object):
                 self.caller_file   = caller_file
                 self.caller_funct  = caller_funct
                 
-                self.store()
+                self._temp_folder = SandboxFolder()
+                self.current_folder.insert_path(self.caller_file, self.caller_module_class)
+                # self.store()
                                 
                 # Test if there are parameters as input
                 params = kwargs.pop('params', None)
@@ -110,25 +116,13 @@ class Workflow(object):
             self.attach_calc_lazy_storage  = {}
             self.attach_subwf_lazy_storage = {}
             
-#     def __getattribute__(self,name):
-#         
-#         try:
-#             attr = object.__getattribute__(self, name)
-#         except:
-#             raise AttributeError()
-#         
-#         if hasattr(attr, '__call__') and name=="start":
-#             
-#             self.logger.debug("Start attributes: {0}".format(attr.__dict__))
-#             
-#             if self.get_status() == wf_states.INITIALIZED:
-#                 self.set_status(wf_states.RUNNING)
-#                 return attr
-#             else:
-#                raise AiidaException("Cannot start an already started workflow")   
-#         else:
-#             return attr
-    
+            
+            
+            
+    ## --------------------------------------
+    ##    DB Instance
+    ## --------------------------------------
+
     @property
     def dbworkflowinstance(self):
         from aiida.djsite.db.models import DbWorkflow
@@ -138,6 +132,84 @@ class Workflow(object):
         else:
             self._dbworkflowinstance = DbWorkflow.objects.get(pk=self._dbworkflowinstance.pk)
             return self._dbworkflowinstance
+    
+    def _get_dbworkflowinstance(self):
+        return self.dbworkflowinstance
+    
+    
+    ## --------------------------------------
+    ##    Folder
+    ## --------------------------------------
+    
+    @property
+    def repo_folder(self):
+        return self._repo_folder
+
+    @property
+    def current_folder(self):
+        if self._to_be_stored:
+            return self.get_temp_folder()
+        else:
+            return self.repo_folder
+
+    @property
+    def path_subfolder(self):
+        return self.current_folder.get_subfolder(
+            _path_subfolder_name,reset_limit=True)
+
+    def get_path_list(self, subfolder='.'):
+        return self.path_subfolder.get_subfolder(subfolder).get_content_list()
+
+    def get_temp_folder(self):
+        if self._temp_folder is None:
+            raise InternalError("The temp_folder was asked for node {}, but it is "
+                                "not set!".format(self.uuid))
+        return self._temp_folder
+
+    def remove_path(self,path):
+        """
+        Remove a file or directory from the repository directory.
+
+        Can be called only before storing.
+        """
+        if not self._to_be_stored:
+            raise ValueError("Cannot delete a path after storing the node")
+        
+        if os.path.isabs(path):
+            raise ValueError("The destination path in remove_path must be a relative path")
+        self.path_subfolder.remove_path(path)
+
+    def add_path(self,src_abs,dst_path):
+        """
+        Copy a file or folder from a local file inside the repository directory.
+        If there is a subpath, folders will be created.
+
+        Copy to a cache directory if the entry has not been saved yet.
+        src_abs: the absolute path of the file to copy.
+        dst_filename: the (relative) path on which to copy.
+        """
+        if not self._to_be_stored:
+            raise ValueError("Cannot insert a path after storing the node")
+        
+        if not os.path.isabs(src_abs):
+            raise ValueError("The source path in add_path must be absolute")
+        if os.path.isabs(dst_path):
+            raise ValueError("The destination path in add_path must be a filename without any subfolder")
+        self.path_subfolder.insert_path(src_abs,dst_path)
+
+
+    def get_abs_path(self,path,section=_path_subfolder_name):
+        """
+        TODO: For the moment works only for one kind of files, 'path' (internal files)
+        """
+        if os.path.isabs(path):
+            raise ValueError("The path in get_abs_path must be relative")
+        return self.current_folder.get_subfolder(section,reset_limit=True).get_abs_path(path,check_existence=True)
+    
+    ## --------------------------------------
+    ##    Store and infos
+    ## --------------------------------------
+
     
     @classmethod
     def query(cls,*args,**kwargs):
@@ -166,11 +238,17 @@ class Workflow(object):
                                                         script_path = self.caller_file,
                                                         script_md5 = hashlib.md5(self.caller_file).hexdigest()
                                                         )
+        if hasattr(self, '_params'):
+            self.dbworkflowinstance.add_parameters(self._params, force=False)
+        
+        self._repo_folder = RepositoryFolder(section=_section_name, uuid=self.uuid)
+        self.repo_folder.replace_with_folder(self.get_temp_folder().abspath, move=True, overwrite=True)
+        
+        self._temp_folder       = None  
         self._to_be_stored      = False
     
-    def _get_dbworkflowinstance(self):
-        return self.dbworkflowinstance
     
+    @property
     def uuid(self):
         return self.dbworkflowinstance.uuid
     
@@ -197,15 +275,22 @@ class Workflow(object):
         Adds parameters to the workflow that are both stored and used every time
         the workflow engine re-initialize the specific workflow to launch the new methods.  
         """
-        
-        #self.params = params
-        self.dbworkflowinstance.add_parameters(params, force=force)
+        if self._to_be_stored:
+            self._params = params
+        else:
+            self.dbworkflowinstance.add_parameters(params, force=force)
     
     def get_parameters(self):
-        return self.dbworkflowinstance.get_parameters()
+        if self._to_be_stored:
+            return self._params
+        else:
+            return self.dbworkflowinstance.get_parameters()
     
     def get_parameter(self, _name):
-        return self.dbworkflowinstance.get_parameter(_name)
+        if self._to_be_stored:
+            return self._params(_name)
+        else:
+            return self.dbworkflowinstance.get_parameter(_name)
     
     # ----------------------------
     
@@ -237,7 +322,7 @@ class Workflow(object):
     
         
     # ----------------------------
-    #         Parameters
+    #         Statuses
     # ----------------------------
 
     def get_status(self):
@@ -247,6 +332,23 @@ class Workflow(object):
     def set_status(self, status):
         
         self.dbworkflowinstance.set_status(status)
+    
+    def is_new(self):
+        from aiida.common.datastructures import wf_start_call, wf_states, wf_exit_call, wf_default_call
+        return self.dbworkflowinstance.status == wf_states.CREATED
+    
+    def is_running(self):
+        from aiida.common.datastructures import wf_start_call, wf_states, wf_exit_call, wf_default_call
+        return self.dbworkflowinstance.status == wf_states.RUNNING
+    
+    def has_finished_ok(self):
+        from aiida.common.datastructures import wf_start_call, wf_states, wf_exit_call, wf_default_call
+        return self.dbworkflowinstance.status in [wf_states.FINISHED,wf_states.SLEEP] 
+    
+    def has_failed(self):
+        from aiida.common.datastructures import wf_start_call, wf_states, wf_exit_call, wf_default_call
+        return self.dbworkflowinstance.status == wf_states.ERROR
+    
     
     # ----------------------------
     #         Steps
@@ -298,7 +400,6 @@ class Workflow(object):
         from aiida.common.datastructures import wf_start_call, wf_states, wf_exit_call, wf_default_call
         
         wrapped_method = fun.__name__
-        logger.info("ME: {0}".format(wrapped_method))
         
         # This function gets called only if the method is launched with the execution brakets ()
         # Otherwise, when the methid is addressed in a next() call this never gets called and only the 
@@ -307,10 +408,10 @@ class Workflow(object):
             
             """
             """
-            # Start the workflow if this is the start method
             
-            if (cls._get_dbworkflowinstance().status==wf_states.INITIALIZED):
-                cls._get_dbworkflowinstance().set_status(wf_states.RUNNING)
+            # Store the workflow at the first step executed
+            if cls._to_be_stored:
+                cls.store()
             
             if len(args)>0:
                 raise AiidaException("A step method cannot have any argument, use add_attribute to the workflow")
@@ -331,21 +432,15 @@ class Workflow(object):
                ( cls.get_step(wrapped_method).status == wf_states.ERROR or\
                  cls.get_step(wrapped_method).status == wf_states.SLEEP ):
                 
-                for w in cls.get_step(wrapped_method).get_sub_workflows():
-                    w.kill()
+                for w in cls.get_step(wrapped_method).get_sub_workflows(): w.kill()
                 cls.get_step(wrapped_method).remove_sub_workflows()
                 
-                for c in cls.get_step(wrapped_method).get_calculations():
-                    #c.kill()
-                    logger.error("TODO - Implement kill function in calculation")
+                for c in cls.get_step(wrapped_method).get_calculations(): c.kill()
                 cls.get_step(wrapped_method).remove_calculations()
                 
                 #self.get_steps(wrapped_method).set_nextcall(wf_exit_call)
             
             method_step, created = cls.dbworkflowinstance.steps.get_or_create(name=wrapped_method, user=get_automatic_user())    
-            
-            if not created:
-                method_step.set_status(wf_states.INITIALIZED)
             
             try:
                 fun(cls)
@@ -353,12 +448,7 @@ class Workflow(object):
                 
                 import sys, os, traceback
                 exc_type, exc_value, exc_traceback = sys.exc_info()                
-                cls.append_to_report("ERROR ! This workflow got and error in the {0} method, we report down the stack trace".format(caller_method))
-#                cls.append_to_report("filename: {0}".format(exc_traceback.tb_frame.f_code.co_filename))
-#                cls.append_to_report("lineno: {0}".format(exc_traceback.tb_lineno))
-#                cls.append_to_report("name: {0}".format(exc_traceback.tb_frame.f_code.co_name))
-#                cls.append_to_report("type: {0}".format(exc_type.__name__))
-#                cls.append_to_report("message: {0}".format(exc_value.message))
+                cls.append_to_report("ERROR ! This workflow got and error in the {0} method, we report down the stack trace".format(wrapped_method))
                 cls.append_to_report("full traceback: {0}".format(traceback.format_exc()))
                 method_step.set_status(wf_states.ERROR)
             
@@ -381,6 +471,13 @@ class Workflow(object):
         or a method.
         """
         
+        import hashlib
+        md5          = self.dbworkflowinstance.script_md5
+        script_path  = self.dbworkflowinstance.script_path
+        
+        if not md5==hashlib.md5(script_path).hexdigest():
+            raise ValidationError("Unable to load the original workflow module from {}, MD5 has changed".format(script_path))
+        
         import inspect
         from aiida.common.datastructures import wf_start_call, wf_states, wf_exit_call
  
@@ -388,6 +485,7 @@ class Workflow(object):
         curframe      = inspect.currentframe()
         calframe      = inspect.getouterframes(curframe, 2)
         caller_method = calframe[1][3]
+        
         
 #         logger.info("We are in next call of {0} in {1}".format(caller_method, self.uuid()))
         
@@ -403,7 +501,7 @@ class Workflow(object):
             except AttributeError:
                 raise AiidaException("Cannot add as next call a method not decorated as Workflow method")
         else:
-            print "Next is an end call of {0} in {1}".format(caller_method, self.uuid())
+            print "Next is an end call of {0} in {1}".format(caller_method, self.uuid)
             
         # Retrieve the caller method
         method_step = self.dbworkflowinstance.steps.get(name=caller_method, user=get_automatic_user())
@@ -424,11 +522,19 @@ class Workflow(object):
         else:
             next_method_name = wf_exit_call
             
-#         logger.info("Adding step {0} after {1} in {2}".format(next_method_name, caller_method, self.uuid()))
+        #logger.info("Adding step {0} after {1} in {2}".format(next_method_name, caller_method, self.uuid))
         method_step.set_nextcall(next_method_name)
         
-        #method_step.set_status(wf_states.RUNNING)
         
+        """
+        Store the workflow if it has not been done yet. This permits the workflow manager to handle to workflow
+        correctly, and should remove the issue of the workflow starting before all the calculations are 
+        """
+        # 
+        self._get_dbworkflowinstance().set_status(wf_states.RUNNING)
+        method_step.set_status(wf_states.RUNNING)
+        
+            
     # ----------------------------
     #         Attachments
     # ----------------------------
@@ -520,6 +626,7 @@ class Workflow(object):
             self.kill_step_calculations(s)
             
             for w in s.get_sub_workflows():
+                print "Killing {0}".format(w.uuid)
                 w.kill()
         
         self.dbworkflowinstance.set_status(wf_states.FINISHED)
@@ -572,7 +679,7 @@ class Workflow(object):
     # ------------------------------------------------------
     
     @classmethod
-    def get_subclass_from_dbnode(cls,wf_db):
+    def get_subclass_from_dbnode(cls, wf_db, no_check=False):
         
         """
         Core of the workflow next engine. The workflow is checked against MD5 hash of the stored script, 
@@ -586,11 +693,7 @@ class Workflow(object):
         
         module       = wf_db.module
         module_class = wf_db.module_class
-        md5          = wf_db.script_md5
-        script_path  = wf_db.script_path
-         
-        if not md5==hashlib.md5(script_path).hexdigest():
-            raise ValidationError("Unable to load the original workflow module {}, MD5 has changed".format(module))
+        
          
         try:
             wf_mod = importlib.import_module(module)
@@ -603,7 +706,7 @@ class Workflow(object):
                 return getattr(wf_mod,elem_name)(uuid=wf_db.uuid)
     
     @classmethod      
-    def get_subclass_from_pk(cls,pk):
+    def get_subclass_from_pk(cls,pk, no_check=False):
         
         """
         Simple method to use retrieve starting from pk
@@ -614,13 +717,13 @@ class Workflow(object):
         try:
             
             dbworkflowinstance    = DbWorkflow.objects.get(pk=pk)
-            return cls.get_subclass_from_dbnode(dbworkflowinstance)
+            return cls.get_subclass_from_dbnode(dbworkflowinstance, no_check=False)
                   
         except ObjectDoesNotExist:
             raise NotExistent("No entry with pk={} found".format(pk))
                            
     @classmethod      
-    def get_subclass_from_uuid(cls,uuid):
+    def get_subclass_from_uuid(cls,uuid, no_check=False):
         
         """
         Simple method to use retrieve starting from uuid
@@ -631,7 +734,7 @@ class Workflow(object):
         try:
             
             dbworkflowinstance    = DbWorkflow.objects.get(uuid=uuid)
-            return cls.get_subclass_from_dbnode(dbworkflowinstance)
+            return cls.get_subclass_from_dbnode(dbworkflowinstance, no_check=False)
                   
         except ObjectDoesNotExist:
             raise NotExistent("No entry with the UUID {} found".format(uuid))
@@ -646,12 +749,51 @@ class Workflow(object):
     
     def revive(self):
         
+        import hashlib
+        md5          = self.dbworkflowinstance.script_md5
+        script_path  = self.dbworkflowinstance.script_path
+        
+        md5_check    = hashlib.md5(script_path).hexdigest()
+        
+        # MD5 Check before revive
+        if not md5==md5_check:
+            logger.info("The script has changed, MD5 is now updated")
+            self.dbworkflowinstance.set_script_md5(md5_check)
+        
+        # Clear all the erroneous steps
+        err_steps    = self.get_steps(state=wf_states.ERROR)
+        for s in err_steps:
+            
+            for w in s.get_sub_workflows(): w.kill()
+            s.remove_sub_workflows()
+            
+            for c in s.get_calculations(): c.kill()
+            s.remove_calculations()
+            
+            s.set_status(wf_states.INITIALIZED)
+            
         self.set_status(wf_states.RUNNING)
     
 # ------------------------------------------------------
 #         Module functions for monitor and control
 # ------------------------------------------------------
 
+def kill_from_pk(pk):
+    
+    try:
+        w = Workflow.get_subclass_from_pk(pk, no_check=True)
+        w.kill()
+    except:
+        raise InternalError("Cannot kill the workflows with PK {}".format(pk))
+    
+def kill_from_uuid(uuid):
+    
+    try:
+        w = Workflow.get_subclass_from_uuid(uuid, no_check=True)
+        w.kill()
+    except:
+        raise InternalError("Cannot kill the workflows with UUID {}".format(uuid))
+    
 def kill_all():
     
     from aiida.djsite.utils import get_automatic_user
@@ -663,7 +805,7 @@ def kill_all():
     w_list = DbWorkflow.objects.filter(q_object)
     
     for w in w_list:
-        Workflow(uuid=w.uuid).kill()
+        Workflow.get_subclass_from_uuid(w.uuid, no_check=True).kill()
         
 accumulated_tab = 0
 tab_size = 2
@@ -708,34 +850,23 @@ def list_workflows(ext=False,expired=False):
         
         global accumulated_tab, tab_size
         
-#        print get_separator(accumulated_tab,tab_size, title=True)+" Workflow {0} ({1}) is {2} [{3}]".format(w.module_class, w.uuid, w.status, str_timedelta(now-w.time))
-# Print PK instead of UUID
         print get_separator(accumulated_tab,tab_size, title=True)+" Workflow {0} (pk={1}) is {2} [{3}]".format(w.module_class, w.pk, w.status, str_timedelta(now-w.time))
-            
-#         if expired:
-#             steps = w.steps.all()
-#         else:
-#             steps = w.steps.filter(status=wf_states.RUNNING)
         steps = w.steps.all()
 
         accumulated_tab+=1
         for s in steps:
             
             print get_separator(accumulated_tab,tab_size)+" Step: {0} (->{1}) is {2}".format(s.name,s.nextcall,s.status)
-            
-            ## Calculations
             calcs  = s.get_calculations().filter(attributes__key="_state").values_list("uuid", "ctime", "attributes__tval", "pk")
             
             accumulated_tab+=1
             for c in calcs:
-                #print get_separator(accumulated_tab,tab_size)+" Calculation ({0}) is {1}".format(c[0], c[2])                
                 print get_separator(accumulated_tab,tab_size)+" Calculation (pk={0}) is {1}".format(c[3], c[2])                
 
             accumulated_tab-=1
         
             ## SubWorkflows
-            wflows = s.get_sub_workflows()
-            
+            wflows = s.get_sub_workflows()            
             accumulated_tab+=1
             for sw in wflows:
                 print_workflow(sw.dbworkflowinstance, ext=ext)
@@ -751,7 +882,6 @@ def list_workflows(ext=False,expired=False):
         
         q_object.add(~Q(status=wf_states.FINISHED), Q.AND)
         w_list = DbWorkflow.objects.filter(q_object)
-    
     
     for w in w_list:
         

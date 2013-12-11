@@ -30,9 +30,9 @@ def launch_ws():
               'max_wallclock_seconds': 30*60,
               'pseudo_family': 'pbe-rrkjus-pslib030',
               'cell_dofree': 'x',
-              'functionalized': False,
+              'functionalized': True,
               'change_coord': 1, # independent variable is y
-              'value_range': numpy.linspace(2.51,2.59,10).tolist(), # Change cell y value in this range
+              'value_range': numpy.linspace(2.47,2.63,10).tolist(), # Change cell y value in this range
               }
 
     w = WorkflowCustomEOS(params=params)

@@ -128,7 +128,7 @@ def _get_valid_cell(inputcell):
     """
     Return the cell in a valid format from a generic input.
 
-    Raise ValueError if the format is not valid.
+    :raise ValueError: whenever the format is not valid.    
     """
     try:
         the_cell = tuple(tuple(float(c) for c in i) for i in inputcell)
@@ -178,7 +178,7 @@ def _get_valid_pbc(inputpbc):
 
 def has_ase():
     """
-    Returns True if the ase module can be imported, False otherwise.
+    :return: True if the ase module can be imported, False otherwise.
     """
     try:
         import ase
@@ -193,13 +193,11 @@ def calc_cell_volume(cell):
 
     It is calculated as cell[0] . (cell[1] x cell[2]), where . represents
     a dot product and x a cross product.
-
-    Args:
-        cell: the cell vectors; the must be a 3x3 list of lists of floats,
-            no checks are done.
     
-    Returns:
-        the cell volume.
+    :param cell: the cell vectors; the must be a 3x3 list of lists of floats,
+            no other checks are done.
+    
+    :returns: the cell volume.
     """
     # returns the volume of the primitive cell: |a1.(a2xa3)|
     a1 = cell[0]
@@ -239,13 +237,13 @@ def _create_weights_tuple(weights):
 
 def validate_weights_tuple(weights_tuple,threshold):
     """
-    Raises ValueError if the weights_tuple is not valid.
+    Validates the weight of the atomic kinds.
+    
+    :raise: ValueError if the weights_tuple is not valid.
 
-    Args:
-        weights_tuple: the tuple to validate. It must be a
+    :param weights_tuple: the tuple to validate. It must be a
             a tuple of floats (as created by :func:_create_weights_tuple).
-        threshold:
-            a float number used as a threshold to check that the sum 
+    :param threshold: a float number used as a threshold to check that the sum 
             of the weights is <= 1.
     
     If the sum is less than one, it means that there are vacancies.
@@ -259,8 +257,10 @@ def validate_weights_tuple(weights_tuple,threshold):
 
 def is_valid_symbol(symbol):
     """
-    Returns True if the symbol is a valid chemical symbol (with correct
-    capitalization), False otherwise.
+    Validates the chemical symbol name.
+    
+    :return: True if the symbol is a valid chemical symbol (with correct
+        capitalization), False otherwise.
 
     Recognized symbols are for elements from hydrogen (Z=1) to lawrencium
     (Z=103).
@@ -269,8 +269,11 @@ def is_valid_symbol(symbol):
 
 def validate_symbols_tuple(symbols_tuple):
     """
-    Raises a ValueError if any symbol in the tuple is not a valid chemical
-    symbols (with correct capitalization).
+    Used to validate whether the chemical species are valid.
+    
+    :param symbols_tuple: a tuple (or list) with the chemical symbols name.
+    :raises: ValueError if any symbol in the tuple is not a valid chemical
+        symbols (with correct capitalization).
 
     Refer also to the documentation of :func:is_valid_symbol
     """
@@ -286,11 +289,13 @@ def is_ase_atoms(ase_atoms):
     """
     Check if the ase_atoms parameter is actually a ase.Atoms object.
     
-    It requires that ase can be imported doing 'import ase'.
-    
-    TODO: Check if we want to try to import ase and do something reasonable depending on
-    whether ase is there or not.
+    :param ase_atoms: an object, expected to be an ase.Atoms.
+    :return: a boolean.
+
+    Requires the ability to import ase, by doing 'import ase'.
     """
+    #TODO: Check if we want to try to import ase and do something reasonable depending on
+    #      whether ase is there or not.
     import ase
     return isinstance(ase_atoms, ase.Atoms)
 
@@ -305,19 +310,16 @@ class StructureData(Data):
         """
         Initializes the StructureData object with a given cell.
         
-        Args:
-            cell: It can be:
+        :param cell: It can be:
                 1. the three real-space lattice vectors, in angstrom.
                 cell[i] gives the three coordinates of the i-th vector,
                 with i=0,1,2.
-                Default: [[1,0,0],
-                          [0,1,0],
-                          [0,0,1]]
-            pbc: if we want periodic boundary conditions on each of the
+                Default: [[1,0,0],[0,1,0],[0,0,1]]
+        :param pbc: if we want periodic boundary conditions on each of the
                 three real-space directions.
                 Default: [True, True, True]
-            ase: a ase.atoms object, using the ASE python library. If this 
-            parameter is passed, the one above cannot be specified.
+        :param ase: a ase.atoms object, using the ASE python library. If this 
+                parameter is passed, the one above cannot be specified.
         """
         super(StructureData,self).__init__(**kwargs)
 
@@ -328,17 +330,11 @@ class StructureData(Data):
         cell = kwargs.pop('cell',None)
         pbc = kwargs.pop('pbc',None)
         aseatoms = kwargs.pop('ase',None)
-        raw_kinds = kwargs.pop('raw_kinds',None)
         
         if kwargs:
             raise ValueError("There are unrecognized flags passed to the "
                              "constructor: {}".format(kwargs.keys()))
-        
-        if raw_kinds is not None: 
-            self.set_attr('kinds',raw_kinds)
-        else:
-            self.set_attr('kinds',[])
-            
+                    
         self.set_attr('sites',[])
         if aseatoms is not None:
             if cell is not None or pbc is not None:
@@ -364,6 +360,10 @@ class StructureData(Data):
                 self.cell = [[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]
 
     def validate(self):
+        """
+        Performs some standard validation tests.
+        """
+        
         from aiida.common.exceptions import ValidationError
         super(StructureData,self).validate()
 
@@ -415,25 +415,27 @@ class StructureData(Data):
                 
     def get_elements(self):
         """
-        Return a list of elements, as obtained by reading all sites of the
-        StructureData object, keeping all duplicates.
+        
+        :returns: a list of elements, as obtained by reading all sites of the 
+            StructureData object, keeping all duplicates.
         """
         return list(itertools.chain.from_iterable(
                 kind.symbols for kind in self.kinds))
 
     def get_formula(self):
         """
-        Return a string with a formula for the given element.
-        
-        TODO: implement it better! (like Si2 instead of SiSi, Si0.4Ge0.6 instead
-        of SiGe, etc.)
+
+        :returns: a string with the chemical formula for the given structure.
         """
+        # TODO: implement it better! (like Si2 instead of SiSi, Si0.4Ge0.6 instead of SiGe, etc.)
         return "".join(self.get_elements())
 
     def get_ase(self):
         """
-        Return a ASE object corresponding to this StructureData object. Requires to be
-        able to import ase.
+        Get the ASE object.
+        Requires to be able to import ase.
+
+        :return: an ASE object corresponding to this StructureData object. 
 
         Note: If any site is an alloy or has vacancies, a ValueError is raised
         (from the site.get_ase() routine).
@@ -449,9 +451,8 @@ class StructureData(Data):
     def append_kind(self,kind):
         """
         Append a kind to the StructureData. It makes a copy of the kind.
-
-        Args:
-            kind: the site to append, must be a Kind object.
+        
+        :param kind: the site to append, must be a Kind object.
         """
         from aiida.common.exceptions import ModificationNotAllowed
         
@@ -473,9 +474,8 @@ class StructureData(Data):
     def append_site(self,site):
         """
         Append a site to the StructureData. It makes a copy of the site.
-
-        Args:
-            site: the site to append, must be a Site object.
+        
+        :param site: the site to append. It must be a Site object.
         """
         from aiida.common.exceptions import ModificationNotAllowed
         
@@ -503,11 +503,11 @@ class StructureData(Data):
         :param ase: the ase Atom object from which we want to create a new atom
                 (if present, this must be the only parameter)
         :param position: the position of the atom (three numbers in angstrom)
-        :param symbols, weights, name, ...: any further parameter is passed 
+        :param ... symbols, weights, name: any further parameter is passed 
                 to the constructor of the Kind object. For the 'name' parameter,
                 see the note below.
                 
-        Note on the 'name' parameter (that is, the name of the kind):
+        .. note :: Note on the 'name' parameter (that is, the name of the kind):
 
             * if specified, no checks are done on existing species. Simply,
               a new kind with that name is created. If there is a name
@@ -537,7 +537,7 @@ class StructureData(Data):
             if position is None:
                 raise ValueError("You have to specify the position of the "
                                  "new atom")
-            # all remaining parmeters
+            # all remaining parameters
             kind = Kind(**kwargs)
         
         # I look for identical species only if the name is not specified
@@ -687,6 +687,9 @@ class StructureData(Data):
 
     @property
     def sites(self):
+        """
+        Returns a list of sites.
+        """
         try:
             raw_sites = self.get_attr('sites')
         except AttributeError:
@@ -695,14 +698,41 @@ class StructureData(Data):
 
     @property
     def kinds(self):
+        """
+        Returns a list of kinds.
+        """
         try:
             raw_kinds = self.get_attr('kinds')
         except AttributeError:
             raw_kinds = []
         return [Kind(raw=i) for i in raw_kinds]
     
+    def get_kind(self, kind_name):
+        """
+        Return the kind object associated with the given kind name.
+        
+        :param kind_name: String, the name of the kind you want to get
+        
+        :return: The Kind object associated with the given kind_name, if
+           a Kind with the given name is present in the structure.
+        
+        :raise: ValueError if the kind_name is not present.
+        """
+        kinds = self.kinds
+        kind_names = [k.name for k in kinds]
+        
+        # Will raise ValueError if the kind is not present
+        return kinds[kind_names.index(kind_name)]
+            
+        
+    
     @property
     def cell(self):
+        """
+        Returns the cell shape.
+        
+        :return: a 3x3 list of lists.
+        """
         return copy.deepcopy(self.get_attr('cell'))
     
     @cell.setter
@@ -721,10 +751,9 @@ class StructureData(Data):
         """
         Reset the cell of a structure not yet stored to a new value.
 
-        Args:
-            new_cell: list specifying the cell vectors
+        :param new_cell: list specifying the cell vectors
 
-        Raises:
+        :raises:
             ModificationNotAllowed: if object is already stored
         """
         from aiida.common.exceptions import ModificationNotAllowed
@@ -738,18 +767,16 @@ class StructureData(Data):
         """
         Replace all the Site positions attached to the Structure
 
-        Args:
-            new_positions: list of (3D) positions for every sites.
+        :param new_positions: list of (3D) positions for every sites.
 
-            conserve_particle: if True, allows the possibility of removing a site.
+        :param conserve_particle: if True, allows the possibility of removing a site.
             currently not implemented.
 
-        Raises:
-            ModificationNotAllowed: if object is stored already
-            ValueError: if positions are invalid
+        :raises ModificationNotAllowed: if object is stored already
+        :raises ValueError: if positions are invalid
         
-        NOTE: I assume that the order of the new_positions is given in the same 
-              order of the one I'm substituting, i.e. the kind of the site
+        NOTE: it is assumed that the order of the new_positions is given in the same 
+              order of the one it's substituting, i.e. the kind of the site
               will not be checked.
         """
         from aiida.common.exceptions import ModificationNotAllowed
@@ -792,7 +819,9 @@ class StructureData(Data):
     @property
     def pbc(self):
         """
-        Return a tuple of three booleans, each one tells if there are periodic
+        Get the periodic boundary conditions.
+        
+        :return: a tuple of three booleans, each one tells if there are periodic
         boundary conditions for the i-th real-space direction (i=1,2,3)
         """
         #return copy.deepcopy(self._pbc)
@@ -814,22 +843,25 @@ class StructureData(Data):
 
     def is_alloy(self):
         """
-        Returns:
-            a boolean, True if at least one kind is an alloy 
+        To understand if there are alloys in the structure.
+
+        :return: a boolean, True if at least one kind is an alloy 
         """
         return any(s.is_alloy() for s in self.kinds)
 
     def has_vacancies(self):
         """
-        Returns:
-            a boolean, True if at least one kind has a vacancy
+        To understand if there are vacancies in the structure.
+        
+        :return: a boolean, True if at least one kind has a vacancy
         """
         return any(s.has_vacancies() for s in self.kinds)
 
     def get_cell_volume(self):
         """
-        Returns:
-            (float) the cell volume in angstrom^3
+        Returns the cell volume in Angstrom^3.
+        
+        :return: a float.
         """
         return calc_cell_volume(self.cell)
 
@@ -842,24 +874,25 @@ class Kind(object):
     def __init__(self, **kwargs):
         """
         Create a site.
+        One can either pass:
 
-        Args:
-           One can either pass:
-               raw: the raw python dictionary that will be converted to a
+        :param raw: the raw python dictionary that will be converted to a
                Kind object.
-               ase: an ase Atom object
-               kind: a Kind object (to get a copy)
-           Or alternatively the following parameters:
-               symbols: a single string for the symbol of this site, or a list
+        :param ase: an ase Atom object
+        :param kind: a Kind object (to get a copy)
+
+        Or alternatively the following parameters:
+
+        :param symbols: a single string for the symbol of this site, or a list
                    of symbol strings
-               weights (optional): the weights for each atomic species of
+        :param weights (optional): the weights for each atomic species of
                    this site.
                    If only a single symbol is provided, then this value is
                    optional and the weight is set to 1.
-               mass (optional): the mass for this site in atomic mass units.
+        :param mass (optional): the mass for this site in atomic mass units.
                    If not provided, the mass is set by the
                    self.reset_mass() function.
-               name: a string that uniquely identifies the kind, and that
+        :param name: a string that uniquely identifies the kind, and that
                    is used to identify the sites. 
         """
         # Internal variables
@@ -947,12 +980,10 @@ class Kind(object):
     def get_raw(self):
         """
         Return the raw version of the site, mapped to a suitable dictionary. 
-
         This is the format that is actually used to store each kind of the 
         structure in the DB.
         
-        Returns:
-            a python dictionary with the kind.
+        :return: a python dictionary with the kind.
         """
         return {
             'symbols': self.symbols,
@@ -1006,9 +1037,10 @@ class Kind(object):
     @property
     def name(self):
         """
-        Return the name of this kind (a string).
-        
+        Return the name of this kind. 
         The name of a kind is used to identify the species of a site.
+
+        :return: a string 
         """
         return self._name
 
@@ -1043,8 +1075,7 @@ class Kind(object):
         (with reasonable thresholds, where applicable): the mass, and the list
         of symbols and of weights.
 
-        Return:
-            A tuple with two elements. The first one is True if the two sites
+        :return: A tuple with two elements. The first one is True if the two sites
             are 'equivalent' (same mass, symbols and weights), False otherwise.
             The second element of the tuple is a string, 
             which is either None (if the first element was True), or contains
@@ -1081,6 +1112,8 @@ class Kind(object):
     def mass(self):
         """
         The mass of this species kind.
+
+        :return: a float
         """
         return self._mass
 
@@ -1175,16 +1208,19 @@ class Kind(object):
 
     def is_alloy(self):
         """
-        Returns True if the kind has more than one element (i.e., 
-        len(self.symbols) != 1), False otherwise.
+        To understand if kind is an alloy.
+        
+        :return: True if the kind has more than one element (i.e., 
+            len(self.symbols) != 1), False otherwise.
         """
         return len(self._symbols) != 1
 
     def has_vacancies(self):
         """
         Returns True if the sum of the weights is less than one.
-
         It uses the internal variable _sum_threshold as a threshold.
+        
+        :return: a boolean
         """
         w_sum = sum(self._weights)
         return not(1. - w_sum < _sum_threshold)
@@ -1204,12 +1240,11 @@ class Site(object):
         """
         Create a site.
 
-        Args:
-            kind: a string that identifies the kind (species) of this site.
+        :param kind: a string that identifies the kind (species) of this site.
                 This has to be found in the list of kinds of the StructureData
                 object. 
                 Validation will be done at the StructureData level.
-            position: the absolute position (three floats) in angstrom
+        :param position: the absolute position (three floats) in angstrom
         """
         self._kind = None
         self._position = None
@@ -1250,12 +1285,10 @@ class Site(object):
     def get_raw(self):
         """
         Return the raw version of the site, mapped to a suitable dictionary. 
-
         This is the format that is actually used to store each site of the 
         structure in the DB.
         
-        Returns:
-            a python dictionary with the site.
+        :return: a python dictionary with the site.
         """
         return {
             'position': self.position,
@@ -1266,8 +1299,7 @@ class Site(object):
         """
         Return a ase.Atom object for this site.
         
-        Args: 
-            kinds: the list of kinds from the StructureData object.
+        :param kinds: the list of kinds from the StructureData object.
 
         Note: If any site is an alloy or has vacancies, a ValueError is raised
             (from the site.get_ase() routine).

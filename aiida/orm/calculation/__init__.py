@@ -12,6 +12,9 @@ from aiida.common.exceptions import ModificationNotAllowed
 _input_subfolder = 'raw_input'
 
 class Calculation(Node):
+    """
+    This class provides the definition of an AiiDA calculation.
+    """
     _updatable_attributes = ('state', 'job_id', 'scheduler_state',
                              'last_jobinfo', 'remote_workdir', 'retrieve_list')
     
@@ -22,8 +25,16 @@ class Calculation(Node):
     
     def __init__(self,*args,**kwargs):
         """
-        Possible arguments:
-        computer, resources
+        Accepts as arguments:
+        
+        :param computer: the computer object on which the calculation
+                         will be computed.
+        :param uuid: used to load an existing calculation from the database. 
+                     If uuid is specified, no other argument has to be specified.
+        :param optional resources: set additional resources used by the scheduler plugin.
+        :param optional withmpi: If true adds the machine dependent mpirun command 
+                                 in front of the executable name. Default=True. 
+        :param optional parser: parser object to be used on the output. Default=self._default_parser
         """
         super(Calculation,self).__init__(*args, **kwargs)
 
@@ -61,12 +72,18 @@ class Calculation(Node):
                              "{}".format(kwargs.keys()))
 
     def store(self):
-        
+        """
+        Store the Calculation in the database.
+        """
         super(Calculation, self).store()
-        
         return self
             
     def validate(self):
+        """
+        Verify if all the input nodes are present and valid.
+
+        :raise: ValidationError: if invalid parameters are found.
+        """
         from aiida.common.exceptions import MissingPluginError, ValidationError
         
         super(Calculation,self).validate()
@@ -133,9 +150,8 @@ class Calculation(Node):
         Copy the content of the folder internally, in a subfolder called
         'raw_input'
 
-        Args:
-            folder_path: the path to the folder from which the content
-                should be taken
+        :param folder_path: the path to the folder from which the content
+               should be taken
         """
         # This function can be called only if the state is SUBMITTING
         if self.get_state() != calc_states.SUBMITTING:
@@ -152,6 +168,12 @@ class Calculation(Node):
 
     @property
     def raw_input_folder(self):
+        """
+        Get the input folder object.
+        
+        :return: the input folder object.
+        :raise: NotExistent: if the raw folder hasn't been created yet
+        """
         from aiida.common.exceptions import NotExistent
 
         return_folder = self.current_folder.get_subfolder(_input_subfolder)
@@ -161,45 +183,114 @@ class Calculation(Node):
             raise NotExistent("raw_input_folder not created yet")
 
     def set_queue_name(self,val):
+        """
+        Set the name of the queue on the remote computer.
+        
+        :param str val: the queue name
+        """
         self.set_attr('queue_name',unicode(val))
 
     def set_import_sys_environment(self,val):
+        """
+        If set to true, the submission script will load the system 
+        environment variables.
+        
+        :param bool val: load the environment if True 
+        """
         self.set_attr('import_sys_environment',bool(val))
 
     def get_import_sys_environment(self):
+        """
+        To check if it's loading the system environment on the submission script.
+        
+        :return: a boolean. If True the system environment will be load.
+        """
         return self.get_attr('import_sys_environment',True)
                 
     def set_priority(self,val):
+        """
+        Set the priority of the job to be queued.
+
+        :param val: the values of priority as accepted by the cluster scheduler.
+        """
         self.set_attr('priority',unicode(val))
     
     def set_max_memory_kb(self,val):
+        """
+        Set the maximum memory to be asked to the scheduler.
+        
+        :param val: an integer. Default=None
+        """
         self.set_attr('max_memory_kb',int(val))
 
     def set_max_wallclock_seconds(self,val):    
+        """
+        Set the wallclock in seconds asked to the scheduler.
+        
+        :param val: An integer. Default=None
+        """
         self.set_attr('max_wallclock_seconds',int(val))
 
     def set_resources(self, **kwargs):
+        """
+        Set the dictionary of resources to be used by the scheduler plugin.
+        """
         self.set_attr('jobresource_params', kwargs)
     
-    def set_withmpi(self,val):        
+    def set_withmpi(self,val):
+        """
+        Set the calculation to use mpi.
+        
+        :param val: A boolean. Default=True
+        """
         self.set_attr('withmpi',val)
 
     def get_withmpi(self):        
+        """
+        Get whether the job is set with mpi execution.
+        
+        :return: a boolean. Default=True.
+        """
         return self.get_attr('withmpi',True)
     
     def get_jobresource_params(self):
+        """
+        Returns the dictionary of the job resources set.
+        
+        :return: a dictionary
+        """
         return self.get_attr('jobresource_params', {})
 
     def get_queue_name(self):
+        """
+        Get the name of the queue on cluster.
+        
+        :return: a string or None.
+        """
         return self.get_attr('queue_name', None)
 
     def get_priority(self):
+        """
+        Get the priority, if set, of the job on the cluster.
+        
+        :return: a string or None
+        """
         return self.get_attr('priority', None)
     
     def get_max_memory_kb(self):
+        """
+        Get the memory requested to the scheduler.
+        
+        :return: an integer
+        """
         return self.get_attr('max_memory_kb', None)
 
-    def get_max_wallclock_seconds(self):	
+    def get_max_wallclock_seconds(self):
+	"""
+        Get the max wallclock time requested to the scheduler.
+        
+        :return: an integer
+        """
         return self.get_attr('max_wallclock_seconds', None)
         
     def add_link_from(self,src,label=None):
@@ -207,6 +298,9 @@ class Calculation(Node):
         Add a link with a code as destination.
         You can use the parameters of the base Node class, in particular the
         label parameter to label the link.
+        
+        :param src: a node of the database. It cannot be a Calculation object.
+        :param str label: Name of the link. Default=None
         '''
         
         from aiida.orm.data import Data
@@ -229,9 +323,12 @@ class Calculation(Node):
 
     def set_computer(self,computer):
         """
-        TODO: probably this method should be in the base class, and
-        check for the type
+        Set the computer to be used by the calculation.
+        
+        :param computer: the computer object
         """
+        #TODO: probably this method should be in the base class, and
+        #      check for the type
         from aiida.djsite.db.models import DbComputer
 
         if self._to_be_stored:
@@ -243,6 +340,11 @@ class Calculation(Node):
                 "Node with uuid={} was already stored".format(self.uuid))
 
     def get_computer(self):
+        """
+        Get the computer associated to the calculation.
+        
+        :return: the Computer object or None.
+        """
         from aiida.orm import Computer
         if self.dbnode.computer is None:
             return None
@@ -256,20 +358,48 @@ class Calculation(Node):
         self.set_attr('state', state)
 
     def get_state(self):
+        """
+        Get the state of the calculation.
+        
+        :return: a string.
+        """
         return self.get_attr('state', None)
 
     def is_new(self):
+        """
+        Get whether the calculation is in the NEW status.
+        
+        :return: a boolean
+        """
         return self.get_state() in [calc_states.NEW]
 
     def is_running(self):
+        """
+        Get whether the calculation is in a running state,
+        i.e. one of TOSUBMIT, SUBMITTING, WITHSCHEDULER, 
+        COMPUTED, RETRIEVING or PARSING.
+        
+        :return: a boolean
+        """
         return self.get_state() in [
             calc_states.TOSUBMIT, calc_states.SUBMITTING, calc_states.WITHSCHEDULER,
             calc_states.COMPUTED, calc_states.RETRIEVING, calc_states.PARSING]
 
     def has_finished_ok(self):
+        """
+        Get whether the calculation is in the FINISHED status.
+        
+        :return: a boolean
+        """
         return self.get_state() in [calc_states.FINISHED]
 
     def has_failed(self):
+        """
+        Get whether the calculation is in a failed status,
+        i.e. UNDETERMINED, SUBMISSIONFAILED, RETRIEVALFAILED, PARSINGFAILED or FAILED.
+        
+        :return: a boolean
+        """
         return self.get_state() in [calc_states.UNDETERMINED, calc_states.SUBMISSIONFAILED,
             calc_states.RETRIEVALFAILED, calc_states.PARSINGFAILED, calc_states.FAILED]
 
@@ -282,6 +412,11 @@ class Calculation(Node):
         self.set_attr('remote_workdir', remote_workdir)
 
     def get_remote_workdir(self):
+        """
+        Get the path to the remote (on cluster) scratch folder of the calculation.
+        
+        :return: a string with the remote path
+        """
         return self.get_attr('remote_workdir', None)
 
     def _set_retrieve_list(self, retrieve_list):
@@ -298,6 +433,12 @@ class Calculation(Node):
         self.set_attr('retrieve_list', retrieve_list)
 
     def get_retrieve_list(self):
+        """
+        Get the list of files/directories to be retrieved on the cluster.
+        Their path is relative to the remote workdirectory path.
+        
+        :return: a list of strings for file/directory names
+        """
         return self.get_attr('retrieve_list', None)
 
     def _set_job_id(self, job_id):
@@ -312,6 +453,11 @@ class Calculation(Node):
         return self.set_attr('job_id', unicode(job_id))
     
     def get_job_id(self):
+        """
+        Get the scheduler job id of the calculation.
+        
+        :return: a string
+        """
         return self.get_attr('job_id', None)
         
     def _set_scheduler_state(self,state):
@@ -320,6 +466,11 @@ class Calculation(Node):
         self.set_attr('scheduler_state', unicode(state))
                 
     def get_scheduler_state(self):
+        """
+        Return the status of the calculation according to the cluster scheduler.
+        
+        :return: a string.
+        """
         return self.get_attr('scheduler_state', None)
 
     def _set_last_jobinfo(self,last_jobinfo):
@@ -328,6 +479,11 @@ class Calculation(Node):
         self.set_attr('last_jobinfo', pickle.dumps(last_jobinfo))
 
     def get_last_jobinfo(self):
+        """
+        Get the last information asked to the scheduler about the status of the job.
+        
+        :return: a JobInfo object (that closely resembles a dictionary) or None.
+        """
         import pickle
         
         last_jobinfo_pickled = self.get_attr('last_jobinfo',None)
@@ -342,25 +498,26 @@ class Calculation(Node):
                            only_computer_user_pairs = False):
         """
         Filter all calculations with a given state.
-
+        
         Issue a warning if the state is not in the list of valid states.
-
-        Args:
-            state: The state to be used to filter (should be a string among 
+        
+        :param string state: The state to be used to filter (should be a string among 
                 those defined in aiida.common.datastructures.calc_states)
-            computer: a Django DbComputer entry, or a Computer object, of a
+        :param computer: a Django DbComputer entry, or a Computer object, of a
                 computer in the DbComputer table.
                 A string for the hostname is also valid.
-            user: a Django entry (or its pk) of a user in the User table;
+        :param user: a Django entry (or its pk) of a user in the User table;
                 if present, the results are restricted to calculations of that
                 specific user
-            only_computer_user_pairs: if False (default) return a queryset 
+        :param bool only_computer_user_pairs: if False (default) return a queryset 
                 where each element is a suitable instance of Node (it should
                 be an instance of Calculation, if everything goes right!)
                 If True, return only a list of tuples, where each tuple is
                 in the format
                 ('computer__id', 'user__id')
                 [where the IDs are the IDs of the respective tables]
+
+        :return: a list of calculation objects matching the filters.
         """
         # I assume that calc_states are strings. If this changes in the future,
         # update the filter below from attributes__tval to the correct field.
@@ -392,7 +549,9 @@ class Calculation(Node):
 
     def use_code(self, code):
         """
-        Set the code for this calculation
+        Set the code for this calculation.
+        
+        :param code: the code object to be used by the calculation.
         """
         from aiida.orm import Code
 
@@ -403,7 +562,9 @@ class Calculation(Node):
         
     def get_linkname_code(self):
         """
-        The name of the link used for the code
+        The name of the link used for the code.
+        
+        :return: a string
         """
         return "code"
         
@@ -434,13 +595,13 @@ class Calculation(Node):
     
     def _get_transport(self):
         """
-        Return the transport for this calculation
+        Return the transport for this calculation.
         """
         return self._get_authinfo().get_transport()
 
     def submit(self):
         """
-        Submit the calculation.
+        Execute the calculation.
         """ 
         from aiida.execmanager import submit_calc
         
@@ -449,14 +610,20 @@ class Calculation(Node):
     def set_parser(self, parser):
         """
         Set a string for the output parser
-        Can be None if no output plugin is available or needed
+        Can be None if no output plugin is available or needed.
+        
+        :param parser: a string identifying the module of the parser. 
+              Such module must be located within the folder 'aiida/parsers/plugins'
         """                
         self.set_attr('parser', parser)
 
     def get_parser_name(self):
         """
-        Return a string for the output parser of this calculation, or None
-        if no parser is needed.
+        Return a string locating the module that contains 
+        the output parser of this calculation, that will be searched
+        in the 'aiida/parsers/plugins' directory. None if no parser is needed/set.
+        
+        :return: a string.
         """
         from aiida.parsers import ParserFactory
                 
@@ -467,7 +634,8 @@ class Calculation(Node):
         Return the output parser object for this calculation, or None
         if no parser is set.
         
-        ParserFactory raises MissingPluginError if the plugin is not found.
+        :return: a Parser class.
+        :raise: MissingPluginError from ParserFactory no plugin is found.
         """
         from aiida.parsers import ParserFactory
         
@@ -480,20 +648,27 @@ class Calculation(Node):
 
     def set_linkname_retrieved(self,linkname):
         """
-        set the linkname of the retrieved data folder object
+        Set the linkname of the retrieved data folder object.
+        
+        :param linkname: a string.
         """
         self.set_attr('linkname_retrieved',linkname)
 
     def get_linkname_retrieved(self):
         """
-        get the linkname of the retrieved data folder object
+        Get the linkname of the retrieved data folder object.
+        
+        :return: a string 
         """
         return self.get_attr('linkname_retrieved')
         
     def get_retrieved(self):
         """
-        return the retrieved data folder, if present.
-        Note: we are assuming only one retrieved folder exists
+        Return the retrieved data folder, if present.
+
+        :return: the retrieved data folder object.
+        
+        :note: it is assumed that only one retrieved folder exists.
         """
         from aiida.orm import DataFactory
         
@@ -509,9 +684,9 @@ class Calculation(Node):
         and raises an exception is something goes wrong. 
         No changes of calculation status are done (they will be done later by
         the calculation manager).
-        
-        ..todo:: Check if we want to add a status "KILLED" or something similar.
         """
+        #TODO: Check if we want to add a status "KILLED" or something similar.
+        
         from aiida.common.exceptions import InvalidOperation, RemoteOperationError
         
         if self.get_state() != calc_states.WITHSCHEDULER:
@@ -540,13 +715,28 @@ class Calculation(Node):
     @property
     def res(self):
         """
-        Returns an instance of the CalculationResultManager.
-        It is used to access the parsed parameters directly from the calculation
+        To be used to get direct access to the parsed parameters.
+        
+        :return: an instance of the CalculationResultManager.
+        
+        :note: a practical example on how it is meant to be used: let's say that there is a key 'energy' 
+          in the dictionary of the parsed results which contains a list of floats.
+          The command `calc.res.energy` will return such a list.
         """
         return CalculationResultManager(self)
 
+
 class CalculationResultManager(object):
+    """
+    An object used internally to interface the calculation object with the Parser 
+    and consequentially with the ParameterData object result. 
+    It shouldn't be used explicitely by a user.
+    """
     def __init__(self, calc):
+        """
+        
+        :param calc: the calculation object.
+        """
         # Possibly add checks here
         self._calc = calc
         ParserClass = calc.get_parserclass()
@@ -555,6 +745,8 @@ class CalculationResultManager(object):
     def __getattr__(self,name):
         """
         interface to get to the parser results.
+        
+        :param name: name of the attribute to be asked to the parser results.
         """
         try:
             return self._parser.get_results(name)

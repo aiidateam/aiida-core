@@ -9,6 +9,9 @@ daemon_conf_file = "aiida_daemon.conf"
 log_dir          = "daemon/log"
 aiida_dir = os.path.expanduser("~/.aiida")  
 
+conffname = os.path.join(aiida_dir,daemon_subdir,daemon_conf_file)
+
+
 class Daemon(VerdiCommand):
     """
     Manage the AiiDA daemon
@@ -115,8 +118,7 @@ class Daemon(VerdiCommand):
         
         print "Starting AiiDA Daemon ..."
         process = subprocess.Popen(
-            "supervisord -c {}".format(os.path.join(
-                    aiida_dir,daemon_subdir,"aiida_daemon.conf")), 
+            "supervisord -c {}".format(conffname), 
             shell=True, stdout=subprocess.PIPE)
         process.wait()
         if (process.returncode==0):
@@ -134,23 +136,61 @@ class Daemon(VerdiCommand):
             return
 
         print "Shutting down AiiDA Daemon ({})...".format(pid)
-        os.kill(pid, SIGTERM)
-        
+        try:
+            os.kill(pid, SIGTERM)
+        except OSError as e:
+            if e.errno == 3: # No such process
+                print ("The process {} was not found! "
+                    "Assuming it was already stopped.".format(pid))
+            else:
+                raise
+            
     def daemon_status(self):
         """
         Print the status of the daemon
         """
+        import supervisor
+        import supervisor.supervisorctl
+        import xmlrpclib
+
         pid = self.get_daemon_pid()
         if (pid==None):
             print "Deamon not running (cannot find the PID for it)"
             return
 
-        process = subprocess.Popen("supervisorctl -c {} avail".format(
-                os.path.join(aiida_dir,daemon_subdir,"aiida_daemon.conf")),
-                                   shell=True, stdout=subprocess.PIPE)
-        process.wait()
-        print process.stdout.read()
+        c = supervisor.supervisorctl.ClientOptions()
+        s = c.read_config(conffname)
+        proxy = xmlrpclib.ServerProxy('http://127.0.0.1',
+            transport=supervisor.xmlrpc.SupervisorTransport(
+                s.username, s.password, s.serverurl))
+        try:
+            running_processes = proxy.supervisor.getAllProcessInfo()
+        except xmlrpclib.Fault as e:
+            if e.faultString == "SHUTDOWN_STATE":
+                print "The deamon is shutting down..."
+                return
+            else:
+                raise
+        except Exception as e:
+            import socket
+            if isinstance(e, socket.error):
+                print "Could not reach the daemon, I got a socket.error: "
+                print "  -> [Errno {}] {}".format(e.errno, e.strerror)
+            else:
+                print "Could not reach the daemon, I got a {}: {}".format(
+                    e.__class__.__name__, e.message)
+            print "You can try to stop the daemon and start it again."
+            return
 
+        if running_processes:
+            print "## Found {} processes running:".format(len(running_processes))
+            for process in running_processes:
+                print "* {:<30} {:<10} {}".format(
+                    "{}[{}]".format(process['group'], process['name']),
+                    process['statename'], process['description'])
+        else:
+            print "I was able to connect to the daemon, but I did not find any process..."
+        
     def daemon_showlog(self):
         """
         Show the log of the daemon, press CTRL+C to quit.
@@ -163,7 +203,7 @@ class Daemon(VerdiCommand):
         try:
             process = subprocess.Popen(
                "supervisorctl -c {} tail -f aiida-daemon:0".format(
-                   os.path.join(aiida_dir,daemon_subdir,"aiida_daemon.conf")),
+                           conffname),
                                shell=True) #, stdout=subprocess.PIPE)
             process.wait()
         except KeyboardInterrupt:

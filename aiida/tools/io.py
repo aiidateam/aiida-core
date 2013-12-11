@@ -189,6 +189,7 @@ def import_qeinput(fname):
     cell   = None
     
     atomic_raw_kinds    = None
+    atomic_kinds        = None
     atomic_nums         = None
     atomic_pos          = None
     atomic_masses_table = None
@@ -268,6 +269,7 @@ def import_qeinput(fname):
         
         if atomic_species.search(line) and ntyp>0:
             atomic_raw_kinds    = [None]*ntyp
+            atomic_kinds    = [None]*ntyp
             atomic_masses_table = {}
             
             type_count = 0
@@ -282,6 +284,7 @@ def import_qeinput(fname):
                 atomic_masses_table[_n] = float(p[1])
                 
                 atomic_raw_kinds[type_count] = raw
+                atomic_kinds[type_count] = struct.Kind(symbols=p[0],weights=1.0,name=p[0],mass=float(p[1]))
                 
                 type_count+=1
         
@@ -343,6 +346,16 @@ def import_qeinput(fname):
     for i in range(len(atomic_nums)):
         atomic_masses[i] = atomic_masses_table[atomic_nums[i]]
     
+    
+#     s = struct.StructureData(cell=cell, pbc=True)
+#     for k in atomic_kinds:
+#         s.append_kind(Kind(k))
+#      
+#     sites = zip(atomic_nums, atomic_pos)
+#      
+#     for s in sites:
+#         s.append_site(Site())
+
     s_ase = ase.Atoms(numbers=atomic_nums,positions=atomic_pos,cell=cell,pbc=True, masses=atomic_masses)
     return struct.StructureData(ase = s_ase, raw_kinds = atomic_raw_kinds)
 

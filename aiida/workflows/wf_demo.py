@@ -102,13 +102,13 @@ class SubWorkflowDemo(Workflow):
         w = WorkflowDemo(params=params)
         w.start()
         self.attach_workflow(w)
-        self.append_to_report("Workflow attached: {0}".format(w.uuid()))
+        self.append_to_report("Workflow attached: {0}".format(w.uuid))
         
         params['nmachine']=4
         w = WorkflowDemo(params=params)
         w.start()
         self.attach_workflow(w)
-        self.append_to_report("Workflow attached: {0}".format(w.uuid()))
+        self.append_to_report("Workflow attached: {0}".format(w.uuid))
         
         self.next(self.second)
     
@@ -118,7 +118,7 @@ class SubWorkflowDemo(Workflow):
         s_wfs = self.get_step(self.start).get_sub_workflows()
         
         for s_wf in s_wfs:
-            self.append_to_report("Workflow {0} has results {1}".format(s_wf.uuid(), s_wf.get_result("scf.converged")))
+            self.append_to_report("Workflow {0} has results {1}".format(s_wf.uuid, s_wf.get_result("scf.converged")))
         
         self.next(self.exit)
 

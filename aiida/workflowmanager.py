@@ -39,58 +39,90 @@ def execute_steps():
     
     for w in w_list:
         
-        logger.info("Found active workflow: {0}".format(w.uuid()))
+        logger.info("Found active workflow: {0}".format(w.uuid))
         
         # Launch INITIALIZED Workflows
         #
         running_steps    = w.get_steps(state=wf_states.RUNNING)
         for s in running_steps:
             
-            logger.info("[{0}] Found active step: {1}".format(w.uuid(),s.name))
+            logger.info("[{0}] Found active step: {1}".format(w.uuid,s.name))
             
-            s_calcs       = s.get_calculations()
-            s_calc_states = s.get_calculations_status()
+            s_calcs_new       = [c.uuid for c in s.get_calculations() if c.is_new()]
+            s_calcs_running   = [c.uuid for c in s.get_calculations() if c.is_running()]
+            s_calcs_finished  = [c.uuid for c in s.get_calculations() if c.has_finished_ok()]
+            s_calcs_failed    = [c.uuid for c in s.get_calculations() if c.has_failed()]
+            s_calcs_num       = len(s.get_calculations())
             
-            s_sub_wf        = s.get_sub_workflows()
-            s_sub_wf_states = s.get_sub_workflows_status()
+            s_sub_wf_running  = [sw.uuid for sw in s.get_sub_workflows() if sw.is_running()]
+            s_sub_wf_finished = [sw.uuid for sw in s.get_sub_workflows() if sw.has_finished_ok()]
+            s_sub_wf_failed   = [sw.uuid for sw in s.get_sub_workflows() if sw.has_failed()]
+            s_sub_wf_num      = len(s.get_sub_workflows())
             
-            if (not s_calcs or (len(s_calc_states) == 1 and calc_states.FINISHED in s_calc_states)) and \
-               (not s_sub_wf or (len(s_sub_wf_states) == 1 and wf_states.FINISHED in s_sub_wf_states)):
+            if s_calcs_num==len(s_calcs_finished) and s_sub_wf_num==len(s_sub_wf_finished):
                 
-                logger.info("[{0}] Step: {1} ready to move".format(w.uuid(),s.name))
+                logger.info("[{0}] Step: {1} ready to move".format(w.uuid,s.name))
                 
                 s.set_status(wf_states.FINISHED)
                 advance_workflow(w, s)
             
-            elif calc_states.NEW in s_calc_states:
+            elif len(s_calcs_new)>0:
                     
-                for s_calc in s.get_calculations(calc_states.NEW):
-                    obj_calc = Calculation.get_subclass_from_uuid(uuid=s_calc.uuid)
-                    obj_calc.submit()
-                    logger.info("[{0}] Step: {1} launching calculation {2}".format(w.uuid,s.name, s_calc.uuid))
+                for uuid in s_calcs_new:
                     
-        # Launch INITIALIZED Workflows with all calculations and subworkflows
-        #
+                    obj_calc = Calculation.get_subclass_from_uuid(uuid=uuid)
+                    try:
+                        obj_calc.submit()
+                        logger.info("[{0}] Step: {1} launched calculation {2}".format(w.uuid,s.name, uuid))
+                    except:
+                        logger.error("[{0}] Step: {1} cannot launch calculation {2}".format(w.uuid,s.name, uuid))
+            
+            elif len(s_calcs_failed)>0:
+                
+                s.set_status(wf_states.ERROR)
+        
+        
         initialized_steps    = w.get_steps(state=wf_states.INITIALIZED)
         for s in initialized_steps:
             
-            logger.info("[{0}] Found initialized step: {1}".format(w.uuid(),s.name))
+            import sys
             
-            got_any_error = False
-            for s_calc in s.get_calculations(calc_states.NEW):
-                    
-                obj_calc = Calculation.get_subclass_from_uuid(uuid=s_calc.uuid)
-                try:
-                    logger.info("[{0}] Step: {1} launching calculation {2}".format(w.uuid(),s.name, s_calc.uuid))
-                    obj_calc.submit()
-                except:
-                    logger.error("[{0}] Step: {1} cannot launch calculation {2}".format(w.uuid(),s.name, s_calc.uuid))
-                    got_any_error = True
+            try:
+                w_class = Workflow.get_subclass_from_uuid(w.uuid)
+                getattr(w, s.name)()
+                return True
             
-            if not got_any_error:
-                s.set_status(wf_states.RUNNING)
-            else:
-                s.set_status(wf_states.ERROR)        
+            except:
+                
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                w.append_to_report("ERROR ! This workflow got and error in the {0} method, we report down the stack trace".format(s.name))
+                w.append_to_report("full traceback: {0}".format(exc_traceback.format_exc()))
+                
+                s.set_status(wf_states.ERROR)
+                w.set_status(wf_states.ERROR)
+                
+#         # Launch INITIALIZED Workflows with all calculations and subworkflows
+#         #
+#         initialized_steps    = w.get_steps(state=wf_states.INITIALIZED)
+#         for s in initialized_steps:
+#             
+#             logger.info("[{0}] Found initialized step: {1}".format(w.uuid(),s.name))
+#             
+#             got_any_error = False
+#             for s_calc in s.get_calculations(calc_states.NEW):
+#                     
+#                 obj_calc = Calculation.get_subclass_from_uuid(uuid=s_calc.uuid)
+#                 try:
+#                     logger.info("[{0}] Step: {1} launching calculation {2}".format(w.uuid(),s.name, s_calc.uuid))
+#                     obj_calc.submit()
+#                 except:
+#                     logger.error("[{0}] Step: {1} cannot launch calculation {2}".format(w.uuid(),s.name, s_calc.uuid))
+#                     got_any_error = True
+#             
+#             if not got_any_error:
+#                 s.set_status(wf_states.RUNNING)
+#             else:
+#                 s.set_status(wf_states.ERROR)        
         
         
 #         if len(w.get_steps(state=wf_states.RUNNING))==0 and \
@@ -106,13 +138,13 @@ def advance_workflow(w_superclass, step):
     import sys, os
     
     if step.nextcall==wf_exit_call:
-        logger.info("[{0}] Step: {1} has an exit call".format(w_superclass.uuid(),step.name))
+        logger.info("[{0}] Step: {1} has an exit call".format(w_superclass.uuid,step.name))
         if len(w_superclass.get_steps(wf_states.RUNNING))==0 and len(w_superclass.get_steps(wf_states.ERROR))==0:
-            logger.info("[{0}] Step: {1} is really finished, going out".format(w_superclass.uuid(),step.name))
+            logger.info("[{0}] Step: {1} is really finished, going out".format(w_superclass.uuid,step.name))
             w_superclass.set_status(wf_states.FINISHED)
             return True
         else:
-            logger.error("[{0}] Step: {1} is NOT finished, stopping workflow with error".format(w_superclass.uuid(),step.name))
+            logger.error("[{0}] Step: {1} is NOT finished, stopping workflow with error".format(w_superclass.uuid,step.name))
             w_superclass.append_to_report("""Step: {1} is NOT finished, some calculations or workflows 
             are still running and there is a next call, stopping workflow with error""".format(step.name))
             w_superclass.set_status(wf_states.ERROR)
@@ -128,7 +160,7 @@ def advance_workflow(w_superclass, step):
         logger.info("In  advance_workflow the step {0} goes to nextcall {1}".format(step.name, step.nextcall))
         
         try:
-            w = Workflow.get_subclass_from_uuid(w_superclass.uuid())
+            w = Workflow.get_subclass_from_uuid(w_superclass.uuid)
             getattr(w,step.nextcall)()
             return True
         
@@ -136,12 +168,9 @@ def advance_workflow(w_superclass, step):
             
             exc_type, exc_value, exc_traceback = sys.exc_info()
             w.append_to_report("ERROR ! This workflow got and error in the {0} method, we report down the stack trace".format(step.nextcall))
-            w.append_to_report("filename: {0}".format(exc_traceback.tb_frame.f_code.co_filename))
-            w.append_to_report("lineno: {0}".format(exc_traceback.tb_lineno))
-            w.append_to_report("name: {0}".format(exc_traceback.tb_frame.f_code.co_name))
-            w.append_to_report("type: {0}".format(exc_type.__name__))
-            w.append_to_report("message: {0}".format(exc_value.message))
+            w.append_to_report("full traceback: {0}".format(exc_traceback.format_exc()))
             
+            w.get_step(step.nextcall).set_status(wf_states.ERROR)
             w.set_status(wf_states.ERROR)
             
             return False

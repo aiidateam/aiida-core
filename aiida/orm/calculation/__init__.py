@@ -259,19 +259,19 @@ class Calculation(Node):
         return self.get_attr('state', None)
 
     def is_new(self):
-        return self.get_state() in [self.NEW]
+        return self.get_state() in [calc_states.NEW]
 
     def is_running(self):
         return self.get_state() in [
-            self.TOSUBMIT, self.SUBMITTING, self.WITHSCHEDULER,
-            self.COMPUTED, self.RETRIEVING, self.PARSING]
+            calc_states.TOSUBMIT, calc_states.SUBMITTING, calc_states.WITHSCHEDULER,
+            calc_states.COMPUTED, calc_states.RETRIEVING, calc_states.PARSING]
 
     def has_finished_ok(self):
-        return self.get_state() in [self.FINISHED]
+        return self.get_state() in [calc_states.FINISHED]
 
     def has_failed(self):
-        return self.get_state() in [self.UNDETERMINED, self.SUBMISSIONFAILED,
-            self.RETRIEVALFAILED, self.PARSINGFAILED, self.FAILED]
+        return self.get_state() in [calc_states.UNDETERMINED, calc_states.SUBMISSIONFAILED,
+            calc_states.RETRIEVALFAILED, calc_states.PARSINGFAILED, calc_states.FAILED]
 
     def _set_remote_workdir(self, remote_workdir):
         if self.get_state() != calc_states.SUBMITTING:   

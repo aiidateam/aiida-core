@@ -63,6 +63,7 @@ class WorkflowState(Enumerate):
     pass
 
 wf_states = WorkflowState((
+        'CREATED',
         'INITIALIZED',
         'RUNNING',
         'FINISHED',

@@ -18,8 +18,7 @@ _section_name = 'workflow'
 # The name of the subfolder in which to put the files/directories added with add_path
 _path_subfolder_name = 'path'
 
-class Workflow(object):
-    
+class Workflow(object):    
     """
     Base class to represent a workflow. This is the superclass of any workflow implementations,
     and provides all the methods necessary to interact with the database.
@@ -349,6 +348,12 @@ class Workflow(object):
         from aiida.common.datastructures import wf_start_call, wf_states, wf_exit_call, wf_default_call
         return self.dbworkflowinstance.status == wf_states.ERROR
     
+    def is_subworkflow(self):
+        """
+        Return True is this is a subworkflow (i.e., if it has a parent), 
+        False otherwise.
+        """
+        return self.dbworkflowinstance.is_subworkflow()
     
     # ----------------------------
     #         Steps
@@ -813,89 +818,121 @@ def kill_all():
     for w in w_list:
         Workflow.get_subclass_from_uuid(w.uuid, no_check=True).kill()
         
-accumulated_tab = 0
-tab_size = 2
-    
-def list_workflows(ext=False,expired=False):
-    
+
+
+def get_workflow_info(w, indent_level = 0, tab_size = 2, 
+                                  extended = False):
     """
-    Simple printer witht all the workflow status, to remove when REST APIs will be ready.
+    Return a string with all the information regarding the given workflow and
+    all its calculations and subworkflows.
+    
+    :param w: a DbWorkflow instance
+    :param indent_level: the indentation level of this workflow
+    :param tab_size: number of spaces to use for the indentation
+    :param extended: if True, provide some extra information (not implemented
+       yet)
     """
-    
-    from aiida.djsite.db.models import DbWorkflow
-    from django.db.models import Q
-    import datetime
-    from django.utils.timezone import utc
-    
-    now = datetime.datetime.utcnow().replace(tzinfo=utc)
-    
     
     def str_timedelta(dt):
-        
+        """
+        Given a dt in seconds, return it in a HH:MM:SS format.
+
+        :param dt: a time in seconds
+        """        
         s = dt.seconds
         hours, remainder = divmod(s, 3600)
         minutes, seconds = divmod(remainder, 60)
         return '%sh :%sm :%ss' % (hours, minutes, seconds)
+
     
-    def get_separator(accumulated_tab,tab_size, title=None):
+    def get_separator(parent_level, local_indent, tab_size, is_title=False):
+        """
+        Return a separator string, with the proper alignment level.
         
-        if title:
-            out = "+"
-            for i in range(accumulated_tab):
-                out+='-'*(tab_size)
-            return out
+        :param parent_level: the indentation level of the parent
+        :param local_indent: the indentation level of this item, within the parent
+        :param tab_size: number of spaces to be used at each new indent_level
+        :param is_title: if True, this is a title string and a different header
+            is printed
+        """
         
-        else:
-            
-            out = "|"+' '*(tab_size)
-            for i in range(accumulated_tab-1):
-                out+=' '*tab_size
-            return out
+        if tab_size < 2:
+            raise ValueError("tab_size must be > 2")
         
-    def print_workflow(w,ext=False):
+        pre_string = ('|' + ' '*(tab_size-1)) * parent_level
         
-        global accumulated_tab, tab_size
-        
-        print get_separator(accumulated_tab,tab_size, title=True)+" Workflow {0} (pk={1}) is {2} [{3}]".format(w.module_class, w.pk, w.status, str_timedelta(now-w.time))
-        steps = w.steps.all()
+        if is_title:
+            return pre_string + '+'+' '*(tab_size-1) * local_indent
+        else:            
+            return pre_string + '|'+'-'*(tab_size * local_indent - 1)
 
-        accumulated_tab+=1
-        for s in steps:
-            
-            print get_separator(accumulated_tab,tab_size)+" Step: {0} (->{1}) is {2}".format(s.name,s.nextcall,s.status)
-            calcs  = s.get_calculations().filter(attributes__key="_state").values_list("uuid", "ctime", "attributes__tval", "pk")
-            
-            accumulated_tab+=1
-            for c in calcs:
-                print get_separator(accumulated_tab,tab_size)+" Calculation (pk={0}) is {1}".format(c[3], c[2])                
+    import datetime
+    from django.utils.timezone import utc
+    
+    now = datetime.datetime.utcnow().replace(tzinfo=utc)    
+    lines = []
+    
+    lines.append(get_separator(parent_level=indent_level, local_indent=0, tab_size=tab_size, is_title=True) +
+           " Workflow {0} (pk={1}) is {2} [{3}]".format(
+               w.module_class, w.pk, w.status, str_timedelta(now-w.time)))
 
-            accumulated_tab-=1
-        
-            ## SubWorkflows
-            wflows = s.get_sub_workflows()            
-            accumulated_tab+=1
-            for sw in wflows:
-                print_workflow(sw.dbworkflowinstance, ext=ext)
-            accumulated_tab-=1
+    steps = w.steps.all()
+
+    for s in steps:
+        lines.append(get_separator(parent_level=indent_level+1,local_indent=1,tab_size=tab_size, is_title=True) + 
+                     " Step: {0} (->{1}) is {2}".format(
+                         s.name,s.nextcall,s.status))
+
+        # I need the filter to then get the value of the state
+        calcs  = s.get_calculations().filter(
+             attributes__key="_state").values_list(
+             "uuid", "ctime", "attributes__tval", "pk")
             
-        accumulated_tab-=1
+        for c in calcs:
+            lines.append(
+                 get_separator(parent_level=indent_level+1,local_indent=1,tab_size=tab_size) + 
+                 " Calculation (pk={0}) is {1}".format(c[3], c[2]))              
+        
+        ## SubWorkflows
+        wflows = s.get_sub_workflows()     
+        for subwf in wflows:
+            lines.append(get_workflow_info(subwf.dbworkflowinstance,
+                                           indent_level = indent_level+1,
+                                           tab_size = tab_size, 
+                                           extended=extended))
+
+    return "\n".join(lines)
+    
+def list_workflows(extended = False, print_all = False, tab_size = 2):    
+    """
+    This function return a string with a description of the AiiDA workflows.
+    
+    :param extended: if True, provide some extra information
+    :param print_all:  if True, print also workflows that have finished
+    :param tab_size: how many spaces to use for indentation of subworkflows
+    """
+    from aiida.djsite.db.models import DbWorkflow
+    from django.db.models import Q
     
     q_object = Q(user=get_automatic_user())
     
-    if expired:
-        w_list = DbWorkflow.objects.filter(q_object)
-    else:
-        
+    if not print_all:
         q_object.add(~Q(status=wf_states.FINISHED), Q.AND)
-        w_list = DbWorkflow.objects.filter(q_object)
+
+    wf_list = DbWorkflow.objects.filter(q_object).order_by('time')
     
-    for w in w_list:
-        
-        accumulated_tab = 0
-        print ""
-        
-        if len(w.parent_workflow_step.all())==0:
-            print_workflow(w, ext=ext)
+    lines = []
+    for w in wf_list:
+        if not w.is_subworkflow():
+            lines.append(get_workflow_info(w, tab_size=tab_size, extended=extended))
+    
+    retstring = "\n".join(lines)
+    if not retstring:
+        if print_all:
+            retstring = "# No workflows found"
+        else:
+            retstring = "# No running workflows found"
+    return retstring
         
                 
     

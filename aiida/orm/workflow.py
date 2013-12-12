@@ -843,25 +843,6 @@ def get_workflow_info(w, tab_size = 2, extended = False, pre_string = ""):
         minutes, seconds = divmod(remainder, 60)
         return '%sh :%sm :%ss' % (hours, minutes, seconds)
 
-    
-    def get_separator(parent_level, local_indent, tab_size, is_title=False):
-        """
-        Return a separator string, with the proper alignment level.
-        
-        :param parent_level: the indentation level of the parent
-        :param local_indent: the indentation level of this item, within the parent
-        :param tab_size: number of spaces to be used at each new indent_level
-        :param is_title: if True, this is a title string and a different header
-            is printed
-        """
-        
-        pre_string = ('|' + ' '*(tab_size-1)) * parent_level
-        
-        if is_title:
-            return pre_string + '+'+' '*(tab_size-1) * local_indent
-        else:            
-            return pre_string + '|'+'-'*(tab_size * local_indent - 1)
-
     import datetime
     from django.utils.timezone import utc
     
@@ -876,7 +857,7 @@ def get_workflow_info(w, tab_size = 2, extended = False, pre_string = ""):
 
     steps = w.steps.all()
 
-    for s in steps:
+    for idx, s in enumerate(steps):
         lines.append(pre_string + "|"+'-'*(tab_size-1) +
                      "* Step: {0} (->{1}) is {2}".format(
                          s.name,s.nextcall,s.status))
@@ -887,19 +868,21 @@ def get_workflow_info(w, tab_size = 2, extended = False, pre_string = ""):
              "uuid", "ctime", "attributes__tval", "pk")
             
         for c in calcs:
-            lines.append("|" + " "*(tab_size-1) +
-                         "| Calculation (pk={0}) is {1}".format(c[3], c[2]))              
-        
+            lines.append(pre_string + "|" + " "*(tab_size-1) +
+                         "| Calculation (pk={0}) is {1}".format(c[3], c[2]))
         ## SubWorkflows
         wflows = s.get_sub_workflows()     
         for subwf in wflows:
             lines.append( get_workflow_info(subwf.dbworkflowinstance,
                extended=extended, tab_size = tab_size,
                pre_string = pre_string + "|" + " "*(tab_size-1)) ) 
+        
+        if idx != (len(steps) - 1):
+            lines.append(pre_string + "|")
 
     return "\n".join(lines)
     
-def list_workflows(extended = False, print_all = False, tab_size = 2):    
+def list_workflows(extended = False, print_all = False, tab_size = 2):
     """
     This function return a string with a description of the AiiDA workflows.
     
@@ -922,7 +905,8 @@ def list_workflows(extended = False, print_all = False, tab_size = 2):
         if not w.is_subworkflow():
             lines.append(get_workflow_info(w, tab_size=tab_size, extended=extended))
     
-    retstring = "\n".join(lines)
+    # empty line between workflows
+    retstring = "\n\n".join(lines)
     if not retstring:
         if print_all:
             retstring = "# No workflows found"

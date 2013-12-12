@@ -820,8 +820,7 @@ def kill_all():
         
 
 
-def get_workflow_info(w, indent_level = 0, tab_size = 2, 
-                                  extended = False):
+def get_workflow_info(w, tab_size = 2, extended = False, pre_string = ""):
     """
     Return a string with all the information regarding the given workflow and
     all its calculations and subworkflows.
@@ -856,9 +855,6 @@ def get_workflow_info(w, indent_level = 0, tab_size = 2,
             is printed
         """
         
-        if tab_size < 2:
-            raise ValueError("tab_size must be > 2")
-        
         pre_string = ('|' + ' '*(tab_size-1)) * parent_level
         
         if is_title:
@@ -869,18 +865,20 @@ def get_workflow_info(w, indent_level = 0, tab_size = 2,
     import datetime
     from django.utils.timezone import utc
     
+    if tab_size < 2:
+        raise ValueError("tab_size must be > 2")
+    
     now = datetime.datetime.utcnow().replace(tzinfo=utc)    
     lines = []
     
-    lines.append(get_separator(parent_level=indent_level, local_indent=0, tab_size=tab_size, is_title=True) +
-           " Workflow {0} (pk={1}) is {2} [{3}]".format(
+    lines.append(pre_string + "+ Workflow {0} (pk={1}) is {2} [{3}]".format(
                w.module_class, w.pk, w.status, str_timedelta(now-w.time)))
 
     steps = w.steps.all()
 
     for s in steps:
-        lines.append(get_separator(parent_level=indent_level+1,local_indent=1,tab_size=tab_size, is_title=True) + 
-                     " Step: {0} (->{1}) is {2}".format(
+        lines.append(pre_string + "|"+'-'*(tab_size-1) +
+                     "* Step: {0} (->{1}) is {2}".format(
                          s.name,s.nextcall,s.status))
 
         # I need the filter to then get the value of the state
@@ -889,17 +887,15 @@ def get_workflow_info(w, indent_level = 0, tab_size = 2,
              "uuid", "ctime", "attributes__tval", "pk")
             
         for c in calcs:
-            lines.append(
-                 get_separator(parent_level=indent_level+1,local_indent=1,tab_size=tab_size) + 
-                 " Calculation (pk={0}) is {1}".format(c[3], c[2]))              
+            lines.append("|" + " "*(tab_size-1) +
+                         "| Calculation (pk={0}) is {1}".format(c[3], c[2]))              
         
         ## SubWorkflows
         wflows = s.get_sub_workflows()     
         for subwf in wflows:
-            lines.append(get_workflow_info(subwf.dbworkflowinstance,
-                                           indent_level = indent_level+1,
-                                           tab_size = tab_size, 
-                                           extended=extended))
+            lines.append( get_workflow_info(subwf.dbworkflowinstance,
+               extended=extended, tab_size = tab_size,
+               pre_string = pre_string + "|" + " "*(tab_size-1)) ) 
 
     return "\n".join(lines)
     

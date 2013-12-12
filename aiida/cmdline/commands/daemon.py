@@ -185,7 +185,7 @@ class Daemon(VerdiCommand):
         if running_processes:
             print "## Found {} processes running:".format(len(running_processes))
             for process in running_processes:
-                print "* {:<30} {:<10} {}".format(
+                print "* {:<22} {:<10} {}".format(
                     "{}[{}]".format(process['group'], process['name']),
                     process['statename'], process['description'])
         else:

@@ -651,11 +651,15 @@ class DbWorkflow(m.Model):
     # ------------------------------------------------
     
     def get_sub_workflows(self):
-        
-        from aiida.orm import Calculation
         return DbWorkflow.objects.filter(parent_workflow_step=self.steps.all())
     
-            
+    def is_subworkflow(self):
+        """
+        Return True if this is a subworkflow, False if it is a root workflow,
+        launched by the user.
+        """
+        return len(self.parent_workflow_step.all())>0
+        
     def finish(self):
         self.status = 'finished'
 

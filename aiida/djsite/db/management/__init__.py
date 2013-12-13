@@ -1,4 +1,8 @@
-from django.db.models.signals import post_syncdb
+## When using south, one must attach to the south post_migrate signal,
+## because since the tables are managed by South, after the post_sync
+## the tables are not created yet.
+#from django.db.models.signals import post_syncdb
+from south.signals import post_migrate
 from django.contrib.auth import models as auth_models
 from django.conf import settings
 
@@ -491,7 +495,11 @@ def install_tc(sender, **kwargs):
     else:
         print '== No transitive closure installed =='
 
-# dispatch_uid used to avoid to install twice the signal if this
-# module is loaded twice (it happens e.g. when tests are run)
-post_syncdb.connect(install_tc, sender=auth_models, 
-                    dispatch_uid="transitive_closure_post_syncdb")
+## dispatch_uid used to avoid to install twice the signal if this
+## module is loaded twice (it happens e.g. when tests are run)
+## Note: since we use south, we attach to post_migrate rather than to
+## post_syncdb (see comment at the top of this file)
+#post_migrate.connect(install_tc, sender=auth_models, 
+#                    dispatch_uid="transitive_closure_post_syncdb")
+post_migrate.connect(install_tc,
+                     dispatch_uid="transitive_closure_post_syncdb")

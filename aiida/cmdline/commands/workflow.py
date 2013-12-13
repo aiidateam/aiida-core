@@ -80,7 +80,7 @@ class Workflow(VerdiCommand):
         parser.add_argument('-p', '--past-days', metavar='N', help="add a filter to show only workflows created in the past N days",
                             action='store', type=int)
         parser.add_argument('pks', type=int, nargs='*',
-                            help="a list of workflows to show. If empty, all running workflows are shown.")
+                            help="a list of workflows to show. If empty, all running workflows are shown. If non-empty, automatically sets --all and ignores the -p option.")
         
         
         args = list(args)

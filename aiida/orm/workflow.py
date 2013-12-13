@@ -837,42 +837,10 @@ def get_workflow_info(w, tab_size = 2, extended = False, pre_string = ""):
     :param extended: if True, provide some extra information (not implemented
        yet)
     """
-    from aiida.common.datastructures import calc_states
-    
-    def str_timedelta(dt, short=False, negative_to_zero = True):
-        """
-        Given a dt in seconds, return it in a HH:MM:SS format.
-
-        :param dt: a time in seconds
-        :param short: if True, do not print hours if they are zero, and
-            do not print hours and minutes if they are both zero.
-        :param negative_to_zero: if True, set dt = 0 if dt < 0.
-        """        
-        s = dt.total_seconds() # Important to get more than 1 day, and for 
-                               # negative values. dt.seconds would give
-                               # wrong results in these cases, see
-                               # http://docs.python.org/2/library/datetime.html
-        s = int(s)
-        
-        if negative_to_zero:
-            if s < 0:
-                s = 0
-                
-        
-        hours, remainder = divmod(s, 3600)
-        minutes, seconds = divmod(remainder, 60)
-        if short:
-            if hours == 0:
-                if minutes == 0:
-                    return '{:2d}s'.format(seconds)
-                else:
-                    return '{:2d}m:{:02d}s'.format(minutes, seconds)
-            else:
-                return '{:2d}h:{:02d}m:{:02d}s'.format(hours, minutes, seconds)                
-        else:
-            return '{:2d}h:{:02d}m:{:02d}s'.format(hours, minutes, seconds)
-
     from django.utils import timezone
+    
+    from aiida.common.datastructures import calc_states
+    from aiida.common.utils import str_timedelta
     
     if tab_size < 2:
         raise ValueError("tab_size must be > 2")
@@ -932,21 +900,37 @@ def get_workflow_info(w, tab_size = 2, extended = False, pre_string = ""):
 
     return "\n".join(lines)
     
-def list_workflows(extended = False, print_all = False, tab_size = 2):
+def list_workflows(extended = False, all_states = False, tab_size = 2,
+                                 past_days=None, pks=[]):
     """
     This function return a string with a description of the AiiDA workflows.
     
     :param extended: if True, provide some extra information
-    :param print_all:  if True, print also workflows that have finished
+    :param all_states:  if True, print also workflows that have finished.
+        Otherwise, hide workflows in the FINISHED and ERROR states.
     :param tab_size: how many spaces to use for indentation of subworkflows
+    :param past_days: If specified, show only workflows that were created in
+        the given number of past days.
+    :param pks: if specified, must be a list of integers, and only workflows
+        within that list are shown. Otherwise, all workflows are shown.
     """
     from aiida.djsite.db.models import DbWorkflow
+    
+    from django.utils import timezone
+    import datetime
     from django.db.models import Q
     
     q_object = Q(user=get_automatic_user())
     
-    if not print_all:
+    if not all_states:
         q_object.add(~Q(state=wf_states.FINISHED), Q.AND)
+        q_object.add(~Q(state=wf_states.ERROR), Q.AND)
+    if pks:
+        q_object.add(Q(pk__in=pks), Q.AND)
+    if past_days:
+        now = timezone.now()
+        n_days_ago = now - datetime.timedelta(days=past_days)
+        q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
 
     wf_list = DbWorkflow.objects.filter(q_object).order_by('ctime')
     
@@ -958,7 +942,7 @@ def list_workflows(extended = False, print_all = False, tab_size = 2):
     # empty line between workflows
     retstring = "\n\n".join(lines)
     if not retstring:
-        if print_all:
+        if all_states:
             retstring = "# No workflows found"
         else:
             retstring = "# No running workflows found"

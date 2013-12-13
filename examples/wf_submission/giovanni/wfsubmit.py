@@ -32,7 +32,22 @@ def launch_ws():
               'cell_dofree': 'x',
               'functionalized': True,
               'change_coord': 1, # independent variable is y
-              'value_range': numpy.linspace(2.47,2.63,10).tolist(), # Change cell y value in this range
+              'value_range': numpy.linspace(2.8,3.8,20).tolist(), # Change cell y value in this range
+              'atom1': 'Si',
+              'atom2': 'C',
+              'ecutwfc': 60.,
+              'ecutrho': 350.,
+              'kpoints': [6, 12, 1, 1, 1, 0],
+              'startz': 20.,
+              ## BNHH
+              #'startx': 4.49,
+              #'starty': 2.59,
+              ## BN
+              #'startx': 4.35,
+              #'starty': 2.51,
+              ## SiC
+              'startx': 5.35,
+              'starty': 3.09,
               }
 
     w = WorkflowCustomEOS(params=params)
@@ -42,6 +57,7 @@ def launch_ws():
     
 if __name__ == "__main__":
     if sys.argv[1:] == ["--run"]:
-        launch_ws()
+        wf = launch_ws()
+        print "Workflow launched, pk={}".format(wf.pk)
     else:
         print >> sys.stderr, "Pass --run to run the wf."

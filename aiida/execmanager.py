@@ -451,8 +451,11 @@ def submit_calc(calc):
                 execlogger.debug("submitted calculation {} with job id {}".format(
                     calc.uuid, job_id))
 
-    except:
+    except Exception as e:
+        import traceback
         calc._set_state(calc_states.SUBMISSIONFAILED)
+        execlogger.debug("Submission failed, traceback: {}".format(
+               traceback.format_exc()))
         raise
             
 def retrieve_computed_for_authinfo(authinfo):

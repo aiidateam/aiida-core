@@ -78,7 +78,7 @@ class WorkflowCustomEOS(Workflow):
 
         kpoints = ParameterData({
                 'type': 'automatic',
-                'points': [6, 12, 1, 1, 1, 0],
+                'points': p['kpoints'],
                 }).store()
 
         parameters = ParameterData({
@@ -89,8 +89,8 @@ class WorkflowCustomEOS(Workflow):
                 'forc_conv_thr': 1.e-5,
                 },
             'SYSTEM': {
-                'ecutwfc': 60.,
-                'ecutrho': 350.,
+                'ecutwfc': p['ecutwfc'],
+                'ecutrho': p['ecutrho'],
                 },
             'ELECTRONS': {
                 'conv_thr': 1.e-10,
@@ -98,18 +98,24 @@ class WorkflowCustomEOS(Workflow):
              'CELL': {
                  'cell_dofree': p['cell_dofree']}}).store()
 
+        atom1 = p['atom1']
+        atom2 = p['atom2']
+
+        cell_string = str(atom1) + str(atom2) + str(atom1) + str(atom2)
+
+        startcell = (p['startx'], p['starty'], p['startz'])
+
         if p['functionalized']:
-            asecell = ase.Atoms('BNBNHHHH', cell=(4.49, 2.59, 20.))
+            asecell = ase.Atoms(cell_string + 'HHHH', cell=startcell)
             rel_coords = copy.deepcopy(template_rel_coords)
         else:
-            asecell = ase.Atoms('BNBN', cell=(4.35, 2.51, 20.))
+            asecell = ase.Atoms(cell_string, cell=startcell)
             rel_coords = copy.deepcopy(template_rel_coords[:4])
             for rel_coord in rel_coords:
                 rel_coord[2] = 0.
 
 
         for value in p['value_range']:
-            # BaTiO3 cubic structure
             asecell.cell[p['change_coord'],p['change_coord']] = value
             asecell.set_scaled_positions(rel_coords)
             structure = StructureData(ase=asecell).store()
@@ -118,10 +124,6 @@ class WorkflowCustomEOS(Workflow):
                                                        kpoints))
         
         
-#        n = Node()
-#        attrs = {"a": [1,2,3], "n": n}
-#        self.add_attributes(attrs)
-
         # Test process
         self.next(self.second_step)
     

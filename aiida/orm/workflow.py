@@ -913,6 +913,8 @@ def list_workflows(extended = False, all_states = False, tab_size = 2,
         the given number of past days.
     :param pks: if specified, must be a list of integers, and only workflows
         within that list are shown. Otherwise, all workflows are shown.
+        If specified, automatically sets all_states to True and ignores the 
+        value of the ``past_days`` option.")
     """
     from aiida.djsite.db.models import DbWorkflow
     
@@ -920,17 +922,18 @@ def list_workflows(extended = False, all_states = False, tab_size = 2,
     import datetime
     from django.db.models import Q
     
-    q_object = Q(user=get_automatic_user())
     
-    if not all_states:
-        q_object.add(~Q(state=wf_states.FINISHED), Q.AND)
-        q_object.add(~Q(state=wf_states.ERROR), Q.AND)
     if pks:
-        q_object.add(Q(pk__in=pks), Q.AND)
-    if past_days:
-        now = timezone.now()
-        n_days_ago = now - datetime.timedelta(days=past_days)
-        q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
+        q_object = Q(pk__in=pks)
+    else:
+        q_object = Q(user=get_automatic_user())
+        if not all_states:
+            q_object.add(~Q(state=wf_states.FINISHED), Q.AND)
+            q_object.add(~Q(state=wf_states.ERROR), Q.AND)
+        if past_days:
+            now = timezone.now()
+            n_days_ago = now - datetime.timedelta(days=past_days)
+            q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
 
     wf_list = DbWorkflow.objects.filter(q_object).order_by('ctime')
     

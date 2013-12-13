@@ -204,3 +204,70 @@ def md5_file(filename, block_size_factor=128):
             lambda: f.read(block_size_factor*md5.block_size), b''):
             md5.update(chunk)
     return md5.hexdigest()
+
+def str_timedelta(dt, max_num_fields=3, short=False, negative_to_zero = True):
+    """
+    Given a dt in seconds, return it in a HH:MM:SS format.
+
+    :param dt: a TimeDelta object
+    :param max_num_fields: maximum number of non-zero fields to show
+        (for instance if the number of days is non-zero, shows only
+        days, hours and minutes, but not seconds)
+    :param short: if False, print always ``max_num_fields`` fields, even
+        if they are zero. If True, do not print the first fields, if they
+        are zero.
+    :param negative_to_zero: if True, set dt = 0 if dt < 0.
+    """        
+    if max_num_fields <= 0:
+        raise ValueError("max_num_fields must be > 0")
+    
+    s = dt.total_seconds() # Important to get more than 1 day, and for 
+                           # negative values. dt.seconds would give
+                           # wrong results in these cases, see
+                           # http://docs.python.org/2/library/datetime.html
+    s = int(s)
+    
+    if negative_to_zero:
+        if s < 0:
+            s = 0
+
+    negative = (s < 0)
+    s = abs(s)
+    
+    negative_string = " in the future" if negative else ""
+    
+    # For the moment stay away from months and years, difficult to get
+    days, remainder = divmod(s, 3600*24)
+    hours, remainder = divmod(remainder, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    
+    all_fields = [(days,'D'), (hours, 'h'), (minutes, 'm'), (seconds,'s')]
+    fields = []
+    start_insert = False
+    counter = 0
+    for idx, f in enumerate(all_fields):
+        if f[0] != 0:
+            start_insert = True
+        if (len(all_fields) - idx) <= max_num_fields:
+            start_insert = True
+        if start_insert:
+            if counter >= max_num_fields:
+                break
+            fields.append(f)
+            counter += 1
+            
+    if short:
+        while len(fields)>1: # at least one element has to remain
+            if fields[0][0] != 0:
+                break
+            fields.pop(0) # remove first element
+            
+    # Join the fields
+    raw_string = ":".join(["{:02d}{}".format(*f) for f in fields])
+    
+    if raw_string.startswith('0'):
+        raw_string = raw_string[1:]
+    
+    # Return the resulting string, appending a suitable string if the time
+    # is negative
+    return "{}{}".format(raw_string, negative_string)

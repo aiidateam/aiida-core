@@ -8,23 +8,10 @@ from django.db import models
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
-        # Deleting field 'DbWorkflowStep.status'
-        db.delete_column(u'db_dbworkflowstep', 'status')
-
-        # Adding field 'DbWorkflowStep.state'
-        db.add_column(u'db_dbworkflowstep', 'state',
-                      self.gf('django.db.models.fields.CharField')(default='CREATED', max_length=255),
-                      keep_default=False)
-
+        db.rename_column(u'db_dbworkflowstep', 'status', 'state')
 
     def backwards(self, orm):
-        # Adding field 'DbWorkflowStep.status'
-        db.add_column(u'db_dbworkflowstep', 'status',
-                      self.gf('django.db.models.fields.CharField')(default='CREATED', max_length=255),
-                      keep_default=False)
-
-        # Deleting field 'DbWorkflowStep.state'
-        db.delete_column(u'db_dbworkflowstep', 'state')
+        db.rename_column(u'db_dbworkflowstep', 'state', 'status')
 
 
     models = {

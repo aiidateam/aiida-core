@@ -795,8 +795,10 @@ def kill_from_pk(pk):
     
     :param pk: the principal key (id) of the workflow to kill
     """
-    
-    w = Workflow.query(pk=pk)[0].kill()
+    try:    
+        Workflow.query(pk=pk)[0].kill()
+    except IndexError:
+        raise NotExistent("No workflow with pk={} found.".format(pk))
     
 def kill_from_uuid(uuid):
     """
@@ -806,12 +808,12 @@ def kill_from_uuid(uuid):
     
     :param uuid: the UUID of the workflow to kill
     """
-    
-    w = Workflow.query(uuid=uuid)[0].kill()
+    try:    
+        Workflow.query(uuid=uuid)[0].kill()
+    except IndexError:
+        raise NotExistent("No workflow with uuid={} found.".format(uuid))
     
 def kill_all():
-    
-    from aiida.djsite.utils import get_automatic_user
     from aiida.djsite.db.models import DbWorkflow
     from django.db.models import Q
     

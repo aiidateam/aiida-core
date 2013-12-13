@@ -294,8 +294,8 @@ def is_ase_atoms(ase_atoms):
 
     Requires the ability to import ase, by doing 'import ase'.
     """
-    #TODO: Check if we want to try to import ase and do something reasonable depending on
-    #      whether ase is there or not.
+    #TODO: Check if we want to try to import ase and do something
+    #      reasonable depending on whether ase is there or not.
     import ase
     return isinstance(ase_atoms, ase.Atoms)
 
@@ -401,13 +401,13 @@ class StructureData(Data):
                 "Unable to validate the sites: {}".format(e.message))
 
         for site in sites:
-            if site.kind not in [k.name for k in kinds]:
+            if site.kind_name not in [k.name for k in kinds]:
                 raise ValidationError(
                     "A site has kind {}, but no specie with that name exists"
-                    "".format(site.kind)) 
+                    "".format(site.kind_name)) 
         
         kinds_without_sites = (
-            set(k.name for k in kinds) - set(s.kind for s in sites))
+            set(k.name for k in kinds) - set(s.kind_name for s in sites))
         if kinds_without_sites:
             raise ValidationError("The following kinds are defined, but there "
                                   "are no sites with that kind: {}".format(
@@ -486,9 +486,9 @@ class StructureData(Data):
 
         new_site = Site(site=site) # So we make a copy
         
-        if site.kind not in [k.name for k in self.kinds]:
+        if site.kind_name not in [k.name for k in self.kinds]:
             raise ValueError("No kind with name '{}', available kinds are: "
-                             "{}".format(site.kind,
+                             "{}".format(site.kind_name,
                                          [k.name for k in self.kinds]))
             
         # If here, no exceptions have been raised, so I add the site.
@@ -586,7 +586,7 @@ class StructureData(Data):
                                      " (first difference: {})".format(
                                         kind.name, firstdiff))
                  
-        site = Site(kind=kind.name, position=position)
+        site = Site(kind_name=kind.name, position=position)
         self.append_site(site)
         
 #     def _set_site_type(self, new_site, reset_type_if_needed):
@@ -1240,13 +1240,13 @@ class Site(object):
         """
         Create a site.
 
-        :param kind: a string that identifies the kind (species) of this site.
+        :param kind_name: a string that identifies the kind (species) of this site.
                 This has to be found in the list of kinds of the StructureData
                 object. 
                 Validation will be done at the StructureData level.
         :param position: the absolute position (three floats) in angstrom
         """
-        self._kind = None
+        self._kind_name = None
         self._position = None
         
         if 'site' in kwargs:
@@ -1256,7 +1256,7 @@ class Site(object):
                                  "further parameter to the Site constructor")
             if not isinstance(site, Site):
                 raise ValueError("'site' must be of type Site")
-            self.kind = site.kind
+            self.kind_name = site.kind_name
             self.position = site.position
         elif 'raw' in kwargs:
             raw = kwargs.pop('raw')
@@ -1264,7 +1264,7 @@ class Site(object):
                 raise ValueError("If you pass 'raw', you cannot pass any "
                                  "further parameter to the Site constructor")
             try:
-                self.kind = raw['kind']
+                self.kind_name = raw['kind_name']
                 self.position = raw['position']
             except KeyError as e:
                 raise ValueError("Invalid raw object, it does not contain any "
@@ -1274,7 +1274,7 @@ class Site(object):
 
         else:
             try:
-                self.kind = kwargs.pop('kind')
+                self.kind_name = kwargs.pop('kind_name')
                 self.position = kwargs.pop('position')
             except KeyError as e:
                 raise ValueError("You need to specify {}".format(e.message))
@@ -1292,7 +1292,7 @@ class Site(object):
         """
         return {
             'position': self.position,
-            'kind': self.kind,
+            'kind_name': self.kind_name,
             }
 
     def get_ase(self, kinds):
@@ -1348,14 +1348,14 @@ class Site(object):
         
         found = False
         for k, t in zip(kinds,tag_list):
-            if k.name == self.kind:
+            if k.name == self.kind_name:
                 kind=k
                 tag=t
                 found = True
                 break
         if not found:
             raise ValueError("No kind '{}' has been found in the list of kinds"
-                             "".format(self.kind))
+                             "".format(self.kind_name))
         
         if kind.is_alloy() or kind.has_vacancies():
             raise ValueError("Cannot convert to ASE if the kind represents "
@@ -1368,21 +1368,21 @@ class Site(object):
         return aseatom
 
     @property
-    def kind(self):
+    def kind_name(self):
         """
-        Return the kind of this site (a string).
+        Return the kind name of this site (a string).
         
         The type of a site is used to decide whether two sites are identical
         (same mass, symbols, weights, ...) or not.
         """
-        return self._kind
+        return self._kind_name
 
-    @kind.setter
-    def kind(self, value):
+    @kind_name.setter
+    def kind_name(self, value):
         """
         Set the type of this site (a string).
         """
-        self._kind = unicode(value)
+        self._kind_name = unicode(value)
 
     @property
     def position(self):
@@ -1409,6 +1409,6 @@ class Site(object):
         self._position = internal_pos
 
     def __repr__(self):
-        return u"'{}' site @ {},{},{}".format(self.kind, self.position[0],
+        return u"'{}' site @ {},{},{}".format(self.kind_name, self.position[0],
                                               self.position[1],
                                               self.position[2])

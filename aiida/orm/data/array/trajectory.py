@@ -312,7 +312,7 @@ class TrajectoryData(ArrayData):
             for k in custom_kinds:
                 struc.append_kind(k)
             for s, p in zip(symbols, positions): 
-                struc.append_site(Site(kind=s, position=p))
+                struc.append_site(Site(kind_name=s, position=p))
         else:
             for s,p in zip(symbols,positions):
                 # Automatic species generation

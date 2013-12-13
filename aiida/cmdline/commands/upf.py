@@ -14,7 +14,8 @@ class Upf(VerdiCommand):
         A dictionary with valid commands and functions to be called.
         """
         self.valid_subcommands = {
-            'upload_family': (self.upload_family, self.complete_none)
+            'uploadfamily': (self.uploadfamily, self.complete_auto),
+            'listfamilies': (self.listfamilies, self.complete_none),
             }
 
     def run(self,*args):       
@@ -40,10 +41,15 @@ class Upf(VerdiCommand):
             except KeyError:
                 print ""
                 return
-            print complete_function()
+            complete_data = complete_function()
+            if complete_data is not None:
+                print complete_data
 
     def complete_none(self):
         return ""
+
+    def complete_auto(self):
+        return None
         
     def no_subcommand(self,*args):
         print >> sys.stderr, ("You have to pass a valid subcommand to "
@@ -63,9 +69,11 @@ class Upf(VerdiCommand):
     #
     #
     
-    def upload_family(self, *args):
+    def uploadfamily(self, *args):
         """
-        Setup a new or existing computer
+        Upload a new pseudopotential family.
+        
+        Call without parameters to get some help.
         """
         import inspect
         import readline
@@ -75,7 +83,7 @@ class Upf(VerdiCommand):
         from aiida.orm import Computer as AiidaOrmComputer
         
         if not len(args) == 3 and not len(args) == 4:
-            print >> sys.stderr, ("\n after 'upf upload_family' there should be three "
+            print >> sys.stderr, ("\n after 'upf uploadfamily' there should be three "
                                   "arguments: folder, group_name, group_description [optional --stop_if_existing]\n")
             sys.exit(1)
         
@@ -88,16 +96,61 @@ class Upf(VerdiCommand):
             if args[3]=="--stop_if_existing":
                 stop_if_existing  = True
             else:
-                raise ValidationError('Unknown directive: '+args[3])
+                print >> sys.stderr, 'Unknown directive: '+args[3]
+                sys.exit(1)
         
         if (not os.path.isdir(folder)):
-            raise ValidationError('Cannot find diretory: '+folder)
-        
+            print >> sys.stderr, 'Cannot find directory: '+folder
+            sys.exit(1)
+            
         load_django()
         
         import aiida.orm.data.upf as upfd
         upfd.upload_upf_family(folder, group_name, group_description, stop_if_existing)
         
+
+    def listfamilies(self, *args):
+        """
+        Setup a new or existing computer
+        """
+        
+        if args:
+            print >> sys.stderr, ("after 'upf listfamilies' there should be "
+                                  "no parameters")
+            sys.exit(1)
+
+        load_django()
+        
+        from aiida.orm import DataFactory
+        from aiida.djsite.db.models import Group
+        
+        UpfData = DataFactory('upf')
+        
+        # All groups that contain at least one upf
+        groups = Group.objects.filter(
+             dbnodes__type__startswith=UpfData._plugin_type_string,
+             ).distinct().order_by('name')
+        
+        if groups:
+            for g in groups:
+#                match = UpfData.query(groups__name=g.name,
+#                                      attributes__key="_element",
+#                                      attributes__tval=element)
+                pseudos = UpfData.query(groups__name=g.name).distinct()
+                num_pseudos = pseudos.count()
+
+                pseudos_list = pseudos.filter(
+                    attributes__key="_element").values_list(
+                    'attributes__tval', flat=True)
+                
+                if num_pseudos != len(set(pseudos_list)):
+                    print ("x {} [INVALID: {} pseudos, "
+                           "but only for {} different elements]".format(
+                                g.name, num_pseudos, len(set(pseudos_list))))
+                else:
+                    print "* {} [{} pseudos]".format(g.name, num_pseudos)
+        else:
+            print "No valid UPF pseudopotential families found."
         
         
      

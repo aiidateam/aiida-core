@@ -522,10 +522,10 @@ class DbWorkflow(m.Model):
                 
 #             transaction.savepoint_commit(sid)
             
-        except:
-            
+        except Exception as e:
+            raise
 #             transaction.savepoint_rollback(sid)
-            raise ValueError("Error adding parameters")
+            #raise ValueError("Error adding parameters")
     
     def get_data(self, d_type):
         
@@ -536,8 +536,9 @@ class DbWorkflow(m.Model):
             for p in self.data.filter(parent=self, data_type=d_type):
                 dict[p.name] = p.get_value()
             return dict
-        except:
-            raise ValueError("Error retrieving parameters")
+        except Exception as e:
+            raise
+            #raise ValueError("Error retrieving parameters")
     
         
     # ------------------------------------------------

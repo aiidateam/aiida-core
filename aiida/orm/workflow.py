@@ -265,8 +265,8 @@ class Workflow(object):
             self.dbworkflowinstance.module_class, 
             self.dbworkflowinstance.script_path,
             self.dbworkflowinstance.script_md5,
-            self.dbworkflowinstance.time,
-            self.dbworkflowinstance.status]
+            self.dbworkflowinstance.ctime,
+            self.dbworkflowinstance.state]
     
     # --------------------------------------------
     #         Parameters, attribute, results
@@ -330,7 +330,7 @@ class Workflow(object):
 
     def get_status(self):
         
-        return self.dbworkflowinstance.status
+        return self.dbworkflowinstance.state
     
     def set_status(self, status):
         
@@ -338,19 +338,19 @@ class Workflow(object):
     
     def is_new(self):
         from aiida.common.datastructures import wf_start_call, wf_states, wf_exit_call, wf_default_call
-        return self.dbworkflowinstance.status == wf_states.CREATED
+        return self.dbworkflowinstance.state == wf_states.CREATED
     
     def is_running(self):
         from aiida.common.datastructures import wf_start_call, wf_states, wf_exit_call, wf_default_call
-        return self.dbworkflowinstance.status == wf_states.RUNNING
+        return self.dbworkflowinstance.state == wf_states.RUNNING
     
     def has_finished_ok(self):
         from aiida.common.datastructures import wf_start_call, wf_states, wf_exit_call, wf_default_call
-        return self.dbworkflowinstance.status in [wf_states.FINISHED,wf_states.SLEEP] 
+        return self.dbworkflowinstance.state in [wf_states.FINISHED,wf_states.SLEEP] 
     
     def has_failed(self):
         from aiida.common.datastructures import wf_start_call, wf_states, wf_exit_call, wf_default_call
-        return self.dbworkflowinstance.status == wf_states.ERROR
+        return self.dbworkflowinstance.state == wf_states.ERROR
     
     def is_subworkflow(self):
         """
@@ -391,10 +391,10 @@ class Workflow(object):
 
     def get_steps(self, state = None):
         
-        if state == None:
+        if state is None:
             return self.dbworkflowinstance.steps.all()#.values_list('name',flat=True)
         else:
-            return self.dbworkflowinstance.steps.filter(status=state)    
+            return self.dbworkflowinstance.steps.filter(state=state)    
     
     def has_step(self,method):
         
@@ -427,8 +427,8 @@ class Workflow(object):
             
             # If a method is launched and the step is RUNNING or INITIALIZED we should stop
             if cls.has_step(wrapped_method) and \
-               not (cls.get_step(wrapped_method).status == wf_states.ERROR or \
-                    cls.get_step(wrapped_method).status == wf_states.SLEEP or \
+               not (cls.get_step(wrapped_method).state == wf_states.ERROR or \
+                    cls.get_step(wrapped_method).state == wf_states.SLEEP or \
                     cls.get_step(wrapped_method).nextcall == wf_default_call or \
                     cls.get_step(wrapped_method).nextcall == wrapped_method \
                     #cls.has_step(wrapped_method) \
@@ -438,8 +438,8 @@ class Workflow(object):
             
             # If a method is launched and the step is halted for ERROR, then clean the step and re-launch
             if cls.has_step(wrapped_method) and \
-               ( cls.get_step(wrapped_method).status == wf_states.ERROR or\
-                 cls.get_step(wrapped_method).status == wf_states.SLEEP ):
+               ( cls.get_step(wrapped_method).state == wf_states.ERROR or\
+                 cls.get_step(wrapped_method).state == wf_states.SLEEP ):
                 
                 for w in cls.get_step(wrapped_method).get_sub_workflows(): w.kill()
                 cls.get_step(wrapped_method).remove_sub_workflows()
@@ -816,7 +816,7 @@ def kill_all():
     from django.db.models import Q
     
     q_object = Q(user=get_automatic_user())
-    q_object.add(~Q(status=wf_states.FINISHED), Q.AND)
+    q_object.add(~Q(state=wf_states.FINISHED), Q.AND)
     w_list = DbWorkflow.objects.filter(q_object)
     
     for w in w_list:
@@ -846,7 +846,11 @@ def get_workflow_info(w, tab_size = 2, extended = False, pre_string = ""):
             do not print hours and minutes if they are both zero.
         :param negative_to_zero: if True, set dt = 0 if dt < 0.
         """        
-        s = dt.seconds
+        s = dt.total_seconds() # Important to get more than 1 day, and for 
+                               # negative values. dt.seconds would give
+                               # wrong results in these cases, see
+                               # http://docs.python.org/2/library/datetime.html
+        s = int(s)
         
         if negative_to_zero:
             if s < 0:
@@ -866,24 +870,25 @@ def get_workflow_info(w, tab_size = 2, extended = False, pre_string = ""):
         else:
             return '{:2d}h:{:02d}m:{:02d}s'.format(hours, minutes, seconds)
 
-    import datetime
-    from django.utils.timezone import utc
+    from django.utils import timezone
     
     if tab_size < 2:
         raise ValueError("tab_size must be > 2")
-    
-    now = datetime.datetime.utcnow().replace(tzinfo=utc)    
+        
+    now = timezone.now()
+
     lines = []
     
     lines.append(pre_string + "+ Workflow {0} (pk={1}) is {2} [{3}]".format(
-               w.module_class, w.pk, w.status, str_timedelta(now-w.time)))
+               w.module_class, w.pk, w.state, str_timedelta(
+                    now-w.ctime, negative_to_zero = True)))
 
     steps = w.steps.all()
 
     for idx, s in enumerate(steps):
         lines.append(pre_string + "|"+'-'*(tab_size-1) +
                      "* Step: {0} (->{1}) is {2}".format(
-                         s.name,s.nextcall,s.status))
+                         s.name,s.nextcall,s.state))
 
         calcs  = s.get_calculations().order_by('ctime')
             
@@ -901,7 +906,8 @@ def get_workflow_info(w, tab_size = 2, extended = False, pre_string = ""):
                     last_check = c.get_scheduler_state_lastcheck()
                     if last_check is not None:
                         when_string = " {} ago".format(
-                           str_timedelta(now-last_check, short=True))
+                           str_timedelta(now-last_check, short=True,
+                                         negative_to_zero = True))
                         verb_string = "was "
                     else:
                         when_string = ""
@@ -938,9 +944,9 @@ def list_workflows(extended = False, print_all = False, tab_size = 2):
     q_object = Q(user=get_automatic_user())
     
     if not print_all:
-        q_object.add(~Q(status=wf_states.FINISHED), Q.AND)
+        q_object.add(~Q(state=wf_states.FINISHED), Q.AND)
 
-    wf_list = DbWorkflow.objects.filter(q_object).order_by('time')
+    wf_list = DbWorkflow.objects.filter(q_object).order_by('ctime')
     
     lines = []
     for w in wf_list:

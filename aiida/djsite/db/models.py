@@ -459,20 +459,27 @@ class DbWorkflow(m.Model):
     from aiida.common.datastructures import wf_states, wf_data_types
     
     uuid         = UUIDField(auto=True)
-    time         = m.DateTimeField(auto_now_add=True, editable=False)
+    ctime        = m.DateTimeField(auto_now_add=True, editable=False)
+    mtime        = m.DateTimeField(auto_now=True, editable=False)    
     user         = m.ForeignKey(User, on_delete=m.PROTECT)
+
+    label = m.CharField(max_length=255, db_index=True, blank=True)
+    description = m.TextField(blank=True)
+
+    # still to implement, similarly to the DbNode class
+    nodeversion = m.IntegerField(default=1,editable=False)
+    # to be implemented similarly to the DbNode class
+    lastsyncedversion = m.IntegerField(default=0,editable=False)
+
+    state        = m.CharField(max_length=255, choices=zip(list(wf_states), list(wf_states)), default=wf_states.INITIALIZED)
     report       = m.TextField(blank=True)
 
-
-    
     # File variables, script is the complete dump of the workflow python script
     module       = m.TextField(blank=False)
     module_class = m.TextField(blank=False)
     script_path  = m.TextField(blank=False)
     script_md5   = m.CharField(max_length=255, blank=False)
-    
-    status       = m.CharField(max_length=255, choices=zip(list(wf_states), list(wf_states)), default=wf_states.INITIALIZED)
-    
+        
     objects = m.Manager()
     # Return aiida Node instances or their subclasses instead of DbNode instances
     aiidaobjects = AiidaObjectManager()
@@ -489,7 +496,7 @@ class DbWorkflow(m.Model):
     
     def set_status(self, _status):
         
-        self.status = _status;
+        self.state = _status;
         self.save()
     
     def set_script_md5(self, _md5):
@@ -541,7 +548,7 @@ class DbWorkflow(m.Model):
         
         from aiida.common.datastructures import wf_states, wf_data_types
         
-        if not self.status == wf_states.INITIALIZED and not force:
+        if not self.state == wf_states.INITIALIZED and not force:
             raise ValueError("Cannot add initial parameters to an already initialized workflow")
         
         self.add_data(dict, wf_data_types.PARAMETER)
@@ -663,7 +670,9 @@ class DbWorkflow(m.Model):
         return len(self.parent_workflow_step.all())>0
         
     def finish(self):
-        self.status = 'finished'
+        from aiida.common.datastructures import wf_states
+    
+        self.state = wf_states.FINISHED
 
 
 class DbWorkflowData(m.Model):
@@ -734,7 +743,7 @@ class DbWorkflowStep(m.Model):
     sub_workflows = m.ManyToManyField(DbWorkflow, symmetrical=False, related_name="parent_workflow_step")
     
     
-    status        = m.CharField(max_length=255, choices=zip(list(wf_states), list(wf_states)), default=wf_states.CREATED)
+    state        = m.CharField(max_length=255, choices=zip(list(wf_states), list(wf_states)), default=wf_states.CREATED)
 
     class Meta:
         unique_together = (("parent", "name"))
@@ -817,7 +826,7 @@ class DbWorkflowStep(m.Model):
         
         from aiida.common.datastructures import calc_states, wf_states, wf_exit_call
         
-        return self.status==wf_states.FINISHED
+        return self.state==wf_states.FINISHED
         
     def set_nextcall(self, _nextcall):
         
@@ -826,7 +835,7 @@ class DbWorkflowStep(m.Model):
         
     def set_status(self, _status):
         
-        self.status = _status;
+        self.state = _status;
         self.save()
         
     def reinitialize(self):

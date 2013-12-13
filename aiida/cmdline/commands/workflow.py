@@ -10,7 +10,8 @@ class Workflow(VerdiCommand):
     Manage the AiiDA worflow manager
     
     Valid subcommands are:
-    * list: list the running workflows running and their state
+    * list: list the running workflows running and their state. Pass a -h
+            option for further help on valid options.
     * kill: kill a given workflow
     """
 
@@ -67,12 +68,28 @@ class Workflow(VerdiCommand):
         """
         from aiida.common.utils import load_django
         load_django()
-        
-        extended = "--extended" in args
-        print_all = "--all" in args
-            
+
+        import argparse
         import aiida.orm.workflow as wfs
-        print wfs.list_workflows(extended=extended, print_all=print_all) 
+        
+        parser = argparse.ArgumentParser(description='List AiiDA workflows.')
+        parser.add_argument('-x', '--extended', help="show extended output",
+                            action='store_true')
+        parser.add_argument('-a', '--all-states', help="show all existing AiiDA workflows, not only running ones",
+                            action='store_true')
+        parser.add_argument('-p', '--past-days', metavar='N', help="add a filter to show only workflows created in the past N days",
+                            action='store', type=int)
+        parser.add_argument('pks', type=int, nargs='*',
+                            help="a list of workflows to show. If empty, all running workflows are shown.")
+        
+        
+        args = list(args)
+        parsed_args = parser.parse_args(args)
+
+        print wfs.list_workflows(extended=parsed_args.extended,
+                                 all_states=parsed_args.all_states,
+                                 past_days=parsed_args.past_days, 
+                                 pks=parsed_args.pks) 
 
 
     def workflow_kill(self, *args):

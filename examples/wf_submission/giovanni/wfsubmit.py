@@ -24,7 +24,8 @@ def launch_ws():
     import numpy
     
     params = {
-              'pw_codename': 'pw-svn-rosa',
+#              'pw_codename': 'pw-svn-rosa',
+              'pw_codename': 'pw-svn-bellatrix',
               'num_machines': 1,
               'num_cpus_per_machine': 32, 
               'max_wallclock_seconds': 30*60,

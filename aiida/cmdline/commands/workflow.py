@@ -24,6 +24,7 @@ class Workflow(VerdiCommand):
         self.valid_subcommands = {
             'list': self.workflow_list,
             'kill': self.workflow_kill,
+            'report': self.print_report,
             }
 
     def run(self,*args):       
@@ -91,6 +92,37 @@ class Workflow(VerdiCommand):
                                  past_days=parsed_args.past_days, 
                                  pks=parsed_args.pks) 
 
+
+    def print_report(self, *args):
+        """
+        Print the report of a workflow.
+        """
+        from aiida.common.utils import load_django
+        from aiida.common.exceptions import NotExistent
+        load_django()
+
+        from aiida.orm.workflow import Workflow
+        
+        if len(args) != 1:
+            print >> sys.stderr, "You have to pass a valid workflow PK as a parameter."
+            sys.exit(1)
+        
+        try:
+            pk = int(args[0])
+        except ValueError:
+            print >> sys.stderr, "You have to pass a valid workflow PK as a parameter."
+            sys.exit(1)
+        
+        try:
+            w = Workflow.get_subclass_from_pk(pk)
+        except NotExistent:
+            print >> sys.stderr, "No workflow with PK={} found.".format(pk)
+            sys.exit(1)
+        
+        print "### WORKFLOW pk={} ###".format(pk)
+        print "\n".join(w.get_report())
+
+    
 
     def workflow_kill(self, *args):
         """

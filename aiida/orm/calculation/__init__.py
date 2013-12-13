@@ -16,6 +16,7 @@ class Calculation(Node):
     This class provides the definition of an AiiDA calculation.
     """
     _updatable_attributes = ('state', 'job_id', 'scheduler_state',
+                             'scheduler_state_lastcheck',
                              'last_jobinfo', 'remote_workdir', 'retrieve_list')
     
     # By default, no output parser
@@ -463,7 +464,10 @@ class Calculation(Node):
     def _set_scheduler_state(self,state):
         # I don't do any test here on the possible valid values,
         # I just convert it to a string
+        from django.utils import timezone
+        
         self.set_attr('scheduler_state', unicode(state))
+        self.set_attr('scheduler_state_lastcheck', timezone.now())
                 
     def get_scheduler_state(self):
         """
@@ -472,6 +476,16 @@ class Calculation(Node):
         :return: a string.
         """
         return self.get_attr('scheduler_state', None)
+
+    def get_scheduler_state_lastcheck(self):
+        """
+        Return the time of the last update of the scheduler state, or None
+        if it was never set.
+        
+        :return: a datetime object.
+        """
+        return self.get_attr('scheduler_state_lastcheck', None)
+
 
     def _set_last_jobinfo(self,last_jobinfo):
         import pickle

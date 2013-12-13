@@ -11,6 +11,8 @@ from django.db import models
 
 class Migration(SchemaMigration):
 
+    no_dry_run = True
+
     def forwards(self, orm):
         import json
         attributes = orm.Attribute.objects.filter(

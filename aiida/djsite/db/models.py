@@ -462,6 +462,8 @@ class DbWorkflow(m.Model):
     time         = m.DateTimeField(auto_now_add=True, editable=False)
     user         = m.ForeignKey(User, on_delete=m.PROTECT)
     report       = m.TextField(blank=True)
+
+
     
     # File variables, script is the complete dump of the workflow python script
     module       = m.TextField(blank=False)

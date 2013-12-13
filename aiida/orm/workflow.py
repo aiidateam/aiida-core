@@ -250,6 +250,10 @@ class Workflow(object):
     @property
     def uuid(self):
         return self.dbworkflowinstance.uuid
+
+    @property
+    def pk(self):
+        return self.dbworkflowinstance.pk
     
     def info(self):
         
@@ -831,17 +835,36 @@ def get_workflow_info(w, tab_size = 2, extended = False, pre_string = ""):
     :param extended: if True, provide some extra information (not implemented
        yet)
     """
+    from aiida.common.datastructures import calc_states
     
-    def str_timedelta(dt):
+    def str_timedelta(dt, short=False, negative_to_zero = True):
         """
         Given a dt in seconds, return it in a HH:MM:SS format.
 
         :param dt: a time in seconds
+        :param short: if True, do not print hours if they are zero, and
+            do not print hours and minutes if they are both zero.
+        :param negative_to_zero: if True, set dt = 0 if dt < 0.
         """        
         s = dt.seconds
+        
+        if negative_to_zero:
+            if s < 0:
+                s = 0
+                
+        
         hours, remainder = divmod(s, 3600)
         minutes, seconds = divmod(remainder, 60)
-        return '%sh :%sm :%ss' % (hours, minutes, seconds)
+        if short:
+            if hours == 0:
+                if minutes == 0:
+                    return '{:2d}s'.format(seconds)
+                else:
+                    return '{:2d}m:{:02d}s'.format(minutes, seconds)
+            else:
+                return '{:2d}h:{:02d}m:{:02d}s'.format(hours, minutes, seconds)                
+        else:
+            return '{:2d}h:{:02d}m:{:02d}s'.format(hours, minutes, seconds)
 
     import datetime
     from django.utils.timezone import utc
@@ -862,14 +885,33 @@ def get_workflow_info(w, tab_size = 2, extended = False, pre_string = ""):
                      "* Step: {0} (->{1}) is {2}".format(
                          s.name,s.nextcall,s.status))
 
-        # I need the filter to then get the value of the state
-        calcs  = s.get_calculations().filter(
-             attributes__key="_state").values_list(
-             "uuid", "ctime", "attributes__tval", "pk")
+        calcs  = s.get_calculations().order_by('ctime')
             
         for c in calcs:
+            uuid = c.uuid
+            pk = c.pk
+            calc_state = c.get_state()
+            time = c.ctime
+            
+            if calc_state == calc_states.WITHSCHEDULER:
+                sched_state = c.get_scheduler_state()
+                if sched_state is None:
+                    remote_state = "(remote state still unknown)"
+                else:
+                    last_check = c.get_scheduler_state_lastcheck()
+                    if last_check is not None:
+                        when_string = " {} ago".format(
+                           str_timedelta(now-last_check, short=True))
+                        verb_string = "was "
+                    else:
+                        when_string = ""
+                        verb_string = ""
+                    remote_state = " ({}{}{})".format(verb_string,
+                        sched_state, when_string)
+            else:
+                remote_state = ""
             lines.append(pre_string + "|" + " "*(tab_size-1) +
-                         "| Calculation (pk={0}) is {1}".format(c[3], c[2]))
+                         "| Calculation (pk={0}) is {1}{2}".format(pk, calc_state, remote_state))
         ## SubWorkflows
         wflows = s.get_sub_workflows()     
         for subwf in wflows:

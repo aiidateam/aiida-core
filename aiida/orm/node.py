@@ -108,6 +108,20 @@ class Node(object):
             raise NotExistent("pk={} is not an instance of {}".format(
                 pk,cls.__name__))        
         return node
+    
+    @property
+    def ctime(self):
+        """
+        Return the creation time of the node.
+        """
+        return self.dbnode.ctime
+
+    @property
+    def mtime(self):
+        """
+        Return the modification time of the node.
+        """
+        return self.dbnode.mtime
         
     def __int__(self):
         """

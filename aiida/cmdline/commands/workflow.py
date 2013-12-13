@@ -10,7 +10,7 @@ class Workflow(VerdiCommand):
     Manage the AiiDA worflow manager
     
     Valid subcommands are:
-    * list: list the workflows running and the status
+    * list: list the running workflows running and their state
     """
 
 

@@ -35,7 +35,7 @@ def execute_steps():
     
     logger.info("Querying the worflow DB")
     
-    w_list = Workflow.query(user=get_automatic_user(),status=wf_states.RUNNING)
+    w_list = Workflow.query(user=get_automatic_user(),state=wf_states.RUNNING)
     
     for w in w_list:
         

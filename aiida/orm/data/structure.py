@@ -413,22 +413,38 @@ class StructureData(Data):
                                   "are no sites with that kind: {}".format(
                                       list(kinds_without_sites)))
                 
-    def get_elements(self):
+    def get_symbols_set(self):
         """
-        
-        :returns: a list of elements, as obtained by reading all sites of the 
-            StructureData object, keeping all duplicates.
+        Return a set containing the names of all elements involved in
+        this structure (i.e., for it joins the list of symbols for each
+        kind k in the structure). 
+         
+        :returns: a set of strings of element names.
         """
-        return list(itertools.chain.from_iterable(
+        return set(itertools.chain.from_iterable(
                 kind.symbols for kind in self.kinds))
 
-    def get_formula(self):
-        """
+#    def get_formula(self):
+#        """
+#        Return a string that 
+#        :returns: a string with the chemical formula for the given structure.
+#        """
+#        # TODO: implement it better! (like Si2 instead of SiSi, Si0.4Ge0.6 instead of SiGe, etc.)
+#        # TODO: use the list of chemical symbols (as in get_symbols_sets, but with the correct multiplicity)
+#        #       rather than the kind names?   
+#        return "".join(self.get_kind_names())
 
-        :returns: a string with the chemical formula for the given structure.
+
+        
+    def get_site_kindnames(self):
         """
-        # TODO: implement it better! (like Si2 instead of SiSi, Si0.4Ge0.6 instead of SiGe, etc.)
-        return "".join(self.get_elements())
+        Return a list with length equal to the number of sites of this structure,
+        where each element of the list is the kind name of the corresponding site.
+        
+        :return: a list of strings
+        """
+        return [ this_site.kind_name for this_site in self.sites ]
+
 
     def get_ase(self):
         """
@@ -724,7 +740,14 @@ class StructureData(Data):
         # Will raise ValueError if the kind is not present
         return kinds[kind_names.index(kind_name)]
             
+    def get_kind_names(self):
+        """
+        Return a list of kind names (in the same order of the ``self.kinds``
+        property, but return the names rather than Kind objects)
         
+        :return: a list of strings.
+        """
+        return [k.name for k in self.kinds]        
     
     @property
     def cell(self):

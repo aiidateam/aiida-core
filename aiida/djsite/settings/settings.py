@@ -229,7 +229,16 @@ LOGGING = {
 
 # We don't need to run the South migrations every time we want to run the
 # test suite. This leads to massive speedup.
+# However, we have to remember to attach operations that expect the tables
+# to be created (as the creation of the triggers) either to:
+# - south->post_migrate if this is not a test
+# - django->post_syncdb if this is a test (this is set in
+#     cmdline.commands.verdilib.DeveloperTest.run)
 SOUTH_TESTS_MIGRATE = False
+# This is only a string: call
+# aiida.djsite.utils.get_after_database_creation_signal
+# to get the proper signal
+AFTER_DATABASE_CREATION_SIGNAL = 'post_migrate'
 
 # -------------------------
 # AiiDA-Deamon configuration

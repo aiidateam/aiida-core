@@ -2,7 +2,10 @@
 ## because since the tables are managed by South, after the post_sync
 ## the tables are not created yet.
 #from django.db.models.signals import post_syncdb
-from south.signals import post_migrate
+#from south.signals import post_migrate
+## Actually, now we have a variable in settings that points to the correct
+## signal.
+from aiida.djsite.utils import get_after_database_creation_signal
 from django.contrib.auth import models as auth_models
 from django.conf import settings
 
@@ -498,8 +501,9 @@ def install_tc(sender, **kwargs):
 ## dispatch_uid used to avoid to install twice the signal if this
 ## module is loaded twice (it happens e.g. when tests are run)
 ## Note: since we use south, we attach to post_migrate rather than to
-## post_syncdb (see comment at the top of this file)
-#post_migrate.connect(install_tc, sender=auth_models, 
-#                    dispatch_uid="transitive_closure_post_syncdb")
-post_migrate.connect(install_tc,
-                     dispatch_uid="transitive_closure_post_syncdb")
+## post_syncdb (see comment at the top of this file). But in tests,
+## we have to attach to post_syncdb. Therefore, we use the
+## utility function to get the proper signal
+signal, sender = get_after_database_creation_signal() 
+signal.connect(install_tc, sender=sender,
+    dispatch_uid="transitive_closure_post_syncdb")

@@ -27,11 +27,11 @@ class PwParser(Parser):
         
         # save calc for later use
         self._calc = calculation
-        # here a complicated logic to decide whether
-        # the parser has the linkname for output structure or not.
-        if calculation.get_state is calc_states.PARSING: # if coming from the execmanager
-            self._set_linkname_outstructure(None)
-        elif calculation.get_state in self._possible_after_parsing:
+        
+        # here some logic to decide whether the parser has an output structure or not.
+        # set it to None by default
+        self._set_linkname_outstructure(None)
+        if calculation.get_state in self._possible_after_parsing:
             # can have been already parsed: check for outstructure
             # find existing outputs of kind structuredata
             out_struc = calculation.get_outputs(type=StructureData,also_labels=True)

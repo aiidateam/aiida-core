@@ -95,32 +95,52 @@ def upload_upf_family(folder, group_name, group_description,
              os.path.isfile(os.path.join(folder,i)) and 
              i.lower().endswith('.upf')]
 
-    group, created = Group.objects.get_or_create(name=group_name, defaults=
+    group,group_created = Group.objects.get_or_create(name=group_name, defaults=
         {'user': get_automatic_user()})
     if len(group.dbnodes.all()) != 0:
         raise UniquenessError("Group with name {} already exists and is "
                               "non-empty".format(group_name))
     group.description = group_description
-    if not created: # enforce the user if the group was empty and already there
-        group.user = get_automatic_user()
-        group.save()
-
+    # note that the group will be saved only after the check on upf uniqueness
+    
+    pseudo_and_created = []
     
     for f in files:
         
-        pseudo  = None
-        created = None
-        
-    
         md5sum = aiida.common.utils.md5_file(f)
         existing_upf = UpfData.query(attributes__key="_md5",attributes__tval = md5sum)
         
         if len(existing_upf) == 0:
-            pseudo, created = UpfData.get_or_create(f, use_first = True)
+            # return the upfdata instances, not stored
+            pseudo, created = UpfData.get_or_create(f, use_first = True,store_upf=False)
+            # to check whether only one upf per element exists
+            # NOTE: actually, created has the meaning of "to_be_created"
+            pseudo_and_created.append( (pseudo,created) )
         else:
             if stop_if_existing:
                 raise ValueError("A UPF with identical MD5 to "+f+" cannot be added with stop_if_existing")
             pseudo = existing_upf[0]
+            pseudo_and_created.append( (pseudo,False) )
+             
+    print pseudo_and_created, [ i[0].element for i in pseudo_and_created ]
+    # check whether pseudo are unique per element
+    elements = [ i[0].element for i in pseudo_and_created ]
+    if not len(pseudo_and_created) == len( 
+                            set(elements) ):
+        duplicates = set([x for x in elements if elements.count(x) > 1])
+        duplicates_string = ", ".join(i for i in duplicates)
+        raise UniquenessError("More than one UPF found for the elements: " +
+                              duplicates_string+".")
+    
+    # save the group in the database
+    if not group_created: # enforce the user if the group was empty and already there
+        group.user = get_automatic_user()
+        group.save()
+
+    # save the upf in the database, and add them to group    
+    for pseudo,created in pseudo_and_created:
+        if created:
+            pseudo.store()
                 
         group.dbnodes.add(pseudo.dbnode)
 
@@ -222,7 +242,7 @@ class UpfData(SinglefileData):
     """
     
     @classmethod
-    def get_or_create(cls,filename,use_first = False):
+    def get_or_create(cls,filename,use_first = False,store_upf=True):
         """
         Pass the same parameter of the init; if a file with the same md5
         is found, that UpfData is returned. 
@@ -231,6 +251,8 @@ class UpfData(SinglefileData):
         :param use_first: if False (default), raise an exception if more than \
                 one potential is found.\
                 If it is True, instead, use the first available pseudopotential.
+        :param bool store_upf: If false, the UpfData objects are not stored in 
+                the database. default=True.
         :return (upf, created): where upf is the UpfData object, and create is either\
             True if the object was created, or False if the object was retrieved\
             from the DB.
@@ -253,8 +275,12 @@ class UpfData(SinglefileData):
         
         pseudos = cls.from_md5(md5)
         if len(pseudos) == 0:
-            instance = cls(filename=filename, element=element).store()
-            return (instance, True)
+            if store_upf:
+                instance = cls(filename=filename, element=element).store()
+                return (instance, True)
+            else:
+                instance = cls(filename=filename, element=element)
+                return (instance, True)
         else:
             filtered_pseudos = []
             for p in pseudos:

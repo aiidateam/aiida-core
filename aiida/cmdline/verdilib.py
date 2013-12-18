@@ -388,6 +388,16 @@ class Developertest(VerdiCommand):
             print >> sys.stderr,  "# LOCAL AiiDA REPOSITORY FOR TESTS:"
             print >> sys.stderr, "# {}".format(settings.LOCAL_REPOSITORY)
             print >> sys.stderr, "########################################"
+            # Here. I set the correct signal to attach to when we want to
+            # perform an operation after all tables are created (e.g., creation
+            # of the triggers).
+            # By default, in djsite/settings/settings.py this is south->post_migrate,
+            # here we set it to django->post_syncdb because we have set
+            # SOUTH_TESTS_MIGRATE = False
+            # in the settings.
+            settings.AFTER_DATABASE_CREATION_SIGNAL = 'post_syncdb'
+            
+            
             ##################################################################
             ## Only now I set the aiida_test_list variable so that tests can run
             settings.aiida_test_list = db_test_list
@@ -502,7 +512,7 @@ supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
 serverurl=unix:///"""+daemon_dir+"""/supervisord.sock 
 
 ;=======================================
-; Main AiiDA Deamon
+; Main AiiDA Daemon
 ;=======================================
 
 [program:aiida-daemon]

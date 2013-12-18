@@ -415,7 +415,7 @@ def dirty_qe(s, fout=None, force_kind_order = False, velocities=None):
     output = StringIO.StringIO()
     
     output.write("&system\n");
-    output.write("nat="+str(len(s.sites))+", ntyp="+str(len(s.get_elements()))+",\n");
+    output.write("nat="+str(len(s.sites))+", ntyp="+str(len(s.kinds))+",\n");
     output.write("ibrav=0, celldm(1)=1.88972687000");
     output.write("\n");
     

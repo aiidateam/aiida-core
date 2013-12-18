@@ -1779,23 +1779,35 @@ class TestStructureData(AiidaTestCase):
         a.append_atom(position=(1.,1.,1.),symbols='Ti',name='Ti2')
         # Should not complain, should create a new type
         a.append_atom(position=(0.,0.,0.),symbols='Ba',mass=150.)
-
         # There should be 4 kinds, the automatic name for the last one
         # should be Ba1 (same check of test_kind_5
         self.assertEquals([k.name for k in a.kinds],
                           ['Ba', 'Ti', 'Ti2', 'Ba1'])
-        
         #############################
-        # Here I start the real tests
-        
+        # Here I start the real tests        
         # No such kind
         with self.assertRaises(ValueError):
-            a.get_kind('Ti3')
-        
+            a.get_kind('Ti3')        
         k = a.get_kind('Ba1')
         self.assertEqual(k.symbols, ('Ba',))
         self.assertAlmostEqual(k.mass, 150.)
-            
+
+    def test_kind_7(self):
+        """
+        Test the functions returning the list of kinds, symbols, ...
+        """
+        from aiida.orm.data.structure import StructureData
+
+        a = StructureData(cell=((2.,0.,0.),(0.,2.,0.),(0.,0.,2.)))
+        
+        a.append_atom(position=(0.,0.,0.),symbols='Ba',mass=100.)
+        a.append_atom(position=(0.,0.,0.),symbols='Ti')
+        # The name does not exist
+        a.append_atom(position=(0.,0.,0.),symbols='Ti',name='Ti2')
+        # The name already exists, but the properties are identical => OK
+        a.append_atom(position=(0.,0.,0.),symbols=['O', 'H'], weights=[0.9,0.1], mass=15.)
+
+        self.assertEquals(a.get_symbols_set(), set(['Ba', 'Ti', 'O', 'H']))
         
 
 class TestStructureDataLock(AiidaTestCase):

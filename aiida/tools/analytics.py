@@ -59,14 +59,14 @@ class SimpleTrajectory(object):
     
     def generate_kind_ordering(self):
         
-        elems = self.struct.get_elements()
+        elems = self.struct.get_kind_names()
         self.ordering = [None]*len(elems)
          
         count = 0
         for k in range(len(elems)):
             self.ordering[k] = []
             for s in range(len(self.struct.sites)):
-                if str(self.struct.sites[s].kind) == elems[k]:
+                if str(self.struct.sites[s].kind_name) == elems[k]:
                     self.ordering[k].append(s)
                     count+=1
         

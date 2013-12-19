@@ -222,8 +222,8 @@ You can inquire the daemon status using::
 
 and, if the daemon is running, you should see something like::
 
-    aiida-daemon:0                   in use    auto      999:999
-    aiida-daemon-beat:0              in use    auto      999:999
+  * aiida-daemon[0]        RUNNING    pid 12076, uptime 0:39:05
+  * aiida-daemon-beat[0]   RUNNING    pid 12075, uptime 0:39:05
 
 
 To stop the daemon, use::

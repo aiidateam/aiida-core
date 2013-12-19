@@ -27,7 +27,7 @@ def launch_ws():
 #              'pw_codename': 'pw-svn-rosa',
               'pw_codename': 'pw-svn-bellatrix',
               'num_machines': 1,
-              'num_cpus_per_machine': 32, 
+              'num_cpus_per_machine': 32, ### CORRECT IF YOU WANT TO SEND ON BELLATRIX!
               'max_wallclock_seconds': 30*60,
               'pseudo_family': 'pbe-rrkjus-pslib030',
               'cell_dofree': 'x',

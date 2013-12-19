@@ -46,7 +46,6 @@ class Calculation(Node):
 
         # For new calculations
         self._set_state(calc_states.NEW)
-        self.label = "Calculation {}".format(self.uuid)
 
         computer = kwargs.pop('computer', None)
         if computer is not None:

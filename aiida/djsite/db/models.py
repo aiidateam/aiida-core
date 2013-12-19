@@ -1,6 +1,7 @@
 from django.db import models as m
 from django_extensions.db.fields import UUIDField
 from django.contrib.auth.models import User
+from django.utils.encoding import python_2_unicode_compatible
 
 from django.db.models.query import QuerySet
 
@@ -118,7 +119,36 @@ class DbNode(m.Model):
             PluginClass = Node
 
         return PluginClass(uuid=self.uuid)
-            
+
+    def get_simple_name(self, invalid_result=None):
+        """
+        Return a string with the last part of the type name.
+        
+        If the type is empty, use 'Node'.
+        If the type is invalid, return the content of the input variable
+          ``invalid_result``.
+          
+        :param invalid_result: The value to be returned if the node type is
+            not recognized.
+        """
+        thistype = self.type
+        # Fix for base class
+        if thistype == "":
+            thistype = "node.Node."
+        if not thistype.endswith("."):
+            return invalid_result
+        else:
+            thistype = thistype[:-1] # Strip final dot
+            return thistype.rpartition('.')[2]
+
+    @python_2_unicode_compatible
+    def __str__(self):
+        simplename = self.get_simple_name(invalid_result="Unknown")
+        # node pk + type
+        if self.label:
+            return "{} node [{}]: {}".format(simplename, self.pk, self.label)
+        else:
+            return "{} node [{}]".format(simplename, self.pk)
 
 class Link(m.Model):
     '''
@@ -143,7 +173,15 @@ class Link(m.Model):
         unique_together = (("input",  "output"),
                            ("output", "label"),
                            )
-    
+        
+    @python_2_unicode_compatible
+    def __str__(self):
+        return "{} ({}) --> {} ({})".format(
+            self.input.get_simple_name(invalid_result="Unknown node"),
+            self.input.pk,
+            self.output.get_simple_name(invalid_result="Unknown node"),
+            self.output.pk,)
+            
 
 class Path(m.Model):
     """
@@ -160,6 +198,16 @@ class Path(m.Model):
     entry_edge_id = m.IntegerField(null=True,editable=False)
     direct_edge_id = m.IntegerField(null=True,editable=False)
     exit_edge_id = m.IntegerField(null=True,editable=False)
+
+    @python_2_unicode_compatible
+    def __str__(self):
+        return "{} ({}) ==[{}]==>> {} ({})".format(
+            self.parent.get_simple_name(invalid_result="Unknown node"),
+            self.parent.pk,
+            self.depth,
+            self.child.get_simple_name(invalid_result="Unknown node"),
+            self.child.pk,)
+
 
 attrdatatype_choice = (
     ('float', 'float'),
@@ -292,8 +340,24 @@ class Attribute(m.Model):
             raise DbContentError("The type field '{}' is not recognized".format(
                     self.datatype))        
 
+    @python_2_unicode_compatible
+    def __str__(self):
+        return "[{} ({})].{} ({})".format(
+            self.dbnode.get_simple_name(invalid_result="Unknown node"),
+            self.dbnode.pk,
+            self.key,
+            self.datatype,)
+
 
 class Group(m.Model):
+    """
+    A group of nodes.
+    
+    Any group of nodes can be created, but some groups may have specific meaning
+    if they satisfy specific rules (for instance, groups of UpdData objects are
+    pseudopotential families - if no two pseudos are included for the same 
+    atomic element).
+    """
     uuid = UUIDField(auto=True)
     # max_length is required by MySql to have indexes and unique constraints
     name = m.CharField(max_length=255,unique=True, db_index=True)
@@ -301,6 +365,10 @@ class Group(m.Model):
     time = m.DateTimeField(auto_now_add=True, editable=False)
     description = m.TextField(blank=True)
     user = m.ForeignKey(User)  # The owner of the group, not of the calculations
+
+    @python_2_unicode_compatible
+    def __str__(self):
+        return self.name
 
 class DbComputer(m.Model):
     """
@@ -376,6 +444,14 @@ class DbComputer(m.Model):
             raise TypeError("Pass either a computer name, a DbComputer django instance or a Computer object")
         return dbcomputer
 
+    @python_2_unicode_compatible
+    def __str__(self):
+        if self.enabled:
+            return "{} ({})".format(self.name, self.hostname)
+        else:
+            return "{} ({}) [DISABLED]".format(self.name, self.hostname)
+
+
 #class RunningJob(m.Model):
 #    calc = m.OneToOneField(DbNode,related_name='jobinfo') # OneToOneField implicitly sets unique=True
 #    calc_state = m.CharField(max_length=64)
@@ -431,11 +507,22 @@ class AuthInfo(m.Model):
                       self.get_auth_params().items())
         return ThisTransport(machine=self.computer.hostname,**params)
 
+    @python_2_unicode_compatible
+    def __str__(self):
+        return "Authorization info for {}".format(self.computer.name)
+
+
 class Comment(m.Model):
     dbnode = m.ForeignKey(DbNode,related_name='comments')
     time = m.DateTimeField(auto_now_add=True, editable=False)
     user = m.ForeignKey(User)
     content = m.TextField(blank=True)
+
+    @python_2_unicode_compatible
+    def __str__(self):
+        return "Comment for [{} {}] on {}".format(self.dbnode.get_simple_name(),
+            self.dbnode.pk, self.time.strftime("%Y-%m-%d"))
+
 
 #-------------------------------------
 #         Lock
@@ -675,6 +762,15 @@ class DbWorkflow(m.Model):
     
         self.state = wf_states.FINISHED
 
+    @python_2_unicode_compatible
+    def __str__(self):
+        simplename = self.module_class
+        # node pk + type
+        if self.label:
+            return "{} workflow [{}]: {}".format(simplename, self.pk, self.label)
+        else:
+            return "{} workflow [{}]".format(simplename, self.pk)
+
 
 class DbWorkflowData(m.Model):
     
@@ -728,7 +824,12 @@ class DbWorkflowData(m.Model):
             return None
         else:
             raise ValueError("Cannot rebuild the parameter {}".format(self.name))
-        
+
+    @python_2_unicode_compatible
+    def __str__(self):
+        return "Data for workflow {} [{}]: {}".format(
+            self.parent.module_class, self.parent.pk, self.name)
+
            
 class DbWorkflowStep(m.Model):
 
@@ -848,3 +949,9 @@ class DbWorkflowStep(m.Model):
         
         from aiida.common.datastructures import calc_states, wf_states, wf_exit_call
         self.set_status(wf_states.FINISHED)
+
+
+    @python_2_unicode_compatible
+    def __str__(self):
+        return "Step {} for workflow {} [{}]".format(self.name,
+            self.parent.module_class, self.parent.pk)

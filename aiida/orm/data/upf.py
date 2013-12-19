@@ -363,3 +363,31 @@ class UpfData(SinglefileData):
         except AttributeError:
             raise ValidationError("attribute 'md5' not set.")
 
+    @classmethod
+    def get_upf_groups(self,filter_elements=None):
+        """
+        Return all groups that contains UpfDatas
+            
+        :param filter_elements: A list of strings. 
+               If present, returns only the groups that contains one Upf for
+               every element present in the list. Default=None
+        """
+        # Get all groups that contain at least one upf
+        from django.db.models import Q
+        from aiida.djsite.db.models import Group
+        
+        q_object = Q(dbnodes__type__startswith=self._plugin_type_string)
+        groups = Group.objects.filter(q_object)
+        
+        if filter_elements is not None:
+            # add a filter to the previous query, one f per element
+            # to get only groups with desired element
+            for el in filter_elements:
+                groups = groups.filter( dbnodes__attributes__key='_element',
+                                 dbnodes__attributes__tval=el.capitalize() )
+            
+        # find all groups matching the desired filters
+        groups = groups.distinct().order_by("name")
+            
+        return groups
+        

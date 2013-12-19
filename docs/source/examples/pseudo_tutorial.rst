@@ -41,3 +41,7 @@ for every upf family that you upload. Moreover, it is also needed that no more
 than one UPF exists for every element, otherwise the choice of a UPF file would
 be ambiguous.
 
+To get a list of uploaded pseudo families, type::
+   
+   verdi upf listfamilies
+

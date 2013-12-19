@@ -111,46 +111,52 @@ class Upf(VerdiCommand):
 
     def listfamilies(self, *args):
         """
-        Setup a new or existing computer
+        Print on screen the list of upf families installed
         """
+        # note that the following command requires that the upfdata has a
+        # key called element. As such, it is not well separated.
+        import argparse
+        parser = argparse.ArgumentParser(description='List AiiDA workflows.')
+        parser.add_argument('-e','--element',nargs='+', type=str, default=None)
         
-        if args:
-            print >> sys.stderr, ("after 'upf listfamilies' there should be "
-                                  "no parameters")
-            sys.exit(1)
+        args = list(args)
+        parsed_args = parser.parse_args(args)
 
         load_django()
         
         from aiida.orm import DataFactory
-        from aiida.djsite.db.models import Group
+        
         
         UpfData = DataFactory('upf')
         
-        # All groups that contain at least one upf
-        groups = Group.objects.filter(
-             dbnodes__type__startswith=UpfData._plugin_type_string,
-             ).distinct().order_by('name')
-        
+        groups = UpfData.get_upf_groups(filter_elements=parsed_args.element)
+            
         if groups:
             for g in groups:
-#                match = UpfData.query(groups__name=g.name,
-#                                      attributes__key="_element",
-#                                      attributes__tval=element)
                 pseudos = UpfData.query(groups__name=g.name).distinct()
                 num_pseudos = pseudos.count()
 
                 pseudos_list = pseudos.filter(
-                    attributes__key="_element").values_list(
-                    'attributes__tval', flat=True)
+                                      attributes__key="_element").values_list(
+                                      'attributes__tval', flat=True)
+                
+                new_ps = pseudos.filter(
+                                attributes__key="_element").values_list(
+                                'attributes__tval', flat=True)
                 
                 if num_pseudos != len(set(pseudos_list)):
-                    print ("x {} [INVALID: {} pseudos, "
-                           "but only for {} different elements]".format(
-                                g.name, num_pseudos, len(set(pseudos_list))))
+                    print ("x {} [INVALID: {} pseudos, for {} elements]"
+                           .format(g.name,num_pseudos,len(set(pseudos_list))))
+                    print ("  Maybe the pseudopotential family wasn't "
+                           "setup with the uploadfamily function?")
+
                 else:
-                    print "* {} [{} pseudos]".format(g.name, num_pseudos)
+                     print "* {} [{} pseudos]".format(g.name, num_pseudos)
         else:
-            print "No valid UPF pseudopotential families found."
+            print "No valid UPF pseudopotential family found."
+         
+            
         
-        
+    
+  
      

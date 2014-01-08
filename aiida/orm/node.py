@@ -550,7 +550,7 @@ class Node(object):
         Get the attribute.
 
         :param key: name of the attribute
-        :param optional *value: if no attribute key is found, returns value
+        :param optional value: if no attribute key is found, returns value
         
         :return: attribute value
         

@@ -20,6 +20,13 @@ class MultipleObjectsError(AiidaException):
     """
     pass
     
+class RemoteOperationError(AiidaException):
+    """
+    Raised when an error in a remote operation occurs, as in a failed kill() 
+    of a scheduler job.
+    """
+    pass
+
 class ContentNotExistent(NotExistent):
     """
     Raised when trying to access an attribute, a key or a file in the result
@@ -139,7 +146,6 @@ class FeatureDisabled(AiidaException):
 
 class LockPresent(AiidaException):
     """
-    Raised when a feature is requested, but the used chose to disabled it
-    (e.g., for submissions on disabled computers).
+    Raised when a lock is requested, but cannot be acquired.
     """
     pass

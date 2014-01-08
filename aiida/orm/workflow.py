@@ -769,7 +769,7 @@ class Workflow(object):
     # ------------------------------------------------------
     
     @classmethod
-    def get_subclass_from_dbnode(cls, wf_db, no_check=False):
+    def get_subclass_from_dbnode(cls, wf_db):
         
         """
         Core of the workflow next engine. The workflow is checked against MD5 hash of the stored script, 
@@ -796,7 +796,7 @@ class Workflow(object):
                 return getattr(wf_mod,elem_name)(uuid=wf_db.uuid)
     
     @classmethod      
-    def get_subclass_from_pk(cls,pk, no_check=False):
+    def get_subclass_from_pk(cls,pk):
         
         """
         Simple method to use retrieve starting from pk
@@ -807,13 +807,13 @@ class Workflow(object):
         try:
             
             dbworkflowinstance    = DbWorkflow.objects.get(pk=pk)
-            return cls.get_subclass_from_dbnode(dbworkflowinstance, no_check=False)
+            return cls.get_subclass_from_dbnode(dbworkflowinstance)
                   
         except ObjectDoesNotExist:
             raise NotExistent("No entry with pk={} found".format(pk))
                            
     @classmethod      
-    def get_subclass_from_uuid(cls,uuid, no_check=False):
+    def get_subclass_from_uuid(cls,uuid):
         
         """
         Simple method to use retrieve starting from uuid
@@ -824,7 +824,7 @@ class Workflow(object):
         try:
             
             dbworkflowinstance    = DbWorkflow.objects.get(uuid=uuid)
-            return cls.get_subclass_from_dbnode(dbworkflowinstance, no_check=False)
+            return cls.get_subclass_from_dbnode(dbworkflowinstance)
                   
         except ObjectDoesNotExist:
             raise NotExistent("No entry with the UUID {} found".format(uuid))
@@ -903,7 +903,7 @@ def kill_all():
     w_list = DbWorkflow.objects.filter(q_object)
     
     for w in w_list:
-        Workflow.get_subclass_from_uuid(w.uuid, no_check=True).kill()
+        Workflow.get_subclass_from_uuid(w.uuid).kill()
         
 
 

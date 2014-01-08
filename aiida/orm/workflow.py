@@ -915,7 +915,8 @@ def get_workflow_info(w, tab_size = 2, short = False, pre_string = ""):
     :param w: a DbWorkflow instance
     :param indent_level: the indentation level of this workflow
     :param tab_size: number of spaces to use for the indentation
-    :param short: if True, provide a shorter output
+    :param short: if True, provide a shorter output (only total number of
+        calculations, rather than the status of each calculation)
     """
     from django.utils import timezone
     
@@ -1001,7 +1002,8 @@ def list_workflows(short = False, all_states = False, tab_size = 2,
     """
     This function return a string with a description of the AiiDA workflows.
     
-    :param short: if True, provide a shorter output
+    :param short: if True, provide a shorter output (see documentation of the
+        ``short`` parameter of the :py:func:`get_workflow_info` function)
     :param all_states:  if True, print also workflows that have finished.
         Otherwise, hide workflows in the FINISHED and ERROR states.
     :param tab_size: how many spaces to use for indentation of subworkflows

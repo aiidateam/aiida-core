@@ -841,6 +841,35 @@ class TestNodeBasic(AiidaTestCase):
         with self.assertRaises(AttributeError):
             b.get_attr('state')
 
+    def test_versioning_lowlevel(self):
+        """
+        Checks the versioning.
+        """
+        from aiida.orm.test import myNodeWithFields
+        
+        a = myNodeWithFields()
+        a.store()
+
+        # Even if I stored many attributes, this should stay at 1
+        self.assertEquals(a._dbnode.nodeversion, 1)
+        self.assertEquals(a.dbnode.nodeversion, 1)
+        self.assertEquals(a._dbnode.nodeversion, 1)
+
+        a.label = "label1"
+        a.label = "label2"
+        self.assertEquals(a._dbnode.nodeversion, 3)
+        self.assertEquals(a.dbnode.nodeversion, 3)
+        self.assertEquals(a._dbnode.nodeversion, 3)
+
+        a.description = "desc1"
+        a.description = "desc2"
+        a.description = "desc3"
+        self.assertEquals(a._dbnode.nodeversion, 6)
+        self.assertEquals(a.dbnode.nodeversion, 6)
+        self.assertEquals(a._dbnode.nodeversion, 6)
+
+
+
     def test_comments(self):
         # This is the best way to compare dates with the stored ones, instead of
         # directly loading datetime.datetime.now(), or you can get a
@@ -1762,6 +1791,54 @@ class TestStructureData(AiidaTestCase):
                           ['Ba', 'Ti', 'Ti2', 'Ba1'])
         self.assertEquals(len(a.sites),5)
 
+    def test_kind_6(self):
+        """
+        Test the returning of kinds from the string name (most of the code
+        copied from :py:meth:`.test_kind_5`).
+        """
+        from aiida.orm.data.structure import StructureData
+
+        a = StructureData(cell=((2.,0.,0.),(0.,2.,0.),(0.,0.,2.)))
+        
+        a.append_atom(position=(0.,0.,0.),symbols='Ba',mass=100.)
+        a.append_atom(position=(0.,0.,0.),symbols='Ti')
+        # The name does not exist
+        a.append_atom(position=(0.,0.,0.),symbols='Ti',name='Ti2')
+        # The name already exists, but the properties are identical => OK
+        a.append_atom(position=(1.,1.,1.),symbols='Ti',name='Ti2')
+        # Should not complain, should create a new type
+        a.append_atom(position=(0.,0.,0.),symbols='Ba',mass=150.)
+        # There should be 4 kinds, the automatic name for the last one
+        # should be Ba1 (same check of test_kind_5
+        self.assertEquals([k.name for k in a.kinds],
+                          ['Ba', 'Ti', 'Ti2', 'Ba1'])
+        #############################
+        # Here I start the real tests        
+        # No such kind
+        with self.assertRaises(ValueError):
+            a.get_kind('Ti3')        
+        k = a.get_kind('Ba1')
+        self.assertEqual(k.symbols, ('Ba',))
+        self.assertAlmostEqual(k.mass, 150.)
+
+    def test_kind_7(self):
+        """
+        Test the functions returning the list of kinds, symbols, ...
+        """
+        from aiida.orm.data.structure import StructureData
+
+        a = StructureData(cell=((2.,0.,0.),(0.,2.,0.),(0.,0.,2.)))
+        
+        a.append_atom(position=(0.,0.,0.),symbols='Ba',mass=100.)
+        a.append_atom(position=(0.,0.,0.),symbols='Ti')
+        # The name does not exist
+        a.append_atom(position=(0.,0.,0.),symbols='Ti',name='Ti2')
+        # The name already exists, but the properties are identical => OK
+        a.append_atom(position=(0.,0.,0.),symbols=['O', 'H'], weights=[0.9,0.1], mass=15.)
+
+        self.assertEquals(a.get_symbols_set(), set(['Ba', 'Ti', 'O', 'H']))
+        
+
 class TestStructureDataLock(AiidaTestCase):
     """
     Tests that the structure is locked after storage
@@ -1778,7 +1855,7 @@ class TestStructureDataLock(AiidaTestCase):
         a.pbc = [False,True,True]
 
         k = Kind(symbols='Ba',name='Ba')       
-        s = Site(position=(0.,0.,0.),kind='Ba')
+        s = Site(position=(0.,0.,0.),kind_name='Ba')
         a.append_kind(k)
         a.append_site(s)
 
@@ -2022,3 +2099,396 @@ class TestStructureDataFromAse(AiidaTestCase):
                                                      'Cu', 'Cu', 'Cu', 
                                                      'Cu', 'Cu'])
         self.assertEquals(list(b.get_tags()), [0, 1, 0, 2, 3, 4, 5, 6])
+
+
+class TestArrayData(AiidaTestCase):
+    """
+    Tests the ArrayData objects.
+    """
+
+    def test_creation(self):
+        """
+        Check the methods to add, remove, modify, and get arrays and
+        array shapes.
+        """
+        from aiida.orm.data.array import ArrayData
+        import numpy
+        
+        # Create a node with two arrays
+        n = ArrayData()
+        first = numpy.random.rand(2,3,4)
+        n.set_array('first', first)
+        
+        second = numpy.arange(10)
+        n.set_array('second', second)
+
+        third = numpy.random.rand(6,6)
+        n.set_array('third', third)
+
+        
+        # Check if the arrays are there
+        self.assertEquals(set(['first', 'second', 'third']), set(n.arraynames()))
+        self.assertAlmostEquals(abs(first-n.get_array('first')).max(), 0.)
+        self.assertAlmostEquals(abs(second-n.get_array('second')).max(), 0.)
+        self.assertAlmostEquals(abs(third-n.get_array('third')).max(), 0.)
+        self.assertEquals(first.shape, n.get_shape('first'))
+        self.assertEquals(second.shape, n.get_shape('second')) 
+        self.assertEquals(third.shape, n.get_shape('third')) 
+        
+        with self.assertRaises(KeyError):
+            n.get_array('nonexistent_array')
+        
+        # Delete an array, and try to delete a non-existing one
+        n.delete_array('third')
+        with self.assertRaises(KeyError):
+            n.delete_array('nonexistent_array')
+          
+        # Overwrite an array
+        first = numpy.random.rand(4,5,6)
+        n.set_array('first', first)
+        
+        # Check if the arrays are there, and if I am getting the new one
+        self.assertEquals(set(['first', 'second']), set(n.arraynames()))
+        self.assertAlmostEquals(abs(first-n.get_array('first')).max(), 0.)
+        self.assertAlmostEquals(abs(second-n.get_array('second')).max(), 0.)
+        self.assertEquals(first.shape, n.get_shape('first'))
+        self.assertEquals(second.shape, n.get_shape('second')) 
+        
+        n.store()
+        
+        # Same checks, after storing
+        self.assertEquals(set(['first', 'second']), set(n.arraynames()))
+        self.assertAlmostEquals(abs(first-n.get_array('first')).max(), 0.)
+        self.assertAlmostEquals(abs(second-n.get_array('second')).max(), 0.)
+        self.assertEquals(first.shape, n.get_shape('first'))
+        self.assertEquals(second.shape, n.get_shape('second')) 
+
+        # Same checks, again (this is checking the caching features)
+        self.assertEquals(set(['first', 'second']), set(n.arraynames()))
+        self.assertAlmostEquals(abs(first-n.get_array('first')).max(), 0.)
+        self.assertAlmostEquals(abs(second-n.get_array('second')).max(), 0.)
+        self.assertEquals(first.shape, n.get_shape('first'))
+        self.assertEquals(second.shape, n.get_shape('second')) 
+
+
+        n2 = ArrayData(uuid=n.uuid)
+        
+        # Same checks, after reloading
+        self.assertEquals(set(['first', 'second']), set(n2.arraynames()))
+        self.assertAlmostEquals(abs(first-n2.get_array('first')).max(), 0.)
+        self.assertAlmostEquals(abs(second-n2.get_array('second')).max(), 0.)
+        self.assertEquals(first.shape, n2.get_shape('first'))
+        self.assertEquals(second.shape, n2.get_shape('second')) 
+
+        # Check that I cannot modify the node after storing
+        with self.assertRaises(ModificationNotAllowed):
+            n.delete_array('first')
+        with self.assertRaises(ModificationNotAllowed):
+            n.set_array('second', first)
+            
+        # Again same checks, to verify that the attempts to delete/overwrite
+        # arrays did not damage the node content
+        self.assertEquals(set(['first', 'second']), set(n.arraynames()))
+        self.assertAlmostEquals(abs(first-n.get_array('first')).max(), 0.)
+        self.assertAlmostEquals(abs(second-n.get_array('second')).max(), 0.)
+        self.assertEquals(first.shape, n.get_shape('first'))
+        self.assertEquals(second.shape, n.get_shape('second')) 
+        
+    def test_iteration(self):
+        """
+        Check the functionality of the iterarrays() iterator
+        """
+        from aiida.orm.data.array import ArrayData
+        import numpy
+        
+        # Create a node with two arrays
+        n = ArrayData()
+        first = numpy.random.rand(2,3,4)
+        n.set_array('first', first)
+        
+        second = numpy.arange(10)
+        n.set_array('second', second)
+
+        third = numpy.random.rand(6,6)
+        n.set_array('third', third)
+    
+        for name, array in n.iterarrays():
+            if name == 'first':
+                self.assertAlmostEquals(abs(first-array).max(), 0.)
+            if name == 'second':
+                self.assertAlmostEquals(abs(second-array).max(), 0.)
+            if name == 'third':
+                self.assertAlmostEquals(abs(third-array).max(), 0.)
+        
+        
+class TestTrajectoryData(AiidaTestCase):
+    """
+    Tests the TrajectoryData objects.
+    """
+
+    def test_creation(self):
+        """
+        Check the methods to set and retrieve a trajectory.
+        """
+        from aiida.orm.data.array.trajectory import TrajectoryData
+        import numpy
+        
+        # Create a node with two arrays
+        n = TrajectoryData()
+
+        # I create sample data
+        steps = numpy.array([60,70])
+        times = steps * 0.01
+        cells = numpy.array([
+                [[2.,0.,0.,],
+                 [0.,2.,0.,],
+                 [0.,0.,2.,]],
+                [[3.,0.,0.,],
+                 [0.,3.,0.,],
+                 [0.,0.,3.,]]])
+        symbols = numpy.array(['H', 'O', 'C'])
+        positions = numpy.array([
+            [[0.,0.,0.],
+             [0.5,0.5,0.5],
+             [1.5,1.5,1.5]],
+            [[0.,0.,0.],
+             [0.5,0.5,0.5],
+             [1.5,1.5,1.5]]])
+        velocities = numpy.array([
+            [[0.,0.,0.],
+             [0.,0.,0.],
+             [0.,0.,0.]],
+            [[0.5,0.5,0.5],
+             [0.5,0.5,0.5],
+             [-0.5,-0.5,-0.5]]])
+
+        # I set the node
+        n.set_trajectory(steps, times, cells, symbols, positions, velocities)
+
+        # Generic checks
+        self.assertEqual(n.numsites, 3)
+        self.assertEqual(n.numsteps, 2)
+        self.assertAlmostEqual(abs(steps-n.get_steps()).sum(), 0.)
+        self.assertAlmostEqual(abs(times-n.get_times()).sum(), 0.)
+        self.assertAlmostEqual(abs(cells-n.get_cells()).sum(), 0.)
+        self.assertEqual(symbols.tolist(), n.get_symbols().tolist())
+        self.assertAlmostEqual(abs(positions-n.get_positions()).sum(), 0.)
+        self.assertAlmostEqual(abs(velocities-n.get_velocities()).sum(), 0.)
+        
+        # get_step_data function check
+        data = n.get_step_data(1)
+        self.assertEqual(data[0], steps[1])
+        self.assertAlmostEqual(data[1], times[1])
+        self.assertAlmostEqual(abs(cells[1]-data[2]).sum(), 0.)
+        self.assertEqual(symbols.tolist(), data[3].tolist())
+        self.assertAlmostEqual(abs(data[4]-positions[1]).sum(), 0.)
+        self.assertAlmostEqual(abs(data[5]-velocities[1]).sum(), 0.)
+        
+        # Step 70 has index 1
+        self.assertEqual(1,n.get_step_index(70))
+        with self.assertRaises(ValueError):
+            # Step 66 does not exist
+            n.get_step_index(66)
+        
+        ########################################################
+        # I set the node, this time without velocities (the same node)
+        n.set_trajectory(steps, times, cells, symbols, positions)
+        # Generic checks
+        self.assertEqual(n.numsites, 3)
+        self.assertEqual(n.numsteps, 2)
+        self.assertAlmostEqual(abs(steps-n.get_steps()).sum(), 0.)
+        self.assertAlmostEqual(abs(times-n.get_times()).sum(), 0.)
+        self.assertAlmostEqual(abs(cells-n.get_cells()).sum(), 0.)
+        self.assertEqual(symbols.tolist(), n.get_symbols().tolist())
+        self.assertAlmostEqual(abs(positions-n.get_positions()).sum(), 0.)
+        self.assertIsNone(n.get_velocities())
+        
+        # Same thing, but for a new node
+        n = TrajectoryData()
+        n.set_trajectory(steps, times, cells, symbols, positions)
+        # Generic checks
+        self.assertEqual(n.numsites, 3)
+        self.assertEqual(n.numsteps, 2)
+        self.assertAlmostEqual(abs(steps-n.get_steps()).sum(), 0.)
+        self.assertAlmostEqual(abs(times-n.get_times()).sum(), 0.)
+        self.assertAlmostEqual(abs(cells-n.get_cells()).sum(), 0.)
+        self.assertEqual(symbols.tolist(), n.get_symbols().tolist())
+        self.assertAlmostEqual(abs(positions-n.get_positions()).sum(), 0.)
+        self.assertIsNone(n.get_velocities())
+        
+        n.store()
+        
+        # Again same checks, but after storing
+        # Generic checks
+        self.assertEqual(n.numsites, 3)
+        self.assertEqual(n.numsteps, 2)
+        self.assertAlmostEqual(abs(steps-n.get_steps()).sum(), 0.)
+        self.assertAlmostEqual(abs(times-n.get_times()).sum(), 0.)
+        self.assertAlmostEqual(abs(cells-n.get_cells()).sum(), 0.)
+        self.assertEqual(symbols.tolist(), n.get_symbols().tolist())
+        self.assertAlmostEqual(abs(positions-n.get_positions()).sum(), 0.)
+        self.assertIsNone(n.get_velocities())
+        
+        # get_step_data function check
+        data = n.get_step_data(1)
+        self.assertEqual(data[0], steps[1])
+        self.assertAlmostEqual(data[1], times[1])
+        self.assertAlmostEqual(abs(cells[1]-data[2]).sum(), 0.)
+        self.assertEqual(symbols.tolist(), data[3].tolist())
+        self.assertAlmostEqual(abs(data[4]-positions[1]).sum(), 0.)
+        self.assertIsNone(data[5])
+        
+        # Step 70 has index 1
+        self.assertEqual(1,n.get_step_index(70))
+        with self.assertRaises(ValueError):
+            # Step 66 does not exist
+            n.get_step_index(66)
+
+        ##############################################################
+        # Again, but after reloading from uuid
+        n = TrajectoryData(uuid=n.uuid)
+        # Generic checks
+        self.assertEqual(n.numsites, 3)
+        self.assertEqual(n.numsteps, 2)
+        self.assertAlmostEqual(abs(steps-n.get_steps()).sum(), 0.)
+        self.assertAlmostEqual(abs(times-n.get_times()).sum(), 0.)
+        self.assertAlmostEqual(abs(cells-n.get_cells()).sum(), 0.)
+        self.assertEqual(symbols.tolist(), n.get_symbols().tolist())
+        self.assertAlmostEqual(abs(positions-n.get_positions()).sum(), 0.)
+        self.assertIsNone(n.get_velocities())
+        
+        # get_step_data function check
+        data = n.get_step_data(1)
+        self.assertEqual(data[0], steps[1])
+        self.assertAlmostEqual(data[1], times[1])
+        self.assertAlmostEqual(abs(cells[1]-data[2]).sum(), 0.)
+        self.assertEqual(symbols.tolist(), data[3].tolist())
+        self.assertAlmostEqual(abs(data[4]-positions[1]).sum(), 0.)
+        self.assertIsNone(data[5])
+        
+        # Step 70 has index 1
+        self.assertEqual(1,n.get_step_index(70))
+        with self.assertRaises(ValueError):
+            # Step 66 does not exist
+            n.get_step_index(66)
+
+    def test_conversion_to_structure(self):
+        """
+        Check the methods to export a given time step to a StructureData node.
+        """
+        from aiida.orm.data.array.trajectory import TrajectoryData
+        from aiida.orm.data.structure import Kind
+        import numpy
+
+        # Create a node with two arrays
+        n = TrajectoryData()
+
+        # I create sample data
+        steps = numpy.array([60,70])
+        times = steps * 0.01
+        cells = numpy.array([
+                [[2.,0.,0.,],
+                 [0.,2.,0.,],
+                 [0.,0.,2.,]],
+                [[3.,0.,0.,],
+                 [0.,3.,0.,],
+                 [0.,0.,3.,]]])
+        symbols = numpy.array(['H', 'O', 'C'])
+        positions = numpy.array([
+            [[0.,0.,0.],
+             [0.5,0.5,0.5],
+             [1.5,1.5,1.5]],
+            [[0.,0.,0.],
+             [0.5,0.5,0.5],
+             [1.5,1.5,1.5]]])
+        velocities = numpy.array([
+            [[0.,0.,0.],
+             [0.,0.,0.],
+             [0.,0.,0.]],
+            [[0.5,0.5,0.5],
+             [0.5,0.5,0.5],
+             [-0.5,-0.5,-0.5]]])
+
+        # I set the node
+        n.set_trajectory(steps, times, cells, symbols, positions, velocities)
+
+        struc = n.step_to_structure(1)
+        self.assertEqual(len(struc.sites), 3) # 3 sites
+        self.assertAlmostEqual(abs(numpy.array(struc.cell)-cells[1]).sum(), 0)
+        newpos = numpy.array([s.position for s in struc.sites])
+        self.assertAlmostEqual(abs(newpos-positions[1]).sum(), 0)
+        newkinds = [s.kind_name for s in struc.sites]
+        self.assertEqual(newkinds, symbols.tolist())
+        
+        # Weird assignments (nobody should ever do this, but it is possible in 
+        # principle and we want to check
+        k1 = Kind(name='C', symbols='Cu')
+        k2 = Kind(name='H', symbols='He')
+        k3 = Kind(name='O', symbols='Os', mass=100.)
+        k4 = Kind(name='Ge', symbols='Ge')
+        
+        with self.assertRaises(ValueError):
+            # Not enough kinds
+            struc = n.step_to_structure(1, custom_kinds=[k1,k2])
+        
+        with self.assertRaises(ValueError):
+            # Too many kinds
+            struc = n.step_to_structure(1, custom_kinds=[k1,k2, k3, k4])
+        
+        with self.assertRaises(ValueError):
+            # Wrong kinds
+            struc = n.step_to_structure(1, custom_kinds=[k1,k2, k4])
+        
+        with self.assertRaises(ValueError):
+            # Two kinds with the same name
+            struc = n.step_to_structure(1, custom_kinds=[k1,k2, k3, k3])
+
+        # Correct kinds
+        struc = n.step_to_structure(1, custom_kinds=[k1,k2, k3])
+        
+        # Checks
+        self.assertEqual(len(struc.sites), 3) # 3 sites
+        self.assertAlmostEqual(abs(numpy.array(struc.cell)-cells[1]).sum(), 0)
+        newpos = numpy.array([s.position for s in struc.sites])
+        self.assertAlmostEqual(abs(newpos-positions[1]).sum(), 0)
+        newkinds = [s.kind_name for s in struc.sites]
+        # Kinds are in the same order as given in the custm_kinds list
+        self.assertEqual(newkinds, symbols.tolist())
+        newatomtypes = [struc.get_kind(s.kind_name).symbols[0] for s in struc.sites]
+        # Atoms remain in the same order as given in the positions list
+        self.assertEqual(newatomtypes, ['He', 'Os','Cu'])
+        # Check the mass of the kind of the second atom ('O' _> symbol Os, mass 100)
+        self.assertAlmostEqual(struc.get_kind(struc.sites[1].kind_name).mass,100.)
+        
+
+class TestWfBasic(AiidaTestCase):
+    """
+    Tests for the workflows
+    """
+    def test_versioning_lowlevel(self):
+        """
+        Checks the versioning.
+        """
+        from aiida.workflows.test import WorkflowTestEmpty
+        
+        w = WorkflowTestEmpty().store()
+
+        # Even if I stored many attributes, this should stay at 1
+        self.assertEquals(w._dbworkflowinstance.nodeversion, 1)
+        self.assertEquals(w.dbworkflowinstance.nodeversion, 1)
+        self.assertEquals(w._dbworkflowinstance.nodeversion, 1)
+
+        w.label = "label1"
+        w.label = "label2"
+        self.assertEquals(w._dbworkflowinstance.nodeversion, 3)
+        self.assertEquals(w.dbworkflowinstance.nodeversion, 3)
+        self.assertEquals(w._dbworkflowinstance.nodeversion, 3)
+
+        w.description = "desc1"
+        w.description = "desc2"
+        w.description = "desc3"
+        self.assertEquals(w._dbworkflowinstance.nodeversion, 6)
+        self.assertEquals(w.dbworkflowinstance.nodeversion, 6)
+        self.assertEquals(w._dbworkflowinstance.nodeversion, 6)
+
+    

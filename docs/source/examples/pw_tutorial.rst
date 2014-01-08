@@ -133,6 +133,15 @@ Structure
 ---------
 
 We now proceed in setting up the structure. 
+
+.. note:: Here we discuss only the main features of structures in AiiDA, needed
+    to run a Quantum ESPRESSO PW calculation.
+     
+    For more detailed information, give a look to the 
+    :ref:`structure_tutorial`.
+
+There are two ways to do that in AiiDA, a first one is to use the AiiDA Structure, which we will explain in the following; the second choice is the `Atomic Simulation Environment (ASE) <http://wiki.fysik.dtu.dk/ase/>`_ which provides excellent tools to manipulate structures (the ASE Atoms object needs to be converted into an AiiDA Structure, see the note at the end of the section).
+
 We first have to load the abstract object class that describes a structure. 
 We do it in the following way: we load the DataFactory, which is a tool to load the classes by their name, and then call StructureData the abstract class that we loaded. 
 (NB: it's not yet a class instance!) 
@@ -149,22 +158,25 @@ We define the cell with a 3x3 matrix (we choose the convention where each ROW re
           [0., 0., alat,],
          ]
 
-Now, we create the StructureData instance, assigning immediatly the cell. 
+Now, we create the StructureData instance, assigning immediately the cell. 
 Then, we append to the empty crystal cell the atoms, specifying their element name and their positions::
 
   # BaTiO3 cubic structure
   s = StructureData(cell=cell)
-  s.append_atom(position=(0.,0.,0.),symbols=['Ba'])
-  s.append_atom(position=(alat/2.,alat/2.,alat/2.),symbols=['Ti'])
-  s.append_atom(position=(alat/2.,alat/2.,0.),symbols=['O'])
-  s.append_atom(position=(alat/2.,0.,alat/2.),symbols=['O'])
-  s.append_atom(position=(0.,alat/2.,alat/2.),symbols=['O'])
+  s.append_atom(position=(0.,0.,0.),symbols='Ba')
+  s.append_atom(position=(alat/2.,alat/2.,alat/2.),symbols='Ti')
+  s.append_atom(position=(alat/2.,alat/2.,0.),symbols='O')
+  s.append_atom(position=(alat/2.,0.,alat/2.),symbols='O')
+  s.append_atom(position=(0.,alat/2.,alat/2.),symbols='O')
   s.store()
 
-To see more methods associated to the class StructureData, look at the class documentation.
+To see more methods associated to the class StructureData, look at the :ref:`my-ref-to-structure` documentation.
 Note also last line: with the method store(), we saved the instance of the structure in the database.
 It is also fundamental for later use: the calculation that will use this structure, will need to find it in the database.
 
+For an extended tutorial about the creation of Structure objects, check :doc:`this tutorial <../examples/structure_tutorial>`.
+
+.. note:: AiiDA supports also ASE structures. Once you created your structure with ASE, in an object instance called say ``ase_s``, you can straightforwardly use it to create the AiiDA StructureData, as ``s = StructureData(ase=ase_s)`` and then save it ``s.store()``.
 
 Parameters
 ----------
@@ -404,11 +416,11 @@ Compact script
 	    [0., 0., alat,],
 	   ]
     s = StructureData(cell=cell)
-    s.append_atom(position=(0.,0.,0.),symbols=['Ba'])
-    s.append_atom(position=(alat/2.,alat/2.,alat/2.),symbols=['Ti'])
-    s.append_atom(position=(alat/2.,alat/2.,0.),symbols=['O'])
-    s.append_atom(position=(alat/2.,0.,alat/2.),symbols=['O'])
-    s.append_atom(position=(0.,alat/2.,alat/2.),symbols=['O'])
+    s.append_atom(position=(0.,0.,0.),symbols='Ba')
+    s.append_atom(position=(alat/2.,alat/2.,alat/2.),symbols='Ti')
+    s.append_atom(position=(alat/2.,alat/2.,0.),symbols='O')
+    s.append_atom(position=(alat/2.,0.,alat/2.),symbols='O')
+    s.append_atom(position=(0.,alat/2.,alat/2.),symbols='O')
     s.store()
 
     parameters = ParameterData({
@@ -543,11 +555,11 @@ Exception tolerant code
 
     # BaTiO3 cubic structure
     s = StructureData(cell=cell)
-    s.append_atom(position=(0.,0.,0.),symbols=['Ba'])
-    s.append_atom(position=(alat/2.,alat/2.,alat/2.),symbols=['Ti'])
-    s.append_atom(position=(alat/2.,alat/2.,0.),symbols=['O'])
-    s.append_atom(position=(alat/2.,0.,alat/2.),symbols=['O'])
-    s.append_atom(position=(0.,alat/2.,alat/2.),symbols=['O'])
+    s.append_atom(position=(0.,0.,0.),symbols='Ba')
+    s.append_atom(position=(alat/2.,alat/2.,alat/2.),symbols='Ti')
+    s.append_atom(position=(alat/2.,alat/2.,0.),symbols='O')
+    s.append_atom(position=(alat/2.,0.,alat/2.),symbols='O')
+    s.append_atom(position=(0.,alat/2.,alat/2.),symbols='O')
     s.store()
 
     parameters = ParameterData({

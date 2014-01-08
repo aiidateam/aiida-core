@@ -21,7 +21,8 @@ Node
 ++++
 .. automodule:: aiida.orm.node
    :members:
-   
+   :special-members: __init__
+
 Workflow
 ++++++++
 .. automodule:: aiida.orm.workflow
@@ -42,14 +43,22 @@ ORM documentation: Data
 
 .. automodule:: aiida.orm.data
 
+.. _my-ref-to-structure:
+
 Structure
 +++++++++
 .. automodule:: aiida.orm.data.structure
    :members:
+   :special-members: __init__
 
 Folder
 ++++++
 .. automodule:: aiida.orm.data.folder
+   :members:
+
+Singlefile
+++++++++++
+.. automodule:: aiida.orm.data.singlefile
    :members:
 
 Upf
@@ -67,9 +76,14 @@ Remote
 .. automodule:: aiida.orm.data.remote
    :members:
 
-Singlefile
-++++++++++
-.. automodule:: aiida.orm.data.singlefile
+ArrayData
++++++++++
+.. automodule:: aiida.orm.data.array
+   :members:
+
+TrajectoryData
+++++++++++++++
+.. automodule:: aiida.orm.data.array.trajectory
    :members:
 
 
@@ -87,7 +101,6 @@ ORM documentation: Calculation
 .. automodule:: aiida.orm.calculation
    :members:
    :special-members: __init__
-   :undoc-members:
 
 Quantum Espresso - PW
 +++++++++++++++++++++

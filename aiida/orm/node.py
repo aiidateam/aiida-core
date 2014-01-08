@@ -59,14 +59,23 @@ class Node(object):
     
     @property
     def logger(self):
+        """
+        Get the logger of the Node object.
+        
+        :return: Logger object
+        """
         return self._logger
     
     @classmethod
     def get_subclass_from_uuid(cls,uuid):
         """
-        This class method will load an entry from the uuid, but loading the proper
-        subclass where appropriate (while if Node(uuid=...) is called, only the Node
-        class is loaded, even if the node is of a subclass).
+        Get a node object from the uuid, with the proper subclass of Node.
+        (if Node(uuid=...) is called, only the Node class is loaded).
+        
+        :param uuid: a string with the uuid of the object to be loaded.
+        :return: the object of the proper subclass.
+        :raise: NotExistent: if there is no entry of the desired 
+                             object kind with the given uuid.
         """
         from aiida.djsite.db.models import DbNode
         try:
@@ -81,8 +90,14 @@ class Node(object):
     @classmethod
     def get_subclass_from_pk(cls,pk):
         """
-        This class method will load an entry from the pk (integer primary key used in 
-        this database), but loading the proper subclass where appropriate.
+        Get a node object from the pk, with the proper subclass of Node.
+        (integer primary key used in this database), 
+        but loading the proper subclass where appropriate.
+                
+        :param pk: a string with the pk of the object to be loaded.
+        :return: the object of the proper subclass.
+        :raise: NotExistent: if there is no entry of the desired 
+                             object kind with the given pk.
         """
         from aiida.djsite.db.models import DbNode
         try:
@@ -93,12 +108,28 @@ class Node(object):
             raise NotExistent("pk={} is not an instance of {}".format(
                 pk,cls.__name__))        
         return node
+    
+    @property
+    def ctime(self):
+        """
+        Return the creation time of the node.
+        """
+        return self.dbnode.ctime
+
+    @property
+    def mtime(self):
+        """
+        Return the modification time of the node.
+        """
+        return self.dbnode.mtime
         
     def __int__(self):
         """
         Convert the class to an integer. This is needed to allow querying with Django.
         Be careful, though, not to pass it to a wrong field! This only returns the
         local DB principal key value.
+        
+        :return: the integer pk of the node or None if not stored.
         """
         if self._to_be_stored:
             return None
@@ -106,6 +137,12 @@ class Node(object):
             return self._dbnode.pk
     
     def __init__(self,**kwargs):
+        """
+        Initialize the object Node.
+        
+        :param optional uuid: if present, the Node with given uuid is loaded from the database.
+                  (It is not possible to assign a uuid to a new Node.)
+        """
         from aiida.djsite.utils import get_automatic_user
         from aiida.djsite.db.models import DbNode
 
@@ -173,8 +210,10 @@ class Node(object):
     @property
     def computer(self):
         """
-        Return the Computer associated to this node, or None if no computer
+        Get the Computer associated to this node, or None if no computer
         is associated.
+        
+        :return: a computer object
         """
         from aiida.orm import Computer
         
@@ -186,19 +225,26 @@ class Node(object):
 
     @property
     def label(self):
+        """
+        Get the label of the node.
+        
+        :return: a string.
+        """
         return self.dbnode.label
 
     @label.setter
     def label(self,label):
         """
-        Set the label of the node
+        Set the label of the node.
+        
+        :param label: a string
         """
         self._update_db_label_field(label)
             
     def _update_db_label_field(self, field_value):
         from django.db import transaction        
 
-        self._dbnode.label = field_value
+        self.dbnode.label = field_value
         if not self._to_be_stored:
             with transaction.commit_on_success():
                 self._dbnode.save()
@@ -206,19 +252,26 @@ class Node(object):
             
     @property
     def description(self):
+        """
+        Get the description of the node.
+        
+        :return: a string
+        """
         return self.dbnode.description
 
     @description.setter
     def description(self,desc):
         """
         Set the description of the node
+        
+        :param desc: a string
         """
         self._update_db_description_field(desc)
 
     def _update_db_description_field(self, field_value):
         from django.db import transaction        
 
-        self._dbnode.description = field_value
+        self.dbnode.description = field_value
         if not self._to_be_stored:
             with transaction.commit_on_success():
                 self._dbnode.save()
@@ -239,12 +292,20 @@ class Node(object):
         return True
 
     def get_user(self):
+        """
+        Get the user.
+        
+        :return: a Django User object
+        """
         return self.dbnode.user
 
     def replace_link_from(self,src,label):
         """
         Replace an input link with the given label, or simply creates it
         if it does not exist.
+        
+        :param str src: the source object.
+        :param str label: the label of the link from src to the current Node
         """
         from django.db import transaction        
         from aiida.djsite.db.models import Link
@@ -263,8 +324,11 @@ class Node(object):
         """
         Add a link to the current node from the 'src' node.
         Both nodes must be a Node instance (or a subclass of Node)
-
-        In subclasses, change only this.
+        (In subclasses, change only this.)
+        
+        :param src: the source object
+        :param str label: the name of the label to set the link from src.
+                    Default = None.
         """
         from aiida.djsite.db.models import Link, Path
         from django.db import IntegrityError, transaction
@@ -286,7 +350,7 @@ class Node(object):
         # I am linking src->self; a loop would be created if a Path exists already
         # in the TC table from self to src
         if len(Path.objects.filter(parent=self.dbnode, child=src.dbnode))>0:
-            raise ValueError("The link you are attempting to create would generate a loop")            
+            raise ValueError("The link you are attempting to create would generate a loop")
 
         # Check if the source allows output links from this node (will raise ValueError if 
         # this is not the case)
@@ -338,8 +402,10 @@ class Node(object):
         """
         Add a link from the current node to the 'dest' node.
         Both nodes must be a Node instance (or a subclass of Node)
-
-        Do not change in subclasses, subclass the add_link_from class only.
+        (Do not change in subclasses, subclass the add_link_from class only.)
+        
+        :param dest: destination Node object to set the link to.
+        :param str label: the name of the link. Default=None
         """
         if not isinstance(dest,Node):
             raise ValueError("dest must be a Node instance")
@@ -348,7 +414,10 @@ class Node(object):
     def can_link_as_output(self,dest):
         """
         Raise a ValueError if a link from self to dest is not allowed.
-        Implement in subclasses
+        Implement in subclasses.
+        
+        :param dest: the destination output Node
+        :return: a boolean (True)
         """
         return True
 
@@ -356,6 +425,8 @@ class Node(object):
         """
         Return a dictionary where the key is the label of the input link, and
         the value is the input node.
+        
+        :return: a dictionary {label:object}
         """
         return dict(self.get_inputs(also_labels=True))
 
@@ -364,6 +435,8 @@ class Node(object):
         Return a dictionary where the key is the label of the input link, and
         the value is the input node. Includes only the data nodes, no
         calculations or codes.
+        
+        :return: a dictionary {label:object}
         """
         from aiida.orm import Data
         return dict(self.get_inputs(type=Data, also_labels=True))
@@ -372,6 +445,9 @@ class Node(object):
         """
         Return the input with a given name, or None if no input with that name
         is set.
+
+        :param str name: the label of the input object
+        :return: the input object
         """
         return self.get_inputdata_dict().get(name, None)
 
@@ -379,12 +455,9 @@ class Node(object):
         """
         Return a list of nodes that enter (directly) in this node
 
-        Args:
-            type
-                If specified, should be a class, and it filters only elements of that
-                specific type (or a subclass of 'type')
-            also_labels
-                If False (default) only return a list of input nodes.
+        :param type: If specified, should be a class, and it filters only elements of that
+                     specific type (or a subclass of 'type')
+        :param also_labels: If False (default) only return a list of input nodes.
                 If True, return a list of tuples, where each tuple has the following
                 format: ('label', Node)
                 with 'label' the link label, and Node a Node instance or subclass
@@ -411,10 +484,9 @@ class Node(object):
         """
         Return a list of nodes that exit (directly) from this node
 
-        Args:
-            type: if specified, should be a class, and it filters only elements of that
+        :param type: if specified, should be a class, and it filters only elements of that
                 specific type (or a subclass of 'type')
-            also_labels: if False (default) only return a list of input nodes.
+        :param also_labels: if False (default) only return a list of input nodes.
                 If True, return a list of tuples, where each tuple has the following
                 format: ('label', Node)
                 with 'label' the link label, and Node a Node instance or subclass
@@ -438,6 +510,13 @@ class Node(object):
 
             
     def set_attr(self, key, value):
+        """
+        Set a new attribute to the Node.
+        
+        :param str key: key name
+        :param value: its value
+        :raise: ModificationNotAllowed if cannot add such attribute.
+        """
         if self._to_be_stored:
             self._attrs_cache["_{}".format(key)] = value
         else:
@@ -447,6 +526,13 @@ class Node(object):
                 raise ModificationNotAllowed("Cannot set an attribute after saving a node")
 
     def del_attr(self, key):
+        """
+        Delete an attribute.
+
+        :param key: attribute to delete.
+        :raise AttributeError: if key does not exist.
+        :raise ModificationNotAllowed: if the Node was already stored.
+        """
         if self._to_be_stored:
             try:
                 del self._attrs_cache["_{}".format(key)]
@@ -460,6 +546,17 @@ class Node(object):
 
 
     def get_attr(self, key, *args):
+        """
+        Get the attribute.
+
+        :param key: name of the attribute
+        :param optional value: if no attribute key is found, returns value
+        
+        :return: attribute value
+        
+        :raise IndexError: If no attribute is found and there is no default
+        :raise ValueError: If more than two arguments are passed to get_attr
+        """
         if len(args) > 1:
             raise ValueError("After the key name you can pass at most one value, that is "
                              "the default value to be used if no attribute is found.")
@@ -484,6 +581,9 @@ class Node(object):
         Can be used *only* after saving.
 
         Metadata keys cannot start with an underscore.
+        
+        :param string key: key name
+        :param value: key value
         """
         if key.startswith('_'):
             raise ValueError("An metadata key cannot start with an underscore")
@@ -499,6 +599,10 @@ class Node(object):
         function is meaningful to be called only after the .store() method.
 
         Metadata keys cannot start with an underscore.
+        
+        :param str key: key name
+        :return: the key value
+        :raise: AttributeError: if key starts with underscore
         """
         if key.startswith('_'):
             raise AttributeError("An metadata key cannot start with an underscore")
@@ -512,6 +616,10 @@ class Node(object):
         function is meaningful to be called only after the .store() method.
 
         Metadata keys cannot start with an underscore.
+        
+        :param str key: key name
+        :raise: AttributeError: if key starts with underscore
+        :raise: ModificationNotAllowed: if the node has already been stored
         """
         if key.startswith('_'):
             raise ValueError("An metadata key cannot start with an underscore")
@@ -522,7 +630,9 @@ class Node(object):
 
     def metadata(self):
         """
-        Returns the keys of the metadata
+        Get the keys of the metadata.
+        
+        :return: a list of strings
         """
         from django.db.models import Q
         # I return the list of keys
@@ -543,11 +653,11 @@ class Node(object):
         """
         Iterator over the attributes, returning tuples (key, value)
 
-        If also_updatable is False, does not iterate over attributes that are updatable
-
-        TODO: check what happens if someone stores the object while the iterator is
-        being used!
+        :param bool also_updatable: if False, does not iterate over 
+                      attributes that are updatable
         """
+#        TODO: check what happens if someone stores the object while the iterator is
+#              being used!
         updatable_list = ["_{}".format(attr) for attr in self._updatable_attributes]
         
         if self._to_be_stored:
@@ -567,9 +677,11 @@ class Node(object):
 
     def attrs(self):
         """
-        Returns the keys of the attributes
+        Returns the keys of the attributes.
+        
+        :return: a list of strings
         """
-
+        
         if self._to_be_stored:
             return [k[1:] for k in self._attrs_cache.keys()]
         else:
@@ -589,6 +701,8 @@ class Node(object):
     def add_comment(self,content):
         """
         Add a new comment.
+        
+        :param content: string with comment
         """
         from aiida.djsite.db.models import Comment
         from aiida.djsite.utils import get_automatic_user
@@ -601,8 +715,9 @@ class Node(object):
 
     def get_comments(self):
         """
-        Return the list of comments, sorted by date; each element of the list is a tuple
-        containing (username, username_email, date, content)
+        
+        :return: the list of comments, sorted by date; each element of the list is a tuple
+            containing (username, username_email, date, content)
         """
         from aiida.djsite.db.models import Comment
 
@@ -657,6 +772,9 @@ class Node(object):
         # need to get its pk
         DbNode.objects.filter(pk=self._dbnode.pk).update(nodeversion = F('nodeversion') + 1)
 
+        # This reload internally the node of self._dbworkflowinstance
+        self.dbnode
+
         # Note: I have to reload the ojbect. I don't do it here because it is done at every call
         # to self.dbnode
         #self._dbnode = DbNode.objects.get(pk=self._dbnode.pk)
@@ -692,6 +810,8 @@ class Node(object):
 
         Copies files and attributes, but not the metadata.
         Does not store the Node to allow modification of attributes.
+        
+        :return: an object copy
         """
         newobject = self.__class__()
         newobject.dbnode.type = self.dbnode.type # Inherit type
@@ -710,15 +830,27 @@ class Node(object):
 
     @property
     def uuid(self):
+        """
+        
+        :return: a string with the uuid
+        """
         return unicode(self.dbnode.uuid)
 
     @property
     def pk(self):
+        """
+        
+        :return: a string with the principle key
+        """
         return unicode(self.dbnode.pk)
 
 
     @property
     def dbnode(self):
+        """
+        
+        :return: the DbNode object.
+        """
         from aiida.djsite.db.models import DbNode
         
         # I also update the internal _dbnode variable, if it was saved
@@ -728,10 +860,22 @@ class Node(object):
 
     @property
     def repo_folder(self):
+        """
+        Get the permanent repository folder.
+        Use preferentially the current_folder method.
+        
+        :return: the permanent RepositoryFolder object
+        """
         return self._repo_folder
 
     @property
     def current_folder(self):
+        """
+        Get the current repository folder, 
+        whether the temporary or the permanent.
+        
+        :return: the RepositoryFolder object.
+        """
         if self._to_be_stored:
             return self.get_temp_folder()
         else:
@@ -739,13 +883,29 @@ class Node(object):
 
     @property
     def path_subfolder(self):
+        """
+        Get the subfolder in the repository.
+        
+        :return: a Folder object.
+        """
         return self.current_folder.get_subfolder(
             _path_subfolder_name,reset_limit=True)
 
     def get_path_list(self, subfolder='.'):
+        """
+        Get the the list of files/directory in the repository of the object.
+        
+        :param str,optional subfolder: get the list of a subfolder
+        :return: a list of strings.
+        """
         return self.path_subfolder.get_subfolder(subfolder).get_content_list()
 
     def get_temp_folder(self):
+        """
+        Get the folder of the Node in the temporary repository.
+        
+        :return: a SandboxFolder object mapping the node in the repository.
+        """
         if self._temp_folder is None:
             raise InternalError("The temp_folder was asked for node {}, but it is "
                                 "not set!".format(self.uuid))
@@ -754,11 +914,12 @@ class Node(object):
     def remove_path(self,path):
         """
         Remove a file or directory from the repository directory.
-
         Can be called only before storing.
+        
+        :param str path: relative path to file/directory.
         """
         if not self._to_be_stored:
-            raise ValueError("Cannot delete a path after storing the node")
+            raise ModificationNotAllowed("Cannot delete a path after storing the node")
         
         if os.path.isabs(path):
             raise ValueError("The destination path in remove_path must be a relative path")
@@ -770,14 +931,15 @@ class Node(object):
         If there is a subpath, folders will be created.
 
         Copy to a cache directory if the entry has not been saved yet.
-        src_abs: the absolute path of the file to copy.
-        dst_filename: the (relative) path on which to copy.
-
+        
+        :param str src_abs: the absolute path of the file to copy.
+        :param str dst_filename: the (relative) path on which to copy.
+        
         TODO: in the future, add an add_attachment() that has the same meaning of a metadata file.
         Decide also how to store. If in two separate subfolders, remember to reset the limit.
         """
         if not self._to_be_stored:
-            raise ValueError("Cannot insert a path after storing the node")
+            raise ModificationNotAllowed("Cannot insert a path after storing the node")
         
         if not os.path.isabs(src_abs):
             raise ValueError("The source path in add_path must be absolute")
@@ -788,8 +950,15 @@ class Node(object):
 
     def get_abs_path(self,path,section=_path_subfolder_name):
         """
-        TODO: For the moment works only for one kind of files, 'path' (internal files)
+        Get the absolute path to the folder associated with the Node in the AiiDA repository.
+        
+        :param str path: the name of the subfolder inside the section.
+        :param section: the name of the subfolder ('path' by default).
+        :return: a string with the absolute path
+        
+        For the moment works only for one kind of files, 'path' (internal files)
         """
+        #TODO: For the moment works only for one kind of files, 'path' (internal files)
         if os.path.isabs(path):
             raise ValueError("The path in get_abs_path must be relative")
         return self.current_folder.get_subfolder(section,reset_limit=True).get_abs_path(path,check_existence=True)
@@ -800,9 +969,8 @@ class Node(object):
 
         Can be called only once. Afterwards, attributes cannot be changed anymore!
         Instead, metadata can be changed only AFTER calling this store() function.
-        
-        TODO: This needs to be generalized, allowing for flexible methods for storing data and its attributes.
         """
+        #TODO: This needs to be generalized, allowing for flexible methods for storing data and its attributes.
         from django.db import transaction
 
         if self._to_be_stored:

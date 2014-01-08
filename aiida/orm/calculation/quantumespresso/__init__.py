@@ -258,7 +258,7 @@ class BasePwCpInputGenerator(object):
               structure.sites,fixed_coords_strings):
             atomic_positions_card_list.append(
             "{0} {1:18.10f} {2:18.10f} {3:18.10f} {4}\n".format(
-                site.kind.ljust(6), site.position[0], site.position[1],
+                site.kind_name.ljust(6), site.position[0], site.position[1],
                 site.position[2], fixed_coords_string))
         atomic_positions_card = "".join(atomic_positions_card_list)
         del atomic_positions_card_list # Free memory

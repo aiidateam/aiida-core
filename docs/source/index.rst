@@ -21,6 +21,7 @@ User's guide
    database/index
    installation
    setup/computerandcodes
+   examples/structure_tutorial
    examples/pw_tutorial
    examples/ph_tutorial
    examples/cp_tutorial
@@ -29,6 +30,7 @@ User's guide
    scheduler/index
     
    workflow/index
+   troubleshooting/index
 
 Developer's guide
 +++++++++++++++++
@@ -37,6 +39,7 @@ Developer's guide
     :maxdepth: 2
     
     Developer's Guide <developers> 
+    devel_tutorial/code_plugin    
 
 Modules provided with aiida
 ---------------------------

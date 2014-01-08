@@ -9,6 +9,7 @@ class CalcState(Enumerate):
 calc_states = CalcState((
         'UNDETERMINED',
         'NEW', # just created
+        'TOSUBMIT', # used by the executionmanager to submit new calculations scheduled to be submitted
         'SUBMITTING', # being submitted to cluster
         'WITHSCHEDULER', # on the scheduler (on any unfinished status:
                          # QUEUED, QUEUED_HELD, SUSPENDED, RUNNING)
@@ -57,17 +58,40 @@ class CalcInfo(DefaultFieldsAttributeDict):
         'remote_file_list', # a list of length-three tuples with (remotemachinename, remoteabspath, relativedestpath)
         )
 
+
 class WorkflowState(Enumerate):
     pass
 
 wf_states = WorkflowState((
-        'INITIATED',
+        'CREATED',
+        'INITIALIZED',
         'RUNNING',
         'FINISHED',
+        'SLEEP',
+        'ERROR'
+        ))
+
+class WorkflowDataType(Enumerate):
+    pass
+
+wf_data_types = WorkflowDataType((
+        'PARAMETER',
+        'RESULT',
+        'ATTRIBUTE',
+        ))
+
+class WorkflowDataValueType(Enumerate):
+    pass
+
+wf_data_value_types = WorkflowDataValueType((
+        'NONE',
+        'JSON',
+        'AIIDA',
         ))
 
 wf_start_call = "start"
 wf_exit_call = "exit"
+wf_default_call = "none"
 
 #TODO Improve/implement this!
 #class DynResourcesInfo(AttributeDict):

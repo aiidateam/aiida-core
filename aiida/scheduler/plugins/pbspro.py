@@ -302,7 +302,11 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
         # issue a warning if there is any stderr output
         # but I strip lines containing "Unknown Job Id", that happens
         # also when I ask for a calculation that has finished
-        filtered_stderr = '\n'.join(l for l in stderr.split('\n') if "Unknown Job Id" not in l)
+        #
+        # I also strip for "Job has finished" because this happens for
+        # those schedulers configured to leave the job in the output
+        # of qstat for some time after job completion.
+        filtered_stderr = '\n'.join(l for l in stderr.split('\n') if "Unknown Job Id" not in l and "Job has finished" not in l)
         if filtered_stderr.strip():
             self.logger.warning("Warning in _parse_joblist_output, non-empty "
                 "(filtered) stderr='{}'".format(filtered_stderr))
@@ -643,3 +647,38 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
         
         return stdout.strip()
 
+    def _get_kill_command(self, jobid):
+        """
+        Return the command to kill the job with specified jobid.
+        """
+        submit_command = 'qdel {}'.format(jobid)
+
+        self.logger.info("killing job {}".format(jobid))
+
+        return submit_command
+
+
+    def _parse_kill_output(self, retval, stdout, stderr):
+        """
+        Parse the output of the kill command.
+        
+        To be implemented by the plugin.
+
+        :return: True if everything seems ok, False otherwise.
+        """
+        if retval != 0:
+            self.logger.error("Error in _parse_kill_output: retval={}; "
+                "stdout={}; stderr={}".format(retval, stdout, stderr))
+            return False
+
+        if stderr.strip():
+            self.logger.warning("in _parse_kill_output for {}: "
+                "there was some text in stderr: {}".format(
+                    str(self.transport),stderr))
+
+        if stdout.strip():
+            self.logger.warning("in _parse_kill_output for {}: "
+                "there was some text in stdout: {}".format(
+                    str(self.transport),stdout))
+
+        return True

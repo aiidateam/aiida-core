@@ -284,7 +284,7 @@ def submit_calc(calc):
             job_tmpl.rerunnable = False
             job_tmpl.job_environment = {}
             #'email', 'email_on_started', 'email_on_terminated',
-            job_tmpl.job_name = 'aiida-{}'.format(calc.uuid) 
+            job_tmpl.job_name = 'aiida-{}'.format(calc.pk) 
             job_tmpl.sched_output_path = '_scheduler-stdout.txt'
             job_tmpl.sched_error_path = '_scheduler-stderr.txt'
             job_tmpl.sched_join_files = False
@@ -451,8 +451,11 @@ def submit_calc(calc):
                 execlogger.debug("submitted calculation {} with job id {}".format(
                     calc.uuid, job_id))
 
-    except:
+    except Exception as e:
+        import traceback
         calc._set_state(calc_states.SUBMISSIONFAILED)
+        execlogger.debug("Submission failed, traceback: {}".format(
+               traceback.format_exc()))
         raise
             
 def retrieve_computed_for_authinfo(authinfo):
@@ -501,14 +504,14 @@ def retrieve_computed_for_authinfo(authinfo):
 
                     calc._set_state(calc_states.PARSING)
 
-                    Parser = calc.get_parser()
+                    Parser = calc.get_parserclass()
                     # If no parser is set, the calculation is successful
                     successful = True 
                     if Parser is not None:
                         # TODO: parse here
-                        parser = Parser()
-                        successful = parser.parse_from_calc(calc)
-
+                        parser = Parser(calc)
+                        successful = parser.parse_from_calc()
+                        
                     if successful:
                         calc._set_state(calc_states.FINISHED)
                     else:

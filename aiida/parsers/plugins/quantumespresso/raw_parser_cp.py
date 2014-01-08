@@ -21,7 +21,6 @@ def parse_cp_traj_stanzas(num_elements, splitlines, prepend_name,rescale=1.):
 
     rescale: the values in each stanza are multiplied by this factor, for units conversion
     """
-
     steps = []
     times = []
     stanzas = []
@@ -59,7 +58,6 @@ def parse_cp_traj_stanzas(num_elements, splitlines, prepend_name,rescale=1.):
     except Exception as e:
         e.message = "At line {}: {}".format(linenum+1, e.message)
         raise e
-
 
 def parse_cp_text_output(data,xml_data):
     """
@@ -601,3 +599,11 @@ def parse_cp_xml_output(data):
     # - others TODO are written in the function
 
     return parsed_data
+
+
+
+
+def parse_cp_raw_trajectory():
+    
+
+    return raw_trajectory

@@ -190,9 +190,11 @@ class SgeScheduler(aiida.scheduler.Scheduler):
             job_title = re.sub(r'[^a-zA-Z0-9_.-]+', '', job_tmpl.job_name)
 
             # prepend a 'j' (for 'job') before the string if the string
-            # is now empty or does not start with a valid charachter
+            # is now empty or does not start with a valid character
+            # (the first symbol cannot be digit, at least in some versions
+            #  of the scheduler)
             if not job_title or (
-                job_title[0] not in string.letters + string.digits):
+                job_title[0] not in string.letters):
                 job_title = 'j' + job_title
                 
             lines.append('#$ -N {}'.format(job_tmpl.job_name))

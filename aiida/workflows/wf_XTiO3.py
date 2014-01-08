@@ -9,7 +9,7 @@ UpfData = DataFactory('upf')
 ParameterData = DataFactory('parameter')
 StructureData = DataFactory('structure')
 
-logger = aiidalogger.getChild('WorkflowDemo')
+logger = aiidalogger.getChild('WorkflowXTiO3')
 
 ## ===============================================
 ##    WorkflowXTiO3
@@ -43,10 +43,10 @@ class WorkflowXTiO3(Workflow):
         
         params = self.get_parameters()
         
-        ph_codename            = params.pop('ph_codename', 'phlocal')
-        num_machines           = int(params.pop('num_machines', 1))
-        num_cpus_per_machine   = int(params.pop('num_cpus_per_machine', 8))
-        max_wallclock_seconds  = int(params.pop('max_wallclock_seconds', 30*60))
+        ph_codename            = params['ph_codename']
+        num_machines           = params['num_machines']
+        num_cpus_per_machine   = params['num_cpus_per_machine']
+        max_wallclock_seconds  = params['max_wallclock_seconds']
         
         code = Code.get(ph_codename)
         computer = code.get_remote_computer()
@@ -68,6 +68,7 @@ class WorkflowXTiO3(Workflow):
     ##    Wf steps
     ## ===============================================
     
+    @Workflow.step
     def start(self):
         
         params = self.get_parameters()
@@ -86,7 +87,8 @@ class WorkflowXTiO3(Workflow):
             self.attach_workflow(w)
         
         self.next(self.run_ph)
-
+        
+    @Workflow.step
     def run_ph(self):
         
         # Get calculations
@@ -102,7 +104,8 @@ class WorkflowXTiO3(Workflow):
             self.attach_calculation(ph_calc)
             
         self.next(self.final_step)
-        
+    
+    @Workflow.step
     def final_step(self):
         
         #self.append_to_report(x_material+"Ti03 EOS started")
@@ -112,9 +115,9 @@ class WorkflowXTiO3(Workflow):
         params = self.get_parameters()
         
         # Get calculations
-        start_calcs = self.get_step(self.run_ph).get_calculations()
+        run_ph_calcs = self.get_step_calculations(self.run_ph) #.get_calculations()
         
-        for c in start_calcs:
+        for c in run_ph_calcs:
             dm = c.get_outputs(type=ParameterData)[0].get_dict()['dynamical_matrix_1']
             self.append_to_report("Point q: {0} Frequencies: {1}".format(dm['q_point'],dm['frequencies']))
         
@@ -184,15 +187,15 @@ class WorkflowXTiO3_EOS(Workflow):
     ##    Calculations generators
     ## ===============================================
     
-    def get_pw_calculation(self, pw_structure, pw_parameters, pw_keypoint):
+    def get_pw_calculation(self, pw_structure, pw_parameters, pw_kpoint):
         
         params = self.get_parameters()
         
-        pw_codename               = params.pop('pw_codename', 'pwlocal')
-        num_machines           = int(params.pop('num_machines', 1))
-        num_cpus_per_machine   = int(params.pop('num_cpus_per_machine', 8))
-        max_wallclock_seconds  = int(params.pop('max_wallclock_seconds', 30*60))
-        pseudo_family          = params.pop('pseudo_family', 'PBEsol_rrkjus_pslibrary_0.3.0')
+        pw_codename            = params['pw_codename']
+        num_machines           = params['num_machines']
+        num_cpus_per_machine   = params['num_cpus_per_machine']
+        max_wallclock_seconds  = params['max_wallclock_seconds']
+        pseudo_family          = params['pseudo_family']
         
         code = Code.get(pw_codename)
         computer = code.get_remote_computer()
@@ -209,7 +212,7 @@ class WorkflowXTiO3_EOS(Workflow):
         calc.use_structure(pw_structure)
         calc.use_pseudo_from_family(pseudo_family)
         calc.use_parameters(pw_parameters)
-        calc.use_kpoints(pw_keypoint)
+        calc.use_kpoints(pw_kpoint)
         
         return calc
         
@@ -218,15 +221,16 @@ class WorkflowXTiO3_EOS(Workflow):
     ##    Wf steps
     ## ===============================================
     
-    
+    @Workflow.step
     def start(self):
         
         params = self.get_parameters()
-        x_material             = params.pop('x_material', 'Ba')
+        x_material             = params['x_material']
         
         self.append_to_report(x_material+"Ti03 EOS started")
         self.next(self.eos)
     
+    @Workflow.step
     def eos(self):
         
         from aiida.orm import Code, Computer, CalculationFactory
@@ -234,15 +238,15 @@ class WorkflowXTiO3_EOS(Workflow):
         
         params = self.get_parameters()
         
-        x_material             = params.pop('x_material', 'Ba')
-        starting_alat          = float(params.pop('starting_alat', 4.0))
-        alat_steps             = int(params.pop('alat_steps', 5))
+        x_material             = params['x_material']
+        starting_alat          = params['starting_alat']
+        alat_steps             = params['alat_steps']
         
         
         a_sweep = np.linspace(starting_alat*0.85,starting_alat*1.15,alat_steps).tolist()
         
         aiidalogger.info("Storing a_sweep as "+str(a_sweep))
-        self.add_parameters({'a_sweep':a_sweep})
+        self.add_attribute('a_sweep',a_sweep)
         
         for a in a_sweep:
             
@@ -257,26 +261,25 @@ class WorkflowXTiO3_EOS(Workflow):
             
         self.next(self.optimize)
         
-        
+    @Workflow.step  
     def optimize(self):
         
         from aiida.orm.data.parameter import ParameterData
         import aiida.tools.physics as ps
         
-        params = self.get_parameters()
-        x_material   = params.pop('x_material', 'Ba')
-        a_sweep      = params.pop('a_sweep',[])
+        x_material   = self.get_parameter("x_material")
+        a_sweep      = self.get_attribute("a_sweep")
         
-        aiidalogger.info("Retrieving a_sweep as "+str(a_sweep))
+        aiidalogger.info("Retrieving a_sweep as {0}".format(a_sweep))
         
         # Get calculations
-        start_calcs = self.get_step(self.eos).get_calculations()
+        start_calcs = self.get_step_calculations(self.eos) #.get_calculations()
         
         #  Calculate results
         #-----------------------------------------
         
-        e_calcs = [c.get_outputs(type=ParameterData)[0].get_dict()['energy'][-1] for c in start_calcs]
-        v_calcs = [c.get_outputs(type=ParameterData)[0].get_dict()['cell']['volume'] for c in start_calcs]
+        e_calcs = [c.res.energy[-1] for c in start_calcs]
+        v_calcs = [c.res.cell['volume'] for c in start_calcs]
         
         e_calcs = zip(*sorted(zip(a_sweep, e_calcs)))[1]
         v_calcs = zip(*sorted(zip(a_sweep, v_calcs)))[1]
@@ -293,7 +296,7 @@ class WorkflowXTiO3_EOS(Workflow):
         
         # New optimal alat
         optimal_alat  = murnpars[3]** (1 / 3.0)
-        self.add_parameters({'optimal_alat':optimal_alat})
+        self.add_attribute('optimal_alat',optimal_alat)
         
         #  Build last calculation
         #-----------------------------------------
@@ -305,17 +308,19 @@ class WorkflowXTiO3_EOS(Workflow):
         
         
         self.next(self.final_step)
-        
+     
+    @Workflow.step   
     def final_step(self):
         
-        params = self.get_parameters()
-        x_material   = params.pop('x_material', 'Ba')
-        optimal_alat   = params.pop('optimal_alat', -1.0)
+        x_material   = self.get_parameter("x_material")
+        optimal_alat = self.get_attribute("optimal_alat")
         
-        opt_calc = self.get_step(self.optimize).get_calculations()[0]
+        opt_calc = self.get_step_calculations(self.optimize) #.get_calculations()[0]
         opt_e = opt_calc.get_outputs(type=ParameterData)[0].get_dict()['energy'][-1]
         
         self.append_to_report(x_material+"Ti03 optimal with a="+str(optimal_alat)+", e="+str(opt_e))
+        
+        self.add_result("scf.converged", opt_calc)
             
         self.next(self.exit)
 

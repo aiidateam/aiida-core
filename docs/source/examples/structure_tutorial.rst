@@ -1,3 +1,5 @@
+.. _structure_tutorial:
+
 StructureData tutorial
 ======================
 
@@ -44,3 +46,4 @@ Tutorial
 
 TO BE DONE   
 
+.. todo:: write this part, probably reuse something from the pw tutorial?

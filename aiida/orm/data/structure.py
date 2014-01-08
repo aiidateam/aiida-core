@@ -845,7 +845,7 @@ class StructureData(Data):
         Get the periodic boundary conditions.
         
         :return: a tuple of three booleans, each one tells if there are periodic
-        boundary conditions for the i-th real-space direction (i=1,2,3)
+            boundary conditions for the i-th real-space direction (i=1,2,3)
         """
         #return copy.deepcopy(self._pbc)
         return (self.get_attr('pbc1'),self.get_attr('pbc2'),self.get_attr('pbc3'))

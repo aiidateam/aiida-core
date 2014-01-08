@@ -244,10 +244,10 @@ class Node(object):
     def _update_db_label_field(self, field_value):
         from django.db import transaction        
 
-        self._dbnode.label = field_value
+        self.dbnode.label = field_value
         if not self._to_be_stored:
             with transaction.commit_on_success():
-                self._dbnode.save()
+                self.dbnode.save()
                 self._increment_version_number_db()
             
     @property
@@ -771,6 +771,9 @@ class Node(object):
         # I use self._dbnode because this will not do a query to update the node; here I only
         # need to get its pk
         DbNode.objects.filter(pk=self._dbnode.pk).update(nodeversion = F('nodeversion') + 1)
+
+        # This reload internally the node of self._dbworkflowinstance
+        self.dbnode
 
         # Note: I have to reload the ojbect. I don't do it here because it is done at every call
         # to self.dbnode

@@ -29,6 +29,10 @@ class Workflow(object):
     Workflow can have steps, and each step must contain some calculations to be executed. At the
     end of the step's calculations the workflow is reloaded in memory and the next methods is called.
 
+
+    .. todo: verify if there are other places (beside label and description) where
+      the _increment_version_number_db routine needs to be called to increase
+      the nodeversion after storing 
     """
     
     def __init__(self,**kwargs):
@@ -49,12 +53,12 @@ class Workflow(object):
             uuid = kwargs.pop('uuid', None)
             
             if uuid is not None:
+                self._to_be_stored = False
                 if kwargs:
                         raise ValueError("If you pass a UUID, you cannot pass any further parameter")
                 
                 try:
                         self._dbworkflowinstance   = DbWorkflow.objects.get(uuid=uuid)
-                        self._to_be_stored         = False
                         
                         #self.logger.info("Workflow found in the database, now retrieved")
                         self._repo_folder = RepositoryFolder(section=_section_name, uuid=self.uuid)
@@ -134,8 +138,85 @@ class Workflow(object):
     
     def _get_dbworkflowinstance(self):
         return self.dbworkflowinstance
-    
-    
+
+    @property
+    def label(self):
+        """
+        Get the label of the workflow.
+        
+        :return: a string.
+        """
+        return self.dbworkflowinstance.label
+
+    @label.setter
+    def label(self,label):
+        """
+        Set the label of the workflow.
+        
+        :param label: a string
+        """
+        self._update_db_label_field(label)
+            
+    def _update_db_label_field(self, field_value):
+        from django.db import transaction        
+
+        self.dbworkflowinstance.label = field_value
+        if not self._to_be_stored:
+            with transaction.commit_on_success():
+                self.dbworkflowinstance.save()
+                self._increment_version_number_db()
+            
+    @property
+    def description(self):
+        """
+        Get the description of the workflow.
+        
+        :return: a string
+        """
+        return self.dbworkflowinstance.description
+
+    @description.setter
+    def description(self,desc):
+        """
+        Set the description of the workflow
+        
+        :param desc: a string
+        """
+        self._update_db_description_field(desc)
+
+    def _update_db_description_field(self, field_value):
+        from django.db import transaction        
+
+        self.dbworkflowinstance.description = field_value
+        if not self._to_be_stored:
+            with transaction.commit_on_success():
+                self.dbworkflowinstance.save()
+                self._increment_version_number_db()
+
+
+    def _increment_version_number_db(self):
+        """
+        This function increments the version number in the DB.
+        This should be called every time you need to increment the version (e.g. on adding a
+        metadata or attribute). 
+        """
+        from django.db.models import F
+        from aiida.djsite.db.models import DbWorkflow
+
+        # I increment the node number using a filter (this should be the right way of doing it;
+        # dbnode.nodeversion  = F('nodeversion') + 1
+        # will do weird stuff, returning Django Objects instead of numbers, and incrementing at
+        # every save; moreover in this way I should do the right thing for concurrent writings
+        # I use self._dbnode because this will not do a query to update the node; here I only
+        # need to get its pk
+        DbWorkflow.objects.filter(pk=self._dbworkflowinstance.pk).update(nodeversion = F('nodeversion') + 1)
+        
+        # This reload internally the node of self._dbworkflowinstance
+        self.dbworkflowinstance
+        # Note: I have to reload the ojbect. I don't do it here because it is done at every call
+        # to self.dbnode
+        #self._dbnode = DbNode.objects.get(pk=self._dbnode.pk)
+
     ## --------------------------------------
     ##    Folder
     ## --------------------------------------

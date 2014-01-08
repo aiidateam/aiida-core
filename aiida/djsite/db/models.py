@@ -126,7 +126,7 @@ class DbNode(m.Model):
         
         If the type is empty, use 'Node'.
         If the type is invalid, return the content of the input variable
-          ``invalid_result``.
+        ``invalid_result``.
           
         :param invalid_result: The value to be returned if the node type is
             not recognized.

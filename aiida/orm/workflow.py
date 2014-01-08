@@ -327,6 +327,8 @@ class Workflow(object):
         self._temp_folder       = None  
         self._to_be_stored      = False
     
+        # Important to allow to do w = WorkflowSubClass().store()
+        return self
     
     @property
     def uuid(self):

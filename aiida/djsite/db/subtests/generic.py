@@ -841,6 +841,35 @@ class TestNodeBasic(AiidaTestCase):
         with self.assertRaises(AttributeError):
             b.get_attr('state')
 
+    def test_versioning_lowlevel(self):
+        """
+        Checks the versioning.
+        """
+        from aiida.orm.test import myNodeWithFields
+        
+        a = myNodeWithFields()
+        a.store()
+
+        # Even if I stored many attributes, this should stay at 1
+        self.assertEquals(a._dbnode.nodeversion, 1)
+        self.assertEquals(a.dbnode.nodeversion, 1)
+        self.assertEquals(a._dbnode.nodeversion, 1)
+
+        a.label = "label1"
+        a.label = "label2"
+        self.assertEquals(a._dbnode.nodeversion, 3)
+        self.assertEquals(a.dbnode.nodeversion, 3)
+        self.assertEquals(a._dbnode.nodeversion, 3)
+
+        a.description = "desc1"
+        a.description = "desc2"
+        a.description = "desc3"
+        self.assertEquals(a._dbnode.nodeversion, 6)
+        self.assertEquals(a.dbnode.nodeversion, 6)
+        self.assertEquals(a._dbnode.nodeversion, 6)
+
+
+
     def test_comments(self):
         # This is the best way to compare dates with the stored ones, instead of
         # directly loading datetime.datetime.now(), or you can get a
@@ -2431,4 +2460,35 @@ class TestTrajectoryData(AiidaTestCase):
         # Check the mass of the kind of the second atom ('O' _> symbol Os, mass 100)
         self.assertAlmostEqual(struc.get_kind(struc.sites[1].kind_name).mass,100.)
         
+
+class TestWfBasic(AiidaTestCase):
+    """
+    Tests for the workflows
+    """
+    def test_versioning_lowlevel(self):
+        """
+        Checks the versioning.
+        """
+        from aiida.workflows.test import WorkflowTestEmpty
         
+        w = WorkflowTestEmpty().store()
+
+        # Even if I stored many attributes, this should stay at 1
+        self.assertEquals(w._dbworkflowinstance.nodeversion, 1)
+        self.assertEquals(w.dbworkflowinstance.nodeversion, 1)
+        self.assertEquals(w._dbworkflowinstance.nodeversion, 1)
+
+        w.label = "label1"
+        w.label = "label2"
+        self.assertEquals(w._dbworkflowinstance.nodeversion, 3)
+        self.assertEquals(w.dbworkflowinstance.nodeversion, 3)
+        self.assertEquals(w._dbworkflowinstance.nodeversion, 3)
+
+        w.description = "desc1"
+        w.description = "desc2"
+        w.description = "desc3"
+        self.assertEquals(w._dbworkflowinstance.nodeversion, 6)
+        self.assertEquals(w.dbworkflowinstance.nodeversion, 6)
+        self.assertEquals(w._dbworkflowinstance.nodeversion, 6)
+
+    

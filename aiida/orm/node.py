@@ -247,7 +247,7 @@ class Node(object):
         self.dbnode.label = field_value
         if not self._to_be_stored:
             with transaction.commit_on_success():
-                self.dbnode.save()
+                self._dbnode.save()
                 self._increment_version_number_db()
             
     @property
@@ -271,7 +271,7 @@ class Node(object):
     def _update_db_description_field(self, field_value):
         from django.db import transaction        
 
-        self._dbnode.description = field_value
+        self.dbnode.description = field_value
         if not self._to_be_stored:
             with transaction.commit_on_success():
                 self._dbnode.save()

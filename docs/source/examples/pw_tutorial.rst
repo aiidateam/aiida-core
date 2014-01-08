@@ -133,6 +133,13 @@ Structure
 ---------
 
 We now proceed in setting up the structure. 
+
+.. note:: Here we discuss only the main features of structures in AiiDA, needed
+    to run a Quantum ESPRESSO PW calculation.
+     
+    For more detailed information, give a look to the 
+    :ref:`structure_tutorial`.
+
 There are two ways to do that in AiiDA, a first one is to use the AiiDA Structure, which we will explain in the following; the second choice is the `Atomic Simulation Environment (ASE) <http://wiki.fysik.dtu.dk/ase/>`_ which provides excellent tools to manipulate structures (the ASE Atoms object needs to be converted into an AiiDA Structure, see the note at the end of the section).
 
 We first have to load the abstract object class that describes a structure. 
@@ -151,7 +158,7 @@ We define the cell with a 3x3 matrix (we choose the convention where each ROW re
           [0., 0., alat,],
          ]
 
-Now, we create the StructureData instance, assigning immediatly the cell. 
+Now, we create the StructureData instance, assigning immediately the cell. 
 Then, we append to the empty crystal cell the atoms, specifying their element name and their positions::
 
   # BaTiO3 cubic structure

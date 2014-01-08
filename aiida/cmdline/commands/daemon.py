@@ -265,6 +265,9 @@ class Daemon(VerdiCommand):
         shut down.
         """
         pid = self.get_daemon_pid()
+
+        dead = True
+        
         if pid is not None:
             dead = self.daemon_stop(wait_for_death=True)
             

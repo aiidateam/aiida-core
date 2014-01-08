@@ -37,8 +37,12 @@ class AiidaTestCase(unittest.TestCase):
         from django.core.exceptions import ObjectDoesNotExist
         from aiida.djsite.db.models import DbComputer
 
-        # I first delete the nodes, otherwise I cannot delete computers and
-        # users
+        # I first delete the workflows
+        from aiida.djsite.db.models import DbWorkflow
+        DbWorkflow.objects.filter().delete()
+
+        # Then I delete the nodes, otherwise I cannot
+        # delete computers and users
         from aiida.djsite.db.models import DbNode
         DbNode.objects.filter().delete()
 

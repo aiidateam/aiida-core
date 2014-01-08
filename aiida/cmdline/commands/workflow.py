@@ -74,7 +74,7 @@ class Workflow(VerdiCommand):
         import aiida.orm.workflow as wfs
         
         parser = argparse.ArgumentParser(description='List AiiDA workflows.')
-        parser.add_argument('-x', '--extended', help="show extended output",
+        parser.add_argument('-s', '--short', help="show shorter output (only subworkflows and steps, no calculations)",
                             action='store_true')
         parser.add_argument('-a', '--all-states', help="show all existing AiiDA workflows, not only running ones",
                             action='store_true')
@@ -87,7 +87,7 @@ class Workflow(VerdiCommand):
         args = list(args)
         parsed_args = parser.parse_args(args)
 
-        print wfs.list_workflows(extended=parsed_args.extended,
+        print wfs.list_workflows(short=parsed_args.short,
                                  all_states=parsed_args.all_states,
                                  past_days=parsed_args.past_days, 
                                  pks=parsed_args.pks) 

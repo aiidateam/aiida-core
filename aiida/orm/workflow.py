@@ -163,7 +163,7 @@ class Workflow(object):
         self.dbworkflowinstance.label = field_value
         if not self._to_be_stored:
             with transaction.commit_on_success():
-                self.dbworkflowinstance.save()
+                self._dbworkflowinstance.save()
                 self._increment_version_number_db()
             
     @property
@@ -190,7 +190,7 @@ class Workflow(object):
         self.dbworkflowinstance.description = field_value
         if not self._to_be_stored:
             with transaction.commit_on_success():
-                self.dbworkflowinstance.save()
+                self._dbworkflowinstance.save()
                 self._increment_version_number_db()
 
 
@@ -907,7 +907,7 @@ def kill_all():
         
 
 
-def get_workflow_info(w, tab_size = 2, extended = False, pre_string = ""):
+def get_workflow_info(w, tab_size = 2, short = False, pre_string = ""):
     """
     Return a string with all the information regarding the given workflow and
     all its calculations and subworkflows.
@@ -915,8 +915,7 @@ def get_workflow_info(w, tab_size = 2, extended = False, pre_string = ""):
     :param w: a DbWorkflow instance
     :param indent_level: the indentation level of this workflow
     :param tab_size: number of spaces to use for the indentation
-    :param extended: if True, provide some extra information (not implemented
-       yet)
+    :param short: if True, provide a shorter output
     """
     from django.utils import timezone
     
@@ -930,50 +929,66 @@ def get_workflow_info(w, tab_size = 2, extended = False, pre_string = ""):
 
     lines = []
     
-    lines.append(pre_string + "+ Workflow {0} (pk={1}) is {2} [{3}]".format(
-               w.module_class, w.pk, w.state, str_timedelta(
+
+    if w.label:
+        wf_labelstring = "'{}', ".format(w.label)
+    else:
+        wf_labelstring = ""
+
+    lines.append(pre_string + "+ Workflow {} ({}pk={}) is {} [{}]".format(
+               w.module_class, wf_labelstring, w.pk, w.state, str_timedelta(
                     now-w.ctime, negative_to_zero = True)))
 
     steps = w.steps.all()
 
     for idx, s in enumerate(steps):
         lines.append(pre_string + "|"+'-'*(tab_size-1) +
-                     "* Step: {0} (->{1}) is {2}".format(
+                     "* Step: {0} [->{1}] is {2}".format(
                          s.name,s.nextcall,s.state))
 
         calcs  = s.get_calculations().order_by('ctime')
-            
-        for c in calcs:
-            uuid = c.uuid
-            pk = c.pk
-            calc_state = c.get_state()
-            time = c.ctime
-            
-            if calc_state == calc_states.WITHSCHEDULER:
-                sched_state = c.get_scheduler_state()
-                if sched_state is None:
-                    remote_state = "(remote state still unknown)"
-                else:
-                    last_check = c.get_scheduler_state_lastcheck()
-                    if last_check is not None:
-                        when_string = " {} ago".format(
-                           str_timedelta(now-last_check, short=True,
-                                         negative_to_zero = True))
-                        verb_string = "was "
-                    else:
-                        when_string = ""
-                        verb_string = ""
-                    remote_state = " ({}{}{})".format(verb_string,
-                        sched_state, when_string)
-            else:
-                remote_state = ""
+        
+        # print calculations only if it is not short
+        if short:
             lines.append(pre_string + "|" + " "*(tab_size-1) +
-                         "| Calculation (pk={0}) is {1}{2}".format(pk, calc_state, remote_state))
+                "| [{0} calculations]".format(len(calcs)))
+        else:    
+            for c in calcs:
+                uuid = c.uuid
+                pk = c.pk
+                calc_state = c.get_state()
+                time = c.ctime
+                if c.label:
+                    labelstring = "'{}', ".format(c.label)
+                else:
+                    labelstring = ""
+                 
+                if calc_state == calc_states.WITHSCHEDULER:
+                    sched_state = c.get_scheduler_state()
+                    if sched_state is None:
+                        remote_state = "(remote state still unknown)"
+                    else:
+                        last_check = c.get_scheduler_state_lastcheck()
+                        if last_check is not None:
+                            when_string = " {} ago".format(
+                               str_timedelta(now-last_check, short=True,
+                                             negative_to_zero = True))
+                            verb_string = "was "
+                        else:
+                            when_string = ""
+                            verb_string = ""
+                        remote_state = " ({}{}{})".format(verb_string,
+                            sched_state, when_string)
+                else:
+                    remote_state = ""
+                lines.append(pre_string + "|" + " "*(tab_size-1) +
+                             "| Calculation ({}pk={}) is {}{}".format(
+                                 labelstring, pk, calc_state, remote_state))
         ## SubWorkflows
         wflows = s.get_sub_workflows()     
         for subwf in wflows:
             lines.append( get_workflow_info(subwf.dbworkflowinstance,
-               extended=extended, tab_size = tab_size,
+               short=short, tab_size = tab_size,
                pre_string = pre_string + "|" + " "*(tab_size-1)) ) 
         
         if idx != (len(steps) - 1):
@@ -981,12 +996,12 @@ def get_workflow_info(w, tab_size = 2, extended = False, pre_string = ""):
 
     return "\n".join(lines)
     
-def list_workflows(extended = False, all_states = False, tab_size = 2,
-                                 past_days=None, pks=[]):
+def list_workflows(short = False, all_states = False, tab_size = 2,
+                   past_days=None, pks=[]):
     """
     This function return a string with a description of the AiiDA workflows.
     
-    :param extended: if True, provide some extra information
+    :param short: if True, provide a shorter output
     :param all_states:  if True, print also workflows that have finished.
         Otherwise, hide workflows in the FINISHED and ERROR states.
     :param tab_size: how many spaces to use for indentation of subworkflows
@@ -1021,7 +1036,7 @@ def list_workflows(extended = False, all_states = False, tab_size = 2,
     lines = []
     for w in wf_list:
         if not w.is_subworkflow():
-            lines.append(get_workflow_info(w, tab_size=tab_size, extended=extended))
+            lines.append(get_workflow_info(w, tab_size=tab_size, short=short))
     
     # empty line between workflows
     retstring = "\n\n".join(lines)

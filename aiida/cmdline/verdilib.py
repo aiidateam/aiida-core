@@ -26,6 +26,7 @@ from aiida.cmdline.commands.computer import Computer
 from aiida.cmdline.commands.workflow import Workflow
 from aiida.cmdline.commands.upf import Upf
 from aiida.cmdline.commands.code import Code
+from aiida.cmdline.commands.calculation import Calculation
 
 
 # default execname; can be substituted later in the call from

@@ -60,7 +60,7 @@ if not os.path.isdir(LOCAL_REPOSITORY):
 
 # Usual Django settings starts here.............
 
-DEBUG = False
+DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
 ADMINS = (
@@ -175,6 +175,7 @@ INSTALLED_APPS = (
     'aiida.djsite.db',
     'kombu.transport.django',
     'djcelery',
+    'tastypie',
 )
 
 # A sample logging configuration. The only tangible logging
@@ -239,6 +240,13 @@ SOUTH_TESTS_MIGRATE = False
 # aiida.djsite.utils.get_after_database_creation_signal
 # to get the proper signal
 AFTER_DATABASE_CREATION_SIGNAL = 'post_migrate'
+
+# -------------------------
+# Tastypie (API) settings
+# -------------------------
+# For the time being, we support only json
+TASTYPIE_DEFAULT_FORMATS = ['json']
+
 
 # -------------------------
 # AiiDA-Deamon configuration

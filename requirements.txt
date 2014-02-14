@@ -47,3 +47,6 @@ PyMySQL>=0.6.1
 # NumPy, mainly for the ArrayData objects but sometimes
 # used also for arrays in other parts of the code
 numpy
+
+## Tastypie, for the REST API interface
+django-tastypie>=0.11.0

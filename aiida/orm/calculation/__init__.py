@@ -505,6 +505,92 @@ class Calculation(Node):
         else:
             return None
     
+    @classmethod
+    def list_calculations(cls,only_state=None, past_days=None, pks=[]):
+        """
+        This function return a string with a description of the AiiDA calculations.
+        
+        :param only_state:  if set, print only the calculations in the state
+            only_state. Default = None.
+        :param past_days: If specified, show only calculations that were created in
+            the given number of past days.
+        :param pks: if specified, must be a list of integers, and only calculations
+            within that list are shown. Otherwise, all calculations are shown.
+            If specified, sets state to None and ignores the 
+            value of the ``past_days`` option.")
+        
+        :return: a string with description of calculations.
+        """
+        # I assume that calc_states are strings. If this changes in the future,
+        # update the filter below from attributes__tval to the correct field.
+        
+        if only_state:       
+            if only_state not in calc_states:
+                return "Invalid state provided"
+        
+        from django.utils import timezone
+        import datetime
+        from django.db.models import Q
+        from aiida.djsite.db.models import DbNode
+        from aiida.djsite.utils import get_automatic_user
+        from aiida.common.utils import str_timedelta
+        
+        now = timezone.now()
+        
+        if pks:
+            q_object = Q(pk__in=pks)
+        else:
+            q_object = Q(user=get_automatic_user())
+            if only_state:
+#                q_object.add(~Q(attributes__key='_state',
+#                                attributes__tval=only_state,), Q.AND)
+                q_object.add( Q(attributes__key='_state',
+                                attributes__tval=only_state,), Q.AND)
+            if past_days:
+                now = timezone.now()
+                n_days_ago = now - datetime.timedelta(days=past_days)
+                q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
+
+        calc_list = cls.query(q_object).distinct().order_by('ctime')
+        
+        if not calc_list:
+            return "No calculation found"
+        else:
+            res_str = '{:<10} {:<17} {:>12} {:<10} {:<22} {:<15}\n'.format('Pk','State','Creation','Time','Scheduler state','Type')
+            for calc in calc_list:
+                
+                remote_state = "None"
+                
+                calc_state = calc.get_state()
+                try:
+                    sched_state = calc.get_scheduler_state()
+                    if sched_state is None:
+                        remote_state = "(unknown)"
+                    else:
+                        remote_state = '{}'.format(sched_state)
+                        if calc_state == calc_states.WITHSCHEDULER:
+                            last_check = calc.get_scheduler_state_lastcheck()
+                            if last_check is not None:
+                                when_string = " {} ago".format(
+                                    str_timedelta(now-last_check, short=True,
+                                          negative_to_zero = True))
+                                verb_string = "was "
+                            else:
+                                when_string = ""
+                                verb_string = ""
+                            remote_state = "{}{}{}".format(verb_string,
+                                                       sched_state, when_string)
+                except ValueError:
+                    raise
+                
+                res_str+= "{:<10} {:<17} {:<12} {:<10} {:<22} {:<15}\n".format( calc.pk,
+                               calc.get_state(),
+                               calc.ctime.isoformat().split('T')[0],
+                               calc.ctime.isoformat().split('T')[1].split('.')[0],
+                               remote_state, 
+                               str(calc.__class__).split('.')[-1].strip("'>"),
+                            )
+            return res_str
 
     @classmethod
     def get_all_with_state(cls, state, computer=None, user=None, 

@@ -141,7 +141,7 @@ code must be found on the python path.
 To do this, add the following to your ``~/.bashrc`` file (create it if not already present)::
 
       export PYTHONPATH=~/git/aiida:${PYTHONPATH}
-      export PATH=~git/aiida/bin:${PATH}
+      export PATH=~/git/aiida/bin:${PATH}
 
 and then source the .bashrc file with the command ``source ~/.bashrc``, or login
 in a new window.
@@ -155,11 +155,11 @@ in a new window.
   variable in the ``~/.bashrc`` file.
   For Linux systems, the path to add is usually ``~/.local/bin``::
   
-  	export PATH=~git/aiida/bin:~/.local/bin:${PATH}
+  	export PATH=~/git/aiida/bin:~/.local/bin:${PATH}
   
   For Mac OS X systems, the path to add is usually ``~/Library/Python/2.7/bin``::
   
-  	export PATH=~git/aiida/bin:~/Library/Python/2.7/bin:${PATH}
+  	export PATH=~/git/aiida/bin:~/Library/Python/2.7/bin:${PATH}
   
   To verify if this is the correct path to add, navigate to this location and
   you should find the executable ``supervisord`` in the directory.

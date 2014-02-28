@@ -104,7 +104,7 @@ class Calculation(VerdiCommand):
         import argparse
         parser = argparse.ArgumentParser(description='List of AiiDA calculations pks.')
         parser.add_argument('calcs', metavar='N', type=int, nargs='+',
-                   help='an integer for the accumulator')
+                            help='an integer for the accumulator')
         parser.add_argument('-f','--force', help='Force the kill of calculations',
                             action="store_true")
         args = list(args)
@@ -112,14 +112,15 @@ class Calculation(VerdiCommand):
                 
         if not parsed_args.force:
             sys.stderr.write("Are you sure to kill {} calculation{}? [Y/N] ".format(
-                len(calcs), "" if len(calcs)==1 else "s"))
+                len(parsed_args.calcs), "" if len(parsed_args.calcs)==1 else "s"))
             if not wait_for_confirmation():
                 sys.exit(0)
         
         counter = 0
-        for calc_pk in calcs:
+        for calc_pk in parsed_args.calcs:
             try:
-                Calc.kill(calc_pk)
+                c = Calc.get_subclass_from_pk(calc_pk)
+                c.kill() # Calc.kill(calc_pk)
                 counter += 1
             except NotExistent:
                 print >> sys.stderr, ("WARNING: calculation {} "

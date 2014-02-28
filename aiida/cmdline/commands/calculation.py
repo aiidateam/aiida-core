@@ -68,13 +68,23 @@ class Calculation(VerdiCommand):
         """
         from aiida.common.utils import load_django
         load_django()
+        from aiida.common.datastructures import calc_states
         
         import argparse
         from aiida.orm.calculation import Calculation as calc
         
         parser = argparse.ArgumentParser(description='List AiiDA calculations.')
-        parser.add_argument('-s', '--only-state', type=str,
-                            help="show only the AiiDA calculations with given state")
+        parser.add_argument('-s', '--states', nargs='+', type=str,
+                            help="show only the AiiDA calculations with given state",
+                            default=[calc_states.WITHSCHEDULER,
+                                     calc_states.NEW,
+                                     calc_states.TOSUBMIT,
+                                     calc_states.SUBMITTING,
+                                     calc_states.COMPUTED,
+                                     calc_states.RETRIEVING,
+                                     calc_states.PARSING,
+                                     ])
+        
         parser.add_argument('-p', '--past-days', metavar='N', help="add a filter to show only calculations created in the past N days",
                             action='store', type=int)
         parser.add_argument('pks', type=int, nargs='*',
@@ -83,7 +93,7 @@ class Calculation(VerdiCommand):
         args = list(args)
         parsed_args = parser.parse_args(args)
         
-        print calc.list_calculations(only_state=parsed_args.only_state,
+        print calc.list_calculations(states=parsed_args.states,
                                      past_days=parsed_args.past_days, 
                                      pks=parsed_args.pks) 
     
@@ -99,7 +109,7 @@ class Calculation(VerdiCommand):
         
         from aiida.cmdline import wait_for_confirmation
         from aiida.orm.calculation import Calculation as Calc
-        from aiida.common.exceptions import NotExistent
+        from aiida.common.exceptions import NotExistent,InvalidOperation
         
         import argparse
         parser = argparse.ArgumentParser(description='List of AiiDA calculations pks.')
@@ -125,6 +135,9 @@ class Calculation(VerdiCommand):
             except NotExistent:
                 print >> sys.stderr, ("WARNING: calculation {} "
                     "does not exist.".format(calc_pk))
+            except InvalidOperation:
+                print  >> sys.stderr, ("Calculation {} is not in WITHSCHEDULER "
+                    "state: cannot be killed.".format(calc_pk))
         print >> sys.stderr, "{} calculation{} killed.".format(counter,
             "" if counter==1 else "s")
 

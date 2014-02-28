@@ -506,12 +506,12 @@ class Calculation(Node):
             return None
     
     @classmethod
-    def list_calculations(cls,only_state=None, past_days=None, pks=[]):
+    def list_calculations(cls,states=None, past_days=None, pks=[]):
         """
         This function return a string with a description of the AiiDA calculations.
         
-        :param only_state:  if set, print only the calculations in the state
-            only_state. Default = None.
+        :param states: a list of string with states. If set, print only the 
+            calculations in the states "states", otherwise shows all. Default = None.
         :param past_days: If specified, show only calculations that were created in
             the given number of past days.
         :param pks: if specified, must be a list of integers, and only calculations
@@ -524,9 +524,10 @@ class Calculation(Node):
         # I assume that calc_states are strings. If this changes in the future,
         # update the filter below from attributes__tval to the correct field.
         
-        if only_state:       
-            if only_state not in calc_states:
-                return "Invalid state provided"
+        if states:
+            for state in states:
+                if state not in calc_states:
+                    return "Invalid state provided: {}.".format(state)
         
         from django.utils import timezone
         import datetime
@@ -541,11 +542,11 @@ class Calculation(Node):
             q_object = Q(pk__in=pks)
         else:
             q_object = Q(user=get_automatic_user())
-            if only_state:
+            if states:
 #                q_object.add(~Q(attributes__key='_state',
 #                                attributes__tval=only_state,), Q.AND)
-                q_object.add( Q(attributes__key='_state',
-                                attributes__tval=only_state,), Q.AND)
+                 q_object.add( Q(attributes__key='_state',
+                                  attributes__tval__in=states,), Q.AND)
             if past_days:
                 now = timezone.now()
                 n_days_ago = now - datetime.timedelta(days=past_days)

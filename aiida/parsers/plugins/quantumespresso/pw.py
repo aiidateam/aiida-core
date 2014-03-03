@@ -147,7 +147,7 @@ class PwParser(Parser):
         
         # save it into db
         output_params.store()
-        self._calc.add_link_to(output_params, label=self.get_linkname_outparams() )
+        self._calc._add_link_to(output_params, label=self.get_linkname_outparams() )
         
         in_struc = self._calc.get_inputs_dict()['structure']
         type_calc = input_dict['CONTROL']['calculation']
@@ -155,7 +155,7 @@ class PwParser(Parser):
             self._set_linkname_outstructure(self._outstruc_name)
             struc = convert_qe2aiida_structure(out_dict,input_structure=in_struc)
             struc.store()
-            self._calc.add_link_to(struc, label=self.get_linkname_outstructure() )
+            self._calc._add_link_to(struc, label=self.get_linkname_outstructure() )
         
         return successful
 

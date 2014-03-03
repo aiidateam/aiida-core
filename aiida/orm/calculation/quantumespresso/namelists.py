@@ -171,7 +171,7 @@ class NamelistsCalculation(Calculation):
         if not isinstance(data, ParameterData):
             raise ValueError("The data must be an instance of the ParameterData class")
 
-        self.replace_link_from(data, self.get_linkname_settings())
+        self._replace_link_from(data, self.get_linkname_settings())
 
     def get_linkname_settings(self):
         """
@@ -186,7 +186,7 @@ class NamelistsCalculation(Calculation):
         if not isinstance(data, ParameterData):
             raise ValueError("The data must be an instance of the ParameterData class")
 
-        self.replace_link_from(data, self.get_linkname_parameters())
+        self._replace_link_from(data, self.get_linkname_parameters())
 
     def get_linkname_parameters(self):
         """
@@ -201,7 +201,7 @@ class NamelistsCalculation(Calculation):
         if not isinstance(data, RemoteData):
             raise ValueError("The data must be an instance of the RemoteData class")
 
-        self.replace_link_from(data, self.get_linkname_parent_calc_folder())
+        self._replace_link_from(data, self.get_linkname_parent_calc_folder())
 
     def get_linkname_parent_calc_folder(self):
         """

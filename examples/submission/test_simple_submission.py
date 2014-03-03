@@ -145,10 +145,11 @@ calc.use_code(code)
 ## Just for debugging purposes, I check that I can 'reset' the code
 #calc.use_code(code)
 
-calc.add_link_from(template_data, label="template")
-calc.add_link_from(parameters, label="parameters")
-calc.add_link_from(fileparam, label="the_only_local_file")
-calc.add_link_from(remoteparam, label="the_only_remote_node")
+# Should not be done by hand... To improve
+calc._add_link_from(template_data, label="template")
+calc._add_link_from(parameters, label="parameters")
+calc._add_link_from(fileparam, label="the_only_local_file")
+calc._add_link_from(remoteparam, label="the_only_remote_node")
 
 calc.submit()
 print "submitted calculation; calc=Calculation(uuid='{}') # ID={}".format(

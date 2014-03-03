@@ -438,7 +438,7 @@ def submit_calc(calc):
                 remotedata = RemoteData(remote_machine = computer.hostname, 
                         remote_path = workdir).store()
 
-                calc.add_link_to(remotedata, label='remote_folder')
+                calc._add_link_to(remotedata, label='remote_folder')
 
                 job_id = s.submit_from_script(t.getcwd(),script_filename)
                 calc._set_job_id(job_id)
@@ -503,7 +503,7 @@ def retrieve_computed_for_authinfo(authinfo):
 
                     execlogger.debug("Storing retrieved_files={} of calc {}".format(retrieved_files.dbnode.pk, calc.dbnode.pk))
                     retrieved_files.store()
-                    calc.add_link_to(retrieved_files, label=calc.get_linkname_retrieved())
+                    calc._add_link_to(retrieved_files, label=calc.get_linkname_retrieved())
 
                     calc._set_state(calc_states.PARSING)
 

@@ -17,12 +17,12 @@ class TestTransitiveNoLoops(AiidaTestCase):
         n3 = Node().store()
         n4 = Node().store()
 
-        n1.add_link_to(n2)
-        n2.add_link_to(n3)
-        n3.add_link_to(n4)
+        n1._add_link_to(n2)
+        n2._add_link_to(n3)
+        n3._add_link_to(n4)
 
         with self.assertRaises(ValueError): # This would generate a loop
-            n4.add_link_to(n1)
+            n4._add_link_to(n1)
 
 class TestTransitiveClosureDeletion(AiidaTestCase):
     """
@@ -45,31 +45,31 @@ class TestTransitiveClosureDeletion(AiidaTestCase):
         # I create a strange graph, inserting links in a order
         # such that I often have to create the transitive closure
         # between two graphs
-        n2.add_link_to(n3)
-        n1.add_link_to(n2)
-        n3.add_link_to(n5)
-        n4.add_link_to(n5)
-        n2.add_link_to(n4)
+        n2._add_link_to(n3)
+        n1._add_link_to(n2)
+        n3._add_link_to(n5)
+        n4._add_link_to(n5)
+        n2._add_link_to(n4)
 
 
-        n6.add_link_to(n7)
-        n7.add_link_to(n8)
+        n6._add_link_to(n7)
+        n7._add_link_to(n8)
 
         # Yet, no links from 1 to 8
         self.assertEquals(
             len(Path.objects.filter(parent=n1,child=n8).distinct()),0)
 
-        n5.add_link_to(n6)
+        n5._add_link_to(n6)
         # Yet, now 2 links from 1 to 8
         self.assertEquals(
             len(Path.objects.filter(parent=n1,child=n8).distinct()),2)
 
-        n9.add_link_to(n7)
+        n9._add_link_to(n7)
         # Still two links...
         self.assertEquals(
             len(Path.objects.filter(parent=n1,child=n8).distinct()),2)
 
-        n6.add_link_to(n9)
+        n6._add_link_to(n9)
         # And now there should be 4 nodes
         self.assertEquals(
             len(Path.objects.filter(parent=n1,child=n8).distinct()),4)
@@ -111,7 +111,7 @@ class TestTransitiveClosureDeletion(AiidaTestCase):
 
         # Finally, I reconnect in a different way the two graphs and 
         # check that 1 and 8 are again connected
-        n3.add_link_to(n4)
+        n3._add_link_to(n4)
         self.assertEquals(
             len(Path.objects.filter(parent=n1,child=n8).distinct()),1)          
 
@@ -186,10 +186,10 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
         a3 = Node().store()
         a4 = Node().store()        
 
-        a1.add_link_to(a2)
-        a2.add_link_to(a3)
-        a4.add_link_from(a2)
-        a3.add_link_to(a4)
+        a1._add_link_to(a2)
+        a2._add_link_to(a3)
+        a4._add_link_from(a2)
+        a3._add_link_to(a4)
 
         # I check that I get the correct links
         self.assertEquals(set([n.uuid for n in a1.get_inputs()]),
@@ -226,10 +226,10 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
         
         a4 = Node().store()        
 
-        a.add_link_to(a2)
-        a2.add_link_to(a3)
-        a4.add_link_from(a2)
-        a3.add_link_to(a4)
+        a._add_link_to(a2)
+        a2._add_link_to(a3)
+        a4._add_link_from(a2)
+        a3._add_link_to(a4)
 
         b = Node.query(pk=a2)
         self.assertEquals(len(b), 1)
@@ -936,18 +936,18 @@ class TestSubNodesAndLinks(AiidaTestCase):
         n4 = Node().store()
         n5 = Node().store()
 
-        n3.add_link_from(n1, label='label1')
+        n3._add_link_from(n1, label='label1')
         # This should be allowed since it is an output label with the same name
-        n3.add_link_to(n4, label='label1')
+        n3._add_link_to(n4, label='label1')
 
         # An input link with that name already exists
         with self.assertRaises(UniquenessError):
-            n3.add_link_from(n2, label='label1')
+            n3._add_link_from(n2, label='label1')
 
         # instead, for outputs, I can have multiple times the same label
         # (think to the case where n3 is a StructureData, and both n4 and n5
         #  are calculations that use as label 'input_cell')
-        n3.add_link_to(n5, label='label1')
+        n3._add_link_to(n5, label='label1')
 
     def test_links_label_autogenerator(self):
         n1 = Node().store()
@@ -962,34 +962,34 @@ class TestSubNodesAndLinks(AiidaTestCase):
         n10 = Node().store()
 
 
-        n10.add_link_from(n1)
+        n10._add_link_from(n1)
         # Label should be automatically generated
-        n10.add_link_from(n2)
-        n10.add_link_from(n3)
-        n10.add_link_from(n4)
-        n10.add_link_from(n5)
-        n10.add_link_from(n6)
-        n10.add_link_from(n7)
-        n10.add_link_from(n8)
-        n10.add_link_from(n9)
+        n10._add_link_from(n2)
+        n10._add_link_from(n3)
+        n10._add_link_from(n4)
+        n10._add_link_from(n5)
+        n10._add_link_from(n6)
+        n10._add_link_from(n7)
+        n10._add_link_from(n8)
+        n10._add_link_from(n9)
   
     def test_link_replace(self):
         n1 = Node().store()
         n2 = Node().store()
         n3 = Node().store()
         
-        n3.add_link_from(n1,label='the_label')
+        n3._add_link_from(n1,label='the_label')
         with self.assertRaises(UniquenessError):
             # A link with the same name already exists
-            n3.add_link_from(n1,label='the_label')
+            n3._add_link_from(n1,label='the_label')
         
         # I can replace the link and check that it was replaced
-        n3.replace_link_from(n2, label='the_label')
+        n3._replace_link_from(n2, label='the_label')
         the_parent = dict(n3.get_inputs(also_labels=True))['the_label']
         self.assertEquals(n2.uuid, the_parent.uuid)
         
-        # replace_link_from should work also if there is no previous link 
-        n2 .replace_link_from(n1, label='the_label_2')
+        # _replace_link_from should work also if there is no previous link 
+        n2 ._replace_link_from(n1, label='the_label_2')
         the_parent = dict(n2.get_inputs(also_labels=True))['the_label_2']
         self.assertEquals(n1.uuid, the_parent.uuid)
         
@@ -1028,29 +1028,29 @@ class TestSubNodesAndLinks(AiidaTestCase):
             _ = Calculation(computer=1,
                             resources={'num_machines': 1, 'num_cpus_per_machine': 1}).store()
         
-        d1.add_link_to(calc)
-        calc.add_link_from(d2,label='some_label')
+        d1._add_link_to(calc)
+        calc._add_link_from(d2,label='some_label')
         calc.use_code(code)
 
         # Cannot link to itself
         with self.assertRaises(ValueError):
-            d1.add_link_to(d1)
+            d1._add_link_to(d1)
 
         # I try to add wrong links (data to data, calc to calc, etc.)
         with self.assertRaises(ValueError):
-            d1.add_link_to(d2)
+            d1._add_link_to(d2)
 
         with self.assertRaises(ValueError):
-            d1.add_link_from(d2)
+            d1._add_link_from(d2)
 
         with self.assertRaises(ValueError):
-            d1.add_link_from(code)
+            d1._add_link_from(code)
 
         with self.assertRaises(ValueError):
-            code.add_link_from(d1)
+            code._add_link_from(d1)
 
         with self.assertRaises(ValueError):
-            calc.add_link_from(calc2)
+            calc._add_link_from(calc2)
 
         calc_a = Calculation(computer=self.computer,
                              resources={'num_machines':1,'num_cpus_per_machine':1}).store()
@@ -1063,19 +1063,19 @@ class TestSubNodesAndLinks(AiidaTestCase):
         calc_a._set_state(calc_states.RETRIEVING) 
         calc_b._set_state(calc_states.RETRIEVING) 
 
-        data_node.add_link_from(calc_a)
+        data_node._add_link_from(calc_a)
         # A data cannot have two input calculations
         with self.assertRaises(ValueError):
-            data_node.add_link_from(calc_b)
+            data_node._add_link_from(calc_b)
 
         newdata = Data()
         # Cannot add an input link if the calculation is not in status NEW
         with self.assertRaises(ModificationNotAllowed):
-            calc_a.add_link_from(newdata)
+            calc_a._add_link_from(newdata)
 
         # Cannot replace input nodes if the calculation is not in status NEW    
         with self.assertRaises(ModificationNotAllowed):
-            calc_a.replace_link_from(d2, label='some_label')
+            calc_a._replace_link_from(d2, label='some_label')
 
         # Cannot (re)set the code if the calculation is not in status NEW
         with self.assertRaises(ModificationNotAllowed):
@@ -1107,17 +1107,17 @@ class TestSubNodesAndLinks(AiidaTestCase):
 
         # I cannot, calc it is in state NEW
         with self.assertRaises(ModificationNotAllowed):
-            d1.add_link_from(calc)
+            d1._add_link_from(calc)
 
         # I do a trick to set it to a state that allows setting the link
         calc._set_state(calc_states.RETRIEVING) 
         calc2._set_state(calc_states.RETRIEVING) 
 
-        d1.add_link_from(calc)
+        d1._add_link_from(calc)
 
         # more than on input to the same data object!
         with self.assertRaises(ValueError):
-            d1.add_link_from(calc2)
+            d1._add_link_from(calc2)
 
 class TestComputer(AiidaTestCase):
     """

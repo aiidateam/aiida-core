@@ -108,7 +108,7 @@ class Code(Node):
                 raise ValidationError("You did not specify a remote executable")
             
         
-    def add_link_from(self,src,label=None):
+    def _add_link_from(self,src,label=None):
         raise ValueError("A code node cannot have any input nodes")
 
     def can_link_as_output(self,dest):

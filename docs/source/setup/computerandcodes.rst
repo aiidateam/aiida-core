@@ -319,11 +319,14 @@ database (the ``pk``, i.e. the principal key, and the ``uuid``).
    present AiiDA version you cannot add attributes from the command line using
    ``verdi``, but you have to do it using Python code.
 
-.. note:: You can change the label of a code by using the::
+.. note:: You can change the label of a code by using the following command::
 
-   verdi code relabel
+   verdi code relabel "ID"
    
-  command; you can also list all available codes (and their relative IDs) with::
+  (Without the quotation marks!) "ID" can either be the numeric ID (PK) of
+  the code (preferentially), or possibly its label, if the label is unique.
+
+  You can also list all available codes (and their relative IDs) with::
 
    verdi code list
    
@@ -331,10 +334,11 @@ database (the ``pk``, i.e. the principal key, and the ``uuid``).
 
    verdi code show "ID"
    
-  (Without the quotation marks!) Finally, to delete a code (only if it wasn't used by any calculation) use::
+  Finally, to delete a code (only if it wasn't used by any calculation) use::
 
    verdi code delete "ID"
    
+  
    
 And now, you are ready to launch your calculations! You may want to follow to
 the examples of how you can submit a single calculation, as for instance the 

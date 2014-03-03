@@ -299,7 +299,7 @@ class Node(object):
         """
         return self.dbnode.user
 
-    def replace_link_from(self,src,label):
+    def _replace_link_from(self,src,label):
         """
         Replace an input link with the given label, or simply creates it
         if it does not exist.
@@ -311,16 +311,16 @@ class Node(object):
         from aiida.djsite.db.models import Link
         
         try:
-            self.add_link_from(src, label)
+            self._add_link_from(src, label)
         except UniquenessError:
             # I have to replace the link; I do it within a transaction
             with transaction.commit_on_success():
                 Link.objects.filter(output=self.dbnode,
                                     label=label).delete()
-                self.add_link_from(src, label)
+                self._add_link_from(src, label)
 
 
-    def add_link_from(self,src,label=None):
+    def _add_link_from(self,src,label=None):
         """
         Add a link to the current node from the 'src' node.
         Both nodes must be a Node instance (or a subclass of Node)
@@ -398,18 +398,18 @@ class Node(object):
                                       "name (raw message was {})"
                                       "".format(e.message))
 
-    def add_link_to(self,dest,label=None):
+    def _add_link_to(self,dest,label=None):
         """
         Add a link from the current node to the 'dest' node.
         Both nodes must be a Node instance (or a subclass of Node)
-        (Do not change in subclasses, subclass the add_link_from class only.)
+        (Do not change in subclasses, subclass the _add_link_from class only.)
         
         :param dest: destination Node object to set the link to.
         :param str label: the name of the link. Default=None
         """
         if not isinstance(dest,Node):
             raise ValueError("dest must be a Node instance")
-        dest.add_link_from(self,label)
+        dest._add_link_from(self,label)
 
     def can_link_as_output(self,dest):
         """

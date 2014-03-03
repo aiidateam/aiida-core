@@ -23,7 +23,7 @@ class Data(Node):
         ''' 
         return True
         
-    def add_link_from(self,src,label=None):
+    def _add_link_from(self,src,label=None):
         from aiida.orm.calculation import Calculation
 
         if len(self.get_inputs()) > 0:
@@ -32,7 +32,7 @@ class Data(Node):
         if not isinstance(src, Calculation):
             raise ValueError("Links entering a data object can only be of type calculation")
         
-        return super(Data,self).add_link_from(src,label)
+        return super(Data,self)._add_link_from(src,label)
     
     def can_link_as_output(self,dest):
         """

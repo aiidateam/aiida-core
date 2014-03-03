@@ -102,7 +102,7 @@ input to the calculation.
         if not isinstance(data, ParameterData):
             raise ValueError("The data must be an instance of the ParameterData class")
 
-        self.replace_link_from(data, self.get_linkname_parameters())
+        self._replace_link_from(data, self.get_linkname_parameters())
 
 We didn't implement any further input data analysis or verification
 here, what we worked was at the level of the input writing.
@@ -359,7 +359,7 @@ results and perform a dedicated correction!*
             # 6. save it into db and set link from calc to output
 	    # note that the name of the output parameters is set in the baseclass
             output_params.store()
-            calc.add_link_to(output_params, label=self.get_linkname_outparams() )
+            calc._add_link_to(output_params, label=self.get_linkname_outparams() )
 	    # 6. Note: here only a dictionary is stored in the DB, but
 	    # you could also decide to store other output objects, for
 	    # example an output structure (as it is actually done for Pw.

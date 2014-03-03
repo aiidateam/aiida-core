@@ -293,7 +293,7 @@ class Calculation(Node):
         """
         return self.get_attr('max_wallclock_seconds', None)
         
-    def add_link_from(self,src,label=None):
+    def _add_link_from(self,src,label=None):
         '''
         Add a link with a code as destination.
         You can use the parameters of the base Node class, in particular the
@@ -319,7 +319,7 @@ class Calculation(Node):
                 "of the following states: {}, it is instead {}".format(
                     valid_states, self.get_state()))
 
-        return super(Calculation,self).add_link_from(src, label)
+        return super(Calculation,self)._add_link_from(src, label)
 
     def set_computer(self,computer):
         """
@@ -658,7 +658,7 @@ class Calculation(Node):
         if not isinstance(code, Code):
             raise ValueError("The code must be an instance of the Code class")
 
-        self.replace_link_from(code, self.get_linkname_code())
+        self._replace_link_from(code, self.get_linkname_code())
         
     def get_linkname_code(self):
         """

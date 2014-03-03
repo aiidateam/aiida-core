@@ -442,7 +442,7 @@ class BasePwCpInputGenerator(object):
         if not isinstance(data, StructureData):
             raise ValueError("The data must be an instance of the StructureData class")
 
-        self.replace_link_from(data, self.get_linkname_structure())
+        self._replace_link_from(data, self.get_linkname_structure())
 
     def get_linkname_structure(self):
         """
@@ -457,7 +457,7 @@ class BasePwCpInputGenerator(object):
         if not isinstance(data, ParameterData):
             raise ValueError("The data must be an instance of the ParameterData class")
 
-        self.replace_link_from(data, self.get_linkname_settings())
+        self._replace_link_from(data, self.get_linkname_settings())
 
     def get_linkname_settings(self):
         """
@@ -472,7 +472,7 @@ class BasePwCpInputGenerator(object):
         if not isinstance(data, RemoteData):
             raise ValueError("The data must be an instance of the RemoteData class")
 
-        self.replace_link_from(data, self.get_linkname_parent_calc_folder())
+        self._replace_link_from(data, self.get_linkname_parent_calc_folder())
 
     def get_linkname_parent_calc_folder(self):
         """
@@ -487,7 +487,7 @@ class BasePwCpInputGenerator(object):
         if not isinstance(data, ParameterData):
             raise ValueError("The data must be an instance of the ParameterData class")
 
-        self.replace_link_from(data, self.get_linkname_parameters())
+        self._replace_link_from(data, self.get_linkname_parameters())
 
     def get_linkname_parameters(self):
         """
@@ -506,7 +506,7 @@ class BasePwCpInputGenerator(object):
         if not isinstance(data, UpfData):
             raise ValueError("The data must be an instance of the UpfData class")
 
-        self.replace_link_from(data, self.get_linkname_pseudo(kind))
+        self._replace_link_from(data, self.get_linkname_pseudo(kind))
 
     def use_pseudo_from_family(self, family_name):
         """
@@ -532,7 +532,7 @@ class BasePwCpInputGenerator(object):
             pseudo_list[kind.name] = get_upf_from_family(family_name, symbol)
         
         for kindname, pseudo in pseudo_list.iteritems():
-            self.replace_link_from(pseudo, self.get_linkname_pseudo(kindname))
+            self._replace_link_from(pseudo, self.get_linkname_pseudo(kindname))
 
         
     def get_linkname_pseudo(self, kind):

@@ -16,7 +16,7 @@ class Calculation(Node):
     This class provides the definition of an AiiDA calculation.
     """
     _updatable_attributes = ('state', 'job_id', 'scheduler_state',
-                             'scheduler_state_lastcheck',
+                             'scheduler_lastchecktime',
                              'last_jobinfo', 'remote_workdir', 'retrieve_list')
     
     # By default, no output parser
@@ -466,7 +466,7 @@ class Calculation(Node):
         from django.utils import timezone
         
         self.set_attr('scheduler_state', unicode(state))
-        self.set_attr('scheduler_state_lastcheck', timezone.now())
+        self.set_attr('scheduler_lastchecktime', timezone.now())
                 
     def get_scheduler_state(self):
         """
@@ -476,14 +476,14 @@ class Calculation(Node):
         """
         return self.get_attr('scheduler_state', None)
 
-    def get_scheduler_state_lastcheck(self):
+    def get_scheduler_lastchecktime(self):
         """
-        Return the time of the last update of the scheduler state, or None
-        if it was never set.
+        Return the time of the last update of the scheduler state by the daemon,
+        or None if it was never set.
         
         :return: a datetime object.
         """
-        return self.get_attr('scheduler_state_lastcheck', None)
+        return self.get_attr('scheduler_lastchecktime', None)
 
 
     def _set_last_jobinfo(self,last_jobinfo):
@@ -570,7 +570,7 @@ class Calculation(Node):
                     else:
                         remote_state = '{}'.format(sched_state)
                         if calc_state == calc_states.WITHSCHEDULER:
-                            last_check = calc.get_scheduler_state_lastcheck()
+                            last_check = calc.get_scheduler_lastchecktime()
                             if last_check is not None:
                                 when_string = " {} ago".format(
                                     str_timedelta(now-last_check, short=True,

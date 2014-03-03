@@ -443,10 +443,13 @@ def submit_calc(calc):
                 job_id = s.submit_from_script(t.getcwd(),script_filename)
                 calc._set_job_id(job_id)
                 calc._set_state(calc_states.WITHSCHEDULER)
-                if job_tmpl.submit_as_hold:
-                    calc._set_scheduler_state(job_states.QUEUED_HELD)
-                else:
-                    calc._set_scheduler_state(job_states.QUEUED)
+                ## I do not set the state to queued; in this way, if the
+                ## daemon is down, the user sees '(unknown)' as last state
+                ## and understands that the daemon is not running.
+                #if job_tmpl.submit_as_hold:
+                #    calc._set_scheduler_state(job_states.QUEUED_HELD)
+                #else:
+                #    calc._set_scheduler_state(job_states.QUEUED)
     
                 execlogger.debug("submitted calculation {} with job id {}".format(
                     calc.uuid, job_id))

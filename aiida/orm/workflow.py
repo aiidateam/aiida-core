@@ -971,7 +971,7 @@ def get_workflow_info(w, tab_size = 2, short = False, pre_string = ""):
                     if sched_state is None:
                         remote_state = "(remote state still unknown)"
                     else:
-                        last_check = c.get_scheduler_state_lastcheck()
+                        last_check = c.get_scheduler_lastchecktime()
                         if last_check is not None:
                             when_string = " {} ago".format(
                                str_timedelta(now-last_check, short=True,

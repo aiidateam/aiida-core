@@ -29,6 +29,8 @@ User's guide
 
    scheduler/index
     
+   state/calculation_state
+
    workflow/index
    troubleshooting/index
 

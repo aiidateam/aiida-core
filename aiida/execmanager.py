@@ -375,6 +375,7 @@ def submit_calc(calc):
                 t.chdir(calcinfo.uuid[:2])
                 t.mkdir(calcinfo.uuid[2:4], ignore_existing=True)
                 t.chdir(calcinfo.uuid[2:4])
+                t.mkdir(calcinfo.uuid[4:])
                 t.chdir(calcinfo.uuid[4:])
                 workdir = t.getcwd()
                 # I store the workdir of the calculation for later file

@@ -27,6 +27,14 @@ class ParameterData(Data):
         Return a dict with the parameters
         """
         return dict(self.iterattrs())
+    
+    @property
+    def keys(self):
+        """
+        Iterator of valid keys stored in the ParameterData object
+        """
+        for k, v in self.iterattrs():
+            yield k
 
     def add_path(self, *args, **kwargs):
         from aiida.common.exceptions import ModificationNotAllowed

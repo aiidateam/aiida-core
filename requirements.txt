@@ -11,8 +11,9 @@
 # Django
 django>=1.5.1,<1.6
 
-# For data/schema migrations
-south>=0.7.6
+## For data/schema migrations
+## Disabled for the time being.
+#south>=0.7.6
 
 # For the UUID field
 django_extensions>=0.9

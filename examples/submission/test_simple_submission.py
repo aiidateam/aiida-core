@@ -33,9 +33,9 @@ queue = None
 
 
 def get_or_create_code():
-    useful_codes = Code.query(attributes__key="_local_executable",
-                              attributes__tval="sum.py").filter(
-                                  attributes__key="version", attributes__tval=current_version)
+    useful_codes = Code.query(dbattributes__key="_local_executable",
+                              dbattributes__tval="sum.py").filter(
+                                  dbattributes__key="version", dbattributes__tval=current_version)
 
     if not(useful_codes):
         print >> sys.stderr, "Creating the code..."

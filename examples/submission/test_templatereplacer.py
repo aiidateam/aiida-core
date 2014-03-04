@@ -158,9 +158,9 @@ def get_or_create_code(computer):
     code_path = "/usr/bin/less"
     code_version = "5.0.2"
     useful_codes = Code.query(computer=computer.dbcomputer,
-                              attributes__key="_remote_exec_path",
-                              attributes__tval=code_path).filter(
-                                  attributes__key="version", attributes__tval=code_version)
+                              dbattributes__key="_remote_exec_path",
+                              dbattributes__tval=code_path).filter(
+                                  dbattributes__key="version", dbattributes__tval=code_version)
 
     if not(useful_codes):
         print >> sys.stderr, "Creating the code..."

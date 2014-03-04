@@ -60,8 +60,37 @@ class Parser(object):
             is_unlocked = True
         return is_unlocked
 
+    def get_result_keys(self):
+        """
+        Return an iterator of list of strings of valid result keys,
+        that can be then passed to the get_result() method.
+        
+        :note: the function returns an empty list if no output params node
+          can be found (either because the parser did not create it, or because
+          the calculation has not been parsed yet).
+        
+        :raise: UniquenessError if more than one output node with the name
+          self._get_linkname_outparams() is found. 
+        """
+        from aiida.orm.data.parameter import ParameterData
+                
+        out_parameters = self._calc.get_outputs(type=ParameterData,also_labels=True)
+        out_parameterdata = [ i[1] for i in out_parameters if i[0]==self.get_linkname_outparams() ]
+        
+        if not out_parameterdata:
+            return iter([])
+                
+        if len(out_parameterdata) > 1:
+            from aiida.common.exceptions import UniquenessError
+            raise UniquenessError("Output ParameterData should be found once, "
+                                  "found it instead {} times"
+                                  .format(len(out_parameterdata)) )
+        
+        out_parameterdata = out_parameterdata[0]
+        
+        return out_parameterdata.keys
 
-    def get_results(self,key_name):
+    def get_result(self,key_name):
         """
         Access the parameters of the output.
         The following method will should work for a generic parser,

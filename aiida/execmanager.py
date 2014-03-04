@@ -127,9 +127,9 @@ def update_running_calcs_status(authinfo):
     return computed
 
 def get_authinfo(computer, aiidauser):
-    from aiida.djsite.db.models import DbComputer, AuthInfo
+    from aiida.djsite.db.models import DbComputer, DbAuthInfo
     try:
-        authinfo = AuthInfo.objects.get(computer=DbComputer.get_dbcomputer(computer),aiidauser=aiidauser)
+        authinfo = DbAuthInfo.objects.get(computer=DbComputer.get_dbcomputer(computer),aiidauser=aiidauser)
     except ObjectDoesNotExist:
         raise AuthenticationError(
             "The aiida user {} is not configured to use computer {}".format(

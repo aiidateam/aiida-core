@@ -153,29 +153,29 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
         a7.store()
 
         # Query by calculation
-        results = list(Calculation.query(attributes__key=attribute_name))
+        results = list(Calculation.query(dbattributes__key=attribute_name))
         # a3, a4, a5 should not be found because they are not Calculations.
         # a6, a7 should not be found because they have not the attribute set.
         self.assertEquals(set([i.pk for i in results]),
                           set([a1.pk, a2.pk]))        
         
         # Same query, but by the generic Node class
-        results = list(Node.query(attributes__key=attribute_name))
+        results = list(Node.query(dbattributes__key=attribute_name))
         self.assertEquals(set([i.pk for i in results]),
                           set([a1.pk, a2.pk, a3.pk, a4.pk, a5.pk]))
         
         # Same query, but by the Data class
-        results = list(Data.query(attributes__key=attribute_name))
+        results = list(Data.query(dbattributes__key=attribute_name))
         self.assertEquals(set([i.pk for i in results]),
                           set([a3.pk, a4.pk]))
         
         # Same query, but by the ParameterData subclass
-        results = list(ParameterData.query(attributes__key=attribute_name))
+        results = list(ParameterData.query(dbattributes__key=attribute_name))
         self.assertEquals(set([i.pk for i in results]),
                           set([a4.pk]))
         
         # Same query, but by the TemplateReplacerCalc subclass
-        results = list(TemplateReplacerCalc.query(attributes__key=attribute_name))
+        results = list(TemplateReplacerCalc.query(dbattributes__key=attribute_name))
         self.assertEquals(set([i.pk for i in results]),
                           set([a2.pk]))
 
@@ -277,8 +277,8 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
         # Query for related fields using django syntax
         # Note that being myvalue an attribute, it is internally stored starting
         # with an underscore
-        nodes_with_given_attribute = Node.query(attributes__key='_myvalue',
-                                                attributes__ival=145)
+        nodes_with_given_attribute = Node.query(dbattributes__key='_myvalue',
+                                                dbattributes__ival=145)
         # should be entry a3
         self.assertEquals(len(nodes_with_given_attribute), 1)
         self.assertTrue(isinstance(nodes_with_given_attribute[0],Node))

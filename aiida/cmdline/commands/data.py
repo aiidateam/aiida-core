@@ -144,7 +144,7 @@ class _Upf(VerdiCommand):
         
         if not len(args) == 3 and not len(args) == 4:
             print >> sys.stderr, ("\n after 'upf uploadfamily' there should be three "
-                                  "arguments: folder, group_name, group_description [optional --stop_if_existing]\n")
+                                  "arguments: folder, group_name, group_description [optional --stop-if-existing]\n")
             sys.exit(1)
         
         folder            = os.path.abspath(args[0])
@@ -153,7 +153,7 @@ class _Upf(VerdiCommand):
         stop_if_existing  = False
         
         if len(args)==4:
-            if args[3]=="--stop_if_existing":
+            if args[3]=="--stop-if-existing":
                 stop_if_existing  = True
             else:
                 print >> sys.stderr, 'Unknown directive: '+args[3]
@@ -165,8 +165,9 @@ class _Upf(VerdiCommand):
             
         load_django()
         
-        import aiida.orm.data.upf as upfd
-        upfd.upload_upf_family(folder, group_name, group_description, stop_if_existing)
+        import aiida.orm.data.upf as upf
+        upf.upload_upf_family(folder, group_name, 
+                              group_description, stop_if_existing)
         
 
     def listfamilies(self, *args):
@@ -193,16 +194,16 @@ class _Upf(VerdiCommand):
             
         if groups:
             for g in groups:
-                pseudos = UpfData.query(groups__name=g.name).distinct()
+                pseudos = UpfData.query(dbgroups__name=g.name).distinct()
                 num_pseudos = pseudos.count()
 
                 pseudos_list = pseudos.filter(
-                                      attributes__key="_element").values_list(
-                                      'attributes__tval', flat=True)
+                                      dbattributes__key="_element").values_list(
+                                      'dbattributes__tval', flat=True)
                 
                 new_ps = pseudos.filter(
-                                attributes__key="_element").values_list(
-                                'attributes__tval', flat=True)
+                                dbattributes__key="_element").values_list(
+                                'dbattributes__tval', flat=True)
                 
                 if num_pseudos != len(set(pseudos_list)):
                     print ("x {} [INVALID: {} pseudos, for {} elements]"

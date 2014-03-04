@@ -522,7 +522,7 @@ class Calculation(Node):
         :return: a string with description of calculations.
         """
         # I assume that calc_states are strings. If this changes in the future,
-        # update the filter below from attributes__tval to the correct field.
+        # update the filter below from dbattributes__tval to the correct field.
         
         if states:
             for state in states:
@@ -543,10 +543,10 @@ class Calculation(Node):
         else:
             q_object = Q(user=get_automatic_user())
             if states:
-#                q_object.add(~Q(attributes__key='_state',
-#                                attributes__tval=only_state,), Q.AND)
-                 q_object.add( Q(attributes__key='_state',
-                                  attributes__tval__in=states,), Q.AND)
+#                q_object.add(~Q(dbattributes__key='_state',
+#                                dbattributes__tval=only_state,), Q.AND)
+                 q_object.add( Q(dbattributes__key='_state',
+                                  dbattributes__tval__in=states,), Q.AND)
             if past_days:
                 now = timezone.now()
                 n_days_ago = now - datetime.timedelta(days=past_days)
@@ -620,7 +620,7 @@ class Calculation(Node):
         :return: a list of calculation objects matching the filters.
         """
         # I assume that calc_states are strings. If this changes in the future,
-        # update the filter below from attributes__tval to the correct field.
+        # update the filter below from dbattributes__tval to the correct field.
         from aiida.orm import Computer
 
         if state not in calc_states:
@@ -637,8 +637,8 @@ class Calculation(Node):
             kwargs['user'] = user
         
         queryresults = cls.query(
-            attributes__key='_state',
-            attributes__tval=state,
+            dbattributes__key='_state',
+            dbattributes__tval=state,
             **kwargs)
 
         if only_computer_user_pairs:

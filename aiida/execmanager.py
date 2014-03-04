@@ -370,13 +370,15 @@ def submit_calc(calc):
                             "Unable to create the remote directory {} on {}: {}".format(
                                 remote_working_directory, computer.hostname, 
                                 e.message))
-                # Sharding
+                # Store remotely with sharding
                 t.mkdir(calcinfo.uuid[:2],ignore_existing=True)
                 t.chdir(calcinfo.uuid[:2])
-                t.mkdir(calcinfo.uuid[2:])
-                t.chdir(calcinfo.uuid[2:])
+                t.mkdir(calcinfo.uuid[2:4], ignore_existing=True)
+                t.chdir(calcinfo.uuid[2:4])
+                t.chdir(calcinfo.uuid[4:])
                 workdir = t.getcwd()
-                # I store the workdir of the calculation for later file retrieval
+                # I store the workdir of the calculation for later file
+                # retrieval
                 calc._set_remote_workdir(workdir)
 
                 # I first create the code files, so that the code can put

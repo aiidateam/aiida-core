@@ -48,9 +48,9 @@ def get_upf_from_family(family_name, element):
     except ObjectDoesNotExist:
         raise NotExistent("Family named {} does not exist".format(family_name))
     
-    match = UpfData.query(groups__name=family_name,
-                           attributes__key="_element",
-                           attributes__tval=element)
+    match = UpfData.query(dbgroups__name=family_name,
+                           dbattributes__key="_element",
+                           dbattributes__tval=element)
     if len(match) == 0:
         raise NotExistent("No UPF for element {} found in family {}".format(
             element, family_name))
@@ -95,8 +95,8 @@ def upload_upf_family(folder, group_name, group_description,
              os.path.isfile(os.path.join(folder,i)) and 
              i.lower().endswith('.upf')]
 
-    group,group_created = DbGroup.objects.get_or_create(name=group_name, defaults=
-        {'user': get_automatic_user()})
+    group,group_created = DbGroup.objects.get_or_create(
+        name=group_name, defaults={'user': get_automatic_user()})
     if len(group.dbnodes.all()) != 0:
         raise UniquenessError("DbGroup with name {} already exists and is "
                               "non-empty".format(group_name))
@@ -108,11 +108,13 @@ def upload_upf_family(folder, group_name, group_description,
     for f in files:
         
         md5sum = aiida.common.utils.md5_file(f)
-        existing_upf = UpfData.query(attributes__key="_md5",attributes__tval = md5sum)
+        existing_upf = UpfData.query(dbattributes__key="_md5",
+                                     dbattributes__tval = md5sum)
         
         if len(existing_upf) == 0:
             # return the upfdata instances, not stored
-            pseudo, created = UpfData.get_or_create(f, use_first = True,store_upf=False)
+            pseudo, created = UpfData.get_or_create(f, use_first = True,
+                                                    store_upf = False)
             # to check whether only one upf per element exists
             # NOTE: actually, created has the meaning of "to_be_created"
             pseudo_and_created.append( (pseudo,created) )
@@ -122,7 +124,8 @@ def upload_upf_family(folder, group_name, group_description,
             pseudo = existing_upf[0]
             pseudo_and_created.append( (pseudo,False) )
              
-    print pseudo_and_created, [ i[0].element for i in pseudo_and_created ]
+    #print pseudo_and_created, [ i[0].element for i in pseudo_and_created ]
+    
     # check whether pseudo are unique per element
     elements = [ i[0].element for i in pseudo_and_created ]
     if not len(pseudo_and_created) == len( 
@@ -145,9 +148,11 @@ def upload_upf_family(folder, group_name, group_description,
         group.dbnodes.add(pseudo.dbnode)
 
         if created:
-            aiidalogger.debug("New node {} created for file {}".format(pseudo.uuid, f))
+            aiidalogger.debug("New node {} created for file {}".format(
+               pseudo.uuid, pseudo.filename))
         else:
-            aiidalogger.debug("Reusing node {} for file {}".format(pseudo.uuid, f))            
+            aiidalogger.debug("Reusing node {} for file {}".format(
+               pseudo.uuid, pseudo.filename))            
         
             
 def parse_upf(fname, check_filename = True):
@@ -310,7 +315,7 @@ class UpfData(SinglefileData):
         Note that the hash has to be stored in a _md5 attribute, otherwise
         the pseudo will not be found.
         """
-        queryset = cls.query(attributes__key='_md5', attributes__tval=md5)
+        queryset = cls.query(dbattributes__key='_md5', dbattributes__tval=md5)
         return list(queryset)
 
 
@@ -348,6 +353,10 @@ class UpfData(SinglefileData):
     def element(self):
         return self.get_attr('element')
 
+    @property
+    def filename(self):
+        return self.get_attr('filename')
+
     def validate(self):
         from aiida.common.exceptions import ValidationError
 
@@ -383,8 +392,8 @@ class UpfData(SinglefileData):
             # add a filter to the previous query, one f per element
             # to get only groups with desired element
             for el in filter_elements:
-                groups = groups.filter( dbnodes__attributes__key='_element',
-                                 dbnodes__attributes__tval=el.capitalize() )
+                groups = groups.filter( dbnodes__dbattributes__key='_element',
+                                 dbnodes__dbattributes__tval=el.capitalize() )
             
         # find all groups matching the desired filters
         groups = groups.distinct().order_by("name")

@@ -224,7 +224,7 @@ class DbAttribute(m.Model):
     Actual input and output data should never go here, only duplicates and comments.
     '''
     time = m.DateTimeField(auto_now_add=True, editable=False)
-    dbnode = m.ForeignKey('DbNode', related_name='attributes')
+    dbnode = m.ForeignKey('DbNode', related_name='dbattributes')
     # max_length is required by MySql to have indexes and unique constraints
     key = m.CharField(max_length=255,db_index=True,blank=False)
     datatype = m.CharField(max_length=10, choices=attrdatatype_choice, db_index=True)
@@ -361,7 +361,7 @@ class DbGroup(m.Model):
     uuid = UUIDField(auto=True)
     # max_length is required by MySql to have indexes and unique constraints
     name = m.CharField(max_length=255,unique=True, db_index=True)
-    dbnodes = m.ManyToManyField('DbNode', related_name='groups')
+    dbnodes = m.ManyToManyField('DbNode', related_name='dbgroups')
     time = m.DateTimeField(auto_now_add=True, editable=False)
     description = m.TextField(blank=True)
     user = m.ForeignKey(User)  # The owner of the group, not of the calculations
@@ -513,7 +513,7 @@ class DbAuthInfo(m.Model):
 
 
 class DbComment(m.Model):
-    dbnode = m.ForeignKey(DbNode,related_name='comments')
+    dbnode = m.ForeignKey(DbNode,related_name='dbcomments')
     time = m.DateTimeField(auto_now_add=True, editable=False)
     user = m.ForeignKey(User)
     content = m.TextField(blank=True)
@@ -740,7 +740,8 @@ class DbWorkflow(m.Model):
 
         from aiida.common.datastructures import calc_states, wf_states, wf_exit_call
 
-        calc_status = self.get_calculations().filter(attributes__key="_state").values_list("uuid", "attributes__tval")
+        calc_status = self.get_calculations().filter(
+            dbattributes__key="_state").values_list("uuid", "dbattributes__tval")
         return set([l[1] for l in calc_status])
 
     # ------------------------------------------------
@@ -874,13 +875,15 @@ class DbWorkflowStep(m.Model):
         if (state==None):
             return Calculation.query(workflow_step=self)#pk__in = step.calculations.values_list("pk", flat=True))
         else:
-            return Calculation.query(workflow_step=self).filter(attributes__key="_state",attributes__tval=state)
+            return Calculation.query(workflow_step=self).filter(
+                dbattributes__key="_state",dbattributes__tval=state)
 
     def get_calculations_status(self):
 
         from aiida.common.datastructures import calc_states, wf_states, wf_exit_call
 
-        calc_status = self.calculations.filter(attributes__key="_state").values_list("uuid", "attributes__tval")
+        calc_status = self.calculations.filter(
+            dbattributes__key="_state").values_list("uuid", "dbattributes__tval")
         return set([l[1] for l in calc_status])
     
     def remove_calculations(self):

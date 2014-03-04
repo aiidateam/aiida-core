@@ -39,12 +39,12 @@ def get_upf_from_family(family_name, element):
             found in the group.
     :raise NotExistent: if no UPF for the given element are found in the group.
     """
-    from aiida.djsite.db.models import Group
+    from aiida.djsite.db.models import DbGroup
     from django.core.exceptions import ObjectDoesNotExist
     from aiida.common.exceptions import NotExistent, MultipleObjectsError
     
     try:
-        Group.objects.get(name=family_name)
+        DbGroup.objects.get(name=family_name)
     except ObjectDoesNotExist:
         raise NotExistent("Family named {} does not exist".format(family_name))
     
@@ -81,7 +81,7 @@ def upload_upf_family(folder, group_name, group_description,
     import os
     import aiida.common
     from aiida.common import aiidalogger
-    from aiida.djsite.db.models import Group
+    from aiida.djsite.db.models import DbGroup
     from aiida.common.exceptions import UniquenessError, MultipleObjectsError
     from aiida.djsite.utils import get_automatic_user
 
@@ -95,10 +95,10 @@ def upload_upf_family(folder, group_name, group_description,
              os.path.isfile(os.path.join(folder,i)) and 
              i.lower().endswith('.upf')]
 
-    group,group_created = Group.objects.get_or_create(name=group_name, defaults=
+    group,group_created = DbGroup.objects.get_or_create(name=group_name, defaults=
         {'user': get_automatic_user()})
     if len(group.dbnodes.all()) != 0:
-        raise UniquenessError("Group with name {} already exists and is "
+        raise UniquenessError("DbGroup with name {} already exists and is "
                               "non-empty".format(group_name))
     group.description = group_description
     # note that the group will be saved only after the check on upf uniqueness
@@ -374,10 +374,10 @@ class UpfData(SinglefileData):
         """
         # Get all groups that contain at least one upf
         from django.db.models import Q
-        from aiida.djsite.db.models import Group
+        from aiida.djsite.db.models import DbGroup
         
         q_object = Q(dbnodes__type__startswith=self._plugin_type_string)
-        groups = Group.objects.filter(q_object)
+        groups = DbGroup.objects.filter(q_object)
         
         if filter_elements is not None:
             # add a filter to the previous query, one f per element

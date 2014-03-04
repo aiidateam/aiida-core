@@ -287,7 +287,7 @@ class Computer(VerdiCommand):
         from aiida.common.exceptions import (
             NotExistent, ValidationError)
         from aiida.djsite.utils import get_automatic_user
-        from aiida.djsite.db.models import AuthInfo
+        from aiida.djsite.db.models import DbAuthInfo
 
         if len(args) != 1:
             print >> sys.stderr, ("after 'computer configure' there should be one "
@@ -305,7 +305,7 @@ class Computer(VerdiCommand):
 
         user = get_automatic_user()
         
-        authinfo, _ = AuthInfo.objects.get_or_create(
+        authinfo, _ = DbAuthInfo.objects.get_or_create(
             computer=computer.dbcomputer, 
             aiidauser=user)
         

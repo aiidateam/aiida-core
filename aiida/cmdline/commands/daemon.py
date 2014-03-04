@@ -179,10 +179,10 @@ class Daemon(VerdiCommand):
                 pid = self.get_daemon_pid()
                 if pid is None:
                     dead = True
-                    print "AiiDA Daemon was correctly shut down."
+                    print "AiiDA Daemon shut down correctly."
                     break
                 else:        
-                    print "Waiting for the AiiDA Daemon to shutdown..."
+                    print "Waiting for the AiiDA Daemon to shut down..."
                     # Wait two seconds between retries
                     time.sleep(sleep_between_retries)
             if not dead:

@@ -2,7 +2,7 @@ import os
 
 from django.core.exceptions import ObjectDoesNotExist
 
-#from aiida.djsite.db.models import DbNode, Attribute
+#from aiida.djsite.db.models import DbNode, DbAttribute
 from aiida.common.exceptions import (
     DbContentError, InternalError, ModificationNotAllowed,
     NotExistent, UniquenessError, ValidationError )
@@ -557,7 +557,7 @@ class Node(object):
             try:
                 del self._attrs_cache["_{}".format(key)]
             except KeyError:
-                raise AttributeError("Attribute {} does not exist".format(key))
+                raise AttributeError("DbAttribute {} does not exist".format(key))
         else:
             if key in self._updatable_attributes:
                 return self._del_attribute_db('_{}'.format(key))
@@ -585,7 +585,7 @@ class Node(object):
                 try:
                     return self._attrs_cache["_{}".format(key)]
                 except KeyError:
-                    raise AttributeError("Attribute {} does not exist".format(key))
+                    raise AttributeError("DbAttribute {} does not exist".format(key))
             else:
                 return self._get_attribute_db('_{}'.format(key))
         except AttributeError as e:
@@ -714,9 +714,9 @@ class Node(object):
         """
         Return a django queryset with the attributes of this node
         """
-        from aiida.djsite.db.models import Attribute
+        from aiida.djsite.db.models import DbAttribute
         
-        return Attribute.objects.filter(dbnode=self.dbnode)
+        return DbAttribute.objects.filter(dbnode=self.dbnode)
 
     def add_comment(self,content):
         """
@@ -724,14 +724,14 @@ class Node(object):
         
         :param content: string with comment
         """
-        from aiida.djsite.db.models import Comment
+        from aiida.djsite.db.models import DbComment
         from aiida.djsite.utils import get_automatic_user
 
         if self._to_be_stored:
             raise ModificationNotAllowed("Comments can be added only after "
                                          "storing the node")
 
-        Comment.objects.create(dbnode=self._dbnode, user=get_automatic_user(), content=content)
+        DbComment.objects.create(dbnode=self._dbnode, user=get_automatic_user(), content=content)
 
     def get_comments(self):
         """
@@ -739,9 +739,9 @@ class Node(object):
         :return: the list of comments, sorted by date; each element of the list is a tuple
             containing (username, username_email, date, content)
         """
-        from aiida.djsite.db.models import Comment
+        from aiida.djsite.db.models import DbComment
 
-        return list(Comment.objects.filter(dbnode=self._dbnode).order_by('time').values_list(
+        return list(DbComment.objects.filter(dbnode=self._dbnode).order_by('time').values_list(
             'user__username', 'user__email', 'time', 'content'))
 
     def _get_attribute_db(self, key):
@@ -751,10 +751,10 @@ class Node(object):
         The calling function must check that the key of attributes is prepended with
         an underscore and the key of metadata is not.
         """
-        from aiida.djsite.db.models import Attribute
+        from aiida.djsite.db.models import DbAttribute
 
         try:
-            attr = Attribute.objects.get(dbnode=self.dbnode, key=key)
+            attr = DbAttribute.objects.get(dbnode=self.dbnode, key=key)
         except ObjectDoesNotExist:
             raise AttributeError("Key {} not found in db".format(key))
         return attr.getvalue()
@@ -767,11 +767,11 @@ class Node(object):
         The calling function must check that the key of attributes is prepended with
         an underscore and the key of metadata is not.
         """
-        from aiida.djsite.db.models import Attribute
+        from aiida.djsite.db.models import DbAttribute
 
         self._increment_version_number_db()
         try:
-            Attribute.objects.get(dbnode=self.dbnode, key=key).delete()
+            DbAttribute.objects.get(dbnode=self.dbnode, key=key).delete()
         except ObjectDoesNotExist:
             raise AttributeError("Cannot delete attribute {}, not found in db".format(key))
 
@@ -813,12 +813,12 @@ class Node(object):
         This can be set to False during the store() so that the version does not get increased for each
         attribute.
         """
-        from aiida.djsite.db.models import Attribute
+        from aiida.djsite.db.models import DbAttribute
                 
         if incrementversion:
             self._increment_version_number_db()
-        attr, _ = Attribute.objects.get_or_create(dbnode=self.dbnode, key=key)
-        ## TODO: create a get_or_create_with_value method in the djsite.db.models.Attribute class
+        attr, _ = DbAttribute.objects.get_or_create(dbnode=self.dbnode, key=key)
+        ## TODO: create a get_or_create_with_value method in the djsite.db.models.DbAttribute class
         attr.setvalue(value)
 
     def copy(self):

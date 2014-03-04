@@ -841,16 +841,51 @@ class CalculationResultManager(object):
         self._calc = calc
         ParserClass = calc.get_parserclass()
         self._parser = ParserClass(calc)
+
+    def __dir__(self):
+        """
+        Allow to list all valid attributes
+        """
+        from aiida.common.exceptions import UniquenessError
+
+        try:
+            calc_attributes = self._parser.get_result_keys()
+        except UniquenessError:
+            calc_attributes = []
         
+        return sorted(set(list(dir(type(self))) + list(calc_attributes)))
+            
+    def __iter__(self):
+        from aiida.common.exceptions import UniquenessError
+
+        try:
+            calc_attributes = self._parser.get_result_keys()
+        except UniquenessError:
+            calc_attributes = []
+        
+        for k in calc_attributes:
+            yield k
+    
     def __getattr__(self,name):
         """
-        interface to get to the parser results.
+        interface to get to the parser results as an attribute.
         
         :param name: name of the attribute to be asked to the parser results.
         """
         try:
-            return self._parser.get_results(name)
+            return self._parser.get_result(name)
         except AttributeError:
             raise AttributeError("Parser '{}' didn't provide a result '{}'"
                                  .format(self._parser.__class__, name))
 
+    def __getitem__(self,name):
+        """
+        interface to get to the parser results as a dictionary.
+        
+        :param name: name of the attribute to be asked to the parser results.
+        """
+        try:
+            return self._parser.get_result(name)
+        except AttributeError:
+            raise KeyError("Parser '{}' didn't provide a result '{}'"
+                           .format(self._parser.__class__, name))

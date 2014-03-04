@@ -187,15 +187,15 @@ class SyncDB(VerdiCommand):
     def run(self,*args):
         pass_to_django_manage([execname, 'syncdb'] + list(args))
 
-class Migrate(VerdiCommand):
-    """
-    Migrate tables and data using django-south
-    
-    This command calls the Django 'manage.py migrate' command to migrate
-    tables managed by django-south to their most recent version.
-    """
-    def run(self,*args):
-        pass_to_django_manage([execname, 'migrate'] + list(args))
+#class Migrate(VerdiCommand):
+#    """
+#    Migrate tables and data using django-south
+#    
+#    This command calls the Django 'manage.py migrate' command to migrate
+#    tables managed by django-south to their most recent version.
+#    """
+#    def run(self,*args):
+#        pass_to_django_manage([execname, 'migrate'] + list(args))
 
 class Shell(VerdiCommand):
     """
@@ -429,15 +429,27 @@ class Install(VerdiCommand):
     This command creates the ~/.aiida folder in the home directory 
     of the user, interactively asks for the database settings and
     the repository location, does a setup of the daemon and runs
-    a syncdb + migrate command to create/setup the database.
+    a syncdb command to create/setup the database.
     """
     def run(self,*args):
 
         create_base_dirs()
         create_configuration()
 
-        print "Executing now a syncdb --migrate command..."
-        pass_to_django_manage([execname, 'syncdb', '--migrate'])
+        #print "Executing now a syncdb --migrate command..."
+        #pass_to_django_manage([execname, 'syncdb', '--migrate'])
+        print "Executing now a syncdb command..."
+        pass_to_django_manage([execname, 'syncdb'])
+        
+class Runserver(VerdiCommand):
+    """
+    Run the AiiDA webserver on localhost.
+
+    This command runs the webserver on the default port. Further command line
+    options are passed to the Django manage runserver command 
+    """
+    def run(self,*args):
+        pass_to_django_manage([execname, 'runserver'] + list(args))
 
 
 ########################################################################

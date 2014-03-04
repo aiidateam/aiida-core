@@ -25,7 +25,7 @@ from aiida.cmdline import pass_to_django_manage
 from aiida.cmdline.commands.daemon import Daemon
 from aiida.cmdline.commands.computer import Computer
 from aiida.cmdline.commands.workflow import Workflow
-from aiida.cmdline.commands.upf import Upf
+from aiida.cmdline.commands.data import Data
 from aiida.cmdline.commands.code import Code
 from aiida.cmdline.commands.calculation import Calculation
 from aiida.cmdline.commands.devel import Devel
@@ -300,7 +300,7 @@ class GoToComputer(VerdiCommand):
         
 class Runserver(VerdiCommand):
     """
-    Run the AiiDA webserver on localhost.
+    Run the AiiDA webserver on localhost
 
     This command runs the webserver on the default port. Further command line
     options are passed to the Django manage runserver command 

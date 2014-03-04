@@ -555,7 +555,7 @@ class Calculation(Node):
         calc_list = cls.query(q_object).distinct().order_by('ctime')
         
         if not calc_list:
-            return "No calculation found"
+            return ""
         else:
             res_str = '{:<10} {:<17} {:>12} {:<10} {:<22} {:<15}\n'.format('Pk','State','Creation','Time','Scheduler state','Type')
             for calc in calc_list:

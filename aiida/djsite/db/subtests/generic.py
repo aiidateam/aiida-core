@@ -992,7 +992,21 @@ class TestSubNodesAndLinks(AiidaTestCase):
         n2 ._replace_link_from(n1, label='the_label_2')
         the_parent = dict(n2.get_inputs(also_labels=True))['the_label_2']
         self.assertEquals(n1.uuid, the_parent.uuid)
-        
+       
+    def test_link_with_unstored(self): 
+        """
+        In the present version, I cannot add links between unstored nodes.
+        If we change this, remember to duplicate most of the tests that check
+        for the links to perform similar tests also before storing.
+        """
+        n1 = Node()
+        n2 = Node()
+        n3 = Node()
+    
+        with self.assertRaises(ModificationNotAllowed):
+            n2._add_link_from(n1)
+        with self.assertRaises(ModificationNotAllowed):
+            n2._add_link_to(n3)
     
     def test_valid_links(self):
         import tempfile

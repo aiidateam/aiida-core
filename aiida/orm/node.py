@@ -333,15 +333,39 @@ class Node(object):
         from aiida.djsite.db.models import Link, Path
         from django.db import IntegrityError, transaction
 
-        if self._to_be_stored:
-            raise ModificationNotAllowed("You have to store the destination node to make link")
         if not isinstance(src,Node):
             raise ValueError("src must be a Node instance")
+        if self.uuid == src.uuid:
+            raise ValueError("Cannot link to itself")
+
+        # Check if the source allows output links from this node (will raise ValueError if 
+        # this is not the case)
+        src.can_link_as_output(self)
+
+
+
+        ##       if self._to_be_stored:
+        ###           ADD to internal dictionary, understand what to do if 
+        ###           label == None (maybe have a None key, that is a list,
+        ###                          and append the src?)
+        ###           if label is not None: check for existence
+        ###     else:
+        ###          if src._to_be_stored: raise  
+        
+        ## TODO, moreover:
+        ## in store: raise if the internal dict is not empty
+        ## define store_all to store the parents, self and then the links;
+        ## try to see if it can be done in a transaction so that if anything
+        ## fails, we have not stored anything (but understand what to do for
+        ## the files!! and be careful for transactions inside transactions)
+        ## 
+        
+
+        if self._to_be_stored:
+            raise ModificationNotAllowed("You have to store the destination node to make link")
         if src._to_be_stored:
             raise ModificationNotAllowed("You have to store the source node to make a link")
 
-        if self.uuid == src.uuid:
-            raise ValueError("Cannot link to itself")
 
         # Check for cycles. This works if the transitive closure is enabled; if it 
         # isn't, this test will never fail, but then having a circular link is not
@@ -351,10 +375,6 @@ class Node(object):
         # in the TC table from self to src
         if len(Path.objects.filter(parent=self.dbnode, child=src.dbnode))>0:
             raise ValueError("The link you are attempting to create would generate a loop")
-
-        # Check if the source allows output links from this node (will raise ValueError if 
-        # this is not the case)
-        src.can_link_as_output(self)
 
         if label is None:
             autolabel_idx = 1

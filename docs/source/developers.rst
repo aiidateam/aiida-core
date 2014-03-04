@@ -7,7 +7,7 @@ Commits
 
 Before committing, **always** run::
   
-  verdi developertest
+  verdi devel tests
   
 to be sure that your modifications did not introduce any new bugs in existing
 code. Remember to do it even if you believe your modification to be small - 

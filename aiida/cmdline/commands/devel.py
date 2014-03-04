@@ -161,7 +161,7 @@ class Devel(VerdiCommand):
             # I write the local repository on stderr, so that the user running
             # the tests knows where the files are being stored
             print >> sys.stderr, "########################################"
-            print >> sys.stderr,  "# LOCAL AiiDA REPOSITORY FOR TESTS:"
+            print >> sys.stderr, "# LOCAL AiiDA REPOSITORY FOR TESTS:"
             print >> sys.stderr, "# {}".format(settings.LOCAL_REPOSITORY)
             print >> sys.stderr, "########################################"
             # Here. I set the correct signal to attach to when we want to

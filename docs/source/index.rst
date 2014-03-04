@@ -32,6 +32,9 @@ User's guide
    state/calculation_state
 
    workflow/index
+
+   website/web.rst
+
    troubleshooting/index
 
 Developer's guide

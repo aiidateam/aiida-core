@@ -308,14 +308,14 @@ class Node(object):
         :param str label: the label of the link from src to the current Node
         """
         from django.db import transaction        
-        from aiida.djsite.db.models import Link
+        from aiida.djsite.db.models import DbLink
         
         try:
             self._add_link_from(src, label)
         except UniquenessError:
             # I have to replace the link; I do it within a transaction
             with transaction.commit_on_success():
-                Link.objects.filter(output=self.dbnode,
+                DbLink.objects.filter(output=self.dbnode,
                                     label=label).delete()
                 self._add_link_from(src, label)
 
@@ -330,7 +330,7 @@ class Node(object):
         :param str label: the name of the label to set the link from src.
                     Default = None.
         """
-        from aiida.djsite.db.models import Link, Path
+        from aiida.djsite.db.models import DbLink, DbPath
         from django.db import IntegrityError, transaction
 
         if not isinstance(src,Node):
@@ -371,15 +371,15 @@ class Node(object):
         # isn't, this test will never fail, but then having a circular link is not
         # meaningful but does not pose a huge threat
         #
-        # I am linking src->self; a loop would be created if a Path exists already
+        # I am linking src->self; a loop would be created if a DbPath exists already
         # in the TC table from self to src
-        if len(Path.objects.filter(parent=self.dbnode, child=src.dbnode))>0:
+        if len(DbPath.objects.filter(parent=self.dbnode, child=src.dbnode))>0:
             raise ValueError("The link you are attempting to create would generate a loop")
 
         if label is None:
             autolabel_idx = 1
 
-            existing_from_autolabels = list(Link.objects.filter(
+            existing_from_autolabels = list(DbLink.objects.filter(
                 output=self.dbnode,
                 label__startswith="link_").values_list('label',flat=True))
             while "link_{}".format(autolabel_idx) in existing_from_autolabels:
@@ -397,7 +397,7 @@ class Node(object):
                     # transactions are needed here for Postgresql:
                     # https://docs.djangoproject.com/en/1.5/topics/db/transactions/#handling-exceptions-within-postgresql-transactions
                     sid = transaction.savepoint()
-                    Link.objects.create(input=src.dbnode, output=self.dbnode,
+                    DbLink.objects.create(input=src.dbnode, output=self.dbnode,
                         label="link_{}".format(autolabel_idx))
                     transaction.savepoint_commit(sid)
                     break
@@ -410,7 +410,7 @@ class Node(object):
                 # transactions are needed here for Postgresql:
                 # https://docs.djangoproject.com/en/1.5/topics/db/transactions/#handling-exceptions-within-postgresql-transactions
                 sid = transaction.savepoint()
-                Link.objects.create(input=src.dbnode, output=self.dbnode, label=label)
+                DbLink.objects.create(input=src.dbnode, output=self.dbnode, label=label)
                 transaction.savepoint_commit(sid)
             except IntegrityError as e:
                 transaction.savepoint_rollback(sid)
@@ -482,10 +482,10 @@ class Node(object):
                 format: ('label', Node)
                 with 'label' the link label, and Node a Node instance or subclass
         """
-        from aiida.djsite.db.models import Link
+        from aiida.djsite.db.models import DbLink
 
         inputs_list = ((i.label, i.input.get_aiida_class()) for i in
-                       Link.objects.filter(output=self.dbnode).distinct())
+                       DbLink.objects.filter(output=self.dbnode).distinct())
         
         if type is None:
             if also_labels:
@@ -511,10 +511,10 @@ class Node(object):
                 format: ('label', Node)
                 with 'label' the link label, and Node a Node instance or subclass
         """
-        from aiida.djsite.db.models import Link
+        from aiida.djsite.db.models import DbLink
 
         outputs_list = ((i.label, i.output.get_aiida_class()) for i in
-                       Link.objects.filter(input=self.dbnode).distinct())
+                       DbLink.objects.filter(input=self.dbnode).distinct())
         
         if type is None:
             if also_labels:

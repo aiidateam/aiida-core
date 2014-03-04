@@ -72,9 +72,9 @@ class DbNode(m.Model):
     user = m.ForeignKey(User, on_delete=m.PROTECT)
 
     # Direct links
-    outputs = m.ManyToManyField('self', symmetrical=False, related_name='inputs', through='Link')  
+    outputs = m.ManyToManyField('self', symmetrical=False, related_name='inputs', through='DbLink')  
     # Transitive closure
-    children = m.ManyToManyField('self', symmetrical=False, related_name='parents', through='Path')
+    children = m.ManyToManyField('self', symmetrical=False, related_name='parents', through='DbPath')
     
     # Used only if dbnode is a calculation, or remotedata
     computer = m.ForeignKey('DbComputer', null=True, on_delete=m.PROTECT)
@@ -150,7 +150,7 @@ class DbNode(m.Model):
         else:
             return "{} node [{}]".format(simplename, self.pk)
 
-class Link(m.Model):
+class DbLink(m.Model):
     '''
     Direct connection between two dbnodes. The label is identifying the
     link type.
@@ -183,7 +183,7 @@ class Link(m.Model):
             self.output.pk,)
             
 
-class Path(m.Model):
+class DbPath(m.Model):
     """
     Transitive closure table for all dbnode paths.
     

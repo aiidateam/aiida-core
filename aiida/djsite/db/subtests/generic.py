@@ -29,8 +29,8 @@ class TestTransitiveClosureDeletion(AiidaTestCase):
     Test the creation of the transitive closure table
     """
     def test_creation_and_deletion(self):
-        from aiida.djsite.db.models import Link # Direct links
-        from aiida.djsite.db.models import Path # The transitive closure table
+        from aiida.djsite.db.models import DbLink # Direct links
+        from aiida.djsite.db.models import DbPath # The transitive closure table
         
         n1 = Node().store()
         n2 = Node().store()
@@ -57,63 +57,63 @@ class TestTransitiveClosureDeletion(AiidaTestCase):
 
         # Yet, no links from 1 to 8
         self.assertEquals(
-            len(Path.objects.filter(parent=n1,child=n8).distinct()),0)
+            len(DbPath.objects.filter(parent=n1,child=n8).distinct()),0)
 
         n5._add_link_to(n6)
         # Yet, now 2 links from 1 to 8
         self.assertEquals(
-            len(Path.objects.filter(parent=n1,child=n8).distinct()),2)
+            len(DbPath.objects.filter(parent=n1,child=n8).distinct()),2)
 
         n9._add_link_to(n7)
         # Still two links...
         self.assertEquals(
-            len(Path.objects.filter(parent=n1,child=n8).distinct()),2)
+            len(DbPath.objects.filter(parent=n1,child=n8).distinct()),2)
 
         n6._add_link_to(n9)
         # And now there should be 4 nodes
         self.assertEquals(
-            len(Path.objects.filter(parent=n1,child=n8).distinct()),4)
+            len(DbPath.objects.filter(parent=n1,child=n8).distinct()),4)
         
         ### I start deleting now
 
         # I cut one branch below: I should loose 2 links
-        Link.objects.filter(input=n6, output=n9).delete()
+        DbLink.objects.filter(input=n6, output=n9).delete()
         self.assertEquals(
-            len(Path.objects.filter(parent=n1,child=n8).distinct()),2)
+            len(DbPath.objects.filter(parent=n1,child=n8).distinct()),2)
 
         #print "\n".join([str((i.pk, i.input.pk, i.output.pk))
-        #                 for i in Link.objects.filter()])
+        #                 for i in DbLink.objects.filter()])
         #print "\n".join([str((i.pk, i.parent.pk, i.child.pk, i.depth,
         #                      i.entry_edge_id, i.direct_edge_id,
-        #                      i.exit_edge_id)) for i in Path.objects.filter()])
+        #                      i.exit_edge_id)) for i in DbPath.objects.filter()])
 
         # I cut another branch above: I should loose one more link
-        Link.objects.filter(input=n2, output=n4).delete()
+        DbLink.objects.filter(input=n2, output=n4).delete()
         #print "\n".join([str((i.pk, i.input.pk, i.output.pk))
-        #                 for i in Link.objects.filter()])
+        #                 for i in DbLink.objects.filter()])
         #print "\n".join([str((i.pk, i.parent.pk, i.child.pk, i.depth,
         #                      i.entry_edge_id, i.direct_edge_id,
-        #                      i.exit_edge_id)) for i in Path.objects.filter()])
+        #                      i.exit_edge_id)) for i in DbPath.objects.filter()])
         self.assertEquals(
-            len(Path.objects.filter(parent=n1,child=n8).distinct()),1)
+            len(DbPath.objects.filter(parent=n1,child=n8).distinct()),1)
         
         # Another cut should delete all links
-        Link.objects.filter(input=n3, output=n5).delete()
+        DbLink.objects.filter(input=n3, output=n5).delete()
         self.assertEquals(
-            len(Path.objects.filter(parent=n1,child=n8).distinct()),0)
+            len(DbPath.objects.filter(parent=n1,child=n8).distinct()),0)
 
         # But I did not delete everything! For instance, I can check
         # the following links
         self.assertEquals(
-            len(Path.objects.filter(parent=n4,child=n8).distinct()),1)
+            len(DbPath.objects.filter(parent=n4,child=n8).distinct()),1)
         self.assertEquals(
-            len(Path.objects.filter(parent=n5,child=n7).distinct()),1)
+            len(DbPath.objects.filter(parent=n5,child=n7).distinct()),1)
 
         # Finally, I reconnect in a different way the two graphs and 
         # check that 1 and 8 are again connected
         n3._add_link_to(n4)
         self.assertEquals(
-            len(Path.objects.filter(parent=n1,child=n8).distinct()),1)          
+            len(DbPath.objects.filter(parent=n1,child=n8).distinct()),1)          
 
 class TestQueryWithAiidaObjects(AiidaTestCase):
     """
@@ -213,7 +213,7 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
                           set([]))
         
     def test_links_and_queries(self):
-        from aiida.djsite.db.models import DbNode, Link
+        from aiida.djsite.db.models import DbNode, DbLink
         a  = Node()
         a.set_attr('myvalue', 123)
         a.store()
@@ -265,10 +265,10 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
         self.assertTrue(isinstance(going_out_from_a2_bis[1],Node))
 
         # Query for links starting from b[0]==a2 using again the Node class
-        output_links_b = Link.objects.filter(input=b[0])
+        output_links_b = DbLink.objects.filter(input=b[0])
         self.assertEquals(len(output_links_b), 2)
-        self.assertTrue(isinstance(output_links_b[0],Link))
-        self.assertTrue(isinstance(output_links_b[1],Link))
+        self.assertTrue(isinstance(output_links_b[0],DbLink))
+        self.assertTrue(isinstance(output_links_b[1],DbLink))
         uuid_set_db_link = set([output_links_b[0].output.uuid,
                                 output_links_b[1].output.uuid])
         self.assertEquals(uuid_set, uuid_set_db_link)        

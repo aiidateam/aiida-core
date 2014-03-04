@@ -42,6 +42,9 @@ Write comments!
 
 South migrations: quick tutorial
 ++++++++++++++++++++++++++++++++
+
+.. NOTE:: At the moment south migrations have been disabled!
+
 When changing the database schema (that should happen rarely, we hope),
 we use Django South to manage the migrations.
 

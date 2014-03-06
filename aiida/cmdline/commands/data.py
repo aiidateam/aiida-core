@@ -133,6 +133,8 @@ class _Upf(VerdiCommand):
         """
         Upload a new pseudopotential family.
         
+        Returns the numbers of files found and the number of nodes uploaded.
+        
         Call without parameters to get some help.
         """
         import inspect
@@ -166,8 +168,10 @@ class _Upf(VerdiCommand):
         load_django()
         
         import aiida.orm.data.upf as upf
-        upf.upload_upf_family(folder, group_name, 
-                              group_description, stop_if_existing)
+        files_found, files_uploaded = upf.upload_upf_family(folder, group_name, 
+                                                            group_description, stop_if_existing)
+        
+        print "UPF files found: {}. New files uploaded: {}".format(files_found,files_uploaded)
         
 
     def listfamilies(self, *args):

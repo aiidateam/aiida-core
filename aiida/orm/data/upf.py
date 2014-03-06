@@ -94,7 +94,9 @@ def upload_upf_family(folder, group_name, group_description,
              for i in os.listdir(folder) if 
              os.path.isfile(os.path.join(folder,i)) and 
              i.lower().endswith('.upf')]
-
+    
+    nfiles = len(files)
+    
     group,group_created = DbGroup.objects.get_or_create(
         name=group_name, defaults={'user': get_automatic_user()})
     if len(group.dbnodes.all()) != 0:
@@ -106,7 +108,6 @@ def upload_upf_family(folder, group_name, group_description,
     pseudo_and_created = []
     
     for f in files:
-        
         md5sum = aiida.common.utils.md5_file(f)
         existing_upf = UpfData.query(dbattributes__key="_md5",
                                      dbattributes__tval = md5sum)
@@ -123,8 +124,6 @@ def upload_upf_family(folder, group_name, group_description,
                 raise ValueError("A UPF with identical MD5 to "+f+" cannot be added with stop_if_existing")
             pseudo = existing_upf[0]
             pseudo_and_created.append( (pseudo,False) )
-             
-    #print pseudo_and_created, [ i[0].element for i in pseudo_and_created ]
     
     # check whether pseudo are unique per element
     elements = [ i[0].element for i in pseudo_and_created ]
@@ -139,7 +138,7 @@ def upload_upf_family(folder, group_name, group_description,
     if not group_created: # enforce the user if the group was empty and already there
         group.user = get_automatic_user()
         group.save()
-
+    
     # save the upf in the database, and add them to group    
     for pseudo,created in pseudo_and_created:
         if created:
@@ -152,7 +151,11 @@ def upload_upf_family(folder, group_name, group_description,
                pseudo.uuid, pseudo.filename))
         else:
             aiidalogger.debug("Reusing node {} for file {}".format(
-               pseudo.uuid, pseudo.filename))            
+               pseudo.uuid, pseudo.filename))
+    
+    nuploaded = len([i for i in pseudo_and_created if i[1]])
+     
+    return nfiles, nuploaded
         
             
 def parse_upf(fname, check_filename = True):

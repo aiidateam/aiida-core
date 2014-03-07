@@ -9,24 +9,26 @@ admin.autodiscover()
 # API-related classes
 from tastypie.api import Api
 from aiida.djsite.db.api import (
-    MetadataResource,
-    AuthInfoResource,
-    DbAttributeResource,
     AttributeResource,
+    DbAttributeResource,
+    DbAuthInfoResource,
     DbComputerResource,
+    DbGroupResource,
     DbNodeResource,
+    MetadataResource,
     UserResource,
     )
 
 # We register the API v.1
 v1_api = Api(api_name='v1')
-v1_api.register(DbComputerResource())
-v1_api.register(UserResource())
-v1_api.register(AuthInfoResource())
-v1_api.register(DbNodeResource())
-v1_api.register(DbAttributeResource())
 v1_api.register(AttributeResource())
+v1_api.register(DbAttributeResource())
+v1_api.register(DbAuthInfoResource())
+v1_api.register(DbComputerResource())
+v1_api.register(DbGroupResource())
+v1_api.register(DbNodeResource())
 v1_api.register(MetadataResource())
+v1_api.register(UserResource())
 
 import aiida.djsite.awi.urls
 

@@ -1,5 +1,7 @@
 from django.contrib.auth.models import User
 from tastypie import fields, utils
+from tastypie.authentication import SessionAuthentication
+from tastypie.authorization import DjangoAuthorization
 from tastypie.resources import ModelResource, ALL, ALL_WITH_RELATIONS
 from aiida.djsite.db.models import (
         DbAuthInfo, 
@@ -26,14 +28,15 @@ class UserResource(ModelResource):
             'last_name': ['exact', 'iexact'],
             'username': ['exact'],         
             }
-
+        authentication = SessionAuthentication()
+        authorization = DjangoAuthorization()
 
 class DbComputerResource(ModelResource):
     
     class Meta:
         queryset = DbComputer.objects.all()
         resource_name = 'dbcomputer'
-        allowed_methods = ['get']
+        allowed_methods = ['get', 'post', 'put']
         filtering = {
             'id': ['exact'],
             'uuid': ALL,
@@ -43,8 +46,12 @@ class DbComputerResource(ModelResource):
             'scheduler_type': ALL,
             'transport_type': ALL,
             'workdir': ALL,
+            'enabled': ALL,
             }
         ordering = ['id', 'name', 'transport_type', 'scheduler_type', 'enabled'] 
+
+        authentication = SessionAuthentication()
+        authorization = DjangoAuthorization()
     
     def dehydrate_metadata(self, bundle):
         import json
@@ -139,6 +146,8 @@ class DbNodeResource(ModelResource):
             'attributes': ALL_WITH_RELATIONS,    
             }
 
+        ordering = ['id', 'type'] 
+
 class DbAttributeResource(ModelResource):
     dbnode = fields.ToOneField(DbNodeResource, 'dbnode', related_name='dbattributes')    
     class Meta:
@@ -189,7 +198,7 @@ class AttributeResource(ModelResource):
     def dehydrate(self, bundle):
         # Remove all the fields with name matching the pattern '?val'
         # (bval, ival, tval, dval, fval, ...)
-        for k in bundle.data.keys():
+        for k in bundle.data:
             if len(k) == 4 and k.endswith('val'):
                 del bundle.data[k]
         
@@ -199,6 +208,19 @@ class AttributeResource(ModelResource):
         bundle.data['value'] = bundle.obj.getvalue()
         
         return bundle
+
+    def build_schema(self):
+        default_schema = super(AttributeResource, self).build_schema()
+
+        fields = list(default_schema['fields'].keys())
+        for k in fields:
+            if len(k) == 4 and k.endswith('val'):
+                del default_schema['fields'][k]
+        
+        # TODO: fix the schema correctly!
+
+        return default_schema
+
         
 class MetadataResource(ModelResource):
     dbnode = fields.ToOneField(DbNodeResource, 'dbnode', related_name='metadata')    

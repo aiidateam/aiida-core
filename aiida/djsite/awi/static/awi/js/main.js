@@ -24,7 +24,7 @@ String.prototype.trunc =
 * previous : API url for the previous page
 * next : API url for the next page
 */
-function pagination(total, limit, offset, previous, next, ordering) {
+function pagination(module, total, limit, offset, previous, next, ordering) {
 	var output = [];
 	var data_infos = 'data-ordering="'+ordering+'"';
 	if(previous != null) /* if we have a previous link (i.e. not first page), we show the previous link as active */
@@ -36,13 +36,13 @@ function pagination(total, limit, offset, previous, next, ordering) {
 			var aclass = ' class = "active"';
 		else
 			var aclass = '';
-		if(api_computers_url.indexOf('?') == -1 && api_computers_url.indexOf('limit') == -1) /* append the selection criteria, but only if they aren't already present, also check if the order_by is already present */
+		if(api_urls[module].indexOf('?') == -1 && api_urls[module].indexOf('limit') == -1) /* append the selection criteria, but only if they aren't already present, also check if the order_by is already present */
 			var append = '?limit='+limit+'&offset='+(i-1)*limit;
-		else if(api_computers_url.indexOf('limit') == -1)
+		else if(api_urls[module].indexOf('limit') == -1)
 			var append = '&limit='+limit+'&offset='+(i-1)*limit;
 		else
 			var append = '';
-		output.push('<li'+aclass+'><a href="#" data-url="'+api_computers_url+append+'" '+data_infos+'>'+i+'</a></li>');
+		output.push('<li'+aclass+'><a href="#" data-url="'+api_urls[module]+append+'" '+data_infos+'>'+i+'</a></li>');
 	}
 	if(next != null) /* same as with previous link, but for next link */
 		output.push('<li><a href="#" data-url="'+next+'" '+data_infos+'>&raquo;</a></li>');

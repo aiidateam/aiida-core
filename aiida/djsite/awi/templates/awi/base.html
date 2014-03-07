@@ -44,17 +44,20 @@
 						<li class="{% current 'computers' %}"><a href="{% url 'awi:computers' %}">Computers</a></li>
 						<li class="{% current 'codes' %}"><a href="{% url 'awi:codes' %}">Codes</a></li>
 					</ul>
-					<!--<ul class="nav navbar-nav navbar-right">
+					{% if user.is_authenticated %}
+					<ul class="nav navbar-nav navbar-right">
 						<li class="dropdown">
-							<a href="#" class="dropdown-toggle" data-toggle="dropdown">Username <b class="caret"></b></a>
+							<a href="#" class="dropdown-toggle" data-toggle="dropdown">{{ user.username }} <b class="caret"></b></a>
 							<ul class="dropdown-menu">
-								<li><a href="#">Account</a></li>
+								<li class="disabled"><a href="#">Account</a></li>
 								<li class="divider"></li>
-								<li><a href="#">Settings</a></li>
+								<li class="disabled"><a href="#">Settings</a></li>
 							</ul>
 						</li>
-					</ul>-->
-					<form class="navbar-form navbar-right">
+					</ul>
+					{% else %}
+					<form class="navbar-form navbar-right" action="{% url 'awi:login' %}">
+						{% csrf_token %}
 						<div class="form-group">
 							<input type="text" placeholder="Username" class="form-control">
 						</div>
@@ -63,6 +66,7 @@
 						</div>
 						<button type="submit" class="btn btn-success">Sign in</button>
 					</form>
+					{% endif %}
 				</div><!--/.navbar-collapse -->
 			</div><!--/.container -->
 		</nav>
@@ -87,10 +91,16 @@
 
 		<script>
 			/* we need to be able to access this URL from external scripts */
-			var api_computers_url = '{% url "api_dispatch_list" api_name="v1" resource_name="dbcomputer" %}';
-			var api_authinfo_url = '{% url "api_dispatch_list" api_name="v1" resource_name="dbauthinfo" %}';
-			var computers_detail_url = '{% url "awi:computers_detail" computer_id="0" %}';
-			var computers_rename_url = '{% url "awi:computers_rename" computer_id="0" %}';
+			var api_urls = {
+				computers: '{% url "api_dispatch_list" api_name="v1" resource_name="dbcomputer" %}',
+				authinfo: '{% url "api_dispatch_list" api_name="v1" resource_name="dbauthinfo" %}'
+			};
+			var modules_urls = {
+				computers : {
+					detail: '{% url "awi:computers_detail" computer_id="0" %}',
+					rename: '{% url "awi:computers_rename" computer_id="0" %}'
+				}
+			};
 			/* SVG alternative for IE8 and below */
 			if (!Modernizr.svg) {
 				$(".navbar-brand img").attr('src', "{% static 'awi/img/logo.png' %}");

@@ -3,7 +3,67 @@ import sys
 from aiida.cmdline.baseclass import VerdiCommand
 from aiida.common.utils import load_django
 
-class Upf(VerdiCommand):
+class Data(VerdiCommand):
+    """
+    Setup and manage data specific types
+    
+    There is a list of subcommands for managing specific types of data.
+    For instance, 'data upf' manages pseudopotentials in the UPF format.
+    """
+    def __init__(self):
+        """
+        A dictionary with valid commands and functions to be called.
+        """
+        
+        ## Add here the classes to be supported.
+        self.valid_subcommands = {
+            'upf': _Upf,
+            }
+
+    def no_subcommand(self,*args):
+        print >> sys.stderr, ("You have to pass a valid subcommand to "
+                              "'data'. Valid subcommands are:")
+        print >> sys.stderr, "\n".join("  {}".format(sc) 
+                                       for sc in self.valid_subcommands)
+        sys.exit(1)
+
+    def invalid_subcommand(self,*args):
+        print >> sys.stderr, ("You passed an invalid subcommand to 'data'. "
+                              "Valid subcommands are:")
+        print >> sys.stderr, "\n".join("  {}".format(sc) 
+                                       for sc in self.valid_subcommands)
+        sys.exit(1)
+
+    def run(self,*args):       
+        try:
+            function_to_call = self.valid_subcommands[args[0]]().run
+        except IndexError:
+            function_to_call = self.no_subcommand
+        except KeyError:
+            function_to_call = self.invalid_subcommand
+            
+        function_to_call(*args[1:])
+
+    def complete(self,subargs_idx, subargs):
+        if subargs_idx == 0:
+            print "\n".join(self.valid_subcommands.keys())
+        elif subargs_idx >= 1:
+            try:
+                first_subarg = subargs[0]
+            except  IndexError:
+                first_subarg = ''
+            try:
+                complete_function = self.valid_subcommands[first_subarg]().complete 
+            except KeyError:
+                print ""
+                return
+            complete_function(subargs_idx - 1, subargs[1:])
+
+        
+# Note: this class should not be exposed directly in the main module,
+# otherwise it becomes a command of 'verdi'. Instead, we want it to be a 
+# subcommand of verdi data.
+class _Upf(VerdiCommand):
     """
     Setup and manage upf to be used
 
@@ -73,6 +133,8 @@ class Upf(VerdiCommand):
         """
         Upload a new pseudopotential family.
         
+        Returns the numbers of files found and the number of nodes uploaded.
+        
         Call without parameters to get some help.
         """
         import inspect
@@ -84,7 +146,7 @@ class Upf(VerdiCommand):
         
         if not len(args) == 3 and not len(args) == 4:
             print >> sys.stderr, ("\n after 'upf uploadfamily' there should be three "
-                                  "arguments: folder, group_name, group_description [optional --stop_if_existing]\n")
+                                  "arguments: folder, group_name, group_description [optional --stop-if-existing]\n")
             sys.exit(1)
         
         folder            = os.path.abspath(args[0])
@@ -93,7 +155,7 @@ class Upf(VerdiCommand):
         stop_if_existing  = False
         
         if len(args)==4:
-            if args[3]=="--stop_if_existing":
+            if args[3]=="--stop-if-existing":
                 stop_if_existing  = True
             else:
                 print >> sys.stderr, 'Unknown directive: '+args[3]
@@ -105,8 +167,11 @@ class Upf(VerdiCommand):
             
         load_django()
         
-        import aiida.orm.data.upf as upfd
-        upfd.upload_upf_family(folder, group_name, group_description, stop_if_existing)
+        import aiida.orm.data.upf as upf
+        files_found, files_uploaded = upf.upload_upf_family(folder, group_name, 
+                                                            group_description, stop_if_existing)
+        
+        print "UPF files found: {}. New files uploaded: {}".format(files_found,files_uploaded)
         
 
     def listfamilies(self, *args):
@@ -133,16 +198,16 @@ class Upf(VerdiCommand):
             
         if groups:
             for g in groups:
-                pseudos = UpfData.query(groups__name=g.name).distinct()
+                pseudos = UpfData.query(dbgroups__name=g.name).distinct()
                 num_pseudos = pseudos.count()
 
                 pseudos_list = pseudos.filter(
-                                      attributes__key="_element").values_list(
-                                      'attributes__tval', flat=True)
+                                      dbattributes__key="_element").values_list(
+                                      'dbattributes__tval', flat=True)
                 
                 new_ps = pseudos.filter(
-                                attributes__key="_element").values_list(
-                                'attributes__tval', flat=True)
+                                dbattributes__key="_element").values_list(
+                                'dbattributes__tval', flat=True)
                 
                 if num_pseudos != len(set(pseudos_list)):
                     print ("x {} [INVALID: {} pseudos, for {} elements]"

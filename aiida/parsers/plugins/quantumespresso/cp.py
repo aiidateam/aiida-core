@@ -255,7 +255,7 @@ class CpParser(Parser):
         for this_name in evp_keys:
             traj.set_array(this_name,raw_trajectory[this_name])
         traj.store()
-        self._calc.add_link_to(traj, label=self.get_linkname_trajectory() )        
+        self._calc._add_link_to(traj, label=self.get_linkname_trajectory() )        
         self._set_linkname_outtrajectory(self._outtraj_name)
         
         # convert the dictionary into an AiiDA object
@@ -263,7 +263,7 @@ class CpParser(Parser):
         
         # save it into db
         output_params.store()
-        self._calc.add_link_to(output_params, label=self.get_linkname_outparams() )
+        self._calc._add_link_to(output_params, label=self.get_linkname_outparams() )
         
         return successful
 

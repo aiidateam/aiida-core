@@ -2,8 +2,8 @@ from django.contrib.auth.models import User
 from tastypie import fields, utils
 from tastypie.resources import ModelResource, ALL, ALL_WITH_RELATIONS
 from aiida.djsite.db.models import (
-        AuthInfo, 
-        Attribute,
+        DbAuthInfo, 
+        DbAttribute,
         DbComputer, 
         DbNode,
         )
@@ -59,7 +59,7 @@ class AuthInfoResource(ModelResource):
     computer = fields.ToOneField(DbComputerResource, 'computer')
     
     class Meta:
-        queryset = AuthInfo.objects.all()
+        queryset = DbAuthInfo.objects.all()
         resource_name = 'authinfo'
         allowed_methods = ['get']
         filtering = {
@@ -121,7 +121,7 @@ class DbNodeResource(ModelResource):
 class DbAttributeResource(ModelResource):
     dbnode = fields.ToOneField(DbNodeResource, 'dbnode', related_name='dbattributes')    
     class Meta:
-        queryset = Attribute.objects.all()
+        queryset = DbAttribute.objects.all()
         resource_name = 'dbattribute'
         allowed_methods = ['get']
         filtering = {
@@ -141,7 +141,7 @@ class DbAttributeResource(ModelResource):
 class AttributeResource(ModelResource):
     dbnode = fields.ToOneField(DbNodeResource, 'dbnode', related_name='attributes')    
     class Meta:
-        queryset = Attribute.objects.all()
+        queryset = DbAttribute.objects.all()
         resource_name = 'attribute'
         allowed_methods = ['get']
         filtering = {
@@ -182,7 +182,7 @@ class AttributeResource(ModelResource):
 class MetadataResource(ModelResource):
     dbnode = fields.ToOneField(DbNodeResource, 'dbnode', related_name='metadata')    
     class Meta:
-        queryset = Attribute.objects.all()
+        queryset = DbAttribute.objects.all()
         resource_name = 'metadata'
         allowed_methods = ['get']
         filtering = {

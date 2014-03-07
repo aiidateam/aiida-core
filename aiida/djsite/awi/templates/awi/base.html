@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]>	   <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>		   <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>		   <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
+	<head>
+		{% comment %} load the staticfiles library and the custom template tags {% endcomment %}
+		{% load staticfiles %}
+		{% load awi_tags %}
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+		<title>{% block title %}Page{% endblock %} - AiiDA Web Interface</title>
+		<meta name="description" content="">
+		<!-- viewport meta for mobile devices, zoom is not allowed -->
+		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+		
+		<link rel="shortcut icon" href="{% static 'awi/favicon.png' %}">
+		<link rel="icon" sizes="196x196" href="{% static 'awi/apple-touch-icon-precomposed.png' %}"> <!-- for android -->
+		<link rel="apple-touch-icon-precomposed" href="{% static 'awi/apple-touch-icon-precomposed.png' %}"> <!-- for iOS -->
+
+		<link rel="stylesheet" href="{% static 'awi/css/bootstrap.min.css' %}">
+		<link rel="stylesheet" href="{% static 'awi/css/main.css' %}">
+		<link rel="stylesheet" href="{% static 'awi/css/loader.min.css' %}">
+
+		<script src="{% static 'awi/js/vendor/modernizr-2.6.2-respond-1.1.0.min.js' %}"></script>
+	</head>
+	<body>
+		<!--[if lt IE 7]>
+			<p class="chromeframe">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> or <a href="http://www.google.com/chromeframe/?redirect=true">activate Google Chrome Frame</a> to improve your experience.</p>
+		<![endif]-->
+		<nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+			<div class="container">
+				<div class="navbar-header">
+					<button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+						<span class="icon-bar"></span>
+						<span class="icon-bar"></span>
+						<span class="icon-bar"></span>
+					</button>
+					<a class="navbar-brand" href="{% url 'awi:home' %}"><img src="{% static 'awi/img/logo.svg' %}" alt="AiiDA Web Interface"></a>
+				</div>
+				<div class="navbar-collapse collapse">
+					<ul class="nav navbar-nav">
+						<li class="{% current 'home' %}"><a href="{% url 'awi:home' %}">Home</a></li>
+						<li class="{% current 'computers' %}"><a href="{% url 'awi:computers' %}">Computers</a></li>
+						<li class="{% current 'codes' %}"><a href="{% url 'awi:codes' %}">Codes</a></li>
+					</ul>
+					<ul class="nav navbar-nav navbar-right">
+						<li class="dropdown">
+							<a href="#" class="dropdown-toggle" data-toggle="dropdown">Username <b class="caret"></b></a>
+							<ul class="dropdown-menu">
+								<li><a href="#">Account</a></li>
+								<li class="divider"></li>
+								<li><a href="#">Settings</a></li>
+							</ul>
+						</li>
+					</ul>
+					<!--<form class="navbar-form navbar-right">
+						<div class="form-group">
+							<input type="text" placeholder="Email" class="form-control">
+						</div>
+						<div class="form-group">
+							<input type="password" placeholder="Password" class="form-control">
+						</div>
+						<button type="submit" class="btn btn-success">Sign in</button>
+					</form>-->
+				</div><!--/.navbar-collapse -->
+			</div><!--/.container -->
+		</nav>
+		
+		<div class="container">
+			<!-- error message for people without javascript (display controlled by CSS) -->
+			<div class="alert alert-danger" id="nojs">
+			  <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
+			  <strong>Oh my !</strong><br>AiiDA Web Interface doesn't work without JavaScript enabled, we're utterly sorry about that. If you don't know how to activate JavaScript, head up to this website : <a href="http://enable-javascript.com/" class="alert-link" target="_blank">enable-javascript.com</a>.
+			</div>
+			{% block main %}
+			{% endblock %}
+			<hr>
+			<footer>
+				<p>Footer here</p>
+			</footer>
+		</div> <!-- /container -->
+		<script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
+		<script>window.jQuery || document.write('<script src="{% static "awi/js/vendor/jquery-1.10.1.min.js" %}"><\/script>')</script>
+
+		<script src="{% static 'awi/js/vendor/bootstrap.min.js' %}"></script>
+
+		<script>
+			/* we need to be able to access this URL from external scripts */
+			var api_computers_url = '{% url "api_dispatch_list" api_name="v1" resource_name="dbcomputer" %}';
+			var api_authinfo_url = '{% url "api_dispatch_list" api_name="v1" resource_name="authinfo" %}';
+			var computers_detail_url = '{% url "awi:computers_detail" computer_id="0" %}';
+			var computers_rename_url = '{% url "awi:computers_rename" computer_id="0" %}';
+			/* SVG alternative for IE8 and below */
+			if (!Modernizr.svg) {
+				$(".navbar-brand img").attr('src', "{% static 'awi/img/logo.png' %}");
+			}
+		</script>
+		<script src="{% static 'awi/js/main.js' %}"></script>
+		{% block js %}{% endblock %}
+		<div class="font-preload"><span class="glyphicon glyphicon-asterisk"></span></div>
+	</body>
+</html>

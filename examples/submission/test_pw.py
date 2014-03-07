@@ -29,8 +29,8 @@ except IndexError:
 expected_exec_name='pw.x'
 auto_pseudos = False
 
-queue = None
-#queue = "P_share_queue"
+#queue = None
+queue = "Q_aries_free"
      
 #####
 

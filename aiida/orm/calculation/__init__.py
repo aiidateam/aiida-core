@@ -545,8 +545,8 @@ class Calculation(Node):
             if states:
 #                q_object.add(~Q(dbattributes__key='_state',
 #                                dbattributes__tval=only_state,), Q.AND)
-                 q_object.add( Q(dbattributes__key='_state',
-                                  dbattributes__tval__in=states,), Q.AND)
+                q_object.add( Q(dbattributes__key='_state',
+                                 dbattributes__tval__in=states,), Q.AND)
             if past_days:
                 now = timezone.now()
                 n_days_ago = now - datetime.timedelta(days=past_days)
@@ -557,12 +557,13 @@ class Calculation(Node):
         if not calc_list:
             return ""
         else:
-            res_str = '{:<10} {:<17} {:>12} {:<10} {:<22} {:<15}\n'.format('Pk','State','Creation','Time','Scheduler state','Type')
+            res_str = '{:<10} {:<17} {:>12} {:<10} {:<22} {:<15} {:<15}\n'.format('Pk','State','Creation','Time','Scheduler state','Computer','Type')
             for calc in calc_list:
                 
                 remote_state = "None"
                 
                 calc_state = calc.get_state()
+                remote_computer = calc.get_computer().name
                 try:
                     sched_state = calc.get_scheduler_state()
                     if sched_state is None:
@@ -584,11 +585,12 @@ class Calculation(Node):
                 except ValueError:
                     raise
                 
-                res_str+= "{:<10} {:<17} {:<12} {:<10} {:<22} {:<15}\n".format( calc.pk,
+                res_str+= "{:<10} {:<17} {:<12} {:<10} {:<22} {:<15} {:<15}\n".format( calc.pk,
                                calc.get_state(),
                                calc.ctime.isoformat().split('T')[0],
                                calc.ctime.isoformat().split('T')[1].split('.')[0],
-                               remote_state, 
+                               remote_state,
+                               remote_computer,
                                str(calc.__class__).split('.')[-1].strip("'>"),
                             )
             return res_str

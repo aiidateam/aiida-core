@@ -176,6 +176,7 @@ INSTALLED_APPS = (
     'kombu.transport.django',
     'djcelery',
     'tastypie',
+    'aiida.djsite.awi',
 )
 
 # A sample logging configuration. The only tangible logging

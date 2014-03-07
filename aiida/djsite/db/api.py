@@ -36,7 +36,7 @@ class DbComputerResource(ModelResource):
     class Meta:
         queryset = DbComputer.objects.all()
         resource_name = 'dbcomputer'
-        allowed_methods = ['get', 'post', 'put']
+        allowed_methods = ['get', 'post', 'put', 'patch']
         filtering = {
             'id': ['exact'],
             'uuid': ALL,
@@ -61,6 +61,30 @@ class DbComputerResource(ModelResource):
         except (ValueError, TypeError):
             data = None
         return data
+
+    def hydrate_metadata(self, bundle):
+        import json
+        
+        bundle.data['metadata'] = json.dumps(bundle.data['metadata'])
+        
+        return bundle
+
+    def hydrate_transport_params(self, bundle):
+        import json
+        
+        bundle.data['transport_params'] = json.dumps(bundle.data['transport_params'])
+        
+        return bundle
+
+    def dehydrate_transport_params(self, bundle):
+        import json
+        
+        try:
+            data = json.loads(bundle.data['transport_params'])
+        except (ValueError, TypeError):
+            data = None
+        return data
+
 
 class DbAuthInfoResource(ModelResource):
     aiidauser = fields.ToOneField(UserResource, 'aiidauser', full=True) 
@@ -114,8 +138,10 @@ class DbNodeResource(ModelResource):
     outputs = fields.ToManyField('self', 'outputs', related_name='inputs', full=False, use_in='detail')   
     inputs = fields.ToManyField('self', 'inputs', related_name='outputs', full=False, use_in='detail')
 
-    dbattributes = fields.ToManyField('aiida.djsite.db.api.DbAttributeResource', 'attributes', related_name='dbnode', full=False, use_in='detail')
-    attributes = fields.ToManyField('aiida.djsite.db.api.AttributeResource', 'attributes', related_name='dbnode', full=False, use_in='detail')
+    dbattributes = fields.ToManyField('aiida.djsite.db.api.DbAttributeResource', 'dbattributes', related_name='dbnode', full=False, use_in='detail')
+    ## To double check, they do not work right now
+    #attributes = fields.ToManyField('aiida.djsite.db.api.AttributeResource', 'attributes', related_name='dbnode', null=True, full=False, use_in='detail')
+    #metadata = fields.ToManyField('aiida.djsite.db.api.MetadataResource', 'metadata', related_name='dbnode', null=True, full=False, use_in='detail')
 
     ## Transitive-closure links
     ## Hidden for the time being, they could be too many
@@ -198,7 +224,10 @@ class AttributeResource(ModelResource):
     def dehydrate(self, bundle):
         # Remove all the fields with name matching the pattern '?val'
         # (bval, ival, tval, dval, fval, ...)
-        for k in bundle.data:
+        
+        # I have to make a list out of it otherwise I get a
+        # "dictionary changed during iteration" error
+        for k in list(bundle.data.keys()):
             if len(k) == 4 and k.endswith('val'):
                 del bundle.data[k]
         
@@ -259,7 +288,10 @@ class MetadataResource(ModelResource):
     def dehydrate(self, bundle):
         # Remove all the fields with name matching the pattern '?val'
         # (bval, ival, tval, dval, fval, ...)
-        for k in bundle.data.keys():
+
+        # I have to make a list out of it otherwise I get a
+        # "dictionary changed during iteration" error
+        for k in list(bundle.data.keys()):
             if len(k) == 4 and k.endswith('val'):
                 del bundle.data[k]
         

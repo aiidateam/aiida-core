@@ -85,13 +85,24 @@ class Calculation(VerdiCommand):
                                      calc_states.PARSING,
                                      ])
         
-        parser.add_argument('-p', '--past-days', metavar='N', help="add a filter to show only calculations created in the past N days",
+        parser.add_argument('-p', '--past-days', metavar='N', 
+                            help="add a filter to show only calculations created in the past N days",
                             action='store', type=int)
         parser.add_argument('pks', type=int, nargs='*',
                             help="a list of calculations to show. If empty, all running calculations are shown. If non-empty, ignores the -p and -r options.")
+        parser.add_argument('-a', '--all-states',
+                            dest='all_states',action='store_true',
+                            help="Overwrite manual set of states if present, and look for calculations in every possible state")
+        parser.set_defaults(all_states=False)
         
         args = list(args)
         parsed_args = parser.parse_args(args)
+        
+        capital_states = [i.upper() for i in parsed_args.states]
+        parsed_args.states = capital_states
+        
+        if parsed_args.all_states:
+            parsed_args.states = [ i for i in calc_states ]
         
         print calc.list_calculations(states=parsed_args.states,
                                      past_days=parsed_args.past_days, 

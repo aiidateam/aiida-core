@@ -557,31 +557,53 @@ class Code(VerdiCommand):
         load_django()
         return sorted([(c.pk, c.label) for c in AiidaOrmCode.query()])
 
+
     def get_code(self, code_id):
         """
         Get a Computer object with given identifier, that can either be
+        the numeric ID (pk), or the label (if unique).
         
+        .. note:: If an string that can be converted to an integer is given,
+            the numeric ID is verified first (therefore, is a code A with a
+            label equal to the ID of another code B is present, code A cannot
+            be referenced by label).
         """    
         from aiida.orm import Code as AiidaOrmCode
         from aiida.common.exceptions import NotExistent, MultipleObjectsError
         
         load_django()
         try:
-            code_id = int(code_id)
+            code_int = int(code_id)
+            try:
+                return AiidaOrmCode.get_subclass_from_pk(code_int)
+            except NotExistent:
+                raise ValueError() # Jump to the following section
+                                   # to check if a code with the given
+                                   # label exists.
+            except MultipleObjectsError:
+                print >> sys.stderr, (
+                    "More than one code in the DB with pk='{}'!"
+                    "".format(code_id))
+                sys.exit(1)
         except ValueError:
-            print >> sys.stderr, "Id '{}' is not a valid integer.".format(code_id)
-            sys.exit(1)
-            
-        try:
-            return AiidaOrmCode.get_subclass_from_pk(code_id)
-        except NotExistent:
-            print >> sys.stderr, "No code in the DB with id '{}'.".format(code_id)
-            sys.exit(1)
-        except MultipleObjectsError:
-            print >> sys.stderr, ("More than one code in the DB with id '{}'!"
-                                  "".format(code_id))
-            sys.exit(1)
-        
+            # Before dying, try to see if the user passed a (unique) label.
+            codes = AiidaOrmCode.query(label=code_id)
+            if len(codes) == 0:
+                print >> sys.stderr, "'{}' is not a valid code ID or label.".format(code_id)
+                sys.exit(1)
+            if len(codes) > 1:
+                print >> sys.stderr, (
+                    "There are multiple codes with label '{}', having IDs:"
+                    "".format(code_id))
+                print >> sys.stderr, (
+                    ", ".join(sorted([c.pk for c in codes])) + ".")
+                print >> sys.stderr, (
+                    "Relabel them (using their ID), or refer to them "
+                    "with their ID.")
+                sys.exit(1)
+            if len(codes) == 1:
+                return codes[0]
+
 
     def code_show(self, *args):
         """
@@ -657,8 +679,7 @@ class Code(VerdiCommand):
                                   "argument only, being the code id.")
             sys.exit(1)
         
-        pk = args[0]
-        code = self.get_code(pk)
+        code = self.get_code(args[0])
                
         try:
             delete_code(code)

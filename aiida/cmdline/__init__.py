@@ -1,3 +1,7 @@
+# default execname; can be substituted later in the call from
+# exec_from_cmdline
+execname = 'verdi'
+
 def wait_for_confirmation(valid_positive=["Y", "y"], valid_negative=["N", "n"],
         print_to_stderr=True, catch_ctrl_c=True):
     """
@@ -42,4 +46,14 @@ def wait_for_confirmation(valid_positive=["Y", "y"], valid_negative=["N", "n"],
             return False
         else:
             raise
-                
+          
+def pass_to_django_manage(argv):
+    """
+    Call the corresponding django manage.py command
+    """
+    from aiida.common.utils import load_django
+    import django.core.management
+    
+    load_django()
+    django.core.management.execute_from_command_line(argv)
+      

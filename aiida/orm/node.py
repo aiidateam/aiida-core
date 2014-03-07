@@ -2,7 +2,7 @@ import os
 
 from django.core.exceptions import ObjectDoesNotExist
 
-#from aiida.djsite.db.models import DbNode, Attribute
+#from aiida.djsite.db.models import DbNode, DbAttribute
 from aiida.common.exceptions import (
     DbContentError, InternalError, ModificationNotAllowed,
     NotExistent, UniquenessError, ValidationError )
@@ -299,7 +299,7 @@ class Node(object):
         """
         return self.dbnode.user
 
-    def replace_link_from(self,src,label):
+    def _replace_link_from(self,src,label):
         """
         Replace an input link with the given label, or simply creates it
         if it does not exist.
@@ -308,19 +308,19 @@ class Node(object):
         :param str label: the label of the link from src to the current Node
         """
         from django.db import transaction        
-        from aiida.djsite.db.models import Link
+        from aiida.djsite.db.models import DbLink
         
         try:
-            self.add_link_from(src, label)
+            self._add_link_from(src, label)
         except UniquenessError:
             # I have to replace the link; I do it within a transaction
             with transaction.commit_on_success():
-                Link.objects.filter(output=self.dbnode,
+                DbLink.objects.filter(output=self.dbnode,
                                     label=label).delete()
-                self.add_link_from(src, label)
+                self._add_link_from(src, label)
 
 
-    def add_link_from(self,src,label=None):
+    def _add_link_from(self,src,label=None):
         """
         Add a link to the current node from the 'src' node.
         Both nodes must be a Node instance (or a subclass of Node)
@@ -330,36 +330,56 @@ class Node(object):
         :param str label: the name of the label to set the link from src.
                     Default = None.
         """
-        from aiida.djsite.db.models import Link, Path
+        from aiida.djsite.db.models import DbLink, DbPath
         from django.db import IntegrityError, transaction
 
-        if self._to_be_stored:
-            raise ModificationNotAllowed("You have to store the destination node to make link")
         if not isinstance(src,Node):
             raise ValueError("src must be a Node instance")
-        if src._to_be_stored:
-            raise ModificationNotAllowed("You have to store the source node to make a link")
-
         if self.uuid == src.uuid:
             raise ValueError("Cannot link to itself")
-
-        # Check for cycles. This works if the transitive closure is enabled; if it 
-        # isn't, this test will never fail, but then having a circular link is not
-        # meaningful but does not pose a huge threat
-        #
-        # I am linking src->self; a loop would be created if a Path exists already
-        # in the TC table from self to src
-        if len(Path.objects.filter(parent=self.dbnode, child=src.dbnode))>0:
-            raise ValueError("The link you are attempting to create would generate a loop")
 
         # Check if the source allows output links from this node (will raise ValueError if 
         # this is not the case)
         src.can_link_as_output(self)
 
+
+
+        ##       if self._to_be_stored:
+        ###           ADD to internal dictionary, understand what to do if 
+        ###           label == None (maybe have a None key, that is a list,
+        ###                          and append the src?)
+        ###           if label is not None: check for existence
+        ###     else:
+        ###          if src._to_be_stored: raise  
+        
+        ## TODO, moreover:
+        ## in store: raise if the internal dict is not empty
+        ## define store_all to store the parents, self and then the links;
+        ## try to see if it can be done in a transaction so that if anything
+        ## fails, we have not stored anything (but understand what to do for
+        ## the files!! and be careful for transactions inside transactions)
+        ## 
+        
+
+        if self._to_be_stored:
+            raise ModificationNotAllowed("You have to store the destination node to make link")
+        if src._to_be_stored:
+            raise ModificationNotAllowed("You have to store the source node to make a link")
+
+
+        # Check for cycles. This works if the transitive closure is enabled; if it 
+        # isn't, this test will never fail, but then having a circular link is not
+        # meaningful but does not pose a huge threat
+        #
+        # I am linking src->self; a loop would be created if a DbPath exists already
+        # in the TC table from self to src
+        if len(DbPath.objects.filter(parent=self.dbnode, child=src.dbnode))>0:
+            raise ValueError("The link you are attempting to create would generate a loop")
+
         if label is None:
             autolabel_idx = 1
 
-            existing_from_autolabels = list(Link.objects.filter(
+            existing_from_autolabels = list(DbLink.objects.filter(
                 output=self.dbnode,
                 label__startswith="link_").values_list('label',flat=True))
             while "link_{}".format(autolabel_idx) in existing_from_autolabels:
@@ -377,7 +397,7 @@ class Node(object):
                     # transactions are needed here for Postgresql:
                     # https://docs.djangoproject.com/en/1.5/topics/db/transactions/#handling-exceptions-within-postgresql-transactions
                     sid = transaction.savepoint()
-                    Link.objects.create(input=src.dbnode, output=self.dbnode,
+                    DbLink.objects.create(input=src.dbnode, output=self.dbnode,
                         label="link_{}".format(autolabel_idx))
                     transaction.savepoint_commit(sid)
                     break
@@ -390,7 +410,7 @@ class Node(object):
                 # transactions are needed here for Postgresql:
                 # https://docs.djangoproject.com/en/1.5/topics/db/transactions/#handling-exceptions-within-postgresql-transactions
                 sid = transaction.savepoint()
-                Link.objects.create(input=src.dbnode, output=self.dbnode, label=label)
+                DbLink.objects.create(input=src.dbnode, output=self.dbnode, label=label)
                 transaction.savepoint_commit(sid)
             except IntegrityError as e:
                 transaction.savepoint_rollback(sid)
@@ -398,18 +418,18 @@ class Node(object):
                                       "name (raw message was {})"
                                       "".format(e.message))
 
-    def add_link_to(self,dest,label=None):
+    def _add_link_to(self,dest,label=None):
         """
         Add a link from the current node to the 'dest' node.
         Both nodes must be a Node instance (or a subclass of Node)
-        (Do not change in subclasses, subclass the add_link_from class only.)
+        (Do not change in subclasses, subclass the _add_link_from class only.)
         
         :param dest: destination Node object to set the link to.
         :param str label: the name of the link. Default=None
         """
         if not isinstance(dest,Node):
             raise ValueError("dest must be a Node instance")
-        dest.add_link_from(self,label)
+        dest._add_link_from(self,label)
 
     def can_link_as_output(self,dest):
         """
@@ -462,10 +482,10 @@ class Node(object):
                 format: ('label', Node)
                 with 'label' the link label, and Node a Node instance or subclass
         """
-        from aiida.djsite.db.models import Link
+        from aiida.djsite.db.models import DbLink
 
         inputs_list = ((i.label, i.input.get_aiida_class()) for i in
-                       Link.objects.filter(output=self.dbnode).distinct())
+                       DbLink.objects.filter(output=self.dbnode).distinct())
         
         if type is None:
             if also_labels:
@@ -491,10 +511,10 @@ class Node(object):
                 format: ('label', Node)
                 with 'label' the link label, and Node a Node instance or subclass
         """
-        from aiida.djsite.db.models import Link
+        from aiida.djsite.db.models import DbLink
 
         outputs_list = ((i.label, i.output.get_aiida_class()) for i in
-                       Link.objects.filter(input=self.dbnode).distinct())
+                       DbLink.objects.filter(input=self.dbnode).distinct())
         
         if type is None:
             if also_labels:
@@ -537,7 +557,7 @@ class Node(object):
             try:
                 del self._attrs_cache["_{}".format(key)]
             except KeyError:
-                raise AttributeError("Attribute {} does not exist".format(key))
+                raise AttributeError("DbAttribute {} does not exist".format(key))
         else:
             if key in self._updatable_attributes:
                 return self._del_attribute_db('_{}'.format(key))
@@ -565,7 +585,7 @@ class Node(object):
                 try:
                     return self._attrs_cache["_{}".format(key)]
                 except KeyError:
-                    raise AttributeError("Attribute {} does not exist".format(key))
+                    raise AttributeError("DbAttribute {} does not exist".format(key))
             else:
                 return self._get_attribute_db('_{}'.format(key))
         except AttributeError as e:
@@ -694,9 +714,9 @@ class Node(object):
         """
         Return a django queryset with the attributes of this node
         """
-        from aiida.djsite.db.models import Attribute
+        from aiida.djsite.db.models import DbAttribute
         
-        return Attribute.objects.filter(dbnode=self.dbnode)
+        return DbAttribute.objects.filter(dbnode=self.dbnode)
 
     def add_comment(self,content):
         """
@@ -704,14 +724,14 @@ class Node(object):
         
         :param content: string with comment
         """
-        from aiida.djsite.db.models import Comment
+        from aiida.djsite.db.models import DbComment
         from aiida.djsite.utils import get_automatic_user
 
         if self._to_be_stored:
             raise ModificationNotAllowed("Comments can be added only after "
                                          "storing the node")
 
-        Comment.objects.create(dbnode=self._dbnode, user=get_automatic_user(), content=content)
+        DbComment.objects.create(dbnode=self._dbnode, user=get_automatic_user(), content=content)
 
     def get_comments(self):
         """
@@ -719,9 +739,9 @@ class Node(object):
         :return: the list of comments, sorted by date; each element of the list is a tuple
             containing (username, username_email, date, content)
         """
-        from aiida.djsite.db.models import Comment
+        from aiida.djsite.db.models import DbComment
 
-        return list(Comment.objects.filter(dbnode=self._dbnode).order_by('time').values_list(
+        return list(DbComment.objects.filter(dbnode=self._dbnode).order_by('time').values_list(
             'user__username', 'user__email', 'time', 'content'))
 
     def _get_attribute_db(self, key):
@@ -731,10 +751,10 @@ class Node(object):
         The calling function must check that the key of attributes is prepended with
         an underscore and the key of metadata is not.
         """
-        from aiida.djsite.db.models import Attribute
+        from aiida.djsite.db.models import DbAttribute
 
         try:
-            attr = Attribute.objects.get(dbnode=self.dbnode, key=key)
+            attr = DbAttribute.objects.get(dbnode=self.dbnode, key=key)
         except ObjectDoesNotExist:
             raise AttributeError("Key {} not found in db".format(key))
         return attr.getvalue()
@@ -747,11 +767,11 @@ class Node(object):
         The calling function must check that the key of attributes is prepended with
         an underscore and the key of metadata is not.
         """
-        from aiida.djsite.db.models import Attribute
+        from aiida.djsite.db.models import DbAttribute
 
         self._increment_version_number_db()
         try:
-            Attribute.objects.get(dbnode=self.dbnode, key=key).delete()
+            DbAttribute.objects.get(dbnode=self.dbnode, key=key).delete()
         except ObjectDoesNotExist:
             raise AttributeError("Cannot delete attribute {}, not found in db".format(key))
 
@@ -793,12 +813,12 @@ class Node(object):
         This can be set to False during the store() so that the version does not get increased for each
         attribute.
         """
-        from aiida.djsite.db.models import Attribute
+        from aiida.djsite.db.models import DbAttribute
                 
         if incrementversion:
             self._increment_version_number_db()
-        attr, _ = Attribute.objects.get_or_create(dbnode=self.dbnode, key=key)
-        ## TODO: create a get_or_create_with_value method in the djsite.db.models.Attribute class
+        attr, _ = DbAttribute.objects.get_or_create(dbnode=self.dbnode, key=key)
+        ## TODO: create a get_or_create_with_value method in the djsite.db.models.DbAttribute class
         attr.setvalue(value)
 
     def copy(self):

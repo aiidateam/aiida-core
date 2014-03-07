@@ -325,51 +325,28 @@ If you got one installed, you can simply tell the calculation to use the pseudop
 Execute
 -------
 
-Summarizing, we created all the inputs needed by a PW calculation, that are: parameters, kpoints, pseudopotential files and the structure. We then created the calculation, where we specified that it is a PW calculation and we specified the details of the remote cluster.
-We stored all this objects in the database (``.store()``), and set the links between the inputs and the calculation (``calc.use_***``).
+Summarizing, we created all the inputs needed by a PW calculation,
+that are: parameters, kpoints, pseudopotential files and the structure.
+We then created the calculation, where we specified that it is a PW calculation
+and we specified the details of the remote cluster.
+We stored all this objects in the database (``.store()``), and set the links
+between the inputs and the calculation (``calc.use_***``).
 That's all that the calculation needs. 
 Now we just need to submit it::
 
    calc.submit()
 
-Everything else will be managed by AiiDA: the inputs will be checked to verify that it is consistent with a PW input. If the input is complete, the pw input file will be prepared and the folder where it will be executed. It will be sent on cluster, executed, retrieved and parsed.
+Everything else will be managed by AiiDA: the inputs will be checked to verify
+that it is consistent with a PW input. If the input is complete, the pw input
+file will be prepared in a folder together with all the other files required
+for the execution (pseudopotentials, etc.). It will be then sent on cluster,
+submitted, and after execution automatically retrieved and parsed.
 
+To know how to monitor and check the state of submitted calculations, go to
+:doc:`../state/calculation_state`.
 
-
-
-
-If for example you want to check for the state of the calculation, you can execute a script like this one, where you just need to specify the id of the calculation under investigation (or use the uuid with ``.get_subclass_from_uuid()``, note that the id may change after a sync of two databases, while the uuid is a unique identifier)
-
-::
-
-  import paramiko
-
-  from aiida.common.utils import load_django
-  load_django()
-
-  from aiida.orm import CalculationFactory
-
-  QECalc = CalculationFactory('quantumespresso.pw')
-  calc = QECalc.get_subclass_from_pk('...............')
-  print calc.get_state()
-
-The calculation could be in several states.
-The most common you should see:
-
-1. 'WITHSCHEDULER': the job is in queue on the cluster
-
-2. 'RUNNING': in execution on the cluster
-
-2. 'FINISHED': the job on the cluster was finished, AiiDA already retrieved it, and store the results in the database. Moreover, the Pw code seems to have ended without crashing
-
-3. 'FAILED': something went wrong, and AiiDA rose an exception. This could be of several nature: the inputs weren't enough, the execution on the cluster failed, or the code ended without reaching te end successfully. In practice, anything bad that could happen.
-
-
-Eventually, if the calculation is finished, you will find the computed quantities in the database.
-You will be able to query the database for the energies that you computed!
-
-
-Jump to :ref:`my-ref-to-ph-tutorial`.
+To continue the tutorial with the ``ph.x`` phonon code of Quantum ESPRESSO,
+continue here: :ref:`my-ref-to-ph-tutorial`.
 
 
 

@@ -36,7 +36,7 @@ class DbNode(m.Model):
     * C,B are 'children' of A.
 
     FINAL DECISION:
-    All attributes are stored in the Attribute table.
+    All attributes are stored in the DbAttribute table.
 
     * internal attributes (that are used by the Data subclass and similar) are stored\
       starting with an underscore.\
@@ -48,8 +48,8 @@ class DbNode(m.Model):
 
     * There is no json metadata attached to the DbNode entries. This can go into an attribute if needed.
 
-    * Attributes in the Attribute table have to be thought as belonging to the DbNode,\
-      and this is the reason for which there is no 'user' field in the Attribute field.
+    * Attributes in the DbAttribute table have to be thought as belonging to the DbNode,\
+      and this is the reason for which there is no 'user' field in the DbAttribute field.
 
     * For a Data node, attributes will /define/ the data and hence should be immutable.\
       User-defined attributes are metadata for convenience of tagging and searching only.\
@@ -72,9 +72,9 @@ class DbNode(m.Model):
     user = m.ForeignKey(User, on_delete=m.PROTECT)
 
     # Direct links
-    outputs = m.ManyToManyField('self', symmetrical=False, related_name='inputs', through='Link')  
+    outputs = m.ManyToManyField('self', symmetrical=False, related_name='inputs', through='DbLink')  
     # Transitive closure
-    children = m.ManyToManyField('self', symmetrical=False, related_name='parents', through='Path')
+    children = m.ManyToManyField('self', symmetrical=False, related_name='parents', through='DbPath')
     
     # Used only if dbnode is a calculation, or remotedata
     computer = m.ForeignKey('DbComputer', null=True, on_delete=m.PROTECT)
@@ -150,7 +150,7 @@ class DbNode(m.Model):
         else:
             return "{} node [{}]".format(simplename, self.pk)
 
-class Link(m.Model):
+class DbLink(m.Model):
     '''
     Direct connection between two dbnodes. The label is identifying the
     link type.
@@ -183,7 +183,7 @@ class Link(m.Model):
             self.output.pk,)
             
 
-class Path(m.Model):
+class DbPath(m.Model):
     """
     Transitive closure table for all dbnode paths.
     
@@ -217,14 +217,14 @@ attrdatatype_choice = (
     ('date', 'date'),
     ('json', 'json'))
 
-class Attribute(m.Model):
+class DbAttribute(m.Model):
     '''
     Attributes are annotations ONLY for storing metadata and tagging. This is only for
     querying convenience.
     Actual input and output data should never go here, only duplicates and comments.
     '''
     time = m.DateTimeField(auto_now_add=True, editable=False)
-    dbnode = m.ForeignKey('DbNode', related_name='attributes')
+    dbnode = m.ForeignKey('DbNode', related_name='dbattributes')
     # max_length is required by MySql to have indexes and unique constraints
     key = m.CharField(max_length=255,db_index=True,blank=False)
     datatype = m.CharField(max_length=10, choices=attrdatatype_choice, db_index=True)
@@ -349,7 +349,7 @@ class Attribute(m.Model):
             self.datatype,)
 
 
-class Group(m.Model):
+class DbGroup(m.Model):
     """
     A group of nodes.
     
@@ -361,7 +361,7 @@ class Group(m.Model):
     uuid = UUIDField(auto=True)
     # max_length is required by MySql to have indexes and unique constraints
     name = m.CharField(max_length=255,unique=True, db_index=True)
-    dbnodes = m.ManyToManyField('DbNode', related_name='groups')
+    dbnodes = m.ManyToManyField('DbNode', related_name='dbgroups')
     time = m.DateTimeField(auto_now_add=True, editable=False)
     description = m.TextField(blank=True)
     user = m.ForeignKey(User)  # The owner of the group, not of the calculations
@@ -460,7 +460,7 @@ class DbComputer(m.Model):
 #    # Will store a json of the last JobInfo got from the scheduler
 #    last_jobinfo = m.TextField(default='{}')  
 
-class AuthInfo(m.Model):
+class DbAuthInfo(m.Model):
     """
     Table that pairs aiida users and computers, with all required authentication
     information.
@@ -488,7 +488,7 @@ class AuthInfo(m.Model):
         # Raises ValueError if data is not JSON-serializable
         self.auth_params = json.dumps(auth_params)
 
-    # a method of AuthInfo
+    # a method of DbAuthInfo
     def get_transport(self):
         """
         Given a computer and an aiida user (as entries of the DB) return a configured
@@ -512,15 +512,15 @@ class AuthInfo(m.Model):
         return "Authorization info for {}".format(self.computer.name)
 
 
-class Comment(m.Model):
-    dbnode = m.ForeignKey(DbNode,related_name='comments')
+class DbComment(m.Model):
+    dbnode = m.ForeignKey(DbNode,related_name='dbcomments')
     time = m.DateTimeField(auto_now_add=True, editable=False)
     user = m.ForeignKey(User)
     content = m.TextField(blank=True)
 
     @python_2_unicode_compatible
     def __str__(self):
-        return "Comment for [{} {}] on {}".format(self.dbnode.get_simple_name(),
+        return "DbComment for [{} {}] on {}".format(self.dbnode.get_simple_name(),
             self.dbnode.pk, self.time.strftime("%Y-%m-%d"))
 
 
@@ -740,7 +740,8 @@ class DbWorkflow(m.Model):
 
         from aiida.common.datastructures import calc_states, wf_states, wf_exit_call
 
-        calc_status = self.get_calculations().filter(attributes__key="_state").values_list("uuid", "attributes__tval")
+        calc_status = self.get_calculations().filter(
+            dbattributes__key="_state").values_list("uuid", "dbattributes__tval")
         return set([l[1] for l in calc_status])
 
     # ------------------------------------------------
@@ -874,13 +875,15 @@ class DbWorkflowStep(m.Model):
         if (state==None):
             return Calculation.query(workflow_step=self)#pk__in = step.calculations.values_list("pk", flat=True))
         else:
-            return Calculation.query(workflow_step=self).filter(attributes__key="_state",attributes__tval=state)
+            return Calculation.query(workflow_step=self).filter(
+                dbattributes__key="_state",dbattributes__tval=state)
 
     def get_calculations_status(self):
 
         from aiida.common.datastructures import calc_states, wf_states, wf_exit_call
 
-        calc_status = self.calculations.filter(attributes__key="_state").values_list("uuid", "attributes__tval")
+        calc_status = self.calculations.filter(
+            dbattributes__key="_state").values_list("uuid", "dbattributes__tval")
         return set([l[1] for l in calc_status])
     
     def remove_calculations(self):

@@ -33,9 +33,9 @@ queue = None
 
 
 def get_or_create_code():
-    useful_codes = Code.query(attributes__key="_local_executable",
-                              attributes__tval="sum.py").filter(
-                                  attributes__key="version", attributes__tval=current_version)
+    useful_codes = Code.query(dbattributes__key="_local_executable",
+                              dbattributes__tval="sum.py").filter(
+                                  dbattributes__key="version", dbattributes__tval=current_version)
 
     if not(useful_codes):
         print >> sys.stderr, "Creating the code..."
@@ -145,10 +145,11 @@ calc.use_code(code)
 ## Just for debugging purposes, I check that I can 'reset' the code
 #calc.use_code(code)
 
-calc.add_link_from(template_data, label="template")
-calc.add_link_from(parameters, label="parameters")
-calc.add_link_from(fileparam, label="the_only_local_file")
-calc.add_link_from(remoteparam, label="the_only_remote_node")
+# Should not be done by hand... To improve
+calc._add_link_from(template_data, label="template")
+calc._add_link_from(parameters, label="parameters")
+calc._add_link_from(fileparam, label="the_only_local_file")
+calc._add_link_from(remoteparam, label="the_only_remote_node")
 
 calc.submit()
 print "submitted calculation; calc=Calculation(uuid='{}') # ID={}".format(

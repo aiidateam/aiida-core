@@ -127,9 +127,9 @@ def update_running_calcs_status(authinfo):
     return computed
 
 def get_authinfo(computer, aiidauser):
-    from aiida.djsite.db.models import DbComputer, AuthInfo
+    from aiida.djsite.db.models import DbComputer, DbAuthInfo
     try:
-        authinfo = AuthInfo.objects.get(computer=DbComputer.get_dbcomputer(computer),aiidauser=aiidauser)
+        authinfo = DbAuthInfo.objects.get(computer=DbComputer.get_dbcomputer(computer),aiidauser=aiidauser)
     except ObjectDoesNotExist:
         raise AuthenticationError(
             "The aiida user {} is not configured to use computer {}".format(
@@ -370,13 +370,16 @@ def submit_calc(calc):
                             "Unable to create the remote directory {} on {}: {}".format(
                                 remote_working_directory, computer.hostname, 
                                 e.message))
-                # Sharding
+                # Store remotely with sharding
                 t.mkdir(calcinfo.uuid[:2],ignore_existing=True)
                 t.chdir(calcinfo.uuid[:2])
-                t.mkdir(calcinfo.uuid[2:])
-                t.chdir(calcinfo.uuid[2:])
+                t.mkdir(calcinfo.uuid[2:4], ignore_existing=True)
+                t.chdir(calcinfo.uuid[2:4])
+                t.mkdir(calcinfo.uuid[4:])
+                t.chdir(calcinfo.uuid[4:])
                 workdir = t.getcwd()
-                # I store the workdir of the calculation for later file retrieval
+                # I store the workdir of the calculation for later file
+                # retrieval
                 calc._set_remote_workdir(workdir)
 
                 # I first create the code files, so that the code can put
@@ -438,15 +441,18 @@ def submit_calc(calc):
                 remotedata = RemoteData(remote_machine = computer.hostname, 
                         remote_path = workdir).store()
 
-                calc.add_link_to(remotedata, label='remote_folder')
+                calc._add_link_to(remotedata, label='remote_folder')
 
                 job_id = s.submit_from_script(t.getcwd(),script_filename)
                 calc._set_job_id(job_id)
                 calc._set_state(calc_states.WITHSCHEDULER)
-                if job_tmpl.submit_as_hold:
-                    calc._set_scheduler_state(job_states.QUEUED_HELD)
-                else:
-                    calc._set_scheduler_state(job_states.QUEUED)
+                ## I do not set the state to queued; in this way, if the
+                ## daemon is down, the user sees '(unknown)' as last state
+                ## and understands that the daemon is not running.
+                #if job_tmpl.submit_as_hold:
+                #    calc._set_scheduler_state(job_states.QUEUED_HELD)
+                #else:
+                #    calc._set_scheduler_state(job_states.QUEUED)
     
                 execlogger.debug("submitted calculation {} with job id {}".format(
                     calc.uuid, job_id))
@@ -500,7 +506,7 @@ def retrieve_computed_for_authinfo(authinfo):
 
                     execlogger.debug("Storing retrieved_files={} of calc {}".format(retrieved_files.dbnode.pk, calc.dbnode.pk))
                     retrieved_files.store()
-                    calc.add_link_to(retrieved_files, label=calc.get_linkname_retrieved())
+                    calc._add_link_to(retrieved_files, label=calc.get_linkname_retrieved())
 
                     calc._set_state(calc_states.PARSING)
 

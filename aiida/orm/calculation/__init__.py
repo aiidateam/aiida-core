@@ -16,7 +16,7 @@ class Calculation(Node):
     This class provides the definition of an AiiDA calculation.
     """
     _updatable_attributes = ('state', 'job_id', 'scheduler_state',
-                             'scheduler_state_lastcheck',
+                             'scheduler_lastchecktime',
                              'last_jobinfo', 'remote_workdir', 'retrieve_list')
     
     # By default, no output parser
@@ -293,7 +293,7 @@ class Calculation(Node):
         """
         return self.get_attr('max_wallclock_seconds', None)
         
-    def add_link_from(self,src,label=None):
+    def _add_link_from(self,src,label=None):
         '''
         Add a link with a code as destination.
         You can use the parameters of the base Node class, in particular the
@@ -319,7 +319,7 @@ class Calculation(Node):
                 "of the following states: {}, it is instead {}".format(
                     valid_states, self.get_state()))
 
-        return super(Calculation,self).add_link_from(src, label)
+        return super(Calculation,self)._add_link_from(src, label)
 
     def set_computer(self,computer):
         """
@@ -466,7 +466,7 @@ class Calculation(Node):
         from django.utils import timezone
         
         self.set_attr('scheduler_state', unicode(state))
-        self.set_attr('scheduler_state_lastcheck', timezone.now())
+        self.set_attr('scheduler_lastchecktime', timezone.now())
                 
     def get_scheduler_state(self):
         """
@@ -476,14 +476,14 @@ class Calculation(Node):
         """
         return self.get_attr('scheduler_state', None)
 
-    def get_scheduler_state_lastcheck(self):
+    def get_scheduler_lastchecktime(self):
         """
-        Return the time of the last update of the scheduler state, or None
-        if it was never set.
+        Return the time of the last update of the scheduler state by the daemon,
+        or None if it was never set.
         
         :return: a datetime object.
         """
-        return self.get_attr('scheduler_state_lastcheck', None)
+        return self.get_attr('scheduler_lastchecktime', None)
 
 
     def _set_last_jobinfo(self,last_jobinfo):
@@ -522,7 +522,7 @@ class Calculation(Node):
         :return: a string with description of calculations.
         """
         # I assume that calc_states are strings. If this changes in the future,
-        # update the filter below from attributes__tval to the correct field.
+        # update the filter below from dbattributes__tval to the correct field.
         
         if states:
             for state in states:
@@ -543,10 +543,10 @@ class Calculation(Node):
         else:
             q_object = Q(user=get_automatic_user())
             if states:
-#                q_object.add(~Q(attributes__key='_state',
-#                                attributes__tval=only_state,), Q.AND)
-                 q_object.add( Q(attributes__key='_state',
-                                  attributes__tval__in=states,), Q.AND)
+#                q_object.add(~Q(dbattributes__key='_state',
+#                                dbattributes__tval=only_state,), Q.AND)
+                 q_object.add( Q(dbattributes__key='_state',
+                                  dbattributes__tval__in=states,), Q.AND)
             if past_days:
                 now = timezone.now()
                 n_days_ago = now - datetime.timedelta(days=past_days)
@@ -555,7 +555,7 @@ class Calculation(Node):
         calc_list = cls.query(q_object).distinct().order_by('ctime')
         
         if not calc_list:
-            return "No calculation found"
+            return ""
         else:
             res_str = '{:<10} {:<17} {:>12} {:<10} {:<22} {:<15}\n'.format('Pk','State','Creation','Time','Scheduler state','Type')
             for calc in calc_list:
@@ -570,7 +570,7 @@ class Calculation(Node):
                     else:
                         remote_state = '{}'.format(sched_state)
                         if calc_state == calc_states.WITHSCHEDULER:
-                            last_check = calc.get_scheduler_state_lastcheck()
+                            last_check = calc.get_scheduler_lastchecktime()
                             if last_check is not None:
                                 when_string = " {} ago".format(
                                     str_timedelta(now-last_check, short=True,
@@ -620,7 +620,7 @@ class Calculation(Node):
         :return: a list of calculation objects matching the filters.
         """
         # I assume that calc_states are strings. If this changes in the future,
-        # update the filter below from attributes__tval to the correct field.
+        # update the filter below from dbattributes__tval to the correct field.
         from aiida.orm import Computer
 
         if state not in calc_states:
@@ -637,8 +637,8 @@ class Calculation(Node):
             kwargs['user'] = user
         
         queryresults = cls.query(
-            attributes__key='_state',
-            attributes__tval=state,
+            dbattributes__key='_state',
+            dbattributes__tval=state,
             **kwargs)
 
         if only_computer_user_pairs:
@@ -658,7 +658,7 @@ class Calculation(Node):
         if not isinstance(code, Code):
             raise ValueError("The code must be an instance of the Code class")
 
-        self.replace_link_from(code, self.get_linkname_code())
+        self._replace_link_from(code, self.get_linkname_code())
         
     def get_linkname_code(self):
         """
@@ -841,16 +841,51 @@ class CalculationResultManager(object):
         self._calc = calc
         ParserClass = calc.get_parserclass()
         self._parser = ParserClass(calc)
+
+    def __dir__(self):
+        """
+        Allow to list all valid attributes
+        """
+        from aiida.common.exceptions import UniquenessError
+
+        try:
+            calc_attributes = self._parser.get_result_keys()
+        except UniquenessError:
+            calc_attributes = []
         
+        return sorted(set(list(dir(type(self))) + list(calc_attributes)))
+            
+    def __iter__(self):
+        from aiida.common.exceptions import UniquenessError
+
+        try:
+            calc_attributes = self._parser.get_result_keys()
+        except UniquenessError:
+            calc_attributes = []
+        
+        for k in calc_attributes:
+            yield k
+    
     def __getattr__(self,name):
         """
-        interface to get to the parser results.
+        interface to get to the parser results as an attribute.
         
         :param name: name of the attribute to be asked to the parser results.
         """
         try:
-            return self._parser.get_results(name)
+            return self._parser.get_result(name)
         except AttributeError:
             raise AttributeError("Parser '{}' didn't provide a result '{}'"
                                  .format(self._parser.__class__, name))
 
+    def __getitem__(self,name):
+        """
+        interface to get to the parser results as a dictionary.
+        
+        :param name: name of the attribute to be asked to the parser results.
+        """
+        try:
+            return self._parser.get_result(name)
+        except AttributeError:
+            raise KeyError("Parser '{}' didn't provide a result '{}'"
+                           .format(self._parser.__class__, name))

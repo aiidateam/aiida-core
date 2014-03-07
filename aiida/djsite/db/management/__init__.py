@@ -420,10 +420,10 @@ def install_tc(sender, **kwargs):
     from django.db import connection, transaction
     cursor = connection.cursor()
 
-    links_table_name = "db_link"
+    links_table_name = "db_dblink"
     links_table_input_field = "input_id"
     links_table_output_field = "output_id"
-    closure_table_name = "db_path"
+    closure_table_name = "db_dbpath"
     closure_table_parent_field = "parent_id"
     closure_table_child_field = "child_id"
       

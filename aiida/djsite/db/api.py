@@ -43,6 +43,7 @@ class DbComputerResource(ModelResource):
             'transport_type': ALL,
             'workdir': ALL,
             }
+        ordering = ['id', 'name', 'transport_type', 'scheduler_type', 'enabled'] # modified by VB
     
     def dehydrate_metadata(self, bundle):
         import json
@@ -54,7 +55,7 @@ class DbComputerResource(ModelResource):
         return data
 
 class AuthInfoResource(ModelResource):
-    aiidauser = fields.ToOneField(UserResource, 'aiidauser')
+    aiidauser = fields.ToOneField(UserResource, 'aiidauser', full=True) # modified by VB
     computer = fields.ToOneField(DbComputerResource, 'computer')
     
     class Meta:

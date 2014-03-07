@@ -5,6 +5,7 @@ from aiida.djsite.db.models import (
         DbAuthInfo, 
         DbAttribute,
         DbComputer, 
+        DbGroup,
         DbNode,
         )
 
@@ -43,7 +44,7 @@ class DbComputerResource(ModelResource):
             'transport_type': ALL,
             'workdir': ALL,
             }
-        ordering = ['id', 'name', 'transport_type', 'scheduler_type', 'enabled'] # modified by VB
+        ordering = ['id', 'name', 'transport_type', 'scheduler_type', 'enabled'] 
     
     def dehydrate_metadata(self, bundle):
         import json
@@ -54,13 +55,13 @@ class DbComputerResource(ModelResource):
             data = None
         return data
 
-class AuthInfoResource(ModelResource):
-    aiidauser = fields.ToOneField(UserResource, 'aiidauser', full=True) # modified by VB
+class DbAuthInfoResource(ModelResource):
+    aiidauser = fields.ToOneField(UserResource, 'aiidauser', full=True) 
     computer = fields.ToOneField(DbComputerResource, 'computer')
     
     class Meta:
         queryset = DbAuthInfo.objects.all()
-        resource_name = 'authinfo'
+        resource_name = 'dbauthinfo'
         allowed_methods = ['get']
         filtering = {
             'id': ['exact'],
@@ -76,6 +77,26 @@ class AuthInfoResource(ModelResource):
         except (ValueError, TypeError):
             data = None
         return data
+
+
+class DbGroupResource(ModelResource):
+    user = fields.ToOneField(UserResource, 'user') 
+    dbnodes = fields.ToManyField('aiida.djsite.db.api.DbAttributeResource', 'dbnodes', related_name='dbgroups')    
+    
+    class Meta:
+        queryset = DbGroup.objects.all()
+        resource_name = 'dbgroup'
+        allowed_methods = ['get']
+        filtering = {
+            'id': ['exact'],
+            'user': ALL,
+            'dbnodes': ALL_WITH_RELATIONS,
+            'time': ALL,
+            'description': ALL,
+            'name': ALL,
+            'uuid': ['exact'],
+            }
+
 
 def never(bundle):
     return False
@@ -226,3 +247,4 @@ class MetadataResource(ModelResource):
         bundle.data['value'] = bundle.obj.getvalue()
         
         return bundle
+

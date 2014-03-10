@@ -52,6 +52,22 @@ class Scheduler(object):
         
         return existing_plugins(Scheduler, "aiida.scheduler.plugins")
 
+    @classmethod
+    def get_short_doc(self):
+        """
+        Return the first non-empty line of the class docstring, if available
+        """
+        # Remove empty lines
+        docstring = self.__doc__
+        if not docstring:
+            return "No documentation available"
+            
+        doclines = [i for i in docstring.splitlines() if i.strip()]
+        if doclines:
+            return doclines[0].strip()
+        else:
+            return "No documentation available"
+
     def get_feature(self, feature_name):
         try:
             return self._features[feature_name]

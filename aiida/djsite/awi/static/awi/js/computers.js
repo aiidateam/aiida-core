@@ -13,19 +13,20 @@
 	* and the ordering criterion
 	*/
 	function load_computers(scroll, ordering) {
+		var module = 'computers';
 		if(scroll == undefined)
 			scroll = false;
 		if(ordering == undefined) /* default ordering field */
 			ordering = 'id';
-		if(!$('#computers-list .loader').is(':visible')) { /* if there was already content in the table, remove it and show the loader */
-			$('#computers-list').children('tr').not('.loader').remove();
+		if($('#computers-list>tr').length > 1) { /* if there was already content in the table, remove it and show the loader */
+			$('#computers-list>tr').filter(':visible').remove();
 			$('#computers-list .loader').fadeIn('fast');
 		}
-		if(api_computers_url.indexOf('?') == -1 && api_computers_url.indexOf('order_by') == -1)
-			api_computers_url += '?order_by='+ordering;
-		else if(api_computers_url.indexOf('order_by') == -1)
-			api_computers_url += '&order_by='+ordering;
-		$.getJSON(api_computers_url, function(data){ /* get the json via API */
+		if(api_urls[module].indexOf('?') == -1 && api_urls[module].indexOf('order_by') == -1)
+			api_urls[module] += '?order_by='+ordering;
+		else if(api_urls[module].indexOf('order_by') == -1)
+			api_urls[module] += '&order_by='+ordering;
+		$.getJSON(api_urls[module], function(data){ /* get the json via API */
 			var rows = [];
 			var status = {/* used to show colored labels for activation status */
 				true: '<span class="label label-success">enabled</span>',
@@ -37,7 +38,7 @@
 					'<div class="modal-content">'+
 					'</div></div></div>'); /* we prepare a modal box for each */
 				rows.push(''); /* we reserve a spot in the output for this line */
-				$.getJSON(api_authinfo_url+'?computer='+o.id, function(subdata) { /* get the user infos, api_authinfo_url is defined in a script in the base.html template */
+				$.getJSON(api_urls.authinfo+'?computer='+o.id, function(subdata) { /* get the user infos, api_authinfo_url is defined in a script in the base.html template */
 					var username = subdata.objects[0].aiidauser.username; /* user data is included in the authinfo api response */
 					rows[k] = '<tr>'+ /* we update the corresponding line, this ensures that data is gonna be displayed in the right order at the end */
 						'<td>'+o.id+'</td>'+
@@ -54,12 +55,12 @@
 									'Action <span class="caret"></span>'+
 								'</button>'+
 								'<ul class="dropdown-menu dropdown-menu-right" role="menu">'+
-									'<li><a href="'+computers_detail_url.substring(0, computers_detail_url.length - 1)+o.id+'" class="show-detail" data-id="'+o.id+'"><span class="glyphicon glyphicon-tasks"></span>&nbsp;&nbsp;Details</a></li>'+
-									'<li><a href="#"><span class="glyphicon glyphicon-ban-circle"></span>&nbsp;&nbsp;Disable</a></li>'+
-									'<li><a href="#"><span class="glyphicon glyphicon-ok"></span>&nbsp;&nbsp;Enable</a></li>'+
-									'<li><a href="'+computers_rename_url.substring(0, computers_rename_url.length - 1)+o.id+'" data-toggle="modal" data-target="#modal-'+o.id+'"><span class="glyphicon glyphicon-pencil"></span>&nbsp;&nbsp;Rename</a></li>'+
-									'<li><a href="#"><span class="glyphicon glyphicon-cog"></span>&nbsp;&nbsp;Configure</a></li>'+
-									'<li><a href="#" class="text-danger"><span class="glyphicon glyphicon-remove-circle"></span>&nbsp;&nbsp;Delete</a></li>'+
+									'<li><a href="'+modules_urls[module].detail.substring(0, modules_urls[module].detail.length - 1)+o.id+'" class="show-detail" data-id="'+o.id+'"><span class="glyphicon glyphicon-tasks"></span>&nbsp;&nbsp;Details</a></li>'+
+									'<li class="disabled"><a href="#"><span class="glyphicon glyphicon-ban-circle"></span>&nbsp;&nbsp;Disable</a></li>'+
+									'<li class="disabled"><a href="#"><span class="glyphicon glyphicon-ok"></span>&nbsp;&nbsp;Enable</a></li>'+
+									'<li><a href="'+modules_urls[module].rename.substring(0, modules_urls[module].rename.length - 1)+o.id+'" data-toggle="modal" data-target="#modal-'+o.id+'"><span class="glyphicon glyphicon-pencil"></span>&nbsp;&nbsp;Rename</a></li>'+
+									'<li class="disabled"><a href="#"><span class="glyphicon glyphicon-cog"></span>&nbsp;&nbsp;Configure</a></li>'+
+									'<li class="disabled"><a href="#" class="text-danger"><span class="glyphicon glyphicon-remove-circle"></span>&nbsp;&nbsp;Delete</a></li>'+
 								'</ul>'+
 							'</div>'+
 						'</td>'+
@@ -82,7 +83,8 @@
 			};
 			computers_timer();
 			$('#computers-pag').hide().html( /* load the pagination via this custom function */
-				pagination(data.meta.total_count,
+				pagination(module,
+					data.meta.total_count,
 					data.meta.limit,
 					data.meta.offset,
 					data.meta.previous,
@@ -103,7 +105,7 @@
 				return false;
 			}
 			else {
-				api_computers_url = me.attr('data-url');
+				api_urls.computers = me.attr('data-url');
 				load_computers(true, me.attr('data-ordering')); /* load the new list with this new API url, true to scroll to the beginning of the table after loading */
 			}
 		});

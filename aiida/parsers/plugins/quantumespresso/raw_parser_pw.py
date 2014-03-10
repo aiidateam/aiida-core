@@ -284,9 +284,7 @@ def xml_card_cell(parsed_data,dom):
         a=target_tags.getElementsByTagName(tagname)[0]
         b=a.childNodes[0]
         c=b.data.replace('\n','').split()
-        value=[]
-        for i in range(6):
-            value.append(float(c[i]))            
+        value=[ float(i) for i in c ]
         parsed_data[tagname.replace('-','_').lower()]=value
     except Exception:
         raise QEOutputParsingError('Error parsing tag {} inside {}.'.format(tagname,target_tags.tagName) )
@@ -301,7 +299,7 @@ def xml_card_cell(parsed_data,dom):
         parsed_data[second_tagname.replace('-','_').lower()]=value
         
         metric = value
-        if metric not in ['bohr','angstroms']:
+        if metric not in ['bohr','angstroms']: # REMEMBER TO CHECK THE UNITS AT THE END OF THE FUNCTION
             raise QEOutputParsingError('Error parsing tag {} inside {}: units not supported: {}'
                                        .format(tagname,target_tags.tagName,metric) )
 
@@ -310,9 +308,7 @@ def xml_card_cell(parsed_data,dom):
             b = a.getElementsByTagName(second_tagname)[0]
             c = b.childNodes[0]
             d = c.data.replace('\n','').split()
-            value = []
-            for i in range(3):
-                value.append(float(d[i]))
+            value = [ float(i) for i in d ]
             if metric=='bohr':
                 value = [ bohr_to_ang*float(s) for s in value ]
             lattice_vectors.append(value)
@@ -345,9 +341,7 @@ def xml_card_cell(parsed_data,dom):
             b = a.getElementsByTagName(second_tagname)[0]
             c = b.childNodes[0]
             d = c.data.replace('\n','').split()
-            value = []
-            for i in range(3):
-                value.append(float(d[i]))
+            value = [ float(i) for i in d ]
             if metric == '2 pi / a':
                 value=[ float(s)/parsed_data['lattice_parameter'] for s in value ]
             this_matrix.append(value)
@@ -429,10 +423,10 @@ def xml_card_ions(parsed_data,dom,lattice_vectors,volume):
             chem_symbol = chem_symbol.translate(None, string.digits)
 
             tagname2='tau'
-            b=a.getAttribute(tagname2)
-            tau=[float(s) for s in b.rstrip().replace("\n","").split()]
-            metric=parsed_data['units_for_atomic_positions']
-            if metric not in ['alat','bohr','angstrom']:
+            b = a.getAttribute(tagname2)
+            tau = [float(s) for s in b.rstrip().replace("\n","").split()]
+            metric = parsed_data['units_for_atomic_positions']
+            if metric not in ['alat','bohr','angstrom']: # REMEMBER TO CONVERT AT THE END
                 raise QEOutputParsingError('Error parsing tag %s inside %s'% (tagname, target_tags.tagName ) )
             if metric=='alat':
                 tau=[ parsed_data['lattice_parameter_xml']*float(s) for s in tau ]
@@ -457,6 +451,11 @@ def xml_card_ions(parsed_data,dom,lattice_vectors,volume):
         #traceback.print_exc()
         raise QEOutputParsingError('Error parsing tag ATOM.# inside %s.'% (target_tags.tagName ) )
     # saving data together with cell parameters. Did so for better compatibility with ASE.
+    
+    # correct some units that have been converted in 
+    parsed_data['units_for_atomic_positions'] = 'angstrom'
+    parsed_data['UNITS_FOR_DIRECT_LATTICE_VECTORS'.lower()] = 'angstroms'
+        
     return parsed_data
 
     
@@ -850,11 +849,12 @@ def parse_pw_xml_output(data,dir_with_bands=None):
 
     tagname = 'UNITS_FOR_ENERGIES'
     attrname = 'UNITS'
-    parsed_data['energy_units'] = \
-        parse_xml_child_attribute_str(tagname,attrname,target_tags)
-    if parsed_data['energy_units'] not in ['hartree']:
+    units = parse_xml_child_attribute_str(tagname,attrname,target_tags)
+    if units not in ['hartree']:
         raise QEOutputParsingError('Expected energy units in Hartree.' + \
                                    'Got instead {}'.format(parsed_data['energy_units']) )
+        
+    parsed_data['energy_units'] = 'ev'
 
     try:
         tagname='TWO_FERMI_ENERGIES'

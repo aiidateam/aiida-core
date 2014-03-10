@@ -33,6 +33,9 @@ def convert_to_bool(string):
         raise ValueError("Invalid boolean value provided")
 
 class SshTransport(aiida.transport.Transport):
+    """
+    Support connection, command execution and data transfer to remote computers via SSH+SFTP.
+    """
     # Valid keywords accepted by the connect method of paramiko.SSHClient
     # I disable 'password' and 'pkey' to avoid these data to get logged in the
     # aiida log file.

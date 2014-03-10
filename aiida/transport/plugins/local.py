@@ -16,7 +16,9 @@ execlogger = aiidalogger.getChild('transport')
 
 
 class LocalTransport(aiida.transport.Transport):
-    
+    """
+    Support copy and command execution on the same host on which AiiDA is running via direct file copy and execution commands.
+    """
     # There are no valid parameters for the local transport
     _valid_auth_params = []
 

@@ -36,7 +36,7 @@ class DbComputerResource(ModelResource):
     class Meta:
         queryset = DbComputer.objects.all()
         resource_name = 'dbcomputer'
-        allowed_methods = ['get', 'post', 'put', 'patch']
+        allowed_methods = ['get', 'post', 'patch']
         filtering = {
             'id': ['exact'],
             'uuid': ALL,
@@ -84,6 +84,39 @@ class DbComputerResource(ModelResource):
         except (ValueError, TypeError):
             data = None
         return data
+
+    def build_schema(self):
+        """
+        Improve the information provided in the schema
+        """
+        from aiida.transport import Transport, TransportFactory
+        from aiida.scheduler import Scheduler, SchedulerFactory
+
+        # Get the default schema
+        new_schema = super(DbComputerResource, self).build_schema()
+        
+        ###########################################
+        # VALID CHOICES FOR TRANSPORT AND SCHEDULER
+        tlist = Transport.get_valid_transports()
+        slist = Scheduler.get_valid_schedulers()
+        tdict = {}
+        sdict = {}
+        for tname in tlist:
+            t = TransportFactory(tname)
+            tdict[tname] = {'doc': t.get_short_doc()}
+        for sname in slist:
+            s = SchedulerFactory(sname)
+            sdict[sname] = {'doc': s.get_short_doc()}
+        # Add the required fields
+        new_schema['fields']['scheduler_type']['valid_choices'] = sdict
+        new_schema['fields']['transport_type']['valid_choices'] = tdict
+
+        ############################################
+        # Fix the 'type' values, where appropriate
+        new_schema['fields']['metadata']['type'] = "dictionary"
+        new_schema['fields']['transport_params']['type'] = "dictionary"
+
+        return new_schema
 
 
 class DbAuthInfoResource(ModelResource):

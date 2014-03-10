@@ -1,5 +1,7 @@
 from django.contrib.auth.models import User
 from tastypie import fields, utils
+from tastypie.authentication import SessionAuthentication
+from tastypie.authorization import DjangoAuthorization
 from tastypie.resources import ModelResource, ALL, ALL_WITH_RELATIONS
 from aiida.djsite.db.models import (
         DbAuthInfo, 
@@ -26,14 +28,15 @@ class UserResource(ModelResource):
             'last_name': ['exact', 'iexact'],
             'username': ['exact'],         
             }
-
+        authentication = SessionAuthentication()
+        authorization = DjangoAuthorization()
 
 class DbComputerResource(ModelResource):
     
     class Meta:
         queryset = DbComputer.objects.all()
         resource_name = 'dbcomputer'
-        allowed_methods = ['get']
+        allowed_methods = ['get', 'post', 'put', 'patch']
         filtering = {
             'id': ['exact'],
             'uuid': ALL,
@@ -43,8 +46,12 @@ class DbComputerResource(ModelResource):
             'scheduler_type': ALL,
             'transport_type': ALL,
             'workdir': ALL,
+            'enabled': ALL,
             }
         ordering = ['id', 'name', 'transport_type', 'scheduler_type', 'enabled'] 
+
+        authentication = SessionAuthentication()
+        authorization = DjangoAuthorization()
     
     def dehydrate_metadata(self, bundle):
         import json
@@ -54,6 +61,30 @@ class DbComputerResource(ModelResource):
         except (ValueError, TypeError):
             data = None
         return data
+
+    def hydrate_metadata(self, bundle):
+        import json
+        
+        bundle.data['metadata'] = json.dumps(bundle.data['metadata'])
+        
+        return bundle
+
+    def hydrate_transport_params(self, bundle):
+        import json
+        
+        bundle.data['transport_params'] = json.dumps(bundle.data['transport_params'])
+        
+        return bundle
+
+    def dehydrate_transport_params(self, bundle):
+        import json
+        
+        try:
+            data = json.loads(bundle.data['transport_params'])
+        except (ValueError, TypeError):
+            data = None
+        return data
+
 
 class DbAuthInfoResource(ModelResource):
     aiidauser = fields.ToOneField(UserResource, 'aiidauser', full=True) 
@@ -107,8 +138,10 @@ class DbNodeResource(ModelResource):
     outputs = fields.ToManyField('self', 'outputs', related_name='inputs', full=False, use_in='detail')   
     inputs = fields.ToManyField('self', 'inputs', related_name='outputs', full=False, use_in='detail')
 
-    dbattributes = fields.ToManyField('aiida.djsite.db.api.DbAttributeResource', 'attributes', related_name='dbnode', full=False, use_in='detail')
-    attributes = fields.ToManyField('aiida.djsite.db.api.AttributeResource', 'attributes', related_name='dbnode', full=False, use_in='detail')
+    dbattributes = fields.ToManyField('aiida.djsite.db.api.DbAttributeResource', 'dbattributes', related_name='dbnode', full=False, use_in='detail')
+    ## To double check, they do not work right now
+    #attributes = fields.ToManyField('aiida.djsite.db.api.AttributeResource', 'attributes', related_name='dbnode', null=True, full=False, use_in='detail')
+    #metadata = fields.ToManyField('aiida.djsite.db.api.MetadataResource', 'metadata', related_name='dbnode', null=True, full=False, use_in='detail')
 
     ## Transitive-closure links
     ## Hidden for the time being, they could be too many
@@ -138,6 +171,8 @@ class DbNodeResource(ModelResource):
             'children': ALL_WITH_RELATIONS,  
             'attributes': ALL_WITH_RELATIONS,    
             }
+
+        ordering = ['id', 'type'] 
 
 class DbAttributeResource(ModelResource):
     dbnode = fields.ToOneField(DbNodeResource, 'dbnode', related_name='dbattributes')    
@@ -189,7 +224,10 @@ class AttributeResource(ModelResource):
     def dehydrate(self, bundle):
         # Remove all the fields with name matching the pattern '?val'
         # (bval, ival, tval, dval, fval, ...)
-        for k in bundle.data.keys():
+        
+        # I have to make a list out of it otherwise I get a
+        # "dictionary changed during iteration" error
+        for k in list(bundle.data.keys()):
             if len(k) == 4 and k.endswith('val'):
                 del bundle.data[k]
         
@@ -199,6 +237,19 @@ class AttributeResource(ModelResource):
         bundle.data['value'] = bundle.obj.getvalue()
         
         return bundle
+
+    def build_schema(self):
+        default_schema = super(AttributeResource, self).build_schema()
+
+        fields = list(default_schema['fields'].keys())
+        for k in fields:
+            if len(k) == 4 and k.endswith('val'):
+                del default_schema['fields'][k]
+        
+        # TODO: fix the schema correctly!
+
+        return default_schema
+
         
 class MetadataResource(ModelResource):
     dbnode = fields.ToOneField(DbNodeResource, 'dbnode', related_name='metadata')    
@@ -237,7 +288,10 @@ class MetadataResource(ModelResource):
     def dehydrate(self, bundle):
         # Remove all the fields with name matching the pattern '?val'
         # (bval, ival, tval, dval, fval, ...)
-        for k in bundle.data.keys():
+
+        # I have to make a list out of it otherwise I get a
+        # "dictionary changed during iteration" error
+        for k in list(bundle.data.keys()):
             if len(k) == 4 and k.endswith('val'):
                 del bundle.data[k]
         

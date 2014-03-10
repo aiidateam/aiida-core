@@ -1,11 +1,31 @@
 from django.shortcuts import render
 from django.core.urlresolvers import reverse
+from django.contrib.auth import authenticate, login
 
 def index(request):
 	"""
 	Home page view
 	"""
 	return render(request, 'awi/base_home.html')
+
+def login(request):
+	"""
+	Login view
+	"""
+	if request.POST:
+		username = request.POST['username']
+		password = request.POST['password']
+		user = authenticate(username=username, password=password)
+		if user is not None:
+			if user.is_active:
+				login(request, user)
+				return index(request) #success
+			else:
+				return render(request, 'awi/base_login.html', {'error_message': 'Account disabled'})
+		else:
+			return render(request, 'awi/base_login.html', {'error_message': 'Wrong username or password'})
+	else:
+		return render(request, 'awi/base_login.html')
 
 # Computers page view
 def computers(request):

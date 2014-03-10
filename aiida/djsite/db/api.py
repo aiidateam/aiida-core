@@ -3,6 +3,7 @@ from tastypie import fields, utils
 from tastypie.authentication import SessionAuthentication
 from tastypie.authorization import DjangoAuthorization
 from tastypie.resources import ModelResource, ALL, ALL_WITH_RELATIONS
+from tastypie.validation import Validation
 from aiida.djsite.db.models import (
         DbAuthInfo, 
         DbAttribute,
@@ -10,9 +11,48 @@ from aiida.djsite.db.models import (
         DbGroup,
         DbNode,
         )
+from aiida.transport import Transport, TransportFactory
+from aiida.scheduler import Scheduler, SchedulerFactory
+
+class DbComputerValidation(Validation):
+    def is_valid(self, bundle, request=None):
+        """
+        Check the validity of provided data for a computer.
+        
+        :note: if you need to modify data, one should inherit from the
+            CleanedDataFormValidation class.
+        
+        :return: an empty dictionary means no error.
+            Otherwise, a dictionary with key=field with error,
+            and value=list of errors, even if there is only one.
+        """
+        if not bundle.data:
+            return {'__all__': 'No data found...'}
+        
+        errors = {}
+        
+        ## For the time being, I only check the scheduler_type and the
+        ## transport_type
+        ## TODO: implement complete validation
+        
+        # TODO: if it is too slow, cache these?
+        transports_list = Transport.get_valid_transports()
+        schedulers_list = Scheduler.get_valid_schedulers()
+                                
+        for k, v in bundle.data.iteritems():
+            if k == "transport_type":
+                if v not in transports_list:
+                    errors[k] = "Invalid transport type"
+            elif k == "scheduler_type":
+                if v not in schedulers_list:
+                    errors[k] = "Invalid scheduler type"
+            elif k == "name":
+                if not v:
+                    errors[k] = "Zero-length computer name not allowed"
+        
+        return errors
 
 # To discuss/implement/activate:
-# - Authentication + authorization
 # - Caching, Throttling, 
 
 class UserResource(ModelResource):
@@ -52,6 +92,7 @@ class DbComputerResource(ModelResource):
 
         authentication = SessionAuthentication()
         authorization = DjangoAuthorization()
+        validation = DbComputerValidation()
     
     def dehydrate_metadata(self, bundle):
         import json
@@ -61,6 +102,20 @@ class DbComputerResource(ModelResource):
         except (ValueError, TypeError):
             data = None
         return data
+
+    def hydrate(self, bundle):
+#        from tastypie.exceptions import ImmediateHttpResponse
+#        from tastypie.http import HttpForbidden
+
+        # Remove 'uuid' and 'id' data from the modify request, if present 
+        # (The 'None' default field is meant to avoid Exceptions if the field
+        # is not provided)
+        bundle.data.pop('uuid', None)        
+        bundle.data.pop('id', None)
+#        raise ImmediateHttpResponse(
+#            HttpForbidden("Modification not allowed.")
+#            )                                   
+        return bundle
 
     def hydrate_metadata(self, bundle):
         import json
@@ -89,9 +144,6 @@ class DbComputerResource(ModelResource):
         """
         Improve the information provided in the schema
         """
-        from aiida.transport import Transport, TransportFactory
-        from aiida.scheduler import Scheduler, SchedulerFactory
-
         # Get the default schema
         new_schema = super(DbComputerResource, self).build_schema()
         
@@ -99,6 +151,7 @@ class DbComputerResource(ModelResource):
         # VALID CHOICES FOR TRANSPORT AND SCHEDULER
         tlist = Transport.get_valid_transports()
         slist = Scheduler.get_valid_schedulers()
+
         tdict = {}
         sdict = {}
         for tname in tlist:
@@ -120,6 +173,10 @@ class DbComputerResource(ModelResource):
 
 
 class DbAuthInfoResource(ModelResource):
+    # TODO: IMPORTANT! 
+    # Implement here a authorization allowing each user to see only his own
+    # entries, as shown for instance here:
+    # http://django-tastypie.readthedocs.org/en/latest/authorization.html
     aiidauser = fields.ToOneField(UserResource, 'aiidauser', full=True) 
     computer = fields.ToOneField(DbComputerResource, 'computer')
     
@@ -132,6 +189,11 @@ class DbAuthInfoResource(ModelResource):
             'computer': ALL_WITH_RELATIONS,
             'aiidauser': ALL_WITH_RELATIONS,
             }
+        
+        authentication = SessionAuthentication()
+        # As discussed above: improve this with authorization allowing each
+        # user to see only his own DbAuthInfo data
+        authorization = DjangoAuthorization()
 
     def dehydrate_auth_params(self, bundle):
         import json

@@ -60,7 +60,7 @@ try:
         raise ValueError
 except (NotExistent, ValueError):
     valid_code_labels = [c.label for c in Code.query(
-            dbattributes__key="_remote_exec_path",
+            dbattributes__key="remote_exec_path",
             dbattributes__tval__endswith="/{}".format(expected_exec_name))]
     if valid_code_labels:
         print >> sys.stderr, "Pass as first parameter a valid code label."

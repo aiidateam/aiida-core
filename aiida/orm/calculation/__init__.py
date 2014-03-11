@@ -545,10 +545,10 @@ class Calculation(Node):
         else:
             q_object = Q(user=get_automatic_user())
             if states:
-#                q_object.add(~Q(dbattributes__key='_state',
+#                q_object.add(~Q(dbattributes__key='state',
 #                                dbattributes__tval=only_state,), Q.AND)
-                q_object.add( Q(dbattributes__key='_state',
-                                 dbattributes__tval__in=states,), Q.AND)
+                q_object.add( Q(dbattributes__key='state',
+                                dbattributes__tval__in=states,), Q.AND)
             if past_days:
                 now = timezone.now()
                 n_days_ago = now - datetime.timedelta(days=past_days)
@@ -663,7 +663,7 @@ class Calculation(Node):
             kwargs['user'] = user
         
         queryresults = cls.query(
-            dbattributes__key='_state',
+            dbattributes__key='state',
             dbattributes__tval=state,
             **kwargs)
 

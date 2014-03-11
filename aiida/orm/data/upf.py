@@ -49,7 +49,7 @@ def get_upf_from_family(family_name, element):
         raise NotExistent("Family named {} does not exist".format(family_name))
     
     match = UpfData.query(dbgroups__name=family_name,
-                           dbattributes__key="_element",
+                           dbattributes__key="element",
                            dbattributes__tval=element)
     if len(match) == 0:
         raise NotExistent("No UPF for element {} found in family {}".format(
@@ -109,7 +109,7 @@ def upload_upf_family(folder, group_name, group_description,
     
     for f in files:
         md5sum = aiida.common.utils.md5_file(f)
-        existing_upf = UpfData.query(dbattributes__key="_md5",
+        existing_upf = UpfData.query(dbattributes__key="md5",
                                      dbattributes__tval = md5sum)
         
         if len(existing_upf) == 0:
@@ -318,7 +318,7 @@ class UpfData(SinglefileData):
         Note that the hash has to be stored in a _md5 attribute, otherwise
         the pseudo will not be found.
         """
-        queryset = cls.query(dbattributes__key='_md5', dbattributes__tval=md5)
+        queryset = cls.query(dbattributes__key='md5', dbattributes__tval=md5)
         return list(queryset)
 
 
@@ -395,7 +395,7 @@ class UpfData(SinglefileData):
             # add a filter to the previous query, one f per element
             # to get only groups with desired element
             for el in filter_elements:
-                groups = groups.filter( dbnodes__dbattributes__key='_element',
+                groups = groups.filter( dbnodes__dbattributes__key='element',
                                  dbnodes__dbattributes__tval=el.capitalize() )
             
         # find all groups matching the desired filters

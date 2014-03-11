@@ -101,9 +101,7 @@ class SlurmJobResource(NodeNumberJobResource):
 
 class SlurmScheduler(aiida.scheduler.Scheduler):
     """
-    SLURM implementation of the scheduler functions.
-
-    TODO: implement __unicode__ and __str__ methods.
+    Support for the SLURM scheduler (http://slurm.schedmd.com/).
     """
     _logger = aiida.scheduler.Scheduler._logger.getChild('slurm')
 

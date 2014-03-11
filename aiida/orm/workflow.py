@@ -198,7 +198,7 @@ class Workflow(object):
         """
         This function increments the version number in the DB.
         This should be called every time you need to increment the version (e.g. on adding a
-        metadata or attribute). 
+        extra or attribute). 
         """
         from django.db.models import F
         from aiida.djsite.db.models import DbWorkflow

@@ -44,7 +44,7 @@ class DbNode(m.Model):
       the first time.
 
     * other attributes MUST start WITHOUT an underscore. These are user-defined and\
-      can be appended even after the calculation has run, since they just are metadata.
+      can be appended even after the calculation has run, since they just are extras.
 
     * There is no json metadata attached to the DbNode entries. This can go into an attribute if needed.
 
@@ -52,8 +52,8 @@ class DbNode(m.Model):
       and this is the reason for which there is no 'user' field in the DbAttribute field.
 
     * For a Data node, attributes will /define/ the data and hence should be immutable.\
-      User-defined attributes are metadata for convenience of tagging and searching only.\
-      User should be careful not to attach data computed from data as metadata. 
+      User-defined attributes are extras for convenience of tagging and searching only.\
+      User should be careful not to attach data computed from data as extras. 
     '''
     uuid = UUIDField(auto=True)
     # in the form data.upffile., data.structure., calculation., code.quantumespresso.pw., ...
@@ -220,16 +220,24 @@ attrdatatype_choice = (
     ('list', 'list'),
     ('none', 'none'))
 
-class DbAttribute(m.Model):
-    '''
-    Attributes are annotations ONLY for storing metadata and tagging. This is only for
-    querying convenience.
-    Actual input and output data should never go here, only duplicates and comments.
-    '''
+class DbAttributeBaseClass(m.Model):
+    """
+    Abstract base class for tables storing element-attribute-value data.
+    Element is the dbnode; attribute is the key name.
+    Value is the specific value to store. 
+    
+    This table had different SQL columns to store different types of data, and
+    a datatype field to know the actual datatype.
+    
+    Moreover, this class unpacks dictionaries and lists when possible, so that
+    it is possible to query inside recursive lists and dicts.
+    """
     time = m.DateTimeField(auto_now_add=True, editable=False)
-    dbnode = m.ForeignKey('DbNode', related_name='dbattributes')
+    # In this way, the related name for the DbAttribute inherited class will be
+    # 'dbattributes' and for 'dbextra' will be 'dbextras'
+    dbnode = m.ForeignKey('DbNode', related_name='%(class)ss') 
     # max_length is required by MySql to have indexes and unique constraints
-    key = m.CharField(max_length=255,db_index=True,blank=False)
+    key = m.CharField(max_length=1024,db_index=True,blank=False)
     datatype = m.CharField(max_length=10, choices=attrdatatype_choice, db_index=True)
     tval = m.TextField( default='', blank=True)
     fval = m.FloatField( default=None, null=True)
@@ -239,6 +247,7 @@ class DbAttribute(m.Model):
 
     class Meta:
         unique_together = (("dbnode", "key"))
+        abstract = True
         
     def setvalue(self,value):
         """
@@ -361,6 +370,23 @@ class DbAttribute(m.Model):
             self.key,
             self.datatype,)
 
+class DbAttribute(DbAttributeBaseClass):
+    """
+    This table stores attributes that uniquely define the content of the
+    node. Therefore, their modification corrupts the data.
+    """
+    pass
+
+class DbExtra(DbAttributeBaseClass):
+    """
+    This table stores extra data, still in the key-value format,
+    that the user can attach to a node.
+    Therefore, their modification simply changes the user-defined data,
+    but does not corrupt the node (it will still be loadable without errors).
+    Could be useful to add "duplicate" information for easier querying, or
+    for tagging nodes.
+    """
+    pass
 
 class DbGroup(m.Model):
     """

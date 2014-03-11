@@ -194,7 +194,7 @@ class Code(Node):
 
         self._set_remote()
 
-        self.dbnode.computer = remote_dbcomputer
+        self.dbnode.dbcomputer = remote_dbcomputer
         self.set_attr('remote_exec_path', remote_exec_path)
 
     def get_remote_exec_path(self):
@@ -219,7 +219,7 @@ class Code(Node):
         It also deletes the flags related to the local case (if any)
         """
         self.set_attr('is_local', True)
-        self.dbnode.computer = None
+        self.dbnode.dbcomputer = None
         try:
             self.del_attr('remote_exec_path')
         except AttributeError:

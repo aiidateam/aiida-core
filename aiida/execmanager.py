@@ -19,24 +19,24 @@ execlogger = aiidalogger.getChild('execmanager')
 def update_running_calcs_status(authinfo):
     """
     Update the states of calculations in WITHSCHEDULER status belonging 
-    to user and machine as defined in the 'authinfo' table.
+    to user and machine as defined in the 'dbauthinfo' table.
     """
     from aiida.orm import Calculation, Computer
     from aiida.scheduler.datastructures import JobInfo
 
     execlogger.debug("Updating running calc status for user {} "
                      "and machine {}".format(
-        authinfo.aiidauser.username, authinfo.computer.name))
+        authinfo.aiidauser.username, authinfo.dbcomputer.name))
 
     # This returns an iterator over aiida Calculation objects
     calcs_to_inquire = Calculation.get_all_with_state(
         state=calc_states.WITHSCHEDULER,
-        computer=authinfo.computer,
+        computer=authinfo.dbcomputer,
         user=authinfo.aiidauser)
     
     # NOTE: no further check is done that machine and
     # aiidauser are correct for each calc in calcs
-    s = Computer(dbcomputer=authinfo.computer).get_scheduler()
+    s = Computer(dbcomputer=authinfo.dbcomputer).get_scheduler()
     t = authinfo.get_transport()
 
     computed = []
@@ -156,7 +156,7 @@ def get_authinfo(computer, aiidauser):
         authinfo = DbAuthInfo.objects.get(
                 # converts from name, Computer or DbComputer instance to
                 # a DbComputer instance
-            computer=DbComputer.get_dbcomputer(computer),
+            dbcomputer=DbComputer.get_dbcomputer(computer),
             aiidauser=aiidauser)
     except ObjectDoesNotExist:
         raise AuthenticationError(
@@ -554,7 +554,7 @@ def retrieve_computed_for_authinfo(authinfo):
     
     calcs_to_retrieve = Calculation.get_all_with_state(
         state=calc_states.COMPUTED,
-        computer=authinfo.computer,
+        computer=authinfo.dbcomputer,
         user=authinfo.aiidauser)
     
     retrieved = []

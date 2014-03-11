@@ -77,7 +77,7 @@ class DbNode(m.Model):
     children = m.ManyToManyField('self', symmetrical=False, related_name='parents', through='DbPath')
     
     # Used only if dbnode is a calculation, or remotedata
-    computer = m.ForeignKey('DbComputer', null=True, on_delete=m.PROTECT)
+    dbcomputer = m.ForeignKey('DbComputer', null=True, on_delete=m.PROTECT)
 
     # Index that is incremented every time a modification is done on itself or on attributes.
     # Managed by the aiida.orm.Node class. Do not modify
@@ -505,12 +505,12 @@ class DbAuthInfo(m.Model):
     information.
     """
     aiidauser = m.ForeignKey(User)
-    computer = m.ForeignKey(DbComputer)
+    dbcomputer = m.ForeignKey(DbComputer)
     auth_params = m.TextField(default='{}') # Will store a json; contains mainly the remoteuser
                                             # and the private_key
 
     class Meta:
-        unique_together = (("aiidauser", "computer"),)
+        unique_together = (("aiidauser", "dbcomputer"),)
 
     def get_auth_params(self):
         import json
@@ -519,7 +519,7 @@ class DbAuthInfo(m.Model):
         except ValueError:
             raise DbContentError(
                 "Error while reading auth_params for authinfo, aiidauser={}, computer={}".format(
-                    self.aiidauser.username, self.computer.hostname))
+                    self.aiidauser.username, self.dbcomputer.hostname))
 
     def set_auth_params(self,auth_params):
         import json
@@ -537,18 +537,18 @@ class DbAuthInfo(m.Model):
         from aiida.orm import Computer
 
         try:
-            ThisTransport = TransportFactory(self.computer.transport_type)
+            ThisTransport = TransportFactory(self.dbcomputer.transport_type)
         except MissingPluginError as e:
             raise ConfigurationError('No transport found for {} [type {}], message: {}'.format(
-                self.computer.hostname, self.computer.transport_type, e.message))
+                self.dbcomputer.hostname, self.dbcomputer.transport_type, e.message))
 
-        params = dict(Computer(dbcomputer=self.computer).get_transport_params().items() +
+        params = dict(Computer(dbcomputer=self.dbcomputer).get_transport_params().items() +
                       self.get_auth_params().items())
-        return ThisTransport(machine=self.computer.hostname,**params)
+        return ThisTransport(machine=self.dbcomputer.hostname,**params)
 
     @python_2_unicode_compatible
     def __str__(self):
-        return "Authorization info for {}".format(self.computer.name)
+        return "Authorization info for {}".format(self.dbcomputer.name)
 
 
 class DbComment(m.Model):

@@ -37,7 +37,7 @@ def get_or_create_machine():
 #### DON'T DO THIS! WILL ALSO DELETE ALL CALCULATIONS THAT WERE USING
 #### THIS COMPUTER!
 #    from aiida.djsite.db.models import DbComputer, DbNode
-#    DbNode.objects.filter(computer__hostname=machine).delete()
+#    DbNode.objects.filter(dbcomputer__hostname=machine).delete()
 #    DbComputer.objects.filter(hostname=machine).delete()
 
     

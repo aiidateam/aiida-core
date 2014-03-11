@@ -332,7 +332,7 @@ class Calculation(Node):
         from aiida.djsite.db.models import DbComputer
 
         if self._to_be_stored:
-            self.dbnode.computer = DbComputer.get_dbcomputer(computer)
+            self.dbnode.dbcomputer = DbComputer.get_dbcomputer(computer)
         else:
             self.logger.error("Trying to change the computer of an already "
                               "saved node: {}".format(self.uuid))
@@ -346,10 +346,10 @@ class Calculation(Node):
         :return: the Computer object or None.
         """
         from aiida.orm import Computer
-        if self.dbnode.computer is None:
+        if self.dbnode.dbcomputer is None:
             return None
         else:
-            return Computer(dbcomputer=self.dbnode.computer)
+            return Computer(dbcomputer=self.dbnode.dbcomputer)
 
     def _set_state(self, state):
         if state not in calc_states:
@@ -640,7 +640,7 @@ class Calculation(Node):
                 be an instance of Calculation, if everything goes right!)
                 If True, return only a list of tuples, where each tuple is
                 in the format
-                ('computer__id', 'user__id')
+                ('dbcomputer__id', 'user__id')
                 [where the IDs are the IDs of the respective tables]
 
         :return: a list of calculation objects matching the filters.
@@ -657,8 +657,8 @@ class Calculation(Node):
         if computer is not None:
             # I convert it from various type of inputs
             # (string, DbComputer, Computer)
-            # to a Computer type
-            kwargs['computer'] = Computer.get(computer)
+            # to a DbComputer type
+            kwargs['dbcomputer'] = Computer.get(computer).dbcomputer
         if user is not None:
             kwargs['user'] = user
         
@@ -669,7 +669,7 @@ class Calculation(Node):
 
         if only_computer_user_pairs:
             return queryresults.values_list(
-                'computer__id', 'user__id')
+                'dbcomputer__id', 'user__id')
         else:
             return queryresults
 

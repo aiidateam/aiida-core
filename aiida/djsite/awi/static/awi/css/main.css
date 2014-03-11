@@ -24,6 +24,26 @@ html.no-js div.alert#nojs {
 	display: block !important;
 }
 
+form.form-signin {
+	width: 100%;
+	max-width: 300px;
+	margin: 0 auto;
+}
+.form-signin label.checkbox {
+	width: 50%;
+	margin: 10px auto;
+}
+.form-signin input[type="text"] {
+  margin-bottom: -1px;
+  border-bottom-right-radius: 0;
+  border-bottom-left-radius: 0;
+}
+.form-signin input[type="password"] {
+  margin-bottom: 10px;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
 /* force the text-danger color even when in dropdown */
 .text-danger {
 	color: #a94442 !important;

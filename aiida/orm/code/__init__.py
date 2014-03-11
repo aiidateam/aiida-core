@@ -68,6 +68,12 @@ class Code(Node):
         if kwargs:
             raise ValueError("Invalid parameters found in the __init__: {}".format(kwargs.keys()))
 
+    def __str__(self):
+        local_str = "Local" if self.is_local() else "Remote"
+        
+        return "{} code '{}' on {}".format(local_str, self.label,
+                                           self.computer.name)
+
     @classmethod
     def get(cls,label):
         """

@@ -203,11 +203,11 @@ class _Upf(VerdiCommand):
                 num_pseudos = pseudos.count()
 
                 pseudos_list = pseudos.filter(
-                                      dbattributes__key="_element").values_list(
+                                      dbattributes__key="element").values_list(
                                       'dbattributes__tval', flat=True)
                 
                 new_ps = pseudos.filter(
-                                dbattributes__key="_element").values_list(
+                                dbattributes__key="element").values_list(
                                 'dbattributes__tval', flat=True)
                 
                 if num_pseudos != len(set(pseudos_list)):

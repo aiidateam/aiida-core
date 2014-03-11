@@ -780,7 +780,7 @@ class DbWorkflow(m.Model):
         from aiida.common.datastructures import calc_states, wf_states, wf_exit_call
 
         calc_status = self.get_calculations().filter(
-            dbattributes__key="_state").values_list("uuid", "dbattributes__tval")
+            dbattributes__key="state").values_list("uuid", "dbattributes__tval")
         return set([l[1] for l in calc_status])
 
     # ------------------------------------------------
@@ -915,14 +915,14 @@ class DbWorkflowStep(m.Model):
             return Calculation.query(workflow_step=self)#pk__in = step.calculations.values_list("pk", flat=True))
         else:
             return Calculation.query(workflow_step=self).filter(
-                dbattributes__key="_state",dbattributes__tval=state)
+                dbattributes__key="state",dbattributes__tval=state)
 
     def get_calculations_status(self):
 
         from aiida.common.datastructures import calc_states, wf_states, wf_exit_call
 
         calc_status = self.calculations.filter(
-            dbattributes__key="_state").values_list("uuid", "dbattributes__tval")
+            dbattributes__key="state").values_list("uuid", "dbattributes__tval")
         return set([l[1] for l in calc_status])
     
     def remove_calculations(self):

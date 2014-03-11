@@ -160,6 +160,7 @@ class ArrayData(Data):
         from aiida.common.exceptions import ValidationError
         files = self.arraynames()
         properties = self.attrs()
+        
         if set(files) != set(properties):
             raise ValidationError("Mismatch of files and properties for ArrayData"
                                   "node (pk={}): {} vs. {}".format(self.pk,

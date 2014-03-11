@@ -1,0 +1,20 @@
+{% extends base_template %}
+
+{% block modal %}
+<form action="{% url 'awi:login' %}" method="post" role="form" class="form-signin">
+	{% csrf_token %}
+	{% if next %}
+	<input type="hidden" name="next" value="{{ next }}">
+	{% else %}
+	<input type="hidden" name="next" value="{{ request.path }}">
+	{% endif %}
+	<input type="text" placeholder="Username" class="form-control" name="username" required autofocus>
+	<input type="password" placeholder="Password" class="form-control" name="password" required>
+	<label class="checkbox">
+		<input type="checkbox" name="remember" value="remember-me" checked="checked"> Remember me
+	</label>
+	<div class="center">
+		<button type="submit" class="btn btn-lg btn-success">Sign in</button>
+	</div>
+</form>
+{% endblock %}

@@ -7,6 +7,7 @@ from tastypie.validation import Validation
 from aiida.djsite.db.models import (
         DbAuthInfo, 
         DbAttribute,
+        DbExtra,
         DbComputer, 
         DbGroup,
         DbNode,
@@ -234,9 +235,7 @@ class DbNodeResource(ModelResource):
     inputs = fields.ToManyField('self', 'inputs', related_name='outputs', full=False, use_in='detail')
 
     dbattributes = fields.ToManyField('aiida.djsite.db.api.DbAttributeResource', 'dbattributes', related_name='dbnode', full=False, use_in='detail')
-    ## To double check, they do not work right now
-    #attributes = fields.ToManyField('aiida.djsite.db.api.AttributeResource', 'attributes', related_name='dbnode', null=True, full=False, use_in='detail')
-    #metadata = fields.ToManyField('aiida.djsite.db.api.MetadataResource', 'metadata', related_name='dbnode', null=True, full=False, use_in='detail')
+    dbextras = fields.ToManyField('aiida.djsite.db.api.DbExtraResource', 'dbextras', related_name='dbnode', full=False, use_in='detail')
 
     ## Transitive-closure links
     ## Hidden for the time being, they could be too many
@@ -259,6 +258,7 @@ class DbNodeResource(ModelResource):
             'description': ALL,
             'computer': ALL_WITH_RELATIONS,
             'dbattributes': ALL_WITH_RELATIONS,
+            'dbextras': ALL_WITH_RELATIONS,
             'user': ALL_WITH_RELATIONS,
             'outputs': ALL_WITH_RELATIONS,
             'inputs': ALL_WITH_RELATIONS,
@@ -288,112 +288,75 @@ class DbAttributeResource(ModelResource):
             'time': ALL,
             }
         
-        
-class AttributeResource(ModelResource):
-    dbnode = fields.ToOneField(DbNodeResource, 'dbnode', related_name='attributes')    
+
+class DbExtraResource(ModelResource):
+    dbnode = fields.ToOneField(DbNodeResource, 'dbnode', related_name='dbextras')    
     class Meta:
-        queryset = DbAttribute.objects.all()
-        resource_name = 'attribute'
-        allowed_methods = ['get']
-        filtering = {
-            'id': ['exact'],
-            'dbnode': ALL_WITH_RELATIONS,
-            'datatype': ['exact'],
-            'time': ALL,
-#            'key': ALL,
-#            'value': ALL,
-            }
-        
-    def build_filters(self,filters=None):
-        if filters is None:
-            filters = {}
-            
-        orm_filters = super(AttributeResource, self).build_filters(filters)
-        orm_filters['key__startswith'] = "_"
-        
-        return orm_filters
-    
-    def dehydrate_key(self, bundle):
-        return bundle.data['key'][1:]
-    
-    def dehydrate(self, bundle):
-        # Remove all the fields with name matching the pattern '?val'
-        # (bval, ival, tval, dval, fval, ...)
-        
-        # I have to make a list out of it otherwise I get a
-        # "dictionary changed during iteration" error
-        for k in list(bundle.data.keys()):
-            if len(k) == 4 and k.endswith('val'):
-                del bundle.data[k]
-        
-        ## I leave the datatype, can be useful
-        #datatype = bundle.data.pop('datatype')
-        
-        bundle.data['value'] = bundle.obj.getvalue()
-        
-        return bundle
-
-    def build_schema(self):
-        default_schema = super(AttributeResource, self).build_schema()
-
-        fields = list(default_schema['fields'].keys())
-        for k in fields:
-            if len(k) == 4 and k.endswith('val'):
-                del default_schema['fields'][k]
-        
-        # TODO: fix the schema correctly!
-
-        return default_schema
-
-        
-class MetadataResource(ModelResource):
-    dbnode = fields.ToOneField(DbNodeResource, 'dbnode', related_name='metadata')    
-    class Meta:
-        queryset = DbAttribute.objects.all()
-        resource_name = 'metadata'
+        queryset = DbExtra.objects.all()
+        resource_name = 'dbextra'
         allowed_methods = ['get']
         filtering = {
             'id': ['exact'],
             'dbnode': ALL_WITH_RELATIONS,
             'datatype': ['exact'],
             'key': ALL,
+            'bval': ALL,   
+            'dval': ALL,
+            'fval': ALL,
+            'ival': ALL,
+            'tval': ALL,
             'time': ALL,
             }
         
-    def build_filters(self,filters=None):
-        from django.db.models import Q
         
-        if filters is None:
-            filters = {}
-            
-        orm_filters = super(MetadataResource, self).build_filters(filters)
-        orm_filters['custom'] = ~Q(key__startswith="_") 
-        
-        return orm_filters
-    
-    def apply_filters(self, request, applicable_filters):
-        custom = applicable_filters.pop('custom',None)
-        
-        pre_filtered = super(MetadataResource, self).apply_filters(request, applicable_filters)
-        if custom is not None:
-            return pre_filtered.filter(custom)
-        else:
-            return pre_filtered
-        
-    def dehydrate(self, bundle):
-        # Remove all the fields with name matching the pattern '?val'
-        # (bval, ival, tval, dval, fval, ...)
-
-        # I have to make a list out of it otherwise I get a
-        # "dictionary changed during iteration" error
-        for k in list(bundle.data.keys()):
-            if len(k) == 4 and k.endswith('val'):
-                del bundle.data[k]
-        
-        ## I leave the datatype, can be useful
-        #datatype = bundle.data.pop('datatype')
-        
-        bundle.data['value'] = bundle.obj.getvalue()
-        
-        return bundle
+# class MetadataResource(ModelResource):
+#     dbnode = fields.ToOneField(DbNodeResource, 'dbnode', related_name='metadata')    
+#     class Meta:
+#         queryset = DbAttribute.objects.all()
+#         resource_name = 'metadata'
+#         allowed_methods = ['get']
+#         filtering = {
+#             'id': ['exact'],
+#             'dbnode': ALL_WITH_RELATIONS,
+#             'datatype': ['exact'],
+#             'key': ALL,
+#             'time': ALL,
+#             }
+#         
+#     def build_filters(self,filters=None):
+#         from django.db.models import Q
+#         
+#         if filters is None:
+#             filters = {}
+#             
+#         orm_filters = super(MetadataResource, self).build_filters(filters)
+#         orm_filters['custom'] = ~Q(key__startswith="_") 
+#         
+#         return orm_filters
+#     
+#     def apply_filters(self, request, applicable_filters):
+#         custom = applicable_filters.pop('custom',None)
+#         
+#         pre_filtered = super(MetadataResource, self).apply_filters(request, applicable_filters)
+#         if custom is not None:
+#             return pre_filtered.filter(custom)
+#         else:
+#             return pre_filtered
+#         
+#     def dehydrate(self, bundle):
+#         # Remove all the fields with name matching the pattern '?val'
+#         # (bval, ival, tval, dval, fval, ...)
+# 
+#         # I have to make a list out of it otherwise I get a
+#         # "dictionary changed during iteration" error
+#         for k in list(bundle.data.keys()):
+#             if len(k) == 4 and k.endswith('val'):
+#                 del bundle.data[k]
+#         
+#         ## I leave the datatype, can be useful
+#         #datatype = bundle.data.pop('datatype')
+#         
+#         bundle.data['value'] = bundle.obj.getvalue()
+#         
+#         return bundle
 

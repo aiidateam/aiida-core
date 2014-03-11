@@ -165,7 +165,7 @@ def get_or_create_code(computer):
     if not(useful_codes):
         print >> sys.stderr, "Creating the code..."
         code = Code(remote_computer_exec=(computer, code_path)).store()
-        code.set_metadata("version", code_version)
+        code.set_extra("version", code_version)
         return code
     
     elif len(useful_codes) == 1:

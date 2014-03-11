@@ -399,12 +399,12 @@ class RepositoryFolder(Folder):
         self._uuid = uuid
 
         # If you want to change the sharding scheme, this is the only place
-        # where changes should be needed FOR NODES
+        # where changes should be needed FOR NODES AND WORKFLOWS
         # Of course, remember to migrate data!
         # We set a sharding of level 2+2
-        # Note that a similar sharding should probably be done also:
-        #  - for workflows
-        #  - for calculations sent to clusters
+        # Note that a similar sharding should probably has to be done
+        # independently for calculations sent to remote computers in the
+        # execmanager.
         entity_dir=os.path.realpath(os.path.join(
             _perm_repository, unicode(section), 
             unicode(uuid)[:2], unicode(uuid)[2:4], unicode(uuid)[4:]))

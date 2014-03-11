@@ -75,7 +75,7 @@ except IOError:
             code = Code(local_executable = "sum.py")
             code.add_path(f.name, "sum.py")
             code.store()
-            code.set_metadata("version", current_version)
+            code.set_extra("version", current_version)
         return code
     
     elif len(useful_codes) == 1:

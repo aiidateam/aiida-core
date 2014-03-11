@@ -532,9 +532,11 @@ class Calculation(Node):
         from django.utils import timezone
         import datetime
         from django.db.models import Q
+        from django.core.exceptions import ObjectDoesNotExist
         from aiida.djsite.db.models import DbNode
-        from aiida.djsite.utils import get_automatic_user
+        from aiida.djsite.utils import get_automatic_user, get_last_daemon_run
         from aiida.common.utils import str_timedelta
+        from aiida.djsite.settings.settings import djcelery_tasks
         
         now = timezone.now()
         
@@ -554,10 +556,32 @@ class Calculation(Node):
 
         calc_list = cls.query(q_object).distinct().order_by('ctime')
         
-        if not calc_list:
-            return ""
+        try:
+            last_daemon_check = get_last_daemon_run(
+                djcelery_tasks['calculationretrieve'])
+        except ObjectDoesNotExist:
+            last_check_string = ("# Last daemon check: (Unable to discover, "
+                "no such task found)")
+        except Exception as e:
+            last_check_string = ("# Last daemon check: (Unable to discover, "
+                "error: {})".format(type(e).__name__))
         else:
-            res_str = '{:<10} {:<17} {:>12} {:<10} {:<22} {:<15} {:<15}\n'.format('Pk','State','Creation','Time','Scheduler state','Computer','Type')
+            if last_daemon_check is None:
+                last_check_string = "# Last daemon check: (Never)"
+            else:
+                last_check_string = ("# Last daemon check (approximate): "
+                    "{} ago ({})".format(
+                    str_timedelta(now-last_daemon_check),
+                    last_daemon_check.strftime("%H:%M:%S")))
+        
+        if not calc_list:
+            return last_check_string
+        else:
+            fmt_string = '{:<10} {:<17} {:>12} {:<10} {:<22} {:<15} {:<15}'
+            res_str_list = [last_check_string]
+            res_str_list.append(fmt_string.format(
+                    'Pk','State','Creation','Time',
+                    'Scheduler state','Computer','Type'))
             for calc in calc_list:
                 
                 remote_state = "None"
@@ -585,15 +609,15 @@ class Calculation(Node):
                 except ValueError:
                     raise
                 
-                res_str+= "{:<10} {:<17} {:<12} {:<10} {:<22} {:<15} {:<15}\n".format( calc.pk,
+                res_str_list.append(fmt_string.format( calc.pk,
                                calc.get_state(),
                                calc.ctime.isoformat().split('T')[0],
                                calc.ctime.isoformat().split('T')[1].split('.')[0],
                                remote_state,
                                remote_computer,
                                str(calc.__class__).split('.')[-1].strip("'>"),
-                            )
-            return res_str
+                            ))
+            return "\n".join(res_str_list)
 
     @classmethod
     def get_all_with_state(cls, state, computer=None, user=None, 
@@ -877,8 +901,8 @@ class CalculationResultManager(object):
         try:
             return self._parser.get_result(name)
         except AttributeError:
-            raise AttributeError("Parser '{}' didn't provide a result '{}'"
-                                 .format(self._parser.__class__, name))
+            raise AttributeError("Parser '{}' did not provide a result '{}'"
+                                 .format(self._parser.__class__.__name__, name))
 
     def __getitem__(self,name):
         """
@@ -889,5 +913,5 @@ class CalculationResultManager(object):
         try:
             return self._parser.get_result(name)
         except AttributeError:
-            raise KeyError("Parser '{}' didn't provide a result '{}'"
-                           .format(self._parser.__class__, name))
+            raise KeyError("Parser '{}' did not provide a result '{}'"
+                           .format(self._parser.__class__.__name__, name))

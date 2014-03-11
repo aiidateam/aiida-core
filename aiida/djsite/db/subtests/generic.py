@@ -789,6 +789,7 @@ class TestNodeBasic(AiidaTestCase):
         """
         from aiida.orm.test import myNodeWithFields
         
+        # Has 'state' as updatable attribute
         a = myNodeWithFields()
         attrs_to_set = {
             'bool': self.boolval,
@@ -844,6 +845,126 @@ class TestNodeBasic(AiidaTestCase):
         # updatable attributes are not copied
         with self.assertRaises(AttributeError):
             b.get_attr('state')
+            
+    def test_delete_updatable_attributes(self):
+        """
+        Checks the versioning.
+        """
+        from aiida.orm.test import myNodeWithFields
+        
+        # Has 'state' as updatable attribute
+        a = myNodeWithFields()
+        attrs_to_set = {
+            'bool': self.boolval,
+            'integer': self.intval,
+            'float': self.floatval,
+            'string': self.stringval,
+            'dict': self.dictval,
+            'list': self.listval,
+            'state': 267, # updatable
+            }
+
+        for k,v in attrs_to_set.iteritems():
+            a.set_attr(k, v)
+            
+        # Check before storing
+        self.assertEquals(267,a.get_attr('state'))
+
+        a.store()
+
+        # Check after storing
+        self.assertEquals(267,a.get_attr('state'))        
+
+        # Even if I stored many attributes, this should stay at 1
+        self.assertEquals(a.dbnode.nodeversion, 1)
+        self.assertEquals(a.dbnode.lastsyncedversion, 0)
+
+        # I should be able to delete the attribute
+        a.del_attr('state')
+
+        # I check increment on new version
+        self.assertEquals(a.dbnode.nodeversion, 2)
+
+        with self.assertRaises(AttributeError):
+            # I check that I cannot modify this attribute
+            _ = a.get_attr('state')
+
+    def test_delete_extras(self):
+        """
+        Checks the ability of deleting extras, also when they are dictionaries
+        or lists.
+        """
+        
+        a = Node().store()
+        extras_to_set = {
+            'bool': self.boolval,
+            'integer': self.intval,
+            'float': self.floatval,
+            'string': self.stringval,
+            'dict': self.dictval,
+            'list': self.listval,
+            'further': 267, 
+            }
+
+        for k,v in extras_to_set.iteritems():
+            a.set_extra(k, v)
+            
+        self.assertEquals({k: v for k, v in a.iterextras()}, extras_to_set)
+        
+        # I pregenerate it, it cannot change during iteration
+        list_keys = list(extras_to_set.keys())
+        for k in list_keys:
+            # I delete one by one the keys and check if the operation is
+            # performed correctly
+            a.del_extra(k)
+            del extras_to_set[k]
+            self.assertEquals({k: v for k, v in a.iterextras()}, extras_to_set)
+            
+            
+    def test_replace_extras(self):
+        """
+        Checks the ability of replacing extras, removing the subkeys also when
+        these are dictionaries or lists.
+        """
+        
+        a = Node().store()
+        extras_to_set = {
+            'bool': True,
+            'integer': 12,
+            'float': 26.2,
+            'string': "a string",
+            'dict': {"a": "b",
+                     "sublist": [1,2,3],
+                     "subdict": {
+                        "c": "d"}},
+            'list': [1,True,"ggg",{'h': 'j'},[9,8,7]],
+            }
+        
+        # I redefine the keys with more complicated data, and
+        # changing the data type too
+        new_extras = {
+              'bool': 12,
+              'integer': [2,[3],'a'],
+              'float': {'n': 'm', 'x': [1,'r', {}]},
+              'string': True,
+              'dict': 'text',
+              'list': 66.3,
+            }
+
+        for k,v in extras_to_set.iteritems():
+            a.set_extra(k, v)
+            
+        self.assertEquals({k: v for k, v in a.iterextras()}, extras_to_set)
+        
+        for k,v in new_extras.iteritems():
+            # I delete one by one the keys and check if the operation is
+            # performed correctly
+            a.set_extra(k,v)
+        
+        # I update extras_to_set with the new entries, and do the comparison
+        # again
+        extras_to_set.update(new_extras)
+        self.assertEquals({k: v for k, v in a.iterextras()}, extras_to_set)
 
     def test_versioning_lowlevel(self):
         """

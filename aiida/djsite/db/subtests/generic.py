@@ -123,7 +123,7 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
     def test_with_subclasses(self):
         from aiida.orm import Calculation, CalculationFactory, Data, DataFactory
         
-        attribute_name = self.__class__.__name__ + ".test_with_subclasses"
+        extra_name = self.__class__.__name__ + ".test_with_subclasses"
         calc_params = {
             'computer': self.computer,
             'resources': {'num_machines': 1,
@@ -135,16 +135,16 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
         
         a1 = Calculation(**calc_params).store()
         # To query only these nodes later
-        a1.set_extra(attribute_name, True)
+        a1.set_extra(extra_name, True)
         a2 = TemplateReplacerCalc(**calc_params).store()
         # To query only these nodes later
-        a2.set_extra(attribute_name, True)
+        a2.set_extra(extra_name, True)
         a3 = Data().store()        
-        a3.set_extra(attribute_name, True)
+        a3.set_extra(extra_name, True)
         a4 = ParameterData({'a':'b'}).store()        
-        a4.set_extra(attribute_name, True)
+        a4.set_extra(extra_name, True)
         a5 = Node().store()
-        a5.set_extra(attribute_name, True)
+        a5.set_extra(extra_name, True)
         # I don't set the extras, just to be sure that the filtering works
         # The filtering is needed because other tests will put stuff int he DB
         a6 = Calculation(**calc_params)
@@ -153,29 +153,29 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
         a7.store()
 
         # Query by calculation
-        results = list(Calculation.query(dbattributes__key=attribute_name))
+        results = list(Calculation.query(dbextras__key=extra_name))
         # a3, a4, a5 should not be found because they are not Calculations.
         # a6, a7 should not be found because they have not the attribute set.
         self.assertEquals(set([i.pk for i in results]),
                           set([a1.pk, a2.pk]))        
         
         # Same query, but by the generic Node class
-        results = list(Node.query(dbattributes__key=attribute_name))
+        results = list(Node.query(dbextras__key=extra_name))
         self.assertEquals(set([i.pk for i in results]),
                           set([a1.pk, a2.pk, a3.pk, a4.pk, a5.pk]))
         
         # Same query, but by the Data class
-        results = list(Data.query(dbattributes__key=attribute_name))
+        results = list(Data.query(dbextras__key=extra_name))
         self.assertEquals(set([i.pk for i in results]),
                           set([a3.pk, a4.pk]))
         
         # Same query, but by the ParameterData subclass
-        results = list(ParameterData.query(dbattributes__key=attribute_name))
+        results = list(ParameterData.query(dbextras__key=extra_name))
         self.assertEquals(set([i.pk for i in results]),
                           set([a4.pk]))
         
         # Same query, but by the TemplateReplacerCalc subclass
-        results = list(TemplateReplacerCalc.query(dbattributes__key=attribute_name))
+        results = list(TemplateReplacerCalc.query(dbextras__key=extra_name))
         self.assertEquals(set([i.pk for i in results]),
                           set([a2.pk]))
 
@@ -277,7 +277,7 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
         # Query for related fields using django syntax
         # Note that being myvalue an attribute, it is internally stored starting
         # with an underscore
-        nodes_with_given_attribute = Node.query(dbattributes__key='_myvalue',
+        nodes_with_given_attribute = Node.query(dbattributes__key='myvalue',
                                                 dbattributes__ival=145)
         # should be entry a3
         self.assertEquals(len(nodes_with_given_attribute), 1)
@@ -736,15 +736,10 @@ class TestNodeBasic(AiidaTestCase):
 
         a.store()
 
-        # I check that I cannot store a extras with key starting with underscore
-        with self.assertRaises(ValueError):
-            a.set_extra('_start_with_underscore', 'some text')
-
         a_string = 'some non-boolean value'
-        # I now set
+        # I now set an extra with the same name of an attr
         a.set_extra('bool', a_string)
-
-        # I check that there is no name clash
+        # and I check that there is no name clash
         self.assertEquals(self.boolval, a.get_attr('bool'))
         self.assertEquals(a_string, a.get_extra('bool'))
         
@@ -884,21 +879,22 @@ class TestNodeBasic(AiidaTestCase):
         # directly loading datetime.datetime.now(), or you can get a
         # "can't compare offset-naive and offset-aware datetimes" error
         from django.utils import timezone
+        from aiida.djsite.utils import get_automatic_user
         import time
 
         a = Node()
         with self.assertRaises(ModificationNotAllowed):
-            a.add_comment('text')
-        self.assertEquals(a.get_comments(),[])
+            a.add_comment('text',user=get_automatic_user())
+        self.assertEquals(a.get_comments_tuple(),[])
         a.store()
         before = timezone.now()
         time.sleep(1) # I wait 1 second because MySql time precision is 1 sec
-        a.add_comment('text')
-        a.add_comment('text2')        
+        a.add_comment('text',user=get_automatic_user())
+        a.add_comment('text2',user=get_automatic_user())
         time.sleep(1)
         after = timezone.now()
 
-        comments = a.get_comments()
+        comments = a.get_comments_tuple()
         
         times = [i[2] for i in comments]
         for time in times:

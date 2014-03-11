@@ -362,6 +362,7 @@ def import_qeinput(fname):
     
 
 def import_cif(fname):
+    from aiida.djsite.utils import get_automatic_user
     
     import ase.io
     import aiida.orm.data.structure as struct
@@ -369,7 +370,7 @@ def import_cif(fname):
     ase_s = ase.io.read(fname, format="cif")
     s = struct.StructureData(ase=ase_s)
     s.store()
-    s.add_comment("Origin: "+fname)
+    s.add_comment("Origin: "+fname, user=get_automatic_user())
     
     return s
 

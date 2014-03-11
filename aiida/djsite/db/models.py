@@ -215,7 +215,9 @@ attrdatatype_choice = (
     ('txt', 'txt'),
     ('bool', 'bool'),
     ('date', 'date'),
-    ('json', 'json'))
+    ('json', 'json'),
+    ('dict', 'dict'),
+    ('list', 'list'))
 
 class DbAttribute(m.Model):
     '''

@@ -312,6 +312,7 @@ class TestNodeBasic(AiidaTestCase):
         a.set_attr('k6', self.listval)
         a.set_attr('k7', self.emptydict)
         a.set_attr('k8', self.emptylist)
+        a.set_attr('k9', None)
 
         # Now I check if I can retrieve them, before the storage
         self.assertEquals(self.boolval,   a.get_attr('k1'))
@@ -322,6 +323,7 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(self.listval,   a.get_attr('k6'))
         self.assertEquals(self.emptydict, a.get_attr('k7'))
         self.assertEquals(self.emptylist, a.get_attr('k8'))
+        self.assertIsNone(a.get_attr('k9'))
 
         # And now I try to delete the keys
         a.del_attr('k1')
@@ -332,6 +334,7 @@ class TestNodeBasic(AiidaTestCase):
         a.del_attr('k6')
         a.del_attr('k7')
         a.del_attr('k8')
+        a.del_attr('k9')
 
         with self.assertRaises(AttributeError):
             # I delete twice the same attribute
@@ -376,6 +379,7 @@ class TestNodeBasic(AiidaTestCase):
         
         a = Node()
         attrs_to_set = {
+            'none': None,
             'bool': self.boolval,
             'integer': self.intval,
             'float': self.floatval,
@@ -666,6 +670,7 @@ class TestNodeBasic(AiidaTestCase):
 
     def test_attr_after_storing(self):
         a = Node()
+        a.set_attr('none', None)
         a.set_attr('bool', self.boolval)
         a.set_attr('integer', self.intval)
         a.set_attr('float', self.floatval)
@@ -676,6 +681,7 @@ class TestNodeBasic(AiidaTestCase):
         a.store()
 
         # Now I check if I can retrieve them, before the storage
+        self.assertIsNone(a.get_attr('none'))
         self.assertEquals(self.boolval,   a.get_attr('bool'))
         self.assertEquals(self.intval,    a.get_attr('integer'))
         self.assertEquals(self.floatval,  a.get_attr('float'))
@@ -693,6 +699,7 @@ class TestNodeBasic(AiidaTestCase):
 
     def test_attr_with_reload(self):
         a = Node()
+        a.set_attr('none', None)
         a.set_attr('bool', self.boolval)
         a.set_attr('integer', self.intval)
         a.set_attr('float', self.floatval)
@@ -703,6 +710,7 @@ class TestNodeBasic(AiidaTestCase):
         a.store()
 
         b = Node(uuid=a.uuid)
+        self.assertIsNone(a.get_attr('none'))
         self.assertEquals(self.boolval,   b.get_attr('bool'))
         self.assertEquals(self.intval,    b.get_attr('integer'))
         self.assertEquals(self.floatval,  b.get_attr('float'))
@@ -746,6 +754,7 @@ class TestNodeBasic(AiidaTestCase):
         """
         a = Node()
         attrs_to_set = {
+            'none': None,
             'bool': self.boolval,
             'integer': self.intval,
             'float': self.floatval,

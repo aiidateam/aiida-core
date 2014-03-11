@@ -217,7 +217,8 @@ attrdatatype_choice = (
     ('date', 'date'),
     ('json', 'json'),
     ('dict', 'dict'),
-    ('list', 'list'))
+    ('list', 'list'),
+    ('none', 'none'))
 
 class DbAttribute(m.Model):
     '''
@@ -247,7 +248,15 @@ class DbAttribute(m.Model):
         import datetime 
         from django.utils.timezone import is_naive, make_aware, get_current_timezone
         
-        if isinstance(value,bool):
+        if value is None:
+            self.datatype = 'none'
+            self.bval = None
+            self.tval = ''
+            self.ival = None
+            self.fval = None
+            self.dval = None            
+            
+        elif isinstance(value,bool):
             self.datatype = 'bool'
             self.bval = value
             self.tval = ''
@@ -319,7 +328,9 @@ class DbAttribute(m.Model):
         import json
         from django.utils.timezone import is_naive, make_aware, get_current_timezone
 
-        if self.datatype == 'bool':
+        if self.datatype == 'none':
+            return None
+        elif self.datatype == 'bool':
             return self.bval
         elif self.datatype == 'int':
             return self.ival

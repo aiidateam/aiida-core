@@ -362,6 +362,12 @@ class DbAttributeBaseClass(m.Model):
             raise DbContentError("The type field '{}' is not recognized".format(
                     self.datatype))        
 
+    def delvalue(self):
+        """
+        Deletes this value.
+        """
+        self.delete()
+    
     @python_2_unicode_compatible
     def __str__(self):
         return "[{} ({})].{} ({})".format(

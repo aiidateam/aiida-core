@@ -28,6 +28,23 @@
 		<!--[if lt IE 7]>
 			<p class="chromeframe">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> or <a href="http://www.google.com/chromeframe/?redirect=true">activate Google Chrome Frame</a> to improve your experience.</p>
 		<![endif]-->
+		{% if not user.is_authenticated %}
+		<div id="modal-login" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="loginModal" aria-hidden="true">
+			<div class="modal-dialog modal-sm">
+				<div class="modal-content">
+					<div class="modal-header">
+						<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+						<h4 class="modal-title">Login</h4>
+					</div>
+					<div class="modal-body">
+						{% block modal %}
+							{% include "awi/login_form.html" with base_template='awi/base_modal.html' %}
+						{% endblock %}
+					</div>
+				</div>
+			</div>
+		</div>
+		{% endif %}
 		<nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
 			<div class="container">
 				<div class="navbar-header">
@@ -47,25 +64,19 @@
 					{% if user.is_authenticated %}
 					<ul class="nav navbar-nav navbar-right">
 						<li class="dropdown">
-							<a href="#" class="dropdown-toggle" data-toggle="dropdown">{{ user.username }} <b class="caret"></b></a>
+							<a href="#" class="dropdown-toggle" data-toggle="dropdown"><span class="glyphicon glyphicon-user"></span>&nbsp;&nbsp;{{ user.username }} <b class="caret"></b></a>
 							<ul class="dropdown-menu">
 								<li class="disabled"><a href="#">Account</a></li>
-								<li class="divider"></li>
 								<li class="disabled"><a href="#">Settings</a></li>
+								<li class="divider"></li>
+								<li><a href="{% url 'awi:logout' %}">Logout</a></li>
 							</ul>
 						</li>
 					</ul>
 					{% else %}
-					<form class="navbar-form navbar-right" action="{% url 'awi:login' %}">
-						{% csrf_token %}
-						<div class="form-group">
-							<input type="text" placeholder="Username" class="form-control">
-						</div>
-						<div class="form-group">
-							<input type="password" placeholder="Password" class="form-control">
-						</div>
-						<button type="submit" class="btn btn-success">Sign in</button>
-					</form>
+					<div class="navbar-right">
+						<button type="button" class="btn btn-success navbar-btn" data-toggle="modal" data-target="#modal-login">Sign in</button>
+					</div>
 					{% endif %}
 				</div><!--/.navbar-collapse -->
 			</div><!--/.container -->
@@ -74,7 +85,6 @@
 		<div class="container">
 			<!-- error message for people without javascript (display controlled by CSS) -->
 			<div class="alert alert-danger" id="nojs">
-			  <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
 			  <strong>Oh my !</strong><br>AiiDA Web Interface doesn't work without JavaScript enabled, we're utterly sorry about that. If you don't know how to activate JavaScript, head up to this website : <a href="http://enable-javascript.com/" class="alert-link" target="_blank">enable-javascript.com</a>.
 			</div>
 			{% block main %}

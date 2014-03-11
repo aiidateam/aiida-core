@@ -3,6 +3,7 @@ from tastypie import fields, utils
 from tastypie.authentication import SessionAuthentication
 from tastypie.authorization import DjangoAuthorization
 from tastypie.resources import ModelResource, ALL, ALL_WITH_RELATIONS
+from tastypie.validation import Validation
 from aiida.djsite.db.models import (
         DbAuthInfo, 
         DbAttribute,
@@ -10,9 +11,48 @@ from aiida.djsite.db.models import (
         DbGroup,
         DbNode,
         )
+from aiida.transport import Transport, TransportFactory
+from aiida.scheduler import Scheduler, SchedulerFactory
+
+class DbComputerValidation(Validation):
+    def is_valid(self, bundle, request=None):
+        """
+        Check the validity of provided data for a computer.
+        
+        :note: if you need to modify data, one should inherit from the
+            CleanedDataFormValidation class.
+        
+        :return: an empty dictionary means no error.
+            Otherwise, a dictionary with key=field with error,
+            and value=list of errors, even if there is only one.
+        """
+        if not bundle.data:
+            return {'__all__': 'No data found...'}
+        
+        errors = {}
+        
+        ## For the time being, I only check the scheduler_type and the
+        ## transport_type
+        ## TODO: implement complete validation
+        
+        # TODO: if it is too slow, cache these?
+        transports_list = Transport.get_valid_transports()
+        schedulers_list = Scheduler.get_valid_schedulers()
+                                
+        for k, v in bundle.data.iteritems():
+            if k == "transport_type":
+                if v not in transports_list:
+                    errors[k] = "Invalid transport type"
+            elif k == "scheduler_type":
+                if v not in schedulers_list:
+                    errors[k] = "Invalid scheduler type"
+            elif k == "name":
+                if not v:
+                    errors[k] = "Zero-length computer name not allowed"
+        
+        return errors
 
 # To discuss/implement/activate:
-# - Authentication + authorization
 # - Caching, Throttling, 
 
 class UserResource(ModelResource):
@@ -36,7 +76,7 @@ class DbComputerResource(ModelResource):
     class Meta:
         queryset = DbComputer.objects.all()
         resource_name = 'dbcomputer'
-        allowed_methods = ['get', 'post', 'put']
+        allowed_methods = ['get', 'post', 'patch']
         filtering = {
             'id': ['exact'],
             'uuid': ALL,
@@ -52,6 +92,7 @@ class DbComputerResource(ModelResource):
 
         authentication = SessionAuthentication()
         authorization = DjangoAuthorization()
+        validation = DbComputerValidation()
     
     def dehydrate_metadata(self, bundle):
         import json
@@ -62,7 +103,80 @@ class DbComputerResource(ModelResource):
             data = None
         return data
 
+    def hydrate(self, bundle):
+#        from tastypie.exceptions import ImmediateHttpResponse
+#        from tastypie.http import HttpForbidden
+
+        # Remove 'uuid' and 'id' data from the modify request, if present 
+        # (The 'None' default field is meant to avoid Exceptions if the field
+        # is not provided)
+        bundle.data.pop('uuid', None)        
+        bundle.data.pop('id', None)
+#        raise ImmediateHttpResponse(
+#            HttpForbidden("Modification not allowed.")
+#            )                                   
+        return bundle
+
+    def hydrate_metadata(self, bundle):
+        import json
+        
+        bundle.data['metadata'] = json.dumps(bundle.data['metadata'])
+        
+        return bundle
+
+    def hydrate_transport_params(self, bundle):
+        import json
+        
+        bundle.data['transport_params'] = json.dumps(bundle.data['transport_params'])
+        
+        return bundle
+
+    def dehydrate_transport_params(self, bundle):
+        import json
+        
+        try:
+            data = json.loads(bundle.data['transport_params'])
+        except (ValueError, TypeError):
+            data = None
+        return data
+
+    def build_schema(self):
+        """
+        Improve the information provided in the schema
+        """
+        # Get the default schema
+        new_schema = super(DbComputerResource, self).build_schema()
+        
+        ###########################################
+        # VALID CHOICES FOR TRANSPORT AND SCHEDULER
+        tlist = Transport.get_valid_transports()
+        slist = Scheduler.get_valid_schedulers()
+
+        tdict = {}
+        sdict = {}
+        for tname in tlist:
+            t = TransportFactory(tname)
+            tdict[tname] = {'doc': t.get_short_doc()}
+        for sname in slist:
+            s = SchedulerFactory(sname)
+            sdict[sname] = {'doc': s.get_short_doc()}
+        # Add the required fields
+        new_schema['fields']['scheduler_type']['valid_choices'] = sdict
+        new_schema['fields']['transport_type']['valid_choices'] = tdict
+
+        ############################################
+        # Fix the 'type' values, where appropriate
+        new_schema['fields']['metadata']['type'] = "dictionary"
+        new_schema['fields']['transport_params']['type'] = "dictionary"
+
+        return new_schema
+
+
 class DbAuthInfoResource(ModelResource):
+    # TODO: IMPORTANT! 
+    # Implement here a authorization allowing each user to see only his own
+    # entries, as shown for instance here:
+    # http://django-tastypie.readthedocs.org/en/latest/authorization.html
     aiidauser = fields.ToOneField(UserResource, 'aiidauser', full=True) 
     computer = fields.ToOneField(DbComputerResource, 'computer')
     
@@ -75,6 +189,11 @@ class DbAuthInfoResource(ModelResource):
             'computer': ALL_WITH_RELATIONS,
             'aiidauser': ALL_WITH_RELATIONS,
             }
+        
+        authentication = SessionAuthentication()
+        # As discussed above: improve this with authorization allowing each
+        # user to see only his own DbAuthInfo data
+        authorization = DjangoAuthorization()
 
     def dehydrate_auth_params(self, bundle):
         import json
@@ -114,8 +233,10 @@ class DbNodeResource(ModelResource):
     outputs = fields.ToManyField('self', 'outputs', related_name='inputs', full=False, use_in='detail')   
     inputs = fields.ToManyField('self', 'inputs', related_name='outputs', full=False, use_in='detail')
 
-    dbattributes = fields.ToManyField('aiida.djsite.db.api.DbAttributeResource', 'attributes', related_name='dbnode', full=False, use_in='detail')
-    attributes = fields.ToManyField('aiida.djsite.db.api.AttributeResource', 'attributes', related_name='dbnode', full=False, use_in='detail')
+    dbattributes = fields.ToManyField('aiida.djsite.db.api.DbAttributeResource', 'dbattributes', related_name='dbnode', full=False, use_in='detail')
+    ## To double check, they do not work right now
+    #attributes = fields.ToManyField('aiida.djsite.db.api.AttributeResource', 'attributes', related_name='dbnode', null=True, full=False, use_in='detail')
+    #metadata = fields.ToManyField('aiida.djsite.db.api.MetadataResource', 'metadata', related_name='dbnode', null=True, full=False, use_in='detail')
 
     ## Transitive-closure links
     ## Hidden for the time being, they could be too many
@@ -198,7 +319,10 @@ class AttributeResource(ModelResource):
     def dehydrate(self, bundle):
         # Remove all the fields with name matching the pattern '?val'
         # (bval, ival, tval, dval, fval, ...)
-        for k in bundle.data:
+        
+        # I have to make a list out of it otherwise I get a
+        # "dictionary changed during iteration" error
+        for k in list(bundle.data.keys()):
             if len(k) == 4 and k.endswith('val'):
                 del bundle.data[k]
         
@@ -259,7 +383,10 @@ class MetadataResource(ModelResource):
     def dehydrate(self, bundle):
         # Remove all the fields with name matching the pattern '?val'
         # (bval, ival, tval, dval, fval, ...)
-        for k in bundle.data.keys():
+
+        # I have to make a list out of it otherwise I get a
+        # "dictionary changed during iteration" error
+        for k in list(bundle.data.keys()):
             if len(k) == 4 and k.endswith('val'):
                 del bundle.data[k]
         

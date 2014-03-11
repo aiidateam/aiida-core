@@ -276,14 +276,19 @@ CELERY_RESULT_BACKEND = "database"
 
 CELERYBEAT_SCHEDULER = "djcelery.schedulers.DatabaseScheduler"
 
+djcelery_tasks = {
+    'calculationretrieve': 'update-status-and-retrieve',
+    'workflow': 'workflow_stepper',
+    }
+
 # Every 30 seconds it is started, but for how it is done internally, if the previous loop
 # is still working, it won't restart twice at the same time.
 CELERYBEAT_SCHEDULE = {
-    'update-status-and-retrieve': {
+    djcelery_tasks['calculationretrieve']: {
         'task':'aiida.djsite.db.tasks.update_and_retrieve',
         'schedule': timedelta(seconds=30),
         },
-    'workflow_stepper': {
+    djcelery_tasks['workflow']: {
         'task':'aiida.djsite.db.tasks.workflow_stepper',
         'schedule': timedelta(seconds=5),
         },

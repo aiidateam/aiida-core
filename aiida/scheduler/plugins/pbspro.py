@@ -45,9 +45,7 @@ class PbsproJobResource(NodeNumberJobResource):
 
 class PbsproScheduler(aiida.scheduler.Scheduler):
     """
-    PBSPro implementation of the scheduler functions.
-
-    TODO: implement __unicode__ and __str__ methods.
+    Support for the PBSPro scheduler (http://www.pbsworks.com/). Should work also with PBS and Torque (http://www.adaptivecomputing.com/products/open-source/torque/).
     """
     _logger = aiida.scheduler.Scheduler._logger.getChild('pbspro')
     

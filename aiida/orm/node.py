@@ -217,10 +217,10 @@ class Node(object):
         """
         from aiida.orm import Computer
         
-        if self.dbnode.computer is None:
+        if self.dbnode.dbcomputer is None:
             return None
         else:
-            return Computer(dbcomputer=self.dbnode.computer)
+            return Computer(dbcomputer=self.dbnode.dbcomputer)
 
 
     @property
@@ -838,7 +838,7 @@ class Node(object):
         newobject.dbnode.label = self.dbnode.label # Inherit label
         # TODO: add to the description the fact that this was a copy?
         newobject.dbnode.description = self.dbnode.description # Inherit description
-        newobject.dbnode.computer = self.dbnode.computer # Inherit computer
+        newobject.dbnode.dbcomputer = self.dbnode.dbcomputer # Inherit computer
         
         for k, v in self.iterattrs(also_updatable=False):
             newobject.set_attr(k,v)

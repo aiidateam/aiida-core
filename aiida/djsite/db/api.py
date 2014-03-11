@@ -179,7 +179,7 @@ class DbAuthInfoResource(ModelResource):
     # entries, as shown for instance here:
     # http://django-tastypie.readthedocs.org/en/latest/authorization.html
     aiidauser = fields.ToOneField(UserResource, 'aiidauser', full=True) 
-    computer = fields.ToOneField(DbComputerResource, 'computer')
+    dbcomputer = fields.ToOneField(DbComputerResource, 'dbcomputer')
     
     class Meta:
         queryset = DbAuthInfo.objects.all()
@@ -187,7 +187,7 @@ class DbAuthInfoResource(ModelResource):
         allowed_methods = ['get']
         filtering = {
             'id': ['exact'],
-            'computer': ALL_WITH_RELATIONS,
+            'dbcomputer': ALL_WITH_RELATIONS,
             'aiidauser': ALL_WITH_RELATIONS,
             }
         

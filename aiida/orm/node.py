@@ -11,7 +11,8 @@ from aiida.common.folders import RepositoryFolder, SandboxFolder
 # Name to be used for the section
 _section_name = 'node'
 
-# The name of the subfolder in which to put the files/directories added with add_path
+# The name of the subfolder in which to put the files/directories
+# added with add_path
 _path_subfolder_name = 'path'
 
 class Node(object):
@@ -20,15 +21,16 @@ class Node(object):
 
     Stores attributes starting with an underscore.
 
-    Caches files and attributes before the first save, and saves everything only on store().
-    After the call to store(), in general attributes cannot be changed, except for those
-    listed in the self._updatable_attributes tuple (empty for this class, can be
-    extended in a subclass).
+    Caches files and attributes before the first save, and saves everything
+    only on store(). After the call to store(), in general attributes cannot
+    be changed, except for those listed in the self._updatable_attributes
+    tuple (empty for this class, can be extended in a subclass).
 
     Only after storing (or upon loading from uuid) extras can be modified
     and in this case they are directly set on the db.
 
-    In the plugin, also set the _plugin_type_string, to be set in the DB in the 'type' field.
+    In the plugin, also set the _plugin_type_string, to be set in the DB in
+    the 'type' field.
     """
     class __metaclass__(type):
         """
@@ -54,7 +56,8 @@ class Node(object):
             
             return newcls
 
-    # A tuple with attributes that can be updated even after the call of the store() method
+    # A tuple with attributes that can be updated even after
+    # the call of the store() method
     _updatable_attributes = tuple() 
     
     @property
@@ -125,9 +128,9 @@ class Node(object):
         
     def __int__(self):
         """
-        Convert the class to an integer. This is needed to allow querying with Django.
-        Be careful, though, not to pass it to a wrong field! This only returns the
-        local DB principal key value.
+        Convert the class to an integer. This is needed to allow querying
+        with Django. Be careful, though, not to pass it to a wrong field!
+        This only returns the local DB principal key (pk) value.
         
         :return: the integer pk of the node or None if not stored.
         """
@@ -140,8 +143,9 @@ class Node(object):
         """
         Initialize the object Node.
         
-        :param optional uuid: if present, the Node with given uuid is loaded from the database.
-                  (It is not possible to assign a uuid to a new Node.)
+        :param optional uuid: if present, the Node with given uuid is
+          loaded from the database.
+          (It is not possible to assign a uuid to a new Node.)
         """
         from aiida.djsite.utils import get_automatic_user
         from aiida.djsite.db.models import DbNode
@@ -152,7 +156,8 @@ class Node(object):
         
         if uuid is not None:
             if kwargs:
-                raise ValueError("If you pass a UUID, you cannot pass any further parameter")
+                raise ValueError("If you pass a UUID, you cannot pass any "
+                                 "further parameter")
             # If I am loading, I cannot modify it
             self._to_be_stored = False
             try:
@@ -162,11 +167,13 @@ class Node(object):
                 raise NotExistent("No entry with the UUID {} found".format(
                     uuid))
 
-            self._repo_folder = RepositoryFolder(section=_section_name, uuid=self.uuid)
+            self._repo_folder = RepositoryFolder(section=_section_name,
+                                                 uuid=self.uuid)
             try:
                 self.validate()
             except ValidationError as e:
-                raise DbContentError("The data in the DB with UUID={} is not valid for class {}: {}".format(
+                raise DbContentError("The data in the DB with UUID={} is not "
+                                     "valid for class {}: {}".format(
                     uuid, self.__class__.__name__, e.message))
         else:
             self._dbnode = DbNode.objects.create(user=get_automatic_user())
@@ -177,7 +184,8 @@ class Node(object):
             self.path_subfolder.create()
             # Used only before the first save
             self._attrs_cache = {}
-            self._repo_folder = RepositoryFolder(section=_section_name, uuid=self.uuid)
+            self._repo_folder = RepositoryFolder(section=_section_name,
+                                                 uuid=self.uuid)
 
     @classmethod
     def query(cls,*args,**kwargs):
@@ -195,7 +203,9 @@ class Node(object):
 
         if cls._plugin_type_string:
             if not cls._plugin_type_string.endswith('.'):
-                raise InternalError("The plugin type string does not finish with a dot??")
+                raise InternalError("The plugin type string does not "
+                                    "finish with a dot??")
+            
             
             # If it is 'calculation.Calculation.', we want to filter
             # for things that start with 'calculation.' and so on
@@ -283,10 +293,12 @@ class Node(object):
         Check if the attributes and files retrieved from the DB are valid.
         Raise a ValidationError if something is wrong.
 
-        Must be able to work even before storing: therefore, use the get_attr and similar methods
-        that automatically read either from the DB or from the internal attribute cache.
+        Must be able to work even before storing: therefore, use the get_attr
+        and similar methods that automatically read either from the DB or
+        from the internal attribute cache.
 
-        For the base class, this is always valid. Subclasses will reimplement this.
+        For the base class, this is always valid. Subclasses will
+        reimplement this.
         In the subclass, always call the super().validate() method first!
         """
         return True
@@ -338,7 +350,8 @@ class Node(object):
         if self.uuid == src.uuid:
             raise ValueError("Cannot link to itself")
 
-        # Check if the source allows output links from this node (will raise ValueError if 
+        # Check if the source allows output links from this node
+        # (will raise ValueError if 
         # this is not the case)
         src.can_link_as_output(self)
 
@@ -362,9 +375,11 @@ class Node(object):
         
 
         if self._to_be_stored:
-            raise ModificationNotAllowed("You have to store the destination node to make link")
+            raise ModificationNotAllowed(
+                "You have to store the destination node to make link")
         if src._to_be_stored:
-            raise ModificationNotAllowed("You have to store the source node to make a link")
+            raise ModificationNotAllowed(
+                "You have to store the source node to make a link")
 
 
         # Check for cycles. This works if the transitive closure is enabled; if it 
@@ -374,7 +389,8 @@ class Node(object):
         # I am linking src->self; a loop would be created if a DbPath exists already
         # in the TC table from self to src
         if len(DbPath.objects.filter(parent=self.dbnode, child=src.dbnode))>0:
-            raise ValueError("The link you are attempting to create would generate a loop")
+            raise ValueError(
+                "The link you are attempting to create would generate a loop")
 
         if label is None:
             autolabel_idx = 1
@@ -389,9 +405,10 @@ class Node(object):
             while True:
                 safety_counter += 1
                 if safety_counter > 100:
-                    # Well, if you have more than 100 concurrent addings to the same 
-                    # node, you are clearly doing something wrong...
-                    raise InternalError("Hey! We found more than 100 concurrent adds of links "
+                    # Well, if you have more than 100 concurrent addings
+                    # to the same node, you are clearly doing something wrong...
+                    raise InternalError("Hey! We found more than 100 concurrent"
+                        " adds of links "
                         "to the same nodes! Are you really doing that??")
                 try:
                     # transactions are needed here for Postgresql:
@@ -410,7 +427,8 @@ class Node(object):
                 # transactions are needed here for Postgresql:
                 # https://docs.djangoproject.com/en/1.5/topics/db/transactions/#handling-exceptions-within-postgresql-transactions
                 sid = transaction.savepoint()
-                DbLink.objects.create(input=src.dbnode, output=self.dbnode, label=label)
+                DbLink.objects.create(input=src.dbnode, output=self.dbnode,
+                                      label=label)
                 transaction.savepoint_commit(sid)
             except IntegrityError as e:
                 transaction.savepoint_rollback(sid)
@@ -475,12 +493,12 @@ class Node(object):
         """
         Return a list of nodes that enter (directly) in this node
 
-        :param type: If specified, should be a class, and it filters only elements of that
-                     specific type (or a subclass of 'type')
+        :param type: If specified, should be a class, and it filters only
+            elements of that specific type (or a subclass of 'type')
         :param also_labels: If False (default) only return a list of input nodes.
-                If True, return a list of tuples, where each tuple has the following
-                format: ('label', Node)
-                with 'label' the link label, and Node a Node instance or subclass
+                If True, return a list of tuples, where each tuple has the
+                following format: ('label', Node), with 'label' the link label,
+                and Node a Node instance or subclass
         """
         from aiida.djsite.db.models import DbLink
 
@@ -504,12 +522,12 @@ class Node(object):
         """
         Return a list of nodes that exit (directly) from this node
 
-        :param type: if specified, should be a class, and it filters only elements of that
-                specific type (or a subclass of 'type')
+        :param type: if specified, should be a class, and it filters only
+                elements of that specific type (or a subclass of 'type')
         :param also_labels: if False (default) only return a list of input nodes.
-                If True, return a list of tuples, where each tuple has the following
-                format: ('label', Node)
-                with 'label' the link label, and Node a Node instance or subclass
+                If True, return a list of tuples, where each tuple has the 
+                following format: ('label', Node), with 'label' the link label,
+                and Node a Node instance or subclass
         """
         from aiida.djsite.db.models import DbLink
 
@@ -531,19 +549,20 @@ class Node(object):
             
     def set_attr(self, key, value):
         """
-        Set a new attribute to the Node.
+        Set a new attribute to the Node (in the DbAttribute table).
         
         :param str key: key name
         :param value: its value
         :raise: ModificationNotAllowed if cannot add such attribute.
         """
         if self._to_be_stored:
-            self._attrs_cache["_{}".format(key)] = value
+            self._attrs_cache[key] = value
         else:
             if key in self._updatable_attributes:
-                return self._set_attribute_db('_{}'.format(key),value)
+                return self._set_attribute_db(key,value)
             else:
-                raise ModificationNotAllowed("Cannot set an attribute after saving a node")
+                raise ModificationNotAllowed(
+                    "Cannot set an attribute after saving a node")
 
     def del_attr(self, key):
         """
@@ -555,14 +574,16 @@ class Node(object):
         """
         if self._to_be_stored:
             try:
-                del self._attrs_cache["_{}".format(key)]
+                del self._attrs_cache[key]
             except KeyError:
-                raise AttributeError("DbAttribute {} does not exist".format(key))
+                raise AttributeError(
+                    "DbAttribute {} does not exist".format(key))
         else:
             if key in self._updatable_attributes:
-                return self._del_attribute_db('_{}'.format(key))
+                return self._del_attribute_db(key)
             else:
-                raise ModificationNotAllowed("Cannot delete an attribute after saving a node")
+                raise ModificationNotAllowed("Cannot delete an attribute after "
+                                             "saving a node")
 
 
     def get_attr(self, key, *args):
@@ -578,16 +599,18 @@ class Node(object):
         :raise ValueError: If more than two arguments are passed to get_attr
         """
         if len(args) > 1:
-            raise ValueError("After the key name you can pass at most one value, that is "
-                             "the default value to be used if no attribute is found.")
+            raise ValueError("After the key name you can pass at most one"
+                             "value, that is the default value to be used "
+                             "if no attribute is found.")
         try:
             if self._to_be_stored:
                 try:
-                    return self._attrs_cache["_{}".format(key)]
+                    return self._attrs_cache[key]
                 except KeyError:
-                    raise AttributeError("DbAttribute {} does not exist".format(key))
+                    raise AttributeError("DbAttribute '{}' does "
+                                         "not exist".format(key))
             else:
-                return self._get_attribute_db('_{}'.format(key))
+                return self._get_attribute_db(key)
         except AttributeError as e:
             try:
                 return args[0]
@@ -600,33 +623,26 @@ class Node(object):
         No .store() to be called.
         Can be used *only* after saving.
 
-        extras keys cannot start with an underscore.
-        
         :param string key: key name
         :param value: key value
         """
-        if key.startswith('_'):
-            raise ValueError("An extra key cannot start with an underscore")
         if self._to_be_stored:
-            raise ModificationNotAllowed("The extras of a node can be set only after "
-                                         "storing the node")
-        self._set_attribute_db(key,value)
+            raise ModificationNotAllowed(
+                "The extras of a node can be set only after "
+                "storing the node")
+        self._set_extra_db(key,value)
             
     def get_extra(self,key):
         """
         Get the value of a extras, reading directly from the DB!
         Since extras can be added only after storing the node, this
         function is meaningful to be called only after the .store() method.
-
-        extras keys cannot start with an underscore.
         
         :param str key: key name
         :return: the key value
         :raise: AttributeError: if key starts with underscore
         """
-        if key.startswith('_'):
-            raise AttributeError("An extras key cannot start with an underscore")
-        return self._get_attribute_db(key)
+        return self._get_extra_db(key)
 
     def del_extra(self,key):
         """
@@ -634,19 +650,16 @@ class Node(object):
         The action is immediately performed on the DB.
         Since extras can be added only after storing the node, this
         function is meaningful to be called only after the .store() method.
-
-        extras keys cannot start with an underscore.
         
         :param str key: key name
         :raise: AttributeError: if key starts with underscore
         :raise: ModificationNotAllowed: if the node has already been stored
         """
-        if key.startswith('_'):
-            raise ValueError("An extras key cannot start with an underscore")
         if self._to_be_stored:
-            raise ModificationNotAllowed("The extras of a node can be set and deleted "
-                                         "only after storing the node")
-        self._del_attribute_db(key)
+            raise ModificationNotAllowed(
+                "The extras of a node can be set and deleted "
+                "only after storing the node")
+        self._del_extra_db(key)
 
     def extras(self):
         """
@@ -654,18 +667,16 @@ class Node(object):
         
         :return: a list of strings
         """
-        from django.db.models import Q
-        # I return the list of keys
-        return self._list_all_attributes_db().filter(
-            ~Q(key__startswith='_')).distinct().values_list('key', flat=True)
+        return list([i[0] for i in self.iterextras()])
 
     def iterextras(self):
         """
         Iterator over the extras, returning tuples (key, value)
+        
+        :todo: verify that I am not creating a list internally
         """
         from django.db.models import Q
-        extraslist = self._list_all_attributes_db().filter(
-            ~Q(key__startswith='_'))
+        extraslist = self._list_all_extras_db()
         for e in extraslist:
             yield (e.key, e.getvalue())
             
@@ -676,24 +687,21 @@ class Node(object):
         :param bool also_updatable: if False, does not iterate over 
                       attributes that are updatable
         """
-#        TODO: check what happens if someone stores the object while the iterator is
-#              being used!
-        updatable_list = ["_{}".format(attr) for attr in self._updatable_attributes]
+#        TODO: check what happens if someone stores the object while
+#        the iterator is being used!
+        updatable_list = [attr for attr in self._updatable_attributes]
         
         if self._to_be_stored:
             for k, v in self._attrs_cache.iteritems():
                 if not also_updatable and k in updatable_list:
                     continue
-                # I strip the underscore
-                yield (k[1:],v)
+                yield (k,v)
         else:          
-            attrlist = self._list_all_attributes_db().filter(
-                key__startswith='_')
+            attrlist = self._list_all_attributes_db()
             for attr in attrlist:
                 if not also_updatable and attr.key in updatable_list:
                     continue
-                # I strip the initial underscore
-                yield (attr.key[1:], attr.getvalue())
+                yield (attr.key, attr.getvalue())
 
     def attrs(self):
         """
@@ -701,15 +709,8 @@ class Node(object):
         
         :return: a list of strings
         """
+        return list([i[0] for i in self.iterattrs()])
         
-        if self._to_be_stored:
-            return [k[1:] for k in self._attrs_cache.keys()]
-        else:
-            # I return the list of keys of 
-            # attributes, stripping the initial underscore
-            return [k[1:] for k in self._list_all_attributes_db().filter(
-                key__startswith='_').distinct().values_list('key', flat=True)]
-
     def _list_all_attributes_db(self):
         """
         Return a django queryset with the attributes of this node
@@ -718,38 +719,52 @@ class Node(object):
         
         return DbAttribute.objects.filter(dbnode=self.dbnode)
 
-    def add_comment(self,content):
+
+    def _list_all_extras_db(self):
+        """
+        Return a django queryset with the extras of this node
+        """
+        from aiida.djsite.db.models import DbExtra
+        
+        return DbExtra.objects.filter(dbnode=self.dbnode)
+
+
+    def add_comment(self,content,user=None):
         """
         Add a new comment.
         
         :param content: string with comment
         """
         from aiida.djsite.db.models import DbComment
-        from aiida.djsite.utils import get_automatic_user
 
         if self._to_be_stored:
             raise ModificationNotAllowed("Comments can be added only after "
                                          "storing the node")
 
-        DbComment.objects.create(dbnode=self._dbnode, user=get_automatic_user(), content=content)
+        DbComment.objects.create(dbnode=self._dbnode,
+                                 user=user,
+                                 content=content)
 
-    def get_comments(self):
+    def get_comments_tuple(self):
         """
+        Return a sorted list of tuples, one for each comment associated to
+        the node.
         
-        :return: the list of comments, sorted by date; each element of the list is a tuple
-            containing (username, username_email, date, content)
+        :return: the list of comments, sorted by date; each element of the 
+            list is a tuple in the format
+            (username, username_email, date, content)
         """
         from aiida.djsite.db.models import DbComment
 
-        return list(DbComment.objects.filter(dbnode=self._dbnode).order_by('time').values_list(
+        return list(DbComment.objects.filter(dbnode=self._dbnode).order_by(
+            'time').values_list(
             'user__username', 'user__email', 'time', 'content'))
 
     def _get_attribute_db(self, key):
         """
-        This is the raw-level method that accesses the DB. To be used only internally,
-        after saving self.dbnode. Both saves attributes and extras, in the same way.
-        The calling function must check that the key of attributes is prepended with
-        an underscore and the key of extras is not.
+        This is the raw-level method that accesses the DB.
+        To be used only internally,  after saving self.dbnode.
+        This function accesses the DbAttribute table.
         """
         from aiida.djsite.db.models import DbAttribute
 
@@ -759,67 +774,135 @@ class Node(object):
             raise AttributeError("Key {} not found in db".format(key))
         return attr.getvalue()
 
+    def _get_extra_db(self, key):
+        """
+        This is the raw-level method that accesses the DB.
+        To be used only internally,  after saving self.dbnode.
+        This function accesses the DbExtrae table.
+        """
+        from aiida.djsite.db.models import DbExtra
+
+        try:
+            attr = DbExtra.objects.get(dbnode=self.dbnode, key=key)
+        except ObjectDoesNotExist:
+            raise AttributeError("Key {} not found in db".format(key))
+        return attr.getvalue()
+
     def _del_attribute_db(self,key):
         """
-        This is the raw-level method that accesses the DB. No checks are done
-        to prevent the user from deleting a valid key.  To be used only internally,
-        after saving self.dbnode. Both saves attributes and extras, in the same way.
-        The calling function must check that the key of attributes is prepended with
-        an underscore and the key of extras is not.
+        This is the raw-level method that accesses the DB.
+        No checks are done to prevent the user from deleting a valid key. 
+        To be used only internally, after saving self.dbnode. 
+        This function accesses the DbAttribute table.
         """
         from aiida.djsite.db.models import DbAttribute
 
         self._increment_version_number_db()
         try:
-            DbAttribute.objects.get(dbnode=self.dbnode, key=key).delete()
+            # Call the delvalue method, that takes care of recursively deleting
+            # the subattributes, if this is a list or dictionary.
+            DbAttribute.objects.get(dbnode=self.dbnode, key=key).delvalue()
         except ObjectDoesNotExist:
-            raise AttributeError("Cannot delete attribute {}, not found in db".format(key))
+            raise AttributeError("Cannot delete attribute {}, "
+                                 "not found in db".format(key))
+
+    def _del_extra_db(self,key):
+        """
+        This is the raw-level method that accesses the DB.
+        No checks are done to prevent the user from deleting a valid key. 
+        To be used only internally, after saving self.dbnode. 
+        This function accesses the DbExtra table.
+        """
+        from aiida.djsite.db.models import DbExtra
+
+        self._increment_version_number_db()
+        try:
+            # Call the delvalue method, that takes care of recursively deleting
+            # the subattributes, if this is a list or dictionary.
+            DbExtra.objects.get(dbnode=self.dbnode, key=key).delvalue()
+        except ObjectDoesNotExist:
+            raise AttributeError("Cannot delete extra {}, "
+                                 "not found in db".format(key))
 
     def _increment_version_number_db(self):
         """
         This function increments the version number in the DB.
-        This should be called every time you need to increment the version (e.g. on adding a
-        extras or attribute). 
+        This should be called every time you need to increment the version
+        (e.g. on adding a extra or attribute). 
         """
         from django.db.models import F
         from aiida.djsite.db.models import DbNode
 
-        # I increment the node number using a filter (this should be the right way of doing it;
+        # I increment the node number using a filter
+        # (this should be the right way of doing it;
         # dbnode.nodeversion  = F('nodeversion') + 1
-        # will do weird stuff, returning Django Objects instead of numbers, and incrementing at
-        # every save; moreover in this way I should do the right thing for concurrent writings
-        # I use self._dbnode because this will not do a query to update the node; here I only
-        # need to get its pk
-        DbNode.objects.filter(pk=self._dbnode.pk).update(nodeversion = F('nodeversion') + 1)
+        # will do weird stuff, returning Django Objects instead of numbers,
+        # and incrementing at every save; moreover in this way I should do
+        # the right thing for concurrent writings
+        # I use self._dbnode because this will not do a query to
+        # update the node; here I only need to get its pk
+        DbNode.objects.filter(pk=self._dbnode.pk).update(
+            nodeversion = F('nodeversion') + 1)
 
         # This reload internally the node of self._dbworkflowinstance
-        self.dbnode
-
-        # Note: I have to reload the ojbect. I don't do it here because it is done at every call
-        # to self.dbnode
+        # Note: I have to reload the ojbect. I don't do it here because
+        # it is done at every call to self.dbnode
         #self._dbnode = DbNode.objects.get(pk=self._dbnode.pk)
+        # Therefore I simply recalculate self.dbnode
+        self.dbnode
 
     def _set_attribute_db(self,key,value,incrementversion=True):
         """
         This is the raw-level method that accesses the DB. No checks are done
-        to prevent the user from (re)setting a valid key.  To be used only internally,
-        after saving self.dbnode. Both saves attributes and extras, in the same way.
-        The calling function must check that the key of attributes is prepended with
-        an underscore and the key of extras is not.
+        to prevent the user from (re)setting a valid key. 
+        To be used only internally, after saving self.dbnode.
+        This function accesses the DbAttribute table.
 
-        TODO: there may be some error on concurrent write; not checked in this unlucky case!
+        :todo: there may be some error on concurrent write;
+           not checked in this unlucky case!
 
-        If incrementversion is True (default), each attribute set will udpate the version.
-        This can be set to False during the store() so that the version does not get increased for each
-        attribute.
+        :param key: the key of the attribute to store
+        :param value: the value of the attribute to store
+        :param incrementversion : If incrementversion
+          is True (default), each attribute set will
+          udpate the version. This can be set to False during the store() so
+          that the version does not get increased for each attribute.
         """
+        from django.db import transaction
         from aiida.djsite.db.models import DbAttribute
-                
-        if incrementversion:
+        
+        with transaction.commit_on_success():
+            if incrementversion:
+                self._increment_version_number_db()
+            attr, _ = DbAttribute.objects.get_or_create(dbnode=self.dbnode,
+                                                        key=key)
+            ## TODO: create a get_or_create_with_value method in the
+            #        djsite.db.models.DbAttribute class
+            attr.setvalue(value)
+
+    def _set_extra_db(self,key,value):
+        """
+        This is the raw-level method that accesses the DB. No checks are done
+        to prevent the user from (re)setting a valid key. 
+        To be used only internally, after saving self.dbnode.
+        This function accesses the DbExtra table.
+
+        :todo: there may be some error on concurrent write;
+           not checked in this unlucky case!
+
+        :param key: the key of the extra to store
+        :param value: the value of the extra to store
+        """
+        from django.db import transaction
+        from aiida.djsite.db.models import DbExtra
+        
+        with transaction.commit_on_success():
             self._increment_version_number_db()
-        attr, _ = DbAttribute.objects.get_or_create(dbnode=self.dbnode, key=key)
-        ## TODO: create a get_or_create_with_value method in the djsite.db.models.DbAttribute class
-        attr.setvalue(value)
+            extra, _ = DbExtra.objects.get_or_create(dbnode=self.dbnode,
+                                                     key=key)
+            ## TODO: create a get_or_create_with_value method in the
+            #        djsite.db.models.DbAttribute class
+            extra.setvalue(value)
 
     def copy(self):
         """
@@ -927,8 +1010,8 @@ class Node(object):
         :return: a SandboxFolder object mapping the node in the repository.
         """
         if self._temp_folder is None:
-            raise InternalError("The temp_folder was asked for node {}, but it is "
-                                "not set!".format(self.uuid))
+            raise InternalError("The temp_folder was asked for node {}, but "
+                                "it is not set!".format(self.uuid))
         return self._temp_folder
 
     def remove_path(self,path):
@@ -939,10 +1022,12 @@ class Node(object):
         :param str path: relative path to file/directory.
         """
         if not self._to_be_stored:
-            raise ModificationNotAllowed("Cannot delete a path after storing the node")
+            raise ModificationNotAllowed(
+                "Cannot delete a path after storing the node")
         
         if os.path.isabs(path):
-            raise ValueError("The destination path in remove_path must be a relative path")
+            raise ValueError("The destination path in remove_path "
+                             "must be a relative path")
         self.path_subfolder.remove_path(path)
 
     def add_path(self,src_abs,dst_path):
@@ -955,22 +1040,26 @@ class Node(object):
         :param str src_abs: the absolute path of the file to copy.
         :param str dst_filename: the (relative) path on which to copy.
         
-        TODO: in the future, add an add_attachment() that has the same meaning of a extras file.
-        Decide also how to store. If in two separate subfolders, remember to reset the limit.
+        :todo: in the future, add an add_attachment() that has the same
+            meaning of a extras file. Decide also how to store. If in two
+            separate subfolders, remember to reset the limit.
         """
         if not self._to_be_stored:
-            raise ModificationNotAllowed("Cannot insert a path after storing the node")
+            raise ModificationNotAllowed(
+                "Cannot insert a path after storing the node")
         
         if not os.path.isabs(src_abs):
             raise ValueError("The source path in add_path must be absolute")
         if os.path.isabs(dst_path):
-            raise ValueError("The destination path in add_path must be a filename without any subfolder")
+            raise ValueError("The destination path in add_path must be a"
+                "filename without any subfolder")
         self.path_subfolder.insert_path(src_abs,dst_path)
 
 
     def get_abs_path(self,path,section=_path_subfolder_name):
         """
-        Get the absolute path to the folder associated with the Node in the AiiDA repository.
+        Get the absolute path to the folder associated with the
+        Node in the AiiDA repository.
         
         :param str path: the name of the subfolder inside the section.
         :param section: the name of the subfolder ('path' by default).
@@ -978,19 +1067,24 @@ class Node(object):
         
         For the moment works only for one kind of files, 'path' (internal files)
         """
-        #TODO: For the moment works only for one kind of files, 'path' (internal files)
+        #TODO: For the moment works only for one kind of files,
+        #      'path' (internal files)
         if os.path.isabs(path):
             raise ValueError("The path in get_abs_path must be relative")
-        return self.current_folder.get_subfolder(section,reset_limit=True).get_abs_path(path,check_existence=True)
+        return self.current_folder.get_subfolder(section,
+            reset_limit=True).get_abs_path(path,check_existence=True)
 
     def store(self):
         """
-        Store a new node in the DB, also saving its repository directory and attributes.
+        Store a new node in the DB, also saving its repository directory
+        and attributes.
 
-        Can be called only once. Afterwards, attributes cannot be changed anymore!
-        Instead, extras can be changed only AFTER calling this store() function.
+        Can be called only once. Afterwards, attributes cannot be
+        changed anymore! Instead, extras can be changed only AFTER calling
+        this store() function.
         """
-        #TODO: This needs to be generalized, allowing for flexible methods for storing data and its attributes.
+        #TODO: This needs to be generalized, allowing for flexible methods
+        # for storing data and its attributes.
         from django.db import transaction
 
         if self._to_be_stored:
@@ -999,21 +1093,24 @@ class Node(object):
             self.validate()
             # I save the corresponding django entry
             # I set the folder
-            self.repo_folder.replace_with_folder(self.get_temp_folder().abspath, move=True, overwrite=True)
+            self.repo_folder.replace_with_folder(
+                self.get_temp_folder().abspath, move=True, overwrite=True)
 
-            # I do the transaction only during storage on DB to avoid timeout problems, especially
-            # with SQLite
+            # I do the transaction only during storage on DB to avoid timeout
+            # problems, especially with SQLite
             try:
                 with transaction.commit_on_success():
                     # Save the row
                     self._dbnode.save()
-                    # Save its attributes
+                    # Save its attributes 'manually' without incrementing
+                    # the version for each add.
                     for k, v in self._attrs_cache.iteritems():
                         self._set_attribute_db(k,v,incrementversion=False)
-            # This is one of the few cases where it is ok to do a 'global' except,
-            # also because I am re-raising the exception
+            # This is one of the few cases where it is ok to do a 'global'
+            # except, also because I am re-raising the exception
             except:
-                # I put back the files in the sandbox folder since the transaction did not succeed
+                # I put back the files in the sandbox folder since the
+                # transaction did not succeed
                 self.get_temp_folder().replace_with_folder(
                     self.repo_folder.abspath, move=True, overwrite=True)                
                 raise
@@ -1022,8 +1119,10 @@ class Node(object):
             self._temp_folder = None            
             self._to_be_stored = False
         else:
-            self.logger.error("Trying to store an already saved node: {}".format(self.uuid))
-            raise ModificationNotAllowed("Node with uuid={} was already stored".format(self.uuid))
+            self.logger.error("Trying to store an already saved node: "
+                              "{}".format(self.uuid))
+            raise ModificationNotAllowed(
+                "Node with uuid={} was already stored".format(self.uuid))
 
         # This is useful because in this way I can do
         # n = Node().store()
@@ -1033,7 +1132,8 @@ class Node(object):
     def __del__(self):
         """
         Called only upon real object destruction from memory
-        I just try to remove junk, whenever possible; do not trust too much this function!
+        I just try to remove junk, whenever possible; do not trust
+        too much this function!
         """
         if getattr(self,'_temp_folder',None) is not None:
             self._temp_folder.erase()

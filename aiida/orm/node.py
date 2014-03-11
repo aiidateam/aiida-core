@@ -25,7 +25,7 @@ class Node(object):
     listed in the self._updatable_attributes tuple (empty for this class, can be
     extended in a subclass).
 
-    Only after storing (or upon loading from uuid) metadata can be modified
+    Only after storing (or upon loading from uuid) extras can be modified
     and in this case they are directly set on the db.
 
     In the plugin, also set the _plugin_type_string, to be set in the DB in the 'type' field.
@@ -594,63 +594,63 @@ class Node(object):
             except IndexError:
                 raise e
 
-    def set_metadata(self,key,value):
+    def set_extra(self,key,value):
         """
-        Immediately sets a metadata of a calculation, in the DB!
+        Immediately sets an extra of a calculation, in the DB!
         No .store() to be called.
         Can be used *only* after saving.
 
-        Metadata keys cannot start with an underscore.
+        extras keys cannot start with an underscore.
         
         :param string key: key name
         :param value: key value
         """
         if key.startswith('_'):
-            raise ValueError("An metadata key cannot start with an underscore")
+            raise ValueError("An extra key cannot start with an underscore")
         if self._to_be_stored:
-            raise ModificationNotAllowed("The metadata of a node can be set only after "
+            raise ModificationNotAllowed("The extras of a node can be set only after "
                                          "storing the node")
         self._set_attribute_db(key,value)
             
-    def get_metadata(self,key):
+    def get_extra(self,key):
         """
-        Get the value of a metadata, reading directly from the DB!
-        Since metadata can be added only after storing the node, this
+        Get the value of a extras, reading directly from the DB!
+        Since extras can be added only after storing the node, this
         function is meaningful to be called only after the .store() method.
 
-        Metadata keys cannot start with an underscore.
+        extras keys cannot start with an underscore.
         
         :param str key: key name
         :return: the key value
         :raise: AttributeError: if key starts with underscore
         """
         if key.startswith('_'):
-            raise AttributeError("An metadata key cannot start with an underscore")
+            raise AttributeError("An extras key cannot start with an underscore")
         return self._get_attribute_db(key)
 
-    def del_metadata(self,key):
+    def del_extra(self,key):
         """
-        Delete a metadata, acting directly on the DB!
+        Delete a extra, acting directly on the DB!
         The action is immediately performed on the DB.
-        Since metadata can be added only after storing the node, this
+        Since extras can be added only after storing the node, this
         function is meaningful to be called only after the .store() method.
 
-        Metadata keys cannot start with an underscore.
+        extras keys cannot start with an underscore.
         
         :param str key: key name
         :raise: AttributeError: if key starts with underscore
         :raise: ModificationNotAllowed: if the node has already been stored
         """
         if key.startswith('_'):
-            raise ValueError("An metadata key cannot start with an underscore")
+            raise ValueError("An extras key cannot start with an underscore")
         if self._to_be_stored:
-            raise ModificationNotAllowed("The metadata of a node can be set and deleted "
+            raise ModificationNotAllowed("The extras of a node can be set and deleted "
                                          "only after storing the node")
         self._del_attribute_db(key)
 
-    def metadata(self):
+    def extras(self):
         """
-        Get the keys of the metadata.
+        Get the keys of the extras.
         
         :return: a list of strings
         """
@@ -659,15 +659,15 @@ class Node(object):
         return self._list_all_attributes_db().filter(
             ~Q(key__startswith='_')).distinct().values_list('key', flat=True)
 
-    def itermetadata(self):
+    def iterextras(self):
         """
-        Iterator over the metadata, returning tuples (key, value)
+        Iterator over the extras, returning tuples (key, value)
         """
         from django.db.models import Q
-        metadatalist = self._list_all_attributes_db().filter(
+        extraslist = self._list_all_attributes_db().filter(
             ~Q(key__startswith='_'))
-        for md in metadatalist:
-            yield (md.key, md.getvalue())
+        for e in extraslist:
+            yield (e.key, e.getvalue())
             
     def iterattrs(self,also_updatable=True):
         """
@@ -747,9 +747,9 @@ class Node(object):
     def _get_attribute_db(self, key):
         """
         This is the raw-level method that accesses the DB. To be used only internally,
-        after saving self.dbnode. Both saves attributes and metadata, in the same way.
+        after saving self.dbnode. Both saves attributes and extras, in the same way.
         The calling function must check that the key of attributes is prepended with
-        an underscore and the key of metadata is not.
+        an underscore and the key of extras is not.
         """
         from aiida.djsite.db.models import DbAttribute
 
@@ -763,9 +763,9 @@ class Node(object):
         """
         This is the raw-level method that accesses the DB. No checks are done
         to prevent the user from deleting a valid key.  To be used only internally,
-        after saving self.dbnode. Both saves attributes and metadata, in the same way.
+        after saving self.dbnode. Both saves attributes and extras, in the same way.
         The calling function must check that the key of attributes is prepended with
-        an underscore and the key of metadata is not.
+        an underscore and the key of extras is not.
         """
         from aiida.djsite.db.models import DbAttribute
 
@@ -779,7 +779,7 @@ class Node(object):
         """
         This function increments the version number in the DB.
         This should be called every time you need to increment the version (e.g. on adding a
-        metadata or attribute). 
+        extras or attribute). 
         """
         from django.db.models import F
         from aiida.djsite.db.models import DbNode
@@ -803,9 +803,9 @@ class Node(object):
         """
         This is the raw-level method that accesses the DB. No checks are done
         to prevent the user from (re)setting a valid key.  To be used only internally,
-        after saving self.dbnode. Both saves attributes and metadata, in the same way.
+        after saving self.dbnode. Both saves attributes and extras, in the same way.
         The calling function must check that the key of attributes is prepended with
-        an underscore and the key of metadata is not.
+        an underscore and the key of extras is not.
 
         TODO: there may be some error on concurrent write; not checked in this unlucky case!
 
@@ -828,7 +828,7 @@ class Node(object):
         This is a completely new entry in the DB, with its own UUID.
         Works both on stored instances and with not-stored ones.
 
-        Copies files and attributes, but not the metadata.
+        Copies files and attributes, but not the extras.
         Does not store the Node to allow modification of attributes.
         
         :return: an object copy
@@ -955,7 +955,7 @@ class Node(object):
         :param str src_abs: the absolute path of the file to copy.
         :param str dst_filename: the (relative) path on which to copy.
         
-        TODO: in the future, add an add_attachment() that has the same meaning of a metadata file.
+        TODO: in the future, add an add_attachment() that has the same meaning of a extras file.
         Decide also how to store. If in two separate subfolders, remember to reset the limit.
         """
         if not self._to_be_stored:
@@ -988,7 +988,7 @@ class Node(object):
         Store a new node in the DB, also saving its repository directory and attributes.
 
         Can be called only once. Afterwards, attributes cannot be changed anymore!
-        Instead, metadata can be changed only AFTER calling this store() function.
+        Instead, extras can be changed only AFTER calling this store() function.
         """
         #TODO: This needs to be generalized, allowing for flexible methods for storing data and its attributes.
         from django.db import transaction

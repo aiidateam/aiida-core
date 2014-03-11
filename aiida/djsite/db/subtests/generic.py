@@ -135,17 +135,17 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
         
         a1 = Calculation(**calc_params).store()
         # To query only these nodes later
-        a1.set_metadata(attribute_name, True)
+        a1.set_extra(attribute_name, True)
         a2 = TemplateReplacerCalc(**calc_params).store()
         # To query only these nodes later
-        a2.set_metadata(attribute_name, True)
+        a2.set_extra(attribute_name, True)
         a3 = Data().store()        
-        a3.set_metadata(attribute_name, True)
+        a3.set_extra(attribute_name, True)
         a4 = ParameterData({'a':'b'}).store()        
-        a4.set_metadata(attribute_name, True)
+        a4.set_extra(attribute_name, True)
         a5 = Node().store()
-        a5.set_metadata(attribute_name, True)
-        # I don't set the metadata, just to be sure that the filtering works
+        a5.set_extra(attribute_name, True)
+        # I don't set the extras, just to be sure that the filtering works
         # The filtering is needed because other tests will put stuff int he DB
         a6 = Calculation(**calc_params)
         a6.store()
@@ -395,13 +395,13 @@ class TestNodeBasic(AiidaTestCase):
 
         a.store()
 
-        # I now set metadata
-        metadata_to_set = {
+        # I now set extras
+        extras_to_set = {
             'bool': 'some non-boolean value',
             'some_other_name': 987}
 
-        for k,v in metadata_to_set.iteritems():
-            a.set_metadata(k, v)    
+        for k,v in extras_to_set.iteritems():
+            a.set_extra(k, v)    
 
         # I make a copy
         b = a.copy()
@@ -416,25 +416,25 @@ class TestNodeBasic(AiidaTestCase):
         # I check before storing that the attributes are ok
         self.assertEquals({k: v for k,v in b.iterattrs()},
                           b_expected_attributes)
-        # Note that during copy, I do not copy the metadata!
-        self.assertEquals({k: v for k,v in b.itermetadata()}, {})
+        # Note that during copy, I do not copy the extras!
+        self.assertEquals({k: v for k,v in b.iterextras()}, {})
         
         # I store now
         b.store()
-        # and I finally add a metadata
-        b.set_metadata('meta', 'textofext')
-        b_expected_metadata = {'meta': 'textofext'}
+        # and I finally add a extras
+        b.set_extra('meta', 'textofext')
+        b_expected_extras = {'meta': 'textofext'}
 
         # Now I check for the attributes
         # First I check that nothing has changed 
         self.assertEquals({k: v for k,v in a.iterattrs()}, attrs_to_set)
-        self.assertEquals({k: v for k,v in a.itermetadata()}, metadata_to_set)
+        self.assertEquals({k: v for k,v in a.iterextras()}, extras_to_set)
 
         # I check then on the 'b' copy
         self.assertEquals({k: v for k,v in b.iterattrs()},
                           b_expected_attributes)
-        self.assertEquals({k: v for k,v in b.itermetadata()},
-                          b_expected_metadata)
+        self.assertEquals({k: v for k,v in b.iterextras()},
+                          b_expected_extras)
 
     def test_files(self):
         import tempfile
@@ -721,7 +721,7 @@ class TestNodeBasic(AiidaTestCase):
         with self.assertRaises(ModificationNotAllowed):                
             a.set_attr('i',12)
 
-    def test_attr_and_metadata(self):
+    def test_attr_and_extras(self):
         a = Node()
         a.set_attr('bool', self.boolval)
         a.set_attr('integer', self.intval)
@@ -732,25 +732,25 @@ class TestNodeBasic(AiidaTestCase):
 
         with self.assertRaises(ModificationNotAllowed):
             # I did not store, I cannot modify
-            a.set_metadata('bool', 'blablabla')
+            a.set_extra('bool', 'blablabla')
 
         a.store()
 
-        # I check that I cannot store a metadata with key starting with underscore
+        # I check that I cannot store a extras with key starting with underscore
         with self.assertRaises(ValueError):
-            a.set_metadata('_start_with_underscore', 'some text')
+            a.set_extra('_start_with_underscore', 'some text')
 
         a_string = 'some non-boolean value'
         # I now set
-        a.set_metadata('bool', a_string)
+        a.set_extra('bool', a_string)
 
         # I check that there is no name clash
         self.assertEquals(self.boolval, a.get_attr('bool'))
-        self.assertEquals(a_string, a.get_metadata('bool'))
+        self.assertEquals(a_string, a.get_extra('bool'))
         
     def test_attr_listing(self):
         """
-        Checks that the list of attributes and metadata is ok.
+        Checks that the list of attributes and extras is ok.
         """
         a = Node()
         attrs_to_set = {
@@ -768,24 +768,24 @@ class TestNodeBasic(AiidaTestCase):
 
         a.store()
 
-        # I now set metadata
-        metadata_to_set = {
+        # I now set extras
+        extras_to_set = {
             'bool': 'some non-boolean value',
             'some_other_name': 987}
 
-        for k,v in metadata_to_set.iteritems():
-            a.set_metadata(k, v)        
+        for k,v in extras_to_set.iteritems():
+            a.set_extra(k, v)        
 
         self.assertEquals(set(a.attrs()),
                           set(attrs_to_set.keys()))
-        self.assertEquals(set(a.metadata()),
-                          set(metadata_to_set.keys()))
+        self.assertEquals(set(a.extras()),
+                          set(extras_to_set.keys()))
 
         returned_internal_attrs = {k: v for k, v in a.iterattrs()}
         self.assertEquals(returned_internal_attrs, attrs_to_set)
 
-        returned_attrs = {k: v for k, v in a.itermetadata()}
-        self.assertEquals(returned_attrs, metadata_to_set)
+        returned_attrs = {k: v for k, v in a.iterextras()}
+        self.assertEquals(returned_attrs, extras_to_set)
 
 
     def test_versioning_and_postsave_attributes(self):
@@ -821,7 +821,7 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(a.dbnode.lastsyncedversion, 0)
 
         # I check increment on new version
-        a.set_metadata('a', 'b')
+        a.set_extra('a', 'b')
         self.assertEquals(a.dbnode.nodeversion, 2)
 
         # I check that I can set this attribute

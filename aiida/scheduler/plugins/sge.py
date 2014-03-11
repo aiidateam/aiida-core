@@ -83,7 +83,7 @@ class SgeJobResource(ParEnvJobResource):
 
 class SgeScheduler(aiida.scheduler.Scheduler):
     """
-    SGE implementation of the scheduler functions.
+    Support for the Sun Grid Engine scheduler and its variants/forks (Son of Grid Engine, Oracle Grid Engine, ...) 
     """
     _logger = aiida.scheduler.Scheduler._logger.getChild('sge')
     

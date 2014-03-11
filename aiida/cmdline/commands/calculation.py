@@ -71,7 +71,7 @@ class Calculation(VerdiCommand):
         from aiida.common.datastructures import calc_states
         
         import argparse
-        from aiida.orm.calculation import Calculation as calc
+        from aiida.orm.calculation import Calculation as C
         
         parser = argparse.ArgumentParser(description='List AiiDA calculations.')
         parser.add_argument('-s', '--states', nargs='+', type=str,
@@ -104,7 +104,7 @@ class Calculation(VerdiCommand):
         if parsed_args.all_states:
             parsed_args.states = [ i for i in calc_states ]
         
-        print calc.list_calculations(states=parsed_args.states,
+        print C.list_calculations(states=parsed_args.states,
                                      past_days=parsed_args.past_days, 
                                      pks=parsed_args.pks) 
     

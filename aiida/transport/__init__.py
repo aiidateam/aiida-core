@@ -79,6 +79,22 @@ class Transport(object):
         return u"[Transport class or subclass]"
 
     @classmethod
+    def get_short_doc(self):
+        """
+        Return the first non-empty line of the class docstring, if available
+        """
+        # Remove empty lines
+        docstring = self.__doc__
+        if not docstring:
+            return "No documentation available"
+            
+        doclines = [i for i in docstring.splitlines() if i.strip()]
+        if doclines:
+            return doclines[0].strip()
+        else:
+            return "No documentation available"
+
+    @classmethod
     def get_valid_transports(cls):
         """
         :return: a list of existing plugin names

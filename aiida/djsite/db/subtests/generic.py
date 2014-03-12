@@ -123,7 +123,7 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
     def test_with_subclasses(self):
         from aiida.orm import Calculation, CalculationFactory, Data, DataFactory
         
-        extra_name = self.__class__.__name__ + ".test_with_subclasses"
+        extra_name = self.__class__.__name__ + "/test_with_subclasses"
         calc_params = {
             'computer': self.computer,
             'resources': {'num_machines': 1,
@@ -720,6 +720,23 @@ class TestNodeBasic(AiidaTestCase):
 
         with self.assertRaises(ModificationNotAllowed):                
             a.set_attr('i',12)
+
+    def test_attrs_and_extras_wrong_keyname(self):
+        """
+        Attribute keys cannot include the separator symbol in the key
+        """
+        from aiida.djsite.db.models import DbAttributeBaseClass
+        separator = DbAttributeBaseClass._sep
+        
+        a = Node()
+
+        with self.assertRaises(ValueError):
+            # I did not store, I cannot modify
+            a.set_attr('name'+separator, 'blablabla')
+        
+        with self.assertRaises(ValueError):
+            # I did not store, I cannot modify
+            a.set_extra('bool'+separator, 'blablabla')
 
     def test_attr_and_extras(self):
         a = Node()

@@ -458,7 +458,7 @@ class StructureData(Data):
         #       _prepare_"" with the name of the new format        
         exporter_prefix = '_prepare_'
         method_names = dir(self) # get list of class methods names
-        valid_format_names = [ i.lstrip(exporter_prefix) for i in method_names 
+        valid_format_names = [ i[len(exporter_prefix):] for i in method_names 
                          if i.startswith(exporter_prefix) ] # filter them
         valid_formats = {k: getattr(self,exporter_prefix + k) 
                          for k in valid_format_names}

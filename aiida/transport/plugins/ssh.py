@@ -730,7 +730,7 @@ class SshTransport(aiida.transport.Transport):
             self.mkdir(remotepath)
         
         for this_source in os.walk(localpath):
-            this_basename = this_source[0].lstrip(localpath)
+            this_basename = this_source[0][len(localpath):]
             try:
                 self.sftp.stat( os.path.join(remotepath,this_basename) )
             except IOError:

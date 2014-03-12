@@ -2,7 +2,7 @@ from django.db import models as m
 from django_extensions.db.fields import UUIDField
 from django.contrib.auth.models import User
 from django.utils.encoding import python_2_unicode_compatible
-
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.query import QuerySet
 
 from aiida.common.exceptions import (
@@ -140,6 +140,29 @@ class DbNode(m.Model):
         else:
             thistype = thistype[:-1] # Strip final dot
             return thistype.rpartition('.')[2]
+    
+    def increment_version_number(self):
+        """
+        This function increments the version number in the DB.
+        This should be called every time you need to increment the version
+        (e.g. on adding a extra or attribute).
+
+        :note: Do not manually increment the version number, because if
+            two different threads are adding/changing an attribute concurrently,
+            the version number would be incremented only once.
+        """
+        from django.db.models import F
+
+        # I increment the node number using a filter
+        # (this should be the right way of doing it;
+        # dbnode.nodeversion  = F('nodeversion') + 1
+        # will do weird stuff, returning Django Objects instead of numbers,
+        # and incrementing at every save; moreover in this way I should do
+        # the right thing for concurrent writings
+        # I use self._dbnode because this will not do a query to
+        # update the node; here I only need to get its pk
+        self.nodeversion = F('nodeversion') + 1
+        self.save()
 
     @python_2_unicode_compatible
     def __str__(self):
@@ -245,9 +268,109 @@ class DbAttributeBaseClass(m.Model):
     bval = m.NullBooleanField(default=None, null=True)
     dval = m.DateTimeField(default=None, null=True)
 
+    # separator for subfields
+    _sep = "."
+    
     class Meta:
         unique_together = (("dbnode", "key"))
         abstract = True
+    
+    @classmethod
+    def list_all_node_elements(cls, dbnode):
+        """
+        Return a django queryset with the attributes of the given node,
+        only at deepness level zero (i.e., keys not containing the separator).
+        """
+        from django.db.models import Q
+
+        # This node, and does not contain the separator 
+        # (=> show only level-zero entries)
+        query = Q(dbnode=dbnode) & ~Q(key__contains=cls._sep)
+        return cls.objects.filter(query)
+
+    @classmethod
+    def validate_key(cls, key):
+        """
+        Validate the key string to check if it is valid (e.g., if it does not
+        contain the separator symbol.
+        
+        :return: None if the key is valid
+        :raise ValueError: if the key is not valid
+        """
+        if cls._sep in key:
+            raise ValueError("The separator symbol '{}' cannot be present "
+                "in the key of a {}.".format(
+                cls._sep, cls.__name__))
+
+    @classmethod
+    def get_value_for_node(cls, dbnode, key):
+        """
+        Get an attribute from the database for the given dbnode.
+        
+        :return: the value stored in the Db table, correctly converted 
+            to the right type.
+        :raise AttributeError: if no key is found for the given dbnode
+        """        
+        try:
+            attr = cls.objects.get(dbnode=dbnode, key=key)
+        except ObjectDoesNotExist:
+            raise AttributeError("{} with key {} for node {} not found "
+                "in db".format(cls.__name__, key, dbnode.pk))
+        return attr.getvalue()
+
+    @classmethod
+    def set_value_for_node(cls, dbnode, key, value, incrementversion=True):
+        """
+        This is the raw-level method that accesses the DB. No checks are done
+        to prevent the user from (re)setting a valid key. 
+        To be used only internally.
+
+        :todo: there may be some error on concurrent write;
+           not checked in this unlucky case!
+
+        :param dbnode: the dbnode for which the attribute should be stored
+        :param key: the key of the attribute to store
+        :param value: the value of the attribute to store
+        :param incrementversion : If incrementversion
+          is True (default), each attribute set will
+          udpate the version. This can be set to False during the store() so
+          that the version does not get increased for each attribute.
+        
+        :raise ValueError: if the key contains the separator symbol used 
+            internally to unpack dictionaries and lists (defined in cls._sep).
+        """
+        from django.db import transaction
+        
+        cls.validate_key(key)
+        
+        try:
+            sid = transaction.savepoint()
+            
+            if incrementversion:
+                dbnode.increment_version_number()
+            attr, _ = cls.objects.get_or_create(dbnode=dbnode,
+                                                       key=key)
+            attr.setvalue(value)
+        except:
+            transaction.savepoint_rollback(sid)
+            raise
+    
+    @classmethod
+    def del_value_for_node(cls, dbnode, key):
+        """
+        Delete an attribute from the database for the given dbnode.
+        
+        :raise AttributeError: if no key is found for the given dbnode
+        """
+        dbnode.increment_version_number()
+        try:
+            # Call the delvalue method, that takes care of recursively deleting
+            # the subattributes, if this is a list or dictionary.
+            cls.objects.get(dbnode=dbnode, key=key).delvalue()
+        except ObjectDoesNotExist:
+            raise AttributeError("Cannot delete {} '{}' for node {}, "
+                                 "not found in db".format(
+                                 cls.__name__, key, dbnode.pk))
         
     def setvalue(self,value):
         """
@@ -256,78 +379,116 @@ class DbAttributeBaseClass(m.Model):
         import json
         import datetime 
         from django.utils.timezone import is_naive, make_aware, get_current_timezone
+        from django.db import transaction
         
-        if value is None:
-            self.datatype = 'none'
-            self.bval = None
-            self.tval = ''
-            self.ival = None
-            self.fval = None
-            self.dval = None            
-            
-        elif isinstance(value,bool):
-            self.datatype = 'bool'
-            self.bval = value
-            self.tval = ''
-            self.ival = None
-            self.fval = None
-            self.dval = None
-
-        elif isinstance(value,int):
-            self.datatype = 'int'
-            self.ival = value
-            self.tval = ''
-            self.bval = None
-            self.fval = None
-            self.dval = None
-
-        elif isinstance(value,float):
-            self.datatype = 'float'
-            self.fval = value
-            self.tval = ''
-            self.ival = None
-            self.bval = None
-            self.dval = None
-
-        elif isinstance(value,basestring):
-            self.datatype = 'txt'
-            self.tval = value
-            self.bval = None
-            self.ival = None
-            self.fval = None
-            self.dval = None
-
-        elif isinstance(value,datetime.datetime):
-
-            # current timezone is taken from the settings file of django
-            if is_naive(value):
-                value_to_set = make_aware(value,get_current_timezone())
-            else:
-                value_to_set = value
-
-            self.datatype = 'date'
-            # TODO: time-aware and time-naive datetime objects, see
-            # https://docs.djangoproject.com/en/dev/topics/i18n/timezones/#naive-and-aware-datetime-objects
-            self.dval = value_to_set
-            self.tval = ''
-            self.bval = None
-            self.ival = None
-            self.fval = None
-
-        else:
+        with transaction.commit_on_success():
+            # Needed, we call this function recursively; we cannot simply use
+            sid = transaction.savepoint()
             try:
-                jsondata = json.dumps(value)
-            except TypeError:
-                raise ValueError("Unable to store the value: it must be either "
-                                 "a basic datatype, or json-serializable")
-            
-            self.datatype = 'json'
-            self.tval = jsondata
-            self.bval = None
-            self.ival = None
-            self.fval = None
+                # I have to delete the children to start with: if this was a 
+                # dictionary or a list, I do not want to leave around pending
+                # entries. This call will do nothing if the current entry is 
+                # any other datatype
+                self.delchildren()
+    
+                if value is None:
+                    self.datatype = 'none'
+                    self.bval = None
+                    self.tval = ''
+                    self.ival = None
+                    self.fval = None
+                    self.dval = None            
+                    
+                elif isinstance(value,bool):
+                    self.datatype = 'bool'
+                    self.bval = value
+                    self.tval = ''
+                    self.ival = None
+                    self.fval = None
+                    self.dval = None
         
-        self.save()       
+                elif isinstance(value,int):
+                    self.datatype = 'int'
+                    self.ival = value
+                    self.tval = ''
+                    self.bval = None
+                    self.fval = None
+                    self.dval = None
+        
+                elif isinstance(value,float):
+                    self.datatype = 'float'
+                    self.fval = value
+                    self.tval = ''
+                    self.ival = None
+                    self.bval = None
+                    self.dval = None
+        
+                elif isinstance(value,basestring):
+                    self.datatype = 'txt'
+                    self.tval = value
+                    self.bval = None
+                    self.ival = None
+                    self.fval = None
+                    self.dval = None
+        
+                elif isinstance(value,datetime.datetime):
+        
+                    # current timezone is taken from the settings file of django
+                    if is_naive(value):
+                        value_to_set = make_aware(value,get_current_timezone())
+                    else:
+                        value_to_set = value
+        
+                    self.datatype = 'date'
+                    # TODO: time-aware and time-naive datetime objects, see
+                    # https://docs.djangoproject.com/en/dev/topics/i18n/timezones/#naive-and-aware-datetime-objects
+                    self.dval = value_to_set
+                    self.tval = ''
+                    self.bval = None
+                    self.ival = None
+                    self.fval = None
+    
+                elif isinstance(value, dict):
+                                    
+                    self.datatype = 'dict'
+                    self.dval = None
+                    self.tval = ''
+                    self.bval = None
+                    self.ival = len(value)
+                    self.fval = None
+                    
+                    for subk, subv in value.iteritems():
+                        if self._sep in subk:
+                            raise ValueError("You are trying to store an entry "
+                                "that (maybe at an inner level) has"
+                                "contains the character '{}', that "
+                                "cannot be used".format(self._sep))
+                            
+                        item, _ = self.__class__.objects.get_or_create(
+                            dbnode=self.dbnode,
+                            key=(self.key + self._sep + subk))
+                ## TODO: create a get_or_create_with_value method in the
+                #        djsite.db.models.DbAttribute class
+                        item.setvalue(subv)
+                    
+                else:
+                    try:
+                        jsondata = json.dumps(value)
+                    except TypeError:
+                        raise ValueError("Unable to store the value: it must be either "
+                                         "a basic datatype, or json-serializable")
+                    
+                    self.datatype = 'json'
+                    self.tval = jsondata
+                    self.bval = None
+                    self.ival = None
+                    self.fval = None
+                
+                self.save()
+            except:
+                # Revert this inner transation, and reraise
+                transaction.savepoint_rollback(sid)
+                raise
         
     def getvalue(self):
         """
@@ -335,7 +496,12 @@ class DbAttributeBaseClass(m.Model):
         casting it correctly
         """
         import json
-        from django.utils.timezone import is_naive, make_aware, get_current_timezone
+        import re
+    
+        from django.utils.timezone import (
+            is_naive, make_aware, get_current_timezone)
+
+        from aiida.common import aiidalogger
 
         if self.datatype == 'none':
             return None
@@ -353,6 +519,28 @@ class DbAttributeBaseClass(m.Model):
             else:
                 return self.dval
             return self.dval
+        elif self.datatype == 'dict':
+            retdict = {}
+            # Note: it may not be the most efficient way to do it
+            # I need to look for all elements starting with the same key,
+            # followed by the separator, followed by any number of non-separator
+            # symbols
+            regex_string = r"^{parentkey}{sep}([^{sep}])*$".format(
+                    parentkey=re.escape(self.key),
+                    sep=re.escape(self._sep))
+            dbsubvalues = self.__class__.objects.filter(dbnode=self.dbnode,
+                key__regex=regex_string).distinct()
+            for subvalue in dbsubvalues:
+                # I have to remove the length of the parent key + the length
+                # of the separator (to be kept as a length-one string, possibly)
+                subkey = subvalue.key[len(self.key)+len(self._sep):]
+                retdict[subkey] = subvalue.getvalue()
+            if len(dbsubvalues) != self.ival:
+                aiidalogger.error("Wrong dict length stored in {} for "
+                                  "node={} and key='{}' ({} vs {})".format(
+                                    self.__class__.__name__, self.pk, self.key,
+                                    len(retdict), self.ival))
+            return retdict
         elif self.datatype == 'json':
             try:
                 return json.loads(self.tval)
@@ -362,11 +550,38 @@ class DbAttributeBaseClass(m.Model):
             raise DbContentError("The type field '{}' is not recognized".format(
                     self.datatype))        
 
+    def delchildren(self):
+        """
+        Delete all children of this value *at any level of deepness*
+        if it is a list or a dictionary, otherwise do nothing.
+        Note that this is *not* done within a transaction: put a transaction
+        in the caller (this is because the version of Django we are using
+        does not support nested transactions properly.
+        """
+        if self.datatype == 'dict' or self.datatype == 'list':
+            # Here, I have to delete all elements, to any deepness level!
+            self.__class__.objects.filter(dbnode=self.dbnode, 
+                key__startswith="{parentkey}{sep}".format(
+                parentkey=self.key, sep=self._sep)).delete()
+
     def delvalue(self):
         """
         Deletes this value.
         """
-        self.delete()
+        from django.db import transaction
+        
+        if self.datatype == 'dict' or self.datatype == 'list':
+            with transaction.commit_on_success():
+                # Here, I have to delete all elements, to any deepness level!
+                self.delchildren()
+                # Note! I cannot simply do a delete with a 
+                # key__startswith=parentkey, because if I have an entry
+                # called 'a' that is a list and another called 'ab', the
+                # call would delete also 'ab'. Therefore, first I delete
+                # all children, then the item itself.
+                self.delete()
+        else:
+            self.delete()
     
     @python_2_unicode_compatible
     def __str__(self):

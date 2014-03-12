@@ -553,13 +553,22 @@ class Node(object):
         
         :param str key: key name
         :param value: its value
-        :raise: ModificationNotAllowed if cannot add such attribute.
+        :raise ModificationNotAllowed: if such attribute cannot be added (e.g.
+            because the node was already stored, and the attribute is not listed
+            as updatable).
+
+        :raise ValueError: if the key is not valid (e.g. it contains the
+            separator symbol).        
         """
+        from aiida.djsite.db.models import DbAttribute
+        
+        DbAttribute.validate_key(key)
+        
         if self._to_be_stored:
             self._attrs_cache[key] = value
         else:
             if key in self._updatable_attributes:
-                return self._set_attribute_db(key,value)
+                return DbAttribute.set_value_for_node(self.dbnode, key,value)
             else:
                 raise ModificationNotAllowed(
                     "Cannot set an attribute after saving a node")
@@ -572,6 +581,8 @@ class Node(object):
         :raise AttributeError: if key does not exist.
         :raise ModificationNotAllowed: if the Node was already stored.
         """
+        from aiida.djsite.db.models import DbAttribute
+        
         if self._to_be_stored:
             try:
                 del self._attrs_cache[key]
@@ -580,7 +591,7 @@ class Node(object):
                     "DbAttribute {} does not exist".format(key))
         else:
             if key in self._updatable_attributes:
-                return self._del_attribute_db(key)
+                return DbAttribute.del_value_for_node(self.dbnode, key)
             else:
                 raise ModificationNotAllowed("Cannot delete an attribute after "
                                              "saving a node")
@@ -598,6 +609,8 @@ class Node(object):
         :raise IndexError: If no attribute is found and there is no default
         :raise ValueError: If more than two arguments are passed to get_attr
         """
+        from aiida.djsite.db.models import DbAttribute
+        
         if len(args) > 1:
             raise ValueError("After the key name you can pass at most one"
                              "value, that is the default value to be used "
@@ -610,7 +623,8 @@ class Node(object):
                     raise AttributeError("DbAttribute '{}' does "
                                          "not exist".format(key))
             else:
-                return self._get_attribute_db(key)
+                return DbAttribute.get_value_for_node(dbnode=self.dbnode,
+                                                      key=key)
         except AttributeError as e:
             try:
                 return args[0]
@@ -626,23 +640,48 @@ class Node(object):
         :param string key: key name
         :param value: key value
         """
+        from aiida.djsite.db.models import DbExtra
+
+        DbExtra.validate_key(key)
+        
         if self._to_be_stored:
             raise ModificationNotAllowed(
                 "The extras of a node can be set only after "
                 "storing the node")
-        self._set_extra_db(key,value)
+        DbExtra.set_value_for_node(self.dbnode, key,value)
             
-    def get_extra(self,key):
+    def get_extra(self, key, *args):
         """
         Get the value of a extras, reading directly from the DB!
         Since extras can be added only after storing the node, this
         function is meaningful to be called only after the .store() method.
         
         :param str key: key name
+        :param optional value: if no attribute key is found, returns value
+
         :return: the key value
-        :raise: AttributeError: if key starts with underscore
+
+        :raise ValueError: If more than two arguments are passed to get_extra
         """
-        return self._get_extra_db(key)
+        from aiida.djsite.db.models import DbExtra
+
+        if len(args) > 1:
+            raise ValueError("After the key name you can pass at most one"
+                             "value, that is the default value to be used "
+                             "if no extra is found.")
+
+        try:
+            if self._to_be_stored:
+                raise AttributeError("DbExtra '{}' does not exist yet, the "
+                                     "node is not stored".format(key))
+            else:
+                return DbExtra.get_value_for_node(dbnode=self.dbnode,
+                                                  key=key)
+        except AttributeError as e:
+            try:
+                return args[0]
+            except IndexError:
+                raise e
 
     def del_extra(self,key):
         """
@@ -655,11 +694,13 @@ class Node(object):
         :raise: AttributeError: if key starts with underscore
         :raise: ModificationNotAllowed: if the node has already been stored
         """
+        from aiida.djsite.db.models import DbExtra
+        
         if self._to_be_stored:
             raise ModificationNotAllowed(
                 "The extras of a node can be set and deleted "
                 "only after storing the node")
-        self._del_extra_db(key)
+        return DbExtra.del_value_for_node(self.dbnode, key)
 
     def extras(self):
         """
@@ -675,10 +716,17 @@ class Node(object):
         
         :todo: verify that I am not creating a list internally
         """
-        from django.db.models import Q
-        extraslist = self._list_all_extras_db()
-        for e in extraslist:
-            yield (e.key, e.getvalue())
+        from aiida.djsite.db.models import DbExtra
+        
+        if self._to_be_stored:
+            # If it is not stored yet, there are no extras that can be
+            # added (in particular, we do not even have an ID to use!)
+            # Return without value, meaning that this is an empty generator
+            return
+        else:
+            extraslist = DbExtra.list_all_node_elements(self.dbnode)
+            for e in extraslist:
+                yield (e.key, e.getvalue())
             
     def iterattrs(self,also_updatable=True):
         """
@@ -687,6 +735,7 @@ class Node(object):
         :param bool also_updatable: if False, does not iterate over 
                       attributes that are updatable
         """
+        from aiida.djsite.db.models import DbAttribute
 #        TODO: check what happens if someone stores the object while
 #        the iterator is being used!
         updatable_list = [attr for attr in self._updatable_attributes]
@@ -697,7 +746,7 @@ class Node(object):
                     continue
                 yield (k,v)
         else:          
-            attrlist = self._list_all_attributes_db()
+            attrlist = DbAttribute.list_all_node_elements(self.dbnode)
             for attr in attrlist:
                 if not also_updatable and attr.key in updatable_list:
                     continue
@@ -710,24 +759,6 @@ class Node(object):
         :return: a list of strings
         """
         return list([i[0] for i in self.iterattrs()])
-        
-    def _list_all_attributes_db(self):
-        """
-        Return a django queryset with the attributes of this node
-        """
-        from aiida.djsite.db.models import DbAttribute
-        
-        return DbAttribute.objects.filter(dbnode=self.dbnode)
-
-
-    def _list_all_extras_db(self):
-        """
-        Return a django queryset with the extras of this node
-        """
-        from aiida.djsite.db.models import DbExtra
-        
-        return DbExtra.objects.filter(dbnode=self.dbnode)
-
 
     def add_comment(self,content,user=None):
         """
@@ -760,149 +791,26 @@ class Node(object):
             'time').values_list(
             'user__username', 'user__email', 'time', 'content'))
 
-    def _get_attribute_db(self, key):
-        """
-        This is the raw-level method that accesses the DB.
-        To be used only internally,  after saving self.dbnode.
-        This function accesses the DbAttribute table.
-        """
-        from aiida.djsite.db.models import DbAttribute
-
-        try:
-            attr = DbAttribute.objects.get(dbnode=self.dbnode, key=key)
-        except ObjectDoesNotExist:
-            raise AttributeError("Key {} not found in db".format(key))
-        return attr.getvalue()
-
-    def _get_extra_db(self, key):
-        """
-        This is the raw-level method that accesses the DB.
-        To be used only internally,  after saving self.dbnode.
-        This function accesses the DbExtrae table.
-        """
-        from aiida.djsite.db.models import DbExtra
-
-        try:
-            attr = DbExtra.objects.get(dbnode=self.dbnode, key=key)
-        except ObjectDoesNotExist:
-            raise AttributeError("Key {} not found in db".format(key))
-        return attr.getvalue()
-
-    def _del_attribute_db(self,key):
-        """
-        This is the raw-level method that accesses the DB.
-        No checks are done to prevent the user from deleting a valid key. 
-        To be used only internally, after saving self.dbnode. 
-        This function accesses the DbAttribute table.
-        """
-        from aiida.djsite.db.models import DbAttribute
-
-        self._increment_version_number_db()
-        try:
-            # Call the delvalue method, that takes care of recursively deleting
-            # the subattributes, if this is a list or dictionary.
-            DbAttribute.objects.get(dbnode=self.dbnode, key=key).delvalue()
-        except ObjectDoesNotExist:
-            raise AttributeError("Cannot delete attribute {}, "
-                                 "not found in db".format(key))
-
-    def _del_extra_db(self,key):
-        """
-        This is the raw-level method that accesses the DB.
-        No checks are done to prevent the user from deleting a valid key. 
-        To be used only internally, after saving self.dbnode. 
-        This function accesses the DbExtra table.
-        """
-        from aiida.djsite.db.models import DbExtra
-
-        self._increment_version_number_db()
-        try:
-            # Call the delvalue method, that takes care of recursively deleting
-            # the subattributes, if this is a list or dictionary.
-            DbExtra.objects.get(dbnode=self.dbnode, key=key).delvalue()
-        except ObjectDoesNotExist:
-            raise AttributeError("Cannot delete extra {}, "
-                                 "not found in db".format(key))
-
     def _increment_version_number_db(self):
         """
         This function increments the version number in the DB.
         This should be called every time you need to increment the version
         (e.g. on adding a extra or attribute). 
         """
-        from django.db.models import F
         from aiida.djsite.db.models import DbNode
 
-        # I increment the node number using a filter
-        # (this should be the right way of doing it;
-        # dbnode.nodeversion  = F('nodeversion') + 1
-        # will do weird stuff, returning Django Objects instead of numbers,
-        # and incrementing at every save; moreover in this way I should do
-        # the right thing for concurrent writings
-        # I use self._dbnode because this will not do a query to
-        # update the node; here I only need to get its pk
-        DbNode.objects.filter(pk=self._dbnode.pk).update(
-            nodeversion = F('nodeversion') + 1)
+        # I increment the version number using, internally, filters, to perform
+        # the correct operation even if multiple threads are working on the 
+        # same node.
+        DbNode.objects.get(pk=self._dbnode.pk).increment_version_number()
 
-        # This reload internally the node of self._dbworkflowinstance
+        # This reload internally the node of self._dbnode
         # Note: I have to reload the ojbect. I don't do it here because
         # it is done at every call to self.dbnode
         #self._dbnode = DbNode.objects.get(pk=self._dbnode.pk)
         # Therefore I simply recalculate self.dbnode
         self.dbnode
 
-    def _set_attribute_db(self,key,value,incrementversion=True):
-        """
-        This is the raw-level method that accesses the DB. No checks are done
-        to prevent the user from (re)setting a valid key. 
-        To be used only internally, after saving self.dbnode.
-        This function accesses the DbAttribute table.
-
-        :todo: there may be some error on concurrent write;
-           not checked in this unlucky case!
-
-        :param key: the key of the attribute to store
-        :param value: the value of the attribute to store
-        :param incrementversion : If incrementversion
-          is True (default), each attribute set will
-          udpate the version. This can be set to False during the store() so
-          that the version does not get increased for each attribute.
-        """
-        from django.db import transaction
-        from aiida.djsite.db.models import DbAttribute
-        
-        with transaction.commit_on_success():
-            if incrementversion:
-                self._increment_version_number_db()
-            attr, _ = DbAttribute.objects.get_or_create(dbnode=self.dbnode,
-                                                        key=key)
-            ## TODO: create a get_or_create_with_value method in the
-            #        djsite.db.models.DbAttribute class
-            attr.setvalue(value)
-
-    def _set_extra_db(self,key,value):
-        """
-        This is the raw-level method that accesses the DB. No checks are done
-        to prevent the user from (re)setting a valid key. 
-        To be used only internally, after saving self.dbnode.
-        This function accesses the DbExtra table.
-
-        :todo: there may be some error on concurrent write;
-           not checked in this unlucky case!
-
-        :param key: the key of the extra to store
-        :param value: the value of the extra to store
-        """
-        from django.db import transaction
-        from aiida.djsite.db.models import DbExtra
-        
-        with transaction.commit_on_success():
-            self._increment_version_number_db()
-            extra, _ = DbExtra.objects.get_or_create(dbnode=self.dbnode,
-                                                     key=key)
-            ## TODO: create a get_or_create_with_value method in the
-            #        djsite.db.models.DbAttribute class
-            extra.setvalue(value)
 
     def copy(self):
         """
@@ -1086,6 +994,8 @@ class Node(object):
         #TODO: This needs to be generalized, allowing for flexible methods
         # for storing data and its attributes.
         from django.db import transaction
+        
+        from aiida.djsite.db.models import DbAttribute
 
         if self._to_be_stored:
 
@@ -1105,7 +1015,8 @@ class Node(object):
                     # Save its attributes 'manually' without incrementing
                     # the version for each add.
                     for k, v in self._attrs_cache.iteritems():
-                        self._set_attribute_db(k,v,incrementversion=False)
+                        DbAttribute.set_value_for_node(self.dbnode,
+                            k,v,incrementversion=False)
             # This is one of the few cases where it is ok to do a 'global'
             # except, also because I am re-raising the exception
             except:

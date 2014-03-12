@@ -296,9 +296,9 @@ class TestNodeBasic(AiidaTestCase):
     stringval = "aaaa"
     # A recursive dictionary
     dictval = {'num': 3, 'something': 'else', 'emptydict': {},
-               'recursive': {'a': 1, 'b': True, 'c': 1.2, 'd': [1,2], 
-                             'e': {'z': 'z', 'xx': {}, 'yy': []}}}
-    listval = [1, "s", True]
+               'recursive': {'a': 1, 'b': True, 'c': 1.2, 'd': [1,2,None], 
+                             'e': {'z': 'z', 'x': None, 'xx': {}, 'yy': []}}}
+    listval = [1, "s", True, None]
     emptydict = {}
     emptylist = []
 
@@ -906,6 +906,7 @@ class TestNodeBasic(AiidaTestCase):
             # I check that I cannot modify this attribute
             _ = a.get_attr('state')
 
+
     def test_delete_extras(self):
         """
         Checks the ability of deleting extras, also when they are dictionaries
@@ -943,6 +944,7 @@ class TestNodeBasic(AiidaTestCase):
         Checks the ability of replacing extras, removing the subkeys also when
         these are dictionaries or lists.
         """
+        from aiida.djsite.db.models import DbExtra
         
         a = Node().store()
         extras_to_set = {
@@ -982,6 +984,14 @@ class TestNodeBasic(AiidaTestCase):
         # again
         extras_to_set.update(new_extras)
         self.assertEquals({k: v for k, v in a.iterextras()}, extras_to_set)
+        
+        # Check (manually) that, when replacing lsit and dict with objects
+        # that have no deepness, no junk is left in the DB (i.e., no
+        # 'dict.a', 'list.3.h', ...
+        self.assertEquals(len(DbExtra.objects.filter(
+            dbnode=a, key__startswith=('list'+DbExtra._sep))),0)
+        self.assertEquals(len(DbExtra.objects.filter(
+            dbnode=a, key__startswith=('dict'+DbExtra._sep))),0)
 
     def test_versioning_lowlevel(self):
         """

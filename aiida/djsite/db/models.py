@@ -448,6 +448,21 @@ class DbAttributeBaseClass(m.Model):
                     self.ival = None
                     self.fval = None
     
+                elif isinstance(value, list):
+                                    
+                    self.datatype = 'list'
+                    self.dval = None
+                    self.tval = ''
+                    self.bval = None
+                    self.ival = len(value)
+                    self.fval = None
+                    
+                    for i, subv in enumerate(value):                           
+                        item, _ = self.__class__.objects.get_or_create(
+                            dbnode=self.dbnode,
+                            key=("{}{}{:d}".format(self.key,self._sep, i)))
+                        item.setvalue(subv)
+                
                 elif isinstance(value, dict):
                                     
                     self.datatype = 'dict'
@@ -467,8 +482,6 @@ class DbAttributeBaseClass(m.Model):
                         item, _ = self.__class__.objects.get_or_create(
                             dbnode=self.dbnode,
                             key=(self.key + self._sep + subk))
-                ## TODO: create a get_or_create_with_value method in the
-                #        djsite.db.models.DbAttribute class
                         item.setvalue(subv)
                     
                 else:
@@ -519,6 +532,36 @@ class DbAttributeBaseClass(m.Model):
             else:
                 return self.dval
             return self.dval
+        elif self.datatype == 'list':
+            retlist = []
+            regex_string = r"^{parentkey}{sep}([^{sep}])*$".format(
+                    parentkey=re.escape(self.key),
+                    sep=re.escape(self._sep))
+            dbsubvalues = self.__class__.objects.filter(dbnode=self.dbnode,
+                key__regex=regex_string).distinct()
+
+            expected_set = set(["{}{}{:d}".format(self.key,self._sep,i)
+                   for i in range(self.ival)])
+            db_set = set(dbsubvalues.values_list('key',flat=True))
+            # If there are more entries than expected, but all expected
+            # ones are there, I just issue an error but I do not stop.
+            if not expected_set.issubset(db_set):
+                raise DbContentError("Wrong list elements stored in {} for "
+                                     "node={} and key='{}' ({} vs {})".format(
+                                     self.__class__.__name__, self.pk, self.key,
+                                     expected_set, db_set))
+            if expected_set != db_set:
+                aiidalogger.error("Wrong list elements stored in {} for "
+                                  "node={} and key='{}' ({} vs {})".format(
+                                    self.__class__.__name__, self.pk, self.key,
+                                    expected_set, db_set))                
+            
+            # I get the values in memory as a dictionary
+            tempdict = {i.key: i.getvalue() for i in dbsubvalues}
+            # And then I put them in a list
+            retlist = [tempdict["{}{}{:d}".format(
+                self.key, self._sep, i)] for i in range(self.ival)]
+            return retlist
         elif self.datatype == 'dict':
             retdict = {}
             # Note: it may not be the most efficient way to do it

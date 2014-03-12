@@ -33,7 +33,11 @@ def login_view(request):
 		else:
 			return render(request, 'awi/login_form.html', {'base_template': 'awi/base_login.html', 'error_message': 'Wrong username or password'})
 	else:
-		next = request.GET['next']
+		try:
+			next = request.GET['next']
+		except:
+			next = 'awi:home'
+		
 		return render(request, 'awi/login_form.html', {'base_template': 'awi/base_login.html', 'next': next})
 
 def logout_view(request):
@@ -41,7 +45,7 @@ def logout_view(request):
 	Logout view
 	"""
 	logout(request)
-	return index(request) #redirect
+	return redirect('awi:home') #redirect
 
 # Computers page view
 @login_required(login_url='awi:login')

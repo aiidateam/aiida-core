@@ -729,12 +729,21 @@ class SshTransport(aiida.transport.Transport):
         elif not self.isdir(remotepath):
             self.mkdir(remotepath)
         
+        # TODO, NOTE: we are not using 'onerror' because we checked above that
+        # the folder exists, but it would be better to use it
         for this_source in os.walk(localpath):
-            this_basename = this_source[0][len(localpath):]
+            # Get the relative path
+            this_basename = os.path.relpath(path=this_source[0],
+                                            start=localpath)
+            
             try:
                 self.sftp.stat( os.path.join(remotepath,this_basename) )
-            except IOError:
-                self.mkdir( os.path.join(remotepath,this_basename) )
+            except IOError as e:
+                import errno
+                if e.errno == errno.ENOENT: # Missing file
+                    self.mkdir( os.path.join(remotepath,this_basename) )
+                else:
+                    raise
                 
             for this_file in this_source[2]:
                 this_local_file = os.path.join(localpath,this_basename,this_file)        

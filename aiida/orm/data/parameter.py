@@ -33,7 +33,7 @@ class ParameterData(Data):
         """
         Iterator of valid keys stored in the ParameterData object
         """
-        for k, v in self.iterattrs():
+        for k in self.attrs():
             yield k
 
     def add_path(self, *args, **kwargs):

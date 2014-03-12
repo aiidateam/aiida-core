@@ -708,7 +708,14 @@ class Node(object):
         
         :return: a list of strings
         """
-        return list([i[0] for i in self.iterextras()])
+        from aiida.djsite.db.models import DbExtra
+        
+        if self._to_be_stored:
+            return
+        else:
+            extraslist = DbExtra.list_all_node_elements(self.dbnode)
+        for e in extraslist:
+                yield e.key
 
     def iterextras(self):
         """
@@ -731,6 +738,10 @@ class Node(object):
     def iterattrs(self,also_updatable=True):
         """
         Iterator over the attributes, returning tuples (key, value)
+
+        :todo: optimize! At the moment, the call is very slow because it is 
+            also calling attr.getvalue() for each attribute, that has to
+             perform complicated queries to rebuild the object.
 
         :param bool also_updatable: if False, does not iterate over 
                       attributes that are updatable
@@ -758,8 +769,19 @@ class Node(object):
         
         :return: a list of strings
         """
-        return list([i[0] for i in self.iterattrs()])
-
+        # Note: I "duplicate" the code from iterattrs, rather than
+        # calling iterattrs from here, because iterattrs is slow on each call
+        # since it has to call .getvalue(). To improve!
+        from aiida.djsite.db.models import DbAttribute
+        
+        if self._to_be_stored:
+            for k, v in self._attrs_cache.iteritems():
+                yield k
+        else:          
+            attrlist = DbAttribute.list_all_node_elements(self.dbnode)
+            for attr in attrlist:
+                yield attr.key
+    
     def add_comment(self,content,user=None):
         """
         Add a new comment.

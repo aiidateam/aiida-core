@@ -3,55 +3,39 @@
 {% block subcontent %}
 <div class="modal-header">
 	<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-	<h4 class="modal-title">Rename computer {{ computer_id }}</h4>
+	<h4 class="modal-title">{{ field|title }}</h4>
 </div>
 <div class="modal-body">
-	<div class="alert alert-danger" style="display: none;"></div>
 	<div class="input-group">
 		<input type="text" class="form-control">
 		<span class="input-group-btn">
-			<button class="btn btn-primary" type="button">Rename</button>
+			<button class="btn btn-primary" type="button">Update</button>
 		</span>
 	</div>
+	<div class="clearfix"></div><!-- may be unnecessary once the modal code is put at the top of the body -->
 </div>
 <script>
 	(function() { /* we need to defer the script since jQuery is not yet loaded at that point of the page */
 		var code = function($) { /* this is the jQuery code we need to execute */
 			$(document).ready(function(){
-				var themodal = $('#modal-{{ computer_id }}');
-				var field = $('#modal-{{ computer_id }} input.form-control');
-				field.val(themodal.attr('data-rename'));
+				var field = $('#filter-{{ field }} input.form-control');
+				field.val($('#filter-{{ field }}').attr('data-value'));
 				window.setTimeout(function(){
 					field.select().focus();
 				}, 500);
-				$('#modal-{{ computer_id }} button.btn').click(function(){
-					$.ajax({
-						url: themodal.attr('data-url'),
-						type: 'PATCH',
-						dataType: 'json',
-						contentType: 'application/json',
-						processData: false,
-						data: '{"name":"'+field.val()+'"}',
-						success: function(data) {
-							themodal.modal('toggle');
-							$('#row-{{ computer_id }}>td.name>strong').text(data.name);
-						},
-						error: function(xhr, status, error){
-							$('#modal-{{ computer_id }} .alert').html('<strong>Oops</strong>, there was a problem : '+$.parseJSON(xhr.responseText).dbcomputer.name).show();
-							field.select().focus();
-						}
-					});
+				$('#filter-{{ field }} button.btn').click(function(){
+					/* handle click event here : ajax etc */
 				});
 				field.keypress(function(event) {
 					if (event.which == 13) {
-						$('#modal-{{ computer_id }} button.btn').click();
+						$('#filter-{{ field }} button.btn').click();
 					}
 				});
 				themodal.on('shown.bs.modal', function(e){
 					field.select().focus();
 				});
 				themodal.on('show.bs.modal', function(e){
-					$('#modal-{{ computer_id }} .alert').hide();
+					$('#filter-{{ field }} .alert').hide();
 				});
 			});
 		};

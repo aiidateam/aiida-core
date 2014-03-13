@@ -88,7 +88,8 @@ class DbComputerResource(ModelResource):
             'workdir': ALL,
             'enabled': ALL,
             }
-        ordering = ['id', 'name', 'transport_type', 'scheduler_type', 'enabled'] 
+        ordering = ['id', 'name', 'transport_type', 'scheduler_type', 'enabled']
+        always_return_data=True
 
         authentication = SessionAuthentication()
         authorization = DjangoAuthorization()

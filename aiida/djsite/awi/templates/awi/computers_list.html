@@ -5,7 +5,7 @@
 
 {% block content %}
 <div class="row">
-	<div class="col-lg-3 col-md-7 col-sm-9 col-lg-push-9">
+	<div class="col-lg-4 col-md-8 col-sm-10 col-lg-push-8">
 		<div class="panel panel-default">
 			<div class="panel-heading">
 				<h3 class="panel-title">
@@ -15,11 +15,13 @@
 							<button type="button" class="btn btn-xs btn-warning dropdown-toggle" data-toggle="dropdown"><span class="glyphicon glyphicon-plus"></span></button>
 							<ul class="dropdown-menu dropdown-menu-right" role="menu">
 								<!-- todo : filters -->
-								<!-- filters can be : text input (first section), multiple choice (second section) -->
+								<!-- filters can be : numerical input, text input (first section), multiple choice (second section) -->
 								<!-- e.g. name : search string in name __icontains= -->
 								<!-- e.g. status : enabled or disabled -->
+								<!-- note : disable links here for filters that have already been applied -->
 								<li><a href="#">ID</a></li>
 								<li><a href="#">Name</a></li>
+								<li><a href="#">Description</a></li>
 								<li><a href="#">Hostname</a></li>
 								<li class="divider"></li>
 								<li><a href="#">Type</a></li>
@@ -44,15 +46,32 @@
 						<button type="button" class="btn btn-default text-danger"><strong>&times;</strong></button>
 					</div>
 					<div class="btn-group btn-group-sm">
-						<button type="button" class="btn btn-warning filter-field disabled"><strong>Scheduler</strong></button>
-						<button type="button" class="btn btn-default filter-value">pbspro</button>
+						<button type="button" class="btn btn-warning filter-field disabled"><strong>Description</strong></button>
+						<div class="btn-group btn-group-sm">
+							<button type="button" class="btn btn-default dropdown-toggle filter-operator" data-toggle="dropdown">~</button>
+							<ul class="dropdown-menu">
+								<li><a href="#">~ contains</a></li>
+								<li><a href="#">= equals</a></li>
+								<li><a href="#">&ne; doesn't contain</a></li>
+							</ul>
+						</div>
+						<button type="button" class="btn btn-default filter-value" data-toggle="modal" data-target="#filter-description" href="{% url 'awi:filters_value' field='description' %}">aries</button>
+						<!-- start modal -->
+						<div class="modal fade" id="filter-description" tabindex="-1" role="dialog" aria-labelledby="filterLabel" aria-hidden="true" data-value="aries">
+							<div class="modal-dialog modal-sm">
+								<div class="modal-content">
+									
+								</div>
+							</div>
+						</div>
+						<!-- end modal -->
 						<button type="button" class="btn btn-default text-danger"><strong>&times;</strong></button>
 					</div>
 				</div>
 			</div>
 		</div>
  	</div>
-	<div class="col-lg-9 col-md-12 col-sm-12 col-lg-pull-3">
+	<div class="col-lg-8 col-md-12 col-sm-12 col-lg-pull-4">
 		<div class="panel panel-default">
 			<div class="table-responsive">
 				<table class="table">

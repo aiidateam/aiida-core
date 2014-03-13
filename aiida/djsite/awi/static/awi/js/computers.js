@@ -33,16 +33,16 @@
 				false: '<span class="label label-danger">disabled</span>'
 			}
 			$.each(data.objects, function(k, o){ /* for each computer, we build the html of a table row */
-				$('nav+div.container').prepend('<div class="modal fade" id="modal-'+o.id+'" role="dialog" aria-labelledby="RenameComputer'+o.id+'" aria-hidden="true" tabindex="-1" data-rename="'+o.name+'">'+
+				$('nav+div.container').prepend('<div class="modal fade" id="modal-'+o.id+'" role="dialog" aria-labelledby="RenameComputer'+o.id+'" aria-hidden="true" tabindex="-1" data-rename="'+o.name+'" data-url="'+o.resource_uri+'">'+
 					'<div class="modal-dialog modal-sm">'+
 					'<div class="modal-content">'+
 					'</div></div></div>'); /* we prepare a modal box for each */
 				rows.push(''); /* we reserve a spot in the output for this line */
 				$.getJSON(api_urls.authinfo+'?computer='+o.id, function(subdata) { /* get the user infos, api_authinfo_url is defined in a script in the base.html template */
 					var username = subdata.objects[0].aiidauser.username; /* user data is included in the authinfo api response */
-					rows[k] = '<tr>'+ /* we update the corresponding line, this ensures that data is gonna be displayed in the right order at the end */
+					rows[k] = '<tr id="row-'+o.id+'">'+ /* we update the corresponding line, this ensures that data is gonna be displayed in the right order at the end */
 						'<td>'+o.id+'</td>'+
-						'<td><strong>'+o.name+'</strong></td>'+
+						'<td class="name"><strong>'+o.name+'</strong><a href="'+modules_urls[module].detail.substring(0, modules_urls[module].detail.length - 1)+o.id+'" class="show-detail" data-id="'+o.id+'">&nbsp;<span class="right-caret"></span></a></td>'+
 						'<td><span title="'+o.description+'" data-toggle="tooltip">'+o.description.trunc(30,true)+'</span></td>'+ /* description is truncated via this custom function */
 						'<td>'+username+'</td>'+
 						'<td>'+o.transport_type+'</td>'+
@@ -116,8 +116,10 @@
 			var detail_id = me.attr('data-id'); /* this is the computer id */
 			if($('#detail-'+detail_id).length > 0) { /* we check if the panel is already open */
 				close_computers_detail(detail_id);
+				$('#row-'+detail_id+'>td.name>a>span').removeClass('caret').addClass('right-caret');
 			}
 			else {
+				$('#row-'+detail_id+'>td.name>a>span').removeClass('right-caret').addClass('caret');
 				var detail_url = me.attr('href')+'/ajax'; /* this is the details page url */
 				me.closest('tr').after('<tr id="detail-'+detail_id+'" class="loader detail"><td colspan="9">'+
 					'<div class="dots">Loading...</div></td></tr>'); /* add the required line (hidden) */

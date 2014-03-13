@@ -83,6 +83,12 @@ def computers_rename(request, computer_id):
 	"""
 	return render(request, 'awi/computers_rename.html', {'computer_id': computer_id})
 
+@login_required(login_url='awi:login')
+def filters_value(request, field):
+	"""
+	Update value form for filters
+	"""
+	return render(request, 'awi/filters_value.html', {'field': field})
 
 def codes(request):
 	"""

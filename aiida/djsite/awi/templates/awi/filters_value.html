@@ -1,6 +1,6 @@
 {% extends 'awi/base_ajax.html' %}
 
-{% block subcontent %}
+{% block ajax %}
 <div class="modal-header">
 	<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
 	<h4 class="modal-title">{{ field|title }}</h4>
@@ -18,23 +18,24 @@
 	(function() { /* we need to defer the script since jQuery is not yet loaded at that point of the page */
 		var code = function($) { /* this is the jQuery code we need to execute */
 			$(document).ready(function(){
+				var themodal = $('#filter-{{ field }}');
 				var field = $('#filter-{{ field }} input.form-control');
 				field.val($('#filter-{{ field }}').attr('data-value'));
 				window.setTimeout(function(){
-					field.select().focus();
+					field.select().focus(); /* we focus on the input field when the animation is over (just required for the first load, is then handled by the event show.bs.modal) */
 				}, 500);
 				$('#filter-{{ field }} button.btn').click(function(){
 					/* handle click event here : ajax etc */
 				});
-				field.keypress(function(event) {
+				field.keypress(function(event) { /* on pressing the enter key, trigger the click event on the button (submit) */
 					if (event.which == 13) {
 						$('#filter-{{ field }} button.btn').click();
 					}
 				});
-				themodal.on('shown.bs.modal', function(e){
+				themodal.on('shown.bs.modal', function(e){ /* after apparition animation is complete, focus on the field */
 					field.select().focus();
 				});
-				themodal.on('show.bs.modal', function(e){
+				themodal.on('show.bs.modal', function(e){ /* if there was an error message, hide it on modal apparition */
 					$('#filter-{{ field }} .alert').hide();
 				});
 			});

@@ -14,13 +14,14 @@
 	*/
 	function load_computers(scroll, ordering) {
 		var module = 'computers';
+		var module_s = 'computer';
 		if(scroll == undefined)
 			scroll = false;
 		if(ordering == undefined) /* default ordering field */
 			ordering = 'id';
-		if($('#computers-list>tr').length > 1) { /* if there was already content in the table, remove it and show the loader */
-			$('#computers-list>tr').filter(':visible').remove();
-			$('#computers-list .loader').fadeIn('fast');
+		if($('#'+module+'-list>tr').length > 1) { /* if there was already content in the table, remove it and show the loader */
+			$('#'+module+'-list>tr').filter(':visible').remove();
+			$('#'+module+'-list .loader').fadeIn('fast');
 		}
 		if(api_urls[module].indexOf('?') == -1 && api_urls[module].indexOf('order_by') == -1)
 			api_urls[module] += '?order_by='+ordering;
@@ -33,7 +34,7 @@
 				false: '<span class="label label-danger">disabled</span>'
 			}
 			$.each(data.objects, function(k, o){ /* for each computer, we build the html of a table row */
-				$('nav+div.container').prepend('<div class="modal fade" id="modal-'+o.id+'" role="dialog" aria-labelledby="RenameComputer'+o.id+'" aria-hidden="true" tabindex="-1" data-rename="'+o.name+'" data-url="'+o.resource_uri+'">'+
+				$('nav+div.container').prepend('<div class="modal fade" id="modal-'+o.id+'" role="dialog" aria-labelledby="Rename'+module_s+o.id+'" aria-hidden="true" tabindex="-1" data-rename="'+o.name+'" data-url="'+o.resource_uri+'">'+
 					'<div class="modal-dialog modal-sm">'+
 					'<div class="modal-content">'+
 					'</div></div></div>'); /* we prepare a modal box for each */
@@ -48,17 +49,19 @@
 						'<td>'+o.transport_type+'</td>'+
 						'<td>'+o.hostname+'</td>'+
 						'<td>'+o.scheduler_type+'</td>'+
-						'<td>'+status[o.enabled]+'</td>'+
+						'<td class="status">'+status[o.enabled]+'</td>'+
 						'<td>'+
 							'<div class="btn-group">'+ /* actions dropdown */
 								'<button type="button" class="btn btn-primary btn-sm dropdown-toggle" data-toggle="dropdown">'+
 									'Action <span class="caret"></span>'+
 								'</button>'+
 								'<ul class="dropdown-menu dropdown-menu-right" role="menu">'+
-									'<li><a href="'+modules_urls[module].detail.substring(0, modules_urls[module].detail.length - 1)+o.id+'" class="show-detail" data-id="'+o.id+'"><span class="glyphicon glyphicon-tasks"></span>&nbsp;&nbsp;Details</a></li>'+
-									'<li class="disabled"><a href="#"><span class="glyphicon glyphicon-ban-circle"></span>&nbsp;&nbsp;Disable</a></li>'+
-									'<li class="disabled"><a href="#"><span class="glyphicon glyphicon-ok"></span>&nbsp;&nbsp;Enable</a></li>'+
-									'<li><a href="'+modules_urls[module].rename.substring(0, modules_urls[module].rename.length - 1)+o.id+'" data-toggle="modal" data-target="#modal-'+o.id+'"><span class="glyphicon glyphicon-pencil"></span>&nbsp;&nbsp;Rename</a></li>'+
+									'<li><a href="'+modules_urls[module].detail.substring(0, modules_urls[module].detail.length - 1)+o.id+'" class="show-detail"'+
+										'data-id="'+o.id+'"><span class="glyphicon glyphicon-tasks"></span>&nbsp;&nbsp;Details</a></li>'+
+									(o.enabled == true ? '<li class="status"><a href="'+o.resource_uri+'" class="computer-disable" data-id="'+o.id+'"><span class="glyphicon glyphicon-ban-circle"></span>&nbsp;&nbsp;Disable</a></li>'
+										: '<li class="status"><a href="'+o.resource_uri+'" class="computer-enable" data-id="'+o.id+'"><span class="glyphicon glyphicon-ok"></span>&nbsp;&nbsp;Enable</a></li>')+
+									'<li><a href="'+modules_urls[module].rename.substring(0, modules_urls[module].rename.length - 1)+o.id+'" data-toggle="modal" data-target="#modal-'+o.id+'">'+
+										'<span class="glyphicon glyphicon-pencil"></span>&nbsp;&nbsp;Rename</a></li>'+
 									'<li class="disabled"><a href="#"><span class="glyphicon glyphicon-cog"></span>&nbsp;&nbsp;Configure</a></li>'+
 									'<li class="disabled"><a href="#" class="text-danger"><span class="glyphicon glyphicon-remove-circle"></span>&nbsp;&nbsp;Delete</a></li>'+
 								'</ul>'+
@@ -120,7 +123,7 @@
 			}
 			else {
 				$('#row-'+detail_id+'>td.name>a>span').removeClass('right-caret').addClass('caret');
-				var detail_url = me.attr('href')+'/ajax'; /* this is the details page url */
+				var detail_url = me.attr('href'); /* this is the details page url */
 				me.closest('tr').after('<tr id="detail-'+detail_id+'" class="loader detail"><td colspan="9">'+
 					'<div class="dots">Loading...</div></td></tr>'); /* add the required line (hidden) */
 				$('tr#detail-'+detail_id+'>td').slideDown(function(){ /* show it */
@@ -130,6 +133,50 @@
 					}); 
 				})
 			}	
+		});
+		/* listen to the "disable" links */
+		$('#computers-list').delegate('a.computer-disable', 'click', function(e){
+			e.preventDefault(); /* we do not want to go to the api url */
+			var me = $(this);
+			var api_url = me.attr('href');
+			var computer_id = me.attr('data-id');
+			$.ajax({ /* call the api with the required data */
+				url: api_url,
+				type: 'PATCH',
+				dataType: 'json',
+				contentType: 'application/json',
+				processData: false,
+				data: '{"enabled":false}',
+				success: function(data) { /* on success, we change the label in the table row and change the link in the actions dropdown */
+					$('#row-'+computer_id+'>td.status').html('<span class="label label-danger">disabled</span>');
+					$('#row-'+computer_id+' ul.dropdown-menu>li.status>a').removeClass('computer-disable').addClass('computer-enable').html('<span class="glyphicon glyphicon-ok"></span>&nbsp;&nbsp;Enable');
+				},
+				error: function(xhr, status, error){ /* or we show an error message */
+					$('body>div.container').prepend('<div class="alert alert-danger"><strong>Oops</strong>, there was a problem. Could not change status on computer '+computer_id+' : '+$.parseJSON(xhr.responseText).dbcomputer.enabled+'</div>');
+				}
+			});
+		});
+		/* listen to the "enable" links */
+		$('#computers-list').delegate('a.computer-enable', 'click', function(e){
+			e.preventDefault(); /* we do not want to go to the api url */
+			var me = $(this);
+			var api_url = me.attr('href');
+			var computer_id = me.attr('data-id');
+			$.ajax({ /* call the api with the required data */
+				url: api_url,
+				type: 'PATCH',
+				dataType: 'json',
+				contentType: 'application/json',
+				processData: false,
+				data: '{"enabled":true}',
+				success: function(data) { /* on success, we change the label in the table row and change the link in the actions dropdown */
+					$('#row-'+computer_id+'>td.status').html('<span class="label label-success">enabled</span>');
+					$('#row-'+computer_id+' ul.dropdown-menu>li.status>a').removeClass('computer-enable').addClass('computer-disable').html('<span class="glyphicon glyphicon-ban-circle"></span>&nbsp;&nbsp;Disable');
+				},
+				error: function(xhr, status, error){ /* or we show an error message */
+					$('body>div.container').prepend('<div class="alert alert-danger"><strong>Oops</strong>, there was a problem. Could not change status on computer '+computer_id+' : '+$.parseJSON(xhr.responseText).dbcomputer.enabled+'</div>');
+				}
+			});
 		});
 	});
 	

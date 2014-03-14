@@ -22,13 +22,15 @@ from aiida.cmdline import pass_to_django_manage
 
 ## Import here from other files; once imported, it will be found and
 ## used as a command-line parameter
-from aiida.cmdline.commands.daemon import Daemon
-from aiida.cmdline.commands.computer import Computer
-from aiida.cmdline.commands.workflow import Workflow
-from aiida.cmdline.commands.data import Data
-from aiida.cmdline.commands.code import Code
 from aiida.cmdline.commands.calculation import Calculation
+from aiida.cmdline.commands.code import Code
+from aiida.cmdline.commands.computer import Computer
+from aiida.cmdline.commands.daemon import Daemon
+from aiida.cmdline.commands.data import Data
 from aiida.cmdline.commands.devel import Devel
+from aiida.cmdline.commands.export import Export
+from aiida.cmdline.commands.workflow import Workflow
+
 
 from aiida.cmdline import execname
 

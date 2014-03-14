@@ -13,6 +13,14 @@ from aiida.common.exceptions import (
 # to create the new table. See for instance
 # http://stackoverflow.com/questions/14904046/
 
+class EmptyContextManager(object):
+    def __enter__(self):
+        pass
+    
+    def __exit__(self, exc_type, exc_value, traceback):
+        pass
+    
+
 class AiidaQuerySet(QuerySet):
     def iterator(self):
         for obj in super(AiidaQuerySet, self).iterator():
@@ -349,8 +357,8 @@ class DbAttributeBaseClass(m.Model):
             if incrementversion:
                 dbnode.increment_version_number()
             attr, _ = cls.objects.get_or_create(dbnode=dbnode,
-                                                       key=key)
-            attr.setvalue(value)
+                                                key=key)
+            attr.setvalue(value,with_transaction=False)
         except:
             transaction.savepoint_rollback(sid)
             raise
@@ -372,136 +380,146 @@ class DbAttributeBaseClass(m.Model):
                                  "not found in db".format(
                                  cls.__name__, key, dbnode.pk))
         
-    def setvalue(self,value):
+    def setvalue(self,value,with_transaction=True):
         """
         This can be called on a given row and will set the corresponding value.
+        
+        :param with_transaction: If you are calling this function recursively,
+           set with_transaction=False to avoid recursive transactions, that
+           can significantly increase the time spent to store dictionaries by
+           large factors. 
         """
         import json
         import datetime 
         from django.utils.timezone import is_naive, make_aware, get_current_timezone
         from django.db import transaction
         
-        with transaction.commit_on_success():
-            # Needed, we call this function recursively; we cannot simply use
+        # Needed, we call this function recursively; we cannot simply use
+        if with_transaction:
             sid = transaction.savepoint()
-            try:
-                # I have to delete the children to start with: if this was a 
-                # dictionary or a list, I do not want to leave around pending
-                # entries. This call will do nothing if the current entry is 
-                # any other datatype
-                self.delchildren()
-    
-                if value is None:
-                    self.datatype = 'none'
-                    self.bval = None
-                    self.tval = ''
-                    self.ival = None
-                    self.fval = None
-                    self.dval = None            
-                    
-                elif isinstance(value,bool):
-                    self.datatype = 'bool'
-                    self.bval = value
-                    self.tval = ''
-                    self.ival = None
-                    self.fval = None
-                    self.dval = None
-        
-                elif isinstance(value,int):
-                    self.datatype = 'int'
-                    self.ival = value
-                    self.tval = ''
-                    self.bval = None
-                    self.fval = None
-                    self.dval = None
-        
-                elif isinstance(value,float):
-                    self.datatype = 'float'
-                    self.fval = value
-                    self.tval = ''
-                    self.ival = None
-                    self.bval = None
-                    self.dval = None
-        
-                elif isinstance(value,basestring):
-                    self.datatype = 'txt'
-                    self.tval = value
-                    self.bval = None
-                    self.ival = None
-                    self.fval = None
-                    self.dval = None
-        
-                elif isinstance(value,datetime.datetime):
-        
-                    # current timezone is taken from the settings file of django
-                    if is_naive(value):
-                        value_to_set = make_aware(value,get_current_timezone())
-                    else:
-                        value_to_set = value
-        
-                    self.datatype = 'date'
-                    # TODO: time-aware and time-naive datetime objects, see
-                    # https://docs.djangoproject.com/en/dev/topics/i18n/timezones/#naive-and-aware-datetime-objects
-                    self.dval = value_to_set
-                    self.tval = ''
-                    self.bval = None
-                    self.ival = None
-                    self.fval = None
-    
-                elif isinstance(value, list):
-                                    
-                    self.datatype = 'list'
-                    self.dval = None
-                    self.tval = ''
-                    self.bval = None
-                    self.ival = len(value)
-                    self.fval = None
-                    
-                    for i, subv in enumerate(value):                           
-                        item, _ = self.__class__.objects.get_or_create(
-                            dbnode=self.dbnode,
-                            key=("{}{}{:d}".format(self.key,self._sep, i)))
-                        item.setvalue(subv)
+        try:
+            # I have to delete the children to start with: if this was a 
+            # dictionary or a list, I do not want to leave around pending
+            # entries. This call will do nothing if the current entry is 
+            # any other datatype
+            self.delchildren()
+
+            if value is None:
+                self.datatype = 'none'
+                self.bval = None
+                self.tval = ''
+                self.ival = None
+                self.fval = None
+                self.dval = None            
                 
-                elif isinstance(value, dict):
-                                    
-                    self.datatype = 'dict'
-                    self.dval = None
-                    self.tval = ''
-                    self.bval = None
-                    self.ival = len(value)
-                    self.fval = None
-                    
-                    for subk, subv in value.iteritems():
-                        if self._sep in subk:
-                            raise ValueError("You are trying to store an entry "
-                                "that (maybe at an inner level) has"
-                                "contains the character '{}', that "
-                                "cannot be used".format(self._sep))
-                            
-                        item, _ = self.__class__.objects.get_or_create(
-                            dbnode=self.dbnode,
-                            key=(self.key + self._sep + subk))
-                        item.setvalue(subv)
-                    
+            elif isinstance(value,bool):
+                self.datatype = 'bool'
+                self.bval = value
+                self.tval = ''
+                self.ival = None
+                self.fval = None
+                self.dval = None
+    
+            elif isinstance(value,int):
+                self.datatype = 'int'
+                self.ival = value
+                self.tval = ''
+                self.bval = None
+                self.fval = None
+                self.dval = None
+    
+            elif isinstance(value,float):
+                self.datatype = 'float'
+                self.fval = value
+                self.tval = ''
+                self.ival = None
+                self.bval = None
+                self.dval = None
+    
+            elif isinstance(value,basestring):
+                self.datatype = 'txt'
+                self.tval = value
+                self.bval = None
+                self.ival = None
+                self.fval = None
+                self.dval = None
+    
+            elif isinstance(value,datetime.datetime):
+    
+                # current timezone is taken from the settings file of django
+                if is_naive(value):
+                    value_to_set = make_aware(value,get_current_timezone())
                 else:
-                    try:
-                        jsondata = json.dumps(value)
-                    except TypeError:
-                        raise ValueError("Unable to store the value: it must be either "
-                                         "a basic datatype, or json-serializable")
-                    
-                    self.datatype = 'json'
-                    self.tval = jsondata
-                    self.bval = None
-                    self.ival = None
-                    self.fval = None
+                    value_to_set = value
+    
+                self.datatype = 'date'
+                # TODO: time-aware and time-naive datetime objects, see
+                # https://docs.djangoproject.com/en/dev/topics/i18n/timezones/#naive-and-aware-datetime-objects
+                self.dval = value_to_set
+                self.tval = ''
+                self.bval = None
+                self.ival = None
+                self.fval = None
+
+            elif isinstance(value, list):
+                                
+                self.datatype = 'list'
+                self.dval = None
+                self.tval = ''
+                self.bval = None
+                self.ival = len(value)
+                self.fval = None
                 
-                self.save()
-            except:
-                # Revert this inner transation, and reraise
+                for i, subv in enumerate(value):                           
+                    # I do not need get_or_create here, because
+                    # above I deleted all children (and I
+                    # expect no concurrency)
+                    item = self.__class__(dbnode=self.dbnode,
+                        key=("{}{}{:d}".format(self.key,self._sep, i)))
+                    item.setvalue(subv,with_transaction=False)
+            
+            elif isinstance(value, dict):
+                                
+                self.datatype = 'dict'
+                self.dval = None
+                self.tval = ''
+                self.bval = None
+                self.ival = len(value)
+                self.fval = None
+                
+                for subk, subv in value.iteritems():
+                    if self._sep in subk:
+                        raise ValueError("You are trying to store an entry "
+                            "that (maybe at an inner level) has"
+                            "contains the character '{}', that "
+                            "cannot be used".format(self._sep))
+                        
+                    # I do not need get_or_create here, because
+                    # above I deleted all children (and I
+                    # expect no concurrency)
+                    item = self.__class__(dbnode=self.dbnode,
+                        key=(self.key + self._sep + subk))
+                    item.setvalue(subv,with_transaction=False)
+                
+            else:
+                try:
+                    jsondata = json.dumps(value)
+                except TypeError:
+                    raise ValueError("Unable to store the value: it must be either "
+                                     "a basic datatype, or json-serializable")
+                
+                self.datatype = 'json'
+                self.tval = jsondata
+                self.bval = None
+                self.ival = None
+                self.fval = None
+            
+            self.save()
+        except:
+            # Revert this inner transation, and reraise
+            if with_transaction:
                 transaction.savepoint_rollback(sid)
-                raise
+            raise
         
     def getvalue(self):
         """

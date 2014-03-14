@@ -1,6 +1,6 @@
 {% extends 'awi/base_ajax.html' %}
 
-{% block subcontent %}
+{% block ajax %}
 <div class="modal-header">
 	<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
 	<h4 class="modal-title">Rename computer {{ computer_id }}</h4>
@@ -22,35 +22,35 @@
 				var field = $('#modal-{{ computer_id }} input.form-control');
 				field.val(themodal.attr('data-rename'));
 				window.setTimeout(function(){
-					field.select().focus();
+					field.select().focus(); /* we focus on the input field when the animation is over (just required for the first load, is then handled by the event show.bs.modal) */
 				}, 500);
-				$('#modal-{{ computer_id }} button.btn').click(function(){
-					$.ajax({
+				$('#modal-{{ computer_id }} button.btn').click(function(){ /* submitting the form */
+					$.ajax({ /* we call the api */
 						url: themodal.attr('data-url'),
 						type: 'PATCH',
 						dataType: 'json',
 						contentType: 'application/json',
 						processData: false,
 						data: '{"name":"'+field.val()+'"}',
-						success: function(data) {
+						success: function(data) { /* on success, hide the modal and change the value in the table row */
 							themodal.modal('toggle');
 							$('#row-{{ computer_id }}>td.name>strong').text(data.name);
 						},
-						error: function(xhr, status, error){
+						error: function(xhr, status, error){ /* on error, show an error message and focus on the field again */
 							$('#modal-{{ computer_id }} .alert').html('<strong>Oops</strong>, there was a problem : '+$.parseJSON(xhr.responseText).dbcomputer.name).show();
 							field.select().focus();
 						}
 					});
 				});
-				field.keypress(function(event) {
+				field.keypress(function(event) { /* on pressing the enter key, trigger the click event on the button (submit) */
 					if (event.which == 13) {
 						$('#modal-{{ computer_id }} button.btn').click();
 					}
 				});
-				themodal.on('shown.bs.modal', function(e){
+				themodal.on('shown.bs.modal', function(e){ /* after apparition animation is complete, focus on the field */
 					field.select().focus();
 				});
-				themodal.on('show.bs.modal', function(e){
+				themodal.on('show.bs.modal', function(e){ /* if there was an error message, hide it on modal apparition */
 					$('#modal-{{ computer_id }} .alert').hide();
 				});
 			});

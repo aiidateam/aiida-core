@@ -94,7 +94,7 @@
 				<p>Footer here</p>
 			</footer>
 		</div> <!-- /container -->
-		<script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
+		<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
 		<script>window.jQuery || document.write('<script src="{% static "awi/js/vendor/jquery-1.10.1.min.js" %}"><\/script>')</script>
 
 		<script src="{% static 'awi/js/vendor/bootstrap.min.js' %}"></script>
@@ -109,12 +109,29 @@
 				computers : {
 					detail: '{% url "awi:computers_detail" computer_id="0" %}',
 					rename: '{% url "awi:computers_rename" computer_id="0" %}'
+				},
+				filters : {
+					value: '{% url "awi:filters_value" field="0" %}'
 				}
 			};
 			/* SVG alternative for IE8 and below */
 			if (!Modernizr.svg) {
 				$(".navbar-brand img").attr('src', "{% static 'awi/img/logo.png' %}");
 			}
+			
+			// sending a csrftoken with every ajax request
+			function csrfSafeMethod(method) {
+				// these HTTP methods do not require CSRF protection
+				return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+			}
+			$.ajaxSetup({
+				crossDomain: false, // obviates need for sameOrigin test
+				beforeSend: function(xhr, settings) {
+					if (!csrfSafeMethod(settings.type)) {
+						xhr.setRequestHeader("X-CSRFToken", '{{ csrf_token }}');
+					}
+				}
+			});
 		</script>
 		<script src="{% static 'awi/js/main.js' %}"></script>
 		{% block js %}{% endblock %}

@@ -103,7 +103,6 @@
 			/* we need to be able to access this URL from external scripts */
 			var api_urls = {
 				computers: '{% url "api_dispatch_list" api_name="v1" resource_name="dbcomputer" %}',
-				/*computers_rename: '{% url "api_dispatch_detail" api_name="v1" resource_name="dbcomputer" pk=0 %}',*/
 				authinfo: '{% url "api_dispatch_list" api_name="v1" resource_name="dbauthinfo" %}'
 			};
 			var modules_urls = {

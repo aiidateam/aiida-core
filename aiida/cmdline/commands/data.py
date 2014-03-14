@@ -234,7 +234,7 @@ class _Structure(VerdiCommand):
         A dictionary with valid commands and functions to be called.
         """
         self.valid_subcommands = {
-            'show': (self.show, self.complete_none),
+            'show': (self.show, self.complete_visualizers),
             'list': (self.list, self.complete_none),
             }
 
@@ -270,6 +270,10 @@ class _Structure(VerdiCommand):
 
     def complete_auto(self):
         return None
+
+    def complete_visualizers(self):
+        plugin_names = self.get_show_plugins().keys()
+        return "\n".join(plugin_names)
         
     def no_subcommand(self,*args):
         print >> sys.stderr, ("You have to pass a valid subcommand to "

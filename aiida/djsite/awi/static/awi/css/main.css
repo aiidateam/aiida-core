@@ -73,6 +73,17 @@ a.text-danger:hover {
   border-right: 4px solid transparent;
   border-left: 4px solid transparent;
 }
+/* right caret symbol for displaying of details */
+.right-caret {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  margin-top: 2px;
+  vertical-align: middle;
+  border-left: 4px solid;
+  border-bottom: 4px solid transparent;
+  border-top: 4px solid transparent;
+}
 
 .table thead>tr>th>a, .table thead>tr>th>a:hover {
 	text-decoration: none;
@@ -119,6 +130,10 @@ a.text-danger:hover {
 	width: 150px;
 }
 
+.table tr td.name a {
+	text-decoration: none;
+}
+
 /* corrections for the + icon of the filters panel */
 h3 .btn-xs {
 	padding: 2px 5px 1px 6px !important;
@@ -133,12 +148,19 @@ h3 .btn-group {
 	margin-bottom: 3px;
 }
 .btn.filter-field {
-	min-width: 100px;
+	width: 100px;
+	text-align: right;
+}
+.btn.filter-operator {
+	width: 30px;
 	text-align: right;
 }
 .btn.filter-value {
-	min-width: 100px;
+	width: 150px;
 	text-align: left;
+}
+.btn-group+.btn.filter-value {
+	width: 121px;
 }
 
 /* we need to add a padding to the tables when in overflow hidden because of the dropdown menu that gets hidden */

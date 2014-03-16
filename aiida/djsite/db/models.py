@@ -505,8 +505,8 @@ class DbAttributeBaseClass(m.Model):
                 try:
                     jsondata = json.dumps(value)
                 except TypeError:
-                    raise ValueError("Unable to store the value: it must be either "
-                                     "a basic datatype, or json-serializable")
+                    raise ValueError("Unable to store the value: it must be "
+                        "either a basic datatype, or json-serializable")
                 
                 self.datatype = 'json'
                 self.tval = jsondata
@@ -520,11 +520,33 @@ class DbAttributeBaseClass(m.Model):
             if with_transaction:
                 transaction.savepoint_rollback(sid)
             raise
-        
+    
     def getvalue(self):
         """
         This can be called on a given row and will get the corresponding value,
-        casting it correctly
+        casting it correctly.
+        """
+        return self._getvalue_internal(subitems=None)
+
+    def _getvalue_internal(self,subitems=None):
+        """
+        This function returns the value of the given node, casting it
+        correctly.
+        
+        This function should be used only internally, because it uses the
+        optional parameter subitems to call itself recursively for items that
+        were expanded in their items (lists and dicts) in a faster way,
+        avoiding to perform too many queries.
+
+        :param subitems: a dictionary of subitems at all deepness level,
+            where the values are DbAttribute instances, and the keys are
+            the key values in the DbAttribute table, but already stripped
+            from the initial part belonging to 'self' (that is, if we 
+            are item 'a.b' and we pass subitems 'a.b.0', 'a.b.1', 'a.b.1.c',
+            the keys must be '0', '1', '1.c').
+            It must be None if the value is not iterable (int, str,
+            float, ...) or if we still have to perform a query.
+            It is an empty dictionary if there are no subitems.
         """
         import json
         import re
@@ -551,57 +573,95 @@ class DbAttributeBaseClass(m.Model):
                 return self.dval
             return self.dval
         elif self.datatype == 'list':
-            retlist = []
-            regex_string = r"^{parentkey}{sep}([^{sep}])*$".format(
-                    parentkey=re.escape(self.key),
-                    sep=re.escape(self._sep))
-            dbsubvalues = self.__class__.objects.filter(dbnode=self.dbnode,
-                key__regex=regex_string).distinct()
+            if subitems is None:
+                # This function was called for the first time: 
+                # perform the query for *all* subitems at any 
+                # deepness level
+                prefix = "{}{}".format(self.key, self._sep)
+                dballsubvalues = self.__class__.objects.filter(
+                    dbnode=self.dbnode,
+                    key__startswith=prefix)
+                # Strip the prefix and store in a dictionary
+                dbsubdict = {_.key[len(prefix):]: _ for _ in dballsubvalues}
+            else:
+                # The subitems are passed as a parameter for a recursive call
+                dbsubdict = subitems
 
-            expected_set = set(["{}{}{:d}".format(self.key,self._sep,i)
+            # dbsubdict contains all subitems, here I store only those of
+            # deepness 1, i.e. if I have subitems '0', '1' and '1.c' I 
+            # store only '0' and '1'
+            firstleveldbsubdict = {k: v for k, v in dbsubdict.iteritems()
+                                   if self._sep not in k}
+
+            # For checking, I verify the expected values
+            expected_set = set(["{:d}".format(i)
                    for i in range(self.ival)])
-            db_set = set(dbsubvalues.values_list('key',flat=True))
+            db_set = set(firstleveldbsubdict.keys())
             # If there are more entries than expected, but all expected
             # ones are there, I just issue an error but I do not stop.
             if not expected_set.issubset(db_set):
                 raise DbContentError("Wrong list elements stored in {} for "
                                      "node={} and key='{}' ({} vs {})".format(
-                                     self.__class__.__name__, self.pk, self.key,
-                                     expected_set, db_set))
+                                     self.__class__.__name__, self.dbnode.pk,
+                                     self.key, expected_set, db_set))
             if expected_set != db_set:
                 aiidalogger.error("Wrong list elements stored in {} for "
                                   "node={} and key='{}' ({} vs {})".format(
-                                    self.__class__.__name__, self.pk, self.key,
-                                    expected_set, db_set))                
+                                    self.__class__.__name__, self.dbnode.pk, 
+                                    self.key, expected_set, db_set))
             
             # I get the values in memory as a dictionary
-            tempdict = {i.key: i.getvalue() for i in dbsubvalues}
+            tempdict = {}
+            for firstsubk, firstsubv in firstleveldbsubdict.iteritems():
+                # I call recursively the same function to get subitems
+                newsubitems={k[len(firstsubk)+len(self._sep):]: v 
+                             for k, v in dbsubdict.iteritems()
+                             if k.startswith(firstsubk+self._sep)}
+                tempdict[firstsubk] = firstsubv._getvalue_internal(
+                    subitems=newsubitems)
+                    
             # And then I put them in a list
-            retlist = [tempdict["{}{}{:d}".format(
-                self.key, self._sep, i)] for i in range(self.ival)]
+            retlist = [tempdict["{:d}".format(i)] for i in range(self.ival)]
             return retlist
         elif self.datatype == 'dict':
-            retdict = {}
-            # Note: it may not be the most efficient way to do it
-            # I need to look for all elements starting with the same key,
-            # followed by the separator, followed by any number of non-separator
-            # symbols
-            regex_string = r"^{parentkey}{sep}([^{sep}])*$".format(
-                    parentkey=re.escape(self.key),
-                    sep=re.escape(self._sep))
-            dbsubvalues = self.__class__.objects.filter(dbnode=self.dbnode,
-                key__regex=regex_string).distinct()
-            for subvalue in dbsubvalues:
-                # I have to remove the length of the parent key + the length
-                # of the separator (to be kept as a length-one string, possibly)
-                subkey = subvalue.key[len(self.key)+len(self._sep):]
-                retdict[subkey] = subvalue.getvalue()
-            if len(dbsubvalues) != self.ival:
+            if subitems is None:
+                # This function was called for the first time: 
+                # perform the query for *all* subitems at any 
+                # deepness level
+                prefix = "{}{}".format(self.key, self._sep)
+                dballsubvalues = self.__class__.objects.filter(
+                    dbnode=self.dbnode,
+                    key__startswith=prefix)
+                # Strip the prefix and store in a dictionary
+                dbsubdict = {_.key[len(prefix):]: _ for _ in dballsubvalues}
+            else:
+                # The subitems are passed as a parameter for a recursive call
+                dbsubdict = subitems
+
+            # dbsubdict contains all subitems, here I store only those of
+            # deepness 1, i.e. if I have subitems '0', '1' and '1.c' I 
+            # store only '0' and '1'
+            firstleveldbsubdict = {k: v for k, v in dbsubdict.iteritems()
+                                   if self._sep not in k}
+
+            if len(firstleveldbsubdict) != self.ival:
                 aiidalogger.error("Wrong dict length stored in {} for "
                                   "node={} and key='{}' ({} vs {})".format(
-                                    self.__class__.__name__, self.pk, self.key,
-                                    len(retdict), self.ival))
-            return retdict
+                                    self.__class__.__name__, self.dbnode.pk,
+                                    self.key, len(firstleveldbsubdict),
+                                    self.ival))
+
+            # I get the values in memory as a dictionary
+            tempdict = {}
+            for firstsubk, firstsubv in firstleveldbsubdict.iteritems():
+                # I call recursively the same function to get subitems
+                newsubitems={k[len(firstsubk)+len(self._sep):]: v 
+                             for k, v in dbsubdict.iteritems()
+                             if k.startswith(firstsubk+self._sep)}
+                tempdict[firstsubk] = firstsubv._getvalue_internal(
+                    subitems=newsubitems)
+                
+            return tempdict
         elif self.datatype == 'json':
             try:
                 return json.loads(self.tval)

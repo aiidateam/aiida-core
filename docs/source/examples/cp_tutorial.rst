@@ -178,7 +178,7 @@ And we impose the input data to the calculation, (and therefore set the links in
 If you have installed a pseudopotential family (see :ref:`my-ref-to-pseudo-tutorial`), then setting the pseudopotentials for this calculation is extremely easy, there's a function for that::
   
   pseudo_family = 'lda_pslib'
-  calc.use_pseudo_from_family(pseudo_family)
+  calc.use_pseudos_from_family(pseudo_family)
 
 Now, everything is ready to be submitted::
 
@@ -271,7 +271,7 @@ This is the script described in the tutorial above. Remember to check the schedu
 	calc.use_code(code)
 	calc.use_parameters(parameters)
 	pseudo_family = 'lda_pslib'
-	calc.use_pseudo_from_family(pseudo_family)
+	calc.use_pseudos_from_family(pseudo_family)
 
 	calc.submit()
 
@@ -414,7 +414,7 @@ Again, remember to check and modify to your needs the au
 
 	if auto_pseudos:
 		try:
-			calc.use_pseudo_from_family(pseudo_family)
+			calc.use_pseudos_from_family(pseudo_family)
 			print "Pseudos successfully loaded from family {}".format(pseudo_family)
 		except NotExistent:
 			print ("Pseudo or pseudo family not found. You may want to load the "

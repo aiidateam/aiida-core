@@ -42,7 +42,7 @@ class WorkflowCustomEOS(Workflow):
         calc.use_code(code)
         
         calc.use_structure(structure)
-        calc.use_pseudo_from_family(pseudo_family)
+        calc.use_pseudos_from_family(pseudo_family)
         calc.use_parameters(parameters)
         calc.use_kpoints(kpoints)
         

@@ -286,7 +286,7 @@ class Calculation(Node):
         return self.get_attr('max_memory_kb', None)
 
     def get_max_wallclock_seconds(self):
-	"""
+        """
         Get the max wallclock time requested to the scheduler.
         
         :return: an integer
@@ -420,10 +420,11 @@ class Calculation(Node):
         return self.get_attr('remote_workdir', None)
 
     def _set_retrieve_list(self, retrieve_list):
-        if self.get_state() != calc_states.SUBMITTING:
+        if self.get_state() not in (calc_states.SUBMITTING,
+                                    calc_states.NEW):
             raise ModificationNotAllowed(
-                "Cannot set the retrieve_list if you are not "
-				"submitting the calculation (current state is "
+                "Cannot set the retrieve_list for a calculation "
+				"that is neither NEW nor SUBMITTING (current state is "
 		        "{})".format(self.get_state()))
 
         if (not(isinstance(retrieve_list,(tuple,list))) or
@@ -694,7 +695,7 @@ class Calculation(Node):
         """
         return "code"
         
-    def _prepare_for_submission(self,tempfolder):        
+    def _prepare_for_submission(self,tempfolder,inputdict=None):        
         """
         This is the routine to be called when you want to create
         the input files and related stuff with a plugin.
@@ -702,6 +703,16 @@ class Calculation(Node):
         Args:
             tempfolder: a aiida.common.folders.Folder subclass where
                 the plugin should put all its files.
+            inputdict: None, if it has to be calculated automatically
+                from the input nodes using the
+                self.get_inputdata_dict() method.
+                Otherwise, a dictionary where
+                each key is an input link name and each value an AiiDA
+                node, as it would be returned by the
+                self.get_inputdata_dict() method.
+                The advantage of having this as a key is that this
+                allows to test for submission even before creating 
+                the nodes in the DB.
 
         TODO: document what it has to return (probably a CalcInfo object)
               and what is the behavior on the tempfolder
@@ -815,6 +826,10 @@ class Calculation(Node):
         
         from aiida.common.exceptions import InvalidOperation, RemoteOperationError
         
+        if self.get_state() == calc_states.NEW:
+            self._set_state(calc_states.FAILED)
+            return
+        
         if self.get_state() != calc_states.WITHSCHEDULER:
             raise InvalidOperation("Cannot kill a calculation not in {} state"
                                    .format(calc_states.WITHSCHEDULER) )
@@ -837,6 +852,153 @@ class Calculation(Node):
                                        "(maybe the calculation already finished?)"
                                        .format(self.pk, self.get_job_id()))
         
+    def presubmit(self, folder, code, inputdict=None):
+        import os
+        import StringIO
+        import json
+
+        from aiida.common.exceptions import (
+            PluginInternalError, ValidationError)
+        from aiida.scheduler.datastructures import JobTemplate
+        from aiida.common.utils import validate_list_of_string_tuples
+
+
+        computer = self.get_computer()
+
+        calcinfo = self._prepare_for_submission(folder, inputdict)
+        s = computer.get_scheduler()
+
+        if code.is_local():
+            if code.get_local_executable() in folder.get_content_list():
+                raise PluginInternalError(
+                      "The plugin created a file {} that is also "
+                      "the executable name!".format(
+                      code.get_local_executable()))
+
+        # TODO: support -V option of schedulers!
+        
+        self._set_retrieve_list(calcinfo.retrieve_list if
+                                calcinfo.retrieve_list is not None else [])
+
+        # I create the job template to pass to the scheduler
+        job_tmpl = JobTemplate()
+        ## TODO: in the future, allow to customize the following variables
+        job_tmpl.submit_as_hold = False
+        job_tmpl.rerunnable = False
+        job_tmpl.job_environment = {}
+        #'email', 'email_on_started', 'email_on_terminated',
+        job_tmpl.job_name = 'aiida-{}'.format(self.pk) 
+        job_tmpl.sched_output_path = '_scheduler-stdout.txt'
+        job_tmpl.sched_error_path = '_scheduler-stderr.txt'
+        job_tmpl.sched_join_files = False
+        
+        # TODO: add also code from the machine + u'\n\n'
+        job_tmpl.prepend_text = (
+            ((computer.get_prepend_text() + u"\n\n") if 
+                computer.get_prepend_text() else u"") + 
+            ((code.get_prepend_text() + u"\n\n") if 
+                code.get_prepend_text() else u"") + 
+            (calcinfo.prepend_text if 
+                calcinfo.prepend_text is not None else u""))
+        
+        job_tmpl.append_text = (
+            (calcinfo.append_text if 
+                calcinfo.append_text is not None else u"") +
+            ((code.get_append_text() + u"\n\n") if 
+                code.get_append_text() else u"") +
+            ((computer.get_append_text() + u"\n\n") if 
+                computer.get_append_text() else u""))
+
+        job_tmpl.job_resource = s.create_job_resource(
+             **self.get_jobresource_params())
+
+        subst_dict = {'tot_num_cpus': 
+                      job_tmpl.job_resource.get_tot_num_cpus()}
+        
+        for k,v in job_tmpl.job_resource.iteritems():
+            subst_dict[k] = v
+        mpi_args = [arg.format(**subst_dict) for arg in
+                    computer.get_mpirun_command()]
+        if self.get_withmpi():
+            job_tmpl.argv = mpi_args + [code.get_execname()] + (
+                calcinfo.cmdline_params if 
+                    calcinfo.cmdline_params is not None else [])
+        else:
+            job_tmpl.argv = [code.get_execname()] + (
+                calcinfo.cmdline_params if 
+                    calcinfo.cmdline_params is not None else [])
+
+        job_tmpl.stdin_name = calcinfo.stdin_name
+        job_tmpl.stdout_name = calcinfo.stdout_name
+        job_tmpl.stderr_name = calcinfo.stderr_name
+        job_tmpl.join_files = calcinfo.join_files
+        
+        job_tmpl.import_sys_environment = self.get_import_sys_environment()
+        
+        queue_name = self.get_queue_name()
+        if queue_name is not None:
+            job_tmpl.queue_name = queue_name
+        priority = self.get_priority()
+        if priority is not None:
+            job_tmpl.priority = priority
+        max_memory_kb = self.get_max_memory_kb()
+        if max_memory_kb is not None:
+            job_tmpl.max_memory_kb = max_memory_kb
+        max_wallclock_seconds = self.get_max_wallclock_seconds()
+        if max_wallclock_seconds is not None:
+            job_tmpl.max_wallclock_seconds = max_wallclock_seconds
+        max_memory_kb = self.get_max_memory_kb()
+        if max_memory_kb is not None:
+            job_tmpl.max_memory_kb = max_memory_kb
+
+        # TODO: give possibility to use a different name??
+        script_filename = '_aiidasubmit.sh'
+        script_content = s.get_submit_script(job_tmpl)
+        folder.create_file_from_filelike(
+             StringIO.StringIO(script_content),script_filename)
+
+        subfolder = folder.get_subfolder('.aiida',create=True)
+        subfolder.create_file_from_filelike(
+            StringIO.StringIO(json.dumps(job_tmpl)),'job_tmpl.json')
+        subfolder.create_file_from_filelike(
+            StringIO.StringIO(json.dumps(calcinfo)),'calcinfo.json')
+
+
+        if calcinfo.local_copy_list is None:
+            calcinfo.local_copy_list = []
+        
+        if calcinfo.remote_copy_list is None:
+            calcinfo.remote_copy_list = []
+
+        # Some validation
+        this_pk = self.pk if self.pk is not None else "[UNSTORED]"
+        local_copy_list = calcinfo.local_copy_list
+        try:
+            validate_list_of_string_tuples(local_copy_list,
+                                           tuple_length = 2)
+        except ValidationError as e:
+            raise PluginInternalError("[presubmission of calc {}] "
+                "local_copy_list format problem: {}".format(
+                this_pk, e.message))
+
+        remote_copy_list = calcinfo.remote_copy_list
+        try:
+            validate_list_of_string_tuples(remote_copy_list,
+                                           tuple_length = 3)
+        except ValidationError as e:
+            raise PluginInternalError("[presubmission of calc {}] "
+                "remote_copy_list format problem: {}".format(
+                this_pk, e.message))
+
+        for (remote_machine, remote_abs_path, 
+             dest_rel_path) in remote_copy_list:
+            if os.path.isabs(dest_rel_path):
+                raise PluginInternalError("[presubmission of calc {}] "
+                    "The destination path of the remote copy "
+                    "is absolute! ({})".format(this_pk, dest_rel_path))
+
+        return calcinfo, script_filename
+
 
     @property
     def res(self):
@@ -851,6 +1013,56 @@ class Calculation(Node):
         """
         return CalculationResultManager(self)
 
+    def submit_test(self, folder, code, inputdict, subfolder_name = None):
+        import os
+        from aiida.transport.plugins.local import LocalTransport
+        import datetime
+        import tempfile
+        
+        # In case it is not created yet
+        folder.create()
+        
+        if subfolder_name is None:
+            subfolder_basename = datetime.datetime.now().strftime('%Y%m%d-%H%M%S-')
+        else:
+            subfolder_basename = subfolder_name
+            
+        # Find a new subfolder.
+        subfolder_path = tempfile.mkdtemp(prefix = subfolder_basename, dir=folder.abspath)
+        subfolder = folder.get_subfolder(
+            os.path.relpath(subfolder_path,folder.abspath),
+            reset_limit=True)
+        
+        # I use the local transport where possible, to be as similar
+        # as possible to a real submission
+        t = LocalTransport()
+        with t:
+            t.chdir(subfolder.abspath)
+        
+            calcinfo, script_filename = self.presubmit(
+                subfolder, code, inputdict)
+        
+            if code.is_local():
+                # Note: this will possibly overwrite files
+                for f in code.get_path_list():
+                    t.put(code.get_abs_path(f), f)
+                t.chmod(code.get_local_executable(), 0755) # rwxr-xr-x
+
+            local_copy_list = calcinfo.local_copy_list
+            remote_copy_list = calcinfo.remote_copy_list
+
+            for src_abs_path, dest_rel_path in local_copy_list:
+                t.put(src_abs_path, dest_rel_path)
+                
+            for (remote_machine, remote_abs_path, 
+                  dest_rel_path) in remote_copy_list:
+                with open(os.path.join(
+                    subfolder.abspath, dest_rel_path),'w') as f:
+                    f.write("PLACEHOLDER FOR REMOTELY COPIED "
+                            "FILE FROM {}:{}".format(remote_machine,
+                                                     remote_abs_path))
+
+        return subfolder, script_filename
 
 class CalculationResultManager(object):
     """
@@ -915,3 +1127,4 @@ class CalculationResultManager(object):
         except AttributeError:
             raise KeyError("Parser '{}' did not provide a result '{}'"
                            .format(self._parser.__class__.__name__, name))
+

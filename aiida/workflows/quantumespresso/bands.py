@@ -28,7 +28,7 @@ class WorkflowQEBands(Workflow):
         s = Data.get_subclass_from_uuid(self.get_parameters()['structure_uuid'])
         calc.use_structure(s)
         
-        calc.use_pseudo_from_family(self.get_parameters()['pseudo_family'])
+        calc.use_pseudos_from_family(self.get_parameters()['pseudo_family'])
         
         k = Data.get_subclass_from_uuid(self.get_parameters()['kpoints_uuid'])
         calc.use_kpoints(k)

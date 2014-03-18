@@ -210,7 +210,7 @@ class WorkflowXTiO3_EOS(Workflow):
         calc.use_code(code)
         
         calc.use_structure(pw_structure)
-        calc.use_pseudo_from_family(pseudo_family)
+        calc.use_pseudos_from_family(pseudo_family)
         calc.use_parameters(pw_parameters)
         calc.use_kpoints(pw_kpoint)
         

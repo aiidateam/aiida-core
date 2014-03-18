@@ -246,16 +246,10 @@ def submit_calc(calc):
     :param calc: the calculation to submit
         (an instance of the aiida.orm.Calculation class)
     """
-    import StringIO
-    import json
-    import os
-    
     from aiida.orm import Calculation, Code
     from aiida.common.folders import SandboxFolder
     from aiida.common.exceptions import (
-        FeatureDisabled, InputValidationError, ValidationError)
-    from aiida.scheduler.datastructures import JobTemplate
-    from aiida.common.utils import validate_list_of_string_tuples
+        FeatureDisabled, InputValidationError)
     from aiida.orm.data.remote import RemoteData
     
     if not isinstance(calc,Calculation):
@@ -285,7 +279,8 @@ def submit_calc(calc):
          
     try:
         authinfo = get_authinfo(calc.get_computer(), calc.get_user())
-        s = calc.get_computer().get_scheduler()
+        computer = calc.get_computer()
+        s = computer.get_scheduler()
         t = authinfo.get_transport()
     
         input_codes = calc.get_inputs(type=Code)
@@ -302,106 +297,14 @@ def submit_calc(calc):
                 code.pk, calc.pk, computer.name))
         
         with SandboxFolder() as folder:
-            calcinfo = calc._prepare_for_submission(folder)
-    
-            if code.is_local():
-                if code.get_local_executable() in folder.get_content_list():
-                    raise PluginInternalError(
-                          "The plugin created a file {} that is also "
-                          "the executable name!".format(
-                          code.get_local_executable()))
-
-            # TODO: support -V option of schedulers!
-            
-            calc._set_retrieve_list(calcinfo.retrieve_list if
-                                    calcinfo.retrieve_list is not None else [])
-    
-            # I create the job template to pass to the scheduler
-            job_tmpl = JobTemplate()
-            ## TODO: in the future, allow to customize the following variables
-            job_tmpl.submit_as_hold = False
-            job_tmpl.rerunnable = False
-            job_tmpl.job_environment = {}
-            #'email', 'email_on_started', 'email_on_terminated',
-            job_tmpl.job_name = 'aiida-{}'.format(calc.pk) 
-            job_tmpl.sched_output_path = '_scheduler-stdout.txt'
-            job_tmpl.sched_error_path = '_scheduler-stderr.txt'
-            job_tmpl.sched_join_files = False
-            
-            # TODO: add also code from the machine + u'\n\n'
-            job_tmpl.prepend_text = (
-                ((computer.get_prepend_text() + u"\n\n") if 
-                    computer.get_prepend_text() else u"") + 
-                ((code.get_prepend_text() + u"\n\n") if 
-                    code.get_prepend_text() else u"") + 
-                (calcinfo.prepend_text if 
-                    calcinfo.prepend_text is not None else u""))
-            
-            job_tmpl.append_text = (
-                (calcinfo.append_text if 
-                    calcinfo.append_text is not None else u"") +
-                ((code.get_append_text() + u"\n\n") if 
-                    code.get_append_text() else u"") +
-                ((computer.get_append_text() + u"\n\n") if 
-                    computer.get_append_text() else u""))
-
-            job_tmpl.job_resource = s.create_job_resource(
-                 **calc.get_jobresource_params())
-
-            subst_dict = {'tot_num_cpus': 
-                          job_tmpl.job_resource.get_tot_num_cpus()}
-            
-            for k,v in job_tmpl.job_resource.iteritems():
-                subst_dict[k] = v
-            mpi_args = [arg.format(**subst_dict) for arg in
-                        computer.get_mpirun_command()]
-            if calc.get_withmpi():
-                job_tmpl.argv = mpi_args + [code.get_execname()] + (
-                    calcinfo.cmdline_params if 
-                        calcinfo.cmdline_params is not None else [])
-            else:
-                job_tmpl.argv = [code.get_execname()] + (
-                    calcinfo.cmdline_params if 
-                        calcinfo.cmdline_params is not None else [])
-    
-            job_tmpl.stdin_name = calcinfo.stdin_name
-            job_tmpl.stdout_name = calcinfo.stdout_name
-            job_tmpl.stderr_name = calcinfo.stderr_name
-            job_tmpl.join_files = calcinfo.join_files
-            
-            job_tmpl.import_sys_environment = calc.get_import_sys_environment()
-            
-            queue_name = calc.get_queue_name()
-            if queue_name is not None:
-                job_tmpl.queue_name = queue_name
-            priority = calc.get_priority()
-            if priority is not None:
-                job_tmpl.priority = priority
-            max_memory_kb = calc.get_max_memory_kb()
-            if max_memory_kb is not None:
-                job_tmpl.max_memory_kb = max_memory_kb
-            max_wallclock_seconds = calc.get_max_wallclock_seconds()
-            if max_wallclock_seconds is not None:
-                job_tmpl.max_wallclock_seconds = max_wallclock_seconds
-            max_memory_kb = calc.get_max_memory_kb()
-            if max_memory_kb is not None:
-                job_tmpl.max_memory_kb = max_memory_kb
-
-            # TODO: give possibility to use a different name??
-            script_filename = '_aiidasubmit.sh'
-            script_content = s.get_submit_script(job_tmpl)
-            folder.create_file_from_filelike(
-                 StringIO.StringIO(script_content),script_filename)
-    
-            subfolder = folder.get_subfolder('.aiida',create=True)
-            subfolder.create_file_from_filelike(
-                StringIO.StringIO(json.dumps(job_tmpl)),'job_tmpl.json')
-            subfolder.create_file_from_filelike(
-                StringIO.StringIO(json.dumps(calcinfo)),'calcinfo.json')
+            calcinfo, script_filename = calc.presubmit(folder, code)
 
             # After this call, no modifications to the folder should be done
             calc._store_raw_input_folder(folder.abspath)
 
+            # NOTE: some logic is partially replicated in the 'test_submit'
+            # method of Calculation. If major logic changes are done
+            # here, make sure to update also the test_submit routine
             with t:
                 s.set_transport(t)
                 remote_user = t.whoami()
@@ -464,27 +367,10 @@ def submit_calc(calc):
 
                 # local_copy_list is a list of tuples,
                 # each with (src_abs_path, dest_rel_path)
+                # NOTE: validation of these lists are done
+                #       inside calc.presubmit()
                 local_copy_list = calcinfo.local_copy_list
-                if local_copy_list is None:
-                    local_copy_list = []
-                try:
-                    validate_list_of_string_tuples(local_copy_list,
-                                                   tuple_length = 2)
-                except ValidationError as e:
-                    raise PluginInternalError("[submission of calc {}] "
-                        "local_copy_list format problem: {}".format(
-                        calc.pk, e.message))
-
                 remote_copy_list = calcinfo.remote_copy_list
-                if remote_copy_list is None:
-                    remote_copy_list = []
-                try:
-                    validate_list_of_string_tuples(remote_copy_list,
-                                                   tuple_length = 3)
-                except ValidationError as e:
-                    raise PluginInternalError("[submission of calc {}] "
-                        "remote_copy_list format problem: {}".format(
-                        calc.pk, e.message))
 
                 for src_abs_path, dest_rel_path in local_copy_list:
                     execlogger.debug("[submission of calc {}] "
@@ -494,11 +380,6 @@ def submit_calc(calc):
                 
                 for (remote_machine, remote_abs_path, 
                      dest_rel_path) in remote_copy_list:
-                    if os.path.isabs(dest_rel_path):
-                        raise PluginInternalError("[submission of calc {}] "
-                            "The destination path of the remote copy "
-                            "is absolute! ({})".format(calc.pk, dest_rel_path))
-
                     if remote_machine == computer.hostname:
                         execlogger.debug("[submission of calc {}] "
                             "copying {} remotely, directly on the machine "
@@ -511,13 +392,15 @@ def submit_calc(calc):
                                 "Stopping.".format(calc.pk,
                                     remote_abs_path,dest_rel_path))
                             raise
-
                     else:
-                        # TODO: implement copy between two different machines!
-                        raise NotImplementedError("[submission of calc {}] "
+                        # TODO: implement copy between two different
+                        # machines!
+                        raise NotImplementedError(
+                            "[presubmission of calc {}] "
                             "Remote copy between two different machines is "
                             "not implemented yet".format(calc.pk))
-        
+
+                                
                 remotedata = RemoteData(remote_machine = computer.hostname, 
                         remote_path = workdir).store()
 

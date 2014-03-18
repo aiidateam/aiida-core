@@ -29,6 +29,14 @@ _element_v2_regexp = re.compile(
     (?P=quote_symbol).*
    """, re.VERBOSE)
 
+def get_pseudos_from_structure(structure, family_name):       
+    pseudo_list = {}
+    for kind in structure.kinds:
+        symbol = kind.symbol
+        # Will raise the correct exception if not found, or too many found
+        pseudo_list[kind.name] = get_upf_from_family(family_name, symbol)
+
+    return pseudo_list
 
 def get_upf_from_family(family_name, element):
     """

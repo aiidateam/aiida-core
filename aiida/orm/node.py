@@ -49,7 +49,11 @@ class Node(object):
                 newcls._plugin_type_string = "{}.{}.".format(
                     attrs['__module__'][len(prefix):], name)
                 if newcls._plugin_type_string == 'node.Node.':
-                    newcls._plugin_type_string = ''
+                    newcls._plugin_type_string = '' 
+                newcls._query_type_string = "{}.".format(
+                    attrs['__module__'][len(prefix):])
+                if newcls._query_type_string == 'node.':
+                    newcls._query_type_string = ''                 
             else:
                 raise InternalError("Class {} is not in a module under "
                                     "aiida.orm.".format(name))
@@ -231,7 +235,6 @@ class Node(object):
             return None
         else:
             return Computer(dbcomputer=self.dbnode.dbcomputer)
-
 
     @property
     def label(self):

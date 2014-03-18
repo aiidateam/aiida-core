@@ -315,7 +315,7 @@ In this example, we loaded the files directly from the hard disk.
 For a more practical use, it is convenient to use the pseudopotential families. Its use is documented in :ref:`my-ref-to-pseudo-tutorial`.
 If you got one installed, you can simply tell the calculation to use the pseudopotential family, then AiiDA will take care of attaching the proper pseudopotential to the element::
 
-  calc.use_pseudo_from_family('my_pseudo_family')
+  calc.use_pseudos_from_family('my_pseudo_family')
 
 
 
@@ -428,7 +428,7 @@ Compact script
     calc.use_structure(s)
     calc.use_code(code)
     calc.use_parameters(parameters)
-    calc.use_pseudo_from_family(pseudo_family)
+    calc.use_pseudos_from_family(pseudo_family)
     calc.use_kpoints(kpoints)
 
     calc.submit()
@@ -574,7 +574,7 @@ Exception tolerant code
 
     if auto_pseudos:
 	try:
-	    calc.use_pseudo_from_family(pseudo_family)
+	    calc.use_pseudos_from_family(pseudo_family)
 	    print "Pseudos successfully loaded from family {}".format(pseudo_family)
 	except NotExistent:
 	    print ("Pseudo or pseudo family not found. You may want to load the "

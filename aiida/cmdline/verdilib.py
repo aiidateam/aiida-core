@@ -190,8 +190,6 @@ class Install(VerdiCommand):
         create_base_dirs()
         create_configuration()
 
-        #print "Executing now a syncdb --migrate command..."
-        #pass_to_django_manage([execname, 'syncdb', '--migrate'])
         print "Executing now a syncdb command..."
         pass_to_django_manage([execname, 'syncdb'])
 

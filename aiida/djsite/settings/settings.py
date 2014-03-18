@@ -251,7 +251,9 @@ SOUTH_TESTS_MIGRATE = False
 # This is only a string: call
 # aiida.djsite.utils.get_after_database_creation_signal
 # to get the proper signal
-AFTER_DATABASE_CREATION_SIGNAL = 'post_migrate'
+# Uncomment next line if using south
+#AFTER_DATABASE_CREATION_SIGNAL = 'post_migrate'
+AFTER_DATABASE_CREATION_SIGNAL = 'post_syncdb'
 
 # -------------------------
 # Tastypie (API) settings

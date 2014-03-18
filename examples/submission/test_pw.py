@@ -141,7 +141,7 @@ calc.use_parameters(parameters)
 
 if auto_pseudos:
     try:
-        calc.use_pseudo_from_family(pseudo_family)
+        calc.use_pseudos_from_family(pseudo_family)
         print "Pseudos successfully loaded from family {}".format(pseudo_family)
     except NotExistent:
         print ("Pseudo or pseudo family not found. You may want to load the "

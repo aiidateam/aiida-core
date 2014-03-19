@@ -35,6 +35,28 @@ def store_config(confs):
 def load_django():
     os.environ['DJANGO_SETTINGS_MODULE'] = 'aiida.djsite.settings.settings'
 
+def get_new_uuid():
+    """
+    Return a new UUID (typically to be used for new nodes).
+    It uses the version of </
+    """
+    from aiida.djsite.settings.settings import (
+        AIIDANODES_UUID_VERSION)
+    import uuid
+
+    # Taken from UUIDField
+    try:
+        from django.utils.encoding import force_unicode     
+    except ImportError:
+        from django.utils.encoding import force_text as force_unicode 
+    
+    
+    if AIIDANODES_UUID_VERSION != 4:
+        raise NotImplementedError("Only version 4 of UUID supported currently")
+    
+    the_uuid = uuid.uuid4()
+    return force_unicode(the_uuid)
+
 def get_repository_folder():
     """
     Return the top folder of the local repository.

@@ -17,16 +17,7 @@ class ArrayData(Data):
       cache with the :py:meth:`.clear_internal_cache` method. 
     """
 
-    def __init__(self,**kwargs):
-        # Will cache arrays (after storing) so that they are read from file only
-        # once
-        self._cached_arrays = {}
-        
-        super(ArrayData,self).__init__(**kwargs)
-
-        uuid = kwargs.pop('uuid', None)
-        if uuid is not None:
-            return
+    _cached_arrays = {}
 
     def delete_array(self, name):
         """

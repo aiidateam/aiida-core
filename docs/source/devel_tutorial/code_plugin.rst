@@ -364,7 +364,7 @@ results and perform a dedicated correction!*
             out_dict,successful = parse_raw_output(out_file)
             
             # 6. convert the dictionary into an AiiDA object
-            output_params = ParameterData(out_dict)
+            output_params = ParameterData(dict=out_dict)
             # 6. save it into db and set link from calc to output
 	    # note that the name of the output parameters is set in the baseclass
             output_params.store()

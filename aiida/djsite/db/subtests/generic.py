@@ -141,7 +141,7 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
         a2.set_extra(extra_name, True)
         a3 = Data().store()        
         a3.set_extra(extra_name, True)
-        a4 = ParameterData({'a':'b'}).store()        
+        a4 = ParameterData(dict={'a':'b'}).store()        
         a4.set_extra(extra_name, True)
         a5 = Node().store()
         a5.set_extra(extra_name, True)
@@ -709,7 +709,7 @@ class TestNodeBasic(AiidaTestCase):
 
         a.store()
 
-        b = Node(uuid=a.uuid)
+        b = Node.get_subclass_from_uuid(a.uuid)
         self.assertIsNone(a.get_attr('none'))
         self.assertEquals(self.boolval,   b.get_attr('bool'))
         self.assertEquals(self.intval,    b.get_attr('integer'))
@@ -717,6 +717,17 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(self.stringval, b.get_attr('string'))
         self.assertEquals(self.dictval,   b.get_attr('dict'))
         self.assertEquals(self.listval,   b.get_attr('list'))
+
+        # Reload directly
+        b = Node(dbnode=a.dbnode)
+        self.assertIsNone(a.get_attr('none'))
+        self.assertEquals(self.boolval,   b.get_attr('bool'))
+        self.assertEquals(self.intval,    b.get_attr('integer'))
+        self.assertEquals(self.floatval,  b.get_attr('float'))
+        self.assertEquals(self.stringval, b.get_attr('string'))
+        self.assertEquals(self.dictval,   b.get_attr('dict'))
+        self.assertEquals(self.listval,   b.get_attr('list'))
+
 
         with self.assertRaises(ModificationNotAllowed):                
             a.set_attr('i',12)
@@ -1173,7 +1184,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         # I create some objects
         d1 = Data().store()
         with tempfile.NamedTemporaryFile() as f:
-            d2 = SinglefileData(f.name).store()
+            d2 = SinglefileData(file=f.name).store()
 
         code = Code(remote_computer_exec=(self.computer,'/bin/true')).store()
 
@@ -1407,7 +1418,7 @@ class TestSinglefileData(AiidaTestCase):
             basename = os.path.split(filename)[1]
             f.write(file_content)
             f.flush()
-            a = SinglefileData(filename)
+            a = SinglefileData(file=filename)
 
         the_uuid = a.uuid
 
@@ -2079,7 +2090,7 @@ class TestStructureDataReload(AiidaTestCase):
 
         a.store()
 
-        b = StructureData(uuid=a.uuid)
+        b = StructureData(dbnode=a.dbnode)
         
         for i in range(3):
             for j in range(3):
@@ -2093,6 +2104,23 @@ class TestStructureDataReload(AiidaTestCase):
             self.assertAlmostEqual(b.sites[0].position[i], 0.)
         for i in range(3):
             self.assertAlmostEqual(b.sites[1].position[i], 1.)
+
+        # Fully reload from UUID
+        b = StructureData.get_subclass_from_uuid(a.uuid)
+        
+        for i in range(3):
+            for j in range(3):
+                self.assertAlmostEqual(cell[i][j], b.cell[i][j])
+        
+        self.assertEqual(b.pbc, (False,True,True))
+        self.assertEqual(len(b.sites), 2)
+        self.assertEqual(b.kinds[0].symbols[0], 'Ba')
+        self.assertEqual(b.kinds[1].symbols[0], 'Ti')
+        for i in range(3):
+            self.assertAlmostEqual(b.sites[0].position[i], 0.)
+        for i in range(3):
+            self.assertAlmostEqual(b.sites[1].position[i], 1.)
+
 
     def test_copy(self):
         """
@@ -2338,14 +2366,22 @@ class TestArrayData(AiidaTestCase):
         self.assertEquals(second.shape, n.get_shape('second')) 
 
 
-        n2 = ArrayData(uuid=n.uuid)
-        
         # Same checks, after reloading
+        n2 = ArrayData(dbnode=n.dbnode)
         self.assertEquals(set(['first', 'second']), set(n2.arraynames()))
         self.assertAlmostEquals(abs(first-n2.get_array('first')).max(), 0.)
         self.assertAlmostEquals(abs(second-n2.get_array('second')).max(), 0.)
         self.assertEquals(first.shape, n2.get_shape('first'))
         self.assertEquals(second.shape, n2.get_shape('second')) 
+
+        # Same checks, after reloading with UUID
+        n2 = ArrayData.get_subclass_from_uuid(n.uuid)
+        self.assertEquals(set(['first', 'second']), set(n2.arraynames()))
+        self.assertAlmostEquals(abs(first-n2.get_array('first')).max(), 0.)
+        self.assertAlmostEquals(abs(second-n2.get_array('second')).max(), 0.)
+        self.assertEquals(first.shape, n2.get_shape('first'))
+        self.assertEquals(second.shape, n2.get_shape('second')) 
+
 
         # Check that I cannot modify the node after storing
         with self.assertRaises(ModificationNotAllowed):
@@ -2513,7 +2549,7 @@ class TestTrajectoryData(AiidaTestCase):
 
         ##############################################################
         # Again, but after reloading from uuid
-        n = TrajectoryData(uuid=n.uuid)
+        n = TrajectoryData.get_subclass_from_uuid(n.uuid)
         # Generic checks
         self.assertEqual(n.numsites, 3)
         self.assertEqual(n.numsteps, 2)

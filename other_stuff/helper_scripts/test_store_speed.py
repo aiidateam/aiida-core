@@ -37,7 +37,7 @@ print "Read in %6.3f s. Creating new node..." % (b-a)
 #except KeyError:
 #    print "(No 'symmetries' key to remove)"
 
-data2 = ParameterData(datadict)
+data2 = ParameterData(dict=datadict)
 
 print "Starting to store..."
 

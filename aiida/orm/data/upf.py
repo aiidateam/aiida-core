@@ -280,43 +280,53 @@ class UpfData(SinglefileData):
         if not os.path.abspath(filename):
             raise ValueError("filename must be an absolute path")
         md5 = aiida.common.utils.md5_file(filename)
-
-        # already raises a ParsingError if the file cannot be recognized
-        parsed_data = parse_upf(filename)
-        try:
-            element = parsed_data['element']
-        except KeyError:
-            raise ParsingError("No 'element' parsed in the UPF file {}".format(
-                filename))
         
         pseudos = cls.from_md5(md5)
         if len(pseudos) == 0:
             if store_upf:
-                instance = cls(filename=filename, element=element).store()
+                instance = cls(file=filename).store()
                 return (instance, True)
             else:
-                instance = cls(filename=filename, element=element)
+                instance = cls(file=filename)
                 return (instance, True)
         else:
-            filtered_pseudos = []
-            for p in pseudos:
-                if (p.get_attr("element", None) == element):
-                    filtered_pseudos.append(p)
-            if len(filtered_pseudos) == 0:
-                raise ValueError("At least one UPF found with the same md5, "
-                    "but the element is different. "
-                    "pks={}".format(
-                        ",".join([str(i.pk) for i in pseudos])))
-            elif len(filtered_pseudos) > 1:
+            if len(pseudos) > 1:
                 if use_first:
-                    return (filtered_pseudos[0], False)
+                    return (pseudos[0], False)
                 else:
                     raise ValueError("More than one copy of a pseudopotential "
                         "with the same MD5 has been found in the "
                         "DB. pks={}".format(
-                          ",".join([str(i.pk) for i in filtered_pseudos])))
+                          ",".join([str(i.pk) for i in pseudos])))
             else:        
-                return (filtered_pseudos[0], False)
+                return (pseudos[0], False)
+
+    def store(self):
+        """
+        Store the node, reparsing the file so that the md5 and the element 
+        are correctly reset.
+        """
+        from aiida.common.exceptions import ParsingError, ValidationError
+        import aiida.common.utils
+
+        upf_abspath = self.get_file_abs_path()
+        if not upf_abspath:
+            raise ValidationError("No valid UPF was passed!")
+
+        parsed_data = parse_upf(upf_abspath)
+        md5sum = aiida.common.utils.md5_file(upf_abspath)
+        
+        try:
+            element = parsed_data['element']
+        except KeyError:
+            raise ParsingError("No 'element' parsed in the UPF file {};"
+                               " unable to store".format(self.filename))
+        
+        self.set_attr('element', str(element))
+        self.set_attr('md5', md5sum)
+
+        return super(UpfData, self).store()
+
 
     @classmethod
     def from_md5(cls, md5):
@@ -329,59 +339,75 @@ class UpfData(SinglefileData):
         queryset = cls.query(dbattributes__key='md5', dbattributes__tval=md5)
         return list(queryset)
 
-
-    def __init__(self, **kwargs):
+    def set_file(self, filename):
+        """
+        I pre-parse the file to store the attributes.
+        """
+        from aiida.common.exceptions import ParsingError
         import aiida.common.utils
-        
-        
-        uuid = kwargs.pop('uuid', None)
-        if uuid is not None:
-            if kwargs:
-                raise TypeError("You cannot pass other arguments if one of"
-                                "the arguments is uuid")
-            super(UpfData,self).__init__(uuid=uuid)
-            return
-        
-        super(UpfData,self).__init__()
+
+        parsed_data = parse_upf(filename)
+        md5sum = aiida.common.utils.md5_file(filename)
         
         try:
-            filename = kwargs.pop("filename")
+            element = parsed_data['element']
         except KeyError:
-            raise TypeError("You have to specify the filename")
-        try:
-            element = kwargs.pop("element")
-        except KeyError:
-            raise TypeError("You have to specify the element to which this "
-                            "pseudo refers to")
-                    
-        self.add_path(filename)
-        md5sum = aiida.common.utils.md5_file(self.get_file_abs_path())
+            raise ParsingError("No 'element' parsed in the UPF file {};"
+                               " unable to store".format(self.filename))
         
+        super(UpfData,self).set_file(filename)
+            
         self.set_attr('element', str(element))
         self.set_attr('md5', md5sum)
-
+        
     @property
     def element(self):
-        return self.get_attr('element')
-
-    @property
-    def filename(self):
-        return self.get_attr('filename')
+        return self.get_attr('element', None)
+ 
 
     def validate(self):
-        from aiida.common.exceptions import ValidationError
+        from aiida.common.exceptions import ValidationError, ParsingError
+        import aiida.common.utils
 
         super(UpfData,self).validate()
+
+
+        upf_abspath = self.get_file_abs_path()
+        if not upf_abspath:
+            raise ValidationError("No valid UPF was passed!")
+
+        try:
+            parsed_data = parse_upf(upf_abspath)
+        except ParsingError:
+            raise ValidationError("The file '{}' could not be "
+                                  "parsed".format(upf_abspath))
+        md5 = aiida.common.utils.md5_file(upf_abspath)
         
         try:
-            self.get_attr('element')
+            element = parsed_data['element']
+        except KeyError:
+            raise ValidationError("No 'element' could be parsed in the UPF "
+                                  "file {}".format(upf_abspath))
+        
+        try:
+            attr_element = self.get_attr('element')
         except AttributeError:
             raise ValidationError("attribute 'element' not set.")
 
         try:
-            self.get_attr('md5')
+            attr_md5 = self.get_attr('md5')
         except AttributeError:
             raise ValidationError("attribute 'md5' not set.")
+
+        if attr_element != element:
+            raise ValidationError("Attribute 'element' says '{}' but '{}' was "
+                                  "parsed instead.".format(
+                    attr_element, element))
+
+        if attr_md5 != md5:
+            raise ValidationError("Attribute 'md5' says '{}' but '{}' was "
+                                  "parsed instead.".format(
+                    attr_md5, md5))
 
     @classmethod
     def get_upf_groups(self,filter_elements=None):

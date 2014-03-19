@@ -5,9 +5,6 @@ import tempfile
 
 from aiida.common.utils import get_repository_folder
 
-_sandbox_folder = os.path.realpath(os.path.join(get_repository_folder(),'sandbox'))
-_perm_repository = os.path.realpath(os.path.join(get_repository_folder(),'repository'))
-
 _valid_sections = ['node', 'workflow']
 
 class Folder(object):
@@ -22,17 +19,17 @@ class Folder(object):
         with os.pardir?)
     """
     def __init__(self, abspath, folder_limit=None):
-        abspath = os.path.realpath(abspath)
+        abspath = os.path.abspath(abspath)
         if folder_limit is None:
             folder_limit = abspath
-        folder_limit = os.path.realpath(folder_limit)
+        folder_limit = os.path.abspath(folder_limit)
 
         # check that it is a subfolder
         if not os.path.commonprefix([abspath,folder_limit]) == folder_limit:
             raise ValueError("The absolute path for this folder is not within the folder_limit. "
                              "abspath={}, folder_limit={}.".format(abspath, folder_limit))
 
-        self._abspath = os.path.realpath(abspath)
+        self._abspath = abspath
         self._folder_limit = folder_limit
 
     
@@ -51,7 +48,7 @@ class Folder(object):
             
         :Returns: a Folder object pointing to the subfolder.
         """
-        dest_abs_dir = os.path.realpath(os.path.join(
+        dest_abs_dir = os.path.abspath(os.path.join(
                 self.abspath,unicode(subfolder)))
 
         
@@ -362,10 +359,11 @@ class SandboxFolder(Folder):
         sandbox.
         """
         # First check if the sandbox folder already exists
-        if not os.path.exists(_sandbox_folder):
-            os.makedirs(_sandbox_folder)
+        sandbox = get_repository_folder('sandbox')
+        if not os.path.exists(sandbox):
+            os.makedirs(sandbox)
 
-        abspath = tempfile.mkdtemp(dir=_sandbox_folder)
+        abspath = tempfile.mkdtemp(dir=sandbox)
         super(SandboxFolder, self).__init__(abspath=abspath)
        
     def __enter__(self):
@@ -390,7 +388,7 @@ class RepositoryFolder(Folder):
         Initializes the object by pointing it to a folder in the repository.
 
         Pass the uuid as a string.
-        """
+        """    
         if section not in _valid_sections:
             retstr = ("Repository section '{}' not allowed. "
                       "Valid sections are: {}".format(section, ",".join(_valid_sections)))
@@ -405,10 +403,10 @@ class RepositoryFolder(Folder):
         # Note that a similar sharding should probably has to be done
         # independently for calculations sent to remote computers in the
         # execmanager.
-        entity_dir=os.path.realpath(os.path.join(
-            _perm_repository, unicode(section), 
+        entity_dir=os.path.abspath(os.path.join(
+            get_repository_folder('repository'), unicode(section), 
             unicode(uuid)[:2], unicode(uuid)[2:4], unicode(uuid)[4:]))
-        dest = os.path.realpath(os.path.join(entity_dir,unicode(subfolder)))
+        dest = os.path.abspath(os.path.join(entity_dir,unicode(subfolder)))
 
         # Internal variable of this class 
         self._subfolder=subfolder

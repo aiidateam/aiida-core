@@ -36,7 +36,7 @@ class WorkflowCustomEOS(Workflow):
         
         calc = QECalc(computer=computer)
         calc.set_max_wallclock_seconds(max_wallclock_seconds)
-        calc.set_resources(num_machines=num_machines, num_cpus_per_machine=num_cpus_per_machine)
+        calc.set_resources({"num_machines": num_machines, "num_cpus_per_machine": num_cpus_per_machine})
         calc.store()
         
         calc.use_code(code)
@@ -76,12 +76,12 @@ class WorkflowCustomEOS(Workflow):
         # Testing report
         self.append_to_report("Starting workflow with params: {0}".format(p))
 
-        kpoints = ParameterData({
+        kpoints = ParameterData(dict={
                 'type': 'automatic',
                 'points': p['kpoints'],
                 }).store()
 
-        parameters = ParameterData({
+        parameters = ParameterData(dict={
             'CONTROL': {
                 'calculation': 'vc-relax',
                 'restart_mode': 'from_scratch',

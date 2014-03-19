@@ -128,7 +128,7 @@ class DbNode(m.Model):
                 "will use base Node class".format(self.type,self.pk))
             PluginClass = Node
 
-        return PluginClass(uuid=self.uuid)
+        return PluginClass(dbnode=self)
 
     def get_simple_name(self, invalid_result=None):
         """
@@ -150,29 +150,6 @@ class DbNode(m.Model):
         else:
             thistype = thistype[:-1] # Strip final dot
             return thistype.rpartition('.')[2]
-    
-    def increment_version_number(self):
-        """
-        This function increments the version number in the DB.
-        This should be called every time you need to increment the version
-        (e.g. on adding a extra or attribute).
-
-        :note: Do not manually increment the version number, because if
-            two different threads are adding/changing an attribute concurrently,
-            the version number would be incremented only once.
-        """
-        from django.db.models import F
-
-        # I increment the node number using a filter
-        # (this should be the right way of doing it;
-        # dbnode.nodeversion  = F('nodeversion') + 1
-        # will do weird stuff, returning Django Objects instead of numbers,
-        # and incrementing at every save; moreover in this way I should do
-        # the right thing for concurrent writings
-        # I use self._dbnode because this will not do a query to
-        # update the node; here I only need to get its pk
-        self.nodeversion = F('nodeversion') + 1
-        self.save()
 
     @python_2_unicode_compatible
     def __str__(self):
@@ -348,7 +325,7 @@ class DbAttributeBaseClass(m.Model):
 
 
     @classmethod
-    def set_value_for_node(cls, dbnode, key, value, incrementversion=True):
+    def set_value_for_node(cls, dbnode, key, value):
         """
         This is the raw-level method that accesses the DB. No checks are done
         to prevent the user from (re)setting a valid key. 
@@ -360,10 +337,6 @@ class DbAttributeBaseClass(m.Model):
         :param dbnode: the dbnode for which the attribute should be stored
         :param key: the key of the attribute to store
         :param value: the value of the attribute to store
-        :param incrementversion : If incrementversion
-          is True (default), each attribute set will
-          udpate the version. This can be set to False during the store() so
-          that the version does not get increased for each attribute.
         
         :raise ValueError: if the key contains the separator symbol used 
             internally to unpack dictionaries and lists (defined in cls._sep).
@@ -375,8 +348,6 @@ class DbAttributeBaseClass(m.Model):
         try:
             sid = transaction.savepoint()
             
-            if incrementversion:
-                dbnode.increment_version_number()
             attr, _ = cls.objects.get_or_create(dbnode=dbnode,
                                                 key=key)
             attr.setvalue(value,with_transaction=False)
@@ -391,7 +362,6 @@ class DbAttributeBaseClass(m.Model):
         
         :raise AttributeError: if no key is found for the given dbnode
         """
-        dbnode.increment_version_number()
         try:
             # Call the delvalue method, that takes care of recursively deleting
             # the subattributes, if this is a list or dictionary.

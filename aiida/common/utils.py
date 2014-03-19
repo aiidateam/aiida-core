@@ -5,6 +5,20 @@ from aiida.common.exceptions import ConfigurationError
 
 CONFIG_FNAME = 'config.json'
 
+class classproperty(object):
+    """
+    A class that, when used as a decorator, works as if the 
+    two decorators @property and @classmethod where applied together
+    (i.e., the object works as a property, both for the Class and for any
+    of its instance; and is called with the class cls rather than with the 
+    instance as its first argument).
+    """
+    def __init__(self, getter):
+        self.getter= getter
+    def __get__(self, instance, owner):
+        return self.getter(owner)
+
+
 def backup_config():   
     import shutil
     aiida_dir    = os.path.expanduser("~/.aiida")
@@ -57,7 +71,7 @@ def get_new_uuid():
     the_uuid = uuid.uuid4()
     return force_unicode(the_uuid)
 
-def get_repository_folder():
+def get_repository_folder(subfolder=None):
     """
     Return the top folder of the local repository.
     """
@@ -68,7 +82,15 @@ def get_repository_folder():
     except ImportError:
         raise ConfigurationError(
             "The LOCAL_REPOSITORY variable is not set correctly.")
-    return os.path.realpath(LOCAL_REPOSITORY)
+    if subfolder is None:
+        return os.path.abspath(LOCAL_REPOSITORY)
+    elif subfolder == "sandbox":
+        return os.path.abspath(os.path.join(LOCAL_REPOSITORY,'sandbox'))
+    elif subfolder == "repository":
+        return os.path.abspath(os.path.join(LOCAL_REPOSITORY,'repository'))
+    else:
+        raise ValueError("Invalid 'subfolder' passed to "
+                         "get_repository_folder: {}".format(subfolder))
 
 def escape_for_bash(str_to_escape):
     """

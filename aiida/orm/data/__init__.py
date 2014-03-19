@@ -15,14 +15,7 @@ method. This is done independently in order to allow cross-validation of plugins
 
 class Data(Node):
     _updatable_attributes = tuple() 
-        
-    def validate(self):
-        '''
-        Each datatype has functionality to validate itself according to a schema or 
-        a procedure (e.g. see halst/schema python schema validation)
-        ''' 
-        return True
-        
+               
     def _add_link_from(self,src,label=None):
         from aiida.orm.calculation import Calculation
 

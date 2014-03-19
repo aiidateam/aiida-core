@@ -23,7 +23,15 @@ def get_last_daemon_run(task):
     #id = str(type(TaskMeta.objects.all().order_by('-date_done')[0].task_id))
     return last_run_at
 
+# Cache for speed-up
+_aiida_autouser_cache = None
+
 def get_automatic_user():
+    global _aiida_autouser_cache
+    
+    if _aiida_autouser_cache is not None:
+        return _aiida_autouser_cache
+
     import getpass
     username = getpass.getuser()
     
@@ -32,7 +40,8 @@ def get_automatic_user():
     from aiida.common.exceptions import ConfigurationError
 
     try:
-        return User.objects.get(username=username)
+        _aiida_autouser_cache = User.objects.get(username=username)
+        return _aiida_autouser_cache
     except ObjectDoesNotExist:
         raise ConfigurationError("No aiida user with username {}".format(
                 username))

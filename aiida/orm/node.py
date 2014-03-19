@@ -64,6 +64,20 @@ class Node(object):
     # the call of the store() method
     _updatable_attributes = tuple() 
     
+    # A list of tuples, saying which attributes cannot be set at the same time
+    # See documentation in the set() method.
+    _set_incompatibilities = []
+    
+    # Default values to set in the __init__, if no value is explicitly provided
+    # for the given key.
+    # It is a dictionary, with k=v; if the key k is not provided to the __init__,
+    # and a value is present here, this is set.
+    ## NOTE: redefine it as a classproperty, using the @classproperty decorator
+    ##       that you can import from aiida.common.utils, if you need to
+    ##       dynamically access other class-wide attributes (see example for
+    ##       the Calculation class).
+    _set_defaults = {}
+    
     @property
     def logger(self):
         """
@@ -152,44 +166,61 @@ class Node(object):
           (It is not possible to assign a uuid to a new Node.)
         """
         from aiida.djsite.utils import get_automatic_user
-        from aiida.djsite.db.models import DbNode
+        from aiida.djsite.db.models import DbNode, DbAttribute
+        from aiida.common.utils import get_new_uuid
 
         self._to_be_stored = False
         self._temp_folder = None
-        uuid = kwargs.pop('uuid', None)
-        
-        if uuid is not None:
+
+        dbnode = kwargs.pop('dbnode', None)
+   
+        if dbnode is not None:
+            if not isinstance(dbnode, DbNode):
+                raise TypeError("dbnode is not a DbNode instance")
             if kwargs:
-                raise ValueError("If you pass a UUID, you cannot pass any "
+                raise ValueError("If you pass a dbnode, you cannot pass any "
                                  "further parameter")
+
             # If I am loading, I cannot modify it
             self._to_be_stored = False
-            try:
-                self._dbnode = DbNode.objects.get(uuid=uuid)
-                # I do not check for multiple entries found
-            except ObjectDoesNotExist:
-                raise NotExistent("No entry with the UUID {} found".format(
-                    uuid))
+            
+            self._dbnode = dbnode
 
             self._repo_folder = RepositoryFolder(section=_section_name,
-                                                 uuid=self.uuid)
-            try:
-                self.validate()
-            except ValidationError as e:
-                raise DbContentError("The data in the DB with UUID={} is not "
-                                     "valid for class {}: {}".format(
-                    uuid, self.__class__.__name__, e.message))
+                                                 uuid=self._dbnode.uuid)
+            
+# NO VALIDATION ON __init__ BY DEFAULT, IT IS TOO SLOW SINCE IT OFTEN
+# REQUIRES MULTIPLE DB HITS
+#            try:
+#                # Note: the validation often requires to load at least one
+#                # attribute, and therefore it will take a lot of time
+#                # because it has to cache every attribute.
+#                self.validate()
+#            except ValidationError as e:
+#                raise DbContentError("The data in the DB with UUID={} is not "
+#                                     "valid for class {}: {}".format(
+#                    uuid, self.__class__.__name__, e.message))
         else:
-            self._dbnode = DbNode.objects.create(user=get_automatic_user())
-            self._dbnode.type = self._plugin_type_string
+            
+            self._dbnode = DbNode(user=get_automatic_user(),
+                                  uuid=get_new_uuid(),
+                                  type=self._plugin_type_string)
+            
             self._to_be_stored = True
-            self._temp_folder = SandboxFolder()
-            # Create an empty folder, to avoid any problem in the future
+            
+            # Note: the following steps take a lot of time, having to create
+            #       folders!
+            self._temp_folder = SandboxFolder() # This is also created
+            # Create the 'path' subfolder in the Sandbox
             self.path_subfolder.create()
             # Used only before the first save
             self._attrs_cache = {}
             self._repo_folder = RepositoryFolder(section=_section_name,
                                                  uuid=self.uuid)
+
+            # Automatically set all *other* attributes, if possible, otherwise
+            # stop
+            self._set_with_defaults(**kwargs)
 
     @classmethod
     def query(cls,*args,**kwargs):
@@ -235,6 +266,84 @@ class Node(object):
             return None
         else:
             return Computer(dbcomputer=self.dbnode.dbcomputer)
+      
+    def _set_with_defaults(self, **kwargs):
+        """
+        Calls the set() method, but also adds the class-defined default
+        values (defined in the self._set_defaults attribute),
+        if they are not provided by the user.
+        
+        :note: for the default values, also allow to define 'hidden' methods,
+            meaning that if a default value has a key "_state", it will not call
+            the function "set__state" but rather "_set_state".
+            This is not allowed, instead, for the standard set() method.
+        """
+        self._set_internal(arguments=self._set_defaults, allow_hidden=True)
+        
+        # Pass everything to 'set'
+        self.set(**kwargs)
+    
+    def set(self, **kwargs):
+        """
+        For each k=v pair passed as kwargs, call the corresponding 
+        set_k(v) method (e.g., calling self.set(property=5, mass=2) will
+        call self.set_property(5) and self.set_mass(2).   
+        Useful especially in the __init__.
+        
+        :note: it uses the _set_incompatibilities list of the class to check
+            that we are not setting methods that cannot be set at the same time.
+            _set_incompatibilities must be a list of tuples, and each tuple
+            specifies the elements that cannot be set at the same time.
+            For instance, if _set_incompatibilities = [('property', 'mass')],
+            then the call self.set(property=5, mass=2) will raise a ValueError.
+            If a tuple has more than two values, it raises ValueError if *all*
+            keys are provided at the same time, but it does not give any error
+            if at least one of the keys is not present.
+        
+        :note: If one element of _set_incompatibilities is a tuple with only
+            one element, this element will not be settable using this function
+            (and in particular, 
+        
+        :raise ValueError: if the corresponding set_k method does not exist
+            in self, or if the methods cannot be set at the same time.
+        """
+        self._set_internal(arguments=kwargs, allow_hidden=False)
+    
+    def _set_internal(self, arguments, allow_hidden=False):
+        """
+        Works as self.set(), but takes a dictionary as the 'arguments' variable,
+        instead of reading it from the **kwargs; moreover, it allows to specify
+        allow_hidden to True. In this case, if a a key starts with and 
+        underscore, as for instance "_state", it will not call
+        the function "set__state" but rather "_set_state".
+        """
+        import collections
+        
+        for incomp in self._set_incompatibilities:
+            if all(k in arguments.keys() for k in incomp):
+                if len(incomp) == 1:
+                    raise ValueError("Cannot set {} directly when creating "
+                                     "the node or using the .set() method; "
+                                     "use the specific method instead.".format(
+                                        incomp[0]))
+                else:
+                    raise ValueError("Cannot set {} at the same time".format(
+                        " and ".join(incomp)))
+        
+        for k, v in arguments.iteritems():
+            try:
+                if allow_hidden and k.startswith("_"):                   
+                    method = getattr(self,'_set_{}'.format(k[1:]))
+                else:
+                    method = getattr(self,'set_{}'.format(k))
+            except AttributeError:
+                raise ValueError("Unable to set '{0}', no set_{0} method "
+                                 "found".format(k))
+            if not isinstance(method, collections.Callable):
+                raise ValueError("Unable to set '{0}', set_{0} is not "
+                                 "callable!".format(k))
+            method(v)
+                
 
     @property
     def label(self):
@@ -549,6 +658,38 @@ class Node(object):
             else:
                 return [i[1] for i in filtered_list]
 
+    def get_computer(self):
+        """
+        Get the computer associated to the node.
+        
+        :return: the Computer object or None.
+        """
+        from aiida.orm import Computer
+        if self.dbnode.dbcomputer is None:
+            return None
+        else:
+            return Computer(dbcomputer=self.dbnode.dbcomputer)
+ 
+    def set_computer(self,computer):
+        """
+        Set the computer to be used by the node.
+        
+        Note that the computer makes sense only for some nodes: Calculation,
+        RemoteData, ...
+        
+        :param computer: the computer object
+        """
+        #TODO: probably this method should be in the base class, and
+        #      check for the type
+        from aiida.djsite.db.models import DbComputer
+
+        if self._to_be_stored:
+            self.dbnode.dbcomputer = DbComputer.get_dbcomputer(computer)
+        else:
+            self.logger.error("Trying to change the computer of an already "
+                              "saved node: {}".format(self.uuid))
+            raise ModificationNotAllowed(
+                "Node with uuid={} was already stored".format(self.uuid))
             
     def set_attr(self, key, value):
         """
@@ -571,7 +712,8 @@ class Node(object):
             self._attrs_cache[key] = value
         else:
             if key in self._updatable_attributes:
-                return DbAttribute.set_value_for_node(self.dbnode, key,value)
+                DbAttribute.set_value_for_node(self.dbnode, key,value)
+                self._increment_version_number_db()
             else:
                 raise ModificationNotAllowed(
                     "Cannot set an attribute after saving a node")
@@ -594,7 +736,8 @@ class Node(object):
                     "DbAttribute {} does not exist".format(key))
         else:
             if key in self._updatable_attributes:
-                return DbAttribute.del_value_for_node(self.dbnode, key)
+                DbAttribute.del_value_for_node(self.dbnode, key)
+                self._increment_version_number_db()
             else:
                 raise ModificationNotAllowed("Cannot delete an attribute after "
                                              "saving a node")
@@ -652,6 +795,7 @@ class Node(object):
                 "The extras of a node can be set only after "
                 "storing the node")
         DbExtra.set_value_for_node(self.dbnode, key,value)
+        self._increment_version_number_db()
             
     def get_extra(self, key, *args):
         """
@@ -704,6 +848,7 @@ class Node(object):
                 "The extras of a node can be set and deleted "
                 "only after storing the node")
         return DbExtra.del_value_for_node(self.dbnode, key)
+        self._increment_version_number_db()
 
     def extras(self):
         """
@@ -821,21 +966,22 @@ class Node(object):
         This function increments the version number in the DB.
         This should be called every time you need to increment the version
         (e.g. on adding a extra or attribute). 
+        
+        :note: Do not manually increment the version number, because if
+            two different threads are adding/changing an attribute concurrently,
+            the version number would be incremented only once.
         """
         from aiida.djsite.db.models import DbNode
+        from django.db.models import F
 
-        # I increment the version number using, internally, filters, to perform
-        # the correct operation even if multiple threads are working on the 
-        # same node.
-        DbNode.objects.get(pk=self._dbnode.pk).increment_version_number()
+        # I increment the node number using a filter
+        self._dbnode.nodeversion = F('nodeversion') + 1
+        self._dbnode.save()
 
         # This reload internally the node of self._dbnode
-        # Note: I have to reload the ojbect. I don't do it here because
-        # it is done at every call to self.dbnode
-        #self._dbnode = DbNode.objects.get(pk=self._dbnode.pk)
-        # Therefore I simply recalculate self.dbnode
-        self.dbnode
-
+        # Note: I have to reload the object (to have the right values in memory,
+        # otherwise I only get the Django Field F object as a result!
+        self._dbnode = DbNode.objects.get(pk=self._dbnode.pk)
 
     def copy(self):
         """
@@ -890,8 +1036,8 @@ class Node(object):
         from aiida.djsite.db.models import DbNode
         
         # I also update the internal _dbnode variable, if it was saved
-        if not self._to_be_stored:
-            self._dbnode = DbNode.objects.get(pk=self._dbnode.pk)
+#        if not self._to_be_stored:
+#            self._dbnode = DbNode.objects.get(pk=self._dbnode.pk)
         return self._dbnode
 
     @property
@@ -1041,7 +1187,7 @@ class Node(object):
                     # the version for each add.
                     for k, v in self._attrs_cache.iteritems():
                         DbAttribute.set_value_for_node(self.dbnode,
-                            k,v,incrementversion=False)
+                            k,v)
             # This is one of the few cases where it is ok to do a 'global'
             # except, also because I am re-raising the exception
             except:
@@ -1050,7 +1196,6 @@ class Node(object):
                 self.get_temp_folder().replace_with_folder(
                     self.repo_folder.abspath, move=True, overwrite=True)                
                 raise
-
             
             self._temp_folder = None            
             self._to_be_stored = False

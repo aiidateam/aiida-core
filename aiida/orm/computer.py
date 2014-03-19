@@ -168,44 +168,22 @@ class Computer(object):
         else:
             self._dbcomputer = DbComputer()
 
-            name = kwargs.pop('name', None)
-            if name is not None:
-                self.set_name(name)
+        # Set all remaining parameters, stop if unknown
+        self.set(**kwargs)
 
-            hostname = kwargs.pop('hostname', None)
-            if hostname is not None:
-                self.set_hostname(hostname)
-
-            workdir = kwargs.pop('workdir', None)
-            if workdir is not None:
-                self.set_workdir(workdir)
-
-            prepend_text = kwargs.pop('prepend_text', None)
-            if prepend_text is not None:
-                self.set_prepend_text(prepend_text)
-
-            append_text = kwargs.pop('append_text', None)
-            if append_text is not None:
-                self.set_append_text(append_text)
-
-            mpirun_command = kwargs.pop('mpirun_command', None)
-            if mpirun_command is not None:
-                self.set_mpirun_command(mpirun_command)
-
-            transport_params = kwargs.pop('transport_params', None)
-            if transport_params is not None:
-                self.set_transport_params(transport_params)
-
-            transport_type = kwargs.pop('transport_type', None)
-            if transport_type is not None:
-                self.set_transport_type(transport_type)
-
-            scheduler_type = kwargs.pop('scheduler_type', None)
-            if scheduler_type is not None:
-                self.set_scheduler_type(scheduler_type)
-
-            if kwargs:
-                raise ValueError("Unrecognized parameters: {}".format(kwargs.keys()))
+    def set(self, **kwargs):
+        import collections
+        
+        for k, v in kwargs.iteritems():
+            try:
+                method = getattr(self,'set_{}'.format(k))
+            except AttributeError:
+                raise ValueError("Unable to set '{0}', no set_{0} method "
+                                 "found".format(k))
+            if not isinstance(method, collections.Callable):
+                raise ValueError("Unable to set '{0}', set_{0} is not "
+                                 "callable!".format(k))
+            method(v)
 
     @classmethod
     def list_names(cls):

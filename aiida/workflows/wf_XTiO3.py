@@ -23,7 +23,7 @@ class WorkflowXTiO3(Workflow):
     
     def get_ph_parameters(self):
         
-        parameters = ParameterData({
+        parameters = ParameterData(dict={
             'INPUTPH': {
                 'tr2_ph' : 1.0e-8,
                 'epsil' : True,
@@ -55,7 +55,7 @@ class WorkflowXTiO3(Workflow):
         calc = QEPhCalc(computer=computer)
         
         calc.set_max_wallclock_seconds(max_wallclock_seconds) # 30 min
-        calc.set_resources(num_machines=num_machines, num_cpus_per_machine=num_cpus_per_machine)
+        calc.set_resources({"num_machines": num_machines, "num_cpus_per_machine": num_cpus_per_machine})
         calc.store()
         
         calc.use_parameters(ph_parameters)
@@ -158,7 +158,7 @@ class WorkflowXTiO3_EOS(Workflow):
     
     def get_pw_parameters(self):
         
-        parameters = ParameterData({
+        parameters = ParameterData(dict={
                     'CONTROL': {
                         'calculation': 'scf',
                         'restart_mode': 'from_scratch',
@@ -176,7 +176,7 @@ class WorkflowXTiO3_EOS(Workflow):
     
     def get_kpoints(self):
         
-        kpoints = ParameterData({
+        kpoints = ParameterData(dict={
                         'type': 'automatic',
                         'points': [4, 4, 4, 0, 0, 0],
                         }).store()
@@ -204,7 +204,7 @@ class WorkflowXTiO3_EOS(Workflow):
         
         calc = QECalc(computer=computer)
         calc.set_max_wallclock_seconds(max_wallclock_seconds)
-        calc.set_resources(num_machines=num_machines, num_cpus_per_machine=num_cpus_per_machine)
+        calc.set_resources({"num_machines": num_machines, "num_cpus_per_machine": num_cpus_per_machine})
         calc.store()
         
         calc.use_code(code)

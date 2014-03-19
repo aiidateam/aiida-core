@@ -143,7 +143,7 @@ class PwParser(Parser):
         out_dict,successful = parse_raw_output(*parsing_args)
         
         # convert the dictionary into an AiiDA object
-        output_params = ParameterData(out_dict)
+        output_params = ParameterData(dict=out_dict)
         
         # save it into db
         output_params.store()

@@ -103,7 +103,7 @@ s.append_atom(position=(alat/2.,0.,alat/2.),symbols=['O'])
 s.append_atom(position=(0.,alat/2.,alat/2.),symbols=['O'])
 s.store()
 
-parameters = ParameterData({
+parameters = ParameterData(dict={
             'CONTROL': {
                 'calculation': 'cp',
                 'restart_mode': 'from_scratch',
@@ -135,7 +135,7 @@ parameters = ParameterData({
 QECalc = CalculationFactory('quantumespresso.cp')
 calc = QECalc(computer=computer)
 calc.set_max_wallclock_seconds(30*60) # 30 min
-calc.set_resources(num_machines=1, num_cpus_per_machine=num_cpus_per_machine)
+calc.set_resources({"num_machines": 1, "num_cpus_per_machine": num_cpus_per_machine})
 if queue is not None:
     calc.set_queue_name(queue)
 calc.store()

@@ -11,15 +11,9 @@ class ParameterData(Data):
     You can then change/delete/add more attributes before storing with the
     usual methods of aiida.orm.Node
     """
-    def __init__(self,dictionary=None,**kwargs):
-        super(ParameterData,self).__init__(**kwargs)
-
-        uuid = kwargs.pop('uuid', None)
-        if uuid is not None:
-            return
-
+    def set_dict(self, dict):
         # I set the keys
-        for k, v in dictionary.iteritems():
+        for k, v in dict.iteritems():
             self.set_attr(k, v)
 
     def get_dict(self):

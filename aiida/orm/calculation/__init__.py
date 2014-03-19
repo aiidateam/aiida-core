@@ -1,6 +1,7 @@
 from aiida.orm import Node
 from aiida.common.datastructures import calc_states
 from aiida.common.exceptions import ModificationNotAllowed
+from aiida.common.utils import classproperty
 
 #TODO: set the following as properties of the Calculation
 #        'email',
@@ -24,59 +25,13 @@ class Calculation(Node):
     # Set default for the link to the retrieved folder (after calc is done)
     _linkname_retrieved = 'retrieved' 
     
-    def __init__(self,*args,**kwargs):
-        """
-        Accepts as arguments:
-        
-        :param computer: the computer object on which the calculation
-                         will be computed.
-        :param uuid: used to load an existing calculation from the database. 
-                     If uuid is specified, no other argument has to be specified.
-        :param optional resources: set additional resources used by the scheduler plugin.
-        :param optional withmpi: If true adds the machine dependent mpirun command 
-                                 in front of the executable name. Default=True. 
-        :param optional parser: parser object to be used on the output. Default=self._default_parser
-        """
-        super(Calculation,self).__init__(*args, **kwargs)
-
-        uuid = kwargs.pop('uuid', None)
-        if uuid is not None:
-            # if I am loading an existing calc: stop here
-            return
-
-        # For new calculations
-        self._set_state(calc_states.NEW)
-
-        computer = kwargs.pop('computer', None)
-        if computer is not None:
-            self.set_computer(computer)
-
-        # Default value: True
-        # If True, adds the machine-dependent mpirun command in front of the
-        # executable name.
-        withmpi = kwargs.pop('withmpi', True)
-        self.set_withmpi(withmpi)
-
-        resources = kwargs.pop('resources',None)
-        if resources is not None:
-            self.set_resources(**resources)
-
-        parser = kwargs.pop('parser', self._default_parser)
-        self.set_parser(parser)
-        
-        # hard code the output folder to be a single one
-        self.set_linkname_retrieved(self._linkname_retrieved)
-
-        if kwargs:
-            raise ValueError("Invalid parameters found in the __init__: "
-                             "{}".format(kwargs.keys()))
-
-    def store(self):
-        """
-        Store the Calculation in the database.
-        """
-        super(Calculation, self).store()
-        return self
+    # Default values to be set for new nodes
+    @classproperty
+    def _set_defaults(cls):
+        return {"_state": calc_states.NEW,
+                "parser_name": cls._default_parser,
+                "linkname_retrieved": cls._linkname_retrieved,
+          }
             
     def validate(self):
         """
@@ -112,7 +67,7 @@ class Calculation(Node):
 
         if not isinstance(self.get_withmpi(), bool):
             raise ValidationError("withmpi property must be boolean! It in instead {}".format(str(type(self.get_withmpi()))))
-            
+           
 
     def can_link_as_output(self,dest):
         """
@@ -231,11 +186,15 @@ class Calculation(Node):
         """
         self.set_attr('max_wallclock_seconds',int(val))
 
-    def set_resources(self, **kwargs):
+    def set_resources(self, resources_dict):
         """
         Set the dictionary of resources to be used by the scheduler plugin.
         """
-        self.set_attr('jobresource_params', kwargs)
+        # Note: for the time being, resources are only validated during the
+        # 'store' because here we are not sure that a Computer has been set
+        # yet (in particular, if both computer and resources are set together
+        # using the .set() method).
+        self.set_attr('jobresource_params', resources_dict)
     
     def set_withmpi(self,val):
         """
@@ -320,36 +279,6 @@ class Calculation(Node):
                     valid_states, self.get_state()))
 
         return super(Calculation,self)._add_link_from(src, label)
-
-    def set_computer(self,computer):
-        """
-        Set the computer to be used by the calculation.
-        
-        :param computer: the computer object
-        """
-        #TODO: probably this method should be in the base class, and
-        #      check for the type
-        from aiida.djsite.db.models import DbComputer
-
-        if self._to_be_stored:
-            self.dbnode.dbcomputer = DbComputer.get_dbcomputer(computer)
-        else:
-            self.logger.error("Trying to change the computer of an already "
-                              "saved node: {}".format(self.uuid))
-            raise ModificationNotAllowed(
-                "Node with uuid={} was already stored".format(self.uuid))
-
-    def get_computer(self):
-        """
-        Get the computer associated to the calculation.
-        
-        :return: the Computer object or None.
-        """
-        from aiida.orm import Computer
-        if self.dbnode.dbcomputer is None:
-            return None
-        else:
-            return Computer(dbcomputer=self.dbnode.dbcomputer)
 
     def _set_state(self, state):
         if state not in calc_states:
@@ -583,8 +512,7 @@ class Calculation(Node):
             res_str_list.append(fmt_string.format(
                     'Pk','State','Creation','Time',
                     'Scheduler state','Computer','Type'))
-            for calc in calc_list:
-                
+            for calc in calc_list:                          
                 remote_state = "None"
                 
                 calc_state = calc.get_state()
@@ -744,7 +672,7 @@ class Calculation(Node):
         
         submit_calc(self)
 
-    def set_parser(self, parser):
+    def set_parser_name(self, parser):
         """
         Set a string for the output parser
         Can be None if no output plugin is available or needed.
@@ -764,7 +692,7 @@ class Calculation(Node):
         """
         from aiida.parsers import ParserFactory
                 
-        return self.get_attr('parser')
+        return self.get_attr('parser', None)
 
     def get_parserclass(self):
         """

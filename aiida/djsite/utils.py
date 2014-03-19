@@ -1,10 +1,3 @@
-import getpass
-
-from django.core.exceptions import ObjectDoesNotExist
-from aiida.common.exceptions import ConfigurationError
-
-from django.contrib.auth.models import User
-
 def get_last_daemon_run(task):
     """
     Return the time the given task was run the last time.
@@ -30,7 +23,14 @@ def get_last_daemon_run(task):
     #id = str(type(TaskMeta.objects.all().order_by('-date_done')[0].task_id))
     return last_run_at
 
-def get_automatic_user(username=getpass.getuser()):
+def get_automatic_user():
+    import getpass
+    username = getpass.getuser()
+    
+    from django.contrib.auth.models import User
+    from django.core.exceptions import ObjectDoesNotExist
+    from aiida.common.exceptions import ConfigurationError
+
     try:
         return User.objects.get(username=username)
     except ObjectDoesNotExist:

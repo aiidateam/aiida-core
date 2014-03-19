@@ -3,9 +3,6 @@ import sys
 from aiida.cmdline.baseclass import VerdiCommand
 from aiida.common.utils import load_django
 
-from aiida.common.folders import SandboxFolder
-from aiida.orm import Node
-
 class Export(VerdiCommand):
     """
     Export nodes and group of nodes
@@ -14,6 +11,9 @@ class Export(VerdiCommand):
     purposes or to share data with collaborators.
     """
     def run(self,*args):               
+        from aiida.common.folders import SandboxFolder
+        from aiida.orm import Node
+
         import tarfile
         
         load_django()

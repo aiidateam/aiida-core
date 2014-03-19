@@ -8,6 +8,8 @@ from django.db.models.query import QuerySet
 from aiida.common.exceptions import (
     ConfigurationError, DbContentError, MissingPluginError, InternalError)
 
+from aiida.djsite.settings.settings import AIIDANODES_UUID_VERSION
+
 # Removed the custom User field, that was creating a lot of problems. Use
 # the email as UUID. In case we need it, we can do a couple of south migrations
 # to create the new table. See for instance
@@ -63,7 +65,7 @@ class DbNode(m.Model):
       User-defined attributes are extras for convenience of tagging and searching only.\
       User should be careful not to attach data computed from data as extras. 
     '''
-    uuid = UUIDField(auto=True)
+    uuid = UUIDField(auto=True, version=AIIDANODES_UUID_VERSION)
     # in the form data.upffile., data.structure., calculation., code.quantumespresso.pw., ...
     # Note that there is always a final dot, to allow to do queries of the
     # type (type__startswith="calculation.") and avoid problems with classes
@@ -325,6 +327,25 @@ class DbAttributeBaseClass(m.Model):
             raise AttributeError("{} with key {} for node {} not found "
                 "in db".format(cls.__name__, key, dbnode.pk))
         return attr.getvalue()
+
+    @classmethod
+    def get_all_values_for_node(cls, dbnode):
+        """
+        Return a dictionary with all attributes for the given dbnode.
+        
+        :return: a dictionary where each key is a level-0 attribute
+            stored in the Db table, correctly converted 
+            to the right type.
+        """        
+        from django.db.models import Q
+        
+        # First level key: the key must not contain the separator        
+        first_level_key = ~Q(key__contains=cls._sep)
+        attrs = cls.objects.filter(dbnode=dbnode).filter(first_level_key)
+
+        # Return a dictionary
+        return {attr.key: attr.getvalue() for attr in attrs}
+
 
     @classmethod
     def set_value_for_node(cls, dbnode, key, value, incrementversion=True):
@@ -739,7 +760,7 @@ class DbGroup(m.Model):
     pseudopotential families - if no two pseudos are included for the same 
     atomic element).
     """
-    uuid = UUIDField(auto=True)
+    uuid = UUIDField(auto=True, version=AIIDANODES_UUID_VERSION)
     # max_length is required by MySql to have indexes and unique constraints
     name = m.CharField(max_length=255,unique=True, db_index=True)
     dbnodes = m.ManyToManyField('DbNode', related_name='dbgroups')
@@ -783,7 +804,7 @@ class DbComputer(m.Model):
     """
     #TODO: understand if we want that this becomes simply another type of dbnode.
 
-    uuid = UUIDField(auto=True)
+    uuid = UUIDField(auto=True,version=AIIDANODES_UUID_VERSION)
     name = m.CharField(max_length=255, unique=True, blank=False)
     hostname = m.CharField(max_length=255)
     description = m.TextField(blank=True)
@@ -926,7 +947,7 @@ class DbWorkflow(m.Model):
     
     from aiida.common.datastructures import wf_states, wf_data_types
     
-    uuid         = UUIDField(auto=True)
+    uuid         = UUIDField(auto=True,version=AIIDANODES_UUID_VERSION)
     ctime        = m.DateTimeField(auto_now_add=True, editable=False)
     mtime        = m.DateTimeField(auto_now=True, editable=False)    
     user         = m.ForeignKey(User, on_delete=m.PROTECT)

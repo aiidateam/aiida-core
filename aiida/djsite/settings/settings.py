@@ -255,6 +255,10 @@ SOUTH_TESTS_MIGRATE = False
 #AFTER_DATABASE_CREATION_SIGNAL = 'post_migrate'
 AFTER_DATABASE_CREATION_SIGNAL = 'post_syncdb'
 
+# VERSION TO USE FOR DBNODES.
+AIIDANODES_UUID_VERSION=4
+
+
 # -------------------------
 # Tastypie (API) settings
 # -------------------------

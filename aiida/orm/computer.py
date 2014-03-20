@@ -1,6 +1,7 @@
 from aiida.common.exceptions import (
     ConfigurationError, DbContentError, InvalidOperation,
     MissingPluginError)
+from aiida.common.utils import classproperty
 
 def delete_computer(computer):
     """
@@ -57,7 +58,7 @@ class Computer(object):
     # Moreover, the _set_internalname_string method should also immediately
     # validate the value. 
     
-    @property
+    @classproperty
     def _conf_attributes(self):
         """
         Return the configuration attributes.

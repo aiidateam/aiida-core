@@ -666,11 +666,17 @@ class Calculation(Node):
 
     def submit(self):
         """
-        Execute the calculation.
-        """ 
-        from aiida.execmanager import submit_calc
+        Puts the calculation in the TOSUBMIT status.
         
-        submit_calc(self)
+        Actual submission is performed by the daemon.
+        """ 
+        from aiida.common.exceptions import InvalidOperation
+        
+        if self.get_state() != calc_states.NEW:
+            raise InvalidOperation("Cannot submit a calculation not in {} state"
+                                   .format(calc_states.NEW) )
+
+        self._set_state(calc_states.TOSUBMIT)
 
     def set_parser_name(self, parser):
         """

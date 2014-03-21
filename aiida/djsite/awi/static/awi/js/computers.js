@@ -31,9 +31,9 @@ function load_computers(scroll, ordering) {
 		var apiurl = api_urls[module] + qs;
 		$.getJSON(apiurl, function(data){ /* get the json via API */
 			var rows = [];
-			var status = {/* used to show colored labels for activation status */
-				true: '<span class="label label-success">enabled</span>',
-				false: '<span class="label label-danger">disabled</span>'
+			var enabled = {/* used to show colored labels for activation status */
+				true: '<span class="label label-success">true</span>',
+				false: '<span class="label label-danger">false</span>'
 			}
 			$.each(data.objects, function(k, o){ /* for each computer, we build the html of a table row */
 				$('body>div.container').prepend('<div class="modal fade rename-modal" id="modal-'+o.id+'" role="dialog" aria-labelledby="renameLabel'+o.id+'" aria-hidden="true" tabindex="-1" data-rename="'+o.name+'" data-url="'+o.resource_uri+'">'+
@@ -51,7 +51,7 @@ function load_computers(scroll, ordering) {
 						'<td>'+o.transport_type+'</td>'+
 						'<td>'+o.hostname+'</td>'+
 						'<td>'+o.scheduler_type+'</td>'+
-						'<td class="status">'+status[o.enabled]+'</td>'+
+						'<td class="status">'+enabled[o.enabled]+'</td>'+
 						'<td>'+
 							'<div class="btn-group">'+ /* actions dropdown */
 								'<button type="button" class="btn btn-primary btn-sm dropdown-toggle" data-toggle="dropdown">'+
@@ -158,7 +158,7 @@ function load_computers(scroll, ordering) {
 				processData: false,
 				data: '{"enabled":false}',
 				success: function(data) { /* on success, we change the label in the table row and change the link in the actions dropdown */
-					$('#row-'+computer_id+'>td.status').html('<span class="label label-danger">disabled</span>');
+					$('#row-'+computer_id+'>td.status').html('<span class="label label-danger">false</span>');
 					$('#row-'+computer_id+' ul.dropdown-menu>li.status>a').removeClass('computer-disable').addClass('computer-enable').html('<span class="glyphicon glyphicon-ok"></span>&nbsp;&nbsp;Enable');
 				},
 				error: function(xhr, status, error){ /* or we show an error message */
@@ -180,7 +180,7 @@ function load_computers(scroll, ordering) {
 				processData: false,
 				data: '{"enabled":true}',
 				success: function(data) { /* on success, we change the label in the table row and change the link in the actions dropdown */
-					$('#row-'+computer_id+'>td.status').html('<span class="label label-success">enabled</span>');
+					$('#row-'+computer_id+'>td.status').html('<span class="label label-success">true</span>');
 					$('#row-'+computer_id+' ul.dropdown-menu>li.status>a').removeClass('computer-enable').addClass('computer-disable').html('<span class="glyphicon glyphicon-ban-circle"></span>&nbsp;&nbsp;Disable');
 				},
 				error: function(xhr, status, error){ /* or we show an error message */

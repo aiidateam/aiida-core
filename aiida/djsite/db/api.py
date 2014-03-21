@@ -173,7 +173,7 @@ class DbComputerResource(ModelResource):
         #hardcoded by VB for testing purposes
         new_schema['fields']['description']['display_name'] = "Description" #not necessary if the name is just capitalized
         new_schema['fields']['description']['filtering'] = {"type": "text"} #not necessary, take from the type
-        new_schema['fields']['enabled']['display_name'] = "Status"
+        new_schema['fields']['enabled']['display_name'] = "Enabled"
         new_schema['fields']['enabled']['filtering'] = {"type": "boolean"}
         new_schema['fields']['hostname']['display_name'] = "Hostname"
         new_schema['fields']['hostname']['filtering'] = {"type": "text"}
@@ -272,8 +272,8 @@ class DbNodeResource(ModelResource):
             'id': ['exact'],
             'uuid': ALL,
             'type': ALL,   
-            'ctype': ALL,
-            'mtype': ALL,
+            'ctime': ALL,
+            'mtime': ALL,
             'label': ALL,
             'description': ALL,
             'computer': ALL_WITH_RELATIONS,
@@ -286,7 +286,11 @@ class DbNodeResource(ModelResource):
             'attributes': ALL_WITH_RELATIONS,    
             }
 
-        ordering = ['id', 'type'] 
+        ordering = ['id', 'type']
+        authentication = SessionAuthentication()
+        # As discussed above: improve this with authorization allowing each
+        # user to see only his own DbAuthInfo data
+        authorization = DjangoAuthorization()
 
 class DbAttributeResource(ModelResource):
     dbnode = fields.ToOneField(DbNodeResource, 'dbnode', related_name='dbattributes')    

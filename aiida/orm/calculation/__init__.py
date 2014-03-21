@@ -60,7 +60,7 @@ class Calculation(Node):
         computer = self.get_computer()        
         s = computer.get_scheduler()
         try:
-            _ = s.create_job_resource(**self.get_jobresource_params())
+            _ = s.create_job_resource(**self.get_resources())
         except (TypeError, ValueError) as e:
             raise ValidationError("Invalid resources for the scheduler of the "
                                   "specified computer: {}".format(e.message))
@@ -212,7 +212,7 @@ class Calculation(Node):
         """
         return self.get_attr('withmpi',True)
     
-    def get_jobresource_params(self):
+    def get_resources(self):
         """
         Returns the dictionary of the job resources set.
         
@@ -854,7 +854,7 @@ class Calculation(Node):
                 computer.get_append_text() else u""))
 
         job_tmpl.job_resource = s.create_job_resource(
-             **self.get_jobresource_params())
+             **self.get_resources())
 
         subst_dict = {'tot_num_cpus': 
                       job_tmpl.job_resource.get_tot_num_cpus()}

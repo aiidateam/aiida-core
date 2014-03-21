@@ -3,25 +3,17 @@
 {% block ajax %}
 <div class="modal-header">
 	<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-	<h4 class="modal-title">{{ display_name }}</h4>
+	<h4 class="modal-title">New filter, replace with field name when logic for api call is made</h4>
 </div>
 <div class="modal-body">
 	<div class="alert alert-danger" style="display: none;"></div>
-	<div class="input-group">
-		<input type="text" class="form-control">
-		<span class="input-group-btn">
-			<button class="btn btn-primary" type="button">Update</button>
-		</span>
-	</div>
+	asdf
 </div>
 <script>
 	(function() { /* we need to defer the script since jQuery is not yet loaded at that point of the page */
 		var code = function($) { /* this is the jQuery code we need to execute */
 			$(document).ready(function(){
 				var themodal = $('#filter-modal');
-				
-				$('#filter-modal h4').append(' <small>'+filters_operators.{{ type }}.{{ operator }}[1]+'</small>');
-				
 				var field = $('#filter-modal input.form-control');
 				field.val($('#filter-{{ field }} button.filter-value').text());
 				window.setTimeout(function(){

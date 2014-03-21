@@ -152,14 +152,14 @@ h3 .btn-group {
 	text-align: right;
 }
 .btn.filter-operator {
-	width: 30px;
-	text-align: right;
+	width: 35px;
+	text-align: center;
 }
 .btn.filter-value {
 	width: 150px;
 	text-align: left;
 }
-.btn-group+.btn.filter-value {
+.btn-group+.btn.filter-value, .btn-group+.btn-group .btn.filter-value {
 	width: 121px;
 }
 

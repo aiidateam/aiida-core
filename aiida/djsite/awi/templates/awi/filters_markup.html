@@ -5,32 +5,41 @@
 	<div class="btn-group btn-group-sm" id="filter-{{ fieldname }}">
 		<button type="button" class="btn btn-warning filter-field disabled"><strong>{{ f.display_name }}</strong></button>
 		<div class="btn-group btn-group-sm">
-			{% if f.type != 'list' %}
-			<button type="button" class="btn btn-default dropdown-toggle filter-operator" data-toggle="dropdown"></button>
-			<ul class="dropdown-menu filter-operators"></ul>
+			{% if f.type != 'list' and f.type != 'boolean' %}
+				<button type="button" class="btn btn-default dropdown-toggle filter-operator" data-toggle="dropdown"></button>
+				<ul class="dropdown-menu filter-operators"></ul>
 			{% else %}
-			<button type="button" class="btn btn-default filter-operator disabled"></button>
+				<button type="button" class="btn btn-default filter-operator disabled"></button>
 			{% endif %}
 		</div>
-		{% if f.type != 'list' %}
-		<button type="button" class="btn btn-default filter-value" data-toggle="modal" data-target="#filter-modal" href="{% url 'awi:filters_value' module=module field=fieldname %}">{{ f.value }}</button>
+		{% if f.type != 'list' and f.type != 'boolean' %}
+			<button type="button" class="btn btn-default filter-value" data-toggle="modal" data-target="#filter-modal" href="{% url 'awi:filters_value' module=module field=fieldname %}">{{ f.value }}</button>
 		{% else %}
-		<div class="btn-group btn-group-sm">
-			<button type="button" class="btn btn-default dropdown-toggle filter-value filter-list" data-toggle="dropdown">{{ f.value }}</button>
-			<ul class="dropdown-menu filter-values"></ul>
-		</div>
+			<div class="btn-group btn-group-sm">
+				{% if f.type == 'list' %}
+					<button type="button" class="btn btn-default dropdown-toggle filter-value filter-list" data-toggle="dropdown">{{ f.value }}</button>
+				{% else %}
+					{% if f.value == 'true' %}
+						<button type="button" class="btn btn-success dropdown-toggle filter-value filter-list" data-toggle="dropdown">{{ f.value }}</button>
+					{% else %}
+						<button type="button" class="btn btn-danger dropdown-toggle filter-value filter-list" data-toggle="dropdown">{{ f.value }}</button>
+					{% endif %}
+				{% endif %}
+				<ul class="dropdown-menu filter-values"></ul>
+			</div>
 		{% endif %}
-		<button type="button" class="btn btn-default text-danger"><strong>&times;</strong></button>
+		<button type="button" class="btn btn-default text-danger filter-remove" data-field="{{ fieldname }}"><strong>&times;</strong></button>
 	</div>
 {% endfor %}
 <script>
 	(function() { /* we need to defer the script since jQuery is not yet loaded at that point of the page */
 		var code = function($) { /* this is the jQuery code we need to execute */
 			$(document).ready(function(){
+				/* display the operator choices for each filter */
 				{% for fieldname, f in filters.items %}
 					var o_{{ fieldname }} = filters_operators.{{ f.type }};
 					$('#filter-{{ fieldname }} button.filter-operator').text(o_{{ fieldname }}.{{ f.operator }}[0]);
-					{% if f.type != 'list' %}
+					{% if f.type != 'list' and f.type != 'boolean' %}
 						$('#filter-{{ fieldname }} ul.filter-operators').html(function(){
 							var content = [];
 							for (var op in o_{{ fieldname }}) {
@@ -49,9 +58,15 @@
 						if($('#filter-'+k+' .filter-list').length > 0) {
 							$('#filter-'+k+' ul.filter-values').html(function(){
 								var content = [];
-								for (var v in o.valid_choices) {
-									if(o.valid_choices.hasOwnProperty(v)) {
-										content.push('<li><a href="#" data-field="'+k+'" class="filter-change-value">'+v+'</a></li>');
+								if(o.filtering.type == 'boolean') {
+									content.push('<li><a href="#" data-field="'+k+'" class="filter-change-value text-success">true</a></li>');
+									content.push('<li><a href="#" data-field="'+k+'" class="filter-change-value text-danger">false</a></li>');
+								}
+								else {
+									for (var v in o.valid_choices) {
+										if(o.valid_choices.hasOwnProperty(v)) {
+											content.push('<li><a href="#" data-field="'+k+'" class="filter-change-value">'+v+'</a></li>');
+										}
 									}
 								}
 								return content.join('');
@@ -61,12 +76,17 @@
 				});
 				
 				/* we add the required modal for filters needs somewhere in the body where it isn't affected by css */
-				$('body>div.container').prepend('<div class="modal fade" id="filter-modal" tabindex="-1" role="dialog" aria-hidden="true">'+
-				'<div class="modal-dialog modal-sm">'+
-						'<div class="modal-content">'+
+				if($('#filter-modal').length == 0) {
+					$('body>div.container').prepend('<div class="modal fade" id="filter-modal" tabindex="-1" role="dialog" aria-hidden="true">'+
+					'<div class="modal-dialog modal-sm">'+
+							'<div class="modal-content">'+
+							'</div>'+
 						'</div>'+
-					'</div>'+
-				'</div>');
+					'</div>');
+					$('body').on('hidden.bs.modal', '#filter-modal', function(){ /* we need to delete the bs.modal instance upon closing it otherwise the content doesn't get updated next time we open the modal with a remote url */
+						$(this).removeData('bs.modal');
+					});
+				}
 			});
 		};
 		var timer = function() { /* this is the timer function to defer code execution */

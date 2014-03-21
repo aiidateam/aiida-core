@@ -8,6 +8,7 @@ urlpatterns = patterns('',
 	url(r'^logout', views.logout_view, name='logout'), #logout page
 	url(r'^filters/get/(?P<module>[a-z0-9\-_]+)', views.filters_get, name='filters_get'), #get the filters markup for a given module
 	url(r'^filters/set/(?P<module>[a-z0-9\-_]+)/(?P<field>[a-z0-9\-_]+)', views.filters_set, name='filters_set'), #get the filters markup for a given module
+	url(r'^filters/remove/(?P<module>[a-z0-9\-_]+)/(?P<field>[a-z0-9\-_]+)', views.filters_remove, name='filters_remove'), #remove a filter for a given module
 	url(r'^filters/create/(?P<module>[a-z0-9\-_]+)/(?P<field>[a-z0-9\-_]+)', views.filters_create, name='filters_create'), # update a filter (ajax)
 	url(r'^filters/value/(?P<module>[a-z0-9\-_]+)/(?P<field>[a-z0-9\-_]+)', views.filters_value, name='filters_value'), # update a filter (ajax)
 	url(r'^filters/querystring/(?P<module>[a-z0-9\-_]+)', views.filters_querystring, name='filters_querystring'), # get the querystring for filtering

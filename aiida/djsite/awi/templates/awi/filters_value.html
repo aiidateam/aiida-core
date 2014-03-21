@@ -35,10 +35,8 @@
 						success: function(data) { /* if everything ok */
 							/* reload the filters and reload the list */
 							themodal.modal('toggle');
-							themodal.on('hidden.bs.modal', function(e){
-								load_filters(module);
-								window['load_'+module](false, $('#'+module+'-list').attr('data-ordering'));
-							});
+							load_filters(module);
+							window['load_'+module](false, $('#'+module+'-list').attr('data-ordering'));
 						},
 						error: function(xhr, status, error) {
 							$('#filter-modal .alert').html('<strong>Oops</strong>, there was a problem : '+xhr.responseText).show();

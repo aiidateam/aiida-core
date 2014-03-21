@@ -85,7 +85,7 @@ elif computer.hostname.startswith("bellatrix"):
     num_cpus_per_machine = 16
 elif computer.hostname.startswith("theospc12"):
     num_cpus_per_machine = 8
-elif computer.hostname.startswith("localhost"):
+elif "localhost" in computer.hostname:
     num_cpus_per_machine = 6
 else:
     raise ValueError("num_cpus_per_machine not specified for the current machine: {0}".format(computer.hostname))

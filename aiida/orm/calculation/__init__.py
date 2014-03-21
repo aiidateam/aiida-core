@@ -614,6 +614,16 @@ class Calculation(Node):
             raise ValueError("The code must be an instance of the Code class")
 
         self._replace_link_from(code, self.get_linkname_code())
+
+    def get_code(self):
+        """
+        Return the code for this calculation, or None if the code
+        was not set.
+        """
+        from aiida.orm import Code
+        
+        return dict(self.get_inputs(type=Code, also_labels=True)).get(
+            self.get_linkname_code(), None)
         
     def get_linkname_code(self):
         """

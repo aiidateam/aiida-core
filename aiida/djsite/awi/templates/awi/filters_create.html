@@ -5,13 +5,61 @@
 	<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
 	<h4 class="modal-title">{{ display_name }} <small>create</small></h4>
 </div>
-<div class="modal-body">
+<div class="modal-body" style="z-index: 1050;"><!-- z-index needed for the datepicker plugin -->
 	<div class="alert alert-danger" style="display: none;"></div>
 	<div class="form-horizontal" role="form">
-	{% if type == 'numeric' or type == 'text' %}
+	{% if type == 'date' %}
+		<div class="form-group">
+			<label for="filter-operator" class="col-sm-4 control-label">Operator</label>
+			<div class="col-sm-4">
+				<select class="form-control" id="filter-operator"></select>
+			</div>
+		</div>
+		<div class="form-group filter-date" id="filter-date-single">
+			<label for="filter-value" class="col-sm-4 control-label">Date</label>
+			<div class="col-sm-6">
+				<div class="input-group date">
+					<input type="text" class="form-control" id="filter-value" placeholder="YYYY-MM-DD"
+						data-provide="datepicker" data-date-format="yyyy-mm-dd" data-date-week-start="1" data-date-today-btn="true"
+						data-date-autoclose="true" data-date-today-highlight="true">
+					<span class="input-group-addon"><i class="glyphicon glyphicon-th"></i></span>
+				</div>
+			</div>
+		</div>
+		<div class="form-group filter-date" style="display: none;" id="filter-date-range">
+			<label for="filter-date-start" class="col-sm-4 control-label">Date</label>
+			<div class="col-sm-6">
+				<div class="input-daterange input-group" id="datepicker">
+					<input type="text" class="form-control" id="filter-date-start" placeholder="YYYY-MM-DD"
+						data-provide="datepicker" data-date-format="yyyy-mm-dd" data-date-week-start="1" data-date-today-btn="true"
+						data-date-autoclose="true" data-date-today-highlight="true">
+					<span class="input-group-addon">to</span>
+					<input type="text" class="form-control" id="filter-date-end" placeholder="YYYY-MM-DD"
+						data-provide="datepicker" data-date-format="yyyy-mm-dd" data-date-week-start="1" data-date-today-btn="true"
+						data-date-autoclose="true" data-date-today-highlight="true">
+				</div>
+			</div>
+		</div>
+		<div class="form-group filter-date" style="display:none;" id="filter-date-year">
+			<label for="filter-date-year" class="col-sm-4 control-label">Date</label>
+			<div class="col-sm-6">
+				<div class="input-group date">
+					<input type="text" class="form-control" id="filter-date-year" placeholder="YYYY"
+						data-provide="datepicker" data-date-format="yyyy" data-date-autoclose="true"
+						data-date-min-view-mode="2">
+					<span class="input-group-addon"><i class="glyphicon glyphicon-th"></i></span>
+				</div>
+			</div>
+		</div>
+		<div class="form-group">
+			<div class="col-sm-offset-4 col-sm-6">
+				<button type="button" class="btn btn-primary filter-submit">Create</button>
+			</div>
+		</div>
+	{% elif type == 'numeric' or type == 'text' %}
 		<div class="form-group">
 			<label for="filter-operator" class="col-sm-5 control-label">Operator</label>
-			<div class="col-sm-5">
+			<div class="col-sm-4">
 				<select class="form-control" id="filter-operator"></select>
 			</div>
 		</div>
@@ -52,8 +100,6 @@
 				<button type="button" class="btn btn-primary filter-submit">Create</button>
 			</div>
 		</div>
-	{% elif type == 'date' %}
-		date
 	{% else %}
 		<p class="text-danger center">unknown filter type</p>
 	{% endif %}
@@ -112,18 +158,56 @@
 				
 				{% if type != 'list' and type != 'boolean' %}
 					var operator_field = $('#filter-modal select#filter-operator')
+					{% if type != 'date' %}
 					var value_field = $('#filter-modal input#filter-value');
 					value_field.val($('#filter-{{ field }} button.filter-value').text());
 					window.setTimeout(function(){
 						value_field.select().focus(); /* we focus on the input field when the animation is over (just required for the first load, is then handled by the event show.bs.modal) */
-					}, 500);
+					}, 1000);
+					{% endif %}
+				{% endif %}
+				
+				{% if type == 'date' %}
+					operator_field.change(function(){
+						var option = $(this).children('option:selected').val();
+						if(option == 'range') {
+							$('#filter-modal .filter-date').hide();
+							$('#filter-modal #filter-date-range').show();
+						}
+						else if(option == 'year') {
+							$('#filter-modal .filter-date').hide();
+							$('#filter-modal #filter-date-year').show();
+						}
+						else {
+							$('#filter-modal .filter-date').hide();
+							$('#filter-modal #filter-date-single').show();
+						}
+					});
 				{% endif %}
 				
 				{% if type != 'boolean' %}
 					$('#filter-modal button.filter-submit').click(function(){
-						{% if type != 'list' and type != 'boolean' %}
+						{% if type != 'list' and type != 'boolean' and type != 'date' %}
 							var post_operator = operator_field.children('option:selected').val();
 							var post_value = value_field.val();
+						{% elif type == 'date' %}
+							var post_operator = operator_field.children('option:selected').val();
+							var option = operator_field.children('option:selected').val();
+							if(option == 'range') {
+								var post_value = $('#filter-modal #filter-date-start').val()+'T00:00;'+$('#filter-modal #filter-date-end')+'T23:59:59';
+							}
+							else if(option == 'year') {
+								var post_value = $('#filter-modal #filter-date-year').val();
+							}
+							else if(option == 'gte') {
+								var post_value = $('#filter-modal #filter-value').val()+'T00:00';
+							}
+							else if(option == 'lte') {
+								var post_value = $('#filter-modal #filter-value').val()+'T23:59:59';
+							}
+							else {
+								var post_value = '';
+							}
 						{% elif type == 'list' %}
 							var post_operator = 'exact';
 							var post_value = $('#filter-modal select#filter-value option:selected').val();
@@ -158,7 +242,7 @@
 					});
 				{% endif %}
 				themodal.on('shown.bs.modal', function(e){ /* after apparition animation is complete, focus on the field */
-					{% if type != 'list' and type != 'boolean' %}
+					{% if type != 'list' and type != 'boolean' and type != 'date' %}
 						value_field.select().focus();
 					{% endif %}
 				});

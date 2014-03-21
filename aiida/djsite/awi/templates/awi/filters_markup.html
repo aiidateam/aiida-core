@@ -13,7 +13,15 @@
 			{% endif %}
 		</div>
 		{% if f.type != 'list' and f.type != 'boolean' %}
-			<button type="button" class="btn btn-default filter-value" data-toggle="modal" data-target="#filter-modal" href="{% url 'awi:filters_value' module=module field=fieldname %}">{{ f.value }}</button>
+			{% if f.value != '' %}
+				<button type="button" class="btn btn-default filter-value" data-toggle="modal" data-target="#filter-modal" href="{% url 'awi:filters_value' module=module field=fieldname %}">{{ f.value }}</button>
+			{% else %}
+				{% if f.operator == 'isnull' %}
+					<button type="button" class="btn btn-default filter-value disabled" data-toggle="modal" data-target="#filter-modal" href="{% url 'awi:filters_value' module=module field=fieldname %}"><em>is null</em></button>
+				{% else %}
+					<button type="button" class="btn btn-default filter-value" data-toggle="modal" data-target="#filter-modal" href="{% url 'awi:filters_value' module=module field=fieldname %}">&nbsp;</button>
+				{% endif %}
+			{% endif %}
 		{% else %}
 			<div class="btn-group btn-group-sm">
 				{% if f.type == 'list' %}

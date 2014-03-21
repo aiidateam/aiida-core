@@ -23,7 +23,10 @@
 				$('#filter-modal h4').append(' <small>'+filters_operators.{{ type }}.{{ operator }}[1]+'</small>');
 				
 				var field = $('#filter-modal input.form-control');
-				field.val($('#filter-{{ field }} button.filter-value').text());
+				var fieldval = $('#filter-{{ field }} button.filter-value').text();
+				console.log(fieldval);
+				if(fieldval != '\xA0')
+					field.val(fieldval);
 				window.setTimeout(function(){
 					field.select().focus(); /* we focus on the input field when the animation is over (just required for the first load, is then handled by the event show.bs.modal) */
 				}, 500);

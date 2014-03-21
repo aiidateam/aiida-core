@@ -296,7 +296,7 @@ CELERYBEAT_SCHEDULE = {
         },
     djcelery_tasks['workflow']: {
         'task':'aiida.djsite.db.tasks.workflow_stepper',
-        'schedule': timedelta(seconds=5),
+        'schedule': timedelta(seconds=30),
         },
 }
 

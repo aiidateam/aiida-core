@@ -175,7 +175,7 @@ def daemon_main_loop():
     retrieve_jobs()
 
 def retrieve_jobs():
-    from aiida.orm import Calculation
+    from aiida.orm import Calculation, Computer
     from django.contrib.auth.models import User
     from aiida.djsite.db.models import DbComputer
     
@@ -188,6 +188,8 @@ def retrieve_jobs():
     
     for dbcomputer_id, aiidauser_id in computers_users_to_check:
         dbcomputer = DbComputer.objects.get(id=dbcomputer_id)
+        if not Computer(dbcomputer=dbcomputer).is_enabled():
+            continue
         aiidauser = User.objects.get(id=aiidauser_id)
 
         execlogger.debug("({},{}) pair to check".format(
@@ -203,14 +205,15 @@ def retrieve_jobs():
                        dbcomputer.name,
                        e.__class__.__name__, e.message))
             execlogger.error(msg)
-            raise
+            # Continue with next computer
+            continue
 
 # in daemon
 def update_jobs():
     """
     calls an update for each set of pairs (machine, aiidauser)
     """
-    from aiida.orm import Calculation
+    from aiida.orm import Calculation, Computer
     from django.contrib.auth.models import User
     from aiida.djsite.db.models import DbComputer
 
@@ -223,6 +226,8 @@ def update_jobs():
     
     for dbcomputer_id, aiidauser_id in computers_users_to_check:
         dbcomputer = DbComputer.objects.get(id=dbcomputer_id)
+        if not Computer(dbcomputer=dbcomputer).is_enabled():
+            continue
         aiidauser = User.objects.get(id=aiidauser_id)
 
         execlogger.debug("({},{}) pair to check".format(
@@ -239,13 +244,14 @@ def update_jobs():
                        dbcomputer.name,
                        e.__class__.__name__, e.message))
             execlogger.error(msg)
-            raise
+            # Continue with next computer
+            continue
 
 def submit_jobs():
     """
     Submit all jobs in the TOSUBMIT state.
     """
-    from aiida.orm import Calculation
+    from aiida.orm import Calculation, Computer
     from django.contrib.auth.models import User
     from aiida.djsite.db.models import DbComputer
 
@@ -258,6 +264,8 @@ def submit_jobs():
     
     for dbcomputer_id, aiidauser_id in computers_users_to_check:
         dbcomputer = DbComputer.objects.get(id=dbcomputer_id)
+        if not Computer(dbcomputer=dbcomputer).is_enabled():
+            continue
         aiidauser = User.objects.get(id=aiidauser_id)
 
         execlogger.debug("({},{}) pair to submit".format(
@@ -274,7 +282,8 @@ def submit_jobs():
                        dbcomputer.name,
                        e.__class__.__name__, e.message))
             execlogger.error(msg)
-            raise
+            # Continue with next computer
+            continue
  
 
 def submit_jobs_with_authinfo(authinfo):

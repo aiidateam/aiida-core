@@ -114,6 +114,7 @@
 					computers: {
 						get: '{% url "awi:filters_get" module="computers" %}',
 						set: '{% url "awi:filters_set" module="computers" field="0" %}',
+						remove: '{% url "awi:filters_remove" module="computers" field="0" %}',
 						querystring: '{% url "awi:filters_querystring" module="computers" %}',
 						create: '{% url "awi:filters_create" module="computers" field="0" %}',
 						value: '{% url "awi:filters_value" module="computers" field="0" %}',
@@ -122,25 +123,30 @@
 				}
 			};
 			var filters_operators = {
+				'boolean': {
+					exact: ['=', 'exactly']
+				},
 				numeric: {
+					exact: ['=', 'equal'],
 					gt: ['>', 'greater than'],
-					gte: ['>=', 'greater or equal'],
 					lt: ['<', 'lower than'],
+					gte: ['>=', 'greater or equal'],
 					lte: ['<=', 'lower or equal'],
-					iexact: ['=', 'equal'],
 					range: ['<>', 'in range']
 				},
 				text: {
-					iexact: ['=', 'exactly'],
 					icontains: ['~', 'contains'],
-					istartswith: ['<', 'starts with'],
-					iendswith: ['>', 'ends with'],
+					istartswith: ['^', 'starts with'],
+					iendswith: ['$', 'ends with'],
+					iexact: ['=', 'exactly'],
 					isnull: ['0', 'is null']
 				},
 				list: {
 					exact: ['=', 'exactly']
 				},
 				date: {
+					gte: ['>=', 'after'],
+					lte: ['<=', 'before'],
 					range: ['<>', 'in range'],
 					year: ['y', 'year'],
 					month: ['m', 'month'],

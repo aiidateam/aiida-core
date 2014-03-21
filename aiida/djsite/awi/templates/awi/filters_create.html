@@ -3,48 +3,164 @@
 {% block ajax %}
 <div class="modal-header">
 	<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-	<h4 class="modal-title">New filter, replace with field name when logic for api call is made</h4>
+	<h4 class="modal-title">{{ display_name }} <small>create</small></h4>
 </div>
 <div class="modal-body">
 	<div class="alert alert-danger" style="display: none;"></div>
-	asdf
+	<div class="form-horizontal" role="form">
+	{% if type == 'numeric' or type == 'text' %}
+		<div class="form-group">
+			<label for="filter-operator" class="col-sm-5 control-label">Operator</label>
+			<div class="col-sm-5">
+				<select class="form-control" id="filter-operator"></select>
+			</div>
+		</div>
+		<div class="form-group">
+			<label for="filter-value" class="col-sm-5 control-label">Value</label>
+			<div class="col-sm-5">
+				{% if type == 'numeric' %}
+					<input type="number" class="form-control" id="filter-value" placeholder="12345">
+				{% else %}
+					<input type="text" class="form-control" id="filter-value" placeholder="Text">
+				{% endif %}
+			</div>
+		</div>
+		<div class="form-group">
+			<div class="col-sm-offset-5 col-sm-5">
+				<button type="button" class="btn btn-primary filter-submit">Create</button>
+			</div>
+		</div>
+	{% elif type == 'boolean' %}
+		<div class="form-group">
+			<label class="col-sm-5 control-label">Value</label>
+			<div class="col-sm-5">
+				<div class="btn-group">
+					<button type="button" class="btn btn-success filter-bool" data-value="true">True</button>
+					<button type="button" class="btn btn-danger filter-bool" data-value="false">False</button>
+				</div>
+			</div>
+		</div>
+	{% elif type == 'list' %}
+		<div class="form-group">
+			<label for="filter-operator" class="col-sm-5 control-label">Value</label>
+			<div class="col-sm-5">
+				<select class="form-control" id="filter-value"></select>
+			</div>
+		</div>
+		<div class="form-group">
+			<div class="col-sm-offset-5 col-sm-5">
+				<button type="button" class="btn btn-primary filter-submit">Create</button>
+			</div>
+		</div>
+	{% elif type == 'date' %}
+		date
+	{% else %}
+		<p class="text-danger center">unknown filter type</p>
+	{% endif %}
+	</div>
 </div>
 <script>
 	(function() { /* we need to defer the script since jQuery is not yet loaded at that point of the page */
 		var code = function($) { /* this is the jQuery code we need to execute */
 			$(document).ready(function(){
 				var themodal = $('#filter-modal');
-				var field = $('#filter-modal input.form-control');
-				field.val($('#filter-{{ field }} button.filter-value').text());
-				window.setTimeout(function(){
-					field.select().focus(); /* we focus on the input field when the animation is over (just required for the first load, is then handled by the event show.bs.modal) */
-				}, 500);
-				$('#filter-modal button.btn').click(function(){
-					$.ajax({
-						url: modules_urls.filters[module].set.substring(0, modules_urls.filters[module].set.length - 1)+'{{ field }}',
-						type: 'POST',
-						data: {'value': field.val()},
-						success: function(data) { /* if everything ok */
-							/* reload the filters and reload the list */
-							themodal.modal('toggle');
-							themodal.on('hidden.bs.modal', function(e){
+				
+				var o = filters_operators.{{ type }};
+				{% if type != 'list' %}
+					$('#filter-modal select#filter-operator').html(function(){
+						var content = [];
+						for (var op in o) {
+							if(o.hasOwnProperty(op)) {
+								content.push('<option value="'+op+'">'+o[op][0]+'&nbsp;&nbsp;&nbsp;'+o[op][1]+'</option>');
+							}
+						}
+						return content.join('');
+					});
+				{% else %}	
+					$.getJSON(modules_urls.filters[module].schema, function(data){
+						$('#filter-modal select#filter-value').html(function(){
+							var content = [];
+							for (var v in data.fields.{{ field }}.valid_choices) {
+								content.push('<option value="'+v+'">'+v+'</option>');
+							}
+							return content.join('');
+						});
+					});
+				{% endif %}
+				{% if type == 'boolean' %}
+					$('button.filter-bool').click(function(){
+						var value_bool = $(this).attr('data-value');
+						$.ajax({
+							url: modules_urls.filters[module].set.substring(0, modules_urls.filters[module].set.length - 1)+'{{ field }}',
+							type: 'POST',
+							data: {
+								'operator': 'exact',
+								'value': value_bool
+							},
+							success: function(data) { /* if everything ok */
+								/* reload the filters and reload the list */
+								themodal.modal('toggle');
 								load_filters(module);
 								window['load_'+module](false, $('#'+module+'-list').attr('data-ordering'));
-							});
-						},
-						error: function(xhr, status, error) {
-							$('#filter-modal .alert').html('<strong>Oops</strong>, there was a problem : '+xhr.responseText).show();
-							field.select().focus();
+							},
+							error: function(xhr, status, error) {
+								$('#filter-modal .alert').html('<strong>Oops</strong>, there was a problem : '+xhr.responseText).show();
+							}
+						});
+					});
+				{% endif %}
+				
+				{% if type != 'list' and type != 'boolean' %}
+					var operator_field = $('#filter-modal select#filter-operator')
+					var value_field = $('#filter-modal input#filter-value');
+					value_field.val($('#filter-{{ field }} button.filter-value').text());
+					window.setTimeout(function(){
+						value_field.select().focus(); /* we focus on the input field when the animation is over (just required for the first load, is then handled by the event show.bs.modal) */
+					}, 500);
+				{% endif %}
+				
+				{% if type != 'boolean' %}
+					$('#filter-modal button.filter-submit').click(function(){
+						{% if type != 'list' and type != 'boolean' %}
+							var post_operator = operator_field.children('option:selected').val();
+							var post_value = value_field.val();
+						{% elif type == 'list' %}
+							var post_operator = 'exact';
+							var post_value = $('#filter-modal select#filter-value option:selected').val();
+						{% endif %}
+						$.ajax({
+							url: modules_urls.filters[module].set.substring(0, modules_urls.filters[module].set.length - 1)+'{{ field }}',
+							type: 'POST',
+							data: {
+								'operator': post_operator,
+								'value': post_value
+							},
+							success: function(data) { /* if everything ok */
+								/* reload the filters and reload the list */
+								themodal.modal('toggle');
+								load_filters(module);
+								window['load_'+module](false, $('#'+module+'-list').attr('data-ordering'));
+							},
+							error: function(xhr, status, error) {
+								$('#filter-modal .alert').html('<strong>Oops</strong>, there was a problem : '+xhr.responseText).show();
+								{% if type != 'list' and type != 'boolean' %}
+									value_field.select().focus();
+								{% endif %}
+							}
+						});
+					});
+				{% endif %}
+				{% if type != 'list' and type != 'boolean' %}
+					value_field.keypress(function(event) { /* on pressing the enter key, trigger the click event on the button (submit) */
+						if (event.which == 13) {
+							$('#filter-modal button.btn').click();
 						}
 					});
-				});
-				field.keypress(function(event) { /* on pressing the enter key, trigger the click event on the button (submit) */
-					if (event.which == 13) {
-						$('#filter-modal button.btn').click();
-					}
-				});
+				{% endif %}
 				themodal.on('shown.bs.modal', function(e){ /* after apparition animation is complete, focus on the field */
-					field.select().focus();
+					{% if type != 'list' and type != 'boolean' %}
+						value_field.select().focus();
+					{% endif %}
 				});
 				themodal.on('show.bs.modal', function(e){ /* if there was an error message, hide it on modal apparition */
 					$('#filter-modal .alert').hide();

@@ -54,11 +54,11 @@
 						<th>User</th>
 						<th>
 							{% if ordering == 'transport_type' %}
-							<a href="{% url 'awi:computers_list' %}/-transport_type" class="ordering">Type<span class="up-caret"></span></a>
+							<a href="{% url 'awi:computers_list' %}/-transport_type" class="ordering">Transport<span class="up-caret"></span></a>
 							{% elif ordering == '-transport_type' %}
-							<a href="{% url 'awi:computers_list' %}/transport_type" class="ordering">Type<span class="caret"></span></a>
+							<a href="{% url 'awi:computers_list' %}/transport_type" class="ordering">Transport<span class="caret"></span></a>
 							{% else %}
-							<a href="{% url 'awi:computers_list' %}/transport_type" class="ordering">Type</a>
+							<a href="{% url 'awi:computers_list' %}/transport_type" class="ordering">Transport</a>
 							{% endif %}
 						</th>
 						<th>Hostname</th>
@@ -73,11 +73,11 @@
 						</th>
 						<th>
 							{% if ordering == 'enabled' %}
-							<a href="{% url 'awi:computers_list' %}/-enabled" class="ordering">Status<span class="up-caret"></span></a>
+							<a href="{% url 'awi:computers_list' %}/-enabled" class="ordering">Enabled<span class="up-caret"></span></a>
 							{% elif ordering == '-enabled' %}
-							<a href="{% url 'awi:computers_list' %}/enabled" class="ordering">Status<span class="caret"></span></a>
+							<a href="{% url 'awi:computers_list' %}/enabled" class="ordering">Enabled<span class="caret"></span></a>
 							{% else %}
-							<a href="{% url 'awi:computers_list' %}/enabled" class="ordering">Status</a>
+							<a href="{% url 'awi:computers_list' %}/enabled" class="ordering">Enabled</a>
 							{% endif %}
 						</th>
 						<th></th>

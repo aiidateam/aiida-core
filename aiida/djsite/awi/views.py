@@ -107,7 +107,8 @@ def filters_set(request, module, field):
 			if value is not None:
 				value = value.strip()
 				if not value:
-					return HttpResponse("The operator value cannot be empty", status=400)
+					if operator != 'isnull':
+						return HttpResponse("The operator value cannot be empty", status=400)
 				else:
 					#validation
 					if field_type == 'boolean':
@@ -142,6 +143,40 @@ def filters_set(request, module, field):
 			return HttpResponse(json.dumps(request.session['filters'][module][field]))
 		else:
 			if operator is not None and value is not None:
+				value = value.strip()
+				if not value:
+					if operator != 'isnull':
+						return HttpResponse("The operator value cannot be empty", status=400)
+				else:
+					#validation
+					if field_type == 'boolean':
+						if value not in ['true', 'false']:
+							return HttpResponse("Value must be a boolean (true/false)", status=400)
+					elif field_type == 'numeric':
+						try:
+							float(value)
+						except ValueError:
+							return HttpResponse("Value must be numeric", status=400)
+					elif field_type == 'list':
+						valid_choices = schema["fields"][field]["valid_choices"]
+						if value not in valid_choices:
+							return HttpResponse("Value is not acceptable", status=400)
+					elif field_type == 'date':
+						if value.find(';') != -1:
+							begin_date, end_date = value.split(';')
+							try:
+								begin_date = dateutil.parser.parse(begin_date)
+								end_date = dateutil.parser.parse(end_date)
+							except:
+								return HttpResponse("Datetime format parsing error", status=400)
+							if begin_date > end_date:
+								return HttpResponse("Begin datetime of the range is greater than the end datetime", status=400)
+						else:
+							try:
+								date = dateutil.parser.parse(value)
+							except:
+								return HttpResponse("Datetime format parsing error", status=400)
+				
 				# we create the filter
 				request.session['filters'][module][field] = {
 					'type': field_type,
@@ -149,11 +184,7 @@ def filters_set(request, module, field):
 					'operator': operator,
 					'value': value,
 				}
-				#for boolean : exact
-				#for numeric : gt, gte, lt, lte, iexact, range
-				#for text : iexact, icontains, istartswith, iendswith, isnull
-				#for list : not used, but should be 'exact'. The possible values are taken from the API schema
-				#for date : range, year, month, day, week_day
+				#boolean numeric text list date
 				#http://localhost:8000/api/v1/dbnode/?ctime__range=2014-03-06T00:00&ctime__range=2014-03-08T00:00
 				request.session.modified = True
 				return HttpResponse(json.dumps(request.session['filters'][module][field]))

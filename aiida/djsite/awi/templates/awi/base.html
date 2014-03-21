@@ -19,6 +19,7 @@
 		<link rel="apple-touch-icon-precomposed" href="{% static 'awi/apple-touch-icon-precomposed.png' %}"> <!-- for iOS -->
 
 		<link rel="stylesheet" href="{% static 'awi/css/bootstrap.min.css' %}">
+		<link rel="stylesheet" href="{% static 'awi/css/datepicker3.css' %}">
 		<link rel="stylesheet" href="{% static 'awi/css/main.css' %}">
 		<link rel="stylesheet" href="{% static 'awi/css/loader.min.css' %}">
 
@@ -98,6 +99,7 @@
 		<script>window.jQuery || document.write('<script src="{% static "awi/js/vendor/jquery-1.10.1.min.js" %}"><\/script>')</script>
 
 		<script src="{% static 'awi/js/vendor/bootstrap.min.js' %}"></script>
+		<script src="{% static 'awi/js/vendor/bootstrap-datepicker.js' %}"></script>
 
 		<script>
 			/* we need to be able to access this URL from external scripts */
@@ -148,16 +150,9 @@
 					gte: ['>=', 'after'],
 					lte: ['<=', 'before'],
 					range: ['<>', 'in range'],
-					year: ['y', 'year'],
-					month: ['m', 'month'],
-					day: ['d', 'day'],
-					week_day: ['w', 'week day']
+					year: ['y', 'year']
 				}
 			};
-			/* SVG alternative for IE8 and below */
-			if (!Modernizr.svg) {
-				$(".navbar-brand img").attr('src', "{% static 'awi/img/logo.png' %}");
-			}
 			
 			// sending a csrftoken with every ajax request
 			function csrfSafeMethod(method) {
@@ -171,6 +166,13 @@
 						xhr.setRequestHeader("X-CSRFToken", '{{ csrf_token }}');
 					}
 				}
+			});
+			$(document).ready(function(){
+				/* SVG alternative for IE8 and below */
+				if (!Modernizr.svg) {
+					$(".navbar-brand img").attr('src', "{% static 'awi/img/logo.png' %}");
+				}
+				$('span').tooltip(); /* activate the tooltips already available */
 			});
 		</script>
 		<script src="{% static 'awi/js/main.js' %}"></script>

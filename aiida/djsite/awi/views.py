@@ -80,11 +80,7 @@ def filters_set(request, module, field):
 	"""
 	Set one filter for a given module or update said filter
 	"""
-	# create the filters session data if not already created
-	if 'filters' not in request.session:
-		request.session['filters'] = {}
-	if module not in request.session['filters']:
-		request.session['filters'][module] = {}
+	# create the field filter session data if not already created
 	if field not in request.session['filters'][module]:
 		request.session['filters'][module][field] = {}
 	
@@ -184,6 +180,12 @@ def filters_querystring(request, module):
 	"""
 	Return the querystring for filtering
 	"""
+	# create the filters session data if not already created
+	if 'filters' not in request.session:
+		request.session['filters'] = {}
+	if module not in request.session['filters']:
+		request.session['filters'][module] = {}
+	
 	output = ''
 	for field, f in request.session['filters'][module].items():
 		output += '&'+field+'__'+f['operator']+'='+f['value']

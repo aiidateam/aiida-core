@@ -42,7 +42,7 @@
 						'<li class="media"><strong class="pull-left">Working directory</strong><div class="media-body">'+data.workdir+'</div></li>',
 						'</ul></div>'
 					);
-					loader.fadeTo('slow', 0.01, function(){ /* we hide the loader and show the details html */
+					loader.fadeTo('fast', 0.01, function(){ /* we hide the loader and show the details html */
 						$('#computers-detail-{{ computer_id }}').prepend(rows.join(''));
 						$('#computers-detail-{{ computer_id }} .ajax-hide').slideDown(function(){
 							loader.hide();
@@ -51,7 +51,7 @@
 					});
 				});
 				$('#computers-detail-{{ computer_id }}>.detail-close').click(function(){
-					close_computers_detail('{{ computer_id }}');
+					close_detail(module, '{{ computer_id }}');
 				});
 			});
 		};

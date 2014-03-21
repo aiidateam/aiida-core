@@ -29,12 +29,12 @@
 			<p class="chromeframe">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> or <a href="http://www.google.com/chromeframe/?redirect=true">activate Google Chrome Frame</a> to improve your experience.</p>
 		<![endif]-->
 		{% if not user.is_authenticated %}
-		<div id="modal-login" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="loginModal" aria-hidden="true">
+		<div id="modal-login" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="loginLabel" aria-hidden="true">
 			<div class="modal-dialog modal-sm">
 				<div class="modal-content">
 					<div class="modal-header">
 						<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-						<h4 class="modal-title">Login</h4>
+						<h4 class="modal-title" id="loginLabel">Login</h4>
 					</div>
 					<div class="modal-body">
 						{% block modal %}
@@ -111,7 +111,41 @@
 					rename: '{% url "awi:computers_rename" computer_id="0" %}'
 				},
 				filters : {
-					value: '{% url "awi:filters_value" field="0" %}'
+					computers: {
+						get: '{% url "awi:filters_get" module="computers" %}',
+						set: '{% url "awi:filters_set" module="computers" field="0" %}',
+						querystring: '{% url "awi:filters_querystring" module="computers" %}',
+						create: '{% url "awi:filters_create" module="computers" field="0" %}',
+						value: '{% url "awi:filters_value" module="computers" field="0" %}',
+						schema: '{% url "api_get_schema" api_name="v1" resource_name="dbcomputer" %}'
+					}
+				}
+			};
+			var filters_operators = {
+				numeric: {
+					gt: ['>', 'greater than'],
+					gte: ['>=', 'greater or equal'],
+					lt: ['<', 'lower than'],
+					lte: ['<=', 'lower or equal'],
+					iexact: ['=', 'equal'],
+					range: ['<>', 'in range']
+				},
+				text: {
+					iexact: ['=', 'exactly'],
+					icontains: ['~', 'contains'],
+					istartswith: ['<', 'starts with'],
+					iendswith: ['>', 'ends with'],
+					isnull: ['0', 'is null']
+				},
+				list: {
+					exact: ['=', 'exactly']
+				},
+				date: {
+					range: ['<>', 'in range'],
+					year: ['y', 'year'],
+					month: ['m', 'month'],
+					day: ['d', 'day'],
+					week_day: ['w', 'week day']
 				}
 			};
 			/* SVG alternative for IE8 and below */

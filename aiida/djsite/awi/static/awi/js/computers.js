@@ -4,37 +4,39 @@
 * http://www.aiida.net
 */
 
-/* To avoid conflicts with other libraries possibly using the $ function, we isolate the code in an immediately invoked function expression */
-(function($) {
-	
-	/**
-	* this function loads the computers list in a table, takes as input the API url,
-	* details URL (for a computer), rename url, if it should scroll to the top of the table after loading or not,
-	* and the ordering criterion
-	*/
-	function load_computers(scroll, ordering) {
-		var module = 'computers';
-		var module_s = 'computer';
-		if(scroll == undefined)
-			scroll = false;
-		if(ordering == undefined) /* default ordering field */
-			ordering = 'id';
-		if($('#'+module+'-list>tr').length > 1) { /* if there was already content in the table, remove it and show the loader */
-			$('#'+module+'-list>tr').filter(':visible').remove();
-			$('#'+module+'-list .loader').fadeIn('fast');
-		}
-		if(api_urls[module].indexOf('?') == -1 && api_urls[module].indexOf('order_by') == -1)
-			api_urls[module] += '?order_by='+ordering;
-		else if(api_urls[module].indexOf('order_by') == -1)
-			api_urls[module] += '&order_by='+ordering;
-		$.getJSON(api_urls[module], function(data){ /* get the json via API */
+var module = 'computers';
+var module_s = 'computer';
+
+/**
+* this function loads the computers list in a table, takes as input the API url,
+* details URL (for a computer), rename url, if it should scroll to the top of the table after loading or not,
+* and the ordering criterion
+*/
+function load_computers(scroll, ordering) {
+	if(scroll == undefined)
+		scroll = false;
+	if(ordering == undefined) /* default ordering field */
+		ordering = 'id';
+	if($('#'+module+'-list>tr').length > 1) { /* if there was already content in the table, remove it and show the loader, also remove the modal boxes */
+		$('#'+module+'-list>tr').filter(':visible').remove();
+		$('div.rename-modal').remove();
+		$('#'+module+'-list .loader').fadeIn('fast');
+	}
+	if(api_urls[module].indexOf('?') == -1 && api_urls[module].indexOf('order_by') == -1)
+		api_urls[module] += '?order_by='+ordering;
+	else if(api_urls[module].indexOf('order_by') == -1)
+		api_urls[module] += '&order_by='+ordering;
+	/* get the query string */
+	$.get(modules_urls.filters[module].querystring, function(qs){
+		var apiurl = api_urls[module] + qs;
+		$.getJSON(apiurl, function(data){ /* get the json via API */
 			var rows = [];
 			var status = {/* used to show colored labels for activation status */
 				true: '<span class="label label-success">enabled</span>',
 				false: '<span class="label label-danger">disabled</span>'
 			}
 			$.each(data.objects, function(k, o){ /* for each computer, we build the html of a table row */
-				$('nav+div.container').prepend('<div class="modal fade" id="modal-'+o.id+'" role="dialog" aria-labelledby="Rename'+module_s+o.id+'" aria-hidden="true" tabindex="-1" data-rename="'+o.name+'" data-url="'+o.resource_uri+'">'+
+				$('body>div.container').prepend('<div class="modal fade rename-modal" id="modal-'+o.id+'" role="dialog" aria-labelledby="renameLabel'+o.id+'" aria-hidden="true" tabindex="-1" data-rename="'+o.name+'" data-url="'+o.resource_uri+'">'+
 					'<div class="modal-dialog modal-sm">'+
 					'<div class="modal-content">'+
 					'</div></div></div>'); /* we prepare a modal box for each */
@@ -72,8 +74,11 @@
 			});
 			/* we need to wait until all ajax data is loaded */
 			var computers_timer = function() { /* this is a timer function to defer code execution */
-				if (rows.length == data.objects.length) { /* if all secondary data is loaded */
-					$('#computers-list .loader').fadeOut('slow', function(){ /* fade out the loader and add all table rows */
+				if (rows.length == data.objects.length && (rows.length == 0 || rows[0] != '')) { /* if all secondary data is loaded */
+					if(rows.length == 0) {
+						rows.push('<tr><td colspan="9" class="center">No matching entry</td></tr>');
+					}
+					$('#computers-list .loader').fadeOut('fast', function(){ /* fade out the loader and add all table rows */
 						$('#computers-list').append(rows.join(""));
 						$('#computers-list span').tooltip(); /* activate the tooltips */
 						if(scroll) { /* if we chose to scroll to the top of the table, then do so */
@@ -96,10 +101,14 @@
 				)
 			).fadeIn();
 		});
-	}
-	
+	});
+}
+
+/* To avoid conflicts with other libraries possibly using the $ function, we isolate the code in an immediately invoked function expression */
+(function($) {
 	$(document).ready(function(){ /* actions to perform at page load and definition of event listeners */
 		load_computers(false, $('#computers-list').attr('data-ordering'));  /* load the first page of computers */
+	
 		/* listen for click events on the pagination links */
 		$('#computers-pag').delegate('a', 'click', function(e){
 			e.preventDefault(); /* we do not want the empty anchor to bring us back to the top of the page */
@@ -112,13 +121,14 @@
 				load_computers(true, me.attr('data-ordering')); /* load the new list with this new API url, true to scroll to the beginning of the table after loading */
 			}
 		});
+	
 		/* when clicking the 'details' link, show the details on a row below */
 		$('#computers-list').delegate('a.show-detail', 'click', function(e){
 			e.preventDefault(); /* we do not want to go to the detail page */
 			var me = $(this);
 			var detail_id = me.attr('data-id'); /* this is the computer id */
 			if($('#detail-'+detail_id).length > 0) { /* we check if the panel is already open */
-				close_computers_detail(detail_id);
+				close_detail(module, detail_id);
 				$('#row-'+detail_id+'>td.name>a>span').removeClass('caret').addClass('right-caret');
 			}
 			else {
@@ -179,5 +189,4 @@
 			});
 		});
 	});
-	
 })( jQuery );

@@ -7,6 +7,7 @@ from aiida.parsers.plugins.quantumespresso import convert_qe2aiida_structure
 from aiida.common.datastructures import calc_states
 from aiida.orm.data.structure import StructureData
 from aiida.common.exceptions import UniquenessError,ValidationError
+from aiida.orm.data.array import ArrayData
 
 #TODO: I don't like the generic class always returning a name for the link to the output structure
 
@@ -16,6 +17,7 @@ class PwParser(Parser):
     """
 
     _outstruc_name = 'output_structure'
+    _outarray_name = 'output_array' 
 
     def __init__(self,calculation):
         """
@@ -37,13 +39,28 @@ class PwParser(Parser):
             out_struc = calculation.get_outputs(type=StructureData,also_labels=True)
             # get only those with the linkame of this parser plugin
             parser_out_struc = [ i for i in out_struc if i[0] == self._outstruc_name ]
-            if not parser_out_struc: # case with no struc found
-                self._set_linkname_outstructure(None)
+            if not parser_out_struc:
+                pass
             elif len(parser_out_struc)>1: # case with too many struc found
                 raise UniquenessError("Multiple output StructureData found ({})"
                                       "with same linkname".format(len(parser_out_struc)))
             else: # one structure is found, with the right name
                 self._set_linkname_outstructure(self._outstruc_name)
+                
+        # same for the arraydata        
+        self._set_linkname_outarray(None)
+        if calculation.get_state in self._possible_after_parsing:
+            # can have been already parsed: check for outarrays
+            out_array = calculation.get_outputs(type=ArrayData,also_labels=True)
+            # get only those with the linkame of this parser plugin
+            parser_out_array = [ i for i in out_array if i[0] == self._outarray_name ]
+            if not parser_out_array: # nothing found
+                pass
+            elif len(parser_out_struc)>1: # too many arraydatas found
+                raise UniquenessError("Multiple output ArrayData found ({})"
+                                      "with same linkname".format(len(parser_out_struc)))
+            else: # if at least one is found
+                self._set_linkname_outarray(self._outarray_name)
         
     def parse_from_data(self,data):
         """
@@ -140,20 +157,32 @@ class PwParser(Parser):
             parsing_args.append(xml_file)
         if has_bands:
             parsing_args.append(dir_with_bands)
-        out_dict,successful = parse_raw_output(*parsing_args)
+        out_dict,trajectory_data,structure_data,bands_data,successful = parse_raw_output(*parsing_args)
+        
+        if bands_data:
+            raise QEOutputParsingError("Bands parsing not implemented.")
         
         # convert the dictionary into an AiiDA object
         output_params = ParameterData(out_dict)
-        
         # save it into db
         output_params.store()
         self._calc._add_link_to(output_params, label=self.get_linkname_outparams() )
         
+        if trajectory_data:
+            import numpy
+            array_data = ArrayData()
+            for x in trajectory_data.iteritems():
+                array_data.set_array(x[0],numpy.array(x[1]))
+            self._set_linkname_outarray(self.get_linkname_outarray())
+            array_data.store()
+            self._calc._add_link_to(array_data, label=self.get_linkname_outarray() )
+        
+        # I eventually save the new structure. structure_data is unnecessary after this
         in_struc = self._calc.get_inputs_dict()['structure']
         type_calc = input_dict['CONTROL']['calculation']
         if type_calc=='relax' or type_calc=='vc-relax':
             self._set_linkname_outstructure(self._outstruc_name)
-            struc = convert_qe2aiida_structure(out_dict,input_structure=in_struc)
+            struc = convert_qe2aiida_structure(structure_data,input_structure=in_struc)
             struc.store()
             self._calc._add_link_to(struc, label=self.get_linkname_outstructure() )
         
@@ -171,6 +200,18 @@ class PwParser(Parser):
         """
         setattr(self,'linkname_outstructure',linkname)
         
+    def get_linkname_outarray(self):
+        """
+        Returns the name of the link to the output_structure (None if not present)
+        """
+        return self.linkname_outarray
+    
+    def _set_linkname_outarray(self,linkname):
+        """
+        Set the name of the link to the output_structure
+        """
+        setattr(self,'linkname_outarray',linkname)
+
     def get_energy_ev(self,all_values=False):
         """
         Returns the float value of energy.

@@ -12,21 +12,8 @@
 					<span class="glyphicon glyphicon-filter"></span>&nbsp;&nbsp;Filters
 					<span class="pull-right">
 						<div class="btn-group">
-							<button type="button" class="btn btn-xs btn-warning dropdown-toggle" data-toggle="dropdown"><span class="glyphicon glyphicon-plus"></span></button>
-							<ul class="dropdown-menu dropdown-menu-right" role="menu">
-								<!-- todo : filters -->
-								<!-- filters can be : numerical input, text input (first section), multiple choice (second section) -->
-								<!-- e.g. name : search string in name __icontains= -->
-								<!-- e.g. status : enabled or disabled -->
-								<!-- note : disable links here for filters that have already been applied -->
-								<li><a href="#">ID</a></li>
-								<li><a href="#">Name</a></li>
-								<li><a href="#">Description</a></li>
-								<li><a href="#">Hostname</a></li>
-								<li class="divider"></li>
-								<li><a href="#">Type</a></li>
-								<li><a href="#">Scheduler</a></li>
-								<li><a href="#">Status</a></li>
+							<button type="button" class="btn btn-xs btn-warning dropdown-toggle" data-toggle="dropdown"><span class="glyphicon glyphicon-plus" data-toggle="tooltip" title="Add a new filter"></span></button>
+							<ul class="dropdown-menu dropdown-menu-right" id="filters-new" role="menu">
 							</ul>
 						</div>
 						
@@ -34,39 +21,8 @@
 				</h3>
 			</div>
 			<div class="panel-body">
-				<div class="btn-toolbar" role="toolbar">
-					<div class="btn-group btn-group-sm">
-						<button type="button" class="btn btn-warning filter-field disabled"><strong>Status</strong></button>
-						<button type="button" class="btn btn-default filter-value"><span class="label label-danger">disabled</span></button>
-						<button type="button" class="btn btn-default text-danger"><strong>&times;</strong></button>
-					</div>
-					<div class="btn-group btn-group-sm">
-						<button type="button" class="btn btn-warning filter-field disabled"><strong>Type</strong></button>
-						<button type="button" class="btn btn-default filter-value">local</button>
-						<button type="button" class="btn btn-default text-danger"><strong>&times;</strong></button>
-					</div>
-					<div class="btn-group btn-group-sm">
-						<button type="button" class="btn btn-warning filter-field disabled"><strong>Description</strong></button>
-						<div class="btn-group btn-group-sm">
-							<button type="button" class="btn btn-default dropdown-toggle filter-operator" data-toggle="dropdown">~</button>
-							<ul class="dropdown-menu">
-								<li><a href="#">~ contains</a></li>
-								<li><a href="#">= equals</a></li>
-								<li><a href="#">&ne; doesn't contain</a></li>
-							</ul>
-						</div>
-						<button type="button" class="btn btn-default filter-value" data-toggle="modal" data-target="#filter-description" href="{% url 'awi:filters_value' field='description' %}">aries</button>
-						<!-- start modal -->
-						<div class="modal fade" id="filter-description" tabindex="-1" role="dialog" aria-labelledby="filterLabel" aria-hidden="true" data-value="aries">
-							<div class="modal-dialog modal-sm">
-								<div class="modal-content">
-									
-								</div>
-							</div>
-						</div>
-						<!-- end modal -->
-						<button type="button" class="btn btn-default text-danger"><strong>&times;</strong></button>
-					</div>
+				<div class="btn-toolbar" role="toolbar" id="filters">
+					<div class="center loader"><div class="dots">Loading...</div></div>
 				</div>
 			</div>
 		</div>
@@ -98,11 +54,11 @@
 						<th>User</th>
 						<th>
 							{% if ordering == 'transport_type' %}
-							<a href="{% url 'awi:computers_list' %}/-transport_type" class="ordering">Type<span class="up-caret"></span></a>
+							<a href="{% url 'awi:computers_list' %}/-transport_type" class="ordering">Transport<span class="up-caret"></span></a>
 							{% elif ordering == '-transport_type' %}
-							<a href="{% url 'awi:computers_list' %}/transport_type" class="ordering">Type<span class="caret"></span></a>
+							<a href="{% url 'awi:computers_list' %}/transport_type" class="ordering">Transport<span class="caret"></span></a>
 							{% else %}
-							<a href="{% url 'awi:computers_list' %}/transport_type" class="ordering">Type</a>
+							<a href="{% url 'awi:computers_list' %}/transport_type" class="ordering">Transport</a>
 							{% endif %}
 						</th>
 						<th>Hostname</th>
@@ -117,11 +73,11 @@
 						</th>
 						<th>
 							{% if ordering == 'enabled' %}
-							<a href="{% url 'awi:computers_list' %}/-enabled" class="ordering">Status<span class="up-caret"></span></a>
+							<a href="{% url 'awi:computers_list' %}/-enabled" class="ordering">Enabled<span class="up-caret"></span></a>
 							{% elif ordering == '-enabled' %}
-							<a href="{% url 'awi:computers_list' %}/enabled" class="ordering">Status<span class="caret"></span></a>
+							<a href="{% url 'awi:computers_list' %}/enabled" class="ordering">Enabled<span class="caret"></span></a>
 							{% else %}
-							<a href="{% url 'awi:computers_list' %}/enabled" class="ordering">Status</a>
+							<a href="{% url 'awi:computers_list' %}/enabled" class="ordering">Enabled</a>
 							{% endif %}
 						</th>
 						<th></th>
@@ -144,4 +100,5 @@
 
 {% block js %}
 <script src="{% static 'awi/js/computers.js' %}"></script>
+<script src="{% static 'awi/js/filters.js' %}"></script>
 {% endblock %}

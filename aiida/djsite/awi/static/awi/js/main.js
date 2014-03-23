@@ -52,8 +52,8 @@ function pagination(module, total, limit, offset, previous, next, ordering) {
 }
 
 /* to close and remove a computers detail panel */
-function close_computers_detail(detail_id) {
-	$('#computers-detail-'+detail_id+' .ajax-hide').slideUp('slow', function(){
+function close_detail(module, detail_id) {
+	$('#'+module+'-detail-'+detail_id+' .ajax-hide').slideUp('slow', function(){
 		$('#detail-'+detail_id+'>td').slideUp(function(){
 			$(this).parent().remove();
 		});

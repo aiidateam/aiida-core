@@ -1,41 +1,62 @@
 {% extends 'awi/base_ajax.html' %}
 
-{% block subcontent %}
+{% block ajax %}
 <div class="modal-header">
 	<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-	<h4 class="modal-title">{{ field|title }}</h4>
+	<h4 class="modal-title">{{ display_name }}</h4>
 </div>
 <div class="modal-body">
+	<div class="alert alert-danger" style="display: none;"></div>
 	<div class="input-group">
 		<input type="text" class="form-control">
 		<span class="input-group-btn">
 			<button class="btn btn-primary" type="button">Update</button>
 		</span>
 	</div>
-	<div class="clearfix"></div><!-- may be unnecessary once the modal code is put at the top of the body -->
 </div>
 <script>
 	(function() { /* we need to defer the script since jQuery is not yet loaded at that point of the page */
 		var code = function($) { /* this is the jQuery code we need to execute */
 			$(document).ready(function(){
-				var field = $('#filter-{{ field }} input.form-control');
-				field.val($('#filter-{{ field }}').attr('data-value'));
+				var themodal = $('#filter-modal');
+				
+				$('#filter-modal h4').append(' <small>'+filters_operators.{{ type }}.{{ operator }}[1]+'</small>');
+				
+				var field = $('#filter-modal input.form-control');
+				var fieldval = $('#filter-{{ field }} button.filter-value').text();
+				console.log(fieldval);
+				if(fieldval != '\xA0')
+					field.val(fieldval);
 				window.setTimeout(function(){
-					field.select().focus();
+					field.select().focus(); /* we focus on the input field when the animation is over (just required for the first load, is then handled by the event show.bs.modal) */
 				}, 500);
-				$('#filter-{{ field }} button.btn').click(function(){
-					/* handle click event here : ajax etc */
+				$('#filter-modal button.btn').click(function(){
+					$.ajax({
+						url: modules_urls.filters[module].set.substring(0, modules_urls.filters[module].set.length - 1)+'{{ field }}',
+						type: 'POST',
+						data: {'value': field.val()},
+						success: function(data) { /* if everything ok */
+							/* reload the filters and reload the list */
+							themodal.modal('toggle');
+							load_filters(module);
+							window['load_'+module](false, $('#'+module+'-list').attr('data-ordering'));
+						},
+						error: function(xhr, status, error) {
+							$('#filter-modal .alert').html('<strong>Oops</strong>, there was a problem : '+xhr.responseText).show();
+							field.select().focus();
+						}
+					});
 				});
-				field.keypress(function(event) {
+				field.keypress(function(event) { /* on pressing the enter key, trigger the click event on the button (submit) */
 					if (event.which == 13) {
-						$('#filter-{{ field }} button.btn').click();
+						$('#filter-modal button.btn').click();
 					}
 				});
-				themodal.on('shown.bs.modal', function(e){
+				themodal.on('shown.bs.modal', function(e){ /* after apparition animation is complete, focus on the field */
 					field.select().focus();
 				});
-				themodal.on('show.bs.modal', function(e){
-					$('#filter-{{ field }} .alert').hide();
+				themodal.on('show.bs.modal', function(e){ /* if there was an error message, hide it on modal apparition */
+					$('#filter-modal .alert').hide();
 				});
 			});
 		};

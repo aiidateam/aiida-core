@@ -1,0 +1,264 @@
+{% extends 'awi/base_ajax.html' %}
+
+{% block ajax %}
+<div class="modal-header">
+	<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+	<h4 class="modal-title">{{ display_name }} <small>create</small></h4>
+</div>
+<div class="modal-body" style="z-index: 1050;"><!-- z-index needed for the datepicker plugin -->
+	<div class="alert alert-danger" style="display: none;"></div>
+	<div class="form-horizontal" role="form">
+	{% if type == 'date' %}
+		<div class="form-group">
+			<label for="filter-operator" class="col-sm-4 control-label">Operator</label>
+			<div class="col-sm-4">
+				<select class="form-control" id="filter-operator"></select>
+			</div>
+		</div>
+		<div class="form-group filter-date" id="filter-date-single">
+			<label for="filter-value" class="col-sm-4 control-label">Date</label>
+			<div class="col-sm-6">
+				<div class="input-group date">
+					<input type="text" class="form-control" id="filter-value" placeholder="YYYY-MM-DD"
+						data-provide="datepicker" data-date-format="yyyy-mm-dd" data-date-week-start="1" data-date-today-btn="true"
+						data-date-autoclose="true" data-date-today-highlight="true">
+					<span class="input-group-addon"><i class="glyphicon glyphicon-th"></i></span>
+				</div>
+			</div>
+		</div>
+		<div class="form-group filter-date" style="display: none;" id="filter-date-range">
+			<label for="filter-date-start" class="col-sm-4 control-label">Date</label>
+			<div class="col-sm-6">
+				<div class="input-daterange input-group" id="datepicker">
+					<input type="text" class="form-control" id="filter-date-start" placeholder="YYYY-MM-DD"
+						data-provide="datepicker" data-date-format="yyyy-mm-dd" data-date-week-start="1" data-date-today-btn="true"
+						data-date-autoclose="true" data-date-today-highlight="true">
+					<span class="input-group-addon">to</span>
+					<input type="text" class="form-control" id="filter-date-end" placeholder="YYYY-MM-DD"
+						data-provide="datepicker" data-date-format="yyyy-mm-dd" data-date-week-start="1" data-date-today-btn="true"
+						data-date-autoclose="true" data-date-today-highlight="true">
+				</div>
+			</div>
+		</div>
+		<div class="form-group filter-date" style="display:none;" id="filter-date-year">
+			<label for="filter-date-year" class="col-sm-4 control-label">Date</label>
+			<div class="col-sm-6">
+				<div class="input-group date">
+					<input type="text" class="form-control" id="filter-date-year" placeholder="YYYY"
+						data-provide="datepicker" data-date-format="yyyy" data-date-autoclose="true"
+						data-date-min-view-mode="2">
+					<span class="input-group-addon"><i class="glyphicon glyphicon-th"></i></span>
+				</div>
+			</div>
+		</div>
+		<div class="form-group">
+			<div class="col-sm-offset-4 col-sm-6">
+				<button type="button" class="btn btn-primary filter-submit">Create</button>
+			</div>
+		</div>
+	{% elif type == 'numeric' or type == 'text' %}
+		<div class="form-group">
+			<label for="filter-operator" class="col-sm-5 control-label">Operator</label>
+			<div class="col-sm-4">
+				<select class="form-control" id="filter-operator"></select>
+			</div>
+		</div>
+		<div class="form-group">
+			<label for="filter-value" class="col-sm-5 control-label">Value</label>
+			<div class="col-sm-5">
+				{% if type == 'numeric' %}
+					<input type="number" class="form-control" id="filter-value" placeholder="12345">
+				{% else %}
+					<input type="text" class="form-control" id="filter-value" placeholder="Text">
+				{% endif %}
+			</div>
+		</div>
+		<div class="form-group">
+			<div class="col-sm-offset-5 col-sm-5">
+				<button type="button" class="btn btn-primary filter-submit">Create</button>
+			</div>
+		</div>
+	{% elif type == 'boolean' %}
+		<div class="form-group">
+			<label class="col-sm-5 control-label">Value</label>
+			<div class="col-sm-5">
+				<div class="btn-group">
+					<button type="button" class="btn btn-success filter-bool" data-value="true">True</button>
+					<button type="button" class="btn btn-danger filter-bool" data-value="false">False</button>
+				</div>
+			</div>
+		</div>
+	{% elif type == 'list' %}
+		<div class="form-group">
+			<label for="filter-operator" class="col-sm-5 control-label">Value</label>
+			<div class="col-sm-5">
+				<select class="form-control" id="filter-value"></select>
+			</div>
+		</div>
+		<div class="form-group">
+			<div class="col-sm-offset-5 col-sm-5">
+				<button type="button" class="btn btn-primary filter-submit">Create</button>
+			</div>
+		</div>
+	{% else %}
+		<p class="text-danger center">unknown filter type</p>
+	{% endif %}
+	</div>
+</div>
+<script>
+	(function() { /* we need to defer the script since jQuery is not yet loaded at that point of the page */
+		var code = function($) { /* this is the jQuery code we need to execute */
+			$(document).ready(function(){
+				var themodal = $('#filter-modal');
+				
+				var o = filters_operators.{{ type }};
+				{% if type != 'list' %}
+					$('#filter-modal select#filter-operator').html(function(){
+						var content = [];
+						for (var op in o) {
+							if(o.hasOwnProperty(op)) {
+								content.push('<option value="'+op+'">'+o[op][0]+'&nbsp;&nbsp;&nbsp;'+o[op][1]+'</option>');
+							}
+						}
+						return content.join('');
+					});
+				{% else %}	
+					$.getJSON(modules_urls.filters[module].schema, function(data){
+						$('#filter-modal select#filter-value').html(function(){
+							var content = [];
+							for (var v in data.fields.{{ field }}.valid_choices) {
+								content.push('<option value="'+v+'">'+v+'</option>');
+							}
+							return content.join('');
+						});
+					});
+				{% endif %}
+				{% if type == 'boolean' %}
+					$('button.filter-bool').click(function(){
+						var value_bool = $(this).attr('data-value');
+						$.ajax({
+							url: modules_urls.filters[module].set.substring(0, modules_urls.filters[module].set.length - 1)+'{{ field }}',
+							type: 'POST',
+							data: {
+								'operator': 'exact',
+								'value': value_bool
+							},
+							success: function(data) { /* if everything ok */
+								/* reload the filters and reload the list */
+								themodal.modal('toggle');
+								load_filters(module);
+								window['load_'+module](false, $('#'+module+'-list').attr('data-ordering'));
+							},
+							error: function(xhr, status, error) {
+								$('#filter-modal .alert').html('<strong>Oops</strong>, there was a problem : '+xhr.responseText).show();
+							}
+						});
+					});
+				{% endif %}
+				
+				{% if type != 'list' and type != 'boolean' %}
+					var operator_field = $('#filter-modal select#filter-operator')
+					{% if type != 'date' %}
+					var value_field = $('#filter-modal input#filter-value');
+					value_field.val($('#filter-{{ field }} button.filter-value').text());
+					window.setTimeout(function(){
+						value_field.select().focus(); /* we focus on the input field when the animation is over (just required for the first load, is then handled by the event show.bs.modal) */
+					}, 1000);
+					{% endif %}
+				{% endif %}
+				
+				{% if type == 'date' %}
+					operator_field.change(function(){
+						var option = $(this).children('option:selected').val();
+						if(option == 'range') {
+							$('#filter-modal .filter-date').hide();
+							$('#filter-modal #filter-date-range').show();
+						}
+						else if(option == 'year') {
+							$('#filter-modal .filter-date').hide();
+							$('#filter-modal #filter-date-year').show();
+						}
+						else {
+							$('#filter-modal .filter-date').hide();
+							$('#filter-modal #filter-date-single').show();
+						}
+					});
+				{% endif %}
+				
+				{% if type != 'boolean' %}
+					$('#filter-modal button.filter-submit').click(function(){
+						{% if type != 'list' and type != 'boolean' and type != 'date' %}
+							var post_operator = operator_field.children('option:selected').val();
+							var post_value = value_field.val();
+						{% elif type == 'date' %}
+							var post_operator = operator_field.children('option:selected').val();
+							var option = operator_field.children('option:selected').val();
+							if(option == 'range') {
+								var post_value = $('#filter-modal #filter-date-start').val()+'T00:00;'+$('#filter-modal #filter-date-end')+'T23:59:59';
+							}
+							else if(option == 'year') {
+								var post_value = $('#filter-modal #filter-date-year').val();
+							}
+							else if(option == 'gte') {
+								var post_value = $('#filter-modal #filter-value').val()+'T00:00';
+							}
+							else if(option == 'lte') {
+								var post_value = $('#filter-modal #filter-value').val()+'T23:59:59';
+							}
+							else {
+								var post_value = '';
+							}
+						{% elif type == 'list' %}
+							var post_operator = 'exact';
+							var post_value = $('#filter-modal select#filter-value option:selected').val();
+						{% endif %}
+						$.ajax({
+							url: modules_urls.filters[module].set.substring(0, modules_urls.filters[module].set.length - 1)+'{{ field }}',
+							type: 'POST',
+							data: {
+								'operator': post_operator,
+								'value': post_value
+							},
+							success: function(data) { /* if everything ok */
+								/* reload the filters and reload the list */
+								themodal.modal('toggle');
+								load_filters(module);
+								window['load_'+module](false, $('#'+module+'-list').attr('data-ordering'));
+							},
+							error: function(xhr, status, error) {
+								$('#filter-modal .alert').html('<strong>Oops</strong>, there was a problem : '+xhr.responseText).show();
+								{% if type != 'list' and type != 'boolean' %}
+									value_field.select().focus();
+								{% endif %}
+							}
+						});
+					});
+				{% endif %}
+				{% if type != 'list' and type != 'boolean' %}
+					value_field.keypress(function(event) { /* on pressing the enter key, trigger the click event on the button (submit) */
+						if (event.which == 13) {
+							$('#filter-modal button.btn').click();
+						}
+					});
+				{% endif %}
+				themodal.on('shown.bs.modal', function(e){ /* after apparition animation is complete, focus on the field */
+					{% if type != 'list' and type != 'boolean' and type != 'date' %}
+						value_field.select().focus();
+					{% endif %}
+				});
+				themodal.on('show.bs.modal', function(e){ /* if there was an error message, hide it on modal apparition */
+					$('#filter-modal .alert').hide();
+				});
+			});
+		};
+		var timer = function() { /* this is the timer function to defer code execution */
+			if (window.jQuery) { /* if jQuery is available, ok lessgo */
+				code(window.jQuery);
+			} else { /* otherwise we defer for 100 milliseconds */
+				window.setTimeout(timer, 100);
+			}
+		};
+		timer();
+	})();
+</script>
+{% endblock %}

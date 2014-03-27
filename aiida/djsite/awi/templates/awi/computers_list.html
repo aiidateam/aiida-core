@@ -99,6 +99,13 @@
 {% endblock %}
 
 {% block js %}
-<script src="{% static 'awi/js/computers.js' %}"></script>
-<script src="{% static 'awi/js/filters.js' %}"></script>
+<script src="{% static 'awi/js/application_manager.js' %}"></script>
+<script src="{% static 'awi/js/filters_manager.js' %}"></script>
+<script src="{% static 'awi/js/computers_manager.js' %}"></script>
+<script>
+	var am;
+	$(document).ready(function () {
+		am = new ApplicationManager('computers', FiltersManager, ComputersManager);
+	});
+</script>
 {% endblock %}

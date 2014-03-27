@@ -103,22 +103,44 @@ def filters_set(request, module, field):
 		value = request.POST.get('value', None)
 		if 'type' in request.session['filters'][module][field]: # the filter exists, we need to update
 			if operator is not None:
-				request.session['filters'][module][field]['operator'] = operator
+				if request.session['filters'][module][field]['operator'] == 'range':
+					lo, hi = request.session['filters'][module][field]['value'].split(';')
+					if operator != 'range':
+						request.session['filters'][module][field]['value'] = lo
+					request.session['filters'][module][field]['operator'] = operator
+				elif operator == 'range':
+					if request.session['filters'][module][field]['operator'] != 'range':
+						request.session['filters'][module][field]['value'] = '0;'+request.session['filters'][module][field]['value']
+					request.session['filters'][module][field]['operator'] = operator
+				else:
+					request.session['filters'][module][field]['operator'] = operator
+			else:
+				operator = request.session['filters'][module][field]['operator']
 			if value is not None:
 				value = value.strip()
 				if not value:
 					if operator != 'isnull':
-						return HttpResponse("The operator value cannot be empty", status=400)
+						return HttpResponse("The value cannot be empty", status=400)
 				else:
 					#validation
 					if field_type == 'boolean':
 						if value not in ['true', 'false']:
 							return HttpResponse("Value must be a boolean (true/false)", status=400)
 					elif field_type == 'numeric':
-						try:
-							float(value)
-						except ValueError:
-							return HttpResponse("Value must be numeric", status=400)
+						if operator == 'range' and value.find(';') != -1:
+							lo, hi = value.split(';')
+							try:
+								float(lo)
+								float(hi)
+							except ValueError:
+								return HttpResponse("Values must be numeric", status=400)
+							if lo > hi:
+								return HttpResponse("Low value of the range is greater than the high value", status=400)
+						else:
+							try:
+								float(value)
+							except ValueError:
+								return HttpResponse("Value must be numeric", status=400)
 					elif field_type == 'list':
 						valid_choices = schema["fields"][field]["valid_choices"]
 						if value not in valid_choices:
@@ -153,10 +175,20 @@ def filters_set(request, module, field):
 						if value not in ['true', 'false']:
 							return HttpResponse("Value must be a boolean (true/false)", status=400)
 					elif field_type == 'numeric':
-						try:
-							float(value)
-						except ValueError:
-							return HttpResponse("Value must be numeric", status=400)
+						if operator == 'range' and value.find(';') != -1:
+							lo, hi = value.split(';')
+							try:
+								float(lo)
+								float(hi)
+							except ValueError:
+								return HttpResponse("Values must be numeric", status=400)
+							if lo > hi:
+								return HttpResponse("Low value of the range is greater than the high value", status=400)
+						else:
+							try:
+								float(value)
+							except ValueError:
+								return HttpResponse("Value must be numeric", status=400)
 					elif field_type == 'list':
 						valid_choices = schema["fields"][field]["valid_choices"]
 						if value not in valid_choices:
@@ -219,7 +251,12 @@ def filters_querystring(request, module):
 	
 	output = ''
 	for field, f in request.session['filters'][module].items():
-		output += '&'+field+'__'+f['operator']+'='+f['value']
+		if f['operator'] == 'range':
+			lo, hi = f['value'].split(';')
+			output += '&'+field+'__'+f['operator']+'='+lo
+			output += '&'+field+'__'+f['operator']+'='+hi
+		else:
+			output += '&'+field+'__'+f['operator']+'='+f['value']
 	return HttpResponse(output)
 
 @login_required(login_url='awi:login')

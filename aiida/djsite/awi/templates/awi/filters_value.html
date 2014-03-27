@@ -15,59 +15,6 @@
 	</div>
 </div>
 <script>
-	(function() { /* we need to defer the script since jQuery is not yet loaded at that point of the page */
-		var code = function($) { /* this is the jQuery code we need to execute */
-			$(document).ready(function(){
-				var themodal = $('#filter-modal');
-				
-				$('#filter-modal h4').append(' <small>'+filters_operators.{{ type }}.{{ operator }}[1]+'</small>');
-				
-				var field = $('#filter-modal input.form-control');
-				var fieldval = $('#filter-{{ field }} button.filter-value').text();
-				console.log(fieldval);
-				if(fieldval != '\xA0')
-					field.val(fieldval);
-				window.setTimeout(function(){
-					field.select().focus(); /* we focus on the input field when the animation is over (just required for the first load, is then handled by the event show.bs.modal) */
-				}, 500);
-				$('#filter-modal button.btn').click(function(){
-					$.ajax({
-						url: modules_urls.filters[module].set.substring(0, modules_urls.filters[module].set.length - 1)+'{{ field }}',
-						type: 'POST',
-						data: {'value': field.val()},
-						success: function(data) { /* if everything ok */
-							/* reload the filters and reload the list */
-							themodal.modal('toggle');
-							load_filters(module);
-							window['load_'+module](false, $('#'+module+'-list').attr('data-ordering'));
-						},
-						error: function(xhr, status, error) {
-							$('#filter-modal .alert').html('<strong>Oops</strong>, there was a problem : '+xhr.responseText).show();
-							field.select().focus();
-						}
-					});
-				});
-				field.keypress(function(event) { /* on pressing the enter key, trigger the click event on the button (submit) */
-					if (event.which == 13) {
-						$('#filter-modal button.btn').click();
-					}
-				});
-				themodal.on('shown.bs.modal', function(e){ /* after apparition animation is complete, focus on the field */
-					field.select().focus();
-				});
-				themodal.on('show.bs.modal', function(e){ /* if there was an error message, hide it on modal apparition */
-					$('#filter-modal .alert').hide();
-				});
-			});
-		};
-		var timer = function() { /* this is the timer function to defer code execution */
-			if (window.jQuery) { /* if jQuery is available, ok lessgo */
-				code(window.jQuery);
-			} else { /* otherwise we defer for 100 milliseconds */
-				window.setTimeout(timer, 100);
-			}
-		};
-		timer();
-	})();
+	am.filtersManager.loadValue('{{ field }}', '{{ type }}', '{{ operator }}');
 </script>
 {% endblock %}

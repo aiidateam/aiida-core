@@ -78,7 +78,7 @@ class DbComputerResource(ModelResource):
         resource_name = 'dbcomputer'
         allowed_methods = ['get', 'post', 'patch']
         filtering = {
-            'id': ['exact'],
+            'id': ALL,
             'uuid': ALL,
             'name': ALL,
             'description': ALL,

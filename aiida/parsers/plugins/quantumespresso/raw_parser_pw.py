@@ -47,6 +47,7 @@ def parse_raw_output(out_file, input_dict, parser_opts=None, xml_file=None, dir_
     On an upper level, these flags MUST be checked.
     The first two are expected to be empty unless QE failures or unfinished jobs.
     """
+    import copy
     # TODO: a lot of ifs could be cleaned out
     
     # TODO: input_dict should be used as well
@@ -109,20 +110,19 @@ def parse_raw_output(out_file, input_dict, parser_opts=None, xml_file=None, dir_
     # I add in the out_data all the last elements of trajectory_data values.
     # Safe for some large arrays, that I will likely never query.
     skip_keys = ['forces','lattice_vectors_relax',
-                 'atomic_positions_relax','atomic_species_name',
-                 'atomic_species_name']
-    for x in trajectory_data.iteritems():
+                 'atomic_positions_relax','atomic_species_name']
+    tmp_trajectory_data = copy.copy(trajectory_data)
+    for x in tmp_trajectory_data.iteritems():
         if x[0] in skip_keys:
             continue
         out_data[x[0]] = x[1][-1]
         if len(x[1])==1: # delete eventual keys that are not arrays (scf cycles)
             trajectory_data.pop(x[0])
         # note: if an array is empty, there will be KeyError
-
+    for key in ['k_points','k_points_weights']:
+        trajectory_data[key] = xml_data.pop(key)
     # As the k points are an array that is rather large, and again it's not something I'm going to parse likely
     # since it's an info mainly contained in the input file, I move it to the trajectory data
-    for key in ['k_points','k_points_weigths']:
-        trajectory_data[key] = out_data.pop(key)
 
     # if there is a severe error, the calculation is FAILED
     if any([x in out_data['warnings'] for x in critical_messages]):
@@ -597,11 +597,14 @@ def xml_card_symmetries(parsed_data,dom):
                 
             for tagname2 in ['FRACTIONAL_TRANSLATION','EQUIVALENT_IONS']: # not always present
                 try:
-                    b=a.getElementsByTagName(tagname2)[0]
-                    value=[ float(s) for s in b.childNodes[0].data.split() ]
-                    current_sym[tagname2.lower()]=value
+                    b = a.getElementsByTagName(tagname2)[0]
+                    if tagname2 == 'FRACTIONAL_TRANSLATION':
+                        value = [ float(s) for s in b.childNodes[0].data.split() ]
+                    else:
+                        value = [ int(s) for s in b.childNodes[0].data.split() ]
+                    current_sym[tagname2.lower()] = value
                 except Exception:
-                    pass
+                    raise
 
             parsed_data['symmetries'].append(current_sym)
         except IndexError: # SYMM.i out of index

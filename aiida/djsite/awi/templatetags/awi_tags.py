@@ -1,4 +1,5 @@
 from django import template
+from django.utils.datastructures import SortedDict
 from django.core import urlresolvers
 
 register = template.Library()
@@ -28,3 +29,22 @@ def current_url_equals(context, url_name, **kwargs):
 			if not resolved_kwarg or kwarg != resolved_kwarg:
 				return False
 	return matches
+
+@register.filter(name='sort', is_safe=True)
+def listsort(value):
+	"""
+	Allows to sort dictionaries on the fly when doing a for loop over their items
+	"""
+	if isinstance(value, dict):
+		new_dict = SortedDict()
+		key_list = value.keys()
+		key_list.sort()
+		for key in key_list:
+			new_dict[key] = value[key]
+		return new_dict
+	elif isinstance(value, list):
+		new_list = list(value)
+		new_list.sort()
+		return new_list
+	else:
+		return value

@@ -33,6 +33,9 @@ def convert_to_bool(string):
         raise ValueError("Invalid boolean value provided")
 
 class SshTransport(aiida.transport.Transport):
+    """
+    Support connection, command execution and data transfer to remote computers via SSH+SFTP.
+    """
     # Valid keywords accepted by the connect method of paramiko.SSHClient
     # I disable 'password' and 'pkey' to avoid these data to get logged in the
     # aiida log file.
@@ -289,7 +292,7 @@ class SshTransport(aiida.transport.Transport):
                              "the transport: {}".format(
                     ",".join(str(k) for k in kwargs)))
 
-    def __enter__(self):
+    def open(self):
         """
         Open a SSHClient to the machine possibly using the parameters given
         in the __init__. 
@@ -318,7 +321,7 @@ class SshTransport(aiida.transport.Transport):
         
         return self
         
-    def __exit__(self, type, value, traceback):
+    def close(self):
         """
         Close the SFTP channel, and the SSHClient.
         
@@ -726,12 +729,21 @@ class SshTransport(aiida.transport.Transport):
         elif not self.isdir(remotepath):
             self.mkdir(remotepath)
         
+        # TODO, NOTE: we are not using 'onerror' because we checked above that
+        # the folder exists, but it would be better to use it
         for this_source in os.walk(localpath):
-            this_basename = this_source[0].lstrip(localpath)
+            # Get the relative path
+            this_basename = os.path.relpath(path=this_source[0],
+                                            start=localpath)
+            
             try:
                 self.sftp.stat( os.path.join(remotepath,this_basename) )
-            except IOError:
-                self.mkdir( os.path.join(remotepath,this_basename) )
+            except IOError as e:
+                import errno
+                if e.errno == errno.ENOENT: # Missing file
+                    self.mkdir( os.path.join(remotepath,this_basename) )
+                else:
+                    raise
                 
             for this_file in this_source[2]:
                 this_local_file = os.path.join(localpath,this_basename,this_file)        

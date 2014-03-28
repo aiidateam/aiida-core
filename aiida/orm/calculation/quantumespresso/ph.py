@@ -40,7 +40,7 @@ class PhCalculation(Calculation):
     # Default PW output parser provided by AiiDA
     _default_parser = 'quantumespresso.ph'
     
-    def _prepare_for_submission(self,tempfolder):        
+    def _prepare_for_submission(self,tempfolder,inputdict=None):        
         """
         This is the routine to be called when you want to create
         the input files and related stuff with a plugin.
@@ -55,7 +55,8 @@ class PhCalculation(Calculation):
         remote_copy_list = []
         
         # The code is not here, only the data        
-        inputdict = self.get_inputdata_dict()
+        if inputdict is None:
+            inputdict = self.get_inputdata_dict()
 
         try:
             parameters = inputdict.pop(self.get_linkname_parameters())
@@ -215,7 +216,7 @@ class PhCalculation(Calculation):
         if not isinstance(data, ParameterData):
             raise ValueError("The data must be an instance of the ParameterData class")
 
-        self.replace_link_from(data, self.get_linkname_settings())
+        self._replace_link_from(data, self.get_linkname_settings())
 
     def get_linkname_settings(self):
         """
@@ -230,7 +231,7 @@ class PhCalculation(Calculation):
         if not isinstance(data, ParameterData):
             raise ValueError("The data must be an instance of the ParameterData class")
 
-        self.replace_link_from(data, self.get_linkname_parameters())
+        self._replace_link_from(data, self.get_linkname_parameters())
 
     def get_linkname_parameters(self):
         """
@@ -245,7 +246,7 @@ class PhCalculation(Calculation):
         if not isinstance(data, RemoteData):
             raise ValueError("The data must be an instance of the RemoteData class")
 
-        self.add_link_from(data, self.get_linkname_parent_calc_folder())
+        self._add_link_from(data, self.get_linkname_parent_calc_folder())
 
     def get_linkname_parent_calc_folder(self):
         """

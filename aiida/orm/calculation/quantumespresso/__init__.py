@@ -3,6 +3,7 @@ import os
 from aiida.common.exceptions import InputValidationError
 from aiida.orm import DataFactory
 from aiida.common.datastructures import CalcInfo
+from aiida.orm.data.upf import get_pseudos_from_structure
 
 StructureData = DataFactory('structure')
 ParameterData = DataFactory('parameter')
@@ -64,7 +65,8 @@ class BasePwCpInputGenerator(object):
     
     _use_kpoints = False
     
-    def _prepare_for_submission(self,tempfolder):        
+    def _prepare_for_submission(self,tempfolder,
+                                    inputdict = None):        
         """
         This is the routine to be called when you want to create
         the input files and related stuff with a plugin.
@@ -79,7 +81,8 @@ class BasePwCpInputGenerator(object):
         remote_copy_list = []
         
         # The code is not here, only the data        
-        inputdict = self.get_inputdata_dict()
+        if inputdict is None:
+            inputdict = self.get_inputdata_dict()
 
         try:
             parameters = inputdict.pop(self.get_linkname_parameters())
@@ -199,6 +202,10 @@ class BasePwCpInputGenerator(object):
         # ------------- ATOMIC_SPECIES ------------
         # I create the subfolder that will contain the pseudopotentials
         tempfolder.get_subfolder(self.PSEUDO_SUBFOLDER, create=True)
+        # I create the subfolder with the output data (sometimes the
+        # Quantum Espresso codes crash if an empty folder is not already
+        # there...
+        tempfolder.get_subfolder(self.OUTPUT_SUBFOLDER, create=True)
                 
         atomic_species_card_list = ["ATOMIC_SPECIES\n"]
 
@@ -415,11 +422,16 @@ class BasePwCpInputGenerator(object):
         calcinfo.retrieve_list += settings_retrieve_list
         calcinfo.retrieve_list += self._internal_retrieve_list
         
-        
         if settings_dict:
-            raise InputValidationError("The following keys have been found in "
-                "the settings input node, but were not understood: {}".format(
-                ",".join(settings_dict.keys())))
+            try:
+                Parserclass = self.get_parserclass()
+                parser = Parserclass(self)
+                parser_opts = parser.get_parser_settings_key()
+                settings_dict.pop(parser_opts)
+            except (KeyError,AttributeError): # the key parser_opts isn't inside the dictionary
+                raise InputValidationError("The following keys have been found in "
+                  "the settings input node, but were not understood: {}".format(
+                  ",".join(settings_dict.keys())))
         
         return calcinfo
 
@@ -442,7 +454,7 @@ class BasePwCpInputGenerator(object):
         if not isinstance(data, StructureData):
             raise ValueError("The data must be an instance of the StructureData class")
 
-        self.replace_link_from(data, self.get_linkname_structure())
+        self._replace_link_from(data, self.get_linkname_structure())
 
     def get_linkname_structure(self):
         """
@@ -457,7 +469,7 @@ class BasePwCpInputGenerator(object):
         if not isinstance(data, ParameterData):
             raise ValueError("The data must be an instance of the ParameterData class")
 
-        self.replace_link_from(data, self.get_linkname_settings())
+        self._replace_link_from(data, self.get_linkname_settings())
 
     def get_linkname_settings(self):
         """
@@ -472,7 +484,7 @@ class BasePwCpInputGenerator(object):
         if not isinstance(data, RemoteData):
             raise ValueError("The data must be an instance of the RemoteData class")
 
-        self.replace_link_from(data, self.get_linkname_parent_calc_folder())
+        self._replace_link_from(data, self.get_linkname_parent_calc_folder())
 
     def get_linkname_parent_calc_folder(self):
         """
@@ -487,7 +499,7 @@ class BasePwCpInputGenerator(object):
         if not isinstance(data, ParameterData):
             raise ValueError("The data must be an instance of the ParameterData class")
 
-        self.replace_link_from(data, self.get_linkname_parameters())
+        self._replace_link_from(data, self.get_linkname_parameters())
 
     def get_linkname_parameters(self):
         """
@@ -506,9 +518,9 @@ class BasePwCpInputGenerator(object):
         if not isinstance(data, UpfData):
             raise ValueError("The data must be an instance of the UpfData class")
 
-        self.replace_link_from(data, self.get_linkname_pseudo(kind))
+        self._replace_link_from(data, self.get_linkname_pseudo(kind))
 
-    def use_pseudo_from_family(self, family_name):
+    def use_pseudos_from_family(self, family_name):
         """
         Set the pseudo to use for all atomic kinds, picking pseudos from the
         family with name family_name.
@@ -518,22 +530,15 @@ class BasePwCpInputGenerator(object):
         Args:
             family_name: the name of the group containing the pseudos
         """
-        from aiida.orm.data.upf import get_upf_from_family
-        
         try:
             structure = self.get_input(self.get_linkname_structure())
         except AttributeError:
             raise ValueError("structure is not set yet!")
-        
-        pseudo_list = {}
-        for kind in structure.kinds:
-            symbol = kind.symbol
-            # Will raise the correct exception if not found, or too many found
-            pseudo_list[kind.name] = get_upf_from_family(family_name, symbol)
+
+        pseudo_list = get_pseudos_from_structure(structure, family_name)
         
         for kindname, pseudo in pseudo_list.iteritems():
-            self.replace_link_from(pseudo, self.get_linkname_pseudo(kindname))
-
+            self._replace_link_from(pseudo, self.get_linkname_pseudo(kindname))
         
     def get_linkname_pseudo(self, kind):
         """

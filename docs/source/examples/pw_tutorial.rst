@@ -192,7 +192,7 @@ Note also that numbers and booleans are written in Python, i.e. not ``.false.`` 
 
   ParameterData = DataFactory('parameter')
 
-  parameters = ParameterData({
+  parameters = ParameterData(dict={
             'CONTROL': {
                 'calculation': 'scf',
                 'restart_mode': 'from_scratch',
@@ -209,7 +209,7 @@ Note also that numbers and booleans are written in Python, i.e. not ``.false.`` 
 ( The experienced QE user will have noticed also that a couple of variables are missing: the prefix, the pseudo directory and the scratch directory are reserved to the plugin which will use default values: in case you want to use the scratch of a previous calculation, it must be specified)
 The k-points have to be saved in a different ParameterData, analogously as before::
                 
-  kpoints = ParameterData({
+  kpoints = ParameterData(dict={
                 'type': 'automatic',
                 'points': [4, 4, 4, 0, 0, 0],
                 }).store()
@@ -249,7 +249,7 @@ For the complete scheduler documentation, see :ref:`my-reference-to-scheduler`
   queue = None
   calc.set_max_wallclock_seconds(30*60) # 30 min
   num_cpus_per_machine = 48
-  calc.set_resources(num_machines=1, num_cpus_per_machine=num_cpus_per_machine)
+  calc.set_resources({"num_machines": 1, "num_cpus_per_machine": num_cpus_per_machine})
   queue = None
   if queue is not None:
       calc.set_queue_name(queue)
@@ -315,7 +315,7 @@ In this example, we loaded the files directly from the hard disk.
 For a more practical use, it is convenient to use the pseudopotential families. Its use is documented in :ref:`my-ref-to-pseudo-tutorial`.
 If you got one installed, you can simply tell the calculation to use the pseudopotential family, then AiiDA will take care of attaching the proper pseudopotential to the element::
 
-  calc.use_pseudo_from_family('my_pseudo_family')
+  calc.use_pseudos_from_family('my_pseudo_family')
 
 
 
@@ -325,51 +325,28 @@ If you got one installed, you can simply tell the calculation to use the pseudop
 Execute
 -------
 
-Summarizing, we created all the inputs needed by a PW calculation, that are: parameters, kpoints, pseudopotential files and the structure. We then created the calculation, where we specified that it is a PW calculation and we specified the details of the remote cluster.
-We stored all this objects in the database (``.store()``), and set the links between the inputs and the calculation (``calc.use_***``).
+Summarizing, we created all the inputs needed by a PW calculation,
+that are: parameters, kpoints, pseudopotential files and the structure.
+We then created the calculation, where we specified that it is a PW calculation
+and we specified the details of the remote cluster.
+We stored all this objects in the database (``.store()``), and set the links
+between the inputs and the calculation (``calc.use_***``).
 That's all that the calculation needs. 
 Now we just need to submit it::
 
    calc.submit()
 
-Everything else will be managed by AiiDA: the inputs will be checked to verify that it is consistent with a PW input. If the input is complete, the pw input file will be prepared and the folder where it will be executed. It will be sent on cluster, executed, retrieved and parsed.
+Everything else will be managed by AiiDA: the inputs will be checked to verify
+that it is consistent with a PW input. If the input is complete, the pw input
+file will be prepared in a folder together with all the other files required
+for the execution (pseudopotentials, etc.). It will be then sent on cluster,
+submitted, and after execution automatically retrieved and parsed.
 
+To know how to monitor and check the state of submitted calculations, go to
+:doc:`../state/calculation_state`.
 
-
-
-
-If for example you want to check for the state of the calculation, you can execute a script like this one, where you just need to specify the id of the calculation under investigation (or use the uuid with ``.get_subclass_from_uuid()``, note that the id may change after a sync of two databases, while the uuid is a unique identifier)
-
-::
-
-  import paramiko
-
-  from aiida.common.utils import load_django
-  load_django()
-
-  from aiida.orm import CalculationFactory
-
-  QECalc = CalculationFactory('quantumespresso.pw')
-  calc = QECalc.get_subclass_from_pk('...............')
-  print calc.get_state()
-
-The calculation could be in several states.
-The most common you should see:
-
-1. 'WITHSCHEDULER': the job is in queue on the cluster
-
-2. 'RUNNING': in execution on the cluster
-
-2. 'FINISHED': the job on the cluster was finished, AiiDA already retrieved it, and store the results in the database. Moreover, the Pw code seems to have ended without crashing
-
-3. 'FAILED': something went wrong, and AiiDA rose an exception. This could be of several nature: the inputs weren't enough, the execution on the cluster failed, or the code ended without reaching te end successfully. In practice, anything bad that could happen.
-
-
-Eventually, if the calculation is finished, you will find the computed quantities in the database.
-You will be able to query the database for the energies that you computed!
-
-
-Jump to :ref:`my-ref-to-ph-tutorial`.
+To continue the tutorial with the ``ph.x`` phonon code of Quantum ESPRESSO,
+continue here: :ref:`my-ref-to-ph-tutorial`.
 
 
 
@@ -423,7 +400,7 @@ Compact script
     s.append_atom(position=(0.,alat/2.,alat/2.),symbols='O')
     s.store()
 
-    parameters = ParameterData({
+    parameters = ParameterData(dict={
 		'CONTROL': {
 		    'calculation': 'scf',
 		    'restart_mode': 'from_scratch',
@@ -437,7 +414,7 @@ Compact script
 		    'conv_thr': 1.e-6,
 		    }}).store()
 
-    kpoints = ParameterData({
+    kpoints = ParameterData(dict={
 		    'type': 'automatic',
 		    'points': [4, 4, 4, 0, 0, 0],
 		    }).store()
@@ -445,13 +422,13 @@ Compact script
     QECalc = CalculationFactory('quantumespresso.pw')
     calc = QECalc(computer=computer)
     calc.set_max_wallclock_seconds(30*60) # 30 min
-    calc.set_resources(num_machines=1, num_cpus_per_machine=16)
+    calc.set_resources({"num_machines": 1, "num_cpus_per_machine": 16})
     calc.store()
 
     calc.use_structure(s)
     calc.use_code(code)
     calc.use_parameters(parameters)
-    calc.use_pseudo_from_family(pseudo_family)
+    calc.use_pseudos_from_family(pseudo_family)
     calc.use_kpoints(kpoints)
 
     calc.submit()
@@ -562,7 +539,7 @@ Exception tolerant code
     s.append_atom(position=(0.,alat/2.,alat/2.),symbols='O')
     s.store()
 
-    parameters = ParameterData({
+    parameters = ParameterData(dict={
 		'CONTROL': {
 		    'calculation': 'scf',
 		    'restart_mode': 'from_scratch',
@@ -576,7 +553,7 @@ Exception tolerant code
 		    'conv_thr': 1.e-6,
 		    }}).store()
 
-    kpoints = ParameterData({
+    kpoints = ParameterData(dict={
 		    'type': 'automatic',
 		    'points': [4, 4, 4, 0, 0, 0],
 		    }).store()
@@ -584,7 +561,7 @@ Exception tolerant code
     QECalc = CalculationFactory('quantumespresso.pw')
     calc = QECalc(computer=computer)
     calc.set_max_wallclock_seconds(30*60) # 30 min
-    calc.set_resources(num_machines=1, num_cpus_per_machine=num_cpus_per_machine)
+    calc.set_resources({"num_machines": 1, "num_cpus_per_machine": num_cpus_per_machine})
     if queue is not None:
 	calc.set_queue_name(queue)
     calc.store()
@@ -597,7 +574,7 @@ Exception tolerant code
 
     if auto_pseudos:
 	try:
-	    calc.use_pseudo_from_family(pseudo_family)
+	    calc.use_pseudos_from_family(pseudo_family)
 	    print "Pseudos successfully loaded from family {}".format(pseudo_family)
 	except NotExistent:
 	    print ("Pseudo or pseudo family not found. You may want to load the "

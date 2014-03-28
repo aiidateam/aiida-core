@@ -123,6 +123,7 @@ elements = {
 
 _valid_symbols = tuple(i['symbol'] for i in elements.values())
 _atomic_masses = {el['symbol']: el['mass'] for el in elements.values()}
+_atomic_numbers = {data['symbol']: num for num, data in elements.iteritems()}
 
 def _get_valid_cell(inputcell):
     """
@@ -306,58 +307,26 @@ class StructureData(Data):
     boundary conditions (whether they are periodic or not) and other
     related useful information.
     """
-    def __init__(self,**kwargs):
-        """
-        Initializes the StructureData object with a given cell.
-        
-        :param cell: It can be:
-                1. the three real-space lattice vectors, in angstrom.
-                cell[i] gives the three coordinates of the i-th vector,
-                with i=0,1,2.
-                Default: [[1,0,0],[0,1,0],[0,0,1]]
-        :param pbc: if we want periodic boundary conditions on each of the
-                three real-space directions.
-                Default: [True, True, True]
-        :param ase: a ase.atoms object, using the ASE python library. If this 
-                parameter is passed, the one above cannot be specified.
-        """
-        super(StructureData,self).__init__(**kwargs)
+    _set_incompatibilities = [("ase","cell"),("ase","pbc")]
+    
+    _set_defaults = {"pbc": [True, True, True],
+                     "cell": [[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]
+                     }
 
-        uuid = kwargs.pop('uuid', None)
-        if uuid is not None:
-            return
-
-        cell = kwargs.pop('cell',None)
-        pbc = kwargs.pop('pbc',None)
-        aseatoms = kwargs.pop('ase',None)
-        
-        if kwargs:
-            raise ValueError("There are unrecognized flags passed to the "
-                             "constructor: {}".format(kwargs.keys()))
-                    
-        self.set_attr('sites',[])
-        if aseatoms is not None:
-            if cell is not None or pbc is not None:
-                raise ValueError(
-                    "If you pass 'ase', you cannot pass also 'cell' or 'pbc'")
-            if is_ase_atoms(aseatoms):
-                # Read the ase structure
-                self.cell = aseatoms.cell
-                self.pbc  = aseatoms.pbc
-                for atom in aseatoms:
-                    self.append_atom(ase=atom)
-            else:
-                raise ValueError("an ase flag was passed, but the value is not "
-                    "a ase.Atoms object")
+    def set_ase(self, aseatoms):
+        """
+        Load the structure from a ASE object
+        """
+        if is_ase_atoms(aseatoms):
+            # Read the ase structure
+            self.cell = aseatoms.cell
+            self.pbc  = aseatoms.pbc
+            self.clear_kinds() # This also calls clear_sites
+            for atom in aseatoms:
+                self.append_atom(ase=atom)
         else:
-            if pbc is not None:
-                self.pbc = pbc
-            else:
-                self.pbc = [True, True, True]
-            if cell is not None:
-                self.cell = cell
-            else:
-                self.cell = [[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]
+            raise TypeError("The value is not an ase.Atoms object")
+        
 
     def validate(self):
         """
@@ -412,6 +381,80 @@ class StructureData(Data):
             raise ValidationError("The following kinds are defined, but there "
                                   "are no sites with that kind: {}".format(
                                       list(kinds_without_sites)))
+               
+    def exportstring(self, fileformat):
+        """
+        Converts an AiiDA structure in other text format.
+
+        :param fileformat: a string (the extension) to describe the file format.
+        :returns: a string with the structure description.
+        """
+        exporters = self._get_exporters()
+
+        try:        
+            func = exporters[fileformat]
+        except KeyError:
+            raise ValueError("The format is not accepted."
+                             "Currently implemented are: {}.".format(
+                                ",".join(exporters.keys())) )
+        
+        return func()
+    
+                
+    def export(self,fname,fileformat=None):
+        """
+        Save the structure on a file.
+        
+        :param fname: string with file name. Can be an absolute or relative path.
+        :param fileformat: kind of format to use for the export. If not present, 
+            it will try to use the extension of the file name.
+        """
+        if fileformat is None:
+            fileformat = fname.split('.')[-1]
+
+        filecontent = self.exportstring(format)
+        with open(fname,'w') as f:  # writes in cwd, if fname is not absolute
+            f.write( filecontent )
+        
+    def _get_exporters(self):
+        """
+        Get all implemented export formats. 
+        The convention is to find all _prepare_... methods.
+        Returns a list of strings.
+        """
+        # NOTE: To add support for a new format, write a new function called as
+        #       _prepare_"" with the name of the new format        
+        exporter_prefix = '_prepare_'
+        method_names = dir(self) # get list of class methods names
+        valid_format_names = [ i[len(exporter_prefix):] for i in method_names 
+                         if i.startswith(exporter_prefix) ] # filter them
+        valid_formats = {k: getattr(self,exporter_prefix + k) 
+                         for k in valid_format_names}
+        return valid_formats
+    
+    def _prepare_xsf(self):
+        """
+        Write the given structure to a string of format XSF (for XCrySDen). 
+        """
+        if self.is_alloy() or self.has_vacancies():
+            raise NotImplementedError("XSF for alloys or systems with "
+                "vacancies not implemented.")
+        
+        sites = self.sites
+        
+        return_string = "CRYSTAL\nPRIMVEC 1\n"        
+        for cell_vector in self.cell:
+            return_string += " ".join(["%18.10f" % i for i in cell_vector])
+            return_string += "\n"
+        return_string += "PRIMCOORD 1\n"
+        return_string += "%d 1\n" % len(sites)
+        for site in sites:
+            # I checked above that it is not an alloy, therefore I take the
+            # first symbol
+            return_string += "%s " % _atomic_numbers[
+                self.get_kind(site.kind_name).symbols[0]]
+            return_string += "%18.10f %18.10f %18.10f\n" % tuple(site.position)
+        return return_string
                 
     def get_symbols_set(self):
         """
@@ -760,6 +803,9 @@ class StructureData(Data):
     
     @cell.setter
     def cell(self,value):
+        self.set_cell(value)        
+        
+    def set_cell(self, value):
         from aiida.common.exceptions import ModificationNotAllowed
 
         if not self._to_be_stored:
@@ -852,6 +898,9 @@ class StructureData(Data):
 
     @pbc.setter
     def pbc(self,value):
+        self.set_pbc(value)
+
+    def set_pbc(self, value):
         from aiida.common.exceptions import ModificationNotAllowed
 
         if not self._to_be_stored:

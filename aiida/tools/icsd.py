@@ -91,7 +91,7 @@ def get_spacegroup(sgr):
         raise Exception("Error generating spacegroup")
 
 def get_structure(idnum, idtype="coll_code"):
-    
+    from aiida.djsite.utils import get_automatic_user
     import aiida.orm.data.structure as struct
     
     # Sql starting
@@ -126,7 +126,9 @@ def get_structure(idnum, idtype="coll_code"):
       
         aiida_s = struct.StructureData(ase=s)
         aiida_s.store()
-        aiida_s.add_comment("Origin: ICSD {0}={1}".format(idtype,idnum))
+        # TODO: Better: add a DbExtra!!
+        aiida_s.add_comment("Origin: ICSD {0}={1}".format(idtype,idnum),
+                            user=get_automatic_user())
         
         return aiida_s
     

@@ -60,8 +60,8 @@ try:
         raise ValueError
 except (NotExistent, ValueError):
     valid_code_labels = [c.label for c in Code.query(
-            attributes__key="_remote_exec_path",
-            attributes__tval__endswith="/{}".format(expected_exec_name))]
+            dbattributes__key="remote_exec_path",
+            dbattributes__tval__endswith="/{}".format(expected_exec_name))]
     if valid_code_labels:
         print >> sys.stderr, "Pass as first parameter a valid code label."
         print >> sys.stderr, "Valid labels with a {} executable are:".format(expected_exec_name)
@@ -85,7 +85,7 @@ elif computer.hostname.startswith("bellatrix"):
 else:
     raise ValueError("num_cpus_per_machine not specified for the current machine")
 
-parameters = ParameterData({
+parameters = ParameterData(dict={
             'INPUTPH': {
                 'tr2_ph' : 1.0e-8,
                 'epsil' : True,
@@ -101,7 +101,7 @@ parentcalc = QEPwCalc.get_subclass_from_pk(parent_id)
 calc = QEPhCalc(computer=computer)
 
 calc.set_max_wallclock_seconds(30*60) # 30 min
-calc.set_resources(num_machines=1, num_cpus_per_machine=num_cpus_per_machine)
+calc.set_resources({"num_machines": 1, "num_cpus_per_machine": num_cpus_per_machine})
 if queue is not None:
     calc.set_queue_name(queue)
 calc.store()

@@ -284,10 +284,12 @@ class Computer(VerdiCommand):
         import readline
         import inspect
                 
+        from django.core.exceptions import ObjectDoesNotExist
+        
         from aiida.common.exceptions import (
             NotExistent, ValidationError)
         from aiida.djsite.utils import get_automatic_user
-        from aiida.djsite.db.models import AuthInfo
+        from aiida.djsite.db.models import DbAuthInfo
 
         if len(args) != 1:
             print >> sys.stderr, ("after 'computer configure' there should be one "
@@ -305,11 +307,15 @@ class Computer(VerdiCommand):
 
         user = get_automatic_user()
         
-        authinfo, _ = AuthInfo.objects.get_or_create(
-            computer=computer.dbcomputer, 
-            aiidauser=user)
+        try:
+            authinfo = DbAuthInfo.objects.get(
+                dbcomputer=computer.dbcomputer, 
+                aiidauser=user)
         
-        old_authparams = authinfo.get_auth_params()
+            old_authparams = authinfo.get_auth_params()
+        except ObjectDoesNotExist:
+            authinfo = DbAuthInfo(dbcomputer=computer.dbcomputer, aiidauser=user)
+            old_authparams = {}
 
         Transport = computer.get_transport_class()
         

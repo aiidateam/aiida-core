@@ -31,13 +31,13 @@ queue = None
 def get_or_create_machine():
     import json
     from aiida.common.exceptions import NotExistent
-    from aiida.djsite.db.models import AuthInfo
+    from aiida.djsite.db.models import DbAuthInfo
         
 #    # I can delete the computer first
 #### DON'T DO THIS! WILL ALSO DELETE ALL CALCULATIONS THAT WERE USING
 #### THIS COMPUTER!
 #    from aiida.djsite.db.models import DbComputer, DbNode
-#    DbNode.objects.filter(computer__hostname=machine).delete()
+#    DbNode.objects.filter(dbcomputer__hostname=machine).delete()
 #    DbComputer.objects.filter(hostname=machine).delete()
 
     
@@ -55,7 +55,7 @@ def get_or_create_machine():
 
         auth_params = {}
 
-        authinfo, created = AuthInfo.objects.get_or_create(
+        authinfo, created = DbAuthInfo.objects.get_or_create(
             aiidauser=get_automatic_user(),
             computer=computer.dbcomputer, 
             defaults= {'auth_params': json.dumps(auth_params)},
@@ -135,7 +135,7 @@ def get_or_create_machine():
         except KeyError:
             pass       
 
-        authinfo, created = AuthInfo.objects.get_or_create(
+        authinfo, created = DbAuthInfo.objects.get_or_create(
             aiidauser=get_automatic_user(),
             computer=computer.dbcomputer, 
             defaults= {'auth_params': json.dumps(auth_params)},
@@ -145,7 +145,7 @@ def get_or_create_machine():
             print "  (Created authinfo)"
         else:
             print "  (Retrieved authinfo)"
-        print "*** AuthInfo: "
+        print "*** DbAuthInfo: "
         for k,v in json.loads(authinfo.auth_params).iteritems():
             print "{} = {}".format(k, v)
         print ""
@@ -158,14 +158,14 @@ def get_or_create_code(computer):
     code_path = "/usr/bin/less"
     code_version = "5.0.2"
     useful_codes = Code.query(computer=computer.dbcomputer,
-                              attributes__key="_remote_exec_path",
-                              attributes__tval=code_path).filter(
-                                  attributes__key="version", attributes__tval=code_version)
+                              dbattributes__key="_remote_exec_path",
+                              dbattributes__tval=code_path).filter(
+                                  dbattributes__key="version", dbattributes__tval=code_version)
 
     if not(useful_codes):
         print >> sys.stderr, "Creating the code..."
         code = Code(remote_computer_exec=(computer, code_path)).store()
-        code.set_metadata("version", code_version)
+        code.set_extra("version", code_version)
         return code
     
     elif len(useful_codes) == 1:
@@ -182,7 +182,7 @@ code = get_or_create_code(computer)
 SimpleCalc = CalculationFactory('simpleplugins.templatereplacer')
 calc = SimpleCalc(computer=computer)
 calc.set_max_wallclock_seconds(4*60) # 1 min
-calc.set_resources(parallel_env='smp',tot_num_cpus=1)
+calc.set_resources({"parallel_env": 'smp',"tot_num_cpus": 1})
 calc.set_queue_name('serial.q') #No parallel needed. 
 calc.store()
 calc.use_code(code)
@@ -191,7 +191,7 @@ from aiida.orm.data.parameter import ParameterData
 input_dict = {'input_file_template':'Content to be copied: TEST',
               'input_file_name':'aiida.in',
               'output_file_name':'aiida.out'}
-params = ParameterData(input_dict).store()
+params = ParameterData(dict=input_dict).store()
 params.add_link_to(calc,label='template')
 
 calc.submit()

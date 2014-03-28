@@ -86,7 +86,7 @@ that returns the total number of CPUs requested.
      
      # This assumes that the computer is configured to use a scheduler with
      # job resources of type NodeNumberJobResource
-     calc.set_resources(num_machines=4, num_cpus_per_machine=16)
+     calc.set_resources({"num_machines": 4, "num_cpus_per_machine": 16})
 
 
 .. _NodeNumberJobResource:
@@ -123,7 +123,7 @@ or, even better, directly calling the :py:meth:`set_resources() <aiida.orm.calcu
 method of the :py:meth:`Calculation <aiida.orm.calculation.Calculation>` class
 (assuming here that ``calc`` is your calculation object)::
 
-    calc.set_resources(num_machines=4, num_cpus_per_machine=16)
+    calc.set_resources({"num_machines": 4, "num_cpus_per_machine": 16})
 
 .. note:: If you specify all three fields (not recommended), make sure that they satisfy::
 
@@ -171,5 +171,5 @@ Some examples:
   method of the :py:meth:`Calculation <aiida.orm.calculation.Calculation>` class
   (assuming here that ``calc`` is your calculation object)::
 
-    calc.set_resources(parallel_env='mpi', tot_num_cpus=64)
+    calc.set_resources({"parallel_env": 'mpi', "tot_num_cpus": 64})
   

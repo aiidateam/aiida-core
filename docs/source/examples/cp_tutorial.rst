@@ -120,7 +120,7 @@ ParameterData will accept in input a nested dictionary: at the first level the n
 ::
 
   ParameterData = DataFactory('parameter')
-  parameters = ParameterData({
+  parameters = ParameterData(dict={
             'CONTROL': {
                 'calculation': 'cp',
                 'restart_mode': 'from_scratch',
@@ -163,7 +163,7 @@ And create its instance::
 We set the parameters for the scheduler (note that it will depend on the details of your scheduler, this configuration works for PBSpro and Slurm schedulers)::
 
   calc.set_max_wallclock_seconds(30*60) # 30 min
-  calc.set_resources(num_machines=1, num_cpus_per_machine=16)
+  calc.set_resources({"num_machines": 1, "num_cpus_per_machine": 16})
 
 We save the object in the database::
 
@@ -178,7 +178,7 @@ And we impose the input data to the calculation, (and therefore set the links in
 If you have installed a pseudopotential family (see :ref:`my-ref-to-pseudo-tutorial`), then setting the pseudopotentials for this calculation is extremely easy, there's a function for that::
   
   pseudo_family = 'lda_pslib'
-  calc.use_pseudo_from_family(pseudo_family)
+  calc.use_pseudos_from_family(pseudo_family)
 
 Now, everything is ready to be submitted::
 
@@ -232,7 +232,7 @@ This is the script described in the tutorial above. Remember to check the schedu
 	s.append_atom(position=(0.,alat/2.,alat/2.),symbols=['O'])
 	s.store()
 
-	parameters = ParameterData({
+	parameters = ParameterData(dict={
 				'CONTROL': {
 					'calculation': 'cp',
 					'restart_mode': 'from_scratch',
@@ -264,14 +264,14 @@ This is the script described in the tutorial above. Remember to check the schedu
 	QECalc = CalculationFactory('quantumespresso.cp')
 	calc = QECalc(computer=computer)
 	calc.set_max_wallclock_seconds(30*60) # 30 min
-	calc.set_resources(num_machines=1, num_cpus_per_machine=16)
+	calc.set_resources({"num_machines": 1, "num_cpus_per_machine": 16})
 	calc.store()
 
 	calc.use_structure(s)
 	calc.use_code(code)
 	calc.use_parameters(parameters)
 	pseudo_family = 'lda_pslib'
-	calc.use_pseudo_from_family(pseudo_family)
+	calc.use_pseudos_from_family(pseudo_family)
 
 	calc.submit()
 
@@ -367,7 +367,7 @@ Again, remember to check and modify to your needs the au
 	s.append_atom(position=(0.,alat/2.,alat/2.),symbols=['O'])
 	s.store()
 
-	parameters = ParameterData({
+	parameters = ParameterData(dict={
 				'CONTROL': {
 					'calculation': 'cp',
 					'restart_mode': 'from_scratch',
@@ -401,7 +401,7 @@ Again, remember to check and modify to your needs the au
 	QECalc = CalculationFactory('quantumespresso.cp')
 	calc = QECalc(computer=computer)
 	calc.set_max_wallclock_seconds(30*60) # 30 min
-	calc.set_resources(num_machines=1, num_cpus_per_machine=num_cpus_per_machine)
+	calc.set_resources({"num_machines": 1, "num_cpus_per_machine": num_cpus_per_machine})
 	if queue is not None:
 		calc.set_queue_name(queue)
 	calc.store()
@@ -414,7 +414,7 @@ Again, remember to check and modify to your needs the au
 
 	if auto_pseudos:
 		try:
-			calc.use_pseudo_from_family(pseudo_family)
+			calc.use_pseudos_from_family(pseudo_family)
 			print "Pseudos successfully loaded from family {}".format(pseudo_family)
 		except NotExistent:
 			print ("Pseudo or pseudo family not found. You may want to load the "

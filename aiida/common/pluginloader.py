@@ -5,7 +5,8 @@ from aiida.common.exceptions import MissingPluginError
 
 logger = aiida.common.aiidalogger.getChild('pluginloader')
 
-def _existing_plugins_with_module(base_class, plugins_module_path, pkgname, basename, max_depth):
+def _existing_plugins_with_module(base_class, plugins_module_path,
+                                  pkgname, basename, max_depth):
     """
         Recursive function to return the existing plugins within a given module.
         
@@ -115,7 +116,11 @@ def existing_plugins(base_class, plugins_module_name, max_depth=5):
         raise MissingPluginError("Unable to load the plugin module {}".format(
             plugins_module_name))
 
-    return _existing_plugins_with_module(base_class,pluginmod.__path__[0],plugins_module_name,"",max_depth)
+    return _existing_plugins_with_module(base_class,
+                                         pluginmod.__path__[0],
+                                         plugins_module_name,
+                                         "",
+                                         max_depth)
 
 def load_plugin(base_class, plugins_module, plugin_type):
     """

@@ -86,7 +86,6 @@ class DbComputerResource(ModelResource):
             'hostname': ALL,
             'scheduler_type': ALL,
             'transport_type': ALL,
-            'workdir': ALL,
             'enabled': ALL,
             }
         ordering = ['id', 'name', 'transport_type', 'scheduler_type', 'enabled']

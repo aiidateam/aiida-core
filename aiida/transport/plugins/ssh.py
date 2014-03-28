@@ -292,7 +292,7 @@ class SshTransport(aiida.transport.Transport):
                              "the transport: {}".format(
                     ",".join(str(k) for k in kwargs)))
 
-    def __enter__(self):
+    def open(self):
         """
         Open a SSHClient to the machine possibly using the parameters given
         in the __init__. 
@@ -321,7 +321,7 @@ class SshTransport(aiida.transport.Transport):
         
         return self
         
-    def __exit__(self, type, value, traceback):
+    def close(self):
         """
         Close the SFTP channel, and the SSHClient.
         

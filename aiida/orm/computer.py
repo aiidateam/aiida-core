@@ -439,7 +439,7 @@ class Computer(object):
 
     def _set_mpirun_command_string(self,string):
         """
-        Set the workdir starting from a string.
+        Set the mpirun command string (from a string to a list).
         """
         converted_cmd = str(string).strip().split(" ")
         if converted_cmd == ['']:
@@ -640,11 +640,13 @@ class Computer(object):
 #            raise ModificationNotAllowed("Cannot set a property after having stored the entry")
 
     def get_workdir(self):
-        return self.dbcomputer.workdir
+        return self._get_metadata().get('workdir', '')
 
     def set_workdir(self,val):
         #if self.to_be_stored:
-        self.dbcomputer.workdir = val
+        metadata = self._get_metadata()
+        metadata['workdir'] = val
+        self._set_metadata(metadata)
         #else:
         #    raise ModificationNotAllowed("Cannot set a property after having stored the entry")
 

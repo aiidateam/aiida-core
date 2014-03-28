@@ -191,7 +191,7 @@ class PwParser(Parser):
                 pass
         
         # convert the dictionary into an AiiDA object
-        output_params = ParameterData(out_dict)
+        output_params = ParameterData(dict=out_dict)
         # save it into db
         output_params.store()
         self._calc._add_link_to(output_params, label=self.get_linkname_outparams() )

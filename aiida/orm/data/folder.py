@@ -9,15 +9,6 @@ class FolderData(Data):
 
     No special attributes are set.
     """
-    def __init__(self,**kwargs):
-        super(FolderData,self).__init__(**kwargs)
-
-        uuid = kwargs.pop('uuid', None)
-        if uuid is not None:
-            # TODO: check that there are no further args;
-            # do the same in other classes
-            return
-
     def replace_with_folder(self,folder,overwrite=True):
         """
         Replace the data with another folder, always copying and not moving the

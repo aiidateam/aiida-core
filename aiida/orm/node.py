@@ -15,6 +15,19 @@ _section_name = 'node'
 # added with add_path
 _path_subfolder_name = 'path'
 
+def from_type_to_pluginclassname(typestr):
+    """
+    Return the string to pass to the load_plugin function, starting from
+    the 'type' field of a Node.
+    """
+    # Fix for base class
+    if typestr == "":
+        typestr = "node.Node."
+    if not typestr.endswith("."):
+        raise DbContentError("The type name '{}' is not valid!".format(
+            typestr))
+    return typestr[:-1] # Strip final dot
+
 class Node(object):
     """
     Base class to map a node in the DB + its permanent repository counterpart.
@@ -1022,9 +1035,9 @@ class Node(object):
     def pk(self):
         """
         
-        :return: a string with the principle key
+        :return: a the principal key (the ID)
         """
-        return unicode(self.dbnode.pk)
+        return self.dbnode.pk
 
 
     @property

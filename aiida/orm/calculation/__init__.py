@@ -467,6 +467,7 @@ class Calculation(Node):
         from aiida.djsite.utils import get_automatic_user, get_last_daemon_run
         from aiida.common.utils import str_timedelta
         from aiida.djsite.settings.settings import djcelery_tasks
+        from aiida.orm.node import from_type_to_pluginclassname
         
         now = timezone.now()
         
@@ -485,6 +486,19 @@ class Calculation(Node):
                 q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
 
         calc_list = cls.query(q_object).distinct().order_by('ctime')
+        
+        from aiida.djsite.db.models import DbAttribute
+        scheduler_states = dict(DbAttribute.objects.filter(dbnode__in=calc_list,
+                                                   key='scheduler_state').values_list(
+            'dbnode__pk', 'tval'))
+        states = dict(DbAttribute.objects.filter(dbnode__in=calc_list,
+                                                   key='state').values_list(
+            'dbnode__pk', 'tval'))
+        scheduler_lastcheck = dict(DbAttribute.objects.filter(dbnode__in=calc_list,
+                                                   key='scheduler_lastchecktime').values_list(
+            'dbnode__pk', 'dval'))
+        
+        calc_list_data = calc_list.values('pk', 'dbcomputer__name', 'ctime', 'type')
         
         try:
             last_daemon_check = get_last_daemon_run(
@@ -512,19 +526,19 @@ class Calculation(Node):
             res_str_list.append(fmt_string.format(
                     'Pk','State','Creation','Time',
                     'Scheduler state','Computer','Type'))
-            for calc in calc_list:                          
+            for calcdata in calc_list_data:
                 remote_state = "None"
                 
-                calc_state = calc.get_state()
-                remote_computer = calc.get_computer().name
+                calc_state = states[calcdata['pk']]
+                remote_computer = calcdata['dbcomputer__name']
                 try:
-                    sched_state = calc.get_scheduler_state()
+                    sched_state = scheduler_states.get(calcdata['pk'], None)
                     if sched_state is None:
                         remote_state = "(unknown)"
                     else:
                         remote_state = '{}'.format(sched_state)
                         if calc_state == calc_states.WITHSCHEDULER:
-                            last_check = calc.get_scheduler_lastchecktime()
+                            last_check = scheduler_lastcheck.get(calcdata['pk'], None)
                             if last_check is not None:
                                 when_string = " {} ago".format(
                                     str_timedelta(now-last_check, short=True,
@@ -538,14 +552,15 @@ class Calculation(Node):
                 except ValueError:
                     raise
                 
-                res_str_list.append(fmt_string.format( calc.pk,
-                               calc.get_state(),
-                               calc.ctime.isoformat().split('T')[0],
-                               calc.ctime.isoformat().split('T')[1].split('.')[0],
-                               remote_state,
-                               remote_computer,
-                               str(calc.__class__).split('.')[-1].strip("'>"),
-                            ))
+                res_str_list.append(fmt_string.format( calcdata['pk'],
+                    states[calcdata['pk']],
+                    calcdata['ctime'].isoformat().split('T')[0],
+                    calcdata['ctime'].isoformat().split('T')[1].split('.')[0],
+                    remote_state,
+                    remote_computer,
+                    str(from_type_to_pluginclassname(
+                        calcdata['type']).split('.')[-1]),
+                    ))
             return "\n".join(res_str_list)
 
     @classmethod
@@ -1000,8 +1015,15 @@ class Calculation(Node):
                 
             for (remote_machine, remote_abs_path, 
                   dest_rel_path) in remote_copy_list:
-                with open(os.path.join(
-                    subfolder.abspath, dest_rel_path),'w') as f:
+                localpath = os.path.join(
+                    subfolder.abspath, dest_rel_path)
+                # If it ends with a separator, it is a folder
+                if localpath.endswith(os.path.sep):
+                    localpath = os.path.join(localpath, 'PLACEHOLDER')
+                dirpart = os.path.split(localpath)[0]
+                if not(os.path.isdir(dirpart)):
+                    os.makedirs(dirpart)
+                with open(localpath,'w') as f:
                     f.write("PLACEHOLDER FOR REMOTELY COPIED "
                             "FILE FROM {}:{}".format(remote_machine,
                                                      remote_abs_path))

@@ -38,6 +38,7 @@ class Devel(VerdiCommand):
 
         self.valid_subcommands = {
             'tests': (self.run_tests, self.complete_tests),
+            'query': (self.run_query, self.complete_query),
             }
         
         # The content of the dict is:
@@ -75,6 +76,10 @@ class Devel(VerdiCommand):
                 print ""
                 return
             print complete_function(subargs_idx - 1, subargs[1:])
+
+    def complete_query(self, subargs_idx, subargs):
+        # For the moment, no completion
+        print ""
 
     def no_subcommand(self,*args):
         print >> sys.stderr, ("You have to pass a valid subcommand to "
@@ -198,3 +203,283 @@ class Devel(VerdiCommand):
 
         return " ".join(sorted(remaining_tests))
 
+
+    def get_querydict_from_keyvalue(self, key, separator_filter, value):
+        from aiida.orm import (Node, Code, Data, Calculation,
+                               DataFactory, CalculationFactory)
+        from aiida.common.exceptions import MissingPluginError
+        import re
+        
+        item, sep, subproperty = key.partition('.')
+        
+        the_type, realvalue = re.match("^(\([^\)]+\))?(.*)$", value).groups()
+        value = realvalue
+        
+        if the_type is None:
+            # default: string
+            the_type = "(t)"
+
+        if the_type == '(t)':
+            cast_value = value
+            attr_field = "tval"
+        elif the_type == '(i)':
+            cast_value = int(value)
+            attr_field = "ival"
+        elif the_type == '(f)':
+            cast_value = float(value)
+            attr_field = "fval"
+        else:
+            raise ValueError("For the moment only (t), (i) and (f) fields accepted. Got '{}' instead".format(the_type))
+        
+        do_recursive = False
+        
+        if separator_filter:
+            sep_filter_string = "__{}".format(separator_filter)
+        else:
+            sep_filter_string = ""
+        
+        if item == 'i': # input
+            keystring = "inputs"
+            do_recursive = True
+        elif item == 'o': # input
+            keystring = "outputs"
+            do_recursive = True
+        elif item == 'p': # input
+            keystring = "parents"
+            do_recursive = True
+        elif item == 'c': # input
+            keystring = "children"
+            do_recursive = True
+        elif item == 'a': # input
+            keystring = "dbattributes"
+            if '*' in subproperty:
+                if sep_filter_string:
+                    raise ValueError("Only = allowed if * patterns in the attributes are used")
+                regex_key = re.escape(subproperty)
+                # I look for non-separators, i.e. the * only covers
+                # at a single level, and does not go deeper in levels
+                regex_key = regex_key.replace(r'\*', r'[^\.]+')
+                # Match the full string
+                return ({keystring + "__key__regex": r'^{}$'.format(regex_key),
+                        keystring + "__{}".format(attr_field): cast_value},
+                        [keystring + "__key", keystring + 
+                         "__{}".format(attr_field)]
+                        )
+            else:
+                # Standard query
+                return ({keystring + "__key": subproperty,
+                        keystring + "__{}".format(attr_field) 
+                        + sep_filter_string: cast_value},
+                        [keystring + "__key", keystring
+                         + "__{}".format(attr_field)]
+                        )
+
+        elif item == 'e': # input
+            keystring = "dbextras"
+
+            if '*' in subproperty:
+                import re
+                if sep_filter_string:
+                    raise ValueError("Only = allowed if * patterns in the extras are used")
+                regex_key = re.escape(subproperty)
+                # I look for non-separators, i.e. the * only covers
+                # at a single level, and does not go deeper in levels
+                regex_key = regex_key.replace(r'\*', r'[^\.]+')
+                return ({keystring + "__key__regex": r'^{}$'.format(regex_key),
+                         keystring + "__ival": value},
+                        [keystring + "__key", keystring + "__ival"],
+                        )
+
+            else:
+                # Standard query
+                return ({keystring + "__key": subproperty,
+                         keystring + "__ival" + sep_filter_string: value},
+                        [keystring + "__key", keystring + "__ival"]
+                        )
+
+
+        elif item == 't' or item == 'type':
+            if sep_filter_string:
+                raise ValueError("Only = allowed for type")
+            if subproperty:
+                raise ValueError("Cannot pass subproperties to type")
+            
+            if value == 'code':
+                DataClass = Code
+            elif value == 'node':
+                return ({}, [])
+            elif value == 'calc' or value == 'calculation':
+                DataClass = Calculation
+            elif value == 'data':
+                DataClass = Data
+            else:
+                try:
+                    DataClass = DataFactory(value)
+                except MissingPluginError:
+                    try:
+                        DataClass = CalculationFactory(value)
+                    except MissingPluginError:
+                        raise ValueError("Unknown node type '{}'".format(value))
+                    
+            # Startswith so to get also subclasses
+            return ({"type__startswith": DataClass._query_type_string},
+                    ["type"])
+                    
+        else:
+            # this is a 'direct' attribute: just create the query
+            return ({key+sep_filter_string: value}, # all, including the dots
+                    [key])
+
+        if do_recursive:
+            if sep:
+                tempdict, templist = self.get_querydict_from_keyvalue(
+                    subproperty, 
+                    separator_filter,
+                    value)
+                # In this case the filter is added by the recursive function
+                return ({"{}__{}".format(keystring, k): v 
+                        for k,v in tempdict.iteritems()},
+                        ["{}__{}".format(keystring, k) for k in templist] + 
+                        ["{}__pk".format(keystring),
+                         "{}__type".format(keystring),
+                         "{}__label".format(keystring)],
+                        )
+            else:
+                return ({keystring+sep_filter_string: value},
+                        [keystring] + 
+                        ["{}__pk".format(keystring),
+                         "{}__type".format(keystring),
+                         "{}__label".format(keystring)],
+                        )
+
+        raise NotImplementedError("Should not be here...")
+
+
+    # To be put in the right order! For instance,
+    # You want to put ~= before =, because this has
+    # to be checked first
+    # First element of each tuple: string used as separator
+    # Second element of each tuple: django filter to apply
+    separators = [
+        ("~=", "iexact"),
+        (">=", "gte"),
+        ("<=", "lte"),
+        (">", "gt"),
+        ("<", "lt"),
+        ("=", ""),
+        ]
+    # TO ADD: startswith, istartswith, endswith, iendswith, ymdHMS, isnull, in, contains, 
+
+    # TO ADD: support for other types
+    
+
+    def parse_arg(self, arg):
+#        pieces = arg.split("=")
+#        if len(pieces) != 2:
+#            raise ValueError("Each option must be in the key=value format")
+#        key = pieces[0]
+#        value = pieces[1]
+        
+        #import re
+        #sep_regex = "|".join([re.escape(k) for k in self.separators.keys()])        
+        #regex = re.match(r'(.+)(' + sep_regex + r')(.+)',arg)
+#        key, sep, value = regex.groups()
+        
+        for s, django_filter in self.separators:  
+            key, sep, value = arg.partition(s)
+            if sep:
+                filter_to_apply = django_filter
+                break
+        if not sep:
+            raise ValueError("No separator provided!")
+                    
+        querydict = self.get_querydict_from_keyvalue(key,
+                                                     filter_to_apply,
+                                                     value)
+        
+        return querydict
+        
+        
+    def run_query(self, *args):
+        load_django()
+        from django.db.models import Q
+        from aiida.djsite.db.models import DbNode
+                
+#        django_query = Q()
+        django_query = DbNode.objects.filter()
+        
+        try:
+            # NOT SURE THIS IS THE RIGHT WAY OF MANAGING NEGATION FOR 
+            # ATTRIBUTES!!
+            queries = [(self.parse_arg(arg[1:] if arg.startswith('!') else arg), arg.startswith('!')) for arg in args]
+        except ValueError as e:
+            print "ERROR in format!"
+            print e.message
+            sys.exit(1)
+        
+        all_values = ['pk']
+        
+        print "*** DEBUG: QUERY ***" + "*"*52
+        for (q,v), n in queries:
+            print "* {}{}".format("[NEG]" if n else "", q)
+        print "*" * 72
+        
+        for (query,values), negate in queries:
+            
+            all_values += list(values)
+            if negate:
+                if len(query) == 1:                
+#                    django_query = django_query & ~Q(**query)
+                    django_query = django_query.filter(~Q(**query))
+                elif len(query) == 2:
+                    
+                    raise NotImplementedError("The current implementation does not work for negation of attributes. See comments in source code.")
+
+                    ## NOT THE RIGHT WAY TO MANAGE NEGATIONS!! SEE AT THE
+                    ## END OF THE FILE
+                    temp = [(k, v) for k,v in query.iteritems()]
+                    if temp[0][0].endswith("__key"):
+#                        django_query = django_query & (
+#                            Q(~Q(**{temp[1][0]: temp[1][1]}), 
+#                               **{temp[0][0]: temp[0][1]}) 
+                        django_query = django_query.filter(~Q(**{temp[1][0]: temp[1][1]}),
+                                             **{temp[0][0]: temp[0][1]})
+                    elif temp[1][0].endswith("__key"):
+                        django_query = django_query.filter(~Q(**{temp[0][0]: temp[0][1]}),
+                                             **{temp[1][0]: temp[1][1]})
+                    else:
+                        raise NotImplementedError("Should not be here... no key search?")
+                else:
+                    raise NotImplementedError("Should not be here...")
+            else:
+                django_query = django_query.filter(Q(**query))
+        
+        res = django_query.distinct().order_by('pk')
+        res = res.values_list(*all_values)
+        print res.query
+        print "{} matching nodes found ({} removing duplicates).".format(len(res),
+            len(set([_[0] for _ in res])))
+#        for node in res:
+#            print "* {}".format(str(node))
+#            print "* {} ({}){}".format(
+#                node.pk, node.get_aiida_class().__class__.__name__, 
+#                " [{}]".format(node.label) if node.label else "")  
+        for node in res:
+            print "* {}".format(node[0])
+            for p, v in zip(all_values[1:], node[1:]):
+                print "  `-> {} = {}".format(p, v)
+        
+
+
+
+#In [11]: attr_res = DbAttribute.objects.filter(Q(key='cell.atoms'), ~Q(ival__gt=7))
+#
+#In [12]: dbres = DbNode.objects.filter(outputs__dbattributes__in=attr_res).distinct()
+#
+#In [13]: print dbres.query
+#SELECT DISTINCT "db_dbnode"."id", "db_dbnode"."uuid", "db_dbnode"."type", "db_dbnode"."label", "db_dbnode"."description", "db_dbnode"."ctime", "db_dbnode"."mtime", "db_dbnode"."user_id", "db_dbnode"."dbcomputer_id", "db_dbnode"."nodeversion", "db_dbnode"."lastsyncedversion" FROM "db_dbnode" INNER JOIN "db_dblink" ON ("db_dbnode"."id" = "db_dblink"."input_id") INNER JOIN "db_dbnode" T3 ON ("db_dblink"."output_id" = T3."id") INNER JOIN "db_dbattribute" ON (T3."id" = "db_dbattribute"."dbnode_id") WHERE "db_dbattribute"."id" IN (SELECT U0."id" FROM "db_dbattribute" U0 WHERE (U0."key" = cell.atoms  AND NOT ((U0."ival" > 7  AND U0."ival" IS NOT NULL))))
+
+## OR, if doing
+#dbres = DbNode.objects.filter(dbattributes__in=attr_res).distinct()
+#In [18]: print dbres.query
+#SELECT DISTINCT "db_dbnode"."id", "db_dbnode"."uuid", "db_dbnode"."type", "db_dbnode"."label", "db_dbnode"."description", "db_dbnode"."ctime", "db_dbnode"."mtime", "db_dbnode"."user_id", "db_dbnode"."dbcomputer_id", "db_dbnode"."nodeversion", "db_dbnode"."lastsyncedversion" FROM "db_dbnode" INNER JOIN "db_dbattribute" ON ("db_dbnode"."id" = "db_dbattribute"."dbnode_id") WHERE "db_dbattribute"."id" IN (SELECT U0."id" FROM "db_dbattribute" U0 WHERE (U0."key" = cell.atoms  AND NOT ((U0."ival" > 7  AND U0."ival" IS NOT NULL))))

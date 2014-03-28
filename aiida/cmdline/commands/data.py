@@ -203,11 +203,11 @@ class _Upf(VerdiCommand):
                 num_pseudos = pseudos.count()
 
                 pseudos_list = pseudos.filter(
-                                      dbattributes__key="_element").values_list(
+                                      dbattributes__key="element").values_list(
                                       'dbattributes__tval', flat=True)
                 
                 new_ps = pseudos.filter(
-                                dbattributes__key="_element").values_list(
+                                dbattributes__key="element").values_list(
                                 'dbattributes__tval', flat=True)
                 
                 if num_pseudos != len(set(pseudos_list)):
@@ -377,7 +377,7 @@ class _Structure(VerdiCommand):
         """
         prefix = '_plugin_'
         method_names = dir(self) # get list of class methods names
-        valid_formats = [ i.lstrip(prefix) for i in method_names 
+        valid_formats = [ i[len(prefix):] for i in method_names 
                          if i.startswith(prefix)] # filter them
         
         return {k: getattr(self,prefix + k) for k in valid_formats}

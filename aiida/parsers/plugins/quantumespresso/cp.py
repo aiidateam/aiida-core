@@ -259,7 +259,7 @@ class CpParser(Parser):
         self._set_linkname_outtrajectory(self._outtraj_name)
         
         # convert the dictionary into an AiiDA object
-        output_params = ParameterData(out_dict)
+        output_params = ParameterData(dict=out_dict)
         
         # save it into db
         output_params.store()

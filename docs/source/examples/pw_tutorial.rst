@@ -192,7 +192,7 @@ Note also that numbers and booleans are written in Python, i.e. not ``.false.`` 
 
   ParameterData = DataFactory('parameter')
 
-  parameters = ParameterData({
+  parameters = ParameterData(dict={
             'CONTROL': {
                 'calculation': 'scf',
                 'restart_mode': 'from_scratch',
@@ -209,7 +209,7 @@ Note also that numbers and booleans are written in Python, i.e. not ``.false.`` 
 ( The experienced QE user will have noticed also that a couple of variables are missing: the prefix, the pseudo directory and the scratch directory are reserved to the plugin which will use default values: in case you want to use the scratch of a previous calculation, it must be specified)
 The k-points have to be saved in a different ParameterData, analogously as before::
                 
-  kpoints = ParameterData({
+  kpoints = ParameterData(dict={
                 'type': 'automatic',
                 'points': [4, 4, 4, 0, 0, 0],
                 }).store()
@@ -249,7 +249,7 @@ For the complete scheduler documentation, see :ref:`my-reference-to-scheduler`
   queue = None
   calc.set_max_wallclock_seconds(30*60) # 30 min
   num_cpus_per_machine = 48
-  calc.set_resources(num_machines=1, num_cpus_per_machine=num_cpus_per_machine)
+  calc.set_resources({"num_machines": 1, "num_cpus_per_machine": num_cpus_per_machine})
   queue = None
   if queue is not None:
       calc.set_queue_name(queue)
@@ -315,7 +315,7 @@ In this example, we loaded the files directly from the hard disk.
 For a more practical use, it is convenient to use the pseudopotential families. Its use is documented in :ref:`my-ref-to-pseudo-tutorial`.
 If you got one installed, you can simply tell the calculation to use the pseudopotential family, then AiiDA will take care of attaching the proper pseudopotential to the element::
 
-  calc.use_pseudo_from_family('my_pseudo_family')
+  calc.use_pseudos_from_family('my_pseudo_family')
 
 
 
@@ -400,7 +400,7 @@ Compact script
     s.append_atom(position=(0.,alat/2.,alat/2.),symbols='O')
     s.store()
 
-    parameters = ParameterData({
+    parameters = ParameterData(dict={
 		'CONTROL': {
 		    'calculation': 'scf',
 		    'restart_mode': 'from_scratch',
@@ -414,7 +414,7 @@ Compact script
 		    'conv_thr': 1.e-6,
 		    }}).store()
 
-    kpoints = ParameterData({
+    kpoints = ParameterData(dict={
 		    'type': 'automatic',
 		    'points': [4, 4, 4, 0, 0, 0],
 		    }).store()
@@ -422,13 +422,13 @@ Compact script
     QECalc = CalculationFactory('quantumespresso.pw')
     calc = QECalc(computer=computer)
     calc.set_max_wallclock_seconds(30*60) # 30 min
-    calc.set_resources(num_machines=1, num_cpus_per_machine=16)
+    calc.set_resources({"num_machines": 1, "num_cpus_per_machine": 16})
     calc.store()
 
     calc.use_structure(s)
     calc.use_code(code)
     calc.use_parameters(parameters)
-    calc.use_pseudo_from_family(pseudo_family)
+    calc.use_pseudos_from_family(pseudo_family)
     calc.use_kpoints(kpoints)
 
     calc.submit()
@@ -539,7 +539,7 @@ Exception tolerant code
     s.append_atom(position=(0.,alat/2.,alat/2.),symbols='O')
     s.store()
 
-    parameters = ParameterData({
+    parameters = ParameterData(dict={
 		'CONTROL': {
 		    'calculation': 'scf',
 		    'restart_mode': 'from_scratch',
@@ -553,7 +553,7 @@ Exception tolerant code
 		    'conv_thr': 1.e-6,
 		    }}).store()
 
-    kpoints = ParameterData({
+    kpoints = ParameterData(dict={
 		    'type': 'automatic',
 		    'points': [4, 4, 4, 0, 0, 0],
 		    }).store()
@@ -561,7 +561,7 @@ Exception tolerant code
     QECalc = CalculationFactory('quantumespresso.pw')
     calc = QECalc(computer=computer)
     calc.set_max_wallclock_seconds(30*60) # 30 min
-    calc.set_resources(num_machines=1, num_cpus_per_machine=num_cpus_per_machine)
+    calc.set_resources({"num_machines": 1, "num_cpus_per_machine": num_cpus_per_machine})
     if queue is not None:
 	calc.set_queue_name(queue)
     calc.store()
@@ -574,7 +574,7 @@ Exception tolerant code
 
     if auto_pseudos:
 	try:
-	    calc.use_pseudo_from_family(pseudo_family)
+	    calc.use_pseudos_from_family(pseudo_family)
 	    print "Pseudos successfully loaded from family {}".format(pseudo_family)
 	except NotExistent:
 	    print ("Pseudo or pseudo family not found. You may want to load the "

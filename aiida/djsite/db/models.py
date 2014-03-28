@@ -102,27 +102,26 @@ class DbNode(m.Model):
     objects = m.Manager()
     # Return aiida Node instances or their subclasses instead of DbNode instances
     aiidaobjects = AiidaObjectManager()
+            
     
     def get_aiida_class(self):
         """
         Return the corresponding aiida instance of class aiida.orm.Node or a
         appropriate subclass.
         """
-        from aiida.orm import Node
+        from aiida.orm.node import Node, from_type_to_pluginclassname
         from aiida.common.pluginloader import load_plugin
         from aiida.common import aiidalogger
 
-        thistype = self.type
-        # Fix for base class
-        if thistype == "":
-            thistype = "node.Node."
-        if not thistype.endswith("."):
-            raise DbContentError("The type name of node with pk={} is "
-                                "not valid: '{}'".format(self.pk, self.type))
-        thistype = thistype[:-1] # Strip final dot
 
         try:
-            PluginClass = load_plugin(Node, 'aiida.orm', thistype)
+            pluginclassname = from_type_to_pluginclassname(self.type)
+        except DbContentError:
+            raise DbContentError("The type name of node with pk={} is "
+                                "not valid: '{}'".format(self.pk, self.type))
+
+        try:
+            PluginClass = load_plugin(Node, 'aiida.orm', pluginclassname)
         except MissingPluginError:
             aiidalogger.error("Unable to find plugin for type '{}' (node={}), "
                 "will use base Node class".format(self.type,self.pk))

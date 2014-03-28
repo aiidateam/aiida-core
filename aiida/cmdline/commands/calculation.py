@@ -125,8 +125,12 @@ class Calculation(VerdiCommand):
                 print "*** {}: Not a valid calculation".format(calc_pk)
                 continue
             print "*** {} [{}]".format(calc_pk, calc.label)
+            print "##### INPUTS:"
             for k, v in calc.get_inputdata_dict().iteritems():
-                print k, v.pk
+                print k, v.pk, v.__class__.__name__
+            print "##### OUTPUTS:"
+            for k, v in calc.get_outputs(also_labels=True):
+                print k, v.pk, v.__class__.__name__
     
     def calculation_kill(self, *args):
         """

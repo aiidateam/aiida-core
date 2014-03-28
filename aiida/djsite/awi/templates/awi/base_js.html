@@ -4,7 +4,9 @@
 	/* we need to be able to access those urls from external scripts */
 	var api_urls = {
 		computers: '{% url "api_dispatch_list" api_name="v1" resource_name="dbcomputer" %}',
-		authinfo: '{% url "api_dispatch_list" api_name="v1" resource_name="dbauthinfo" %}'
+		calculations: '{% url "api_dispatch_list" api_name="v1" resource_name="dbnode" %}',
+		authinfo: '{% url "api_dispatch_list" api_name="v1" resource_name="dbauthinfo" %}',
+		user: '{% url "api_dispatch_detail" api_name="v1" resource_name="user" pk=0 %}'
 	};
 	var modules_urls = {
 		computers : {
@@ -12,6 +14,11 @@
 			detail: '{% url "awi:computers_detail" computer_id="0" %}',
 			apidetail: '{% url "api_dispatch_detail" api_name="v1" resource_name="dbcomputer" pk=0 %}',
 			rename: '{% url "awi:computers_rename" computer_id="0" %}'
+		},
+		calculations : {
+			listing: '{% url "api_dispatch_list" api_name="v1" resource_name="dbnode" %}?type__startswith=calculation.',
+			detail: '{% url "awi:calculations_detail" calculation_id="0" %}',
+			apidetail: '{% url "api_dispatch_detail" api_name="v1" resource_name="dbnode" pk=0 %}'
 		},
 		filters : {
 			computers: {
@@ -22,6 +29,15 @@
 				create: '{% url "awi:filters_create" module="computers" field="0" %}',
 				value: '{% url "awi:filters_value" module="computers" field="0" %}',
 				schema: '{% url "api_get_schema" api_name="v1" resource_name="dbcomputer" %}'
+			},
+			calculations: {
+				get: '{% url "awi:filters_get" module="calculations" %}',
+				set: '{% url "awi:filters_set" module="calculations" field="0" %}',
+				remove: '{% url "awi:filters_remove" module="calculations" field="0" %}',
+				querystring: '{% url "awi:filters_querystring" module="calculations" %}',
+				create: '{% url "awi:filters_create" module="calculations" field="0" %}',
+				value: '{% url "awi:filters_value" module="calculations" field="0" %}',
+				schema: '{% url "api_get_schema" api_name="v1" resource_name="dbnode" %}'
 			}
 		}
 	};

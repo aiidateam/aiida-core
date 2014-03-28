@@ -104,6 +104,9 @@ def parse_raw_output(out_file, input_dict, parser_opts=None, xml_file=None, dir_
         if not finished_run: # I try to parse it as much as possible
             parser_info['parser_warnings'].append('Error while parsing the output file')
             pass
+            out_data = {}
+            trajectory_data = {}
+            critical_messages = []
         else: # if it was finished and I got error, it's a mistake of the parser
             raise QEOutputParsingError('Error while parsing QE output')
         
@@ -120,7 +123,10 @@ def parse_raw_output(out_file, input_dict, parser_opts=None, xml_file=None, dir_
             trajectory_data.pop(x[0])
         # note: if an array is empty, there will be KeyError
     for key in ['k_points','k_points_weights']:
-        trajectory_data[key] = xml_data.pop(key)
+        try:
+            trajectory_data[key] = xml_data.pop(key)
+        except KeyError:
+            pass
     # As the k points are an array that is rather large, and again it's not something I'm going to parse likely
     # since it's an info mainly contained in the input file, I move it to the trajectory data
 
@@ -1012,7 +1018,7 @@ def parse_pw_text_output(data, xml_data=None, structure_data=None):
     all_warnings = dict(critical_warnings.items() + minor_warnings.items())
 
     # Find some useful quantities.
-    if xml_data is None and structure_data is None:
+    if not xml_data and not structure_data:
         try:
             for line in data.split('\n'):
                 if 'lattice parameter (alat)' in line:

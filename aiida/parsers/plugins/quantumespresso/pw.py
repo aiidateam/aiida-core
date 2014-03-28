@@ -104,7 +104,7 @@ class PwParser(Parser):
                     if i[0]==self._calc.get_linkname_settings()] 
         # assume there is only one, otherwise calc already should have complained
         try:
-            parser_opts = settings_list[0][self._setting_key]
+            parser_opts = settings_list[0].get_dict()[self._setting_key]
         except (KeyError,IndexError): # no parser_opts or no settings
             parser_opts = {}
 
@@ -168,27 +168,30 @@ class PwParser(Parser):
         except KeyError:
             all_symmetries = False
         if not all_symmetries:
-            if out_dict['symmetries']:
-                old_symmetries = out_dict['symmetries']
-                new_symmetries = []
-                for this_sym in old_symmetries:
-                    name = this_sym['name']
-                    index = None
-                    for i,this in enumerate(self._possible_symmetries):
-                        if name in this['name']:
-                            index = i
-                    if index is None:
-                        raise QEOutputParsingError("Symmetry name not found.")
-                    new_dict = {}
-                    # note: here I lose the information about equivalent ions and fractional_translation
-                    # they will be present with all_symmetries=True
-                    new_dict['t_rev'] = this_sym['t_rev']
-                    new_dict['symmetry_number'] = index
-                    new_symmetries.append(new_dict)
-                out_dict['symmetries'] = new_symmetries # and overwrite the old one
+            try:
+                if 'symmetries' in out_dict.keys():
+                    old_symmetries = out_dict['symmetries']
+                    new_symmetries = []
+                    for this_sym in old_symmetries:
+                        name = this_sym['name']
+                        index = None
+                        for i,this in enumerate(self._possible_symmetries):
+                            if name in this['name']:
+                                index = i
+                        if index is None:
+                            raise QEOutputParsingError("Symmetry name not found.")
+                        new_dict = {}
+                        # note: here I lose the information about equivalent ions and fractional_translation
+                        # they will be present with all_symmetries=True
+                        new_dict['t_rev'] = this_sym['t_rev']
+                        new_dict['symmetry_number'] = index
+                        new_symmetries.append(new_dict)
+                    out_dict['symmetries'] = new_symmetries # and overwrite the old one
+            except KeyError: # no symmetries were parsed (failed case, likely)
+                pass
         
         # convert the dictionary into an AiiDA object
-        output_params = ParameterData(out_dict)
+        output_params = ParameterData(dict=out_dict)
         # save it into db
         output_params.store()
         self._calc._add_link_to(output_params, label=self.get_linkname_outparams() )
@@ -205,11 +208,13 @@ class PwParser(Parser):
         # I eventually save the new structure. structure_data is unnecessary after this
         in_struc = self._calc.get_inputs_dict()['structure']
         type_calc = input_dict['CONTROL']['calculation']
+                
         if type_calc=='relax' or type_calc=='vc-relax':
-            self._set_linkname_outstructure(self._outstruc_name)
-            struc = convert_qe2aiida_structure(structure_data,input_structure=in_struc)
-            struc.store()
-            self._calc._add_link_to(struc, label=self.get_linkname_outstructure() )
+            if 'cell' in structure_data.keys():
+                self._set_linkname_outstructure(self._outstruc_name)
+                struc = convert_qe2aiida_structure(structure_data,input_structure=in_struc)
+                struc.store()
+                self._calc._add_link_to(struc, label=self.get_linkname_outstructure() )
         
         return successful
 

@@ -38,7 +38,7 @@ class NamelistsCalculation(Calculation):
         """
         return ""
     
-    def _prepare_for_submission(self,tempfolder):        
+    def _prepare_for_submission(self,tempfolder, inputdict = None):        
         """
         This is the routine to be called when you want to create
         the input files and related stuff with a plugin.
@@ -51,7 +51,8 @@ class NamelistsCalculation(Calculation):
         remote_copy_list = []
         
         # The code is not here, only the data        
-        inputdict = self.get_inputdata_dict()
+        if inputdict is None:
+            inputdict = self.get_inputdata_dict()
 
         try:
             parameters = inputdict.pop(self.get_linkname_parameters())

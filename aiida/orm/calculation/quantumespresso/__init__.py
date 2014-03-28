@@ -424,9 +424,15 @@ class BasePwCpInputGenerator(object):
         
         
         if settings_dict:
-            raise InputValidationError("The following keys have been found in "
-                "the settings input node, but were not understood: {}".format(
-                ",".join(settings_dict.keys())))
+            try:
+                Parserclass = self.get_parserclass()
+                parser = Parserclass(self)
+                parser_opts = parser.get_parser_settings_key()
+                settings_dict.pop(parser_opts)
+            except KeyError: # the key parser_opts isn't inside the dictionary
+                raise InputValidationError("The following keys have been found in "
+                  "the settings input node, but were not understood: {}".format(
+                  ",".join(settings_dict.keys())))
         
         return calcinfo
 

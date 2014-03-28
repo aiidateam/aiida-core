@@ -44,12 +44,18 @@ form.form-signin {
   border-top-right-radius: 0;
 }
 
-/* force the text-danger color even when in dropdown */
+/* force the text-danger and text-success color even when in dropdown */
 .text-danger {
 	color: #a94442 !important;
 }
 a.text-danger:hover {
 	color: #843534 !important;
+}
+.text-success {
+	color: #3c763d !important;
+}
+a.text-success:hover {
+	color: #2b542c !important;
 }
 
 /* styling of the AWI logo */
@@ -152,14 +158,14 @@ h3 .btn-group {
 	text-align: right;
 }
 .btn.filter-operator {
-	width: 30px;
-	text-align: right;
+	width: 35px;
+	text-align: center;
 }
 .btn.filter-value {
 	width: 150px;
 	text-align: left;
 }
-.btn-group+.btn.filter-value {
+.btn-group+.btn.filter-value, .btn-group+.btn-group .btn.filter-value {
 	width: 121px;
 }
 

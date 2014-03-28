@@ -79,7 +79,7 @@ class DbComputerResource(ModelResource):
         resource_name = 'dbcomputer'
         allowed_methods = ['get', 'post', 'patch']
         filtering = {
-            'id': ['exact'],
+            'id': ALL,
             'uuid': ALL,
             'name': ALL,
             'description': ALL,
@@ -170,7 +170,25 @@ class DbComputerResource(ModelResource):
         # Fix the 'type' values, where appropriate
         new_schema['fields']['metadata']['type'] = "dictionary"
         new_schema['fields']['transport_params']['type'] = "dictionary"
-
+        
+        #hardcoded by VB for testing purposes
+        new_schema['fields']['description']['display_name'] = "Description" #not necessary if the name is just capitalized
+        new_schema['fields']['description']['filtering'] = {"type": "text"} #not necessary, take from the type
+        new_schema['fields']['enabled']['display_name'] = "Enabled"
+        new_schema['fields']['enabled']['filtering'] = {"type": "boolean"}
+        new_schema['fields']['hostname']['display_name'] = "Hostname"
+        new_schema['fields']['hostname']['filtering'] = {"type": "text"}
+        new_schema['fields']['id']['display_name'] = "ID"
+        new_schema['fields']['id']['filtering'] = {"type": "numeric"}
+        new_schema['fields']['name']['display_name'] = "Name"
+        new_schema['fields']['name']['filtering'] = {"type": "text"}
+        new_schema['fields']['scheduler_type']['display_name'] = "Scheduler"
+        new_schema['fields']['scheduler_type']['filtering'] = {"type": "list"}
+        new_schema['fields']['transport_type']['display_name'] = "Transport"
+        new_schema['fields']['transport_type']['filtering'] = {"type": "list"}
+        new_schema['fields']['uuid']['display_name'] = "Unique ID"
+        new_schema['fields']['uuid']['filtering'] = {"type": "text"}
+        
         return new_schema
 
 
@@ -253,8 +271,8 @@ class DbNodeResource(ModelResource):
             'id': ['exact'],
             'uuid': ALL,
             'type': ALL,   
-            'ctype': ALL,
-            'mtype': ALL,
+            'ctime': ALL,
+            'mtime': ALL,
             'label': ALL,
             'description': ALL,
             'computer': ALL_WITH_RELATIONS,
@@ -268,7 +286,11 @@ class DbNodeResource(ModelResource):
             'attributes': ALL_WITH_RELATIONS,    
             }
 
-        ordering = ['id', 'type'] 
+        ordering = ['id', 'type']
+        authentication = SessionAuthentication()
+        # As discussed above: improve this with authorization allowing each
+        # user to see only his own DbAuthInfo data
+        authorization = DjangoAuthorization()
 
 class DbAttributeResource(ModelResource):
     dbnode = fields.ToOneField(DbNodeResource, 'dbnode', related_name='dbattributes')    

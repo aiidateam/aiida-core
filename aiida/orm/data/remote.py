@@ -5,25 +5,6 @@ class RemoteData(Data):
     """
     Store a link to a file or folder on a remote machine
     """
-    def __init__(self,filename=None,**kwargs):
-        super(RemoteData,self).__init__(**kwargs)
-
-        uuid = kwargs.pop('uuid', None)
-        if uuid is not None:
-            return
-
-        remote_path = kwargs.pop('remote_path', None)
-        if remote_path is not None:
-            self.set_remote_path(remote_path)
-
-        remote_machine = kwargs.pop('remote_machine', None)
-        if remote_machine is not None:
-            self.set_remote_machine(remote_machine)    
-
-        if kwargs:
-            raise ValueError("The following parameters were not understood: {}".format(
-                kwargs.keys()))
-
     def get_remote_machine(self):
         return self.get_attr('remote_machine')
 

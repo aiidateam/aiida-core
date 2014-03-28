@@ -1,6 +1,7 @@
 from aiida.common.exceptions import (
     ConfigurationError, DbContentError, InvalidOperation,
     MissingPluginError)
+from aiida.common.utils import classproperty
 
 def delete_computer(computer):
     """
@@ -40,8 +41,6 @@ class Computer(object):
     In the plugin, also set the _plugin_type_string, to be set in the DB in the 'type' field.
     """
     import logging
-    from aiida.transport import Transport
-    from aiida.scheduler import Scheduler
     
     _logger = logging.getLogger(__name__)
     
@@ -58,67 +57,80 @@ class Computer(object):
     # _set_internalname_string and get_internalname_string methods.
     # Moreover, the _set_internalname_string method should also immediately
     # validate the value. 
-    _conf_attributes = [
-        ("hostname",
-         "Fully-qualified hostname",
-         "The fully qualified host-name of this computer",
-         False,
-        ),
-        ("description",
-         "Description",
-         "A human-readable description of this computer",
-         False,
-        ),                        
-        ("enabled_state",
-         "Enabled",
-         "True or False; if False, the computer is disabled and calculations\n"
-         "associated with it will not be submitted",
-         False,
-        ), 
-        ("transport_type",
-         "Transport type",
-         "The name of the transport to be used. Valid names are: {}".format(
-            ",".join(Transport.get_valid_transports())),
-         False,
-         ),
-        ("scheduler_type",
-         "Scheduler type",
-         "The name of the scheduler to be used. Valid names are: {}".format(
-            ",".join(Scheduler.get_valid_schedulers())),
-         False,
-         ),
-        ("workdir",
-         "AiiDA work directory",
-         "The absolute path of the directory on the computer where AiiDA will\n"
-         "run the calculations (typically, the scratch of the computer). You\n"
-         "can use the {username} replacement, that will be replaced by your\n"
-         "username on the remote computer",
-         False,
-         ),
-        # Must be called after the scheduler!
-        ("mpirun_command",
-         "mpirun command",
-         "The mpirun command needed on the cluster to run parallel MPI\n"
-         "programs. You can use the {tot_num_cpus} replacement, that will be \n"
-         "replaced by the total number of cpus, or the other scheduler-dependent\n"
-         "replacement fields (see the scheduler docs for more information)",
-         False,
-         ),
-        ("prepend_text",
-         "Text to prepend to each command execution",
-         "This is a multiline string, whose content will be prepended inside\n"
-         "the submission script before the real execution of the job. It is\n"
-         "your responsibility to write proper bash code!",
-         True,
-         ),
-        ("append_text",
-         "Text to append to each command execution",
-         "This is a multiline string, whose content will be appended inside\n"
-         "the submission script after the real execution of the job. It is\n"
-         "your responsibility to write proper bash code!",
-         True,
-         ),
-        ] 
+    
+    @classproperty
+    def _conf_attributes(self):
+        """
+        Return the configuration attributes.
+        
+        Defining it as a property increases the overall execution
+        of the code because it does not require to calculate
+        Transport.get_valid_transports() at each load of this class.
+        """
+        from aiida.transport import Transport
+        from aiida.scheduler import Scheduler
+
+        return [
+            ("hostname",
+             "Fully-qualified hostname",
+             "The fully qualified host-name of this computer",
+             False,
+            ),
+            ("description",
+             "Description",
+             "A human-readable description of this computer",
+             False,
+            ),                        
+            ("enabled_state",
+             "Enabled",
+             "True or False; if False, the computer is disabled and calculations\n"
+             "associated with it will not be submitted",
+             False,
+            ), 
+            ("transport_type",
+             "Transport type",
+             "The name of the transport to be used. Valid names are: {}".format(
+                ",".join(Transport.get_valid_transports())),
+             False,
+             ),
+            ("scheduler_type",
+             "Scheduler type",
+             "The name of the scheduler to be used. Valid names are: {}".format(
+                ",".join(Scheduler.get_valid_schedulers())),
+             False,
+             ),
+            ("workdir",
+             "AiiDA work directory",
+             "The absolute path of the directory on the computer where AiiDA will\n"
+             "run the calculations (typically, the scratch of the computer). You\n"
+             "can use the {username} replacement, that will be replaced by your\n"
+             "username on the remote computer",
+             False,
+             ),
+            # Must be called after the scheduler!
+            ("mpirun_command",
+             "mpirun command",
+             "The mpirun command needed on the cluster to run parallel MPI\n"
+             "programs. You can use the {tot_num_cpus} replacement, that will be \n"
+             "replaced by the total number of cpus, or the other scheduler-dependent\n"
+             "replacement fields (see the scheduler docs for more information)",
+             False,
+             ),
+            ("prepend_text",
+             "Text to prepend to each command execution",
+             "This is a multiline string, whose content will be prepended inside\n"
+             "the submission script before the real execution of the job. It is\n"
+             "your responsibility to write proper bash code!",
+             True,
+             ),
+            ("append_text",
+             "Text to append to each command execution",
+             "This is a multiline string, whose content will be appended inside\n"
+             "the submission script after the real execution of the job. It is\n"
+             "your responsibility to write proper bash code!",
+             True,
+             ),
+            ] 
         
     def __int__(self):
         """
@@ -157,44 +169,22 @@ class Computer(object):
         else:
             self._dbcomputer = DbComputer()
 
-            name = kwargs.pop('name', None)
-            if name is not None:
-                self.set_name(name)
+        # Set all remaining parameters, stop if unknown
+        self.set(**kwargs)
 
-            hostname = kwargs.pop('hostname', None)
-            if hostname is not None:
-                self.set_hostname(hostname)
-
-            workdir = kwargs.pop('workdir', None)
-            if workdir is not None:
-                self.set_workdir(workdir)
-
-            prepend_text = kwargs.pop('prepend_text', None)
-            if prepend_text is not None:
-                self.set_prepend_text(prepend_text)
-
-            append_text = kwargs.pop('append_text', None)
-            if append_text is not None:
-                self.set_append_text(append_text)
-
-            mpirun_command = kwargs.pop('mpirun_command', None)
-            if mpirun_command is not None:
-                self.set_mpirun_command(mpirun_command)
-
-            transport_params = kwargs.pop('transport_params', None)
-            if transport_params is not None:
-                self.set_transport_params(transport_params)
-
-            transport_type = kwargs.pop('transport_type', None)
-            if transport_type is not None:
-                self.set_transport_type(transport_type)
-
-            scheduler_type = kwargs.pop('scheduler_type', None)
-            if scheduler_type is not None:
-                self.set_scheduler_type(scheduler_type)
-
-            if kwargs:
-                raise ValueError("Unrecognized parameters: {}".format(kwargs.keys()))
+    def set(self, **kwargs):
+        import collections
+        
+        for k, v in kwargs.iteritems():
+            try:
+                method = getattr(self,'set_{}'.format(k))
+            except AttributeError:
+                raise ValueError("Unable to set '{0}', no set_{0} method "
+                                 "found".format(k))
+            if not isinstance(method, collections.Callable):
+                raise ValueError("Unable to set '{0}', set_{0} is not "
+                                 "callable!".format(k))
+            method(v)
 
     @classmethod
     def list_names(cls):
@@ -449,7 +439,7 @@ class Computer(object):
 
     def _set_mpirun_command_string(self,string):
         """
-        Set the workdir starting from a string.
+        Set the mpirun command string (from a string to a list).
         """
         converted_cmd = str(string).strip().split(" ")
         if converted_cmd == ['']:
@@ -650,11 +640,13 @@ class Computer(object):
 #            raise ModificationNotAllowed("Cannot set a property after having stored the entry")
 
     def get_workdir(self):
-        return self.dbcomputer.workdir
+        return self._get_metadata().get('workdir', '')
 
     def set_workdir(self,val):
         #if self.to_be_stored:
-        self.dbcomputer.workdir = val
+        metadata = self._get_metadata()
+        metadata['workdir'] = val
+        self._set_metadata(metadata)
         #else:
         #    raise ModificationNotAllowed("Cannot set a property after having stored the entry")
 

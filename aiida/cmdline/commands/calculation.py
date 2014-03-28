@@ -1,6 +1,7 @@
 import sys
 import os
 import subprocess
+from aiida.common.utils import load_django
 
 from aiida.cmdline.baseclass import VerdiCommand
 
@@ -24,6 +25,7 @@ class Calculation(VerdiCommand):
         self.valid_subcommands = {
             'list': self.calculation_list,
             'kill': self.calculation_kill,
+            'show': self.calculation_show,
             }
 
     def run(self,*args):       
@@ -66,7 +68,6 @@ class Calculation(VerdiCommand):
         """
         Return a list of calculations on screen. 
         """
-        from aiida.common.utils import load_django
         load_django()
         from aiida.common.datastructures import calc_states
         
@@ -107,6 +108,29 @@ class Calculation(VerdiCommand):
         print C.list_calculations(states=parsed_args.states,
                                      past_days=parsed_args.past_days, 
                                      pks=parsed_args.pks) 
+    
+    def calculation_show(self, *args):
+        from aiida.common.exceptions import NotExistent
+        from aiida.orm import Calculation as OrmCalculation
+        
+        load_django()
+        
+        for calc_pk in args:
+            try:
+                calc = OrmCalculation.get_subclass_from_pk(int(calc_pk))
+            except ValueError:
+                print "*** {}: Not a valid PK".format(calc_pk)
+                continue
+            except NotExistent:
+                print "*** {}: Not a valid calculation".format(calc_pk)
+                continue
+            print "*** {} [{}]".format(calc_pk, calc.label)
+            print "##### INPUTS:"
+            for k, v in calc.get_inputdata_dict().iteritems():
+                print k, v.pk, v.__class__.__name__
+            print "##### OUTPUTS:"
+            for k, v in calc.get_outputs(also_labels=True):
+                print k, v.pk, v.__class__.__name__
     
     def calculation_kill(self, *args):
         """

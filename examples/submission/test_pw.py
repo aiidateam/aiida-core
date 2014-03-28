@@ -42,7 +42,7 @@ try:
         raise ValueError
 except (NotExistent, ValueError):
     valid_code_labels = [c.label for c in Code.query(
-            dbattributes__key="_remote_exec_path",
+            dbattributes__key="remote_exec_path",
             dbattributes__tval__endswith="/{}".format(expected_exec_name))]
     if valid_code_labels:
         print >> sys.stderr, "Pass as first parameter a valid code label."
@@ -85,7 +85,7 @@ elif computer.hostname.startswith("bellatrix"):
     num_cpus_per_machine = 16
 elif computer.hostname.startswith("theospc12"):
     num_cpus_per_machine = 8
-elif computer.hostname.startswith("localhost"):
+elif "localhost" in computer.hostname:
     num_cpus_per_machine = 6
 else:
     raise ValueError("num_cpus_per_machine not specified for the current machine: {0}".format(computer.hostname))
@@ -106,7 +106,7 @@ s.append_atom(position=(alat/2.,0.,alat/2.),symbols=['O'])
 s.append_atom(position=(0.,alat/2.,alat/2.),symbols=['O'])
 s.store()
 
-parameters = ParameterData({
+parameters = ParameterData(dict={
             'CONTROL': {
                 'calculation': 'scf',
                 'restart_mode': 'from_scratch',
@@ -120,7 +120,7 @@ parameters = ParameterData({
                 'conv_thr': 1.e-6,
                 }}).store()
                 
-kpoints = ParameterData({
+kpoints = ParameterData(dict={
                 'type': 'automatic',
                 'points': [4, 4, 4, 0, 0, 0],
                 }).store()
@@ -128,7 +128,7 @@ kpoints = ParameterData({
 QECalc = CalculationFactory('quantumespresso.pw')
 calc = QECalc(computer=computer)
 calc.set_max_wallclock_seconds(30*60) # 30 min
-calc.set_resources(num_machines=1, num_cpus_per_machine=num_cpus_per_machine)
+calc.set_resources({"num_machines": 1, "num_cpus_per_machine": num_cpus_per_machine})
 if queue is not None:
     calc.set_queue_name(queue)
 calc.store()
@@ -141,7 +141,7 @@ calc.use_parameters(parameters)
 
 if auto_pseudos:
     try:
-        calc.use_pseudo_from_family(pseudo_family)
+        calc.use_pseudos_from_family(pseudo_family)
         print "Pseudos successfully loaded from family {}".format(pseudo_family)
     except NotExistent:
         print ("Pseudo or pseudo family not found. You may want to load the "

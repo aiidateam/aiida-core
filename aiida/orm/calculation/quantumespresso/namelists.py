@@ -13,7 +13,8 @@ from aiida.orm.calculation.quantumespresso import (
 
 ParameterData = DataFactory('parameter') 
 RemoteData = DataFactory('remote') 
-    
+FolderData = DataFactory('folder') 
+
     
 class NamelistsCalculation(Calculation):   
 
@@ -24,8 +25,8 @@ class NamelistsCalculation(Calculation):
     _internal_retrieve_list = []
     _default_namelists = ['INPUTPP']
     _default_parent_output_folder = './out/'
-
-    # Default PW output parser provided by AiiDA
+    _blocked_keywords = [] # a list of tuples with key and value fixed
+    _parent_folder_type = 'RemoteData'
     _default_parser = None
 
     def _get_following_text(self, inputdict, settings):
@@ -43,9 +44,8 @@ class NamelistsCalculation(Calculation):
         This is the routine to be called when you want to create
         the input files and related stuff with a plugin.
         
-        Args:
-            tempfolder: a aiida.common.folders.Folder subclass where
-                the plugin should put all its files.
+        :param tempfolder: a aiida.common.folders.Folder subclass where
+                           the plugin should put all its files.
         """
         local_copy_list = []
         remote_copy_list = []
@@ -74,10 +74,11 @@ class NamelistsCalculation(Calculation):
                                             dict_name='settings')
 
         parent_calc_folder = inputdict.pop(self.get_linkname_parent_calc_folder(),None)
+        
         if parent_calc_folder is not None:
-            if not isinstance(parent_calc_folder,  RemoteData):
+            if not isinstance(parent_calc_folder, self._parent_folder_type):
                 raise InputValidationError("parent_calc_folder, if specified,"
-                    "must be of type RemoteData")
+                    "must be of type {}".format(self._parent_folder_type.__name__))
 
         following_text = self._get_following_text(inputdict, settings)
                 
@@ -97,7 +98,24 @@ class NamelistsCalculation(Calculation):
                                        dict_name='parameters')
         input_params = {k: _lowercase_dict(v, dict_name=k) 
                         for k, v in input_params.iteritems()}
-
+        
+        # set default values. NOTE: this is different from PW/CP
+        for blocked in self._blocked_keywords:
+            namelist = blocked[0].upper()
+            key = blocked[1].lower()
+            value = blocked[2]
+            
+            if namelist in input_params:
+                if key in input_params[namelist]:
+                    raise InputValidationError(
+                        "You cannot specify explicitly the '{}' key in the '{}' "
+                        "namelist.".format(key, namelist))
+                    
+            # set to a default
+            if not input_params[namelist]:
+                input_params[namelist] = {}
+            input_params[namelist][key] = value
+        
         # =================== NAMELISTS AND CARDS ========================
         try:
             namelists_toprint = settings_dict.pop('NAMELISTS')
@@ -129,18 +147,23 @@ class NamelistsCalculation(Calculation):
                 "The following namelists are specified in input_params, but are "
                 "not valid namelists for the current type of calculation: "
                 "{}".format(",".join(input_params.keys())))
-
-        parent_calc_out_subfolder = settings_dict.pop('parent_calc_out_subfolder',
-            self._default_parent_output_folder)
-
+        
         # copy remote output dir, if specified
+        print parent_calc_folder
         if parent_calc_folder is not None:
-            remote_copy_list.append(
-                (parent_calc_folder.get_remote_machine(),
-                 os.path.join(parent_calc_folder.get_remote_path(),
-                              parent_calc_out_subfolder),
-                 self.OUTPUT_SUBFOLDER))
-
+            if isinstance(parent_calc_folder,RemoteData):
+                parent_calc_out_subfolder = settings_dict.pop('parent_calc_out_subfolder',
+                                              self._default_parent_output_folder)
+                remote_copy_list.append(
+                         (parent_calc_folder.get_remote_machine(),
+                          os.path.join(parent_calc_folder.get_remote_path(),
+                                       parent_calc_out_subfolder),
+                          self.OUTPUT_SUBFOLDER))
+            elif isinstance(parent_calc_folder,FolderData):
+                local_copy_list.append( (parent_calc_folder.get_abs_path(self.OUTPUT_SUBFOLDER),
+                                         self.OUTPUT_SUBFOLDER
+                                        )
+                                      )
         calcinfo = CalcInfo()
 
         calcinfo.uuid = self.uuid
@@ -159,9 +182,15 @@ class NamelistsCalculation(Calculation):
         calcinfo.retrieve_list += self._internal_retrieve_list
         
         if settings_dict:
-            raise InputValidationError("The following keys have been found in "
-                "the settings input node, but were not understood: {}".format(
-                ",".join(settings_dict.keys())))
+            try:
+                Parserclass = self.get_parserclass()
+                parser = Parserclass(self)
+                parser_opts = parser.get_parser_settings_key()
+                settings_dict.pop(parser_opts)
+            except (KeyError,AttributeError): # the key parser_opts isn't inside the dictionary, or it is set to None
+                raise InputValidationError("The following keys have been found in "
+                  "the settings input node, but were not understood: {}".format(
+                  ",".join(settings_dict.keys())))
         
         return calcinfo
 
@@ -199,15 +228,28 @@ class NamelistsCalculation(Calculation):
         """
         Set the folder of the parent calculation, if any
         """
-        if not isinstance(data, RemoteData):
-            raise ValueError("The data must be an instance of the RemoteData class")
+        if not isinstance(data, self._parent_folder_type):
+            raise ValueError("The data must be an instance of the {} class"
+                             .format(self._parent_folder_type))
 
         self._replace_link_from(data, self.get_linkname_parent_calc_folder())
+
+    def set_parent_calc(self,calc):
+        """
+        Set the parent calculation, from which it will inherit the 
+        outputsubfolder. The link will be created from parent 
+        RemoteData/FolderData to NamelistCalculation. 
+        """
+        from aiida.common.exceptions import UniquenessError
+        remotedatas = calc.get_outputs(type=self._parent_folder_type)
+        if len(remotedatas) != 1:
+            raise UniquenessError("More than one output {} found".format(self._parent_folder_type))
+        remotedata = remotedatas[0]
+        
+        self.use_parent_folder(remotedata)
 
     def get_linkname_parent_calc_folder(self):
         """
         The name of the link used for the calculation folder of the parent (if any)
         """
         return "parent_calc_folder"
-
-

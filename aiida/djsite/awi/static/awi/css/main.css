@@ -58,6 +58,10 @@ a.text-success:hover {
 	color: #2b542c !important;
 }
 
+.tooltip-inner {
+    word-wrap: break-word;
+}
+
 /* styling of the AWI logo */
 .navbar-brand img {
 	height: 18px;

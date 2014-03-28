@@ -289,7 +289,7 @@ def computers(request):
 	"""
 	Computers default view, calls list
 	"""
-	return computers_list(request)
+	return redirect('awi:computers_list')
 
 @login_required(login_url='awi:login')
 def computers_list(request, ordering = 'id'):
@@ -312,6 +312,29 @@ def computers_rename(request, computer_id):
 	Rename form for computers
 	"""
 	return render(request, 'awi/computers_rename.html', {'computer_id': computer_id})
+
+# Calculations views
+@login_required(login_url='awi:login')
+def calculations(request):
+	"""
+	Calculations default view, calls list
+	"""
+	return redirect('awi:calculations_list')
+
+@login_required(login_url='awi:login')
+def calculations_list(request, ordering = 'id'):
+	"""
+	List of calculations
+	"""
+	return render(request, 'awi/calculations_list.html', {'ordering': ordering})
+
+@login_required(login_url='awi:login')
+def calculations_detail(request, calculation_id):
+	"""
+	Details of a calculation
+	"""
+	api_detail_url = reverse('api_dispatch_detail', kwargs={'api_name': 'v1', 'resource_name':'dbnode', 'pk':calculation_id})
+	return render(request, 'awi/calculations_detail.html', {'api_detail_url': api_detail_url, 'calculation_id': calculation_id})
 
 def codes(request):
 	"""

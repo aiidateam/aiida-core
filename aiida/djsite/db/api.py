@@ -4,6 +4,7 @@ from tastypie.authentication import SessionAuthentication
 from tastypie.authorization import DjangoAuthorization
 from tastypie.resources import ModelResource, ALL, ALL_WITH_RELATIONS
 from tastypie.validation import Validation
+from tastypie.serializers import Serializer
 from aiida.djsite.db.models import (
         DbAuthInfo, 
         DbAttribute,
@@ -13,6 +14,20 @@ from aiida.djsite.db.models import (
         )
 from aiida.transport import Transport, TransportFactory
 from aiida.scheduler import Scheduler, SchedulerFactory
+
+class MyDateSerializer(Serializer):
+    """
+    Our own serializer to format datetimes in ISO 8601 but with timezone
+    offset.
+    """
+    def format_datetime(self, data):
+        from django.utils.timezone import is_naive
+        # If naive or rfc-2822, default behavior...
+        if is_naive(data) or self.datetime_formatting == 'rfc-2822':
+            return super(MyDateSerializer, self).format_datetime(data)
+        
+        return data.isoformat()
+
 
 class DbComputerValidation(Validation):
     def is_valid(self, bundle, request=None):
@@ -286,11 +301,12 @@ class DbNodeResource(ModelResource):
             'attributes': ALL_WITH_RELATIONS,    
             }
 
-        ordering = ['id', 'type']
+        ordering = ['id', 'label', 'type', 'computer', 'ctime']
         authentication = SessionAuthentication()
         # As discussed above: improve this with authorization allowing each
         # user to see only his own DbAuthInfo data
         authorization = DjangoAuthorization()
+        serializer = MyDateSerializer()
 
 class DbAttributeResource(ModelResource):
     dbnode = fields.ToOneField(DbNodeResource, 'dbnode', related_name='dbattributes')    
@@ -310,6 +326,7 @@ class DbAttributeResource(ModelResource):
             'tval': ALL,
             'time': ALL,
             }
+        serializer = MyDateSerializer()
         
         
 class AttributeResource(ModelResource):

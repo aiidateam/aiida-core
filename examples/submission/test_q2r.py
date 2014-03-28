@@ -77,7 +77,7 @@ elif computer.hostname.startswith("localhost"):
 else:
     raise ValueError("num_cpus_per_machine not specified for the current machine: {0}".format(computer.hostname))
 
-parameters = ParameterData({
+parameters = ParameterData(dict={
             'INPUT': {
                 'zasr': 'simple',
                 },
@@ -86,7 +86,7 @@ parameters = ParameterData({
 Q2rCalc = CalculationFactory('quantumespresso.q2r')
 calc = Q2rCalc(computer=computer)
 calc.set_max_wallclock_seconds(60*30) # 30 min
-calc.set_resources(num_machines=num_machines, num_cpus_per_machine=num_cpus_per_machine) # must run in serial
+calc.set_resources({"num_machines":num_machines, "num_cpus_per_machine":num_cpus_per_machine}) # must run in serial
 calc.store()
 
 calc.use_parameters(parameters)

@@ -24,6 +24,9 @@ def update_running_calcs_status(authinfo):
     from aiida.orm import Calculation, Computer
     from aiida.scheduler.datastructures import JobInfo
 
+    if not authinfo.enabled:
+        return
+
     execlogger.debug("Updating running calc status for user {} "
                      "and machine {}".format(
         authinfo.aiidauser.username, authinfo.dbcomputer.name))
@@ -294,6 +297,9 @@ def submit_jobs_with_authinfo(authinfo):
     from aiida.orm import Calculation, Computer
     from aiida.scheduler.datastructures import JobInfo
 
+    if not authinfo.enabled:
+        return
+
     execlogger.debug("Submitting jobs for user {} "
                      "and machine {}".format(
         authinfo.aiidauser.username, authinfo.dbcomputer.name))
@@ -304,9 +310,7 @@ def submit_jobs_with_authinfo(authinfo):
         computer=authinfo.dbcomputer,
         user=authinfo.aiidauser)
     
-    # NOTE: no further check is done that machine and
-    # aiidauser are correct for each calc in calcs
-    s = Computer(dbcomputer=authinfo.dbcomputer).get_scheduler()
+    # I do it here so that the transport is opened only once per computer
     t = authinfo.get_transport()
 
     # I avoid to open an ssh connection if there are
@@ -314,10 +318,9 @@ def submit_jobs_with_authinfo(authinfo):
     if len(calcs_to_inquire):
         # Open connection
         with t:
-            s.set_transport(t)
             for c in calcs_to_inquire:
                 try:
-                    submit_calc(calc=c, transport=t, scheduler=s)
+                    submit_calc(calc=c, authinfo=authinfo, transport=t)
                 except Exception as e:
                     # TODO: implement a counter, after N retrials
                     # set it to a status that
@@ -330,29 +333,35 @@ def submit_jobs_with_authinfo(authinfo):
     
   
 
-def submit_calc(calc, transport, scheduler):
+def submit_calc(calc, authinfo, transport=None):
     """
     Submit a calculation
     
-    :note: it is assumed that the transport and the scheduler
-        are appropriate, and no checks are done. It is also
-        assumed that the transport is open and set for the given
-        scheduler
+    :note: if no transport is passed, a new transport is opened and then 
+        closed within this function. If you want to use an already opened
+        transport, pass it as further parameter. In this case, the transport
+        has to be already open, and must coincide with the transport of the
+        the computer defined by the authinfo.
     
     :param calc: the calculation to submit
         (an instance of the aiida.orm.Calculation class)
-    :param transport: the proper transport instance, already open.
-    :param scheduler: the proper scheduler instance, with the
-        transport already set.
+    :param authinfo: the authinfo for this calculation.
+    :param transport: if passed, must be an already opened transport. No checks
+        are done on the consistency of the given transport with the transport
+        of the computer defined in the authinfo.
     """
-    from aiida.orm import Calculation, Code
+    from aiida.orm import Calculation, Code, Computer
     from aiida.common.folders import SandboxFolder
     from aiida.common.exceptions import (
         FeatureDisabled, InputValidationError)
     from aiida.orm.data.remote import RemoteData
 
-    t = transport
-    s = scheduler
+    if transport is None:
+        t = authinfo.get_transport()
+        must_open_t = True
+    else:
+        t = transport
+        must_open_t = False
 
     # TODO: do some sort of blocking call,
     # to be sure that the submit function is not called
@@ -363,8 +372,14 @@ def submit_calc(calc, transport, scheduler):
                              calc.pk, calc.get_state()))
     # I start to submit the calculation: I set the state
     calc._set_state(calc_states.SUBMITTING)
-         
+             
     try:    
+        if must_open_t:
+            t.open()
+            
+        s = Computer(dbcomputer=authinfo.dbcomputer).get_scheduler()
+        s.set_transport(t)
+
         input_codes = calc.get_inputs(type=Code)
         if len(input_codes) != 1:
             raise InputValidationError("Calculation {} must have "
@@ -390,7 +405,7 @@ def submit_calc(calc, transport, scheduler):
             remote_user = t.whoami()
             computer = calc.get_computer()
             # TODO Doc: {username} field
-            remote_working_directory = computer.get_workdir().format(
+            remote_working_directory = authinfo.get_workdir().format(
                 username=remote_user)
             if not remote_working_directory.strip():
                 raise ConfigurationError("[submission of calc {}] "
@@ -507,6 +522,10 @@ def submit_calc(calc, transport, scheduler):
                          "log file! Traceback: {}".format(calc.pk, 
             traceback.format_exc()))
         raise
+    finally:
+        # close the transport, but only if it was opened within this function
+        if must_open_t:
+            t.close()
             
 def retrieve_computed_for_authinfo(authinfo):
     from aiida.orm import Calculation
@@ -514,6 +533,9 @@ def retrieve_computed_for_authinfo(authinfo):
     from aiida.orm.data.folder import FolderData
 
     import os
+    
+    if not authinfo.enabled:
+        return
     
     calcs_to_retrieve = Calculation.get_all_with_state(
         state=calc_states.COMPUTED,

@@ -22,7 +22,7 @@ class WorkflowDemo(Workflow):
         computer = Computer.get("localhost")
         
         calc = CustomCalc(computer=computer,withmpi=True)
-        calc.set_resources(num_machines=1, num_cpus_per_machine=1)
+        calc.set_resources({"num_machines": 1, "num_cpus_per_machine": 1})
         calc._set_state(calc_states.FINISHED)
         calc.store()
         
@@ -84,7 +84,7 @@ class SubWorkflowDemo(Workflow):
         computer = Computer.get("localhost")
         
         calc = CustomCalc(computer=computer,withmpi=True)
-        calc.set_resources(num_machines=1, num_cpus_per_machine=1)
+        calc.set_resources({"num_machines": 1, "num_cpus_per_machine": 1})
         calc._set_state(calc_states.FINISHED)
         calc.store()
         
@@ -139,7 +139,7 @@ class BranchWorkflowDemo(Workflow):
         computer = Computer.get("localhost")
         
         calc = CustomCalc(computer=computer,withmpi=True)
-        calc.set_resources(num_machines=1, num_cpus_per_machine=1)
+        calc.set_resources({"num_machines": 1, "num_cpus_per_machine": 1})
         calc._set_state(calc_states.FINISHED)
         calc.store()
         
@@ -225,7 +225,7 @@ class LoopBranchWorkflowDemo(Workflow):
         computer = Computer.get("localhost")
         
         calc = CustomCalc(computer=computer,withmpi=True)
-        calc.set_resources(num_machines=1, num_cpus_per_machine=1)
+        calc.set_resources({"num_machines": 1, "num_cpus_per_machine": 1})
         calc._set_state(calc_states.FINISHED)
         calc.store()
         

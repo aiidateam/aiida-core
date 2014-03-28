@@ -5,12 +5,6 @@ class TrajectoryData(ArrayData):
     Stores a trajectory (a sequence of crystal structures with timestamps, and
     possibly with velocities).
     """
-    def __init__(self,**kwargs):
-        super(TrajectoryData,self).__init__(**kwargs)
-
-        uuid = kwargs.pop('uuid', None)
-        if uuid is not None:
-            return
 
     def _internal_validate(self, steps, times, cells, symbols, positions, velocities):
         """

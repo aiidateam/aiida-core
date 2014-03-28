@@ -70,9 +70,18 @@ Note: the PwCalculation inherits both the calculation and the ``BasicPwCpInputGe
 
 Every plugin class is required to have the following hidden method::
 
-  def _prepare_for_submission(self,tempfolder):
+  def _prepare_for_submission(self,tempfolder,inputdict=None):
 
 This function is called by the executionmanager when it's needed to create a new calculation.
+If inputdict is None, it has to be calculated using::
+   
+   # The code is not here, only the data        
+   if inputdict is None:
+      inputdict = self.get_inputdata_dict()
+    
+otherwise the function should use the inputdict provided as input
+(this is useful to test for submission without the need to store all nodes
+on the DB).    
 No other specific functions have to be created for the plugin to work.
 This function is expected to receive in input a tempfolder. 
 This is a folder object in which the plugin will prepare and write the files needed for the code execution on the cluster (this is actually the folder that will be copied on the cluster and executed).
@@ -355,7 +364,7 @@ results and perform a dedicated correction!*
             out_dict,successful = parse_raw_output(out_file)
             
             # 6. convert the dictionary into an AiiDA object
-            output_params = ParameterData(out_dict)
+            output_params = ParameterData(dict=out_dict)
             # 6. save it into db and set link from calc to output
 	    # note that the name of the output parameters is set in the baseclass
             output_params.store()

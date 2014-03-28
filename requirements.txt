@@ -11,8 +11,9 @@
 # Django
 django>=1.5.1,<1.6
 
-# For data/schema migrations
-south>=0.7.6
+## For data/schema migrations
+## Disabled for the time being.
+#south>=0.7.6
 
 # For the UUID field
 django_extensions>=0.9
@@ -47,3 +48,6 @@ PyMySQL>=0.6.1
 # NumPy, mainly for the ArrayData objects but sometimes
 # used also for arrays in other parts of the code
 numpy
+
+## Tastypie, for the REST API interface
+django-tastypie>=0.11.0

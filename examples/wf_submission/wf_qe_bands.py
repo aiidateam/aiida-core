@@ -40,7 +40,7 @@ def launch_ws():
     params['pseudo_family'] = "pslib030-pbesol-rrkjus"
     params['structure_uuid'] = s.uuid
     
-    kpoints = ParameterData({
+    kpoints = ParameterData(dict={
                 'type': 'automatic',
                 'points': [4, 4, 4, 0, 0, 0],
                 }).store()

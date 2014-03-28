@@ -29,6 +29,14 @@ _element_v2_regexp = re.compile(
     (?P=quote_symbol).*
    """, re.VERBOSE)
 
+def get_pseudos_from_structure(structure, family_name):       
+    pseudo_list = {}
+    for kind in structure.kinds:
+        symbol = kind.symbol
+        # Will raise the correct exception if not found, or too many found
+        pseudo_list[kind.name] = get_upf_from_family(family_name, symbol)
+
+    return pseudo_list
 
 def get_upf_from_family(family_name, element):
     """
@@ -39,18 +47,18 @@ def get_upf_from_family(family_name, element):
             found in the group.
     :raise NotExistent: if no UPF for the given element are found in the group.
     """
-    from aiida.djsite.db.models import Group
+    from aiida.djsite.db.models import DbGroup
     from django.core.exceptions import ObjectDoesNotExist
     from aiida.common.exceptions import NotExistent, MultipleObjectsError
     
     try:
-        Group.objects.get(name=family_name)
+        DbGroup.objects.get(name=family_name)
     except ObjectDoesNotExist:
         raise NotExistent("Family named {} does not exist".format(family_name))
     
-    match = UpfData.query(groups__name=family_name,
-                           attributes__key="_element",
-                           attributes__tval=element)
+    match = UpfData.query(dbgroups__name=family_name,
+                           dbattributes__key="element",
+                           dbattributes__tval=element)
     if len(match) == 0:
         raise NotExistent("No UPF for element {} found in family {}".format(
             element, family_name))
@@ -81,7 +89,7 @@ def upload_upf_family(folder, group_name, group_description,
     import os
     import aiida.common
     from aiida.common import aiidalogger
-    from aiida.djsite.db.models import Group
+    from aiida.djsite.db.models import DbGroup
     from aiida.common.exceptions import UniquenessError, MultipleObjectsError
     from aiida.djsite.utils import get_automatic_user
 
@@ -94,11 +102,13 @@ def upload_upf_family(folder, group_name, group_description,
              for i in os.listdir(folder) if 
              os.path.isfile(os.path.join(folder,i)) and 
              i.lower().endswith('.upf')]
-
-    group,group_created = Group.objects.get_or_create(name=group_name, defaults=
-        {'user': get_automatic_user()})
+    
+    nfiles = len(files)
+    
+    group,group_created = DbGroup.objects.get_or_create(
+        name=group_name, defaults={'user': get_automatic_user()})
     if len(group.dbnodes.all()) != 0:
-        raise UniquenessError("Group with name {} already exists and is "
+        raise UniquenessError("DbGroup with name {} already exists and is "
                               "non-empty".format(group_name))
     group.description = group_description
     # note that the group will be saved only after the check on upf uniqueness
@@ -106,13 +116,14 @@ def upload_upf_family(folder, group_name, group_description,
     pseudo_and_created = []
     
     for f in files:
-        
         md5sum = aiida.common.utils.md5_file(f)
-        existing_upf = UpfData.query(attributes__key="_md5",attributes__tval = md5sum)
+        existing_upf = UpfData.query(dbattributes__key="md5",
+                                     dbattributes__tval = md5sum)
         
         if len(existing_upf) == 0:
             # return the upfdata instances, not stored
-            pseudo, created = UpfData.get_or_create(f, use_first = True,store_upf=False)
+            pseudo, created = UpfData.get_or_create(f, use_first = True,
+                                                    store_upf = False)
             # to check whether only one upf per element exists
             # NOTE: actually, created has the meaning of "to_be_created"
             pseudo_and_created.append( (pseudo,created) )
@@ -121,8 +132,7 @@ def upload_upf_family(folder, group_name, group_description,
                 raise ValueError("A UPF with identical MD5 to "+f+" cannot be added with stop_if_existing")
             pseudo = existing_upf[0]
             pseudo_and_created.append( (pseudo,False) )
-             
-    print pseudo_and_created, [ i[0].element for i in pseudo_and_created ]
+    
     # check whether pseudo are unique per element
     elements = [ i[0].element for i in pseudo_and_created ]
     if not len(pseudo_and_created) == len( 
@@ -136,7 +146,7 @@ def upload_upf_family(folder, group_name, group_description,
     if not group_created: # enforce the user if the group was empty and already there
         group.user = get_automatic_user()
         group.save()
-
+    
     # save the upf in the database, and add them to group    
     for pseudo,created in pseudo_and_created:
         if created:
@@ -145,9 +155,15 @@ def upload_upf_family(folder, group_name, group_description,
         group.dbnodes.add(pseudo.dbnode)
 
         if created:
-            aiidalogger.debug("New node {} created for file {}".format(pseudo.uuid, f))
+            aiidalogger.debug("New node {} created for file {}".format(
+               pseudo.uuid, pseudo.filename))
         else:
-            aiidalogger.debug("Reusing node {} for file {}".format(pseudo.uuid, f))            
+            aiidalogger.debug("Reusing node {} for file {}".format(
+               pseudo.uuid, pseudo.filename))
+    
+    nuploaded = len([i for i in pseudo_and_created if i[1]])
+     
+    return nfiles, nuploaded
         
             
 def parse_upf(fname, check_filename = True):
@@ -264,43 +280,53 @@ class UpfData(SinglefileData):
         if not os.path.abspath(filename):
             raise ValueError("filename must be an absolute path")
         md5 = aiida.common.utils.md5_file(filename)
-
-        # already raises a ParsingError if the file cannot be recognized
-        parsed_data = parse_upf(filename)
-        try:
-            element = parsed_data['element']
-        except KeyError:
-            raise ParsingError("No 'element' parsed in the UPF file {}".format(
-                filename))
         
         pseudos = cls.from_md5(md5)
         if len(pseudos) == 0:
             if store_upf:
-                instance = cls(filename=filename, element=element).store()
+                instance = cls(file=filename).store()
                 return (instance, True)
             else:
-                instance = cls(filename=filename, element=element)
+                instance = cls(file=filename)
                 return (instance, True)
         else:
-            filtered_pseudos = []
-            for p in pseudos:
-                if (p.get_attr("element", None) == element):
-                    filtered_pseudos.append(p)
-            if len(filtered_pseudos) == 0:
-                raise ValueError("At least one UPF found with the same md5, "
-                    "but the element is different. "
-                    "pks={}".format(
-                        ",".join([str(i.pk) for i in pseudos])))
-            elif len(filtered_pseudos) > 1:
+            if len(pseudos) > 1:
                 if use_first:
-                    return (filtered_pseudos[0], False)
+                    return (pseudos[0], False)
                 else:
                     raise ValueError("More than one copy of a pseudopotential "
                         "with the same MD5 has been found in the "
                         "DB. pks={}".format(
-                          ",".join([str(i.pk) for i in filtered_pseudos])))
+                          ",".join([str(i.pk) for i in pseudos])))
             else:        
-                return (filtered_pseudos[0], False)
+                return (pseudos[0], False)
+
+    def store(self):
+        """
+        Store the node, reparsing the file so that the md5 and the element 
+        are correctly reset.
+        """
+        from aiida.common.exceptions import ParsingError, ValidationError
+        import aiida.common.utils
+
+        upf_abspath = self.get_file_abs_path()
+        if not upf_abspath:
+            raise ValidationError("No valid UPF was passed!")
+
+        parsed_data = parse_upf(upf_abspath)
+        md5sum = aiida.common.utils.md5_file(upf_abspath)
+        
+        try:
+            element = parsed_data['element']
+        except KeyError:
+            raise ParsingError("No 'element' parsed in the UPF file {};"
+                               " unable to store".format(self.filename))
+        
+        self.set_attr('element', str(element))
+        self.set_attr('md5', md5sum)
+
+        return super(UpfData, self).store()
+
 
     @classmethod
     def from_md5(cls, md5):
@@ -310,58 +336,78 @@ class UpfData(SinglefileData):
         Note that the hash has to be stored in a _md5 attribute, otherwise
         the pseudo will not be found.
         """
-        queryset = cls.query(attributes__key='_md5', attributes__tval=md5)
+        queryset = cls.query(dbattributes__key='md5', dbattributes__tval=md5)
         return list(queryset)
 
-
-    def __init__(self, **kwargs):
+    def set_file(self, filename):
+        """
+        I pre-parse the file to store the attributes.
+        """
+        from aiida.common.exceptions import ParsingError
         import aiida.common.utils
-        
-        
-        uuid = kwargs.pop('uuid', None)
-        if uuid is not None:
-            if kwargs:
-                raise TypeError("You cannot pass other arguments if one of"
-                                "the arguments is uuid")
-            super(UpfData,self).__init__(uuid=uuid)
-            return
-        
-        super(UpfData,self).__init__()
+
+        parsed_data = parse_upf(filename)
+        md5sum = aiida.common.utils.md5_file(filename)
         
         try:
-            filename = kwargs.pop("filename")
+            element = parsed_data['element']
         except KeyError:
-            raise TypeError("You have to specify the filename")
-        try:
-            element = kwargs.pop("element")
-        except KeyError:
-            raise TypeError("You have to specify the element to which this "
-                            "pseudo refers to")
-                    
-        self.add_path(filename)
-        md5sum = aiida.common.utils.md5_file(self.get_file_abs_path())
+            raise ParsingError("No 'element' parsed in the UPF file {};"
+                               " unable to store".format(self.filename))
         
+        super(UpfData,self).set_file(filename)
+            
         self.set_attr('element', str(element))
         self.set_attr('md5', md5sum)
-
+        
     @property
     def element(self):
-        return self.get_attr('element')
+        return self.get_attr('element', None)
+ 
 
     def validate(self):
-        from aiida.common.exceptions import ValidationError
+        from aiida.common.exceptions import ValidationError, ParsingError
+        import aiida.common.utils
 
         super(UpfData,self).validate()
+
+
+        upf_abspath = self.get_file_abs_path()
+        if not upf_abspath:
+            raise ValidationError("No valid UPF was passed!")
+
+        try:
+            parsed_data = parse_upf(upf_abspath)
+        except ParsingError:
+            raise ValidationError("The file '{}' could not be "
+                                  "parsed".format(upf_abspath))
+        md5 = aiida.common.utils.md5_file(upf_abspath)
         
         try:
-            self.get_attr('element')
+            element = parsed_data['element']
+        except KeyError:
+            raise ValidationError("No 'element' could be parsed in the UPF "
+                                  "file {}".format(upf_abspath))
+        
+        try:
+            attr_element = self.get_attr('element')
         except AttributeError:
             raise ValidationError("attribute 'element' not set.")
 
         try:
-            self.get_attr('md5')
+            attr_md5 = self.get_attr('md5')
         except AttributeError:
             raise ValidationError("attribute 'md5' not set.")
+
+        if attr_element != element:
+            raise ValidationError("Attribute 'element' says '{}' but '{}' was "
+                                  "parsed instead.".format(
+                    attr_element, element))
+
+        if attr_md5 != md5:
+            raise ValidationError("Attribute 'md5' says '{}' but '{}' was "
+                                  "parsed instead.".format(
+                    attr_md5, md5))
 
     @classmethod
     def get_upf_groups(self,filter_elements=None):
@@ -374,17 +420,17 @@ class UpfData(SinglefileData):
         """
         # Get all groups that contain at least one upf
         from django.db.models import Q
-        from aiida.djsite.db.models import Group
+        from aiida.djsite.db.models import DbGroup
         
         q_object = Q(dbnodes__type__startswith=self._plugin_type_string)
-        groups = Group.objects.filter(q_object)
+        groups = DbGroup.objects.filter(q_object)
         
         if filter_elements is not None:
             # add a filter to the previous query, one f per element
             # to get only groups with desired element
             for el in filter_elements:
-                groups = groups.filter( dbnodes__attributes__key='_element',
-                                 dbnodes__attributes__tval=el.capitalize() )
+                groups = groups.filter( dbnodes__dbattributes__key='element',
+                                 dbnodes__dbattributes__tval=el.capitalize() )
             
         # find all groups matching the desired filters
         groups = groups.distinct().order_by("name")

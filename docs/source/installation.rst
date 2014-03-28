@@ -113,10 +113,20 @@ Then, install the python dependencies is as simple as this::
 (this will download and install requirements that are listed in the
 ``requirements.txt`` file; the ``--user`` option allows to install
 the packages as a normal user, without the need of using ``sudo`` or
-becoming root).
+becoming root). Check that every package is installed correctly.
 
 If everything went smoothly, congratulations! Now the code is installed!
 However, we need still a few steps to properly configure AiiDA for your user.
+
+Note : if the ``pip install`` command gives you an error that ressembles the one
+shown below, you will need to downgrade to an older version of pip::
+
+	Cannot fetch index base URL https://pypi.python.org/simple/
+
+To downgrade pip, use the following command::
+
+	sudo easy_install pip==1.2.1
+
 
 AiiDA configuration
 +++++++++++++++++++
@@ -128,16 +138,31 @@ The main interface to AiiDA is through its command-line tool, called ``verdi``.
 For it to work, it must be on the system path, and moreover the AiiDA python
 code must be found on the python path. 
 
-To do this, add the following to your ``~/.bashrc`` file::
+To do this, add the following to your ``~/.bashrc`` file (create it if not already present)::
 
       export PYTHONPATH=~/git/aiida:${PYTHONPATH}
-      export PATH=~git/aiida/bin:${PATH}
+      export PATH=~/git/aiida/bin:${PATH}
 
-and then source the .bashrc file, or login in a new window.
+and then source the .bashrc file with the command ``source ~/.bashrc``, or login
+in a new window.
 
 .. note:: replace ``~/git/aiida`` with the path where you installed AiiDA. Note
   also that in the ``PYTHONPATH`` you simply have to specify the AiiDA path, while
   in ``PATH`` you also have to append the ``/bin`` subfolder!
+
+.. note:: if you installed the modules with the ``--user`` parameter during the
+  ``pip install`` step, you will need to add one more directory to your ``PATH``
+  variable in the ``~/.bashrc`` file.
+  For Linux systems, the path to add is usually ``~/.local/bin``::
+  
+  	export PATH=~/git/aiida/bin:~/.local/bin:${PATH}
+  
+  For Mac OS X systems, the path to add is usually ``~/Library/Python/2.7/bin``::
+  
+  	export PATH=~/git/aiida/bin:~/Library/Python/2.7/bin:${PATH}
+  
+  To verify if this is the correct path to add, navigate to this location and
+  you should find the executable ``supervisord`` in the directory.
 
 To verify if the path setup is OK:
 

@@ -1,0 +1,92 @@
+{% extends "awi/base_computers.html" %}
+{% load staticfiles %}
+
+{% block subtitle %} <small>List</small>{% endblock %}
+
+{% block content %}
+<div class="row">
+	<div class="col-lg-4 col-md-8 col-sm-10 col-lg-push-8">
+		{% include 'awi/base_filters.html' %}
+ 	</div>
+	<div class="col-lg-8 col-md-12 col-sm-12 col-lg-pull-4">
+		<div class="panel panel-default">
+			<div class="table-responsive">
+				<table class="table">
+					<thead>
+						<th>
+							{% if ordering == 'id' %}
+							<a href="{% url 'awi:computers_list' %}/-id" class="ordering">ID<span class="up-caret"></span></a>
+							{% elif ordering == '-id' %}
+							<a href="{% url 'awi:computers_list' %}/id" class="ordering">ID<span class="caret"></span></a>
+							{% else %}
+							<a href="{% url 'awi:computers_list' %}/id" class="ordering">ID</a>
+							{% endif %}
+						</th>
+						<th>
+							{% if ordering == 'name' %}
+							<a href="{% url 'awi:computers_list' %}/-name" class="ordering">Name<span class="up-caret"></span></a>
+							{% elif ordering == '-name' %}
+							<a href="{% url 'awi:computers_list' %}/name" class="ordering">Name<span class="caret"></span></a>
+							{% else %}
+							<a href="{% url 'awi:computers_list' %}/name" class="ordering">Name</a>
+							{% endif %}
+						</th>
+						<th>Description</th>
+						<th>User</th>
+						<th>
+							{% if ordering == 'transport_type' %}
+							<a href="{% url 'awi:computers_list' %}/-transport_type" class="ordering">Transport<span class="up-caret"></span></a>
+							{% elif ordering == '-transport_type' %}
+							<a href="{% url 'awi:computers_list' %}/transport_type" class="ordering">Transport<span class="caret"></span></a>
+							{% else %}
+							<a href="{% url 'awi:computers_list' %}/transport_type" class="ordering">Transport</a>
+							{% endif %}
+						</th>
+						<th>Hostname</th>
+						<th>
+							{% if ordering == 'scheduler_type' %}
+							<a href="{% url 'awi:computers_list' %}/-scheduler_type" class="ordering">Scheduler<span class="up-caret"></span></a>
+							{% elif ordering == '-scheduler_type' %}
+							<a href="{% url 'awi:computers_list' %}/scheduler_type" class="ordering">Scheduler<span class="caret"></span></a>
+							{% else %}
+							<a href="{% url 'awi:computers_list' %}/scheduler_type" class="ordering">Scheduler</a>
+							{% endif %}
+						</th>
+						<th>
+							{% if ordering == 'enabled' %}
+							<a href="{% url 'awi:computers_list' %}/-enabled" class="ordering">Enabled<span class="up-caret"></span></a>
+							{% elif ordering == '-enabled' %}
+							<a href="{% url 'awi:computers_list' %}/enabled" class="ordering">Enabled<span class="caret"></span></a>
+							{% else %}
+							<a href="{% url 'awi:computers_list' %}/enabled" class="ordering">Enabled</a>
+							{% endif %}
+						</th>
+						<th></th>
+					</thead>
+					<tbody id="computers-list" data-ordering="{{ ordering }}">
+						<tr class="loader">
+							<td colspan="9"><div class="dots">Loading...</div></td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
+		<div class="center">
+			<ul class="pagination" id="computers-pag">
+			</ul>
+		</div>
+	</div>
+</div>
+{% endblock %}
+
+{% block js %}
+<script src="{% static 'awi/js/application_manager.js' %}"></script>
+<script src="{% static 'awi/js/filters_manager.js' %}"></script>
+<script src="{% static 'awi/js/computers_manager.js' %}"></script>
+<script>
+	var am;
+	$(document).ready(function () {
+		am = new ApplicationManager('computers', FiltersManager, ComputersManager);
+	});
+</script>
+{% endblock %}

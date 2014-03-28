@@ -18,20 +18,21 @@ import getpass
 import aiida
 from aiida.common.exceptions import ConfigurationError
 from aiida.cmdline.baseclass import VerdiCommand
+from aiida.cmdline import pass_to_django_manage
 
 ## Import here from other files; once imported, it will be found and
 ## used as a command-line parameter
-from aiida.cmdline.commands.daemon import Daemon
-from aiida.cmdline.commands.computer import Computer
-from aiida.cmdline.commands.workflow import Workflow
-from aiida.cmdline.commands.upf import Upf
-from aiida.cmdline.commands.code import Code
 from aiida.cmdline.commands.calculation import Calculation
+from aiida.cmdline.commands.code import Code
+from aiida.cmdline.commands.computer import Computer
+from aiida.cmdline.commands.daemon import Daemon
+from aiida.cmdline.commands.data import Data
+from aiida.cmdline.commands.devel import Devel
+from aiida.cmdline.commands.export import Export
+from aiida.cmdline.commands.workflow import Workflow
 
 
-# default execname; can be substituted later in the call from
-# exec_from_cmdline
-execname = 'verdi'
+from aiida.cmdline import execname
 
 ########################################################################
 # HERE STARTS THE COMMAND FUNCTION LIST
@@ -174,6 +175,26 @@ class Help(VerdiCommand):
         else:
             print ""
     
+    
+class Install(VerdiCommand):
+    """
+    Install/setup aiida for the current user
+
+    This command creates the ~/.aiida folder in the home directory 
+    of the user, interactively asks for the database settings and
+    the repository location, does a setup of the daemon and runs
+    a syncdb command to create/setup the database.
+    """
+    def run(self,*args):
+
+        create_base_dirs()
+        create_configuration()
+
+        print "Executing now a syncdb command..."
+        pass_to_django_manage([execname, 'syncdb'])
+
+    
+    
 class SyncDB(VerdiCommand):
     """
     Create new tables in the database
@@ -187,15 +208,15 @@ class SyncDB(VerdiCommand):
     def run(self,*args):
         pass_to_django_manage([execname, 'syncdb'] + list(args))
 
-class Migrate(VerdiCommand):
-    """
-    Migrate tables and data using django-south
-    
-    This command calls the Django 'manage.py migrate' command to migrate
-    tables managed by django-south to their most recent version.
-    """
-    def run(self,*args):
-        pass_to_django_manage([execname, 'migrate'] + list(args))
+#class Migrate(VerdiCommand):
+#    """
+#    Migrate tables and data using django-south
+#    
+#    This command calls the Django 'manage.py migrate' command to migrate
+#    tables managed by django-south to their most recent version.
+#    """
+#    def run(self,*args):
+#        pass_to_django_manage([execname, 'migrate'] + list(args))
 
 class Shell(VerdiCommand):
     """
@@ -276,184 +297,22 @@ class GoToComputer(VerdiCommand):
         print ""
 
 
-class Developertest(VerdiCommand):
-    """
-    Runs aiida developer tests
-
-    If no parameters are specified, both the django tests for the db application
-    and the unittests of the aiida modules are run.
-    
-    If you want to limit the tests to a specific subset of modules,
-    pass them as parameters. 
-    
-    An invalid parameter will make the code print the list of all
-    valid parameters.
-    
-    Note: the test called 'db' will run all db.* tests.
-    """
-    base_allowed_test_folders = [
-        'aiida.scheduler', 
-        'aiida.transport',
-        'aiida.common',
-        ]
-    
-    _dbrawprefix = "db"
-    _dbprefix = _dbrawprefix + "."
-
-    def __init__(self,*args,**kwargs):
-        from aiida.djsite.db.testbase import db_test_list
         
-        super(Developertest, self).__init__(*args, **kwargs)
-        
-        # The content of the dict is:
-        #   None for a simple folder test
-        #   a list of strings for db tests, one for each test to run
-        self.allowed_test_folders = {}
-        for k in self.base_allowed_test_folders:
-            self.allowed_test_folders[k] = None
-        for dbtest in db_test_list:
-            self.allowed_test_folders["{}{}".format(self._dbprefix, dbtest)] = [dbtest]
-        self.allowed_test_folders[self._dbrawprefix] = db_test_list
-    
-    def run(self,*args):
-        import unittest
-        import tempfile
-        from aiida.djsite.settings import settings
-
-        db_test_list = []
-        test_folders = []
-        do_db = False
-        if args:
-            for arg in args:
-                if arg in self.allowed_test_folders:
-                    dbtests = self.allowed_test_folders[arg]
-                    # Anything that has been added is a DB test                    
-                    if dbtests is not None:
-                        do_db = True
-                        for dbtest in dbtests:
-                            db_test_list.append(dbtest)
-                    else:
-                        test_folders.append(arg)
-                else:
-                    print >> sys.stderr, (
-                        "{} is not a valid test. "
-                        "Allowed test folders are:".format(arg))
-                    print >> sys.stderr, "\n".join(
-                        '  * {}'.format(a) for a in sorted(
-                            self.allowed_test_folders.keys()))
-                    sys.exit(1)
-        else:
-            # Without arguments, run all tests
-            do_db = True
-            for k, v in self.allowed_test_folders.iteritems():
-                if v is None:
-                    # Non-db tests
-                    test_folders.append(k)
-                else:
-                    # DB test
-                    for dbtest in v:
-                        db_test_list.append(dbtest)                    
-
-        for test_folder in test_folders:
-            print "v"*75
-            print ">>> Tests for module {} <<<".format(test_folder.ljust(50))
-            print "^"*75
-            testsuite = unittest.defaultTestLoader.discover(
-                test_folder,top_level_dir = os.path.dirname(aiida.__file__))
-            test_runner = unittest.TextTestRunner()
-            test_runner.run( testsuite )
-
-        if do_db:
-            # As a first thing, I want to set the correct flags.
-            # This allow to work on temporary DBs and a temporary repository.
-
-            ## Setup a sqlite3 DB for tests (WAY faster, since it remains in-memory
-            ## and not on disk.
-            # if you define such a variable to False, it will use the same backend
-            # that you have already configured also for tests. Otherwise, 
-            # Setup a sqlite3 DB for tests (WAY faster, since it remains in-memory)
-
-            # TODO: allow the use of this flag
-            #if confs.get('use_inmemory_sqlite_for_tests', True):
-            settings.DATABASES['default'] = {'ENGINE': 'django.db.backends.sqlite3'}
-            ###################################################################
-            # IMPORTANT! Choose a different repository location, otherwise 
-            # real data will be destroyed during tests!!
-            # The location is automatically created with the tempfile module
-            # Typically, under linux this is created under /tmp
-            # and is not deleted at the end of the run.
-            settings.LOCAL_REPOSITORY = tempfile.mkdtemp(prefix='aiida_repository_')
-            # I write the local repository on stderr, so that the user running
-            # the tests knows where the files are being stored
-            print >> sys.stderr, "########################################"
-            print >> sys.stderr,  "# LOCAL AiiDA REPOSITORY FOR TESTS:"
-            print >> sys.stderr, "# {}".format(settings.LOCAL_REPOSITORY)
-            print >> sys.stderr, "########################################"
-            # Here. I set the correct signal to attach to when we want to
-            # perform an operation after all tables are created (e.g., creation
-            # of the triggers).
-            # By default, in djsite/settings/settings.py this is south->post_migrate,
-            # here we set it to django->post_syncdb because we have set
-            # SOUTH_TESTS_MIGRATE = False
-            # in the settings.
-            settings.AFTER_DATABASE_CREATION_SIGNAL = 'post_syncdb'
-            
-            
-            ##################################################################
-            ## Only now I set the aiida_test_list variable so that tests can run
-            settings.aiida_test_list = db_test_list
-            
-            print "v"*75
-            print (">>> Tests for django db application   "
-                   "                                  <<<")
-            print "^"*75            
-            pass_to_django_manage([execname, 'test', 'db'])
-
-    def complete(self, subargs_idx, subargs):
-        """
-        I complete with subargs that were not used yet.
-        """
-        # I remove the one on which I am, so if I wrote all of it but
-        # did not press space, it will get completed
-        other_subargs = subargs[:subargs_idx] + subargs[subargs_idx+1:]
-        # I create a list of the tests that are not already written on the 
-        # command line
-        remaining_tests = (
-            set(self.allowed_test_folders) - set(other_subargs))
-        print " ".join(sorted(remaining_tests))
-
-class Install(VerdiCommand):
+class Runserver(VerdiCommand):
     """
-    Install/setup aiida for the current user
+    Run the AiiDA webserver on localhost
 
-    This command creates the ~/.aiida folder in the home directory 
-    of the user, interactively asks for the database settings and
-    the repository location, does a setup of the daemon and runs
-    a syncdb + migrate command to create/setup the database.
+    This command runs the webserver on the default port. Further command line
+    options are passed to the Django manage runserver command 
     """
     def run(self,*args):
-
-        create_base_dirs()
-        create_configuration()
-
-        print "Executing now a syncdb --migrate command..."
-        pass_to_django_manage([execname, 'syncdb', '--migrate'])
+        pass_to_django_manage([execname, 'runserver'] + list(args))
 
 
 ########################################################################
 # HERE ENDS THE COMMAND FUNCTION LIST
 ########################################################################
 # From here on: utility functions
-
-def pass_to_django_manage(argv):
-    """
-    Call the corresponding django manage.py command
-    """
-    from aiida.common.utils import load_django
-    import django.core.management
-    
-    load_django()
-    django.core.management.execute_from_command_line(argv)
 
 def get_listparams():
     """

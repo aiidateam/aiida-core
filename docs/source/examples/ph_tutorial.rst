@@ -69,7 +69,7 @@ Finally, we store the object in the database.
 ::
 
     ParameterData = DataFactory('parameter')
-    parameters = ParameterData({
+    parameters = ParameterData(dict={
 		'INPUTPH': {
 		    'tr2_ph' : 1.0e-8,
 		    'epsil' : True,
@@ -98,7 +98,7 @@ We set the parameters of the scheduler (and just like the PWscf, this is a cofig
     
     num_cpus_per_machine = 16
     calc.set_max_wallclock_seconds(30*60) # 30 min
-    calc.set_resources(num_machines=1, num_cpus_per_machine=num_cpus_per_machine)
+    calc.set_resources({"num_machines": 1, "num_cpus_per_machine": num_cpus_per_machine})
 
 When we finished the scheduler setup, we store the calculation::
     
@@ -168,7 +168,7 @@ Note that this script is not much tolerant to exceptions!
     code = Code.get(codename)
 
     ParameterData = DataFactory('parameter')
-    parameters = ParameterData({
+    parameters = ParameterData(dict={
 		'INPUTPH': {
 		    'tr2_ph' : 1.0e-8,
 		    'epsil' : True,
@@ -186,7 +186,7 @@ Note that this script is not much tolerant to exceptions!
     QEPhCalc = CalculationFactory('quantumespresso.ph')
     calc = QEPhCalc(computer=computer)
     calc.set_max_wallclock_seconds(30*60) # 30 min
-    calc.set_resources(num_machines=1, num_cpus_per_machine=num_cpus_per_machine)
+    calc.set_resources({"num_machines": 1, "num_cpus_per_machine": num_cpus_per_machine})
     calc.store()
 
     calc.use_parameters(parameters)

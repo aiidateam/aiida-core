@@ -1,0 +1,188 @@
+
+
+/* ==========================================================================
+   Author's custom styles
+   ========================================================================== */
+
+/* push the content down so that it is not hidden under the navbar */
+body {
+	padding-top: 60px;
+	padding-bottom: 20px;
+}
+
+/* block that preloads the glyphicon font */
+.font-preload {
+	position: absolute;
+	visibility: hidden;
+}
+
+/* error message when js is disabled */
+div.alert#nojs {
+	display: none;
+}
+html.no-js div.alert#nojs {
+	display: block !important;
+}
+
+form.form-signin {
+	width: 100%;
+	max-width: 300px;
+	margin: 0 auto;
+}
+.form-signin label.checkbox {
+	width: 50%;
+	margin: 10px auto;
+}
+.form-signin input[type="text"] {
+  margin-bottom: -1px;
+  border-bottom-right-radius: 0;
+  border-bottom-left-radius: 0;
+}
+.form-signin input[type="password"] {
+  margin-bottom: 10px;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/* force the text-danger and text-success color even when in dropdown */
+.text-danger {
+	color: #a94442 !important;
+}
+a.text-danger:hover {
+	color: #843534 !important;
+}
+.text-success {
+	color: #3c763d !important;
+}
+a.text-success:hover {
+	color: #2b542c !important;
+}
+
+.tooltip-inner {
+    word-wrap: break-word;
+}
+
+/* styling of the AWI logo */
+.navbar-brand img {
+	height: 18px;
+	vertical-align: baseline;
+}
+
+/* no margin for a table in a panel */
+.panel .table {
+	margin-bottom: 0;
+}
+/* inversed caret symbol for sorting in table headers */
+.up-caret {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  margin-left: 2px;
+  vertical-align: middle;
+  border-bottom: 4px solid;
+  border-right: 4px solid transparent;
+  border-left: 4px solid transparent;
+}
+/* right caret symbol for displaying of details */
+.right-caret {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  margin-top: 2px;
+  vertical-align: middle;
+  border-left: 4px solid;
+  border-bottom: 4px solid transparent;
+  border-top: 4px solid transparent;
+}
+
+.table thead>tr>th>a, .table thead>tr>th>a:hover {
+	text-decoration: none;
+	display: block;
+}
+
+/* center the loader in tables */
+.table tbody>tr.loader>td {
+	text-align: center;
+	padding: 20px;
+}
+/* vertically align the content of tables */
+.table tbody>tr>td {
+	vertical-align: middle;
+}
+/* labels in tables should be bigger */
+.table .label {
+	font-size: 90%;
+}
+.table tr.detail {
+	background-color: #f5f5f5;
+}
+.table tr.detail>td {
+	display: none;
+}
+.table tr.detail>td div.detail-close {
+	position: absolute;
+	bottom: -30px;
+	left: 50%;
+	margin-left: -10px;
+	display: none;
+}
+.table .detail-ajax { /* when showing listing detail via ajax in the table, make the content narrower */
+	width: 80%;
+	margin: 0 auto 10px auto;
+	text-align: left;
+	position: relative;
+}
+.table .ajax-hide {
+	display: none;
+}
+
+.table .detail-ajax strong.pull-left {
+	width: 150px;
+}
+
+.table tr td.name a {
+	text-decoration: none;
+}
+
+/* corrections for the + icon of the filters panel */
+h3 .btn-xs {
+	padding: 2px 5px 1px 6px !important;
+}
+h3 .btn-group {
+	top: -3px;
+	right: -5px;
+}
+
+/* styling of the filters button-groups */
+.btn-toolbar>.btn-group {
+	margin-bottom: 3px;
+}
+.btn.filter-field {
+	width: 100px;
+	text-align: right;
+}
+.btn.filter-operator {
+	width: 35px;
+	text-align: center;
+}
+.btn.filter-value {
+	width: 150px;
+	text-align: left;
+}
+.btn-group+.btn.filter-value, .btn-group+.btn-group .btn.filter-value {
+	width: 121px;
+}
+
+/* we need to add a padding to the tables when in overflow hidden because of the dropdown menu that gets hidden */
+@media (max-width: 767px) {
+	.table-responsive {
+		overflow-y: scroll !important;
+		padding-bottom: 160px !important;
+	}
+}
+
+/* useful centering class */
+.center {
+	text-align: center;
+}
+

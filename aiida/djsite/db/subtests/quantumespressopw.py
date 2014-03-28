@@ -70,9 +70,9 @@ class TestQEPWInputGeneration(QETestCase):
         s.append_atom(position=(0.,0.,0.),symbols=['Ba'])
         s.store()
         
-        p = ParameterData(input_params).store()
+        p = ParameterData(dict=input_params).store()
         
-        k = ParameterData(k_points).store()
+        k = ParameterData(dict=k_points).store()
         
         pseudo_dir = os.path.join(aiida.__file__, os.pardir,os.pardir,
                      'testdata','qepseudos')

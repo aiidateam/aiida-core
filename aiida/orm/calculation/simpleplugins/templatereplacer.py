@@ -42,7 +42,7 @@ from aiida.common.datastructures import CalcInfo
 # and type of inputs + default values etc.
 class TemplatereplacerCalculation(Calculation):   
     
-    def _prepare_for_submission(self,tempfolder):        
+    def _prepare_for_submission(self,tempfolder,inputdict=None):        
         """
         This is the routine to be called when you want to create
         the input files and related stuff with a plugin.
@@ -62,7 +62,8 @@ class TemplatereplacerCalculation(Calculation):
         from aiida.common.utils import validate_list_of_string_tuples
         from aiida.common.exceptions import ValidationError
         
-        inputdict = self.get_inputdata_dict()
+        if inputdict is None:
+            inputdict = self.get_inputdata_dict()
         
         parameters_node = inputdict.pop('parameters', None)
         if parameters_node is None:

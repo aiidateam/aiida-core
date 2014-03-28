@@ -20,29 +20,22 @@ from aiida.orm import Data
 
 class SinglefileData(Data):
     """
-    Pass as input either the uuid of an existing node, or a
-    file parameter with the (absolute) path of a file on the hard drive.
-    It will get copied inside.
+    Pass as input a file parameter with the (absolute) path of a file 
+    on the hard drive.
+    It will get copied inside the node.
 
     Internally must have a single file, and stores as internal attribute
-    the filename in the '_filename' attribute.
+    the filename in the 'filename' attribute.
     """
-    def __init__(self,filename=None,**kwargs):
-        super(SinglefileData,self).__init__(**kwargs)
-
-        uuid = kwargs.pop('uuid', None)
-        if uuid is not None:
-            return
-
-        if filename is not None:
-            self.add_path(filename)
-
     @property
     def filename(self):
         return self.get_attr('filename')
 
     def get_file_abs_path(self):
         return os.path.join(self.path_subfolder.abspath,self.filename)
+
+    def set_file(self, filename):
+            self.add_path(filename)
 
     def add_path(self,src_abs,dst_filename=None):
         """

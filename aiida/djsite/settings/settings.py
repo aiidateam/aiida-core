@@ -251,7 +251,13 @@ SOUTH_TESTS_MIGRATE = False
 # This is only a string: call
 # aiida.djsite.utils.get_after_database_creation_signal
 # to get the proper signal
-AFTER_DATABASE_CREATION_SIGNAL = 'post_migrate'
+# Uncomment next line if using south
+#AFTER_DATABASE_CREATION_SIGNAL = 'post_migrate'
+AFTER_DATABASE_CREATION_SIGNAL = 'post_syncdb'
+
+# VERSION TO USE FOR DBNODES.
+AIIDANODES_UUID_VERSION=4
+
 
 # -------------------------
 # Tastypie (API) settings
@@ -290,7 +296,7 @@ CELERYBEAT_SCHEDULE = {
         },
     djcelery_tasks['workflow']: {
         'task':'aiida.djsite.db.tasks.workflow_stepper',
-        'schedule': timedelta(seconds=5),
+        'schedule': timedelta(seconds=30),
         },
 }
 

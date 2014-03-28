@@ -309,12 +309,12 @@ class Computer(VerdiCommand):
         
         try:
             authinfo = DbAuthInfo.objects.get(
-                computer=computer.dbcomputer, 
+                dbcomputer=computer.dbcomputer, 
                 aiidauser=user)
         
             old_authparams = authinfo.get_auth_params()
         except ObjectDoesNotExist:
-            authinfo = DbAuthInfo(computer=computer.dbcomputer, aiidauser=user)
+            authinfo = DbAuthInfo(dbcomputer=computer.dbcomputer, aiidauser=user)
             old_authparams = {}
 
         Transport = computer.get_transport_class()

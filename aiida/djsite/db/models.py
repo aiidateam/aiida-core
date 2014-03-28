@@ -92,12 +92,9 @@ class DbNode(m.Model):
     # Index that is incremented every time a modification is done on itself or on attributes.
     # Managed by the aiida.orm.Node class. Do not modify
     nodeversion = m.IntegerField(default=1,editable=False)
-    # Index that keeps track of the last time the node was updated to the remote aiida instance.
-    # Zero means that it was never stored, so also files need to be udpated.
-    # When this number is > 0, only attributes and not files will be uploaded to the remote aiida
-    # instance.
-    # Managed by the aiida.orm.Node class. Do not modify
-    lastsyncedversion = m.IntegerField(default=0,editable=False)
+
+    # For the API: whether this node 
+    public = m.BooleanField(default=False)
 
     objects = m.Manager()
     # Return aiida Node instances or their subclasses instead of DbNode instances
@@ -241,7 +238,8 @@ class DbAttributeBaseClass(m.Model):
     Moreover, this class unpacks dictionaries and lists when possible, so that
     it is possible to query inside recursive lists and dicts.
     """
-    time = m.DateTimeField(auto_now_add=True, editable=False)
+    # Modification time of this attribute
+    time = m.DateTimeField(auto_now=True, editable=False)
     # In this way, the related name for the DbAttribute inherited class will be
     # 'dbattributes' and for 'dbextra' will be 'dbextras'
     dbnode = m.ForeignKey('DbNode', related_name='%(class)ss') 
@@ -731,11 +729,14 @@ class DbGroup(m.Model):
     """
     uuid = UUIDField(auto=True, version=AIIDANODES_UUID_VERSION)
     # max_length is required by MySql to have indexes and unique constraints
-    name = m.CharField(max_length=255,unique=True, db_index=True)
+    name = m.CharField(max_length=1024, db_index=True)
     dbnodes = m.ManyToManyField('DbNode', related_name='dbgroups')
     time = m.DateTimeField(auto_now_add=True, editable=False)
     description = m.TextField(blank=True)
     user = m.ForeignKey(User)  # The owner of the group, not of the calculations
+
+    class Meta:
+        unique_together = (("user", "name"),)
 
     @python_2_unicode_compatible
     def __str__(self):
@@ -748,13 +749,6 @@ class DbComputer(m.Model):
     Attributes:
     * name: A name to be used to refer to this computer. Must be unique.
     * hostname: Fully-qualified hostname of the host
-    * workdir: Full path of the aiida folder on the host. It can contain\
-            the string {username} that will be substituted by the username\
-            of the user on that machine.\
-            The actual workdir is then obtained as\
-            workdir.format(username=THE_ACTUAL_USERNAME)\
-            Example: \
-            workdir = "/scratch/{username}/aiida/"
     * transport_type: a string with a valid transport type
 
 
@@ -765,6 +759,15 @@ class DbComputer(m.Model):
         * num cores per node
 
         * max num cores
+
+        * workdir: Full path of the aiida folder on the host. It can contain\
+            the string {username} that will be substituted by the username\
+            of the user on that machine.\
+            The actual workdir is then obtained as\
+            workdir.format(username=THE_ACTUAL_USERNAME)\
+            Example: \
+            workdir = "/scratch/{username}/aiida/"
+
 
         * allocate full node = True or False
 
@@ -779,7 +782,6 @@ class DbComputer(m.Model):
     description = m.TextField(blank=True)
     enabled = m.BooleanField(default=True)
     # TODO: next three fields should not be blank...
-    workdir = m.CharField(max_length=255)
     transport_type = m.CharField(max_length=255)
     scheduler_type = m.CharField(max_length=255)
     transport_params = m.TextField(default="{}") # Will store a json
@@ -815,6 +817,23 @@ class DbComputer(m.Model):
             raise TypeError("Pass either a computer name, a DbComputer django instance or a Computer object")
         return dbcomputer
 
+
+    def get_workdir(self):
+        import json
+        try:
+            metadata = json.loads(self.metadata)
+        except ValueError:
+            raise DbContentError(
+                "Error while reading metadata for DbComputer {} ({})".format(
+                    self.name, self.hostname))
+
+        try:        
+            return metadata['workdir']
+        except KeyError:
+            raise ConfigurationError('No workdir found for DbComputer {} '.format(
+                self.name))
+
+
     @python_2_unicode_compatible
     def __str__(self):
         if self.enabled:
@@ -841,6 +860,13 @@ class DbAuthInfo(m.Model):
     auth_params = m.TextField(default='{}') # Will store a json; contains mainly the remoteuser
                                             # and the private_key
 
+    # The keys defined in the metadata of the DbAuthInfo will override the 
+    # keys with the same name defined in the DbComputer (using a dict.update()
+    # call of python).
+    metadata = m.TextField(default="{}") # Will store a json
+    # Whether this computer is enabled (user-level enabling feature)
+    enabled = m.BooleanField(default=True)
+
     class Meta:
         unique_together = (("aiidauser", "dbcomputer"),)
 
@@ -858,6 +884,20 @@ class DbAuthInfo(m.Model):
         
         # Raises ValueError if data is not JSON-serializable
         self.auth_params = json.dumps(auth_params)
+
+    def get_workdir(self):
+        import json
+        try:
+            metadata = json.loads(self.metadata)
+        except ValueError:
+            raise DbContentError(
+                "Error while reading metadata for authinfo, aiidauser={}, computer={}".format(
+                    self.aiidauser.username, self.dbcomputer.hostname))
+        
+        try:
+            return metadata['workdir']
+        except KeyError:
+            return self.dbcomputer.get_workdir()
 
     # a method of DbAuthInfo
     def get_transport(self):
@@ -880,12 +920,18 @@ class DbAuthInfo(m.Model):
 
     @python_2_unicode_compatible
     def __str__(self):
-        return "Authorization info for {}".format(self.dbcomputer.name)
+        if self.enabled:
+            return "Authorization info for {}@{}".format(self.aiidauser.name, self.dbcomputer.name)
+        else:
+            return "Authorization info for {}@{} [DISABLED]".format(self.aiidauser.name, self.dbcomputer.name)
+
 
 
 class DbComment(m.Model):
+    uuid = UUIDField(auto=True,version=AIIDANODES_UUID_VERSION)
     dbnode = m.ForeignKey(DbNode,related_name='dbcomments')
-    time = m.DateTimeField(auto_now_add=True, editable=False)
+    ctime = m.DateTimeField(auto_now_add=True, editable=False)
+    mtime = m.DateTimeField(auto_now=True, editable=False)
     user = m.ForeignKey(User)
     content = m.TextField(blank=True)
 

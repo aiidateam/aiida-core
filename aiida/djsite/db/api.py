@@ -101,6 +101,7 @@ class DbComputerResource(ModelResource):
             'hostname': ALL,
             'scheduler_type': ALL,
             'transport_type': ALL,
+            'transport_params': ALL,
             'enabled': ALL,
             }
         ordering = ['id', 'name', 'transport_type', 'scheduler_type', 'enabled']
@@ -222,6 +223,9 @@ class DbAuthInfoResource(ModelResource):
             'id': ['exact'],
             'dbcomputer': ALL_WITH_RELATIONS,
             'aiidauser': ALL_WITH_RELATIONS,
+            'enabled': ALL,
+            'metadata': ALL,
+            'auth_params': ALL,
             }
         
         authentication = SessionAuthentication()
@@ -288,7 +292,7 @@ class DbNodeResource(ModelResource):
     children = fields.ToManyField('self', 'children', related_name='parents', full=False, use_in=never)
     parents = fields.ToManyField('self', 'parents', related_name='children', full=False, use_in=never)
     
-    computer = fields.ToOneField(DbComputerResource, 'computer', null=True)
+    dbcomputer = fields.ToOneField(DbComputerResource, 'dbcomputer', null=True)
     
     class Meta:
         queryset = DbNode.objects.all()
@@ -302,7 +306,7 @@ class DbNodeResource(ModelResource):
             'mtime': ALL,
             'label': ALL,
             'description': ALL,
-            'computer': ALL_WITH_RELATIONS,
+            'dbcomputer': ALL_WITH_RELATIONS,
             'dbattributes': ALL_WITH_RELATIONS,
             'dbextras': ALL_WITH_RELATIONS,
             'user': ALL_WITH_RELATIONS,
@@ -313,7 +317,7 @@ class DbNodeResource(ModelResource):
             'attributes': ALL_WITH_RELATIONS,    
             }
 
-        ordering = ['id', 'label', 'type', 'computer', 'ctime']
+        ordering = ['id', 'label', 'type', 'dbcomputer', 'ctime']
         authentication = SessionAuthentication()
         # As discussed above: improve this with authorization allowing each
         # user to see only his own DbAuthInfo data

@@ -302,7 +302,7 @@ Then, we loop over the filenames and
     pseudos_to_use = {}
 
     for fname, elem in raw_pseudos:
-        absname = os.path.realpath(os.path.join(os.path.dirname(__file__), "data",fname))
+        absname = os.path.realpath(os.path.join(os.path.dirname(__file__), "testdata","qepseudos",fname))
         pseudo, created = UpfData.get_or_create(absname,use_first=True)
         pseudos_to_use[elem] = pseudo
 
@@ -367,6 +367,7 @@ Note that the configuration of the computer resources (like number of nodes and 
 
 Compact script
 --------------
+Download: :download:`this example script <pw_short_example.py>`
 
 ::
 
@@ -437,9 +438,11 @@ Compact script
 
 
 
-
 Exception tolerant code
 -----------------------
+Download: :download:`this example script <pw_example.py>`
+
+
 ::
 
     #!/usr/bin/env python
@@ -589,7 +592,8 @@ Exception tolerant code
 	pseudos_to_use = {}
 	for fname, elem, pot_type in raw_pseudos:
 	    absname = os.path.realpath(os.path.join(os.path.dirname(__file__),
-						    "data",fname))
+						    "testdata",
+						    "qepseudos",fname))
 	    pseudo, created = UpfData.get_or_create(
 		absname,use_first=True)
 	    if created:

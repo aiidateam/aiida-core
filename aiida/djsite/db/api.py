@@ -261,7 +261,15 @@ class DbGroupResource(ModelResource):
 def never(bundle):
     return False
 
+def only_dbattributes_levelzero(bundle):
+    # Returns only level-zero attributes.
+    # Put here to check if it works, but must be probably moved somewhere else
+    from django.db.models import Q
+
+    return DbAttribute.objects.filter(~Q(key__contains=DbAttribute._sep), dbnode=bundle.obj)
+
 class DbNodeResource(ModelResource):
+    
     user = fields.ToOneField(UserResource, 'user')
     # Full = False: only put 
     outputs = fields.ToManyField('self', 'outputs', related_name='inputs', full=False, use_in='detail')   
@@ -269,6 +277,11 @@ class DbNodeResource(ModelResource):
 
     dbattributes = fields.ToManyField('aiida.djsite.db.api.DbAttributeResource', 'dbattributes', related_name='dbnode', full=False, use_in='detail')
     dbextras = fields.ToManyField('aiida.djsite.db.api.DbExtraResource', 'dbextras', related_name='dbnode', full=False, use_in='detail')
+
+    # Test mode yet
+    attributes = fields.ToManyField('aiida.djsite.db.api.AttributeResource',
+                                    only_dbattributes_levelzero,
+                                    null=True, related_name='dbnode', full=False, use_in='detail')
 
     ## Transitive-closure links
     ## Hidden for the time being, they could be too many
@@ -328,6 +341,45 @@ class DbAttributeResource(ModelResource):
         serializer = MyDateSerializer()
         
 
+class AttributeResource(ModelResource):
+    dbnode = fields.ToOneField(DbNodeResource, 'dbnode', related_name='attributes')    
+    class Meta:
+        queryset = DbAttribute.objects.all()
+        resource_name = 'attribute'
+        allowed_methods = ['get']
+        filtering = {
+            'id': ['exact'],
+            'dbnode': ALL_WITH_RELATIONS,
+            'datatype': ['exact'],
+            'key': ALL,
+            'bval': ALL,   
+            'dval': ALL,
+            'fval': ALL,
+            'ival': ALL,
+            'tval': ALL,
+            'time': ALL,
+            }
+        serializer = MyDateSerializer()
+         
+    def dehydrate(self, bundle):
+        # Remove all the fields with name matching the pattern '?val'
+        # (bval, ival, tval, dval, fval, ...)
+ 
+        # I have to make a list out of it otherwise I get a
+        # "dictionary changed during iteration" error
+        for k in list(bundle.data.keys()):
+            if len(k) == 4 and k.endswith('val'):
+                del bundle.data[k]
+         
+        ## I leave the datatype, can be useful
+        #datatype = bundle.data.pop('datatype')
+         
+        bundle.data['value'] = bundle.obj.getvalue()
+         
+        return bundle
+
+
+
 class DbExtraResource(ModelResource):
     dbnode = fields.ToOneField(DbNodeResource, 'dbnode', related_name='dbextras')    
     class Meta:
@@ -346,6 +398,7 @@ class DbExtraResource(ModelResource):
             'tval': ALL,
             'time': ALL,
             }
+        serializer = MyDateSerializer()
         
         
 # class MetadataResource(ModelResource):

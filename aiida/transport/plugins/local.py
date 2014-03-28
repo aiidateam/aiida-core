@@ -41,7 +41,7 @@ class LocalTransport(aiida.transport.Transport):
                              " are not recognized")
         
     
-    def __enter__(self):
+    def open(self):
         """
         Opens a local transport channel
         """
@@ -50,7 +50,7 @@ class LocalTransport(aiida.transport.Transport):
         return self
     
     
-    def __exit__(self, type, value, traceback):
+    def close(self):
         """
         Closes the local transport channel
         """

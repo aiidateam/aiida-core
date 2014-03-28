@@ -1058,7 +1058,7 @@ class TestNodeBasic(AiidaTestCase):
             self.assertTrue(time > before)
             self.assertTrue(time < after )
 
-        self.assertEquals([(i[0], i[1], i[3]) for i in comments],
+        self.assertEquals([(i[0], i[1], i[4]) for i in comments],
                           [(self.user.username, self.user.email, 'text'),
                            (self.user.username, self.user.email, 'text2'),])
         

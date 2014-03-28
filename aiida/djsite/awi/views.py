@@ -5,14 +5,12 @@ from django.shortcuts import redirect
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, HttpResponseNotAllowed
 from aiida.djsite.db.api import (
-	AttributeResource,
-	DbAttributeResource,
-	DbAuthInfoResource,
+#	DbAttributeResource,
+#	DbAuthInfoResource,
 	DbComputerResource,
-	DbGroupResource,
-	DbNodeResource,
-	MetadataResource,
-	UserResource,
+#	DbGroupResource,
+#	DbNodeResource,
+#	UserResource,
 	)
 import json
 import datetime, dateutil.parser

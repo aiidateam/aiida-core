@@ -61,13 +61,26 @@ class Transport(object):
     def __enter__(self):
         """
         For transports that require opening a connection, opens
-        all required channels.
+        all required channels (used in 'with' statements)
         """
-        raise NotImplementedError
+        self.open()
+        return self
 
     def __exit__(self, type, value, traceback):
         """
-        Closes connections, if needed.
+        Closes connections, if needed (used in 'with' statements).
+        """
+        self.close()
+
+    def open(self):
+        """
+        Opens a local transport channel
+        """
+        raise NotImplementedError
+    
+    def close(self):
+        """
+        Closes the local transport channel
         """
         raise NotImplementedError
 
@@ -77,6 +90,22 @@ class Transport(object):
     # Remember to define this in each plugin!
     def __unicode__(self):
         return u"[Transport class or subclass]"
+
+    @classmethod
+    def get_short_doc(self):
+        """
+        Return the first non-empty line of the class docstring, if available
+        """
+        # Remove empty lines
+        docstring = self.__doc__
+        if not docstring:
+            return "No documentation available"
+            
+        doclines = [i for i in docstring.splitlines() if i.strip()]
+        if doclines:
+            return doclines[0].strip()
+        else:
+            return "No documentation available"
 
     @classmethod
     def get_valid_transports(cls):

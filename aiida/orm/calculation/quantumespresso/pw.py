@@ -63,7 +63,7 @@ class PwCalculation(BasePwCpInputGenerator, Calculation):
         if not isinstance(data, ParameterData):
             raise ValueError("The data must be an instance of the ParameterData class")
 
-        self.replace_link_from(data, self.get_linkname_kpoints())
+        self._replace_link_from(data, self.get_linkname_kpoints())
 
     def get_linkname_kpoints(self):
         """

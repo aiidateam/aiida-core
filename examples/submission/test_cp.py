@@ -12,7 +12,7 @@ aiidalogger.setLevel(logging.INFO)
 
 from aiida.orm import Code
 from aiida.orm import CalculationFactory, DataFactory
-from aiida.djsite.db.models import Group
+from aiida.djsite.db.models import DbGroup
 UpfData = DataFactory('upf')
 ParameterData = DataFactory('parameter')
 StructureData = DataFactory('structure')
@@ -42,8 +42,8 @@ try:
         raise ValueError
 except (NotExistent, ValueError):
     valid_code_labels = [c.label for c in Code.query(
-            attributes__key="_remote_exec_path",
-            attributes__tval__endswith="/{}".format(expected_exec_name))]
+            dbattributes__key="remote_exec_path",
+            dbattributes__tval__endswith="/{}".format(expected_exec_name))]
     if valid_code_labels:
         print >> sys.stderr, "Pass as first parameter a valid code label."
         print >> sys.stderr, "Valid labels with a {} executable are:".format(expected_exec_name)
@@ -55,7 +55,7 @@ except (NotExistent, ValueError):
     sys.exit(1)
 
 if auto_pseudos:
-    valid_pseudo_groups = Group.objects.filter(dbnodes__type__contains='.upf.').distinct().values_list('name',flat=True)
+    valid_pseudo_groups = DbGroup.objects.filter(dbnodes__type__contains='.upf.').distinct().values_list('name',flat=True)
 
     try:
         pseudo_family = sys.argv[2]
@@ -67,7 +67,7 @@ if auto_pseudos:
         sys.exit(1)
         
 
-    if not Group.objects.filter(name=pseudo_family):
+    if not DbGroup.objects.filter(name=pseudo_family):
         print >> sys.stderr, "auto_pseudos is set to True and pseudo_family='{}',".format(pseudo_family)
         print >> sys.stderr, "but no group with such a name found in the DB."
         print >> sys.stderr, "Valid groups containing at least one UPFData object are:"
@@ -103,7 +103,7 @@ s.append_atom(position=(alat/2.,0.,alat/2.),symbols=['O'])
 s.append_atom(position=(0.,alat/2.,alat/2.),symbols=['O'])
 s.store()
 
-parameters = ParameterData({
+parameters = ParameterData(dict={
             'CONTROL': {
                 'calculation': 'cp',
                 'restart_mode': 'from_scratch',
@@ -135,7 +135,7 @@ parameters = ParameterData({
 QECalc = CalculationFactory('quantumespresso.cp')
 calc = QECalc(computer=computer)
 calc.set_max_wallclock_seconds(30*60) # 30 min
-calc.set_resources(num_machines=1, num_cpus_per_machine=num_cpus_per_machine)
+calc.set_resources({"num_machines": 1, "num_cpus_per_machine": num_cpus_per_machine})
 if queue is not None:
     calc.set_queue_name(queue)
 calc.store()
@@ -148,7 +148,7 @@ calc.use_parameters(parameters)
 
 if auto_pseudos:
     try:
-        calc.use_pseudo_from_family(pseudo_family)
+        calc.use_pseudos_from_family(pseudo_family)
         print "Pseudos successfully loaded from family {}".format(pseudo_family)
     except NotExistent:
         print ("Pseudo or pseudo family not found. You may want to load the "

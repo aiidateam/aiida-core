@@ -29,7 +29,7 @@ for example with a structure like 'Element.a-short-description.UPF'.
 The utility to upload a family of pseudopotentials is accessed through the 
 ``verdi``::
 
-  verdi upf uploadfamily path/to/folder name_of_the_family "some description for your convenience"
+  verdi data upf uploadfamily path/to/folder name_of_the_family "some description for your convenience"
 
 With the optional flag ``--stop-if-existing``, that will stop if the md5 key 
 of the file to upload is found equal to another already present in the database.
@@ -43,5 +43,5 @@ be ambiguous.
 
 To get a list of uploaded pseudo families, type::
    
-   verdi upf listfamilies
+   verdi data upf listfamilies
 

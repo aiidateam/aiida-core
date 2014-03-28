@@ -24,18 +24,18 @@ from aiida.orm.data.remote import RemoteData
 
 from aiida.common.exceptions import NotExistent
 
-#print ParameterData.__module__
+# print ParameterData.__module__
 
 # A string with the version of this script, used to recreate a code when necessary
 current_version = "1.0.5"
 queue = None
-#queue = "P_share_queue"
+# queue = "P_share_queue"
 
 
 def get_or_create_code():
-    useful_codes = Code.query(attributes__key="_local_executable",
-                              attributes__tval="sum.py").filter(
-                                  attributes__key="version", attributes__tval=current_version)
+    useful_codes = Code.query(dbattributes__key="_local_executable",
+                              dbattributes__tval="sum.py").filter(
+                                  dbattributes__key="version", dbattributes__tval=current_version)
 
     if not(useful_codes):
         print >> sys.stderr, "Creating the code..."
@@ -72,10 +72,10 @@ except IOError:
     sys.exit(1)
 """)
             f.flush()
-            code = Code(local_executable = "sum.py")
+            code = Code(local_executable="sum.py")
             code.add_path(f.name, "sum.py")
             code.store()
-            code.set_metadata("version", current_version)
+            code.set_extra("version", current_version)
         return code
     
     elif len(useful_codes) == 1:
@@ -95,17 +95,17 @@ except NotExistent:
     sys.exit(1)
 code = get_or_create_code()
 
-template_data = ParameterData({
+template_data = ParameterData(dict={
     'input_file_template': "{factor}\n",
     # TODO: pass only input_file_name and no template and see if an error is raised
     'input_file_name': "factor.dat",
     'cmdline_params': ["{add1}", "{add2}"],
     'output_file_name': "result.txt",
-    'files_to_copy': [('the_only_local_file','check.txt'),
-                      ('the_only_remote_node','bashrc-copy')],
+    'files_to_copy': [('the_only_local_file', 'check.txt'),
+                      ('the_only_remote_node', 'bashrc-copy')],
     }).store()
 
-parameters = ParameterData({
+parameters = ParameterData(dict={
     'add1': 3.45,
     'add2': 7.89,
     'factor': 2,
@@ -115,22 +115,22 @@ with tempfile.NamedTemporaryFile() as f:
     f.write("double check, created @ {}".format(datetime.datetime.now()))
     f.flush()
     # I don't worry of the name with which it is internally stored
-    fileparam = SinglefileData(filename=f.name).store()
+    fileparam = SinglefileData(file=f.name).store()
 
 remoteparam = RemoteData(remote_machine=computer.hostname,
                          remote_path="/etc/inittab").store()
 
 CustomCalc = CalculationFactory('simpleplugins.templatereplacer')
-calc = CustomCalc(computer=computer,withmpi=True)
-calc.set_max_wallclock_seconds(12*60) # 12 min
+calc = CustomCalc(computer=computer, withmpi=True)
+calc.set_max_wallclock_seconds(12 * 60)  # 12 min
 jr_class = computer.get_scheduler()._job_resource_class
 
 from aiida.scheduler.datastructures import NodeNumberJobResource, ParEnvJobResource
 
 if issubclass(jr_class, NodeNumberJobResource):
-    calc.set_resources(num_machines=1, num_cpus_per_machine=1)
+    calc.set_resources({"num_machines": 1, "num_cpus_per_machine": 1})
 elif issubclass(jr_class, ParEnvJobResource):
-    calc.set_resources(parallel_env='smp', tot_num_cpus=1)
+    calc.set_resources({"parallel_env": 'smp', "tot_num_cpus": 1})
 else:
     print >> sys.stderr, "Unknown Job resource type: {}".format(str(jr_class))
     sys.exit(1)
@@ -139,18 +139,19 @@ if queue is not None:
     calc.set_queue_name(queue)
 calc.store()
 print "created calculation; calc=Calculation(uuid='{}') # ID={}".format(
-    calc.uuid,calc.dbnode.pk)
+    calc.uuid, calc.dbnode.pk)
 
 calc.use_code(code)
-## Just for debugging purposes, I check that I can 'reset' the code
-#calc.use_code(code)
+# # Just for debugging purposes, I check that I can 'reset' the code
+# calc.use_code(code)
 
-calc.add_link_from(template_data, label="template")
-calc.add_link_from(parameters, label="parameters")
-calc.add_link_from(fileparam, label="the_only_local_file")
-calc.add_link_from(remoteparam, label="the_only_remote_node")
+# Should not be done by hand... To improve
+calc._add_link_from(template_data, label="template")
+calc._add_link_from(parameters, label="parameters")
+calc._add_link_from(fileparam, label="the_only_local_file")
+calc._add_link_from(remoteparam, label="the_only_remote_node")
 
 calc.submit()
 print "submitted calculation; calc=Calculation(uuid='{}') # ID={}".format(
-    calc.uuid,calc.dbnode.pk)
+    calc.uuid, calc.dbnode.pk)
 

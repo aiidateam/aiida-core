@@ -198,7 +198,7 @@ class Workflow(object):
         """
         This function increments the version number in the DB.
         This should be called every time you need to increment the version (e.g. on adding a
-        metadata or attribute). 
+        extra or attribute). 
         """
         from django.db.models import F
         from aiida.djsite.db.models import DbWorkflow
@@ -971,7 +971,7 @@ def get_workflow_info(w, tab_size = 2, short = False, pre_string = ""):
                     if sched_state is None:
                         remote_state = "(remote state still unknown)"
                     else:
-                        last_check = c.get_scheduler_state_lastcheck()
+                        last_check = c.get_scheduler_lastchecktime()
                         if last_check is not None:
                             when_string = " {} ago".format(
                                str_timedelta(now-last_check, short=True,

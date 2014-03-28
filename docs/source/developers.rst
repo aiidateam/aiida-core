@@ -7,7 +7,7 @@ Commits
 
 Before committing, **always** run::
   
-  verdi developertest
+  verdi devel tests
   
 to be sure that your modifications did not introduce any new bugs in existing
 code. Remember to do it even if you believe your modification to be small - 
@@ -42,6 +42,9 @@ Write comments!
 
 South migrations: quick tutorial
 ++++++++++++++++++++++++++++++++
+
+.. NOTE:: At the moment south migrations have been disabled!
+
 When changing the database schema (that should happen rarely, we hope),
 we use Django South to manage the migrations.
 

@@ -60,7 +60,7 @@ if not os.path.isdir(LOCAL_REPOSITORY):
 
 # Usual Django settings starts here.............
 
-DEBUG = False
+DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
 ADMINS = (
@@ -160,6 +160,17 @@ TEMPLATE_DIRS = (
     # Don't forget to use absolute paths, not relative paths.
 )
 
+TEMPLATE_CONTEXT_PROCESSORS = (
+    "django.contrib.auth.context_processors.auth",
+    "django.core.context_processors.debug",
+    "django.core.context_processors.i18n",
+    "django.core.context_processors.media",
+    "django.core.context_processors.static",
+    "django.core.context_processors.tz",
+    "django.contrib.messages.context_processors.messages",
+    "django.core.context_processors.request",
+)
+
 INSTALLED_APPS = (
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -169,12 +180,14 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     # Uncomment the next line to enable the admin:
     'django.contrib.admin',
-    'south',
+#    'south',
     # Uncomment the next line to enable admin documentation:
     # 'django.contrib.admindocs',
     'aiida.djsite.db',
     'kombu.transport.django',
     'djcelery',
+    'tastypie',
+    'aiida.djsite.awi',
 )
 
 # A sample logging configuration. The only tangible logging
@@ -238,7 +251,20 @@ SOUTH_TESTS_MIGRATE = False
 # This is only a string: call
 # aiida.djsite.utils.get_after_database_creation_signal
 # to get the proper signal
-AFTER_DATABASE_CREATION_SIGNAL = 'post_migrate'
+# Uncomment next line if using south
+#AFTER_DATABASE_CREATION_SIGNAL = 'post_migrate'
+AFTER_DATABASE_CREATION_SIGNAL = 'post_syncdb'
+
+# VERSION TO USE FOR DBNODES.
+AIIDANODES_UUID_VERSION=4
+
+
+# -------------------------
+# Tastypie (API) settings
+# -------------------------
+# For the time being, we support only json
+TASTYPIE_DEFAULT_FORMATS = ['json']
+
 
 # -------------------------
 # AiiDA-Deamon configuration
@@ -256,16 +282,21 @@ CELERY_RESULT_BACKEND = "database"
 
 CELERYBEAT_SCHEDULER = "djcelery.schedulers.DatabaseScheduler"
 
+djcelery_tasks = {
+    'calculationretrieve': 'update-status-and-retrieve',
+    'workflow': 'workflow_stepper',
+    }
+
 # Every 30 seconds it is started, but for how it is done internally, if the previous loop
 # is still working, it won't restart twice at the same time.
 CELERYBEAT_SCHEDULE = {
-    'update-status-and-retrieve': {
+    djcelery_tasks['calculationretrieve']: {
         'task':'aiida.djsite.db.tasks.update_and_retrieve',
         'schedule': timedelta(seconds=30),
         },
-    'workflow_stepper': {
+    djcelery_tasks['workflow']: {
         'task':'aiida.djsite.db.tasks.workflow_stepper',
-        'schedule': timedelta(seconds=5),
+        'schedule': timedelta(seconds=30),
         },
 }
 

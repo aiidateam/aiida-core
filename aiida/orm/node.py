@@ -971,8 +971,8 @@ class Node(object):
         from aiida.djsite.db.models import DbComment
 
         return list(DbComment.objects.filter(dbnode=self._dbnode).order_by(
-            'time').values_list(
-            'user__username', 'user__email', 'time', 'content'))
+            'ctime').values_list(
+            'user__username', 'user__email', 'ctime', 'mtime', 'content'))
 
     def _increment_version_number_db(self):
         """

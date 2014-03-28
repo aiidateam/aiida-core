@@ -2,12 +2,12 @@ function ComputersManager(ApplicationManager) {
 	this.applicationManager = ApplicationManager;
 	this.module = 'computers';
 	this.moduleS = 'computer';
+	this.columns = 9; // number of columns in the listing table
 	this.loadUrl = modules_urls[this.module].listing;
-	this.authUrl = api_urls.authinfo;
 	this.filterUrls = modules_urls.filters[this.module];
 	this.table = $('#' + this.module + '-list');
-	this.pagination = $('#computers-pag');
-	this.modalId = 'computer-modal';
+	this.pagination = $('#' + this.module + '-pag');
+	this.modalId = this.moduleS + '-modal';
 	this.modal = $('#' + this.modalId);
 	this.ordering = this.table.attr('data-ordering') || 'id';
 	
@@ -75,8 +75,10 @@ ComputersManager.prototype.closeDetails = function (id) {
 
 // open details of a computer
 ComputersManager.prototype.openDetails = function (id, url, trigger) {
+	var self = this;
+	
 	$('#row-' + id + '>td.name>a>span').removeClass('right-caret').addClass('caret');
-	trigger.closest('tr').after('<tr id="detail-' + id + '" class="loader detail"><td colspan="9">' +
+	trigger.closest('tr').after('<tr id="detail-' + id + '" class="loader detail"><td colspan="' + self.columns + '">' +
 		'<div class="dots">Loading...</div></td></tr>');
 	$('tr#detail-' + id + '>td').slideDown(function () {
 		var td = $(this);
@@ -84,7 +86,7 @@ ComputersManager.prototype.openDetails = function (id, url, trigger) {
 			td.prepend(data);
 		}); 
 	})
-}
+};
 
 // disable computer
 ComputersManager.prototype.disable = function (id, url) {
@@ -161,13 +163,13 @@ ComputersManager.prototype.load = function (scroll) {
 			// for each computer, we build the html of a table row
 			$.each(data.objects, function (k, o) {
 				rows.push(''); // reserve a spot in the output for this row
-				$.getJSON(self.authUrl + '?computer=' + o.id, function (subdata) {
+				$.getJSON(self.getAPIUrl('authinfo') + '?computer=' + o.id, function (subdata) {
 					var username = subdata.objects[0].aiidauser.username; // this is not correct
 					// we update the corresponding line, this ensures that data is gonna be displayed in the right order at the end
 					rows[k] = '<tr id="row-' + o.id + '">' +
 						'<td>' + o.id + '</td>' +
-						'<td class="name"><strong>' + o.name + '</strong><a href="' + self.getUrl('detail') + o.id +
-						'" class="show-detail" data-id="' + o.id + '">&nbsp;<span class="right-caret"></span></a></td>' +
+						'<td class="name"><a href="' + self.getUrl('detail') + o.id + '" class="show-detail" data-id="' + o.id +
+						'"><strong>' + o.name + '</strong>&nbsp;<span class="right-caret"></span></a></td>' +
 						'<td><span title="' + o.description + '" data-toggle="tooltip">' + o.description.trunc(30,true) + '</span></td>' + /* description is truncated via this custom function */
 						'<td>' + username + '</td>' +
 						'<td>' + o.transport_type + '</td>' +
@@ -187,8 +189,6 @@ ComputersManager.prototype.load = function (scroll) {
 											: '<li class="status"><a href="' + o.resource_uri + '" class="computer-enable" data-id="' + o.id + '"><span class="glyphicon glyphicon-ok"></span>&nbsp;&nbsp;Enable</a></li>') +
 									'<li><a href="' + self.getUrl('rename') + o.id + '" data-toggle="modal" data-target="#' + self.modalId + '">' +
 										'<span class="glyphicon glyphicon-pencil"></span>&nbsp;&nbsp;Rename</a></li>' +
-									'<li class="disabled"><a href="#"><span class="glyphicon glyphicon-cog"></span>&nbsp;&nbsp;Configure</a></li>' +
-									'<li class="disabled"><a href="#" class="text-danger"><span class="glyphicon glyphicon-remove-circle"></span>&nbsp;&nbsp;Delete</a></li>' +
 								'</ul>' +
 							'</div>' +
 						'</td>' +
@@ -200,7 +200,7 @@ ComputersManager.prototype.load = function (scroll) {
 				// if all secondary data is loaded or there is no data
 				if (rows.length == data.objects.length && (rows.length == 0 || rows[0] != '')) {
 					if (rows.length == 0) {
-						rows.push('<tr><td colspan="9" class="center">No matching entry</td></tr>');
+						rows.push('<tr><td colspan="' + self.columns + '" class="center">No matching entry</td></tr>');
 					}
 					self.table.find('.loader').fadeOut('fast', function () {
 						self.table.append(rows.join(""));
@@ -227,7 +227,7 @@ ComputersManager.prototype.load = function (scroll) {
 			).fadeIn();
 		});
 	});
-	// we add the required modal for filters needs somewhere in the body where it isn't affected by css
+	// we add the required modal somewhere in the body where it isn't affected by css
 	this.modal = this.modal.refresh();
 	if (this.modal.length == 0) {
 		$('body>div.container').prepend('<div class="modal fade" id="' + this.modalId + '" tabindex="-1" role="dialog" aria-hidden="true">' +
@@ -244,8 +244,10 @@ ComputersManager.prototype.load = function (scroll) {
 };
 
 ComputersManager.prototype.loadDetail = function (url, id) {
+	var self = this;
+	
 	$.getJSON(url, function (data) {
-		var loader = $('#computers-detail-' + id + ' ~ .dots');
+		var loader = $('#' + self.module + '-detail-' + id + ' ~ .dots');
 		var rows = [
 			'<div class="ajax-hide">',
 			'<ul class="media-list">',
@@ -277,10 +279,10 @@ ComputersManager.prototype.loadDetail = function (url, id) {
 			'</ul></div>'
 		);
 		loader.fadeTo('fast', 0.01, function () { /* we hide the loader and show the details html */
-			$('#computers-detail-' + id).prepend(rows.join(''));
-			$('#computers-detail-' + id + ' .ajax-hide').slideDown(function () {
+			$('#' + self.module + '-detail-' + id).prepend(rows.join(''));
+			$('#' + self.module + '-detail-' + id + ' .ajax-hide').slideDown(function () {
 				loader.hide();
-				$('#computers-detail-' + id + '>.detail-close').fadeIn();
+				$('#' + self.module + '-detail-' + id + '>.detail-close').fadeIn();
 			});
 		});
 	});
@@ -291,7 +293,7 @@ ComputersManager.prototype.loadRename = function (id) {
 	this.modal = this.modal.refresh();
 	
 	var field = this.modal.find('input.form-control');
-	field.val($('#row-' + id + '>td.name>strong').text());
+	field.val($('#row-' + id + '>td.name strong').text());
 	window.setTimeout(function () {
 		// we focus on the input field when the animation is over (just required for the first load, is then handled by the event show.bs.modal)
 		field.select().focus();
@@ -306,7 +308,7 @@ ComputersManager.prototype.loadRename = function (id) {
 			data: '{"name":"' + field.val() + '"}',
 			success: function (data) {
 				self.modal.modal('toggle');
-				$('#row-' + id + '>td.name>strong').text(data.name);
+				$('#row-' + id + '>td.name strong').text(data.name);
 			},
 			error: function (xhr, status, error) {
 				self.errorModal(field, $.parseJSON(xhr.responseText).dbcomputer.name);
@@ -333,6 +335,17 @@ ComputersManager.prototype.loadRename = function (id) {
 // get ajax url for a function
 ComputersManager.prototype.getUrl = function (action) {
 	var url = modules_urls[this.module][action];
+	if (url.slice(-2) == '/0') {
+		return url.substring(0, url.length - 1);
+	} else if (url.slice(-3) == '/0/') {
+		return url.substring(0, url.length - 2);
+	} else {
+		return url;
+	}
+};
+// get ajax api url
+ComputersManager.prototype.getAPIUrl = function (resource) {
+	var url = api_urls[resource];
 	if (url.slice(-2) == '/0') {
 		return url.substring(0, url.length - 1);
 	} else if (url.slice(-3) == '/0/') {

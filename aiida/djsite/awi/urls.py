@@ -17,5 +17,9 @@ urlpatterns = patterns('',
 	url(r'^computers/list/(?P<ordering>[a-z0-9\-_]+)', views.computers_list), # listing of computers
 	url(r'^computers/list', views.computers_list, name='computers_list'), # listing of computers
 	url(r'^computers', views.computers, name='computers'), # computers module
+	url(r'^calculations/detail/(?P<calculation_id>\d+)', views.calculations_detail, name='calculations_detail'), # details for a calculation called in ajax
+	url(r'^calculations/list/(?P<ordering>[a-z0-9\-_]+)', views.calculations_list), # listing of calculations
+	url(r'^calculations/list', views.calculations_list, name='calculations_list'), # listing of calculations
+	url(r'^calculations', views.calculations, name='calculations'), # calculations module
 	url(r'^codes', views.codes, name='codes'), # page for management of codes
 )

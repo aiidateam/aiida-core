@@ -842,7 +842,6 @@ class TestNodeBasic(AiidaTestCase):
 
         # Even if I stored many attributes, this should stay at 1
         self.assertEquals(a.dbnode.nodeversion, 1)
-        self.assertEquals(a.dbnode.lastsyncedversion, 0)
 
         # I check increment on new version
         a.set_extra('a', 'b')
@@ -905,7 +904,6 @@ class TestNodeBasic(AiidaTestCase):
 
         # Even if I stored many attributes, this should stay at 1
         self.assertEquals(a.dbnode.nodeversion, 1)
-        self.assertEquals(a.dbnode.lastsyncedversion, 0)
 
         # I should be able to delete the attribute
         a.del_attr('state')
@@ -1060,7 +1058,7 @@ class TestNodeBasic(AiidaTestCase):
             self.assertTrue(time > before)
             self.assertTrue(time < after )
 
-        self.assertEquals([(i[0], i[1], i[3]) for i in comments],
+        self.assertEquals([(i[0], i[1], i[4]) for i in comments],
                           [(self.user.username, self.user.email, 'text'),
                            (self.user.username, self.user.email, 'text2'),])
         

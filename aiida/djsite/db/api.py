@@ -4,15 +4,31 @@ from tastypie.authentication import SessionAuthentication
 from tastypie.authorization import DjangoAuthorization
 from tastypie.resources import ModelResource, ALL, ALL_WITH_RELATIONS
 from tastypie.validation import Validation
+from tastypie.serializers import Serializer
 from aiida.djsite.db.models import (
         DbAuthInfo, 
         DbAttribute,
+        DbExtra,
         DbComputer, 
         DbGroup,
         DbNode,
         )
 from aiida.transport import Transport, TransportFactory
 from aiida.scheduler import Scheduler, SchedulerFactory
+
+class MyDateSerializer(Serializer):
+    """
+    Our own serializer to format datetimes in ISO 8601 but with timezone
+    offset.
+    """
+    def format_datetime(self, data):
+        from django.utils.timezone import is_naive
+        # If naive or rfc-2822, default behavior...
+        if is_naive(data) or self.datetime_formatting == 'rfc-2822':
+            return super(MyDateSerializer, self).format_datetime(data)
+        
+        return data.isoformat()
+
 
 class DbComputerValidation(Validation):
     def is_valid(self, bundle, request=None):
@@ -85,7 +101,6 @@ class DbComputerResource(ModelResource):
             'hostname': ALL,
             'scheduler_type': ALL,
             'transport_type': ALL,
-            'workdir': ALL,
             'enabled': ALL,
             }
         ordering = ['id', 'name', 'transport_type', 'scheduler_type', 'enabled']
@@ -197,7 +212,7 @@ class DbAuthInfoResource(ModelResource):
     # entries, as shown for instance here:
     # http://django-tastypie.readthedocs.org/en/latest/authorization.html
     aiidauser = fields.ToOneField(UserResource, 'aiidauser', full=True) 
-    computer = fields.ToOneField(DbComputerResource, 'computer')
+    dbcomputer = fields.ToOneField(DbComputerResource, 'dbcomputer')
     
     class Meta:
         queryset = DbAuthInfo.objects.all()
@@ -205,7 +220,7 @@ class DbAuthInfoResource(ModelResource):
         allowed_methods = ['get']
         filtering = {
             'id': ['exact'],
-            'computer': ALL_WITH_RELATIONS,
+            'dbcomputer': ALL_WITH_RELATIONS,
             'aiidauser': ALL_WITH_RELATIONS,
             }
         
@@ -253,9 +268,7 @@ class DbNodeResource(ModelResource):
     inputs = fields.ToManyField('self', 'inputs', related_name='outputs', full=False, use_in='detail')
 
     dbattributes = fields.ToManyField('aiida.djsite.db.api.DbAttributeResource', 'dbattributes', related_name='dbnode', full=False, use_in='detail')
-    ## To double check, they do not work right now
-    #attributes = fields.ToManyField('aiida.djsite.db.api.AttributeResource', 'attributes', related_name='dbnode', null=True, full=False, use_in='detail')
-    #metadata = fields.ToManyField('aiida.djsite.db.api.MetadataResource', 'metadata', related_name='dbnode', null=True, full=False, use_in='detail')
+    dbextras = fields.ToManyField('aiida.djsite.db.api.DbExtraResource', 'dbextras', related_name='dbnode', full=False, use_in='detail')
 
     ## Transitive-closure links
     ## Hidden for the time being, they could be too many
@@ -278,6 +291,7 @@ class DbNodeResource(ModelResource):
             'description': ALL,
             'computer': ALL_WITH_RELATIONS,
             'dbattributes': ALL_WITH_RELATIONS,
+            'dbextras': ALL_WITH_RELATIONS,
             'user': ALL_WITH_RELATIONS,
             'outputs': ALL_WITH_RELATIONS,
             'inputs': ALL_WITH_RELATIONS,
@@ -286,11 +300,12 @@ class DbNodeResource(ModelResource):
             'attributes': ALL_WITH_RELATIONS,    
             }
 
-        ordering = ['id', 'type']
+        ordering = ['id', 'label', 'type', 'computer', 'ctime']
         authentication = SessionAuthentication()
         # As discussed above: improve this with authorization allowing each
         # user to see only his own DbAuthInfo data
         authorization = DjangoAuthorization()
+        serializer = MyDateSerializer()
 
 class DbAttributeResource(ModelResource):
     dbnode = fields.ToOneField(DbNodeResource, 'dbnode', related_name='dbattributes')    
@@ -310,113 +325,77 @@ class DbAttributeResource(ModelResource):
             'tval': ALL,
             'time': ALL,
             }
+        serializer = MyDateSerializer()
         
-        
-class AttributeResource(ModelResource):
-    dbnode = fields.ToOneField(DbNodeResource, 'dbnode', related_name='attributes')    
+
+class DbExtraResource(ModelResource):
+    dbnode = fields.ToOneField(DbNodeResource, 'dbnode', related_name='dbextras')    
     class Meta:
-        queryset = DbAttribute.objects.all()
-        resource_name = 'attribute'
-        allowed_methods = ['get']
-        filtering = {
-            'id': ['exact'],
-            'dbnode': ALL_WITH_RELATIONS,
-            'datatype': ['exact'],
-            'time': ALL,
-#            'key': ALL,
-#            'value': ALL,
-            }
-        
-    def build_filters(self,filters=None):
-        if filters is None:
-            filters = {}
-            
-        orm_filters = super(AttributeResource, self).build_filters(filters)
-        orm_filters['key__startswith'] = "_"
-        
-        return orm_filters
-    
-    def dehydrate_key(self, bundle):
-        return bundle.data['key'][1:]
-    
-    def dehydrate(self, bundle):
-        # Remove all the fields with name matching the pattern '?val'
-        # (bval, ival, tval, dval, fval, ...)
-        
-        # I have to make a list out of it otherwise I get a
-        # "dictionary changed during iteration" error
-        for k in list(bundle.data.keys()):
-            if len(k) == 4 and k.endswith('val'):
-                del bundle.data[k]
-        
-        ## I leave the datatype, can be useful
-        #datatype = bundle.data.pop('datatype')
-        
-        bundle.data['value'] = bundle.obj.getvalue()
-        
-        return bundle
-
-    def build_schema(self):
-        default_schema = super(AttributeResource, self).build_schema()
-
-        fields = list(default_schema['fields'].keys())
-        for k in fields:
-            if len(k) == 4 and k.endswith('val'):
-                del default_schema['fields'][k]
-        
-        # TODO: fix the schema correctly!
-
-        return default_schema
-
-        
-class MetadataResource(ModelResource):
-    dbnode = fields.ToOneField(DbNodeResource, 'dbnode', related_name='metadata')    
-    class Meta:
-        queryset = DbAttribute.objects.all()
-        resource_name = 'metadata'
+        queryset = DbExtra.objects.all()
+        resource_name = 'dbextra'
         allowed_methods = ['get']
         filtering = {
             'id': ['exact'],
             'dbnode': ALL_WITH_RELATIONS,
             'datatype': ['exact'],
             'key': ALL,
+            'bval': ALL,   
+            'dval': ALL,
+            'fval': ALL,
+            'ival': ALL,
+            'tval': ALL,
             'time': ALL,
             }
         
-    def build_filters(self,filters=None):
-        from django.db.models import Q
         
-        if filters is None:
-            filters = {}
-            
-        orm_filters = super(MetadataResource, self).build_filters(filters)
-        orm_filters['custom'] = ~Q(key__startswith="_") 
-        
-        return orm_filters
-    
-    def apply_filters(self, request, applicable_filters):
-        custom = applicable_filters.pop('custom',None)
-        
-        pre_filtered = super(MetadataResource, self).apply_filters(request, applicable_filters)
-        if custom is not None:
-            return pre_filtered.filter(custom)
-        else:
-            return pre_filtered
-        
-    def dehydrate(self, bundle):
-        # Remove all the fields with name matching the pattern '?val'
-        # (bval, ival, tval, dval, fval, ...)
-
-        # I have to make a list out of it otherwise I get a
-        # "dictionary changed during iteration" error
-        for k in list(bundle.data.keys()):
-            if len(k) == 4 and k.endswith('val'):
-                del bundle.data[k]
-        
-        ## I leave the datatype, can be useful
-        #datatype = bundle.data.pop('datatype')
-        
-        bundle.data['value'] = bundle.obj.getvalue()
-        
-        return bundle
+# class MetadataResource(ModelResource):
+#     dbnode = fields.ToOneField(DbNodeResource, 'dbnode', related_name='metadata')    
+#     class Meta:
+#         queryset = DbAttribute.objects.all()
+#         resource_name = 'metadata'
+#         allowed_methods = ['get']
+#         filtering = {
+#             'id': ['exact'],
+#             'dbnode': ALL_WITH_RELATIONS,
+#             'datatype': ['exact'],
+#             'key': ALL,
+#             'time': ALL,
+#             }
+#         
+#     def build_filters(self,filters=None):
+#         from django.db.models import Q
+#         
+#         if filters is None:
+#             filters = {}
+#             
+#         orm_filters = super(MetadataResource, self).build_filters(filters)
+#         orm_filters['custom'] = ~Q(key__startswith="_") 
+#         
+#         return orm_filters
+#     
+#     def apply_filters(self, request, applicable_filters):
+#         custom = applicable_filters.pop('custom',None)
+#         
+#         pre_filtered = super(MetadataResource, self).apply_filters(request, applicable_filters)
+#         if custom is not None:
+#             return pre_filtered.filter(custom)
+#         else:
+#             return pre_filtered
+#         
+#     def dehydrate(self, bundle):
+#         # Remove all the fields with name matching the pattern '?val'
+#         # (bval, ival, tval, dval, fval, ...)
+# 
+#         # I have to make a list out of it otherwise I get a
+#         # "dictionary changed during iteration" error
+#         for k in list(bundle.data.keys()):
+#             if len(k) == 4 and k.endswith('val'):
+#                 del bundle.data[k]
+#         
+#         ## I leave the datatype, can be useful
+#         #datatype = bundle.data.pop('datatype')
+#         
+#         bundle.data['value'] = bundle.obj.getvalue()
+#         
+#         return bundle
 

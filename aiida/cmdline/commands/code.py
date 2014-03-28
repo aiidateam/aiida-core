@@ -680,7 +680,7 @@ class Code(VerdiCommand):
             sys.exit(1)
         
         code = self.get_code(args[0])
-               
+        pk = code.pk       
         try:
             delete_code(code)
         except InvalidOperation as e:

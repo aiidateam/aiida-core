@@ -61,13 +61,26 @@ class Transport(object):
     def __enter__(self):
         """
         For transports that require opening a connection, opens
-        all required channels.
+        all required channels (used in 'with' statements)
         """
-        raise NotImplementedError
+        self.open()
+        return self
 
     def __exit__(self, type, value, traceback):
         """
-        Closes connections, if needed.
+        Closes connections, if needed (used in 'with' statements).
+        """
+        self.close()
+
+    def open(self):
+        """
+        Opens a local transport channel
+        """
+        raise NotImplementedError
+    
+    def close(self):
+        """
+        Closes the local transport channel
         """
         raise NotImplementedError
 

@@ -1,6 +1,7 @@
 from aiida.orm import Node
 from aiida.common.datastructures import calc_states
 from aiida.common.exceptions import ModificationNotAllowed
+from aiida.common.utils import classproperty
 
 #TODO: set the following as properties of the Calculation
 #        'email',
@@ -24,59 +25,13 @@ class Calculation(Node):
     # Set default for the link to the retrieved folder (after calc is done)
     _linkname_retrieved = 'retrieved' 
     
-    def __init__(self,*args,**kwargs):
-        """
-        Accepts as arguments:
-        
-        :param computer: the computer object on which the calculation
-                         will be computed.
-        :param uuid: used to load an existing calculation from the database. 
-                     If uuid is specified, no other argument has to be specified.
-        :param optional resources: set additional resources used by the scheduler plugin.
-        :param optional withmpi: If true adds the machine dependent mpirun command 
-                                 in front of the executable name. Default=True. 
-        :param optional parser: parser object to be used on the output. Default=self._default_parser
-        """
-        super(Calculation,self).__init__(*args, **kwargs)
-
-        uuid = kwargs.pop('uuid', None)
-        if uuid is not None:
-            # if I am loading an existing calc: stop here
-            return
-
-        # For new calculations
-        self._set_state(calc_states.NEW)
-
-        computer = kwargs.pop('computer', None)
-        if computer is not None:
-            self.set_computer(computer)
-
-        # Default value: True
-        # If True, adds the machine-dependent mpirun command in front of the
-        # executable name.
-        withmpi = kwargs.pop('withmpi', True)
-        self.set_withmpi(withmpi)
-
-        resources = kwargs.pop('resources',None)
-        if resources is not None:
-            self.set_resources(**resources)
-
-        parser = kwargs.pop('parser', self._default_parser)
-        self.set_parser(parser)
-        
-        # hard code the output folder to be a single one
-        self.set_linkname_retrieved(self._linkname_retrieved)
-
-        if kwargs:
-            raise ValueError("Invalid parameters found in the __init__: "
-                             "{}".format(kwargs.keys()))
-
-    def store(self):
-        """
-        Store the Calculation in the database.
-        """
-        super(Calculation, self).store()
-        return self
+    # Default values to be set for new nodes
+    @classproperty
+    def _set_defaults(cls):
+        return {"_state": calc_states.NEW,
+                "parser_name": cls._default_parser,
+                "linkname_retrieved": cls._linkname_retrieved,
+          }
             
     def validate(self):
         """
@@ -105,14 +60,14 @@ class Calculation(Node):
         computer = self.get_computer()        
         s = computer.get_scheduler()
         try:
-            _ = s.create_job_resource(**self.get_jobresource_params())
+            _ = s.create_job_resource(**self.get_resources())
         except (TypeError, ValueError) as e:
             raise ValidationError("Invalid resources for the scheduler of the "
                                   "specified computer: {}".format(e.message))
 
         if not isinstance(self.get_withmpi(), bool):
             raise ValidationError("withmpi property must be boolean! It in instead {}".format(str(type(self.get_withmpi()))))
-            
+           
 
     def can_link_as_output(self,dest):
         """
@@ -231,11 +186,15 @@ class Calculation(Node):
         """
         self.set_attr('max_wallclock_seconds',int(val))
 
-    def set_resources(self, **kwargs):
+    def set_resources(self, resources_dict):
         """
         Set the dictionary of resources to be used by the scheduler plugin.
         """
-        self.set_attr('jobresource_params', kwargs)
+        # Note: for the time being, resources are only validated during the
+        # 'store' because here we are not sure that a Computer has been set
+        # yet (in particular, if both computer and resources are set together
+        # using the .set() method).
+        self.set_attr('jobresource_params', resources_dict)
     
     def set_withmpi(self,val):
         """
@@ -253,7 +212,7 @@ class Calculation(Node):
         """
         return self.get_attr('withmpi',True)
     
-    def get_jobresource_params(self):
+    def get_resources(self):
         """
         Returns the dictionary of the job resources set.
         
@@ -286,7 +245,7 @@ class Calculation(Node):
         return self.get_attr('max_memory_kb', None)
 
     def get_max_wallclock_seconds(self):
-	"""
+        """
         Get the max wallclock time requested to the scheduler.
         
         :return: an integer
@@ -320,36 +279,6 @@ class Calculation(Node):
                     valid_states, self.get_state()))
 
         return super(Calculation,self)._add_link_from(src, label)
-
-    def set_computer(self,computer):
-        """
-        Set the computer to be used by the calculation.
-        
-        :param computer: the computer object
-        """
-        #TODO: probably this method should be in the base class, and
-        #      check for the type
-        from aiida.djsite.db.models import DbComputer
-
-        if self._to_be_stored:
-            self.dbnode.computer = DbComputer.get_dbcomputer(computer)
-        else:
-            self.logger.error("Trying to change the computer of an already "
-                              "saved node: {}".format(self.uuid))
-            raise ModificationNotAllowed(
-                "Node with uuid={} was already stored".format(self.uuid))
-
-    def get_computer(self):
-        """
-        Get the computer associated to the calculation.
-        
-        :return: the Computer object or None.
-        """
-        from aiida.orm import Computer
-        if self.dbnode.computer is None:
-            return None
-        else:
-            return Computer(dbcomputer=self.dbnode.computer)
 
     def _set_state(self, state):
         if state not in calc_states:
@@ -420,10 +349,11 @@ class Calculation(Node):
         return self.get_attr('remote_workdir', None)
 
     def _set_retrieve_list(self, retrieve_list):
-        if self.get_state() != calc_states.SUBMITTING:
+        if self.get_state() not in (calc_states.SUBMITTING,
+                                    calc_states.NEW):
             raise ModificationNotAllowed(
-                "Cannot set the retrieve_list if you are not "
-				"submitting the calculation (current state is "
+                "Cannot set the retrieve_list for a calculation "
+				"that is neither NEW nor SUBMITTING (current state is "
 		        "{})".format(self.get_state()))
 
         if (not(isinstance(retrieve_list,(tuple,list))) or
@@ -537,6 +467,7 @@ class Calculation(Node):
         from aiida.djsite.utils import get_automatic_user, get_last_daemon_run
         from aiida.common.utils import str_timedelta
         from aiida.djsite.settings.settings import djcelery_tasks
+        from aiida.orm.node import from_type_to_pluginclassname
         
         now = timezone.now()
         
@@ -545,16 +476,29 @@ class Calculation(Node):
         else:
             q_object = Q(user=get_automatic_user())
             if states:
-#                q_object.add(~Q(dbattributes__key='_state',
+#                q_object.add(~Q(dbattributes__key='state',
 #                                dbattributes__tval=only_state,), Q.AND)
-                q_object.add( Q(dbattributes__key='_state',
-                                 dbattributes__tval__in=states,), Q.AND)
+                q_object.add( Q(dbattributes__key='state',
+                                dbattributes__tval__in=states,), Q.AND)
             if past_days:
                 now = timezone.now()
                 n_days_ago = now - datetime.timedelta(days=past_days)
                 q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
 
         calc_list = cls.query(q_object).distinct().order_by('ctime')
+        
+        from aiida.djsite.db.models import DbAttribute
+        scheduler_states = dict(DbAttribute.objects.filter(dbnode__in=calc_list,
+                                                   key='scheduler_state').values_list(
+            'dbnode__pk', 'tval'))
+        states = dict(DbAttribute.objects.filter(dbnode__in=calc_list,
+                                                   key='state').values_list(
+            'dbnode__pk', 'tval'))
+        scheduler_lastcheck = dict(DbAttribute.objects.filter(dbnode__in=calc_list,
+                                                   key='scheduler_lastchecktime').values_list(
+            'dbnode__pk', 'dval'))
+        
+        calc_list_data = calc_list.values('pk', 'dbcomputer__name', 'ctime', 'type')
         
         try:
             last_daemon_check = get_last_daemon_run(
@@ -582,20 +526,19 @@ class Calculation(Node):
             res_str_list.append(fmt_string.format(
                     'Pk','State','Creation','Time',
                     'Scheduler state','Computer','Type'))
-            for calc in calc_list:
-                
+            for calcdata in calc_list_data:
                 remote_state = "None"
                 
-                calc_state = calc.get_state()
-                remote_computer = calc.get_computer().name
+                calc_state = states[calcdata['pk']]
+                remote_computer = calcdata['dbcomputer__name']
                 try:
-                    sched_state = calc.get_scheduler_state()
+                    sched_state = scheduler_states.get(calcdata['pk'], None)
                     if sched_state is None:
                         remote_state = "(unknown)"
                     else:
                         remote_state = '{}'.format(sched_state)
                         if calc_state == calc_states.WITHSCHEDULER:
-                            last_check = calc.get_scheduler_lastchecktime()
+                            last_check = scheduler_lastcheck.get(calcdata['pk'], None)
                             if last_check is not None:
                                 when_string = " {} ago".format(
                                     str_timedelta(now-last_check, short=True,
@@ -609,14 +552,15 @@ class Calculation(Node):
                 except ValueError:
                     raise
                 
-                res_str_list.append(fmt_string.format( calc.pk,
-                               calc.get_state(),
-                               calc.ctime.isoformat().split('T')[0],
-                               calc.ctime.isoformat().split('T')[1].split('.')[0],
-                               remote_state,
-                               remote_computer,
-                               str(calc.__class__).split('.')[-1].strip("'>"),
-                            ))
+                res_str_list.append(fmt_string.format( calcdata['pk'],
+                    states[calcdata['pk']],
+                    calcdata['ctime'].isoformat().split('T')[0],
+                    calcdata['ctime'].isoformat().split('T')[1].split('.')[0],
+                    remote_state,
+                    remote_computer,
+                    str(from_type_to_pluginclassname(
+                        calcdata['type']).split('.')[-1]),
+                    ))
             return "\n".join(res_str_list)
 
     @classmethod
@@ -640,7 +584,7 @@ class Calculation(Node):
                 be an instance of Calculation, if everything goes right!)
                 If True, return only a list of tuples, where each tuple is
                 in the format
-                ('computer__id', 'user__id')
+                ('dbcomputer__id', 'user__id')
                 [where the IDs are the IDs of the respective tables]
 
         :return: a list of calculation objects matching the filters.
@@ -657,19 +601,19 @@ class Calculation(Node):
         if computer is not None:
             # I convert it from various type of inputs
             # (string, DbComputer, Computer)
-            # to a Computer type
-            kwargs['computer'] = Computer.get(computer)
+            # to a DbComputer type
+            kwargs['dbcomputer'] = Computer.get(computer).dbcomputer
         if user is not None:
             kwargs['user'] = user
         
         queryresults = cls.query(
-            dbattributes__key='_state',
+            dbattributes__key='state',
             dbattributes__tval=state,
             **kwargs)
 
         if only_computer_user_pairs:
             return queryresults.values_list(
-                'computer__id', 'user__id')
+                'dbcomputer__id', 'user__id')
         else:
             return queryresults
 
@@ -685,6 +629,16 @@ class Calculation(Node):
             raise ValueError("The code must be an instance of the Code class")
 
         self._replace_link_from(code, self.get_linkname_code())
+
+    def get_code(self):
+        """
+        Return the code for this calculation, or None if the code
+        was not set.
+        """
+        from aiida.orm import Code
+        
+        return dict(self.get_inputs(type=Code, also_labels=True)).get(
+            self.get_linkname_code(), None)
         
     def get_linkname_code(self):
         """
@@ -694,7 +648,7 @@ class Calculation(Node):
         """
         return "code"
         
-    def _prepare_for_submission(self,tempfolder):        
+    def _prepare_for_submission(self,tempfolder,inputdict=None):        
         """
         This is the routine to be called when you want to create
         the input files and related stuff with a plugin.
@@ -702,6 +656,16 @@ class Calculation(Node):
         Args:
             tempfolder: a aiida.common.folders.Folder subclass where
                 the plugin should put all its files.
+            inputdict: None, if it has to be calculated automatically
+                from the input nodes using the
+                self.get_inputdata_dict() method.
+                Otherwise, a dictionary where
+                each key is an input link name and each value an AiiDA
+                node, as it would be returned by the
+                self.get_inputdata_dict() method.
+                The advantage of having this as a key is that this
+                allows to test for submission even before creating 
+                the nodes in the DB.
 
         TODO: document what it has to return (probably a CalcInfo object)
               and what is the behavior on the tempfolder
@@ -727,13 +691,19 @@ class Calculation(Node):
 
     def submit(self):
         """
-        Execute the calculation.
-        """ 
-        from aiida.execmanager import submit_calc
+        Puts the calculation in the TOSUBMIT status.
         
-        submit_calc(self)
+        Actual submission is performed by the daemon.
+        """ 
+        from aiida.common.exceptions import InvalidOperation
+        
+        if self.get_state() != calc_states.NEW:
+            raise InvalidOperation("Cannot submit a calculation not in {} state"
+                                   .format(calc_states.NEW) )
 
-    def set_parser(self, parser):
+        self._set_state(calc_states.TOSUBMIT)
+
+    def set_parser_name(self, parser):
         """
         Set a string for the output parser
         Can be None if no output plugin is available or needed.
@@ -753,7 +723,7 @@ class Calculation(Node):
         """
         from aiida.parsers import ParserFactory
                 
-        return self.get_attr('parser')
+        return self.get_attr('parser', None)
 
     def get_parserclass(self):
         """
@@ -815,6 +785,10 @@ class Calculation(Node):
         
         from aiida.common.exceptions import InvalidOperation, RemoteOperationError
         
+        if self.get_state() == calc_states.NEW:
+            self._set_state(calc_states.FAILED)
+            return
+        
         if self.get_state() != calc_states.WITHSCHEDULER:
             raise InvalidOperation("Cannot kill a calculation not in {} state"
                                    .format(calc_states.WITHSCHEDULER) )
@@ -837,6 +811,153 @@ class Calculation(Node):
                                        "(maybe the calculation already finished?)"
                                        .format(self.pk, self.get_job_id()))
         
+    def presubmit(self, folder, code, inputdict=None):
+        import os
+        import StringIO
+        import json
+
+        from aiida.common.exceptions import (
+            PluginInternalError, ValidationError)
+        from aiida.scheduler.datastructures import JobTemplate
+        from aiida.common.utils import validate_list_of_string_tuples
+
+
+        computer = self.get_computer()
+
+        calcinfo = self._prepare_for_submission(folder, inputdict)
+        s = computer.get_scheduler()
+
+        if code.is_local():
+            if code.get_local_executable() in folder.get_content_list():
+                raise PluginInternalError(
+                      "The plugin created a file {} that is also "
+                      "the executable name!".format(
+                      code.get_local_executable()))
+
+        # TODO: support -V option of schedulers!
+        
+        self._set_retrieve_list(calcinfo.retrieve_list if
+                                calcinfo.retrieve_list is not None else [])
+
+        # I create the job template to pass to the scheduler
+        job_tmpl = JobTemplate()
+        ## TODO: in the future, allow to customize the following variables
+        job_tmpl.submit_as_hold = False
+        job_tmpl.rerunnable = False
+        job_tmpl.job_environment = {}
+        #'email', 'email_on_started', 'email_on_terminated',
+        job_tmpl.job_name = 'aiida-{}'.format(self.pk) 
+        job_tmpl.sched_output_path = '_scheduler-stdout.txt'
+        job_tmpl.sched_error_path = '_scheduler-stderr.txt'
+        job_tmpl.sched_join_files = False
+        
+        # TODO: add also code from the machine + u'\n\n'
+        job_tmpl.prepend_text = (
+            ((computer.get_prepend_text() + u"\n\n") if 
+                computer.get_prepend_text() else u"") + 
+            ((code.get_prepend_text() + u"\n\n") if 
+                code.get_prepend_text() else u"") + 
+            (calcinfo.prepend_text if 
+                calcinfo.prepend_text is not None else u""))
+        
+        job_tmpl.append_text = (
+            (calcinfo.append_text if 
+                calcinfo.append_text is not None else u"") +
+            ((code.get_append_text() + u"\n\n") if 
+                code.get_append_text() else u"") +
+            ((computer.get_append_text() + u"\n\n") if 
+                computer.get_append_text() else u""))
+
+        job_tmpl.job_resource = s.create_job_resource(
+             **self.get_resources())
+
+        subst_dict = {'tot_num_cpus': 
+                      job_tmpl.job_resource.get_tot_num_cpus()}
+        
+        for k,v in job_tmpl.job_resource.iteritems():
+            subst_dict[k] = v
+        mpi_args = [arg.format(**subst_dict) for arg in
+                    computer.get_mpirun_command()]
+        if self.get_withmpi():
+            job_tmpl.argv = mpi_args + [code.get_execname()] + (
+                calcinfo.cmdline_params if 
+                    calcinfo.cmdline_params is not None else [])
+        else:
+            job_tmpl.argv = [code.get_execname()] + (
+                calcinfo.cmdline_params if 
+                    calcinfo.cmdline_params is not None else [])
+
+        job_tmpl.stdin_name = calcinfo.stdin_name
+        job_tmpl.stdout_name = calcinfo.stdout_name
+        job_tmpl.stderr_name = calcinfo.stderr_name
+        job_tmpl.join_files = calcinfo.join_files
+        
+        job_tmpl.import_sys_environment = self.get_import_sys_environment()
+        
+        queue_name = self.get_queue_name()
+        if queue_name is not None:
+            job_tmpl.queue_name = queue_name
+        priority = self.get_priority()
+        if priority is not None:
+            job_tmpl.priority = priority
+        max_memory_kb = self.get_max_memory_kb()
+        if max_memory_kb is not None:
+            job_tmpl.max_memory_kb = max_memory_kb
+        max_wallclock_seconds = self.get_max_wallclock_seconds()
+        if max_wallclock_seconds is not None:
+            job_tmpl.max_wallclock_seconds = max_wallclock_seconds
+        max_memory_kb = self.get_max_memory_kb()
+        if max_memory_kb is not None:
+            job_tmpl.max_memory_kb = max_memory_kb
+
+        # TODO: give possibility to use a different name??
+        script_filename = '_aiidasubmit.sh'
+        script_content = s.get_submit_script(job_tmpl)
+        folder.create_file_from_filelike(
+             StringIO.StringIO(script_content),script_filename)
+
+        subfolder = folder.get_subfolder('.aiida',create=True)
+        subfolder.create_file_from_filelike(
+            StringIO.StringIO(json.dumps(job_tmpl)),'job_tmpl.json')
+        subfolder.create_file_from_filelike(
+            StringIO.StringIO(json.dumps(calcinfo)),'calcinfo.json')
+
+
+        if calcinfo.local_copy_list is None:
+            calcinfo.local_copy_list = []
+        
+        if calcinfo.remote_copy_list is None:
+            calcinfo.remote_copy_list = []
+
+        # Some validation
+        this_pk = self.pk if self.pk is not None else "[UNSTORED]"
+        local_copy_list = calcinfo.local_copy_list
+        try:
+            validate_list_of_string_tuples(local_copy_list,
+                                           tuple_length = 2)
+        except ValidationError as e:
+            raise PluginInternalError("[presubmission of calc {}] "
+                "local_copy_list format problem: {}".format(
+                this_pk, e.message))
+
+        remote_copy_list = calcinfo.remote_copy_list
+        try:
+            validate_list_of_string_tuples(remote_copy_list,
+                                           tuple_length = 3)
+        except ValidationError as e:
+            raise PluginInternalError("[presubmission of calc {}] "
+                "remote_copy_list format problem: {}".format(
+                this_pk, e.message))
+
+        for (remote_machine, remote_abs_path, 
+             dest_rel_path) in remote_copy_list:
+            if os.path.isabs(dest_rel_path):
+                raise PluginInternalError("[presubmission of calc {}] "
+                    "The destination path of the remote copy "
+                    "is absolute! ({})".format(this_pk, dest_rel_path))
+
+        return calcinfo, script_filename
+
 
     @property
     def res(self):
@@ -851,6 +972,63 @@ class Calculation(Node):
         """
         return CalculationResultManager(self)
 
+    def submit_test(self, folder, code, inputdict, subfolder_name = None):
+        import os
+        from aiida.transport.plugins.local import LocalTransport
+        import datetime
+        import tempfile
+        
+        # In case it is not created yet
+        folder.create()
+        
+        if subfolder_name is None:
+            subfolder_basename = datetime.datetime.now().strftime('%Y%m%d-%H%M%S-')
+        else:
+            subfolder_basename = subfolder_name
+            
+        # Find a new subfolder.
+        subfolder_path = tempfile.mkdtemp(prefix = subfolder_basename, dir=folder.abspath)
+        subfolder = folder.get_subfolder(
+            os.path.relpath(subfolder_path,folder.abspath),
+            reset_limit=True)
+        
+        # I use the local transport where possible, to be as similar
+        # as possible to a real submission
+        t = LocalTransport()
+        with t:
+            t.chdir(subfolder.abspath)
+        
+            calcinfo, script_filename = self.presubmit(
+                subfolder, code, inputdict)
+        
+            if code.is_local():
+                # Note: this will possibly overwrite files
+                for f in code.get_path_list():
+                    t.put(code.get_abs_path(f), f)
+                t.chmod(code.get_local_executable(), 0755) # rwxr-xr-x
+
+            local_copy_list = calcinfo.local_copy_list
+            remote_copy_list = calcinfo.remote_copy_list
+
+            for src_abs_path, dest_rel_path in local_copy_list:
+                t.put(src_abs_path, dest_rel_path)
+                
+            for (remote_machine, remote_abs_path, 
+                  dest_rel_path) in remote_copy_list:
+                localpath = os.path.join(
+                    subfolder.abspath, dest_rel_path)
+                # If it ends with a separator, it is a folder
+                if localpath.endswith(os.path.sep):
+                    localpath = os.path.join(localpath, 'PLACEHOLDER')
+                dirpart = os.path.split(localpath)[0]
+                if not(os.path.isdir(dirpart)):
+                    os.makedirs(dirpart)
+                with open(localpath,'w') as f:
+                    f.write("PLACEHOLDER FOR REMOTELY COPIED "
+                            "FILE FROM {}:{}".format(remote_machine,
+                                                     remote_abs_path))
+
+        return subfolder, script_filename
 
 class CalculationResultManager(object):
     """
@@ -915,3 +1093,4 @@ class CalculationResultManager(object):
         except AttributeError:
             raise KeyError("Parser '{}' did not provide a result '{}'"
                            .format(self._parser.__class__.__name__, name))
+

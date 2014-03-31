@@ -36,11 +36,24 @@ login from your user to the cluster. If you don't know how to do, google for
 something like "passwordless login ssh". We will add a more detailed explanation
 here in the future.
 
-Once you are able to connect to your cluster using::
+Before proceeding to setup the computer, be sure that you are able to
+connect to your cluster using::
 
    ssh YOURUSERNAME@YOURCLUSTERADDRESS
    
-without the need to type a password, you can proceed to setup the computer.
+without the need to type a password. Moreover, make also sure you can connect
+via ``sftp`` (needed to copy files). The following command::
+
+   sftp YOURUSERNAME@YOURCLUSTERADDRESS
+
+should show you a prompt without errors (possibly with a message saying
+``Connected to YOURCLUSTERADDRESS``).
+
+.. note:: If the ``ssh`` command works, but the ``sftp`` command does not
+  (e.g. it just prints ``Connection closed``), a possible reason can be
+  that there is a line in your ``~/.bashrc`` that either produces an output, 
+  or an error. Remove/comment it until no output or error is produced: this
+  should make ``sftp`` working again.
 
 Computer setup and configuration
 ++++++++++++++++++++++++++++++++

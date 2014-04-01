@@ -30,7 +30,7 @@ class Calculation(VerdiCommand):
 
     def run(self,*args):       
         """
-        Run the specified workflow subcommand.
+        Run the specified subcommand.
         """
         try:
             function_to_call = self.valid_subcommands.get(
@@ -51,13 +51,13 @@ class Calculation(VerdiCommand):
 
     def no_subcommand(self):
         print >> sys.stderr, ("You have to pass a valid subcommand to "
-                              "'workflow'. Valid subcommands are:")
+                              "'calculation'. Valid subcommands are:")
         print >> sys.stderr, "\n".join("  {}".format(sc) 
                                        for sc in self.valid_subcommands)
         sys.exit(1)
 
     def invalid_subcommand(self,*args):
-        print >> sys.stderr, ("You passed an invalid subcommand to 'workflow'. "
+        print >> sys.stderr, ("You passed an invalid subcommand to 'calculation'. "
                               "Valid subcommands are:")
         print >> sys.stderr, "\n".join("  {}".format(sc) 
                                        for sc in self.valid_subcommands)
@@ -136,7 +136,7 @@ class Calculation(VerdiCommand):
         """
         Kill a calculation. 
         
-        Pass a list of workflow PKs to kill them.
+        Pass a list of calculation PKs to kill them.
         If you also pass the -f option, no confirmation will be asked.
         """
         from aiida.common.utils import load_django

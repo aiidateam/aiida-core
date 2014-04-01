@@ -81,6 +81,8 @@ if computer.hostname.startswith("aries"):
     num_cpus_per_machine = 48
 elif computer.hostname.startswith("rosa"):
     num_cpus_per_machine = 32
+elif computer.hostname.startswith("daint"):
+    num_cpus_per_machine = 8
 elif computer.hostname.startswith("bellatrix"):
     num_cpus_per_machine = 16
 elif computer.hostname.startswith("theospc12"):

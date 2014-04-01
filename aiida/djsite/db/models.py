@@ -921,9 +921,9 @@ class DbAuthInfo(m.Model):
     @python_2_unicode_compatible
     def __str__(self):
         if self.enabled:
-            return "Authorization info for {}@{}".format(self.aiidauser.name, self.dbcomputer.name)
+            return "Authorization info for {}@{}".format(self.aiidauser.username, self.dbcomputer.name)
         else:
-            return "Authorization info for {}@{} [DISABLED]".format(self.aiidauser.name, self.dbcomputer.name)
+            return "Authorization info for {}@{} [DISABLED]".format(self.aiidauser.username, self.dbcomputer.name)
 
 
 

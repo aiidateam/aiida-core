@@ -55,6 +55,13 @@ should show you a prompt without errors (possibly with a message saying
   or an error. Remove/comment it until no output or error is produced: this
   should make ``sftp`` working again.
 
+.. note:: If you need to ssh to a computer A first, from which you can then
+     connect to computer B you wanted to connect to, you can use the
+     ``proxy_command`` feature of ssh, that we also support in
+     AiiDA. For more information, see :ref:`ssh_proxycommand`.
+
+.. _computer_setup:
+
 Computer setup and configuration
 ++++++++++++++++++++++++++++++++
 The configuration of computers happens in two steps.
@@ -176,7 +183,12 @@ The configuration of computers happens in two steps.
    * **timeout**: A timeout in seconds if there is no response (e.g., the
      machine is down. You can leave it empty to use the default value.
    * **allow_agent**: If True, it will try to use an SSH agent.
-   
+   * **proxy_command**: Leave empty if you do not need a proxy command (i.e., 
+     if you can directly connect to the machine). If you instead need to connect
+     to an intermediate computer first, you need to provide here the
+     command for the proxy: see documentation :ref:`here <ssh_proxycommand>` 
+     for how to use this option, and in particular the notes
+     :ref:`here <ssh_proxycommand_notes>` for the format of this field.
    * **compress**: True to compress the traffic (recommended)
    * **load_system_host_keys**: True to load the known hosts keys from the
      default SSH location (recommended)

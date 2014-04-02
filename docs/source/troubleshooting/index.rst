@@ -1,14 +1,25 @@
-=================
- Troubleshooting
-=================
+==========================
+Troubleshooting and tricks
+==========================
+
+Some tricks
+===========
+
+.. toctree::
+  :maxdepth: 1
+
+  ../setup/ssh_proxycommand
+  
 
 Connection problems
 ===================
 
-* **When AiiDA tries to connect to the remote computer, it says** ``paramiko.SSHException: Server u'FULLHOSTNAME' not found in known_hosts``
+* **When AiiDA tries to connect to the remote computer, it says**
+  ``paramiko.SSHException: Server u'FULLHOSTNAME' not found in known_hosts``
 
-  AiiDA uses the ``paramiko`` library to establish SSH connections. ``paramiko``
-  is able to read the remote host keys from the ``~/.ssh/known_hosts`` of the
+  AiiDA uses the ``paramiko`` library to establish SSH connections.
+  ``paramiko`` is able to read the remote host keys
+  from the ``~/.ssh/known_hosts`` of the
   user under which the AiiDA daemon is running. You therefore have to make
   sure that the key of the remote host is stored in the file.
 

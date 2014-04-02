@@ -266,7 +266,10 @@ class PwParser(Parser):
             for element in compact_list:
                 new_dict = {}
                 for keys in ['t_rev','equivalent_ions','fractional_translation']:
-                    new_dict[keys] = element[keys]
+                    try:
+                        new_dict[keys] = element[keys]
+                    except KeyError:
+                        pass
                 # expand the rest
                 new_dict['name'] = self._possible_symmetries[element['symmetry_number']]['name']
                 new_dict['rotation'] = self._possible_symmetries[element['symmetry_number']]['matrix']

@@ -16,7 +16,7 @@ class SingleTask(celery.Task):
     def __call__(self, *args, **kwargs):
         
         from aiida.orm.lock import Lock, LockManager
-        print('TASK STARTING: %s[%s]' % (self.name, self.request.id))
+        logger.info('TASK STARTING: %s[%s]' % (self.name, self.request.id))
         
         try:
             self.lock = LockManager().aquire(self.name, timeout=LOCK_EXPIRE, owner=self.request.id)

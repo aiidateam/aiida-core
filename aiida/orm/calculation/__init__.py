@@ -143,7 +143,10 @@ class Calculation(Node):
         
         :param str val: the queue name
         """
-        self.set_attr('queue_name',unicode(val))
+        if val is None:
+            self.set_attr('queue_name',None)
+        else:
+            self.set_attr('queue_name',unicode(val))
 
     def set_import_sys_environment(self,val):
         """

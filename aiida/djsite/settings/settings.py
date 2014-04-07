@@ -234,7 +234,7 @@ LOGGING = {
         },
         'aiida': {
             'handlers': ['console'],
-            'level': 'DEBUG',
+            'level': 'WARNING',
             'propagate': False,
             },
         },

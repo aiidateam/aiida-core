@@ -412,7 +412,6 @@ class Node(object):
                 self._dbnode.save()
                 self._increment_version_number_db()
 
-
     def validate(self):
         """
         Check if the attributes and files retrieved from the DB are valid.

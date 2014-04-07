@@ -473,12 +473,12 @@ def submit_calc(calc, authinfo, transport=None):
                     calc.pk, dest_rel_path))
                 t.put(src_abs_path, dest_rel_path)
             
-            for (remote_machine, remote_abs_path, 
+            for (remote_computer_uuid, remote_abs_path, 
                  dest_rel_path) in remote_copy_list:
-                if remote_machine == computer.hostname:
+                if remote_computer_uuid == computer.uuid:
                     execlogger.debug("[submission of calc {}] "
                         "copying {} remotely, directly on the machine "
-                        "{}".format(calc.pk, dest_rel_path, remote_machine))
+                        "{}".format(calc.pk, dest_rel_path, computer.name))
                     try:
                         t.copy(remote_abs_path, dest_rel_path)
                     except (IOError,OSError):
@@ -496,7 +496,7 @@ def submit_calc(calc, authinfo, transport=None):
                         "not implemented yet".format(calc.pk))
 
                             
-            remotedata = RemoteData(remote_machine = computer.hostname, 
+            remotedata = RemoteData(computer = computer, 
                     remote_path = workdir).store()
 
             calc._add_link_to(remotedata, label='remote_folder')

@@ -65,12 +65,22 @@ def get_after_database_creation_signal():
         call.
     """
     from aiida.djsite.settings import settings
+    from aiida.common.exceptions import ConfigurationError
     
     if settings.AFTER_DATABASE_CREATION_SIGNAL == 'post_syncdb':
         from django.contrib.auth import models as auth_models
         from django.db.models.signals import post_syncdb
+
+        if 'south'  in settings.INSTALLED_APPS:
+            raise ConfigurationError("AFTER_DATABASE_CREATION_SIGNAL is "
+                "post_syncdb, but south is in the INSTALLED_APPS")        
+
         return post_syncdb,  auth_models
-    elif settings.AFTER_DATABASE_CREATION_SIGNAL == 'post_migrate':        
+    elif settings.AFTER_DATABASE_CREATION_SIGNAL == 'post_migrate':
+        if 'south' not in settings.INSTALLED_APPS:
+            raise ConfigurationError("AFTER_DATABASE_CREATION_SIGNAL is "
+                "post_migrate, but south is not in the INSTALLED_APPS")
+                    
         from south.signals import post_migrate
         return post_migrate, None # No sender is needed for this model
     else:

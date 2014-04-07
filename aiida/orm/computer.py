@@ -156,21 +156,35 @@ class Computer(object):
     
     def __init__(self,**kwargs):
         from aiida.djsite.db.models import DbComputer
-
-        if 'dbcomputer' in kwargs:
-            dbcomputer = kwargs.pop('dbcomputer')            
-            if not(isinstance(dbcomputer, DbComputer)):
-                raise TypeError("dbcomputer must be of type DbComputer")
-            self._dbcomputer = dbcomputer
-
+        from django.core.exceptions import ObjectDoesNotExist
+        from aiida.common.exceptions import NotExistent 
+        
+        uuid = kwargs.pop('uuid', None)
+        if uuid is not None:
             if kwargs:
-                raise ValueError("If you pass a dbcomputer parameter, "
-                                 "you cannot pass any further parameter")
-        else:
-            self._dbcomputer = DbComputer()
+                raise ValueError("If you pass a uuid, you cannot pass any "
+                                 "further parameter")
+            try:
+                dbcomputer = DbComputer.objects.get(uuid=uuid)
+            except ObjectDoesNotExist:
+                raise NotExistent("No entry with UUID={} found".format(uuid))
 
-        # Set all remaining parameters, stop if unknown
-        self.set(**kwargs)
+            self._dbcomputer = dbcomputer
+        else:            
+            if 'dbcomputer' in kwargs:
+                dbcomputer = kwargs.pop('dbcomputer')            
+                if not(isinstance(dbcomputer, DbComputer)):
+                    raise TypeError("dbcomputer must be of type DbComputer")
+                self._dbcomputer = dbcomputer
+    
+                if kwargs:
+                    raise ValueError("If you pass a dbcomputer parameter, "
+                                     "you cannot pass any further parameter")
+            else:
+                self._dbcomputer = DbComputer()
+    
+            # Set all remaining parameters, stop if unknown
+            self.set(**kwargs)
 
     def set(self, **kwargs):
         import collections

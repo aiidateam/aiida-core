@@ -395,14 +395,14 @@ class BasePwCpInputGenerator(object):
         # copy remote output dir, if specified
         if parent_calc_folder is not None:
             remote_copy_list.append(
-                (parent_calc_folder.get_remote_machine(),
+                (parent_calc_folder.get_computer().uuid,
                  os.path.join(parent_calc_folder.get_remote_path(),
                               parent_calc_out_subfolder),
                  self.OUTPUT_SUBFOLDER))
 
         # TODO: copy remote output dir, if specified
         # remote_copy_list.append(
-        # (fileobj.get_remote_machine(), fileobj.get_remote_path(),dest_rel_path))
+        # (fileobj.get_comptuer().uuid, fileobj.get_remote_path(),dest_rel_path))
 
         calcinfo = CalcInfo()
 

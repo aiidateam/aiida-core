@@ -86,3 +86,38 @@ across different AiiDA instances.
    returned by the ``calc.get_scheduler_lastchecktime()`` method (that returns
    ``None`` if no check has been performed yet).
 
+
+The ``verdi gotocomputer`` command
+++++++++++++++++++++++++++++++++++
+
+Sometimes, it may be useful to directly go to the folder on
+which the calculation is running, for instance to check if the 
+output file has been created.
+
+In this case, it is possible to run::
+
+  verdi gotocomputer CALCULATIONPK
+  
+where ``CALCULATIONPK`` is the PK of the calculation. This will
+open a new connection to the computer (either simply a bash shell
+or a ssh connection, depending on the transport) and directly
+change directory to the appropriate folder where the code is
+running.
+
+.. note:: Be careful not to change any file that AiiDA created,
+  nor to modify the output files or resubmit the calculation, 
+  unless you **really** know what you are doing, 
+  otherwise AiiDA may get very confused!   
+
+
+
+
+
+
+
+
+
+ 
+
+
+

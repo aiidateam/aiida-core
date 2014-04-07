@@ -177,7 +177,7 @@ class PhCalculation(Calculation):
                 "{}".format(",".join(input_params.keys())))
         
         remote_copy_list.append(
-                (parent_calc_folder.get_remote_machine(),
+                (parent_calc_folder.get_computer().uuid,
                  os.path.join(parent_calc_folder.get_remote_path(),
                               parent_calc_out_subfolder),
                  self.OUTPUT_SUBFOLDER))

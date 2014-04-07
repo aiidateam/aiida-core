@@ -816,11 +816,11 @@ class Calculation(Node):
         import StringIO
         import json
 
-        from aiida.common.exceptions import (
+        from aiida.common.exceptions import (NotExistent,
             PluginInternalError, ValidationError)
         from aiida.scheduler.datastructures import JobTemplate
         from aiida.common.utils import validate_list_of_string_tuples
-
+        from aiida.orm import Computer
 
         computer = self.get_computer()
 
@@ -949,8 +949,15 @@ class Calculation(Node):
                 "remote_copy_list format problem: {}".format(
                 this_pk, e.message))
 
-        for (remote_machine, remote_abs_path, 
+        for (remote_computer_uuid, remote_abs_path, 
              dest_rel_path) in remote_copy_list:
+            try:
+                remote_computer = Computer(uuid=remote_computer_uuid)
+            except NotExistent:
+                raise PluginInternalError("[presubmission of calc {}] "
+                    "The remote copy requires a computer with UUID={}"
+                    "but no such computer was found in the "
+                    "database".format(this_pk, remote_computer_uuid))                
             if os.path.isabs(dest_rel_path):
                 raise PluginInternalError("[presubmission of calc {}] "
                     "The destination path of the remote copy "
@@ -977,6 +984,7 @@ class Calculation(Node):
         from aiida.transport.plugins.local import LocalTransport
         import datetime
         import tempfile
+        from aiida.orm import Computer
         
         # In case it is not created yet
         folder.create()
@@ -1013,8 +1021,9 @@ class Calculation(Node):
             for src_abs_path, dest_rel_path in local_copy_list:
                 t.put(src_abs_path, dest_rel_path)
                 
-            for (remote_machine, remote_abs_path, 
+            for (remote_computer_uuid, remote_abs_path, 
                   dest_rel_path) in remote_copy_list:
+                remote_computer = Computer(uuid=remote_computer_uuid)
                 localpath = os.path.join(
                     subfolder.abspath, dest_rel_path)
                 # If it ends with a separator, it is a folder
@@ -1025,8 +1034,9 @@ class Calculation(Node):
                     os.makedirs(dirpart)
                 with open(localpath,'w') as f:
                     f.write("PLACEHOLDER FOR REMOTELY COPIED "
-                            "FILE FROM {}:{}".format(remote_machine,
-                                                     remote_abs_path))
+                            "FILE FROM {} ({}):{}".format(remote_computer_uuid,
+                                                    remote_computer.name,
+                                                    remote_abs_path))
 
         return subfolder, script_filename
 

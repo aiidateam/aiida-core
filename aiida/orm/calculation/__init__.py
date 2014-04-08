@@ -505,7 +505,7 @@ class Calculation(Node):
         
         try:
             last_daemon_check = get_last_daemon_run(
-                djcelery_tasks['calculationretrieve'])
+                djcelery_tasks['retriever'])
         except ObjectDoesNotExist:
             last_check_string = ("# Last daemon check: (Unable to discover, "
                 "no such task found)")
@@ -783,12 +783,16 @@ class Calculation(Node):
         and raises an exception is something goes wrong. 
         No changes of calculation status are done (they will be done later by
         the calculation manager).
+        
+        .. todo: if the status is TOSUBMIT, check with some lock that it is not
+            actually being submitted at the same time in another thread.
         """
         #TODO: Check if we want to add a status "KILLED" or something similar.
         
         from aiida.common.exceptions import InvalidOperation, RemoteOperationError
         
-        if self.get_state() == calc_states.NEW:
+        if (self.get_state() == calc_states.NEW or 
+            self.get_state() == calc_states.TOSUBMIT):
             self._set_state(calc_states.FAILED)
             return
         

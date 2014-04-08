@@ -172,11 +172,6 @@ def get_authinfo(computer, aiidauser):
                 aiidauser.username, computer.name))
     return authinfo
 
-def daemon_main_loop():
-    submit_jobs()
-    update_jobs()
-    retrieve_jobs()
-
 def retrieve_jobs():
     from aiida.orm import Calculation, Computer
     from django.contrib.auth.models import User
@@ -278,12 +273,13 @@ def submit_jobs():
             authinfo = get_authinfo(dbcomputer, aiidauser)
             computed_calcs = submit_jobs_with_authinfo(authinfo)
         except Exception as e:
+            import traceback
             msg = ("Error while submitting jobs "
                    "for aiidauser={} on computer={}, "
-                   "error type is {}, error message: {}".format(
+                   "error type is {}, traceback: {}".format(
                        aiidauser.username,
                        dbcomputer.name,
-                       e.__class__.__name__, e.message))
+                       e.__class__.__name__, traceback.format_exc()))
             execlogger.error(msg)
             # Continue with next computer
             continue
@@ -355,6 +351,9 @@ def submit_calc(calc, authinfo, transport=None):
     from aiida.common.exceptions import (
         FeatureDisabled, InputValidationError)
     from aiida.orm.data.remote import RemoteData
+    from aiida.djsite.utils import get_dblogger_extra
+    
+    logger_extra = get_dblogger_extra(calc)
 
     if transport is None:
         t = authinfo.get_transport()
@@ -418,7 +417,8 @@ def submit_calc(calc, authinfo, transport=None):
             except IOError:
                 execlogger.debug("[submission of calc {}] "
                     "Unable to chdir in {}, trying to create it".format(
-                    calc.pk, remote_working_directory))
+                    calc.pk, remote_working_directory),
+                                 extra=logger_extra)
                 try:
                     t.makedirs(remote_working_directory)
                     t.chdir(remote_working_directory)
@@ -457,7 +457,8 @@ def submit_calc(calc, authinfo, transport=None):
             # copy all files, recursively with folders
             for f in folder.get_content_list():
                 execlogger.debug("[submission of calc {}] "
-                    "copying file/folder {}...".format(calc.pk,f))
+                    "copying file/folder {}...".format(calc.pk,f),
+                     extra=logger_extra)
                 t.put(folder.get_abs_path(f), f)
 
             # local_copy_list is a list of tuples,
@@ -470,7 +471,8 @@ def submit_calc(calc, authinfo, transport=None):
             for src_abs_path, dest_rel_path in local_copy_list:
                 execlogger.debug("[submission of calc {}] "
                     "copying local file/folder to {}".format(
-                    calc.pk, dest_rel_path))
+                    calc.pk, dest_rel_path),
+                    extra=logger_extra)
                 t.put(src_abs_path, dest_rel_path)
             
             for (remote_computer_uuid, remote_abs_path, 
@@ -485,7 +487,8 @@ def submit_calc(calc, authinfo, transport=None):
                         execlogger.warning("[submission of calc {}] "
                             "Unable to copy remote resource from {} to {}! "
                             "Stopping.".format(calc.pk,
-                                remote_abs_path,dest_rel_path))
+                                remote_abs_path,dest_rel_path),
+                                extra=logger_extra)
                         raise
                 else:
                     # TODO: implement copy between two different
@@ -513,14 +516,17 @@ def submit_calc(calc, authinfo, transport=None):
             #    calc._set_scheduler_state(job_states.QUEUED)
 
             execlogger.debug("submitted calculation {} on {} with "
-                "jobid {}".format(calc.pk, computer.name, job_id))
+                "jobid {}".format(calc.pk, computer.name, job_id),
+                extra=logger_extra)
 
     except Exception as e:
         import traceback
         calc._set_state(calc_states.SUBMISSIONFAILED)
-        execlogger.debug("Submission of calc {} failed, check also the "
-                         "log file! Traceback: {}".format(calc.pk, 
-            traceback.format_exc()))
+        execlogger.error("Submission of calc {} failed, check also the "
+                         "log file! Traceback: {}".format(
+                              calc.pk, 
+                              traceback.format_exc()),
+                         extra=logger_extra)
         raise
     finally:
         # close the transport, but only if it was opened within this function

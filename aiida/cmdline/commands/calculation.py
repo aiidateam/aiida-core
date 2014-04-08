@@ -24,6 +24,7 @@ class Calculation(VerdiCommand):
         """
         self.valid_subcommands = {
             'list': self.calculation_list,
+            'logshow': self.calculation_logshow,
             'kill': self.calculation_kill,
             'show': self.calculation_show,
             }
@@ -112,6 +113,7 @@ class Calculation(VerdiCommand):
     def calculation_show(self, *args):
         from aiida.common.exceptions import NotExistent
         from aiida.orm import Calculation as OrmCalculation
+        from aiida.djsite.utils import get_log_messages
         
         load_django()
         
@@ -131,6 +133,38 @@ class Calculation(VerdiCommand):
             print "##### OUTPUTS:"
             for k, v in calc.get_outputs(also_labels=True):
                 print k, v.pk, v.__class__.__name__
+            log_messages = get_log_messages(calc)
+            if log_messages:
+                print ("##### NOTE! There are {} log messages for this "
+                       "calculation.".format(len(log_messages)))
+                print "      Use the 'calculation logshow' command to see them."
+ 
+    def calculation_logshow(self, *args):
+        from aiida.common.exceptions import NotExistent
+        from aiida.orm import Calculation as OrmCalculation
+        from aiida.djsite.utils import get_log_messages
+        
+        load_django()
+        
+        for calc_pk in args:
+            try:
+                calc = OrmCalculation.get_subclass_from_pk(int(calc_pk))
+            except ValueError:
+                print "*** {}: Not a valid PK".format(calc_pk)
+                continue
+            except NotExistent:
+                print "*** {}: Not a valid calculation".format(calc_pk)
+                continue
+            print "*** {} [{}]".format(calc_pk, calc.label)
+            log_messages = get_log_messages(calc)
+            print "    -> {} log messages".format(len(log_messages))
+            for log in log_messages:
+                print "`-> {} at {}".format(log['levelname'], log['time'])
+                # Print the message, with a few spaces in front of each line
+                print "\n".join(["    {}".format(_)
+                                 for _ in log['message'].splitlines()])
+ 
+       
     
     def calculation_kill(self, *args):
         """

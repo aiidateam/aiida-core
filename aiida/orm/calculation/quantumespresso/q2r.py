@@ -4,7 +4,11 @@ from aiida.orm.calculation.quantumespresso.ph import PhCalculation
 from aiida.orm.data.folder import FolderData
 
 class Q2rCalculation(NamelistsCalculation):
-    
+    """
+    q2r.x code of the Quantum ESPRESSO distribution, used to obtain the
+    interatomic force constants in real space after a phonon calculation.
+    For more information, refer to http://www.quantum-espresso.org/
+    """    
     FORCE_CONSTANTS_NAME = 'real_space_force_constants.dat'
     _default_namelists = ['INPUT']   
     _default_parent_output_folder = os.path.join('.',

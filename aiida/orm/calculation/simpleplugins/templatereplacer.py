@@ -41,7 +41,11 @@ from aiida.common.datastructures import CalcInfo
 # TODO: write a 'input_type_checker' routine to automatically check the existence
 # and type of inputs + default values etc.
 class TemplatereplacerCalculation(Calculation):   
-    
+    """
+    Simple stub of a plugin that can be used to replace some text in a given
+    template. Can be used for many different codes, or as a starting point
+    to develop a new plugin.
+    """
     def _prepare_for_submission(self,tempfolder,inputdict=None):        
         """
         This is the routine to be called when you want to create

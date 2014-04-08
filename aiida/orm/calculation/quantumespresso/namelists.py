@@ -17,7 +17,11 @@ FolderData = DataFactory('folder')
 
     
 class NamelistsCalculation(Calculation):   
-
+    """
+    Generic plugin to manage simple post-processing tools of the
+    Quantum ESPRESSO distribution (http://www.quantum-espresso.org/)
+    that accept as input a Fortran-style namelist.
+    """
     OUTPUT_SUBFOLDER = './out/'
     PREFIX = 'aiida'
     INPUT_FILE_NAME = 'aiida.in'

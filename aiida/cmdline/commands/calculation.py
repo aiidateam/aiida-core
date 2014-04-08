@@ -8,12 +8,15 @@ from aiida.cmdline.baseclass import VerdiCommand
 
 class Calculation(VerdiCommand):
     """
-    Manage the AiiDA calculation manager
+    Query and interact with calculations
     
     Valid subcommands are:
-    * list: list the running calculations running and their state. Pass a -h
-            option for further help on valid options.
-    * kill: kill a given calculation
+    * kill:    kill a given calculation
+    * list:    list the running calculations running and their state. Pass a -h
+    |          option for further help on valid options.
+    * logshow: show the log messages for a given calculation
+    * plugins: list (and describe) the existing available calculation plugins
+    * show:    show more details on a given calculation
     """
 
 
@@ -23,10 +26,11 @@ class Calculation(VerdiCommand):
         list.
         """
         self.valid_subcommands = {
-            'list': self.calculation_list,
-            'logshow': self.calculation_logshow,
-            'kill': self.calculation_kill,
-            'show': self.calculation_show,
+            'list': (self.calculation_list, self.complete_none),
+            'logshow': (self.calculation_logshow, self.complete_none),
+            'kill': (self.calculation_kill, self.complete_none),
+            'show': (self.calculation_show, self.complete_none),
+            'plugins': (self.calculation_plugins, self.complete_plugins),
             }
 
     def run(self,*args):       
@@ -34,21 +38,43 @@ class Calculation(VerdiCommand):
         Run the specified subcommand.
         """
         try:
-            function_to_call = self.valid_subcommands.get(
-                args[0], self.invalid_subcommand)
+            function_to_call = self.valid_subcommands[args[0]][0]
         except IndexError:
             function_to_call = self.no_subcommand
+        except KeyError:
+            function_to_call = self.invalid_subcommand
             
         function_to_call(*args[1:])
 
+    def complete_none(self, subargs_idx, subargs):
+        return ""
+    
+    def complete_plugins(self, subargs_idx, subargs):
+        from aiida.common.pluginloader import existing_plugins
+        from aiida.orm import Calculation as OrmCalculation
+        
+        plugins = sorted(existing_plugins(OrmCalculation,
+                                          'aiida.orm.calculation'))
+        # Do not return plugins that are already on the command line
+        other_subargs = subargs[:subargs_idx] + subargs[subargs_idx+1:]
+        return_plugins = [_ for _ in plugins if _ not in other_subargs]
+#        print >> sys.stderr, "*", subargs
+        return "\n".join(return_plugins)
+
     def complete(self,subargs_idx, subargs):
-        """
-        Complete the calculation subcommand.
-        """
         if subargs_idx == 0:
             print "\n".join(self.valid_subcommands.keys())
-        else:
-            print ""
+        else: # >=1 
+            try:
+                first_subarg = subargs[0]
+            except  IndexError:
+                first_subarg = ''
+            try:
+                complete_function = self.valid_subcommands[first_subarg][1] 
+            except KeyError:
+                print ""
+                return
+            print complete_function(subargs_idx-1, subargs[1:])
 
     def no_subcommand(self):
         print >> sys.stderr, ("You have to pass a valid subcommand to "
@@ -163,8 +189,39 @@ class Calculation(VerdiCommand):
                 # Print the message, with a few spaces in front of each line
                 print "\n".join(["    {}".format(_)
                                  for _ in log['message'].splitlines()])
+
  
-       
+    def calculation_plugins(self, *args):
+        from aiida.orm import Calculation as OrmCalculation, CalculationFactory
+        from aiida.common.pluginloader import existing_plugins
+        from aiida.common.exceptions import MissingPluginError
+        
+        load_django()
+        
+        if args:
+            for arg in args:
+                try:
+                    C = CalculationFactory(arg)
+                    print "* {}".format(arg)
+                    docstring = C.__doc__
+                    if docstring is None:
+                        docstring = "(No documentation available)"
+                    docstring = docstring.strip()
+                    print "\n".join(["    {}".format(_.strip())
+                                     for _ in docstring.splitlines()])
+                except MissingPluginError:
+                    print "! {}: NOT FOUND!".format(arg)
+        else:
+            plugins = sorted(existing_plugins(OrmCalculation,
+                                              'aiida.orm.calculation'))
+            if plugins:                
+                print "## Pass as a further parameter one (or more) plugin names"
+                print "## to get more details on a given plugin."
+                for plugin in plugins:
+                    print "* {}".format(plugin)
+            else:
+                print "## No calculation plugins found"
+                
     
     def calculation_kill(self, *args):
         """

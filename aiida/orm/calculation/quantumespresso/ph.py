@@ -26,6 +26,10 @@ _blocked_keywords = [('INPUTPH', 'outdir'),
     ]
 
 class PhCalculation(Calculation):
+    """
+    Phonon code (ph.x) of the Quantum ESPRESSO distribution.
+    For more information, refer to http://www.quantum-espresso.org/
+    """
 
     OUTPUT_SUBFOLDER = './out/'
     PREFIX = 'aiida'

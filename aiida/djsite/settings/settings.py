@@ -245,7 +245,12 @@ LOGGING = {
             'handlers': ['console'],
             'level': 'WARNING',
             'propagate': False,
-            } 
+            },
+        'paramiko': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'propagate': False,
+            },
         },
 }
 

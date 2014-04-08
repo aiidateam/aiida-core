@@ -144,7 +144,16 @@ class CodeInputValidationClass(object):
          "computers for every calculation submission. If True, the code "
          "is just a link to a remote computer and an absolute path there",
          False,
-        )]
+        ),
+        ("input_plugin",
+         "Default input plugin",
+         "A string of the default input plugin to be used with this code "
+         "that is recognized by the CalculationFactory. Use the "
+         "'verdi calculation plugins' command to get the list of existing"
+         "plugins",
+         False,
+        ),                              
+        ]
     _conf_attributes_local = [
         ("folder_with_code",
          "Folder with the code",
@@ -369,6 +378,44 @@ class CodeInputValidationClass(object):
             raise ValidationError("Invalid value '{}' for the is_local variable, must "
                                   "be a boolean".format(str(is_local)))
 
+    input_plugin = None
+
+    def _get_input_plugin_string(self):
+        """
+        Return the input plugin string
+        """
+        return self.input_plugin
+
+    def _set_input_plugin_string(self,string):
+        """
+        Set the input_plugin starting from a string.
+        """
+        input_plugin = string.strip()
+        
+        if input_plugin.lower == "none":
+            input_plugin = None
+        
+        self._input_plugin_validator(input_plugin)        
+        self.input_plugin = input_plugin
+        
+    def _input_plugin_validator(self,input_plugin):
+        """
+        Validates the input_plugin, checking it is in the list of existing
+        plugins.
+        """
+        from aiida.common.exceptions import ValidationError
+        from aiida.orm import Calculation
+        from aiida.common.pluginloader import existing_plugins
+
+        if input_plugin is None:
+            return
+
+        if input_plugin not in existing_plugins(Calculation,
+                                                'aiida.orm.calculation'):
+            raise ValidationError("Invalid value '{}' for the input_plugin "
+                "variable, it is not among the existing plugins".format(
+                str(input_plugin)))
+
     prepend_text = ""
     
     def _get_prepend_text_string(self):
@@ -424,6 +471,7 @@ class CodeInputValidationClass(object):
 
         code.label = self.label
         code.description = self.description
+        code.set_input_plugin_name(self.input_plugin)
         code.set_prepend_text(self.prepend_text)    
         code.set_append_text(self.append_text)    
         
@@ -437,6 +485,7 @@ class CodeInputValidationClass(object):
 #         
 #         self.label = code.label
 #         self.description = code.description
+#         # Add here also the input_plugin stuff
 #         self.is_local = code.is_local()
 #         if self.is_local:
 #             raise NotImplementedError
@@ -512,7 +561,7 @@ class Code(VerdiCommand):
         return "\n".join(code_names)
 
     def complete_code_pks(self):
-        code_pks = [c[0] for c in self.get_code_pks_and_labels()]
+        code_pks = [str(c[0]) for c in self.get_code_pks_and_labels()]
         return "\n".join(code_pks)
 
     def no_subcommand(self,*args):

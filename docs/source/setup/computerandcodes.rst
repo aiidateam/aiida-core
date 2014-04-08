@@ -296,6 +296,15 @@ You will be asked for:
 
 * **description**: A human-readable description of this code (for instance "Quantum
   Espresso v.5.0.2 with 5.0.3 patches, pw.x code, compiled with openmpi")
+
+* **default input plugin**: A string that identifies the default input plugin to
+  used to generate new calculations to use with this code.
+  This string has to be a valid string recognized by the ``CalculationFactory``
+  function. To get the list of all available Calculation plugin strings,
+  use the ``verdi calculation plugins`` command. Note: if you do not want to 
+  specify a default input plugin, you can write the string "None", but this is
+  strongly discouraged, because then you will not be able to use
+  the ``.new_calc`` method of the ``Code`` object.
   
 * **local**: either True (for local codes) or False (for remote codes). Depending
   on your choice, you will be asked for:

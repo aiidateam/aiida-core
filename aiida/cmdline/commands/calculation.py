@@ -181,13 +181,14 @@ class Calculation(VerdiCommand):
             except NotExistent:
                 print "*** {}: Not a valid calculation".format(calc_pk)
                 continue
-            print "*** {} [{}]".format(calc_pk, calc.label)
             log_messages = get_log_messages(calc)
-            print "    -> {} log messages".format(len(log_messages))
+            label_string =  " [{}]".format(calc.label) if calc.label else ""
+            print "*** {}{}: {} log messages".format(
+                calc_pk, label_string, len(log_messages))
             for log in log_messages:
-                print "`-> {} at {}".format(log['levelname'], log['time'])
+                print "+-> {} at {}".format(log['levelname'], log['time'])
                 # Print the message, with a few spaces in front of each line
-                print "\n".join(["    {}".format(_)
+                print "\n".join(["|   {}".format(_)
                                  for _ in log['message'].splitlines()])
 
  

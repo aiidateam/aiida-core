@@ -625,9 +625,20 @@ class Computer(object):
         self._set_property("append_text", unicode(val))
 
     def get_mpirun_command(self):
-        return self._get_property("mpirun_command", [])
+        """
+        Return the mpirun command. Must be a list of strings, that will be
+        then joined with spaces when submitting.
+        
+        I also provide a sensible default that may be ok in many cases.
+        """
+        return self._get_property("mpirun_command",
+            ["mpirun", "-np", "{tot_num_cpus}"])
 
     def set_mpirun_command(self,val):
+        """
+        Set the mpirun command. It must be a list of strings (you can use
+        string.split() if you have a single, space-separated string).
+        """
         if not isinstance(val,(tuple,list)) or not(
             all(isinstance(i,basestring) for i in val)):
                 raise TypeError("the mpirun_command must be a list of strings")
@@ -654,7 +665,11 @@ class Computer(object):
 #            raise ModificationNotAllowed("Cannot set a property after having stored the entry")
 
     def get_workdir(self):
-        return self._get_metadata().get('workdir', '')
+        try:
+            return self.dbcomputer.get_workdir()
+        except ConfigurationError:
+            # This happens the first time: I provide a reasonable default value
+            return "/scratch/{username}/aiida_run/"
 
     def set_workdir(self,val):
         #if self.to_be_stored:

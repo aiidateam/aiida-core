@@ -150,6 +150,30 @@ class Computer(VerdiCommand):
         for internal_name, name, desc, multiline in (
           AiidaOrmComputer._conf_attributes):
 
+            # Check if I should skip this entry
+            shouldcall_name = '_shouldcall_{}'.format(internal_name)
+            try:
+                shouldcallfunc = dict(inspect.getmembers(
+                   computer))[shouldcall_name]
+                shouldcall = shouldcallfunc()
+            except KeyError:
+                shouldcall = True
+            if not shouldcall:
+                # Call cleanup code, if present
+                cleanup_name = '_cleanup_{}'.format(internal_name)
+                try:
+                    cleanup = dict(inspect.getmembers(
+                        computer))[cleanup_name]
+                    cleanup()
+                except KeyError:
+                    # No cleanup function: this is not a problem, simply
+                    # no cleanup is needed
+                    pass
+                
+                # Skip this question
+                continue
+
+
             getter_name = '_get_{}_string'.format(internal_name)
             try:
                 getter = dict(inspect.getmembers(

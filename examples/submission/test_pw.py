@@ -11,7 +11,7 @@ from aiida.common.exceptions import NotExistent
 aiidalogger.setLevel(logging.INFO)
 
 from aiida.orm import Code
-from aiida.orm import CalculationFactory, DataFactory
+from aiida.orm import DataFactory
 from aiida.djsite.db.models import DbGroup
 UpfData = DataFactory('upf')
 ParameterData = DataFactory('parameter')
@@ -77,22 +77,6 @@ if auto_pseudos:
 
 computer = code.get_remote_computer()
 
-if computer.hostname.startswith("aries"):
-    num_cpus_per_machine = 48
-elif computer.hostname.startswith("rosa"):
-    num_cpus_per_machine = 32
-elif computer.hostname.startswith("daint"):
-    num_cpus_per_machine = 8
-elif computer.hostname.startswith("bellatrix"):
-    num_cpus_per_machine = 16
-elif computer.hostname.startswith("theospc12"):
-    num_cpus_per_machine = 8
-elif "localhost" in computer.hostname:
-    num_cpus_per_machine = 6
-else:
-    raise ValueError("num_cpus_per_machine not specified for the current machine: {0}".format(computer.hostname))
-
-
 alat = 4. # angstrom
 cell = [[alat, 0., 0.,],
         [0., alat, 0.,],
@@ -128,7 +112,13 @@ kpoints = ParameterData(dict={
 
 calc = code.new_calc(computer=computer)
 calc.set_max_wallclock_seconds(30*60) # 30 min
-calc.set_resources({"num_machines": 1, "num_cpus_per_machine": num_cpus_per_machine})
+# Valid only for Slurm and PBS (using default values for the
+# number_cpus_per_machine), change for SGE-like schedulers 
+calc.set_resources({"num_machines": 1})
+## Otherwise, to specify a given # of cpus per machine, uncomment the following:
+# calc.set_resources({"num_machines": 1, "num_cpus_per_machine": 8})
+
+
 if queue is not None:
     calc.set_queue_name(queue)
 calc.store()

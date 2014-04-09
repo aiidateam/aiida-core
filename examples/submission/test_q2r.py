@@ -11,7 +11,7 @@ from aiida.common.exceptions import NotExistent
 aiidalogger.setLevel(logging.INFO)
 
 from aiida.orm import Code
-from aiida.orm import CalculationFactory, DataFactory
+from aiida.orm import DataFactory
 from aiida.djsite.db.models import DbGroup
 UpfData = DataFactory('upf')
 ParameterData = DataFactory('parameter')
@@ -64,29 +64,15 @@ except (NotExistent, ValueError):
 
 computer = code.get_remote_computer()
 
-if computer.hostname.startswith("aries"):
-    num_cpus_per_machine = 48
-elif computer.hostname.startswith("daint"):
-    num_cpus_per_machine = 8
-elif computer.hostname.startswith("bellatrix"):
-    num_cpus_per_machine = 16
-elif computer.hostname.startswith("theospc12"):
-    num_cpus_per_machine = 8
-elif computer.hostname.startswith("localhost"):
-    num_cpus_per_machine = 6
-else:
-    raise ValueError("num_cpus_per_machine not specified for the current machine: {0}".format(computer.hostname))
-
 parameters = ParameterData(dict={
             'INPUT': {
                 'zasr': 'simple',
                 },
             }).store()
                 
-Q2rCalc = CalculationFactory('quantumespresso.q2r')
-calc = Q2rCalc(computer=computer)
+calc = code.new_calc(computer=computer)
 calc.set_max_wallclock_seconds(60*30) # 30 min
-calc.set_resources({"num_machines":num_machines, "num_cpus_per_machine":num_cpus_per_machine}) # must run in serial
+calc.set_resources({"num_machines":num_machines})
 calc.store()
 
 calc.use_parameters(parameters)

@@ -60,7 +60,7 @@ class Calculation(Node):
         computer = self.get_computer()        
         s = computer.get_scheduler()
         try:
-            _ = s.create_job_resource(**self.get_resources())
+            _ = s.create_job_resource(**self.get_resources(full=True))
         except (TypeError, ValueError) as e:
             raise ValidationError("Invalid resources for the scheduler of the "
                                   "specified computer: {}".format(e.message))
@@ -215,13 +215,24 @@ class Calculation(Node):
         """
         return self.get_attr('withmpi',True)
     
-    def get_resources(self):
+    def get_resources(self, full=False):
         """
         Returns the dictionary of the job resources set.
         
+        :param full: if True, also add the default values, e.g.
+            ``default_cpus_per_machine``
+        
         :return: a dictionary
         """
-        return self.get_attr('jobresource_params', {})
+        resources_dict = self.get_attr('jobresource_params', {})
+    
+        if full:
+            computer = self.get_computer()
+            def_cpus_machine = computer.get_default_cpus_per_machine()
+            if def_cpus_machine is not None:
+                resources_dict['default_cpus_per_machine'] = def_cpus_machine
+        
+        return resources_dict
 
     def get_queue_name(self):
         """
@@ -858,7 +869,6 @@ class Calculation(Node):
         job_tmpl.sched_error_path = '_scheduler-stderr.txt'
         job_tmpl.sched_join_files = False
         
-        # TODO: add also code from the machine + u'\n\n'
         job_tmpl.prepend_text = (
             ((computer.get_prepend_text() + u"\n\n") if 
                 computer.get_prepend_text() else u"") + 
@@ -875,8 +885,9 @@ class Calculation(Node):
             ((computer.get_append_text() + u"\n\n") if 
                 computer.get_append_text() else u""))
 
-        job_tmpl.job_resource = s.create_job_resource(
-             **self.get_resources())
+        # Set resources, also with get_default_cpus_per_machine
+        resources_dict = self.get_resources(full=True)
+        job_tmpl.job_resource = s.create_job_resource(**resources_dict)
 
         subst_dict = {'tot_num_cpus': 
                       job_tmpl.job_resource.get_tot_num_cpus()}

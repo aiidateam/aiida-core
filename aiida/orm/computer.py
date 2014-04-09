@@ -43,29 +43,37 @@ class Computer(object):
     import logging
     
     _logger = logging.getLogger(__name__)
-    
-    # This is the list of attributes to be automatically configured
-    
-    # It is a list of tuples. Each tuple has three elements:
-    # 1. an internal name (used to find the 
-    #    _set_internalname_string, and get_internalname_string methods)
-    # 2. a short human-readable name
-    # 3. A long human-readable description
-    # 4. True if it is a multi-line input, False otherwise  
-    # IMPORTANT!
-    # for each entry, remember to define the 
-    # _set_internalname_string and get_internalname_string methods.
-    # Moreover, the _set_internalname_string method should also immediately
-    # validate the value. 
-    
+        
     @classproperty
     def _conf_attributes(self):
         """
-        Return the configuration attributes.
+        Return the configuration attributes to be used in the 'setup' phase.
+    
+        The return value is a list of tuples. Each tuple has three elements:
+        1. an internal name (used to find the 
+           _set_internalname_string, and get_internalname_string methods)
+        2. a short human-readable name
+        3. A long human-readable description
+        4. True if it is a multi-line input, False otherwise  
+    
+        For the implementation, see in aiida.cmdline.computer
         
-        Defining it as a property increases the overall execution
-        of the code because it does not require to calculate
-        Transport.get_valid_transports() at each load of this class.
+        .. note: you can define a ``_shouldcall_internalname`` method that returns
+          either True or False if the specific configuration option has to be
+          called or not. If such a method is not found, the option is always 
+          asked to the user. In this case, you typically also want to define a
+          ``_cleanup_internalname`` method to remove any previous configuration 
+          associated to internalname, in case ``_shouldcall_internalname``
+          returns False.
+        
+        .. note: IMPORTANT! For each entry, remember to define the 
+          ``_set_internalname_string`` and ``get_internalname_string`` methods.
+          Moreover, the ``_set_internalname_string`` method should also
+          immediately validate the value. 
+        
+        ..note: Defining it as a property increases the overall execution
+          of the code because it does not require to calculate
+          Transport.get_valid_transports() at each load of this class.
         """
         from aiida.transport import Transport
         from aiida.scheduler import Scheduler
@@ -116,6 +124,13 @@ class Computer(object):
              "replacement fields (see the scheduler docs for more information)",
              False,
              ),
+             ("default_cpus_per_machine",
+             "Default number of CPUs per machine",
+             "Enter here the default number of CPUs per machine (node) that \n"
+             "should be used if nothing is otherwise specified. Leave empty \n"
+             "if you do not want to provide a default value.\n",
+             False,
+             ),           
             ("prepend_text",
              "Text to prepend to each command execution",
              "This is a multiline string, whose content will be prepended inside\n"
@@ -219,14 +234,18 @@ class Computer(object):
         ret_lines.append(" * PK:             {}".format(self.pk))
         ret_lines.append(" * UUID:           {}".format(self.uuid))
         ret_lines.append(" * Description:    {}".format(self.description))
-        ret_lines.append(" * Used by:        {} nodes".format(
-            len(self.dbcomputer.dbnode_set.all())))
         ret_lines.append(" * Hostname:       {}".format(self.hostname))
         ret_lines.append(" * Transport type: {}".format(self.get_transport_type()))
         ret_lines.append(" * Scheduler type: {}".format(self.get_scheduler_type()))
         ret_lines.append(" * Work directory: {}".format(self.get_workdir()))
         ret_lines.append(" * mpirun command: {}".format(" ".join(
             self.get_mpirun_command())))
+        def_cpus_machine = self.get_default_cpus_per_machine()
+        if def_cpus_machine is not None:
+            ret_lines.append(" * Default number of cpus per machine: {}".format(
+                def_cpus_machine))
+        ret_lines.append(" * Used by:        {} nodes".format(
+            len(self.dbcomputer.dbnode_set.all())))
         
         ret_lines.append(" * prepend text:")
         if self.get_prepend_text().strip():
@@ -288,6 +307,87 @@ class Computer(object):
     
         if not hostname.strip():
             raise ValidationError("No hostname specified")
+
+    def _get_default_cpus_per_machine_string(self):
+        """
+        Get the default number of CPUs per machine (node) as a string
+        """
+        def_cpus_per_machine = self.get_default_cpus_per_machine()
+        if def_cpus_per_machine is None:
+            return ""
+        else:
+            return str(def_cpus_per_machine)
+        
+
+    def _set_default_cpus_per_machine_string(self, string):
+        """
+        Set the default number of CPUs per machine (node) from a string (set to
+        None if the string is empty)
+        """       
+        from aiida.common.exceptions import ValidationError
+        
+        if not string:
+            def_cpus_per_machine = None
+        else:
+            try:
+                def_cpus_per_machine = int(string)
+            except ValueError:
+                raise ValidationError("Invalid value for default_cpus_per_machine, "
+                                      "must be a positive integer, or an empty "
+                                      "string if you do not want to provide a "
+                                      "default value.")                
+        
+        self._default_cpus_per_machine_validator(def_cpus_per_machine)
+        
+        self.set_default_cpus_per_machine(def_cpus_per_machine)
+
+    def _default_cpus_per_machine_validator(self, def_cpus_per_machine):
+        """
+        Validates the default number of CPUs per machine (node)
+        """
+        from aiida.common.exceptions import ValidationError
+
+        if def_cpus_per_machine is None:
+            return
+        
+        if not isinstance(def_cpus_per_machine, int) or def_cpus_per_machine <= 0:
+            raise ValidationError("Invalid value for default_cpus_per_machine, "
+                                  "must be a positive integer, or an empty "
+                                  "string if you do not want to provide a "
+                                  "default value.")
+        
+    def _shouldcall_default_cpus_per_machine(self):
+        """
+        Return True if the scheduler can accept 'default_cpus_per_machine',
+        False otherwise.
+        
+        If there is a problem in determining the scheduler, return True to
+        avoid exceptions.
+        """
+        from aiida.scheduler import SchedulerFactory
+        
+        try:
+            SchedulerClass = SchedulerFactory(self.get_scheduler_type())
+        except MissingPluginError:
+            # Return True if the Scheduler was not found...
+            return True
+    
+        JobResourceClass = SchedulerClass._job_resource_class
+        if JobResourceClass is None:
+            # Odd situation...
+            return False
+        
+        return JobResourceClass.accepts_default_cpus_per_machine()
+
+    def _cleanup_default_cpus_per_machine(self):
+        """
+        Called by the command line utility in case the _shouldcall_ routine
+        returns False, to remove possible values that were previously set
+        (e.g. if one used before a pbspro scheduler and set the
+        default_cpus_per_machine, and then switches to sge, the question is
+        not asked, but the value should also be removed from the DB.
+        """
+        self.set_default_cpus_per_machine(None)
 
     def _get_enabled_state_string(self):
         return "True" if self.is_enabled() else "False"
@@ -590,10 +690,29 @@ class Computer(object):
         return json.loads(self.dbcomputer.metadata)
 
     def _set_metadata(self,metadata_dict):
+        """
+        Set the metadata.
+        
+        .. note: You still need to call the .store() method to actually save
+           data to the database! (The store method can be called multiple
+           times, differently from AiiDA Node objects).
+        """
         import json
 #        if not self.to_be_stored:
 #            raise ModificationNotAllowed("Cannot set a property after having stored the entry")
         self.dbcomputer.metadata = json.dumps(metadata_dict)
+
+    def _del_property(self,k,raise_exception=True):
+        olddata = self._get_metadata()
+        try:
+            del olddata[k]
+        except KeyError:
+            if raise_exception:
+                raise AttributeError("'{}' property not found".format(k))
+            else:
+                # Do not reset the metadata, it is not necessary
+                return
+        self._set_metadata(olddata)
 
     def _set_property(self,k,v):
         olddata = self._get_metadata()
@@ -643,6 +762,26 @@ class Computer(object):
             all(isinstance(i,basestring) for i in val)):
                 raise TypeError("the mpirun_command must be a list of strings")
         self._set_property("mpirun_command", val)
+
+    def get_default_cpus_per_machine(self):
+        """
+        Return the default number of CPUs per machine (node) for this computer,
+        or None if it was not set.
+        """
+        return self._get_property("default_cpus_per_machine",
+            None)
+    
+    def set_default_cpus_per_machine(self, def_cpus_per_machine):
+        """
+        Set the default number of CPUs per machine (node) for this computer.
+        Accepts None if you do not want to set this value.
+        """
+        if def_cpus_per_machine is None:
+            self._del_property("default_cpus_per_machine", raise_exception=False)
+        else:
+            if not isinstance(def_cpus_per_machine, int):
+                raise TypeError("def_cpus_per_machine must be an integer (or None)")
+        self._set_property("default_cpus_per_machine", def_cpus_per_machine)
 
     def get_transport_params(self):
         import json
@@ -750,4 +889,8 @@ class Computer(object):
             raise ConfigurationError('No scheduler found for {} [type {}], message: {}'.format(
                 self.name, self.get_scheduler_type(), e.message))
 
-
+    def __str__(self):
+        if self.is_enabled():
+            return "<Computer {} ({})>".format(self.name, self.hostname)
+        else:
+            return "<Computer {} ({}) [DISABLED]>".format(self.name, self.hostname)

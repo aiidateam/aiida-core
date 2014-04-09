@@ -20,7 +20,8 @@ UpfData = DataFactory('upf')
 ParameterData = DataFactory('parameter')
 StructureData = DataFactory('structure')
 RemoteData = DataFactory('remote')
-
+# Used to make sure that the parent is a pw.x calculation
+QEPwCalc = CalculationFactory('quantumespresso.pw') 
 
 
 ################################################################
@@ -95,10 +96,9 @@ parameters = ParameterData(dict={
                 'nq3' : 1,
                 }}).store()
 
-QEPhCalc = CalculationFactory('quantumespresso.ph')
-QEPwCalc = CalculationFactory('quantumespresso.pw')
 parentcalc = QEPwCalc.get_subclass_from_pk(parent_id)
-calc = QEPhCalc(computer=computer)
+
+calc = code.new_calc(computer=computer)
 
 calc.set_max_wallclock_seconds(30*60) # 30 min
 calc.set_resources({"num_machines": 1, "num_cpus_per_machine": num_cpus_per_machine})

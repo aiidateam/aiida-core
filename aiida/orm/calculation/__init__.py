@@ -249,6 +249,30 @@ class Calculation(Node):
         :return: a string or None
         """
         return self.get_attr('priority', None)
+
+    def get_prepend_text(self):
+        """
+        Set the calculation-specific prepend text
+        """
+        return self.get_attr("prepend_text", "")
+
+    def set_prepend_text(self,val):
+        """
+        Set the calculation-specific prepend text
+        """
+        self.set_attr("prepend_text", unicode(val))
+
+    def get_append_text(self):
+        """
+        Set the calculation-specific append text
+        """
+        return self.get_attr("append_text", "")
+
+    def set_append_text(self,val):
+        """
+        Set the calculation-specific append text
+        """
+        self.set_attr("append_text", unicode(val))
     
     def get_max_memory_kb(self):
         """
@@ -874,11 +898,15 @@ class Calculation(Node):
                 computer.get_prepend_text() else u"") + 
             ((code.get_prepend_text() + u"\n\n") if 
                 code.get_prepend_text() else u"") + 
-            (calcinfo.prepend_text if 
-                calcinfo.prepend_text is not None else u""))
+            ((calcinfo.prepend_text + u"\n\n") if 
+                calcinfo.prepend_text is not None else u"") +
+            ((self.get_prepend_text()) if 
+                self.get_prepend_text() else u""))
         
         job_tmpl.append_text = (
-            (calcinfo.append_text if 
+            ((self.get_append_text() + u"\n\n") if 
+                self.get_append_text() else u"") +                         
+            ((calcinfo.append_text + u"\n\n") if 
                 calcinfo.append_text is not None else u"") +
             ((code.get_append_text() + u"\n\n") if 
                 code.get_append_text() else u"") +

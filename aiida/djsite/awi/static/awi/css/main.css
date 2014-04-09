@@ -127,7 +127,7 @@ a.text-success:hover {
 	display: none;
 }
 .table .detail-ajax { /* when showing listing detail via ajax in the table, make the content narrower */
-	width: 80%;
+	width: 90%;
 	margin: 0 auto 10px auto;
 	text-align: left;
 	position: relative;

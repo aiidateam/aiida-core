@@ -13,7 +13,7 @@ String.prototype.trunc = function (n,useWordBoundary,tooltip) {
 	s_ = useWordBoundary && tooLong ? s_.substr(0,s_.lastIndexOf(' ')) : s_;
 	if (tooLong) {
 		if (tooltip) {
-			return '<span title="' + s_ + '" data-toggle="tooltip">' + s_ + '&hellip;</span>';
+			return '<span title="' + this + '" data-toggle="tooltip">' + s_ + '&hellip;</span>';
 		} else {
 			return s_ + '&hellip;';
 		}

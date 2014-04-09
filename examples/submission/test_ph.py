@@ -99,6 +99,8 @@ parameters = ParameterData(dict={
 parentcalc = QEPwCalc.get_subclass_from_pk(parent_id)
 
 calc = code.new_calc(computer=computer)
+calc.label = "Test QE ph.x"
+calc.description = "Test calculation with the Quantum ESPRESSO ph.x code"
 
 calc.set_max_wallclock_seconds(30*60) # 30 min
 calc.set_resources({"num_machines": 1, "num_cpus_per_machine": num_cpus_per_machine})

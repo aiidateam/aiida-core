@@ -122,6 +122,8 @@ parameters = ParameterData(dict={
                 
 
 calc = code.new_calc(computer=computer)
+calc.label = "Test QE cp.x"
+calc.description = "Test calculation with the Quantum ESPRESSO cp.x code"
 calc.set_max_wallclock_seconds(30*60) # 30 min
 calc.set_resources({"num_machines": 1})
 if queue is not None:

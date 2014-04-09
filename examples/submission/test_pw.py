@@ -111,13 +111,14 @@ kpoints = ParameterData(dict={
                 }).store()
 
 calc = code.new_calc(computer=computer)
+calc.label = "Test QE pw.x"
+calc.description = "Test calculation with the Quantum ESPRESSO pw.x code"
 calc.set_max_wallclock_seconds(30*60) # 30 min
 # Valid only for Slurm and PBS (using default values for the
 # number_cpus_per_machine), change for SGE-like schedulers 
 calc.set_resources({"num_machines": 1})
 ## Otherwise, to specify a given # of cpus per machine, uncomment the following:
 # calc.set_resources({"num_machines": 1, "num_cpus_per_machine": 8})
-
 
 if queue is not None:
     calc.set_queue_name(queue)

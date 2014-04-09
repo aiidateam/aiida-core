@@ -71,6 +71,8 @@ parameters = ParameterData(dict={
             }).store()
                 
 calc = code.new_calc(computer=computer)
+calc.label = "Test QE q2r.x"
+calc.description = "Test calculation with the Quantum ESPRESSO q2r.x code"
 calc.set_max_wallclock_seconds(60*30) # 30 min
 calc.set_resources({"num_machines":num_machines})
 calc.store()

@@ -412,7 +412,6 @@ class Node(object):
                 self._dbnode.save()
                 self._increment_version_number_db()
 
-
     def validate(self):
         """
         Check if the attributes and files retrieved from the DB are valid.
@@ -902,10 +901,10 @@ class Node(object):
 
         :todo: optimize! At the moment, the call is very slow because it is 
             also calling attr.getvalue() for each attribute, that has to
-             perform complicated queries to rebuild the object.
+            perform complicated queries to rebuild the object.
 
         :param bool also_updatable: if False, does not iterate over 
-                      attributes that are updatable
+            attributes that are updatable
         """
         from aiida.djsite.db.models import DbAttribute
 #        TODO: check what happens if someone stores the object while

@@ -23,6 +23,7 @@ def update_running_calcs_status(authinfo):
     """
     from aiida.orm import Calculation, Computer
     from aiida.scheduler.datastructures import JobInfo
+    from aiida.djsite.utils import get_dblogger_extra
 
     if not authinfo.enabled:
         return
@@ -70,11 +71,13 @@ def update_running_calcs_status(authinfo):
 
             for c in calcs_to_inquire:
                 try:
+                    logger_extra = get_dblogger_extra(c)
+                    
                     jobid = c.get_job_id()
                     if jobid is None:
                         execlogger.error("Calculation {} is WITHSCHEDULER "
                                          "but no job id was found!".format(
-                            c.pk))
+                            c.pk), extra=logger_extra)
                         continue
                     
                     # I check if the calculation to be checked (c)
@@ -85,7 +88,7 @@ def update_running_calcs_status(authinfo):
                         jobinfo = found_jobs[jobid]
                         execlogger.debug("Inquirying calculation {} (jobid "
                                          "{}): it has job_state={}".format(
-                            c.pk, jobid, jobinfo.job_state))
+                            c.pk, jobid, jobinfo.job_state), extra=logger_extra)
                         # For the moment, FAILED is not defined
                         if jobinfo.job_state in [job_states.DONE]: #, job_states.FAILED]:
                             computed.append(c)
@@ -94,7 +97,7 @@ def update_running_calcs_status(authinfo):
                             c._set_state(calc_states.UNDETERMINED)
                             execlogger.error("There is an undetermined calc "
                                              "with pk {}".format(
-                                c.pk))
+                                c.pk), extra=logger_extra)
                         else:
                             c._set_state(calc_states.WITHSCHEDULER)
     
@@ -105,7 +108,7 @@ def update_running_calcs_status(authinfo):
                         execlogger.debug("Inquirying calculation {} (jobid "
                                          "{}): not found, assuming "
                                          "job_state={}".format(
-                            c.pk, jobid, job_states.DONE))
+                            c.pk, jobid, job_states.DONE), extra=logger_extra)
 
                         # calculation c is not found in the output of qstat
                         computed.append(c)
@@ -116,11 +119,13 @@ def update_running_calcs_status(authinfo):
                     # requires the user intervention
                     execlogger.warning("There was an exception for "
                         "calculation {} ({}): {}".format(
-                        c.pk, e.__class__.__name__, e.message))
+                        c.pk, e.__class__.__name__, e.message),
+                        extra=logger_extra)
                     continue
     
             for c in computed:
                 try:
+                    logger_extra = get_dblogger_extra(c)
                     try:
                         detailed_jobinfo = s.get_detailed_jobinfo(
                             jobid=c.get_job_id())
@@ -141,7 +146,8 @@ def update_running_calcs_status(authinfo):
                     execlogger.warning("There was an exception while "
                                        "retrieving the detailed jobinfo "
                                        "for calculation {} ({}): {}".format(
-                                       c.pk, e.__class__.__name__, e.message))
+                                       c.pk, e.__class__.__name__, e.message),
+                                       extra=logger_extra)
                     continue
                 finally:
                     # Set the state to COMPUTED as the very last thing
@@ -171,11 +177,6 @@ def get_authinfo(computer, aiidauser):
             "computer {}! Only one configuration is allowed".format(
                 aiidauser.username, computer.name))
     return authinfo
-
-def daemon_main_loop():
-    submit_jobs()
-    update_jobs()
-    retrieve_jobs()
 
 def retrieve_jobs():
     from aiida.orm import Calculation, Computer
@@ -278,12 +279,13 @@ def submit_jobs():
             authinfo = get_authinfo(dbcomputer, aiidauser)
             computed_calcs = submit_jobs_with_authinfo(authinfo)
         except Exception as e:
+            import traceback
             msg = ("Error while submitting jobs "
                    "for aiidauser={} on computer={}, "
-                   "error type is {}, error message: {}".format(
+                   "error type is {}, traceback: {}".format(
                        aiidauser.username,
                        dbcomputer.name,
-                       e.__class__.__name__, e.message))
+                       e.__class__.__name__, traceback.format_exc()))
             execlogger.error(msg)
             # Continue with next computer
             continue
@@ -355,6 +357,9 @@ def submit_calc(calc, authinfo, transport=None):
     from aiida.common.exceptions import (
         FeatureDisabled, InputValidationError)
     from aiida.orm.data.remote import RemoteData
+    from aiida.djsite.utils import get_dblogger_extra
+    
+    logger_extra = get_dblogger_extra(calc)
 
     if transport is None:
         t = authinfo.get_transport()
@@ -418,7 +423,8 @@ def submit_calc(calc, authinfo, transport=None):
             except IOError:
                 execlogger.debug("[submission of calc {}] "
                     "Unable to chdir in {}, trying to create it".format(
-                    calc.pk, remote_working_directory))
+                    calc.pk, remote_working_directory),
+                                 extra=logger_extra)
                 try:
                     t.makedirs(remote_working_directory)
                     t.chdir(remote_working_directory)
@@ -457,7 +463,8 @@ def submit_calc(calc, authinfo, transport=None):
             # copy all files, recursively with folders
             for f in folder.get_content_list():
                 execlogger.debug("[submission of calc {}] "
-                    "copying file/folder {}...".format(calc.pk,f))
+                    "copying file/folder {}...".format(calc.pk,f),
+                     extra=logger_extra)
                 t.put(folder.get_abs_path(f), f)
 
             # local_copy_list is a list of tuples,
@@ -470,22 +477,24 @@ def submit_calc(calc, authinfo, transport=None):
             for src_abs_path, dest_rel_path in local_copy_list:
                 execlogger.debug("[submission of calc {}] "
                     "copying local file/folder to {}".format(
-                    calc.pk, dest_rel_path))
+                    calc.pk, dest_rel_path),
+                    extra=logger_extra)
                 t.put(src_abs_path, dest_rel_path)
             
-            for (remote_machine, remote_abs_path, 
+            for (remote_computer_uuid, remote_abs_path, 
                  dest_rel_path) in remote_copy_list:
-                if remote_machine == computer.hostname:
+                if remote_computer_uuid == computer.uuid:
                     execlogger.debug("[submission of calc {}] "
                         "copying {} remotely, directly on the machine "
-                        "{}".format(calc.pk, dest_rel_path, remote_machine))
+                        "{}".format(calc.pk, dest_rel_path, computer.name))
                     try:
                         t.copy(remote_abs_path, dest_rel_path)
                     except (IOError,OSError):
                         execlogger.warning("[submission of calc {}] "
                             "Unable to copy remote resource from {} to {}! "
                             "Stopping.".format(calc.pk,
-                                remote_abs_path,dest_rel_path))
+                                remote_abs_path,dest_rel_path),
+                                extra=logger_extra)
                         raise
                 else:
                     # TODO: implement copy between two different
@@ -496,7 +505,7 @@ def submit_calc(calc, authinfo, transport=None):
                         "not implemented yet".format(calc.pk))
 
                             
-            remotedata = RemoteData(remote_machine = computer.hostname, 
+            remotedata = RemoteData(computer = computer, 
                     remote_path = workdir).store()
 
             calc._add_link_to(remotedata, label='remote_folder')
@@ -513,14 +522,17 @@ def submit_calc(calc, authinfo, transport=None):
             #    calc._set_scheduler_state(job_states.QUEUED)
 
             execlogger.debug("submitted calculation {} on {} with "
-                "jobid {}".format(calc.pk, computer.name, job_id))
+                "jobid {}".format(calc.pk, computer.name, job_id),
+                extra=logger_extra)
 
     except Exception as e:
         import traceback
         calc._set_state(calc_states.SUBMISSIONFAILED)
-        execlogger.debug("Submission of calc {} failed, check also the "
-                         "log file! Traceback: {}".format(calc.pk, 
-            traceback.format_exc()))
+        execlogger.error("Submission of calc {} failed, check also the "
+                         "log file! Traceback: {}".format(
+                              calc.pk, 
+                              traceback.format_exc()),
+                         extra=logger_extra)
         raise
     finally:
         # close the transport, but only if it was opened within this function
@@ -531,6 +543,7 @@ def retrieve_computed_for_authinfo(authinfo):
     from aiida.orm import Calculation
     from aiida.common.folders import SandboxFolder
     from aiida.orm.data.folder import FolderData
+    from aiida.djsite.utils import get_dblogger_extra
 
     import os
     
@@ -552,12 +565,15 @@ def retrieve_computed_for_authinfo(authinfo):
         with authinfo.get_transport() as t:
             for calc in calcs_to_retrieve:
                 calc._set_state(calc_states.RETRIEVING)
+                logger_extra = get_dblogger_extra(calc)
                 try:
-                    execlogger.debug("Retrieving calc {}".format(calc.pk))
+                    execlogger.debug("Retrieving calc {}".format(calc.pk),
+                                     extra=logger_extra)
                     workdir = calc.get_remote_workdir()
                     retrieve_list = calc.get_retrieve_list()
                     execlogger.debug("[retrieval of calc {}] "
-                                     "chdir {}".format(calc.pk, workdir))
+                                     "chdir {}".format(calc.pk, workdir),
+                                     extra=logger_extra)
                     t.chdir(workdir)
 
                     retrieved_files = FolderData()
@@ -566,7 +582,8 @@ def retrieve_computed_for_authinfo(authinfo):
                         for item in retrieve_list:
                             execlogger.debug("[retrieval of calc {}] "
                                 "Trying to retrieve remote item '{}'".format(
-                                calc.pk, item))
+                                calc.pk, item),
+                                extra=logger_extra)
                             t.get(item, os.path.join(
                                 folder.abspath,os.path.split(item)[1]),
                                 ignore_nonexisting=True)
@@ -577,7 +594,8 @@ def retrieve_computed_for_authinfo(authinfo):
 
                     execlogger.debug("[retrieval of calc {}] "
                                      "Storing retrieved_files={}".format(
-                        calc.pk, retrieved_files.dbnode.pk))
+                        calc.pk, retrieved_files.dbnode.pk),
+                                     extra=logger_extra)
                     retrieved_files.store()
                     calc._add_link_to(retrieved_files,
                                       label=calc.get_linkname_retrieved())
@@ -597,20 +615,21 @@ def retrieve_computed_for_authinfo(authinfo):
                     else:
                         calc._set_state(calc_states.FAILED)
                     retrieved.append(calc)
-                except:
+                except Exception:
                     import traceback
-                    import StringIO
-                    buf = StringIO.StringIO()
-                    traceback.print_exc(file=buf)
-                    buf.seek(0)
+                    tb = traceback.format_exc()
+                    newextradict = logger_extra.copy()
+                    newextradict['full_traceback'] = tb
                     if calc.get_state() == calc_states.PARSING:
                         execlogger.error("Error parsing calc {}. "
-                            "Traceback: {}".format(calc.pk, buf.read()))
+                            "Traceback: {}".format(calc.pk, tb),
+                            extra=newextradict)
                         # TODO: add a 'comment' to the calculation
                         calc._set_state(calc_states.PARSINGFAILED)
                     else:
-                        execlogger.error("Error retrieving calc {}".format(
-                            calc.pk))
+                        execlogger.error("Error retrieving calc {}. "
+                            "Traceback: {}".format(calc.pk, tb),
+                            extra=newextradict)
                         calc._set_state(calc_states.RETRIEVALFAILED)
                         raise
 

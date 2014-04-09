@@ -226,7 +226,7 @@ class Shell(VerdiCommand):
     IPython shell with the Django environment loaded.
     """
     def run(self,*args):
-        pass_to_django_manage([execname, 'shell'] + list(args))
+        pass_to_django_manage([execname, 'customshell'] + list(args))
 
     def complete(self, subargs_idx, subargs):
         # disable further completion

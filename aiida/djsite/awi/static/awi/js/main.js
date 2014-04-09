@@ -7,18 +7,19 @@
 if (!jQuery) { throw new Error("AiiDA Web Interface requires jQuery") }
 
 /* custom function to truncate a string after so many characters, optionally after a word, and append an ellipsis */
-String.prototype.trunc = function (n,useWordBoundary) {
+String.prototype.trunc = function (n,useWordBoundary,tooltip) {
 	var tooLong = this.length>n,
 	s_ = tooLong ? this.substr(0,n-1) : this;
 	s_ = useWordBoundary && tooLong ? s_.substr(0,s_.lastIndexOf(' ')) : s_;
-	return  tooLong ? s_ + '&hellip;' : s_;
-};
-
-/* custom function to truncate a string to so many characters, ellipsis at the beginning */
-String.prototype.truncReverse = function (n) {
-	var tooLong = this.length>n,
-	s_ = tooLong ? this.substr(this.length-n) : this;
-	return tooLong ? '&hellip;' + s_ : s_;
+	if (tooLong) {
+		if (tooltip) {
+			return '<span title="' + s_ + '" data-toggle="tooltip">' + s_ + '&hellip;</span>';
+		} else {
+			return s_ + '&hellip;';
+		}
+	} else {
+		return s_;
+	}
 };
 
 /* parse iso-8601 date format if not supported */

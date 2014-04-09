@@ -229,7 +229,6 @@ CalculationsManager.prototype.loadDetail = function (url, id) {
 				} else if (typeof subdata.value === 'number') {
 					subdata.value = String(subdata.value);
 				} else if (typeof subdata.value === 'object') {
-					console.log(subdata.value);
 					var content = ['<dl class="dl-horizontal">'];
 					$.each(subdata.value, function (key, val) {
 						content.push('<dt>' + key.trunc(16, false, true) + '</dt>');
@@ -255,12 +254,13 @@ CalculationsManager.prototype.loadDetail = function (url, id) {
 		$.each(data.inputs, function (k, v) { /* we go over all inputs and display them in a nested way */
 			var rowstart = rows.length; // index of the input row
 			rows.push(''); // reserve a spot
-			// here do the ajax to get input infos, and then update the corresponding row
-			//rows.push('<li class="media"><strong class="pull-left">' + k + '</strong><div class="media-body">' + value + '</div></li>');
-			ajaxLoaded++;
-			if (ajaxLoaded == data.attributes.length+data.inputs.length+data.outputs.length) {
-				next();
-			}
+			$.getJSON(v, function (subdata) {
+				rows[rowstart] = subdata.type + '<br>';
+				ajaxLoaded++;
+				if (ajaxLoaded == data.attributes.length+data.inputs.length+data.outputs.length) {
+					next();
+				}
+			});
 		});
 		rows.push(
 			'</ul></div></li>',
@@ -269,12 +269,13 @@ CalculationsManager.prototype.loadDetail = function (url, id) {
 		$.each(data.outputs, function (k, v) { /* we go over all outputs and display them in a nested way */
 			var rowstart = rows.length; // index of the output row
 			rows.push(''); // reserve a spot
-			// here do the ajax to get output infos, and then update the corresponding row
-			//rows.push('<li class="media"><strong class="pull-left">' + k + '</strong><div class="media-body">' + value + '</div></li>');
-			ajaxLoaded++;
-			if (ajaxLoaded == data.attributes.length+data.inputs.length+data.outputs.length) {
-				next();
-			}
+			$.getJSON(v, function (subdata) {
+				rows[rowstart] = subdata.type + '<br>';
+				ajaxLoaded++;
+				if (ajaxLoaded == data.attributes.length+data.inputs.length+data.outputs.length) {
+					next();
+				}
+			});
 		});
 		rows.push(
 			'</ul></div></li>',

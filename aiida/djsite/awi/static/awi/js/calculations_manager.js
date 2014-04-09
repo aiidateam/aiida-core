@@ -207,21 +207,45 @@ CalculationsManager.prototype.loadDetail = function (url, id) {
 			'<li class="media"><strong class="pull-left">Type</strong><div class="media-body">' + data.type + '</div></li>',
 			'<li class="media"><strong class="pull-left">Attributes</strong><div class="media-body"><ul class="media-list">'
 		];
+		
+		var next = function () {
+			loader.fadeTo('fast', 0.01, function () { /* we hide the loader and show the details html */
+				$('#' + self.module + '-detail-' + id).prepend(rows.join(''));
+				$('#' + self.module + '-detail-' + id + ' .ajax-hide').slideDown(function () {
+					loader.hide();
+					$('#' + self.module + '-detail-' + id + '>.detail-close').fadeIn();
+				});
+				$('#' + self.module + '-detail-' + id).find('span').tooltip();
+			});
+		};
+		
 		$.each(data.attributes, function (k, v) { /* we go over all attributes and display them in a nested way */
 			var rowstart = rows.length; // index of the attribute row
 			rows.push(''); // reserve a spot
 			// here do the ajax to get attribute infos, and then update the corresponding row
 			$.getJSON(v, function (subdata) {
-				ajaxLoaded++;
-				// if json content we need to parse it
-				/*var content = ['<dl class="dl-horizontal">'];
-				$.each(subdata.tval, function (key, val) {
-					content.push('<dt>' + key + '</dt>');
-					content.push('<dd>' + val + '</dd>');
-				});
-				content.push('</dl>');*/
+				if (subdata.value instanceof Array) {
+					subdata.value = subdata.value.join('<br>');
+				} else if (typeof subdata.value === 'number') {
+					subdata.value = String(subdata.value);
+				} else if (typeof subdata.value === 'object') {
+					console.log(subdata.value);
+					var content = ['<dl class="dl-horizontal">'];
+					$.each(subdata.value, function (key, val) {
+						content.push('<dt>' + key.trunc(16, false, true) + '</dt>');
+						content.push('<dd>' + val + '</dd>');
+					});
+					content.push('</dl>');
+					subdata.value = content.join('');
+				} else {
+					subdata.value = subdata.value.trunc(100);
+				}
 				rows[rowstart] = '<li class="media"><strong class="pull-left">' + subdata.key.trunc(18, false, true) +
-					'</strong><div class="media-body" style="max-width: 320px;">' + subdata.value.trunc(100) + '</div></li>';
+					'</strong><div class="media-body" style="max-width: 320px;">' + subdata.value + '</div></li>';
+				ajaxLoaded++;
+				if (ajaxLoaded == data.attributes.length+data.inputs.length+data.outputs.length) {
+					next();
+				}
 			});
 		});
 		rows.push(
@@ -231,9 +255,12 @@ CalculationsManager.prototype.loadDetail = function (url, id) {
 		$.each(data.inputs, function (k, v) { /* we go over all inputs and display them in a nested way */
 			var rowstart = rows.length; // index of the input row
 			rows.push(''); // reserve a spot
-			ajaxLoaded++;
 			// here do the ajax to get input infos, and then update the corresponding row
 			//rows.push('<li class="media"><strong class="pull-left">' + k + '</strong><div class="media-body">' + value + '</div></li>');
+			ajaxLoaded++;
+			if (ajaxLoaded == data.attributes.length+data.inputs.length+data.outputs.length) {
+				next();
+			}
 		});
 		rows.push(
 			'</ul></div></li>',
@@ -242,9 +269,12 @@ CalculationsManager.prototype.loadDetail = function (url, id) {
 		$.each(data.outputs, function (k, v) { /* we go over all outputs and display them in a nested way */
 			var rowstart = rows.length; // index of the output row
 			rows.push(''); // reserve a spot
-			ajaxLoaded++;
 			// here do the ajax to get output infos, and then update the corresponding row
 			//rows.push('<li class="media"><strong class="pull-left">' + k + '</strong><div class="media-body">' + value + '</div></li>');
+			ajaxLoaded++;
+			if (ajaxLoaded == data.attributes.length+data.inputs.length+data.outputs.length) {
+				next();
+			}
 		});
 		rows.push(
 			'</ul></div></li>',
@@ -253,11 +283,10 @@ CalculationsManager.prototype.loadDetail = function (url, id) {
 			'<li class="media"><strong class="pull-left">UUID</strong><div class="media-body">' + data.uuid + '</div></li>',
 			'</ul></div>'
 		);
-		// we need to wait until all ajax data is loaded
+		/*
 		var timer = function () {
-			// if all secondary data is loaded or there is no data
 			if (ajaxLoaded == data.attributes.length+data.inputs.length+data.outputs.length) {
-				loader.fadeTo('fast', 0.01, function () { /* we hide the loader and show the details html */
+				loader.fadeTo('fast', 0.01, function () {
 					$('#' + self.module + '-detail-' + id).prepend(rows.join(''));
 					$('#' + self.module + '-detail-' + id + ' .ajax-hide').slideDown(function () {
 						loader.hide();
@@ -265,11 +294,11 @@ CalculationsManager.prototype.loadDetail = function (url, id) {
 					});
 					$('#' + self.module + '-detail-' + id).find('span').tooltip();
 				});
-			} else { /* defer for 100 milliseconds if not all data is loaded */
+			} else {
 				window.setTimeout(timer, 100);
 			}
 		};
-		timer();
+		timer();*/
 	});
 };
 

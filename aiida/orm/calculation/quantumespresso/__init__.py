@@ -395,14 +395,14 @@ class BasePwCpInputGenerator(object):
         # copy remote output dir, if specified
         if parent_calc_folder is not None:
             remote_copy_list.append(
-                (parent_calc_folder.get_remote_machine(),
+                (parent_calc_folder.get_computer().uuid,
                  os.path.join(parent_calc_folder.get_remote_path(),
                               parent_calc_out_subfolder),
                  self.OUTPUT_SUBFOLDER))
 
         # TODO: copy remote output dir, if specified
         # remote_copy_list.append(
-        # (fileobj.get_remote_machine(), fileobj.get_remote_path(),dest_rel_path))
+        # (fileobj.get_comptuer().uuid, fileobj.get_remote_path(),dest_rel_path))
 
         calcinfo = CalcInfo()
 
@@ -422,14 +422,13 @@ class BasePwCpInputGenerator(object):
         calcinfo.retrieve_list += settings_retrieve_list
         calcinfo.retrieve_list += self._internal_retrieve_list
         
-        
         if settings_dict:
             try:
                 Parserclass = self.get_parserclass()
                 parser = Parserclass(self)
                 parser_opts = parser.get_parser_settings_key()
                 settings_dict.pop(parser_opts)
-            except KeyError: # the key parser_opts isn't inside the dictionary
+            except (KeyError,AttributeError): # the key parser_opts isn't inside the dictionary
                 raise InputValidationError("The following keys have been found in "
                   "the settings input node, but were not understood: {}".format(
                   ",".join(settings_dict.keys())))

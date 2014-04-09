@@ -23,6 +23,9 @@ class Computer(VerdiCommand):
             }
 
     def run(self,*args):       
+        """
+        Run the specified subcommand.
+        """
         try:
             function_to_call = self.valid_subcommands[args[0]][0]
         except IndexError:
@@ -46,6 +49,9 @@ class Computer(VerdiCommand):
                 print ""
                 return
             print complete_function()
+        # Only one-level completion allowed
+        else:
+            print self.complete_none()
 
     def complete_none(self):
         return ""

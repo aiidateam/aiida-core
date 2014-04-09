@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 import sys
 import os
-import paramiko
-import getpass
 
 from aiida.common.utils import load_django
 load_django()
@@ -12,19 +10,16 @@ import logging
 from aiida.common.exceptions import NotExistent
 aiidalogger.setLevel(logging.INFO)
 
-from aiida.orm import Code, Computer
-from aiida.djsite.utils import get_automatic_user
+from aiida.orm import Code
 from aiida.orm import CalculationFactory, DataFactory
-
+from aiida.djsite.db.models import DbGroup
 UpfData = DataFactory('upf')
 ParameterData = DataFactory('parameter')
 StructureData = DataFactory('structure')
-RemoteData = DataFactory('remote')
-
-
+import numpy
+from aiida.orm import Calculation
 
 ################################################################
-
 try:
     parent_id = sys.argv[1]
 except IndexError:
@@ -33,17 +28,13 @@ except IndexError:
 try:
     codename = sys.argv[2]
 except IndexError:
-    raise ValueError("Must provide the parent ID, followed by the codename, in input")
-#codename = None
+    codename = None
 
-# If True, load the pseudos from the family specified below
-# Otherwise, use static files provided
-expected_code_type='quantumespresso.ph'
-
+num_machines = 1 # node numbers
 queue = None
-#queue = "P_share_queue"
-     
+
 #####
+expected_code_type='q2r.x'
 
 if parent_id is None:
     raise ValueError("Must provide parent_id")
@@ -51,12 +42,11 @@ try:
     int(parent_id)
 except ValueError:
     raise ValueError('Parent_id not an integer: {}'.format(parent_id))
-
 try:
     if codename is None:
         raise ValueError
     code = Code.get(codename)
-    if code.get_input_plugin_name() != expected_code_type: 
+    if code.get_input_plugin_name() != expected_code_type:
         raise ValueError
 except (NotExistent, ValueError):
     valid_code_labels = [c.label for c in Code.query(
@@ -72,8 +62,6 @@ except (NotExistent, ValueError):
         print >> sys.stderr, "    verdi code setup"
     sys.exit(1)
 
-######
-
 computer = code.get_remote_computer()
 
 if computer.hostname.startswith("aries"):
@@ -82,35 +70,29 @@ elif computer.hostname.startswith("daint"):
     num_cpus_per_machine = 8
 elif computer.hostname.startswith("bellatrix"):
     num_cpus_per_machine = 16
+elif computer.hostname.startswith("theospc12"):
+    num_cpus_per_machine = 8
+elif computer.hostname.startswith("localhost"):
+    num_cpus_per_machine = 6
 else:
-    raise ValueError("num_cpus_per_machine not specified for the current machine")
+    raise ValueError("num_cpus_per_machine not specified for the current machine: {0}".format(computer.hostname))
 
 parameters = ParameterData(dict={
-            'INPUTPH': {
-                'tr2_ph' : 1.0e-8,
-                'epsil' : True,
-                'ldisp' : True,
-                'nq1' : 1,
-                'nq2' : 1,
-                'nq3' : 1,
-                }}).store()
-
-QEPhCalc = CalculationFactory('quantumespresso.ph')
-QEPwCalc = CalculationFactory('quantumespresso.pw')
-parentcalc = QEPwCalc.get_subclass_from_pk(parent_id)
-calc = QEPhCalc(computer=computer)
-
-calc.set_max_wallclock_seconds(30*60) # 30 min
-calc.set_resources({"num_machines": 1, "num_cpus_per_machine": num_cpus_per_machine})
-if queue is not None:
-    calc.set_queue_name(queue)
+            'INPUT': {
+                'zasr': 'simple',
+                },
+            }).store()
+                
+Q2rCalc = CalculationFactory('quantumespresso.q2r')
+calc = Q2rCalc(computer=computer)
+calc.set_max_wallclock_seconds(60*30) # 30 min
+calc.set_resources({"num_machines":num_machines, "num_cpus_per_machine":num_cpus_per_machine}) # must run in serial
 calc.store()
-print "created calculation; calc=Calculation(uuid='{}') # ID={}".format(
-    calc.uuid,calc.dbnode.pk)
 
 calc.use_parameters(parameters)
+parentcalc = Calculation.get_subclass_from_pk(parent_id)
+calc.set_parent_calc(parentcalc)
 calc.use_code(code)
-calc.set_parent_calc( parentcalc )
 
 calc.submit()
 print "submitted calculation; calc=Calculation(uuid='{}') # ID={}".format(

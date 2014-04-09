@@ -27,7 +27,7 @@ except IndexError:
 # If True, load the pseudos from the family specified below
 # Otherwise, use static files provided
 expected_code_type='quantumespresso.cp'
-auto_pseudos = True
+auto_pseudos = False
 
 queue = None
 #queue = "P_share_queue"
@@ -77,17 +77,6 @@ if auto_pseudos:
 
 computer = code.get_remote_computer()
 
-if computer.hostname.startswith("aries"):
-    num_cpus_per_machine = 48
-elif computer.hostname.startswith("daint"):
-    num_cpus_per_machine = 8
-elif computer.hostname.startswith("bellatrix"):
-    num_cpus_per_machine = 16
-else:
-    raise ValueError("num_cpus_per_machine not specified for the current machine")
-
-
-
 alat = 4. # angstrom
 cell = [[alat, 0., 0.,],
         [0., alat, 0.,],
@@ -132,10 +121,9 @@ parameters = ParameterData(dict={
             }}).store()
                 
 
-QECalc = CalculationFactory('quantumespresso.cp')
-calc = QECalc(computer=computer)
+calc = code.new_calc(computer=computer)
 calc.set_max_wallclock_seconds(30*60) # 30 min
-calc.set_resources({"num_machines": 1, "num_cpus_per_machine": num_cpus_per_machine})
+calc.set_resources({"num_machines": 1})
 if queue is not None:
     calc.set_queue_name(queue)
 calc.store()

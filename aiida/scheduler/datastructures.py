@@ -55,6 +55,16 @@ class JobResource(DefaultFieldsAttributeDict):
     _default_fields = tuple()
     
     @classmethod
+    def accepts_default_cpus_per_machine(cls):
+        """
+        Return True if this JobResource accepts a 'default_cpus_per_machine'
+        key, False otherwise. 
+        
+        Should be implemented in each subclass.
+        """
+        raise NotImplementedError
+    
+    @classmethod
     def get_valid_keys(cls):
         """
         Return a list of valid keys to be passed to the __init__
@@ -83,7 +93,15 @@ class NodeNumberJobResource(JobResource):
         Return a list of valid keys to be passed to the __init__
         """
         return super(NodeNumberJobResource,cls).get_valid_keys() + [
-            "tot_num_cpus"]
+            "tot_num_cpus", "default_cpus_per_machine"]
+
+    @classmethod
+    def accepts_default_cpus_per_machine(cls):
+        """
+        Return True if this JobResource accepts a 'default_cpus_per_machine'
+        key, False otherwise. 
+        """
+        return True
     
     def __init__(self,**kwargs):
         """
@@ -98,6 +116,15 @@ class NodeNumberJobResource(JobResource):
             num_machines = None
         except ValueError:
             raise ValueError("num_machines must an integer")
+
+        try:
+            default_cpus_per_machine = kwargs.pop('default_cpus_per_machine')
+            if default_cpus_per_machine is not None:
+                default_cpus_per_machine = int(default_cpus_per_machine)
+        except KeyError:
+            default_cpus_per_machine = None
+        except ValueError:
+            raise ValueError("default_cpus_per_machine must an integer")
             
         try:
             num_cpus_per_machine = int(kwargs.pop('num_cpus_per_machine'))
@@ -111,13 +138,17 @@ class NodeNumberJobResource(JobResource):
         except KeyError:
             tot_num_cpus = None
         except ValueError:
-            raise ValueError("tot_num_cpus must an integer")
+            raise ValueError("tot_num_cpus must an integer")        
 
         if kwargs:
             raise TypeError("The following parameters were not recognized for "
                             "the JobResource: {}".format(kwargs.keys()))
 
         if num_machines is None:
+            # Use default value, if not provided
+            if num_cpus_per_machine is None:
+                num_cpus_per_machine = default_cpus_per_machine
+
             if num_cpus_per_machine is None or tot_num_cpus is None:
                 raise TypeError("At least two among num_machines, "
                     "num_cpus_per_machine or tot_num_cpus must be specified")
@@ -126,15 +157,24 @@ class NodeNumberJobResource(JobResource):
                 if num_cpus_per_machine <= 0:
                     raise ValueError("num_cpus_per_machine must be >= 1")
                 num_machines = tot_num_cpus // num_cpus_per_machine
-        elif num_cpus_per_machine is None:
-            if num_machines is None or tot_num_cpus is None:
-                raise TypeError("At least two among num_machines, "
-                    "num_cpus_per_machine or tot_num_cpus must be specified")
-            else:
-                # To avoid divisions by zero
-                if num_machines <= 0:
-                    raise ValueError("num_machines must be >= 1")
-                num_cpus_per_machine = tot_num_cpus // num_machines
+        else:
+            if tot_num_cpus is None:
+                # Only set the default value if tot_num_cpus is not provided.
+                # Otherwise, it means that the user provided both
+                # num_machines and tot_num_cpus, and we have to ignore
+                # the default value of tot_num_cpus
+                if num_cpus_per_machine is None:
+                    num_cpus_per_machine = default_cpus_per_machine
+                
+            if num_cpus_per_machine is None:            
+                if tot_num_cpus is None:
+                    raise TypeError("At least two among num_machines, "
+                        "num_cpus_per_machine or tot_num_cpus must be specified")
+                else:
+                    # To avoid divisions by zero
+                    if num_machines <= 0:
+                        raise ValueError("num_machines must be >= 1")
+                    num_cpus_per_machine = tot_num_cpus // num_machines
         
         self.num_machines = num_machines
         self.num_cpus_per_machine = num_cpus_per_machine
@@ -165,6 +205,7 @@ class ParEnvJobResource(JobResource):
     _default_fields = (
         'parallel_env',
         'tot_num_cpus',
+        'default_cpus_per_machine',
         )
     
     def __init__(self,**kwargs):
@@ -172,8 +213,13 @@ class ParEnvJobResource(JobResource):
         Initialize the job resources from the passed arguments (the valid keys can be
         obtained with the function self.get_valid_keys()).
         
-        Should raise only ValueError or TypeError on invalid parameters.
+        :raise ValueError: on invalid parameters.
+        :raise TypeError: on invalid parameters.
+        :raise ConfigurationError: if default_cpus_per_machine was set for this
+            computer, since ParEnvJobResource cannot accept this parameter.
         """
+        from aiida.common.exceptions import ConfigurationError
+        
         try:
             self.parallel_env = str(kwargs.pop('parallel_env'))
         except (KeyError, TypeError, ValueError):
@@ -184,6 +230,11 @@ class ParEnvJobResource(JobResource):
         except (KeyError, ValueError):
             raise TypeError("tot_num_cpus must be specified and must be an integer")
 
+        default_cpus_per_machine = kwargs.pop('default_cpus_per_machine', None)
+        if default_cpus_per_machine is not None:
+            raise ConfigurationError("default_cpus_per_machine cannot be set "
+                                     "for schedulers that use ParEnvJobResource")
+
         if self.tot_num_cpus <= 0:
             raise ValueError("tot_num_cpus must be >= 1")
 
@@ -193,7 +244,14 @@ class ParEnvJobResource(JobResource):
         """
         return self.tot_num_cpus
 
-
+    @classmethod
+    def accepts_default_cpus_per_machine(cls):
+        """
+        Return True if this JobResource accepts a 'default_cpus_per_machine'
+        key, False otherwise. 
+        """
+        return False
+    
 class JobTemplate(DefaultFieldsAttributeDict):
     """
     A template for submitting jobs. This contains all required information

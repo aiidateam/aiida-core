@@ -322,7 +322,7 @@ ComputersManager.prototype.loadRename = function (id) {
 	}, 500);
 	this.modal.find('button.btn').click(function () {
 		$.ajax({
-			url: self.getUrl('apidetail') + id,
+			url: self.getUrl('apidetail') + id + '/',
 			type: 'PATCH',
 			dataType: 'json',
 			contentType: 'application/json',

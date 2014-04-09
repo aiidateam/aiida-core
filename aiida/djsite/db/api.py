@@ -288,7 +288,7 @@ class DbNodeResource(ModelResource):
     children = fields.ToManyField('self', 'children', related_name='parents', full=False, use_in=never)
     parents = fields.ToManyField('self', 'parents', related_name='children', full=False, use_in=never)
     
-    computer = fields.ToOneField(DbComputerResource, 'computer', null=True)
+    dbcomputer = fields.ToOneField(DbComputerResource, 'dbcomputer', null=True)
     
     class Meta:
         queryset = DbNode.objects.all()

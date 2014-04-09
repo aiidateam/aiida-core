@@ -177,7 +177,7 @@ h3 .btn-group {
 @media (max-width: 767px) {
 	.table-responsive {
 		overflow-y: scroll !important;
-		padding-bottom: 160px !important;
+		/*padding-bottom: 160px !important;*/
 	}
 }
 

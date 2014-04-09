@@ -12,7 +12,7 @@ aiidalogger.setLevel(logging.INFO)
 
 from aiida.orm import Code
 from aiida.orm import CalculationFactory, DataFactory
-from aiida.djsite.db.models import DbGroup
+from aiida.djsite.db.models import Group
 UpfData = DataFactory('upf')
 ParameterData = DataFactory('parameter')
 StructureData = DataFactory('structure')
@@ -26,36 +26,36 @@ except IndexError:
 
 # If True, load the pseudos from the family specified below
 # Otherwise, use static files provided
-expected_code_type='quantumespresso.cp'
-auto_pseudos = True
+expected_exec_name='pw.x'
+auto_pseudos = False
 
 queue = None
 #queue = "P_share_queue"
-     
+
 #####
 
 try:
     if codename is None:
         raise ValueError
     code = Code.get(codename)
-    if code.get_input_plugin_name() != expected_code_type:
+    if not code.get_remote_exec_path().endswith(expected_exec_name):
         raise ValueError
 except (NotExistent, ValueError):
     valid_code_labels = [c.label for c in Code.query(
-            dbattributes__key="input_plugin",
-            dbattributes__tval=expected_code_type)]
+            attributes__key="_remote_exec_path",
+            attributes__tval__endswith="/{}".format(expected_exec_name))]
     if valid_code_labels:
         print >> sys.stderr, "Pass as first parameter a valid code label."
-        print >> sys.stderr, "Valid labels with a {} executable are:".format(expected_code_type)
+        print >> sys.stderr, "Valid labels with a {} executable are:".format(expected_exec_name)
         for l in valid_code_labels:
             print >> sys.stderr, "*", l
     else:
-        print >> sys.stderr, "Code not valid, and no valid codes for {}. Configure at least one first using".format(expected_code_type)
+        print >> sys.stderr, "Code not valid, and no valid codes for {}. Configure at least one first using".format(expected_exec_name)
         print >> sys.stderr, "    verdi code setup"
     sys.exit(1)
 
 if auto_pseudos:
-    valid_pseudo_groups = DbGroup.objects.filter(dbnodes__type__contains='.upf.').distinct().values_list('name',flat=True)
+    valid_pseudo_groups = Group.objects.filter(dbnodes__type__contains='.upf.').distinct().values_list('name',flat=True)
 
     try:
         pseudo_family = sys.argv[2]
@@ -65,9 +65,9 @@ if auto_pseudos:
         print >> sys.stderr, "Valid groups containing at least one UPFData object are:"
         print >> sys.stderr, "\n".join("* {}".format(i) for i in valid_pseudo_groups)
         sys.exit(1)
-        
 
-    if not DbGroup.objects.filter(name=pseudo_family):
+
+    if not Group.objects.filter(name=pseudo_family):
         print >> sys.stderr, "auto_pseudos is set to True and pseudo_family='{}',".format(pseudo_family)
         print >> sys.stderr, "but no group with such a name found in the DB."
         print >> sys.stderr, "Valid groups containing at least one UPFData object are:"
@@ -77,15 +77,7 @@ if auto_pseudos:
 
 computer = code.get_remote_computer()
 
-if computer.hostname.startswith("aries"):
-    num_cpus_per_machine = 48
-elif computer.hostname.startswith("daint"):
-    num_cpus_per_machine = 8
-elif computer.hostname.startswith("bellatrix"):
-    num_cpus_per_machine = 16
-else:
-    raise ValueError("num_cpus_per_machine not specified for the current machine")
-
+num_cpus_per_machine = 16
 
 
 alat = 4. # angstrom
@@ -96,43 +88,33 @@ cell = [[alat, 0., 0.,],
 
 # BaTiO3 cubic structure
 s = StructureData(cell=cell)
-s.append_atom(position=(0.,0.,0.),symbols=['Ba'])
-s.append_atom(position=(alat/2.,alat/2.,alat/2.),symbols=['Ti'])
-s.append_atom(position=(alat/2.,alat/2.,0.),symbols=['O'])
-s.append_atom(position=(alat/2.,0.,alat/2.),symbols=['O'])
-s.append_atom(position=(0.,alat/2.,alat/2.),symbols=['O'])
+s.append_atom(position=(0.,0.,0.),symbols='Ba')
+s.append_atom(position=(alat/2.,alat/2.,alat/2.),symbols='Ti')
+s.append_atom(position=(alat/2.,alat/2.,0.),symbols='O')
+s.append_atom(position=(alat/2.,0.,alat/2.),symbols='O')
+s.append_atom(position=(0.,alat/2.,alat/2.),symbols='O')
 s.store()
 
 parameters = ParameterData(dict={
             'CONTROL': {
-                'calculation': 'cp',
+                'calculation': 'scf',
                 'restart_mode': 'from_scratch',
-                'wf_collect': False,
-                'iprint': 1,
-                'isave': 100,
-                'dt': 3.,
-                'max_seconds': 25*60,
-                'nstep': 10,
+                'wf_collect': True,
                 },
             'SYSTEM': {
                 'ecutwfc': 30.,
                 'ecutrho': 240.,
-                'nr1b': 24,
-                'nr2b': 24,
-                'nr3b': 24,
                 },
             'ELECTRONS': {
-                'electron_damping': 1.e-1,
-                'electron_dynamics': 'damp', 
-                'emass': 400.,
-                'emass_cutoff': 3.,
-                },
-            'IONS': {
-                'ion_dynamics': 'none',
-            }}).store()
-                
+                'conv_thr': 1.e-6,
+                }}).store()
 
-QECalc = CalculationFactory('quantumespresso.cp')
+kpoints = ParameterData(dict={
+                'type': 'automatic',
+                'points': [4, 4, 4, 0, 0, 0],
+                }).store()
+
+QECalc = CalculationFactory('quantumespresso.pw')
 calc = QECalc(computer=computer)
 calc.set_max_wallclock_seconds(30*60) # 30 min
 calc.set_resources({"num_machines": 1, "num_cpus_per_machine": num_cpus_per_machine})
@@ -163,7 +145,8 @@ else:
     pseudos_to_use = {}
     for fname, elem, pot_type in raw_pseudos:
         absname = os.path.realpath(os.path.join(os.path.dirname(__file__),
-                                                "data",fname))
+                                                "testdata",
+                                                "qepseudos",fname))
         pseudo, created = UpfData.get_or_create(
             absname,use_first=True)
         if created:
@@ -175,6 +158,7 @@ else:
     for k, v in pseudos_to_use.iteritems():
         calc.use_pseudo(v, kind=k)
 
+calc.use_kpoints(kpoints)
 #calc.use_settings(settings)
 #from aiida.orm.data.remote import RemoteData
 #calc.set_outdir(remotedata)
@@ -182,4 +166,3 @@ else:
 calc.submit()
 print "submitted calculation; calc=Calculation(uuid='{}') # ID={}".format(
     calc.uuid,calc.dbnode.pk)
-

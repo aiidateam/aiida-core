@@ -22,7 +22,11 @@ from aiida.orm.calculation.quantumespresso import BasePwCpInputGenerator
 ParameterData = DataFactory('parameter')
   
 class CpCalculation(BasePwCpInputGenerator, Calculation):   
-
+    """
+    Car-Parrinello molecular dynamics code (cp.x) of the
+    Quantum ESPRESSO distribution.
+    For more information, refer to http://www.quantum-espresso.org/
+    """
     _cp_unit_number = 50
 
     DATAFILE_XML = os.path.join(BasePwCpInputGenerator.OUTPUT_SUBFOLDER, 

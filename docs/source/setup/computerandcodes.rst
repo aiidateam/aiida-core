@@ -36,11 +36,31 @@ login from your user to the cluster. If you don't know how to do, google for
 something like "passwordless login ssh". We will add a more detailed explanation
 here in the future.
 
-Once you are able to connect to your cluster using::
+Before proceeding to setup the computer, be sure that you are able to
+connect to your cluster using::
 
    ssh YOURUSERNAME@YOURCLUSTERADDRESS
    
-without the need to type a password, you can proceed to setup the computer.
+without the need to type a password. Moreover, make also sure you can connect
+via ``sftp`` (needed to copy files). The following command::
+
+   sftp YOURUSERNAME@YOURCLUSTERADDRESS
+
+should show you a prompt without errors (possibly with a message saying
+``Connected to YOURCLUSTERADDRESS``).
+
+.. note:: If the ``ssh`` command works, but the ``sftp`` command does not
+  (e.g. it just prints ``Connection closed``), a possible reason can be
+  that there is a line in your ``~/.bashrc`` that either produces an output, 
+  or an error. Remove/comment it until no output or error is produced: this
+  should make ``sftp`` working again.
+
+.. note:: If you need to ssh to a computer A first, from which you can then
+     connect to computer B you wanted to connect to, you can use the
+     ``proxy_command`` feature of ssh, that we also support in
+     AiiDA. For more information, see :ref:`ssh_proxycommand`.
+
+.. _computer_setup:
 
 Computer setup and configuration
 ++++++++++++++++++++++++++++++++
@@ -163,7 +183,12 @@ The configuration of computers happens in two steps.
    * **timeout**: A timeout in seconds if there is no response (e.g., the
      machine is down. You can leave it empty to use the default value.
    * **allow_agent**: If True, it will try to use an SSH agent.
-   
+   * **proxy_command**: Leave empty if you do not need a proxy command (i.e., 
+     if you can directly connect to the machine). If you instead need to connect
+     to an intermediate computer first, you need to provide here the
+     command for the proxy: see documentation :ref:`here <ssh_proxycommand>` 
+     for how to use this option, and in particular the notes
+     :ref:`here <ssh_proxycommand_notes>` for the format of this field.
    * **compress**: True to compress the traffic (recommended)
    * **load_system_host_keys**: True to load the known hosts keys from the
      default SSH location (recommended)
@@ -271,6 +296,15 @@ You will be asked for:
 
 * **description**: A human-readable description of this code (for instance "Quantum
   Espresso v.5.0.2 with 5.0.3 patches, pw.x code, compiled with openmpi")
+
+* **default input plugin**: A string that identifies the default input plugin to
+  used to generate new calculations to use with this code.
+  This string has to be a valid string recognized by the ``CalculationFactory``
+  function. To get the list of all available Calculation plugin strings,
+  use the ``verdi calculation plugins`` command. Note: if you do not want to 
+  specify a default input plugin, you can write the string "None", but this is
+  strongly discouraged, because then you will not be able to use
+  the ``.new_calc`` method of the ``Code`` object.
   
 * **local**: either True (for local codes) or False (for remote codes). Depending
   on your choice, you will be asked for:

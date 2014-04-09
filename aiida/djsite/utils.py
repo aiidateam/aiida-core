@@ -1,3 +1,5 @@
+import logging
+
 def get_last_daemon_run(task):
     """
     Return the time the given task was run the last time.
@@ -26,6 +28,58 @@ def get_last_daemon_run(task):
 # Cache for speed-up
 _aiida_autouser_cache = None
 
+class DBLogHandler(logging.Handler):
+    def emit(self, record):
+        from django.core.exceptions import ImproperlyConfigured 
+        try:
+            from aiida.djsite.db.models import DbLog
+            
+            DbLog.add_from_logrecord(record)
+            
+        except ImproperlyConfigured:
+            # Probably, the logger was called without the
+            # Django settings module loaded. Then,
+            # This ignore should be a no-op.
+            pass
+        except Exception:
+            # To avoid loops with the error handler, I just print.
+            # Hopefully, though, this should not happen!
+            import traceback
+            traceback.print_exc() 
+
+def get_dblogger_extra(obj):
+    """
+    Given an object (Node, Calculation, ...) return a dictionary to be passed
+    as extra to the aiidalogger in order to store the exception also in the DB.
+    If no such extra is passed, the exception is only logged on file.
+    """
+    from aiida.orm import Node
+    
+    if isinstance(obj, Node):
+        if obj._plugin_type_string:
+            objname = "node." + obj._plugin_type_string
+        else:
+            objname = "node"
+    else:
+        objname = obj.__class__.__module__ + "." + obj.__class__.__name__
+    objpk = obj.pk
+    return {'objpk': objpk, 'objname': objname}
+
+def get_log_messages(obj):
+    from aiida.djsite.db.models import DbLog
+    import json
+    
+    extra = get_dblogger_extra(obj)
+    # convert to list, too
+    log_messages = list(DbLog.objects.filter(**extra).order_by('time').values(
+        'loggername', 'levelname', 'message', 'metadata', 'time'))
+
+    #  deserialize metadata
+    for log in log_messages:
+        log.update({'metadata': json.loads(log['metadata'])})
+
+    return log_messages
+        
 def get_automatic_user():
     global _aiida_autouser_cache
     
@@ -65,12 +119,22 @@ def get_after_database_creation_signal():
         call.
     """
     from aiida.djsite.settings import settings
+    from aiida.common.exceptions import ConfigurationError
     
     if settings.AFTER_DATABASE_CREATION_SIGNAL == 'post_syncdb':
         from django.contrib.auth import models as auth_models
         from django.db.models.signals import post_syncdb
+
+        if 'south'  in settings.INSTALLED_APPS:
+            raise ConfigurationError("AFTER_DATABASE_CREATION_SIGNAL is "
+                "post_syncdb, but south is in the INSTALLED_APPS")        
+
         return post_syncdb,  auth_models
-    elif settings.AFTER_DATABASE_CREATION_SIGNAL == 'post_migrate':        
+    elif settings.AFTER_DATABASE_CREATION_SIGNAL == 'post_migrate':
+        if 'south' not in settings.INSTALLED_APPS:
+            raise ConfigurationError("AFTER_DATABASE_CREATION_SIGNAL is "
+                "post_migrate, but south is not in the INSTALLED_APPS")
+                    
         from south.signals import post_migrate
         return post_migrate, None # No sender is needed for this model
     else:

@@ -117,7 +117,7 @@ with tempfile.NamedTemporaryFile() as f:
     # I don't worry of the name with which it is internally stored
     fileparam = SinglefileData(file=f.name).store()
 
-remoteparam = RemoteData(remote_machine=computer.hostname,
+remoteparam = RemoteData(computer=computer,
                          remote_path="/etc/inittab").store()
 
 CustomCalc = CalculationFactory('simpleplugins.templatereplacer')

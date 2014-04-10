@@ -120,6 +120,8 @@ calc.set_resources({"num_machines": 1})
 ## Otherwise, to specify a given # of cpus per machine, uncomment the following:
 # calc.set_resources({"num_machines": 1, "num_cpus_per_machine": 8})
 
+#calc.set_prepend_text("#SBATCH --account=ch3")
+
 if queue is not None:
     calc.set_queue_name(queue)
 calc.store()

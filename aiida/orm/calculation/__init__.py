@@ -164,6 +164,34 @@ class Calculation(Node):
         :return: a boolean. If True the system environment will be load.
         """
         return self.get_attr('import_sys_environment',True)
+
+    def set_environment_variables(self, env_vars_dict):
+        """
+        Set a dictionary of custom environment variables for this calculation.
+        
+        Both keys and values must be strings.
+        """       
+        if not isinstance(env_vars_dict, dict):
+            raise ValueError("You have to pass a "
+                "dictionary to set_environment_variables")
+             
+        for k, v in env_vars_dict.iteritems():
+            if not isinstance(k, basestring) or not isinstance(v, basestring):
+                raise ValueError("Both the keys and the values of the "
+                    "dictionary passed to set_environment_variables must be "
+                    "strings.")
+        
+        return self.set_attr('custom_environment_variables',env_vars_dict)
+    
+    def get_environment_variables(self):
+        """
+        Return a dictionary of the environment variables that we want to set
+        for this calculation. 
+        
+        Return an empty dictionary if no special environment variables have
+        to be set for this calculation.
+        """
+        return self.get_attr('custom_environment_variables',{})
                 
     def set_priority(self,val):
         """
@@ -267,6 +295,44 @@ class Calculation(Node):
         Set the calculation-specific append text
         """
         return self.get_attr("append_text", "")
+
+    def get_extra_mpirun_params(self):
+        """
+        Return a list of strings, that are the extra params to pass to the
+        mpirun (or equivalent) command after the one provided in 
+        computer.mpirun_command.
+        
+        Return an empty list if no parameters have been defined.
+        """
+        return self.get_attr("extra_mpirun_params", [])
+
+    def set_extra_mpirun_params(self, extra_params):
+        """
+        Set the extra params to pass to the
+        mpirun (or equivalent) command after the one provided in 
+        computer.mpirun_command.
+        
+        :param extra_params: must be a list of strings, one for each
+            extra parameter
+        """
+        if extra_params is None:
+            try:
+                self.del_attr("extra_mpirun_params")
+            except AttributeError:
+                # it was not saved, yet
+                pass
+            return
+        
+        if not isinstance(extra_params, (list, tuple)):
+            raise ValueError("You must pass a list of strings to "
+                             "set_extra_mpirun_params")
+        for param in extra_params:
+            if not isinstance(param, basestring):
+                raise ValueError("You must pass a list of strings to "
+                                 "set_extra_mpirun_params")
+        
+        
+        self.set_attr("extra_mpirun_params", list(extra_params))
 
     def set_append_text(self,val):
         """
@@ -924,10 +990,12 @@ class Calculation(Node):
             subst_dict[k] = v
         mpi_args = [arg.format(**subst_dict) for arg in
                     computer.get_mpirun_command()]
+        extra_mpirun_params = self.get_extra_mpirun_params()
         if self.get_withmpi():
-            job_tmpl.argv = mpi_args + [code.get_execname()] + (
-                calcinfo.cmdline_params if 
-                    calcinfo.cmdline_params is not None else [])
+            job_tmpl.argv = (mpi_args + extra_mpirun_params + 
+                [code.get_execname()] + 
+                (calcinfo.cmdline_params if 
+                    calcinfo.cmdline_params is not None else []))
         else:
             job_tmpl.argv = [code.get_execname()] + (
                 calcinfo.cmdline_params if 
@@ -939,6 +1007,8 @@ class Calculation(Node):
         job_tmpl.join_files = calcinfo.join_files
         
         job_tmpl.import_sys_environment = self.get_import_sys_environment()
+        
+        job_tmpl.job_environment = self.get_environment_variables()
         
         queue_name = self.get_queue_name()
         if queue_name is not None:

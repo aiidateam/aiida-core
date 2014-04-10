@@ -894,24 +894,24 @@ class Calculation(Node):
         job_tmpl.sched_join_files = False
         
         job_tmpl.prepend_text = (
+            ((self.get_prepend_text() + u"\n\n") if 
+                self.get_prepend_text() else u"") + 
             ((computer.get_prepend_text() + u"\n\n") if 
                 computer.get_prepend_text() else u"") + 
             ((code.get_prepend_text() + u"\n\n") if 
                 code.get_prepend_text() else u"") + 
             ((calcinfo.prepend_text + u"\n\n") if 
-                calcinfo.prepend_text is not None else u"") +
-            ((self.get_prepend_text()) if 
-                self.get_prepend_text() else u""))
+                calcinfo.prepend_text is not None else u""))
         
         job_tmpl.append_text = (
-            ((self.get_append_text() + u"\n\n") if 
-                self.get_append_text() else u"") +                         
             ((calcinfo.append_text + u"\n\n") if 
                 calcinfo.append_text is not None else u"") +
             ((code.get_append_text() + u"\n\n") if 
                 code.get_append_text() else u"") +
             ((computer.get_append_text() + u"\n\n") if 
-                computer.get_append_text() else u""))
+                computer.get_append_text() else u"") +
+            ((self.get_append_text() + u"\n\n") if 
+                self.get_append_text() else u""))
 
         # Set resources, also with get_default_cpus_per_machine
         resources_dict = self.get_resources(full=True)

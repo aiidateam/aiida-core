@@ -405,7 +405,7 @@ class Computer(object):
             enabled_state = False
         else:
             raise ValidationError("Invalid value '{}' for the enabled state, must "
-                                  "be a boolean".format(str(enabled_state)))
+                                  "be a boolean".format(string))
             
         self._enabled_state_validator(enabled_state)
         
@@ -542,8 +542,10 @@ class Computer(object):
         try:
             convertedwd = workdir.format(username="test")
         except KeyError as e:
-            raise ValidationError("In workdir there is an unknown replacement field '{}'".format(
-                e.message))
+            raise ValidationError("In workdir there is an unknown replacement "
+                                  "field '{}'".format(e.message))
+        except ValueError as e:
+            raise ValidationError("Error in the string: '{}'".format(e.message))
         
         if not os.path.isabs(convertedwd):
             raise ValidationError("The workdir must be an absolute path")
@@ -584,8 +586,10 @@ class Computer(object):
             for arg in mpirun_cmd:
                 arg.format(**subst)
         except KeyError as e:
-            raise ValidationError("In workdir there is an unknown replacement field '{}'".format(
-                e.message))
+            raise ValidationError("In workdir there is an unknown replacement "
+                                  "field '{}'".format(e.message))
+        except ValueError as e:
+            raise ValidationError("Error in the string: '{}'".format(e.message))
 
 
     def validate(self):

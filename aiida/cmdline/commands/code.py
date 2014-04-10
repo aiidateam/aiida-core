@@ -645,7 +645,7 @@ class Code(VerdiCommand):
                     "There are multiple codes with label '{}', having IDs:"
                     "".format(code_id))
                 print >> sys.stderr, (
-                    ", ".join(sorted([c.pk for c in codes])) + ".")
+                    ", ".join(sorted([str(c.pk) for c in codes])) + ".")
                 print >> sys.stderr, (
                     "Relabel them (using their ID), or refer to them "
                     "with their ID.")

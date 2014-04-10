@@ -116,20 +116,28 @@ calc.description = "Test calculation with the Quantum ESPRESSO pw.x code"
 calc.set_max_wallclock_seconds(30*60) # 30 min
 # Valid only for Slurm and PBS (using default values for the
 # number_cpus_per_machine), change for SGE-like schedulers 
-calc.set_resources({"num_machines": 1, "num_cpus_per_machine": 1})
-## Otherwise, to specify a given # of cpus per machine, uncomment the following:
-# calc.set_resources({"num_machines": 1, "num_cpus_per_machine": 8})
+
 calc.set_prepend_text("#SBATCH --account=ch3")
 
-extra_mpi_params = "-N 1 -d {} -cc none".format(str(computer.get_default_cpus_per_machine()))
+num_machines = 2
+# num_pools can be None
+#num_pools = None
+num_pools = 2
 
+mpis_per_machine = 1
+
+calc.set_resources({"num_machines": num_machines,
+                    "num_cpus_per_machine": mpis_per_machine})
+
+# 1 MPI per node, default_cpus_per_node OpenMP threads per node
+extra_mpi_params = "-N {} -d {} -cc none".format(
+    str(mpis_per_machine),
+    str(computer.get_default_cpus_per_machine()))
 calc.set_extra_mpirun_params(extra_mpi_params.split())
-
 calc.set_environment_variables({
         "OMP_NUM_THREADS": str(computer.get_default_cpus_per_machine()),
         "MKL_NUM_THREADS": str(computer.get_default_cpus_per_machine()),
         })
-
 
 if queue is not None:
     calc.set_queue_name(queue)
@@ -141,6 +149,12 @@ s.store()
 calc.use_structure(s)
 calc.use_code(code)
 calc.use_parameters(parameters)
+
+if num_pools is not None:
+    settings = ParameterData(dict={
+            'cmdline': ['-npools', str(num_pools)]
+            }).store()
+    calc.use_settings(settings)
 
 if auto_pseudos:
     try:

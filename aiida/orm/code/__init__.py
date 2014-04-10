@@ -16,7 +16,7 @@ class Code(Node):
     methods (e.g., the set_preexec_code() can be used to load specific modules required
     for the code to be run).
     """
-    _updatable_attributes = ('input_plugin',) 
+    _updatable_attributes = ('input_plugin','append_text', 'prepend_text') 
 
     _set_incompatibilities = [('remote_computer_exec','local_executable')]
     

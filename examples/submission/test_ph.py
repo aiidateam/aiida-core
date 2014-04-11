@@ -35,7 +35,6 @@ try:
     codename = sys.argv[2]
 except IndexError:
     raise ValueError("Must provide the parent ID, followed by the codename, in input")
-#codename = None
 
 # If True, load the pseudos from the family specified below
 # Otherwise, use static files provided
@@ -77,15 +76,6 @@ except (NotExistent, ValueError):
 
 computer = code.get_remote_computer()
 
-if computer.hostname.startswith("aries"):
-    num_cpus_per_machine = 48
-elif computer.hostname.startswith("daint"):
-    num_cpus_per_machine = 8
-elif computer.hostname.startswith("bellatrix"):
-    num_cpus_per_machine = 16
-else:
-    raise ValueError("num_cpus_per_machine not specified for the current machine")
-
 parameters = ParameterData(dict={
             'INPUTPH': {
                 'tr2_ph' : 1.0e-8,
@@ -103,7 +93,7 @@ calc.label = "Test QE ph.x"
 calc.description = "Test calculation with the Quantum ESPRESSO ph.x code"
 
 calc.set_max_wallclock_seconds(30*60) # 30 min
-calc.set_resources({"num_machines": 1, "num_cpus_per_machine": num_cpus_per_machine})
+calc.set_resources({"num_machines": 1})
 if queue is not None:
     calc.set_queue_name(queue)
 calc.store()

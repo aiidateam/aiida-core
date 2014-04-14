@@ -17,7 +17,11 @@ FolderData = DataFactory('folder')
 
     
 class NamelistsCalculation(Calculation):   
-
+    """
+    Generic plugin to manage simple post-processing tools of the
+    Quantum ESPRESSO distribution (http://www.quantum-espresso.org/)
+    that accept as input a Fortran-style namelist.
+    """
     OUTPUT_SUBFOLDER = './out/'
     PREFIX = 'aiida'
     INPUT_FILE_NAME = 'aiida.in'
@@ -155,7 +159,7 @@ class NamelistsCalculation(Calculation):
                 parent_calc_out_subfolder = settings_dict.pop('parent_calc_out_subfolder',
                                               self._default_parent_output_folder)
                 remote_copy_list.append(
-                         (parent_calc_folder.get_remote_machine(),
+                         (parent_calc_folder.get_computer().uuid,
                           os.path.join(parent_calc_folder.get_remote_path(),
                                        parent_calc_out_subfolder),
                           self.OUTPUT_SUBFOLDER))

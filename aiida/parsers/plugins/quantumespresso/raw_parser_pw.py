@@ -17,7 +17,7 @@ from aiida.parsers.plugins.quantumespresso import QEOutputParsingError
 # parameter that will be used later for comparisons
 lattice_tolerance = 1.e-5
 
-default_energy_units = 'ev'
+default_energy_units = 'eV'
 units_suffix = '_units'
 k_points_default_units = '2 pi / Angstrom'
 default_length_units = 'Angstrom'

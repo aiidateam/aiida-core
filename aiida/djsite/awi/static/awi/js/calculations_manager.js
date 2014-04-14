@@ -98,7 +98,7 @@ CalculationsManager.prototype.load = function (scroll) {
 				rows.push(''); // reserve a spot in the output for this row
 				$.getJSON(o.user, function (subdata) {
 					var username = subdata.username;
-					$.getJSON(o.computer, function (subsubdata) {
+					$.getJSON(o.dbcomputer, function (subsubdata) {
 						var computername = subsubdata.name;
 						//var ctime = new Date((o.ctime || "").replace(/-/g,"/").replace(/[TZ]/g," "));
 						var ctime = new Date();
@@ -108,7 +108,7 @@ CalculationsManager.prototype.load = function (scroll) {
 							'<td>' + o.id + '</td>' +
 							'<td class="name"><a href="' + self.getUrl('detail') + o.id + '" class="show-detail" data-id="' + o.id +
 							'"><strong>' + o.label + '</strong>&nbsp;<span class="right-caret"></span></a></td>' +
-							'<td><span title="' + o.description + '" data-toggle="tooltip">' + o.description.trunc(15,true) + '</span></td>' + /* description is truncated via this custom function */
+							'<td>' + o.description.trunc(15, true, true) + '</td>' + /* description is truncated via this custom function */
 							'<td><span title="' + o.type + '" data-toggle="tooltip">' + o.type.split('.').slice(-2)[0] + '</span></td>' +
 							'<td>' + computername + '</td>' +
 							'<td>' + username + '</td>' +
@@ -125,12 +125,28 @@ CalculationsManager.prototype.load = function (scroll) {
 								'</div>' +
 							'</td>' +
 						'</tr>';
+						if (k == data.objects.length - 1) {
+							next();
+						}
 					});
 				});
 			});
-			// we need to wait until all ajax data is loaded
+			var next = function () {
+				if (rows.length == 0) {
+					rows.push('<tr><td colspan="' + self.columns + '" class="center">No matching entry</td></tr>');
+				}
+				self.table.find('.loader').fadeOut('fast', function () {
+					self.table.append(rows.join(""));
+					self.table.find('span').tooltip(); // activate the tooltips
+					if (scroll) {
+						$('html, body').animate({
+							scrollTop: self.table.parent().offset().top-50
+						}, 200);
+					}
+				});
+			};
+			/*
 			var timer = function () {
-				// if all secondary data is loaded or there is no data
 				if (rows.length == data.objects.length && (rows.length == 0 || rows[0] != '')) {
 					if (rows.length == 0) {
 						rows.push('<tr><td colspan="' + self.columns + '" class="center">No matching entry</td></tr>');
@@ -144,11 +160,11 @@ CalculationsManager.prototype.load = function (scroll) {
 							}, 200);
 						}
 					});
-				} else { /* defer for 100 milliseconds if not all data is loaded */
+				} else {
 					window.setTimeout(timer, 100);
 				}
 			};
-			timer();
+			timer();*/
 			self.pagination.hide().html( /* load the pagination via this custom function */
 				self.applicationManager.pagination(
 					data.meta.total_count,
@@ -178,12 +194,6 @@ CalculationsManager.prototype.load = function (scroll) {
 
 CalculationsManager.prototype.loadDetail = function (url, id) {
 	var self = this;
-	var attributesVal = {
-		'int': 'ival',
-		'float': 'fval',
-		'txt': 'tval',
-		'bool': 'bval' // to complete
-	};
 	
 	$.getJSON(url, function (data) {
 		var loader = $('#' + self.module + '-detail-' + id + ' ~ .dots');
@@ -197,21 +207,44 @@ CalculationsManager.prototype.loadDetail = function (url, id) {
 			'<li class="media"><strong class="pull-left">Type</strong><div class="media-body">' + data.type + '</div></li>',
 			'<li class="media"><strong class="pull-left">Attributes</strong><div class="media-body"><ul class="media-list">'
 		];
-		$.each(data.dbattributes, function (k, v) { /* we go over all attributes and display them in a nested way */
+		
+		var next = function () {
+			loader.fadeTo('fast', 0.01, function () { /* we hide the loader and show the details html */
+				$('#' + self.module + '-detail-' + id).prepend(rows.join(''));
+				$('#' + self.module + '-detail-' + id + ' .ajax-hide').slideDown(function () {
+					loader.hide();
+					$('#' + self.module + '-detail-' + id + '>.detail-close').fadeIn();
+				});
+				$('#' + self.module + '-detail-' + id).find('span').tooltip();
+			});
+		};
+		
+		$.each(data.attributes, function (k, v) { /* we go over all attributes and display them in a nested way */
 			var rowstart = rows.length; // index of the attribute row
 			rows.push(''); // reserve a spot
 			// here do the ajax to get attribute infos, and then update the corresponding row
 			$.getJSON(v, function (subdata) {
+				if (subdata.value instanceof Array) {
+					subdata.value = subdata.value.join('<br>');
+				} else if (typeof subdata.value === 'number') {
+					subdata.value = String(subdata.value);
+				} else if (typeof subdata.value === 'object') {
+					var content = ['<dl class="dl-horizontal">'];
+					$.each(subdata.value, function (key, val) {
+						content.push('<dt>' + key.trunc(16, false, true) + '</dt>');
+						content.push('<dd>' + val + '</dd>');
+					});
+					content.push('</dl>');
+					subdata.value = content.join('');
+				} else {
+					subdata.value = subdata.value.trunc(100);
+				}
+				rows[rowstart] = '<li class="media"><strong class="pull-left">' + subdata.key.trunc(18, false, true) +
+					'</strong><div class="media-body" style="max-width: 320px;">' + subdata.value + '</div></li>';
 				ajaxLoaded++;
-				// if json content we need to parse it
-				/*var content = ['<dl class="dl-horizontal">'];
-				$.each(subdata.tval, function (key, val) {
-					content.push('<dt>' + key + '</dt>');
-					content.push('<dd>' + val + '</dd>');
-				});
-				content.push('</dl>');*/
-				rows[rowstart] = '<li class="media"><strong class="pull-left"><span title="' + subdata.key + '" data-toggle="tooltip">' + subdata.key.trunc(18) +
-					'</span></strong><div class="media-body" style="max-width: 320px;">' + subdata[attributesVal[subdata.datatype]].trunc(100) + '</div></li>';
+				if (ajaxLoaded == data.attributes.length+data.inputs.length+data.outputs.length) {
+					next();
+				}
 			});
 		});
 		rows.push(
@@ -221,9 +254,13 @@ CalculationsManager.prototype.loadDetail = function (url, id) {
 		$.each(data.inputs, function (k, v) { /* we go over all inputs and display them in a nested way */
 			var rowstart = rows.length; // index of the input row
 			rows.push(''); // reserve a spot
-			ajaxLoaded++;
-			// here do the ajax to get input infos, and then update the corresponding row
-			//rows.push('<li class="media"><strong class="pull-left">' + k + '</strong><div class="media-body">' + value + '</div></li>');
+			$.getJSON(v, function (subdata) {
+				rows[rowstart] = subdata.type + '<br>';
+				ajaxLoaded++;
+				if (ajaxLoaded == data.attributes.length+data.inputs.length+data.outputs.length) {
+					next();
+				}
+			});
 		});
 		rows.push(
 			'</ul></div></li>',
@@ -232,9 +269,13 @@ CalculationsManager.prototype.loadDetail = function (url, id) {
 		$.each(data.outputs, function (k, v) { /* we go over all outputs and display them in a nested way */
 			var rowstart = rows.length; // index of the output row
 			rows.push(''); // reserve a spot
-			ajaxLoaded++;
-			// here do the ajax to get output infos, and then update the corresponding row
-			//rows.push('<li class="media"><strong class="pull-left">' + k + '</strong><div class="media-body">' + value + '</div></li>');
+			$.getJSON(v, function (subdata) {
+				rows[rowstart] = subdata.type + '<br>';
+				ajaxLoaded++;
+				if (ajaxLoaded == data.attributes.length+data.inputs.length+data.outputs.length) {
+					next();
+				}
+			});
 		});
 		rows.push(
 			'</ul></div></li>',
@@ -243,11 +284,10 @@ CalculationsManager.prototype.loadDetail = function (url, id) {
 			'<li class="media"><strong class="pull-left">UUID</strong><div class="media-body">' + data.uuid + '</div></li>',
 			'</ul></div>'
 		);
-		// we need to wait until all ajax data is loaded
+		/*
 		var timer = function () {
-			// if all secondary data is loaded or there is no data
-			if (ajaxLoaded == data.dbattributes.length+data.inputs.length+data.outputs.length) {
-				loader.fadeTo('fast', 0.01, function () { /* we hide the loader and show the details html */
+			if (ajaxLoaded == data.attributes.length+data.inputs.length+data.outputs.length) {
+				loader.fadeTo('fast', 0.01, function () {
 					$('#' + self.module + '-detail-' + id).prepend(rows.join(''));
 					$('#' + self.module + '-detail-' + id + ' .ajax-hide').slideDown(function () {
 						loader.hide();
@@ -255,11 +295,11 @@ CalculationsManager.prototype.loadDetail = function (url, id) {
 					});
 					$('#' + self.module + '-detail-' + id).find('span').tooltip();
 				});
-			} else { /* defer for 100 milliseconds if not all data is loaded */
+			} else {
 				window.setTimeout(timer, 100);
 			}
 		};
-		timer();
+		timer();*/
 	});
 };
 

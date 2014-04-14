@@ -41,6 +41,7 @@ class SshTransport(aiida.transport.Transport):
     # aiida log file.
     _valid_connect_params = ['username', 'port', 'look_for_keys', 
                              'key_filename', 'timeout', 'allow_agent',
+                             'proxy_command', # Managed 'manually' in connect
                              'compress']
     
     # Valid parameters for the ssh transport
@@ -123,7 +124,6 @@ class SshTransport(aiida.transport.Transport):
         config = parse_sshconfig(computer.hostname)
         return os.path.expanduser(config.get('identityfile', ""))
 
-
     @classmethod
     def _convert_timeout_fromstring(cls, string):
         """
@@ -181,6 +181,40 @@ class SshTransport(aiida.transport.Transport):
         Return a suggestion for the specific field.
         """
         return ""
+
+    @classmethod
+    def _convert_proxy_command_fromstring(cls, string):
+        """
+        Convert the proxy command from string.
+        """
+        from aiida.common.exceptions import ValidationError
+        
+        if str(string).strip():
+            return str(string)
+        else:
+            return None
+
+    @classmethod
+    def _get_proxy_command_suggestion_string(cls, computer):
+        """
+        Return a suggestion for the specific field.
+        """
+        config = parse_sshconfig(computer.hostname)
+        # Either the configured user in the .ssh/config, or the default SSH port
+        raw_string = str(config.get('proxycommand',''))
+        # Note: %h and %p get already automatically substituted with 
+        # hostname and port by the config parser!
+        
+        pieces = raw_string.split()
+        new_pieces = []
+        for piece in pieces:
+            if '>' in piece:
+                # If there is a piece with > to readdress stderr or stdout,
+                # skip from here on (anything else can only be readdressing)
+                break
+            else:
+                new_pieces.append(piece)
+        return " ".join(new_pieces)
 
     @classmethod
     def _convert_compress_fromstring(cls, string):
@@ -302,8 +336,14 @@ class SshTransport(aiida.transport.Transport):
         """
         
         # Open a SSHClient
+        connection_arguments = self._connect_args
+        proxystring = connection_arguments.pop('proxy_command', None)
+        if proxystring is not None:
+            proxy = paramiko.ProxyCommand(proxystring)
+            connection_arguments['sock'] = proxy
+            
         try:
-            self._client.connect(self._machine,**self._connect_args)
+            self._client.connect(self._machine,**connection_arguments)
         except Exception as e:
             self.logger.error("Error connecting through SSH: [{}] {}, "
                               "connect_args were: {}".format(

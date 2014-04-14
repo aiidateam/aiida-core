@@ -225,6 +225,10 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'halfverbose',
         },
+        'dblogger': {
+            'level': 'WARNING',
+            'class': 'aiida.djsite.utils.DBLogHandler',
+        },
     },
     'loggers': {
         'django.request': {
@@ -233,8 +237,18 @@ LOGGING = {
             'propagate': True,
         },
         'aiida': {
+            'handlers': ['console', 'dblogger'],
+            'level': 'WARNING',
+            'propagate': False,
+            },
+        'celery': {
             'handlers': ['console'],
-            'level': 'DEBUG',
+            'level': 'WARNING',
+            'propagate': False,
+            },
+        'paramiko': {
+            'handlers': ['console'],
+            'level': 'WARNING',
             'propagate': False,
             },
         },
@@ -282,21 +296,34 @@ CELERY_RESULT_BACKEND = "database"
 
 CELERYBEAT_SCHEDULER = "djcelery.schedulers.DatabaseScheduler"
 
+# Used internally, for the get_last_daemon_run function.
+# Key: internal name, left: actual celery name. Can be the same
 djcelery_tasks = {
-    'calculationretrieve': 'update-status-and-retrieve',
+#    'calculationretrieve': 'update-status-and-retrieve',
+    'submitter': 'submitter',
+    'updater': 'updater',
+    'retriever': 'retriever',
     'workflow': 'workflow_stepper',
     }
 
 # Every 30 seconds it is started, but for how it is done internally, if the previous loop
 # is still working, it won't restart twice at the same time.
 CELERYBEAT_SCHEDULE = {
-    djcelery_tasks['calculationretrieve']: {
-        'task':'aiida.djsite.db.tasks.update_and_retrieve',
+    djcelery_tasks['submitter']: {
+        'task':'aiida.djsite.db.tasks.submitter',
         'schedule': timedelta(seconds=30),
         },
-    djcelery_tasks['workflow']: {
-        'task':'aiida.djsite.db.tasks.workflow_stepper',
+    djcelery_tasks['updater']: {
+        'task':'aiida.djsite.db.tasks.updater',
         'schedule': timedelta(seconds=30),
+        },
+    djcelery_tasks['retriever']: {
+        'task':'aiida.djsite.db.tasks.retriever',
+        'schedule': timedelta(seconds=30),
+        },
+   djcelery_tasks['workflow']: {
+        'task':'aiida.djsite.db.tasks.workflow_stepper',
+        'schedule': timedelta(seconds=5),
         },
 }
 

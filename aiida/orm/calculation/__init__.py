@@ -60,7 +60,7 @@ class Calculation(Node):
         computer = self.get_computer()        
         s = computer.get_scheduler()
         try:
-            _ = s.create_job_resource(**self.get_resources())
+            _ = s.create_job_resource(**self.get_resources(full=True))
         except (TypeError, ValueError) as e:
             raise ValidationError("Invalid resources for the scheduler of the "
                                   "specified computer: {}".format(e.message))
@@ -143,7 +143,10 @@ class Calculation(Node):
         
         :param str val: the queue name
         """
-        self.set_attr('queue_name',unicode(val))
+        if val is None:
+            self.set_attr('queue_name',None)
+        else:
+            self.set_attr('queue_name',unicode(val))
 
     def set_import_sys_environment(self,val):
         """
@@ -161,6 +164,34 @@ class Calculation(Node):
         :return: a boolean. If True the system environment will be load.
         """
         return self.get_attr('import_sys_environment',True)
+
+    def set_environment_variables(self, env_vars_dict):
+        """
+        Set a dictionary of custom environment variables for this calculation.
+        
+        Both keys and values must be strings.
+        """       
+        if not isinstance(env_vars_dict, dict):
+            raise ValueError("You have to pass a "
+                "dictionary to set_environment_variables")
+             
+        for k, v in env_vars_dict.iteritems():
+            if not isinstance(k, basestring) or not isinstance(v, basestring):
+                raise ValueError("Both the keys and the values of the "
+                    "dictionary passed to set_environment_variables must be "
+                    "strings.")
+        
+        return self.set_attr('custom_environment_variables',env_vars_dict)
+    
+    def get_environment_variables(self):
+        """
+        Return a dictionary of the environment variables that we want to set
+        for this calculation. 
+        
+        Return an empty dictionary if no special environment variables have
+        to be set for this calculation.
+        """
+        return self.get_attr('custom_environment_variables',{})
                 
     def set_priority(self,val):
         """
@@ -212,13 +243,24 @@ class Calculation(Node):
         """
         return self.get_attr('withmpi',True)
     
-    def get_resources(self):
+    def get_resources(self, full=False):
         """
         Returns the dictionary of the job resources set.
         
+        :param full: if True, also add the default values, e.g.
+            ``default_cpus_per_machine``
+        
         :return: a dictionary
         """
-        return self.get_attr('jobresource_params', {})
+        resources_dict = self.get_attr('jobresource_params', {})
+    
+        if full:
+            computer = self.get_computer()
+            def_cpus_machine = computer.get_default_cpus_per_machine()
+            if def_cpus_machine is not None:
+                resources_dict['default_cpus_per_machine'] = def_cpus_machine
+        
+        return resources_dict
 
     def get_queue_name(self):
         """
@@ -235,6 +277,68 @@ class Calculation(Node):
         :return: a string or None
         """
         return self.get_attr('priority', None)
+
+    def get_prepend_text(self):
+        """
+        Set the calculation-specific prepend text
+        """
+        return self.get_attr("prepend_text", "")
+
+    def set_prepend_text(self,val):
+        """
+        Set the calculation-specific prepend text
+        """
+        self.set_attr("prepend_text", unicode(val))
+
+    def get_append_text(self):
+        """
+        Set the calculation-specific append text
+        """
+        return self.get_attr("append_text", "")
+
+    def get_extra_mpirun_params(self):
+        """
+        Return a list of strings, that are the extra params to pass to the
+        mpirun (or equivalent) command after the one provided in 
+        computer.mpirun_command.
+        
+        Return an empty list if no parameters have been defined.
+        """
+        return self.get_attr("extra_mpirun_params", [])
+
+    def set_extra_mpirun_params(self, extra_params):
+        """
+        Set the extra params to pass to the
+        mpirun (or equivalent) command after the one provided in 
+        computer.mpirun_command.
+        
+        :param extra_params: must be a list of strings, one for each
+            extra parameter
+        """
+        if extra_params is None:
+            try:
+                self.del_attr("extra_mpirun_params")
+            except AttributeError:
+                # it was not saved, yet
+                pass
+            return
+        
+        if not isinstance(extra_params, (list, tuple)):
+            raise ValueError("You must pass a list of strings to "
+                             "set_extra_mpirun_params")
+        for param in extra_params:
+            if not isinstance(param, basestring):
+                raise ValueError("You must pass a list of strings to "
+                                 "set_extra_mpirun_params")
+        
+        
+        self.set_attr("extra_mpirun_params", list(extra_params))
+
+    def set_append_text(self,val):
+        """
+        Set the calculation-specific append text
+        """
+        self.set_attr("append_text", unicode(val))
     
     def get_max_memory_kb(self):
         """
@@ -502,7 +606,7 @@ class Calculation(Node):
         
         try:
             last_daemon_check = get_last_daemon_run(
-                djcelery_tasks['calculationretrieve'])
+                djcelery_tasks['retriever'])
         except ObjectDoesNotExist:
             last_check_string = ("# Last daemon check: (Unable to discover, "
                 "no such task found)")
@@ -780,12 +884,16 @@ class Calculation(Node):
         and raises an exception is something goes wrong. 
         No changes of calculation status are done (they will be done later by
         the calculation manager).
+        
+        .. todo: if the status is TOSUBMIT, check with some lock that it is not
+            actually being submitted at the same time in another thread.
         """
         #TODO: Check if we want to add a status "KILLED" or something similar.
         
         from aiida.common.exceptions import InvalidOperation, RemoteOperationError
         
-        if self.get_state() == calc_states.NEW:
+        if (self.get_state() == calc_states.NEW or 
+            self.get_state() == calc_states.TOSUBMIT):
             self._set_state(calc_states.FAILED)
             return
         
@@ -816,11 +924,11 @@ class Calculation(Node):
         import StringIO
         import json
 
-        from aiida.common.exceptions import (
+        from aiida.common.exceptions import (NotExistent,
             PluginInternalError, ValidationError)
         from aiida.scheduler.datastructures import JobTemplate
         from aiida.common.utils import validate_list_of_string_tuples
-
+        from aiida.orm import Computer
 
         computer = self.get_computer()
 
@@ -851,25 +959,29 @@ class Calculation(Node):
         job_tmpl.sched_error_path = '_scheduler-stderr.txt'
         job_tmpl.sched_join_files = False
         
-        # TODO: add also code from the machine + u'\n\n'
         job_tmpl.prepend_text = (
+            ((self.get_prepend_text() + u"\n\n") if 
+                self.get_prepend_text() else u"") + 
             ((computer.get_prepend_text() + u"\n\n") if 
                 computer.get_prepend_text() else u"") + 
             ((code.get_prepend_text() + u"\n\n") if 
                 code.get_prepend_text() else u"") + 
-            (calcinfo.prepend_text if 
+            ((calcinfo.prepend_text + u"\n\n") if 
                 calcinfo.prepend_text is not None else u""))
         
         job_tmpl.append_text = (
-            (calcinfo.append_text if 
+            ((calcinfo.append_text + u"\n\n") if 
                 calcinfo.append_text is not None else u"") +
             ((code.get_append_text() + u"\n\n") if 
                 code.get_append_text() else u"") +
             ((computer.get_append_text() + u"\n\n") if 
-                computer.get_append_text() else u""))
+                computer.get_append_text() else u"") +
+            ((self.get_append_text() + u"\n\n") if 
+                self.get_append_text() else u""))
 
-        job_tmpl.job_resource = s.create_job_resource(
-             **self.get_resources())
+        # Set resources, also with get_default_cpus_per_machine
+        resources_dict = self.get_resources(full=True)
+        job_tmpl.job_resource = s.create_job_resource(**resources_dict)
 
         subst_dict = {'tot_num_cpus': 
                       job_tmpl.job_resource.get_tot_num_cpus()}
@@ -878,10 +990,12 @@ class Calculation(Node):
             subst_dict[k] = v
         mpi_args = [arg.format(**subst_dict) for arg in
                     computer.get_mpirun_command()]
+        extra_mpirun_params = self.get_extra_mpirun_params()
         if self.get_withmpi():
-            job_tmpl.argv = mpi_args + [code.get_execname()] + (
-                calcinfo.cmdline_params if 
-                    calcinfo.cmdline_params is not None else [])
+            job_tmpl.argv = (mpi_args + extra_mpirun_params + 
+                [code.get_execname()] + 
+                (calcinfo.cmdline_params if 
+                    calcinfo.cmdline_params is not None else []))
         else:
             job_tmpl.argv = [code.get_execname()] + (
                 calcinfo.cmdline_params if 
@@ -893,6 +1007,8 @@ class Calculation(Node):
         job_tmpl.join_files = calcinfo.join_files
         
         job_tmpl.import_sys_environment = self.get_import_sys_environment()
+        
+        job_tmpl.job_environment = self.get_environment_variables()
         
         queue_name = self.get_queue_name()
         if queue_name is not None:
@@ -949,8 +1065,15 @@ class Calculation(Node):
                 "remote_copy_list format problem: {}".format(
                 this_pk, e.message))
 
-        for (remote_machine, remote_abs_path, 
+        for (remote_computer_uuid, remote_abs_path, 
              dest_rel_path) in remote_copy_list:
+            try:
+                remote_computer = Computer(uuid=remote_computer_uuid)
+            except NotExistent:
+                raise PluginInternalError("[presubmission of calc {}] "
+                    "The remote copy requires a computer with UUID={}"
+                    "but no such computer was found in the "
+                    "database".format(this_pk, remote_computer_uuid))                
             if os.path.isabs(dest_rel_path):
                 raise PluginInternalError("[presubmission of calc {}] "
                     "The destination path of the remote copy "
@@ -977,6 +1100,7 @@ class Calculation(Node):
         from aiida.transport.plugins.local import LocalTransport
         import datetime
         import tempfile
+        from aiida.orm import Computer
         
         # In case it is not created yet
         folder.create()
@@ -1013,8 +1137,9 @@ class Calculation(Node):
             for src_abs_path, dest_rel_path in local_copy_list:
                 t.put(src_abs_path, dest_rel_path)
                 
-            for (remote_machine, remote_abs_path, 
+            for (remote_computer_uuid, remote_abs_path, 
                   dest_rel_path) in remote_copy_list:
+                remote_computer = Computer(uuid=remote_computer_uuid)
                 localpath = os.path.join(
                     subfolder.abspath, dest_rel_path)
                 # If it ends with a separator, it is a folder
@@ -1025,8 +1150,9 @@ class Calculation(Node):
                     os.makedirs(dirpart)
                 with open(localpath,'w') as f:
                     f.write("PLACEHOLDER FOR REMOTELY COPIED "
-                            "FILE FROM {}:{}".format(remote_machine,
-                                                     remote_abs_path))
+                            "FILE FROM {} ({}):{}".format(remote_computer_uuid,
+                                                    remote_computer.name,
+                                                    remote_abs_path))
 
         return subfolder, script_filename
 

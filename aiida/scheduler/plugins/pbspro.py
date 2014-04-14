@@ -635,8 +635,9 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
         if retval != 0:
             self.logger.error("Error in _parse_submit_output: retval={}; "
                 "stdout={}; stderr={}".format(retval, stdout, stderr))
-            raise SchedulerError("Error during submission, retval={}".format(
-                retval))
+            raise SchedulerError("Error during submission, retval={}\n"
+                                 "stdout={}\nstderr={}".format(
+                retval, stdout, stderr))
 
         if stderr.strip():
             self.logger.warning("in _parse_submit_output for {}: "

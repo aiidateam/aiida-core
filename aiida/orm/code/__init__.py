@@ -16,7 +16,7 @@ class Code(Node):
     methods (e.g., the set_preexec_code() can be used to load specific modules required
     for the code to be run).
     """
-    _updatable_attributes = tuple() 
+    _updatable_attributes = ('input_plugin','append_text', 'prepend_text') 
 
     _set_incompatibilities = [('remote_computer_exec','local_executable')]
     
@@ -114,6 +114,23 @@ class Code(Node):
         execution, or an empty string if no pre-exec code was defined.
         """
         return self.get_attr('prepend_text',u"")
+
+    def set_input_plugin_name(self, input_plugin):
+        """
+        Set the name of the default input plugin, to be used for the automatic
+        generation of a new calculation.
+        """
+        if input_plugin is None:
+            self.set_attr('input_plugin', None)
+        else:
+            self.set_attr('input_plugin', unicode(input_plugin))
+        
+    def get_input_plugin_name(self):
+        """
+        Return the name of the default input plugin (or None if no input plugin
+        was set.
+        """
+        return self.get_attr('input_plugin', None)
 
     def set_append_text(self,code):
         """
@@ -261,6 +278,32 @@ class Code(Node):
         else:
             return self.get_remote_exec_path()
 
+    def new_calc(self, *args, **kwargs):
+        """
+        Create and return a new Calculation object (unstored) with the correct
+        plugin subclass, as otained by the self.get_input_plugin_name() method.
+        
+        Parameters are passed to the calculation __init__ method.
+        
+        :raise MissingPluginError: if the specified plugin does not exist.
+        :raise ValueError: if no plugin was specified.        
+        """
+        from aiida.orm import CalculationFactory
+        from aiida.common.exceptions import MissingPluginError
+        
+        plugin_name = self.get_input_plugin_name()
+        if plugin_name is None:
+            raise ValueError("You did not specify an input plugin "
+                             "for this code")
+        
+        try:
+            C = CalculationFactory(plugin_name)
+        except MissingPluginError:
+            raise MissingPluginError("The input_plugin name for this code is "
+                                     "'{}', but it is not an existing plugin"
+                                     "name".format(plugin_name))
+        return C(*args, **kwargs)
+
     @property
     def full_text_info(self):
         """
@@ -273,6 +316,8 @@ class Code(Node):
         ret_lines.append(" * UUID:           {}".format(self.uuid))
         ret_lines.append(" * Label:          {}".format(self.label))
         ret_lines.append(" * Description:    {}".format(self.description))
+        ret_lines.append(" * Default plugin: {}".format(
+            self.get_input_plugin_name()))
         ret_lines.append(" * Used by:        {} calculations".format(
              len(self.get_outputs())))
         if self.is_local():

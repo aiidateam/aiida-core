@@ -21,7 +21,10 @@ from aiida.orm.calculation.quantumespresso import BasePwCpInputGenerator
 ParameterData = DataFactory('parameter')
   
 class PwCalculation(BasePwCpInputGenerator, Calculation):   
-
+    """
+    Main DFT code (PWscf, pw.x) of the Quantum ESPRESSO distribution.
+    For more information, refer to http://www.quantum-espresso.org/
+    """
     DATAFILE_XML = os.path.join(BasePwCpInputGenerator.OUTPUT_SUBFOLDER, 
                                '{}.save'.format(BasePwCpInputGenerator.PREFIX), 
                                BasePwCpInputGenerator.DATAFILE_XML_BASENAME)

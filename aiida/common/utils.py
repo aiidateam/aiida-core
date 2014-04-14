@@ -1,5 +1,6 @@
 import os, os.path
 import string
+import logging
 
 from aiida.common.exceptions import ConfigurationError
 
@@ -17,7 +18,6 @@ class classproperty(object):
         self.getter= getter
     def __get__(self, instance, owner):
         return self.getter(owner)
-
 
 def backup_config():   
     import shutil

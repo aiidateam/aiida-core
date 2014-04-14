@@ -302,7 +302,7 @@ Then, we loop over the filenames and
     pseudos_to_use = {}
 
     for fname, elem in raw_pseudos:
-        absname = os.path.realpath(os.path.join(os.path.dirname(__file__), "data",fname))
+        absname = os.path.realpath(os.path.join(os.path.dirname(__file__), "testdata","qepseudos",fname))
         pseudo, created = UpfData.get_or_create(absname,use_first=True)
         pseudos_to_use[elem] = pseudo
 
@@ -319,7 +319,39 @@ If you got one installed, you can simply tell the calculation to use the pseudop
 
 
 
+Comments
+--------
 
+Sometimes it is useful to attach some notes to the calculation, that may help you later understand why you did such a calculation, or note down what you understood out of it.
+Comments are a special set of properties of the calculation, in the sense that it is one of the few properties that can be changed, even after the calculation has run.
+Comments come in various flavours, first there is the label property,
+a string of max 255 characters, which is meant to be the title of the calculation.
+To create it, simply write::
+
+  calc.label = "A generic title"
+
+The label can be later accessed as a class property, i.e. the command::
+
+  calc.label
+
+will return the string you previously set (empty by default).
+Another property is the description, which instead does not have a limitation on the maximum number of characters::
+
+  c.description = "A much longer description"
+
+And finally, there is the possibility of comments.
+The peculiarity of this last property is that they are user dependent (like the comments that you can post on facebook pages), so it is best
+suited to calculation exposed on a website, where you want to remember
+the comments of each user.
+To set a comment, you need first to import the django user, and then
+write it with a dedicated method::
+
+  from aiida.djsite.utils import get_automatic_user
+  c.add_comment("Some comment", user=get_automatic_user())
+
+The comments can be accessed with this function::
+
+  c.get_comments_tuple()
 
 
 Execute
@@ -367,6 +399,7 @@ Note that the configuration of the computer resources (like number of nodes and 
 
 Compact script
 --------------
+Download: :download:`this example script <pw_short_example.py>`
 
 ::
 
@@ -437,9 +470,11 @@ Compact script
 
 
 
-
 Exception tolerant code
 -----------------------
+Download: :download:`this example script <pw_example.py>`
+
+
 ::
 
     #!/usr/bin/env python
@@ -589,7 +624,8 @@ Exception tolerant code
 	pseudos_to_use = {}
 	for fname, elem, pot_type in raw_pseudos:
 	    absname = os.path.realpath(os.path.join(os.path.dirname(__file__),
-						    "data",fname))
+						    "testdata",
+						    "qepseudos",fname))
 	    pseudo, created = UpfData.get_or_create(
 		absname,use_first=True)
 	    if created:

@@ -163,14 +163,19 @@ ComputersManager.prototype.load = function (scroll) {
 			// for each computer, we build the html of a table row
 			$.each(data.objects, function (k, o) {
 				rows.push(''); // reserve a spot in the output for this row
-				$.getJSON(self.getAPIUrl('authinfo') + '?computer=' + o.id, function (subdata) {
-					var username = subdata.objects[0].aiidauser.username; // this is not correct
+				$.getJSON(self.getAPIUrl('authinfo') + '?dbcomputer=' + o.id, function (subdata) {
+					var username;
+					if (subdata.objects.length > 0) {
+						username = subdata.objects[0].aiidauser.username;
+					} else {
+						username = 'N/A';
+					}
 					// we update the corresponding line, this ensures that data is gonna be displayed in the right order at the end
 					rows[k] = '<tr id="row-' + o.id + '">' +
 						'<td>' + o.id + '</td>' +
 						'<td class="name"><a href="' + self.getUrl('detail') + o.id + '" class="show-detail" data-id="' + o.id +
 						'"><strong>' + o.name + '</strong>&nbsp;<span class="right-caret"></span></a></td>' +
-						'<td><span title="' + o.description + '" data-toggle="tooltip">' + o.description.trunc(30,true) + '</span></td>' + /* description is truncated via this custom function */
+						'<td>' + o.description.trunc(30, true, true) + '</td>' + /* description is truncated via this custom function */
 						'<td>' + username + '</td>' +
 						'<td>' + o.transport_type + '</td>' +
 						'<td>' + o.hostname + '</td>' +
@@ -184,7 +189,7 @@ ComputersManager.prototype.load = function (scroll) {
 								'<ul class="dropdown-menu dropdown-menu-right" role="menu">' +
 									'<li><a href="' + self.getUrl('detail') + o.id + '" class="show-detail"' +
 										'data-id="' + o.id + '"><span class="glyphicon glyphicon-tasks"></span>&nbsp;&nbsp;Details</a></li>' +
-										(o.enabled == true 	?
+										(o.enabled == true	?
 											'<li class="status"><a href="' + o.resource_uri + '" class="computer-disable" data-id="' + o.id + '"><span class="glyphicon glyphicon-ban-circle"></span>&nbsp;&nbsp;Disable</a></li>'
 											: '<li class="status"><a href="' + o.resource_uri + '" class="computer-enable" data-id="' + o.id + '"><span class="glyphicon glyphicon-ok"></span>&nbsp;&nbsp;Enable</a></li>') +
 									'<li><a href="' + self.getUrl('rename') + o.id + '" data-toggle="modal" data-target="#' + self.modalId + '">' +
@@ -193,29 +198,47 @@ ComputersManager.prototype.load = function (scroll) {
 							'</div>' +
 						'</td>' +
 					'</tr>';
+					if (k == data.objects.length - 1) {
+						next();
+					}
 				});
 			});
 			// we need to wait until all ajax data is loaded
+			var next = function () {
+				if (rows.length == 0) {
+					rows.push('<tr><td colspan="' + self.columns + '" class="center">No matching entry</td></tr>');
+				}
+				self.table.find('.loader').fadeOut('fast', function () {
+					self.table.append(rows.join(""));
+					self.table.find('span').tooltip(); // activate the tooltips
+					if (scroll) {
+						$('html, body').animate({
+							scrollTop: self.table.parent().offset().top-50
+						}, 200);
+					}
+				});
+			};
+			/*
 			var timer = function () {
-				// if all secondary data is loaded or there is no data
 				if (rows.length == data.objects.length && (rows.length == 0 || rows[0] != '')) {
 					if (rows.length == 0) {
 						rows.push('<tr><td colspan="' + self.columns + '" class="center">No matching entry</td></tr>');
 					}
 					self.table.find('.loader').fadeOut('fast', function () {
 						self.table.append(rows.join(""));
-						self.table.find('span').tooltip(); // activate the tooltips
+						self.table.find('span').tooltip();
 						if (scroll) {
 							$('html, body').animate({
 								scrollTop: self.table.parent().offset().top-50
 							}, 200);
 						}
 					});
-				} else { /* defer for 100 milliseconds if not all data is loaded */
+				} else {
 					window.setTimeout(timer, 100);
 				}
 			};
 			timer();
+			*/
 			self.pagination.hide().html( /* load the pagination via this custom function */
 				self.applicationManager.pagination(
 					data.meta.total_count,
@@ -275,7 +298,6 @@ ComputersManager.prototype.loadDetail = function (url, id) {
 		rows.push(
 			'</ul></div></li>',
 			'<li class="media"><strong class="pull-left">UUID</strong><div class="media-body">' + data.uuid + '</div></li>',
-			'<li class="media"><strong class="pull-left">Working directory</strong><div class="media-body">' + data.workdir + '</div></li>',
 			'</ul></div>'
 		);
 		loader.fadeTo('fast', 0.01, function () { /* we hide the loader and show the details html */
@@ -300,7 +322,7 @@ ComputersManager.prototype.loadRename = function (id) {
 	}, 500);
 	this.modal.find('button.btn').click(function () {
 		$.ajax({
-			url: self.getUrl('apidetail') + id,
+			url: self.getUrl('apidetail') + id + '/',
 			type: 'PATCH',
 			dataType: 'json',
 			contentType: 'application/json',

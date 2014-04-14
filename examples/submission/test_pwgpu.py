@@ -11,7 +11,7 @@ from aiida.common.exceptions import NotExistent
 aiidalogger.setLevel(logging.INFO)
 
 from aiida.orm import Code
-from aiida.orm import CalculationFactory, DataFactory
+from aiida.orm import DataFactory
 from aiida.djsite.db.models import DbGroup
 UpfData = DataFactory('upf')
 ParameterData = DataFactory('parameter')
@@ -26,11 +26,11 @@ except IndexError:
 
 # If True, load the pseudos from the family specified below
 # Otherwise, use static files provided
-expected_code_type='quantumespresso.cp'
+expected_code_type='quantumespresso.pw'
 auto_pseudos = False
 
 queue = None
-#queue = "P_share_queue"
+#queue = "Q_aries_free"
      
 #####
 
@@ -90,51 +90,71 @@ s.append_atom(position=(alat/2.,alat/2.,alat/2.),symbols=['Ti'])
 s.append_atom(position=(alat/2.,alat/2.,0.),symbols=['O'])
 s.append_atom(position=(alat/2.,0.,alat/2.),symbols=['O'])
 s.append_atom(position=(0.,alat/2.,alat/2.),symbols=['O'])
-s.store()
 
 parameters = ParameterData(dict={
             'CONTROL': {
-                'calculation': 'cp',
+                'calculation': 'scf',
                 'restart_mode': 'from_scratch',
-                'wf_collect': False,
-                'iprint': 1,
-                'isave': 100,
-                'dt': 3.,
-                'max_seconds': 25*60,
-                'nstep': 10,
+                'wf_collect': True,
                 },
             'SYSTEM': {
                 'ecutwfc': 30.,
                 'ecutrho': 240.,
-                'nr1b': 24,
-                'nr2b': 24,
-                'nr3b': 24,
                 },
             'ELECTRONS': {
-                'electron_damping': 1.e-1,
-                'electron_dynamics': 'damp', 
-                'emass': 400.,
-                'emass_cutoff': 3.,
-                },
-            'IONS': {
-                'ion_dynamics': 'none',
-            }}).store()
+                'conv_thr': 1.e-6,
+                }}).store()
                 
+kpoints = ParameterData(dict={
+                'type': 'automatic',
+                'points': [4, 4, 4, 0, 0, 0],
+                }).store()
 
 calc = code.new_calc(computer=computer)
-calc.label = "Test QE cp.x"
-calc.description = "Test calculation with the Quantum ESPRESSO cp.x code"
+calc.label = "Test QE pw.x"
+calc.description = "Test calculation with the Quantum ESPRESSO pw.x code"
 calc.set_max_wallclock_seconds(30*60) # 30 min
-calc.set_resources({"num_machines": 1})
+# Valid only for Slurm and PBS (using default values for the
+# number_cpus_per_machine), change for SGE-like schedulers 
+
+calc.set_prepend_text("#SBATCH --account=ch3")
+
+num_machines = 2
+# num_pools can be None
+#num_pools = None
+num_pools = 2
+
+mpis_per_machine = 1
+
+calc.set_resources({"num_machines": num_machines,
+                    "num_cpus_per_machine": mpis_per_machine})
+
+# 1 MPI per node, default_cpus_per_node OpenMP threads per node
+extra_mpi_params = "-N {} -d {} -cc none".format(
+    str(mpis_per_machine),
+    str(computer.get_default_cpus_per_machine()))
+calc.set_extra_mpirun_params(extra_mpi_params.split())
+calc.set_environment_variables({
+        "OMP_NUM_THREADS": str(computer.get_default_cpus_per_machine()),
+        "MKL_NUM_THREADS": str(computer.get_default_cpus_per_machine()),
+        })
+
 if queue is not None:
     calc.set_queue_name(queue)
 calc.store()
 print "created calculation; calc=Calculation(uuid='{}') # ID={}".format(
     calc.uuid,calc.dbnode.pk)
 
+s.store()
 calc.use_structure(s)
 calc.use_code(code)
 calc.use_parameters(parameters)
+
+if num_pools is not None:
+    settings = ParameterData(dict={
+            'cmdline': ['-npools', str(num_pools)]
+            }).store()
+    calc.use_settings(settings)
 
 if auto_pseudos:
     try:
@@ -165,6 +185,7 @@ else:
     for k, v in pseudos_to_use.iteritems():
         calc.use_pseudo(v, kind=k)
 
+calc.use_kpoints(kpoints)
 #calc.use_settings(settings)
 #from aiida.orm.data.remote import RemoteData
 #calc.set_outdir(remotedata)

@@ -921,9 +921,9 @@ class DbAuthInfo(m.Model):
     @python_2_unicode_compatible
     def __str__(self):
         if self.enabled:
-            return "Authorization info for {}@{}".format(self.aiidauser.name, self.dbcomputer.name)
+            return "Authorization info for {}@{}".format(self.aiidauser.username, self.dbcomputer.name)
         else:
-            return "Authorization info for {}@{} [DISABLED]".format(self.aiidauser.name, self.dbcomputer.name)
+            return "Authorization info for {}@{} [DISABLED]".format(self.aiidauser.username, self.dbcomputer.name)
 
 
 
@@ -941,6 +941,48 @@ class DbComment(m.Model):
             self.dbnode.pk, self.time.strftime("%Y-%m-%d"))
 
 
+class DbLog(m.Model):
+    # Creation time
+    time = m.DateTimeField(auto_now_add=True, editable=False)
+    loggername = m.CharField(max_length=255, db_index=True)
+    levelname = m.CharField(max_length=50, db_index=True)
+    # A string to know what is the referred object (e.g. a Calculation,
+    # or other)
+    objname = m.CharField(max_length=255, blank=True, db_index=True)
+    objpk   = m.IntegerField(db_index=True, null=True) # It is not a ForeignKey
+                                            # because it may be in different
+                                            # tables
+    message = m.TextField(blank=True)
+    metadata = m.TextField(default="{}") # Will store a json
+
+    @python_2_unicode_compatible                                       
+    def __str__(self):
+        return "[Log: {} for {} {}] {}".format(self.levelname,
+            self.objname, self.objpk, self.message)
+    
+    @classmethod
+    def add_from_logrecord(cls, record):
+        """
+        Add a new entry from a LogRecord (from the standard python
+        logging facility). No exceptions are managed here.
+        """
+        import json
+    
+        objpk = record.__dict__.get('objpk', None)
+        objname = record.__dict__.get('objname', None)
+    
+        # Filter: Do not store in DB if no objpk and objname is given 
+        if objpk is None or objname is None:
+            return
+    
+        new_entry = cls(loggername=record.name,
+                        levelname=record.levelname,
+                        objname=objname,
+                        objpk=objpk,
+                        message=record.getMessage(),
+                        metadata=json.dumps(record.__dict__))
+        new_entry.save()
+        
 #-------------------------------------
 #         Lock
 #-------------------------------------

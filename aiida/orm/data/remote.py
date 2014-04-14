@@ -3,13 +3,12 @@ from aiida.orm import Data
 
 class RemoteData(Data):
     """
-    Store a link to a file or folder on a remote machine
+    Store a link to a file or folder on a remote machine.
+    
+    Remember to pass a computer!
     """
-    def get_remote_machine(self):
-        return self.get_attr('remote_machine')
-
-    def set_remote_machine(self,val):
-        self.set_attr('remote_machine', val)
+    def get_dbcomputer(self):
+        return self.dbnode.dbcomputer
 
     def get_remote_path(self):
         return self.get_attr('remote_path')
@@ -34,8 +33,7 @@ class RemoteData(Data):
         except AttributeError:
             raise ValidationError("attribute 'remote_path' not set.")
 
-        try:
-            self.get_remote_machine()
-        except AttributeError:
-            raise ValidationError("attribute 'remote_machine' not set.")
+        computer = self.get_computer()
+        if computer is None:
+            raise ValidationError("Remote computer not set.")
     

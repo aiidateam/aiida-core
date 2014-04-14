@@ -179,7 +179,7 @@ in tempfolder, or in multiple if necessary::
 
 
 If you need to copy remotely the scratch of a previous calculation, than it works as follows: a user set a link between the FolderData that is created by the parent calculation and the new one.
-Then you will save in a list ``remote_calc_folder`` a tuple of length 3, which contains the remote computer source, the source folder path and the destination folder paths that have to be copied.
+Then you will save in a list ``remote_calc_folder`` a tuple of length 3, which contains the UUID in the database of the remote computer, the source folder path and the destination folder paths that have to be copied.
 This list will be appended to a CalcInfo object that we will discuss later.
 Note that this method has to be used for copying data in the same remote machine, i.e. not between two clusters.
 
@@ -187,7 +187,7 @@ Note that this method has to be used for copying data in the same remote machine
 
         if parent_calc_folder is not None:   # if needed
             remote_copy_list.append(
-                (parent_calc_folder.get_remote_machine(),
+                (parent_calc_folder.get_computer().uuid,
                  os.path.join(parent_calc_folder.get_remote_path(),parent_calc_out_subfolder),
                  self.OUTPUT_SUBFOLDER)
 		 )

@@ -614,6 +614,11 @@ def retrieve_computed_for_authinfo(authinfo):
                         calc._set_state(calc_states.FINISHED)
                     else:
                         calc._set_state(calc_states.FAILED)
+                        execlogger.error("[parsing of calc {}] "
+                            "The parser returned an error, but it should have "
+                            "created an output node with some partial results "
+                            "and warnings. Check there for more information on "
+                            "the problem".format(calc.pk), extra=logger_extra)                   
                     retrieved.append(calc)
                 except Exception:
                     import traceback

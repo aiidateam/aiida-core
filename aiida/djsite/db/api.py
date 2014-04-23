@@ -125,7 +125,7 @@ class DbComputerResource(ModelResource):
             return super(DbComputerResource, self).delete_detail(request, **kwargs)
         except ProtectedError as e:
             return HttpConflict("The DbComputer cannot be deleted, since it "
-                                "is used by at least one DbNode")
+                                "is used by at least one DbNode.")
     
     def dehydrate_metadata(self, bundle):
         import json

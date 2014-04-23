@@ -794,7 +794,7 @@ class LocalTransport(aiida.transport.Transport):
         escaped_remotedir="'{}'".format(remotedir), remotedir=remotedir)
 
 
-    def rename(src,dst):
+    def rename(self, src,dst):
         """
         Rename a file or folder from oldpath to newpath.
 

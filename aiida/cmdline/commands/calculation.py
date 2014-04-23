@@ -169,6 +169,7 @@ class Calculation(VerdiCommand):
         from aiida.common.exceptions import NotExistent
         from aiida.orm import Calculation as OrmCalculation
         from aiida.djsite.utils import get_log_messages
+        from aiida.common.datastructures import calc_states
         
         load_django()
         
@@ -181,10 +182,40 @@ class Calculation(VerdiCommand):
             except NotExistent:
                 print "*** {}: Not a valid calculation".format(calc_pk)
                 continue
+
             log_messages = get_log_messages(calc)
             label_string =  " [{}]".format(calc.label) if calc.label else ""
-            print "*** {}{}: {} log messages".format(
-                calc_pk, label_string, len(log_messages))
+            state = calc.get_state()
+            if state == calc_states.WITHSCHEDULER:
+                sched_state = calc.get_scheduler_state()
+                if sched_state is None:
+                    sched_state = "(unknown)"
+                state += ", scheduler state: {}".format(sched_state)
+            print "*** {}{}: {}".format(calc_pk, label_string, state)
+
+            sched_out = calc.get_scheduler_output()
+            sched_err = calc.get_scheduler_error()
+            if sched_out is None:
+                print "*** Scheduler output: N/A"
+            elif sched_out:
+                print "*** Scheduler output:"
+                print sched_out
+            else:
+                print "*** (empty scheduler output file)"
+                            
+            if sched_err is None:
+                print "*** Scheduler errors: N/A"
+            elif sched_err:
+                print "*** Scheduler errors:"
+                print sched_err
+            else:
+                print "*** (empty scheduler errors file)"
+            
+            if log_messages:
+                print "*** {} LOG MESSAGES:".format(len(log_messages))
+            else:
+                print "*** 0 LOG MESSAGES"
+                
             for log in log_messages:
                 print "+-> {} at {}".format(log['levelname'], log['time'])
                 # Print the message, with a few spaces in front of each line

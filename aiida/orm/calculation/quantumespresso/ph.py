@@ -7,10 +7,12 @@ from aiida.common.exceptions import InputValidationError
 from aiida.common.datastructures import CalcInfo
 from aiida.orm.calculation.quantumespresso import get_input_data_text,_lowercase_dict,_uppercase_dict
 from aiida.common.exceptions import UniquenessError
+from aiida.common.utils import classproperty
 
 from aiida.orm.data.parameter import ParameterData 
 from aiida.orm.data.remote import RemoteData 
 from aiida.orm.data.folder import FolderData 
+from aiida.orm.calculation.quantumespresso.pw import PwCalculation 
 
 # List of namelists (uppercase) that are allowed to be found in the
 # input_data, in the correct order

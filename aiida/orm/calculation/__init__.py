@@ -1096,11 +1096,16 @@ class Calculation(Node):
             actually being submitted at the same time in another thread.
         """
         #TODO: Check if we want to add a status "KILLED" or something similar.
-        
+        from aiida.djsite.utils import get_dblogger_extra
         from aiida.common.exceptions import InvalidOperation, RemoteOperationError
         
+        logger_extra = get_dblogger_extra(self)    
+        
         if (self.get_state() == calc_states.NEW or 
-            self.get_state() == calc_states.TOSUBMIT):
+                self.get_state() == calc_states.TOSUBMIT):
+            self.logger.warning("Calculation {} killed by the user "
+                                "(it was in {} state)".format(
+                                self.pk, self.get_state()), extra=logger_extra)
             self._set_state(calc_states.FAILED)
             return
         
@@ -1118,13 +1123,19 @@ class Calculation(Node):
         # And I call the proper kill method for the job ID of this calculation
         with t:
             retval = s.kill(self.get_job_id())
-        
+            
         # Raise error is something went wrong
         if not retval:
             raise RemoteOperationError("An error occurred while trying to kill "
                                        "calculation {} (jobid {}), see log "
                                        "(maybe the calculation already finished?)"
                                        .format(self.pk, self.get_job_id()))
+        else:
+            self._set_state(calc_states.FAILED)
+            self.logger.warning("Calculation {} killed by the user "
+                                "(it was WITHSCHEDULER)".format(self.pk),
+                                extra=logger_extra)
+            
         
     def presubmit(self, folder, code, inputdict=None):
         import os

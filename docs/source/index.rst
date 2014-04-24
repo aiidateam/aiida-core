@@ -21,6 +21,7 @@ User's guide
    database/index
    installation
    setup/computerandcodes
+   examples/scripting
    examples/structure_tutorial
    examples/pw_tutorial
    examples/ph_tutorial

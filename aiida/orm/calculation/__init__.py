@@ -25,6 +25,11 @@ class Calculation(Node):
     # Set default for the link to the retrieved folder (after calc is done)
     _linkname_retrieved = 'retrieved' 
     
+    # Files in which the scheduler output and error will be stored.
+    # If they are identical, outputs will be joined.
+    SCHED_OUTPUT_FILE = '_scheduler-stdout.txt'
+    SCHED_ERROR_FILE = '_scheduler-stderr.txt'
+    
     # Default values to be set for new nodes
     @classproperty
     def _set_defaults(cls):
@@ -862,17 +867,40 @@ class Calculation(Node):
         """
         return self.get_attr('linkname_retrieved')
         
-    def get_retrieved(self):
+    def get_retrieved_node(self):
         """
         Return the retrieved data folder, if present.
 
-        :return: the retrieved data folder object.
+        :return: the retrieved data folder object, or None if no such output
+            node is found.
         
-        :note: it is assumed that only one retrieved folder exists.
+        :raise MultipleObjectsError: if more than one output node is found.
         """
-        from aiida.orm import DataFactory
+        from aiida.common.exceptions import MultipleObjectsError
+        from aiida.orm.data.folder import FolderData
         
-        return DataFactory(self.get_linkname_retrieved)
+        outputs = self.get_outputs(also_labels = True)
+        
+        retrieved_node = None
+        retrieved_linkname = self.get_linkname_retrieved()
+        
+        for label, node in outputs:
+            if label == retrieved_linkname:
+                if retrieved_node is None:
+                    retrieved_node = node
+                else:
+                    raise MultipleObjectsError("More than one output node "
+                        "with label '{}' for calc with pk={}".format(
+                            retrieved_linkname, self.pk))
+        
+        if retrieved_node is None:
+            return None
+        
+        if not isinstance(retrieved_node, FolderData):
+            raise TypeError("The retrieved node of calc with pk={} is not of "
+                            "type FolderData".format(self.pk))
+        
+        return retrieved_node
         
     def kill(self):
         """
@@ -942,11 +970,6 @@ class Calculation(Node):
                       "the executable name!".format(
                       code.get_local_executable()))
 
-        # TODO: support -V option of schedulers!
-        
-        self._set_retrieve_list(calcinfo.retrieve_list if
-                                calcinfo.retrieve_list is not None else [])
-
         # I create the job template to pass to the scheduler
         job_tmpl = JobTemplate()
         ## TODO: in the future, allow to customize the following variables
@@ -955,9 +978,26 @@ class Calculation(Node):
         job_tmpl.job_environment = {}
         #'email', 'email_on_started', 'email_on_terminated',
         job_tmpl.job_name = 'aiida-{}'.format(self.pk) 
-        job_tmpl.sched_output_path = '_scheduler-stdout.txt'
-        job_tmpl.sched_error_path = '_scheduler-stderr.txt'
-        job_tmpl.sched_join_files = False
+        job_tmpl.sched_output_path = self.SCHED_OUTPUT_FILE
+        if self.SCHED_ERROR_FILE == self.SCHED_OUTPUT_FILE:
+            job_tmpl.sched_join_files = True
+        else:
+            job_tmpl.sched_error_path = self.SCHED_ERROR_FILE
+            job_tmpl.sched_join_files = False
+
+        # Set retrieve path, add also scheduler STDOUT and STDERR
+        retrieve_list = (calcinfo.retrieve_list
+                         if calcinfo.retrieve_list is not None
+                         else [])
+        if (job_tmpl.sched_output_path is not None and 
+            job_tmpl.sched_output_path not in retrieve_list):
+            retrieve_list.append(job_tmpl.sched_output_path)
+        if not job_tmpl.sched_join_files:
+            if (job_tmpl.sched_error_path is not None and 
+            job_tmpl.sched_error_path not in retrieve_list):
+                retrieve_list.append(job_tmpl.sched_error_path)
+        self._set_retrieve_list(retrieve_list)
+
         
         job_tmpl.prepend_text = (
             ((self.get_prepend_text() + u"\n\n") if 
@@ -1155,6 +1195,60 @@ class Calculation(Node):
                                                     remote_abs_path))
 
         return subfolder, script_filename
+
+    def get_scheduler_output(self):
+        """
+        Return the output of the scheduler output (a string) if the calculation
+        has finished, and output node is present, and the output of the
+        scheduler was retrieved.
+        
+        Return None otherwise.
+        """       
+        from aiida.common.exceptions import NotExistent
+        
+        # Shortcut if no error file is set
+        if self.SCHED_OUTPUT_FILE is None:
+            return None
+        
+        retrieved_node = self.get_retrieved_node()
+        if retrieved_node is None:
+            return None
+
+        try:
+            outfile_content = retrieved_node.get_file_content(
+                self.SCHED_OUTPUT_FILE)
+        except (NotExistent):
+            # Return None if no file is found
+            return None
+
+        return outfile_content
+
+    def get_scheduler_error(self):
+        """
+        Return the output of the scheduler error (a string) if the calculation
+        has finished, and output node is present, and the output of the
+        scheduler was retrieved.
+        
+        Return None otherwise.
+        """
+        from aiida.common.exceptions import NotExistent
+
+        # Shortcut if no error file is set
+        if self.SCHED_ERROR_FILE is None:
+            return None
+
+        retrieved_node = self.get_retrieved_node()
+        if retrieved_node is None:
+            return None
+
+        try:
+            errfile_content = retrieved_node.get_file_content(
+                self.SCHED_ERROR_FILE)
+        except (NotExistent):
+            # Return None if no file is found
+            return None
+        
+        return errfile_content
 
 class CalculationResultManager(object):
     """

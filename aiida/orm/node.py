@@ -55,6 +55,9 @@ class Node(object):
             newcls._logger = logging.getLogger(
                 '{:s}.{:s}'.format(attrs['__module__'], name))
             
+            # Note: the reverse logic (from type_string to name that can
+            # be passed to the plugin loader) is implemented in 
+            # aiida.common.pluginloader.
             prefix = "aiida.orm."
             if attrs['__module__'].startswith(prefix):
                 # Strip aiida.orm.

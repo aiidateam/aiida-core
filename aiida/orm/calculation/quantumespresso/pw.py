@@ -17,8 +17,9 @@ import os
 
 from aiida.orm import Calculation, DataFactory
 from aiida.orm.calculation.quantumespresso import BasePwCpInputGenerator
+from aiida.common.utils import classproperty
 
-ParameterData = DataFactory('parameter')
+from aiida.orm.data.parameter import ParameterData
   
 class PwCalculation(BasePwCpInputGenerator, Calculation):   
     """
@@ -55,21 +56,22 @@ class PwCalculation(BasePwCpInputGenerator, Calculation):
     ]
     
     _use_kpoints = True
+
+    @classproperty
+    def _use_methods(cls):
+        """
+        Extend the parent _use_methods with further keys.
+        """
+        retdict = Calculation._use_methods
+        retdict.update(BasePwCpInputGenerator._baseclass_use_methods)
+        
+        retdict['kpoints'] = {
+               'valid_types': ParameterData,
+               'additional_parameter': None,
+               'linkname': 'kpoints',
+               'docstring': "Use the node defining the kpoint sampling to use",
+               }
+        
+        return retdict
     
 
-    def use_kpoints(self, data):
-        """
-        Set the kpoints for this calculation.
-
-        :param data: Object ParameterData that represents the kpoints
-        """
-        if not isinstance(data, ParameterData):
-            raise ValueError("The data must be an instance of the ParameterData class")
-
-        self._replace_link_from(data, self.get_linkname_kpoints())
-
-    def get_linkname_kpoints(self):
-        """
-        :return: the name of the link used for the kpoints
-        """
-        return "kpoints"

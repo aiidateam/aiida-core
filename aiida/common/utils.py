@@ -315,3 +315,12 @@ def str_timedelta(dt, max_num_fields=3, short=False, negative_to_zero = True):
     # Return the resulting string, appending a suitable string if the time
     # is negative
     return "{}{}".format(raw_string, negative_string)
+
+def create_display_name(field):
+    """
+    Given a string, creates the suitable "default" display name: replace 
+    underscores with spaces, and capitalize each word.
+    
+    :return: the converted string
+    """
+    return ' '.join(_.capitalize() for _ in field.split('_'))

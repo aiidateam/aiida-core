@@ -18,8 +18,9 @@ import os
 
 from aiida.orm import Calculation, DataFactory
 from aiida.orm.calculation.quantumespresso import BasePwCpInputGenerator
+from aiida.common.utils import classproperty
 
-ParameterData = DataFactory('parameter')
+from aiida.orm.data.parameter import ParameterData
   
 class CpCalculation(BasePwCpInputGenerator, Calculation):   
     """
@@ -68,6 +69,17 @@ class CpCalculation(BasePwCpInputGenerator, Calculation):
     ]
     
     _use_kpoints = False
+    
+    @classproperty
+    def _use_methods(cls):
+        """
+        Extend the parent _use_methods with further keys.
+        """
+        retdict = Calculation._use_methods
+        retdict.update(BasePwCpInputGenerator._baseclass_use_methods)
+        
+        return retdict
+    
     
     _cp_ext_list = ['cel', 'con', 'eig', 'evp', 'for', 'nos', 'pol', 
                     'pos', 'spr', 'str', 'the', 'vel', 'wfc']

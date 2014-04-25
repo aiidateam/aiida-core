@@ -375,6 +375,13 @@ def submit_calc(calc, authinfo, transport=None):
         raise ValueError("Can only submit calculations with state=TOSUBMIT! "
                          "(state of calc {} is {} instead)".format(
                              calc.pk, calc.get_state()))
+    if calc.has_cached_links():
+        raise ValueError("Cannot submit calculation {} because it has "
+                         "cached input links! If you "
+                         "just want to test the submission, use the "
+                         "test_submit() method, otherwise store all links"
+                         "first".format(calc.pk))
+                
     # I start to submit the calculation: I set the state
     calc._set_state(calc_states.SUBMITTING)
              
@@ -399,7 +406,8 @@ def submit_calc(calc, authinfo, transport=None):
                 code.pk, calc.pk, computer.name))
         
         with SandboxFolder() as folder:
-            calcinfo, script_filename = calc.presubmit(folder, code)
+            calcinfo, script_filename = calc.presubmit(folder,
+                                                       use_unstored_links=False)
 
             # After this call, no modifications to the folder should be done
             calc._store_raw_input_folder(folder.abspath)

@@ -189,7 +189,10 @@ class Node(object):
         self._temp_folder = None
 
         dbnode = kwargs.pop('dbnode', None)
-   
+        
+        # Empty cache of input links in any case
+        self._inputlinks_cache = {}
+        
         if dbnode is not None:
             if not isinstance(dbnode, DbNode):
                 raise TypeError("dbnode is not a DbNode instance")
@@ -438,10 +441,109 @@ class Node(object):
         """
         return self.dbnode.user
 
-    def _replace_link_from(self,src,label):
+    def has_cached_links(self):
+        """
+        Return True if there is at least one cached (input) link, that is a
+        link that is not stored yet in the database. False otherwise.
+        """
+        return len(self._inputlinks_cache) != 0
+
+    def _add_link_from(self, src, label=None):
+        """
+        Add a link to the current node from the 'src' node.
+        Both nodes must be a Node instance (or a subclass of Node)
+        :note: In subclasses, change only this. Moreover, remember to call
+           the super() method in order to properly use the caching logic!
+        
+        
+        :param src: the source object
+        :param str label: the name of the label to set the link from src.
+                    Default = None.
+        """
+        # Check that the label does not already exist
+        
+        # This can happen also if both nodes are stored, e.g. if one first
+        # stores the output node and then the input node. Therefore I check
+        # it here.
+        if label in self._inputlinks_cache:
+            raise UniquenessError("Input link with name '{}' already present "
+                                  "in the internal cache")
+        
+        # If both are stored, write directly on the DB
+        if not self._to_be_stored and not src._to_be_stored:
+            self._add_dblink_from(src, label)
+        else: # at least one is not stored: add to the internal cache
+            self._add_cachelink_from(src, label)
+
+    def _add_cachelink_from(self, src, label):
+        """
+        Add a link in the cache.
+        """
+        if label is None:
+            raise ModificationNotAllowed("Cannot store a link in the cache if "
+                             "no explicit label is provided. You can avoid "
+                             "to provide an input link name only if "
+                             "both nodes are already stored: in this case, "
+                             "the link will be directly stored in the DB "
+                             "and a default name will be provided")
+
+        if label in self._inputlinks_cache:
+            raise UniquenessError("Input link with name '{}' already present "
+                                  "in the internal cache")
+                
+        self._inputlinks_cache[label] = src
+
+    def _replace_link_from(self, src, label):
         """
         Replace an input link with the given label, or simply creates it
         if it does not exist.
+        :note: In subclasses, change only this. Moreover, remember to call
+           the super() method in order to properly use the caching logic!
+        
+        :param src: the source object
+        :param str label: the name of the label to set the link from src.
+        """        
+        # If both are stored, write directly on the DB
+        if not self._to_be_stored and not src._to_be_stored:
+            self._replace_dblink_from(src, label)
+            # If the link was in the local cache, remove it
+            # (this could happen if I first store the output node, then
+            # the input node.
+            try:
+                del self._inputlinks_cache[label]
+            except KeyError:
+                pass
+        else: # at least one is not stored: set in the internal cache
+            self._inputlinks_cache[label] = src
+
+    def _remove_link_from(self, src, label):
+        """
+        Remove from the DB the input link with the given label.
+        :note: In subclasses, change only this. Moreover, remember to call
+           the super() method in order to properly use the caching logic!
+        
+        :note: No error is raised if the link does not exist.
+        
+        :param src: the source object
+        :param str label: the name of the label to set the link from src.
+        """
+        # Try to remove from the local cache, no problem if none is present
+        try:
+            del self._inputlinks_cache[label]
+        except KeyError:
+            pass
+
+        # If both are stored, remove also from the DB
+        if not self._to_be_stored and not src._to_be_stored:
+            self._remove_dblink_from(src, label)
+
+    def _replace_dblink_from(self,src,label):
+        """
+        Replace an input link with the given label, or simply creates it
+        if it does not exist.
+        
+        :note: this function should not be called directly; it acts directly on
+            the database.
         
         :param str src: the source object.
         :param str label: the label of the link from src to the current Node
@@ -450,20 +552,37 @@ class Node(object):
         from aiida.djsite.db.models import DbLink
         
         try:
-            self._add_link_from(src, label)
+            self._add_dblink_from(src, label)
         except UniquenessError:
             # I have to replace the link; I do it within a transaction
             with transaction.commit_on_success():
-                DbLink.objects.filter(output=self.dbnode,
-                                    label=label).delete()
-                self._add_link_from(src, label)
+                self._remove_dblink_from(label)
+                self._add_dblink_from(src, label)
 
+    def _remove_dblink_from(self,label):
+        """
+        Remove from the DB the input link with the given label.
+        
+        :note: this function should not be called directly; it acts directly on
+            the database.
+            
+        :note: No checks are done to verify that the link actually exists.
+        
+        :param str label: the label of the link from src to the current Node
+        """
+        from django.db import transaction        
+        from aiida.djsite.db.models import DbLink
+        
+        DbLink.objects.filter(output=self.dbnode,
+                              label=label).delete()
 
-    def _add_link_from(self,src,label=None):
+    def _add_dblink_from(self,src,label=None):
         """
         Add a link to the current node from the 'src' node.
         Both nodes must be a Node instance (or a subclass of Node)
-        (In subclasses, change only this.)
+        
+        :note: this function should not be called directly; it acts directly on
+            the database.
         
         :param src: the source object
         :param str label: the name of the label to set the link from src.
@@ -482,32 +601,14 @@ class Node(object):
         # this is not the case)
         src.can_link_as_output(self)
 
-
-
-        ##       if self._to_be_stored:
-        ###           ADD to internal dictionary, understand what to do if 
-        ###           label == None (maybe have a None key, that is a list,
-        ###                          and append the src?)
-        ###           if label is not None: check for existence
-        ###     else:
-        ###          if src._to_be_stored: raise  
-        
-        ## TODO, moreover:
-        ## in store: raise if the internal dict is not empty
-        ## define store_all to store the parents, self and then the links;
-        ## try to see if it can be done in a transaction so that if anything
-        ## fails, we have not stored anything (but understand what to do for
-        ## the files!! and be careful for transactions inside transactions)
-        ## 
-        
-
         if self._to_be_stored:
             raise ModificationNotAllowed(
-                "You have to store the destination node to make link")
+                "Cannot call the internal _add_dblink_from if the "
+                "destination node is not stored")
         if src._to_be_stored:
             raise ModificationNotAllowed(
-                "You have to store the source node to make a link")
-
+                "Cannot call the internal _add_dblink_from if the "
+                "source node is not stored")
 
         # Check for cycles. This works if the transitive closure is enabled; if it 
         # isn't, this test will never fail, but then having a circular link is not
@@ -595,7 +696,7 @@ class Node(object):
         """
         return dict(self.get_inputs(also_labels=True))
 
-    def get_inputdata_dict(self):
+    def get_inputdata_dict(self, only_in_db=False):
         """
         Return a dictionary where the key is the label of the input link, and
         the value is the input node. Includes only the data nodes, no
@@ -604,7 +705,8 @@ class Node(object):
         :return: a dictionary {label:object}
         """
         from aiida.orm import Data
-        return dict(self.get_inputs(type=Data, also_labels=True))
+        return dict(self.get_inputs(type=Data, also_labels=True,
+                                    only_in_db=only_in_db))
 
     def get_input(self, name):
         """
@@ -616,7 +718,7 @@ class Node(object):
         """
         return self.get_inputdata_dict().get(name, None)
 
-    def get_inputs(self,type=None,also_labels=False):
+    def get_inputs(self,type=None,also_labels=False, only_in_db=False):
         """
         Return a list of nodes that enter (directly) in this node
 
@@ -626,23 +728,37 @@ class Node(object):
                 If True, return a list of tuples, where each tuple has the
                 following format: ('label', Node), with 'label' the link label,
                 and Node a Node instance or subclass
+        :param only_in_db: Return only the inputs that are in the database,
+                ignoring those that are in the local cache. Otherwise, return
+                all links.
         """
         from aiida.djsite.db.models import DbLink
 
-        inputs_list = ((i.label, i.input.get_aiida_class()) for i in
-                       DbLink.objects.filter(output=self.dbnode).distinct())
+        inputs_list = [(i.label, i.input.get_aiida_class()) for i in
+                       DbLink.objects.filter(output=self.dbnode).distinct()]
+        
+        
+        
+        if not only_in_db:
+            # Needed for the check
+            input_list_keys = [i[0] for i in inputs_list]
+            
+            for k, v in self._inputlinks_cache.iteritems():
+                if k in input_list_keys:
+                    raise InternalError("There exist a link with the same name "
+                        "'{}' both in the DB and in the internal "
+                        "cache for node pk={}!".format(k, self.pk))
+                inputs_list.append((k, v))
         
         if type is None:
-            if also_labels:
-                return list(inputs_list)
-            else:
-                return [i[1] for i in inputs_list]
+            filtered_list = inputs_list
         else:
-            filtered_list = (i for i in inputs_list if isinstance(i[1],type))
-            if also_labels:
-                return list(filtered_list)
-            else:
-                return [i[1] for i in filtered_list]
+            filtered_list = [i for i in inputs_list if isinstance(i[1],type)]
+
+        if also_labels:
+            return list(filtered_list)
+        else:
+            return [i[1] for i in filtered_list]
             
 
     def get_outputs(self,type=None,also_labels=False):
@@ -1168,6 +1284,82 @@ class Node(object):
         return self.current_folder.get_subfolder(section,
             reset_limit=True).get_abs_path(path,check_existence=True)
 
+    def store_all(self):
+        """
+        Store the node, together with all input links, if cached, and also the
+        linked nodes, if they were not stored yet.
+        """
+        self.store()
+        self.store_input_links(store_parents=True)
+        
+        return self
+
+    def store_input_links(self, store_parents=True, only_stored=False):
+        """
+        Store all input links that are in the local cache, transferring them 
+        to the DB.
+        
+        :note: if store_parents is True, input nodes are stored one by one, 
+            and therefore if an error occurs only some nodes may be in the
+            stored state.
+        
+        :note: Links are stored only after the input nodes are stored. Moreover,
+            link storage is done in a transaction, and if one of the links
+            cannot be stored, an exception is raised and *all* links will remain
+            in the cache. 
+        
+        :note: This function can be called only after the node is stored.
+           After that, it can be called multiple times, and nothing will be
+           executed if no links are still in the cache.
+        
+        :param store_parents: If True, it will also store nodes that are linked
+            in input that were not stored yet.
+        :param only_stored: will only store those input links where also the
+            source is already stored. This is normally False, and is called 
+            with True usually only within the .store() method.
+        """
+        from django.db import transaction
+
+        if self._to_be_stored:
+            raise ModificationNotAllowed(
+                "Node with pk={} is not stored yet".format(self.pk))
+        
+        # Preliminary check, and storage
+        if not only_stored:
+            # I have to store all links, in this case
+            links_to_store = list(self._inputlinks_cache.keys())
+            if not store_parents:
+                for link in self._inputlinks_cache:
+                    if self._inputlinks_cache[link]._to_be_stored:
+                        raise ModificationNotAllowed(
+                            "Cannot store the input link '{}' because the "
+                            "source node is not stored. Either store it first, "
+                            "or call store_input_links with the store_parents "
+                            "parameter set to True".format(link))
+            else:
+                for link in self._inputlinks_cache:
+                    if self._inputlinks_cache[link]._to_be_stored:
+                        self._inputlinks_cache[link].store()
+        else:
+            # I have to store only those links where the source is already
+            # stored
+            links_to_store = [link for link in self._inputlinks_cache.keys()
+                              if not self._inputlinks_cache[link]._to_be_stored]
+            
+        # If we are here, all input nodes should be stored, we can simply store
+        # the links
+        with transaction.commit_on_success():
+            for link in links_to_store:
+                self._add_dblink_from(self._inputlinks_cache[link], link)
+            # If everything went smoothly, clear the entries from the cache.
+            # I do it here because I delete them all at once if no error
+            # occurred; otherwise, links will not be stored and I 
+            # should not delete them from the cache (but then an exception
+            # would have been raised, and the following lines are not executed)
+            for link in links_to_store:
+                del self._inputlinks_cache[link]
+
+
     def store(self):
         """
         Store a new node in the DB, also saving its repository directory
@@ -1176,6 +1368,10 @@ class Node(object):
         Can be called only once. Afterwards, attributes cannot be
         changed anymore! Instead, extras can be changed only AFTER calling
         this store() function.
+        
+        :note: After successful storage, those links that are in the cache, and
+            for which also the parent node is already stored, will be
+            automatically stored. The others will remain unstored.
         """
         #TODO: This needs to be generalized, allowing for flexible methods
         # for storing data and its attributes.
@@ -1214,11 +1410,15 @@ class Node(object):
             
             self._temp_folder = None            
             self._to_be_stored = False
+            
+            # Here, I store those links that were in the cache and that are
+            # between stored nodes.
+            self.store_input_links(store_parents=False, only_stored=True)
         else:
             self.logger.error("Trying to store an already saved node: "
-                              "{}".format(self.uuid))
+                              "pk={}".format(self.pk))
             raise ModificationNotAllowed(
-                "Node with uuid={} was already stored".format(self.uuid))
+                "Node with pk={} was already stored".format(self.pk))
 
         # This is useful because in this way I can do
         # n = Node().store()

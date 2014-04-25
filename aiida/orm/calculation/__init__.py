@@ -126,8 +126,10 @@ class Calculation(Node):
                     valid_types_string = self.data['valid_types'].__name__
                 if not isinstance(parent_node, self.data['valid_types']):
                     raise TypeError("The given node is not of the valid type "
-                                    "for use_{}. Valid types are: {}".format(
-                                    self.actual_name, valid_types_string))
+                                    "for use_{}. Valid types are: {}, while "
+                                    "you provided {}".format(
+                                    self.actual_name, valid_types_string,
+                                    parent_node.__class__.__name__))
                 
                 # Get actual link name
                 actual_linkname = self.node.get_linkname(actual_name, *args,
@@ -563,7 +565,9 @@ class Calculation(Node):
         
     def _add_link_from(self,src,label=None):
         '''
-        Add a link with a code as destination.
+        Add a link with a code as destination. Only possible if the calculation
+        is in state NEW.
+        
         You can use the parameters of the base Node class, in particular the
         label parameter to label the link.
         
@@ -574,6 +578,30 @@ class Calculation(Node):
         from aiida.orm.data import Data
         from aiida.orm.code import Code
         
+        if not isinstance(src,(Data, Code)):
+            raise ValueError("Nodes entering in calculation can only be of "
+                             "type data or code")
+        
+        valid_states = [calc_states.NEW]
+
+        if self.get_state() not in valid_states:
+            raise ModificationNotAllowed(
+                "Can add an input link to a calculation only if it is in one "
+                "of the following states: {}, it is instead {}".format(
+                    valid_states, self.get_state()))
+
+        return super(Calculation,self)._add_link_from(src, label)
+
+    def _replace_link_from(self,src,label):
+        '''
+        Replace a link. Only possible if the calculation is in state NEW.
+        
+        :param src: a node of the database. It cannot be a Calculation object.
+        :param str label: Name of the link. 
+        '''
+        
+        from aiida.orm.data import Data
+        from aiida.orm.code import Code
         
         if not isinstance(src,(Data, Code)):
             raise ValueError("Nodes entering in calculation can only be of "
@@ -583,11 +611,28 @@ class Calculation(Node):
 
         if self.get_state() not in valid_states:
             raise ModificationNotAllowed(
-                "Can add an input node to a calculation only if it is in one "
+                "Can replace an input link to a calculation only if it is in one "
                 "of the following states: {}, it is instead {}".format(
                     valid_states, self.get_state()))
 
-        return super(Calculation,self)._add_link_from(src, label)
+        return super(Calculation,self)._replace_link_from(src, label)
+
+    def _remove_link_from(self,label):
+        '''
+        Remove a link. Only possible if the calculation is in state NEW.
+        
+        :param str label: Name of the link to remove. 
+        '''        
+        valid_states = [calc_states.NEW]
+
+        if self.get_state() not in valid_states:
+            raise ModificationNotAllowed(
+                "Can remove an input link to a calculation only if it is in one "
+                "of the following states: {}, it is instead {}".format(
+                    valid_states, self.get_state()))
+
+        return super(Calculation,self)._remove_link_from(label)
+
 
     def _set_state(self, state):
         if state not in calc_states:
@@ -936,7 +981,7 @@ class Calculation(Node):
         return dict(self.get_inputs(type=Code, also_labels=True)).get(
             self._use_methods['code']['linkname'], None)
                 
-    def _prepare_for_submission(self,tempfolder,inputdict=None):        
+    def _prepare_for_submission(self,tempfolder,inputdict):        
         """
         This is the routine to be called when you want to create
         the input files and related stuff with a plugin.
@@ -944,16 +989,13 @@ class Calculation(Node):
         Args:
             tempfolder: a aiida.common.folders.Folder subclass where
                 the plugin should put all its files.
-            inputdict: None, if it has to be calculated automatically
-                from the input nodes using the
-                self.get_inputdata_dict() method.
-                Otherwise, a dictionary where
+            inputdict: A dictionary where
                 each key is an input link name and each value an AiiDA
                 node, as it would be returned by the
-                self.get_inputdata_dict() method.
-                The advantage of having this as a key is that this
-                allows to test for submission even before creating 
-                the nodes in the DB.
+                self.get_inputdata_dict() method (without the Code!).
+                The advantage of having this explicitly passed is that this
+                allows to choose outside which nodes to use, and whether to
+                use also unstored nodes, e.g. in a test_submit phase.
 
         TODO: document what it has to return (probably a CalcInfo object)
               and what is the behavior on the tempfolder
@@ -985,9 +1027,11 @@ class Calculation(Node):
         """ 
         from aiida.common.exceptions import InvalidOperation
         
-        if self.get_state() != calc_states.NEW:
-            raise InvalidOperation("Cannot submit a calculation not in {} state"
-                                   .format(calc_states.NEW) )
+        current_state = self.get_state()
+        if current_state != calc_states.NEW:
+            raise InvalidOperation("Cannot submit a calculation not in {} "
+                                   "state (the current state is {})"
+                                   .format(calc_states.NEW, current_state) )
 
         self._set_state(calc_states.TOSUBMIT)
 
@@ -1137,7 +1181,7 @@ class Calculation(Node):
                                 extra=logger_extra)
             
         
-    def presubmit(self, folder, code, inputdict=None):
+    def presubmit(self, folder, use_unstored_links=False):
         import os
         import StringIO
         import json
@@ -1149,6 +1193,12 @@ class Calculation(Node):
         from aiida.orm import Computer
 
         computer = self.get_computer()
+
+        code = self.get_code()
+        if use_unstored_links:
+            inputdict = self.get_inputdata_dict(only_in_db=False)
+        else:
+            inputdict = self.get_inputdata_dict(only_in_db=False)
 
         calcinfo = self._prepare_for_submission(folder, inputdict)
         s = computer.get_scheduler()
@@ -1325,12 +1375,31 @@ class Calculation(Node):
         """
         return CalculationResultManager(self)
 
-    def submit_test(self, folder, code, inputdict, subfolder_name = None):
+    def submit_test(self, folder=None, subfolder_name = None):
+        """
+        Test submission, creating the files in a local folder.
+        
+        :note: this submit_test function does not require any node
+            (neither the calculation nor the input links) to be stored yet.
+        
+        :param folder: A Folder object, within which each calculation files 
+            are created; if not passed, a subfolder 'submit_test' of the current
+            folder is used.
+        :param subfolder_name: the name of the subfolder to use for this
+            calculation (within Folder). If not passed, a unique string 
+            starting with the date and time in the format ``yymmdd-HHMMSS-``
+            is used.
+        """
         import os
-        from aiida.transport.plugins.local import LocalTransport
         import datetime
         import tempfile
+
+        from aiida.transport.plugins.local import LocalTransport
         from aiida.orm import Computer
+        from aiida.common.folders import Folder
+        
+        if folder is None:
+            folder = Folder(os.path.abspath('submit_test'))
         
         # In case it is not created yet
         folder.create()
@@ -1353,7 +1422,9 @@ class Calculation(Node):
             t.chdir(subfolder.abspath)
         
             calcinfo, script_filename = self.presubmit(
-                subfolder, code, inputdict)
+                subfolder, use_unstored_links=True)
+        
+            code = self.get_code()
         
             if code.is_local():
                 # Note: this will possibly overwrite files

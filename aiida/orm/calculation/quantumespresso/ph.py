@@ -74,23 +74,20 @@ class PhCalculation(Calculation):
             })
         return retdict
     
-    def _prepare_for_submission(self,tempfolder,inputdict=None):        
+    def _prepare_for_submission(self,tempfolder,inputdict):        
         """
         This is the routine to be called when you want to create
         the input files and related stuff with a plugin.
         
-        Args:
-            tempfolder: a aiida.common.folders.Folder subclass where
-                the plugin should put all its files.
+        :param tempfolder: a aiida.common.folders.Folder subclass where
+                           the plugin should put all its files.
+        :param inputdict: a dictionary with the input nodes, as they would
+                be returned by get_inputdata_dict (without the Code!)
         """
 #        from aiida.common.utils import get_unique_filename, get_suggestion
 
         local_copy_list = []
         remote_copy_list = []
-        
-        # The code is not here, only the data        
-        if inputdict is None:
-            inputdict = self.get_inputdata_dict()
 
         try:
             parameters = inputdict.pop(self.get_linkname('parameters'))

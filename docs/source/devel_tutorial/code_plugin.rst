@@ -68,20 +68,26 @@ look like the following::
 
 Note: the PwCalculation inherits both the calculation and the ``BasicPwCpInputGenerator`` classes.
 
-Every plugin class is required to have the following hidden method::
+Every plugin class is required to have the following method::
 
-  def _prepare_for_submission(self,tempfolder,inputdict=None):
+  def _prepare_for_submission(self,tempfolder,inputdict):
 
 This function is called by the executionmanager when it's needed to create a new calculation.
-If inputdict is None, it has to be calculated using::
-   
-   # The code is not here, only the data        
-   if inputdict is None:
+The ``inputdict`` must contain all the input data nodes as a dictionary, in the
+same format that is returned by the ``get_inputdata_dict()`` method.
+
+.. note:: inputdict should contain all input ``Data`` nodes, but *not* the code.
+  (this is what the ``get_inputdata_dict()`` method does, by the way).
+
+In general, you simply want to do::
+
       inputdict = self.get_inputdata_dict()
-    
-otherwise the function should use the inputdict provided as input
-(this is useful to test for submission without the need to store all nodes
-on the DB).    
+
+right before calling ``_prepare_for_submission``.
+The reason for having this explicitly passed is that the plugin does not have
+to perform explicit database queries, and moreover this is useful to test
+for submission without the need to store all nodes on the DB.    
+
 No other specific functions have to be created for the plugin to work.
 This function is expected to receive in input a tempfolder. 
 This is a folder object in which the plugin will prepare and write the files needed for the code execution on the cluster (this is actually the folder that will be copied on the cluster and executed).
@@ -182,10 +188,8 @@ Step 2: write your input
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 How does the method ``_prepare_for_submission`` work in practice?
-At first, one needs to find all the input nodes of the calculation. 
-The method ``self.get_inputdata_dict()`` does a query to the database,
-and asks for all the nodes that are input to the calculation object (``self``), as a result, it returns a dictionary that has the linkname for the key, and the node object as for the value.
-After this first query, you should check if the input nodes are logically sufficient to run an actual calculation. 
+You should start by checking if the input nodes passed in ``inputdict``
+are logically sufficient to run an actual calculation. 
 For example, a Pw calculation with QE strictly requires parameters, k_points, pseudopotentials and a structure.
 There are some nodes that are optional or that may be used in future for further functionalities.
 Note however that is good to check that there are no unused nodes, if this happens, an ``InputValidationError`` exception must be raised. 

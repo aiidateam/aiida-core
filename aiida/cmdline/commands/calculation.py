@@ -116,6 +116,9 @@ class Calculation(VerdiCommand):
         parser.add_argument('-p', '--past-days', metavar='N', 
                             help="add a filter to show only calculations created in the past N days",
                             action='store', type=int)
+        parser.add_argument('-g', '--group', metavar='GROUPNAME', 
+                            help="add a filter to show only calculations within a given group",
+                            action='store', type=str)
         parser.add_argument('pks', type=int, nargs='*',
                             help="a list of calculations to show. If empty, all running calculations are shown. If non-empty, ignores the -p and -r options.")
         parser.add_argument('-a', '--all-states',
@@ -134,7 +137,8 @@ class Calculation(VerdiCommand):
         
         print C.list_calculations(states=parsed_args.states,
                                      past_days=parsed_args.past_days, 
-                                     pks=parsed_args.pks) 
+                                     pks=parsed_args.pks,
+                                     group=parsed_args.group) 
     
     def calculation_show(self, *args):
         from aiida.common.exceptions import NotExistent

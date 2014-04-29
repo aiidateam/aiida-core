@@ -790,7 +790,7 @@ class Calculation(Node):
             return None
     
     @classmethod
-    def list_calculations(cls,states=None, past_days=None, pks=[]):
+    def list_calculations(cls,states=None, past_days=None, group=None, pks=[]):
         """
         This function return a string with a description of the AiiDA calculations.
         
@@ -798,6 +798,8 @@ class Calculation(Node):
             calculations in the states "states", otherwise shows all. Default = None.
         :param past_days: If specified, show only calculations that were created in
             the given number of past days.
+        :param group: If specified, show only calculations belonging to a group
+            with the given name.
         :param pks: if specified, must be a list of integers, and only calculations
             within that list are shown. Otherwise, all calculations are shown.
             If specified, sets state to None and ignores the 
@@ -829,15 +831,18 @@ class Calculation(Node):
             q_object = Q(pk__in=pks)
         else:
             q_object = Q(user=get_automatic_user())
-            if states:
+            if states is not None:
 #                q_object.add(~Q(dbattributes__key='state',
 #                                dbattributes__tval=only_state,), Q.AND)
                 q_object.add( Q(dbattributes__key='state',
                                 dbattributes__tval__in=states,), Q.AND)
-            if past_days:
+            if past_days is not None:
                 now = timezone.now()
                 n_days_ago = now - datetime.timedelta(days=past_days)
                 q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
+
+            if group is not None:
+                q_object.add(Q(dbgroups__name=group), Q.AND)
 
         calc_list = cls.query(q_object).distinct().order_by('ctime')
         

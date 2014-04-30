@@ -256,3 +256,29 @@ class PhCalculation(Calculation):
         
         self.use_parent_folder(remotedata)
         
+
+    def get_parent_calc(self):
+        """
+        Return the parent calculation of Ph, 
+        from which it will inherit the outputsubfolder.
+        Raise NotExistent if no parent_calculation was set.
+        """       
+        from aiida.common.exceptions import NotExistent
+        
+        try:
+            parentremotedata = self.get_inputs_dict()[
+                self._use_methods['parent_folder']['linkname']]
+        except KeyError:
+            raise NotExistent("No parent folder was set, therefore I cannot "
+                              "return a parent pw.x calculation.")
+        
+        parentcalcs = parentremotedata.get_inputs(type=PwCalculation)
+        if len(parentcalcs) > 1:
+            raise UniquenessError("More than one input pw.x calculation found")
+        if parentcalcs:
+            return parentcalcs[0]
+        else:
+            raise NotExistent("An input parent_folder exists, but no parent "
+                              "pw.x calculation was found.")
+            
+

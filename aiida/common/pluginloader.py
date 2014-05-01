@@ -5,6 +5,28 @@ from aiida.common.exceptions import MissingPluginError
 
 logger = aiida.common.aiidalogger.getChild('pluginloader')
 
+def get_class_typestring(type_string):
+    """
+    Given the type string, return three strings: the first one is 
+    one of the first-level classes that the Node can be:
+    "node", "calculation", "code", "data".
+    The second string is the one that can be passed to the DataFactory or
+    CalculationFactory (or an empty string for nodes and codes);
+    the third one is the name of the python class that would be loaded.
+    """
+    from aiida.common.exceptions import DbContentError
+    
+    if type_string == "":
+        return ("node", "")
+    else:
+        pieces = type_string.split('.')
+        if pieces[-1]:
+            raise DbContentError("The type string does not end with a dot")
+        if len(pieces) < 3:
+            raise DbContentError("Not enough parts in the type string")
+        return pieces[0], ".".join(pieces[1:-2]), pieces[-2]
+        
+
 def _existing_plugins_with_module(base_class, plugins_module_path,
                                   pkgname, basename, max_depth):
     """

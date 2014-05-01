@@ -5,15 +5,31 @@ Getting parsed calculation results
 In this section, we describe how to get the results of a calculation, after AiiDA
 parsed the output of the calculation.
 
-When a calculation is done on the remote computer, AiiDA will retrieve the results and
-try to parse the results with the default parser, if one is available for the given calculation.
-These results are stored in new nodes, and connected as output of the calculation.
-Of course, it is possible for a given calculation to check output nodes and get their content, 
-However, AiiDA provides a way to access directly the results, using the
-:py:class:`aiida.orm.calculation.CalculationResultManager` class, described in the next section.
+When a calculation is done on the remote computer, AiiDA will retrieve the
+results and try to parse the results with the default parser, if one is
+available for the given calculation.
+These results are stored in new nodes, and connected as output of the
+calculation. Of course, it is possible for a given calculation to check
+output nodes and get their content. However, AiiDA provides a way to access
+directly the results, using the
+:py:class:`aiida.orm.calculation.CalculationResultManager` class,
+described in the next section.
 
 The CalculationResultManager
 +++++++++++++++++++++++++++++
+
+.. note:: In the following, we assume that ``calc`` is a correctly finished
+  and parsed Quantum ESPRESSO pw.x calculation. You can load such a calculation
+  for instance with the command::
+
+    calc = Calculation.get_subclass_from_pk(YOURPK)
+
+  either in ``verdi shell``, or in a python script
+  (see :doc:`here <../examples/scripting>` for more information
+  on how to use ``verdi shell`` or how to run python scripts for AiiDA),
+  and where ``YOURPK`` is substituted by a valid calculation PK in your database.
+
+
 Each calculation has a ``res`` attribute that is a CalculationResultManager object and
 gives direct access to parsed data. 
 
@@ -22,9 +38,8 @@ To use it, you can just use then::
   calc.res
 
 that will however just return the class. You can however convert it to
-a list, to get all the possible keys that were parsed. For intance, if
-you consider a correctly finished Quantum ESPRESSO pw.x calculation ``calc``,
-and you type (e.g. in ``verdi shell``, or in a python script)::
+a list, to get all the possible keys that were parsed. For instance, if you
+type::
 
   print list(calc.res)
 

@@ -82,9 +82,11 @@ class DbNode(m.Model):
     user = m.ForeignKey(User, on_delete=m.PROTECT)
 
     # Direct links
-    outputs = m.ManyToManyField('self', symmetrical=False, related_name='inputs', through='DbLink')  
+    outputs = m.ManyToManyField('self', symmetrical=False,
+                                related_name='inputs', through='DbLink')  
     # Transitive closure
-    children = m.ManyToManyField('self', symmetrical=False, related_name='parents', through='DbPath')
+    children = m.ManyToManyField('self', symmetrical=False,
+                                 related_name='parents', through='DbPath')
     
     # Used only if dbnode is a calculation, or remotedata
     dbcomputer = m.ForeignKey('DbComputer', null=True, on_delete=m.PROTECT)
@@ -146,6 +148,20 @@ class DbNode(m.Model):
         else:
             thistype = thistype[:-1] # Strip final dot
             return thistype.rpartition('.')[2]
+
+    @property
+    def attributes(self):
+        """
+        Return all attributes of the given node as a single dictionary.
+        """
+        return DbAttribute.get_all_values_for_node(self)
+
+    @property
+    def extras(self):
+        """
+        Return all extras of the given node as a single dictionary.
+        """
+        return DbExtra.get_all_values_for_node(self)
 
     @python_2_unicode_compatible
     def __str__(self):

@@ -94,6 +94,7 @@ class TestQEPWInputGeneration(QETestCase):
         # Reset logging level
         logging.disable(logging.NOTSET)
 
+        inputdict = c.get_inputdata_dict()
         
         with SandboxFolder() as f:
             # I use the same SandboxFolder more than once because nothing
@@ -101,22 +102,27 @@ class TestQEPWInputGeneration(QETestCase):
 
             # Missing required input nodes
             with self.assertRaises(InputValidationError):
-                c._prepare_for_submission(f)
+                c._prepare_for_submission(f, inputdict)
             c.use_parameters(p)
+            inputdict = c.get_inputdata_dict()
             with self.assertRaises(InputValidationError):
-                c._prepare_for_submission(f)
+                c._prepare_for_submission(f, inputdict)
             c.use_structure(s)
+            inputdict = c.get_inputdata_dict()
             with self.assertRaises(InputValidationError):
-                c._prepare_for_submission(f)
-            c.use_kpoints(k)            
+                c._prepare_for_submission(f, inputdict)
+            c.use_kpoints(k)
+            inputdict = c.get_inputdata_dict()
             with self.assertRaises(InputValidationError):
-                c._prepare_for_submission(f)
+                c._prepare_for_submission(f, inputdict)
             c.use_pseudo(pseudos['Ba'], 'Ba')
-            c._prepare_for_submission(f)
+            inputdict = c.get_inputdata_dict()
+            c._prepare_for_submission(f, inputdict)
 
             # TODO: split this test in more than one
             c.use_pseudo(pseudos['Ti'], 'Ti')
+            inputdict = c.get_inputdata_dict()
             # Too many pseudos
             with self.assertRaises(InputValidationError):
-                c._prepare_for_submission(f)
+                c._prepare_for_submission(f, inputdict)
             

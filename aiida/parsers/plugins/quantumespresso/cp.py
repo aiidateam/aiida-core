@@ -75,7 +75,7 @@ class CpParser(Parser):
         calc_input_parameterdata = self._calc.get_inputs(type=ParameterData,
                                                          also_labels=True)
         # then look for parameterdata only
-        input_param_name = self._calc.get_linkname_parameters()
+        input_param_name = self._calc.get_linkname('parameters')
         params = [i[1] for i in calc_input_parameterdata if i[0]==input_param_name]
         if len(params) != 1:
             raise UniquenessError("Found {} input_params instead of one"

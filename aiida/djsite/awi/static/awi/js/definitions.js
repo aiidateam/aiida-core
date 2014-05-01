@@ -9,7 +9,7 @@ var filters_operators = {
 	'boolean': {
 		exact: 	['=', 'exactly']
 	},
-	numeric: {
+	integer: {
 		exact: 	['=', 'equal'],
 		gt: 	['>', 'greater than'],
 		lt: 	['<', 'lower than'],
@@ -17,7 +17,7 @@ var filters_operators = {
 		lte: 	['<=', 'lower or equal'],
 		range: 	['<>', 'in range']
 	},
-	text: {
+	string: {
 		icontains: 		['~', 'contains'],
 		istartswith: 	['^', 'starts with'],
 		iendswith: 		['$', 'ends with'],
@@ -27,7 +27,7 @@ var filters_operators = {
 	list: {
 		exact: ['=', 'exactly']
 	},
-	date: {
+	datetime: {
 		gte: 	['>=', 'after'],
 		lte: 	['<=', 'before'],
 		range: 	['<>', 'in range'],

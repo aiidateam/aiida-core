@@ -2,7 +2,7 @@ function ComputersManager(ApplicationManager) {
 	this.applicationManager = ApplicationManager;
 	this.module = 'computers';
 	this.moduleS = 'computer';
-	this.columns = 9; // number of columns in the listing table
+	this.columns = 8; // number of columns in the listing table
 	this.loadUrl = modules_urls[this.module].listing;
 	this.filterUrls = modules_urls.filters[this.module];
 	this.table = $('#' + this.module + '-list');
@@ -160,50 +160,7 @@ ComputersManager.prototype.load = function (scroll) {
 				true: '<span class="label label-success">true</span>',
 				false: '<span class="label label-danger">false</span>'
 			}
-			// for each computer, we build the html of a table row
-			$.each(data.objects, function (k, o) {
-				rows.push(''); // reserve a spot in the output for this row
-				$.getJSON(self.getAPIUrl('authinfo') + '?dbcomputer=' + o.id, function (subdata) {
-					var username;
-					if (subdata.objects.length > 0) {
-						username = subdata.objects[0].aiidauser.username;
-					} else {
-						username = 'N/A';
-					}
-					// we update the corresponding line, this ensures that data is gonna be displayed in the right order at the end
-					rows[k] = '<tr id="row-' + o.id + '">' +
-						'<td>' + o.id + '</td>' +
-						'<td class="name"><a href="' + self.getUrl('detail') + o.id + '" class="show-detail" data-id="' + o.id +
-						'"><strong>' + o.name + '</strong>&nbsp;<span class="right-caret"></span></a></td>' +
-						'<td>' + o.description.trunc(30, true, true) + '</td>' + /* description is truncated via this custom function */
-						'<td>' + username + '</td>' +
-						'<td>' + o.transport_type + '</td>' +
-						'<td>' + o.hostname + '</td>' +
-						'<td>' + o.scheduler_type + '</td>' +
-						'<td class="status">' + enabled[o.enabled] + '</td>' +
-						'<td>' +
-							'<div class="btn-group">' + /* actions dropdown */
-								'<button type="button" class="btn btn-primary btn-sm dropdown-toggle" data-toggle="dropdown">' +
-									'Action <span class="caret"></span>' +
-								'</button>' +
-								'<ul class="dropdown-menu dropdown-menu-right" role="menu">' +
-									'<li><a href="' + self.getUrl('detail') + o.id + '" class="show-detail"' +
-										'data-id="' + o.id + '"><span class="glyphicon glyphicon-tasks"></span>&nbsp;&nbsp;Details</a></li>' +
-										(o.enabled == true	?
-											'<li class="status"><a href="' + o.resource_uri + '" class="computer-disable" data-id="' + o.id + '"><span class="glyphicon glyphicon-ban-circle"></span>&nbsp;&nbsp;Disable</a></li>'
-											: '<li class="status"><a href="' + o.resource_uri + '" class="computer-enable" data-id="' + o.id + '"><span class="glyphicon glyphicon-ok"></span>&nbsp;&nbsp;Enable</a></li>') +
-									'<li><a href="' + self.getUrl('rename') + o.id + '" data-toggle="modal" data-target="#' + self.modalId + '">' +
-										'<span class="glyphicon glyphicon-pencil"></span>&nbsp;&nbsp;Rename</a></li>' +
-								'</ul>' +
-							'</div>' +
-						'</td>' +
-					'</tr>';
-					if (k == data.objects.length - 1) {
-						next();
-					}
-				});
-			});
-			// we need to wait until all ajax data is loaded
+			
 			var next = function () {
 				if (rows.length == 0) {
 					rows.push('<tr><td colspan="' + self.columns + '" class="center">No matching entry</td></tr>');
@@ -218,6 +175,41 @@ ComputersManager.prototype.load = function (scroll) {
 					}
 				});
 			};
+			
+			// for each computer, we build the html of a table row
+			$.each(data.objects, function (k, o) {
+				rows.push(''); // reserve a spot in the output for this row
+				// we update the corresponding line, this ensures that data is gonna be displayed in the right order at the end
+				rows[k] = '<tr id="row-' + o.id + '">' +
+					'<td>' + o.id + '</td>' +
+					'<td class="name"><a href="' + self.getUrl('detail') + o.id + '" class="show-detail" data-id="' + o.id +
+					'"><strong>' + o.name + '</strong>&nbsp;<span class="right-caret"></span></a></td>' +
+					'<td>' + o.description.trunc(30, true, true) + '</td>' + /* description is truncated via this custom function */
+					'<td>' + o.transport_type + '</td>' +
+					'<td>' + o.hostname + '</td>' +
+					'<td>' + o.scheduler_type + '</td>' +
+					'<td class="status">' + enabled[o.enabled] + '</td>' +
+					'<td>' +
+						'<div class="btn-group">' + /* actions dropdown */
+							'<button type="button" class="btn btn-primary btn-sm dropdown-toggle" data-toggle="dropdown">' +
+								'Action <span class="caret"></span>' +
+							'</button>' +
+							'<ul class="dropdown-menu dropdown-menu-right" role="menu">' +
+								'<li><a href="' + self.getUrl('detail') + o.id + '" class="show-detail"' +
+									'data-id="' + o.id + '"><span class="glyphicon glyphicon-tasks"></span>&nbsp;&nbsp;Details</a></li>' +
+									(o.enabled == true	?
+										'<li class="status"><a href="' + o.resource_uri + '" class="computer-disable" data-id="' + o.id + '"><span class="glyphicon glyphicon-ban-circle"></span>&nbsp;&nbsp;Disable</a></li>'
+										: '<li class="status"><a href="' + o.resource_uri + '" class="computer-enable" data-id="' + o.id + '"><span class="glyphicon glyphicon-ok"></span>&nbsp;&nbsp;Enable</a></li>') +
+								'<li><a href="' + self.getUrl('edit') + o.id + '" data-toggle="modal" data-target="#' + self.modalId + '">' +
+									'<span class="glyphicon glyphicon-pencil"></span>&nbsp;&nbsp;Edit</a></li>' +
+							'</ul>' +
+						'</div>' +
+					'</td>' +
+				'</tr>';
+				if (k == data.objects.length - 1) {
+					next();
+				}
+			});
 			/*
 			var timer = function () {
 				if (rows.length == data.objects.length && (rows.length == 0 || rows[0] != '')) {
@@ -254,7 +246,7 @@ ComputersManager.prototype.load = function (scroll) {
 	this.modal = this.modal.refresh();
 	if (this.modal.length == 0) {
 		$('body>div.container').prepend('<div class="modal fade" id="' + this.modalId + '" tabindex="-1" role="dialog" aria-hidden="true">' +
-		'<div class="modal-dialog modal-sm">' +
+		'<div class="modal-dialog">' +
 				'<div class="modal-content">' +
 				'</div>' +
 			'</div>' +
@@ -270,87 +262,109 @@ ComputersManager.prototype.loadDetail = function (url, id) {
 	var self = this;
 	
 	$.getJSON(url, function (data) {
-		var loader = $('#' + self.module + '-detail-' + id + ' ~ .dots');
-		var rows = [
-			'<div class="ajax-hide">',
-			'<ul class="media-list">',
-			'<li class="media"><strong class="pull-left">Description</strong><div class="media-body">' + data.description + '</div></li>',
-			'<li class="media"><strong class="pull-left">Metadata</strong><div class="media-body"><ul class="media-list">'
-		];
-		$.each(data.metadata, function (k, v) { /* we go over all metadatas and display them in a nested way */
-			if (v instanceof Array)
-				var value = v.join(' ');
-			else
-				var value = nl2br(v);
-			rows.push('<li class="media"><strong class="pull-left">' + k + '</strong><div class="media-body">' + value + '</div></li>');
-		});
-		rows.push(
-			'</ul></div></li>',
-			'<li class="media"><strong class="pull-left">Transport parameters</strong><div class="media-body"><ul class="media-list">'
-		);
-		$.each(data.transport_params, function (k, v) { /* we go over all transport parameters and display them in a nested way */
-			if (v instanceof Array)
-				var value = v.join(' ');
-			else
-				var value = nl2br(v);
-			rows.push('<li class="media"><strong class="pull-left">' + k + '</strong><div class="media-body">' + value + '</div></li>');
-		});
-		rows.push(
-			'</ul></div></li>',
-			'<li class="media"><strong class="pull-left">UUID</strong><div class="media-body">' + data.uuid + '</div></li>',
-			'</ul></div>'
-		);
-		loader.fadeTo('fast', 0.01, function () { /* we hide the loader and show the details html */
-			$('#' + self.module + '-detail-' + id).prepend(rows.join(''));
-			$('#' + self.module + '-detail-' + id + ' .ajax-hide').slideDown(function () {
-				loader.hide();
-				$('#' + self.module + '-detail-' + id + '>.detail-close').fadeIn();
+		$.getJSON(self.getAPIUrl('authinfo') + '?dbcomputer=' + id, function (subdata) {
+			var ajaxLoaded = 0;
+		
+			var loader = $('#' + self.module + '-detail-' + id + ' ~ .dots');
+			var rows = [
+				'<div class="ajax-hide">',
+				'<ul class="media-list">',
+				'<li class="media"><strong class="pull-left">Users</strong><div class="media-body">'
+			];
+			
+			var users = [];
+			$.each(subdata.objects, function (k, v) {
+				users.push(v.aiidauser.username);
 			});
+			rows.push(users.join(', '));
+			
+			rows.push(
+				'</div></li>',
+				'<li class="media"><strong class="pull-left">Description</strong><div class="media-body">' + data.description + '</div></li>',
+				'<li class="media"><strong class="pull-left">Metadata</strong><div class="media-body"><ul class="media-list">'
+			);
+		
+			$.each(data.metadata, function (k, v) { /* we go over all metadatas and display them in a nested way */
+				if (v instanceof Array)
+					var value = v.join('<br>');
+				else
+					var value = nl2br(v);
+				rows.push('<li class="media"><strong class="pull-left">' + k.trunc(18, false, true) + '</strong><div class="media-body">' + value + '</div></li>');
+			});
+			rows.push(
+				'</ul></div></li>',
+				'<li class="media"><strong class="pull-left">Transport parameters</strong><div class="media-body"><ul class="media-list">'
+			);
+			$.each(data.transport_params, function (k, v) { /* we go over all transport parameters and display them in a nested way */
+				if (v instanceof Array)
+					var value = v.join('<br>');
+				else
+					var value = nl2br(v);
+				rows.push('<li class="media"><strong class="pull-left">' + k.trunc(18, false, true) + '</strong><div class="media-body">' + value + '</div></li>');
+			});
+			rows.push(
+				'</ul></div></li>',
+				'<li class="media"><strong class="pull-left">UUID</strong><div class="media-body">' + data.uuid + '</div></li>',
+				'</ul></div>'
+			);
+			var next = function () {
+				loader.fadeTo('fast', 0.01, function () { /* we hide the loader and show the details html */
+					$('#' + self.module + '-detail-' + id).prepend(rows.join(''));
+					$('#' + self.module + '-detail-' + id + ' .ajax-hide').slideDown(function () {
+						loader.hide();
+						$('#' + self.module + '-detail-' + id + '>.detail-close').fadeIn();
+					});
+					$('#' + self.module + '-detail-' + id).find('span').tooltip();
+				});
+			};
+			next();
 		});
 	});
 };
 
-ComputersManager.prototype.loadRename = function (id) {
+ComputersManager.prototype.loadEdit = function (id) {
 	var self = this;
 	this.modal = this.modal.refresh();
 	
-	var field = this.modal.find('input.form-control');
-	field.val($('#row-' + id + '>td.name strong').text());
+	var namefield = this.modal.find('input#computer-name');
+	namefield.val($('#row-' + id + '>td.name strong').text());
 	window.setTimeout(function () {
 		// we focus on the input field when the animation is over (just required for the first load, is then handled by the event show.bs.modal)
-		field.select().focus();
+		namefield.select().focus();
 	}, 500);
-	this.modal.find('button.btn').click(function () {
+	this.modal.find('button.computer-submit').click(function () {
 		$.ajax({
 			url: self.getUrl('apidetail') + id + '/',
 			type: 'PATCH',
 			dataType: 'json',
 			contentType: 'application/json',
 			processData: false,
-			data: '{"name":"' + field.val() + '"}',
+			data: '{"name":"' + namefield.val() + '"}',
 			success: function (data) {
 				self.modal.modal('toggle');
 				$('#row-' + id + '>td.name strong').text(data.name);
 			},
 			error: function (xhr, status, error) {
-				self.errorModal(field, $.parseJSON(xhr.responseText).dbcomputer.name);
+				$.each($.parseJSON(xhr.responseText).dbcomputer, function (k, v) {
+					self.errorModal(k, $.parseJSON(xhr.responseText).dbcomputer[k]);
+				});
 			}
 		});
 	});
 	// on pressing the enter key, trigger the click event on the button (submit)
-	field.keypress(function (event) {
+	this.modal.find('input.form-control').keypress(function (event) {
 		if (event.which == 13) {
-			self.modal.find('button.btn').click();
+			self.modal.find('button.computer-submit').click();
 		}
 	});
 	// after apparition animation is complete, focus on the field
 	this.modal.on('shown.bs.modal', function (e) {
-		field.select().focus();
+		namefield.select().focus();
 	});
 	// if there was an error message, hide it on modal apparition
 	this.modal.on('show.bs.modal', function (e) {
-		field.parent().removeClass('has-error');
-		self.modal.find('.alert').hide();
+		self.modal.find('input').parent().removeClass('has-error');
+		self.modal.find('.alert').html('').hide();
 	});
 };
 
@@ -389,9 +403,10 @@ ComputersManager.prototype.errorMessage = function (action, id, error) {
 
 // add an error message to the modal box
 ComputersManager.prototype.errorModal = function (field, error) {
-	this.modal.find('.alert').html('<strong>Oops</strong>, there was a problem : ' + error)
+	var fieldElem = this.modal.find('input#computer-' + field);
+	this.modal.find('.alert').append('<strong>Oops</strong>, there was a problem : ' + error + '<br>')
 		.show();
-	field.parent().addClass('has-error');
-	field.select().focus();
+	fieldElem.parent().addClass('has-error');
+	fieldElem.select().focus();
 };
 

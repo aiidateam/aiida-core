@@ -9,7 +9,7 @@ from aiida.djsite.db.api import (
 #	DbAuthInfoResource,
 	DbComputerResource,
 #	DbGroupResource,
-#	DbNodeResource,
+	DbNodeResource,
 #	UserResource,
 	)
 import json
@@ -265,6 +265,8 @@ def filters_create(request, module, field):
 	#this needs to be hardcoded for now, unfortunately
 	if module == 'computers':
 		res = DbComputerResource()
+	elif module == 'calculations':
+	    res = DbNodeResource()
 	schema = res.build_schema()
 	field_type = schema['fields'][field]['filtering']['type']
 	display_name = schema['fields'][field]['display_name']
@@ -305,11 +307,11 @@ def computers_detail(request, computer_id):
 	return render(request, 'awi/computers_detail.html', {'api_detail_url': api_detail_url, 'computer_id': computer_id})
 
 @login_required(login_url='awi:login')
-def computers_rename(request, computer_id):
+def computers_edit(request, computer_id):
 	"""
-	Rename form for computers
+	Edit form for computers
 	"""
-	return render(request, 'awi/computers_rename.html', {'computer_id': computer_id})
+	return render(request, 'awi/computers_edit.html', {'computer_id': computer_id})
 
 # Calculations views
 @login_required(login_url='awi:login')

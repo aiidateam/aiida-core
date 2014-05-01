@@ -27,15 +27,25 @@ QEPwCalc = CalculationFactory('quantumespresso.pw')
 ################################################################
 
 try:
-    parent_id = sys.argv[1]
+    dontsend = sys.argv[1]
+    if dontsend == "--dont-send":
+        submit_test = True
+    elif dontsend == "--send":
+        submit_test = False
+    else:
+        raise IndexError
 except IndexError:
-    parent_id = None
-
+    print >> sys.stderr, ("The first parameter can only be either "
+                          "--send or --dont-send")
+    sys.exit(1)
+    
 try:
-    codename = sys.argv[2]
+    parent_id = sys.argv[2]
+    codename = sys.argv[3]
 except IndexError:
-    raise ValueError("Must provide the parent ID, followed by the codename, in input")
-#codename = None
+    print >> sys.stderr, ("Must provide as further parameters the parent ID and "
+                     "a phonon codename")
+    sys.exit(1)
 
 # If True, load the pseudos from the family specified below
 # Otherwise, use static files provided
@@ -46,8 +56,6 @@ queue = None
      
 #####
 
-if parent_id is None:
-    raise ValueError("Must provide parent_id")
 try:
     int(parent_id)
 except ValueError:
@@ -77,15 +85,6 @@ except (NotExistent, ValueError):
 
 computer = code.get_remote_computer()
 
-if computer.hostname.startswith("aries"):
-    num_cpus_per_machine = 48
-elif computer.hostname.startswith("daint"):
-    num_cpus_per_machine = 8
-elif computer.hostname.startswith("bellatrix"):
-    num_cpus_per_machine = 16
-else:
-    raise ValueError("num_cpus_per_machine not specified for the current machine")
-
 parameters = ParameterData(dict={
             'INPUTPH': {
                 'tr2_ph' : 1.0e-8,
@@ -94,7 +93,7 @@ parameters = ParameterData(dict={
                 'nq1' : 1,
                 'nq2' : 1,
                 'nq3' : 1,
-                }}).store()
+                }})
 
 parentcalc = QEPwCalc.get_subclass_from_pk(parent_id)
 
@@ -103,18 +102,26 @@ calc.label = "Test QE ph.x"
 calc.description = "Test calculation with the Quantum ESPRESSO ph.x code"
 
 calc.set_max_wallclock_seconds(30*60) # 30 min
-calc.set_resources({"num_machines": 1, "num_cpus_per_machine": num_cpus_per_machine})
+calc.set_resources({"num_machines": 1})
 if queue is not None:
     calc.set_queue_name(queue)
-calc.store()
-print "created calculation; calc=Calculation(uuid='{}') # ID={}".format(
-    calc.uuid,calc.dbnode.pk)
 
 calc.use_parameters(parameters)
 calc.use_code(code)
 calc.set_parent_calc( parentcalc )
 
-calc.submit()
-print "submitted calculation; calc=Calculation(uuid='{}') # ID={}".format(
-    calc.uuid,calc.dbnode.pk)
-
+if submit_test:
+    subfolder, script_filename = calc.submit_test()
+    print "Test_submit for calculation (uuid='{}')".format(
+        calc.uuid)
+    print "Submit file in {}".format(os.path.join(
+        os.path.relpath(subfolder.abspath),
+        script_filename
+        ))
+else:
+    calc.store_all()
+    print "created calculation; calc=Calculation(uuid='{}') # ID={}".format(
+        calc.uuid,calc.dbnode.pk)
+    calc.submit()
+    print "submitted calculation; calc=Calculation(uuid='{}') # ID={}".format(
+        calc.uuid,calc.dbnode.pk)

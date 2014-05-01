@@ -1524,13 +1524,15 @@ class CalculationResultManager(object):
     """
     def __init__(self, calc):
         """
-        
         :param calc: the calculation object.
         """
         # Possibly add checks here
         self._calc = calc
         ParserClass = calc.get_parserclass()
-        self._parser = ParserClass(calc)
+        if ParserClass is None:
+            raise AttributeError("No output parser is attached to the calculation")
+        else:
+            self._parser = ParserClass(calc)
 
     def __dir__(self):
         """

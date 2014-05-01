@@ -180,6 +180,7 @@ FiltersManager.prototype.loadFilters = function (filters) {
 	var self = this;
 	
 	// display the operator choices for each filter
+	console.log(filters.toString());
 	$.each(filters, function (k, f) {
 		var o = self.operators[f.type];
 		$('#filter-' + f.field + ' button.filter-operator').text(o[f.operator][0]);

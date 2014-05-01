@@ -31,7 +31,6 @@
 							<a href="{% url 'awi:calculations_list' %}/label" class="ordering">Label</a>
 							{% endif %}
 						</th>
-						<th>Description</th>
 						<th>
 							{% if ordering == 'type' %}
 							<a href="{% url 'awi:calculations_list' %}/-type" class="ordering">Type<span class="up-caret"></span></a>
@@ -42,15 +41,14 @@
 							{% endif %}
 						</th>
 						<th>
-							{% if ordering == 'computer__name' %}
-							<a href="{% url 'awi:calculations_list' %}/-computer__name" class="ordering">Computer<span class="up-caret"></span></a>
-							{% elif ordering == '-computer__name' %}
-							<a href="{% url 'awi:calculations_list' %}/computer__name" class="ordering">Computer<span class="caret"></span></a>
+							{% if ordering == 'dbcomputer__name' %}
+							<a href="{% url 'awi:calculations_list' %}/-dbcomputer__name" class="ordering">Computer<span class="up-caret"></span></a>
+							{% elif ordering == '-dbcomputer__name' %}
+							<a href="{% url 'awi:calculations_list' %}/dbcomputer__name" class="ordering">Computer<span class="caret"></span></a>
 							{% else %}
-							<a href="{% url 'awi:calculations_list' %}/computer__name" class="ordering">Computer</a>
+							<a href="{% url 'awi:calculations_list' %}/dbcomputer__name" class="ordering">Computer</a>
 							{% endif %}
 						</th>
-						<th>User</th>
 						<th>
 							{% if ordering == 'ctime' %}
 							<a href="{% url 'awi:calculations_list' %}/-ctime" class="ordering">Creation<span class="up-caret"></span></a>
@@ -64,7 +62,7 @@
 					</thead>
 					<tbody id="calculations-list" data-ordering="{{ ordering }}">
 						<tr class="loader">
-							<td colspan="8"><div class="dots">Loading...</div></td>
+							<td colspan="6"><div class="dots">Loading...</div></td>
 						</tr>
 					</tbody>
 				</table>

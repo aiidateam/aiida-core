@@ -8,17 +8,17 @@
 <div class="modal-body" style="z-index: 1050;"><!-- z-index needed for the datepicker plugin -->
 	<div class="alert alert-danger" style="display: none;"></div>
 	<div class="form-horizontal" role="form">
-	{% if type == 'date' %}
+	{% if type == 'datetime' %}
 		<div class="form-group">
 			<label for="filter-operator" class="col-sm-4 control-label">Operator</label>
 			<div class="col-sm-4">
 				<select class="form-control" id="filter-operator"></select>
 			</div>
 		</div>
-		<div class="form-group filter-date" id="filter-date-single">
+		<div class="form-group filter-datetime" id="filter-datetime-single">
 			<label for="filter-value" class="col-sm-4 control-label">Date</label>
 			<div class="col-sm-6">
-				<div class="input-group date">
+				<div class="input-group datetime">
 					<input type="text" class="form-control" id="filter-value" placeholder="YYYY-MM-DD"
 						data-provide="datepicker" data-date-format="yyyy-mm-dd" data-date-week-start="1" data-date-today-btn="true"
 						data-date-autoclose="true" data-date-today-highlight="true">
@@ -26,25 +26,25 @@
 				</div>
 			</div>
 		</div>
-		<div class="form-group filter-date" style="display: none;" id="filter-date-range">
-			<label for="filter-date-start" class="col-sm-4 control-label">Date</label>
+		<div class="form-group filter-datetime" style="display: none;" id="filter-datetime-range">
+			<label for="filter-datetime-start" class="col-sm-4 control-label">Date</label>
 			<div class="col-sm-6">
-				<div class="input-daterange input-group" id="datepicker">
-					<input type="text" class="form-control" id="filter-date-start" placeholder="YYYY-MM-DD"
+				<div class="input-datetimerange input-group" id="datepicker">
+					<input type="text" class="form-control" id="filter-datetime-start" placeholder="YYYY-MM-DD"
 						data-provide="datepicker" data-date-format="yyyy-mm-dd" data-date-week-start="1" data-date-today-btn="true"
 						data-date-autoclose="true" data-date-today-highlight="true">
 					<span class="input-group-addon">to</span>
-					<input type="text" class="form-control" id="filter-date-end" placeholder="YYYY-MM-DD"
+					<input type="text" class="form-control" id="filter-datetime-end" placeholder="YYYY-MM-DD"
 						data-provide="datepicker" data-date-format="yyyy-mm-dd" data-date-week-start="1" data-date-today-btn="true"
 						data-date-autoclose="true" data-date-today-highlight="true">
 				</div>
 			</div>
 		</div>
-		<div class="form-group filter-date" style="display:none;" id="filter-date-year">
-			<label for="filter-date-year" class="col-sm-4 control-label">Date</label>
+		<div class="form-group filter-datetime" style="display:none;" id="filter-datetime-year">
+			<label for="filter-datetime-year" class="col-sm-4 control-label">Date</label>
 			<div class="col-sm-6">
-				<div class="input-group date">
-					<input type="text" class="form-control" id="filter-date-year" placeholder="YYYY"
+				<div class="input-group datetime">
+					<input type="text" class="form-control" id="filter-datetime-year" placeholder="YYYY"
 						data-provide="datepicker" data-date-format="yyyy" data-date-autoclose="true"
 						data-date-min-view-mode="2">
 					<span class="input-group-addon"><i class="glyphicon glyphicon-th"></i></span>
@@ -56,20 +56,20 @@
 				<button type="button" class="btn btn-primary filter-submit">Create</button>
 			</div>
 		</div>
-	{% elif type == 'numeric' %}
+	{% elif type == 'integer' %}
 		<div class="form-group">
 			<label for="filter-operator" class="col-sm-4 control-label">Operator</label>
 			<div class="col-sm-4">
 				<select class="form-control" id="filter-operator"></select>
 			</div>
 		</div>
-		<div class="form-group filter-numeric" id="filter-numeric-single">
+		<div class="form-group filter-integer" id="filter-integer-single">
 			<label for="filter-value" class="col-sm-4 control-label">Value</label>
 			<div class="col-sm-6">
 				<input type="number" class="form-control" id="filter-value" placeholder="12345">
 			</div>
 		</div>
-		<div class="form-group filter-numeric" style="display: none;" id="filter-numeric-range">
+		<div class="form-group filter-integer" style="display: none;" id="filter-integer-range">
 			<label for="filter-value-low" class="col-sm-4 control-label">Value</label>
 			<div class="col-sm-6">
 				<div class="input-group">
@@ -84,7 +84,7 @@
 				<button type="button" class="btn btn-primary filter-submit">Create</button>
 			</div>
 		</div>
-	{% elif type == 'text' %}
+	{% elif type == 'string' %}
 		<div class="form-group">
 			<label for="filter-operator" class="col-sm-5 control-label">Operator</label>
 			<div class="col-sm-4">

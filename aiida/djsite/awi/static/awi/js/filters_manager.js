@@ -9,7 +9,7 @@ function FiltersManager(module, moduleManager) {
 		'boolean': {
 			exact: 	['=', 'exactly']
 		},
-		numeric: {
+		integer: {
 			exact: 	['=', 'equal'],
 			gt: 	['>', 'greater than'],
 			lt: 	['<', 'lower than'],
@@ -17,7 +17,7 @@ function FiltersManager(module, moduleManager) {
 			lte: 	['<=', 'lower or equal'],
 			range: 	['<>', 'in range']
 		},
-		text: {
+		string: {
 			icontains: 		['~', 'contains'],
 			istartswith: 	['^', 'starts with'],
 			iendswith: 		['$', 'ends with'],
@@ -27,7 +27,7 @@ function FiltersManager(module, moduleManager) {
 		list: {
 			exact: ['=', 'exactly']
 		},
-		date: {
+		datetime: {
 			gte: 	['>=', 'after'],
 			lte: 	['<=', 'before'],
 			range: 	['<>', 'in range'],
@@ -156,18 +156,16 @@ FiltersManager.prototype.load = function () {
 			// load options for the new filter dropdown directly from API, disable links if filter already set
 			self.newDropdown.html('');
 			$.getJSON(self.getUrl('schema'), function (data) {
-				$.each(data.fields, function (k, o) {
-					if (o.hasOwnProperty('filtering')) {
-						// we check if there is already a filter for this field
-						if (self.panel.find('#filter-' + k).length == 0) {
-							self.newDropdown.append('<li><a href="' +
-								self.getUrl('create') +	k +
-								'" data-toggle="modal" data-target="#filter-modal">' +
-								o.display_name + '</a></li>');
-						} else {
-							self.newDropdown.append('<li class="disabled"><a href="#">' +
-								o.display_name + '</a></li>');
-						}
+				$.each(data.filtering, function (k, o) {
+					// we check if there is already a filter for this field
+					if (self.panel.find('#filter-' + k).length == 0) {
+						self.newDropdown.append('<li><a href="' +
+							self.getUrl('create') +	k +
+							'" data-toggle="modal" data-target="#filter-modal">' +
+							data.fields[k].display_name + '</a></li>');
+					} else {
+						self.newDropdown.append('<li class="disabled"><a href="#">' +
+							data.fields[k].display_name + '</a></li>');
 					}
 				});
 			});
@@ -203,7 +201,7 @@ FiltersManager.prototype.loadFilters = function (filters) {
 			if ($('#filter-' + k + ' .filter-list').length > 0) {
 				$('#filter-' + k + ' ul.filter-values').html(function () {
 					var content = [];
-					if (o.filtering.type == 'boolean') {
+					if (o.type == 'boolean') {
 						content.push('<li><a href="#" data-field="' + k + '" class="filter-change-value text-success">true</a></li>');
 						content.push('<li><a href="#" data-field="' + k + '" class="filter-change-value text-danger">false</a></li>');
 					}
@@ -333,7 +331,7 @@ FiltersManager.prototype.loadCreate = function (fieldname, type) {
 	
 	if (type != 'list' && type != 'boolean') {
 		var operator_field = this.modal.find('select#filter-operator');
-		if (type != 'date') {
+		if (type != 'datetime') {
 			var value_field = this.modal.find('input#filter-value');
 			value_field.val($('#filter-' + fieldname + ' button.filter-value').text());
 			window.setTimeout(function () {
@@ -343,40 +341,40 @@ FiltersManager.prototype.loadCreate = function (fieldname, type) {
 		}
 	}
 	
-	if (type == 'date') {
+	if (type == 'datetime') {
 		operator_field.change(function () {
 			var option = $(this).children('option:selected').val();
 			if (option == 'range') {
-				self.modal.find('.filter-date').hide();
-				self.modal.find('#filter-date-range').show();
+				self.modal.find('.filter-datetime').hide();
+				self.modal.find('#filter-datetime-range').show();
 			} else if (option == 'year') {
-				self.modal.find('.filter-date').hide();
-				self.modal.find('#filter-date-year').show();
+				self.modal.find('.filter-datetime').hide();
+				self.modal.find('#filter-datetime-year').show();
 			} else {
-				self.modal.find('.filter-date').hide();
-				self.modal.find('#filter-date-single').show();
+				self.modal.find('.filter-datetime').hide();
+				self.modal.find('#filter-datetime-single').show();
 			}
 		});
-	} else if (type == 'numeric') {
+	} else if (type == 'integer') {
 		operator_field.change(function () {
 			var option = $(this).children('option:selected').val();
 			if (option == 'range') {
-				self.modal.find('.filter-numeric').hide();
-				self.modal.find('#filter-numeric-range').show();
-				self.modal.find('#filter-numeric-range #filter-value-low').focus();
+				self.modal.find('.filter-integer').hide();
+				self.modal.find('#filter-integer-range').show();
+				self.modal.find('#filter-integer-range #filter-value-low').focus();
 			} else {
-				self.modal.find('.filter-numeric').hide();
-				self.modal.find('#filter-numeric-single').show();
+				self.modal.find('.filter-integer').hide();
+				self.modal.find('#filter-integer-single').show();
 			}
 		});
 	}
 	
 	if (type != 'boolean') {
 		this.modal.find('button.filter-submit').click(function () {
-			if (type != 'list' && type != 'boolean' && type != 'date' && type != 'numeric') {
+			if (type != 'list' && type != 'boolean' && type != 'datetime' && type != 'integer') {
 				var post_operator = operator_field.children('option:selected').val();
 				var post_value = value_field.val();
-			} else if (type == 'numeric') {
+			} else if (type == 'integer') {
 				var post_operator = operator_field.children('option:selected').val();
 				var option = operator_field.children('option:selected').val();
 				if (option == 'range') {
@@ -384,13 +382,13 @@ FiltersManager.prototype.loadCreate = function (fieldname, type) {
 				} else {
 					var post_value = value_field.val();
 				}
-			} else if (type == 'date') {
+			} else if (type == 'datetime') {
 				var post_operator = operator_field.children('option:selected').val();
 				var option = operator_field.children('option:selected').val();
 				if (option == 'range') {
-					var post_value = self.modal.find('#filter-date-start').val() + 'T00:00;' + self.modal.find('#filter-date-end').val() + 'T23:59:59';
+					var post_value = self.modal.find('#filter-datetime-start').val() + 'T00:00;' + self.modal.find('#filter-datetime-end').val() + 'T23:59:59';
 				} else if (option == 'year') {
-					var post_value = self.modal.find('#filter-date-year').val();
+					var post_value = self.modal.find('#filter-datetime-year').val();
 				} else if (option == 'gte') {
 					var post_value = self.modal.find('#filter-value').val() + 'T00:00';
 				} else if (option == 'lte') {
@@ -434,7 +432,7 @@ FiltersManager.prototype.loadCreate = function (fieldname, type) {
 			}
 		});
 	}
-	if (type != 'list' && type != 'boolean' && type != 'date') {
+	if (type != 'list' && type != 'boolean' && type != 'datetime') {
 		// after apparition animation is complete, focus on the field
 		self.modal.on('shown.bs.modal', function (e) {
 			value_field.select().focus();
@@ -442,7 +440,7 @@ FiltersManager.prototype.loadCreate = function (fieldname, type) {
 	}
 	// if there was an error message, hide it on modal apparition
 	self.modal.on('show.bs.modal', function (e) {
-		if (type != 'list' && type != 'boolean' && type != 'date') {
+		if (type != 'list' && type != 'boolean' && type != 'datetime') {
 			value_field.parent().removeClass('has-error');
 		}
 		self.modal.find('.alert').hide();

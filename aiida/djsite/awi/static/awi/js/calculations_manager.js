@@ -100,24 +100,31 @@ CalculationsManager.prototype.load = function (scroll) {
 				// http://localhost:8000/api/v1/attribute/?id__in=23&id__in=26&id__in=27&id__in=28&id__in=29&id__in=75&id__in=78&id__in=80&id__in=81&id__in=82&id__in=83&key=state
 				// http://localhost:8000/api/v1/attribute/?id__in=23,26,27,28,29,75,78,80,81,82,83&key=state
 				var stateUrl = self.getAPIUrl('attributes') + '?';
-				var attrIds = [];
+				/*var attrIds = [];
 				for (var i = 0, len = o.attributes.length; i < len; i++) {
 					attrIds.push(o.attributes[i].substring(0, o.attributes[i].length - 1).split('/').pop());
 				}
 				stateUrl = stateUrl + attrIds.join(',');
-				stateUrl = stateUrl + '&key=state';
+				stateUrl = stateUrl + '&key=state';*/
 				
 				$.getJSON(o.dbcomputer, function (subsubdata) {
 					var computername = subsubdata.name;
 					//var ctime = new Date((o.ctime || "").replace(/-/g,"/").replace(/[TZ]/g," "));
 					var ctime = new Date();
 					ctime.setISO8601(o.ctime);
+					
+					if (o.class_name == 'None') {
+						o.class_name = '<span class="text-danger">Error</span>';
+					} else if (o.class_name === undefined || o.class_name == '') {
+						o.class_name = o.base_class;
+					}
+					
 					// we update the corresponding line, this ensures that data is gonna be displayed in the right order at the end
 					rows[k] = '<tr id="row-' + o.id + '">' +
 						'<td>' + o.id + '</td>' +
 						'<td class="name"><a href="' + self.getUrl('detail') + o.id + '" class="show-detail" data-id="' + o.id +
 						'"><strong>' + o.label + '</strong>&nbsp;<span class="right-caret"></span></a></td>' +
-						'<td><span title="' + o.type + '" data-toggle="tooltip">' + o.type.split('.').slice(-2)[0] + '</span></td>' +
+						'<td><span title="' + o.type + '" data-toggle="tooltip">' + o.class_name + '</span></td>' +
 						'<td>' + computername + '</td>' +
 						'<td>' + ctime.toLocaleString() + '</td>' +
 						'<td>' +
@@ -228,8 +235,36 @@ CalculationsManager.prototype.loadDetail = function (url, id) {
 				});
 			};
 		
-			$.each(data.attributes, function (k, v) { /* we go over all attributes and display them in a nested way */
-				var rowstart = rows.length; // index of the attribute row
+			$.each(data.attributes, function (k, v) {
+				if (v instanceof Array) {
+					v = v.join('<br>');
+				} else if (typeof v === 'number') {
+					v = String(v);
+				} else if (typeof v === 'object') {
+					var content = ['<dl class="dl-horizontal">'];
+					$.each(v, function (key, val) {
+						content.push('<dt>' + key.trunc(18, false, true) + '</dt>');
+						content.push('<dd>' + val + '</dd>');
+					});
+					content.push('</dl>');
+					v = content.join('');
+				} else if (k === 'scheduler_lastchecktime') {
+					var time = new Date();
+					time.setISO8601(v);
+					v = time.toLocaleString();
+				} else if (k === 'state') {
+					v = self.colorState(v);
+				} else if (k === 'scheduler_state') {
+					v = self.colorSchedulerState(v);
+				} else {
+					v = v.trunc(100);
+				}
+				rows.push('<li class="media"><strong class="pull-left">' + k.trunc(18, false, true) +
+					'</strong><div class="media-body">' + v + '</div></li>');
+			});
+			
+			/*$.each(data.attributes, function (k, v) {
+				var rowstart = rows.length;
 				rows.push(''); // reserve a spot
 				// here do the ajax to get attribute infos, and then update the corresponding row
 				$.getJSON(v, function (subdata) {
@@ -263,11 +298,13 @@ CalculationsManager.prototype.loadDetail = function (url, id) {
 						next();
 					}
 				});
-			});
+			});*/
 			rows.push(
 				'</ul></div></li>',
 				'<li class="media"><strong class="pull-left">Inputs</strong><div class="media-body"><dl class="dl-horizontal">'
 			);
+			// instead of querying each url, there is an endpoint dbnode/id/inputs which shows the basic necessary informations
+			// query this endpoint instead and go through the list
 			$.each(data.inputs, function (k, v) { /* we go over all inputs and display them in a nested way */
 				var rowstart = rows.length; // index of the input row
 				rows.push(''); // reserve a spot
@@ -277,7 +314,7 @@ CalculationsManager.prototype.loadDetail = function (url, id) {
 					'" target="_blank" class="text-info"><span class="glyphicon glyphicon-new-window"></span></a>&nbsp;&nbsp;<a href="#">' +
 						subdata.type + '</a></dd>';
 					ajaxLoaded++;
-					if (ajaxLoaded == data.attributes.length + data.inputs.length + data.outputs.length) {
+					if (ajaxLoaded == data.inputs.length + data.outputs.length) {
 						next();
 					}
 				});
@@ -286,6 +323,8 @@ CalculationsManager.prototype.loadDetail = function (url, id) {
 				'</dl></div></li>',
 				'<li class="media"><strong class="pull-left">Outputs</strong><div class="media-body"><dl class="dl-horizontal">'
 			);
+			// instead of querying each url, there is an endpoint dbnode/id/outputs which shows the basic necessary informations
+			// query this endpoint instead and go through the list
 			$.each(data.outputs, function (k, v) { /* we go over all outputs and display them in a nested way */
 				var rowstart = rows.length; // index of the output row
 				rows.push(''); // reserve a spot
@@ -295,7 +334,7 @@ CalculationsManager.prototype.loadDetail = function (url, id) {
 					'" target="_blank" class="text-info"><span class="glyphicon glyphicon-new-window"></span></a>&nbsp;&nbsp;<a href="#">' +
 						subdata.type + '</a></dd>';
 					ajaxLoaded++;
-					if (ajaxLoaded == data.attributes.length + data.inputs.length + data.outputs.length) {
+					if (ajaxLoaded == data.inputs.length + data.outputs.length) {
 						next();
 					}
 				});

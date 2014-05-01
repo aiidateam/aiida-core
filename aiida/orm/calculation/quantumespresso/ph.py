@@ -127,8 +127,8 @@ class PhCalculation(Calculation):
         new_comp = self.get_computer()
         old_comp = parent_calc.get_computer()
         if ( not new_comp.uuid == old_comp.uuid ):
-            raise IOError("PhCalculation must be launched on the same computer"
-                          "of the parent: {}".format(old_comp.get_name()))
+            raise InputValidationError("PhCalculation must be launched on the same computer"
+                          " of the parent: {}".format(old_comp.get_name()))
 
         default_parent_output_folder = parent_calc.OUTPUT_SUBFOLDER
         parent_calc_out_subfolder = settings_dict.pop('parent_calc_out_subfolder',

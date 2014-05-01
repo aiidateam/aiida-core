@@ -259,7 +259,7 @@ def parse_cp_xml_output(data):
     # CARD PLANE WAVES
 
     parsed_data = copy.deepcopy(xml_card_planewaves(parsed_data,dom,'cp'))
-            
+    
     # CARD SPIN
     parsed_data = copy.deepcopy(xml_card_spin(parsed_data,dom))
 

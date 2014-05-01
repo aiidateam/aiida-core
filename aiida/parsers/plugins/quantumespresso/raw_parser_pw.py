@@ -545,10 +545,10 @@ def xml_card_planewaves(parsed_data,dom,calctype):
         parsed_data[tagname.lower()] = parse_xml_child_bool(tagname,target_tags)
 
         tagname='SMALLBOX_FFT_GRID'
-        fft_grid=[]
-        for attrname in ['nr1b,nr2b,nr3b']:
+        fft_grid = []
+        for attrname in ['nr1b','nr2b','nr3b']:
             fft_grid.append(parse_xml_child_attribute_int(tagname,attrname,target_tags))
-        parsed_data[tagname.lower()]=fft_grid
+        parsed_data[tagname.lower()] = fft_grid
         
     return parsed_data
 

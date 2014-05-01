@@ -201,7 +201,7 @@ class PwParser(Parser):
             array_data = ArrayData()
             for x in trajectory_data.iteritems():
                 array_data.set_array(x[0],numpy.array(x[1]))
-            self._set_linkname_outarray(self.get_linkname_outarray())
+            self._set_linkname_outarray(self._outarray_name)
             array_data.store()
             self._calc._add_link_to(array_data, label=self.get_linkname_outarray() )
         

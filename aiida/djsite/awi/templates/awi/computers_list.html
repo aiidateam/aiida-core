@@ -32,7 +32,6 @@
 							{% endif %}
 						</th>
 						<th>Description</th>
-						<th>User</th>
 						<th>
 							{% if ordering == 'transport_type' %}
 							<a href="{% url 'awi:computers_list' %}/-transport_type" class="ordering">Transport<span class="up-caret"></span></a>
@@ -42,7 +41,15 @@
 							<a href="{% url 'awi:computers_list' %}/transport_type" class="ordering">Transport</a>
 							{% endif %}
 						</th>
-						<th>Hostname</th>
+						<th>
+							{% if ordering == 'hostname' %}
+							<a href="{% url 'awi:computers_list' %}/-hostname" class="ordering">Hostname<span class="up-caret"></span></a>
+							{% elif ordering == '-hostname' %}
+							<a href="{% url 'awi:computers_list' %}/hostname" class="ordering">Hostname<span class="caret"></span></a>
+							{% else %}
+							<a href="{% url 'awi:computers_list' %}/hostname" class="ordering">Hostname</a>
+							{% endif %}
+						</th>
 						<th>
 							{% if ordering == 'scheduler_type' %}
 							<a href="{% url 'awi:computers_list' %}/-scheduler_type" class="ordering">Scheduler<span class="up-caret"></span></a>
@@ -65,7 +72,7 @@
 					</thead>
 					<tbody id="computers-list" data-ordering="{{ ordering }}">
 						<tr class="loader">
-							<td colspan="9"><div class="dots">Loading...</div></td>
+							<td colspan="8"><div class="dots">Loading...</div></td>
 						</tr>
 					</tbody>
 				</table>

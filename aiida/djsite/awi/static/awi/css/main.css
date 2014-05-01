@@ -98,6 +98,7 @@ a.text-success:hover {
 .table thead>tr>th>a, .table thead>tr>th>a:hover {
 	text-decoration: none;
 	display: block;
+	white-space: nowrap;
 }
 
 /* center the loader in tables */
@@ -142,6 +143,7 @@ a.text-success:hover {
 
 .table tr td.name a {
 	text-decoration: none;
+	white-space: nowrap;
 }
 
 /* corrections for the + icon of the filters panel */

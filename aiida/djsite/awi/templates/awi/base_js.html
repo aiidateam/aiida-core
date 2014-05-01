@@ -5,6 +5,7 @@
 	var api_urls = {
 		computers: '{% url "api_dispatch_list" api_name="v1" resource_name="dbcomputer" %}',
 		calculations: '{% url "api_dispatch_list" api_name="v1" resource_name="dbnode" %}',
+		attributes: '{% url "api_dispatch_list" api_name="v1" resource_name="attribute" %}',
 		authinfo: '{% url "api_dispatch_list" api_name="v1" resource_name="dbauthinfo" %}',
 		user: '{% url "api_dispatch_detail" api_name="v1" resource_name="user" pk=0 %}'
 	};
@@ -13,11 +14,12 @@
 			listing: '{% url "api_dispatch_list" api_name="v1" resource_name="dbcomputer" %}',
 			detail: '{% url "awi:computers_detail" computer_id="0" %}',
 			apidetail: '{% url "api_dispatch_detail" api_name="v1" resource_name="dbcomputer" pk=0 %}',
-			rename: '{% url "awi:computers_rename" computer_id="0" %}'
+			edit: '{% url "awi:computers_edit" computer_id="0" %}'
 		},
 		calculations : {
 			listing: '{% url "api_dispatch_list" api_name="v1" resource_name="dbnode" %}?type__startswith=calculation.',
 			detail: '{% url "awi:calculations_detail" calculation_id="0" %}',
+			attribute: '{% url "api_dispatch_detail" api_name="v1" resource_name="attribute" pk=0 %}',
 			apidetail: '{% url "api_dispatch_detail" api_name="v1" resource_name="dbnode" pk=0 %}'
 		},
 		filters : {

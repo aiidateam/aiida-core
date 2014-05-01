@@ -91,9 +91,13 @@ def filters_set(request, module, field):
 		#this needs to be hardcoded for now, unfortunately
 		if module == 'computers':
 			res = DbComputerResource()
+		elif module == 'calculations':
+			res = DbNodeResource()
 		
 		schema = res.build_schema()
-		field_type = schema['fields'][field]['filtering']['type']
+		field_type = schema['fields'][field]['type']
+		if 'valid_choices' in schema['fields'][field]:
+			field_type = 'list'
 		display_name = schema['fields'][field]['display_name']
 		# get the type from the API to allow proper validation
 		
@@ -124,7 +128,7 @@ def filters_set(request, module, field):
 					if field_type == 'boolean':
 						if value not in ['true', 'false']:
 							return HttpResponse("Value must be a boolean (true/false)", status=400)
-					elif field_type == 'numeric':
+					elif field_type == 'integer':
 						if operator == 'range' and value.find(';') != -1:
 							lo, hi = value.split(';')
 							try:
@@ -143,7 +147,7 @@ def filters_set(request, module, field):
 						valid_choices = schema["fields"][field]["valid_choices"]
 						if value not in valid_choices:
 							return HttpResponse("Value is not acceptable", status=400)
-					elif field_type == 'date':
+					elif field_type == 'datetime':
 						if value.find(';') != -1:
 							begin_date, end_date = value.split(';')
 							try:
@@ -172,7 +176,7 @@ def filters_set(request, module, field):
 					if field_type == 'boolean':
 						if value not in ['true', 'false']:
 							return HttpResponse("Value must be a boolean (true/false)", status=400)
-					elif field_type == 'numeric':
+					elif field_type == 'integer':
 						if operator == 'range' and value.find(';') != -1:
 							lo, hi = value.split(';')
 							try:
@@ -191,7 +195,7 @@ def filters_set(request, module, field):
 						valid_choices = schema["fields"][field]["valid_choices"]
 						if value not in valid_choices:
 							return HttpResponse("Value is not acceptable", status=400)
-					elif field_type == 'date':
+					elif field_type == 'datetime':
 						if value.find(';') != -1:
 							begin_date, end_date = value.split(';')
 							try:
@@ -214,7 +218,7 @@ def filters_set(request, module, field):
 					'operator': operator,
 					'value': value,
 				}
-				#boolean numeric text list date
+				#boolean integer string list datetime
 				#http://localhost:8000/api/v1/dbnode/?ctime__range=2014-03-06T00:00&ctime__range=2014-03-08T00:00
 				request.session.modified = True
 				return HttpResponse(json.dumps(request.session['filters'][module][field]))
@@ -266,9 +270,11 @@ def filters_create(request, module, field):
 	if module == 'computers':
 		res = DbComputerResource()
 	elif module == 'calculations':
-	    res = DbNodeResource()
+		res = DbNodeResource()
 	schema = res.build_schema()
-	field_type = schema['fields'][field]['filtering']['type']
+	field_type = schema['fields'][field]['type']
+	if 'valid_choices' in schema['fields'][field]:
+		field_type = 'list'
 	display_name = schema['fields'][field]['display_name']
 	
 	return render(request, 'awi/filters_create.html', {'module': module, 'field': field, 'display_name': display_name, 'type': field_type})

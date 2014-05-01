@@ -4,11 +4,12 @@ from aiida.common.exceptions import InputValidationError
 from aiida.orm import DataFactory
 from aiida.common.datastructures import CalcInfo
 from aiida.orm.data.upf import get_pseudos_from_structure
+from aiida.common.utils import classproperty
 
-StructureData = DataFactory('structure')
-ParameterData = DataFactory('parameter')
-UpfData = DataFactory('upf')
-RemoteData = DataFactory('remote') 
+from aiida.orm.data.structure import StructureData
+from aiida.orm.data.parameter import ParameterData
+from aiida.orm.data.upf import UpfData
+from aiida.orm.data.remote import RemoteData 
 
 class BasePwCpInputGenerator(object):
 
@@ -65,34 +66,77 @@ class BasePwCpInputGenerator(object):
     
     _use_kpoints = False
     
+    @classproperty
+    def _baseclass_use_methods(cls):
+        """
+        This will be manually added to the _use_methods in each subclass
+        """
+        return {
+            "structure": {
+               'valid_types': StructureData,
+               'additional_parameter': None,
+               'linkname': 'structure',
+               'docstring': "Choose the input structure to use",
+               },
+            "settings": {
+               'valid_types': ParameterData,
+               'additional_parameter': None,
+               'linkname': 'settings',
+               'docstring': "Use an additional node for special settings",
+               },
+            "parameters": {
+               'valid_types': ParameterData,
+               'additional_parameter': None,
+               'linkname': 'parameters',
+               'docstring': ("Use a node that specifies the input parameters "
+                             "for the namelists"),
+               },
+            "parent_folder": {
+               'valid_types': RemoteData,
+               'additional_parameter': None,
+               'linkname': 'parent_calc_folder',
+               'docstring': ("Use a remote folder as parent folder (for "
+                             "restarts and similar"),
+               },
+            "pseudo": {
+               'valid_types': UpfData,
+               'additional_parameter': "kind",
+               'linkname': cls._get_linkname_pseudo,
+               'docstring': ("Use a node for the UPF pseudopotential of one of "
+                             "the elements in the structure. You have to pass "
+                             "an additional parameter ('kind') specifying the "
+                             "name of the structure kind (i.e., the name of "
+                             "the species) for which you want to use this "
+                             "pseudo"),
+               },
+            }
+
+    
     def _prepare_for_submission(self,tempfolder,
-                                    inputdict = None):        
+                                    inputdict):        
         """
         This is the routine to be called when you want to create
         the input files and related stuff with a plugin.
         
-        Args:
-            tempfolder: a aiida.common.folders.Folder subclass where
-                the plugin should put all its files.
+        :param tempfolder: a aiida.common.folders.Folder subclass where
+                           the plugin should put all its files.
+        :param inputdict: a dictionary with the input nodes, as they would
+                be returned by get_inputdata_dict (without the Code!)
         """
         from aiida.common.utils import get_unique_filename, get_suggestion
 
         local_copy_list = []
         remote_copy_list = []
         
-        # The code is not here, only the data        
-        if inputdict is None:
-            inputdict = self.get_inputdata_dict()
-
         try:
-            parameters = inputdict.pop(self.get_linkname_parameters())
+            parameters = inputdict.pop(self.get_linkname('parameters'))
         except KeyError:
             raise InputValidationError("No parameters specified for this calculation")
         if not isinstance(parameters, ParameterData):
             raise InputValidationError("parameters is not of type ParameterData")
         
         try:
-            structure = inputdict.pop(self.get_linkname_structure())
+            structure = inputdict.pop(self.get_linkname('structure'))
         except KeyError:
             raise InputValidationError("No structure specified for this calculation")
         if not isinstance(structure,  StructureData):
@@ -100,14 +144,14 @@ class BasePwCpInputGenerator(object):
         
         if self._use_kpoints:
             try:
-                kpoints = inputdict.pop(self.get_linkname_kpoints())
+                kpoints = inputdict.pop(self.get_linkname('kpoints'))
             except KeyError:
                 raise InputValidationError("No kpoints specified for this calculation")
             if not isinstance(kpoints,  ParameterData):
                 raise InputValidationError("kpoints is not of type ParameterData")
 
         # Settings can be undefined, and defaults to an empty dictionary
-        settings = inputdict.pop(self.get_linkname_settings(),None)
+        settings = inputdict.pop(self.get_linkname('settings'),None)
         if settings is None:
             settings_dict = {}
         else:
@@ -120,14 +164,14 @@ class BasePwCpInputGenerator(object):
         
         pseudos = {}
         for link in inputdict.keys():
-            if link.startswith(self.get_linkname_pseudo_prefix()):
-                kind = link[len(self.get_linkname_pseudo_prefix()):]
+            if link.startswith(self._get_linkname_pseudo_prefix()):
+                kind = link[len(self._get_linkname_pseudo_prefix()):]
                 pseudos[kind] = inputdict.pop(link)
                 if not isinstance(pseudos[kind], UpfData):
                     raise InputValidationError("Pseudo for kind {} is not of "
                                                "type UpfData".format(kind))
 
-        parent_calc_folder = inputdict.pop(self.get_linkname_parent_calc_folder(),None)
+        parent_calc_folder = inputdict.pop(self.get_linkname('parent_folder'),None)
         if parent_calc_folder is not None:
             if not isinstance(parent_calc_folder,  RemoteData):
                 raise InputValidationError("parent_calc_folder, if specified,"
@@ -447,78 +491,29 @@ class BasePwCpInputGenerator(object):
         else:
             return 1
 
-    def use_structure(self, data):
+    @classmethod
+    def _get_linkname_pseudo_prefix(cls):
         """
-        Set the structure for this calculation
-        """
-        if not isinstance(data, StructureData):
-            raise ValueError("The data must be an instance of the StructureData class")
-
-        self._replace_link_from(data, self.get_linkname_structure())
-
-    def get_linkname_structure(self):
-        """
-        The name of the link used for the structure
-        """
-        return "structure"
-
-    def use_settings(self, data):
-        """
-        Set the settings for this calculation
-        """
-        if not isinstance(data, ParameterData):
-            raise ValueError("The data must be an instance of the ParameterData class")
-
-        self._replace_link_from(data, self.get_linkname_settings())
-
-    def get_linkname_settings(self):
-        """
-        The name of the link used for the settings
-        """
-        return "settings"
-
-    def use_parent_folder(self, data):
-        """
-        Set the folder of the parent calculation, if any
-        """
-        if not isinstance(data, RemoteData):
-            raise ValueError("The data must be an instance of the RemoteData class")
-
-        self._replace_link_from(data, self.get_linkname_parent_calc_folder())
-
-    def get_linkname_parent_calc_folder(self):
-        """
-        The name of the link used for the calculation folder of the parent (if any)
-        """
-        return "parent_calc_folder"
-
-    def use_parameters(self, data):
-        """
-        Set the parameters for this calculation
-        """
-        if not isinstance(data, ParameterData):
-            raise ValueError("The data must be an instance of the ParameterData class")
-
-        self._replace_link_from(data, self.get_linkname_parameters())
-
-    def get_linkname_parameters(self):
-        """
-        The name of the link used for the parameters
-        """
-        return "parameters"
-
-    def use_pseudo(self, data, kind):
-        """
-        Set the pseudo to use for the atomic kind 'kind' for this calculation
+        The prefix for the name of the link used for the pseudo for kind 'kind'
         
         Args:
-            data: the Data object of type UpfData
-            kind: a string identifying the kind for which this pseudo should be used
+            kind: a string for the atomic kind for which we want to get the link name
         """
-        if not isinstance(data, UpfData):
-            raise ValueError("The data must be an instance of the UpfData class")
+        return "pseudo_"
 
-        self._replace_link_from(data, self.get_linkname_pseudo(kind))
+    @classmethod
+    def _get_linkname_pseudo(cls, kind):
+        """
+        The name of the link used for the pseudo for kind 'kind'. 
+        It appends the pseudo name to the pseudo_prefix, as returned by the
+        _get_linkname_pseudo_prefix() method.
+        
+        Args:
+            kind: a string for the atomic kind for which we want to get the
+            link name
+        """
+        return "{}{}".format(cls._get_linkname_pseudo_prefix(),kind)
+
 
     def use_pseudos_from_family(self, family_name):
         """
@@ -531,36 +526,14 @@ class BasePwCpInputGenerator(object):
             family_name: the name of the group containing the pseudos
         """
         try:
-            structure = self.get_input(self.get_linkname_structure())
+            structure = self.get_input(self.get_linkname('structure'))
         except AttributeError:
-            raise ValueError("structure is not set yet!")
+            raise ValueError("Structure is not set yet!")
 
         pseudo_list = get_pseudos_from_structure(structure, family_name)
         
         for kindname, pseudo in pseudo_list.iteritems():
-            self._replace_link_from(pseudo, self.get_linkname_pseudo(kindname))
-        
-    def get_linkname_pseudo(self, kind):
-        """
-        The name of the link used for the pseudo for kind 'kind'. 
-        It appends the pseudo name to the pseudo_prefix, as returned by the
-        get_linkname_pseudo_prefix() method.
-        
-        Args:
-            kind: a string for the atomic kind for which we want to get the link name
-        """
-        return "{}{}".format(self.get_linkname_pseudo_prefix(),kind)
-
-
-    def get_linkname_pseudo_prefix(self):
-        """
-        The prefix for the name of the link used for the pseudo for kind 'kind'
-        
-        Args:
-            kind: a string for the atomic kind for which we want to get the link name
-        """
-        return "pseudo_"
-
+            self.use_pseudo(pseudo, kindname)
 
 def get_input_data_text(key,val):
     """

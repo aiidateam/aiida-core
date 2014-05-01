@@ -7,12 +7,12 @@ from aiida.common.exceptions import InputValidationError
 from aiida.common.datastructures import CalcInfo
 from aiida.orm.calculation.quantumespresso import get_input_data_text,_lowercase_dict,_uppercase_dict
 from aiida.common.exceptions import UniquenessError
+from aiida.common.utils import classproperty
 
-StructureData = DataFactory('structure')
-ParameterData = DataFactory('parameter')
-UpfData = DataFactory('upf')
-RemoteData = DataFactory('remote')
-PwCalculation = CalculationFactory('quantumespresso.pw')
+from aiida.orm.data.parameter import ParameterData 
+from aiida.orm.data.remote import RemoteData 
+from aiida.orm.data.folder import FolderData 
+from aiida.orm.calculation.quantumespresso.pw import PwCalculation 
 
 # List of namelists (uppercase) that are allowed to be found in the
 # input_data, in the correct order
@@ -43,27 +43,54 @@ class PhCalculation(Calculation):
 
     # Default PW output parser provided by AiiDA
     _default_parser = 'quantumespresso.ph'
+
+    @classproperty
+    def _use_methods(cls):
+        """
+        Additional use_* methods for the ph class.
+        """
+        retdict = Calculation._use_methods
+        retdict.update({
+            "settings": {
+               'valid_types': ParameterData,
+               'additional_parameter': None,
+               'linkname': 'settings',
+               'docstring': "Use an additional node for special settings",
+               },
+            "parameters": {
+               'valid_types': ParameterData,
+               'additional_parameter': None,
+               'linkname': 'parameters',
+               'docstring': ("Use a node that specifies the input parameters "
+                             "for the namelists"),
+               },
+            "parent_folder": {
+               'valid_types': RemoteData,
+               'additional_parameter': None,
+               'linkname': 'parent_calc_folder',
+               'docstring': ("Use a remote folder as parent folder (for "
+                             "restarts and similar"),
+               },
+            })
+        return retdict
     
-    def _prepare_for_submission(self,tempfolder,inputdict=None):        
+    def _prepare_for_submission(self,tempfolder,inputdict):        
         """
         This is the routine to be called when you want to create
         the input files and related stuff with a plugin.
         
-        Args:
-            tempfolder: a aiida.common.folders.Folder subclass where
-                the plugin should put all its files.
+        :param tempfolder: a aiida.common.folders.Folder subclass where
+                           the plugin should put all its files.
+        :param inputdict: a dictionary with the input nodes, as they would
+                be returned by get_inputdata_dict (without the Code!)
         """
 #        from aiida.common.utils import get_unique_filename, get_suggestion
 
         local_copy_list = []
         remote_copy_list = []
-        
-        # The code is not here, only the data        
-        if inputdict is None:
-            inputdict = self.get_inputdata_dict()
 
         try:
-            parameters = inputdict.pop(self.get_linkname_parameters())
+            parameters = inputdict.pop(self.get_linkname('parameters'))
         except KeyError:
             raise InputValidationError("No parameters specified for this calculation")
         if not isinstance(parameters, ParameterData):
@@ -71,7 +98,7 @@ class PhCalculation(Calculation):
         
         # Settings can be undefined, and defaults to an empty dictionary.
         # They will be used for any input that doen't fit elsewhere.
-        settings = inputdict.pop(self.get_linkname_settings(),None)
+        settings = inputdict.pop(self.get_linkname('settings'),None)
         if settings is None:
             settings_dict = {}
         else:
@@ -82,7 +109,7 @@ class PhCalculation(Calculation):
             settings_dict = _uppercase_dict(settings.get_dict(),
                                             dict_name='settings')
 
-        parent_calc_folder = inputdict.pop(self.get_linkname_parent_calc_folder(),None)
+        parent_calc_folder = inputdict.pop(self.get_linkname('parent_folder'),None)
         if parent_calc_folder is None:
             raise InputValidationError("No parent calculation found, needed to compute phonons")
         # TODO: to be a PwCalculation is not sufficient: it could also be a nscf calculation that is invalid for phonons
@@ -212,52 +239,7 @@ class PhCalculation(Calculation):
                 ",".join(settings_dict.keys())))
         
         return calcinfo
-    
-    def use_settings(self, data):
-        """
-        Set the settings for this calculation
-        """
-        if not isinstance(data, ParameterData):
-            raise ValueError("The data must be an instance of the ParameterData class")
-
-        self._replace_link_from(data, self.get_linkname_settings())
-
-    def get_linkname_settings(self):
-        """
-        The name of the link used for the settings
-        """
-        return "settings"
-
-    def use_parameters(self, data):
-        """
-        Set the parameters for this calculation
-        """
-        if not isinstance(data, ParameterData):
-            raise ValueError("The data must be an instance of the ParameterData class")
-
-        self._replace_link_from(data, self.get_linkname_parameters())
-
-    def get_linkname_parameters(self):
-        """
-        The name of the link used for the parameters
-        """
-        return "parameters"
-
-    def use_parent_folder(self, data):
-        """
-        Set the folder of the parent calculation, if any
-        """
-        if not isinstance(data, RemoteData):
-            raise ValueError("The data must be an instance of the RemoteData class")
-
-        self._add_link_from(data, self.get_linkname_parent_calc_folder())
-
-    def get_linkname_parent_calc_folder(self):
-        """
-        The name of the link used for the calculation folder of the parent (if any)
-        """
-        return "parent_calc_folder" 
-    
+        
     def set_parent_calc(self,calc):
         """
         Set the parent calculation of Ph, 
@@ -274,3 +256,29 @@ class PhCalculation(Calculation):
         
         self.use_parent_folder(remotedata)
         
+
+    def get_parent_calc(self):
+        """
+        Return the parent calculation of Ph, 
+        from which it will inherit the outputsubfolder.
+        Raise NotExistent if no parent_calculation was set.
+        """       
+        from aiida.common.exceptions import NotExistent
+        
+        try:
+            parentremotedata = self.get_inputs_dict()[
+                self._use_methods['parent_folder']['linkname']]
+        except KeyError:
+            raise NotExistent("No parent folder was set, therefore I cannot "
+                              "return a parent pw.x calculation.")
+        
+        parentcalcs = parentremotedata.get_inputs(type=PwCalculation)
+        if len(parentcalcs) > 1:
+            raise UniquenessError("More than one input pw.x calculation found")
+        if parentcalcs:
+            return parentcalcs[0]
+        else:
+            raise NotExistent("An input parent_folder exists, but no parent "
+                              "pw.x calculation was found.")
+            
+

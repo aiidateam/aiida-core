@@ -68,20 +68,26 @@ look like the following::
 
 Note: the PwCalculation inherits both the calculation and the ``BasicPwCpInputGenerator`` classes.
 
-Every plugin class is required to have the following hidden method::
+Every plugin class is required to have the following method::
 
-  def _prepare_for_submission(self,tempfolder,inputdict=None):
+  def _prepare_for_submission(self,tempfolder,inputdict):
 
 This function is called by the executionmanager when it's needed to create a new calculation.
-If inputdict is None, it has to be calculated using::
-   
-   # The code is not here, only the data        
-   if inputdict is None:
+The ``inputdict`` must contain all the input data nodes as a dictionary, in the
+same format that is returned by the ``get_inputdata_dict()`` method.
+
+.. note:: inputdict should contain all input ``Data`` nodes, but *not* the code.
+  (this is what the ``get_inputdata_dict()`` method does, by the way).
+
+In general, you simply want to do::
+
       inputdict = self.get_inputdata_dict()
-    
-otherwise the function should use the inputdict provided as input
-(this is useful to test for submission without the need to store all nodes
-on the DB).    
+
+right before calling ``_prepare_for_submission``.
+The reason for having this explicitly passed is that the plugin does not have
+to perform explicit database queries, and moreover this is useful to test
+for submission without the need to store all nodes on the DB.    
+
 No other specific functions have to be created for the plugin to work.
 This function is expected to receive in input a tempfolder. 
 This is a folder object in which the plugin will prepare and write the files needed for the code execution on the cluster (this is actually the folder that will be copied on the cluster and executed).
@@ -91,49 +97,99 @@ Therefore, you don't have to prepare a multitude of inputs to the function::
   the actual code inputs have to be taken out of the database.
 
 How? The plugin follows the links inside the database, that have to be set by the user.
-Therefore the Pw plugin contains functions such as::
+These are set as nodes that are linked as input to the calculation using the
+``use_NAME`` methods. For instance, the following methods are defined for a 
+``quantumespresso.pw`` calculation::
 
-    def use_structure(self, data):
-    def use_parent_folder(self, data):
-    def use_parameters(self, data):
-    def use_pseudo(self, data, kind):
+    use_structure(self, data)
+    use_parent_folder(self, data)
+    use_parameters(self, data)
+    use_pseudo(self, data, kind)
 
-The user prepares the object structure, the object calculation, and uses this function to set the link between the two elements in the database.
-More into details, a function use_parameters will check if the input
-node is of the desired kind, and then it will set the link from the
-input to the calculation.
-::
+Note, however, that these functions are not explicitly defined. Instead, you 
+have to `extend` the ``_use_methods`` classproperty.
 
-    def use_parameters(self, data):
-        """
-        Set the parameters for this calculation
-        """
-        if not isinstance(data, ParameterData):
-            raise ValueError("The data must be an instance of the ParameterData class")
+.. note:: remember to extend, and not to redefine, the ``_use_methods`` 
+    classproperty, as described below, otherwise you will lose the other ``use_*``
+    methods defined in the parent class (e.g., the ``use_code`` that is defined
+    in the ``Calculation`` base class).
+    
+An example of how to do this is reported here, to add two new ``use_``
+functions::
 
-        self._replace_link_from(data, self.get_linkname_parameters())
+    from aiida.common.utils import classproperty
+  
+    class SubclassCalculation(Calculation):
+  
+        @classproperty
+        def _use_methods(cls):
+            retdict = Calculation._use_methods
+            retdict.update({
+                "settings": {
+                   'valid_types': ParameterData,
+                   'additional_parameter': None,
+                   'linkname': 'settings',
+                   'docstring': "Use an additional node for special settings",
+                   },
+                "pseudo": {
+                   'valid_types': UpfData,
+                   'additional_parameter': 'kind',
+                   'linkname': cls._get_pseudo_linkname,
+                   'docstring': ("Use a remote folder as parent folder (for "
+                                 "restarts and similar"),
+                   },
+                })
+            return retdict
 
-We didn't implement any further input data analysis or verification
-here, what we worked was at the level of the input writing.
-Note also that a link can also have a label, therefore the calculation
-plugin has to implement a simple method that returns the name of the
-link (avoid hard-coding!)::
+        @classmethod
+        def _get_pseudo_linkname(cls, kind):
+            """
+            Return the linkname for a pseudopotential associated to a given 
+            structure kind.
+            """
+            return "pseudo_{}".format(kind)
 
-    def get_linkname_parameters(self):
-        """
-        The name of the link used for the parameters
-        """
-        return "parameters"
+What did we do?
 
+1. We added implicitly the two new ``use_settings`` and ``use_pseudo`` methods 
+   (because the dictionary returned by ``_use_methods`` now contains a
+   ``settings`` and a ``pseudo`` key)
+2. We did not lose the ``use_code`` call defined in the ``Calculation`` 
+   base class, because we are extending ``Calculation._use_methods``
+3. ``use_settings`` will accept only one parameter, the node specifying the
+   settings, since the ``additional_parameter`` value is ``None``.
+4. ``use_pseudo`` will require two parameters instead, since
+   ``additional_parameter`` value is *not* ``None``. If the second parameter
+   is passed via kwargs, its name must be 'kind' (the value of
+   ``additional_parameters``). That is, you can call ``use_pseudo`` in one of
+   the two following ways::
+     
+     use_pseudo(pseudo_node, 'He')
+     use_pseudo(pseudo_node, kind='He')
+
+   to associate the pseudopotential node ``pseudo_node`` (that you must have
+   loaded before) to helium (He) atoms.
+5. The type of the node that you pass as first parameter will be checked
+   against the type (or the tuple of types) specified with ``valid_types``
+   (the check is internally done using the ``isinstance`` python call).
+6. The name of the link is taken from the ``linkname`` value. Note that
+   if ``additional_parameter`` is ``None``, this is simply a string; otherwise,
+   it must be a callable that accepts one single parameter (the further
+   parameter passed to the ``use_XXX`` function) and returns a string with the
+   proper name. This functionality is provided to have a single ``use_XXX`` 
+   method to define more than one input node, as it is the case for
+   pseudopotentials, where one input pseudopotential node must be specified for
+   each atomic species or kind.
+7. Finally, ``docstring`` will contain the documentation of the function, 
+   that the user can obtain by printing e..g. ``use_pseudo.__doc__``.
+   
 
 Step 2: write your input
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 How does the method ``_prepare_for_submission`` work in practice?
-At first, one needs to find all the input nodes of the calculation. 
-The method ``self.get_inputdata_dict()`` does a query to the database,
-and asks for all the nodes that are input to the calculation object (``self``), as a result, it returns a dictionary that has the linkname for the key, and the node object as for the value.
-After this first query, you should check if the input nodes are logically sufficient to run an actual calculation. 
+You should start by checking if the input nodes passed in ``inputdict``
+are logically sufficient to run an actual calculation. 
 For example, a Pw calculation with QE strictly requires parameters, k_points, pseudopotentials and a structure.
 There are some nodes that are optional or that may be used in future for further functionalities.
 Note however that is good to check that there are no unused nodes, if this happens, an ``InputValidationError`` exception must be raised. 
@@ -143,7 +199,7 @@ Now it is time to build the input.
 You can load the object from the database as in the following way::
 
     input_dict = self.get_inputdata_dict()
-    kpoints = inputdict.pop(self.get_linkname_kpoints())
+    kpoints = inputdict.pop(self.get_linkname('kpoints'))
 
 And then you have to use the information that you stored in this object to build the actual lines of the code input.
 Now the problem is simply that of reading the database and convert that information into code/text input, which essentially requires a bit of time and code-specific knowledge.

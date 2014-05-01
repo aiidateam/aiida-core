@@ -1,47 +1,52 @@
 #!/usr/bin/env python
-import sys
-import os
-
 from aiida.common.utils import load_django
 load_django()
 
-from aiida.common import aiidalogger
-import logging
-from aiida.common.exceptions import NotExistent
-aiidalogger.setLevel(logging.INFO)
+import sys
+import os
 
-from aiida.orm import Code
-from aiida.orm import DataFactory
-from aiida.djsite.db.models import DbGroup
+from aiida.common.exceptions import NotExistent
+
+from aiida.orm import Code, Calculation, DataFactory
+
 UpfData = DataFactory('upf')
 ParameterData = DataFactory('parameter')
 StructureData = DataFactory('structure')
-import numpy
-from aiida.orm import Calculation
 
 ################################################################
 try:
-    parent_id = sys.argv[1]
+    dontsend = sys.argv[1]
+    if dontsend == "--dont-send":
+        submit_test = True
+    elif dontsend == "--send":
+        submit_test = False
+    else:
+        raise IndexError
 except IndexError:
-    parent_id = None
+    print >> sys.stderr, ("The first parameter can only be either "
+                          "--send or --dont-send")
+    sys.exit(1)
 
 try:
-    codename = sys.argv[2]
+    parent_id = sys.argv[2]
+    codename = sys.argv[3]
 except IndexError:
-    codename = None
+    print >> sys.stderr, ("Must provide as further parameters the parent ID and "
+                     "a q2r codename")
+    sys.exit(1)
 
 num_machines = 1 # node numbers
 queue = None
 
 #####
-expected_code_type='q2r.x'
+expected_code_type='quantumespresso.q2r'
 
-if parent_id is None:
-    raise ValueError("Must provide parent_id")
 try:
-    int(parent_id)
+    parent_id = int(parent_id)
 except ValueError:
-    raise ValueError('Parent_id not an integer: {}'.format(parent_id))
+    print >> sys.stderr, 'Parent_id not an integer: {}'.format(parent_id)
+    sys.exit(1)
+    
 try:
     if codename is None:
         raise ValueError
@@ -68,21 +73,31 @@ parameters = ParameterData(dict={
             'INPUT': {
                 'zasr': 'simple',
                 },
-            }).store()
+            })
                 
 calc = code.new_calc(computer=computer)
 calc.label = "Test QE q2r.x"
 calc.description = "Test calculation with the Quantum ESPRESSO q2r.x code"
 calc.set_max_wallclock_seconds(60*30) # 30 min
 calc.set_resources({"num_machines":num_machines})
-calc.store()
 
 calc.use_parameters(parameters)
 parentcalc = Calculation.get_subclass_from_pk(parent_id)
 calc.set_parent_calc(parentcalc)
 calc.use_code(code)
 
-calc.submit()
-print "submitted calculation; calc=Calculation(uuid='{}') # ID={}".format(
-    calc.uuid,calc.dbnode.pk)
-
+if submit_test:
+    subfolder, script_filename = calc.submit_test()
+    print "Test_submit for calculation (uuid='{}')".format(
+        calc.uuid)
+    print "Submit file in {}".format(os.path.join(
+        os.path.relpath(subfolder.abspath),
+        script_filename
+        ))
+else:
+    calc.store_all()
+    print "created calculation; calc=Calculation(uuid='{}') # ID={}".format(
+        calc.uuid,calc.dbnode.pk)
+    calc.submit()
+    print "submitted calculation; calc=Calculation(uuid='{}') # ID={}".format(
+        calc.uuid,calc.dbnode.pk)

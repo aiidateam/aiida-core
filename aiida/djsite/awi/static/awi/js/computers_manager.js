@@ -49,6 +49,16 @@ ComputersManager.prototype.listen = function () {
 		var id = $(this).attr('data-id');
 		self.enable(id, url);
 	});
+	
+	// 'delete' links
+	this.table.delegate('a.computer-delete', 'click', function (e) {
+		e.preventDefault();
+		var id = $(this).attr('data-id');
+		if (confirm('Are you sure you want to delete computer ' + id + '?')) {
+			var url = $(this).attr('href');
+			self.delete(id, url);
+		}
+	});
 };
 
 // toggle the details panel for a computer
@@ -134,6 +144,37 @@ ComputersManager.prototype.enable = function (id, url) {
 	});
 };
 
+// delete computer
+ComputersManager.prototype.delete = function (id, url) {
+	var self = this;
+	
+	$.ajax({
+		url: url,
+		type: 'DELETE',
+		dataType: 'json',
+		contentType: 'application/json',
+		processData: false,
+		success: function (data) {
+			self.load(true); // reload list
+		},
+		error: function (xhr, status, error) { /* or we show an error message */
+			try {
+				var errorText = $.parseJSON(xhr.responseText);
+			} catch (e) {
+				var errorText = xhr.responseText;
+			}
+			if (errorText.constructor === Object) {
+				var errors = [];
+				$.each(errorText.dbcomputer, function (k, v) {
+					errors.push(errorText.dbcomputer[k]);
+				});
+				errorText = errors.join(', ');
+			}
+			self.errorMessage('delete', id, errorText);
+		}
+	});
+};
+
 // load the markup for the listing table
 ComputersManager.prototype.load = function (scroll) {
 	var self = this;
@@ -185,9 +226,9 @@ ComputersManager.prototype.load = function (scroll) {
 					'<td class="name"><a href="' + self.getUrl('detail') + o.id + '" class="show-detail" data-id="' + o.id +
 					'"><strong>' + o.name + '</strong>&nbsp;<span class="right-caret"></span></a></td>' +
 					'<td>' + o.description.trunc(30, true, true) + '</td>' + /* description is truncated via this custom function */
-					'<td>' + o.transport_type + '</td>' +
+					'<td class="transport_type">' + o.transport_type + '</td>' +
 					'<td>' + o.hostname + '</td>' +
-					'<td>' + o.scheduler_type + '</td>' +
+					'<td class="scheduler_type">' + o.scheduler_type + '</td>' +
 					'<td class="status">' + enabled[o.enabled] + '</td>' +
 					'<td>' +
 						'<div class="btn-group">' + /* actions dropdown */
@@ -202,6 +243,7 @@ ComputersManager.prototype.load = function (scroll) {
 										: '<li class="status"><a href="' + o.resource_uri + '" class="computer-enable" data-id="' + o.id + '"><span class="glyphicon glyphicon-ok"></span>&nbsp;&nbsp;Enable</a></li>') +
 								'<li><a href="' + self.getUrl('edit') + o.id + '" data-toggle="modal" data-target="#' + self.modalId + '">' +
 									'<span class="glyphicon glyphicon-pencil"></span>&nbsp;&nbsp;Edit</a></li>' +
+								'<li><a href="' + o.resource_uri + '" class="computer-delete text-danger" data-id="' + o.id + '"><span class="glyphicon glyphicon-remove-circle"></span>&nbsp;&nbsp;Delete</a></li>' +
 							'</ul>' +
 						'</div>' +
 					'</td>' +
@@ -210,6 +252,10 @@ ComputersManager.prototype.load = function (scroll) {
 					next();
 				}
 			});
+			
+			if (rows.length == 0) {
+				next();
+			}
 			/*
 			var timer = function () {
 				if (rows.length == data.objects.length && (rows.length == 0 || rows[0] != '')) {
@@ -276,6 +322,9 @@ ComputersManager.prototype.loadDetail = function (url, id) {
 			$.each(subdata.objects, function (k, v) {
 				users.push(v.aiidauser.username);
 			});
+			if (users.length === 0) {
+				users.push('This computer is not configured for your user.');
+			}
 			rows.push(users.join(', '));
 			
 			rows.push(
@@ -326,6 +375,34 @@ ComputersManager.prototype.loadEdit = function (id) {
 	var self = this;
 	this.modal = this.modal.refresh();
 	
+	// get possible values for transport type and scheduler type and populate the dropdowns
+	var transportfield = this.modal.find('select#computer-transport');
+	var schedulerfield = this.modal.find('select#computer-scheduler');
+	$.getJSON(self.getUrl('schema'), function (data) {
+		transportfield.html(function () {
+			var content = [];
+			for (var v in data.fields.transport_type.valid_choices) {
+				if (v == $('#row-' + id + '>td.transport_type').text()) {
+					content.push('<option value="' + v + '" selected="selected">' + v + '</option>');
+				} else {
+					content.push('<option value="' + v + '">' + v + '</option>');
+				}
+			}
+			return content.join('');
+		});
+		schedulerfield.html(function () {
+			var content = [];
+			for (var v in data.fields.scheduler_type.valid_choices) {
+				if (v == $('#row-' + id + '>td.scheduler_type').text()) {
+					content.push('<option value="' + v + '" selected="selected">' + v + '</option>');
+				} else {
+					content.push('<option value="' + v + '">' + v + '</option>');
+				}
+			}
+			return content.join('');
+		});
+	});
+	
 	var namefield = this.modal.find('input#computer-name');
 	namefield.val($('#row-' + id + '>td.name strong').text());
 	window.setTimeout(function () {
@@ -339,10 +416,14 @@ ComputersManager.prototype.loadEdit = function (id) {
 			dataType: 'json',
 			contentType: 'application/json',
 			processData: false,
-			data: '{"name":"' + namefield.val() + '"}',
+			data: '{"name":"' + namefield.val() + '",' +
+				'"transport_type":"' + self.modal.find('select#computer-transport>option:selected').val() + '",' +
+				'"scheduler_type":"' + self.modal.find('select#computer-scheduler>option:selected').val() + '"}',
 			success: function (data) {
 				self.modal.modal('toggle');
 				$('#row-' + id + '>td.name strong').text(data.name);
+				$('#row-' + id + '>td.transport_type').text(data.transport_type);
+				$('#row-' + id + '>td.scheduler_type').text(data.scheduler_type);
 			},
 			error: function (xhr, status, error) {
 				$.each($.parseJSON(xhr.responseText).dbcomputer, function (k, v) {
@@ -395,7 +476,8 @@ ComputersManager.prototype.getAPIUrl = function (resource) {
 ComputersManager.prototype.errorMessage = function (action, id, error) {
 	var message = {
 		disable: 'Could not disable computer ' + id,
-		enable: 'Could not enable computer ' + id
+		enable: 'Could not enable computer ' + id,
+		delete: 'Could not delete comptuer ' + id
 	}
 	$('body>div.container').prepend('<div class="alert alert-danger"><strong>Oops</strong>, there was a problem.' +
 		message[action] + ' : ' + error + '</div>');

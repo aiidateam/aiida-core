@@ -5,6 +5,7 @@ function FiltersManager(module, moduleManager) {
 	this.newDropdown = $('#filters-new');
 	this.modalId = 'filter-modal';
 	this.modal = $('#' + this.modalId);
+	this.allowedTypes = ['boolean', 'string', 'integer', 'datetime', 'list'];
 	this.operators = {
 		'boolean': {
 			exact: 	['=', 'exactly']
@@ -157,15 +158,18 @@ FiltersManager.prototype.load = function () {
 			self.newDropdown.html('');
 			$.getJSON(self.getUrl('schema'), function (data) {
 				$.each(data.filtering, function (k, o) {
-					// we check if there is already a filter for this field
-					if (self.panel.find('#filter-' + k).length == 0) {
-						self.newDropdown.append('<li><a href="' +
-							self.getUrl('create') +	k +
-							'" data-toggle="modal" data-target="#filter-modal">' +
-							data.fields[k].display_name + '</a></li>');
-					} else {
-						self.newDropdown.append('<li class="disabled"><a href="#">' +
-							data.fields[k].display_name + '</a></li>');
+					// we check if the filter type is allowed
+					if ($.inArray(data.fields[k].type, self.allowedTypes) !== -1) {
+						// we check if there is already a filter for this field
+						if (self.panel.find('#filter-' + k).length == 0) {
+							self.newDropdown.append('<li><a href="' +
+								self.getUrl('create') +	k +
+								'" data-toggle="modal" data-target="#filter-modal">' +
+								data.fields[k].display_name + '</a></li>');
+						} else {
+							self.newDropdown.append('<li class="disabled"><a href="#">' +
+								data.fields[k].display_name + '</a></li>');
+						}
 					}
 				});
 			});
@@ -384,17 +388,18 @@ FiltersManager.prototype.loadCreate = function (fieldname, type) {
 				}
 			} else if (type == 'datetime') {
 				var post_operator = operator_field.children('option:selected').val();
+				var post_value;
 				var option = operator_field.children('option:selected').val();
 				if (option == 'range') {
-					var post_value = self.modal.find('#filter-datetime-start').val() + 'T00:00;' + self.modal.find('#filter-datetime-end').val() + 'T23:59:59';
+					post_value = self.modal.find('#filter-datetime-start').val() + 'T00:00;' + self.modal.find('#filter-datetime-end').val() + 'T23:59:59';
 				} else if (option == 'year') {
-					var post_value = self.modal.find('#filter-datetime-year').val();
+					post_value = self.modal.find('#filter-datetime-yearfield').val();
 				} else if (option == 'gte') {
-					var post_value = self.modal.find('#filter-value').val() + 'T00:00';
+					post_value = self.modal.find('#filter-value').val() + 'T00:00';
 				} else if (option == 'lte') {
-					var post_value = self.modal.find('#filter-value').val() + 'T23:59:59';
+					post_value = self.modal.find('#filter-value').val() + 'T23:59:59';
 				} else {
-					var post_value = '';
+					post_value = '';
 				}
 			} else if (type == 'list') {
 				var post_operator = 'exact';
@@ -414,7 +419,7 @@ FiltersManager.prototype.loadCreate = function (fieldname, type) {
 					self.moduleManager.load(false);
 				},
 				error: function (xhr, status, error) {
-					if (type == 'list' || type == 'boolean') {
+					if (type == 'list' || type == 'boolean' || type == 'datetime') {
 						self.errorModal(null, xhr.responseText);
 					} else {
 						self.errorModal(value_field, xhr.responseText);
@@ -424,7 +429,7 @@ FiltersManager.prototype.loadCreate = function (fieldname, type) {
 		});
 	}
 	
-	if (type != 'list' && type != 'boolean') {
+	if (type != 'list' && type != 'boolean' && type != 'datetime') {
 		// on pressing the enter key, trigger the click event on the button (submit)
 		value_field.keypress(function (event) {
 			if (event.which == 13) {
@@ -438,6 +443,12 @@ FiltersManager.prototype.loadCreate = function (fieldname, type) {
 			value_field.select().focus();
 		});
 	}
+	
+	// open datepicker on addon symbol click
+	self.modal.delegate('.input-group-addon', 'click', function (e) {
+		$(this).prev('input').focus();
+	});
+	
 	// if there was an error message, hide it on modal apparition
 	self.modal.on('show.bs.modal', function (e) {
 		if (type != 'list' && type != 'boolean' && type != 'datetime') {

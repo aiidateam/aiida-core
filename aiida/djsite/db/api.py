@@ -331,7 +331,7 @@ class DbNodeResource(ModelResource):
         resource_name = 'dbnode'
         allowed_methods = ['get']
         filtering = {
-            'id': ['exact'],
+            'id': ALL, #['exact']
             'uuid': ALL,
             'type': ALL,   
             'ctime': ALL,
@@ -469,6 +469,8 @@ class DbNodeResource(ModelResource):
         new_schema['fields']['id']['display_name'] = "ID"
         new_schema['fields']['resource_uri']['display_name'] = "Resource URI"
         new_schema['fields']['uuid']['display_name'] = "Unique ID"
+        new_schema['fields']['ctime']['display_name'] = "Creation Time"
+        new_schema['fields']['mtime']['display_name'] = "Modification Time"
         
         return new_schema
 
@@ -523,7 +525,8 @@ class DbNodeResource(ModelResource):
 #        new_bundle = self.build_bundle(data={'pk': 197},
 #                                   request=request)           
         data = {"outputs": 
-            [{'link_name': i['label'], 
+            [{'id': i['output__pk'],
+              'link_name': i['label'], 
               'resource_uri': self.get_uri_for_pk(i['output__pk']),
               'type': i['output__type'],
               'label': i['output__label']
@@ -572,7 +575,8 @@ class DbNodeResource(ModelResource):
 #        new_bundle = self.build_bundle(data={'pk': 197},
 #                                   request=request)           
         data = {"inputs": 
-            [{'link_name': i['label'], 
+            [{'id': i['input__pk'],
+              'link_name': i['label'], 
               'resource_uri': self.get_uri_for_pk(i['input__pk']),
               'type': i['input__type'],
               'label': i['input__label']

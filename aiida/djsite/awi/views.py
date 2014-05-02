@@ -170,7 +170,7 @@ def filters_set(request, module, field):
 				value = value.strip()
 				if not value:
 					if operator != 'isnull':
-						return HttpResponse("The operator value cannot be empty", status=400)
+						return HttpResponse("The value cannot be empty : " + value, status=400)
 				else:
 					#validation
 					if field_type == 'boolean':

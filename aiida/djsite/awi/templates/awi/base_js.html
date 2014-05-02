@@ -14,7 +14,8 @@
 			listing: '{% url "api_dispatch_list" api_name="v1" resource_name="dbcomputer" %}',
 			detail: '{% url "awi:computers_detail" computer_id="0" %}',
 			apidetail: '{% url "api_dispatch_detail" api_name="v1" resource_name="dbcomputer" pk=0 %}',
-			edit: '{% url "awi:computers_edit" computer_id="0" %}'
+			edit: '{% url "awi:computers_edit" computer_id="0" %}',
+			schema: '{% url "api_get_schema" api_name="v1" resource_name="dbcomputer" %}'
 		},
 		calculations : {
 			listing: '{% url "api_dispatch_list" api_name="v1" resource_name="dbnode" %}?type__startswith=calculation.',

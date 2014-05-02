@@ -94,6 +94,22 @@ CalculationsManager.prototype.load = function (scroll) {
 		$.getJSON(apiurl, function (data) {
 			var rows = [];
 			// for each calculation, we build the html of a table row
+			
+			var next = function () {
+				if (rows.length == 0) {
+					rows.push('<tr><td colspan="' + self.columns + '" class="center">No matching entry</td></tr>');
+				}
+				self.table.find('.loader').fadeOut('fast', function () {
+					self.table.append(rows.join(""));
+					self.table.find('span').tooltip(); // activate the tooltips
+					if (scroll) {
+						$('html, body').animate({
+							scrollTop: self.table.parent().offset().top-50
+						}, 200);
+					}
+				});
+			};
+			
 			$.each(data.objects, function (k, o) {
 				rows.push(''); // reserve a spot in the output for this row
 				
@@ -144,20 +160,11 @@ CalculationsManager.prototype.load = function (scroll) {
 					}
 				});
 			});
-			var next = function () {
-				if (rows.length == 0) {
-					rows.push('<tr><td colspan="' + self.columns + '" class="center">No matching entry</td></tr>');
-				}
-				self.table.find('.loader').fadeOut('fast', function () {
-					self.table.append(rows.join(""));
-					self.table.find('span').tooltip(); // activate the tooltips
-					if (scroll) {
-						$('html, body').animate({
-							scrollTop: self.table.parent().offset().top-50
-						}, 200);
-					}
-				});
-			};
+			
+			if (rows.length == 0) {
+				next();
+			}
+			
 			/*
 			var timer = function () {
 				if (rows.length == data.objects.length && (rows.length == 0 || rows[0] != '')) {
@@ -212,7 +219,8 @@ CalculationsManager.prototype.loadDetail = function (url, id) {
 		
 		$.getJSON(data.user, function (subdata) {
 			var loader = $('#' + self.module + '-detail-' + id + ' ~ .dots');
-			var ajaxLoaded = 0;
+			var inputsLoaded = false;
+			var outputsLoaded = false;
 			var mtime = new Date();
 			mtime.setISO8601(data.mtime);
 			var rows = [
@@ -263,82 +271,57 @@ CalculationsManager.prototype.loadDetail = function (url, id) {
 					'</strong><div class="media-body">' + v + '</div></li>');
 			});
 			
-			/*$.each(data.attributes, function (k, v) {
-				var rowstart = rows.length;
-				rows.push(''); // reserve a spot
-				// here do the ajax to get attribute infos, and then update the corresponding row
-				$.getJSON(v, function (subdata) {
-					if (subdata.value instanceof Array) {
-						subdata.value = subdata.value.join('<br>');
-					} else if (typeof subdata.value === 'number') {
-						subdata.value = String(subdata.value);
-					} else if (typeof subdata.value === 'object') {
-						var content = ['<dl class="dl-horizontal">'];
-						$.each(subdata.value, function (key, val) {
-							content.push('<dt>' + key.trunc(18, false, true) + '</dt>');
-							content.push('<dd>' + val + '</dd>');
-						});
-						content.push('</dl>');
-						subdata.value = content.join('');
-					} else if (subdata.key === 'scheduler_lastchecktime') {
-						var time = new Date();
-						time.setISO8601(subdata.value);
-						subdata.value = time.toLocaleString();
-					} else if (subdata.key === 'state') {
-						subdata.value = self.colorState(subdata.value);
-					} else if (subdata.key === 'scheduler_state') {
-						subdata.value = self.colorSchedulerState(subdata.value);
-					} else {
-						subdata.value = subdata.value.trunc(100);
-					}
-					rows[rowstart] = '<li class="media"><strong class="pull-left">' + subdata.key.trunc(18, false, true) +
-						'</strong><div class="media-body">' + subdata.value + '</div></li>';
-					ajaxLoaded++;
-					if (ajaxLoaded == data.attributes.length + data.inputs.length + data.outputs.length) {
-						next();
-					}
-				});
-			});*/
 			rows.push(
 				'</ul></div></li>',
 				'<li class="media"><strong class="pull-left">Inputs</strong><div class="media-body"><dl class="dl-horizontal">'
 			);
-			// instead of querying each url, there is an endpoint dbnode/id/inputs which shows the basic necessary informations
-			// query this endpoint instead and go through the list
-			$.each(data.inputs, function (k, v) { /* we go over all inputs and display them in a nested way */
-				var rowstart = rows.length; // index of the input row
-				rows.push(''); // reserve a spot
-				$.getJSON(v, function (subdata) {
-					rows[rowstart] = '<dt style="width: 30px;">' + subdata.id + '</dt><dd style="margin-left: 50px;"><a href="' +
-					self.getUrl('apidetail') + subdata.id + '/' +
+			
+			// query inputs
+			var inputsRow = rows.length;
+			rows.push(''); // reserve this spot for inputs
+			// get inputs with the custom API endpoint
+			$.getJSON(self.getAPIUrl(self.module) + id + '/inputs', function (subdata) {
+				var inputContent = [];
+				$.each(subdata.inputs, function (k, v) {
+					inputContent.push('<dt style="width: 30px;">' + v.id +
+					'</dt><dd style="margin-left: 50px;"><a href="' +
+					v.resource_uri +
 					'" target="_blank" class="text-info"><span class="glyphicon glyphicon-new-window"></span></a>&nbsp;&nbsp;<a href="#">' +
-						subdata.type + '</a></dd>';
-					ajaxLoaded++;
-					if (ajaxLoaded == data.inputs.length + data.outputs.length) {
-						next();
-					}
+						v.class_name + '</a></dd>');
 				});
+				rows[inputsRow] = inputContent.join('');
+				inputsLoaded = true;
+				if (inputsLoaded && outputsLoaded) {
+					next();
+				}
 			});
+			
 			rows.push(
 				'</dl></div></li>',
 				'<li class="media"><strong class="pull-left">Outputs</strong><div class="media-body"><dl class="dl-horizontal">'
 			);
-			// instead of querying each url, there is an endpoint dbnode/id/outputs which shows the basic necessary informations
-			// query this endpoint instead and go through the list
-			$.each(data.outputs, function (k, v) { /* we go over all outputs and display them in a nested way */
-				var rowstart = rows.length; // index of the output row
-				rows.push(''); // reserve a spot
-				$.getJSON(v, function (subdata) {
-					rows[rowstart] = '<dt style="width: 30px;">' + subdata.id + '</dt><dd style="margin-left: 50px;"><a href="' +
-					self.getUrl('apidetail') + subdata.id + '/' +
+			
+			
+			// query outputs
+			var outputsRow = rows.length;
+			rows.push(''); // reserve this spot for inputs
+			// get inputs with the custom API endpoint
+			$.getJSON(self.getAPIUrl(self.module) + id + '/outputs', function (subdata) {
+				var outputContent = [];
+				$.each(subdata.outputs, function (k, v) {
+					outputContent.push('<dt style="width: 30px;">' + v.id +
+					'</dt><dd style="margin-left: 50px;"><a href="' +
+					v.resource_uri +
 					'" target="_blank" class="text-info"><span class="glyphicon glyphicon-new-window"></span></a>&nbsp;&nbsp;<a href="#">' +
-						subdata.type + '</a></dd>';
-					ajaxLoaded++;
-					if (ajaxLoaded == data.inputs.length + data.outputs.length) {
-						next();
-					}
+						v.class_name + '</a></dd>');
 				});
+				rows[outputsRow] = outputContent.join('');
+				outputsLoaded = true;
+				if (inputsLoaded && outputsLoaded) {
+					next();
+				}
 			});
+			
 			rows.push(
 				'</dl></div></li>',
 				'<li class="media"><strong class="pull-left">Modification</strong><div class="media-body">' + mtime.toLocaleString() + '</div></li>',

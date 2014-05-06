@@ -334,8 +334,13 @@ ComputersManager.prototype.loadDetail = function (url, id) {
 			);
 		
 			$.each(data.metadata, function (k, v) { /* we go over all metadatas and display them in a nested way */
-				if (v instanceof Array)
-					var value = v.join('<br>');
+				if (v instanceof Array) {
+					var metaValue = ['<ul>'];
+					$.each(v, function (key, val) {
+						metaValue.push('<li>' + val + '</li>');
+					});
+					var value = metaValue.join('');
+				}
 				else
 					var value = nl2br(v);
 				rows.push('<li class="media"><strong class="pull-left">' + k.trunc(18, false, true) + '</strong><div class="media-body">' + value + '</div></li>');
@@ -477,16 +482,16 @@ ComputersManager.prototype.errorMessage = function (action, id, error) {
 	var message = {
 		disable: 'Could not disable computer ' + id,
 		enable: 'Could not enable computer ' + id,
-		delete: 'Could not delete comptuer ' + id
+		delete: 'Could not delete computer ' + id
 	}
-	$('body>div.container').prepend('<div class="alert alert-danger"><strong>Oops</strong>, there was a problem.' +
-		message[action] + ' : ' + error + '</div>');
+	$('body>div.container').prepend('<div class="alert alert-danger"><strong>Oops</strong>, there was a problem. ' +
+		message[action] + ': ' + error + '</div>');
 };
 
 // add an error message to the modal box
 ComputersManager.prototype.errorModal = function (field, error) {
 	var fieldElem = this.modal.find('input#computer-' + field);
-	this.modal.find('.alert').append('<strong>Oops</strong>, there was a problem : ' + error + '<br>')
+	this.modal.find('.alert').append('<strong>Oops</strong>, there was a problem: ' + error + '<br>')
 		.show();
 	fieldElem.parent().addClass('has-error');
 	fieldElem.select().focus();

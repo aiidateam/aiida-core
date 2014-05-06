@@ -245,7 +245,11 @@ CalculationsManager.prototype.loadDetail = function (url, id) {
 		
 			$.each(data.attributes, function (k, v) {
 				if (v instanceof Array) {
-					v = v.join('<br>');
+					var metaValue = ['<ul>'];
+					$.each(v, function (key, val) {
+						metaValue.push('<li>' + val + '</li>');
+					});
+					var v = metaValue.join('');
 				} else if (typeof v === 'number') {
 					v = String(v);
 				} else if (typeof v === 'object') {
@@ -401,13 +405,13 @@ CalculationsManager.prototype.errorMessage = function (action, id, error) {
 		disable: 'Could not disable computer ' + id,
 		enable: 'Could not enable computer ' + id
 	}
-	$('body>div.container').prepend('<div class="alert alert-danger"><strong>Oops</strong>, there was a problem.' +
-		message[action] + ' : ' + error + '</div>');
+	$('body>div.container').prepend('<div class="alert alert-danger"><strong>Oops</strong>, there was a problem. ' +
+		message[action] + ': ' + error + '</div>');
 };
 
 // add an error message to the modal box
 CalculationsManager.prototype.errorModal = function (field, error) {
-	this.modal.find('.alert').html('<strong>Oops</strong>, there was a problem : ' + error)
+	this.modal.find('.alert').html('<strong>Oops</strong>, there was a problem: ' + error)
 		.show();
 	field.parent().addClass('has-error');
 	field.select().focus();

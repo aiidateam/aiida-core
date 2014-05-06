@@ -36,12 +36,24 @@ ApplicationManager.prototype.pagination = function (total, limit, offset, previo
 		else
 			var aclass = '';
 		// append the selection criteria, but only if they aren't already present, also check if the order_by is already present
-		if (this.moduleManager.loadUrl.indexOf('?') == -1 && this.moduleManager.loadUrl.indexOf('limit') == -1)
-			var append = '?limit=' + limit + '&offset=' + (i - 1) * limit;
-		else if (this.moduleManager.loadUrl.indexOf('limit') == -1)
-			var append = '&limit=' + limit + '&offset=' + (i - 1) * limit;
+		var firstChar;
+		if (this.moduleManager.loadUrl.indexOf('?') == -1)
+			firstChar = '?';
 		else
-			var append = '';
+			firstChar = '&';
+		
+		var append;
+		if (this.moduleManager.loadUrl.indexOf('limit') === -1) {
+			append = firstChar + 'limit=' + limit + '&offset=' + ((i - 1) * limit);
+		} else if (this.moduleManager.loadUrl.indexOf('offset') !== -1) {
+			this.moduleManager.loadUrl = this.moduleManager.loadUrl.replace(/&offset=\d+/g, '');
+			append = firstChar + 'offset=' + ((i - 1) * limit);
+		} else if (this.moduleManager.loadUrl.indexOf('limit') !== -1) {
+			append = firstChar + 'offset=' + ((i - 1) * limit);
+		} else {
+			append = '';
+		}
+		
 		output.push('<li' + aclass + '><a href="#" data-url="' + this.moduleManager.loadUrl + append + '">' + i + '</a></li>');
 	}
 	if (next != null)

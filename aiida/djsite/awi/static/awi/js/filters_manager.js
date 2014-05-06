@@ -182,7 +182,6 @@ FiltersManager.prototype.loadFilters = function (filters) {
 	var self = this;
 	
 	// display the operator choices for each filter
-	console.log(filters.toString());
 	$.each(filters, function (k, f) {
 		var o = self.operators[f.type];
 		$('#filter-' + f.field + ' button.filter-operator').text(o[f.operator][0]);
@@ -475,13 +474,13 @@ FiltersManager.prototype.errorMessage = function (action, field, error) {
 		operator: 'Could not change operator on filter for field ' + field,
 		value: 'Could not change value on filter for field ' + field
 	}
-	$('body>div.container').prepend('<div class="alert alert-danger"><strong>Oops</strong>, there was a problem.' +
-		message[action] + ' : ' + error + '</div>');
+	$('body>div.container').prepend('<div class="alert alert-danger"><strong>Oops</strong>, there was a problem. ' +
+		message[action] + ': ' + error + '</div>');
 };
 
 // add an error message to the modal box
 FiltersManager.prototype.errorModal = function (field, error) {
-	this.modal.find('.alert').html('<strong>Oops</strong>, there was a problem : ' + error)
+	this.modal.find('.alert').html('<strong>Oops</strong>, there was a problem: ' + error)
 		.show();
 	if (field !== null) {
 		field.parent().addClass('has-error');

@@ -245,7 +245,7 @@ class Computer(object):
             ret_lines.append(" * Default number of cpus per machine: {}".format(
                 def_cpus_machine))
         ret_lines.append(" * Used by:        {} nodes".format(
-            len(self.dbcomputer.dbnode_set.all())))
+            len(self.dbcomputer.dbnodes.all())))
         
         ret_lines.append(" * prepend text:")
         if self.get_prepend_text().strip():

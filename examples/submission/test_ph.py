@@ -107,7 +107,6 @@ if queue is not None:
     calc.set_queue_name(queue)
 
 calc.use_parameters(parameters)
-calc.use_code(code)
 calc.set_parent_calc( parentcalc )
 
 if submit_test:

@@ -84,7 +84,6 @@ calc.set_resources({"num_machines":num_machines})
 calc.use_parameters(parameters)
 parentcalc = Calculation.get_subclass_from_pk(parent_id)
 calc.set_parent_calc(parentcalc)
-calc.use_code(code)
 
 if submit_test:
     subfolder, script_filename = calc.submit_test()

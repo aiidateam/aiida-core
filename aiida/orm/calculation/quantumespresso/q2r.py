@@ -31,6 +31,10 @@ class Q2rCalculation(NamelistsCalculation):
 
         from aiida.common.exceptions import UniquenessError
         localdatas = calc.get_outputs(type=self._parent_folder_type)
+        if len(localdatas) == 0:
+            raise UniquenessError("No output remotedata found in the parent "
+                                  "calc, probably it did not finish yet, "
+                                  "or it crashed")
         if len(localdatas) != 1:
             raise UniquenessError("More than one output remotedata found")
         localdata = localdatas[0]

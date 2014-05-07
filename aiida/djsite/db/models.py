@@ -79,7 +79,7 @@ class DbNode(m.Model):
     # last-modified time
     mtime = m.DateTimeField(auto_now=True, editable=False)
     # Cannot delete a user if something is associated to it
-    user = m.ForeignKey(User, on_delete=m.PROTECT)
+    user = m.ForeignKey(User, on_delete=m.PROTECT, related_name='dbnodes')
 
     # Direct links
     outputs = m.ManyToManyField('self', symmetrical=False,
@@ -89,7 +89,8 @@ class DbNode(m.Model):
                                  related_name='parents', through='DbPath')
     
     # Used only if dbnode is a calculation, or remotedata
-    dbcomputer = m.ForeignKey('DbComputer', null=True, on_delete=m.PROTECT)
+    dbcomputer = m.ForeignKey('DbComputer', null=True, on_delete=m.PROTECT,
+                              related_name='dbnodes')
 
     # Index that is incremented every time a modification is done on itself or on attributes.
     # Managed by the aiida.orm.Node class. Do not modify

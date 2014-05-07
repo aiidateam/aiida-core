@@ -137,7 +137,6 @@ if queue is not None:
     calc.set_queue_name(queue)
 
 calc.use_structure(s)
-calc.use_code(code)
 calc.use_parameters(parameters)
 
 if auto_pseudos:

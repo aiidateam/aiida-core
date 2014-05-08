@@ -3,7 +3,7 @@ Plugin to create a Quantum Espresso ph.x input file.
 """
 import os
 from aiida.orm import Calculation, DataFactory, CalculationFactory
-from aiida.common.exceptions import InputValidationError
+from aiida.common.exceptions import InputValidationError,ValidationError
 from aiida.common.datastructures import CalcInfo
 from aiida.orm.calculation.quantumespresso import get_input_data_text,_lowercase_dict,_uppercase_dict
 from aiida.common.exceptions import UniquenessError
@@ -113,15 +113,21 @@ class PhCalculation(Calculation):
         if parent_calc_folder is None:
             raise InputValidationError("No parent calculation found, needed to compute phonons")
         # TODO: to be a PwCalculation is not sufficient: it could also be a nscf calculation that is invalid for phonons
-        parent_calcs = parent_calc_folder.get_inputs(type=PwCalculation)
-        if len(parent_calcs) != 1:
-            raise UniquenessError("RemoteData found to be child to two PwCalcs!")
-        parent_calc = parent_calcs[0]
-        if not isinstance(parent_calc,PwCalculation):
-            raise  InputValidationError("The parent is not a PwCalculation")
+        
         if not isinstance(parent_calc_folder, RemoteData):
             raise InputValidationError("parent_calc_folder, if specified,"
                     "must be of type RemoteData")
+
+        restart_flag = False
+        parent_calcs = parent_calc_folder.get_inputs(type=PwCalculation)
+        if not parent_calcs:
+            parent_calcs = parent_calc_folder.get_inputs(type=PhCalculation)
+            restart_flag = True
+        if len(parent_calcs) != 1:
+            raise UniquenessError("Input RemoteData is child of many Calcs, or "
+                                  "does not have a parent at all")
+        parent_calc = parent_calcs[0]
+
 
         # Also, the parent calculation must be on the same computer
         new_comp = self.get_computer()
@@ -213,6 +219,13 @@ class PhCalculation(Calculation):
                               parent_calc_out_subfolder),
                  self.OUTPUT_SUBFOLDER))
         
+        if restart_flag:
+            remote_copy_list.append(
+                (parent_calc_folder.get_computer().uuid,
+                 os.path.join(parent_calc_folder.get_remote_path(),
+                              self.FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX),
+                 '.'))
+        
         calcinfo = CalcInfo()
         
         calcinfo.uuid = self.uuid
@@ -244,19 +257,34 @@ class PhCalculation(Calculation):
         """
         Set the parent calculation of Ph, 
         from which it will inherit the outputsubfolder.
-        The link will be created from parent RemoteData and PhCalculation 
+        The link will be created from parent RemoteData to PhCalculation 
         """
         if not isinstance(calc,PwCalculation):
             raise ValueError("Parent calculation must be a PwCalculation")
         
         remotedatas = calc.get_outputs(type=RemoteData)
         if len(remotedatas) != 1:
-            raise UniquenessError("More than one output remotedata found")
+            raise UniquenessError("More than one output remotedata found in "
+                                  "the parent")
         remotedata = remotedatas[0]
         
+        self._set_parent_remotedata(remotedata)
+
+    def _set_parent_remotedata(self,remotedata):
+        """
+        Used to set a parent remotefolder in the restart of ph.
+        """
+        if not isinstance(remotedata,RemoteData):
+            raise ValueError('remotedata must be a RemoteData')
+        
+        # complain if another remotedata is already found
+        input_remote = self.get_inputs(type=RemoteData)
+        if input_remote:
+            raise ValidationError("Cannot set several parent calculation to a "
+                                  "ph calculation")
+
         self.use_parent_folder(remotedata)
         
-
     def get_parent_calc(self):
         """
         Return the parent calculation of Ph, 
@@ -269,16 +297,64 @@ class PhCalculation(Calculation):
             parentremotedata = self.get_inputs_dict()[
                 self._use_methods['parent_folder']['linkname']]
         except KeyError:
-            raise NotExistent("No parent folder was set, therefore I cannot "
-                              "return a parent pw.x calculation.")
+            raise NotExistent("No parent was set.")
         
         parentcalcs = parentremotedata.get_inputs(type=PwCalculation)
+        if not parentcalcs: # case of restart
+            parentcalcs = parentremotedata.get_inputs(type=PhCalculation)
+
         if len(parentcalcs) > 1:
-            raise UniquenessError("More than one input pw.x calculation found")
+            raise UniquenessError("More than one input calculation found")
         if parentcalcs:
             return parentcalcs[0]
         else:
-            raise NotExistent("An input parent_folder exists, but no parent "
-                              "pw.x calculation was found.")
+            raise NotExistent("No valid parent calculation was found")
             
-
+    def create_restart(self,restart_if_failed=False):
+        """
+        Function to restart a calculation that was not completed before 
+        (like max walltime reached...) i.e. not to restart a FAILED calculation.
+        Returns a calculation c2, with all links prepared but not stored in DB.
+        To submit it simply:
+        c2.store_all()
+        c2.submit()
+        
+        :param bool restart_if_failed: restart if parent is failed. default False
+        """
+        from aiida.common.datastructures import calc_states
+        if self.get_state() != calc_states.FINISHED:
+            if restart_if_failed:
+                pass
+            else:
+                raise InputValidationError("Calculation to be restarted must be "
+                            "in the {} state".format(calc_states.FINISHED) )
+        
+        inp = self.get_inputs_dict()
+        code = inp['code']
+        
+        old_inp_dict = inp['parameters'].get_dict()
+        # add the restart flag
+        old_inp_dict['INPUTPH']['recover'] = True
+        inp_dict = ParameterData(dict=old_inp_dict) 
+        
+        remote_folders = self.get_outputs(type=RemoteData)
+        if len(remote_folders)!=1:
+            raise InputValidationError("More than one output RemoteData found "
+                                       "in calculation {}".format(self.pk))
+        remote_folder = remote_folders[0]
+        
+        c2 = self.copy()
+        
+        labelstring = c2.label + " Restart of ph.x."
+        c2.label = labelstring.lstrip()
+        
+        # set the 
+        c2.use_parameters(inp_dict)
+        c2.use_code(code)
+        try:
+            c2.use_settings(inp['settings'])
+        except KeyError:
+            pass
+        c2._set_parent_remotedata( remote_folder )
+        return c2
+    

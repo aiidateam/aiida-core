@@ -140,7 +140,6 @@ def get_all_fields_info():
 def export(what, also_parents = True, outfile = 'export_data.aiida.tar.gz'):     
     import json
     import tarfile
-    import importlib
     import operator
     from collections import defaultdict
     
@@ -312,7 +311,10 @@ def export(what, also_parents = True, outfile = 'export_data.aiida.tar.gz'):
         print "COMPRESSING..."
     
         with tarfile.open(outfile, "w:gz") as tar:
-            tar.add(folder.abspath, arcname="aiida")
+            tar.add(folder.abspath, arcname="")
+
+#        import shutil
+#        shutil.make_archive(outfile, 'zip', folder.abspath)#, base_dir='aiida')
 
     print "DONE."
 

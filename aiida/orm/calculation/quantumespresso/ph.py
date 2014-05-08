@@ -44,6 +44,9 @@ class PhCalculation(Calculation):
     # Default PW output parser provided by AiiDA
     _default_parser = 'quantumespresso.ph'
 
+    # in restarts, will not copy but use symlinks
+    _default_symlink_usage = True
+
     @classproperty
     def _use_methods(cls):
         """
@@ -88,7 +91,8 @@ class PhCalculation(Calculation):
 
         local_copy_list = []
         remote_copy_list = []
-
+        remote_symlink_list = []
+        
         try:
             parameters = inputdict.pop(self.get_linkname('parameters'))
         except KeyError:
@@ -136,7 +140,9 @@ class PhCalculation(Calculation):
             raise InputValidationError("PhCalculation must be launched on the same computer"
                           " of the parent: {}".format(old_comp.get_name()))
 
-        default_parent_output_folder = parent_calc.OUTPUT_SUBFOLDER
+        default_parent_output_folder = os.path.join(
+                            parent_calc.OUTPUT_SUBFOLDER, 
+                            '{}.save'.format(parent_calc.PREFIX))
         parent_calc_out_subfolder = settings_dict.pop('parent_calc_out_subfolder',
                                                       default_parent_output_folder)      
 
@@ -190,7 +196,8 @@ class PhCalculation(Calculation):
         input_filename = tempfolder.get_abs_path(self.INPUT_FILE_NAME)
 
         # create a folder for the dynamical matrices
-        tempfolder.get_subfolder(self.FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX,
+        if not restart_flag: # if it is a restart, it will be copied over
+            tempfolder.get_subfolder(self.FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX,
                                  create=True)
         
         with open(input_filename,'w') as infile:
@@ -213,18 +220,49 @@ class PhCalculation(Calculation):
                 "not valid namelists for the current type of calculation: "
                 "{}".format(",".join(input_params.keys())))
         
-        remote_copy_list.append(
+        # copy the parent scratch
+        symlink = settings_dict.pop('PARENT_FOLDER_SYMLINK',self._default_symlink_usage) # a boolean
+        if symlink:
+            # here I copy ./out/aiida.save
+            # but first I have to create the out folder
+            tempfolder.get_subfolder(self.OUTPUT_SUBFOLDER, create=True)
+            remote_symlink_list.append(
+                (parent_calc_folder.get_computer().uuid,
+                 os.path.join(parent_calc_folder.get_remote_path(),
+                              parent_calc_out_subfolder),
+                 os.path.join(self.OUTPUT_SUBFOLDER,'{}.save'.format(self.PREFIX))
+                 ))
+        else:
+            # here I copy the whole folder ./out
+            remote_copy_list.append(
                 (parent_calc_folder.get_computer().uuid,
                  os.path.join(parent_calc_folder.get_remote_path(),
                               parent_calc_out_subfolder),
                  self.OUTPUT_SUBFOLDER))
         
-        if restart_flag:
-            remote_copy_list.append(
-                (parent_calc_folder.get_computer().uuid,
-                 os.path.join(parent_calc_folder.get_remote_path(),
+        if restart_flag: # in this case, copy in addition also the dynamical matrices
+            if symlink:
+                remote_symlink_list.append(
+                    (parent_calc_folder.get_computer().uuid,
+                     os.path.join(parent_calc_folder.get_remote_path(),
                               self.FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX),
-                 '.'))
+                     self.FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX))
+                # and here I copy ./out/_ph0
+                remote_symlink_list.append(
+                        (parent_calc_folder.get_computer().uuid,
+                         os.path.join(parent_calc_folder.get_remote_path(),
+                                      self.OUTPUT_SUBFOLDER,'_ph0'),
+                         os.path.join(self.OUTPUT_SUBFOLDER,'_ph0')
+                         ))
+
+            else:
+                # copy the dynamical matrices
+                remote_copy_list.append(
+                    (parent_calc_folder.get_computer().uuid,
+                     os.path.join(parent_calc_folder.get_remote_path(),
+                              self.FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX),
+                     '.'))
+                # no need to copy the _ph0, since I copied already the whole ./out folder
         
         calcinfo = CalcInfo()
         
@@ -233,6 +271,7 @@ class PhCalculation(Calculation):
         calcinfo.cmdline_params = settings_dict.pop('CMDLINE', [])
         calcinfo.local_copy_list = local_copy_list
         calcinfo.remote_copy_list = remote_copy_list
+        calcinfo.remote_symlink_list = remote_symlink_list
         calcinfo.stdin_name = self.INPUT_FILE_NAME
         calcinfo.stdout_name = self.OUTPUT_FILE_NAME
         
@@ -310,7 +349,8 @@ class PhCalculation(Calculation):
         else:
             raise NotExistent("No valid parent calculation was found")
             
-    def create_restart(self,restart_if_failed=False):
+    def create_restart(self,restart_if_failed=False,
+                       parent_folder_symlink=_default_symlink_usage):
         """
         Function to restart a calculation that was not completed before 
         (like max walltime reached...) i.e. not to restart a FAILED calculation.
@@ -351,10 +391,19 @@ class PhCalculation(Calculation):
         # set the 
         c2.use_parameters(inp_dict)
         c2.use_code(code)
+        
+        # settings will use the logic for the usage of symlinks
         try:
-            c2.use_settings(inp['settings'])
+            old_settings_dict = inp['settings'].get_dict()
         except KeyError:
-            pass
+            old_settings_dict = {}
+        if parent_folder_symlink:
+            old_settings_dict['PARENT_FOLDER_SYMLINK'] = True
+            
+        if old_settings_dict: # if not empty dictionary
+            settings = ParameterData(dict=old_settings_dict)
+            c2.use_settings(settings)
+        
         c2._set_parent_remotedata( remote_folder )
         return c2
     

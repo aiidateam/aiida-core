@@ -1289,4 +1289,14 @@ class SshTransport(aiida.transport.Transport):
         #    machine=self._machine, escaped_remotedir="'{}'".format(remotedir), remotedir=remotedir,
         #    bash_call_escaped=escape_for_bash("""bash --rcfile <(echo 'if [ -e ~/.bashrc ] ; then source ~/.bashrc ; fi ; export PS1="\[\033[01;31m\][AiiDA]\033[00m\]$PS1"')"""))
         
+    def symlink(self,remotesource,remotedestination):
+        """
+        Create a symbolic link between the remote source and the remote 
+        destination
         
+        :param remotesource: remote source
+        :param remotedestination:remote destination
+        """
+        
+        self.sftp.symlink(remotesource,remotedestination)
+    

@@ -816,3 +816,15 @@ class LocalTransport(aiida.transport.Transport):
         
         shutil.move(src,dst)
 
+    def symlink(self,remotesource,remotedestination):
+        """
+        Create a symbolic link between the remote source and the remote 
+        destination
+        
+        :param remotesource: remote source
+        :param remotedestination:remote destination
+        """
+        
+        os.symlink(remotesource,remotedestination)
+    
+    

@@ -28,17 +28,18 @@ class CpCalculation(BasePwCpInputGenerator, Calculation):
     Quantum ESPRESSO distribution.
     For more information, refer to http://www.quantum-espresso.org/
     """
-    _cp_unit_number = 50
+    _cp_read_unit_number = 50
+    _cp_write_unit_number = 51
 
     DATAFILE_XML = os.path.join(BasePwCpInputGenerator.OUTPUT_SUBFOLDER, 
                                '{}_{}.save'.format(BasePwCpInputGenerator.PREFIX,
-                                                   _cp_unit_number), 
+                                                   _cp_write_unit_number), 
                                BasePwCpInputGenerator.DATAFILE_XML_BASENAME)
 
     FILE_XML_PRINT_COUNTER_BASENAME = 'print_counter.xml'
     FILE_XML_PRINT_COUNTER = os.path.join(BasePwCpInputGenerator.OUTPUT_SUBFOLDER, 
                                '{}_{}.save'.format(BasePwCpInputGenerator.PREFIX,
-                                                   _cp_unit_number), 
+                                                   _cp_write_unit_number), 
                                           FILE_XML_PRINT_COUNTER_BASENAME)
 
     # Default PW output parser provided by AiiDA
@@ -64,12 +65,21 @@ class CpCalculation(BasePwCpInputGenerator, Calculation):
          ('SYSTEM', 'ntyp'),  # set later
          ('SYSTEM', 'a'), ('SYSTEM', 'b'), ('SYSTEM', 'c'),
          ('SYSTEM', 'cosab'), ('SYSTEM', 'cosac'), ('SYSTEM', 'cosbc'),
-         ('CONTROL', 'ndr', _cp_unit_number),
-         ('CONTROL', 'ndw', _cp_unit_number),
+         ('CONTROL', 'ndr', _cp_read_unit_number),
+         ('CONTROL', 'ndw', _cp_write_unit_number),
     ]
     
     _use_kpoints = False
     
+    # in restarts, it will copy from the parent the following 
+    _default_parent_folder_source = os.path.join(
+                         BasePwCpInputGenerator._default_parent_output_folder,
+                         '{}_51.save'.format(BasePwCpInputGenerator.PREFIX))
+    # in restarts, it will copy the previous folder in the following one 
+    _default_parent_folder_destination = os.path.join(
+                         BasePwCpInputGenerator._default_parent_output_folder,
+                         '{}_50.save'.format(BasePwCpInputGenerator.PREFIX))
+
     @classproperty
     def _use_methods(cls):
         """

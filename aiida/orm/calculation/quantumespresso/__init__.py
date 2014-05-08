@@ -27,7 +27,6 @@ class BasePwCpInputGenerator(object):
     # Additional files that should always be retrieved for the specific plugin
     _internal_retrieve_list = []
 
-
     # Default PW output parser provided by AiiDA
     _default_parser = None
     #_default_parser = 'quantumespresso.pw'
@@ -38,6 +37,16 @@ class BasePwCpInputGenerator(object):
 
     _automatic_namelists = {}
 
+    # in restarts, will not copy but use symlinks
+    _default_symlink_usage = True
+
+    # in restarts, it will copy from the parent the following 
+    _default_parent_folder_source = os.path.join(
+                                _default_parent_output_folder,
+                                '{}.save'.format(PREFIX))
+    # in restarts, it will copy the previous folder in the following one 
+    _default_parent_folder_destination = _default_parent_folder_source
+    
 #    _automatic_namelists = {
 #        'scf':   ['CONTROL', 'SYSTEM', 'ELECTRONS'],
 #        'nscf':  ['CONTROL', 'SYSTEM', 'ELECTRONS'],
@@ -109,6 +118,14 @@ class BasePwCpInputGenerator(object):
                              "the species) for which you want to use this "
                              "pseudo"),
                },
+            "parent_folder": {
+               'valid_types': RemoteData,
+               'additional_parameter': None,
+               'linkname': 'parent_calc_folder',
+               'docstring': ("Use a remote folder as parent folder (for "
+                             "restarts and similar"),
+               },
+
             }
 
     
@@ -127,6 +144,7 @@ class BasePwCpInputGenerator(object):
 
         local_copy_list = []
         remote_copy_list = []
+        remote_symlink_list = []
         
         try:
             parameters = inputdict.pop(self.get_linkname('parameters'))
@@ -141,7 +159,7 @@ class BasePwCpInputGenerator(object):
             raise InputValidationError("No structure specified for this calculation")
         if not isinstance(structure,  StructureData):
             raise InputValidationError("structure is not of type StructureData")
-        
+
         if self._use_kpoints:
             try:
                 kpoints = inputdict.pop(self.get_linkname('kpoints'))
@@ -433,20 +451,34 @@ class BasePwCpInputGenerator(object):
                 "not valid namelists for the current type of calculation: "
                 "{}".format(",".join(input_params.keys())))
 
+        try:
+            parent_calc_out_subfolder_dst = settings_dict['parent_calc_out_subfolder']
+        except KeyError:
+            parent_calc_out_subfolder_dst = self._default_parent_folder_destination
+            
         parent_calc_out_subfolder = settings_dict.pop('parent_calc_out_subfolder',
-            self._default_parent_output_folder)
+            self._default_parent_folder_source
+            )
 
-        # copy remote output dir, if specified
-        if parent_calc_folder is not None:
-            remote_copy_list.append(
-                (parent_calc_folder.get_computer().uuid,
-                 os.path.join(parent_calc_folder.get_remote_path(),
-                              parent_calc_out_subfolder),
-                 self.OUTPUT_SUBFOLDER))
-
-        # TODO: copy remote output dir, if specified
-        # remote_copy_list.append(
-        # (fileobj.get_comptuer().uuid, fileobj.get_remote_path(),dest_rel_path))
+        # operations for restart
+        symlink = settings_dict.pop('parent_folder_symlink',self._default_symlink_usage) # a boolean
+        if symlink:
+            if parent_calc_folder is not None:               
+                remote_symlink_list.append(
+                        (parent_calc_folder.get_computer().uuid,
+                         os.path.join(parent_calc_folder.get_remote_path(),
+                         parent_calc_out_subfolder),
+                         parent_calc_out_subfolder_dst
+                         ))
+        else:
+            # copy remote output dir, if specified
+            if parent_calc_folder is not None:
+                remote_copy_list.append(
+                        (parent_calc_folder.get_computer().uuid,
+                         os.path.join(parent_calc_folder.get_remote_path(),
+                         parent_calc_out_subfolder),
+                         parent_calc_out_subfolder_dst
+                         ))
 
         calcinfo = CalcInfo()
 
@@ -457,6 +489,7 @@ class BasePwCpInputGenerator(object):
         calcinfo.remote_copy_list = remote_copy_list
         calcinfo.stdin_name = self.INPUT_FILE_NAME
         calcinfo.stdout_name = self.OUTPUT_FILE_NAME
+        calcinfo.remote_symlink_list = remote_symlink_list
         
         # Retrieve by default the output file and the xml file
         calcinfo.retrieve_list = []        
@@ -534,6 +567,87 @@ class BasePwCpInputGenerator(object):
         
         for kindname, pseudo in pseudo_list.iteritems():
             self.use_pseudo(pseudo, kindname)
+
+    def _set_parent_remotedata(self,remotedata):
+        """
+        Used to set a parent remotefolder in the restart of ph.
+        """
+        from aiida.common.exceptions import ValidationError
+        
+        if not isinstance(remotedata,RemoteData):
+            raise ValueError('remotedata must be a RemoteData')
+        
+        # complain if another remotedata is already found
+        input_remote = self.get_inputs(type=RemoteData)
+        if input_remote:
+            raise ValidationError("Cannot set several parent calculation to a "
+                                  "{} calculation".format(self.__class__.__name__))
+
+        self.use_parent_folder(remotedata)
+
+    def create_restart(self,restart_if_failed=False,
+                parent_folder_symlink=_default_symlink_usage):
+        """
+        Function to restart a calculation that was not completed before 
+        (like max walltime reached...) i.e. not to restart a really FAILED calculation.
+        Returns a calculation c2, with all links prepared but not stored in DB.
+        To submit it simply:
+        c2.store_all()
+        c2.submit()
+        
+        :param bool restart_if_failed: restart if parent is failed.
+        """
+        from aiida.common.datastructures import calc_states
+        
+        if self.get_state() != calc_states.FINISHED:
+            if restart_if_failed:
+                pass
+            else:
+                raise InputValidationError("Calculation to be restarted must be "
+                            "in the {} state".format(calc_states.FINISHED) )
+        
+        calc_inp = self.get_inputs_dict()
+        
+        old_inp_dict = calc_inp['parameters'].get_dict()
+        # add the restart flag
+        old_inp_dict['CONTROL']['restart_mode'] = 'restart'
+        inp_dict = ParameterData(dict=old_inp_dict) 
+        
+        remote_folders = self.get_outputs(type=RemoteData)
+        if len(remote_folders)!=1:
+            raise InputValidationError("More than one output RemoteData found "
+                                       "in calculation {}".format(self.pk))
+        remote_folder = remote_folders[0]
+        
+        c2 = self.copy()
+        
+        labelstring = c2.label + " Restart of {} {}.".format(
+                                        self.__class__.__name__,self.pk)
+        c2.label = labelstring.lstrip()
+        
+        # set the new links
+        c2.use_parameters(inp_dict)
+        c2.use_structure(calc_inp['structure'])
+        if self._use_kpoints:
+            c2.use_kpoints(calc_inp['kpoints'])
+        c2.use_code(calc_inp['code'])
+        try:
+            old_settings_dict = calc_inp['settings'].get_dict()
+        except KeyError:
+            old_settings_dict = {}
+        if parent_folder_symlink:
+            old_settings_dict['parent_folder_symlink'] = True
+            
+        if old_settings_dict: # if not empty dictionary
+            settings = ParameterData(dict=old_settings_dict)
+            c2.use_settings(settings)
+            
+        c2._set_parent_remotedata( remote_folder )
+        
+        for pseudo in self.get_inputs(type=UpfData):
+            c2.use_pseudo(pseudo, kind=pseudo.element)
+        
+        return c2
 
 def get_input_data_text(key,val):
     """

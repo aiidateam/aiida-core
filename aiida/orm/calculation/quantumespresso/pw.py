@@ -32,7 +32,9 @@ class PwCalculation(BasePwCpInputGenerator, Calculation):
 
     # Default PW output parser provided by AiiDA
     _default_parser = 'quantumespresso.pw'
-    
+    _default_symlink_usage = False
+    # false due to PWscf bug, could be set to true on versions >= 5.1.0
+        
     _automatic_namelists = {
         'scf':   ['CONTROL', 'SYSTEM', 'ELECTRONS'],
         'nscf':  ['CONTROL', 'SYSTEM', 'ELECTRONS'],
@@ -73,5 +75,4 @@ class PwCalculation(BasePwCpInputGenerator, Calculation):
                }
         
         return retdict
-    
-
+   

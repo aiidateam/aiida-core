@@ -327,15 +327,26 @@ class DbAttributeBaseClass(m.Model):
         :return: a dictionary where each key is a level-0 attribute
             stored in the Db table, correctly converted 
             to the right type.
-        """        
-        from django.db.models import Q
-        
-        # First level key: the key must not contain the separator        
-        first_level_key = ~Q(key__contains=cls._sep)
-        attrs = cls.objects.filter(dbnode=dbnode).filter(first_level_key)
+        """  
+        # Speedup: I put some logic here so that I need to perform
+        # only one query per dbnode (similar to the one in _getvalue_internal
+        # for the case of dictionaries)
+        all_attributes = {_.key: _ for _ in
+                          cls.objects.filter(dbnode=dbnode)}
 
-        # Return a dictionary
-        return {attr.key: attr.getvalue() for attr in attrs}
+        firstleveldbsubdict = {k: v for k, v in all_attributes.iteritems()
+                               if cls._sep not in k}
+
+        tempdict = {}
+        for firstsubk, firstsubv in firstleveldbsubdict.iteritems():
+            # I call recursively the same function to get subitems
+            newsubitems={k[len(firstsubk)+len(cls._sep):]: v 
+                         for k, v in all_attributes.iteritems()
+                         if k.startswith(firstsubk+cls._sep)}
+            tempdict[firstsubk] = firstsubv._getvalue_internal(
+                subitems=newsubitems)
+            
+        return tempdict
 
 
     @classmethod

@@ -87,7 +87,7 @@ Download the code using git in a directory of your choice (``~/git/aiida`` in
 this tutorial), using the
 following command::
 
-    git clone https://pizzi@bitbucket.org/aiida_team/aiida.git ~/git/aiida
+    git clone https://USERNAME@bitbucket.org/aiida_team/aiida.git ~/git/aiida
 
 (or use ``git@bitbucket.org:aiida_team/aiida.git`` if you are downloading
 through SSH; note that this requires your ssh key to be added on the
@@ -118,12 +118,13 @@ becoming root). Check that every package is installed correctly.
 If everything went smoothly, congratulations! Now the code is installed!
 However, we need still a few steps to properly configure AiiDA for your user.
 
-Note : if the ``pip install`` command gives you an error that ressembles the one
-shown below, you will need to downgrade to an older version of pip::
+.. note:: if the ``pip install`` command gives you an error that
+  resembles the one
+  shown below, you might need to downgrade to an older version of pip::
 
 	Cannot fetch index base URL https://pypi.python.org/simple/
 
-To downgrade pip, use the following command::
+  To downgrade pip, use the following command::
 
 	sudo easy_install pip==1.2.1
 

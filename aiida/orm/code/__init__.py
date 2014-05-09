@@ -285,6 +285,9 @@ class Code(Node):
         
         Parameters are passed to the calculation __init__ method.
         
+        :note: it also directly creates the link to this code (that will of
+            course be cached, since the new node is not stored yet).
+        
         :raise MissingPluginError: if the specified plugin does not exist.
         :raise ValueError: if no plugin was specified.        
         """
@@ -298,11 +301,15 @@ class Code(Node):
         
         try:
             C = CalculationFactory(plugin_name)
+            
         except MissingPluginError:
             raise MissingPluginError("The input_plugin name for this code is "
                                      "'{}', but it is not an existing plugin"
                                      "name".format(plugin_name))
-        return C(*args, **kwargs)
+        new_calc = C(*args, **kwargs)
+        # I link to the code
+        new_calc.use_code(self)
+        return new_calc
 
     @property
     def full_text_info(self):

@@ -461,7 +461,7 @@ class BasePwCpInputGenerator(object):
             )
 
         # operations for restart
-        symlink = settings_dict.pop('parent_folder_symlink',self._default_symlink_usage) # a boolean
+        symlink = settings_dict.pop('PARENT_FOLDER_SYMLINK',self._default_symlink_usage) # a boolean
         if symlink:
             if parent_calc_folder is not None:               
                 remote_symlink_list.append(
@@ -586,7 +586,7 @@ class BasePwCpInputGenerator(object):
         self.use_parent_folder(remotedata)
 
     def create_restart(self,restart_if_failed=False,
-                parent_folder_symlink=_default_symlink_usage):
+                parent_folder_symlink=None):
         """
         Function to restart a calculation that was not completed before 
         (like max walltime reached...) i.e. not to restart a really FAILED calculation.
@@ -605,6 +605,9 @@ class BasePwCpInputGenerator(object):
             else:
                 raise InputValidationError("Calculation to be restarted must be "
                             "in the {} state".format(calc_states.FINISHED) )
+        
+        if parent_folder_symlink is None:
+            parent_folder_symlink = self._default_symlink_usage
         
         calc_inp = self.get_inputs_dict()
         
@@ -636,7 +639,7 @@ class BasePwCpInputGenerator(object):
         except KeyError:
             old_settings_dict = {}
         if parent_folder_symlink:
-            old_settings_dict['parent_folder_symlink'] = True
+            old_settings_dict['PARENT_FOLDER_SYMLINK'] = True
             
         if old_settings_dict: # if not empty dictionary
             settings = ParameterData(dict=old_settings_dict)

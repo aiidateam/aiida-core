@@ -252,6 +252,9 @@ class SgeScheduler(aiida.scheduler.Scheduler):
             seconds = tot_minutes % 60
             lines.append("#$ -l h_rt={:02d}:{:02d}:{:02d}".format(
                 hours, minutes, seconds))
+        
+        if job_tmpl.custom_scheduler_commands:
+            lines.append(job_tmpl.custom_scheduler_commands)
             
         #TAKEN FROM PBSPRO:  
         # Job environment variables are to be set on one single line. 

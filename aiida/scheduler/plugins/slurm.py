@@ -311,6 +311,9 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
             # --mem and  --mem-per-cpu  are  mutually exclusive.
             lines.append("#SBATCH --mem={}".format(virtualMemoryKb//1024))
 
+        if job_tmpl.custom_scheduler_commands:
+            lines.append(job_tmpl.custom_scheduler_commands)
+
         # Job environment variables are to be set on one single line. 
         # This is a tough job due to the escaping of commas, etc.
         # moreover, I am having issues making it work.

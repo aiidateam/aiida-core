@@ -4,26 +4,48 @@ from aiida.cmdline.baseclass import VerdiCommand
 from aiida.common.utils import load_django
 
 def import_file(infile):     
+    import json
+    import os
     import tarfile
 
     from aiida.common.folders import SandboxFolder
 
-    import json
-
+    
     try:
-        with tarfile.open(infile, "r:gz") as tar:
+        with tarfile.open(infile, "r:gz", format=tarfile.PAX_FORMAT) as tar:
             with SandboxFolder() as folder:
-                print "UNCOMPRESSING..."
-                # TODO: CHECKS ON EXTRACTALL
-                tar.extractall(path=folder.abspath,
-                               members=tar.getmembers())
-               
+                print "READING DATA AND METADATA..."                
+                tar.extract(path=folder.abspath,
+                       member=tar.getmember('metadata.json'))
+                tar.extract(path=folder.abspath,
+                       member=tar.getmember('data.json'))
+                
                 # TODO: CHECKS ON WHETHER THE FILE EXISTS
                 with open(folder.get_abs_path('metadata.json')) as f:
                     metadata = json.load(f)
 
                 with open(folder.get_abs_path('data.json')) as f:
                     data = json.load(f)
+
+                print "EXTRACTING NODE DATA..."
+                for member in tar.getmembers():
+                    if member.isdev():
+                        # safety: skip if character device, block device or FIFO
+                        print >> sys.stderr, ("WARNING, device found inside the "
+                            "import file: {}".format(member.name))
+                        continue
+                    if member.issym() or member.islnk():
+                        # safety: in export, I set dereference=True therefore
+                        # there should be no symbolic or hard links.
+                        print >> sys.stderr, ("WARNING, link found inside the "
+                            "import file: {}".format(member.name))
+                        continue
+                    if not member.name.startswith('nodes'+os.sep):
+                        continue
+                    tar.extract(path=folder.abspath,
+                                member=member)
+                print os.listdir(folder.abspath)
+                print os.listdir(folder.abspath + "/nodes")
     except tarfile.ReadError:
         raise ValueError("The input file format for import is not valid (1)")
     

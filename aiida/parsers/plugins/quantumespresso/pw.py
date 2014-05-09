@@ -92,7 +92,7 @@ class PwParser(Parser):
         calc_input_parameterdata = self._calc.get_inputs(type=ParameterData,
                                                          also_labels=True)
         # then look for parameterdata only
-        input_param_name = self._calc.get_linkname_parameters()
+        input_param_name = self._calc.get_linkname('parameters')
         params = [i[1] for i in calc_input_parameterdata if i[0]==input_param_name]
         if len(params) != 1:
             raise UniquenessError("Found {} input_params instead of one"
@@ -101,7 +101,7 @@ class PwParser(Parser):
 
         # look for eventual flags of the parser
         settings_list = [i[1] for i in self._calc.get_inputs(also_labels=True) 
-                    if i[0]==self._calc.get_linkname_settings()] 
+                    if i[0]==self._calc.get_linkname('settings')] 
         # assume there is only one, otherwise calc already should have complained
         try:
             parser_opts = settings_list[0].get_dict()[self._setting_key]
@@ -201,7 +201,7 @@ class PwParser(Parser):
             array_data = ArrayData()
             for x in trajectory_data.iteritems():
                 array_data.set_array(x[0],numpy.array(x[1]))
-            self._set_linkname_outarray(self.get_linkname_outarray())
+            self._set_linkname_outarray(self._outarray_name)
             array_data.store()
             self._calc._add_link_to(array_data, label=self.get_linkname_outarray() )
         

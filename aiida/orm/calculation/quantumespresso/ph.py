@@ -3,16 +3,16 @@ Plugin to create a Quantum Espresso ph.x input file.
 """
 import os
 from aiida.orm import Calculation, DataFactory, CalculationFactory
-from aiida.common.exceptions import InputValidationError
+from aiida.common.exceptions import InputValidationError,ValidationError
 from aiida.common.datastructures import CalcInfo
 from aiida.orm.calculation.quantumespresso import get_input_data_text,_lowercase_dict,_uppercase_dict
 from aiida.common.exceptions import UniquenessError
+from aiida.common.utils import classproperty
 
-StructureData = DataFactory('structure')
-ParameterData = DataFactory('parameter')
-UpfData = DataFactory('upf')
-RemoteData = DataFactory('remote')
-PwCalculation = CalculationFactory('quantumespresso.pw')
+from aiida.orm.data.parameter import ParameterData 
+from aiida.orm.data.remote import RemoteData 
+from aiida.orm.data.folder import FolderData 
+from aiida.orm.calculation.quantumespresso.pw import PwCalculation 
 
 # List of namelists (uppercase) that are allowed to be found in the
 # input_data, in the correct order
@@ -43,27 +43,58 @@ class PhCalculation(Calculation):
 
     # Default PW output parser provided by AiiDA
     _default_parser = 'quantumespresso.ph'
+
+    # in restarts, will not copy but use symlinks
+    _default_symlink_usage = True
+
+    @classproperty
+    def _use_methods(cls):
+        """
+        Additional use_* methods for the ph class.
+        """
+        retdict = Calculation._use_methods
+        retdict.update({
+            "settings": {
+               'valid_types': ParameterData,
+               'additional_parameter': None,
+               'linkname': 'settings',
+               'docstring': "Use an additional node for special settings",
+               },
+            "parameters": {
+               'valid_types': ParameterData,
+               'additional_parameter': None,
+               'linkname': 'parameters',
+               'docstring': ("Use a node that specifies the input parameters "
+                             "for the namelists"),
+               },
+            "parent_folder": {
+               'valid_types': RemoteData,
+               'additional_parameter': None,
+               'linkname': 'parent_calc_folder',
+               'docstring': ("Use a remote folder as parent folder (for "
+                             "restarts and similar"),
+               },
+            })
+        return retdict
     
-    def _prepare_for_submission(self,tempfolder,inputdict=None):        
+    def _prepare_for_submission(self,tempfolder,inputdict):        
         """
         This is the routine to be called when you want to create
         the input files and related stuff with a plugin.
         
-        Args:
-            tempfolder: a aiida.common.folders.Folder subclass where
-                the plugin should put all its files.
+        :param tempfolder: a aiida.common.folders.Folder subclass where
+                           the plugin should put all its files.
+        :param inputdict: a dictionary with the input nodes, as they would
+                be returned by get_inputdata_dict (without the Code!)
         """
 #        from aiida.common.utils import get_unique_filename, get_suggestion
 
         local_copy_list = []
         remote_copy_list = []
+        remote_symlink_list = []
         
-        # The code is not here, only the data        
-        if inputdict is None:
-            inputdict = self.get_inputdata_dict()
-
         try:
-            parameters = inputdict.pop(self.get_linkname_parameters())
+            parameters = inputdict.pop(self.get_linkname('parameters'))
         except KeyError:
             raise InputValidationError("No parameters specified for this calculation")
         if not isinstance(parameters, ParameterData):
@@ -71,7 +102,7 @@ class PhCalculation(Calculation):
         
         # Settings can be undefined, and defaults to an empty dictionary.
         # They will be used for any input that doen't fit elsewhere.
-        settings = inputdict.pop(self.get_linkname_settings(),None)
+        settings = inputdict.pop(self.get_linkname('settings'),None)
         if settings is None:
             settings_dict = {}
         else:
@@ -82,28 +113,36 @@ class PhCalculation(Calculation):
             settings_dict = _uppercase_dict(settings.get_dict(),
                                             dict_name='settings')
 
-        parent_calc_folder = inputdict.pop(self.get_linkname_parent_calc_folder(),None)
+        parent_calc_folder = inputdict.pop(self.get_linkname('parent_folder'),None)
         if parent_calc_folder is None:
             raise InputValidationError("No parent calculation found, needed to compute phonons")
         # TODO: to be a PwCalculation is not sufficient: it could also be a nscf calculation that is invalid for phonons
-        parent_calcs = parent_calc_folder.get_inputs(type=PwCalculation)
-        if len(parent_calcs) != 1:
-            raise UniquenessError("RemoteData found to be child to two PwCalcs!")
-        parent_calc = parent_calcs[0]
-        if not isinstance(parent_calc,PwCalculation):
-            raise  InputValidationError("The parent is not a PwCalculation")
+        
         if not isinstance(parent_calc_folder, RemoteData):
             raise InputValidationError("parent_calc_folder, if specified,"
                     "must be of type RemoteData")
+
+        restart_flag = False
+        parent_calcs = parent_calc_folder.get_inputs(type=PwCalculation)
+        if not parent_calcs:
+            parent_calcs = parent_calc_folder.get_inputs(type=PhCalculation)
+            restart_flag = True
+        if len(parent_calcs) != 1:
+            raise UniquenessError("Input RemoteData is child of many Calcs, or "
+                                  "does not have a parent at all")
+        parent_calc = parent_calcs[0]
+
 
         # Also, the parent calculation must be on the same computer
         new_comp = self.get_computer()
         old_comp = parent_calc.get_computer()
         if ( not new_comp.uuid == old_comp.uuid ):
-            raise IOError("PhCalculation must be launched on the same computer"
-                          "of the parent: {}".format(old_comp.get_name()))
+            raise InputValidationError("PhCalculation must be launched on the same computer"
+                          " of the parent: {}".format(old_comp.get_name()))
 
-        default_parent_output_folder = parent_calc.OUTPUT_SUBFOLDER
+        default_parent_output_folder = os.path.join(
+                            parent_calc.OUTPUT_SUBFOLDER, 
+                            '{}.save'.format(parent_calc.PREFIX))
         parent_calc_out_subfolder = settings_dict.pop('parent_calc_out_subfolder',
                                                       default_parent_output_folder)      
 
@@ -157,7 +196,8 @@ class PhCalculation(Calculation):
         input_filename = tempfolder.get_abs_path(self.INPUT_FILE_NAME)
 
         # create a folder for the dynamical matrices
-        tempfolder.get_subfolder(self.FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX,
+        if not restart_flag: # if it is a restart, it will be copied over
+            tempfolder.get_subfolder(self.FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX,
                                  create=True)
         
         with open(input_filename,'w') as infile:
@@ -180,11 +220,49 @@ class PhCalculation(Calculation):
                 "not valid namelists for the current type of calculation: "
                 "{}".format(",".join(input_params.keys())))
         
-        remote_copy_list.append(
+        # copy the parent scratch
+        symlink = settings_dict.pop('PARENT_FOLDER_SYMLINK',self._default_symlink_usage) # a boolean
+        if symlink:
+            # here I copy ./out/aiida.save
+            # but first I have to create the out folder
+            tempfolder.get_subfolder(self.OUTPUT_SUBFOLDER, create=True)
+            remote_symlink_list.append(
+                (parent_calc_folder.get_computer().uuid,
+                 os.path.join(parent_calc_folder.get_remote_path(),
+                              parent_calc_out_subfolder),
+                 os.path.join(self.OUTPUT_SUBFOLDER,'{}.save'.format(self.PREFIX))
+                 ))
+        else:
+            # here I copy the whole folder ./out
+            remote_copy_list.append(
                 (parent_calc_folder.get_computer().uuid,
                  os.path.join(parent_calc_folder.get_remote_path(),
                               parent_calc_out_subfolder),
                  self.OUTPUT_SUBFOLDER))
+        
+        if restart_flag: # in this case, copy in addition also the dynamical matrices
+            if symlink:
+                remote_symlink_list.append(
+                    (parent_calc_folder.get_computer().uuid,
+                     os.path.join(parent_calc_folder.get_remote_path(),
+                              self.FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX),
+                     self.FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX))
+                # and here I copy ./out/_ph0
+                remote_symlink_list.append(
+                        (parent_calc_folder.get_computer().uuid,
+                         os.path.join(parent_calc_folder.get_remote_path(),
+                                      self.OUTPUT_SUBFOLDER,'_ph0'),
+                         os.path.join(self.OUTPUT_SUBFOLDER,'_ph0')
+                         ))
+
+            else:
+                # copy the dynamical matrices
+                remote_copy_list.append(
+                    (parent_calc_folder.get_computer().uuid,
+                     os.path.join(parent_calc_folder.get_remote_path(),
+                              self.FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX),
+                     '.'))
+                # no need to copy the _ph0, since I copied already the whole ./out folder
         
         calcinfo = CalcInfo()
         
@@ -193,6 +271,7 @@ class PhCalculation(Calculation):
         calcinfo.cmdline_params = settings_dict.pop('CMDLINE', [])
         calcinfo.local_copy_list = local_copy_list
         calcinfo.remote_copy_list = remote_copy_list
+        calcinfo.remote_symlink_list = remote_symlink_list
         calcinfo.stdin_name = self.INPUT_FILE_NAME
         calcinfo.stdout_name = self.OUTPUT_FILE_NAME
         
@@ -212,65 +291,119 @@ class PhCalculation(Calculation):
                 ",".join(settings_dict.keys())))
         
         return calcinfo
-    
-    def use_settings(self, data):
-        """
-        Set the settings for this calculation
-        """
-        if not isinstance(data, ParameterData):
-            raise ValueError("The data must be an instance of the ParameterData class")
-
-        self._replace_link_from(data, self.get_linkname_settings())
-
-    def get_linkname_settings(self):
-        """
-        The name of the link used for the settings
-        """
-        return "settings"
-
-    def use_parameters(self, data):
-        """
-        Set the parameters for this calculation
-        """
-        if not isinstance(data, ParameterData):
-            raise ValueError("The data must be an instance of the ParameterData class")
-
-        self._replace_link_from(data, self.get_linkname_parameters())
-
-    def get_linkname_parameters(self):
-        """
-        The name of the link used for the parameters
-        """
-        return "parameters"
-
-    def use_parent_folder(self, data):
-        """
-        Set the folder of the parent calculation, if any
-        """
-        if not isinstance(data, RemoteData):
-            raise ValueError("The data must be an instance of the RemoteData class")
-
-        self._add_link_from(data, self.get_linkname_parent_calc_folder())
-
-    def get_linkname_parent_calc_folder(self):
-        """
-        The name of the link used for the calculation folder of the parent (if any)
-        """
-        return "parent_calc_folder" 
-    
+        
     def set_parent_calc(self,calc):
         """
         Set the parent calculation of Ph, 
         from which it will inherit the outputsubfolder.
-        The link will be created from parent RemoteData and PhCalculation 
+        The link will be created from parent RemoteData to PhCalculation 
         """
         if not isinstance(calc,PwCalculation):
             raise ValueError("Parent calculation must be a PwCalculation")
         
         remotedatas = calc.get_outputs(type=RemoteData)
         if len(remotedatas) != 1:
-            raise UniquenessError("More than one output remotedata found")
+            raise UniquenessError("More than one output remotedata found in "
+                                  "the parent")
         remotedata = remotedatas[0]
         
+        self._set_parent_remotedata(remotedata)
+
+    def _set_parent_remotedata(self,remotedata):
+        """
+        Used to set a parent remotefolder in the restart of ph.
+        """
+        if not isinstance(remotedata,RemoteData):
+            raise ValueError('remotedata must be a RemoteData')
+        
+        # complain if another remotedata is already found
+        input_remote = self.get_inputs(type=RemoteData)
+        if input_remote:
+            raise ValidationError("Cannot set several parent calculation to a "
+                                  "ph calculation")
+
         self.use_parent_folder(remotedata)
         
+    def get_parent_calc(self):
+        """
+        Return the parent calculation of Ph, 
+        from which it will inherit the outputsubfolder.
+        Raise NotExistent if no parent_calculation was set.
+        """       
+        from aiida.common.exceptions import NotExistent
+        
+        try:
+            parentremotedata = self.get_inputs_dict()[
+                self._use_methods['parent_folder']['linkname']]
+        except KeyError:
+            raise NotExistent("No parent was set.")
+        
+        parentcalcs = parentremotedata.get_inputs(type=PwCalculation)
+        if not parentcalcs: # case of restart
+            parentcalcs = parentremotedata.get_inputs(type=PhCalculation)
+
+        if len(parentcalcs) > 1:
+            raise UniquenessError("More than one input calculation found")
+        if parentcalcs:
+            return parentcalcs[0]
+        else:
+            raise NotExistent("No valid parent calculation was found")
+            
+    def create_restart(self,restart_if_failed=False,
+                       parent_folder_symlink=_default_symlink_usage):
+        """
+        Function to restart a calculation that was not completed before 
+        (like max walltime reached...) i.e. not to restart a FAILED calculation.
+        Returns a calculation c2, with all links prepared but not stored in DB.
+        To submit it simply:
+        c2.store_all()
+        c2.submit()
+        
+        :param bool restart_if_failed: restart if parent is failed. default False
+        """
+        from aiida.common.datastructures import calc_states
+        if self.get_state() != calc_states.FINISHED:
+            if restart_if_failed:
+                pass
+            else:
+                raise InputValidationError("Calculation to be restarted must be "
+                            "in the {} state".format(calc_states.FINISHED) )
+        
+        inp = self.get_inputs_dict()
+        code = inp['code']
+        
+        old_inp_dict = inp['parameters'].get_dict()
+        # add the restart flag
+        old_inp_dict['INPUTPH']['recover'] = True
+        inp_dict = ParameterData(dict=old_inp_dict) 
+        
+        remote_folders = self.get_outputs(type=RemoteData)
+        if len(remote_folders)!=1:
+            raise InputValidationError("More than one output RemoteData found "
+                                       "in calculation {}".format(self.pk))
+        remote_folder = remote_folders[0]
+        
+        c2 = self.copy()
+        
+        labelstring = c2.label + " Restart of ph.x."
+        c2.label = labelstring.lstrip()
+        
+        # set the 
+        c2.use_parameters(inp_dict)
+        c2.use_code(code)
+        
+        # settings will use the logic for the usage of symlinks
+        try:
+            old_settings_dict = inp['settings'].get_dict()
+        except KeyError:
+            old_settings_dict = {}
+        if parent_folder_symlink:
+            old_settings_dict['PARENT_FOLDER_SYMLINK'] = True
+            
+        if old_settings_dict: # if not empty dictionary
+            settings = ParameterData(dict=old_settings_dict)
+            c2.use_settings(settings)
+        
+        c2._set_parent_remotedata( remote_folder )
+        return c2
+    

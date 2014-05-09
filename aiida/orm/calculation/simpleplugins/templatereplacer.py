@@ -46,17 +46,18 @@ class TemplatereplacerCalculation(Calculation):
     template. Can be used for many different codes, or as a starting point
     to develop a new plugin.
     """
-    def _prepare_for_submission(self,tempfolder,inputdict=None):        
+    def _prepare_for_submission(self,tempfolder,inputdict):        
         """
         This is the routine to be called when you want to create
         the input files and related stuff with a plugin.
         
-        Args:
-            tempfolder: a aiida.common.folders.Folder subclass where
-                the plugin should put all its files.
-
-        TODO: document what it has to return (probably a CalcInfo object)
-              and what is the behavior on the tempfolder
+        This is the routine to be called when you want to create
+        the input files and related stuff with a plugin.
+        
+        :param tempfolder: a aiida.common.folders.Folder subclass where
+                           the plugin should put all its files.
+        :param inputdict: a dictionary with the input nodes, as they would
+                be returned by get_inputdata_dict (without the Code!)
         """
         import StringIO
 
@@ -65,9 +66,6 @@ class TemplatereplacerCalculation(Calculation):
         from aiida.orm.data.remote import RemoteData
         from aiida.common.utils import validate_list_of_string_tuples
         from aiida.common.exceptions import ValidationError
-        
-        if inputdict is None:
-            inputdict = self.get_inputdata_dict()
         
         parameters_node = inputdict.pop('parameters', None)
         if parameters_node is None:

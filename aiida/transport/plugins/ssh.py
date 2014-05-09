@@ -122,7 +122,29 @@ class SshTransport(aiida.transport.Transport):
         Return a suggestion for the specific field.
         """
         config = parse_sshconfig(computer.hostname)
-        return os.path.expanduser(config.get('identityfile', ""))
+        
+        try:
+            identities = config['identityfile']
+            # In paramiko > 0.10, identity file is a list of strings.
+            if isinstance(identities,basestring):
+                identity = identities
+            elif isinstance(identities,(list,tuple)):
+                if not identities:
+                    # An empty list should not be provided; to be sure,
+                    # anyway, behave as if no identityfile were defined
+                    raise KeyError
+                # By default we suggest only the first one
+                identity = identities[0]
+            else:
+                # If the parser provides an unknown type, just skip to
+                # the 'except KeyError' section, as if no identityfile 
+                # were provided (hopefully, this should never happen)
+                raise KeyError
+        except KeyError:
+            # No IdentityFile defined: return an empty string
+            return ""
+        
+        return os.path.expanduser(identity)
 
     @classmethod
     def _convert_timeout_fromstring(cls, string):
@@ -1267,4 +1289,14 @@ class SshTransport(aiida.transport.Transport):
         #    machine=self._machine, escaped_remotedir="'{}'".format(remotedir), remotedir=remotedir,
         #    bash_call_escaped=escape_for_bash("""bash --rcfile <(echo 'if [ -e ~/.bashrc ] ; then source ~/.bashrc ; fi ; export PS1="\[\033[01;31m\][AiiDA]\033[00m\]$PS1"')"""))
         
+    def symlink(self,remotesource,remotedestination):
+        """
+        Create a symbolic link between the remote source and the remote 
+        destination
         
+        :param remotesource: remote source
+        :param remotedestination:remote destination
+        """
+        
+        self.sftp.symlink(remotesource,remotedestination)
+    

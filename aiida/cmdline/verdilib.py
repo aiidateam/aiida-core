@@ -28,7 +28,8 @@ from aiida.cmdline.commands.computer import Computer
 from aiida.cmdline.commands.daemon import Daemon
 from aiida.cmdline.commands.data import Data
 from aiida.cmdline.commands.devel import Devel
-from aiida.cmdline.commands.export import Export
+from aiida.cmdline.commands.exportfile import Export
+from aiida.cmdline.commands.importfile import Import
 from aiida.cmdline.commands.workflow import Workflow
 
 

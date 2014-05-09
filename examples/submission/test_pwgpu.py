@@ -147,7 +147,6 @@ print "created calculation; calc=Calculation(uuid='{}') # ID={}".format(
 
 s.store()
 calc.use_structure(s)
-calc.use_code(code)
 calc.use_parameters(parameters)
 
 if num_pools is not None:

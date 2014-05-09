@@ -375,6 +375,13 @@ def submit_calc(calc, authinfo, transport=None):
         raise ValueError("Can only submit calculations with state=TOSUBMIT! "
                          "(state of calc {} is {} instead)".format(
                              calc.pk, calc.get_state()))
+    if calc.has_cached_links():
+        raise ValueError("Cannot submit calculation {} because it has "
+                         "cached input links! If you "
+                         "just want to test the submission, use the "
+                         "test_submit() method, otherwise store all links"
+                         "first".format(calc.pk))
+                
     # I start to submit the calculation: I set the state
     calc._set_state(calc_states.SUBMITTING)
              
@@ -399,7 +406,8 @@ def submit_calc(calc, authinfo, transport=None):
                 code.pk, calc.pk, computer.name))
         
         with SandboxFolder() as folder:
-            calcinfo, script_filename = calc.presubmit(folder, code)
+            calcinfo, script_filename = calc.presubmit(folder,
+                                                       use_unstored_links=False)
 
             # After this call, no modifications to the folder should be done
             calc._store_raw_input_folder(folder.abspath)
@@ -473,37 +481,60 @@ def submit_calc(calc, authinfo, transport=None):
             #       inside calc.presubmit()
             local_copy_list = calcinfo.local_copy_list
             remote_copy_list = calcinfo.remote_copy_list
+            remote_symlink_list = calcinfo.remote_symlink_list
 
-            for src_abs_path, dest_rel_path in local_copy_list:
-                execlogger.debug("[submission of calc {}] "
-                    "copying local file/folder to {}".format(
-                    calc.pk, dest_rel_path),
-                    extra=logger_extra)
-                t.put(src_abs_path, dest_rel_path)
-            
-            for (remote_computer_uuid, remote_abs_path, 
-                 dest_rel_path) in remote_copy_list:
-                if remote_computer_uuid == computer.uuid:
+            if local_copy_list is not None:
+                for src_abs_path, dest_rel_path in local_copy_list:
                     execlogger.debug("[submission of calc {}] "
-                        "copying {} remotely, directly on the machine "
-                        "{}".format(calc.pk, dest_rel_path, computer.name))
-                    try:
-                        t.copy(remote_abs_path, dest_rel_path)
-                    except (IOError,OSError):
-                        execlogger.warning("[submission of calc {}] "
-                            "Unable to copy remote resource from {} to {}! "
-                            "Stopping.".format(calc.pk,
-                                remote_abs_path,dest_rel_path),
-                                extra=logger_extra)
-                        raise
-                else:
-                    # TODO: implement copy between two different
-                    # machines!
-                    raise NotImplementedError(
-                        "[presubmission of calc {}] "
-                        "Remote copy between two different machines is "
-                        "not implemented yet".format(calc.pk))
+                                     "copying local file/folder to {}".format(
+                                                        calc.pk, dest_rel_path),
+                                     extra=logger_extra)
+                    t.put(src_abs_path, dest_rel_path)
+            
+            if remote_copy_list is not None:
+                for (remote_computer_uuid, remote_abs_path, 
+                     dest_rel_path) in remote_copy_list:
+                    if remote_computer_uuid == computer.uuid:
+                        execlogger.debug("[submission of calc {}] "
+                             "copying {} remotely, directly on the machine "
+                             "{}".format(calc.pk, dest_rel_path, computer.name))
+                        try:
+                            t.copy(remote_abs_path, dest_rel_path)
+                        except (IOError,OSError):
+                            execlogger.warning("[submission of calc {}] "
+                              "Unable to copy remote resource from {} to {}! "
+                              "Stopping.".format(calc.pk,
+                                   remote_abs_path,dest_rel_path),
+                                   extra=logger_extra)
+                            raise
+                    else:
+                        # TODO: implement copy between two different
+                        # machines!
+                        raise NotImplementedError(
+                            "[presubmission of calc {}] "
+                            "Remote copy between two different machines is "
+                            "not implemented yet".format(calc.pk))
 
+            if remote_symlink_list is not None:
+                for (remote_computer_uuid, remote_abs_path, 
+                     dest_rel_path) in remote_symlink_list:
+                    if remote_computer_uuid == computer.uuid:
+                        execlogger.debug("[submission of calc {}] "
+                             "copying {} remotely, directly on the machine "
+                             "{}".format(calc.pk, dest_rel_path, computer.name))
+                        try:
+                            t.symlink(remote_abs_path, dest_rel_path)
+                        except (IOError,OSError):
+                            execlogger.warning("[submission of calc {}] "
+                              "Unable to create remote symlink from {} to {}! "
+                              "Stopping.".format(calc.pk,
+                                   remote_abs_path,dest_rel_path),
+                                   extra=logger_extra)
+                            raise
+                    else:
+                        raise IOError("It is not possible to create a symlink "
+                                      "between two different machines for "
+                                      "calculation {}".format(calc.pk))
                             
             remotedata = RemoteData(computer = computer, 
                     remote_path = workdir).store()

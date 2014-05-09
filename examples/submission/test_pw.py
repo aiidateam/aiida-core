@@ -1,18 +1,15 @@
 #!/usr/bin/env python
-import sys
-import os
-
 from aiida.common.utils import load_django
 load_django()
 
-from aiida.common import aiidalogger
-import logging
-from aiida.common.exceptions import NotExistent
-aiidalogger.setLevel(logging.INFO)
+import sys
+import os
 
-from aiida.orm import Code
-from aiida.orm import DataFactory
+from aiida.common.exceptions import NotExistent
+
+from aiida.orm import Code, DataFactory
 from aiida.djsite.db.models import DbGroup
+
 UpfData = DataFactory('upf')
 ParameterData = DataFactory('parameter')
 StructureData = DataFactory('structure')
@@ -20,7 +17,21 @@ StructureData = DataFactory('structure')
 ################################################################
 
 try:
-    codename = sys.argv[1]
+    dontsend = sys.argv[1]
+    if dontsend == "--dont-send":
+        submit_test = True
+    elif dontsend == "--send":
+        submit_test = False
+    else:
+        raise IndexError
+except IndexError:
+    print >> sys.stderr, ("The first parameter can only be either "
+                          "--send or --dont-send")
+    sys.exit(1)
+        
+
+try:
+    codename = sys.argv[2]
 except IndexError:
     codename = None
 
@@ -45,7 +56,7 @@ except (NotExistent, ValueError):
             dbattributes__key="input_plugin",
             dbattributes__tval=expected_code_type)]
     if valid_code_labels:
-        print >> sys.stderr, "Pass as first parameter a valid code label."
+        print >> sys.stderr, "Pass as further parameter a valid code label."
         print >> sys.stderr, "Valid labels with a {} executable are:".format(expected_code_type)
         for l in valid_code_labels:
             print >> sys.stderr, "*", l
@@ -103,12 +114,12 @@ parameters = ParameterData(dict={
                 },
             'ELECTRONS': {
                 'conv_thr': 1.e-6,
-                }}).store()
+                }})
                 
 kpoints = ParameterData(dict={
                 'type': 'automatic',
                 'points': [4, 4, 4, 0, 0, 0],
-                }).store()
+                })
 
 calc = code.new_calc(computer=computer)
 calc.label = "Test QE pw.x"
@@ -124,13 +135,8 @@ calc.set_resources({"num_machines": 1})
 
 if queue is not None:
     calc.set_queue_name(queue)
-calc.store()
-print "created calculation; calc=Calculation(uuid='{}') # ID={}".format(
-    calc.uuid,calc.dbnode.pk)
 
-s.store()
 calc.use_structure(s)
-calc.use_code(code)
 calc.use_parameters(parameters)
 
 if auto_pseudos:
@@ -163,11 +169,25 @@ else:
         calc.use_pseudo(v, kind=k)
 
 calc.use_kpoints(kpoints)
+
 #calc.use_settings(settings)
 #from aiida.orm.data.remote import RemoteData
 #calc.set_outdir(remotedata)
 
-calc.submit()
-print "submitted calculation; calc=Calculation(uuid='{}') # ID={}".format(
-    calc.uuid,calc.dbnode.pk)
+
+if submit_test:
+    subfolder, script_filename = calc.submit_test()
+    print "Test_submit for calculation (uuid='{}')".format(
+        calc.uuid)
+    print "Submit file in {}".format(os.path.join(
+        os.path.relpath(subfolder.abspath),
+        script_filename
+        ))
+else:
+    calc.store_all()
+    print "created calculation; calc=Calculation(uuid='{}') # ID={}".format(
+        calc.uuid,calc.dbnode.pk)
+    calc.submit()
+    print "submitted calculation; calc=Calculation(uuid='{}') # ID={}".format(
+        calc.uuid,calc.dbnode.pk)
 

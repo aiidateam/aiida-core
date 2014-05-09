@@ -310,7 +310,14 @@ def export(what, also_parents = True, outfile = 'export_data.aiida.tar.gz'):
     
         print "COMPRESSING..."
     
-        with tarfile.open(outfile, "w:gz") as tar:
+        # PAX_FORMAT: virtually no limitations, better support for unicode
+        #   characters
+        # dereference=True: at the moment, we should not have any symlink or
+        #   hardlink in the AiiDA repository; therefore, do not store symlinks
+        #   or hardlinks, but store the actual destinations.
+        #   This also simplifies the checks on import.
+        with tarfile.open(outfile, "w:gz", format=tarfile.PAX_FORMAT,
+                          dereference=True) as tar:
             tar.add(folder.abspath, arcname="")
 
 #        import shutil

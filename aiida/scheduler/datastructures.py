@@ -300,6 +300,10 @@ class JobTemplate(DefaultFieldsAttributeDict):
         to allocate ON EACH NODE, in kilobytes
       * ``max_wallclock_seconds``: The maximum wall clock time that all processes
         of a job are allowed to exist, in seconds
+      * ``custom_scheduler_commands``: a string that will be inserted right 
+        after the last scheduler command, and before any other non-scheduler
+        command; useful if some specific flag needs to be added and is not
+        supported by the plugin
       * ``prepend_text``: a (possibly multi-line) string to be inserted 
         in the scheduler script before the main execution line
       * ``argv``: a list of strings with the command line arguments
@@ -342,6 +346,7 @@ class JobTemplate(DefaultFieldsAttributeDict):
         'priority',
         'max_memory_kb', 
         'max_wallclock_seconds',
+        'custom_scheduler_commands',
         'prepend_text',
         'append_text',
         'argv',

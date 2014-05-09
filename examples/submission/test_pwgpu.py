@@ -117,7 +117,7 @@ calc.set_max_wallclock_seconds(30*60) # 30 min
 # Valid only for Slurm and PBS (using default values for the
 # number_cpus_per_machine), change for SGE-like schedulers 
 
-calc.set_prepend_text("#SBATCH --account=ch3")
+calc.set_custom_scheduler_commands("#SBATCH --account=ch3")
 
 num_machines = 2
 # num_pools can be None

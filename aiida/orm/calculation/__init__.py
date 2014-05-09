@@ -503,6 +503,30 @@ class Calculation(Node):
         """
         return self.get_attr("append_text", "")
 
+    def set_custom_scheduler_commands(self, val):
+        """
+        Set a (possibly multiline) string with the commands that the user
+        wants to manually set for the scheduler.
+        
+        The difference of this method with respect to the set_prepend_text
+        is the position in the scheduler submission file where such text is
+        inserted: with this method, the string is inserted before any 
+        non-scheduler command.
+        """
+        self.set_attr("custom_scheduler_commands", unicode(val))
+
+    def get_custom_scheduler_commands(self):
+        """
+        Return a (possibly multiline) string with the commands that the user
+        wants to manually set for the scheduler.
+        See also the documentation of the corresponding
+        ``set_`` method. 
+
+        :return: the custom scheduler command, or an empty string if no 
+          custom command was defined.
+        """
+        return self.get_attr("custom_scheduler_commands", "")
+
     def get_extra_mpirun_params(self):
         """
         Return a list of strings, that are the extra params to pass to the
@@ -1243,26 +1267,23 @@ class Calculation(Node):
                 retrieve_list.append(job_tmpl.sched_error_path)
         self._set_retrieve_list(retrieve_list)
 
+        # the if is done so that if the method returns None, this is 
+        # not added. This has two advantages:
+        # - it does not add too many \n\n if most of the prepend_text are empty
+        # - most importantly, skips the cases in which one of the methods 
+        #   would return None, in which case the join method would raise
+        #   an exception
+        job_tmpl.prepend_text = "\n\n".join(_ for _ in 
+            [computer.get_prepend_text(), 
+             code.get_prepend_text(),
+             calcinfo.prepend_text,
+             self.get_prepend_text()] if _)
         
-        job_tmpl.prepend_text = (
-            ((self.get_prepend_text() + u"\n\n") if 
-                self.get_prepend_text() else u"") + 
-            ((computer.get_prepend_text() + u"\n\n") if 
-                computer.get_prepend_text() else u"") + 
-            ((code.get_prepend_text() + u"\n\n") if 
-                code.get_prepend_text() else u"") + 
-            ((calcinfo.prepend_text + u"\n\n") if 
-                calcinfo.prepend_text is not None else u""))
-        
-        job_tmpl.append_text = (
-            ((calcinfo.append_text + u"\n\n") if 
-                calcinfo.append_text is not None else u"") +
-            ((code.get_append_text() + u"\n\n") if 
-                code.get_append_text() else u"") +
-            ((computer.get_append_text() + u"\n\n") if 
-                computer.get_append_text() else u"") +
-            ((self.get_append_text() + u"\n\n") if 
-                self.get_append_text() else u""))
+        job_tmpl.append_text = "\n\n".join(_ for _ in 
+            [self.get_append_text(),
+             calcinfo.append_text,
+             code.get_append_text(),
+             computer.get_prepend_text()] if _)
 
         # Set resources, also with get_default_cpus_per_machine
         resources_dict = self.get_resources(full=True)
@@ -1290,6 +1311,10 @@ class Calculation(Node):
         job_tmpl.stdout_name = calcinfo.stdout_name
         job_tmpl.stderr_name = calcinfo.stderr_name
         job_tmpl.join_files = calcinfo.join_files
+        
+        custom_sched_commands = self.get_custom_scheduler_commands()
+        if custom_sched_commands:        
+            job_tmpl.custom_scheduler_commands = custom_sched_commands
         
         job_tmpl.import_sys_environment = self.get_import_sys_environment()
         

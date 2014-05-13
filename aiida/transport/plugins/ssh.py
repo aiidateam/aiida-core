@@ -162,9 +162,11 @@ class SshTransport(aiida.transport.Transport):
     def _get_timeout_suggestion_string(cls, computer):
         """
         Return a suggestion for the specific field.
+        
+        Provide 60s as a default timeout for connections.
         """
         config = parse_sshconfig(computer.hostname)
-        return str(config.get('connecttimeout',""))
+        return str(config.get('connecttimeout',"60"))
 
     @classmethod
     def _convert_allow_agent_fromstring(cls, string):

@@ -324,3 +324,32 @@ def create_display_name(field):
     :return: the converted string
     """
     return ' '.join(_.capitalize() for _ in field.split('_'))
+
+def get_class_string(obj):
+    """
+    Return the string identifying the class of the object (module + object name,
+    joined by dots).
+
+    It works both for classes and for class instances.
+    """
+    import inspect
+    if inspect.isclass(obj):
+        return "{}.{}".format(
+            obj.__module__,
+            obj.__name__)     
+    else:
+        return "{}.{}".format(
+            obj.__module__,
+            obj.__class__.__name__)
+
+
+def get_object_from_string(string):
+    """
+    Given a string identifying an object (as returned by the get_class_string
+    method) load and return the actual object.
+    """
+    import importlib
+
+    the_module, _, the_name = string.rpartition('.')
+    
+    return getattr(importlib.import_module(the_module), the_name)

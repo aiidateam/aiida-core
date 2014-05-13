@@ -1,36 +1,8 @@
 import sys
 
 from aiida.cmdline.baseclass import VerdiCommand
-from aiida.common.utils import load_django
-
-def get_class_string(obj):
-    """
-    Return the string identifying the class of the object (module + object name,
-    joined by dots).
-
-    It works both for classes and for class instances.
-    """
-    import inspect
-    if inspect.isclass(obj):
-        return "{}.{}".format(
-            obj.__module__,
-            obj.__name__)     
-    else:
-        return "{}.{}".format(
-            obj.__module__,
-            obj.__class__.__name__)
-
-
-def get_object_from_string(string):
-    """
-    Given a string identifying an object (as returned by the get_class_string
-    method) load and return the actual object.
-    """
-    import importlib
-
-    the_module, _, the_name = string.rpartition('.')
-    
-    return getattr(importlib.import_module(the_module), the_name)
+from aiida.common.utils import (get_class_string, get_object_from_string,
+                                load_django)
 
 def serialize_field(data):
     """
@@ -40,9 +12,15 @@ def serialize_field(data):
         import
     """
     import datetime
+    import pytz
+    from django.db.models import Model
 
     if isinstance(data, datetime.datetime):
-        return data.strftime('%Y-%m-%dT%H:%M:%S.%f%z')
+        # Note: requires timezone-aware objects!
+        return data.astimezone(pytz.utc).strftime(
+            '%Y-%m-%dT%H:%M:%S.%f')
+    elif isinstance(data, Model):
+        print get_class_string(data)
     else:
         return data
 
@@ -71,22 +49,28 @@ def get_all_fields_info():
     Retrieve automatically the information on the fields and store them in a
     dictionary, that will be also stored in the export data, in the metadata
     file.
+    
+    :return: a tuple with two elements, the all_fiekds_info dictionary, and the
+      unique_identifiers dictionary.
     """
     import importlib
 
     import django.db.models.fields as djf
-    import django_extensions
+    import django_extensions    
     
+    from django.contrib.auth.models import User
     from aiida.djsite.db import models
     
     all_fields_info = {}
     
+    user_model_string = get_class_string(User)
+    
     # TODO: These will probably need to have a default value in the IMPORT!
     # TODO: maybe define this inside the Model!
     all_exclude_fields = {
-        'django.contrib.auth.models.User': ['password', 'is_staff', 
-                                            'is_superuser', 'is_active',
-                                            'last_login', 'date_joined'],
+        user_model_string: ['password', 'is_staff', 
+                            'is_superuser', 'is_active',
+                            'last_login', 'date_joined'],
         }
     
     # I start only with DbNode
@@ -135,7 +119,28 @@ def get_all_fields_info():
                             get_class_string(field)))
                 all_fields_info[model_name] = thisinfo  
 
-    return all_fields_info
+    unique_identifiers = {}
+    for k in all_fields_info:
+        if k == user_model_string:
+            unique_identifiers[k] = 'email'
+            continue
+
+        # No unique identifier in this case
+        if k in [get_class_string(models.DbAttribute),
+                 get_class_string(models.DbLink),
+                 get_class_string(models.DbExtra)]:
+            unique_identifiers[k] = None
+            continue
+        
+        m = get_object_from_string(k)
+        field_names = [f.name for f in m._meta.fields] 
+        if 'uuid' in field_names:
+            unique_identifiers[k] = 'uuid'
+        else:
+            raise ValueError("Unable to identify the unique identifier "
+                             "for model {}".format(k))
+
+    return all_fields_info, unique_identifiers
 
 def export(what, also_parents = True, outfile = 'export_data.aiida.tar.gz'):     
     import json
@@ -152,7 +157,7 @@ def export(what, also_parents = True, outfile = 'export_data.aiida.tar.gz'):
 
     EXPORT_VERSION = '0.1'
     
-    all_fields_info = get_all_fields_info()
+    all_fields_info, unique_identifiers = get_all_fields_info()
     
     entries_ids_to_add = defaultdict(list)
     for entry in what:
@@ -194,13 +199,13 @@ def export(what, also_parents = True, outfile = 'export_data.aiida.tar.gz'):
             # Only serialize new nodes (also to avoid infinite loops)
             if model_name in export_data:
                 serialized = {
-                    v['id']: serialize_dict(v, remove_fields=['id'])
+                    str(v['id']): serialize_dict(v, remove_fields=['id'])
                     for v in entryvalues
                     if v['id'] not in export_data[model_name]
                     }
             else:
                 serialized = {
-                    v['id']: serialize_dict(v, remove_fields=['id'])
+                    str(v['id']): serialize_dict(v, remove_fields=['id'])
                     for v in entryvalues
                     }            
     
@@ -236,7 +241,7 @@ def export(what, also_parents = True, outfile = 'export_data.aiida.tar.gz'):
 
     ## ATTRIBUTES
     print "STORING NODE ATTRIBUTES..."
-    node_attributes = {n.pk: serialize_dict(n.attributes)
+    node_attributes = {str(n.pk): serialize_dict(n.attributes)
                    for n in all_nodes_query}
     ## If I want to store them 'raw'; it is faster, but more error prone and
     ## less version-independent, I think. Better to optimize the n.attributes 
@@ -282,6 +287,7 @@ def export(what, also_parents = True, outfile = 'export_data.aiida.tar.gz'):
             'aiida_version': aiida.get_version(),
             'export_version': EXPORT_VERSION,
             'all_fields_info': all_fields_info,
+            'unique_identifiers': unique_identifiers,
             }
 
         with open(folder.get_abs_path('metadata.json'), 'w') as f:
@@ -344,8 +350,6 @@ class Export(VerdiCommand):
             print "Pass a group name to export all entries in that group"
             sys.exit(1)
         
-        
-
         ## TODO: parse cmdline parameters and pass them
         ## in particular: also_parents; what; outputfile
         export(what = models.DbNode.objects.filter(

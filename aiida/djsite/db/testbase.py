@@ -41,6 +41,12 @@ class AiidaTestCase(unittest.TestCase):
         from aiida.djsite.db.models import DbWorkflow
         DbWorkflow.objects.filter().delete()
 
+        # I first need to delete the links, because in principle I could
+        # not delete input nodes, only outputs. For simplicity, since
+        # I am deleting everything, I delete the links first
+        from aiida.djsite.db.models import DbLink
+        DbLink.objects.filter().delete()
+        
         # Then I delete the nodes, otherwise I cannot
         # delete computers and users
         from aiida.djsite.db.models import DbNode

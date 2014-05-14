@@ -180,11 +180,14 @@ class DbLink(m.Model):
     Direct connection between two dbnodes. The label is identifying the
     link type.
     '''
-    # Note: for the moment, I do not put any on_delete constraint here;
-    # to think better, and to see if there is a sensible value for 
-    # both Calculation and Data
-    input = m.ForeignKey('DbNode',related_name='output_links')
-    output = m.ForeignKey('DbNode',related_name='input_links')
+    # If I delete an output, delete also the link; if I delete an input, stop
+    # NOTE: this will in most cases render a DbNode.objects.filter(...).delete()
+    #    call unusable because some nodes will be inputs; Nodes will have to 
+    #    be deleted in the proper order (or links will need to be deleted first)
+    input = m.ForeignKey('DbNode',related_name='output_links',
+                         on_delete=m.PROTECT)
+    output = m.ForeignKey('DbNode',related_name='input_links',
+                          on_delete=m.CASCADE)
     #label for data input for calculation
     label = m.CharField(max_length=255, db_index=True, blank=False)
 

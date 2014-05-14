@@ -8,12 +8,6 @@ from aiida.common.exceptions import (
     NotExistent, UniquenessError, ValidationError )
 from aiida.common.folders import RepositoryFolder, SandboxFolder
 
-# Name to be used for the section
-_section_name = 'node'
-
-# The name of the subfolder in which to put the files/directories
-# added with add_path
-_path_subfolder_name = 'path'
 
 def from_type_to_pluginclassname(typestr):
     """
@@ -75,6 +69,14 @@ class Node(object):
                                     "aiida.orm.".format(name))
             
             return newcls
+
+    # Name to be used for the Repository section
+    _section_name = 'node'
+    
+    # The name of the subfolder in which to put the files/directories
+    # added with add_path
+    _path_subfolder_name = 'path'
+
 
     # A tuple with attributes that can be updated even after
     # the call of the store() method
@@ -205,7 +207,8 @@ class Node(object):
             
             self._dbnode = dbnode
 
-            self._repo_folder = RepositoryFolder(section=_section_name,
+            # If this is changed, fix also the importer
+            self._repo_folder = RepositoryFolder(section=self._section_name,
                                                  uuid=self._dbnode.uuid)
             
 # NO VALIDATION ON __init__ BY DEFAULT, IT IS TOO SLOW SINCE IT OFTEN
@@ -234,7 +237,8 @@ class Node(object):
             self.path_subfolder.create()
             # Used only before the first save
             self._attrs_cache = {}
-            self._repo_folder = RepositoryFolder(section=_section_name,
+            # If this is changed, fix also the importer
+            self._repo_folder = RepositoryFolder(section=self._section_name,
                                                  uuid=self.uuid)
 
             # Automatically set all *other* attributes, if possible, otherwise
@@ -1202,7 +1206,7 @@ class Node(object):
         :return: a Folder object.
         """
         return self.current_folder.get_subfolder(
-            _path_subfolder_name,reset_limit=True)
+            self._path_subfolder_name,reset_limit=True)
 
     def get_path_list(self, subfolder='.'):
         """
@@ -1266,7 +1270,7 @@ class Node(object):
         self.path_subfolder.insert_path(src_abs,dst_path)
 
 
-    def get_abs_path(self,path,section=_path_subfolder_name):
+    def get_abs_path(self,path,section=None):
         """
         Get the absolute path to the folder associated with the
         Node in the AiiDA repository.
@@ -1277,6 +1281,8 @@ class Node(object):
         
         For the moment works only for one kind of files, 'path' (internal files)
         """
+        if section is None:
+            section = self._path_subfolder_name
         #TODO: For the moment works only for one kind of files,
         #      'path' (internal files)
         if os.path.isabs(path):
@@ -1385,6 +1391,11 @@ class Node(object):
             self.validate()
             # I save the corresponding django entry
             # I set the folder
+            # NOTE: I first store the files, then only if this is successful,
+            # I store the DB entry. In this way,
+            # I assume that if a node exists in the DB, its folder is in place.
+            # On the other hand, periodically the user might need to run some
+            # bookkeeping utility to check for lone folders.
             self.repo_folder.replace_with_folder(
                 self.get_temp_folder().abspath, move=True, overwrite=True)
 
@@ -1398,7 +1409,7 @@ class Node(object):
                     # the version for each add.
                     for k, v in self._attrs_cache.iteritems():
                         DbAttribute.set_value_for_node(self.dbnode,
-                            k,v)
+                            k,v, with_transaction=False)
             # This is one of the few cases where it is ok to do a 'global'
             # except, also because I am re-raising the exception
             except:

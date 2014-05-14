@@ -173,7 +173,7 @@ def get_authinfo(computer, aiidauser):
                 aiidauser.username, computer.name))
     except MultipleObjectsReturned:
         raise ConfigurationError(
-            "The aiida user {} is not configured more than once to use "
+            "The aiida user {} is configured more than once to use "
             "computer {}! Only one configuration is allowed".format(
                 aiidauser.username, computer.name))
     return authinfo
@@ -258,6 +258,8 @@ def submit_jobs():
     from aiida.orm import Calculation, Computer
     from django.contrib.auth.models import User
     from aiida.djsite.db.models import DbComputer
+    from aiida.djsite.utils import get_dblogger_extra
+    
 
     # I create a unique set of pairs (computer, aiidauser)
     computers_users_to_check = set(
@@ -276,8 +278,26 @@ def submit_jobs():
             aiidauser.username, dbcomputer.name))
 
         try:
-            authinfo = get_authinfo(dbcomputer, aiidauser)
-            computed_calcs = submit_jobs_with_authinfo(authinfo)
+            try:
+                authinfo = get_authinfo(dbcomputer, aiidauser)
+            except AuthenticationError:
+                calcs_to_inquire = Calculation.get_all_with_state(
+                    state=calc_states.TOSUBMIT,
+                    computer=dbcomputer,
+                    user=aiidauser)
+                for calc in calcs_to_inquire:
+                    calc._set_state(calc_states.SUBMISSIONFAILED)
+                    logger_extra = get_dblogger_extra(calc)
+                    execlogger.error("Submission of calc {} failed, "
+                                     "computer pk={} ({}) is not configured "
+                                     "for aiidauser {}".format(
+                                         calc.pk, dbcomputer.pk,
+                                         dbcomputer.name, aiidauser.username), 
+                                     extra=logger_extra)
+                # Go to the next (dbcomputer,aiidauser) pair
+                continue
+
+            submitted_calcs = submit_jobs_with_authinfo(authinfo)
         except Exception as e:
             import traceback
             msg = ("Error while submitting jobs "

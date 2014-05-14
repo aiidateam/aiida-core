@@ -1,10 +1,11 @@
 import sys
 
 from aiida.cmdline.baseclass import VerdiCommand
-from aiida.common.utils import (get_class_string, get_object_from_string,
+from aiida.common.utils import (export_shard_uuid,
+                                get_class_string, get_object_from_string,
                                 load_django)
 
-def serialize_field(data):
+def serialize_field(data, track_conversion=False):
     """
     Serialize a single field.
     
@@ -13,18 +14,47 @@ def serialize_field(data):
     """
     import datetime
     import pytz
-    from django.db.models import Model
 
-    if isinstance(data, datetime.datetime):
+    if isinstance(data, dict):
+        if track_conversion:
+            ret_data = {}
+            ret_conversion = {}
+            for k, v in data.iteritems():
+                ret_data[k], ret_conversion[k] = serialize_field(
+                    data=v, track_conversion=track_conversion)
+        else:
+            ret_data = {k: serialize_field(data=v,
+                                           track_conversion=track_conversion)
+                        for k, v in data.iteritems()}
+    elif isinstance(data, (list, tuple)):
+        if track_conversion:
+            ret_data = []
+            ret_conversion = []
+            for value in data:
+                this_data, this_conversion = serialize_field(
+                    data=value, track_conversion=track_conversion)
+                ret_data.append(this_data)
+                ret_conversion.append(this_conversion)
+        else:
+            ret_data = [serialize_field(
+                        data=value, track_conversion=track_conversion)
+                        for value in data]
+    elif isinstance(data, datetime.datetime):
         # Note: requires timezone-aware objects!
-        return data.astimezone(pytz.utc).strftime(
+        ret_data = data.astimezone(pytz.utc).strftime(
             '%Y-%m-%dT%H:%M:%S.%f')
-    elif isinstance(data, Model):
-        print get_class_string(data)
+        ret_conversion = 'date'
     else:
-        return data
+        ret_data = data
+        ret_conversion = None
+        
+    if track_conversion:
+        return (ret_data, ret_conversion)
+    else:
+        return ret_data
 
-def serialize_dict(datadict, remove_fields=[], rename_fields={}):
+def serialize_dict(datadict, remove_fields=[], rename_fields={},
+                     track_conversion=False):
     """
     Serialize the dict using the serialize_field function to serialize
     each field.
@@ -32,17 +62,42 @@ def serialize_dict(datadict, remove_fields=[], rename_fields={}):
     :param remove_fields: a list of strings. 
       If a field with key inside the remove_fields list is found, 
       it is removed from the dict.
+      
+      This is only used at level-0, no removal
+      is possible at deeper levels.
     
     :param rename_fields: a dictionary in the format
-      ``{"oldname": "newname"}``.
+      ``{"oldname": "newname"}``. 
 
       If the "oldname" key is found, it is replaced with the
       "newname" string in the output dictionary.
+      
+      This is only used at level-0, no renaming
+      is possible at deeper levels.
+    :param track_conversion: if True, a tuple is returned, where the first
+      element is the serialized dictionary, and the second element is a
+      dictionary with the information on the serialized fields.
     """
-    # rename_fields.get(k,k): use the replacement if found in rename_fields,
-    # otherwise use 'k' as the default value.
-    return {rename_fields.get(k,k): serialize_field(v)
-            for k, v in datadict.iteritems() if k not in remove_fields}
+    ret_dict = {}
+    
+    conversions = {}
+    
+    for k, v in datadict.iteritems():
+        if k not in remove_fields:
+            # rename_fields.get(k,k): use the replacement if found in rename_fields,
+            # otherwise use 'k' as the default value.
+            if track_conversion:
+                (ret_dict[rename_fields.get(k,k)],
+                 conversions[rename_fields.get(k,k)]) = serialize_field(
+                    data=v, track_conversion=track_conversion)
+            else:
+                ret_dict[rename_fields.get(k,k)] = serialize_field(
+                    data=v, track_conversion=track_conversion)
+
+    if track_conversion:
+        return (ret_dict, conversions) 
+    else:
+        return ret_dict
 
 def get_all_fields_info():
     """
@@ -142,7 +197,8 @@ def get_all_fields_info():
 
     return all_fields_info, unique_identifiers
 
-def export(what, also_parents = True, outfile = 'export_data.aiida.tar.gz'):     
+def export(what, also_parents = True, also_calc_outputs = True,
+           outfile = 'export_data.aiida.tar.gz'):     
     import json
     import tarfile
     import operator
@@ -152,7 +208,7 @@ def export(what, also_parents = True, outfile = 'export_data.aiida.tar.gz'):
 
     import aiida
     from aiida.djsite.db import models
-    from aiida.orm import Node
+    from aiida.orm import Node, Calculation
     from aiida.common.folders import SandboxFolder
 
     EXPORT_VERSION = '0.1'
@@ -163,18 +219,35 @@ def export(what, also_parents = True, outfile = 'export_data.aiida.tar.gz'):
     for entry in what:
         entries_ids_to_add[get_class_string(entry)].append(entry.pk)
     
-    # Initial query to fire the generation of the export data
-    entries_to_add = {k: [Q(id__in=v)] for k, v
-                      in entries_ids_to_add.iteritems()}
-
     if also_parents:
         # It is a defaultdict, it will provide an empty list
         given_nodes = entries_ids_to_add[get_class_string(models.DbNode)]
         
         if given_nodes:
             # Also add the parents (to any level) to the query
-            entries_to_add[get_class_string(models.DbNode)].append(
-                Q(children__in=given_nodes))
+            given_nodes = list(set(given_nodes + 
+                list(models.DbNode.objects.filter(
+                    children__in=given_nodes).values_list('pk', flat=True))))
+            entries_ids_to_add[get_class_string(models.DbNode)] = given_nodes
+
+    if also_calc_outputs:
+        given_nodes = entries_ids_to_add[get_class_string(models.DbNode)]
+        
+        if given_nodes:
+            # Add all (direct) outputs of a calculation object that was already
+            # selected
+            given_nodes = list(set(given_nodes + 
+                list(models.DbNode.objects.filter(
+                    inputs__pk__in=given_nodes,
+                    inputs__type__startswith=Calculation._query_type_string
+                    ).values_list('pk', flat=True)
+                    )))
+            entries_ids_to_add[get_class_string(models.DbNode)] = given_nodes
+
+    # Initial query to fire the generation of the export data
+    entries_to_add = {k: [Q(id__in=v)] for k, v
+                      in entries_ids_to_add.iteritems()}
+    
 
     ############################################################
     ##### Start automatic recursive export data generation #####
@@ -241,8 +314,12 @@ def export(what, also_parents = True, outfile = 'export_data.aiida.tar.gz'):
 
     ## ATTRIBUTES
     print "STORING NODE ATTRIBUTES..."
-    node_attributes = {str(n.pk): serialize_dict(n.attributes)
-                   for n in all_nodes_query}
+    node_attributes = {}
+    node_attributes_conversion = {}
+    for n in all_nodes_query:
+        (node_attributes[str(n.pk)],
+         node_attributes_conversion[str(n.pk)]) = serialize_dict(
+            n.attributes, track_conversion=True)
     ## If I want to store them 'raw'; it is faster, but more error prone and
     ## less version-independent, I think. Better to optimize the n.attributes 
     ## call.
@@ -279,6 +356,7 @@ def export(what, also_parents = True, outfile = 'export_data.aiida.tar.gz'):
         with open(folder.get_abs_path('data.json'), 'w') as f:
             json.dump({
                     'node_attributes': node_attributes,
+                    'node_attributes_conversion': node_attributes_conversion,
                     'export_data': export_data,
                     'links_uuid': links_uuid,
                     }, f)
@@ -298,10 +376,8 @@ def export(what, also_parents = True, outfile = 'export_data.aiida.tar.gz'):
         for pk in all_nodes_pk:
             # Maybe we do not need to get the subclass, if it is too slow?
             node = Node.get_subclass_from_pk(pk)
-            # ToDo: use the same function for sharding?
             
-            sharded_uuid = '{}/{}/{}'.format(node.uuid[:2], node.uuid[2:4], 
-                                             node.uuid[4:])
+            sharded_uuid = export_shard_uuid(node.uuid)
     
             # Important to set create=False, otherwise creates
             # twice a subfolder. Maybe this is a bug of insert_path??

@@ -89,6 +89,8 @@ class DbNode(m.Model):
                                  related_name='parents', through='DbPath')
     
     # Used only if dbnode is a calculation, or remotedata
+    # Avoid that computers can be deleted if at least a node exists pointing
+    # to it.
     dbcomputer = m.ForeignKey('DbComputer', null=True, on_delete=m.PROTECT,
                               related_name='dbnodes')
 
@@ -178,6 +180,9 @@ class DbLink(m.Model):
     Direct connection between two dbnodes. The label is identifying the
     link type.
     '''
+    # Note: for the moment, I do not put any on_delete constraint here;
+    # to think better, and to see if there is a sensible value for 
+    # both Calculation and Data
     input = m.ForeignKey('DbNode',related_name='output_links')
     output = m.ForeignKey('DbNode',related_name='input_links')
     #label for data input for calculation
@@ -259,7 +264,9 @@ class DbAttributeBaseClass(m.Model):
     time = m.DateTimeField(auto_now=True, editable=False)
     # In this way, the related name for the DbAttribute inherited class will be
     # 'dbattributes' and for 'dbextra' will be 'dbextras'
-    dbnode = m.ForeignKey('DbNode', related_name='%(class)ss') 
+    # Moreover, automatically destroy attributes and extras if the parent
+    # node is deleted
+    dbnode = m.ForeignKey('DbNode', related_name='%(class)ss', on_delete=m.CASCADE) 
     # max_length is required by MySql to have indexes and unique constraints
     key = m.CharField(max_length=1024,db_index=True,blank=False)
     datatype = m.CharField(max_length=10, choices=attrdatatype_choice, db_index=True)
@@ -350,7 +357,7 @@ class DbAttributeBaseClass(m.Model):
 
 
     @classmethod
-    def set_value_for_node(cls, dbnode, key, value):
+    def set_value_for_node(cls, dbnode, key, value, with_transaction=True):
         """
         This is the raw-level method that accesses the DB. No checks are done
         to prevent the user from (re)setting a valid key. 
@@ -359,9 +366,15 @@ class DbAttributeBaseClass(m.Model):
         :todo: there may be some error on concurrent write;
            not checked in this unlucky case!
 
-        :param dbnode: the dbnode for which the attribute should be stored
+        :param dbnode: the dbnode for which the attribute should be stored;
+          in an integer is passed, this is used as the PK of the dbnode, 
+          without any further check (for speed reasons)
         :param key: the key of the attribute to store
         :param value: the value of the attribute to store
+        :param with_transaction: if True (default), do this within a transaction,
+           so that nothing gets stored if a subitem cannot be created.
+           Otherwise, if this parameter is False, no transaction management
+           is performed.
         
         :raise ValueError: if the key contains the separator symbol used 
             internally to unpack dictionaries and lists (defined in cls._sep).
@@ -371,13 +384,22 @@ class DbAttributeBaseClass(m.Model):
         cls.validate_key(key)
         
         try:
-            sid = transaction.savepoint()
+            if with_transaction:
+                sid = transaction.savepoint()
             
-            attr, _ = cls.objects.get_or_create(dbnode=dbnode,
-                                                key=key)
+            if isinstance(dbnode, int):
+                attr, _ = cls.objects.get_or_create(dbnode_id=dbnode,
+                                                    key=key)
+            else:
+                attr, _ = cls.objects.get_or_create(dbnode=dbnode,
+                                                    key=key)
+            # Internally, subitems are always stored without transactions
+            # to avoid, in any case, recursive transactions that are 
+            # *extremely* slow.
             attr.setvalue(value,with_transaction=False)
         except:
-            transaction.savepoint_rollback(sid)
+            if with_transaction:
+                transaction.savepoint_rollback(sid)
             raise
     
     @classmethod
@@ -761,7 +783,10 @@ class DbGroup(m.Model):
     dbnodes = m.ManyToManyField('DbNode', related_name='dbgroups')
     time = m.DateTimeField(auto_now_add=True, editable=False)
     description = m.TextField(blank=True)
-    user = m.ForeignKey(User)  # The owner of the group, not of the calculations
+    # The owner of the group, not of the calculations
+    # On user deletion, remove his/her groups too (not the calcuations, only
+    # the groups
+    user = m.ForeignKey(User, on_delete=m.CASCADE)
 
     class Meta:
         unique_together = (("user", "name"),)
@@ -883,8 +908,9 @@ class DbAuthInfo(m.Model):
     Table that pairs aiida users and computers, with all required authentication
     information.
     """
-    aiidauser = m.ForeignKey(User)
-    dbcomputer = m.ForeignKey(DbComputer)
+    # Delete the DbAuthInfo if either the user or the computer are removed
+    aiidauser = m.ForeignKey(User, on_delete=m.CASCADE)
+    dbcomputer = m.ForeignKey(DbComputer, on_delete=m.CASCADE)
     auth_params = m.TextField(default='{}') # Will store a json; contains mainly the remoteuser
                                             # and the private_key
 
@@ -957,10 +983,12 @@ class DbAuthInfo(m.Model):
 
 class DbComment(m.Model):
     uuid = UUIDField(auto=True,version=AIIDANODES_UUID_VERSION)
-    dbnode = m.ForeignKey(DbNode,related_name='dbcomments')
+    # Delete comments if the node is removed
+    dbnode = m.ForeignKey(DbNode,related_name='dbcomments', on_delete=m.CASCADE)
     ctime = m.DateTimeField(auto_now_add=True, editable=False)
     mtime = m.DateTimeField(auto_now=True, editable=False)
-    user = m.ForeignKey(User)
+    # Delete the comments of a deleted user (TODO: check if this is a good policy)
+    user = m.ForeignKey(User, on_delete=m.CASCADE)
     content = m.TextField(blank=True)
 
     @python_2_unicode_compatible

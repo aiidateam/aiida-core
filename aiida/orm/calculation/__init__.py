@@ -208,8 +208,7 @@ class Calculation(Node):
                     function_name))
                 
             return None
-
-    
+   
     def get_linkname(self, link, *args, **kwargs):
         """
         Return the linkname used for a given input link

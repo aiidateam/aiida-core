@@ -353,3 +353,29 @@ def get_object_from_string(string):
     the_module, _, the_name = string.rpartition('.')
     
     return getattr(importlib.import_module(the_module), the_name)
+
+def export_shard_uuid(uuid):
+    """
+    Sharding of the UUID for the import/export
+    """
+    return os.path.join(uuid[:2], uuid[2:4], uuid[4:])
+
+def grouper(n, iterable):
+    """
+    Given an iterable, returns an iterable that returns tuples of groups of
+    elements from iterable of length n, except the last one that has the
+    required length to exaust iterable (i.e., there is no filling applied).
+    
+    :param n: length of each tuple (except the last one,that will have length
+       <= n
+    :param iterable: the iterable to divide in groups
+    """
+    import itertools
+    
+    it = iter(iterable)
+    while True:
+        chunk = tuple(itertools.islice(it, n))
+        if not chunk:
+            return
+        yield chunk
+

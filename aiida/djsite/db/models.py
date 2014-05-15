@@ -1,19 +1,17 @@
 from django.db import models as m
 from django_extensions.db.fields import UUIDField
-from django.contrib.auth.models import User
+from django.contrib.auth.models import (
+    AbstractBaseUser, BaseUserManager, PermissionsMixin)
 from django.utils.encoding import python_2_unicode_compatible
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.query import QuerySet
+from django.utils import timezone
 
 from aiida.common.exceptions import (
     ConfigurationError, DbContentError, MissingPluginError, InternalError)
-
-from aiida.djsite.settings.settings import AIIDANODES_UUID_VERSION
-
-# Removed the custom User field, that was creating a lot of problems. Use
-# the email as UUID. In case we need it, we can do a couple of south migrations
-# to create the new table. See for instance
-# http://stackoverflow.com/questions/14904046/
+from aiida.djsite.settings.settings import (
+    AIIDANODES_UUID_VERSION, AUTH_USER_MODEL)
+from aiida.djsite.additions import CustomEmailField
 
 class EmptyContextManager(object):
     def __enter__(self):
@@ -31,6 +29,71 @@ class AiidaQuerySet(QuerySet):
 class AiidaObjectManager(m.Manager):
     def get_query_set(self):
         return AiidaQuerySet(self.model, using=self._db)
+   
+class DbUserManager(BaseUserManager):
+    def create_user(self, email, password=None, **extra_fields):
+        """
+        Creates and saves a User with the given email (that is the
+        username) and password.
+        """
+        now = timezone.now()
+        if not email:
+            raise ValueError('The given email must be set')
+        email = BaseUserManager.normalize_email(email)
+        user = self.model(email=email,
+                          is_staff=False, is_active=True, is_superuser=False,
+                          last_login=now, date_joined=now, **extra_fields)
+    
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+    
+    def create_superuser(self, email, password, **extra_fields):
+        u = self.create_user(email, password, **extra_fields)
+        u.is_staff = True
+        u.is_active = True
+        u.is_superuser = True
+        u.save(using=self._db)
+        return u
+
+
+class DbUser(AbstractBaseUser, PermissionsMixin):
+    """
+    This class replaces the default User class of Django
+    """
+    # Set unique email field
+    email = CustomEmailField(unique=True, db_index=True)
+    first_name = m.CharField(max_length=254, blank=True)
+    last_name = m.CharField(max_length=254, blank=True)
+    institution = m.CharField(max_length=1024, blank=True)
+
+    is_staff = m.BooleanField(default=False,
+        help_text='Designates whether the user can log into this admin '
+                    'site.')
+    is_active = m.BooleanField(default=True,
+        help_text='Designates whether this user should be treated as '
+                    'active. Unselect this instead of deleting accounts.')
+    date_joined = m.DateTimeField(default=timezone.now)  
+    
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['first_name', 'last_name', 'institution']
+    
+    objects = DbUserManager()
+
+    def get_full_name(self):
+        if self.first_name and self.last_name:
+            return "{} {} ({})".format(self.first_name, self.last_name,
+                                       self.email)
+        elif self.first_name:
+            return "{} ({})".format(self.first_name, self.email)            
+        elif self.last_name:
+            return "{} ({})".format(self.last_name, self.email)
+        else:
+            return "{}".format(self.email)
+    
+    def get_short_name(self):
+        return self.email
+    
             
 class DbNode(m.Model):
     '''
@@ -79,7 +142,8 @@ class DbNode(m.Model):
     # last-modified time
     mtime = m.DateTimeField(auto_now=True, editable=False)
     # Cannot delete a user if something is associated to it
-    user = m.ForeignKey(User, on_delete=m.PROTECT, related_name='dbnodes')
+    user = m.ForeignKey(AUTH_USER_MODEL, on_delete=m.PROTECT,
+                        related_name='dbnodes')
 
     # Direct links
     outputs = m.ManyToManyField('self', symmetrical=False,
@@ -789,7 +853,7 @@ class DbGroup(m.Model):
     # The owner of the group, not of the calculations
     # On user deletion, remove his/her groups too (not the calcuations, only
     # the groups
-    user = m.ForeignKey(User, on_delete=m.CASCADE)
+    user = m.ForeignKey(AUTH_USER_MODEL, on_delete=m.CASCADE)
 
     class Meta:
         unique_together = (("user", "name"),)
@@ -912,7 +976,7 @@ class DbAuthInfo(m.Model):
     information.
     """
     # Delete the DbAuthInfo if either the user or the computer are removed
-    aiidauser = m.ForeignKey(User, on_delete=m.CASCADE)
+    aiidauser = m.ForeignKey(AUTH_USER_MODEL, on_delete=m.CASCADE)
     dbcomputer = m.ForeignKey(DbComputer, on_delete=m.CASCADE)
     auth_params = m.TextField(default='{}') # Will store a json; contains mainly the remoteuser
                                             # and the private_key
@@ -934,7 +998,7 @@ class DbAuthInfo(m.Model):
         except ValueError:
             raise DbContentError(
                 "Error while reading auth_params for authinfo, aiidauser={}, computer={}".format(
-                    self.aiidauser.username, self.dbcomputer.hostname))
+                    self.aiidauser.email, self.dbcomputer.hostname))
 
     def set_auth_params(self,auth_params):
         import json
@@ -949,7 +1013,7 @@ class DbAuthInfo(m.Model):
         except ValueError:
             raise DbContentError(
                 "Error while reading metadata for authinfo, aiidauser={}, computer={}".format(
-                    self.aiidauser.username, self.dbcomputer.hostname))
+                    self.aiidauser.email, self.dbcomputer.hostname))
         
         try:
             return metadata['workdir']
@@ -978,9 +1042,9 @@ class DbAuthInfo(m.Model):
     @python_2_unicode_compatible
     def __str__(self):
         if self.enabled:
-            return "Authorization info for {}@{}".format(self.aiidauser.username, self.dbcomputer.name)
+            return "Authorization info for {} on {}".format(self.aiidauser.email, self.dbcomputer.name)
         else:
-            return "Authorization info for {}@{} [DISABLED]".format(self.aiidauser.username, self.dbcomputer.name)
+            return "Authorization info for {} on {} [DISABLED]".format(self.aiidauser.email, self.dbcomputer.name)
 
 
 
@@ -991,7 +1055,7 @@ class DbComment(m.Model):
     ctime = m.DateTimeField(auto_now_add=True, editable=False)
     mtime = m.DateTimeField(auto_now=True, editable=False)
     # Delete the comments of a deleted user (TODO: check if this is a good policy)
-    user = m.ForeignKey(User, on_delete=m.CASCADE)
+    user = m.ForeignKey(AUTH_USER_MODEL, on_delete=m.CASCADE)
     content = m.TextField(blank=True)
 
     @python_2_unicode_compatible
@@ -1066,7 +1130,7 @@ class DbWorkflow(m.Model):
     uuid         = UUIDField(auto=True,version=AIIDANODES_UUID_VERSION)
     ctime        = m.DateTimeField(auto_now_add=True, editable=False)
     mtime        = m.DateTimeField(auto_now=True, editable=False)    
-    user         = m.ForeignKey(User, on_delete=m.PROTECT)
+    user         = m.ForeignKey(AUTH_USER_MODEL, on_delete=m.PROTECT)
 
     label = m.CharField(max_length=255, db_index=True, blank=True)
     description = m.TextField(blank=True)
@@ -1356,7 +1420,7 @@ class DbWorkflowStep(m.Model):
     
     parent        = m.ForeignKey(DbWorkflow, related_name='steps')
     name          = m.CharField(max_length=255, blank=False)
-    user          = m.ForeignKey(User, on_delete=m.PROTECT)
+    user          = m.ForeignKey(AUTH_USER_MODEL, on_delete=m.PROTECT)
     time          = m.DateTimeField(auto_now_add=True, editable=False)
     nextcall      = m.CharField(max_length=255, blank=False, default=wf_default_call)
     

@@ -441,7 +441,7 @@ class Node(object):
         """
         Get the user.
         
-        :return: a Django User object
+        :return: a Django DbUser model object
         """
         return self.dbnode.user
 
@@ -1088,13 +1088,13 @@ class Node(object):
         
         :return: the list of comments, sorted by date; each element of the 
             list is a tuple in the format
-            (username, username_email, date, content)
+            (email, ctime, mtime, content)
         """
         from aiida.djsite.db.models import DbComment
 
         return list(DbComment.objects.filter(dbnode=self._dbnode).order_by(
             'ctime').values_list(
-            'user__username', 'user__email', 'ctime', 'mtime', 'content'))
+            'user__email', 'ctime', 'mtime', 'content'))
 
     def _increment_version_number_db(self):
         """

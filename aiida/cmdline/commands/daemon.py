@@ -4,14 +4,6 @@ import subprocess
 
 from aiida.cmdline.baseclass import VerdiCommand
 
-daemon_subdir    = "daemon"
-daemon_conf_file = "aiida_daemon.conf"
-log_dir          = "daemon/log"
-aiida_dir = os.path.expanduser("~/.aiida")  
-
-conffname = os.path.join(aiida_dir,daemon_subdir,daemon_conf_file)
-
-
 class Daemon(VerdiCommand):
     """
     Manage the AiiDA daemon
@@ -28,7 +20,7 @@ class Daemon(VerdiCommand):
 
     * status: inquire the status of the Daemon.
 
-    * showlog: show the log in a continuous fashion, similar to the 'tail -f' \
+    * logshow: show the log in a continuous fashion, similar to the 'tail -f' \
         command. Press CTRL+C to exit.
     """
 
@@ -38,13 +30,20 @@ class Daemon(VerdiCommand):
         A dictionary with valid commands and functions to be called:
         start, stop, status and restart.
         """
+        from aiida.common import setup
+
         self.valid_subcommands = {
             'start': self.daemon_start,
             'stop' : self.daemon_stop,
             'status': self.daemon_status,
-            'showlog': self.daemon_showlog,
+            'logshow': self.daemon_logshow,
             'restart': self.daemon_restart,
             }
+
+        self.conffile_full_path = os.path.expanduser(os.path.join(
+            setup.AIIDA_CONFIG_FOLDER,
+            setup.DAEMON_SUBDIR,setup.DAEMON_CONF_FILE))
+
 
     def run(self,*args):       
         """
@@ -71,15 +70,21 @@ class Daemon(VerdiCommand):
         """
         Return the full path of the supervisord.pid file.
         """
-        return os.path.normpath(
-            os.path.join(aiida_dir,daemon_subdir,"supervisord.pid"))
+        from aiida.common import setup
+        
+        return os.path.normpath(os.path.expanduser(
+            os.path.join(setup.AIIDA_CONFIG_FOLDER,
+                         setup.DAEMON_SUBDIR,"supervisord.pid")))
 
     def _get_sock_full_path(self):
         """
         Return the full path of the supervisord.sock file.
         """
-        return os.path.normpath(
-            os.path.join(aiida_dir,daemon_subdir,"supervisord.sock"))
+        from aiida.common import setup
+
+        return os.path.normpath(os.path.expanduser(
+            os.path.join(setup.AIIDA_CONFIG_FOLDER,
+                         setup.DAEMON_SUBDIR,"supervisord.sock")))
 
     def get_daemon_pid(self):
         """
@@ -129,7 +134,7 @@ class Daemon(VerdiCommand):
         
         print "Starting AiiDA Daemon ..."
         process = subprocess.Popen(
-            "supervisord -c {}".format(conffname), 
+            "supervisord -c {}".format(self.conffile_full_path), 
             shell=True, stdout=subprocess.PIPE)
         process.wait()
         if (process.returncode==0):
@@ -208,7 +213,7 @@ class Daemon(VerdiCommand):
             return
 
         c = supervisor.supervisorctl.ClientOptions()
-        s = c.read_config(conffname)
+        s = c.read_config(self.conffile_full_path)
         proxy = xmlrpclib.ServerProxy('http://127.0.0.1',
             transport=supervisor.xmlrpc.SupervisorTransport(
                 s.username, s.password, s.serverurl))
@@ -240,7 +245,7 @@ class Daemon(VerdiCommand):
         else:
             print "I was able to connect to the daemon, but I did not find any process..."
         
-    def daemon_showlog(self):
+    def daemon_logshow(self):
         """
         Show the log of the daemon, press CTRL+C to quit.
         """
@@ -252,7 +257,7 @@ class Daemon(VerdiCommand):
         try:
             process = subprocess.Popen(
                "supervisorctl -c {} tail -f aiida-daemon:0".format(
-                           conffname),
+                           self.conffile_full_path),
                                shell=True) #, stdout=subprocess.PIPE)
             process.wait()
         except KeyboardInterrupt:

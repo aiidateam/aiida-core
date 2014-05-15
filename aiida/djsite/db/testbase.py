@@ -18,11 +18,12 @@ class AiidaTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         import getpass
-        from django.contrib.auth.models import User
+        from aiida.djsite.db.models import DbUser
         from aiida.orm import Computer
+        from aiida.djsite.utils import get_configured_user_email
 
-        cls.user = User.objects.create_user(getpass.getuser(),
-                                            'unknown@mail.com', 'fakepwd')
+        cls.user = DbUser.objects.create_user(get_configured_user_email(),
+                                              'fakepwd')
         cls.computer = Computer(name='localhost',
                                 hostname='localhost',
                                 transport_type='ssh',
@@ -33,9 +34,10 @@ class AiidaTestCase(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         import getpass
-        from django.contrib.auth.models import User
         from django.core.exceptions import ObjectDoesNotExist
         from aiida.djsite.db.models import DbComputer
+        from aiida.djsite.db.models import DbUser
+        from aiida.djsite.utils import get_configured_user_email
 
         # I first delete the workflows
         from aiida.djsite.db.models import DbWorkflow
@@ -53,7 +55,7 @@ class AiidaTestCase(unittest.TestCase):
         DbNode.objects.filter().delete()
 
         try:
-            User.objects.get(username=getpass.getuser).delete()
+            DbUser.objects.get(email=get_configured_user_email()).delete()
         except ObjectDoesNotExist:
             pass
         

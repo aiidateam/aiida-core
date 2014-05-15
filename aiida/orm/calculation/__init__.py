@@ -958,7 +958,7 @@ class Calculation(Node):
         :param computer: a Django DbComputer entry, or a Computer object, of a
                 computer in the DbComputer table.
                 A string for the hostname is also valid.
-        :param user: a Django entry (or its pk) of a user in the User table;
+        :param user: a Django entry (or its pk) of a user in the DbUser table;
                 if present, the results are restricted to calculations of that
                 specific user
         :param bool only_computer_user_pairs: if False (default) return a queryset 

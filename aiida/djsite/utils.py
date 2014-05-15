@@ -79,26 +79,45 @@ def get_log_messages(obj):
         log.update({'metadata': json.loads(log['metadata'])})
 
     return log_messages
+
+def get_configured_user_email():
+    """
+    Return the email (that is used as the username) configured during the 
+    first verdi install.
+    """
+    from aiida.common.exceptions import ConfigurationError
+    from aiida.common.setup import get_config, DEFAULT_USER_CONFIG_FIELD
+    
+    try:
+        email = get_config()[DEFAULT_USER_CONFIG_FIELD]
+    # I do not catch the error in case of missing configuration, because
+    # it is already a ConfigurationError
+    except KeyError:
+        raise ConfigurationError("No 'default_user' key found in the "
+            "AiiDA configuration file".format(DEFAULT_USER_CONFIG_FIELD))
+    return email
         
 def get_automatic_user():
+    """
+    Return the default user for this installation of AiiDA.
+    """
     global _aiida_autouser_cache
     
     if _aiida_autouser_cache is not None:
         return _aiida_autouser_cache
 
-    import getpass
-    username = getpass.getuser()
-    
-    from django.contrib.auth.models import User
     from django.core.exceptions import ObjectDoesNotExist
+    from aiida.djsite.db.models import DbUser
     from aiida.common.exceptions import ConfigurationError
 
+    email = get_configured_user_email()
+        
     try:
-        _aiida_autouser_cache = User.objects.get(username=username)
+        _aiida_autouser_cache = DbUser.objects.get(email=email)
         return _aiida_autouser_cache
     except ObjectDoesNotExist:
-        raise ConfigurationError("No aiida user with username {}".format(
-                username))
+        raise ConfigurationError("No aiida user with email {}".format(
+                email))
 
 def get_after_database_creation_signal():
     """

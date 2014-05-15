@@ -33,7 +33,7 @@ class QETestCase(AiidaTestCase):
             'computer': cls.computer,
             'resources': {
                 'num_machines': 1,
-                'num_cpus_per_machine': 1}
+                'num_mpiprocs_per_machine': 1}
             }
 
 class TestQEPWInputGeneration(QETestCase):

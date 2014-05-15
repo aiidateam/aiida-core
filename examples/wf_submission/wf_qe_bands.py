@@ -35,7 +35,7 @@ def launch_ws():
     params['computername'] = "rosa"
     params['resources'] = {
         'num_machines': 1,
-        'num_cpus_per_machine': 16
+        'num_mpiprocs_per_machine': 16
         }
     params['pseudo_family'] = "pslib030-pbesol-rrkjus"
     params['structure_uuid'] = s.uuid

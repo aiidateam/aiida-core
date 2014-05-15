@@ -241,15 +241,15 @@ Then, we load the abstract class QECalc with the CalculationFactory function (th
   calc = QECalc(computer=computer)
 
 We have to specify the details required by the scheduler.
-For example, on a slurm or pbs scheduler, we have to specify the number of nodes (``num_machines``), the number of cpus per node (``num_cpus_per_machine``), the job walltime, the queue name (if desired).
+For example, on a slurm or pbs scheduler, we have to specify the number of nodes (``num_machines``), the number of MPI processes per node (``num_mpiprocs_per_machine``), the job walltime, the queue name (if desired).
 For the complete scheduler documentation, see :ref:`my-reference-to-scheduler`
 
 ::
 
   queue = None
   calc.set_max_wallclock_seconds(30*60) # 30 min
-  num_cpus_per_machine = 48
-  calc.set_resources({"num_machines": 1, "num_cpus_per_machine": num_cpus_per_machine})
+  num_mpiprocs_per_machine = 48
+  calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": num_mpiprocs_per_machine})
   queue = None
   if queue is not None:
       calc.set_queue_name(queue)
@@ -455,7 +455,7 @@ Download: :download:`this example script <pw_short_example.py>`
     QECalc = CalculationFactory('quantumespresso.pw')
     calc = QECalc(computer=computer)
     calc.set_max_wallclock_seconds(30*60) # 30 min
-    calc.set_resources({"num_machines": 1, "num_cpus_per_machine": 16})
+    calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 16})
     calc.store()
 
     calc.use_structure(s)
@@ -556,7 +556,7 @@ Download: :download:`this example script <pw_example.py>`
 
     computer = code.get_remote_computer()
 
-    num_cpus_per_machine = 16
+    num_mpiprocs_per_machine = 16
 
 
     alat = 4. # angstrom
@@ -596,7 +596,7 @@ Download: :download:`this example script <pw_example.py>`
     QECalc = CalculationFactory('quantumespresso.pw')
     calc = QECalc(computer=computer)
     calc.set_max_wallclock_seconds(30*60) # 30 min
-    calc.set_resources({"num_machines": 1, "num_cpus_per_machine": num_cpus_per_machine})
+    calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": num_mpiprocs_per_machine})
     if queue is not None:
 	calc.set_queue_name(queue)
     calc.store()

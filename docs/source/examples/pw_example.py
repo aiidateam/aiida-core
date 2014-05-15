@@ -77,7 +77,7 @@ if auto_pseudos:
 
 computer = code.get_remote_computer()
 
-num_cpus_per_machine = 16
+num_mpiprocs_per_machine = 16
 
 
 alat = 4. # angstrom
@@ -117,7 +117,7 @@ kpoints = ParameterData(dict={
 QECalc = CalculationFactory('quantumespresso.pw')
 calc = QECalc(computer=computer)
 calc.set_max_wallclock_seconds(30*60) # 30 min
-calc.set_resources({"num_machines": 1, "num_cpus_per_machine": num_cpus_per_machine})
+calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": num_mpiprocs_per_machine})
 if queue is not None:
     calc.set_queue_name(queue)
 calc.store()

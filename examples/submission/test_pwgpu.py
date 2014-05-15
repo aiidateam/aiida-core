@@ -127,16 +127,16 @@ num_pools = 2
 mpis_per_machine = 1
 
 calc.set_resources({"num_machines": num_machines,
-                    "num_cpus_per_machine": mpis_per_machine})
+                    "num_mpiprocs_per_machine": mpis_per_machine})
 
-# 1 MPI per node, default_cpus_per_node OpenMP threads per node
+# 1 MPI per node, default_mpiprocs_per_node OpenMP threads per node
 extra_mpi_params = "-N {} -d {} -cc none".format(
     str(mpis_per_machine),
-    str(computer.get_default_cpus_per_machine()))
+    str(computer.get_default_mpiprocs_per_machine()))
 calc.set_extra_mpirun_params(extra_mpi_params.split())
 calc.set_environment_variables({
-        "OMP_NUM_THREADS": str(computer.get_default_cpus_per_machine()),
-        "MKL_NUM_THREADS": str(computer.get_default_cpus_per_machine()),
+        "OMP_NUM_THREADS": str(computer.get_default_mpiprocs_per_machine()),
+        "MKL_NUM_THREADS": str(computer.get_default_mpiprocs_per_machine()),
         })
 
 if queue is not None:

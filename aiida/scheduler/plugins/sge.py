@@ -229,12 +229,12 @@ class SgeScheduler(aiida.scheduler.Scheduler):
             lines.append("#$ -p {}".format(job_tmpl.priority))
         
         if not job_tmpl.job_resource:
-            raise ValueError("Job resources (as the tot_num_cpus) are required "
+            raise ValueError("Job resources (as the tot_num_mpiprocs) are required "
                              "for the SGE scheduler plugin")
         #Setting up the parallel environment
         lines.append('#$ -pe {} {}'.\
                      format(str(job_tmpl.job_resource.parallel_env),\
-                            int(job_tmpl.job_resource.tot_num_cpus)))
+                            int(job_tmpl.job_resource.tot_num_mpiprocs)))
         
         if job_tmpl.max_wallclock_seconds is not None:
             try:
@@ -452,7 +452,7 @@ class SgeScheduler(aiida.scheduler.Scheduler):
                 try:
                     job_element = job.getElementsByTagName('slots').pop(0)
                     element_child = job_element.childNodes.pop(0)
-                    this_job.num_cpus = str(element_child.data).strip()
+                    this_job.num_mpiprocs = str(element_child.data).strip()
                 except IndexError:
                     self.logger.warning("No 'slots' field for job "
                                   "id {}".format(this_job.job_id))

@@ -269,9 +269,9 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
                              "for the SLURM scheduler plugin")
                     
         lines.append("#SBATCH --nodes={}".format(job_tmpl.job_resource.num_machines))
-        if job_tmpl.job_resource.num_cpus_per_machine:
+        if job_tmpl.job_resource.num_mpiprocs_per_machine:
             lines.append("#SBATCH --ntasks-per-node={}".format(
-                    job_tmpl.job_resource.num_cpus_per_machine))
+                    job_tmpl.job_resource.num_mpiprocs_per_machine))
 
         if job_tmpl.max_wallclock_seconds is not None:
             try:
@@ -520,7 +520,7 @@ class SlurmScheduler(aiida.scheduler.Scheduler):
                         this_job.job_id))
 
             try:
-                this_job.num_cpus = int(number_cpus)
+                this_job.num_mpiprocs = int(number_cpus)
             except ValueError:
                 self.logger.warning("The number of allocated cores is not "
                                     "an integer ({}) for job id {}!".format(

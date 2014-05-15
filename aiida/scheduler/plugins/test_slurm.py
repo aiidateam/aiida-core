@@ -80,7 +80,7 @@ class TestParserSqueue(unittest.TestCase):
         self.assertEquals( [j.num_machines for j in job_list
                             if j.job_id == '863100'][0], 
                            32 )
-        self.assertEquals( [j.num_cpus for j in job_list
+        self.assertEquals( [j.num_mpiprocs for j in job_list
                             if j.job_id == '863100'][0], 
                            1024 )
         self.assertEquals( [j.queue_name for j in job_list
@@ -94,13 +94,13 @@ class TestParserSqueue(unittest.TestCase):
         #        for j in job_list:
         #            if j.allocated_machines:
         #                num_machines = 0
-        #                num_cpus = 0
+        #                num_mpiprocs = 0
         #                for n in j.allocated_machines:
         #                    num_machines += 1
-        #                    num_cpus += n.num_cpus
+        #                    num_mpiprocs += n.num_mpiprocs
         #                    
         #                self.assertTrue( j.num_machines==num_machines )
-        #                self.assertTrue( j.num_cpus==num_cpus )
+        #                self.assertTrue( j.num_mpiprocs==num_mpiprocs )
 
 class TestTimes(unittest.TestCase):
     def test_time_conversion(self):
@@ -165,7 +165,7 @@ class TestSubmitScript(unittest.TestCase):
         job_tmpl.argv = ["mpirun", "-np", "23", "pw.x", "-npool", "1"]
         job_tmpl.stdin_name = 'aiida.in'
         job_tmpl.uuid = str(uuid.uuid4())
-        job_tmpl.job_resource = s.create_job_resource(num_machines=1, num_cpus_per_machine=1)
+        job_tmpl.job_resource = s.create_job_resource(num_machines=1, num_mpiprocs_per_machine=1)
         job_tmpl.max_wallclock_seconds = 24 * 3600 
 
         submit_script_text = s.get_submit_script(job_tmpl)

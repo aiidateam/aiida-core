@@ -127,7 +127,7 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
         calc_params = {
             'computer': self.computer,
             'resources': {'num_machines': 1,
-            'num_cpus_per_machine': 1}
+            'num_mpiprocs_per_machine': 1}
             }
         
         TemplateReplacerCalc = CalculationFactory('simpleplugins.templatereplacer')
@@ -1130,9 +1130,9 @@ class TestSubNodesAndLinks(AiidaTestCase):
         code = Code(remote_computer_exec=(computer, '/bin/true'))#.store()
         
         unstoredcalc = Calculation(computer=computer,
-                                   resources={'num_machines': 1, 'num_cpus_per_machine': 1})
+                                   resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1})
         calc = Calculation(computer=computer,
-                           resources={'num_machines': 1, 'num_cpus_per_machine': 1}).store()
+                           resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1}).store()
 
         # calc is not stored, and also code is not 
         unstoredcalc.use_code(code)
@@ -1254,18 +1254,18 @@ class TestSubNodesAndLinks(AiidaTestCase):
         with self.assertRaises(ValueError):
             # I need to save the localhost entry first
             _ = Calculation(computer=unsavedcomputer,
-                            resources={'num_machines': 1, 'num_cpus_per_machine': 1}).store()
+                            resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1}).store()
 
         # I check both with a string or with an object
         calc = Calculation(computer=self.computer,
-                           resources={'num_machines': 1, 'num_cpus_per_machine': 1}).store()
+                           resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1}).store()
         calc2 = Calculation(computer='localhost',
-                            resources={'num_machines': 1, 'num_cpus_per_machine': 1}).store()
+                            resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1}).store()
         with self.assertRaises(TypeError):
             # I don't want to call it with things that are neither
             # strings nor Computer instances
             _ = Calculation(computer=1,
-                            resources={'num_machines': 1, 'num_cpus_per_machine': 1}).store()
+                            resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1}).store()
         
         d1._add_link_to(calc)
         calc._add_link_from(d2,label='some_label')
@@ -1292,9 +1292,9 @@ class TestSubNodesAndLinks(AiidaTestCase):
             calc._add_link_from(calc2)
 
         calc_a = Calculation(computer=self.computer,
-                             resources={'num_machines':1,'num_cpus_per_machine':1}).store()
+                             resources={'num_machines':1,'num_mpiprocs_per_machine':1}).store()
         calc_b = Calculation(computer=self.computer,
-                             resources={'num_machines':1,'num_cpus_per_machine':1}).store()
+                             resources={'num_machines':1,'num_mpiprocs_per_machine':1}).store()
 
         data_node = Data().store()
 
@@ -1340,9 +1340,9 @@ class TestSubNodesAndLinks(AiidaTestCase):
         d1 = Data().store()
         
         calc = Calculation(computer=self.computer,
-                           resources={'num_machines':1,'num_cpus_per_machine':1}).store()
+                           resources={'num_machines':1,'num_mpiprocs_per_machine':1}).store()
         calc2 = Calculation(computer=self.computer,
-                            resources={'num_machines':1,'num_cpus_per_machine':1}).store()
+                            resources={'num_machines':1,'num_mpiprocs_per_machine':1}).store()
 
         # I cannot, calc it is in state NEW
         with self.assertRaises(ModificationNotAllowed):
@@ -1378,7 +1378,7 @@ class TestComputer(AiidaTestCase):
         calc_params = {
             'computer': self.computer,
             'resources': {'num_machines': 1,
-            'num_cpus_per_machine': 1}
+            'num_mpiprocs_per_machine': 1}
             }
     
         _ = Calculation(**calc_params).store()

@@ -454,7 +454,7 @@ class Calculation(Node):
         Returns the dictionary of the job resources set.
         
         :param full: if True, also add the default values, e.g.
-            ``default_cpus_per_machine``
+            ``default_mpiprocs_per_machine``
         
         :return: a dictionary
         """
@@ -462,9 +462,9 @@ class Calculation(Node):
     
         if full:
             computer = self.get_computer()
-            def_cpus_machine = computer.get_default_cpus_per_machine()
+            def_cpus_machine = computer.get_default_mpiprocs_per_machine()
             if def_cpus_machine is not None:
-                resources_dict['default_cpus_per_machine'] = def_cpus_machine
+                resources_dict['default_mpiprocs_per_machine'] = def_cpus_machine
         
         return resources_dict
 
@@ -1284,12 +1284,12 @@ class Calculation(Node):
              code.get_append_text(),
              computer.get_prepend_text()] if _)
 
-        # Set resources, also with get_default_cpus_per_machine
+        # Set resources, also with get_default_mpiprocs_per_machine
         resources_dict = self.get_resources(full=True)
         job_tmpl.job_resource = s.create_job_resource(**resources_dict)
 
-        subst_dict = {'tot_num_cpus': 
-                      job_tmpl.job_resource.get_tot_num_cpus()}
+        subst_dict = {'tot_num_mpiprocs': 
+                      job_tmpl.job_resource.get_tot_num_mpiprocs()}
         
         for k,v in job_tmpl.job_resource.iteritems():
             subst_dict[k] = v

@@ -45,7 +45,7 @@ class WorkflowXTiO3(Workflow):
         
         ph_codename            = params['ph_codename']
         num_machines           = params['num_machines']
-        num_cpus_per_machine   = params['num_cpus_per_machine']
+        num_mpiprocs_per_machine   = params['num_mpiprocs_per_machine']
         max_wallclock_seconds  = params['max_wallclock_seconds']
         
         code = Code.get(ph_codename)
@@ -55,7 +55,7 @@ class WorkflowXTiO3(Workflow):
         calc = QEPhCalc(computer=computer)
         
         calc.set_max_wallclock_seconds(max_wallclock_seconds) # 30 min
-        calc.set_resources({"num_machines": num_machines, "num_cpus_per_machine": num_cpus_per_machine})
+        calc.set_resources({"num_machines": num_machines, "num_mpiprocs_per_machine": num_mpiprocs_per_machine})
         calc.store()
         
         calc.use_parameters(ph_parameters)
@@ -193,7 +193,7 @@ class WorkflowXTiO3_EOS(Workflow):
         
         pw_codename            = params['pw_codename']
         num_machines           = params['num_machines']
-        num_cpus_per_machine   = params['num_cpus_per_machine']
+        num_mpiprocs_per_machine   = params['num_mpiprocs_per_machine']
         max_wallclock_seconds  = params['max_wallclock_seconds']
         pseudo_family          = params['pseudo_family']
         
@@ -204,7 +204,7 @@ class WorkflowXTiO3_EOS(Workflow):
         
         calc = QECalc(computer=computer)
         calc.set_max_wallclock_seconds(max_wallclock_seconds)
-        calc.set_resources({"num_machines": num_machines, "num_cpus_per_machine": num_cpus_per_machine})
+        calc.set_resources({"num_machines": num_machines, "num_mpiprocs_per_machine": num_mpiprocs_per_machine})
         calc.store()
         
         calc.use_code(code)

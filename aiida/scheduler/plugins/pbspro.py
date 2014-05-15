@@ -199,8 +199,8 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
                              "for the PBSPro scheduler plugin")
                     
         select_string = "select={}".format(job_tmpl.job_resource.num_machines)
-        if job_tmpl.job_resource.num_cpus_per_machine:
-            select_string += ":ncpus={}".format(job_tmpl.job_resource.num_cpus_per_machine)
+        if job_tmpl.job_resource.num_mpiprocs_per_machine:
+            select_string += ":mpiprocs={}".format(job_tmpl.job_resource.num_mpiprocs_per_machine)
 
         if job_tmpl.max_wallclock_seconds is not None:
             try:
@@ -469,6 +469,19 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
                 self.logger.warning("'resource_list.ncpus' is not an integer "
                                     "({}) for job id {}!".format(
                         raw_data['resource_list.ncpus'],
+                        this_job.job_id))
+
+            try:
+                this_job.num_mpiprocs = int(raw_data['resource_list.mpiprocs'])
+                # TODO: understand if this is the correct field also for
+                #       multithreaded (OpenMP) jobs.
+            except KeyError:
+                self.logger.debug("No 'resource_list.mpiprocs' field for job id "
+                    "{}".format(this_job.job_id))
+            except ValueError:
+                self.logger.warning("'resource_list.mpiprocs' is not an integer "
+                                    "({}) for job id {}!".format(
+                        raw_data['resource_list.mpiprocs'],
                         this_job.job_id))
 
             try:

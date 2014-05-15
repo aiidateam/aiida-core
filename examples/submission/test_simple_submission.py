@@ -128,9 +128,9 @@ jr_class = computer.get_scheduler()._job_resource_class
 from aiida.scheduler.datastructures import NodeNumberJobResource, ParEnvJobResource
 
 if issubclass(jr_class, NodeNumberJobResource):
-    calc.set_resources({"num_machines": 1, "num_cpus_per_machine": 1})
+    calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
 elif issubclass(jr_class, ParEnvJobResource):
-    calc.set_resources({"parallel_env": 'smp', "tot_num_cpus": 1})
+    calc.set_resources({"parallel_env": 'smp', "tot_num_mpiprocs": 1})
 else:
     print >> sys.stderr, "Unknown Job resource type: {}".format(str(jr_class))
     sys.exit(1)

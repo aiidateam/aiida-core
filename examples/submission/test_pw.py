@@ -129,7 +129,7 @@ calc.set_max_wallclock_seconds(30*60) # 30 min
 # number_cpus_per_machine), change for SGE-like schedulers 
 calc.set_resources({"num_machines": 1})
 ## Otherwise, to specify a given # of cpus per machine, uncomment the following:
-# calc.set_resources({"num_machines": 1, "num_cpus_per_machine": 8})
+# calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 8})
 
 #calc.set_prepend_text("#SBATCH --account=ch3")
 

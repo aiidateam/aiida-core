@@ -297,7 +297,7 @@ class TestCommand(unittest.TestCase):
         
         job_tmpl = JobTemplate()
         job_tmpl.job_resource = sge.create_job_resource(parallel_env="mpi8", \
-                                                        tot_num_cpus=16)
+                                                        tot_num_mpiprocs=16)
         job_tmpl.working_directory = "/home/users/dorigm7s/test"
         job_tmpl.submit_as_hold = None
         job_tmpl.rerunnable = None

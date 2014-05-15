@@ -50,7 +50,7 @@ def get_or_create_machine():
             computer = Computer(hostname="localhost",transport_type='local',
                                 scheduler_type='pbspro')
             computer.set_workdir("/tmp/{username}/aiida")
-            computer.set_mpirun_command("mpirun", "-np", "{tot_num_cpus}")
+            computer.set_mpirun_command("mpirun", "-np", "{tot_num_mpiprocs}")
             computer.store()
 
         auth_params = {}
@@ -71,17 +71,17 @@ def get_or_create_machine():
             computername = "bellatrix.epfl.ch"
             schedulertype = 'pbspro'
             workdir = "/scratch/{username}/aiida"
-            mpirun_command = ['mpirun', '-np', '{tot_num_cpus}']
+            mpirun_command = ['mpirun', '-np', '{tot_num_mpiprocs}']
         if machine.startswith('aries'):
             computername = "aries.epfl.ch"
             schedulertype = 'pbspro'
             workdir = "/scratch/{username}/aiida"
-            mpirun_command = ['mpirun', '-np', '{tot_num_cpus}']
+            mpirun_command = ['mpirun', '-np', '{tot_num_mpiprocs}']
         elif machine.startswith('rosa'):
             computername = "rosa.cscs.ch"
             schedulertype = 'slurm'
             workdir = "/scratch/rosa/{username}/aiida"
-            mpirun_command = ['aprun', '-n', '{tot_num_cpus}']
+            mpirun_command = ['aprun', '-n', '{tot_num_mpiprocs}']
         elif machine.startswith('vulcan'):
             computername = "vulcan.icams.rub.de"
             schedulertype = 'sge'
@@ -182,7 +182,7 @@ code = get_or_create_code(computer)
 SimpleCalc = CalculationFactory('simpleplugins.templatereplacer')
 calc = SimpleCalc(computer=computer)
 calc.set_max_wallclock_seconds(4*60) # 1 min
-calc.set_resources({"parallel_env": 'smp',"tot_num_cpus": 1})
+calc.set_resources({"parallel_env": 'smp',"tot_num_mpiprocs": 1})
 calc.set_queue_name('serial.q') #No parallel needed. 
 calc.store()
 calc.use_code(code)

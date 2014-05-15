@@ -48,7 +48,7 @@ class CalcInfo(DefaultFieldsAttributeDict):
         'join_files',
         'queue_name', 
         'num_machines',
-        'num_cpus_per_machine',
+        'num_mpiprocs_per_machine',
         'priority',
         'max_wallclock_seconds',
         'max_memory_kb',

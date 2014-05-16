@@ -145,6 +145,9 @@ def create_base_dirs():
 def create_configuration():    
     import readline
     from aiida.common.exceptions import ConfigurationError
+    # BE CAREFUL: THIS IS THE DJANGO VALIDATIONERROR
+    from django.core.exceptions import ValidationError as DjangoValidationError
+    from aiida.common.additions import CustomEmailValidator
     
     aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
     
@@ -156,9 +159,18 @@ def create_configuration():
         confs = {}  
       
     try:
+        valid_email = False
+        email_validator = CustomEmailValidator()
         readline.set_startup_hook(lambda: readline.insert_text(
                 confs.get(DEFAULT_USER_CONFIG_FIELD, DAEMON_EMAIL)))
-        confs[DEFAULT_USER_CONFIG_FIELD] = raw_input('Default user email: ')
+        while not valid_email:
+            confs[DEFAULT_USER_CONFIG_FIELD] = raw_input('Default user email: ')
+            try:
+                email_validator(confs[DEFAULT_USER_CONFIG_FIELD])
+                valid_email = True
+            except DjangoValidationError:
+                print "** Invalid email provided!"
+                
         
         readline.set_startup_hook(lambda: readline.insert_text(
                 confs.get('AIIDADB_ENGINE','sqlite3')))

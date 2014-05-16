@@ -22,11 +22,8 @@ access the database.
 
 Moreover, by calling ``verdi shell``, you have the additional advantage that
 some classes and modules are automatically loaded, in particular at start-up 
-the following modules are loaded::
-  
-  from aiida.orm import Calculation, Code, Computer, Data, Node
-  from aiida.orm import CalculationFactory, DataFactory
-  from aiida.djsite.db import models
+the following modules are loaded, as described
+:ref:`here <verdi_shell_description>`.
 
 A further advantage is that bash completion is enabled, allowing to press the 
 ``TAB`` key to see available submethods of a given object (see for instance

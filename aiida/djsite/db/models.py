@@ -19,7 +19,6 @@ class EmptyContextManager(object):
     
     def __exit__(self, exc_type, exc_value, traceback):
         pass
-    
 
 class AiidaQuerySet(QuerySet):
     def iterator(self):
@@ -138,8 +137,7 @@ class DbNode(m.Model):
     label = m.CharField(max_length=255, db_index=True, blank=True)
     description = m.TextField(blank=True)
     # creation time
-    ctime = m.DateTimeField(auto_now_add=True, editable=False)
-    # last-modified time
+    ctime = m.DateTimeField(default=timezone.now, editable=False)
     mtime = m.DateTimeField(auto_now=True, editable=False)
     # Cannot delete a user if something is associated to it
     user = m.ForeignKey(AUTH_USER_MODEL, on_delete=m.PROTECT,
@@ -168,7 +166,7 @@ class DbNode(m.Model):
     objects = m.Manager()
     # Return aiida Node instances or their subclasses instead of DbNode instances
     aiidaobjects = AiidaObjectManager()
-            
+        
     
     def get_aiida_class(self):
         """
@@ -755,8 +753,6 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
     Moreover, this class unpacks dictionaries and lists when possible, so that
     it is possible to query inside recursive lists and dicts.
     """
-    # Modification time of this attribute
-    time = m.DateTimeField(auto_now=True, editable=False)
     # In this way, the related name for the DbAttribute inherited class will be
     # 'dbattributes' and for 'dbextra' will be 'dbextras'
     # Moreover, automatically destroy attributes and extras if the parent
@@ -944,7 +940,8 @@ class DbGroup(m.Model):
     # User groups have type equal to an empty string
     type = m.CharField(default="", max_length=1024, db_index=True)
     dbnodes = m.ManyToManyField('DbNode', related_name='dbgroups')
-    time = m.DateTimeField(auto_now_add=True, editable=False)
+    # Creation time
+    time = m.DateTimeField(default=timezone.now, editable=False)
     description = m.TextField(blank=True)
     # The owner of the group, not of the calculations
     # On user deletion, remove his/her groups too (not the calcuations, only
@@ -1148,7 +1145,7 @@ class DbComment(m.Model):
     uuid = UUIDField(auto=True,version=AIIDANODES_UUID_VERSION)
     # Delete comments if the node is removed
     dbnode = m.ForeignKey(DbNode,related_name='dbcomments', on_delete=m.CASCADE)
-    ctime = m.DateTimeField(auto_now_add=True, editable=False)
+    ctime = m.DateTimeField(default=timezone.now, editable=False)
     mtime = m.DateTimeField(auto_now=True, editable=False)
     # Delete the comments of a deleted user (TODO: check if this is a good policy)
     user = m.ForeignKey(AUTH_USER_MODEL, on_delete=m.CASCADE)
@@ -1162,7 +1159,7 @@ class DbComment(m.Model):
 
 class DbLog(m.Model):
     # Creation time
-    time = m.DateTimeField(auto_now_add=True, editable=False)
+    time = m.DateTimeField(default=timezone.now, editable=False)
     loggername = m.CharField(max_length=255, db_index=True)
     levelname = m.CharField(max_length=50, db_index=True)
     # A string to know what is the referred object (e.g. a Calculation,
@@ -1209,7 +1206,7 @@ class DbLog(m.Model):
 class DbLock(m.Model):
     
     key        = m.TextField(primary_key=True)
-    creation   = m.DateTimeField(auto_now_add=True, editable=False)
+    creation   = m.DateTimeField(default=timezone.now, editable=False)
     timeout    = m.IntegerField(editable=False)
     owner      = m.CharField(max_length=255, blank=False)
             
@@ -1224,7 +1221,7 @@ class DbWorkflow(m.Model):
     from aiida.common.datastructures import wf_states, wf_data_types
     
     uuid         = UUIDField(auto=True,version=AIIDANODES_UUID_VERSION)
-    ctime        = m.DateTimeField(auto_now_add=True, editable=False)
+    ctime        = m.DateTimeField(default=timezone.now, editable=False)
     mtime        = m.DateTimeField(auto_now=True, editable=False)    
     user         = m.ForeignKey(AUTH_USER_MODEL, on_delete=m.PROTECT)
 
@@ -1457,7 +1454,7 @@ class DbWorkflowData(m.Model):
     
     parent       = m.ForeignKey(DbWorkflow, related_name='data')
     name         = m.CharField(max_length=255, blank=False)
-    time         = m.DateTimeField(auto_now_add=True, editable=False)
+    time         = m.DateTimeField(default=timezone.now, editable=False)
     data_type    = m.TextField(blank=False, default=wf_data_types.PARAMETER)
     
     value_type   = m.TextField(blank=False, default=wf_data_value_types.NONE)
@@ -1517,7 +1514,7 @@ class DbWorkflowStep(m.Model):
     parent        = m.ForeignKey(DbWorkflow, related_name='steps')
     name          = m.CharField(max_length=255, blank=False)
     user          = m.ForeignKey(AUTH_USER_MODEL, on_delete=m.PROTECT)
-    time          = m.DateTimeField(auto_now_add=True, editable=False)
+    time          = m.DateTimeField(default=timezone.now, editable=False)
     nextcall      = m.CharField(max_length=255, blank=False, default=wf_default_call)
     
     calculations  = m.ManyToManyField(DbNode, symmetrical=False, related_name="workflow_step")

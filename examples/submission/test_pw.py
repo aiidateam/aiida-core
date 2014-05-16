@@ -10,6 +10,7 @@ from aiida.common.exceptions import NotExistent
 from aiida.orm import Code, DataFactory
 from aiida.djsite.db.models import DbGroup
 
+from aiida.orm.data.upf import UPFGROUP_TYPE
 UpfData = DataFactory('upf')
 ParameterData = DataFactory('parameter')
 StructureData = DataFactory('structure')
@@ -66,22 +67,22 @@ except (NotExistent, ValueError):
     sys.exit(1)
 
 if auto_pseudos:
-    valid_pseudo_groups = DbGroup.objects.filter(dbnodes__type__contains='.upf.').distinct().values_list('name',flat=True)
+    valid_pseudo_groups = DbGroup.objects.filter(type=UPFGROUP_TYPE).distinct().values_list('name',flat=True)
 
     try:
-        pseudo_family = sys.argv[2]
+        pseudo_family = sys.argv[3]
     except IndexError:
         print >> sys.stderr, "Error, auto_pseudos set to True. You therefore need to pass as second parameter"
         print >> sys.stderr, "the pseudo family name."
-        print >> sys.stderr, "Valid groups containing at least one UPFData object are:"
+        print >> sys.stderr, "Valid UPF families are:"
         print >> sys.stderr, "\n".join("* {}".format(i) for i in valid_pseudo_groups)
         sys.exit(1)
         
 
-    if not DbGroup.objects.filter(name=pseudo_family):
+    if not DbGroup.objects.filter(name=pseudo_family, type=UPFGROUP_TYPE):
         print >> sys.stderr, "auto_pseudos is set to True and pseudo_family='{}',".format(pseudo_family)
         print >> sys.stderr, "but no group with such a name found in the DB."
-        print >> sys.stderr, "Valid groups containing at least one UPFData object are:"
+        print >> sys.stderr, "Valid UPF families are:"
         print >> sys.stderr, ",".join(valid_pseudo_groups)
         sys.exit(1)
 

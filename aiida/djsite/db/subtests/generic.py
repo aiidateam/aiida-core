@@ -737,15 +737,16 @@ class TestNodeBasic(AiidaTestCase):
         Attribute keys cannot include the separator symbol in the key
         """
         from aiida.djsite.db.models import DbAttributeBaseClass
+        from aiida.common.exceptions import ValidationError
         separator = DbAttributeBaseClass._sep
         
         a = Node()
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ValidationError):
             # I did not store, I cannot modify
             a.set_attr('name'+separator, 'blablabla')
         
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ValidationError):
             # I did not store, I cannot modify
             a.set_extra('bool'+separator, 'blablabla')
 
@@ -770,6 +771,40 @@ class TestNodeBasic(AiidaTestCase):
         # and I check that there is no name clash
         self.assertEquals(self.boolval, a.get_attr('bool'))
         self.assertEquals(a_string, a.get_extra('bool'))
+        
+    def test_attr_and_extras_multikey(self):
+        """
+        Multiple nodes with the same key. This should not be a problem
+        
+        I test only extras because the two tables are formally identical
+        """
+        n1 = Node().store()
+        n2 = Node().store()
+        
+        n1.set_extra('samename', 1)
+        # No problem, they are two different nodes
+        n2.set_extra('samename', 1)
+        
+    def test_settings(self):
+        """
+        Test the settings table (similar to Attributes, but without the key.
+        """
+        from aiida.djsite.db import models
+        from django.db import IntegrityError, transaction
+        
+        s1 = models.DbSetting(key='pippo')
+        s1.setvalue([1,2,3]) # This will also store
+        
+        self.assertEqual(s1.getvalue(), [1,2,3])
+        
+        s2 = models.DbSetting(key='pippo')
+
+        sid = transaction.savepoint()
+        with self.assertRaises(IntegrityError):
+            # same name...
+            s2.save()
+        transaction.savepoint_rollback(sid)
+        
         
     def test_attr_listing(self):
         """

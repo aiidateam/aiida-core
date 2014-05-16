@@ -796,7 +796,7 @@ class Calculation(Node):
     def _set_last_jobinfo(self,last_jobinfo):
         import pickle
         
-        self.set_attr('last_jobinfo', pickle.dumps(last_jobinfo))
+        self.set_attr('last_jobinfo', last_jobinfo.serialize())
 
     def get_last_jobinfo(self):
         """
@@ -805,10 +805,13 @@ class Calculation(Node):
         :return: a JobInfo object (that closely resembles a dictionary) or None.
         """
         import pickle
+        from aiida.scheduler.datastructures import JobInfo
         
-        last_jobinfo_pickled = self.get_attr('last_jobinfo',None)
-        if last_jobinfo_pickled is not None:
-            return pickle.loads(last_jobinfo_pickled)
+        last_jobinfo_serialized = self.get_attr('last_jobinfo',None)
+        if last_jobinfo_serialized is not None:
+            jobinfo = JobInfo()
+            jobinfo.load_from_serialized(last_jobinfo_serialized)
+            return jobinfo
         else:
             return None
     

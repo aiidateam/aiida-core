@@ -1,0 +1,3 @@
+class Group(object):
+    pass
+

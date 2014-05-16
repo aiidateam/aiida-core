@@ -816,7 +816,8 @@ class Calculation(Node):
             return None
     
     @classmethod
-    def list_calculations(cls,states=None, past_days=None, group=None, pks=[]):
+    def list_calculations(cls,states=None, past_days=None, group=None, 
+                            all_users=False, pks=[]):
         """
         This function return a string with a description of the AiiDA calculations.
         
@@ -856,7 +857,11 @@ class Calculation(Node):
         if pks:
             q_object = Q(pk__in=pks)
         else:
-            q_object = Q(user=get_automatic_user())
+            q_object = Q()
+            
+            if not all_users:
+                q_object.add(Q(user=get_automatic_user()), Q.AND)
+                
             if states is not None:
 #                q_object.add(~Q(dbattributes__key='state',
 #                                dbattributes__tval=only_state,), Q.AND)

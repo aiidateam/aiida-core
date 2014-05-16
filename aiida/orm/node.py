@@ -836,7 +836,7 @@ class Node(object):
             because the node was already stored, and the attribute is not listed
             as updatable).
 
-        :raise ValueError: if the key is not valid (e.g. it contains the
+        :raise ValidationError: if the key is not valid (e.g. it contains the
             separator symbol).        
         """
         from aiida.djsite.db.models import DbAttribute

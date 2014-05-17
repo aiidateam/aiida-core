@@ -2,6 +2,9 @@ import aiida.common
 from aiida.common.exceptions import InternalError
 from aiida.common.extendeddicts import FixedFieldsAttributeDict
 
+import os,re,fnmatch,sys # for glob commands
+magic_check = re.compile('[*?[]')
+
 def TransportFactory(module):
     """
     Used to return a suitable Transport subclass.
@@ -524,3 +527,82 @@ class Transport(object):
                               "stderr: '{}'".format(retval, username, stderr))
             raise IOError("Error while executing cp. Exit code: {}".format(retval) )
 
+
+    def path_exists(self,path):
+        """
+        Returns True if path exists, False otherwise.
+        """
+        raise NotImplementedError
+
+# The following definitions are almost copied and pasted 
+# from the python module glob.
+    def glob(self,pathname):
+        """Return a list of paths matching a pathname pattern.
+        
+        The pattern may contain simple shell-style wildcards a la fnmatch.
+        """
+        return list(self.iglob(pathname))
+
+    def iglob(self,pathname):
+        """Return an iterator which yields the paths matching a pathname pattern.
+    
+        The pattern may contain simple shell-style wildcards a la fnmatch.
+    
+        """
+        if not self.has_magic(pathname):
+            #if os.path.lexists(pathname): # ORIGINAL 
+            # our implementation
+            if self.path_exists(pathname):
+                yield pathname
+            return
+        dirname, basename = os.path.split(pathname)
+        if not dirname:
+            for name in self.glob1(os.curdir, basename):
+                yield name
+            return
+        if self.has_magic(dirname):
+            dirs = self.iglob(dirname)
+        else:
+            dirs = [dirname]
+        if self.has_magic(basename):
+            glob_in_dir = self.glob1
+        else:
+            glob_in_dir = self.glob0
+        for dirname in dirs:
+            for name in glob_in_dir(dirname, basename):
+                yield os.path.join(dirname, name)
+    
+    # These 2 helper functions non-recursively glob inside a literal directory.
+    # They return a list of basenames. `glob1` accepts a pattern while `glob0`
+    # takes a literal basename (so it only has to check for its existence).
+    
+    def glob1(self,dirname, pattern):
+        if not dirname:
+            dirname = os.curdir
+        if isinstance(pattern, unicode) and not isinstance(dirname, unicode):
+            dirname = unicode(dirname, sys.getfilesystemencoding() or
+                                       sys.getdefaultencoding())
+        try:
+            #names = os.listdir(dirname)
+            names = self.listdir(dirname)
+        except os.error:
+            return []
+        if pattern[0] != '.':
+            names = filter(lambda x: x[0] != '.', names)
+        return fnmatch.filter(names, pattern)
+    
+    def glob0(self,dirname, basename):
+        if basename == '':
+            # `os.path.split()` returns an empty basename for paths ending with a
+            # directory separator.  'q*x/' should match only directories.
+            # if os.path.isdir(dirname):
+            if self.isdir(dirname):
+                return [basename]
+        else:
+            # if os.path.lexists(os.path.join(dirname, basename)):
+            if self.path_exists(os.path.join(dirname, basename)):
+                return [basename]
+        return []
+    
+    def has_magic(self,s):
+        return magic_check.search(s) is not None

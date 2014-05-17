@@ -604,12 +604,10 @@ class TestPutGetTree(unittest.TestCase):
                 self.assertTrue( 'file.txt' in list_pushed_file )
                 self.assertTrue( 'file.txt' in list_retrieved_file )
             
-            os.remove(os.path.join(local_subfolder,'file.txt'))
-            os.rmdir(local_subfolder)
-            os.remove(os.path.join(retrieved_subfolder,'file.txt'))
-            os.rmdir(retrieved_subfolder)
-            t.remove(os.path.join(remote_subfolder,'file.txt'))
-            t.rmdir(remote_subfolder)
+            import shutil
+            shutil.rmtree(local_subfolder)
+            shutil.rmtree(retrieved_subfolder)
+            t.rmtree(remote_subfolder)
             
             t.chdir('..')
             t.rmdir(directory)
@@ -674,7 +672,7 @@ class TestPutGetTree(unittest.TestCase):
 
 
 
-    def test_put_and_get_pattern(self):
+    def test_copy(self):
         import os
         import random
         import string
@@ -691,56 +689,289 @@ class TestPutGetTree(unittest.TestCase):
                 directory += random.choice(
                     string.ascii_uppercase + string.digits)
 
-            local_subfolder = os.path.join(local_dir,directory,'tmp1')
-            local_subsubfolder = os.path.join(local_subfolder,'subdir')
-            remote_subfolder = 'tmp2'
-            retrieved_subfolder = os.path.join(local_dir,directory,'tmp3')
-            
-            os.mkdir(os.path.join(local_dir,directory))
-            os.mkdir(os.path.join(local_dir,directory,local_subfolder))            
-            os.mkdir(os.path.join(local_dir,directory,local_subsubfolder))
+            t.mkdir(directory)
             t.chdir(directory)
-
-            # create a tree with files
-            local_file_name_1 = os.path.join(local_subfolder,'a.txt')
-            local_file_name_2 = os.path.join(local_subfolder,'b.tmp')
-            local_file_name_3 = os.path.join(local_subfolder,'c.txt')
-            local_file_name_4 = os.path.join(local_subsubfolder,'d.txt')
+            
+            local_base_dir = os.path.join(local_dir,directory,'local')
+            os.mkdir(local_base_dir)
+            
+            # first test put: I create three files in local
+            file_1 = os.path.join(local_base_dir,'a.txt')
+            file_2 = os.path.join(local_base_dir,'b.tmp')
+            file_3 = os.path.join(local_base_dir,'c.txt')
             text = 'Viva Verdi\n'
-            for filename in [local_file_name_1,local_file_name_2,
-                             local_file_name_3,local_file_name_4]:
+            for filename in [file_1,file_2,file_3]:
                 with open(filename,'w') as f:
                     f.write(text)
+                    
+            # first test the copy. Copy of two files matching patterns, into a folder
+            t.copy(os.path.join('local','*.txt'),'.')
+            self.assertEquals( set(['a.txt','c.txt','local']), 
+                               set(t.listdir('.')) )
+            t.remove('a.txt')
+            t.remove('c.txt')
+            # second test copy. Copy of two folders
+            t.copy('local','prova')
+            self.assertEquals( set(['prova','local']), 
+                               set(t.listdir('.')) )
+            self.assertEquals( set(['a.txt','b.tmp','c.txt']), 
+                               set(t.listdir('prova')) )
+            t.rmtree('prova')
+            # third test copy. Can copy one file into a new file
+            t.copy(os.path.join('local','*.tmp'),'prova')
+            self.assertEquals( set(['prova','local']), 
+                               set(t.listdir('.')) )
+            t.remove('prova')
+            # fourth test copy: can't copy more than one file on the same file,
+            # i.e., the destination should be a folder
+            with self.assertRaises(OSError):
+                t.copy(os.path.join('local','*.txt'),'prova')
+            # fifth test, copying one file into a folder
+            t.mkdir('prova')
+            t.copy(os.path.join('local','a.txt'),'prova')
+            self.assertEquals(set(t.listdir('prova')),
+                              set(['a.txt']))
+            t.rmtree('prova')
+            # sixth test, copying one file into a file
+            t.copy(os.path.join('local','a.txt'),'prova')
+            self.assertTrue(t.isfile('prova'))
+            t.remove('prova')
             
-            t.put(local_subfolder,remote_subfolder,pattern='*.txt')
-            # copies a.txt and c.txt but not the subsubfolder
-            self.assertEquals( set(['a.txt','c.txt']), set(t.listdir(remote_subfolder)) )
-
-            # test a more nested pattern
-            t.rmtree(remote_subfolder)
-            t.put(local_subfolder,remote_subfolder,pattern='*/*.txt')
-            # copies d.txt in the subsubfolder
-            self.assertEquals( ['subdir'], t.listdir(remote_subfolder) )
-            self.assertEquals( ['d.txt'],t.listdir(os.path.join(remote_subfolder,'subdir')) )
-
-            # now copy everything
-            t.put(local_subfolder,remote_subfolder)
-
-            # analogous test for get
-            t.get(remote_subfolder,retrieved_subfolder,pattern='*.txt')
-            # copies a.txt and c.txt but not the subsubfolder
-            self.assertEquals( set(['a.txt','c.txt']), set(os.listdir(retrieved_subfolder)) )
-
-            # more nested
-            t.rmtree(retrieved_subfolder)
-            t.get(remote_subfolder,retrieved_subfolder,pattern='*/*.txt')
-            # copies a.txt and c.txt but not the subsubfolder
-            self.assertEquals( ['subdir'],os.listdir(retrieved_subfolder))
-            self.assertEquals( ['d.txt'],
-                               os.listdir(os.path.join(retrieved_subfolder,'subdir')) )
-
+            # exit
             t.chdir('..')
             t.rmtree(directory)
+
+
+    def test_put(self):
+        # exactly the same tests of copy, just with the put function
+        # and therefore the local path must be absolute
+        import os
+        import random
+        import string
+        
+        local_dir = os.path.join('/','tmp')
+        remote_dir = local_dir
+        directory = 'tmp_try'
+
+        with custom_transport as t:
+            t.chdir(remote_dir)
+            
+            while os.path.exists(os.path.join(local_dir,directory) ):
+                # I append a random letter/number until it is unique
+                directory += random.choice(
+                    string.ascii_uppercase + string.digits)
+
+            t.mkdir(directory)
+            t.chdir(directory)
+            
+            local_base_dir = os.path.join(local_dir,directory,'local')
+            os.mkdir(local_base_dir)
+            
+            # first test put: I create three files in local
+            file_1 = os.path.join(local_base_dir,'a.txt')
+            file_2 = os.path.join(local_base_dir,'b.tmp')
+            file_3 = os.path.join(local_base_dir,'c.txt')
+            text = 'Viva Verdi\n'
+            for filename in [file_1,file_2,file_3]:
+                with open(filename,'w') as f:
+                    f.write(text)
+                    
+            # first test put. Copy of two files matching patterns, into a folder
+            t.put(os.path.join(local_base_dir,'*.txt'),'.')
+            self.assertEquals( set(['a.txt','c.txt','local']), 
+                               set(t.listdir('.')) )
+            t.remove('a.txt')
+            t.remove('c.txt')
+            # second. Copy of folder into a non existing folder
+            t.put(local_base_dir,'prova')
+            self.assertEquals( set(['prova','local']), 
+                               set(t.listdir('.')) )
+            self.assertEquals( set(['a.txt','b.tmp','c.txt']), 
+                               set(t.listdir('prova')) )
+            t.rmtree('prova')
+            # third. copy of folder into an existing folder
+            t.mkdir('prova')
+            t.put(local_base_dir,'prova')
+            self.assertEquals( set(['prova','local']), 
+                               set(t.listdir('.')) )
+            self.assertEquals( set(['local']), 
+                               set(t.listdir('prova')) )
+            self.assertEquals( set(['a.txt','b.tmp','c.txt']), 
+                               set(t.listdir(os.path.join('prova','local')) ) )
+            t.rmtree('prova')
+            # third test copy. Can copy one file into a new file
+            t.put(os.path.join(local_base_dir,'*.tmp'),'prova')
+            self.assertEquals( set(['prova','local']), 
+                               set(t.listdir('.')) )
+            t.remove('prova')
+            # fourth test copy: can't copy more than one file on the same file,
+            # i.e., the destination should be a folder
+            with self.assertRaises(OSError):
+                t.put(os.path.join(local_base_dir,'*.txt'),'prova')
+            # copy of folder into file
+            with open(os.path.join(local_dir,directory,'existing.txt'),'w') as f:
+                    f.write(text)
+            with self.assertRaises(OSError):
+                t.put(os.path.join(local_base_dir),'existing.txt')
+            t.remove('existing.txt')
+            # fifth test, copying one file into a folder
+            t.mkdir('prova')
+            t.put(os.path.join(local_base_dir,'a.txt'),'prova')
+            self.assertEquals(set(t.listdir('prova')),
+                              set(['a.txt']))
+            t.rmtree('prova')
+            # sixth test, copying one file into a file
+            t.put(os.path.join(local_base_dir,'a.txt'),'prova')
+            self.assertTrue(t.isfile('prova'))
+            t.remove('prova')
+            
+            # exit
+            t.chdir('..')
+            t.rmtree(directory)
+
+
+    def test_get(self):
+        # exactly the same tests of copy, just with the put function
+        # and therefore the local path must be absolute
+        import os
+        import random
+        import string,shutil
+        
+        local_dir = os.path.join('/','tmp')
+        remote_dir = local_dir
+        directory = 'tmp_try'
+
+        with custom_transport as t:
+            t.chdir(remote_dir)
+            
+            while os.path.exists(os.path.join(local_dir,directory) ):
+                # I append a random letter/number until it is unique
+                directory += random.choice(
+                    string.ascii_uppercase + string.digits)
+
+            t.mkdir(directory)
+            t.chdir(directory)
+            
+            local_base_dir = os.path.join(local_dir,directory,'local')
+            local_destination = os.path.join(local_dir,directory)
+            os.mkdir(local_base_dir)
+            
+            # first test put: I create three files in local
+            file_1 = os.path.join(local_base_dir,'a.txt')
+            file_2 = os.path.join(local_base_dir,'b.tmp')
+            file_3 = os.path.join(local_base_dir,'c.txt')
+            text = 'Viva Verdi\n'
+            for filename in [file_1,file_2,file_3]:
+                with open(filename,'w') as f:
+                    f.write(text)
+                    
+            # first test put. Copy of two files matching patterns, into a folder
+            t.get(os.path.join('local','*.txt'),local_destination)
+            self.assertEquals( set(['a.txt','c.txt','local']), 
+                               set(os.listdir(local_destination)) )
+            os.remove(os.path.join(local_destination,'a.txt'))
+            os.remove(os.path.join(local_destination,'c.txt'))
+            # second. Copy of folder into a non existing folder
+            t.get('local',os.path.join(local_destination,'prova'))
+            self.assertEquals( set(['prova','local']), 
+                               set(os.listdir(local_destination)) )
+            self.assertEquals( set(['a.txt','b.tmp','c.txt']), 
+                               set(os.listdir(os.path.join(local_destination,'prova'))) )
+            shutil.rmtree(os.path.join(local_destination,'prova'))
+            # third. copy of folder into an existing folder
+            os.mkdir(os.path.join(local_destination,'prova'))
+            t.get('local',os.path.join(local_destination,'prova'))
+            self.assertEquals( set(['prova','local']), 
+                               set(os.listdir(local_destination)) )
+            self.assertEquals( set(['local']), 
+                               set(os.listdir(os.path.join(local_destination,'prova')) ))
+            self.assertEquals( set(['a.txt','b.tmp','c.txt']), 
+                               set(os.listdir(os.path.join(local_destination,'prova','local')) ) )
+            shutil.rmtree(os.path.join(local_destination,'prova'))
+            # third test copy. Can copy one file into a new file
+            t.get(os.path.join('local','*.tmp'),os.path.join(local_destination,'prova'))
+            self.assertEquals( set(['prova','local']), 
+                               set(os.listdir(local_destination)) )
+            os.remove(os.path.join(local_destination,'prova'))
+            # fourth test copy: can't copy more than one file on the same file,
+            # i.e., the destination should be a folder
+            with self.assertRaises(OSError):
+                t.get(os.path.join('local','*.txt'),os.path.join(local_destination,'prova'))
+            # copy of folder into file
+            with open(os.path.join(local_destination,'existing.txt'),'w') as f:
+                f.write(text)
+            with self.assertRaises(OSError):
+                t.get('local',os.path.join(local_destination,'existing.txt'))
+            os.remove(os.path.join(local_destination,'existing.txt'))
+            # fifth test, copying one file into a folder
+            os.mkdir(os.path.join(local_destination,'prova'))
+            t.get(os.path.join('local','a.txt'),os.path.join(local_destination,'prova'))
+            self.assertEquals(set(os.listdir(os.path.join(local_destination,'prova'))),
+                              set(['a.txt']))
+            shutil.rmtree(os.path.join(local_destination,'prova'))
+            # sixth test, copying one file into a file
+            t.get(os.path.join('local','a.txt'),os.path.join(local_destination,'prova'))
+            self.assertTrue(os.path.isfile(os.path.join(local_destination,'prova')))
+            os.remove(os.path.join(local_destination,'prova'))
+            
+            # exit
+            t.chdir('..')
+            t.rmtree(directory)
+
+#            with self.assertRaises(OSError): 
+#             
+#             local_subfolder = os.path.join(local_dir,directory,'tmp1')
+#             local_subsubfolder = os.path.join(local_subfolder,'subdir')
+#             remote_subfolder = 'tmp2'
+#             retrieved_subfolder = os.path.join(local_dir,directory,'tmp3')
+#             
+#             os.mkdir(os.path.join(local_dir,directory))
+#             os.mkdir(os.path.join(local_dir,directory,local_subfolder))            
+#             os.mkdir(os.path.join(local_dir,directory,local_subsubfolder))
+#             t.chdir(directory)
+# 
+#             # create a tree with files
+#             local_file_name_1 = os.path.join(local_subfolder,'a.txt')
+#             local_file_name_2 = os.path.join(local_subfolder,'b.tmp')
+#             local_file_name_3 = os.path.join(local_subfolder,'c.txt')
+#             local_file_name_4 = os.path.join(local_subsubfolder,'d.txt')
+#             text = 'Viva Verdi\n'
+#             for filename in [local_file_name_1,local_file_name_2,
+#                              local_file_name_3,local_file_name_4]:
+#                 with open(filename,'w') as f:
+#                     f.write(text)
+#             
+#             to_copy = os.path.join(local_subfolder,'*.txt')
+#             t.put(to_copy,remote_subfolder)
+#             # copies a.txt and c.txt but not the subsubfolder
+#             self.assertEquals( set(['a.txt','c.txt']), set(t.listdir(remote_subfolder)) )
+# 
+#             # test a more nested pattern
+#             t.rmtree(remote_subfolder)
+#             
+#             t.put(local_subfolder,remote_subfolder,pattern='*/*.txt')
+#             # copies d.txt in the subsubfolder
+#             self.assertEquals( ['subdir'], t.listdir(remote_subfolder) )
+#             self.assertEquals( ['d.txt'],t.listdir(os.path.join(remote_subfolder,'subdir')) )
+# 
+#             # now copy everything
+#             t.put(local_subfolder,remote_subfolder)
+# 
+#             # analogous test for get
+#             t.get(remote_subfolder,retrieved_subfolder,pattern='*.txt')
+#             # copies a.txt and c.txt but not the subsubfolder
+#             self.assertEquals( set(['a.txt','c.txt']), set(os.listdir(retrieved_subfolder)) )
+# 
+#             # more nested
+#             t.rmtree(retrieved_subfolder)
+#             t.get(remote_subfolder,retrieved_subfolder,pattern='*/*.txt')
+#             # copies a.txt and c.txt but not the subsubfolder
+#             self.assertEquals( ['subdir'],os.listdir(retrieved_subfolder))
+#             self.assertEquals( ['d.txt'],
+#                                os.listdir(os.path.join(retrieved_subfolder,'subdir')) )
+
+#            t.chdir('..')
+#            t.rmtree(remote_dir)
 
 
     def test_put_get_abs_path(self):

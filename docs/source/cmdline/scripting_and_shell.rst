@@ -17,6 +17,9 @@ From there on, you can import without problems any module and interact with
 the database (submit calculations, perform queries, ...).
 
 
+
+.. _verdi_shell_description:
+
 verdi shell
 +++++++++++
 If you want to work in interactive mode (rather than writing a script and
@@ -29,7 +32,8 @@ completion and much more.
 Moreover, it will automatically execute the ``load_django`` command, and
 automatically import the following modules/classes::
   
-  from aiida.orm import Node, Calculation, Code, Data, Computer, DataFactory, CalculationFactory
+  from aiida.orm import (Node, Calculation, Code, Data,
+      Computer, Group, DataFactory, CalculationFactory)
   from aiida.djsite.db import models
 
 so that you do not need to perform these useful imports every time you

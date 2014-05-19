@@ -113,12 +113,11 @@ def get_all_fields_info():
     import django.db.models.fields as djf
     import django_extensions    
     
-    from django.contrib.auth.models import User
     from aiida.djsite.db import models
     
     all_fields_info = {}
     
-    user_model_string = get_class_string(User)
+    user_model_string = get_class_string(models.DbUser)
     
     # TODO: These will probably need to have a default value in the IMPORT!
     # TODO: maybe define this inside the Model!

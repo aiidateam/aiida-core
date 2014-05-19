@@ -4,8 +4,6 @@ import logging
 
 from aiida.common.exceptions import ConfigurationError
 
-CONFIG_FNAME = 'config.json'
-
 class classproperty(object):
     """
     A class that, when used as a decorator, works as if the 
@@ -18,33 +16,6 @@ class classproperty(object):
         self.getter= getter
     def __get__(self, instance, owner):
         return self.getter(owner)
-
-def backup_config():   
-    import shutil
-    aiida_dir    = os.path.expanduser("~/.aiida")
-    conf_file   = os.path.join(aiida_dir, CONFIG_FNAME)
-    if (os.path.isfile(conf_file)):
-        shutil.copy(conf_file, conf_file+"_bk")
-    
-def get_config():
-    import json
-    
-    aiida_dir    = os.path.expanduser("~/.aiida")
-    conf_file   = os.path.join(aiida_dir, CONFIG_FNAME)
-    try:
-        with open(conf_file,"r") as json_file:
-            return json.load(json_file)
-    except IOError:
-        # No configuration file
-        raise ConfigurationError("No configuration file found")
-
-def store_config(confs):
-    import json
-    
-    aiida_dir    = os.path.expanduser("~/.aiida")
-    conf_file   = os.path.join(aiida_dir, CONFIG_FNAME)
-    with open(conf_file,"w") as json_file:
-        json.dump(confs, json_file)
    
 def load_django():
     os.environ['DJANGO_SETTINGS_MODULE'] = 'aiida.djsite.settings.settings'

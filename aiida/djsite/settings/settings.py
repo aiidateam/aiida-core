@@ -1,7 +1,7 @@
 # Django settings for the AiiDA project.
-import sys, os, os.path
+import sys, os
 from aiida.common.exceptions import ConfigurationError
-from aiida.common.utils import store_config, get_config
+from aiida.common.setup import get_config
 
 # Assumes that parent directory of aiida is root for
 # things like templates/, SQL/ etc.  If not, change what follows...
@@ -69,6 +69,8 @@ ADMINS = (
 
 MANAGERS = ADMINS
 
+# CUSTOM USER CLASS
+AUTH_USER_MODEL = 'db.DbUser'
 
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
@@ -269,7 +271,6 @@ AFTER_DATABASE_CREATION_SIGNAL = 'post_syncdb'
 
 # VERSION TO USE FOR DBNODES.
 AIIDANODES_UUID_VERSION=4
-
 
 # -------------------------
 # Tastypie (API) settings

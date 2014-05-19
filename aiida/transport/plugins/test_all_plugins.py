@@ -836,7 +836,16 @@ class TestPutGetTree(unittest.TestCase):
             t.copy(os.path.join('local','a.txt'),'prova')
             self.assertTrue(t.isfile('prova'))
             t.remove('prova')
-            
+            # copy of folder into an existing folder
+            #NOTE: the command cp has a different behavior on Mac vs Ubuntu
+            #tests performed locally on a Mac may result in a failure.
+            t.mkdir('prova')
+            t.copy('local','prova')
+            self.assertEquals( set(['local']), 
+                                set(t.listdir('prova')) )
+            self.assertEquals( set(['a.txt','b.tmp','c.txt']), 
+                               set(t.listdir(os.path.join('prova','local'))) )
+            t.rmtree('prova')
             # exit
             t.chdir('..')
             t.rmtree(directory)

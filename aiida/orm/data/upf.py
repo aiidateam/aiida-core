@@ -4,6 +4,8 @@ This module manages the UPF pseudopotentials in the local repository.
 from aiida.orm.data.singlefile import SinglefileData
 import re
 
+UPFGROUP_TYPE = 'data.upf.family'
+
 _upfversion_regexp = re.compile(
     r"""
     \s*<UPF\s+version\s*="
@@ -52,13 +54,14 @@ def get_upf_from_family(family_name, element):
     from aiida.common.exceptions import NotExistent, MultipleObjectsError
     
     try:
-        DbGroup.objects.get(name=family_name)
+        DbGroup.objects.get(name=family_name, type=UPFGROUP_TYPE)
     except ObjectDoesNotExist:
-        raise NotExistent("Family named {} does not exist".format(family_name))
+        raise NotExistent("UPF family named {} does not exist".format(family_name))
     
     match = UpfData.query(dbgroups__name=family_name,
-                           dbattributes__key="element",
-                           dbattributes__tval=element)
+                          dbgroups__type=UPFGROUP_TYPE,
+                          dbattributes__key="element",
+                          dbattributes__tval=element)
     if len(match) == 0:
         raise NotExistent("No UPF for element {} found in family {}".format(
             element, family_name))
@@ -87,9 +90,12 @@ def upload_upf_family(folder, group_name, group_description,
             If False, simply adds the existing UPFData node to the group.
     """
     import os
+    
+    from django.core.exceptions import ObjectDoesNotExist
+    
     import aiida.common
     from aiida.common import aiidalogger
-    from aiida.djsite.db.models import DbGroup
+    from aiida.djsite.db.models import DbGroup, DbNode
     from aiida.common.exceptions import UniquenessError, MultipleObjectsError
     from aiida.djsite.utils import get_automatic_user
 
@@ -105,13 +111,24 @@ def upload_upf_family(folder, group_name, group_description,
     
     nfiles = len(files)
     
-    group,group_created = DbGroup.objects.get_or_create(
-        name=group_name, defaults={'user': get_automatic_user()})
-    if len(group.dbnodes.all()) != 0:
-        raise UniquenessError("DbGroup with name {} already exists and is "
-                              "non-empty".format(group_name))
+    try:
+        group = DbGroup.objects.get(name=group_name, type=UPFGROUP_TYPE)
+        group_created = False
+    except ObjectDoesNotExist:
+        group = DbGroup(name=group_name, type=UPFGROUP_TYPE,
+                        user=get_automatic_user())
+        group_created = True
+        
+    if group.user != get_automatic_user():
+        raise UniquenessError("There is already a UpfFamily group with name {}"
+                              ", but it belongs to user {}, therefore you "
+                              "cannot modify it".format(group_name,
+                                                        group.user.email))
+         
+    # Always update description, even if the group already existed
     group.description = group_description
-    # note that the group will be saved only after the check on upf uniqueness
+
+    # NOTE: GROUP SAVED ONLY AFTER CHECKS OF UNICITY
     
     pseudo_and_created = []
     
@@ -134,18 +151,30 @@ def upload_upf_family(folder, group_name, group_description,
             pseudo_and_created.append( (pseudo,False) )
     
     # check whether pseudo are unique per element
-    elements = [ i[0].element for i in pseudo_and_created ]
-    if not len(pseudo_and_created) == len( 
-                            set(elements) ):
-        duplicates = set([x for x in elements if elements.count(x) > 1])
+    elements = [ (i[0].element, i[0].md5sum) for i in pseudo_and_created ]
+    # If group already exists, check also that I am not inserting more than
+    # once the same element
+    if group.pk is not None:
+        for n in group.dbnodes.distinct().all():
+            aiida_n = n.get_aiida_class()
+            # Skip non-pseudos
+            if not isinstance(aiida_n, UpfData):
+                continue
+            elements.append((aiida_n.element, aiida_n.md5sum))
+    
+    elements = set(elements) # Discard elements with the same MD5, that would
+                             # not be stored twice
+    elements_names = [e[0] for e in elements]
+       
+    if not len(elements_names) == len(set(elements_names) ):
+        duplicates = set([x for x in elements_names
+                          if elements_names.count(x) > 1])
         duplicates_string = ", ".join(i for i in duplicates)
         raise UniquenessError("More than one UPF found for the elements: " +
-                              duplicates_string+".")
+                              duplicates_string+".")    
     
-    # save the group in the database
-    if not group_created: # enforce the user if the group was empty and already there
-        group.user = get_automatic_user()
-        group.save()
+    # At this point, save the group
+    group.save()
     
     # save the upf in the database, and add them to group    
     for pseudo,created in pseudo_and_created:
@@ -364,6 +393,9 @@ class UpfData(SinglefileData):
     def element(self):
         return self.get_attr('element', None)
  
+    @property
+    def md5sum(self):
+        return self.get_attr('md5', None)
 
     def validate(self):
         from aiida.common.exceptions import ValidationError, ParsingError
@@ -422,7 +454,8 @@ class UpfData(SinglefileData):
         from django.db.models import Q
         from aiida.djsite.db.models import DbGroup
         
-        q_object = Q(dbnodes__type__startswith=self._plugin_type_string)
+        #        q_object = Q(dbnodes__type__startswith=self._plugin_type_string)
+        q_object = Q(type=UPFGROUP_TYPE)
         groups = DbGroup.objects.filter(q_object)
         
         if filter_elements is not None:

@@ -796,7 +796,7 @@ class Calculation(Node):
     def _set_last_jobinfo(self,last_jobinfo):
         import pickle
         
-        self.set_attr('last_jobinfo', pickle.dumps(last_jobinfo))
+        self.set_attr('last_jobinfo', last_jobinfo.serialize())
 
     def get_last_jobinfo(self):
         """
@@ -805,15 +805,19 @@ class Calculation(Node):
         :return: a JobInfo object (that closely resembles a dictionary) or None.
         """
         import pickle
+        from aiida.scheduler.datastructures import JobInfo
         
-        last_jobinfo_pickled = self.get_attr('last_jobinfo',None)
-        if last_jobinfo_pickled is not None:
-            return pickle.loads(last_jobinfo_pickled)
+        last_jobinfo_serialized = self.get_attr('last_jobinfo',None)
+        if last_jobinfo_serialized is not None:
+            jobinfo = JobInfo()
+            jobinfo.load_from_serialized(last_jobinfo_serialized)
+            return jobinfo
         else:
             return None
     
     @classmethod
-    def list_calculations(cls,states=None, past_days=None, group=None, pks=[]):
+    def list_calculations(cls,states=None, past_days=None, group=None, 
+                            all_users=False, pks=[]):
         """
         This function return a string with a description of the AiiDA calculations.
         
@@ -853,7 +857,11 @@ class Calculation(Node):
         if pks:
             q_object = Q(pk__in=pks)
         else:
-            q_object = Q(user=get_automatic_user())
+            q_object = Q()
+            
+            if not all_users:
+                q_object.add(Q(user=get_automatic_user()), Q.AND)
+                
             if states is not None:
 #                q_object.add(~Q(dbattributes__key='state',
 #                                dbattributes__tval=only_state,), Q.AND)
@@ -958,7 +966,7 @@ class Calculation(Node):
         :param computer: a Django DbComputer entry, or a Computer object, of a
                 computer in the DbComputer table.
                 A string for the hostname is also valid.
-        :param user: a Django entry (or its pk) of a user in the User table;
+        :param user: a Django entry (or its pk) of a user in the DbUser table;
                 if present, the results are restricted to calculations of that
                 specific user
         :param bool only_computer_user_pairs: if False (default) return a queryset 

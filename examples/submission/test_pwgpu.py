@@ -10,6 +10,7 @@ import logging
 from aiida.common.exceptions import NotExistent
 aiidalogger.setLevel(logging.INFO)
 
+from aiida.orm.data.upf import UPFGROUP_TYPE
 from aiida.orm import Code
 from aiida.orm import DataFactory
 from aiida.djsite.db.models import DbGroup
@@ -20,7 +21,21 @@ StructureData = DataFactory('structure')
 ################################################################
 
 try:
-    codename = sys.argv[1]
+    dontsend = sys.argv[1]
+    if dontsend == "--dont-send":
+        submit_test = True
+    elif dontsend == "--send":
+        submit_test = False
+    else:
+        raise IndexError
+except IndexError:
+    print >> sys.stderr, ("The first parameter can only be either "
+                          "--send or --dont-send")
+    sys.exit(1)
+
+
+try:
+    codename = sys.argv[2]
 except IndexError:
     codename = None
 
@@ -45,7 +60,7 @@ except (NotExistent, ValueError):
             dbattributes__key="input_plugin",
             dbattributes__tval=expected_code_type)]
     if valid_code_labels:
-        print >> sys.stderr, "Pass as first parameter a valid code label."
+        print >> sys.stderr, "Pass as further parameter a valid code label."
         print >> sys.stderr, "Valid labels with a {} executable are:".format(expected_code_type)
         for l in valid_code_labels:
             print >> sys.stderr, "*", l
@@ -55,10 +70,10 @@ except (NotExistent, ValueError):
     sys.exit(1)
 
 if auto_pseudos:
-    valid_pseudo_groups = DbGroup.objects.filter(dbnodes__type__contains='.upf.').distinct().values_list('name',flat=True)
+    valid_pseudo_groups = DbGroup.objects.filter(type=UPFGROUP_TYPE).distinct().values_list('name',flat=True)
 
     try:
-        pseudo_family = sys.argv[2]
+        pseudo_family = sys.argv[3]
     except IndexError:
         print >> sys.stderr, "Error, auto_pseudos set to True. You therefore need to pass as second parameter"
         print >> sys.stderr, "the pseudo family name."
@@ -67,7 +82,7 @@ if auto_pseudos:
         sys.exit(1)
         
 
-    if not DbGroup.objects.filter(name=pseudo_family):
+    if not DbGroup.objects.filter(name=pseudo_family, type=UPFGROUP_TYPE):
         print >> sys.stderr, "auto_pseudos is set to True and pseudo_family='{}',".format(pseudo_family)
         print >> sys.stderr, "but no group with such a name found in the DB."
         print >> sys.stderr, "Valid groups containing at least one UPFData object are:"
@@ -103,12 +118,12 @@ parameters = ParameterData(dict={
                 },
             'ELECTRONS': {
                 'conv_thr': 1.e-6,
-                }}).store()
+                }})
                 
 kpoints = ParameterData(dict={
                 'type': 'automatic',
                 'points': [4, 4, 4, 0, 0, 0],
-                }).store()
+                })
 
 calc = code.new_calc(computer=computer)
 calc.label = "Test QE pw.x"
@@ -141,18 +156,14 @@ calc.set_environment_variables({
 
 if queue is not None:
     calc.set_queue_name(queue)
-calc.store()
-print "created calculation; calc=Calculation(uuid='{}') # ID={}".format(
-    calc.uuid,calc.dbnode.pk)
 
-s.store()
 calc.use_structure(s)
 calc.use_parameters(parameters)
 
 if num_pools is not None:
     settings = ParameterData(dict={
             'cmdline': ['-npools', str(num_pools)]
-            }).store()
+            })
     calc.use_settings(settings)
 
 if auto_pseudos:
@@ -189,7 +200,19 @@ calc.use_kpoints(kpoints)
 #from aiida.orm.data.remote import RemoteData
 #calc.set_outdir(remotedata)
 
-calc.submit()
-print "submitted calculation; calc=Calculation(uuid='{}') # ID={}".format(
-    calc.uuid,calc.dbnode.pk)
 
+if submit_test:
+    subfolder, script_filename = calc.submit_test()
+    print "Test_submit for calculation (uuid='{}')".format(
+        calc.uuid)
+    print "Submit file in {}".format(os.path.join(
+        os.path.relpath(subfolder.abspath),
+        script_filename
+        ))
+else:
+    calc.store_all()
+    print "created calculation; calc=Calculation(uuid='{}') # ID={}".format(
+        calc.uuid,calc.dbnode.pk)
+    calc.submit()
+    print "submitted calculation; calc=Calculation(uuid='{}') # ID={}".format(
+        calc.uuid,calc.dbnode.pk)

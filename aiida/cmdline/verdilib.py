@@ -187,27 +187,138 @@ class Install(VerdiCommand):
     a syncdb command to create/setup the database.
     """
     def run(self,*args):
+        import readline
+        from aiida.common.utils import load_django
+        from aiida.common.setup import create_base_dirs, create_configuration        
 
+        cmdline_args = list(args)
+        
+        only_user_config = False
+        try:
+            cmdline_args.remove('--only-config')
+            only_user_config = True
+        except ValueError:
+            # Parameter not provided
+            pass
+        
+        if cmdline_args:
+            print >> sys.stderr, "Unknown parameters on the command line: "
+            print >> sys.stderr, ", ".join(cmdline_args)
+            sys.exit(1)
+        
         create_base_dirs()
         create_configuration()
 
-        print "Executing now a syncdb command..."
-        pass_to_django_manage([execname, 'syncdb'])
+        if only_user_config:
+            print "Only user configuration requested, skipping the syncdb command"
+        else:
+            print "Executing now a syncdb command..."
+            pass_to_django_manage([execname, 'syncdb', '--noinput'])
 
+        # I create here the default user
+        print "Loading new environment..."
+        load_django()
+        
+        from aiida.common.setup import DAEMON_EMAIL
+        from aiida.djsite.db import models
+        from aiida.djsite.utils import get_configured_user_email
+        from django.core.exceptions import ObjectDoesNotExist
+        
+        if not models.DbUser.objects.filter(email=DAEMON_EMAIL):
+            print "Installing daemon user..."
+            models.DbUser.objects.create_superuser(email=DAEMON_EMAIL, 
+                                                   password='',
+                                                   first_name="AiiDA",
+                                                   last_name="Daemon")
+
+        email = email=get_configured_user_email()
+        print "Starting user configuration for {}...".format(email)
+        if email == DAEMON_EMAIL:
+            print "You set up AiiDA using the default Daemon email,".format(email)
+            print "therefore no further user configuration will be asked."
+        else:
+            try:
+                user = models.DbUser.objects.get(email=email)
+                print ("An AiiDA user for email '{}' is already present "
+                       "in the DB:".format(email))
+                print "First name:   {}".format(user.first_name)
+                print "Last name:    {}".format(user.last_name)
+                print "Institution:  {}".format(user.institution)
+                configure_user = False
+                reply = raw_input("Do you want to reconfigure it? [y/N] ")
+                reply = reply.strip()
+                if not reply:
+                    pass
+                elif reply.lower() == 'n':
+                    pass
+                elif reply.lower() == 'y':
+                    configure_user = True
+                else:
+                    print "Invalid answer, assuming answer was 'NO'"
+            except ObjectDoesNotExist:
+                configure_user = True
+                user = models.DbUser(email=email)
+                
+            if configure_user:
+                try:
+                    kwargs = {}
+
+                    for field in models.DbUser.REQUIRED_FIELDS:
+                        verbose_name = models.DbUser._meta.get_field_by_name(
+                            field)[0].verbose_name.capitalize()
+                        readline.set_startup_hook(lambda: readline.insert_text(
+                            getattr(user, field)))
+                        kwargs[field] = raw_input('{}: '.format(verbose_name))
+                finally:
+                    readline.set_startup_hook(lambda: readline.insert_text(""))
+
+                for k, v in kwargs.iteritems():
+                    setattr(user, k, v)
+                
+                if user.password:
+                    change_password = False
+                    reply = raw_input("Do you want to replace the user password? [y/N] ")
+                    reply = reply.strip()
+                    if not reply:
+                        pass
+                    elif reply.lower() == 'n':
+                        pass
+                    elif reply.lower() == 'y':
+                        change_password = True
+                    else:
+                        print "Invalid answer, assuming answer was 'NO'"
+                else:
+                    change_password = True
+                
+                if change_password:
+                    match = False
+                    while not match:
+                        new_password = getpass.getpass("Insert the new password: ")
+                        new_password_check = getpass.getpass("Insert the new password (again): ")
+                        if new_password == new_password_check:
+                            match = True
+                        else:
+                            print "ERROR, the two passwords do not match."
+                    ## Set the password here
+                    user.set_password(new_password)
+                
+                user.save()
+                print "User {} saved.".format(user.get_full_name())
+        
+        print "Install finished."
     
-    
-class SyncDB(VerdiCommand):
-    """
-    Create new tables in the database
-
-    This command calls the Django 'manage.py syncdb' command to create
-    new tables in the database, and possibly install triggers.
-    Pass a --migrate option to automatically also migrate the tables
-    managed using South migrations.
-    """
-
-    def run(self,*args):
-        pass_to_django_manage([execname, 'syncdb'] + list(args))
+#class SyncDB(VerdiCommand):
+#    """
+#    Create new tables in the database
+#
+#    This command calls the Django 'manage.py syncdb' command to create
+#    new tables in the database, and possibly install triggers.
+#    Pass a --migrate option to automatically also migrate the tables
+#    managed using South migrations.
+#    """
+#
+#    def run(self,*args):
+#        pass_to_django_manage([execname, 'syncdb'] + list(args))
 
 #class Migrate(VerdiCommand):
 #    """
@@ -347,175 +458,6 @@ def get_command_suggestion(command):
         print >> sys.stderr, "Did you mean this?"
         print >> sys.stderr, "\n".join(["     {}".format(i)
                                         for i in similar_cmds])
-
-def install_daemon_files(aiida_dir, daemon_dir, log_dir, aiida_user):
-    daemon_conf_file = "aiida_daemon.conf"
-
-    aiida_module_dir = os.path.split(os.path.abspath(aiida.__file__))[0]
-
-    daemon_conf = """
-[unix_http_server]
-file="""+daemon_dir+"""/supervisord.sock   ; (the path to the socket file)
-
-[supervisord]
-logfile="""+log_dir+"""/supervisord.log 
-logfile_maxbytes=10MB 
-logfile_backups=2         
-loglevel=info                
-pidfile="""+daemon_dir+"""/supervisord.pid
-nodaemon=false               
-minfds=1024                 
-minprocs=200                 
-
-[rpcinterface:supervisor]
-supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
-
-[supervisorctl]
-serverurl=unix:///"""+daemon_dir+"""/supervisord.sock 
-
-;=======================================
-; Main AiiDA Daemon
-;=======================================
-
-[program:aiida-daemon]
-command=python """+aiida_module_dir+"""/djsite/manage.py celeryd --loglevel=INFO
-directory="""+daemon_dir+"""
-user="""+aiida_user+"""
-numprocs=1
-stdout_logfile="""+log_dir+"""/aiida_daemon.log
-stderr_logfile="""+log_dir+"""/aiida_daemon.log
-autostart=true
-autorestart=true
-startsecs=10
-stopwaitsecs=30
-process_name=%(process_num)s
-
-; ==========================================
-; AiiDA Deamon BEAT - for scheduled tasks
-; ==========================================
-[program:aiida-daemon-beat]
-command=python """+aiida_module_dir+"""/djsite/manage.py celerybeat
-directory="""+daemon_dir+"""
-user="""+aiida_user+"""
-numprocs=1
-stdout_logfile="""+log_dir+"""/aiida_daemon_beat.log
-stderr_logfile="""+log_dir+"""/aiida_daemon_beat.log
-autostart=true
-autorestart=true
-startsecs=10
-stopwaitsecs = 30
-process_name=%(process_num)s
-"""
-
-    with open(os.path.join(aiida_dir,daemon_dir,daemon_conf_file), "w") as f:
-        f.write(daemon_conf)
-
-def create_base_dirs():
-    # For the daemon, to be hard-coded when ok
-    daemon_subdir    = "daemon"
-    log_dir          = "daemon/log"
-    
-    aiida_dir        = os.path.expanduser("~/.aiida") 
-    aiida_daemon_dir = os.path.join(aiida_dir,daemon_subdir)
-    aiida_log_dir    = os.path.join(aiida_dir,log_dir)
-    aiida_user       = getpass.getuser()
-  
-    if (not os.path.isdir(aiida_dir)):
-        os.makedirs(aiida_dir)
-    
-    if (not os.path.isdir(aiida_daemon_dir)):
-        os.makedirs(aiida_daemon_dir)
-      
-    if (not os.path.isdir(aiida_log_dir)):
-        os.makedirs(aiida_log_dir)
-        
-    # Install daemon files 
-    install_daemon_files(aiida_dir, aiida_daemon_dir, aiida_log_dir, aiida_user)
-
-def create_configuration():
-    import readline
-    from aiida.common.utils import store_config, get_config, backup_config
-      
-    aiida_dir = os.path.expanduser("~/.aiida")
-    
-    try:
-        confs = get_config()
-        backup_config()
-    except ConfigurationError:
-        # No configuration file found
-        confs = {}  
-      
-    try:
-        readline.set_startup_hook(lambda: readline.insert_text(
-                confs.get('AIIDADB_ENGINE','sqlite3')))
-        confs['AIIDADB_ENGINE'] = raw_input('Database engine: ')
-
-        if 'sqlite' in confs['AIIDADB_ENGINE']:
-            confs['AIIDADB_ENGINE'] = 'sqlite3'          
-            readline.set_startup_hook(lambda: readline.insert_text(
-                    confs.get('AIIDADB_NAME', os.path.join(aiida_dir,"aiida.db"))))
-            confs['AIIDADB_NAME'] = raw_input('AiiDA Database location: ')
-            confs['AIIDADB_HOST'] = ""
-            confs['AIIDADB_PORT'] = ""
-            confs['AIIDADB_USER'] = ""
-            confs['AIIDADB_PASS'] = ""
-
-        elif 'postgre' in confs['AIIDADB_ENGINE']:
-            confs['AIIDADB_ENGINE'] = 'postgresql_psycopg2'
-            readline.set_startup_hook(lambda: readline.insert_text(
-                    confs.get('AIIDADB_HOST','localhost')))
-            confs['AIIDADB_HOST'] = raw_input('PostgreSQL host: ')
-
-            readline.set_startup_hook(lambda: readline.insert_text(
-                    confs.get('AIIDADB_PORT','5432')))
-            confs['AIIDADB_PORT'] = raw_input('PostgreSQL port: ')
-
-            readline.set_startup_hook(lambda: readline.insert_text(
-                    confs.get('AIIDADB_NAME','aiidadb')))
-            confs['AIIDADB_NAME'] = raw_input('AiiDA Database name: ')
-
-            readline.set_startup_hook(lambda: readline.insert_text(
-                    confs.get('AIIDADB_USER','aiida_user')))
-            confs['AIIDADB_USER'] = raw_input('AiiDA Database user: ')
-
-            readline.set_startup_hook(lambda: readline.insert_text(
-                    confs.get('AIIDADB_PASS','aiida_password')))
-            confs['AIIDADB_PASS'] = raw_input('AiiDA Database password: ')
-
-        elif 'mysql' in confs['AIIDADB_ENGINE']:
-            confs['AIIDADB_ENGINE'] = 'mysql'
-            readline.set_startup_hook(lambda: readline.insert_text(
-                    confs.get('AIIDADB_NAME','localhost')))
-            confs['AIIDADB_HOST'] = raw_input('mySQL host: ')
-
-            readline.set_startup_hook(lambda: readline.insert_text(
-                    confs.get('AIIDADB_PORT','3306')))
-            confs['AIIDADB_PORT'] = raw_input('mySQL port: ')
-
-            readline.set_startup_hook(lambda: readline.insert_text(
-                    confs.get('AIIDADB_NAME','aiidadb')))
-            confs['AIIDADB_NAME'] = raw_input('AiiDA Database name: ')
-
-            readline.set_startup_hook(lambda: readline.insert_text(
-                    confs.get('AIIDADB_USER','aiida_user')))
-            confs['AIIDADB_USER'] = raw_input('AiiDA Database user: ')
-
-            readline.set_startup_hook(lambda: readline.insert_text(
-                    confs.get('AIIDADB_PASS','aiida_password')))
-            confs['AIIDADB_PASS'] = raw_input('AiiDA Database password: ')
-        else:
-            raise ValueError("You have to specify a database !")
-
-        readline.set_startup_hook(lambda: readline.insert_text(
-                confs.get('AIIDADB_REPOSITORY',
-                          os.path.join(aiida_dir,"repository/"))))
-        confs['AIIDADB_REPOSITORY'] = raw_input('AiiDA repository directory: ')
-        if (not os.path.isdir(confs['AIIDADB_REPOSITORY'])):
-            os.makedirs(confs['AIIDADB_REPOSITORY'])
-
-        store_config(confs)
-    finally:
-        readline.set_startup_hook(lambda: readline.insert_text(""))
    
 def exec_from_cmdline(argv):
     """

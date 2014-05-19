@@ -71,7 +71,6 @@ def import_file(infile):
     from itertools import chain
 
     from django.db import transaction
-    from django.contrib.auth.models import User as DjangoUser
 
     from aiida.orm import Node
     from aiida.common.folders import SandboxFolder, RepositoryFolder
@@ -180,7 +179,7 @@ def import_file(infile):
         # I hardcode here the model order, for simplicity; in any case, this is
         # fixed by the export version
         model_order = [get_class_string(m) for m in 
-                       (DjangoUser,
+                       (models.DbUser,
                         models.DbComputer,
                         models.DbNode,
                         )

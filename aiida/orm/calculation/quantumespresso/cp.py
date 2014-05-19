@@ -72,13 +72,13 @@ class CpCalculation(BasePwCpInputGenerator, Calculation):
     _use_kpoints = False
     
     # in restarts, it will copy from the parent the following 
-    _default_parent_folder_source = os.path.join(
-                         BasePwCpInputGenerator._default_parent_output_folder,
-                         '{}_51.save'.format(BasePwCpInputGenerator.PREFIX))
+    _restart_copy_from = os.path.join(
+                         BasePwCpInputGenerator.OUTPUT_SUBFOLDER,
+                         '{}_{}.save'.format(BasePwCpInputGenerator.PREFIX,_cp_write_unit_number))
     # in restarts, it will copy the previous folder in the following one 
-    _default_parent_folder_destination = os.path.join(
-                         BasePwCpInputGenerator._default_parent_output_folder,
-                         '{}_50.save'.format(BasePwCpInputGenerator.PREFIX))
+    _restart_copy_to = os.path.join(
+                         BasePwCpInputGenerator.OUTPUT_SUBFOLDER,
+                         '{}_{}.save'.format(BasePwCpInputGenerator.PREFIX,_cp_read_unit_number))
 
     @classproperty
     def _use_methods(cls):

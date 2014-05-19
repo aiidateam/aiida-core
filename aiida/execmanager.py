@@ -30,7 +30,7 @@ def update_running_calcs_status(authinfo):
 
     execlogger.debug("Updating running calc status for user {} "
                      "and machine {}".format(
-        authinfo.aiidauser.username, authinfo.dbcomputer.name))
+        authinfo.aiidauser.email, authinfo.dbcomputer.name))
 
     # This returns an iterator over aiida Calculation objects
     calcs_to_inquire = Calculation.get_all_with_state(
@@ -170,18 +170,17 @@ def get_authinfo(computer, aiidauser):
     except ObjectDoesNotExist:
         raise AuthenticationError(
             "The aiida user {} is not configured to use computer {}".format(
-                aiidauser.username, computer.name))
+                aiidauser.email, computer.name))
     except MultipleObjectsReturned:
         raise ConfigurationError(
             "The aiida user {} is configured more than once to use "
             "computer {}! Only one configuration is allowed".format(
-                aiidauser.username, computer.name))
+                aiidauser.email, computer.name))
     return authinfo
 
 def retrieve_jobs():
     from aiida.orm import Calculation, Computer
-    from django.contrib.auth.models import User
-    from aiida.djsite.db.models import DbComputer
+    from aiida.djsite.db.models import DbComputer, DbUser
     
     # I create a unique set of pairs (computer, aiidauser)
     computers_users_to_check = set(
@@ -194,10 +193,10 @@ def retrieve_jobs():
         dbcomputer = DbComputer.objects.get(id=dbcomputer_id)
         if not Computer(dbcomputer=dbcomputer).is_enabled():
             continue
-        aiidauser = User.objects.get(id=aiidauser_id)
+        aiidauser = DbUser.objects.get(id=aiidauser_id)
 
         execlogger.debug("({},{}) pair to check".format(
-            aiidauser.username, dbcomputer.name))
+            aiidauser.email, dbcomputer.name))
         try:
             authinfo = get_authinfo(dbcomputer, aiidauser)
             retrieve_computed_for_authinfo(authinfo)
@@ -205,7 +204,7 @@ def retrieve_jobs():
             msg = ("Error while retrieving calculation status for "
                    "aiidauser={} on computer={}, "
                    "error type is {}, error message: {}".format(
-                       aiidauser.username,
+                       aiidauser.email,
                        dbcomputer.name,
                        e.__class__.__name__, e.message))
             execlogger.error(msg)
@@ -218,8 +217,7 @@ def update_jobs():
     calls an update for each set of pairs (machine, aiidauser)
     """
     from aiida.orm import Calculation, Computer
-    from django.contrib.auth.models import User
-    from aiida.djsite.db.models import DbComputer
+    from aiida.djsite.db.models import DbComputer, DbUser
 
     # I create a unique set of pairs (computer, aiidauser)
     computers_users_to_check = set(
@@ -232,10 +230,10 @@ def update_jobs():
         dbcomputer = DbComputer.objects.get(id=dbcomputer_id)
         if not Computer(dbcomputer=dbcomputer).is_enabled():
             continue
-        aiidauser = User.objects.get(id=aiidauser_id)
+        aiidauser = DbUser.objects.get(id=aiidauser_id)
 
         execlogger.debug("({},{}) pair to check".format(
-            aiidauser.username, dbcomputer.name))
+            aiidauser.email, dbcomputer.name))
 
         try:
             authinfo = get_authinfo(dbcomputer, aiidauser)
@@ -244,7 +242,7 @@ def update_jobs():
             msg = ("Error while updating calculation status "
                    "for aiidauser={} on computer={}, "
                    "error type is {}, error message: {}".format(
-                       aiidauser.username,
+                       aiidauser.email,
                        dbcomputer.name,
                        e.__class__.__name__, e.message))
             execlogger.error(msg)
@@ -256,8 +254,7 @@ def submit_jobs():
     Submit all jobs in the TOSUBMIT state.
     """
     from aiida.orm import Calculation, Computer
-    from django.contrib.auth.models import User
-    from aiida.djsite.db.models import DbComputer
+    from aiida.djsite.db.models import DbComputer, DbUser
     from aiida.djsite.utils import get_dblogger_extra
     
 
@@ -272,10 +269,10 @@ def submit_jobs():
         dbcomputer = DbComputer.objects.get(id=dbcomputer_id)
         if not Computer(dbcomputer=dbcomputer).is_enabled():
             continue
-        aiidauser = User.objects.get(id=aiidauser_id)
+        aiidauser = DbUser.objects.get(id=aiidauser_id)
 
         execlogger.debug("({},{}) pair to submit".format(
-            aiidauser.username, dbcomputer.name))
+            aiidauser.email, dbcomputer.name))
 
         try:
             try:
@@ -292,7 +289,7 @@ def submit_jobs():
                                      "computer pk={} ({}) is not configured "
                                      "for aiidauser {}".format(
                                          calc.pk, dbcomputer.pk,
-                                         dbcomputer.name, aiidauser.username), 
+                                         dbcomputer.name, aiidauser.email), 
                                      extra=logger_extra)
                 # Go to the next (dbcomputer,aiidauser) pair
                 continue
@@ -303,7 +300,7 @@ def submit_jobs():
             msg = ("Error while submitting jobs "
                    "for aiidauser={} on computer={}, "
                    "error type is {}, traceback: {}".format(
-                       aiidauser.username,
+                       aiidauser.email,
                        dbcomputer.name,
                        e.__class__.__name__, traceback.format_exc()))
             execlogger.error(msg)
@@ -324,7 +321,7 @@ def submit_jobs_with_authinfo(authinfo):
 
     execlogger.debug("Submitting jobs for user {} "
                      "and machine {}".format(
-        authinfo.aiidauser.username, authinfo.dbcomputer.name))
+        authinfo.aiidauser.email, authinfo.dbcomputer.name))
 
     # This returns an iterator over aiida Calculation objects
     calcs_to_inquire = Calculation.get_all_with_state(

@@ -10,6 +10,10 @@ from __future__ import division
 from aiida.common.extendeddicts import (
     DefaultFieldsAttributeDict, Enumerate)
 
+from aiida.common import aiidalogger
+
+scheduler_logger = aiidalogger.getChild('scheduler')
+
 class JobState(Enumerate):
     pass
 
@@ -442,3 +446,96 @@ class JobInfo(DefaultFieldsAttributeDict):
         'dispatch_time',
         'finish_time'
         )
+    
+    # If some fields require special serializers, specify them here.
+    # You then need to define also the respective _serialize_FIELDTYPE and
+    # _deserialize_FIELDTYPE methods        
+    _special_serializers = {
+        'submission_time': 'date',
+        'dispatch_time': 'date',
+        'finish_time': 'date',
+        }
+    
+    def _serialize_date(self, v):
+        import datetime
+        import pytz
+        
+        if v is None:
+            return v
+        
+        if not isinstance(v, datetime.datetime):
+            raise TypeError("Invalid type for the date, should be a datetime")
+
+        # is_naive check from django.utils.timezone
+        if v.tzinfo is None or v.tzinfo.utcoffset(v) is None:
+            # TODO: FIX TIMEZONE
+            scheduler_logger.debug("Datetime to serialize in JobInfo is naive, "
+                                   "this should be fixed!")
+            #v = v.replace(tzinfo = pytz.utc)
+            return {'date': v.strftime(
+                '%Y-%m-%dT%H:%M:%S.%f'), 'timezone': None}
+        else: 
+            return {'date': v.astimezone(pytz.utc).strftime(
+                '%Y-%m-%dT%H:%M:%S.%f'), 'timezone': 'UTC'}
+
+    def _deserialize_date(self, v):
+        import datetime
+        import pytz
+        
+        if v is None:
+            return v
+        
+        if v['timezone'] is None:
+            # naive date
+            return datetime.datetime.strptime(v['date'],
+                '%Y-%m-%dT%H:%M:%S.%f')
+        elif v['timezone'] == 'UTC':
+            return datetime.datetime.strptime(v['date'],
+                                              '%Y-%m-%dT%H:%M:%S.%f').replace(
+                tzinfo=pytz.utc)
+        else:
+            # Try your best
+            return datetime.datetime.strptime(v['date'],
+                                              '%Y-%m-%dT%H:%M:%S.%f').replace(
+                tzinfo=pytz.timezone(v['timezone']))
+            
+        
+    
+    def serialize_field(self, value, field_type):
+        if field_type is None:
+            return value
+        
+        serializer_method = getattr(self, "_serialize_{}".format(field_type))
+        
+        return serializer_method(value)
+
+    def deserialize_field(self, value, field_type):
+        if field_type is None:
+            return value
+
+        deserializer_method = getattr(self, "_deserialize_{}".format(field_type))
+        
+        return deserializer_method(value)
+    
+    def serialize(self):
+        import json
+
+        ser_data = {k: self.serialize_field(
+                        v, self._special_serializers.get(k, None))
+                    for k, v in self.iteritems()}
+        
+        return json.dumps(ser_data)
+    
+    
+    def load_from_serialized(self, data):
+        import json
+
+        deser_data = json.loads(data)
+                
+        for k, v in deser_data.iteritems():
+            self[k] = self.deserialize_field(
+                          v, self._special_serializers.get(k, None))
+            
+        
+        
+        

@@ -56,6 +56,12 @@ class LocalTransport(aiida.transport.Transport):
         """
         self._is_open = False
 
+    def __unicode__(self):
+        """
+        Return a description as a string.
+        """
+        return u'{}'.format(self.__class__.__name__)
+
     @property
     def curdir(self):
         """

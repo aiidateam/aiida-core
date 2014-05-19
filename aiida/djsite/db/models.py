@@ -1,19 +1,17 @@
 from django.db import models as m
 from django_extensions.db.fields import UUIDField
-from django.contrib.auth.models import User
+from django.contrib.auth.models import (
+    AbstractBaseUser, BaseUserManager, PermissionsMixin)
 from django.utils.encoding import python_2_unicode_compatible
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.query import QuerySet
+from django.utils import timezone
 
 from aiida.common.exceptions import (
     ConfigurationError, DbContentError, MissingPluginError, InternalError)
-
-from aiida.djsite.settings.settings import AIIDANODES_UUID_VERSION
-
-# Removed the custom User field, that was creating a lot of problems. Use
-# the email as UUID. In case we need it, we can do a couple of south migrations
-# to create the new table. See for instance
-# http://stackoverflow.com/questions/14904046/
+from aiida.djsite.settings.settings import (
+    AIIDANODES_UUID_VERSION, AUTH_USER_MODEL)
+from aiida.djsite.additions import CustomEmailField
 
 class EmptyContextManager(object):
     def __enter__(self):
@@ -21,7 +19,6 @@ class EmptyContextManager(object):
     
     def __exit__(self, exc_type, exc_value, traceback):
         pass
-    
 
 class AiidaQuerySet(QuerySet):
     def iterator(self):
@@ -31,6 +28,71 @@ class AiidaQuerySet(QuerySet):
 class AiidaObjectManager(m.Manager):
     def get_query_set(self):
         return AiidaQuerySet(self.model, using=self._db)
+   
+class DbUserManager(BaseUserManager):
+    def create_user(self, email, password=None, **extra_fields):
+        """
+        Creates and saves a User with the given email (that is the
+        username) and password.
+        """
+        now = timezone.now()
+        if not email:
+            raise ValueError('The given email must be set')
+        email = BaseUserManager.normalize_email(email)
+        user = self.model(email=email,
+                          is_staff=False, is_active=True, is_superuser=False,
+                          last_login=now, date_joined=now, **extra_fields)
+    
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+    
+    def create_superuser(self, email, password, **extra_fields):
+        u = self.create_user(email, password, **extra_fields)
+        u.is_staff = True
+        u.is_active = True
+        u.is_superuser = True
+        u.save(using=self._db)
+        return u
+
+
+class DbUser(AbstractBaseUser, PermissionsMixin):
+    """
+    This class replaces the default User class of Django
+    """
+    # Set unique email field
+    email = CustomEmailField(unique=True, db_index=True)
+    first_name = m.CharField(max_length=254, blank=True)
+    last_name = m.CharField(max_length=254, blank=True)
+    institution = m.CharField(max_length=1024, blank=True)
+
+    is_staff = m.BooleanField(default=False,
+        help_text='Designates whether the user can log into this admin '
+                    'site.')
+    is_active = m.BooleanField(default=True,
+        help_text='Designates whether this user should be treated as '
+                    'active. Unselect this instead of deleting accounts.')
+    date_joined = m.DateTimeField(default=timezone.now)  
+    
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['first_name', 'last_name', 'institution']
+    
+    objects = DbUserManager()
+
+    def get_full_name(self):
+        if self.first_name and self.last_name:
+            return "{} {} ({})".format(self.first_name, self.last_name,
+                                       self.email)
+        elif self.first_name:
+            return "{} ({})".format(self.first_name, self.email)            
+        elif self.last_name:
+            return "{} ({})".format(self.last_name, self.email)
+        else:
+            return "{}".format(self.email)
+    
+    def get_short_name(self):
+        return self.email
+    
             
 class DbNode(m.Model):
     '''
@@ -75,11 +137,11 @@ class DbNode(m.Model):
     label = m.CharField(max_length=255, db_index=True, blank=True)
     description = m.TextField(blank=True)
     # creation time
-    ctime = m.DateTimeField(auto_now_add=True, editable=False)
-    # last-modified time
+    ctime = m.DateTimeField(default=timezone.now, editable=False)
     mtime = m.DateTimeField(auto_now=True, editable=False)
     # Cannot delete a user if something is associated to it
-    user = m.ForeignKey(User, on_delete=m.PROTECT, related_name='dbnodes')
+    user = m.ForeignKey(AUTH_USER_MODEL, on_delete=m.PROTECT,
+                        related_name='dbnodes')
 
     # Direct links
     outputs = m.ManyToManyField('self', symmetrical=False,
@@ -104,7 +166,7 @@ class DbNode(m.Model):
     objects = m.Manager()
     # Return aiida Node instances or their subclasses instead of DbNode instances
     aiidaobjects = AiidaObjectManager()
-            
+        
     
     def get_aiida_class(self):
         """
@@ -251,7 +313,435 @@ attrdatatype_choice = (
     ('list', 'list'),
     ('none', 'none'))
 
-class DbAttributeBaseClass(m.Model):
+class DbMultipleValueAttributeBaseClass(m.Model):
+    """
+    Abstract base class for tables storing attribute + value data, of
+    different data types (without any association to a Node).
+    """
+    key = m.CharField(max_length=1024,db_index=True,blank=False)
+    datatype = m.CharField(max_length=10, 
+                           default='none', 
+                           choices=attrdatatype_choice, db_index=True)
+    tval = m.TextField( default='', blank=True)
+    fval = m.FloatField( default=None, null=True)
+    ival = m.IntegerField( default=None, null=True)
+    bval = m.NullBooleanField(default=None, null=True)
+    dval = m.DateTimeField(default=None, null=True)
+
+    # separator for subfields
+    _sep = "."
+
+    class Meta:
+        abstract = True
+        unique_together = (('key',),)
+
+    # There are no subspecifiers. If instead you want to group attributes
+    # (e.g. by node, as it is done in the DbAttributeBaseClass), specify here
+    # the field name
+    _subspecifier_field_name = None
+
+    @property
+    def subspecifiers_dict(self):
+        """
+        Return a dict to narrow down the query to only those matching also the
+        subspecifier.
+        """
+        if self._subspecifier_field_name is None:
+            return {}
+        else:
+            return {self._subspecifier_field_name:
+                    getattr(self, self._subspecifier_field_name)}
+    
+    @property
+    def subspecifier_pk(self):
+        """
+        Return the subspecifier PK in the database (or None, if no 
+        subspecifier should be used)
+        """
+        if self._subspecifier_field_name is None:
+            return None
+        else:
+            return getattr(self, self._subspecifier_field_name).pk
+
+    @classmethod
+    def validate_key(cls, key):
+        """
+        Validate the key string to check if it is valid (e.g., if it does not
+        contain the separator symbol.
+        
+        :return: None if the key is valid
+        :raise ValidationError: if the key is not valid
+        """
+        from aiida.common.exceptions import ValidationError
+        
+        if not key:
+            raise ValidationError("The key cannot be an empty string.")
+        if cls._sep in key:
+            raise ValidationError("The separator symbol '{}' cannot be present "
+                "in the key of a {}.".format(
+                cls._sep, cls.__name__))
+
+    def setvalue(self,value,with_transaction=True,check_key=True):
+        """
+        This can be called on a given row and will set the corresponding value.
+        
+        :param with_transaction: If you are calling this function recursively,
+           set with_transaction=False to avoid recursive transactions, that
+           can significantly increase the time spent to store dictionaries by
+           large factors. 
+        :param check_key: if True, check that the key is not empty, and that 
+           it is valid. This should bet set to False when calling this function
+           recursively, because subkeys contain the separator.
+        """
+        import json
+        import datetime 
+        from django.utils.timezone import is_naive, make_aware, get_current_timezone
+        from django.db import transaction
+
+        if check_key:
+            # Check that the key is not empty or invalid, otherwise do not proceed
+            # (this would create problems if you want to store a list or dict)        
+            self.validate_key(self.key)
+        
+        # Needed, we call this function recursively; we cannot simply use
+        if with_transaction:
+            sid = transaction.savepoint()
+        try:
+            # I have to delete the children to start with: if this was a 
+            # dictionary or a list, I do not want to leave around pending
+            # entries. This call will do nothing if the current entry is 
+            # any other datatype
+            self.delchildren()
+
+            if value is None:
+                self.datatype = 'none'
+                self.bval = None
+                self.tval = ''
+                self.ival = None
+                self.fval = None
+                self.dval = None            
+                
+            elif isinstance(value,bool):
+                self.datatype = 'bool'
+                self.bval = value
+                self.tval = ''
+                self.ival = None
+                self.fval = None
+                self.dval = None
+    
+            elif isinstance(value,int):
+                self.datatype = 'int'
+                self.ival = value
+                self.tval = ''
+                self.bval = None
+                self.fval = None
+                self.dval = None
+    
+            elif isinstance(value,float):
+                self.datatype = 'float'
+                self.fval = value
+                self.tval = ''
+                self.ival = None
+                self.bval = None
+                self.dval = None
+    
+            elif isinstance(value,basestring):
+                self.datatype = 'txt'
+                self.tval = value
+                self.bval = None
+                self.ival = None
+                self.fval = None
+                self.dval = None
+    
+            elif isinstance(value,datetime.datetime):
+    
+                # current timezone is taken from the settings file of django
+                if is_naive(value):
+                    value_to_set = make_aware(value,get_current_timezone())
+                else:
+                    value_to_set = value
+    
+                self.datatype = 'date'
+                # TODO: time-aware and time-naive datetime objects, see
+                # https://docs.djangoproject.com/en/dev/topics/i18n/timezones/#naive-and-aware-datetime-objects
+                self.dval = value_to_set
+                self.tval = ''
+                self.bval = None
+                self.ival = None
+                self.fval = None
+
+            elif isinstance(value, list):
+                                
+                self.datatype = 'list'
+                self.dval = None
+                self.tval = ''
+                self.bval = None
+                self.ival = len(value)
+                self.fval = None
+                
+                for i, subv in enumerate(value):                           
+                    # I do not need get_or_create here, because
+                    # above I deleted all children (and I
+                    # expect no concurrency)
+                    item = self.__class__(
+                        key=("{}{}{:d}".format(self.key,self._sep, i)),
+                        **self.subspecifiers_dict)
+                    item.setvalue(subv,with_transaction=False,check_key=False)
+            
+            elif isinstance(value, dict):
+                                
+                self.datatype = 'dict'
+                self.dval = None
+                self.tval = ''
+                self.bval = None
+                self.ival = len(value)
+                self.fval = None
+                
+                for subk, subv in value.iteritems():
+                    if self._sep in subk:
+                        raise ValueError("You are trying to store an entry "
+                            "that (maybe at an inner level) has"
+                            "contains the character '{}', that "
+                            "cannot be used".format(self._sep))
+                        
+                    # I do not need get_or_create here, because
+                    # above I deleted all children (and I
+                    # expect no concurrency)
+                    item = self.__class__(key=(self.key + self._sep + subk),
+                        **self.subspecifiers_dict)
+                    item.setvalue(subv,with_transaction=False,check_key=False)
+                
+            else:
+                try:
+                    jsondata = json.dumps(value)
+                except TypeError:
+                    raise ValueError("Unable to store the value: it must be "
+                        "either a basic datatype, or json-serializable")
+                
+                self.datatype = 'json'
+                self.tval = jsondata
+                self.bval = None
+                self.ival = None
+                self.fval = None
+            
+            self.save()
+        except:
+            # Revert this inner transation, and reraise
+            if with_transaction:
+                transaction.savepoint_rollback(sid)
+            raise
+    
+    def getvalue(self):
+        """
+        This can be called on a given row and will get the corresponding value,
+        casting it correctly.
+        """
+        return self._getvalue_internal(subitems=None)
+
+    def _getvalue_internal(self,subitems=None):
+        """
+        This function returns the value of the given item, casting it
+        correctly.
+        
+        This function should be used only internally, because it uses the
+        optional parameter subitems to call itself recursively for items that
+        were expanded in their items (lists and dicts) in a faster way,
+        avoiding to perform too many queries.
+
+        :param subitems: a dictionary of subitems at all deepness level,
+            where the values are DbAttribute instances, and the keys are
+            the key values in the DbAttribute table, but already stripped
+            from the initial part belonging to 'self' (that is, if we 
+            are item 'a.b' and we pass subitems 'a.b.0', 'a.b.1', 'a.b.1.c',
+            the keys must be '0', '1', '1.c').
+            It must be None if the value is not iterable (int, str,
+            float, ...) or if we still have to perform a query.
+            It is an empty dictionary if there are no subitems.
+        """
+        import json
+        import re
+    
+        from django.utils.timezone import (
+            is_naive, make_aware, get_current_timezone)
+
+        from aiida.common import aiidalogger
+
+        if self.datatype == 'none':
+            return None
+        elif self.datatype == 'bool':
+            return self.bval
+        elif self.datatype == 'int':
+            return self.ival
+        elif self.datatype == 'float':
+            return self.fval
+        elif self.datatype == 'txt':
+            return self.tval
+        elif self.datatype == 'date':
+            if is_naive(self.dval):
+                return make_aware(self.dval,get_current_timezone())
+            else:
+                return self.dval
+            return self.dval
+        elif self.datatype == 'list':
+            if subitems is None:
+                # This function was called for the first time: 
+                # perform the query for *all* subitems at any 
+                # deepness level
+                prefix = "{}{}".format(self.key, self._sep)
+                dballsubvalues = self.__class__.objects.filter(
+                    key__startswith=prefix,
+                    **self.subspecifiers_dict)
+                # Strip the prefix and store in a dictionary
+                dbsubdict = {_.key[len(prefix):]: _ for _ in dballsubvalues}
+            else:
+                # The subitems are passed as a parameter for a recursive call
+                dbsubdict = subitems
+
+            # dbsubdict contains all subitems, here I store only those of
+            # deepness 1, i.e. if I have subitems '0', '1' and '1.c' I 
+            # store only '0' and '1'
+            firstleveldbsubdict = {k: v for k, v in dbsubdict.iteritems()
+                                   if self._sep not in k}
+
+            # For checking, I verify the expected values
+            expected_set = set(["{:d}".format(i)
+                   for i in range(self.ival)])
+            db_set = set(firstleveldbsubdict.keys())
+            # If there are more entries than expected, but all expected
+            # ones are there, I just issue an error but I do not stop.
+
+            if not expected_set.issubset(db_set):
+                if self._subspecifier_field_name is not None:
+                    subspecifier_string = "{}={} and ".format(
+                        self._subspecifier_field_name,
+                        self._subspecifier_pk)
+                else:
+                    subspecifier_string = ""
+
+                raise DbContentError("Wrong list elements stored in {} for "
+                                     "{}key='{}' ({} vs {})".format(
+                                     self.__class__.__name__, 
+                                     subspecifier_string,
+                                     self.key, expected_set, db_set))
+            if expected_set != db_set:
+                if self._subspecifier_field_name is not None:
+                    subspecifier_string = "{}={} and ".format(
+                        self._subspecifier_field_name,
+                        self._subspecifier_pk)
+                else:
+                    subspecifier_string = ""
+
+                aiidalogger.error("Wrong list elements stored in {} for "
+                                  "{}key='{}' ({} vs {})".format(
+                                    self.__class__.__name__, 
+                                    subspecifier_string,
+                                    self.key, expected_set, db_set))
+            
+            # I get the values in memory as a dictionary
+            tempdict = {}
+            for firstsubk, firstsubv in firstleveldbsubdict.iteritems():
+                # I call recursively the same function to get subitems
+                newsubitems={k[len(firstsubk)+len(self._sep):]: v 
+                             for k, v in dbsubdict.iteritems()
+                             if k.startswith(firstsubk+self._sep)}
+                tempdict[firstsubk] = firstsubv._getvalue_internal(
+                    subitems=newsubitems)
+                    
+            # And then I put them in a list
+            retlist = [tempdict["{:d}".format(i)] for i in range(self.ival)]
+            return retlist
+        elif self.datatype == 'dict':
+            if subitems is None:
+                # This function was called for the first time: 
+                # perform the query for *all* subitems at any 
+                # deepness level
+                prefix = "{}{}".format(self.key, self._sep)
+                dballsubvalues = self.__class__.objects.filter(
+                    key__startswith=prefix, **self.subspecifiers_dict)
+                # Strip the prefix and store in a dictionary
+                dbsubdict = {_.key[len(prefix):]: _ for _ in dballsubvalues}
+            else:
+                # The subitems are passed as a parameter for a recursive call
+                dbsubdict = subitems
+
+            # dbsubdict contains all subitems, here I store only those of
+            # deepness 1, i.e. if I have subitems '0', '1' and '1.c' I 
+            # store only '0' and '1'
+            firstleveldbsubdict = {k: v for k, v in dbsubdict.iteritems()
+                                   if self._sep not in k}
+
+            if len(firstleveldbsubdict) != self.ival:
+                if self._subspecifier_field_name is not None:
+                    subspecifier_string = "{}={} and ".format(
+                        self._subspecifier_field_name,
+                        self._subspecifier_pk)
+                else:
+                    subspecifier_string = ""
+
+                aiidalogger.error("Wrong dict length stored in {} for "
+                                  "{}key='{}' ({} vs {})".format(
+                                    self.__class__.__name__,
+                                    subspecifier_string,
+                                    self.key, len(firstleveldbsubdict),
+                                    self.ival))
+
+            # I get the values in memory as a dictionary
+            tempdict = {}
+            for firstsubk, firstsubv in firstleveldbsubdict.iteritems():
+                # I call recursively the same function to get subitems
+                newsubitems={k[len(firstsubk)+len(self._sep):]: v 
+                             for k, v in dbsubdict.iteritems()
+                             if k.startswith(firstsubk+self._sep)}
+                tempdict[firstsubk] = firstsubv._getvalue_internal(
+                    subitems=newsubitems)
+                
+            return tempdict
+        elif self.datatype == 'json':
+            try:
+                return json.loads(self.tval)
+            except ValueError:
+                raise DbContentError("Error in the content of the json field")
+        else:
+            raise DbContentError("The type field '{}' is not recognized".format(
+                    self.datatype))        
+
+    def delchildren(self):
+        """
+        Delete all children of this value *at any level of deepness*
+        if it is a list or a dictionary, otherwise do nothing.
+        Note that this is *not* done within a transaction: put a transaction
+        in the caller (this is because the version of Django we are using
+        does not support nested transactions properly.
+        """
+        if self.datatype == 'dict' or self.datatype == 'list':
+            # Here, I have to delete all elements, to any deepness level!
+            self.__class__.objects.filter(
+                key__startswith="{parentkey}{sep}".format(
+                parentkey=self.key, sep=self._sep),
+                **self.subspecifiers_dict).delete()
+
+    def delvalue(self):
+        """
+        Deletes this value.
+        """
+        from django.db import transaction
+        
+        if self.datatype == 'dict' or self.datatype == 'list':
+            with transaction.commit_on_success():
+                # Here, I have to delete all elements, to any deepness level!
+                self.delchildren()
+                # Note! I cannot simply do a delete with a 
+                # key__startswith=parentkey, because if I have an entry
+                # called 'a' that is a list and another called 'ab', the
+                # call would delete also 'ab'. Therefore, first I delete
+                # all children, then the item itself.
+                self.delete()
+        else:
+            self.delete()
+
+
+
+class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
     """
     Abstract base class for tables storing element-attribute-value data.
     Element is the dbnode; attribute is the key name.
@@ -263,24 +753,14 @@ class DbAttributeBaseClass(m.Model):
     Moreover, this class unpacks dictionaries and lists when possible, so that
     it is possible to query inside recursive lists and dicts.
     """
-    # Modification time of this attribute
-    time = m.DateTimeField(auto_now=True, editable=False)
     # In this way, the related name for the DbAttribute inherited class will be
     # 'dbattributes' and for 'dbextra' will be 'dbextras'
     # Moreover, automatically destroy attributes and extras if the parent
     # node is deleted
     dbnode = m.ForeignKey('DbNode', related_name='%(class)ss', on_delete=m.CASCADE) 
     # max_length is required by MySql to have indexes and unique constraints
-    key = m.CharField(max_length=1024,db_index=True,blank=False)
-    datatype = m.CharField(max_length=10, choices=attrdatatype_choice, db_index=True)
-    tval = m.TextField( default='', blank=True)
-    fval = m.FloatField( default=None, null=True)
-    ival = m.IntegerField( default=None, null=True)
-    bval = m.NullBooleanField(default=None, null=True)
-    dval = m.DateTimeField(default=None, null=True)
-
-    # separator for subfields
-    _sep = "."
+    
+    _subspecifier_field_name = 'dbnode'
     
     class Meta:
         unique_together = (("dbnode", "key"))
@@ -299,19 +779,6 @@ class DbAttributeBaseClass(m.Model):
         query = Q(dbnode=dbnode) & ~Q(key__contains=cls._sep)
         return cls.objects.filter(query)
 
-    @classmethod
-    def validate_key(cls, key):
-        """
-        Validate the key string to check if it is valid (e.g., if it does not
-        contain the separator symbol.
-        
-        :return: None if the key is valid
-        :raise ValueError: if the key is not valid
-        """
-        if cls._sep in key:
-            raise ValueError("The separator symbol '{}' cannot be present "
-                "in the key of a {}.".format(
-                cls._sep, cls.__name__))
 
     @classmethod
     def get_value_for_node(cls, dbnode, key):
@@ -421,329 +888,6 @@ class DbAttributeBaseClass(m.Model):
                                  "not found in db".format(
                                  cls.__name__, key, dbnode.pk))
         
-    def setvalue(self,value,with_transaction=True):
-        """
-        This can be called on a given row and will set the corresponding value.
-        
-        :param with_transaction: If you are calling this function recursively,
-           set with_transaction=False to avoid recursive transactions, that
-           can significantly increase the time spent to store dictionaries by
-           large factors. 
-        """
-        import json
-        import datetime 
-        from django.utils.timezone import is_naive, make_aware, get_current_timezone
-        from django.db import transaction
-        
-        # Needed, we call this function recursively; we cannot simply use
-        if with_transaction:
-            sid = transaction.savepoint()
-        try:
-            # I have to delete the children to start with: if this was a 
-            # dictionary or a list, I do not want to leave around pending
-            # entries. This call will do nothing if the current entry is 
-            # any other datatype
-            self.delchildren()
-
-            if value is None:
-                self.datatype = 'none'
-                self.bval = None
-                self.tval = ''
-                self.ival = None
-                self.fval = None
-                self.dval = None            
-                
-            elif isinstance(value,bool):
-                self.datatype = 'bool'
-                self.bval = value
-                self.tval = ''
-                self.ival = None
-                self.fval = None
-                self.dval = None
-    
-            elif isinstance(value,int):
-                self.datatype = 'int'
-                self.ival = value
-                self.tval = ''
-                self.bval = None
-                self.fval = None
-                self.dval = None
-    
-            elif isinstance(value,float):
-                self.datatype = 'float'
-                self.fval = value
-                self.tval = ''
-                self.ival = None
-                self.bval = None
-                self.dval = None
-    
-            elif isinstance(value,basestring):
-                self.datatype = 'txt'
-                self.tval = value
-                self.bval = None
-                self.ival = None
-                self.fval = None
-                self.dval = None
-    
-            elif isinstance(value,datetime.datetime):
-    
-                # current timezone is taken from the settings file of django
-                if is_naive(value):
-                    value_to_set = make_aware(value,get_current_timezone())
-                else:
-                    value_to_set = value
-    
-                self.datatype = 'date'
-                # TODO: time-aware and time-naive datetime objects, see
-                # https://docs.djangoproject.com/en/dev/topics/i18n/timezones/#naive-and-aware-datetime-objects
-                self.dval = value_to_set
-                self.tval = ''
-                self.bval = None
-                self.ival = None
-                self.fval = None
-
-            elif isinstance(value, list):
-                                
-                self.datatype = 'list'
-                self.dval = None
-                self.tval = ''
-                self.bval = None
-                self.ival = len(value)
-                self.fval = None
-                
-                for i, subv in enumerate(value):                           
-                    # I do not need get_or_create here, because
-                    # above I deleted all children (and I
-                    # expect no concurrency)
-                    item = self.__class__(dbnode=self.dbnode,
-                        key=("{}{}{:d}".format(self.key,self._sep, i)))
-                    item.setvalue(subv,with_transaction=False)
-            
-            elif isinstance(value, dict):
-                                
-                self.datatype = 'dict'
-                self.dval = None
-                self.tval = ''
-                self.bval = None
-                self.ival = len(value)
-                self.fval = None
-                
-                for subk, subv in value.iteritems():
-                    if self._sep in subk:
-                        raise ValueError("You are trying to store an entry "
-                            "that (maybe at an inner level) has"
-                            "contains the character '{}', that "
-                            "cannot be used".format(self._sep))
-                        
-                    # I do not need get_or_create here, because
-                    # above I deleted all children (and I
-                    # expect no concurrency)
-                    item = self.__class__(dbnode=self.dbnode,
-                        key=(self.key + self._sep + subk))
-                    item.setvalue(subv,with_transaction=False)
-                
-            else:
-                try:
-                    jsondata = json.dumps(value)
-                except TypeError:
-                    raise ValueError("Unable to store the value: it must be "
-                        "either a basic datatype, or json-serializable")
-                
-                self.datatype = 'json'
-                self.tval = jsondata
-                self.bval = None
-                self.ival = None
-                self.fval = None
-            
-            self.save()
-        except:
-            # Revert this inner transation, and reraise
-            if with_transaction:
-                transaction.savepoint_rollback(sid)
-            raise
-    
-    def getvalue(self):
-        """
-        This can be called on a given row and will get the corresponding value,
-        casting it correctly.
-        """
-        return self._getvalue_internal(subitems=None)
-
-    def _getvalue_internal(self,subitems=None):
-        """
-        This function returns the value of the given node, casting it
-        correctly.
-        
-        This function should be used only internally, because it uses the
-        optional parameter subitems to call itself recursively for items that
-        were expanded in their items (lists and dicts) in a faster way,
-        avoiding to perform too many queries.
-
-        :param subitems: a dictionary of subitems at all deepness level,
-            where the values are DbAttribute instances, and the keys are
-            the key values in the DbAttribute table, but already stripped
-            from the initial part belonging to 'self' (that is, if we 
-            are item 'a.b' and we pass subitems 'a.b.0', 'a.b.1', 'a.b.1.c',
-            the keys must be '0', '1', '1.c').
-            It must be None if the value is not iterable (int, str,
-            float, ...) or if we still have to perform a query.
-            It is an empty dictionary if there are no subitems.
-        """
-        import json
-        import re
-    
-        from django.utils.timezone import (
-            is_naive, make_aware, get_current_timezone)
-
-        from aiida.common import aiidalogger
-
-        if self.datatype == 'none':
-            return None
-        elif self.datatype == 'bool':
-            return self.bval
-        elif self.datatype == 'int':
-            return self.ival
-        elif self.datatype == 'float':
-            return self.fval
-        elif self.datatype == 'txt':
-            return self.tval
-        elif self.datatype == 'date':
-            if is_naive(self.dval):
-                return make_aware(self.dval,get_current_timezone())
-            else:
-                return self.dval
-            return self.dval
-        elif self.datatype == 'list':
-            if subitems is None:
-                # This function was called for the first time: 
-                # perform the query for *all* subitems at any 
-                # deepness level
-                prefix = "{}{}".format(self.key, self._sep)
-                dballsubvalues = self.__class__.objects.filter(
-                    dbnode=self.dbnode,
-                    key__startswith=prefix)
-                # Strip the prefix and store in a dictionary
-                dbsubdict = {_.key[len(prefix):]: _ for _ in dballsubvalues}
-            else:
-                # The subitems are passed as a parameter for a recursive call
-                dbsubdict = subitems
-
-            # dbsubdict contains all subitems, here I store only those of
-            # deepness 1, i.e. if I have subitems '0', '1' and '1.c' I 
-            # store only '0' and '1'
-            firstleveldbsubdict = {k: v for k, v in dbsubdict.iteritems()
-                                   if self._sep not in k}
-
-            # For checking, I verify the expected values
-            expected_set = set(["{:d}".format(i)
-                   for i in range(self.ival)])
-            db_set = set(firstleveldbsubdict.keys())
-            # If there are more entries than expected, but all expected
-            # ones are there, I just issue an error but I do not stop.
-            if not expected_set.issubset(db_set):
-                raise DbContentError("Wrong list elements stored in {} for "
-                                     "node={} and key='{}' ({} vs {})".format(
-                                     self.__class__.__name__, self.dbnode.pk,
-                                     self.key, expected_set, db_set))
-            if expected_set != db_set:
-                aiidalogger.error("Wrong list elements stored in {} for "
-                                  "node={} and key='{}' ({} vs {})".format(
-                                    self.__class__.__name__, self.dbnode.pk, 
-                                    self.key, expected_set, db_set))
-            
-            # I get the values in memory as a dictionary
-            tempdict = {}
-            for firstsubk, firstsubv in firstleveldbsubdict.iteritems():
-                # I call recursively the same function to get subitems
-                newsubitems={k[len(firstsubk)+len(self._sep):]: v 
-                             for k, v in dbsubdict.iteritems()
-                             if k.startswith(firstsubk+self._sep)}
-                tempdict[firstsubk] = firstsubv._getvalue_internal(
-                    subitems=newsubitems)
-                    
-            # And then I put them in a list
-            retlist = [tempdict["{:d}".format(i)] for i in range(self.ival)]
-            return retlist
-        elif self.datatype == 'dict':
-            if subitems is None:
-                # This function was called for the first time: 
-                # perform the query for *all* subitems at any 
-                # deepness level
-                prefix = "{}{}".format(self.key, self._sep)
-                dballsubvalues = self.__class__.objects.filter(
-                    dbnode=self.dbnode,
-                    key__startswith=prefix)
-                # Strip the prefix and store in a dictionary
-                dbsubdict = {_.key[len(prefix):]: _ for _ in dballsubvalues}
-            else:
-                # The subitems are passed as a parameter for a recursive call
-                dbsubdict = subitems
-
-            # dbsubdict contains all subitems, here I store only those of
-            # deepness 1, i.e. if I have subitems '0', '1' and '1.c' I 
-            # store only '0' and '1'
-            firstleveldbsubdict = {k: v for k, v in dbsubdict.iteritems()
-                                   if self._sep not in k}
-
-            if len(firstleveldbsubdict) != self.ival:
-                aiidalogger.error("Wrong dict length stored in {} for "
-                                  "node={} and key='{}' ({} vs {})".format(
-                                    self.__class__.__name__, self.dbnode.pk,
-                                    self.key, len(firstleveldbsubdict),
-                                    self.ival))
-
-            # I get the values in memory as a dictionary
-            tempdict = {}
-            for firstsubk, firstsubv in firstleveldbsubdict.iteritems():
-                # I call recursively the same function to get subitems
-                newsubitems={k[len(firstsubk)+len(self._sep):]: v 
-                             for k, v in dbsubdict.iteritems()
-                             if k.startswith(firstsubk+self._sep)}
-                tempdict[firstsubk] = firstsubv._getvalue_internal(
-                    subitems=newsubitems)
-                
-            return tempdict
-        elif self.datatype == 'json':
-            try:
-                return json.loads(self.tval)
-            except ValueError:
-                raise DbContentError("Error in the content of the json field")
-        else:
-            raise DbContentError("The type field '{}' is not recognized".format(
-                    self.datatype))        
-
-    def delchildren(self):
-        """
-        Delete all children of this value *at any level of deepness*
-        if it is a list or a dictionary, otherwise do nothing.
-        Note that this is *not* done within a transaction: put a transaction
-        in the caller (this is because the version of Django we are using
-        does not support nested transactions properly.
-        """
-        if self.datatype == 'dict' or self.datatype == 'list':
-            # Here, I have to delete all elements, to any deepness level!
-            self.__class__.objects.filter(dbnode=self.dbnode, 
-                key__startswith="{parentkey}{sep}".format(
-                parentkey=self.key, sep=self._sep)).delete()
-
-    def delvalue(self):
-        """
-        Deletes this value.
-        """
-        from django.db import transaction
-        
-        if self.datatype == 'dict' or self.datatype == 'list':
-            with transaction.commit_on_success():
-                # Here, I have to delete all elements, to any deepness level!
-                self.delchildren()
-                # Note! I cannot simply do a delete with a 
-                # key__startswith=parentkey, because if I have an entry
-                # called 'a' that is a list and another called 'ab', the
-                # call would delete also 'ab'. Therefore, first I delete
-                # all children, then the item itself.
-                self.delete()
-        else:
-            self.delete()
     
     @python_2_unicode_compatible
     def __str__(self):
@@ -752,6 +896,15 @@ class DbAttributeBaseClass(m.Model):
             self.dbnode.pk,
             self.key,
             self.datatype,)
+
+class DbSetting(DbMultipleValueAttributeBaseClass):
+    """
+    This will store generic settings that should be database-wide.
+    """
+    # I also add a description field for the variables
+    description = m.TextField(blank=True)
+    # Modification time of this attribute
+    time = m.DateTimeField(auto_now=True, editable=False)
 
 class DbAttribute(DbAttributeBaseClass):
     """
@@ -783,16 +936,20 @@ class DbGroup(m.Model):
     uuid = UUIDField(auto=True, version=AIIDANODES_UUID_VERSION)
     # max_length is required by MySql to have indexes and unique constraints
     name = m.CharField(max_length=1024, db_index=True)
+    # The type of group: a user group, a pseudopotential group,...
+    # User groups have type equal to an empty string
+    type = m.CharField(default="", max_length=1024, db_index=True)
     dbnodes = m.ManyToManyField('DbNode', related_name='dbgroups')
-    time = m.DateTimeField(auto_now_add=True, editable=False)
+    # Creation time
+    time = m.DateTimeField(default=timezone.now, editable=False)
     description = m.TextField(blank=True)
     # The owner of the group, not of the calculations
     # On user deletion, remove his/her groups too (not the calcuations, only
     # the groups
-    user = m.ForeignKey(User, on_delete=m.CASCADE)
+    user = m.ForeignKey(AUTH_USER_MODEL, on_delete=m.CASCADE)
 
     class Meta:
-        unique_together = (("user", "name"),)
+        unique_together = (("name", "type"),)
 
     @python_2_unicode_compatible
     def __str__(self):
@@ -912,7 +1069,7 @@ class DbAuthInfo(m.Model):
     information.
     """
     # Delete the DbAuthInfo if either the user or the computer are removed
-    aiidauser = m.ForeignKey(User, on_delete=m.CASCADE)
+    aiidauser = m.ForeignKey(AUTH_USER_MODEL, on_delete=m.CASCADE)
     dbcomputer = m.ForeignKey(DbComputer, on_delete=m.CASCADE)
     auth_params = m.TextField(default='{}') # Will store a json; contains mainly the remoteuser
                                             # and the private_key
@@ -934,7 +1091,7 @@ class DbAuthInfo(m.Model):
         except ValueError:
             raise DbContentError(
                 "Error while reading auth_params for authinfo, aiidauser={}, computer={}".format(
-                    self.aiidauser.username, self.dbcomputer.hostname))
+                    self.aiidauser.email, self.dbcomputer.hostname))
 
     def set_auth_params(self,auth_params):
         import json
@@ -949,7 +1106,7 @@ class DbAuthInfo(m.Model):
         except ValueError:
             raise DbContentError(
                 "Error while reading metadata for authinfo, aiidauser={}, computer={}".format(
-                    self.aiidauser.username, self.dbcomputer.hostname))
+                    self.aiidauser.email, self.dbcomputer.hostname))
         
         try:
             return metadata['workdir']
@@ -978,9 +1135,9 @@ class DbAuthInfo(m.Model):
     @python_2_unicode_compatible
     def __str__(self):
         if self.enabled:
-            return "Authorization info for {}@{}".format(self.aiidauser.username, self.dbcomputer.name)
+            return "Authorization info for {} on {}".format(self.aiidauser.email, self.dbcomputer.name)
         else:
-            return "Authorization info for {}@{} [DISABLED]".format(self.aiidauser.username, self.dbcomputer.name)
+            return "Authorization info for {} on {} [DISABLED]".format(self.aiidauser.email, self.dbcomputer.name)
 
 
 
@@ -988,10 +1145,10 @@ class DbComment(m.Model):
     uuid = UUIDField(auto=True,version=AIIDANODES_UUID_VERSION)
     # Delete comments if the node is removed
     dbnode = m.ForeignKey(DbNode,related_name='dbcomments', on_delete=m.CASCADE)
-    ctime = m.DateTimeField(auto_now_add=True, editable=False)
+    ctime = m.DateTimeField(default=timezone.now, editable=False)
     mtime = m.DateTimeField(auto_now=True, editable=False)
     # Delete the comments of a deleted user (TODO: check if this is a good policy)
-    user = m.ForeignKey(User, on_delete=m.CASCADE)
+    user = m.ForeignKey(AUTH_USER_MODEL, on_delete=m.CASCADE)
     content = m.TextField(blank=True)
 
     @python_2_unicode_compatible
@@ -1002,7 +1159,7 @@ class DbComment(m.Model):
 
 class DbLog(m.Model):
     # Creation time
-    time = m.DateTimeField(auto_now_add=True, editable=False)
+    time = m.DateTimeField(default=timezone.now, editable=False)
     loggername = m.CharField(max_length=255, db_index=True)
     levelname = m.CharField(max_length=50, db_index=True)
     # A string to know what is the referred object (e.g. a Calculation,
@@ -1049,7 +1206,7 @@ class DbLog(m.Model):
 class DbLock(m.Model):
     
     key        = m.TextField(primary_key=True)
-    creation   = m.DateTimeField(auto_now_add=True, editable=False)
+    creation   = m.DateTimeField(default=timezone.now, editable=False)
     timeout    = m.IntegerField(editable=False)
     owner      = m.CharField(max_length=255, blank=False)
             
@@ -1064,9 +1221,9 @@ class DbWorkflow(m.Model):
     from aiida.common.datastructures import wf_states, wf_data_types
     
     uuid         = UUIDField(auto=True,version=AIIDANODES_UUID_VERSION)
-    ctime        = m.DateTimeField(auto_now_add=True, editable=False)
+    ctime        = m.DateTimeField(default=timezone.now, editable=False)
     mtime        = m.DateTimeField(auto_now=True, editable=False)    
-    user         = m.ForeignKey(User, on_delete=m.PROTECT)
+    user         = m.ForeignKey(AUTH_USER_MODEL, on_delete=m.PROTECT)
 
     label = m.CharField(max_length=255, db_index=True, blank=True)
     description = m.TextField(blank=True)
@@ -1297,7 +1454,7 @@ class DbWorkflowData(m.Model):
     
     parent       = m.ForeignKey(DbWorkflow, related_name='data')
     name         = m.CharField(max_length=255, blank=False)
-    time         = m.DateTimeField(auto_now_add=True, editable=False)
+    time         = m.DateTimeField(default=timezone.now, editable=False)
     data_type    = m.TextField(blank=False, default=wf_data_types.PARAMETER)
     
     value_type   = m.TextField(blank=False, default=wf_data_value_types.NONE)
@@ -1356,8 +1513,8 @@ class DbWorkflowStep(m.Model):
     
     parent        = m.ForeignKey(DbWorkflow, related_name='steps')
     name          = m.CharField(max_length=255, blank=False)
-    user          = m.ForeignKey(User, on_delete=m.PROTECT)
-    time          = m.DateTimeField(auto_now_add=True, editable=False)
+    user          = m.ForeignKey(AUTH_USER_MODEL, on_delete=m.PROTECT)
+    time          = m.DateTimeField(default=timezone.now, editable=False)
     nextcall      = m.CharField(max_length=255, blank=False, default=wf_default_call)
     
     calculations  = m.ManyToManyField(DbNode, symmetrical=False, related_name="workflow_step")

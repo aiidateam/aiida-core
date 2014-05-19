@@ -1295,8 +1295,10 @@ class SshTransport(aiida.transport.Transport):
         :param remotesource: remote source
         :param remotedestination:remote destination
         """
-        
-        self.sftp.symlink(remotesource,remotedestination)
+        # paramiko gives some errors if path is starting with '.'
+        s = os.path.normpath(remotesource)
+        d = os.path.normpath(remotedestination)
+        self.sftp.symlink(s,d)
     
     def path_exists(self,path):
         """

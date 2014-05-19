@@ -45,7 +45,7 @@ class PhCalculation(Calculation):
     _default_parser = 'quantumespresso.ph'
 
     # in restarts, will not copy but use symlinks
-    _default_symlink_usage = True
+    _default_symlink_usage = False
 
     @classproperty
     def _use_methods(cls):
@@ -140,9 +140,11 @@ class PhCalculation(Calculation):
             raise InputValidationError("PhCalculation must be launched on the same computer"
                           " of the parent: {}".format(old_comp.get_name()))
 
-        default_parent_output_folder = os.path.join(
-                            parent_calc.OUTPUT_SUBFOLDER, 
-                            '{}.save'.format(parent_calc.PREFIX))
+        # put by default, default_parent_output_folder = ./out
+        default_parent_output_folder = parent_calc.OUTPUT_SUBFOLDER
+        #os.path.join(
+        #                   parent_calc.OUTPUT_SUBFOLDER, 
+        #                  '{}.save'.format(parent_calc.PREFIX))
         parent_calc_out_subfolder = settings_dict.pop('parent_calc_out_subfolder',
                                                       default_parent_output_folder)      
 
@@ -223,15 +225,22 @@ class PhCalculation(Calculation):
         # copy the parent scratch
         symlink = settings_dict.pop('PARENT_FOLDER_SYMLINK',self._default_symlink_usage) # a boolean
         if symlink:
-            # here I copy ./out/aiida.save
-            # but first I have to create the out folder
-            tempfolder.get_subfolder(self.OUTPUT_SUBFOLDER, create=True)
+            # I create a symlink to the whole parent ./out
+            # TODO: it would be better to do a symlink of ./out/* -> ./out/
+            # tempfolder.get_subfolder(self.OUTPUT_SUBFOLDER, create=True)
             remote_symlink_list.append(
-                (parent_calc_folder.get_computer().uuid,
-                 os.path.join(parent_calc_folder.get_remote_path(),
-                              parent_calc_out_subfolder),
-                 os.path.join(self.OUTPUT_SUBFOLDER,'{}.save'.format(self.PREFIX))
-                 ))
+                        (parent_calc_folder.get_computer().uuid,
+                         os.path.join(parent_calc_folder.get_remote_path(),
+                                     parent_calc_out_subfolder),
+                         self.OUTPUT_SUBFOLDER))
+#             remote_symlink_list.append(
+#                 (parent_calc_folder.get_computer().uuid,
+#                  os.path.join(parent_calc_folder.get_remote_path(),
+#                               parent_calc_out_subfolder),
+#                  #os.path.join(self.OUTPUT_SUBFOLDER,'{}.save'.format(self.PREFIX))
+#                  self.OUTPUT_SUBFOLDER
+#                  ))
+            pass
         else:
             # here I copy the whole folder ./out
             remote_copy_list.append(
@@ -247,13 +256,13 @@ class PhCalculation(Calculation):
                      os.path.join(parent_calc_folder.get_remote_path(),
                               self.FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX),
                      self.FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX))
-                # and here I copy ./out/_ph0
-                remote_symlink_list.append(
-                        (parent_calc_folder.get_computer().uuid,
-                         os.path.join(parent_calc_folder.get_remote_path(),
-                                      self.OUTPUT_SUBFOLDER,'_ph0'),
-                         os.path.join(self.OUTPUT_SUBFOLDER,'_ph0')
-                         ))
+#                 # and here I copy ./out/_ph0 # copied already by ./out
+#                 remote_symlink_list.append(
+#                         (parent_calc_folder.get_computer().uuid,
+#                          os.path.join(parent_calc_folder.get_remote_path(),
+#                                       self.OUTPUT_SUBFOLDER,'_ph0'),
+#                          os.path.join(self.OUTPUT_SUBFOLDER,'_ph0')
+#                          ))
 
             else:
                 # copy the dynamical matrices

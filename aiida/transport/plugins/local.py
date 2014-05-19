@@ -640,6 +640,11 @@ class LocalTransport(aiida.transport.Transport):
         the_destination = os.path.join( self.curdir,destination )
         if not os.path.exists(the_source):
             raise OSError("Source not found")
+        
+        # Using the Ubuntu default behavior (different from Mac)
+        if self.isdir(destination):
+            the_destination = os.path.join(the_destination,
+                                           os.path.split(source)[1])
 
         shutil.copytree( the_source, the_destination, symlinks = dereference )
             

@@ -1007,6 +1007,7 @@ def parse_pw_text_output(data, xml_data=None, structure_data=None):
                          'convergence NOT achieved after':"The scf cycle did not reach convergence.",
                          'c_bands':'Some bands did not reach convergence',  # this and the next are possible warnings
                          'iterations completed, stopping':'Maximum number of iterations reached in Wentzcovitch Damped Dynamics.',
+                         'Maximum CPU time exceeded':'Maximum CPU time exceeded',
                          }
     
     minor_warnings = {'Warning:':None,

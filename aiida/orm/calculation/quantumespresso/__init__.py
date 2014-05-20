@@ -31,21 +31,16 @@ class BasePwCpInputGenerator(object):
     _default_parser = None
     #_default_parser = 'quantumespresso.pw'
     
-    # Default output folder of a parent calculation, used if nothing else is
-    # specified
-    _default_parent_output_folder = OUTPUT_SUBFOLDER
-
     _automatic_namelists = {}
 
     # in restarts, will not copy but use symlinks
     _default_symlink_usage = True
 
     # in restarts, it will copy from the parent the following 
-    _default_parent_folder_source = os.path.join(
-                                _default_parent_output_folder,
-                                '{}.save'.format(PREFIX))
+    _restart_copy_from = os.path.join(OUTPUT_SUBFOLDER,'*')
+    
     # in restarts, it will copy the previous folder in the following one 
-    _default_parent_folder_destination = _default_parent_folder_source
+    _restart_copy_to = OUTPUT_SUBFOLDER
     
 #    _automatic_namelists = {
 #        'scf':   ['CONTROL', 'SYSTEM', 'ELECTRONS'],
@@ -264,9 +259,8 @@ class BasePwCpInputGenerator(object):
         # ------------- ATOMIC_SPECIES ------------
         # I create the subfolder that will contain the pseudopotentials
         tempfolder.get_subfolder(self.PSEUDO_SUBFOLDER, create=True)
-        # I create the subfolder with the output data (sometimes the
-        # Quantum Espresso codes crash if an empty folder is not already
-        # there...
+        # I create the subfolder with the output data (sometimes Quantum
+        # Espresso codes crash if an empty folder is not already there
         tempfolder.get_subfolder(self.OUTPUT_SUBFOLDER, create=True)
                 
         atomic_species_card_list = ["ATOMIC_SPECIES\n"]
@@ -451,24 +445,19 @@ class BasePwCpInputGenerator(object):
                 "not valid namelists for the current type of calculation: "
                 "{}".format(",".join(input_params.keys())))
 
-        try:
-            parent_calc_out_subfolder_dst = settings_dict['parent_calc_out_subfolder']
-        except KeyError:
-            parent_calc_out_subfolder_dst = self._default_parent_folder_destination
-            
-        parent_calc_out_subfolder = settings_dict.pop('parent_calc_out_subfolder',
-            self._default_parent_folder_source
-            )
-
         # operations for restart
         symlink = settings_dict.pop('PARENT_FOLDER_SYMLINK',self._default_symlink_usage) # a boolean
         if symlink:
-            if parent_calc_folder is not None:               
+            if parent_calc_folder is not None:
+                # I put the symlink to the old parent ./out folder
+                import glob
+                if glob.has_magic(self._restart_copy_from):
+                    raise NotImplementedError("Implement the symlink with * patterns")
                 remote_symlink_list.append(
                         (parent_calc_folder.get_computer().uuid,
                          os.path.join(parent_calc_folder.get_remote_path(),
-                         parent_calc_out_subfolder),
-                         parent_calc_out_subfolder_dst
+                                      self._restart_copy_from),
+                         self._restart_copy_to
                          ))
         else:
             # copy remote output dir, if specified
@@ -476,8 +465,8 @@ class BasePwCpInputGenerator(object):
                 remote_copy_list.append(
                         (parent_calc_folder.get_computer().uuid,
                          os.path.join(parent_calc_folder.get_remote_path(),
-                         parent_calc_out_subfolder),
-                         parent_calc_out_subfolder_dst
+                                      self._restart_copy_from),
+                         self._restart_copy_to
                          ))
 
         calcinfo = CalcInfo()
@@ -638,8 +627,8 @@ class BasePwCpInputGenerator(object):
             old_settings_dict = calc_inp['settings'].get_dict()
         except KeyError:
             old_settings_dict = {}
-        if parent_folder_symlink:
-            old_settings_dict['PARENT_FOLDER_SYMLINK'] = True
+        if parent_folder_symlink is not None:
+            old_settings_dict['PARENT_FOLDER_SYMLINK'] = parent_folder_symlink
             
         if old_settings_dict: # if not empty dictionary
             settings = ParameterData(dict=old_settings_dict)

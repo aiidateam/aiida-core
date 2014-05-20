@@ -953,7 +953,10 @@ class DbGroup(m.Model):
 
     @python_2_unicode_compatible
     def __str__(self):
-        return self.name
+        if self.type:
+            return '<DbGroup [type: {}] "{}">'.format(self.type, self.name)
+        else:
+            return '<DbGroup [user-defined] "{}">'.format(self.name)
 
 class DbComputer(m.Model):
     """

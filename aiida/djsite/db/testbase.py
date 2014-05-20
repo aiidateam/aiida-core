@@ -9,6 +9,8 @@ from django.utils import unittest
 # The value must be the module name containing the subclasses of unittest.TestCase
 db_test_list = {
     'generic': 'aiida.djsite.db.subtests.generic',
+    'nodes': 'aiida.djsite.db.subtests.nodes',
+    'dataclasses': 'aiida.djsite.db.subtests.dataclasses',
     'qepw': 'aiida.djsite.db.subtests.quantumespressopw'}
 
 class AiidaTestCase(unittest.TestCase):
@@ -35,28 +37,31 @@ class AiidaTestCase(unittest.TestCase):
     def tearDownClass(cls):
         import getpass
         from django.core.exceptions import ObjectDoesNotExist
-        from aiida.djsite.db.models import DbComputer
-        from aiida.djsite.db.models import DbUser
+        from aiida.djsite.db.models import DbComputer, DbUser
         from aiida.djsite.utils import get_configured_user_email
 
         # I first delete the workflows
         from aiida.djsite.db.models import DbWorkflow
-        DbWorkflow.objects.filter().delete()
+        DbWorkflow.objects.all().delete()
+
+        # Delete groups
+        from aiida.djsite.db.models import DbGroup
+        DbGroup.objects.all().delete()
 
         # I first need to delete the links, because in principle I could
         # not delete input nodes, only outputs. For simplicity, since
         # I am deleting everything, I delete the links first
         from aiida.djsite.db.models import DbLink
-        DbLink.objects.filter().delete()
+        DbLink.objects.all().delete()
         
         # Then I delete the nodes, otherwise I cannot
         # delete computers and users
         from aiida.djsite.db.models import DbNode
-        DbNode.objects.filter().delete()
+        DbNode.objects.all().delete()
 
         try:
             DbUser.objects.get(email=get_configured_user_email()).delete()
         except ObjectDoesNotExist:
             pass
         
-        DbComputer.objects.filter().delete()
+        DbComputer.objects.all().delete()

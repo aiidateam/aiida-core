@@ -35,6 +35,11 @@ DATABASES = {
         }
     }
 
+# Increase timeout for SQLite engine
+# Does not solve the problem, but alleviates it for small number of calculations
+if 'sqlite' in DBENGINE:
+    DATABASES['default']['OPTIONS'] = {'timeout': 60}
+
 ## Checks on the LOCAL_REPOSITORY
 try:
     LOCAL_REPOSITORY

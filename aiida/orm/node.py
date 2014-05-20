@@ -5,7 +5,7 @@ from django.core.exceptions import ObjectDoesNotExist
 #from aiida.djsite.db.models import DbNode, DbAttribute
 from aiida.common.exceptions import (
     DbContentError, InternalError, ModificationNotAllowed,
-    NotExistent, UniquenessError, ValidationError )
+    NotExistent, UniquenessError )
 from aiida.common.folders import RepositoryFolder, SandboxFolder
 
 
@@ -198,6 +198,9 @@ class Node(object):
         if dbnode is not None:
             if not isinstance(dbnode, DbNode):
                 raise TypeError("dbnode is not a DbNode instance")
+            if dbnode.pk is None:
+                raise ValueError("If cannot load an aiida.orm.Node instance "
+                                 "from an unsaved Django DbNode object.")                
             if kwargs:
                 raise ValueError("If you pass a dbnode, you cannot pass any "
                                  "further parameter")
@@ -223,8 +226,9 @@ class Node(object):
 #                                     "valid for class {}: {}".format(
 #                    uuid, self.__class__.__name__, e.message))
         else:
-            
-            self._dbnode = DbNode(user=get_automatic_user(),
+            # TODO: allow to get the user from the parameters
+            user = get_automatic_user()
+            self._dbnode = DbNode(user=user,
                                   uuid=get_new_uuid(),
                                   type=self._plugin_type_string)
             
@@ -244,6 +248,13 @@ class Node(object):
             # Automatically set all *other* attributes, if possible, otherwise
             # stop
             self._set_with_defaults(**kwargs)
+
+    def __str__(self):
+        classname = self.__class__.__name__
+        if self._to_be_stored:
+            return "<{} (unstored)>".format(classname)
+        else:
+            return "<{} (pk={})>".format(classname, self.pk)
 
     @classmethod
     def query(cls,*args,**kwargs):
@@ -1148,7 +1159,6 @@ class Node(object):
     @property
     def uuid(self):
         """
-        
         :return: a string with the uuid
         """
         return unicode(self.dbnode.uuid)
@@ -1156,8 +1166,8 @@ class Node(object):
     @property
     def pk(self):
         """
-        
-        :return: a the principal key (the ID)
+        :return: the principal key (the ID) as an integer, or None if the
+           node was not stored yet
         """
         return self.dbnode.pk
 
@@ -1165,8 +1175,7 @@ class Node(object):
     @property
     def dbnode(self):
         """
-        
-        :return: the DbNode object.
+        :return: the corresponding Django DbNode object.
         """
         from aiida.djsite.db.models import DbNode
         

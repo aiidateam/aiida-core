@@ -278,6 +278,8 @@ def submit_jobs():
             try:
                 authinfo = get_authinfo(dbcomputer, aiidauser)
             except AuthenticationError:
+                # Put each calculation in the SUBMISSIONFAILED state because
+                # I do not have AuthInfo to submit them
                 calcs_to_inquire = Calculation.get_all_with_state(
                     state=calc_states.TOSUBMIT,
                     computer=dbcomputer,

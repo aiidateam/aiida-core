@@ -11,7 +11,7 @@ logger = aiidalogger.getChild('workflowmanager')
 def daemon_main_loop():
     
     """
-    Support method to keep coherence with the Execution Manager
+    Support method to keep coherence with the Execution Manager, only launches ``execute_steps``
     """
     
     execute_steps()
@@ -19,12 +19,20 @@ def daemon_main_loop():
 def execute_steps():
     
     """
-    This method loops on the RUNNING workflows and checks for RUNNING steps.
+    This method loops on the RUNNING workflows and handled the execution of the steps until
+    each workflow reaches an end (or gets stopped for errors).
     
-    - If all the calculation of the step are finished the step is advanced to the next method
-    - If the step does not have a next method is flagged as finished anyway
-    - If the method does not have anymore RUNNING steps is flagged as finished 
-    
+    In the loop for each RUNNING workflow the method loops also in each of its RUNNING steps,
+    testing if all the calculation and subworkflows attached to the step are FINISHED. In this
+    case the step is set as FINISHED and the workflow is advanced to the step's next method present 
+    in the db with ``advance_workflow``, otherwise if any step's Calculation is found in NEW state 
+    the method will submit. If none of the previous conditions apply the step is flagged as 
+    ERROR and cannot proceed anymore, blocking the future execution of the step and, connected, 
+    the workflow. 
+      
+    Finally, for each workflow the method tests if there are INITIALIZED steps to be launched,
+    and in case reloads the workflow and execute the specific those steps. In case or error
+    the step is flagged in ERROR state and the stack is reported in the workflow report.
     """
     
     from aiida.djsite.utils import get_automatic_user
@@ -134,6 +142,27 @@ def execute_steps():
         
 def advance_workflow(w_superclass, step):
     
+    """
+    The method tries to advance a step running its next method and handling possible errors.
+    
+    If the method to advance is the Workflow ``exit`` method and there are no more steps RUNNING or 
+    in ERROR state then the workflow is set to FINISHED, otherwise an error is added to the report 
+    and the Workflow is flagged as ERORR. 
+    
+    If the method is the ``wf_default_call`` this means the step had no next, and possibly is part of
+    a branching. In this case the Workflow is not advanced but the method returns True to let the other
+    steps kick in.
+    
+    Finally the methos tries to load the Workflow and execute the selected step, reporting the errors
+    and the stack trace in the report in case of problems. Is no errors are reported the method returns
+    True, in all the other cases the Workflow is set to ERROR state and the method returns False. 
+    
+    :param w_superclass: Workflow object to advance
+    :param step: DbWorkflowStep to execute
+    :return: True if the step has been executed, False otherwise
+    """
+    
+    
     from aiida.orm.workflow import Workflow
     import sys, os
     
@@ -157,7 +186,7 @@ def advance_workflow(w_superclass, step):
         
     elif not step.nextcall==None:
         
-        logger.info("In  advance_workflow the step {0} goes to nextcall {1}".format(step.name, step.nextcall))
+        logger.info("In advance_workflow the step {0} goes to nextcall {1}".format(step.name, step.nextcall))
         
         try:
             w = Workflow.get_subclass_from_uuid(w_superclass.uuid)

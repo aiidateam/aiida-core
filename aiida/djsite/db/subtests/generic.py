@@ -1064,6 +1064,64 @@ class TestNodeBasic(AiidaTestCase):
         
         
 class TestSubNodesAndLinks(AiidaTestCase):
+
+    def test_cachelink(self):
+        """
+        Test the proper functionality of the links cache, with different
+        scenarios.
+        """
+        n1 = Node()
+        n2 = Node()
+        n3 = Node().store()
+        n4 = Node().store()
+        endnode = Node()
+        
+        # Nothing stored
+        endnode._add_link_from(n1, "N1")
+        # Try also reverse storage
+        n2._add_link_to(endnode, "N2")
+        
+        self.assertEqual(endnode.get_inputs(only_in_db=True), [])
+        self.assertEqual(set([(i[0], i[1].uuid)
+                              for i in endnode.get_inputs(also_labels=True)]), 
+                         set([("N1", n1.uuid), ("N2", n2.uuid)]))
+
+        # Endnode not stored yet, n3 and n4 already stored        
+        endnode._add_link_from(n3, "N3")
+        # Try also reverse storage
+        n4._add_link_to(endnode, "N4")
+        
+        self.assertEqual(endnode.get_inputs(only_in_db=True), [])
+        self.assertEqual(set([(i[0], i[1].uuid)
+                              for i in endnode.get_inputs(also_labels=True)]), 
+                         set([("N1", n1.uuid), ("N2", n2.uuid),
+                              ("N3", n3.uuid), ("N4", n4.uuid)]))        
+    
+        endnode.store()
+        self.assertEqual(set([(i[0], i[1].uuid)
+                              for i in endnode.get_inputs(only_in_db=True,
+                                                          also_labels=True)]), 
+                         set([("N3", n3.uuid), ("N4", n4.uuid)]))
+        self.assertEqual(set([(i[0], i[1].uuid)
+                              for i in endnode.get_inputs(also_labels=True)]), 
+                         set([("N1", n1.uuid), ("N2", n2.uuid),
+                              ("N3", n3.uuid), ("N4", n4.uuid)]))        
+        
+        # This will also store n1 and n2!
+        endnode.store_input_links()
+        
+        self.assertEqual(set([(i[0], i[1].uuid)
+                              for i in endnode.get_inputs(only_in_db=True,
+                                                          also_labels=True)]), 
+                         set([("N1", n1.uuid), ("N2", n2.uuid),
+                              ("N3", n3.uuid), ("N4", n4.uuid)]))
+        self.assertEqual(set([(i[0], i[1].uuid)
+                              for i in endnode.get_inputs(also_labels=True)]), 
+                         set([("N1", n1.uuid), ("N2", n2.uuid),
+                              ("N3", n3.uuid), ("N4", n4.uuid)]))        
+        
+        
+    
     def test_use_code(self):
         from aiida.orm import Calculation, Code
 
@@ -1075,21 +1133,26 @@ class TestSubNodesAndLinks(AiidaTestCase):
                                    resources={'num_machines': 1, 'num_cpus_per_machine': 1})
         calc = Calculation(computer=computer,
                            resources={'num_machines': 1, 'num_cpus_per_machine': 1}).store()
-        # calc is not stored, and code is not (can't add links to node)
-        with self.assertRaises(ModificationNotAllowed):
-            unstoredcalc.use_code(code)
+
+        # calc is not stored, and also code is not 
+        unstoredcalc.use_code(code)
 
         # calc is stored, but code is not
-        with self.assertRaises(ModificationNotAllowed):
-            calc.use_code(code)
+        calc.use_code(code)
+
+        self.assertEqual(calc.get_code().uuid, code.uuid)
+        self.assertEqual(unstoredcalc.get_code().uuid, code.uuid)
 
         # calc is not stored, but code is
         code.store()        
-        with self.assertRaises(ModificationNotAllowed):
-            unstoredcalc.use_code(code)
 
-        # code and calc are stored
-        calc.use_code(code) 
+        self.assertEqual(calc.get_code().uuid, code.uuid)
+        self.assertEqual(unstoredcalc.get_code().uuid, code.uuid)
+
+        unstoredcalc.store()
+        
+        self.assertEqual(calc.get_code().uuid, code.uuid)
+        self.assertEqual(unstoredcalc.get_code().uuid, code.uuid)
 
     def test_links_label_constraints(self):
         n1 = Node().store()

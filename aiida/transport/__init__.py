@@ -492,6 +492,16 @@ class Transport(object):
         """
         raise NotImplementedError
     
+    def symlink(self,remotesource,remotedestination):
+        """
+        Create a symbolic link between the remote source and the remote 
+        destination
+        
+        :param remotesource: remote source
+        :param remotedestination:remote destination
+        """
+        raise NotImplementedError
+    
     def whoami(self):
         """
         Get the remote username

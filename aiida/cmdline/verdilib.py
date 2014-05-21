@@ -28,7 +28,8 @@ from aiida.cmdline.commands.computer import Computer
 from aiida.cmdline.commands.daemon import Daemon
 from aiida.cmdline.commands.data import Data
 from aiida.cmdline.commands.devel import Devel
-from aiida.cmdline.commands.export import Export
+from aiida.cmdline.commands.exportfile import Export
+from aiida.cmdline.commands.importfile import Import
 from aiida.cmdline.commands.workflow import Workflow
 
 
@@ -283,6 +284,7 @@ class GoToComputer(VerdiCommand):
         remotedir = calc.get_remote_workdir()
         if not remotedir:
             print >> sys.stderr, "No remote work directory is set for this calculation!"
+            print >> sys.stderr, "(It is possible that the daemon did not submit the calculation yet)"
             sys.exit(1)
         
         # get the command to run (does not require to open the connection!)

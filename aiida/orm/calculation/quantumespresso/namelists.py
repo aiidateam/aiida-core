@@ -8,12 +8,13 @@ import os
 from aiida.orm import Calculation, DataFactory
 from aiida.common.exceptions import InputValidationError
 from aiida.common.datastructures import CalcInfo
+from aiida.common.utils import classproperty
 from aiida.orm.calculation.quantumespresso import (
     _lowercase_dict, _uppercase_dict, get_input_data_text)
 
-ParameterData = DataFactory('parameter') 
-RemoteData = DataFactory('remote') 
-FolderData = DataFactory('folder') 
+from aiida.orm.data.parameter import ParameterData 
+from aiida.orm.data.remote import RemoteData 
+from aiida.orm.data.folder import FolderData 
 
     
 class NamelistsCalculation(Calculation):   
@@ -33,6 +34,36 @@ class NamelistsCalculation(Calculation):
     _parent_folder_type = 'RemoteData'
     _default_parser = None
 
+    @classproperty
+    def _use_methods(cls):
+        """
+        Additional use_* methods for the namelists class.
+        """
+        retdict = Calculation._use_methods
+        retdict.update({
+            "settings": {
+               'valid_types': ParameterData,
+               'additional_parameter': None,
+               'linkname': 'settings',
+               'docstring': "Use an additional node for special settings",
+               },
+            "parameters": {
+               'valid_types': ParameterData,
+               'additional_parameter': None,
+               'linkname': 'parameters',
+               'docstring': ("Use a node that specifies the input parameters "
+                             "for the namelists"),
+               },
+            "parent_folder": {
+               'valid_types': (RemoteData, FolderData),
+               'additional_parameter': None,
+               'linkname': 'parent_calc_folder',
+               'docstring': ("Use a remote folder as parent folder (for "
+                             "restarts and similar"),
+               },
+            })
+        return retdict
+
     def _get_following_text(self, inputdict, settings):
         """
         By default, no text follows the namelists section.
@@ -43,30 +74,28 @@ class NamelistsCalculation(Calculation):
         """
         return ""
     
-    def _prepare_for_submission(self,tempfolder, inputdict = None):        
+    def _prepare_for_submission(self,tempfolder, inputdict):        
         """
         This is the routine to be called when you want to create
         the input files and related stuff with a plugin.
         
         :param tempfolder: a aiida.common.folders.Folder subclass where
                            the plugin should put all its files.
+        :param inputdict: a dictionary with the input nodes, as they would
+                be returned by get_inputdata_dict (without the Code!)
         """
         local_copy_list = []
         remote_copy_list = []
         
-        # The code is not here, only the data        
-        if inputdict is None:
-            inputdict = self.get_inputdata_dict()
-
         try:
-            parameters = inputdict.pop(self.get_linkname_parameters())
+            parameters = inputdict.pop(self.get_linkname('parameters'))
         except KeyError:
             raise InputValidationError("No parameters specified for this calculation")
         if not isinstance(parameters, ParameterData):
             raise InputValidationError("parameters is not of type ParameterDa")
         
         # Settings can be undefined, and defaults to an empty dictionary
-        settings = inputdict.pop(self.get_linkname_settings(),None)
+        settings = inputdict.pop(self.get_linkname('settings'),None)
         if settings is None:
             settings_dict = {}
         else:
@@ -77,7 +106,7 @@ class NamelistsCalculation(Calculation):
             settings_dict = _uppercase_dict(settings.get_dict(),
                                             dict_name='settings')
 
-        parent_calc_folder = inputdict.pop(self.get_linkname_parent_calc_folder(),None)
+        parent_calc_folder = inputdict.pop(self.get_linkname('parent_folder'),None)
         
         if parent_calc_folder is not None:
             if not isinstance(parent_calc_folder, self._parent_folder_type):
@@ -198,62 +227,4 @@ class NamelistsCalculation(Calculation):
         
         return calcinfo
 
-    def use_settings(self, data):
-        """
-        Set the settings for this calculation
-        """
-        if not isinstance(data, ParameterData):
-            raise ValueError("The data must be an instance of the ParameterData class")
 
-        self._replace_link_from(data, self.get_linkname_settings())
-
-    def get_linkname_settings(self):
-        """
-        The name of the link used for the settings
-        """
-        return "settings"
-
-    def use_parameters(self, data):
-        """
-        Set the parameters for this calculation
-        """
-        if not isinstance(data, ParameterData):
-            raise ValueError("The data must be an instance of the ParameterData class")
-
-        self._replace_link_from(data, self.get_linkname_parameters())
-
-    def get_linkname_parameters(self):
-        """
-        The name of the link used for the parameters
-        """
-        return "parameters"
-        
-    def use_parent_folder(self, data):
-        """
-        Set the folder of the parent calculation, if any
-        """
-        if not isinstance(data, self._parent_folder_type):
-            raise ValueError("The data must be an instance of the {} class"
-                             .format(self._parent_folder_type))
-
-        self._replace_link_from(data, self.get_linkname_parent_calc_folder())
-
-    def set_parent_calc(self,calc):
-        """
-        Set the parent calculation, from which it will inherit the 
-        outputsubfolder. The link will be created from parent 
-        RemoteData/FolderData to NamelistCalculation. 
-        """
-        from aiida.common.exceptions import UniquenessError
-        remotedatas = calc.get_outputs(type=self._parent_folder_type)
-        if len(remotedatas) != 1:
-            raise UniquenessError("More than one output {} found".format(self._parent_folder_type))
-        remotedata = remotedatas[0]
-        
-        self.use_parent_folder(remotedata)
-
-    def get_linkname_parent_calc_folder(self):
-        """
-        The name of the link used for the calculation folder of the parent (if any)
-        """
-        return "parent_calc_folder"

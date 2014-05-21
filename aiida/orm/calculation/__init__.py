@@ -37,7 +37,209 @@ class Calculation(Node):
                 "parser_name": cls._default_parser,
                 "linkname_retrieved": cls._linkname_retrieved,
           }
+    
+    # Nodes that can be added as input using the use_* methods
+    @classproperty
+    def _use_methods(cls):
+        """
+        Return the list of valid input nodes that can be set using the
+        use_* method. 
+        
+        For each key KEY of the return dictionary, the 'use_KEY' method is
+        exposed.
+        Each value must be a dictionary, defining the following keys:
+        * valid_types: a class, or tuple of classes, that will be used to
+          validate the parameter using the isinstance() method
+        * additional_parameter: None, if no additional parameters can be passed
+          to the use_KEY method beside the node, or the name of the additional
+          parameter (a string)
+        * linkname: the name of the link to create (a string if
+          additional_parameter is None, or a callable if additional_parameter is
+          a string. The value of the additional parameter will be passed to the
+          callable, and it should return a string.
+        * docstring: a docstring for the function
+        
+        .. note:: in subclasses, always extend the parent class, do not
+          substitute it!
+        """
+        from aiida.orm import Code
+        
+        return {
+            "code": {
+               'valid_types': Code,
+               'additional_parameter': None,
+               'linkname': 'code',
+               'docstring': "Choose the code to use",
+               },
+            }
+
+    def __dir__(self):
+        """
+        Allow to list all valid attributes, adding also the use_* methods
+        """
+        return sorted(dir(type(self)) + list(['use_{}'.format(k)
+                                 for k in self._use_methods.iterkeys()]))
+
+    def __getattr__(self,name):
+        """
+        Expand the methods with the use_* calls. Note that this method only 
+        gets called if 'name' is not already defined as a method. Returning
+        None will then automatically raise the standard AttributeError 
+        exception.
+        """
+        class UseMethod(object):
+            """
+            Generic class for the use_* methods. To know which use_* methods
+            exist, use the ``dir()`` function. To get help on a specific method,
+            for instance use_code, use::
+              ``print use_code.__doc__``
+            """
             
+            def __init__(self, node, actual_name, data):
+                from aiida.common.exceptions import InternalError
+                
+                self.node = node
+                self.actual_name = actual_name
+                self.data = data
+                try:
+                    self.__doc__ = data['docstring']
+                except KeyError:
+                    # Forgot to define the docstring! Use the default one
+                    pass
+                            
+            def __call__(self, parent_node, *args, **kwargs):
+                import collections
+                
+                # Not really needed, will be checked in get_linkname
+                # But I do anyway in order to raise an exception as soon as
+                # possible, with the most intuitive caller function name
+                additional_parameter = self.node._parse_single_arg(
+                    function_name='use_{}'.format(self.actual_name),
+                    additional_parameter=self.data['additional_parameter'],
+                    args=args, kwargs=kwargs)
+                 
+                # Type check   
+                if isinstance(self.data['valid_types'], collections.Iterable):
+                    valid_types_string = ",".join([_.__name__ for _ in 
+                                                   self.data['valid_types']])
+                else:
+                    valid_types_string = self.data['valid_types'].__name__
+                if not isinstance(parent_node, self.data['valid_types']):
+                    raise TypeError("The given node is not of the valid type "
+                                    "for use_{}. Valid types are: {}, while "
+                                    "you provided {}".format(
+                                    self.actual_name, valid_types_string,
+                                    parent_node.__class__.__name__))
+                
+                # Get actual link name
+                actual_linkname = self.node.get_linkname(actual_name, *args,
+                                                         **kwargs)
+                # Checks that such an argument exists have already been
+                # made inside actual_linkname
+                    
+                # Here I do the real job
+                self.node._replace_link_from(parent_node, actual_linkname)
+                
+        prefix = 'use_'
+        valid_use_methods = list(['{}{}'.format(prefix, k)
+                                 for k in self._use_methods.iterkeys()])
+        
+        if name in valid_use_methods:
+            actual_name = name[len(prefix):]
+            return UseMethod(node=self, actual_name=actual_name,
+                             data=self._use_methods[actual_name])
+        else:
+            raise AttributeError("'{}' object has no attribute '{}'".format(
+                self.__class__.__name__, name))
+   
+    @classmethod 
+    def _parse_single_arg(cls, function_name, additional_parameter,
+                         args, kwargs):
+        """
+        Verifies that a single additional argument has been given (or no
+        additional argument, if additional_parameter is None). Also
+        verifies its name.
+        
+        :param function_name: the name of the caller function, used for
+            the output messages
+        :param additional_parameter: None if no additional parameters
+            should be passed, or a string with the name of the parameter
+            if one additional parameter should be passed.
+        
+        :return: None, if additional_parameter is None, or the value of 
+            the additional parameter
+        :raise TypeError: on wrong number of inputs
+        """
+        # Here all the logic to check if the parameters are correct.
+        if additional_parameter is not None:
+            if len(args) == 1:                        
+                if kwargs:
+                    raise TypeError("{}() received too many args".format(
+                        function_name))
+                additional_parameter_data = args[0]
+            elif len(args) == 0:
+                kwargs_copy = kwargs.copy()
+                try:
+                    additional_parameter_data = kwargs_copy.pop(
+                        additional_parameter)
+                except KeyError:
+                    if kwargs_copy:
+                        raise TypeError("{}() got an unexpected keyword "
+                            "argument '{}'".format(
+                            function_name, kwargs_copy.keys()[0]))
+                    else:
+                        raise TypeError("{}() requires more "
+                            "arguments".format(function_name))
+                if kwargs_copy:
+                    raise TypeError("{}() got an unexpected keyword "
+                        "argument '{}'".format(
+                        function_name, kwargs_copy.keys()[0]))  
+            else:
+                raise TypeError("{}() received too many args".format(
+                    function_name))
+            return additional_parameter_data
+        else:
+            if kwargs:
+                raise TypeError("{}() got an unexpected keyword "
+                                "argument '{}'".format(
+                                    function_name, kwargs.keys()[0]))
+            if len(args) != 0:
+                raise TypeError("{}() received too many args".format(
+                    function_name))
+                
+            return None
+
+    
+    def get_linkname(self, link, *args, **kwargs):
+        """
+        Return the linkname used for a given input link
+
+        Pass as parameter "NAME" if you would call the use_NAME method.
+        If the use_NAME method requires a further parameter, pass that
+        parameter as the second parameter.
+        """
+        from aiida.common.exceptions import InternalError
+
+        try:
+            data = self._use_methods[link]
+        except KeyError:
+            raise ValueError("No '{}' link is defined for this "
+                "calculation".format(link))
+
+        # Raises if the wrong # of parameters is passed
+        additional_parameter = self._parse_single_arg(
+            function_name='get_linkname',
+            additional_parameter=data['additional_parameter'],
+            args=args, kwargs=kwargs)
+                      
+        if data['additional_parameter'] is not None:
+            # Call the callable to get the proper linkname
+            actual_linkname = data['linkname'](additional_parameter)
+        else:
+            actual_linkname = data['linkname']
+        
+        return actual_linkname
+        
     def validate(self):
         """
         Verify if all the input nodes are present and valid.
@@ -301,6 +503,30 @@ class Calculation(Node):
         """
         return self.get_attr("append_text", "")
 
+    def set_custom_scheduler_commands(self, val):
+        """
+        Set a (possibly multiline) string with the commands that the user
+        wants to manually set for the scheduler.
+        
+        The difference of this method with respect to the set_prepend_text
+        is the position in the scheduler submission file where such text is
+        inserted: with this method, the string is inserted before any 
+        non-scheduler command.
+        """
+        self.set_attr("custom_scheduler_commands", unicode(val))
+
+    def get_custom_scheduler_commands(self):
+        """
+        Return a (possibly multiline) string with the commands that the user
+        wants to manually set for the scheduler.
+        See also the documentation of the corresponding
+        ``set_`` method. 
+
+        :return: the custom scheduler command, or an empty string if no 
+          custom command was defined.
+        """
+        return self.get_attr("custom_scheduler_commands", "")
+
     def get_extra_mpirun_params(self):
         """
         Return a list of strings, that are the extra params to pass to the
@@ -363,7 +589,9 @@ class Calculation(Node):
         
     def _add_link_from(self,src,label=None):
         '''
-        Add a link with a code as destination.
+        Add a link with a code as destination. Only possible if the calculation
+        is in state NEW.
+        
         You can use the parameters of the base Node class, in particular the
         label parameter to label the link.
         
@@ -374,6 +602,30 @@ class Calculation(Node):
         from aiida.orm.data import Data
         from aiida.orm.code import Code
         
+        if not isinstance(src,(Data, Code)):
+            raise ValueError("Nodes entering in calculation can only be of "
+                             "type data or code")
+        
+        valid_states = [calc_states.NEW]
+
+        if self.get_state() not in valid_states:
+            raise ModificationNotAllowed(
+                "Can add an input link to a calculation only if it is in one "
+                "of the following states: {}, it is instead {}".format(
+                    valid_states, self.get_state()))
+
+        return super(Calculation,self)._add_link_from(src, label)
+
+    def _replace_link_from(self,src,label):
+        '''
+        Replace a link. Only possible if the calculation is in state NEW.
+        
+        :param src: a node of the database. It cannot be a Calculation object.
+        :param str label: Name of the link. 
+        '''
+        
+        from aiida.orm.data import Data
+        from aiida.orm.code import Code
         
         if not isinstance(src,(Data, Code)):
             raise ValueError("Nodes entering in calculation can only be of "
@@ -383,11 +635,28 @@ class Calculation(Node):
 
         if self.get_state() not in valid_states:
             raise ModificationNotAllowed(
-                "Can add an input node to a calculation only if it is in one "
+                "Can replace an input link to a calculation only if it is in one "
                 "of the following states: {}, it is instead {}".format(
                     valid_states, self.get_state()))
 
-        return super(Calculation,self)._add_link_from(src, label)
+        return super(Calculation,self)._replace_link_from(src, label)
+
+    def _remove_link_from(self,label):
+        '''
+        Remove a link. Only possible if the calculation is in state NEW.
+        
+        :param str label: Name of the link to remove. 
+        '''        
+        valid_states = [calc_states.NEW]
+
+        if self.get_state() not in valid_states:
+            raise ModificationNotAllowed(
+                "Can remove an input link to a calculation only if it is in one "
+                "of the following states: {}, it is instead {}".format(
+                    valid_states, self.get_state()))
+
+        return super(Calculation,self)._remove_link_from(label)
+
 
     def _set_state(self, state):
         if state not in calc_states:
@@ -545,7 +814,7 @@ class Calculation(Node):
             return None
     
     @classmethod
-    def list_calculations(cls,states=None, past_days=None, pks=[]):
+    def list_calculations(cls,states=None, past_days=None, group=None, pks=[]):
         """
         This function return a string with a description of the AiiDA calculations.
         
@@ -553,6 +822,8 @@ class Calculation(Node):
             calculations in the states "states", otherwise shows all. Default = None.
         :param past_days: If specified, show only calculations that were created in
             the given number of past days.
+        :param group: If specified, show only calculations belonging to a group
+            with the given name.
         :param pks: if specified, must be a list of integers, and only calculations
             within that list are shown. Otherwise, all calculations are shown.
             If specified, sets state to None and ignores the 
@@ -584,15 +855,18 @@ class Calculation(Node):
             q_object = Q(pk__in=pks)
         else:
             q_object = Q(user=get_automatic_user())
-            if states:
+            if states is not None:
 #                q_object.add(~Q(dbattributes__key='state',
 #                                dbattributes__tval=only_state,), Q.AND)
                 q_object.add( Q(dbattributes__key='state',
                                 dbattributes__tval__in=states,), Q.AND)
-            if past_days:
+            if past_days is not None:
                 now = timezone.now()
                 n_days_ago = now - datetime.timedelta(days=past_days)
                 q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
+
+            if group is not None:
+                q_object.add(Q(dbgroups__name=group), Q.AND)
 
         calc_list = cls.query(q_object).distinct().order_by('ctime')
         
@@ -726,19 +1000,6 @@ class Calculation(Node):
         else:
             return queryresults
 
-    def use_code(self, code):
-        """
-        Set the code for this calculation.
-        
-        :param code: the code object to be used by the calculation.
-        """
-        from aiida.orm import Code
-
-        if not isinstance(code, Code):
-            raise ValueError("The code must be an instance of the Code class")
-
-        self._replace_link_from(code, self.get_linkname_code())
-
     def get_code(self):
         """
         Return the code for this calculation, or None if the code
@@ -747,17 +1008,9 @@ class Calculation(Node):
         from aiida.orm import Code
         
         return dict(self.get_inputs(type=Code, also_labels=True)).get(
-            self.get_linkname_code(), None)
-        
-    def get_linkname_code(self):
-        """
-        The name of the link used for the code.
-        
-        :return: a string
-        """
-        return "code"
-        
-    def _prepare_for_submission(self,tempfolder,inputdict=None):        
+            self._use_methods['code']['linkname'], None)
+                
+    def _prepare_for_submission(self,tempfolder,inputdict):        
         """
         This is the routine to be called when you want to create
         the input files and related stuff with a plugin.
@@ -765,16 +1018,13 @@ class Calculation(Node):
         Args:
             tempfolder: a aiida.common.folders.Folder subclass where
                 the plugin should put all its files.
-            inputdict: None, if it has to be calculated automatically
-                from the input nodes using the
-                self.get_inputdata_dict() method.
-                Otherwise, a dictionary where
+            inputdict: A dictionary where
                 each key is an input link name and each value an AiiDA
                 node, as it would be returned by the
-                self.get_inputdata_dict() method.
-                The advantage of having this as a key is that this
-                allows to test for submission even before creating 
-                the nodes in the DB.
+                self.get_inputdata_dict() method (without the Code!).
+                The advantage of having this explicitly passed is that this
+                allows to choose outside which nodes to use, and whether to
+                use also unstored nodes, e.g. in a test_submit phase.
 
         TODO: document what it has to return (probably a CalcInfo object)
               and what is the behavior on the tempfolder
@@ -806,9 +1056,11 @@ class Calculation(Node):
         """ 
         from aiida.common.exceptions import InvalidOperation
         
-        if self.get_state() != calc_states.NEW:
-            raise InvalidOperation("Cannot submit a calculation not in {} state"
-                                   .format(calc_states.NEW) )
+        current_state = self.get_state()
+        if current_state != calc_states.NEW:
+            raise InvalidOperation("Cannot submit a calculation not in {} "
+                                   "state (the current state is {})"
+                                   .format(calc_states.NEW, current_state) )
 
         self._set_state(calc_states.TOSUBMIT)
 
@@ -917,11 +1169,16 @@ class Calculation(Node):
             actually being submitted at the same time in another thread.
         """
         #TODO: Check if we want to add a status "KILLED" or something similar.
-        
+        from aiida.djsite.utils import get_dblogger_extra
         from aiida.common.exceptions import InvalidOperation, RemoteOperationError
         
+        logger_extra = get_dblogger_extra(self)    
+        
         if (self.get_state() == calc_states.NEW or 
-            self.get_state() == calc_states.TOSUBMIT):
+                self.get_state() == calc_states.TOSUBMIT):
+            self.logger.warning("Calculation {} killed by the user "
+                                "(it was in {} state)".format(
+                                self.pk, self.get_state()), extra=logger_extra)
             self._set_state(calc_states.FAILED)
             return
         
@@ -939,15 +1196,21 @@ class Calculation(Node):
         # And I call the proper kill method for the job ID of this calculation
         with t:
             retval = s.kill(self.get_job_id())
-        
+            
         # Raise error is something went wrong
         if not retval:
             raise RemoteOperationError("An error occurred while trying to kill "
                                        "calculation {} (jobid {}), see log "
                                        "(maybe the calculation already finished?)"
                                        .format(self.pk, self.get_job_id()))
+        else:
+            self._set_state(calc_states.FAILED)
+            self.logger.warning("Calculation {} killed by the user "
+                                "(it was WITHSCHEDULER)".format(self.pk),
+                                extra=logger_extra)
+            
         
-    def presubmit(self, folder, code, inputdict=None):
+    def presubmit(self, folder, use_unstored_links=False):
         import os
         import StringIO
         import json
@@ -959,6 +1222,12 @@ class Calculation(Node):
         from aiida.orm import Computer
 
         computer = self.get_computer()
+
+        code = self.get_code()
+        if use_unstored_links:
+            inputdict = self.get_inputdata_dict(only_in_db=False)
+        else:
+            inputdict = self.get_inputdata_dict(only_in_db=False)
 
         calcinfo = self._prepare_for_submission(folder, inputdict)
         s = computer.get_scheduler()
@@ -998,26 +1267,23 @@ class Calculation(Node):
                 retrieve_list.append(job_tmpl.sched_error_path)
         self._set_retrieve_list(retrieve_list)
 
+        # the if is done so that if the method returns None, this is 
+        # not added. This has two advantages:
+        # - it does not add too many \n\n if most of the prepend_text are empty
+        # - most importantly, skips the cases in which one of the methods 
+        #   would return None, in which case the join method would raise
+        #   an exception
+        job_tmpl.prepend_text = "\n\n".join(_ for _ in 
+            [computer.get_prepend_text(), 
+             code.get_prepend_text(),
+             calcinfo.prepend_text,
+             self.get_prepend_text()] if _)
         
-        job_tmpl.prepend_text = (
-            ((self.get_prepend_text() + u"\n\n") if 
-                self.get_prepend_text() else u"") + 
-            ((computer.get_prepend_text() + u"\n\n") if 
-                computer.get_prepend_text() else u"") + 
-            ((code.get_prepend_text() + u"\n\n") if 
-                code.get_prepend_text() else u"") + 
-            ((calcinfo.prepend_text + u"\n\n") if 
-                calcinfo.prepend_text is not None else u""))
-        
-        job_tmpl.append_text = (
-            ((calcinfo.append_text + u"\n\n") if 
-                calcinfo.append_text is not None else u"") +
-            ((code.get_append_text() + u"\n\n") if 
-                code.get_append_text() else u"") +
-            ((computer.get_append_text() + u"\n\n") if 
-                computer.get_append_text() else u"") +
-            ((self.get_append_text() + u"\n\n") if 
-                self.get_append_text() else u""))
+        job_tmpl.append_text = "\n\n".join(_ for _ in 
+            [self.get_append_text(),
+             calcinfo.append_text,
+             code.get_append_text(),
+             computer.get_prepend_text()] if _)
 
         # Set resources, also with get_default_cpus_per_machine
         resources_dict = self.get_resources(full=True)
@@ -1045,6 +1311,10 @@ class Calculation(Node):
         job_tmpl.stdout_name = calcinfo.stdout_name
         job_tmpl.stderr_name = calcinfo.stderr_name
         job_tmpl.join_files = calcinfo.join_files
+        
+        custom_sched_commands = self.get_custom_scheduler_commands()
+        if custom_sched_commands:        
+            job_tmpl.custom_scheduler_commands = custom_sched_commands
         
         job_tmpl.import_sys_environment = self.get_import_sys_environment()
         
@@ -1135,12 +1405,31 @@ class Calculation(Node):
         """
         return CalculationResultManager(self)
 
-    def submit_test(self, folder, code, inputdict, subfolder_name = None):
+    def submit_test(self, folder=None, subfolder_name = None):
+        """
+        Test submission, creating the files in a local folder.
+        
+        :note: this submit_test function does not require any node
+            (neither the calculation nor the input links) to be stored yet.
+        
+        :param folder: A Folder object, within which each calculation files 
+            are created; if not passed, a subfolder 'submit_test' of the current
+            folder is used.
+        :param subfolder_name: the name of the subfolder to use for this
+            calculation (within Folder). If not passed, a unique string 
+            starting with the date and time in the format ``yymmdd-HHMMSS-``
+            is used.
+        """
         import os
-        from aiida.transport.plugins.local import LocalTransport
         import datetime
         import tempfile
+
+        from aiida.transport.plugins.local import LocalTransport
         from aiida.orm import Computer
+        from aiida.common.folders import Folder
+        
+        if folder is None:
+            folder = Folder(os.path.abspath('submit_test'))
         
         # In case it is not created yet
         folder.create()
@@ -1163,7 +1452,9 @@ class Calculation(Node):
             t.chdir(subfolder.abspath)
         
             calcinfo, script_filename = self.presubmit(
-                subfolder, code, inputdict)
+                subfolder, use_unstored_links=True)
+        
+            code = self.get_code()
         
             if code.is_local():
                 # Note: this will possibly overwrite files
@@ -1258,13 +1549,15 @@ class CalculationResultManager(object):
     """
     def __init__(self, calc):
         """
-        
         :param calc: the calculation object.
         """
         # Possibly add checks here
         self._calc = calc
         ParserClass = calc.get_parserclass()
-        self._parser = ParserClass(calc)
+        if ParserClass is None:
+            raise AttributeError("No output parser is attached to the calculation")
+        else:
+            self._parser = ParserClass(calc)
 
     def __dir__(self):
         """

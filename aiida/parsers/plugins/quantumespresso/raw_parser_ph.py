@@ -60,7 +60,7 @@ def parse_raw_ph_output(out_file, tensor_file=None, dynmat_files=[]):
             break
     
     if not finished_run:
-        warning = 'QE pw run did not reach the end of the execution.'
+        warning = 'QE ph run did not reach the end of the execution.'
         parser_info['parser_warnings'].append(warning)        
         job_successful = False
     

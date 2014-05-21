@@ -233,6 +233,9 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
                 
         lines.append("#PBS -l {}".format(select_string))
 
+        if job_tmpl.custom_scheduler_commands:
+            lines.append(job_tmpl.custom_scheduler_commands)
+
         # Job environment variables are to be set on one single line. 
         # This is a tough job due to the escaping of commas, etc.
         # moreover, I am having issues making it work.

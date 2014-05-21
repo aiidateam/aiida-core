@@ -214,13 +214,11 @@ class TestCommand(unittest.TestCase):
         
         #TEST 2:
         logging.disable(logging.ERROR)
-        with self.assertRaises(SchedulerError) as e:
+        with self.assertRaisesRegexp(SchedulerError,
+              '^Error during submission, retval=1'):
             sge_parse_submit_output=sge._parse_submit_output(1,'','')
         logging.disable(logging.NOTSET)
-        
-        self.assertEqual(e.exception.message, 
-                         'Error during submission, retval=1')
-        
+                
     def test_parse_joblist_output(self):
         sge=SgeScheduler()
         

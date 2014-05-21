@@ -19,19 +19,29 @@ redirects it to a given TCP port.
 
 Therefore, a requirement is to install ``netcat`` on computer A. 
 You can already check if the ``netcat`` or ``nc`` command is available
-on you computer, since some distributions include it. If this is not
-the case, download the ``netcat`` source code from `here
-<http://netcat.sourceforge.net/>`_.
+on you computer, since some distributions include it (if it is already
+installed, the output of the command::
 
-Unpack the tar.gz (or tar.bz2) file in a folder on computer A, then
-enter the folder and execute::
+  which netcat
+
+or::
+
+  which nc
+
+will return the absolute path to the executable).
+If this is not
+the case, download the ``netcat`` source code from `here
+<http://netcat.sourceforge.net/>`_. Then, unpack the tar.gz (or tar.bz2)
+file in a folder on computer A, ``cd`` into the folder and execute::
 
   ./configure --prefix=.
   make
   make install
 
 This will create a subdirectory ``bin``, containing the ``netcat`` and
-``nc`` executables. Write down the full path to ``nc``, that we will
+``nc`` executables.
+
+In any case, write down the full path to ``nc``, that we will
 need later.
 
 
@@ -52,7 +62,7 @@ where you have to replace:
   the fully-qualified hostnames of computer ``A`` and ``B`` (remembering that ``B``
   is the computer you want to actually connect to, and ``A`` is the
   intermediate computer to which you have direct access)
-* ``USERA`` and ``USERB`` are the usernames on the two machines (that 
+* ``USER_A`` and ``USER_B`` are the usernames on the two machines (that 
   can possibly be the same).
 * ``ABSPATH_NETCAT`` is the absolute path to the ``nc`` executable
   that you obtained in the previous step.

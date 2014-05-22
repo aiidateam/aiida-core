@@ -1,33 +1,5 @@
 import logging
 
-def get_last_daemon_run(task):
-    """
-    Return the time the given task was run the last time.
-    
-    :note: for the moment, it does not seem to return the exact time, but only
-       an approximate time. It can be improved, but it is already sufficient to
-       give the user an idea on whether the daemon is running or not.
-    
-    :param task: a valid task name; they are listed in the
-      aiida.djsite.settings.settings.djcelery_tasks dictionary.
-      
-    :return: a datetime object if the task is found, or None if the task
-      never run yet.
-    
-    :raises: Django 
-    """
-    from djcelery.models import PeriodicTask#, TaskMeta
-    
-    task = PeriodicTask.objects.get(name=task)
-    last_run_at = task.last_run_at
-    
-    #print (TaskMeta.objects.all().order_by('-date_done')[0].date_done)
-    #id = str(type(TaskMeta.objects.all().order_by('-date_done')[0].task_id))
-    return last_run_at
-
-# Cache for speed-up
-_aiida_autouser_cache = None
-
 class DBLogHandler(logging.Handler):
     def emit(self, record):
         from django.core.exceptions import ImproperlyConfigured 
@@ -96,7 +68,9 @@ def get_configured_user_email():
         raise ConfigurationError("No 'default_user' key found in the "
             "AiiDA configuration file".format(DEFAULT_USER_CONFIG_FIELD))
     return email
-        
+
+_aiida_autouser_cache = None
+    
 def get_automatic_user():
     """
     Return the default user for this installation of AiiDA.

@@ -845,11 +845,10 @@ class Calculation(Node):
         from django.utils import timezone
         import datetime
         from django.db.models import Q
-        from django.core.exceptions import ObjectDoesNotExist
         from aiida.djsite.db.models import DbNode
-        from aiida.djsite.utils import get_automatic_user, get_last_daemon_run
+        from aiida.djsite.utils import get_automatic_user
+        from aiida.djsite.db.tasks import get_last_daemon_timestamp
         from aiida.common.utils import str_timedelta
-        from aiida.djsite.settings.settings import djcelery_tasks
         from aiida.orm.node import from_type_to_pluginclassname
         
         now = timezone.now()
@@ -890,20 +889,17 @@ class Calculation(Node):
         
         calc_list_data = calc_list.values('pk', 'dbcomputer__name', 'ctime', 'type')
         
+        ## Get the last daemon check
         try:
-            last_daemon_check = get_last_daemon_run(
-                djcelery_tasks['retriever'])
-        except ObjectDoesNotExist:
-            last_check_string = ("# Last daemon check: (Unable to discover, "
-                "no such task found)")
-        except Exception as e:
-            last_check_string = ("# Last daemon check: (Unable to discover, "
-                "error: {})".format(type(e).__name__))
+            last_daemon_check = get_last_daemon_timestamp('updater', when='stop')
+        except ValueError:
+            last_check_string = ("# Last daemon state_updater check: "
+                                 "(Error while retrieving the information)")
         else:
             if last_daemon_check is None:
-                last_check_string = "# Last daemon check: (Never)"
+                last_check_string = "# Last daemon state_updater check: (Never)"
             else:
-                last_check_string = ("# Last daemon check (approximate): "
+                last_check_string = ("# Last daemon state_updater check: "
                     "{} ago ({})".format(
                     str_timedelta(now-last_daemon_check),
                     last_daemon_check.strftime("%H:%M:%S")))

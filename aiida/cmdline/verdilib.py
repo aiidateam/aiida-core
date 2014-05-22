@@ -31,6 +31,7 @@ from aiida.cmdline.commands.devel import Devel
 from aiida.cmdline.commands.exportfile import Export
 from aiida.cmdline.commands.group import Group
 from aiida.cmdline.commands.importfile import Import
+from aiida.cmdline.commands.user import User
 from aiida.cmdline.commands.workflow import Workflow
 
 
@@ -175,8 +176,7 @@ class Help(VerdiCommand):
         if subargs_idx == 0:
             print " ".join(sorted(short_doc.keys()))
         else:
-            print ""
-    
+            print "" 
     
 class Install(VerdiCommand):
     """
@@ -218,97 +218,35 @@ class Install(VerdiCommand):
             print "Only user configuration requested, skipping the syncdb command"
         else:
             print "Executing now a syncdb command..."
+            # --noinput so that it does not ask for input, and does not ask
+            # to create a default user (managed below, instead)
             pass_to_django_manage([execname, 'syncdb', '--noinput'])
 
         # I create here the default user
         print "Loading new environment..."
         load_django()
         
-        from aiida.common.setup import DAEMON_EMAIL
+        from aiida.common.setup import DEFAULT_AIIDA_USER
         from aiida.djsite.db import models
         from aiida.djsite.utils import get_configured_user_email
         from django.core.exceptions import ObjectDoesNotExist
         
-        if not models.DbUser.objects.filter(email=DAEMON_EMAIL):
-            print "Installing daemon user..."
-            models.DbUser.objects.create_superuser(email=DAEMON_EMAIL, 
+        if not models.DbUser.objects.filter(email=DEFAULT_AIIDA_USER):
+            print "Installing default AiiDA user..."
+            # No password, so no access via API/AWI
+            models.DbUser.objects.create_superuser(email=DEFAULT_AIIDA_USER, 
                                                    password='',
                                                    first_name="AiiDA",
                                                    last_name="Daemon")
 
         email = email=get_configured_user_email()
         print "Starting user configuration for {}...".format(email)
-        if email == DAEMON_EMAIL:
-            print "You set up AiiDA using the default Daemon email,".format(email)
+        if email == DEFAULT_AIIDA_USER:
+            print "You set up AiiDA using the default Daemon email ({}),".format(email)
             print "therefore no further user configuration will be asked."
         else:
-            try:
-                user = models.DbUser.objects.get(email=email)
-                print ("An AiiDA user for email '{}' is already present "
-                       "in the DB:".format(email))
-                print "First name:   {}".format(user.first_name)
-                print "Last name:    {}".format(user.last_name)
-                print "Institution:  {}".format(user.institution)
-                configure_user = False
-                reply = raw_input("Do you want to reconfigure it? [y/N] ")
-                reply = reply.strip()
-                if not reply:
-                    pass
-                elif reply.lower() == 'n':
-                    pass
-                elif reply.lower() == 'y':
-                    configure_user = True
-                else:
-                    print "Invalid answer, assuming answer was 'NO'"
-            except ObjectDoesNotExist:
-                configure_user = True
-                user = models.DbUser(email=email)
-                
-            if configure_user:
-                try:
-                    kwargs = {}
-
-                    for field in models.DbUser.REQUIRED_FIELDS:
-                        verbose_name = models.DbUser._meta.get_field_by_name(
-                            field)[0].verbose_name.capitalize()
-                        readline.set_startup_hook(lambda: readline.insert_text(
-                            getattr(user, field)))
-                        kwargs[field] = raw_input('{}: '.format(verbose_name))
-                finally:
-                    readline.set_startup_hook(lambda: readline.insert_text(""))
-
-                for k, v in kwargs.iteritems():
-                    setattr(user, k, v)
-                
-                if user.password:
-                    change_password = False
-                    reply = raw_input("Do you want to replace the user password? [y/N] ")
-                    reply = reply.strip()
-                    if not reply:
-                        pass
-                    elif reply.lower() == 'n':
-                        pass
-                    elif reply.lower() == 'y':
-                        change_password = True
-                    else:
-                        print "Invalid answer, assuming answer was 'NO'"
-                else:
-                    change_password = True
-                
-                if change_password:
-                    match = False
-                    while not match:
-                        new_password = getpass.getpass("Insert the new password: ")
-                        new_password_check = getpass.getpass("Insert the new password (again): ")
-                        if new_password == new_password_check:
-                            match = True
-                        else:
-                            print "ERROR, the two passwords do not match."
-                    ## Set the password here
-                    user.set_password(new_password)
-                
-                user.save()
-                print "User {} saved.".format(user.get_full_name())
+            # Ask to configure the new user
+            User().user_configure(email)        
         
         print "Install finished."
     

@@ -45,6 +45,31 @@ def set_daemon_timestamp(task_name, when):
                                     "task '{}' ({})".format(verb,
                                         task_name, actual_task_name))
 
+def get_most_recent_daemon_timestamp():
+    """
+    Try to detect any last timestamp left by the daemon, for instance 
+    to get a hint on whether the daemon is running or not.
+    
+    :return:  a datetime.datetime object with the most recent time.
+      Return None if no information is found in the DB.
+    """
+    import datetime
+    # I go low-level here
+    from aiida.djsite.db.models import DbSetting
+    
+    daemon_timestamps = DbSetting.objects.filter(key__startswith='daemon|task_')
+    timestamps = []
+    for timestamp_setting in daemon_timestamps:
+        timestamp = timestamp_setting.getvalue()
+        if isinstance(timestamp, datetime.datetime):
+            timestamps.append(timestamp)
+    
+    if timestamps:
+        # The most recent timestamp
+        return max(*timestamps)
+    else:
+        return None
+
 def get_last_daemon_timestamp(task_name, when='stop'):
     """
     Return the last time stored in the DB that the daemon executed the given
@@ -60,7 +85,6 @@ def get_last_daemon_timestamp(task_name, when='stop'):
       found in the DB.
     """
     from aiida.common.globalsettings import get_global_setting
-    from aiida.common.exceptions import NotExistent
 
     try:
         actual_task_name = djcelery_tasks[task_name]

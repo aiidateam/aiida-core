@@ -977,7 +977,7 @@ def get_workflow_info(w, tab_size = 2, short = False, pre_string = ""):
                     else:
                         last_check = c.get_scheduler_lastchecktime()
                         if last_check is not None:
-                            when_string = " {} ago".format(
+                            when_string = " {}".format(
                                str_timedelta(now-last_check, short=True,
                                              negative_to_zero = True))
                             verb_string = "was "

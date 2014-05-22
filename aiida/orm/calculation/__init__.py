@@ -900,8 +900,8 @@ class Calculation(Node):
                 last_check_string = "# Last daemon state_updater check: (Never)"
             else:
                 last_check_string = ("# Last daemon state_updater check: "
-                    "{} ago ({})".format(
-                    str_timedelta(now-last_daemon_check),
+                    "{} ({})".format(
+                    str_timedelta(now-last_daemon_check, negative_to_zero=True),
                     last_daemon_check.strftime("%H:%M:%S")))
         
         if not calc_list:
@@ -926,7 +926,7 @@ class Calculation(Node):
                         if calc_state == calc_states.WITHSCHEDULER:
                             last_check = scheduler_lastcheck.get(calcdata['pk'], None)
                             if last_check is not None:
-                                when_string = " {} ago".format(
+                                when_string = " {}".format(
                                     str_timedelta(now-last_check, short=True,
                                           negative_to_zero = True))
                                 verb_string = "was "

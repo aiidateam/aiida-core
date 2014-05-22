@@ -3,8 +3,6 @@ Functions to manage the global settings stored in the DB (in the DbSettings
 table.
 """
 
-
-
 def set_global_setting(key, value, description=None):
     """
     Set a global setting in the DbSetting table (therefore, stored at the DB

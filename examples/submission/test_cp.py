@@ -11,7 +11,6 @@ from aiida.common.exceptions import NotExistent
 aiidalogger.setLevel(logging.INFO)
 
 from aiida.orm import Code, DataFactory
-from aiida.djsite.db.models import DbGroup
 UpfData = DataFactory('upf')
 ParameterData = DataFactory('parameter')
 StructureData = DataFactory('structure')
@@ -38,11 +37,11 @@ except IndexError:
 
 # If True, load the pseudos from the family specified below
 # Otherwise, use static files provided
-expected_code_type='quantumespresso.cp'
+expected_code_type = 'quantumespresso.cp'
 auto_pseudos = False
 
 queue = None
-#queue = "P_share_queue"
+# queue = "P_share_queue"
      
 #####
 
@@ -66,43 +65,42 @@ except (NotExistent, ValueError):
         print >> sys.stderr, "    verdi code setup"
     sys.exit(1)
 
+
+# BaTiO3 cubic structure
+alat = 4.  # angstrom
+cell = [[alat, 0., 0., ],
+        [0., alat, 0., ],
+        [0., 0., alat, ],
+       ]
+s = StructureData(cell=cell)
+s.append_atom(position=(0., 0., 0.), symbols=['Ba'])
+s.append_atom(position=(alat / 2., alat / 2., alat / 2.), symbols=['Ti'])
+s.append_atom(position=(alat / 2., alat / 2., 0.), symbols=['O'])
+s.append_atom(position=(alat / 2., 0., alat / 2.), symbols=['O'])
+s.append_atom(position=(0., alat / 2., alat / 2.), symbols=['O'])
+
+elements = list(s.get_symbols_set())
+
 if auto_pseudos:
-    valid_pseudo_groups = DbGroup.objects.filter(dbnodes__type__contains='.upf.').distinct().values_list('name',flat=True)
+    valid_pseudo_groups = UpfData.get_upf_groups(filter_elements=elements)
 
     try:
-        pseudo_family = sys.argv[2]
+        pseudo_family = sys.argv[3]
     except IndexError:
         print >> sys.stderr, "Error, auto_pseudos set to True. You therefore need to pass as second parameter"
         print >> sys.stderr, "the pseudo family name."
         print >> sys.stderr, "Valid groups containing at least one UPFData object are:"
-        print >> sys.stderr, "\n".join("* {}".format(i) for i in valid_pseudo_groups)
+        print >> sys.stderr, "\n".join("* {}".format(i.name) for i in valid_pseudo_groups)
         sys.exit(1)
         
-
-    if not DbGroup.objects.filter(name=pseudo_family):
+    try:
+        UpfData.get_upf_group(pseudo_family)
+    except NotExistent:
         print >> sys.stderr, "auto_pseudos is set to True and pseudo_family='{}',".format(pseudo_family)
         print >> sys.stderr, "but no group with such a name found in the DB."
-        print >> sys.stderr, "Valid groups containing at least one UPFData object are:"
-        print >> sys.stderr, ",".join(valid_pseudo_groups)
+        print >> sys.stderr, "Valid UPF groups are:"
+        print >> sys.stderr, ",".join(i.name for i in valid_pseudo_groups)
         sys.exit(1)
-
-
-computer = code.get_remote_computer()
-
-alat = 4. # angstrom
-cell = [[alat, 0., 0.,],
-        [0., alat, 0.,],
-        [0., 0., alat,],
-       ]
-
-# BaTiO3 cubic structure
-s = StructureData(cell=cell)
-s.append_atom(position=(0.,0.,0.),symbols=['Ba'])
-s.append_atom(position=(alat/2.,alat/2.,alat/2.),symbols=['Ti'])
-s.append_atom(position=(alat/2.,alat/2.,0.),symbols=['O'])
-s.append_atom(position=(alat/2.,0.,alat/2.),symbols=['O'])
-s.append_atom(position=(0.,alat/2.,alat/2.),symbols=['O'])
-
 
 parameters = ParameterData(dict={
             'CONTROL': {
@@ -112,7 +110,7 @@ parameters = ParameterData(dict={
                 'iprint': 1,
                 'isave': 100,
                 'dt': 3.,
-                'max_seconds': 25*60,
+                'max_seconds': 25 * 60,
                 'nstep': 10,
                 },
             'SYSTEM': {
@@ -124,7 +122,7 @@ parameters = ParameterData(dict={
                 },
             'ELECTRONS': {
                 'electron_damping': 1.e-1,
-                'electron_dynamics': 'damp', 
+                'electron_dynamics': 'damp',
                 'emass': 400.,
                 'emass_cutoff': 3.,
                 },
@@ -133,10 +131,10 @@ parameters = ParameterData(dict={
             }})
                 
 
-calc = code.new_calc(computer=computer)
+calc = code.new_calc()
 calc.label = "Test QE cp.x"
 calc.description = "Test calculation with the Quantum ESPRESSO cp.x code"
-calc.set_max_wallclock_seconds(30*60) # 30 min
+calc.set_max_wallclock_seconds(30 * 60)  # 30 min
 calc.set_resources({"num_machines": 1})
 if queue is not None:
     calc.set_queue_name(queue)
@@ -161,21 +159,21 @@ else:
     pseudos_to_use = {}
     for fname, elem, pot_type in raw_pseudos:
         absname = os.path.realpath(os.path.join(os.path.dirname(__file__),
-                                                "data",fname))
+                                                "data", fname))
         pseudo, created = UpfData.get_or_create(
-            absname,use_first=True)
+            absname, use_first=True)
         if created:
             print "Created the pseudo for {}".format(elem)
         else:
-            print "Using the pseudo for {} from DB: {}".format(elem,pseudo.pk)
+            print "Using the pseudo for {} from DB: {}".format(elem, pseudo.pk)
         pseudos_to_use[elem] = pseudo
 
     for k, v in pseudos_to_use.iteritems():
         calc.use_pseudo(v, kind=k)
 
-#calc.use_settings(settings)
-#from aiida.orm.data.remote import RemoteData
-#calc.set_outdir(remotedata)
+# calc.use_settings(settings)
+# from aiida.orm.data.remote import RemoteData
+# calc.set_outdir(remotedata)
 
 if submit_test:
     subfolder, script_filename = calc.submit_test()
@@ -188,9 +186,9 @@ if submit_test:
 else:
     calc.store_all()
     print "created calculation; calc=Calculation(uuid='{}') # ID={}".format(
-        calc.uuid,calc.dbnode.pk)
+        calc.uuid, calc.dbnode.pk)
     calc.submit()
     print "submitted calculation; calc=Calculation(uuid='{}') # ID={}".format(
-        calc.uuid,calc.dbnode.pk)
+        calc.uuid, calc.dbnode.pk)
 
 

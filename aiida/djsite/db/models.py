@@ -958,6 +958,10 @@ class DbSetting(DbMultipleValueAttributeBaseClass):
     description = m.TextField(blank=True)
     # Modification time of this attribute
     time = m.DateTimeField(auto_now=True, editable=False)
+    
+    @python_2_unicode_compatible
+    def __str__(self):
+        return "'{}'={}".format(self.key, self.getvalue())    
 
 class DbAttribute(DbAttributeBaseClass):
     """

@@ -167,28 +167,16 @@ class Daemon(VerdiCommand):
         process.wait()
         if (process.returncode==0):
             print "Daemon started"
-            
-    def daemon_stop(self, wait_for_death=True):
+         
+    def kill_daemon(self):   
         """
-        Stop the daemon.
+        This is the actual call that kills the daemon.
         
-        :param wait_for_death: If True, also verifies that the process was already
-            killed. It attempts at most ``max_retries`` times, with ``sleep_between_retries``
-            seconds between one attempt and the following one (both variables are
-            for the time being hardcoded in the function).
-            
-        :return: None if ``wait_for_death`` is False. True/False if the process was
-            actually dead or after all the retries it was still alive.
+        There are some print statements inside, but no sys.exit, so it is
+        safe to be called from other parts of the code.
         """
         from signal import SIGTERM
-        import time
         import errno
-
-        max_retries = 20
-        sleep_between_retries = 3
-
-        # Note: NO check here on the daemon user: allow the daemon to be shut
-        # down if it was inadvertently left active and the setting was changed.
 
         pid = self.get_daemon_pid()
         if pid is None:
@@ -205,12 +193,32 @@ class Daemon(VerdiCommand):
                 print "Cleaning the .pid and .sock files..."
                 self._clean_sock_files()
             else:
-                raise
+                raise        
+        
+    def daemon_stop(self, wait_for_death=True):
+        """
+        Stop the daemon.
+        
+        :param wait_for_death: If True, also verifies that the process was already
+            killed. It attempts at most ``max_retries`` times, with ``sleep_between_retries``
+            seconds between one attempt and the following one (both variables are
+            for the time being hardcoded in the function).
+            
+        :return: None if ``wait_for_death`` is False. True/False if the process was
+            actually dead or after all the retries it was still alive.
+        """
+        import time
+        
+        max_retries = 20
+        sleep_between_retries = 3
+
+        # Note: NO check here on the daemon user: allow the daemon to be shut
+        # down if it was inadvertently left active and the setting was changed.
+        self.kill_daemon()
         
         dead = None
         if wait_for_death:
             dead = False
-            restarted = False
             for _ in range(max_retries):
                 pid = self.get_daemon_pid()
                 if pid is None:

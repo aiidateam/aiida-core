@@ -105,7 +105,24 @@ class SingleTask(celery.Task):
     lock = None
     
     def __call__(self, *args, **kwargs):
-        
+        from aiida.djsite.utils import get_daemon_user, get_configured_user_email
+    
+        daemon_user = get_daemon_user()
+        this_user = get_configured_user_email()
+    
+        if daemon_user != this_user:
+            logger.error("ERROR: I detected that the daemon user ({}) is "
+                         "different from the current user ({})! I do not "
+                         "execute the task {}. YOU SHOULD SHUT DOWN "
+                         "THE DAEMON! (I will try to do it now)"
+                         "".format(daemon_user, this_user,
+                                              self.name))
+
+            from aiida.cmdline.commands.daemon import Daemon
+            Daemon().kill_daemon()
+            return
+            
+            
         from aiida.orm.lock import LockManager
         logger.debug('TASK STARTING: %s[%s]' % (self.name, self.request.id))
         
@@ -164,7 +181,7 @@ def retriever():
 def workflow_stepper():
     from aiida.workflowmanager import daemon_main_loop   
 
-    set_daemon_timestamp(task_name='workflowr', when='start')
+    set_daemon_timestamp(task_name='workflow', when='start')
     daemon_main_loop()
     set_daemon_timestamp(task_name='workflow', when='stop')
     

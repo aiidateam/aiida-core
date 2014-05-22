@@ -221,17 +221,48 @@ Run the following command::
     
 to configure AiiDA. The command will guide you through a process to configure
 the database, the repository location, and it will finally (automatically) run 
-a ``verdi syncdb`` command, that creates the required tables in the database
-and installs the database triggers.
+a django ``syncdb`` command, if needed, that creates the required tables
+in the database and installs the database triggers.
 
-.. note:: If this is your first installation, the code (Django, actually)
-  will ask to setup an admin user ("Would you like to create one now?" prompt).
-  In this case chose ``yes`` and type the required information. Some notes:
+.. note:: Whe the "Database engine" is asked, use 'sqlite' **only if** you want
+  to try out AiiDA without setting up a database.
+  
+  **However, keep in mind that for serious use, SQLite has serious
+  limitations!!** For instance, when many calculations are managed at the same
+  time, the database file is locked by SQLite to avoid corruption, but this
+  can lead to timeouts that do not allow to AiiDA to properly store the
+  calculations in the DB.
+  
+  **Therefore, for production use of AiiDA, we strongly suggest to setup a
+  "real" database** as PostgreSQL or MySQL. Then, in the "Database engine"
+  field, type either 'postgres' or 'mysql' according to the database you 
+  chose to use.
 
-  * **Make sure that the username matches your local machine username!** This is
-    required for the current version of AiiDA to work.
-  * The password, in the current version of AiiDA, is not used (even if a non-null
-    password should be specified).
+.. note:: As the first parameter to set during the ``verdi install`` phase,
+  the "Default user email" is asked.
+  
+  In AiiDA, the user email is used as 
+  username, and also as unique identifier when importing/exporting data from 
+  AiiDA.
+  
+  We suggest here to use your institution email, to associate the calculations
+  to your username.
+  
+.. note:: Even if you choose an email different from the default one
+  (``aiida@localhost``), an user with email ``aiida@localhost`` will be set up.
+  Anyway, its password will be set to None, effectively disabling
+  any access via this user using the API or the Web Interface.
+  
+  The existence of such a default user is particularly useful in a multi-user
+  approach, where only one user
+  should run the daemon, even if many users can simultaneously access the DB.
+  See the page on :ref:`setting up AiiDA in multi-user mode<aiida_multiuser>`
+  for more details (only for advanced users).
+
+.. note:: The password, in the current version of AiiDA, is not used (it will
+    be used only in the REST API and in the web interface). If you leave the
+    field empty, no password will be set and no access will be granted to the
+    user via the REST API and the web interface.
 
 If something fails, you may have misconfigured the database.
 

@@ -208,7 +208,11 @@ class Install(VerdiCommand):
             sys.exit(1)
         
         create_base_dirs()
-        create_configuration()
+        try:
+            create_configuration()
+        except ValueError as e:
+            print >> sys.stderr, "Error during configuration: {}".format(e.message)
+            sys.exit(1)
 
         if only_user_config:
             print "Only user configuration requested, skipping the syncdb command"

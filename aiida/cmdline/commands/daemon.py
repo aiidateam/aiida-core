@@ -373,7 +373,7 @@ class Daemon(VerdiCommand):
         if most_recent_timestamp is not None:
             timestamp_delta = timezone.now() - most_recent_timestamp
             last_check_string = ("[The most recent timestamp "
-                "from the daemon was {} ago]".format(
+                "from the daemon was {}]".format(
                 str_timedelta(timestamp_delta)))
             print "* {:72s} *".format(last_check_string)
             

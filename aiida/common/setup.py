@@ -230,7 +230,8 @@ def create_configuration():
                     confs.get('AIIDADB_PASS','aiida_password')))
             confs['AIIDADB_PASS'] = raw_input('AiiDA Database password: ')
         else:
-            raise ValueError("You have to specify a database !")
+            raise ValueError("You have to specify a valid database "
+               "(valid choices are 'sqlite', 'mysql', 'postgres')")
 
         readline.set_startup_hook(lambda: readline.insert_text(
                 confs.get('AIIDADB_REPOSITORY',

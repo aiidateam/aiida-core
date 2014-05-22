@@ -4,8 +4,7 @@ import aiida
 
 # The username (email) used by the default superuser, that should also run 
 # as the daemon
-DAEMON_EMAIL="aiida@localhost"
-
+DEFAULT_AIIDA_USER="aiida@localhost"
 
 AIIDA_CONFIG_FOLDER = "~/.aiida"
 CONFIG_FNAME = 'config.json'
@@ -122,6 +121,9 @@ process_name=%(process_num)s
                 aiida.__file__))[0]))
 
 def create_base_dirs():
+    """
+    Create dirs for AiiDA, and install default daemon files.
+    """
     import getpass
     
     # For the daemon, to be hard-coded when ok    
@@ -162,7 +164,7 @@ def create_configuration():
         valid_email = False
         email_validator = CustomEmailValidator()
         readline.set_startup_hook(lambda: readline.insert_text(
-                confs.get(DEFAULT_USER_CONFIG_FIELD, DAEMON_EMAIL)))
+                confs.get(DEFAULT_USER_CONFIG_FIELD, DEFAULT_AIIDA_USER)))
         while not valid_email:
             confs[DEFAULT_USER_CONFIG_FIELD] = raw_input('Default user email: ')
             try:

@@ -268,11 +268,29 @@ If something fails, you may have misconfigured the database.
 
 Start the daemon
 -----------------
-To try AiiDA, run::
+.. note:: Only one user can run the daemon on a given database instance.
+  By default, this user is the default AiiDA user (aiida@localhost).
+  If you chose a different user in the previous step, the ``verdi daemon start``
+  will refuse to start the daemon.
+  
+  *If you are working in a single-user mode, and you are sure that nobody else
+  is going to run the daemon*, you can configure your user as the (only)
+  one who can run the daemon.
+  
+  To do so, run::
+    
+    verdi daemon configureuser
+   
+  and (after having read and understood the warning text that appears) insert
+  the email that you used above during the ``verdi install`` phase.
+  
+  After this operation, you should be able to run the daemon normally.
+
+To try AiiDA and start the daemon, run::
 
     verdi daemon start
 
-to start the daemon. If everything was done correctly, the daemon should start.
+If everything was done correctly, the daemon should start.
 You can inquire the daemon status using::
 
     verdi daemon status
@@ -287,7 +305,9 @@ To stop the daemon, use::
 
     verdi daemon stop
 
-Detailed logs of what is going can be found in ``in ~/.aiida/daemon/log/``. The daemon is 
+A log of the warning/error messages of the daemon
+can be found in ``in ~/.aiida/daemon/log/``, and can also be seen using
+the ``verdi daemon logshow`` command. The daemon is 
 a fundamental component of AiiDA, and it is in charge of submitting new
 calculations, checking their status on the cluster, retrieving and parsing
 the results of finished calculations, and managing the workflow steps.

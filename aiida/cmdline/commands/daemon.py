@@ -4,6 +4,18 @@ import subprocess
 
 from aiida.cmdline.baseclass import VerdiCommand
 
+def is_daemon_user():
+    """
+    Return True if the user is the current daemon user, False otherwise.
+    """
+    from aiida.djsite.utils import get_daemon_user, get_configured_user_email
+    
+    daemon_user = get_daemon_user()
+    this_user = get_configured_user_email()
+    
+    return daemon_user == this_user
+
+
 class Daemon(VerdiCommand):
     """
     Manage the AiiDA daemon
@@ -38,6 +50,7 @@ class Daemon(VerdiCommand):
             'status': self.daemon_status,
             'logshow': self.daemon_logshow,
             'restart': self.daemon_restart,
+            'configureuser': self.configure_user,
             }
 
         self.conffile_full_path = os.path.expanduser(os.path.join(
@@ -118,16 +131,31 @@ class Daemon(VerdiCommand):
         """
         Start the daemon
         """
+        from aiida.common.utils import load_django
+        load_django()
+
+        from aiida.djsite.utils import get_daemon_user, get_configured_user_email
+        
+        daemon_user = get_daemon_user()
+        this_user = get_configured_user_email()
+
+        if daemon_user != this_user:
+            print "You are not the daemon user! I will not start the daemon."
+            print "(The daemon user is '{}', you are '{}')".format(
+                daemon_user, this_user)
+            print ""
+            print "** FOR ADVANCED USERS ONLY: **"
+            print "To change the current default user, use 'verdi install --only-config'"
+            print "To change the daemon user, use 'verdi daemon configureuser'"
+
+            sys.exit(1)
+        
         pid = self.get_daemon_pid()
 
         if pid is not None:
-            print "Daemon already running, try ask for status"
+            print "Daemon already running, try asking for its status"
             return
-        
-        print "Loading Django ..."
-        from aiida.common.utils import load_django
-        load_django()
-        
+                
         print "Clearing all locks ..."
         from aiida.orm.lock import LockManager
         LockManager().clear_all()
@@ -158,6 +186,9 @@ class Daemon(VerdiCommand):
 
         max_retries = 20
         sleep_between_retries = 3
+
+        # Note: NO check here on the daemon user: allow the daemon to be shut
+        # down if it was inadvertently left active and the setting was changed.
 
         pid = self.get_daemon_pid()
         if pid is None:
@@ -269,6 +300,21 @@ class Daemon(VerdiCommand):
         Restart the daemon. Before restarting, wait for the daemon to really
         shut down.
         """
+        from aiida.common.utils import load_django
+        load_django()
+        
+        from aiida.djsite.utils import get_daemon_user, get_configured_user_email
+        
+        daemon_user = get_daemon_user()
+        this_user = get_configured_user_email()
+
+        if daemon_user != this_user:
+            print "You are not the daemon user! I will not restart the daemon."
+            print "(The daemon user is '{}', you are '{}')".format(
+                daemon_user, this_user)
+
+            sys.exit(1)       
+        
         pid = self.get_daemon_pid()
 
         dead = True
@@ -283,6 +329,78 @@ class Daemon(VerdiCommand):
         else:
             self.daemon_start()
 
+    def configure_user(self):
+        """
+        Configure the user that can run the daemon.
+        """
+        from aiida.common.utils import load_django
+        load_django()
+        
+        from django.utils import timezone
+        
+        from django.core.exceptions import ObjectDoesNotExist
+
+        from aiida.djsite.db.models import DbUser
+        from aiida.djsite.utils import (
+            get_configured_user_email,
+            get_daemon_user, set_daemon_user)
+        
+        from aiida.djsite.db.tasks import get_most_recent_daemon_timestamp
+        from aiida.common.utils import str_timedelta
+        
+        old_daemon_user = get_daemon_user()
+        this_user = get_configured_user_email()
+        
+        print "> Current default user: {}".format(this_user)
+        print "> Currently configured user who can run the daemon: {}".format(old_daemon_user)
+        if old_daemon_user == this_user:
+            print "  (therefore, at the moment you are the user who can run the daemon)"
+            pid = self.get_daemon_pid()
+            if pid is not None:
+                print "The daemon is running! I will not proceed."
+                sys.exit(1)
+        else:
+            print "  (therefore, you cannot run the daemon, at the moment)"
+
+        most_recent_timestamp = get_most_recent_daemon_timestamp()
+        
+        print "*"*76
+        print "* {:72s} *".format("WARNING! Change this setting only if you "
+                                  "are sure of what you are doing.")
+        print "* {:72s} *".format("Moreover, make sure that the "
+                                  "daemon is stopped.")
+        
+        if most_recent_timestamp is not None:
+            timestamp_delta = timezone.now() - most_recent_timestamp
+            last_check_string = ("[The most recent timestamp "
+                "from the daemon was {} ago]".format(
+                str_timedelta(timestamp_delta)))
+            print "* {:72s} *".format(last_check_string)
+            
+        print "*"*76
+        
+        answer = raw_input(
+            "Are you really sure that you want to change the "
+            "daemon user? [y/N] ")
+        
+        if not(answer == 'y' or answer == 'Y'):
+            sys.exit(0)
+        
+        print ""
+        print "Enter below the email of the new user who can run the daemon."
+        new_daemon_user = raw_input("New daemon user: ")
+        
+        try:
+            new_daemon_user_db = DbUser.objects.get(email=new_daemon_user)
+        except ObjectDoesNotExist:
+            print("ERROR! The user you specified ({}) does "
+                  "not exist in the database!!".format(new_daemon_user))
+            sys.exit(1)
+        
+        set_daemon_user(new_daemon_user)
+        
+        print "The new user that can run the daemon is now {}.".format(
+            new_daemon_user_db.get_full_name())
 
     def _clean_sock_files(self):
         """

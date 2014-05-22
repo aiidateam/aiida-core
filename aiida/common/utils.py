@@ -220,7 +220,7 @@ def md5_file(filename, block_size_factor=128):
             md5.update(chunk)
     return md5.hexdigest()
 
-def str_timedelta(dt, max_num_fields=3, short=False, negative_to_zero = True):
+def str_timedelta(dt, max_num_fields=3, short=False, negative_to_zero = False):
     """
     Given a dt in seconds, return it in a HH:MM:SS format.
 
@@ -249,7 +249,7 @@ def str_timedelta(dt, max_num_fields=3, short=False, negative_to_zero = True):
     negative = (s < 0)
     s = abs(s)
     
-    negative_string = " in the future" if negative else ""
+    negative_string = " in the future" if negative else " ago"
     
     # For the moment stay away from months and years, difficult to get
     days, remainder = divmod(s, 3600*24)

@@ -71,7 +71,7 @@ def get_last_daemon_timestamp(task_name, when='stop'):
     try:
         return get_global_setting('daemon|task_{}|{}'.format(when,
                                                              actual_task_name))
-    except NotExistent:
+    except KeyError: # No such global setting found
         return None
     
 

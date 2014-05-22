@@ -2,6 +2,7 @@
 This module manages the UPF pseudopotentials in the local repository.
 """
 from aiida.orm.data.singlefile import SinglefileData
+from aiida.common.utils import classproperty
 import re
 
 UPFGROUP_TYPE = 'data.upf.family'
@@ -32,46 +33,38 @@ _element_v2_regexp = re.compile(
    """, re.VERBOSE)
 
 def get_pseudos_from_structure(structure, family_name):       
+    """
+    Given a family name (a UpfFamily group in the DB) and a AiiDA
+    structure, return a dictionary associating each kind name with its
+    UpfData object.
+    
+    :raise MultipleObjectsError: if more than one UPF for the same element is
+       found in the group.
+    :raise NotExistent: if no UPF for an element in the group is
+       found in the group.
+    """
+    from aiida.common.exceptions import NotExistent, MultipleObjectsError
+
+    family_pseudos = {}
+    family = UpfData.get_upf_group(family_name)
+    for node in family.nodes:
+        if isinstance(node, UpfData):
+            if node.element in family_pseudos:
+                raise MultipleObjectsError(
+                    "More than one UPF for element {} found in "
+                    "family {}".format(node.element, family_name))   
+            family_pseudos[node.element] = node
+
     pseudo_list = {}
     for kind in structure.kinds:
         symbol = kind.symbol
-        # Will raise the correct exception if not found, or too many found
-        pseudo_list[kind.name] = get_upf_from_family(family_name, symbol)
-
+        try:
+            pseudo_list[kind.name] = family_pseudos[symbol]
+        except KeyError:
+            raise NotExistent("No UPF for element {} found in family {}".format(
+                symbol, family_name))
+            
     return pseudo_list
-
-def get_upf_from_family(family_name, element):
-    """
-    Given a family name (a group in the DB) and the element name, return
-    the corresponding UpfData node.
-    
-    :raise MultipleObjectsError: if more than one UPF for the given element is
-            found in the group.
-    :raise NotExistent: if no UPF for the given element are found in the group.
-    """
-    from aiida.djsite.db.models import DbGroup
-    from django.core.exceptions import ObjectDoesNotExist
-    from aiida.common.exceptions import NotExistent, MultipleObjectsError
-    
-    try:
-        DbGroup.objects.get(name=family_name, type=UPFGROUP_TYPE)
-    except ObjectDoesNotExist:
-        raise NotExistent("UPF family named {} does not exist".format(family_name))
-    
-    match = UpfData.query(dbgroups__name=family_name,
-                          dbgroups__type=UPFGROUP_TYPE,
-                          dbattributes__key="element",
-                          dbattributes__tval=element)
-    if len(match) == 0:
-        raise NotExistent("No UPF for element {} found in family {}".format(
-            element, family_name))
-    elif len(match) > 1:
-        raise MultipleObjectsError("More than one UPF for element {} found in "
-                                   "family {}".format(
-            element, family_name))
-    else:
-        return match[0]
-
 
 def upload_upf_family(folder, group_name, group_description,
                         stop_if_existing=True):
@@ -91,12 +84,10 @@ def upload_upf_family(folder, group_name, group_description,
     """
     import os
     
-    from django.core.exceptions import ObjectDoesNotExist
-    
     import aiida.common
     from aiida.common import aiidalogger
-    from aiida.djsite.db.models import DbGroup, DbNode
-    from aiida.common.exceptions import UniquenessError, MultipleObjectsError
+    from aiida.orm import Group
+    from aiida.common.exceptions import UniquenessError, NotExistent
     from aiida.djsite.utils import get_automatic_user
 
     if not os.path.isdir(folder):
@@ -112,10 +103,10 @@ def upload_upf_family(folder, group_name, group_description,
     nfiles = len(files)
     
     try:
-        group = DbGroup.objects.get(name=group_name, type=UPFGROUP_TYPE)
+        group = Group.get(name=group_name, type_string=UPFGROUP_TYPE)
         group_created = False
-    except ObjectDoesNotExist:
-        group = DbGroup(name=group_name, type=UPFGROUP_TYPE,
+    except NotExistent:
+        group = Group(name=group_name, type_string=UPFGROUP_TYPE,
                         user=get_automatic_user())
         group_created = True
         
@@ -154,9 +145,8 @@ def upload_upf_family(folder, group_name, group_description,
     elements = [ (i[0].element, i[0].md5sum) for i in pseudo_and_created ]
     # If group already exists, check also that I am not inserting more than
     # once the same element
-    if group.pk is not None:
-        for n in group.dbnodes.distinct().all():
-            aiida_n = n.get_aiida_class()
+    if not group_created:
+        for aiida_n in group.nodes:
             # Skip non-pseudos
             if not isinstance(aiida_n, UpfData):
                 continue
@@ -173,24 +163,25 @@ def upload_upf_family(folder, group_name, group_description,
         raise UniquenessError("More than one UPF found for the elements: " +
                               duplicates_string+".")    
     
-    # At this point, save the group
-    group.save()
+    # At this point, save the group, if still unstored
+    if group_created:
+        group.store()
     
     # save the upf in the database, and add them to group    
     for pseudo,created in pseudo_and_created:
         if created:
             pseudo.store()
-                
-        group.dbnodes.add(pseudo.dbnode)
-
-        if created:
+            
             aiidalogger.debug("New node {} created for file {}".format(
                pseudo.uuid, pseudo.filename))
         else:
             aiidalogger.debug("Reusing node {} for file {}".format(
                pseudo.uuid, pseudo.filename))
     
-    nuploaded = len([i for i in pseudo_and_created if i[1]])
+    # Add elements to the group all togetehr
+    group.add_nodes(pseudo for pseudo, created in pseudo_and_created)
+    
+    nuploaded = len([_ for _, created in pseudo_and_created if created])
      
     return nfiles, nuploaded
         
@@ -330,6 +321,10 @@ class UpfData(SinglefileData):
             else:        
                 return (pseudos[0], False)
 
+    @classproperty
+    def upffamily_type_string(cls):
+        return UPFGROUP_TYPE
+
     def store(self):
         """
         Store the node, reparsing the file so that the md5 and the element 
@@ -441,32 +436,51 @@ class UpfData(SinglefileData):
                                   "parsed instead.".format(
                     attr_md5, md5))
 
+
     @classmethod
-    def get_upf_groups(self,filter_elements=None):
+    def get_upf_group(cls,group_name):
         """
-        Return all groups that contains UpfDatas
+        Return the UpfFamily group with the given name.
+        """
+        from aiida.orm import Group
+        
+        return Group.get(name=group_name, type_string=cls.upffamily_type_string)
+
+
+    @classmethod
+    def get_upf_groups(cls,filter_elements=None, user=None):
+        """
+        Return all names of groups of type UpfFamily, possibly with some filters.
             
-        :param filter_elements: A list of strings. 
+        :param filter_elements: A string or a list of strings. 
                If present, returns only the groups that contains one Upf for
-               every element present in the list. Default=None
+               every element present in the list. Default=None, meaning that
+               all families are returned.
+        :param user: if None (default), return the groups for all users.
+               If defined, it should be either a DbUser instance, or a string
+               for the username (that is, the user email).
         """
-        # Get all groups that contain at least one upf
-        from django.db.models import Q
-        from aiida.djsite.db.models import DbGroup
-        
-        #        q_object = Q(dbnodes__type__startswith=self._plugin_type_string)
-        q_object = Q(type=UPFGROUP_TYPE)
-        groups = DbGroup.objects.filter(q_object)
-        
+        from aiida.orm import Group
+
+        group_query_params = {"type_string": cls.upffamily_type_string}
+
+        if user is not None:
+            group_query_params['user'] = user
+
+        if isinstance(filter_elements, basestring):
+            filter_elements = [filter_elements]
+
         if filter_elements is not None:
-            # add a filter to the previous query, one f per element
-            # to get only groups with desired element
-            for el in filter_elements:
-                groups = groups.filter( dbnodes__dbattributes__key='element',
-                                 dbnodes__dbattributes__tval=el.capitalize() )
-            
-        # find all groups matching the desired filters
-        groups = groups.distinct().order_by("name")
-            
-        return groups
+            actual_filter_elements = {_.capitalize() for _ in filter_elements}
+
+            group_query_params['node_attributes'] = {
+                'element': actual_filter_elements}
+
+        all_upf_groups = Group.query(**group_query_params)
+        
+        groups = [(g.name, g) for g in all_upf_groups]
+        # Sort by name
+        groups.sort()         
+        # Return the groups, without name
+        return [_[1] for _ in groups]
         

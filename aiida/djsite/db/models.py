@@ -95,38 +95,36 @@ class DbUser(AbstractBaseUser, PermissionsMixin):
     
             
 class DbNode(m.Model):
-    '''
-    Generic node: data or calculation (or code - tbd). There will be several types of connections.
-    Naming convention (NOT FINAL): A --> C --> B. 
+    """
+    Generic node: data or calculation or code.
+
+    Nodes can be linked (DbLink table)
+    Naming convention for Node relationships: A --> C --> B. 
 
     * A is 'input' of C.
-
     * C is 'output' of A. 
-
-    * A is 'parent' of B,C
-
+    * A is 'parent' of B,C 
     * C,B are 'children' of A.
 
-    FINAL DECISION:
-    All attributes are stored in the DbAttribute table.
+    :note: parents and children are stored in the DbPath table, the transitive
+      closure table, automatically updated via DB triggers whenever a link is
+      added to or removed from the DbLink table.
 
-    * internal attributes (that are used by the Data subclass and similar) are stored\
-      starting with an underscore.\
-      These (internal) attributes cannot be changed except when defining the object\
-      the first time.
+    Internal attributes, that define the node itself,
+    are stored in the DbAttribute table; further user-defined attributes,
+    called 'extra', are stored in the DbExtra table (same schema and methods 
+    of the DbAttribute table, but the code does not rely on the content of the
+    table, therefore the user can use it at his will to tag or annotate nodes.
 
-    * other attributes MUST start WITHOUT an underscore. These are user-defined and\
-      can be appended even after the calculation has run, since they just are extras.
-
-    * There is no json metadata attached to the DbNode entries. This can go into an attribute if needed.
-
-    * Attributes in the DbAttribute table have to be thought as belonging to the DbNode,\
-      and this is the reason for which there is no 'user' field in the DbAttribute field.
-
-    * For a Data node, attributes will /define/ the data and hence should be immutable.\
-      User-defined attributes are extras for convenience of tagging and searching only.\
-      User should be careful not to attach data computed from data as extras. 
-    '''
+    :note: Attributes in the DbAttribute table have to be thought as belonging
+       to the DbNode, (this is the reason for which there is no 'user' field
+       in the DbAttribute field). Moreover, Attributes define uniquely the
+       Node so should be immutable (except for the few ones defined in the
+       _updatable_attributes attribute of the Node() class, that are updatable:
+       these are Attributes that are set by AiiDA, so the user should not
+       modify them, but can be changed (e.g., the append_text of a code, that
+       can be redefined if the code has to be recompiled).
+    """
     uuid = UUIDField(auto=True, version=AIIDANODES_UUID_VERSION)
     # in the form data.upffile., data.structure., calculation., code.quantumespresso.pw., ...
     # Note that there is always a final dot, to allow to do queries of the
@@ -530,6 +528,61 @@ class DbMultipleValueAttributeBaseClass(m.Model):
             if with_transaction:
                 transaction.savepoint_rollback(sid)
             raise
+
+    @classmethod
+    def get_query_dict(cls, value):
+        """
+        Return a dictionary that can be used in a django filter to query
+        for a specific value. This takes care of checking the type of the
+        input parameter 'value' and to convert it to the right query.
+        
+        :param value: The value that should be queried. Note: can only be 
+           base datatype, not a list or dict. For those, query directly for
+           one of the sub-elements.
+        
+        :todo: see if we want to give the possibility to query for the existence
+           of a (possibly empty) dictionary or list, of for their length.
+        
+        :note: this will of course not find a data if this was stored in the 
+           DB as a serialized JSON.
+        
+        :return: a dictionary to be used in the django .filter() method.
+            For instance, if 'value' is a string, it will return the dictionary
+            ``{'datatype': 'txt', 'tval': value}``.
+            
+        :raise: ValueError if value is not of a base datatype (string, integer,
+            float, bool, None, or date)
+        """
+        import datetime 
+        from django.utils.timezone import (
+            is_naive, make_aware, get_current_timezone)
+
+        if value is None:
+            return {'datatype': 'none'}
+        elif isinstance(value,bool):
+            return {'datatype': 'bool', 'bval': value}
+        elif isinstance(value,int):
+            return {'datatype': 'int', 'ival': value}
+        elif isinstance(value,float):
+            return {'datatype': 'float', 'fval': value}
+        elif isinstance(value,basestring):
+            return {'datatype': 'txt', 'tval': value}
+        elif isinstance(value,datetime.datetime):    
+            # current timezone is taken from the settings file of django
+            if is_naive(value):
+                value_to_set = make_aware(value,get_current_timezone())
+            else:
+                value_to_set = value
+            return {'datatype': 'date', 'dval': value_to_set}
+        elif isinstance(value, list):
+            raise ValueError("Lists are not supported for getting the "
+                "query_dict")
+        elif isinstance(value, dict):
+            raise ValueError("Dicts are not supported for getting the "
+              "query_dict")
+        else:
+            raise ValueError("Unsupported type for getting the "
+                "query_dict, it is {}".format(str(type(value))))
     
     def getvalue(self):
         """

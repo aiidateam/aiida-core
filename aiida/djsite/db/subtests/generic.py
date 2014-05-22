@@ -186,6 +186,147 @@ class TestGroups(AiidaTestCase):
         # To avoid to find it in further tests
         g.delete()
 
+    def test_description(self):
+        """
+        Test the update of the description both for stored and unstored
+        groups.
+        """
+        from aiida.orm import Group
+        
+        n = Node().store()
+        
+        g1 = Group(name='testgroupdescription1', description="g1").store()
+        g1.add_nodes(n)
+
+        g2 = Group(name='testgroupdescription2', description="g2")
+        
+        # Preliminary checks
+        self.assertTrue(g1._is_stored)        
+        self.assertFalse(g2._is_stored)        
+        self.assertEquals(g1.description, "g1")
+        self.assertEquals(g2.description, "g2")
+
+        # Change
+        g1.description = "new1"
+        g2.description = "new2"
+        
+        # Test that the groups remained in their proper stored state and that
+        # the description was updated
+        self.assertTrue(g1._is_stored)        
+        self.assertFalse(g2._is_stored)        
+        self.assertEquals(g1.description, "new1")
+        self.assertEquals(g2.description, "new2")
+
+        # Store g2 and check that the description is OK
+        g2.store()
+        self.assertTrue(g2._is_stored)        
+        self.assertEquals(g2.description, "new2") 
+        
+        # clean-up
+        g1.delete()
+        g2.delete()
+
+    def test_add_nodes(self):
+        """
+        Test different ways of adding nodes
+        """
+        from aiida.orm import Group
+        
+        n1 = Node().store()
+        n2 = Node().store()
+        n3 = Node().store()
+        n4 = Node().store()
+        n5 = Node().store()
+        n6 = Node().store()
+        n7 = Node().store()
+        n8 = Node().store()
+        
+        g = Group(name='test_adding_nodes')
+        g.store()
+        #Single node
+        g.add_nodes(n1)
+        # List of nodes
+        g.add_nodes([n2, n3])
+        # Single DbNode
+        g.add_nodes(n4.dbnode)
+        # List of DbNodes
+        g.add_nodes([n5.dbnode, n6.dbnode])
+        # List of Nodes and DbNodes
+        g.add_nodes([n7, n8.dbnode])
+        
+        # Check
+        self.assertEquals(set([_.pk for _ in [n1,n2,n3,n4,n5,n6,n7,n8]]),
+            set([_.pk for _ in g.nodes]))
+        
+        # Try to add a node that is already present: there should be no problem
+        g.add_nodes(n1)
+        self.assertEquals(set([_.pk for _ in [n1,n2,n3,n4,n5,n6,n7,n8]]),
+            set([_.pk for _ in g.nodes]))
+        
+        # Cleanup
+        g.delete()
+
+    def test_remove_nodes(self):
+        """
+        Test node removal
+        """
+        from aiida.orm import Group
+        from aiida.common.exceptions import NotExistent
+        
+        n1 = Node().store()
+        n2 = Node().store()
+        n3 = Node().store()
+        n4 = Node().store()
+        n5 = Node().store()
+        n6 = Node().store()
+        n7 = Node().store()
+        n8 = Node().store()
+        n_out = Node().store()
+        
+        g = Group(name='test_remove_nodes').store()
+
+        # Add initial nodes
+        g.add_nodes([n1,n2,n3,n4,n5,n6,n7,n8])
+        # Check
+        self.assertEquals(set([_.pk for _ in [n1,n2,n3,n4,n5,n6,n7,n8]]),
+            set([_.pk for _ in g.nodes]))
+        
+        # Remove a node that is not in the group: nothing should happen
+        # (same behavior of Django)
+        g.remove_nodes(n_out)
+        # Re-check
+        self.assertEquals(set([_.pk for _ in [n1,n2,n3,n4,n5,n6,n7,n8]]),
+            set([_.pk for _ in g.nodes]))
+        
+        # Remove one Node and check
+        g.remove_nodes(n4)
+        self.assertEquals(set([_.pk for _ in [n1,n2,n3,n5,n6,n7,n8]]),
+            set([_.pk for _ in g.nodes]))
+        # Remove one DbNode and check
+        g.remove_nodes(n7.dbnode)
+        self.assertEquals(set([_.pk for _ in [n1,n2,n3,n5,n6,n8]]),
+            set([_.pk for _ in g.nodes]))
+        # Remove a list of Nodes and check
+        g.remove_nodes([n1,n8])
+        self.assertEquals(set([_.pk for _ in [n2,n3,n5,n6]]),
+            set([_.pk for _ in g.nodes]))
+        # Remove a list of Nodes and check
+        g.remove_nodes([n1,n8])
+        self.assertEquals(set([_.pk for _ in [n2,n3,n5,n6]]),
+            set([_.pk for _ in g.nodes]))
+        # Remove a list of DbNodes and check
+        g.remove_nodes([n2.dbnode,n5.dbnode])
+        self.assertEquals(set([_.pk for _ in [n3,n6]]),
+            set([_.pk for _ in g.nodes]))
+
+        # Remove a mixed list of Nodes and DbNodes and check
+        g.remove_nodes([n3,n6.dbnode])
+        self.assertEquals(set(),
+            set([_.pk for _ in g.nodes]))
+
+        # Cleanup
+        g.delete()
+
     def test_creation_from_dbgroup(self):
         from aiida.orm import Group
         
@@ -258,3 +399,69 @@ class TestGroups(AiidaTestCase):
         
         # To avoid to find it in further tests
         g.delete()
+
+    def test_query(self):
+        """
+        Test if queries are working
+        """
+        from aiida.orm import Group
+        from aiida.common.exceptions import NotExistent, MultipleObjectsError
+        from aiida.djsite.db.models import DbUser
+        from aiida.djsite.utils import get_automatic_user
+        
+        g1 = Group(name='testquery1').store()
+        g2 = Group(name='testquery2').store()
+        
+        n1 = Node().store()
+        n2 = Node().store()
+        n3 = Node().store()
+        n4 = Node().store()
+        
+        g1.add_nodes([n1, n2])
+        g2.add_nodes([n1, n3])
+        
+        newuser = DbUser.objects.create_user(email='test@email.xx', password='')
+        g3 = Group(name='testquery3', user = newuser).store()
+        
+        # I should find it
+        g1copy = Group.get(uuid=g1.uuid)
+        self.assertEquals(g1.pk, g1copy.pk)
+        
+        # Try queries
+        res = Group.query(nodes=n4)
+        self.assertEquals([_.pk for _ in res], [])
+
+        res = Group.query(nodes=n1)
+        self.assertEquals([_.pk for _ in res], [_.pk for _ in [g1, g2]])
+
+        res = Group.query(nodes=n2)
+        self.assertEquals([_.pk for _ in res], [_.pk for _ in [g1]])
+
+        
+        # I try to use 'get' with zero or multiple results 
+        with self.assertRaises(NotExistent):
+            Group.get(nodes=n4)
+        with self.assertRaises(MultipleObjectsError):
+            Group.get(nodes=n1)
+        
+        self.assertEquals(Group.get(nodes=n2).pk, g1.pk)
+            
+        # Query by user
+        res = Group.query(user=newuser)
+        self.assertEquals(set(_.pk for _ in res), set(_.pk for _ in [g3]))
+
+        # Same query, but using a string (the username=email) instead of
+        # a DbUser object
+        res = Group.query(user=newuser.email)
+        self.assertEquals(set(_.pk for _ in res), set(_.pk for _ in [g3]))
+
+        res = Group.query(user=get_automatic_user())
+        self.assertEquals(set(_.pk for _ in res), set(_.pk for _ in [g1, g2]))
+            
+        # Final cleanup
+        g1.delete()
+        g2.delete()
+        newuser.delete()
+        
+        
+        

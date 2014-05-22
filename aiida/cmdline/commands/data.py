@@ -182,6 +182,9 @@ class _Upf(VerdiCommand):
         # note that the following command requires that the upfdata has a
         # key called element. As such, it is not well separated.
         import argparse
+        
+        from aiida.orm.data.upf import UPFGROUP_TYPE
+        
         parser = argparse.ArgumentParser(description='List AiiDA upf families.')
         parser.add_argument('-e','--element',nargs='+', type=str, default=None)
         
@@ -199,7 +202,7 @@ class _Upf(VerdiCommand):
             
         if groups:
             for g in groups:
-                pseudos = UpfData.query(dbgroups__name=g.name).distinct()
+                pseudos = UpfData.query(dbgroups=g.dbgroup).distinct()
                 num_pseudos = pseudos.count()
 
                 pseudos_list = pseudos.filter(

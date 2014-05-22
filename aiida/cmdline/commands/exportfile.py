@@ -197,8 +197,9 @@ def get_all_fields_info():
     return all_fields_info, unique_identifiers
 
 def export(what, also_parents = True, also_calc_outputs = True,
-           outfile = 'export_data.aiida.tar.gz'):     
+           outfile = 'export_data.aiida.tar.gz', overwrite=False):     
     import json
+    import os
     import tarfile
     import operator
     from collections import defaultdict
@@ -209,8 +210,13 @@ def export(what, also_parents = True, also_calc_outputs = True,
     from aiida.djsite.db import models
     from aiida.orm import Node, Calculation
     from aiida.common.folders import SandboxFolder
+    from aiida.common.exceptions import ModificationNotAllowed
 
     EXPORT_VERSION = '0.1'
+    
+    if not overwrite and os.path.exists(outfile):
+        raise ModificationNotAllowed("The output file '{}' already "
+                                     "exists".format(outfile))
     
     all_fields_info, unique_identifiers = get_all_fields_info()
     
@@ -418,6 +424,7 @@ class Export(VerdiCommand):
         load_django()
 
         from aiida.djsite.db import models
+        from aiida.orm import Group
         
         print "FEATURE UNDER DEVELOPMENT!"
 
@@ -427,8 +434,7 @@ class Export(VerdiCommand):
         
         ## TODO: parse cmdline parameters and pass them
         ## in particular: also_parents; what; outputfile
-        export(what = models.DbNode.objects.filter(
-            dbgroups__name=args[0]).distinct())
+        export(what = [_.dbnode for _ in set(Group.get(name=args[0]).nodes)])
 
         print "Default output file written."
 

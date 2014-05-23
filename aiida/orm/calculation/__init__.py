@@ -727,7 +727,7 @@ class Calculation(Node):
         
         :param from_attribute: if set to True, read it from the attributes 
           (the attribute is also set with set_state, unless the state is set
-           to IMPORTED; in this way we can also see the state before storing).
+          to IMPORTED; in this way we can also see the state before storing).
         
         :return: a string. If from_attribute is True and no attribute is found,
           return None. If from_attribute is False and no entry is found in the
@@ -980,9 +980,9 @@ class Calculation(Node):
         
         states = {c.pk: c.get_state_string() for c in calc_list}
         
-        scheduler_lastcheck = dict(DbAttribute.objects.filter(dbnode__in=calc_list,
-                                                   key='scheduler_lastchecktime').values_list(
-            'dbnode__pk', 'dval'))
+        scheduler_lastcheck = dict(DbAttribute.objects.filter(
+            dbnode__in=calc_list,
+            key='scheduler_lastchecktime').values_list('dbnode__pk', 'dval'))
         
         calc_list_data = calc_list.values('pk', 'dbcomputer__name', 'ctime', 'type')
         
@@ -999,7 +999,7 @@ class Calculation(Node):
                 last_check_string = ("# Last daemon state_updater check: "
                     "{} ({})".format(
                     str_timedelta(now-last_daemon_check, negative_to_zero=True),
-                    last_daemon_check.strftime("%H:%M:%S")))
+                    timezone.localtime(last_daemon_check).strftime("at %H:%M:%S on %Y-%m-%d")))
         
         if not calc_list:
             return last_check_string
@@ -1037,8 +1037,8 @@ class Calculation(Node):
                 
                 res_str_list.append(fmt_string.format( calcdata['pk'],
                     states[calcdata['pk']],
-                    calcdata['ctime'].isoformat().split('T')[0],
-                    calcdata['ctime'].isoformat().split('T')[1].split('.')[0],
+                    timezone.localtime(calcdata['ctime']).isoformat().split('T')[0],
+                    timezone.localtime(calcdata['ctime']).isoformat().split('T')[1].split('.')[0],
                     remote_state,
                     remote_computer,
                     str(from_type_to_pluginclassname(
@@ -1521,7 +1521,7 @@ class Calculation(Node):
             is used.
         """
         import os
-        import datetime
+        from django.utils import timezone
         import tempfile
 
         from aiida.transport.plugins.local import LocalTransport
@@ -1535,7 +1535,7 @@ class Calculation(Node):
         folder.create()
         
         if subfolder_name is None:
-            subfolder_basename = datetime.datetime.now().strftime('%Y%m%d-%H%M%S-')
+            subfolder_basename = timezone.now().strftime('%Y%m%d-%H%M%S-')
         else:
             subfolder_basename = subfolder_name
             

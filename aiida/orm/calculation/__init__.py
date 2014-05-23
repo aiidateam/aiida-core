@@ -33,8 +33,7 @@ class Calculation(Node):
     # Default values to be set for new nodes
     @classproperty
     def _set_defaults(cls):
-        return {"_state": calc_states.NEW,
-                "parser_name": cls._default_parser,
+        return {"parser_name": cls._default_parser,
                 "linkname_retrieved": cls._linkname_retrieved,
           }
     
@@ -151,7 +150,22 @@ class Calculation(Node):
         else:
             raise AttributeError("'{}' object has no attribute '{}'".format(
                 self.__class__.__name__, name))
-   
+    
+    def store(self, *args, **kwargs):
+        """
+        Override the store() method to store also the calculation in the NEW
+        state as soon as this is stored for the first time.
+        """
+        super(Calculation, self).store(*args, **kwargs)
+        
+        # I get here if the calculation was successfully stored.
+        self._set_state(calc_states.NEW)
+        
+        # Important to return self to allow the one-liner
+        # c = Calculation().store()
+        return self
+        
+       
     @classmethod 
     def _parse_single_arg(cls, function_name, additional_parameter,
                          args, kwargs):
@@ -658,18 +672,97 @@ class Calculation(Node):
 
 
     def _set_state(self, state):
+        """
+        Set the state of the calculation.
+        
+        Set it in the DbCalcState to have also the uniqueness check.
+        Moreover (except for the IMPORTED state) also store in the 'state'
+        attribute, useful to know it also after importing, and for faster
+        querying.
+        
+        .. todo:: Add further checks to enforce that the states are set
+           in order?
+        
+        :param state: a string with the state. This must be a valid string,
+          from ``aiida.common.datastructures.calc_states``.
+        :raise: UniquenessError if the given state was already set.
+        """
+        from django.db import transaction, IntegrityError
+
+        from aiida.djsite.db.models import DbCalcState
+        from aiida.common.exceptions import UniquenessError
+        
+        if self._to_be_stored:
+            raise ModificationNotAllowed("Cannot set the calculation state "
+                                         "before storing")
+        
         if state not in calc_states:
             raise ValueError(
                 "'{}' is not a valid calculation status".format(state))
-        self.set_attr('state', state)
+        
+        try:
+            with transaction.commit_on_success():
+                new_state = DbCalcState(dbnode=self.dbnode, state=state).save()
+        except IntegrityError:
+            raise UniquenessError("Calculation pk={} already transited through "
+                                  "the state {}".format(self.pk, state))
 
-    def get_state(self):
+        # For non-imported states, also set in the attribute (so that, if we
+        # export, we can still see the original state the calculation had.
+        if state != calc_states.IMPORTED:
+            self.set_attr('state', state)
+
+    def get_state(self, from_attribute=False):
         """
         Get the state of the calculation.
         
-        :return: a string.
+        .. note:: this method returns the UNDETERMINED state if no state
+          is found in the DB.
+        
+        .. todo:: Understand if the state returned when no state entry is found
+          in the DB is the best choice.
+        
+        .. todo:: Understand if it is ok to return the most recently modified
+          state, or we should implement some state ordering logic.
+        
+        :param from_attribute: if set to True, read it from the attributes 
+          (the attribute is also set with set_state, unless the state is set
+           to IMPORTED; in this way we can also see the state before storing).
+        
+        :return: a string. If from_attribute is True and no attribute is found,
+          return None. If from_attribute is False and no entry is found in the
+          DB, return the "UNDETERMINED" state.
         """
-        return self.get_attr('state', None)
+        from aiida.djsite.db.models import DbCalcState
+        
+        if from_attribute:
+            return self.get_attr('state', None)
+        else:
+            if self._to_be_stored:
+                return calc_states.NEW
+            else:
+                this_calc_states = DbCalcState.objects.filter(
+                    dbnode=self).order_by('-time').values_list('state', flat=True)
+                if not this_calc_states:
+                    return calc_states.UNDETERMINED
+                most_recent_state = this_calc_states[0]
+                return most_recent_state
+
+    def get_state_string(self):
+        """
+        Return a string, that is correct also when the state is imported 
+        (in this case, the string will be in the format IMPORTED/ORIGSTATE
+        where ORIGSTATE is the original state from the node attributes).
+        """
+        state = self.get_state(from_attribute=False)
+        if state == calc_states.IMPORTED:
+            attribute_state = self.get_state(from_attribute=True)
+            if attribute_state is None:
+                attribute_state = "UNDETERMINED"
+            return 'IMPORTED/{}'.format(attribute_state)
+        else:
+            return state
+
 
     def is_new(self):
         """
@@ -820,6 +913,10 @@ class Calculation(Node):
                             all_users=False, pks=[]):
         """
         This function return a string with a description of the AiiDA calculations.
+
+        .. todo:: does not support the query for the IMPORTED state (since it
+          checks the state in the Attributes, not in the DbCalcState table).
+          Decide which is the correct logi and implement the correct query.
         
         :param states: a list of string with states. If set, print only the 
             calculations in the states "states", otherwise shows all. Default = None.
@@ -880,9 +977,9 @@ class Calculation(Node):
         scheduler_states = dict(DbAttribute.objects.filter(dbnode__in=calc_list,
                                                    key='scheduler_state').values_list(
             'dbnode__pk', 'tval'))
-        states = dict(DbAttribute.objects.filter(dbnode__in=calc_list,
-                                                   key='state').values_list(
-            'dbnode__pk', 'tval'))
+        
+        states = {c.pk: c.get_state_string() for c in calc_list}
+        
         scheduler_lastcheck = dict(DbAttribute.objects.filter(dbnode__in=calc_list,
                                                    key='scheduler_lastchecktime').values_list(
             'dbnode__pk', 'dval'))

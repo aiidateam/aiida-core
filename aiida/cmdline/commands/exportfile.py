@@ -434,6 +434,7 @@ class Export(VerdiCommand):
 
     This command allows to export to file nodes and group of nodes, for backup
     purposes or to share data with collaborators.
+    Call this command with the '-h' option for some documentation of its usage.
     """
     def run(self,*args):                    
         load_django()

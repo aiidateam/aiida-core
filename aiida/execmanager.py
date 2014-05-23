@@ -10,7 +10,7 @@ from aiida.scheduler.datastructures import job_states
 from aiida.common.exceptions import (
     AuthenticationError,
     ConfigurationError,
-    PluginInternalError,
+    UniquenessError,
     )
 from aiida.common import aiidalogger
     
@@ -92,14 +92,24 @@ def update_running_calcs_status(authinfo):
                         # For the moment, FAILED is not defined
                         if jobinfo.job_state in [job_states.DONE]: #, job_states.FAILED]:
                             computed.append(c)
-                            c._set_state(calc_states.COMPUTED)
+                            try:
+                                c._set_state(calc_states.COMPUTED)
+                            except UniquenessError:
+                                # Someone already set it, just skip
+                                pass
                         elif jobinfo.job_state == job_states.UNDETERMINED:
-                            c._set_state(calc_states.UNDETERMINED)
+                            try:
+                                c._set_state(calc_states.UNDETERMINED)
+                            except UniquenessError:
+                                # Someone already set it, just skip
+                                pass                            
                             execlogger.error("There is an undetermined calc "
                                              "with pk {}".format(
                                 c.pk), extra=logger_extra)
-                        else:
-                            c._set_state(calc_states.WITHSCHEDULER)
+                        ## Do not sret the WITHSCHEDULER state multiple times, 
+                        ## this would raise a UniquenessError
+                        #else:
+                        #    c._set_state(calc_states.WITHSCHEDULER)
     
                         c._set_scheduler_state(jobinfo.job_state)
     
@@ -154,7 +164,11 @@ def update_running_calcs_status(authinfo):
                     # of this routine; no further change should be done after
                     # this, so that in general the retriever can just 
                     # poll for this state, if we want to.
-                    c._set_state(calc_states.COMPUTED)
+                    try:
+                        c._set_state(calc_states.COMPUTED)
+                    except UniquenessError:
+                        # Someone already set it, just skip
+                        pass
 
             
     return computed
@@ -285,7 +299,11 @@ def submit_jobs():
                     computer=dbcomputer,
                     user=aiidauser)
                 for calc in calcs_to_inquire:
-                    calc._set_state(calc_states.SUBMISSIONFAILED)
+                    try:
+                        calc._set_state(calc_states.SUBMISSIONFAILED)
+                    except UniquenessError:
+                        # Someone already set it, just skip
+                        pass
                     logger_extra = get_dblogger_extra(calc)
                     execlogger.error("Submission of calc {} failed, "
                                      "computer pk={} ({}) is not configured "
@@ -402,7 +420,11 @@ def submit_calc(calc, authinfo, transport=None):
                          "first".format(calc.pk))
                 
     # I start to submit the calculation: I set the state
-    calc._set_state(calc_states.SUBMITTING)
+    try:
+        calc._set_state(calc_states.SUBMITTING)
+    except UniquenessError:
+        raise ValueError("The calculation has already been submitted by "
+                         "someone else!")
              
     try:    
         if must_open_t:
@@ -562,6 +584,9 @@ def submit_calc(calc, authinfo, transport=None):
 
             job_id = s.submit_from_script(t.getcwd(),script_filename)
             calc._set_job_id(job_id)
+            # This should always be possible, because we should be
+            # the only ones submitting this calculations, 
+            # so I do not check the UniquenessError
             calc._set_state(calc_states.WITHSCHEDULER)
             ## I do not set the state to queued; in this way, if the
             ## daemon is down, the user sees '(unknown)' as last state
@@ -577,7 +602,12 @@ def submit_calc(calc, authinfo, transport=None):
 
     except Exception as e:
         import traceback
-        calc._set_state(calc_states.SUBMISSIONFAILED)
+        try:
+            calc._set_state(calc_states.SUBMISSIONFAILED)
+        except UniquenessError:
+            # Someone already set it, just skip
+            pass
+
         execlogger.error("Submission of calc {} failed, check also the "
                          "log file! Traceback: {}".format(
                               calc.pk, 
@@ -614,8 +644,16 @@ def retrieve_computed_for_authinfo(authinfo):
         # Open connection
         with authinfo.get_transport() as t:
             for calc in calcs_to_retrieve:
-                calc._set_state(calc_states.RETRIEVING)
                 logger_extra = get_dblogger_extra(calc)
+                try:
+                    calc._set_state(calc_states.RETRIEVING)
+                except UniquenessError:
+                    # Someone else has already started to retrieve it,
+                    # just log and continue
+                    execlogger.debug("Attempting to retrieve more than once "
+                                     "calculation {}: skipping!".format(calc.pk),
+                                     extra=logger_extra)                    
+                    continue # with the next calculation to retrieve
                 try:
                     execlogger.debug("Retrieving calc {}".format(calc.pk),
                                      extra=logger_extra)
@@ -650,6 +688,8 @@ def retrieve_computed_for_authinfo(authinfo):
                     calc._add_link_to(retrieved_files,
                                       label=calc.get_linkname_retrieved())
 
+                    # If I was the one retrieving, I should also be the only
+                    # one parsing! I do not check
                     calc._set_state(calc_states.PARSING)
 
                     Parser = calc.get_parserclass()
@@ -661,9 +701,21 @@ def retrieve_computed_for_authinfo(authinfo):
                         successful = parser.parse_from_calc()
                         
                     if successful:
-                        calc._set_state(calc_states.FINISHED)
+                        try:
+                            calc._set_state(calc_states.FINISHED)
+                        except UniquenessError:
+                            # I should have been the only one to set it, but
+                            # in order to avoid unuseful error messages, I 
+                            # just ignore
+                            pass
                     else:
-                        calc._set_state(calc_states.FAILED)
+                        try:
+                            calc._set_state(calc_states.FAILED)
+                        except UniquenessError:
+                            # I should have been the only one to set it, but
+                            # in order to avoid unuseful error messages, I 
+                            # just ignore
+                            pass
                         execlogger.error("[parsing of calc {}] "
                             "The parser returned an error, but it should have "
                             "created an output node with some partial results "
@@ -680,12 +732,18 @@ def retrieve_computed_for_authinfo(authinfo):
                             "Traceback: {}".format(calc.pk, tb),
                             extra=newextradict)
                         # TODO: add a 'comment' to the calculation
-                        calc._set_state(calc_states.PARSINGFAILED)
+                        try:
+                            calc._set_state(calc_states.PARSINGFAILED)
+                        except UniquenessError:
+                            pass
                     else:
                         execlogger.error("Error retrieving calc {}. "
                             "Traceback: {}".format(calc.pk, tb),
                             extra=newextradict)
-                        calc._set_state(calc_states.RETRIEVALFAILED)
+                        try:
+                            calc._set_state(calc_states.RETRIEVALFAILED)
+                        except UniquenessError:
+                            pass
                         raise
 
             

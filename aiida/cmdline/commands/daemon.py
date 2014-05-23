@@ -242,9 +242,26 @@ class Daemon(VerdiCommand):
         """
         Print the status of the daemon
         """
+        from aiida.common.utils import load_django
+        load_django()
+        
         import supervisor
         import supervisor.supervisorctl
         import xmlrpclib
+
+        from django.utils import timezone
+        
+        from aiida.djsite.db.tasks import get_most_recent_daemon_timestamp
+        from aiida.common.utils import str_timedelta
+
+        most_recent_timestamp = get_most_recent_daemon_timestamp()
+        
+        if most_recent_timestamp is not None:
+            timestamp_delta = timezone.now() - most_recent_timestamp
+            print ("# Most recent daemon timestamp:{}".format(
+                str_timedelta(timestamp_delta)))
+        else:
+            print ("# Most recent daemon timestamp: [Never]")
 
         pid = self.get_daemon_pid()
         if (pid==None):

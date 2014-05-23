@@ -76,6 +76,7 @@ def import_file(infile):
     from aiida.common.folders import SandboxFolder, RepositoryFolder
     from aiida.djsite.db import models
     from aiida.common.utils import get_class_string, get_object_from_string
+    from aiida.common.datastructures import calc_states
     
 
     # This is the export version expected by this function
@@ -317,11 +318,24 @@ def import_file(infile):
                 just_saved = dict(Model.objects.filter(
                    **{"{}__in".format(unique_identifier):
                       import_entry_ids.keys()}).values_list(unique_identifier, 'pk'))
-                #Now I have the PKs, print the info
+
+                imported_states = []
+                if model_name == get_class_string(models.DbNode):
+                    print "SETTING THE IMPORTED STATES FOR NEW NODES..."
+                    # I set for all nodes, even if I should set it only 
+                    # for calculations
+                    for unique_id, new_pk in just_saved.iteritems():
+                        imported_states.append(
+                            models.DbCalcState(dbnode_id=new_pk,
+                                        state=calc_states.IMPORTED))
+                    models.DbCalcState.objects.bulk_create(imported_states)
+
+                # Now I have the PKs, print the info
+                # Moreover, set the foreing_ids_reverse_mappings
                 for unique_id, new_pk in just_saved.iteritems():
                     import_entry_id = import_entry_ids[unique_id]
                     foreign_ids_reverse_mappings[model_name][unique_id] = new_pk
-            
+                                        
                     print "NEW %s: %s (%s->%s)" % (model_name, unique_id, 
                                                    import_entry_id,
                                                    new_pk)

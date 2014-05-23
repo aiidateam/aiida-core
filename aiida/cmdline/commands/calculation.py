@@ -102,6 +102,7 @@ class Calculation(VerdiCommand):
         from aiida.orm.calculation import Calculation as C
         
         parser = argparse.ArgumentParser(description='List AiiDA calculations.')
+        # The default states are those that are shown if no option is given
         parser.add_argument('-s', '--states', nargs='+', type=str,
                             help="show only the AiiDA calculations with given state",
                             default=[calc_states.WITHSCHEDULER,

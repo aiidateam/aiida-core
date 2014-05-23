@@ -1234,7 +1234,7 @@ class DbComment(m.Model):
     @python_2_unicode_compatible
     def __str__(self):
         return "DbComment for [{} {}] on {}".format(self.dbnode.get_simple_name(),
-            self.dbnode.pk, self.time.strftime("%Y-%m-%d"))
+            self.dbnode.pk, timezone.localtime(self.ctime).strftime("%Y-%m-%d"))
 
 
 class DbLog(m.Model):

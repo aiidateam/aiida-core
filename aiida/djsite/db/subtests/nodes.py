@@ -355,11 +355,11 @@ class TestNodeBasic(AiidaTestCase):
     def test_datetime_attribute(self):
         import datetime
         from django.utils.timezone import (
-            get_current_timezone, is_naive, make_aware)
+            get_current_timezone, is_naive, make_aware, now)
 
         a = Node()
 
-        date = datetime.datetime.now()
+        date = now()
 
         a.set_attr('some_date', date)
         a.store()

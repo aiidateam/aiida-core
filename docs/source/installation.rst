@@ -224,30 +224,37 @@ the database, the repository location, and it will finally (automatically) run
 a django ``syncdb`` command, if needed, that creates the required tables
 in the database and installs the database triggers.
 
-.. note:: Whe the "Database engine" is asked, use 'sqlite' **only if** you want
-  to try out AiiDA without setting up a database.
-  
-  **However, keep in mind that for serious use, SQLite has serious
-  limitations!!** For instance, when many calculations are managed at the same
-  time, the database file is locked by SQLite to avoid corruption, but this
-  can lead to timeouts that do not allow to AiiDA to properly store the
-  calculations in the DB.
-  
-  **Therefore, for production use of AiiDA, we strongly suggest to setup a
-  "real" database** as PostgreSQL or MySQL. Then, in the "Database engine"
-  field, type either 'postgres' or 'mysql' according to the database you 
-  chose to use.
+The first thing that will be asked to you is the timezone, extremely important
+to get correct dates and times for your calculations.
 
-.. note:: As the first parameter to set during the ``verdi install`` phase,
-  the "Default user email" is asked.
-  
-  In AiiDA, the user email is used as 
+AiiDA will do its best to try and understand the local timezone (if properly
+configured on your machine), and will suggest a set of sensible values.
+Choose the timezone that fits best to you (that is, the nearest city in your 
+timezone - for Lausanne, for instance, we choose ``Europe/Zurich``) and type
+it at the prompt.
+
+If the automatic zone detection did not work for you,  type instead another 
+valid string.
+A list of valid strings can be found at
+http://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+but for the definitive list of timezones supported by your system, open
+a python shell and type::
+
+  import pytz
+  print pytz.all_timezones
+
+as AiiDA will not accept a timezone string that is not in the above list.
+
+As a second parameter to input during the ``verdi install`` phase,
+the "Default user email" is asked.
+
+We suggest here to use your institution email, that will be used to associate
+the calculations to you.
+ 
+.. note:: In AiiDA, the user email is used as 
   username, and also as unique identifier when importing/exporting data from 
   AiiDA.
-  
-  We suggest here to use your institution email, to associate the calculations
-  to your username.
-  
+   
 .. note:: Even if you choose an email different from the default one
   (``aiida@localhost``), an user with email ``aiida@localhost`` will be set up.
   Anyway, its password will be set to None, effectively disabling
@@ -264,7 +271,27 @@ in the database and installs the database triggers.
     field empty, no password will be set and no access will be granted to the
     user via the REST API and the web interface.
 
-If something fails, you may have misconfigured the database.
+Then, the following prompts will help you configure the database.
+
+.. note:: Whe the "Database engine" is asked, use 'sqlite' **only if** you want
+  to try out AiiDA without setting up a database.
+  
+  **However, keep in mind that for serious use, SQLite has serious
+  limitations!!** For instance, when many calculations are managed at the same
+  time, the database file is locked by SQLite to avoid corruption, but this
+  can lead to timeouts that do not allow to AiiDA to properly store the
+  calculations in the DB.
+  
+  **Therefore, for production use of AiiDA, we strongly suggest to setup a
+  "real" database** as PostgreSQL or MySQL. Then, in the "Database engine"
+  field, type either 'postgres' or 'mysql' according to the database you 
+  chose to use.
+
+At the end, AiiDA will also ask to configure your user, if you set up a user
+different from ``aiida@localhost``.
+
+If something fails, there is a high chance that you may have misconfigured
+the database. Double-check your settings before reporting an error.
 
 Start the daemon
 -----------------

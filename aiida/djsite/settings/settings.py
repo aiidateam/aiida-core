@@ -61,8 +61,14 @@ if not os.path.isdir(LOCAL_REPOSITORY):
             "Please setup correctly the LOCAL_REPOSITORY variable to "
             "a suitable directory on which you have write permissions. "
             "(I was not able to create the directory.)")
-        
 
+# CUSTOM USER CLASS
+AUTH_USER_MODEL = 'db.DbUser'
+
+# Make this unique, and don't share it with anybody.
+# This is generated with the first run of 'verdi install'
+SECRET_KEY = get_secret_key()
+        
 # Usual Django settings starts here.............
 
 DEBUG = True
@@ -73,9 +79,6 @@ ADMINS = (
 )
 
 MANAGERS = ADMINS
-
-# CUSTOM USER CLASS
-AUTH_USER_MODEL = 'db.DbUser'
 
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
@@ -91,11 +94,11 @@ SITE_ID = 1
 
 # If you set this to False, Django will make some optimizations so as not
 # to load the internationalization machinery.
-USE_I18N = True
+USE_I18N = False
 
 # If you set this to False, Django will not format dates, numbers and
 # calendars according to the current locale.
-USE_L10N = True
+USE_L10N = False
 
 # If you set this to False, Django will not use timezone-aware datetimes.
 # For AiiDA, leave it as True, otherwise setting properties with dates will not work.
@@ -135,10 +138,6 @@ STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
 #    'django.contrib.staticfiles.finders.DefaultStorageFinder',
 )
-
-# Make this unique, and don't share it with anybody.
-# This is generated with the first run of 'verdi install'
-SECRET_KEY = get_secret_key()
 
 # List of callables that know how to import templates from various sources.
 TEMPLATE_LOADERS = (
@@ -284,7 +283,6 @@ AIIDANODES_UUID_VERSION=4
 # For the time being, we support only json
 TASTYPIE_DEFAULT_FORMATS = ['json']
 
-
 # -------------------------
 # AiiDA-Deamon configuration
 # -------------------------
@@ -301,18 +299,18 @@ CELERY_RESULT_BACKEND = "database"
 
 CELERYBEAT_SCHEDULER = "djcelery.schedulers.DatabaseScheduler"
 
-# Used internally, for the get_last_daemon_run function.
+# Used internally, in the functions that get the last daemon timestamp.
 # Key: internal name, left: actual celery name. Can be the same
 djcelery_tasks = {
-#    'calculationretrieve': 'update-status-and-retrieve',
     'submitter': 'submitter',
-    'updater': 'updater',
+    'updater':   'updater',
     'retriever': 'retriever',
-    'workflow': 'workflow_stepper',
+    'workflow':  'workflow_stepper',
     }
 
-# Every 30 seconds it is started, but for how it is done internally, if the previous loop
-# is still working, it won't restart twice at the same time.
+# Choose here how often the tasks should be run. Note that if the previous task
+# is still running, the new one does not start thanks to the DbLock feature 
+# that we added.
 CELERYBEAT_SCHEDULE = {
     djcelery_tasks['submitter']: {
         'task':'aiida.djsite.db.tasks.submitter',

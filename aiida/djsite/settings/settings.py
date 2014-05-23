@@ -1,7 +1,7 @@
 # Django settings for the AiiDA project.
 import sys, os
 from aiida.common.exceptions import ConfigurationError
-from aiida.common.setup import get_config
+from aiida.common.setup import get_config, get_secret_key
 
 # Assumes that parent directory of aiida is root for
 # things like templates/, SQL/ etc.  If not, change what follows...
@@ -137,7 +137,8 @@ STATICFILES_FINDERS = (
 )
 
 # Make this unique, and don't share it with anybody.
-SECRET_KEY = 'm6=!mrb!aooja+&amp;whx^f$^(r$nd6cchq6n)yg^l)tz6l)x5xx$'
+# This is generated with the first run of 'verdi install'
+SECRET_KEY = get_secret_key()
 
 # List of callables that know how to import templates from various sources.
 TEMPLATE_LOADERS = (

@@ -198,6 +198,22 @@ def get_all_fields_info():
 
 def export(what, also_parents = True, also_calc_outputs = True,
            outfile = 'export_data.aiida.tar.gz', overwrite=False):     
+    """
+    Export the DB entries passed in the 'what' list on a file.
+    
+    :todo: limit the export to finished or failed calculations.
+    
+    :param what: a list of Django database entries; they can belong to different
+      models.
+    :param also_parents: if True, also all the parents are stored (from th
+      DbPath transitive closure table)
+    :param also_calc_outputs: if True, any output of a calculation is also exported
+    :param outfile: the filename of the file on which to export
+    :param overwrite: if True, overwrite the output file without asking.
+        if False, raise an IOError in this case.
+    
+    :raise IOError: if overwrite==False and the filename already exists.
+    """
     import json
     import os
     import tarfile
@@ -210,13 +226,12 @@ def export(what, also_parents = True, also_calc_outputs = True,
     from aiida.djsite.db import models
     from aiida.orm import Node, Calculation
     from aiida.common.folders import SandboxFolder
-    from aiida.common.exceptions import ModificationNotAllowed
 
     EXPORT_VERSION = '0.1'
     
     if not overwrite and os.path.exists(outfile):
-        raise ModificationNotAllowed("The output file '{}' already "
-                                     "exists".format(outfile))
+        raise IOError("The output file '{}' already "
+                      "exists".format(outfile))
     
     all_fields_info, unique_identifiers = get_all_fields_info()
     
@@ -423,18 +438,86 @@ class Export(VerdiCommand):
     def run(self,*args):                    
         load_django()
 
-        from aiida.djsite.db import models
-        from aiida.orm import Group
-        
-        print "FEATURE UNDER DEVELOPMENT!"
+        import argparse
 
-        if len(args) != 1:
-            print "Pass a group name to export all entries in that group"
-            sys.exit(1)
+        from aiida.orm import Group
+        from aiida.common.exceptions import NotExistent
+        from aiida.djsite.db import models
         
-        ## TODO: parse cmdline parameters and pass them
-        ## in particular: also_parents; what; outputfile
-        export(what = [_.dbnode for _ in set(Group.get(name=args[0]).nodes)])
+        parser = argparse.ArgumentParser(description='Export data from the DB.')
+        # The default states are those that are shown if no option is given
+        parser.add_argument('-c', '--computers', nargs='+', type=int, metavar="PK",
+                            help="Export the given computers")
+        parser.add_argument('-n', '--nodes', nargs='+', type=int, metavar="PK",
+                            help="Export the given nodes")
+        parser.add_argument('-g', '--groups', nargs='+', metavar="GROUPNAME",
+                            help="Export all nodes in the given user-defined groups",
+                            type=str)
+        parser.add_argument('-P', '--no-parents',
+                            dest='no_parents',action='store_true',
+                            help="Store only the nodes that are explicitly given, without exporting the parents")        
+        parser.set_defaults(no_parents=False)
+        parser.add_argument('-O', '--no-calc-outputs',
+                            dest='no_calc_outputs',action='store_true',
+                            help="If a calculation is included in the list of nodes to export, do not export its outputs")
+        parser.set_defaults(no_calc_outputs=False)
+        parser.add_argument('-y', '--overwrite',
+                            dest='overwrite',action='store_true',
+                            help="Overwrite the output file, if it exists")       
+        parser.set_defaults(overwrite=False)
+        parser.add_argument('output_file', type=str, 
+                            help='The output file name for the export file')
+        
+        parsed_args = parser.parse_args(args)
+        
+        if parsed_args.nodes is None:
+            node_pk_list = []
+        else:
+            node_pk_list = parsed_args.nodes
+        
+        groups_list = []
+        
+        if parsed_args.groups is not None:
+            for group_name in parsed_args.groups:
+                try:
+                    group = Group.get(name=group_name)
+                except NotExistent:
+                    print >> sys.stderr, ("No user-defined group with name '{}' "
+                                          "found. Stopping.".format(group_name))
+                    sys.exit(1)
+                node_pk_list += group.dbgroup.dbnodes.values_list('pk',flat=True)
+                groups_list.append(group.dbgroup)
+        node_pk_list = set(node_pk_list)
+        
+        node_list = list(
+            models.DbNode.objects.filter(pk__in=node_pk_list))
+        missing_nodes = node_pk_list.difference(_.pk for _ in node_list)
+        for pk in missing_nodes:
+            print >> sys.stderr, ("WARNING! Node with pk={} "
+                                  "not found, skipping.".format(pk))
+        if parsed_args.computers is not None:
+            computer_list = list(models.DbComputer.objects.filter(
+                pk__in=parsed_args.computers))
+            missing_computers = set(parsed_args.computers).difference(
+                _.pk for _ in computer_list)
+            for pk in missing_computers:
+                print >> sys.stderr, ("WARNING! Computer with pk={} "
+                                      "not found, skipping.".format(pk))
+        else:
+            computer_list = []
+
+        # TODO: Export of groups not implemented yet!
+        what_list = node_list + computer_list # + groups_list
+
+        try:
+            export(what = what_list, 
+                   also_parents = not parsed_args.no_parents,
+                   also_calc_outputs = not parsed_args.no_calc_outputs,
+                   outfile=parsed_args.output_file,
+                   overwrite=parsed_args.overwrite)
+        except IOError as e:
+            print >> sys.stderr, e.message
+            sys.exit(1)
 
         print "Default output file written."
 

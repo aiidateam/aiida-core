@@ -1535,7 +1535,7 @@ class Calculation(Node):
         folder.create()
         
         if subfolder_name is None:
-            subfolder_basename = timezone.now().strftime('%Y%m%d-%H%M%S-')
+            subfolder_basename = timezone.localtime(timezone.now()).strftime('%Y%m%d-%H%M%S-')
         else:
             subfolder_basename = subfolder_name
             

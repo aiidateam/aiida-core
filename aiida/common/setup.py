@@ -8,6 +8,7 @@ DEFAULT_AIIDA_USER="aiida@localhost"
 
 AIIDA_CONFIG_FOLDER = "~/.aiida"
 CONFIG_FNAME = 'config.json'
+SECRET_KEY_FNAME = 'secret_key.dat'
 
 DAEMON_SUBDIR    = "daemon"
 LOG_DIR          = "daemon/log"
@@ -120,6 +121,58 @@ process_name=%(process_num)s
             aiida_module_dir = os.path.split(os.path.abspath(
                 aiida.__file__))[0]))
 
+def generate_random_secret_key():
+    """
+    Generate a random secret key to put in the django settings module.
+    
+    This should be the same function used by Django in
+    core/management/commands/startproject.
+    """
+    from django.utils.crypto import get_random_string
+    
+    # Create a random SECRET_KEY hash to put it in the main settings.
+    chars = 'abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)'
+    secret_key = get_random_string(50, chars)
+    return secret_key
+
+def try_create_secret_key():
+    """
+    Creates a new secret key file, if this does not exist, otherwise do nothing
+    (to avoid that the secret key is regenerated each time).
+    
+    If you really want that the secret key is regenerated, delete the
+    secret key file, and then call this function again.
+    """
+    aiida_dir            = os.path.expanduser(AIIDA_CONFIG_FOLDER)
+    secret_key_full_name = os.path.join(aiida_dir,SECRET_KEY_FNAME)
+    
+    if os.path.exists(secret_key_full_name):
+        return
+    
+    with open(secret_key_full_name, 'w') as f:
+        f.write(generate_random_secret_key())
+    
+def get_secret_key():
+    """
+    Return the secret key.
+    
+    Raise ConfigurationError if the secret key cannot be found/read from the disk.
+    """
+    from aiida.common.exceptions import ConfigurationError
+    
+    aiida_dir            = os.path.expanduser(AIIDA_CONFIG_FOLDER)
+    secret_key_full_name = os.path.join(aiida_dir,SECRET_KEY_FNAME)
+    
+    try:
+        with open(secret_key_full_name) as f:
+            secret_key = f.read()
+    except (OSError, IOError):
+        raise ConfigurationError("Unable to find the secret key file "
+                                 "(or to read from it): did you run "
+                                 "'verdi install'?")
+                                 
+    return secret_key.strip()
+
 def create_base_dirs():
     """
     Create dirs for AiiDA, and install default daemon files.
@@ -143,6 +196,9 @@ def create_base_dirs():
         
     # Install daemon files 
     install_daemon_files(aiida_dir, aiida_daemon_dir, aiida_log_dir, local_user)
+
+    # Create the secret key file, if needed
+    try_create_secret_key()
 
 def create_configuration():    
     import readline

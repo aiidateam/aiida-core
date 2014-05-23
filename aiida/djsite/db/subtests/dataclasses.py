@@ -7,6 +7,48 @@ from aiida.orm import Node
 from aiida.common.exceptions import ModificationNotAllowed, UniquenessError
 from aiida.djsite.db.testbase import AiidaTestCase
         
+class TestCalcStatus(AiidaTestCase):        
+    """
+    Test the functionality of calculation states.
+    """
+    def test_state(self):
+        from aiida.orm import Calculation
+        from aiida.common.datastructures import calc_states
+        
+        # Use the AiidaTestCase test computer
+        
+        c = Calculation(computer=self.computer,
+                        resources={
+                            'num_machines': 1,
+                            'num_mpiprocs_per_machine': 1}
+                        )        
+        # Should be in the NEW state before storing
+        self.assertEquals(c.get_state(), calc_states.NEW)
+        
+        with self.assertRaises(ModificationNotAllowed):
+            c._set_state(calc_states.TOSUBMIT)
+                    
+        c.store()
+        # Should be in the NEW state right after storing
+        self.assertEquals(c.get_state(), calc_states.NEW)
+        
+        # Set a different state and check
+        c._set_state(calc_states.TOSUBMIT)
+        self.assertEquals(c.get_state(), calc_states.TOSUBMIT)
+        
+        # Set a different state and check
+        c._set_state(calc_states.SUBMITTING)
+        self.assertEquals(c.get_state(), calc_states.SUBMITTING)
+        
+        # Try to reset a state and check that the proper exception is raised
+        with self.assertRaises(UniquenessError):
+            c._set_state(calc_states.SUBMITTING)
+        
+        # Set a different state and check
+        c._set_state(calc_states.FINISHED)
+        self.assertEquals(c.get_state(), calc_states.FINISHED)
+
+
 class TestSinglefileData(AiidaTestCase):
     """
     Test the SinglefileData class.

@@ -425,6 +425,49 @@ def import_file(infile):
 
     print "DONE."
 
+import HTMLParser
+
+class HTMLGetLinksParser(HTMLParser.HTMLParser):
+    def __init__(self, filter_extension=None):
+        """
+        If a filter_extension is passed, only links with extension matching
+        the given one will be returned.
+        """
+        self.filter_extension = filter_extension
+        self.links = []
+        HTMLParser.HTMLParser.__init__(self)
+
+    def handle_starttag(self, tag, attrs):
+        """
+        Store the urls encountered, if they match the request.
+        """
+        if tag == 'a':
+            for k, v in attrs:
+                if k == 'href':
+                    if (self.filter_extension is None or
+                        v.endswith('.{}'.format(self.filter_extension))):
+                            self.links.append(v)
+
+    def get_links(self):
+        """
+        Return the links that were found during the parsing phase.
+        """
+        return self.links
+
+def get_valid_import_links(url):
+    import urllib2
+    import urlparse
+
+    request = urllib2.urlopen(url)
+    parser = HTMLGetLinksParser(filter_extension='aiida')
+    parser.feed(request.read())
+
+    return_urls = []
+        
+    for link in parser.get_links():
+        return_urls.append(urlparse.urljoin(request.geturl(), link))
+
+    return return_urls
 
 class Import(VerdiCommand):
     """
@@ -443,10 +486,10 @@ class Import(VerdiCommand):
         from aiida.common.folders import SandboxFolder
         
         parser = argparse.ArgumentParser(description='Import data in the DB.')
-#        parser.add_argument('-w', '--webpage', nargs='+', type=str,
-#                            dest='webpage',
-#                            help="Download all URLs in the given HTTP web "
-#                                 "page with excension .aiida")
+        parser.add_argument('-w', '--webpage', nargs='+', type=str,
+                            dest='webpages', metavar='URL',
+                            help="Download all URLs in the given HTTP web "
+                                 "page with extension .aiida")
         parser.add_argument(nargs='*', type=str, 
                             dest='files', metavar='URL_OR_PATH',
                             help="Import the given files or URLs")
@@ -461,6 +504,25 @@ class Import(VerdiCommand):
                 urls.append(path)
             else:
                 files.append(path)
+        
+        for webpage in parsed_args.webpages:
+            try:
+                print "**** Getting links from {}".format(webpage)               
+                found_urls = get_valid_import_links(webpage)
+                print " `-> {} links found.".format(len(found_urls))
+                urls += found_urls
+            except Exception:
+                traceback.print_exc()
+                print ""
+                print "> There has been an exception during the import of webpage"
+                print "> {}".format(webpage)
+                answer = raw_input("> Do you want to continue (c) or stop "
+                                   "(S, default)? ")
+                if answer.lower() == 'c':
+                    continue
+                else:
+                    return
+                
         
         if not (urls + files):
             print >> sys.stderr, ("Pass at least one file or URL from which "

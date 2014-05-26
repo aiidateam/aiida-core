@@ -35,9 +35,15 @@ User's guide
 
    workflow/index
 
+Other guide resources
++++++++++++++++++++++
+.. toctree::
+   :maxdepth: 2
+    
+   setup/aiida_multiuser
+   troubleshooting/index
    website/web.rst
 
-   troubleshooting/index
 
 Developer's guide
 +++++++++++++++++

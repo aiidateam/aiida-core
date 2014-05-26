@@ -221,27 +221,103 @@ Run the following command::
     
 to configure AiiDA. The command will guide you through a process to configure
 the database, the repository location, and it will finally (automatically) run 
-a ``verdi syncdb`` command, that creates the required tables in the database
-and installs the database triggers.
+a django ``syncdb`` command, if needed, that creates the required tables
+in the database and installs the database triggers.
 
-.. note:: If this is your first installation, the code (Django, actually)
-  will ask to setup an admin user ("Would you like to create one now?" prompt).
-  In this case chose ``yes`` and type the required information. Some notes:
+The first thing that will be asked to you is the timezone, extremely important
+to get correct dates and times for your calculations.
 
-  * **Make sure that the username matches your local machine username!** This is
-    required for the current version of AiiDA to work.
-  * The password, in the current version of AiiDA, is not used (even if a non-null
-    password should be specified).
+AiiDA will do its best to try and understand the local timezone (if properly
+configured on your machine), and will suggest a set of sensible values.
+Choose the timezone that fits best to you (that is, the nearest city in your 
+timezone - for Lausanne, for instance, we choose ``Europe/Zurich``) and type
+it at the prompt.
 
-If something fails, you may have misconfigured the database.
+If the automatic zone detection did not work for you,  type instead another 
+valid string.
+A list of valid strings can be found at
+http://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+but for the definitive list of timezones supported by your system, open
+a python shell and type::
+
+  import pytz
+  print pytz.all_timezones
+
+as AiiDA will not accept a timezone string that is not in the above list.
+
+As a second parameter to input during the ``verdi install`` phase,
+the "Default user email" is asked.
+
+We suggest here to use your institution email, that will be used to associate
+the calculations to you.
+ 
+.. note:: In AiiDA, the user email is used as 
+  username, and also as unique identifier when importing/exporting data from 
+  AiiDA.
+   
+.. note:: Even if you choose an email different from the default one
+  (``aiida@localhost``), an user with email ``aiida@localhost`` will be set up.
+  Anyway, its password will be set to None, effectively disabling
+  any access via this user using the API or the Web Interface.
+  
+  The existence of such a default user is particularly useful in a multi-user
+  approach, where only one user
+  should run the daemon, even if many users can simultaneously access the DB.
+  See the page on :ref:`setting up AiiDA in multi-user mode<aiida_multiuser>`
+  for more details (only for advanced users).
+
+.. note:: The password, in the current version of AiiDA, is not used (it will
+    be used only in the REST API and in the web interface). If you leave the
+    field empty, no password will be set and no access will be granted to the
+    user via the REST API and the web interface.
+
+Then, the following prompts will help you configure the database.
+
+.. note:: Whe the "Database engine" is asked, use 'sqlite' **only if** you want
+  to try out AiiDA without setting up a database.
+  
+  **However, keep in mind that for serious use, SQLite has serious
+  limitations!!** For instance, when many calculations are managed at the same
+  time, the database file is locked by SQLite to avoid corruption, but this
+  can lead to timeouts that do not allow to AiiDA to properly store the
+  calculations in the DB.
+  
+  **Therefore, for production use of AiiDA, we strongly suggest to setup a
+  "real" database** as PostgreSQL or MySQL. Then, in the "Database engine"
+  field, type either 'postgres' or 'mysql' according to the database you 
+  chose to use.
+
+At the end, AiiDA will also ask to configure your user, if you set up a user
+different from ``aiida@localhost``.
+
+If something fails, there is a high chance that you may have misconfigured
+the database. Double-check your settings before reporting an error.
 
 Start the daemon
 -----------------
-To try AiiDA, run::
+.. note:: Only one user can run the daemon on a given database instance.
+  By default, this user is the default AiiDA user (aiida@localhost).
+  If you chose a different user in the previous step, the ``verdi daemon start``
+  will refuse to start the daemon.
+  
+  *If you are working in a single-user mode, and you are sure that nobody else
+  is going to run the daemon*, you can configure your user as the (only)
+  one who can run the daemon.
+  
+  To do so, run::
+    
+    verdi daemon configureuser
+   
+  and (after having read and understood the warning text that appears) insert
+  the email that you used above during the ``verdi install`` phase.
+  
+  After this operation, you should be able to run the daemon normally.
+
+To try AiiDA and start the daemon, run::
 
     verdi daemon start
 
-to start the daemon. If everything was done correctly, the daemon should start.
+If everything was done correctly, the daemon should start.
 You can inquire the daemon status using::
 
     verdi daemon status
@@ -256,7 +332,9 @@ To stop the daemon, use::
 
     verdi daemon stop
 
-Detailed logs of what is going can be found in ``in ~/.aiida/daemon/log/``. The daemon is 
+A log of the warning/error messages of the daemon
+can be found in ``in ~/.aiida/daemon/log/``, and can also be seen using
+the ``verdi daemon logshow`` command. The daemon is 
 a fundamental component of AiiDA, and it is in charge of submitting new
 calculations, checking their status on the cluster, retrieving and parsing
 the results of finished calculations, and managing the workflow steps.

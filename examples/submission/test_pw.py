@@ -10,6 +10,7 @@ from aiida.common.exceptions import NotExistent
 from aiida.orm import Code, DataFactory
 from aiida.djsite.db.models import DbGroup
 
+from aiida.orm.data.upf import UPFGROUP_TYPE
 UpfData = DataFactory('upf')
 ParameterData = DataFactory('parameter')
 StructureData = DataFactory('structure')
@@ -65,29 +66,6 @@ except (NotExistent, ValueError):
         print >> sys.stderr, "    verdi code setup"
     sys.exit(1)
 
-if auto_pseudos:
-    valid_pseudo_groups = DbGroup.objects.filter(dbnodes__type__contains='.upf.').distinct().values_list('name',flat=True)
-
-    try:
-        pseudo_family = sys.argv[2]
-    except IndexError:
-        print >> sys.stderr, "Error, auto_pseudos set to True. You therefore need to pass as second parameter"
-        print >> sys.stderr, "the pseudo family name."
-        print >> sys.stderr, "Valid groups containing at least one UPFData object are:"
-        print >> sys.stderr, "\n".join("* {}".format(i) for i in valid_pseudo_groups)
-        sys.exit(1)
-        
-
-    if not DbGroup.objects.filter(name=pseudo_family):
-        print >> sys.stderr, "auto_pseudos is set to True and pseudo_family='{}',".format(pseudo_family)
-        print >> sys.stderr, "but no group with such a name found in the DB."
-        print >> sys.stderr, "Valid groups containing at least one UPFData object are:"
-        print >> sys.stderr, ",".join(valid_pseudo_groups)
-        sys.exit(1)
-
-
-computer = code.get_remote_computer()
-
 alat = 4. # angstrom
 cell = [[alat, 0., 0.,],
         [0., alat, 0.,],
@@ -101,6 +79,29 @@ s.append_atom(position=(alat/2.,alat/2.,alat/2.),symbols=['Ti'])
 s.append_atom(position=(alat/2.,alat/2.,0.),symbols=['O'])
 s.append_atom(position=(alat/2.,0.,alat/2.),symbols=['O'])
 s.append_atom(position=(0.,alat/2.,alat/2.),symbols=['O'])
+
+elements = list(s.get_symbols_set())
+
+if auto_pseudos:
+    valid_pseudo_groups = UpfData.get_upf_groups(filter_elements=elements)
+
+    try:
+        pseudo_family = sys.argv[3]
+    except IndexError:
+        print >> sys.stderr, "Error, auto_pseudos set to True. You therefore need to pass as second parameter"
+        print >> sys.stderr, "the pseudo family name."
+        print >> sys.stderr, "Valid UPF families are:"
+        print >> sys.stderr, "\n".join("* {}".format(i.name) for i in valid_pseudo_groups)
+        sys.exit(1)
+        
+    try:
+        UpfData.get_upf_group(pseudo_family)
+    except NotExistent:
+        print >> sys.stderr, "auto_pseudos is set to True and pseudo_family='{}',".format(pseudo_family)
+        print >> sys.stderr, "but no group with such a name found in the DB."
+        print >> sys.stderr, "Valid UPF groups are:"
+        print >> sys.stderr, ",".join(i.name for i in valid_pseudo_groups)
+        sys.exit(1)
 
 parameters = ParameterData(dict={
             'CONTROL': {
@@ -121,7 +122,14 @@ kpoints = ParameterData(dict={
                 'points': [4, 4, 4, 0, 0, 0],
                 })
 
-calc = code.new_calc(computer=computer)
+
+
+## For remote codes, it is not necessary to manually set the computer,
+## since it is set automatically by new_calc
+#computer = code.get_remote_computer()
+#calc = code.new_calc(computer=computer)
+
+calc = code.new_calc()
 calc.label = "Test QE pw.x"
 calc.description = "Test calculation with the Quantum ESPRESSO pw.x code"
 calc.set_max_wallclock_seconds(30*60) # 30 min
@@ -129,7 +137,7 @@ calc.set_max_wallclock_seconds(30*60) # 30 min
 # number_cpus_per_machine), change for SGE-like schedulers 
 calc.set_resources({"num_machines": 1})
 ## Otherwise, to specify a given # of cpus per machine, uncomment the following:
-# calc.set_resources({"num_machines": 1, "num_cpus_per_machine": 8})
+# calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 8})
 
 #calc.set_prepend_text("#SBATCH --account=ch3")
 

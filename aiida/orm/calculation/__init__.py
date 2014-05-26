@@ -33,8 +33,7 @@ class Calculation(Node):
     # Default values to be set for new nodes
     @classproperty
     def _set_defaults(cls):
-        return {"_state": calc_states.NEW,
-                "parser_name": cls._default_parser,
+        return {"parser_name": cls._default_parser,
                 "linkname_retrieved": cls._linkname_retrieved,
           }
     
@@ -151,7 +150,22 @@ class Calculation(Node):
         else:
             raise AttributeError("'{}' object has no attribute '{}'".format(
                 self.__class__.__name__, name))
-   
+    
+    def store(self, *args, **kwargs):
+        """
+        Override the store() method to store also the calculation in the NEW
+        state as soon as this is stored for the first time.
+        """
+        super(Calculation, self).store(*args, **kwargs)
+        
+        # I get here if the calculation was successfully stored.
+        self._set_state(calc_states.NEW)
+        
+        # Important to return self to allow the one-liner
+        # c = Calculation().store()
+        return self
+        
+       
     @classmethod 
     def _parse_single_arg(cls, function_name, additional_parameter,
                          args, kwargs):
@@ -208,8 +222,7 @@ class Calculation(Node):
                     function_name))
                 
             return None
-
-    
+   
     def get_linkname(self, link, *args, **kwargs):
         """
         Return the linkname used for a given input link
@@ -455,7 +468,7 @@ class Calculation(Node):
         Returns the dictionary of the job resources set.
         
         :param full: if True, also add the default values, e.g.
-            ``default_cpus_per_machine``
+            ``default_mpiprocs_per_machine``
         
         :return: a dictionary
         """
@@ -463,9 +476,9 @@ class Calculation(Node):
     
         if full:
             computer = self.get_computer()
-            def_cpus_machine = computer.get_default_cpus_per_machine()
+            def_cpus_machine = computer.get_default_mpiprocs_per_machine()
             if def_cpus_machine is not None:
-                resources_dict['default_cpus_per_machine'] = def_cpus_machine
+                resources_dict['default_mpiprocs_per_machine'] = def_cpus_machine
         
         return resources_dict
 
@@ -659,18 +672,97 @@ class Calculation(Node):
 
 
     def _set_state(self, state):
+        """
+        Set the state of the calculation.
+        
+        Set it in the DbCalcState to have also the uniqueness check.
+        Moreover (except for the IMPORTED state) also store in the 'state'
+        attribute, useful to know it also after importing, and for faster
+        querying.
+        
+        .. todo:: Add further checks to enforce that the states are set
+           in order?
+        
+        :param state: a string with the state. This must be a valid string,
+          from ``aiida.common.datastructures.calc_states``.
+        :raise: UniquenessError if the given state was already set.
+        """
+        from django.db import transaction, IntegrityError
+
+        from aiida.djsite.db.models import DbCalcState
+        from aiida.common.exceptions import UniquenessError
+        
+        if self._to_be_stored:
+            raise ModificationNotAllowed("Cannot set the calculation state "
+                                         "before storing")
+        
         if state not in calc_states:
             raise ValueError(
                 "'{}' is not a valid calculation status".format(state))
-        self.set_attr('state', state)
+        
+        try:
+            with transaction.commit_on_success():
+                new_state = DbCalcState(dbnode=self.dbnode, state=state).save()
+        except IntegrityError:
+            raise UniquenessError("Calculation pk={} already transited through "
+                                  "the state {}".format(self.pk, state))
 
-    def get_state(self):
+        # For non-imported states, also set in the attribute (so that, if we
+        # export, we can still see the original state the calculation had.
+        if state != calc_states.IMPORTED:
+            self.set_attr('state', state)
+
+    def get_state(self, from_attribute=False):
         """
         Get the state of the calculation.
         
-        :return: a string.
+        .. note:: this method returns the UNDETERMINED state if no state
+          is found in the DB.
+        
+        .. todo:: Understand if the state returned when no state entry is found
+          in the DB is the best choice.
+        
+        .. todo:: Understand if it is ok to return the most recently modified
+          state, or we should implement some state ordering logic.
+        
+        :param from_attribute: if set to True, read it from the attributes 
+          (the attribute is also set with set_state, unless the state is set
+          to IMPORTED; in this way we can also see the state before storing).
+        
+        :return: a string. If from_attribute is True and no attribute is found,
+          return None. If from_attribute is False and no entry is found in the
+          DB, return the "UNDETERMINED" state.
         """
-        return self.get_attr('state', None)
+        from aiida.djsite.db.models import DbCalcState
+        
+        if from_attribute:
+            return self.get_attr('state', None)
+        else:
+            if self._to_be_stored:
+                return calc_states.NEW
+            else:
+                this_calc_states = DbCalcState.objects.filter(
+                    dbnode=self).order_by('-time').values_list('state', flat=True)
+                if not this_calc_states:
+                    return calc_states.UNDETERMINED
+                most_recent_state = this_calc_states[0]
+                return most_recent_state
+
+    def get_state_string(self):
+        """
+        Return a string, that is correct also when the state is imported 
+        (in this case, the string will be in the format IMPORTED/ORIGSTATE
+        where ORIGSTATE is the original state from the node attributes).
+        """
+        state = self.get_state(from_attribute=False)
+        if state == calc_states.IMPORTED:
+            attribute_state = self.get_state(from_attribute=True)
+            if attribute_state is None:
+                attribute_state = "UNDETERMINED"
+            return 'IMPORTED/{}'.format(attribute_state)
+        else:
+            return state
+
 
     def is_new(self):
         """
@@ -797,7 +889,7 @@ class Calculation(Node):
     def _set_last_jobinfo(self,last_jobinfo):
         import pickle
         
-        self.set_attr('last_jobinfo', pickle.dumps(last_jobinfo))
+        self.set_attr('last_jobinfo', last_jobinfo.serialize())
 
     def get_last_jobinfo(self):
         """
@@ -806,24 +898,32 @@ class Calculation(Node):
         :return: a JobInfo object (that closely resembles a dictionary) or None.
         """
         import pickle
+        from aiida.scheduler.datastructures import JobInfo
         
-        last_jobinfo_pickled = self.get_attr('last_jobinfo',None)
-        if last_jobinfo_pickled is not None:
-            return pickle.loads(last_jobinfo_pickled)
+        last_jobinfo_serialized = self.get_attr('last_jobinfo',None)
+        if last_jobinfo_serialized is not None:
+            jobinfo = JobInfo()
+            jobinfo.load_from_serialized(last_jobinfo_serialized)
+            return jobinfo
         else:
             return None
     
     @classmethod
-    def list_calculations(cls,states=None, past_days=None, group=None, pks=[]):
+    def list_calculations(cls,states=None, past_days=None, group=None, 
+                            all_users=False, pks=[]):
         """
         This function return a string with a description of the AiiDA calculations.
+
+        .. todo:: does not support the query for the IMPORTED state (since it
+          checks the state in the Attributes, not in the DbCalcState table).
+          Decide which is the correct logi and implement the correct query.
         
         :param states: a list of string with states. If set, print only the 
             calculations in the states "states", otherwise shows all. Default = None.
         :param past_days: If specified, show only calculations that were created in
             the given number of past days.
-        :param group: If specified, show only calculations belonging to a group
-            with the given name.
+        :param group: If specified, show only calculations belonging to a
+            user-defined group with the given name.
         :param pks: if specified, must be a list of integers, and only calculations
             within that list are shown. Otherwise, all calculations are shown.
             If specified, sets state to None and ignores the 
@@ -842,11 +942,10 @@ class Calculation(Node):
         from django.utils import timezone
         import datetime
         from django.db.models import Q
-        from django.core.exceptions import ObjectDoesNotExist
         from aiida.djsite.db.models import DbNode
-        from aiida.djsite.utils import get_automatic_user, get_last_daemon_run
+        from aiida.djsite.utils import get_automatic_user
+        from aiida.djsite.db.tasks import get_last_daemon_timestamp
         from aiida.common.utils import str_timedelta
-        from aiida.djsite.settings.settings import djcelery_tasks
         from aiida.orm.node import from_type_to_pluginclassname
         
         now = timezone.now()
@@ -854,7 +953,11 @@ class Calculation(Node):
         if pks:
             q_object = Q(pk__in=pks)
         else:
-            q_object = Q(user=get_automatic_user())
+            q_object = Q()
+            
+            if not all_users:
+                q_object.add(Q(user=get_automatic_user()), Q.AND)
+                
             if states is not None:
 #                q_object.add(~Q(dbattributes__key='state',
 #                                dbattributes__tval=only_state,), Q.AND)
@@ -866,7 +969,7 @@ class Calculation(Node):
                 q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
 
             if group is not None:
-                q_object.add(Q(dbgroups__name=group), Q.AND)
+                q_object.add(Q(dbgroups__name=group, dbgroups__type=""), Q.AND)
 
         calc_list = cls.query(q_object).distinct().order_by('ctime')
         
@@ -874,32 +977,29 @@ class Calculation(Node):
         scheduler_states = dict(DbAttribute.objects.filter(dbnode__in=calc_list,
                                                    key='scheduler_state').values_list(
             'dbnode__pk', 'tval'))
-        states = dict(DbAttribute.objects.filter(dbnode__in=calc_list,
-                                                   key='state').values_list(
-            'dbnode__pk', 'tval'))
-        scheduler_lastcheck = dict(DbAttribute.objects.filter(dbnode__in=calc_list,
-                                                   key='scheduler_lastchecktime').values_list(
-            'dbnode__pk', 'dval'))
+        
+        states = {c.pk: c.get_state_string() for c in calc_list}
+        
+        scheduler_lastcheck = dict(DbAttribute.objects.filter(
+            dbnode__in=calc_list,
+            key='scheduler_lastchecktime').values_list('dbnode__pk', 'dval'))
         
         calc_list_data = calc_list.values('pk', 'dbcomputer__name', 'ctime', 'type')
         
+        ## Get the last daemon check
         try:
-            last_daemon_check = get_last_daemon_run(
-                djcelery_tasks['retriever'])
-        except ObjectDoesNotExist:
-            last_check_string = ("# Last daemon check: (Unable to discover, "
-                "no such task found)")
-        except Exception as e:
-            last_check_string = ("# Last daemon check: (Unable to discover, "
-                "error: {})".format(type(e).__name__))
+            last_daemon_check = get_last_daemon_timestamp('updater', when='stop')
+        except ValueError:
+            last_check_string = ("# Last daemon state_updater check: "
+                                 "(Error while retrieving the information)")
         else:
             if last_daemon_check is None:
-                last_check_string = "# Last daemon check: (Never)"
+                last_check_string = "# Last daemon state_updater check: (Never)"
             else:
-                last_check_string = ("# Last daemon check (approximate): "
-                    "{} ago ({})".format(
-                    str_timedelta(now-last_daemon_check),
-                    last_daemon_check.strftime("%H:%M:%S")))
+                last_check_string = ("# Last daemon state_updater check: "
+                    "{} ({})".format(
+                    str_timedelta(now-last_daemon_check, negative_to_zero=True),
+                    timezone.localtime(last_daemon_check).strftime("at %H:%M:%S on %Y-%m-%d")))
         
         if not calc_list:
             return last_check_string
@@ -923,7 +1023,7 @@ class Calculation(Node):
                         if calc_state == calc_states.WITHSCHEDULER:
                             last_check = scheduler_lastcheck.get(calcdata['pk'], None)
                             if last_check is not None:
-                                when_string = " {} ago".format(
+                                when_string = " {}".format(
                                     str_timedelta(now-last_check, short=True,
                                           negative_to_zero = True))
                                 verb_string = "was "
@@ -937,8 +1037,8 @@ class Calculation(Node):
                 
                 res_str_list.append(fmt_string.format( calcdata['pk'],
                     states[calcdata['pk']],
-                    calcdata['ctime'].isoformat().split('T')[0],
-                    calcdata['ctime'].isoformat().split('T')[1].split('.')[0],
+                    timezone.localtime(calcdata['ctime']).isoformat().split('T')[0],
+                    timezone.localtime(calcdata['ctime']).isoformat().split('T')[1].split('.')[0],
                     remote_state,
                     remote_computer,
                     str(from_type_to_pluginclassname(
@@ -959,7 +1059,7 @@ class Calculation(Node):
         :param computer: a Django DbComputer entry, or a Computer object, of a
                 computer in the DbComputer table.
                 A string for the hostname is also valid.
-        :param user: a Django entry (or its pk) of a user in the User table;
+        :param user: a Django entry (or its pk) of a user in the DbUser table;
                 if present, the results are restricted to calculations of that
                 specific user
         :param bool only_computer_user_pairs: if False (default) return a queryset 
@@ -1285,12 +1385,12 @@ class Calculation(Node):
              code.get_append_text(),
              computer.get_prepend_text()] if _)
 
-        # Set resources, also with get_default_cpus_per_machine
+        # Set resources, also with get_default_mpiprocs_per_machine
         resources_dict = self.get_resources(full=True)
         job_tmpl.job_resource = s.create_job_resource(**resources_dict)
 
-        subst_dict = {'tot_num_cpus': 
-                      job_tmpl.job_resource.get_tot_num_cpus()}
+        subst_dict = {'tot_num_mpiprocs': 
+                      job_tmpl.job_resource.get_tot_num_mpiprocs()}
         
         for k,v in job_tmpl.job_resource.iteritems():
             subst_dict[k] = v
@@ -1421,7 +1521,7 @@ class Calculation(Node):
             is used.
         """
         import os
-        import datetime
+        from django.utils import timezone
         import tempfile
 
         from aiida.transport.plugins.local import LocalTransport
@@ -1435,7 +1535,7 @@ class Calculation(Node):
         folder.create()
         
         if subfolder_name is None:
-            subfolder_basename = datetime.datetime.now().strftime('%Y%m%d-%H%M%S-')
+            subfolder_basename = timezone.localtime(timezone.now()).strftime('%Y%m%d-%H%M%S-')
         else:
             subfolder_basename = subfolder_name
             

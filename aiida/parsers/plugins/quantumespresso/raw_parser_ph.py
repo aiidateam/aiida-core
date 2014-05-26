@@ -95,23 +95,23 @@ def parse_raw_ph_output(out_file, tensor_file=None, dynmat_files=[]):
             
             # check if the file contains frequencies (i.e. is useful) or not
             dynmat_to_parse = False
+            if not lines:
+                continue
             try:
                 _ = [ float(i) for i in lines[0].split()]
             except ValueError:
                 dynmat_to_parse = True
             if not dynmat_to_parse:
                 continue
-
+            
             # parse it
             this_dynmat_data = parse_ph_dynmat(lines) 
-
+            
             # join it with the previous dynmat info
             dynmat_data['dynamical_matrix_%s' % dynmat_counter] = this_dynmat_data
-            # TODO: I am not too happy about this format. Any idea on how to improve it?
-            # work in analogy with bands?
+            # TODO: use the bands format?
 
-    # join dictionaries
-    # there should not be any twice repeated key
+    # join dictionaries, there should not be any twice repeated key
     for key in out_data.keys():
         if key in tensor_data.keys():
             raise AssertionError('{} found in two dictionaries'.format(key))

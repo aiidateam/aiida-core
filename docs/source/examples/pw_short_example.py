@@ -50,7 +50,7 @@ kpoints = ParameterData(dict={
 QECalc = CalculationFactory('quantumespresso.pw')
 calc = QECalc(computer=computer)
 calc.set_max_wallclock_seconds(30*60) # 30 min
-calc.set_resources({"num_machines": 1, "num_cpus_per_machine": 16})
+calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 16})
 calc.store()
 
 calc.use_structure(s)

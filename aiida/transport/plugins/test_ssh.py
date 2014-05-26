@@ -4,15 +4,12 @@ Test ssh plugin on localhost
 import unittest
 import logging
 
-from aiida.transport.plugins.ssh import *
+import aiida.transport
+import paramiko
+from aiida.transport.plugins.ssh import SshTransport
 
-import aiida.transport.plugin_test
-from aiida.transport.plugin_test import *
-
-from aiida.transport import Transport
-global custom_transport
-
-aiida.transport.plugin_test.custom_transport = SshTransport(
+# This will be used by test_all_plugins
+plugin_transport = SshTransport(
     machine='localhost', timeout=30, 
     load_system_host_keys=True,
     key_policy = 'AutoAddPolicy')
@@ -40,7 +37,7 @@ class TestBasicConnection(unittest.TestCase):
     def test_auto_add_policy(self):
         with SshTransport(machine='localhost', timeout=30, 
                           load_system_host_keys=True,
-                          key_policy='AutoAddPolicy') as t:
+                          key_policy='AutoAddPolicy'):
             pass
 
     def test_no_host_key(self):
@@ -49,7 +46,7 @@ class TestBasicConnection(unittest.TestCase):
 
         with self.assertRaises(paramiko.SSHException):
             with SshTransport(machine='localhost', timeout=30, 
-                              load_system_host_keys = False) as t:
+                              load_system_host_keys = False):
                 pass
 
         # Reset logging level

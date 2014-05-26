@@ -10,6 +10,10 @@ from __future__ import division
 from aiida.common.extendeddicts import (
     DefaultFieldsAttributeDict, Enumerate)
 
+from aiida.common import aiidalogger
+
+scheduler_logger = aiidalogger.getChild('scheduler')
+
 class JobState(Enumerate):
     pass
 
@@ -36,17 +40,17 @@ class JobResource(DefaultFieldsAttributeDict):
     plugin, that should contain a _job_resource_class attribute pointing to the correct
     JobResource subclass.
     
-    It should at least define the get_tot_num_cpus() method, plus an __init__ to accept
+    It should at least define the get_tot_num_mpiprocs() method, plus an __init__ to accept
     its set of variables.
 
     Typical attributes are:
     
     * ``num_machines``
-    * ``num_cpus_per_machine``
+    * ``num_mpiprocs_per_machine``
     
     or (e.g. for SGE)
     
-    * ``tot_num_cpus``
+    * ``tot_num_mpiprocs``
     * ``parallel_env``
 
     The __init__ should take care of checking the values.
@@ -55,9 +59,9 @@ class JobResource(DefaultFieldsAttributeDict):
     _default_fields = tuple()
     
     @classmethod
-    def accepts_default_cpus_per_machine(cls):
+    def accepts_default_mpiprocs_per_machine(cls):
         """
-        Return True if this JobResource accepts a 'default_cpus_per_machine'
+        Return True if this JobResource accepts a 'default_mpiprocs_per_machine'
         key, False otherwise. 
         
         Should be implemented in each subclass.
@@ -71,7 +75,7 @@ class JobResource(DefaultFieldsAttributeDict):
         """
         return list(cls._default_fields)
     
-    def get_tot_num_cpus(self):
+    def get_tot_num_mpiprocs(self):
         """
         Return the total number of cpus of this job resource.
         """
@@ -84,7 +88,7 @@ class NodeNumberJobResource(JobResource):
     """
     _default_fields = (
         'num_machines',
-        'num_cpus_per_machine',
+        'num_mpiprocs_per_machine',
         )
     
     @classmethod
@@ -93,12 +97,12 @@ class NodeNumberJobResource(JobResource):
         Return a list of valid keys to be passed to the __init__
         """
         return super(NodeNumberJobResource,cls).get_valid_keys() + [
-            "tot_num_cpus", "default_cpus_per_machine"]
+            "tot_num_mpiprocs", "default_mpiprocs_per_machine"]
 
     @classmethod
-    def accepts_default_cpus_per_machine(cls):
+    def accepts_default_mpiprocs_per_machine(cls):
         """
-        Return True if this JobResource accepts a 'default_cpus_per_machine'
+        Return True if this JobResource accepts a 'default_mpiprocs_per_machine'
         key, False otherwise. 
         """
         return True
@@ -118,27 +122,27 @@ class NodeNumberJobResource(JobResource):
             raise ValueError("num_machines must an integer")
 
         try:
-            default_cpus_per_machine = kwargs.pop('default_cpus_per_machine')
-            if default_cpus_per_machine is not None:
-                default_cpus_per_machine = int(default_cpus_per_machine)
+            default_mpiprocs_per_machine = kwargs.pop('default_mpiprocs_per_machine')
+            if default_mpiprocs_per_machine is not None:
+                default_mpiprocs_per_machine = int(default_mpiprocs_per_machine)
         except KeyError:
-            default_cpus_per_machine = None
+            default_mpiprocs_per_machine = None
         except ValueError:
-            raise ValueError("default_cpus_per_machine must an integer")
+            raise ValueError("default_mpiprocs_per_machine must an integer")
             
         try:
-            num_cpus_per_machine = int(kwargs.pop('num_cpus_per_machine'))
+            num_mpiprocs_per_machine = int(kwargs.pop('num_mpiprocs_per_machine'))
         except KeyError:
-            num_cpus_per_machine = None
+            num_mpiprocs_per_machine = None
         except ValueError:
-            raise ValueError("num_cpus_per_machine must an integer")
+            raise ValueError("num_mpiprocs_per_machine must an integer")
 
         try:
-            tot_num_cpus = int(kwargs.pop('tot_num_cpus'))
+            tot_num_mpiprocs = int(kwargs.pop('tot_num_mpiprocs'))
         except KeyError:
-            tot_num_cpus = None
+            tot_num_mpiprocs = None
         except ValueError:
-            raise ValueError("tot_num_cpus must an integer")        
+            raise ValueError("tot_num_mpiprocs must an integer")        
 
         if kwargs:
             raise TypeError("The following parameters were not recognized for "
@@ -146,56 +150,56 @@ class NodeNumberJobResource(JobResource):
 
         if num_machines is None:
             # Use default value, if not provided
-            if num_cpus_per_machine is None:
-                num_cpus_per_machine = default_cpus_per_machine
+            if num_mpiprocs_per_machine is None:
+                num_mpiprocs_per_machine = default_mpiprocs_per_machine
 
-            if num_cpus_per_machine is None or tot_num_cpus is None:
+            if num_mpiprocs_per_machine is None or tot_num_mpiprocs is None:
                 raise TypeError("At least two among num_machines, "
-                    "num_cpus_per_machine or tot_num_cpus must be specified")
+                    "num_mpiprocs_per_machine or tot_num_mpiprocs must be specified")
             else:
                 # To avoid divisions by zero
-                if num_cpus_per_machine <= 0:
-                    raise ValueError("num_cpus_per_machine must be >= 1")
-                num_machines = tot_num_cpus // num_cpus_per_machine
+                if num_mpiprocs_per_machine <= 0:
+                    raise ValueError("num_mpiprocs_per_machine must be >= 1")
+                num_machines = tot_num_mpiprocs // num_mpiprocs_per_machine
         else:
-            if tot_num_cpus is None:
-                # Only set the default value if tot_num_cpus is not provided.
+            if tot_num_mpiprocs is None:
+                # Only set the default value if tot_num_mpiprocs is not provided.
                 # Otherwise, it means that the user provided both
-                # num_machines and tot_num_cpus, and we have to ignore
-                # the default value of tot_num_cpus
-                if num_cpus_per_machine is None:
-                    num_cpus_per_machine = default_cpus_per_machine
+                # num_machines and tot_num_mpiprocs, and we have to ignore
+                # the default value of tot_num_mpiprocs
+                if num_mpiprocs_per_machine is None:
+                    num_mpiprocs_per_machine = default_mpiprocs_per_machine
                 
-            if num_cpus_per_machine is None:            
-                if tot_num_cpus is None:
+            if num_mpiprocs_per_machine is None:            
+                if tot_num_mpiprocs is None:
                     raise TypeError("At least two among num_machines, "
-                        "num_cpus_per_machine or tot_num_cpus must be specified")
+                        "num_mpiprocs_per_machine or tot_num_mpiprocs must be specified")
                 else:
                     # To avoid divisions by zero
                     if num_machines <= 0:
                         raise ValueError("num_machines must be >= 1")
-                    num_cpus_per_machine = tot_num_cpus // num_machines
+                    num_mpiprocs_per_machine = tot_num_mpiprocs // num_machines
         
         self.num_machines = num_machines
-        self.num_cpus_per_machine = num_cpus_per_machine
+        self.num_mpiprocs_per_machine = num_mpiprocs_per_machine
         
-        if tot_num_cpus is not None:
-            if tot_num_cpus != self.num_cpus_per_machine * self.num_machines:
-                raise ValueError("tot_num_cpus must be equal to "
-                    "num_cpus_per_machine * num_machines, and in particular it "
-                    "should be a multiple of num_cpus_per_machine and/or "
+        if tot_num_mpiprocs is not None:
+            if tot_num_mpiprocs != self.num_mpiprocs_per_machine * self.num_machines:
+                raise ValueError("tot_num_mpiprocs must be equal to "
+                    "num_mpiprocs_per_machine * num_machines, and in particular it "
+                    "should be a multiple of num_mpiprocs_per_machine and/or "
                     "num_machines")
         
-        if self.num_cpus_per_machine <= 0:
-            raise ValueError("num_cpus_per_machine must be >= 1")
+        if self.num_mpiprocs_per_machine <= 0:
+            raise ValueError("num_mpiprocs_per_machine must be >= 1")
         if self.num_machines <= 0:
             raise ValueError("num_machine must be >= 1")
 
-    def get_tot_num_cpus(self):
+    def get_tot_num_mpiprocs(self):
         """
         Return the total number of cpus of this job resource.
         """
-        return self.num_machines * self.num_cpus_per_machine
+        return self.num_machines * self.num_mpiprocs_per_machine
 
 class ParEnvJobResource(JobResource):
     """
@@ -204,8 +208,8 @@ class ParEnvJobResource(JobResource):
     """
     _default_fields = (
         'parallel_env',
-        'tot_num_cpus',
-        'default_cpus_per_machine',
+        'tot_num_mpiprocs',
+        'default_mpiprocs_per_machine',
         )
     
     def __init__(self,**kwargs):
@@ -215,7 +219,7 @@ class ParEnvJobResource(JobResource):
         
         :raise ValueError: on invalid parameters.
         :raise TypeError: on invalid parameters.
-        :raise ConfigurationError: if default_cpus_per_machine was set for this
+        :raise ConfigurationError: if default_mpiprocs_per_machine was set for this
             computer, since ParEnvJobResource cannot accept this parameter.
         """
         from aiida.common.exceptions import ConfigurationError
@@ -226,28 +230,28 @@ class ParEnvJobResource(JobResource):
             raise TypeError("'parallel_env' must be specified and must be a string")
             
         try:
-            self.tot_num_cpus = int(kwargs.pop('tot_num_cpus'))
+            self.tot_num_mpiprocs = int(kwargs.pop('tot_num_mpiprocs'))
         except (KeyError, ValueError):
-            raise TypeError("tot_num_cpus must be specified and must be an integer")
+            raise TypeError("tot_num_mpiprocs must be specified and must be an integer")
 
-        default_cpus_per_machine = kwargs.pop('default_cpus_per_machine', None)
-        if default_cpus_per_machine is not None:
-            raise ConfigurationError("default_cpus_per_machine cannot be set "
+        default_mpiprocs_per_machine = kwargs.pop('default_mpiprocs_per_machine', None)
+        if default_mpiprocs_per_machine is not None:
+            raise ConfigurationError("default_mpiprocs_per_machine cannot be set "
                                      "for schedulers that use ParEnvJobResource")
 
-        if self.tot_num_cpus <= 0:
-            raise ValueError("tot_num_cpus must be >= 1")
+        if self.tot_num_mpiprocs <= 0:
+            raise ValueError("tot_num_mpiprocs must be >= 1")
 
-    def get_tot_num_cpus(self):
+    def get_tot_num_mpiprocs(self):
         """
         Return the total number of cpus of this job resource.
         """
-        return self.tot_num_cpus
+        return self.tot_num_mpiprocs
 
     @classmethod
-    def accepts_default_cpus_per_machine(cls):
+    def accepts_default_mpiprocs_per_machine(cls):
         """
-        Return True if this JobResource accepts a 'default_cpus_per_machine'
+        Return True if this JobResource accepts a 'default_mpiprocs_per_machine'
         key, False otherwise. 
         """
         return False
@@ -258,7 +262,7 @@ class JobTemplate(DefaultFieldsAttributeDict):
     to create the job header.
 
     The required fields are: working_directory, job_name, num_machines,
-      num_cpus_per_machine, argv.
+      num_mpiprocs_per_machine, argv.
     
     Fields:
     
@@ -292,7 +296,7 @@ class JobTemplate(DefaultFieldsAttributeDict):
         :py:attr:`aiida.scheduler.Scheduler._job_resource_class` class. 
         Use the Scheduler.create_job_resource method to create it.
       * ``num_machines``: how many machines (or nodes) should be used
-      * ``num_cpus_per_machine``: how many cpus or cores should be used on each
+      * ``num_mpiprocs_per_machine``: how many MPI procs should be used on each
         machine (or node).
       * ``priority``: a priority for this job. Should be in the format accepted
         by the specific scheduler.
@@ -342,7 +346,7 @@ class JobTemplate(DefaultFieldsAttributeDict):
         'queue_name',
         'job_resource',
 #        'num_machines',
-#        'num_cpus_per_machine',
+#        'num_mpiprocs_per_machine',
         'priority',
         'max_memory_kb', 
         'max_wallclock_seconds',
@@ -362,13 +366,16 @@ class MachineInfo(DefaultFieldsAttributeDict):
     """
     Similarly to what is defined in the DRMAA v.2 as SlotInfo; this identifies
     each machine (also called 'node' on some schedulers)
-    on which a job is running, and how many CPUs are being used.
+    on which a job is running, and how many CPUs are being used. (Some of them
+    could be undefined)
 
     * ``name``: name of the machine
     * ``num_cpus``: number of cores used by the job on this machine
+    * ``num_mpiprocs``: number of MPI processes used by the job on this machine
     """
     _default_fields = (
         'name',
+        'num_mpiprocs',
         'num_cpus',
         )
 
@@ -398,7 +405,8 @@ class JobInfo(DefaultFieldsAttributeDict):
        * ``allocated_machines``: a list of machines used for the current job.
          This is a list of :py:class:`MachineInfo` objects.
        * ``job_owner``: the job owner as reported by the scheduler
-       * ``num_cpus``: the *total* number of requested cores
+       * ``num_mpiprocs``: the *total* number of requested MPI procs
+       * ``num_cpus``: the *total* number of requested CPUs (cores) [may be undefined]
        * ``num_machines``: the number of machines (i.e., nodes), required by the
          job. If ``allocated_machines`` is not None, this number must be equal to
          ``len(allocated_machines)``. Otherwise, for schedulers not supporting
@@ -427,6 +435,7 @@ class JobInfo(DefaultFieldsAttributeDict):
         'job_substate',
         'allocated_machines',
         'job_owner',
+        'num_mpiprocs',
         'num_cpus',
         'num_machines',
         'queue_name',
@@ -437,3 +446,96 @@ class JobInfo(DefaultFieldsAttributeDict):
         'dispatch_time',
         'finish_time'
         )
+    
+    # If some fields require special serializers, specify them here.
+    # You then need to define also the respective _serialize_FIELDTYPE and
+    # _deserialize_FIELDTYPE methods        
+    _special_serializers = {
+        'submission_time': 'date',
+        'dispatch_time': 'date',
+        'finish_time': 'date',
+        }
+    
+    def _serialize_date(self, v):
+        import datetime
+        import pytz
+        
+        if v is None:
+            return v
+        
+        if not isinstance(v, datetime.datetime):
+            raise TypeError("Invalid type for the date, should be a datetime")
+
+        # is_naive check from django.utils.timezone
+        if v.tzinfo is None or v.tzinfo.utcoffset(v) is None:
+            # TODO: FIX TIMEZONE
+            scheduler_logger.debug("Datetime to serialize in JobInfo is naive, "
+                                   "this should be fixed!")
+            #v = v.replace(tzinfo = pytz.utc)
+            return {'date': v.strftime(
+                '%Y-%m-%dT%H:%M:%S.%f'), 'timezone': None}
+        else: 
+            return {'date': v.astimezone(pytz.utc).strftime(
+                '%Y-%m-%dT%H:%M:%S.%f'), 'timezone': 'UTC'}
+
+    def _deserialize_date(self, v):
+        import datetime
+        import pytz
+        
+        if v is None:
+            return v
+        
+        if v['timezone'] is None:
+            # naive date
+            return datetime.datetime.strptime(v['date'],
+                '%Y-%m-%dT%H:%M:%S.%f')
+        elif v['timezone'] == 'UTC':
+            return datetime.datetime.strptime(v['date'],
+                                              '%Y-%m-%dT%H:%M:%S.%f').replace(
+                tzinfo=pytz.utc)
+        else:
+            # Try your best
+            return datetime.datetime.strptime(v['date'],
+                                              '%Y-%m-%dT%H:%M:%S.%f').replace(
+                tzinfo=pytz.timezone(v['timezone']))
+            
+        
+    
+    def serialize_field(self, value, field_type):
+        if field_type is None:
+            return value
+        
+        serializer_method = getattr(self, "_serialize_{}".format(field_type))
+        
+        return serializer_method(value)
+
+    def deserialize_field(self, value, field_type):
+        if field_type is None:
+            return value
+
+        deserializer_method = getattr(self, "_deserialize_{}".format(field_type))
+        
+        return deserializer_method(value)
+    
+    def serialize(self):
+        import json
+
+        ser_data = {k: self.serialize_field(
+                        v, self._special_serializers.get(k, None))
+                    for k, v in self.iteritems()}
+        
+        return json.dumps(ser_data)
+    
+    
+    def load_from_serialized(self, data):
+        import json
+
+        deser_data = json.loads(data)
+                
+        for k, v in deser_data.iteritems():
+            self[k] = self.deserialize_field(
+                          v, self._special_serializers.get(k, None))
+            
+        
+        
+        

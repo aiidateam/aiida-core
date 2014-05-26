@@ -1,7 +1,7 @@
 # Django settings for the AiiDA project.
-import sys, os, os.path
+import sys, os
 from aiida.common.exceptions import ConfigurationError
-from aiida.common.utils import store_config, get_config
+from aiida.common.setup import get_config, get_secret_key
 
 # Assumes that parent directory of aiida is root for
 # things like templates/, SQL/ etc.  If not, change what follows...
@@ -35,6 +35,11 @@ DATABASES = {
         }
     }
 
+# Increase timeout for SQLite engine
+# Does not solve the problem, but alleviates it for small number of calculations
+if 'sqlite' in DBENGINE:
+    DATABASES['default']['OPTIONS'] = {'timeout': 60}
+
 ## Checks on the LOCAL_REPOSITORY
 try:
     LOCAL_REPOSITORY
@@ -56,8 +61,14 @@ if not os.path.isdir(LOCAL_REPOSITORY):
             "Please setup correctly the LOCAL_REPOSITORY variable to "
             "a suitable directory on which you have write permissions. "
             "(I was not able to create the directory.)")
-        
 
+# CUSTOM USER CLASS
+AUTH_USER_MODEL = 'db.DbUser'
+
+# Make this unique, and don't share it with anybody.
+# This is generated with the first run of 'verdi install'
+SECRET_KEY = get_secret_key()
+        
 # Usual Django settings starts here.............
 
 DEBUG = True
@@ -69,12 +80,15 @@ ADMINS = (
 
 MANAGERS = ADMINS
 
-
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
 # although not all choices may be available on all operating systems.
 # In a Windows environment this must be set to your system time zone.
-#TIME_ZONE = 'America/New_York'
+try:
+    TIME_ZONE = confs['TIMEZONE']
+except KeyError:
+    raise ConfigurationError("You did not set your timezone during the "
+                             "verdi install phase.")
 
 # Language code for this installation. All choices can be found here:
 # http://www.i18nguy.com/unicode/language-identifiers.html
@@ -84,11 +98,11 @@ SITE_ID = 1
 
 # If you set this to False, Django will make some optimizations so as not
 # to load the internationalization machinery.
-USE_I18N = True
+USE_I18N = False
 
 # If you set this to False, Django will not format dates, numbers and
 # calendars according to the current locale.
-USE_L10N = True
+USE_L10N = False
 
 # If you set this to False, Django will not use timezone-aware datetimes.
 # For AiiDA, leave it as True, otherwise setting properties with dates will not work.
@@ -128,9 +142,6 @@ STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
 #    'django.contrib.staticfiles.finders.DefaultStorageFinder',
 )
-
-# Make this unique, and don't share it with anybody.
-SECRET_KEY = 'm6=!mrb!aooja+&amp;whx^f$^(r$nd6cchq6n)yg^l)tz6l)x5xx$'
 
 # List of callables that know how to import templates from various sources.
 TEMPLATE_LOADERS = (
@@ -270,13 +281,11 @@ AFTER_DATABASE_CREATION_SIGNAL = 'post_syncdb'
 # VERSION TO USE FOR DBNODES.
 AIIDANODES_UUID_VERSION=4
 
-
 # -------------------------
 # Tastypie (API) settings
 # -------------------------
 # For the time being, we support only json
 TASTYPIE_DEFAULT_FORMATS = ['json']
-
 
 # -------------------------
 # AiiDA-Deamon configuration
@@ -294,18 +303,18 @@ CELERY_RESULT_BACKEND = "database"
 
 CELERYBEAT_SCHEDULER = "djcelery.schedulers.DatabaseScheduler"
 
-# Used internally, for the get_last_daemon_run function.
+# Used internally, in the functions that get the last daemon timestamp.
 # Key: internal name, left: actual celery name. Can be the same
 djcelery_tasks = {
-#    'calculationretrieve': 'update-status-and-retrieve',
     'submitter': 'submitter',
-    'updater': 'updater',
+    'updater':   'updater',
     'retriever': 'retriever',
-    'workflow': 'workflow_stepper',
+    'workflow':  'workflow_stepper',
     }
 
-# Every 30 seconds it is started, but for how it is done internally, if the previous loop
-# is still working, it won't restart twice at the same time.
+# Choose here how often the tasks should be run. Note that if the previous task
+# is still running, the new one does not start thanks to the DbLock feature 
+# that we added.
 CELERYBEAT_SCHEDULE = {
     djcelery_tasks['submitter']: {
         'task':'aiida.djsite.db.tasks.submitter',

@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 import sys
 import os
-import paramiko
-import getpass
 
 from aiida.common.utils import load_django
 load_django()
@@ -12,8 +10,7 @@ import logging
 from aiida.common.exceptions import NotExistent
 aiidalogger.setLevel(logging.INFO)
 
-from aiida.orm import Code, Computer
-from aiida.djsite.utils import get_automatic_user
+from aiida.orm import Code
 from aiida.orm import CalculationFactory, DataFactory
 
 UpfData = DataFactory('upf')
@@ -71,6 +68,7 @@ except (NotExistent, ValueError):
     valid_code_labels = [c.label for c in Code.query(
             dbattributes__key="input_plugin",
             dbattributes__tval=expected_code_type)]
+    # TODO: query also only for codes that are on the same computer
     if valid_code_labels:
         print >> sys.stderr, "Pass as first parameter a valid code label."
         print >> sys.stderr, "Valid labels with a {} executable are:".format(expected_code_type)
@@ -82,8 +80,6 @@ except (NotExistent, ValueError):
     sys.exit(1)
 
 ######
-
-computer = code.get_remote_computer()
 
 parameters = ParameterData(dict={
             'INPUTPH': {
@@ -97,7 +93,7 @@ parameters = ParameterData(dict={
 
 parentcalc = QEPwCalc.get_subclass_from_pk(parent_id)
 
-calc = code.new_calc(computer=computer)
+calc = code.new_calc()
 calc.label = "Test QE ph.x"
 calc.description = "Test calculation with the Quantum ESPRESSO ph.x code"
 

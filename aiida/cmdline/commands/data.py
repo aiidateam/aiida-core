@@ -182,8 +182,17 @@ class _Upf(VerdiCommand):
         # note that the following command requires that the upfdata has a
         # key called element. As such, it is not well separated.
         import argparse
+        
+        from aiida.orm.data.upf import UPFGROUP_TYPE
+        
         parser = argparse.ArgumentParser(description='List AiiDA upf families.')
-        parser.add_argument('-e','--element',nargs='+', type=str, default=None)
+        parser.add_argument('-e','--element',nargs='+', type=str, default=None,
+                            help="Filter the families only to those containing "
+                                 "a pseudo for each of the specified elements")
+        parser.add_argument('-d', '--with-description',
+                            dest='with_description',action='store_true',
+                            help="Show also the description for the UPF family")
+        parser.set_defaults(with_description=False)
         
         args = list(args)
         parsed_args = parser.parse_args(args)
@@ -199,7 +208,7 @@ class _Upf(VerdiCommand):
             
         if groups:
             for g in groups:
-                pseudos = UpfData.query(dbgroups__name=g.name).distinct()
+                pseudos = UpfData.query(dbgroups=g.dbgroup).distinct()
                 num_pseudos = pseudos.count()
 
                 pseudos_list = pseudos.filter(
@@ -210,14 +219,21 @@ class _Upf(VerdiCommand):
                                 dbattributes__key="element").values_list(
                                 'dbattributes__tval', flat=True)
                 
+                if parsed_args.with_description:
+                    description_string = ": {}".format(g.description)
+                else:
+                    description_string = ""
+                
                 if num_pseudos != len(set(pseudos_list)):
-                    print ("x {} [INVALID: {} pseudos, for {} elements]"
-                           .format(g.name,num_pseudos,len(set(pseudos_list))))
+                    print ("x {} [INVALID: {} pseudos, for {} elements]{}"
+                           .format(g.name,num_pseudos,len(set(pseudos_list)),
+                                   description_string))
                     print ("  Maybe the pseudopotential family wasn't "
                            "setup with the uploadfamily function?")
 
                 else:
-                     print "* {} [{} pseudos]".format(g.name, num_pseudos)
+                     print "* {} [{} pseudos]{}".format(g.name, num_pseudos,
+                                                        description_string)
         else:
             print "No valid UPF pseudopotential family found."
          

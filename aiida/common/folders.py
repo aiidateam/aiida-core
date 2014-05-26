@@ -172,6 +172,10 @@ class Folder(object):
     def create_file_from_filelike(self,src_filelike,dest_name):
         """
         Create a file from a file-like object.
+
+        :note: if the current file position in src_filelike is not 0,
+          only the contents from the current file position to the end of the
+          file will be copied in the new file.
         
         :param src_filelike: the file-like object (e.g., if you have
             a string called s, you can pass ``StringIO.StringIO(s)``)
@@ -184,8 +188,7 @@ class Folder(object):
         dest_abs_path = self.get_abs_path(filename)
 
         with open(dest_abs_path,'w') as f:
-            for l in src_filelike.readlines():
-                f.write(l)
+            shutil.copyfileobj(src_filelike, f)
 
         return dest_abs_path
 

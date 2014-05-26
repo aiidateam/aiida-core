@@ -4,12 +4,16 @@ import subprocess
 
 from aiida.cmdline.baseclass import VerdiCommand
 
-daemon_subdir    = "daemon"
-daemon_conf_file = "aiida_daemon.conf"
-log_dir          = "daemon/log"
-aiida_dir = os.path.expanduser("~/.aiida")  
-
-conffname = os.path.join(aiida_dir,daemon_subdir,daemon_conf_file)
+def is_daemon_user():
+    """
+    Return True if the user is the current daemon user, False otherwise.
+    """
+    from aiida.djsite.utils import get_daemon_user, get_configured_user_email
+    
+    daemon_user = get_daemon_user()
+    this_user = get_configured_user_email()
+    
+    return daemon_user == this_user
 
 
 class Daemon(VerdiCommand):
@@ -28,7 +32,7 @@ class Daemon(VerdiCommand):
 
     * status: inquire the status of the Daemon.
 
-    * showlog: show the log in a continuous fashion, similar to the 'tail -f' \
+    * logshow: show the log in a continuous fashion, similar to the 'tail -f' \
         command. Press CTRL+C to exit.
     """
 
@@ -38,13 +42,21 @@ class Daemon(VerdiCommand):
         A dictionary with valid commands and functions to be called:
         start, stop, status and restart.
         """
+        from aiida.common import setup
+
         self.valid_subcommands = {
             'start': self.daemon_start,
             'stop' : self.daemon_stop,
             'status': self.daemon_status,
-            'showlog': self.daemon_showlog,
+            'logshow': self.daemon_logshow,
             'restart': self.daemon_restart,
+            'configureuser': self.configure_user,
             }
+
+        self.conffile_full_path = os.path.expanduser(os.path.join(
+            setup.AIIDA_CONFIG_FOLDER,
+            setup.DAEMON_SUBDIR,setup.DAEMON_CONF_FILE))
+
 
     def run(self,*args):       
         """
@@ -71,15 +83,21 @@ class Daemon(VerdiCommand):
         """
         Return the full path of the supervisord.pid file.
         """
-        return os.path.normpath(
-            os.path.join(aiida_dir,daemon_subdir,"supervisord.pid"))
+        from aiida.common import setup
+        
+        return os.path.normpath(os.path.expanduser(
+            os.path.join(setup.AIIDA_CONFIG_FOLDER,
+                         setup.DAEMON_SUBDIR,"supervisord.pid")))
 
     def _get_sock_full_path(self):
         """
         Return the full path of the supervisord.sock file.
         """
-        return os.path.normpath(
-            os.path.join(aiida_dir,daemon_subdir,"supervisord.sock"))
+        from aiida.common import setup
+
+        return os.path.normpath(os.path.expanduser(
+            os.path.join(setup.AIIDA_CONFIG_FOLDER,
+                         setup.DAEMON_SUBDIR,"supervisord.sock")))
 
     def get_daemon_pid(self):
         """
@@ -113,46 +131,52 @@ class Daemon(VerdiCommand):
         """
         Start the daemon
         """
+        from aiida.common.utils import load_django
+        load_django()
+
+        from aiida.djsite.utils import get_daemon_user, get_configured_user_email
+        
+        daemon_user = get_daemon_user()
+        this_user = get_configured_user_email()
+
+        if daemon_user != this_user:
+            print "You are not the daemon user! I will not start the daemon."
+            print "(The daemon user is '{}', you are '{}')".format(
+                daemon_user, this_user)
+            print ""
+            print "** FOR ADVANCED USERS ONLY: **"
+            print "To change the current default user, use 'verdi install --only-config'"
+            print "To change the daemon user, use 'verdi daemon configureuser'"
+
+            sys.exit(1)
+        
         pid = self.get_daemon_pid()
 
         if pid is not None:
-            print "Daemon already running, try ask for status"
+            print "Daemon already running, try asking for its status"
             return
-        
-        print "Loading Django ..."
-        from aiida.common.utils import load_django
-        load_django()
-        
+                
         print "Clearing all locks ..."
         from aiida.orm.lock import LockManager
         LockManager().clear_all()
         
         print "Starting AiiDA Daemon ..."
         process = subprocess.Popen(
-            "supervisord -c {}".format(conffname), 
+            "supervisord -c {}".format(self.conffile_full_path), 
             shell=True, stdout=subprocess.PIPE)
         process.wait()
         if (process.returncode==0):
             print "Daemon started"
-            
-    def daemon_stop(self, wait_for_death=True):
+         
+    def kill_daemon(self):   
         """
-        Stop the daemon.
+        This is the actual call that kills the daemon.
         
-        :param wait_for_death: If True, also verifies that the process was already
-            killed. It attempts at most ``max_retries`` times, with ``sleep_between_retries``
-            seconds between one attempt and the following one (both variables are
-            for the time being hardcoded in the function).
-            
-        :return: None if ``wait_for_death`` is False. True/False if the process was
-            actually dead or after all the retries it was still alive.
+        There are some print statements inside, but no sys.exit, so it is
+        safe to be called from other parts of the code.
         """
         from signal import SIGTERM
-        import time
         import errno
-
-        max_retries = 20
-        sleep_between_retries = 3
 
         pid = self.get_daemon_pid()
         if pid is None:
@@ -169,12 +193,32 @@ class Daemon(VerdiCommand):
                 print "Cleaning the .pid and .sock files..."
                 self._clean_sock_files()
             else:
-                raise
+                raise        
+        
+    def daemon_stop(self, wait_for_death=True):
+        """
+        Stop the daemon.
+        
+        :param wait_for_death: If True, also verifies that the process was already
+            killed. It attempts at most ``max_retries`` times, with ``sleep_between_retries``
+            seconds between one attempt and the following one (both variables are
+            for the time being hardcoded in the function).
+            
+        :return: None if ``wait_for_death`` is False. True/False if the process was
+            actually dead or after all the retries it was still alive.
+        """
+        import time
+        
+        max_retries = 20
+        sleep_between_retries = 3
+
+        # Note: NO check here on the daemon user: allow the daemon to be shut
+        # down if it was inadvertently left active and the setting was changed.
+        self.kill_daemon()
         
         dead = None
         if wait_for_death:
             dead = False
-            restarted = False
             for _ in range(max_retries):
                 pid = self.get_daemon_pid()
                 if pid is None:
@@ -198,9 +242,26 @@ class Daemon(VerdiCommand):
         """
         Print the status of the daemon
         """
+        from aiida.common.utils import load_django
+        load_django()
+        
         import supervisor
         import supervisor.supervisorctl
         import xmlrpclib
+
+        from django.utils import timezone
+        
+        from aiida.djsite.db.tasks import get_most_recent_daemon_timestamp
+        from aiida.common.utils import str_timedelta
+
+        most_recent_timestamp = get_most_recent_daemon_timestamp()
+        
+        if most_recent_timestamp is not None:
+            timestamp_delta = timezone.now() - most_recent_timestamp
+            print ("# Most recent daemon timestamp:{}".format(
+                str_timedelta(timestamp_delta)))
+        else:
+            print ("# Most recent daemon timestamp: [Never]")
 
         pid = self.get_daemon_pid()
         if (pid==None):
@@ -208,7 +269,7 @@ class Daemon(VerdiCommand):
             return
 
         c = supervisor.supervisorctl.ClientOptions()
-        s = c.read_config(conffname)
+        s = c.read_config(self.conffile_full_path)
         proxy = xmlrpclib.ServerProxy('http://127.0.0.1',
             transport=supervisor.xmlrpc.SupervisorTransport(
                 s.username, s.password, s.serverurl))
@@ -240,7 +301,7 @@ class Daemon(VerdiCommand):
         else:
             print "I was able to connect to the daemon, but I did not find any process..."
         
-    def daemon_showlog(self):
+    def daemon_logshow(self):
         """
         Show the log of the daemon, press CTRL+C to quit.
         """
@@ -252,7 +313,7 @@ class Daemon(VerdiCommand):
         try:
             process = subprocess.Popen(
                "supervisorctl -c {} tail -f aiida-daemon:0".format(
-                           conffname),
+                           self.conffile_full_path),
                                shell=True) #, stdout=subprocess.PIPE)
             process.wait()
         except KeyboardInterrupt:
@@ -264,6 +325,21 @@ class Daemon(VerdiCommand):
         Restart the daemon. Before restarting, wait for the daemon to really
         shut down.
         """
+        from aiida.common.utils import load_django
+        load_django()
+        
+        from aiida.djsite.utils import get_daemon_user, get_configured_user_email
+        
+        daemon_user = get_daemon_user()
+        this_user = get_configured_user_email()
+
+        if daemon_user != this_user:
+            print "You are not the daemon user! I will not restart the daemon."
+            print "(The daemon user is '{}', you are '{}')".format(
+                daemon_user, this_user)
+
+            sys.exit(1)       
+        
         pid = self.get_daemon_pid()
 
         dead = True
@@ -278,6 +354,78 @@ class Daemon(VerdiCommand):
         else:
             self.daemon_start()
 
+    def configure_user(self):
+        """
+        Configure the user that can run the daemon.
+        """
+        from aiida.common.utils import load_django
+        load_django()
+        
+        from django.utils import timezone
+        
+        from django.core.exceptions import ObjectDoesNotExist
+
+        from aiida.djsite.db.models import DbUser
+        from aiida.djsite.utils import (
+            get_configured_user_email,
+            get_daemon_user, set_daemon_user)
+        
+        from aiida.djsite.db.tasks import get_most_recent_daemon_timestamp
+        from aiida.common.utils import str_timedelta
+        
+        old_daemon_user = get_daemon_user()
+        this_user = get_configured_user_email()
+        
+        print "> Current default user: {}".format(this_user)
+        print "> Currently configured user who can run the daemon: {}".format(old_daemon_user)
+        if old_daemon_user == this_user:
+            print "  (therefore, at the moment you are the user who can run the daemon)"
+            pid = self.get_daemon_pid()
+            if pid is not None:
+                print "The daemon is running! I will not proceed."
+                sys.exit(1)
+        else:
+            print "  (therefore, you cannot run the daemon, at the moment)"
+
+        most_recent_timestamp = get_most_recent_daemon_timestamp()
+        
+        print "*"*76
+        print "* {:72s} *".format("WARNING! Change this setting only if you "
+                                  "are sure of what you are doing.")
+        print "* {:72s} *".format("Moreover, make sure that the "
+                                  "daemon is stopped.")
+        
+        if most_recent_timestamp is not None:
+            timestamp_delta = timezone.now() - most_recent_timestamp
+            last_check_string = ("[The most recent timestamp "
+                "from the daemon was {}]".format(
+                str_timedelta(timestamp_delta)))
+            print "* {:72s} *".format(last_check_string)
+            
+        print "*"*76
+        
+        answer = raw_input(
+            "Are you really sure that you want to change the "
+            "daemon user? [y/N] ")
+        
+        if not(answer == 'y' or answer == 'Y'):
+            sys.exit(0)
+        
+        print ""
+        print "Enter below the email of the new user who can run the daemon."
+        new_daemon_user = raw_input("New daemon user: ")
+        
+        try:
+            new_daemon_user_db = DbUser.objects.get(email=new_daemon_user)
+        except ObjectDoesNotExist:
+            print("ERROR! The user you specified ({}) does "
+                  "not exist in the database!!".format(new_daemon_user))
+            sys.exit(1)
+        
+        set_daemon_user(new_daemon_user)
+        
+        print "The new user that can run the daemon is now {}.".format(
+            new_daemon_user_db.get_full_name())
 
     def _clean_sock_files(self):
         """

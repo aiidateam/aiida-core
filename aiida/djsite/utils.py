@@ -1,33 +1,5 @@
 import logging
 
-def get_last_daemon_run(task):
-    """
-    Return the time the given task was run the last time.
-    
-    :note: for the moment, it does not seem to return the exact time, but only
-       an approximate time. It can be improved, but it is already sufficient to
-       give the user an idea on whether the daemon is running or not.
-    
-    :param task: a valid task name; they are listed in the
-      aiida.djsite.settings.settings.djcelery_tasks dictionary.
-      
-    :return: a datetime object if the task is found, or None if the task
-      never run yet.
-    
-    :raises: Django 
-    """
-    from djcelery.models import PeriodicTask#, TaskMeta
-    
-    task = PeriodicTask.objects.get(name=task)
-    last_run_at = task.last_run_at
-    
-    #print (TaskMeta.objects.all().order_by('-date_done')[0].date_done)
-    #id = str(type(TaskMeta.objects.all().order_by('-date_done')[0].task_id))
-    return last_run_at
-
-# Cache for speed-up
-_aiida_autouser_cache = None
-
 class DBLogHandler(logging.Handler):
     def emit(self, record):
         from django.core.exceptions import ImproperlyConfigured 
@@ -79,26 +51,71 @@ def get_log_messages(obj):
         log.update({'metadata': json.loads(log['metadata'])})
 
     return log_messages
-        
+
+def get_configured_user_email():
+    """
+    Return the email (that is used as the username) configured during the 
+    first verdi install.
+    """
+    from aiida.common.exceptions import ConfigurationError
+    from aiida.common.setup import get_config, DEFAULT_USER_CONFIG_FIELD
+    
+    try:
+        email = get_config()[DEFAULT_USER_CONFIG_FIELD]
+    # I do not catch the error in case of missing configuration, because
+    # it is already a ConfigurationError
+    except KeyError:
+        raise ConfigurationError("No 'default_user' key found in the "
+            "AiiDA configuration file".format(DEFAULT_USER_CONFIG_FIELD))
+    return email
+
+def get_daemon_user():
+    """
+    Return the username (email) of the user that should run the daemon,
+    or the default AiiDA user in case no explicit configuration is found
+    in the DbSetting table.
+    """
+    from aiida.common.globalsettings import get_global_setting
+    from aiida.common.setup import DEFAULT_AIIDA_USER
+    
+    try: 
+        return get_global_setting('daemon|user')
+    except KeyError:
+        return DEFAULT_AIIDA_USER
+
+def set_daemon_user(user_email):
+    """
+    Set the username (email) of the user that is allowed to run the daemon.
+    """
+    from aiida.common.globalsettings import set_global_setting
+    
+    set_global_setting('daemon|user', user_email,
+                       description="The only user that is allowed to run the "
+                                    "AiiDA daemon on this DB instance")
+
+_aiida_autouser_cache = None
+    
 def get_automatic_user():
+    """
+    Return the default user for this installation of AiiDA.
+    """
     global _aiida_autouser_cache
     
     if _aiida_autouser_cache is not None:
         return _aiida_autouser_cache
 
-    import getpass
-    username = getpass.getuser()
-    
-    from django.contrib.auth.models import User
     from django.core.exceptions import ObjectDoesNotExist
+    from aiida.djsite.db.models import DbUser
     from aiida.common.exceptions import ConfigurationError
 
+    email = get_configured_user_email()
+        
     try:
-        _aiida_autouser_cache = User.objects.get(username=username)
+        _aiida_autouser_cache = DbUser.objects.get(email=email)
         return _aiida_autouser_cache
     except ObjectDoesNotExist:
-        raise ConfigurationError("No aiida user with username {}".format(
-                username))
+        raise ConfigurationError("No aiida user with email {}".format(
+                email))
 
 def get_after_database_creation_signal():
     """

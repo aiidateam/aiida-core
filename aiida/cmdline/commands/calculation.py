@@ -102,6 +102,7 @@ class Calculation(VerdiCommand):
         from aiida.orm.calculation import Calculation as C
         
         parser = argparse.ArgumentParser(description='List AiiDA calculations.')
+        # The default states are those that are shown if no option is given
         parser.add_argument('-s', '--states', nargs='+', type=str,
                             help="show only the AiiDA calculations with given state",
                             default=[calc_states.WITHSCHEDULER,
@@ -125,6 +126,10 @@ class Calculation(VerdiCommand):
                             dest='all_states',action='store_true',
                             help="Overwrite manual set of states if present, and look for calculations in every possible state")
         parser.set_defaults(all_states=False)
+        parser.add_argument('-A', '--all-users',
+                            dest='all_users',action='store_true',
+                            help="Show calculations for all users, rather than only for the current user")
+        parser.set_defaults(all_users=False)
         
         args = list(args)
         parsed_args = parser.parse_args(args)
@@ -133,11 +138,12 @@ class Calculation(VerdiCommand):
         parsed_args.states = capital_states
         
         if parsed_args.all_states:
-            parsed_args.states = [ i for i in calc_states ]
+            parsed_args.states = None
         
         print C.list_calculations(states=parsed_args.states,
                                      past_days=parsed_args.past_days, 
                                      pks=parsed_args.pks,
+                                     all_users=parsed_args.all_users,
                                      group=parsed_args.group) 
     
     def calculation_show(self, *args):

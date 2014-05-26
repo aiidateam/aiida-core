@@ -435,19 +435,82 @@ class Import(VerdiCommand):
     """
     def run(self,*args):                    
         load_django()
-
-        from aiida.djsite.db import models
         
-        print "FEATURE UNDER DEVELOPMENT!"
+        import argparse
+        import traceback
+        import urllib2
+        
+        from aiida.common.folders import SandboxFolder
+        
+        parser = argparse.ArgumentParser(description='Import data in the DB.')
+#        parser.add_argument('-w', '--webpage', nargs='+', type=str,
+#                            dest='webpage',
+#                            help="Download all URLs in the given HTTP web "
+#                                 "page with excension .aiida")
+        parser.add_argument(nargs='*', type=str, 
+                            dest='files', metavar='URL_OR_PATH',
+                            help="Import the given files or URLs")
+        
+        parsed_args = parser.parse_args(args)
 
-        if len(args) != 1:
-            print "Pass a file name to import"
+        all_args = [] if parsed_args.files is None else parsed_args.files
+        urls = []
+        files = []
+        for path in all_args:
+            if path.startswith('http://') or path.startswith('https://'):
+                urls.append(path)
+            else:
+                files.append(path)
+        
+        if not (urls + files):
+            print >> sys.stderr, ("Pass at least one file or URL from which "
+                                  "you want to import data.")
             sys.exit(1)
-        
 
-        ## TODO: parse cmdline parameters and pass them
-        ## in particular: also_parents; what; outputfile
-        import_file(args[0])
+        for filename in files:
+            try:
+                print "**** Importing file {}".format(filename)
+                import_file(filename)
+            except Exception:
+                traceback.print_exc()
+                
+                print ""
+                print "> There has been an exception during the import of file"
+                print "> {}".format(filename)
+                answer = raw_input("> Do you want to continue (c) or stop "
+                                   "(S, default)? ")
+                if answer.lower() == 'c':
+                    continue
+                else:
+                    return
+
+        download_file_name = 'importfile.tar.gz'
+        for url in urls:
+            try:
+                print "**** Downloading url {}".format(url)
+                response = urllib2.urlopen(url)
+                with SandboxFolder() as temp_download_folder:
+                    temp_download_folder.create_file_from_filelike(
+                        response, download_file_name)
+                
+                    print " `-> File downloaded. Importing it..."                
+                    import_file(temp_download_folder.get_abs_path(
+                        download_file_name))
+            except Exception:
+                traceback.print_exc()
+                
+                print ""
+                print "> There has been an exception during the import of url"
+                print "> {}".format(url)
+                answer = raw_input("> Do you want to continue (c) or stop "
+                                   "(S, default)? ")
+                if answer.lower() == 'c':
+                    continue
+                else:
+                    return
+        
+        
+                
 
     def complete(self,subargs_idx, subargs):
         return ""

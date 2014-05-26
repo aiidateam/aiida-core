@@ -38,6 +38,7 @@ class Command(NoArgsCommand):
             ("aiida.orm","CalculationFactory","CalculationFactory"),
             ("aiida.orm","DataFactory","DataFactory"),
             ("aiida.orm","Computer","Computer"),
+            ("aiida.orm","Group","Group"),
             ("aiida.djsite.db","models","models"),
             ]:
             user_ns[alias] = getattr(__import__(app_mod, {}, {}, model_name), model_name)

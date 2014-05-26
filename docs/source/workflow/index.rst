@@ -85,7 +85,7 @@ us to understand the more sophisticated examples reported later.
         computer = Computer.get("localhost")
         
         calc = CustomCalc(computer=computer,withmpi=True)
-        calc.set_resources(num_machines=1, num_cpus_per_machine=1)
+        calc.set_resources(num_machines=1, num_mpiprocs_per_machine=1)
         calc._set_state(calc_states.FINISHED)
         calc.store()
         
@@ -327,7 +327,7 @@ show a more sophisticated example, where real calculations are performed and com
             
             pw_codename            = params['pw_codename']
             num_machines           = params['num_machines']
-            num_cpus_per_machine   = params['num_cpus_per_machine']
+            num_mpiprocs_per_machine   = params['num_mpiprocs_per_machine']
             max_wallclock_seconds  = params['max_wallclock_seconds']
             pseudo_family          = params['pseudo_family']
             
@@ -338,7 +338,7 @@ show a more sophisticated example, where real calculations are performed and com
             
             calc = QECalc(computer=computer)
             calc.set_max_wallclock_seconds(max_wallclock_seconds)
-            calc.set_resources({"num_machines": num_machines, "num_cpus_per_machine": num_cpus_per_machine})
+            calc.set_resources({"num_machines": num_machines, "num_mpiprocs_per_machine": num_mpiprocs_per_machine})
             calc.store()
             
             calc.use_code(code)
@@ -503,7 +503,7 @@ the construction of complex experiments using modular and higly reusable atomic 
             
             ph_codename            = params['ph_codename']
             num_machines           = params['num_machines']
-            num_cpus_per_machine   = params['num_cpus_per_machine']
+            num_mpiprocs_per_machine   = params['num_mpiprocs_per_machine']
             max_wallclock_seconds  = params['max_wallclock_seconds']
             
             code = Code.get(ph_codename)
@@ -513,7 +513,7 @@ the construction of complex experiments using modular and higly reusable atomic 
             calc = QEPhCalc(computer=computer)
             
             calc.set_max_wallclock_seconds(max_wallclock_seconds) # 30 min
-            calc.set_resources({"num_machines": num_machines, "num_cpus_per_machine": num_cpus_per_machine})
+            calc.set_resources({"num_machines": num_machines, "num_mpiprocs_per_machine": num_mpiprocs_per_machine})
             calc.store()
             
             calc.use_parameters(ph_parameters)

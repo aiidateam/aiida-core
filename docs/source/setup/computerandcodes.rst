@@ -128,13 +128,13 @@ The configuration of computers happens in two steps.
        /scratch/{username}/aiida_work/
    
    * **mpirun command**: The ``mpirun`` command needed on the cluster to run parallel MPI
-     programs. You can (should) use the ``{tot_num_cpus}`` replacement,
+     programs. You can (should) use the ``{tot_num_mpiprocs}`` replacement,
      that will be replaced by the total number of cpus, or the other
      scheduler-dependent fields (see the :doc:`scheduler docs <../scheduler/index>`
      for more information). Some examples::
       
-        mpirun -np {tot_num_cpus}
-        aprun -n {tot_num_cpus}
+        mpirun -np {tot_num_mpiprocs}
+        aprun -n {tot_num_mpiprocs}
         poe
       
    * **Text to prepend to each command execution**: This is a multiline string,

@@ -154,8 +154,9 @@ class Devel(VerdiCommand):
             # Setup a sqlite3 DB for tests (WAY faster, since it remains in-memory)
 
             # TODO: allow the use of this flag
-            #if confs.get('use_inmemory_sqlite_for_tests', True):
-            settings.DATABASES['default'] = {'ENGINE': 'django.db.backends.sqlite3'}
+            if settings.confs.get('use_inmemory_sqlite_for_tests', True):
+                settings.DATABASES['default'] = {'ENGINE':
+                                                 'django.db.backends.sqlite3'}
             ###################################################################
             # IMPORTANT! Choose a different repository location, otherwise 
             # real data will be destroyed during tests!!
@@ -177,7 +178,6 @@ class Devel(VerdiCommand):
             # SOUTH_TESTS_MIGRATE = False
             # in the settings.
             settings.AFTER_DATABASE_CREATION_SIGNAL = 'post_syncdb'
-            
             
             ##################################################################
             ## Only now I set the aiida_test_list variable so that tests can run

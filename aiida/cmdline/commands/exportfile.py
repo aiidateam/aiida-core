@@ -446,7 +446,6 @@ class Export(VerdiCommand):
         from aiida.djsite.db import models
         
         parser = argparse.ArgumentParser(description='Export data from the DB.')
-        # The default states are those that are shown if no option is given
         parser.add_argument('-c', '--computers', nargs='+', type=int, metavar="PK",
                             help="Export the given computers")
         parser.add_argument('-n', '--nodes', nargs='+', type=int, metavar="PK",

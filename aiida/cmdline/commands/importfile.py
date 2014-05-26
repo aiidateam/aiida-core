@@ -3,6 +3,8 @@ import sys
 from aiida.cmdline.baseclass import VerdiCommand
 from aiida.common.utils import load_django, export_shard_uuid, grouper
 
+IMPORTGROUP_TYPE = 'aiida.import'
+
 def deserialize_attributes(attributes_data, conversion_data):
     import datetime
     import pytz
@@ -71,8 +73,10 @@ def import_file(infile):
     from itertools import chain
 
     from django.db import transaction
+    from django.utils import timezone
 
-    from aiida.orm import Node
+    from aiida.orm import Node, Group
+    from aiida.common.exceptions import UniquenessError
     from aiida.common.folders import SandboxFolder, RepositoryFolder
     from aiida.djsite.db import models
     from aiida.common.utils import get_class_string, get_object_from_string
@@ -416,11 +420,46 @@ def import_file(infile):
             else:
                 print "   (0 new links...)"
 
+            # Put everything in a specific group
+            dbnode_model_name = get_class_string(models.DbNode)
+            existing = existing_entries.get(dbnode_model_name, {})
+            existing_pk = [foreign_ids_reverse_mappings[
+                                dbnode_model_name][v['uuid']]
+                           for v in existing.itervalues()]
+            new = new_entries.get(dbnode_model_name, {})
+            new_pk = [foreign_ids_reverse_mappings[
+                                dbnode_model_name][v['uuid']]
+                           for v in new.itervalues()]
+            
+            
+            # Get an unique name for the import group, based on the current time
+            basename = timezone.localtime(timezone.now()).strftime(
+                "%Y%m%d-%H%M%S")
+            counter = 0
+            created = False
+            while not created:
+                if counter == 0:
+                    group_name = basename
+                else:
+                    group_name = "{}_{}".format(basename, counter)
+                try:
+                    group = Group(name=group_name,
+                                  type_string=IMPORTGROUP_TYPE).store()
+                    created = True
+                except UniquenessError:
+                    counter += 1
+            
+            # Add all the nodes to the new group
+            # TODO: decide if we want to return the group name
+            group.add_nodes(models.DbNode.objects.get(pk__in=(
+                existing_pk + new_pk)))
+            
+            print "IMPORTED NODES GROUPED IN IMPORT GROUP NAMED '{}'".format(group.name)
+            
     
     
     print "*** WARNING: MISSING EXISTING UUID CHECKS!!"
     print "*** WARNING: TODO: UPDATE IMPORT_DATA WITH DEFAULT VALUES! (e.g. calc status, user pwd, ...)"
-    print "*** WARNING: TODO: PUT ALL NEW NODES IN A NEW GROUP!"
 
 
     print "DONE."
@@ -455,6 +494,10 @@ class HTMLGetLinksParser(HTMLParser.HTMLParser):
         return self.links
 
 def get_valid_import_links(url):
+    """
+    Open the given URL, parse the HTML and return a list of valid links where
+    the link file has a .aiida extension.
+    """
     import urllib2
     import urlparse
 
@@ -505,7 +548,9 @@ class Import(VerdiCommand):
             else:
                 files.append(path)
         
-        for webpage in parsed_args.webpages:
+        webpages = [] if parsed_args.webpages is None else parsed_args.webpages
+        
+        for webpage in webpages:
             try:
                 print "**** Getting links from {}".format(webpage)               
                 found_urls = get_valid_import_links(webpage)
@@ -570,26 +615,6 @@ class Import(VerdiCommand):
                     continue
                 else:
                     return
-        
-        
-                
 
     def complete(self,subargs_idx, subargs):
         return ""
-
-# Following code: to serialize the date directly when dumping into JSON.
-# In our case, it is better to have a finer control on how to parse fields.
-
-#def default_jsondump(data):
-#    import datetime 
-#
-#    if isinstance(data, datetime.datetime):
-#        return data.strftime('%Y-%m-%dT%H:%M:%S.%f%z')
-#    
-#    raise TypeError(repr(data) + " is not JSON serializable")
-#with open('testout.json', 'w') as f:
-#    json.dump({
-#            'entries': serialized_entries,             
-#        },
-#        f,
-#        default=default_jsondump)

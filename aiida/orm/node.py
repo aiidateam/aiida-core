@@ -5,15 +5,9 @@ from django.core.exceptions import ObjectDoesNotExist
 #from aiida.djsite.db.models import DbNode, DbAttribute
 from aiida.common.exceptions import (
     DbContentError, InternalError, ModificationNotAllowed,
-    NotExistent, UniquenessError, ValidationError )
+    NotExistent, UniquenessError )
 from aiida.common.folders import RepositoryFolder, SandboxFolder
 
-# Name to be used for the section
-_section_name = 'node'
-
-# The name of the subfolder in which to put the files/directories
-# added with add_path
-_path_subfolder_name = 'path'
 
 def from_type_to_pluginclassname(typestr):
     """
@@ -75,6 +69,14 @@ class Node(object):
                                     "aiida.orm.".format(name))
             
             return newcls
+
+    # Name to be used for the Repository section
+    _section_name = 'node'
+    
+    # The name of the subfolder in which to put the files/directories
+    # added with add_path
+    _path_subfolder_name = 'path'
+
 
     # A tuple with attributes that can be updated even after
     # the call of the store() method
@@ -196,6 +198,9 @@ class Node(object):
         if dbnode is not None:
             if not isinstance(dbnode, DbNode):
                 raise TypeError("dbnode is not a DbNode instance")
+            if dbnode.pk is None:
+                raise ValueError("If cannot load an aiida.orm.Node instance "
+                                 "from an unsaved Django DbNode object.")                
             if kwargs:
                 raise ValueError("If you pass a dbnode, you cannot pass any "
                                  "further parameter")
@@ -205,7 +210,8 @@ class Node(object):
             
             self._dbnode = dbnode
 
-            self._repo_folder = RepositoryFolder(section=_section_name,
+            # If this is changed, fix also the importer
+            self._repo_folder = RepositoryFolder(section=self._section_name,
                                                  uuid=self._dbnode.uuid)
             
 # NO VALIDATION ON __init__ BY DEFAULT, IT IS TOO SLOW SINCE IT OFTEN
@@ -220,8 +226,9 @@ class Node(object):
 #                                     "valid for class {}: {}".format(
 #                    uuid, self.__class__.__name__, e.message))
         else:
-            
-            self._dbnode = DbNode(user=get_automatic_user(),
+            # TODO: allow to get the user from the parameters
+            user = get_automatic_user()
+            self._dbnode = DbNode(user=user,
                                   uuid=get_new_uuid(),
                                   type=self._plugin_type_string)
             
@@ -234,12 +241,20 @@ class Node(object):
             self.path_subfolder.create()
             # Used only before the first save
             self._attrs_cache = {}
-            self._repo_folder = RepositoryFolder(section=_section_name,
+            # If this is changed, fix also the importer
+            self._repo_folder = RepositoryFolder(section=self._section_name,
                                                  uuid=self.uuid)
 
             # Automatically set all *other* attributes, if possible, otherwise
             # stop
             self._set_with_defaults(**kwargs)
+
+    def __str__(self):
+        classname = self.__class__.__name__
+        if self._to_be_stored:
+            return "<{} (unstored)>".format(classname)
+        else:
+            return "<{} (pk={})>".format(classname, self.pk)
 
     @classmethod
     def query(cls,*args,**kwargs):
@@ -437,7 +452,7 @@ class Node(object):
         """
         Get the user.
         
-        :return: a Django User object
+        :return: a Django DbUser model object
         """
         return self.dbnode.user
 
@@ -832,7 +847,7 @@ class Node(object):
             because the node was already stored, and the attribute is not listed
             as updatable).
 
-        :raise ValueError: if the key is not valid (e.g. it contains the
+        :raise ValidationError: if the key is not valid (e.g. it contains the
             separator symbol).        
         """
         from aiida.djsite.db.models import DbAttribute
@@ -1084,13 +1099,13 @@ class Node(object):
         
         :return: the list of comments, sorted by date; each element of the 
             list is a tuple in the format
-            (username, username_email, date, content)
+            (email, ctime, mtime, content)
         """
         from aiida.djsite.db.models import DbComment
 
         return list(DbComment.objects.filter(dbnode=self._dbnode).order_by(
             'ctime').values_list(
-            'user__username', 'user__email', 'ctime', 'mtime', 'content'))
+            'user__email', 'ctime', 'mtime', 'content'))
 
     def _increment_version_number_db(self):
         """
@@ -1144,7 +1159,6 @@ class Node(object):
     @property
     def uuid(self):
         """
-        
         :return: a string with the uuid
         """
         return unicode(self.dbnode.uuid)
@@ -1152,8 +1166,8 @@ class Node(object):
     @property
     def pk(self):
         """
-        
-        :return: a the principal key (the ID)
+        :return: the principal key (the ID) as an integer, or None if the
+           node was not stored yet
         """
         return self.dbnode.pk
 
@@ -1161,8 +1175,7 @@ class Node(object):
     @property
     def dbnode(self):
         """
-        
-        :return: the DbNode object.
+        :return: the corresponding Django DbNode object.
         """
         from aiida.djsite.db.models import DbNode
         
@@ -1202,7 +1215,7 @@ class Node(object):
         :return: a Folder object.
         """
         return self.current_folder.get_subfolder(
-            _path_subfolder_name,reset_limit=True)
+            self._path_subfolder_name,reset_limit=True)
 
     def get_path_list(self, subfolder='.'):
         """
@@ -1266,7 +1279,7 @@ class Node(object):
         self.path_subfolder.insert_path(src_abs,dst_path)
 
 
-    def get_abs_path(self,path,section=_path_subfolder_name):
+    def get_abs_path(self,path,section=None):
         """
         Get the absolute path to the folder associated with the
         Node in the AiiDA repository.
@@ -1277,6 +1290,8 @@ class Node(object):
         
         For the moment works only for one kind of files, 'path' (internal files)
         """
+        if section is None:
+            section = self._path_subfolder_name
         #TODO: For the moment works only for one kind of files,
         #      'path' (internal files)
         if os.path.isabs(path):
@@ -1385,6 +1400,11 @@ class Node(object):
             self.validate()
             # I save the corresponding django entry
             # I set the folder
+            # NOTE: I first store the files, then only if this is successful,
+            # I store the DB entry. In this way,
+            # I assume that if a node exists in the DB, its folder is in place.
+            # On the other hand, periodically the user might need to run some
+            # bookkeeping utility to check for lone folders.
             self.repo_folder.replace_with_folder(
                 self.get_temp_folder().abspath, move=True, overwrite=True)
 
@@ -1398,7 +1418,7 @@ class Node(object):
                     # the version for each add.
                     for k, v in self._attrs_cache.iteritems():
                         DbAttribute.set_value_for_node(self.dbnode,
-                            k,v)
+                            k,v, with_transaction=False)
             # This is one of the few cases where it is ok to do a 'global'
             # except, also because I am re-raising the exception
             except:

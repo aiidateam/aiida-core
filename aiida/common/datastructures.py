@@ -6,8 +6,9 @@ from aiida.common.extendeddicts import DefaultFieldsAttributeDict, Enumerate
 class CalcState(Enumerate):
     pass
 
+# The order of states is not random: is the order of precedence.
+# However, this is never used at the moment in the code.
 calc_states = CalcState((
-        'UNDETERMINED',
         'NEW', # just created
         'TOSUBMIT', # used by the executionmanager to submit new calculations scheduled to be submitted
         'SUBMITTING', # being submitted to cluster
@@ -17,11 +18,13 @@ calc_states = CalcState((
                       # (both DONE and FAILED)
         'RETRIEVING', # while retrieving data
         'PARSING', # while parsing data
+        'UNDETERMINED',
         'FINISHED',  # Final state of the calculation: data retrieved and eventually parsed
         'SUBMISSIONFAILED', # error occurred during submission phase
         'RETRIEVALFAILED', # error occurred during retrieval phase
         'PARSINGFAILED', # error occurred during parsing phase due to a problem in the parse
         'FAILED', # The parser recognized the calculation as failed
+        'IMPORTED', # The calculation was imported from another DB
         ))
 
 
@@ -48,7 +51,7 @@ class CalcInfo(DefaultFieldsAttributeDict):
         'join_files',
         'queue_name', 
         'num_machines',
-        'num_cpus_per_machine',
+        'num_mpiprocs_per_machine',
         'priority',
         'max_wallclock_seconds',
         'max_memory_kb',

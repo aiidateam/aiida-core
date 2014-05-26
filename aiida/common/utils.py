@@ -4,8 +4,6 @@ import logging
 
 from aiida.common.exceptions import ConfigurationError
 
-CONFIG_FNAME = 'config.json'
-
 class classproperty(object):
     """
     A class that, when used as a decorator, works as if the 
@@ -18,33 +16,6 @@ class classproperty(object):
         self.getter= getter
     def __get__(self, instance, owner):
         return self.getter(owner)
-
-def backup_config():   
-    import shutil
-    aiida_dir    = os.path.expanduser("~/.aiida")
-    conf_file   = os.path.join(aiida_dir, CONFIG_FNAME)
-    if (os.path.isfile(conf_file)):
-        shutil.copy(conf_file, conf_file+"_bk")
-    
-def get_config():
-    import json
-    
-    aiida_dir    = os.path.expanduser("~/.aiida")
-    conf_file   = os.path.join(aiida_dir, CONFIG_FNAME)
-    try:
-        with open(conf_file,"r") as json_file:
-            return json.load(json_file)
-    except IOError:
-        # No configuration file
-        raise ConfigurationError("No configuration file found")
-
-def store_config(confs):
-    import json
-    
-    aiida_dir    = os.path.expanduser("~/.aiida")
-    conf_file   = os.path.join(aiida_dir, CONFIG_FNAME)
-    with open(conf_file,"w") as json_file:
-        json.dump(confs, json_file)
    
 def load_django():
     os.environ['DJANGO_SETTINGS_MODULE'] = 'aiida.djsite.settings.settings'
@@ -249,7 +220,7 @@ def md5_file(filename, block_size_factor=128):
             md5.update(chunk)
     return md5.hexdigest()
 
-def str_timedelta(dt, max_num_fields=3, short=False, negative_to_zero = True):
+def str_timedelta(dt, max_num_fields=3, short=False, negative_to_zero = False):
     """
     Given a dt in seconds, return it in a HH:MM:SS format.
 
@@ -278,7 +249,7 @@ def str_timedelta(dt, max_num_fields=3, short=False, negative_to_zero = True):
     negative = (s < 0)
     s = abs(s)
     
-    negative_string = " in the future" if negative else ""
+    negative_string = " in the future" if negative else " ago"
     
     # For the moment stay away from months and years, difficult to get
     days, remainder = divmod(s, 3600*24)
@@ -324,3 +295,58 @@ def create_display_name(field):
     :return: the converted string
     """
     return ' '.join(_.capitalize() for _ in field.split('_'))
+
+def get_class_string(obj):
+    """
+    Return the string identifying the class of the object (module + object name,
+    joined by dots).
+
+    It works both for classes and for class instances.
+    """
+    import inspect
+    if inspect.isclass(obj):
+        return "{}.{}".format(
+            obj.__module__,
+            obj.__name__)     
+    else:
+        return "{}.{}".format(
+            obj.__module__,
+            obj.__class__.__name__)
+
+
+def get_object_from_string(string):
+    """
+    Given a string identifying an object (as returned by the get_class_string
+    method) load and return the actual object.
+    """
+    import importlib
+
+    the_module, _, the_name = string.rpartition('.')
+    
+    return getattr(importlib.import_module(the_module), the_name)
+
+def export_shard_uuid(uuid):
+    """
+    Sharding of the UUID for the import/export
+    """
+    return os.path.join(uuid[:2], uuid[2:4], uuid[4:])
+
+def grouper(n, iterable):
+    """
+    Given an iterable, returns an iterable that returns tuples of groups of
+    elements from iterable of length n, except the last one that has the
+    required length to exaust iterable (i.e., there is no filling applied).
+    
+    :param n: length of each tuple (except the last one,that will have length
+       <= n
+    :param iterable: the iterable to divide in groups
+    """
+    import itertools
+    
+    it = iter(iterable)
+    while True:
+        chunk = tuple(itertools.islice(it, n))
+        if not chunk:
+            return
+        yield chunk
+

@@ -306,6 +306,13 @@ class Code(Node):
             raise MissingPluginError("The input_plugin name for this code is "
                                      "'{}', but it is not an existing plugin"
                                      "name".format(plugin_name))
+
+        # For remote codes, automatically set the computer,
+        # unless explicitly set by the user
+        if not self.is_local():
+            if 'computer' not in kwargs:
+                kwargs['computer'] = self.get_remote_computer()
+        
         new_calc = C(*args, **kwargs)
         # I link to the code
         new_calc.use_code(self)

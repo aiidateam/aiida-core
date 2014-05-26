@@ -51,14 +51,15 @@ PBS/Torque
 ----------
 PBS/Torque is not fully supported yet, even if its support is one of our
 top priorities. For the moment, you can try the PBSPro plugin, that *may*
-also work PBS/Torque (even if it probably won't).
+also work PBS/Torque (even if there will probably be some small issues).
 
 Job resources
 +++++++++++++
 
 When asking a scheduler to allocate some nodes/machines for a given job,
 we have to specify some job resources (that typically include information as, 
-for instance, the number of required nodes or the numbers of CPU per node).
+for instance, the number of required nodes or the numbers of MPI processes
+per node).
 
 Unfortunately, the way of specifying this piece of information is different on
 different clusters. Instead of having one only abstract class, we chose to 
@@ -69,8 +70,8 @@ specific scheduler.
 
 The base class, from which all job resource subclasses inherit, is
 :py:class:`aiida.scheduler.datastructures.JobResource`. All classes define
-at least one method, :py:meth:`get_tot_num_cpus() <aiida.scheduler.datastructures.JobResource.get_tot_num_cpus()>`,
-that returns the total number of CPUs requested.
+at least one method, :py:meth:`get_tot_num_mpiprocs() <aiida.scheduler.datastructures.JobResource.get_tot_num_mpiprocs()>`,
+that returns the total number of MPI processes requested.
 
 .. note:: to load a specific job resource subclass, you can load it manually
   by directly loading the correct class, e..g.::
@@ -86,7 +87,7 @@ that returns the total number of CPUs requested.
      
      # This assumes that the computer is configured to use a scheduler with
      # job resources of type NodeNumberJobResource
-     calc.set_resources({"num_machines": 4, "num_cpus_per_machine": 16})
+     calc.set_resources({"num_machines": 4, "num_mpiprocs_per_machine": 16})
 
 
 .. _NodeNumberJobResource:
@@ -101,8 +102,9 @@ you have the following fields that you can set:
 
 * ``res.num_machines``: specify the number of machines (also called nodes) on 
   which the code should run
-* ``res.num_cpus_per_machine``: number of CPUs (cores) to use on each machine
-* ``res.tot_num_cpus``: the total number of CPUs (cores) that this job is
+* ``res.num_mpiprocs_per_machine``: number of MPI processes
+  to use on each machine
+* ``res.tot_num_mpiprocs``: the total number of MPI processes that this job is
   requesting
   
 Note that you need to specify only two among the three fields above, for
@@ -110,27 +112,41 @@ instance::
 
     res = NodeNumberJobResource()
     res.num_machines = 4
-    res.num_cpus_per_machine = 16
+    res.num_mpiprocs_per_machine = 16
 
-asks the scheduler to allocate 4 machines, with 16 cpus on each machine.
-This will automatically ask for a total of ``4*16=64`` total number of cpus.
+asks the scheduler to allocate 4 machines, with 16 MPI processes on
+each machine.
+This will automatically ask for a total of ``4*16=64`` total number of
+MPI processes.
 
 The same can be achieved passing the fields directly to the constructor::
 
-    res = NodeNumberJobResource(num_machines=4, num_cpus_per_machine=16)
+    res = NodeNumberJobResource(num_machines=4, num_mpiprocs_per_machine=16)
 
 or, even better, directly calling the :py:meth:`set_resources() <aiida.orm.calculation.Calculation.set_resources()>`
 method of the :py:meth:`Calculation <aiida.orm.calculation.Calculation>` class
 (assuming here that ``calc`` is your calculation object)::
 
-    calc.set_resources({"num_machines": 4, "num_cpus_per_machine": 16})
+    calc.set_resources({"num_machines": 4, "num_mpiprocs_per_machine": 16})
 
 .. note:: If you specify all three fields (not recommended), make sure that they satisfy::
 
-      res.num_machines * res.num_cpus_per_machine = res.tot_num_cpus
+      res.num_machines * res.num_mpiprocs_per_machine = res.tot_num_mpiprocs
     
-  Moreover, if you specify ``res.tot_num_cpus``, make sure that this is a multiple
-  of ``res.num_machines`` and/or ``res.num_cpus_per_machine``. 
+  Moreover, if you specify ``res.tot_num_mpiprocs``, make sure that this is a multiple
+  of ``res.num_machines`` and/or ``res.num_mpiprocs_per_machine``. 
+
+.. note:: When creating a new computer, you will be asked for a
+  ``default_mpiprocs_per_machine``. If you specify it, then you can
+  avoid to specify ``num_mpiprocs_per_machine`` when creating the
+  resources for that computer, and the default number will be used.
+  
+  Of course, all the requirements between ``num_machines``,
+  ``num_mpiprocs_per_machine`` and ``tot_num_mpiprocs`` still apply.
+
+  Moreover, you can explicitly specify ``num_mpiprocs_per_machine`` if 
+  you want to use a value different from the default one.
+
 
 .. _ParEnvJobResource:
 
@@ -145,11 +161,11 @@ you have the following fields that you can set:
 
 * ``res.parallel_env``: specify the parallel environment in which you want
   to run your job (a string)
-* ``res.tot_num_cpus``: the total number of CPUs (cores) that this job is
+* ``res.tot_num_mpiprocs``: the total number of MPI processes that this job is
   requesting
 
 Remember to always specify both fields. No checks are done on the consistency
-between the specified parallel environment and the total number of CPUs
+between the specified parallel environment and the total number of MPI processes
 requested (for instance, some parallel environments may have been configured
 by your cluster administrator to run on a single machine). It is your
 responsibility to make sure that the information is valid, otherwise the 
@@ -161,15 +177,15 @@ Some examples:
 
    res = ParEnvJobResource()
    res.parallel_env = 'mpi'
-   res.tot_num_cpus = 64
+   res.tot_num_mpiprocs = 64
   
 * setting the fields directly in the class constructor::
 
-   res = ParEnvJobResource(parallel_env='mpi', tot_num_cpus=64)
+   res = ParEnvJobResource(parallel_env='mpi', tot_num_mpiprocs=64)
 
 * even better, directly calling the :py:meth:`set_resources() <aiida.orm.calculation.Calculation.set_resources()>`
   method of the :py:meth:`Calculation <aiida.orm.calculation.Calculation>` class
   (assuming here that ``calc`` is your calculation object)::
 
-    calc.set_resources({"parallel_env": 'mpi', "tot_num_cpus": 64})
+    calc.set_resources({"parallel_env": 'mpi', "tot_num_mpiprocs": 64})
   

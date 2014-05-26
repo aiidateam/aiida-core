@@ -96,9 +96,9 @@ We set the parameters of the scheduler (and just like the PWscf, this is a cofig
     
 ::
     
-    num_cpus_per_machine = 16
+    num_mpiprocs_per_machine = 16
     calc.set_max_wallclock_seconds(30*60) # 30 min
-    calc.set_resources({"num_machines": 1, "num_cpus_per_machine": num_cpus_per_machine})
+    calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": num_mpiprocs_per_machine})
 
 When we finished the scheduler setup, we store the calculation::
     
@@ -182,11 +182,11 @@ Note that this script is not much tolerant to exceptions!
     parentcalc = QEPwCalc.get_subclass_from_pk(parent_id)
 
     computer = code.get_remote_computer()
-    num_cpus_per_machine = 16
+    num_mpiprocs_per_machine = 16
     QEPhCalc = CalculationFactory('quantumespresso.ph')
     calc = QEPhCalc(computer=computer)
     calc.set_max_wallclock_seconds(30*60) # 30 min
-    calc.set_resources({"num_machines": 1, "num_cpus_per_machine": num_cpus_per_machine})
+    calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": num_mpiprocs_per_machine})
     calc.store()
 
     calc.use_parameters(parameters)

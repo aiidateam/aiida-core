@@ -56,6 +56,12 @@ class LocalTransport(aiida.transport.Transport):
         """
         self._is_open = False
 
+    def __unicode__(self):
+        """
+        Return a description as a string.
+        """
+        return u'{}'.format(self.__class__.__name__)
+
     @property
     def curdir(self):
         """
@@ -203,7 +209,7 @@ class LocalTransport(aiida.transport.Transport):
             os.chmod( real_path , mode )
             
     
-    def put(self,source,destination,dereference=False,overwrite=True,pattern=None,
+    def put(self,source,destination,dereference=False,overwrite=True,
             ignore_nonexisting=False):
         """
         Copies a file or a folder from source to destination.
@@ -216,11 +222,6 @@ class LocalTransport(aiida.transport.Transport):
                                  default = False
             overwrite (bool)   - if True overwrites destination
                                  default = False
-            pattern (str) - copy list of files matching filters
-                            in Unix style. Tested on unix only.
-                            default = None
-                            Works only on the cwd, e.g.
-                            listdir('.',*/*.txt) will not work
 
         Raises:
             IOError if destination is not valid
@@ -236,48 +237,54 @@ class LocalTransport(aiida.transport.Transport):
         if not os.path.isabs( source ):
             raise ValueError("Source must be an absolute path")
 
-        if pattern:
-            filtered_list = self._local_listdir(source,pattern)
-            to_send = [ os.path.join(source,i) for i in filtered_list ]
-            to_arrive = [ os.path.join(destination,i) for i in filtered_list ]
+        if self.has_magic(source):
+            if self.has_magic(destination):
+                raise ValueError("Pahname patterns are not allowed in the "
+                                 "destination")
+            
+            to_copy_list = glob.glob(source) # using local glob here
+            
+            rename_remote = False
+            if len(to_copy_list)>1:
+                # I can't scp more than one file on a single file
+                if self.isfile(destination):
+                    raise OSError("Remote destination is not a directory")
+                # I can't scp more than one file in a non existing directory
+                elif not self.path_exists(destination):  # questo dovrebbe valere solo per file
+                    raise OSError("Remote directory does not exist")
+                else: # the remote path is a directory
+                    rename_remote=True 
 
-            for this_src,this_dst in zip(to_send,to_arrive):
-                splitted_list = self._os_path_split_asunder(this_dst)
-
-                does_dir_exist = ''
-                for this_dir in splitted_list[:-1]:
-                    does_dir_exist = os.path.join(does_dir_exist,this_dir)
-                    try:
-                        self.mkdir(does_dir_exist)
-                    except OSError as e:
-                        if 'File exists' in str(e):
-                            pass
-                        else:
-                            raise
+            for s in to_copy_list:
+                if os.path.isfile(s):
+                    if rename_remote: # copying more than one file in one directory 
+                        # here is the case isfile and more than one file
+                        r = os.path.join(destination,os.path.split(s)[1])
+                        self.putfile(s,r,overwrite )
                         
-                if self.isdir(this_src):
-                    self.puttree( this_src,this_dst,dereference,overwrite )
-                elif self.isfile(this_src):
-                    self.putfile( this_src,this_dst,overwrite )
+                    elif self.isdir(destination): # one file to copy in '.'
+                        r = os.path.join(destination,os.path.split(s)[1])
+                        self.putfile(s,r,overwrite )
+                    else: # one file to copy on one file
+                        self.putfile(s,destination,overwrite )
                 else:
-                    if ignore_nonexisting:
-                        pass
-                    else:
-                        raise OSError("The local path {} does not exist"
-                                      .format(source))                    
-
+                    self.puttree(s,destination,dereference,overwrite )
+                    
         else:
-            if self.isdir(source):
+            if os.path.isdir(source):
                 self.puttree( source,destination,dereference,overwrite )
-            elif self.isfile(source):
-                self.putfile( source,destination,overwrite )
+            elif os.path.isfile(source):
+                if self.isdir(destination):
+                    r = os.path.join(destination,os.path.split(source)[1])
+                    self.putfile( source,r,overwrite )
+                else:
+                    self.putfile( source,destination,overwrite )
             else:
                 if ignore_nonexisting:
                     pass
                 else:
                     raise OSError("The local path {} does not exist"
                                   .format(source))
-
                     
 
     def putfile(self,source,destination,overwrite=True):
@@ -347,13 +354,17 @@ class LocalTransport(aiida.transport.Transport):
         if not os.path.exists( source ):
             raise OSError( "Source does not exists" )
 
-        the_destination = os.path.join(self.curdir,destination)
-        if os.path.exists(the_destination) and overwrite:
-            self.rmtree(the_destination)
-        elif os.path.exists(the_destination) and not overwrite:
-            raise OSError('Destination already exists: not overwriting it')
+        if self.path_exists(destination) and not overwrite:
+            raise OSError("Can't overwrite existing files")
+        if self.isfile(destination):
+            raise OSError("Cannot copy a directory into a file")
 
-        shutil.copytree( source, the_destination,symlinks=dereference )
+        if self.isdir(destination):
+            destination = os.path.join(destination,os.path.split(source)[1])
+
+        the_destination = os.path.join(self.curdir,destination)
+
+        shutil.copytree( source,the_destination,symlinks=dereference )
 
 
     def rmtree(self,path):
@@ -366,7 +377,7 @@ class LocalTransport(aiida.transport.Transport):
         shutil.rmtree(the_path)
         
 
-    def get(self,source,destination,dereference=False,overwrite=True,pattern=None,
+    def get(self,source,destination,dereference=False,overwrite=True,
             ignore_nonexisting=False):
         """
         Copies a folder or a file recursively from 'remote' source to
@@ -380,11 +391,6 @@ class LocalTransport(aiida.transport.Transport):
                                  default = False
             overwrite (bool) - if True overwrites destination
                                default = False
-            pattern (str) - copy list of files matching filters
-                            in Unix style. Tested on unix only.
-                            default = None
-                            Works only on the cwd, e.g.
-                            listdir('.',*/*.txt) will not work
 
         Raises:
             IOError if 'remote' source is not valid
@@ -397,57 +403,52 @@ class LocalTransport(aiida.transport.Transport):
             raise IOError("Input source to get function "
                              "must be a non empty string")
 
-        if not os.path.exists( os.path.join(self.curdir,source) ):
-            raise IOError("Source not found")
-
         if not os.path.isabs( destination ):
             raise ValueError("Destination must be an absolute path")
 
-        if pattern:
-            filtered_list = self.listdir(source,pattern)
-            to_retrieve = [ os.path.join(source,i) for i in filtered_list ]
-            to_arrive = [ os.path.join(destination,i) for i in filtered_list ]
+        if self.has_magic(source):
+            if self.has_magic(destination):
+                raise ValueError("Pahname patterns are not allowed in the "
+                                 "destination")
+            to_copy_list = self.glob(source)
 
-            for this_src,this_dst in zip(to_retrieve,to_arrive):
-                splitted_list = self._os_path_split_asunder(this_dst)
+            rename_local = False
+            if len(to_copy_list)>1:
+                # I can't scp more than one file on a single file
+                if os.path.isfile(destination):
+                    raise IOError("Remote destination is not a directory")
+                # I can't scp more than one file in a non existing directory
+                elif not os.path.exists(destination):  # this should hold only for files
+                    raise OSError("Remote directory does not exist")
+                else: # the remote path is a directory
+                    rename_local=True
 
-                does_dir_exist = ''
-                for this_dir in splitted_list[:-1]:
-                    does_dir_exist = os.path.join(does_dir_exist,this_dir)
-                    try:
-                        os.mkdir(does_dir_exist)
-                    except OSError as e:
-                        if 'File exists' in str(e) or 'Is a directory' in str(e):
-                            pass
-                        else:
-                            raise
-                        
-                if self.isdir(this_src):
-                    self.gettree( this_src,this_dst,dereference,overwrite )
-                elif self.isfile(this_src):
-                    self.getfile( this_src,this_dst,overwrite )
+            for s in to_copy_list:
+                if self.isfile(s):
+                    if rename_local: # copying more than one file in one directory 
+                        # here is the case isfile and more than one file
+                        r = os.path.join(destination,os.path.split(s)[1])
+                        self.getfile(s,r,overwrite )
+                    else: # one file to copy on one file
+                        self.getfile(s,destination,overwrite )
                 else:
-                    if ignore_nonexisting:
-                        execlogger.debug(
-                                "File {} not found on the remote machine".format(this_src))
-                        pass
-                    else:
-                        raise IOError("The remote path {} does not exist".format(
-                            this_src))
+                    self.gettree(s,destination,dereference,overwrite )
 
         else:
             if self.isdir(source):
                 self.gettree( source,destination,dereference,overwrite )
             elif self.isfile(source):
-                self.getfile( source,destination,overwrite )
+                if os.path.isdir(destination):
+                    r = os.path.join(destination,os.path.split(source)[1])
+                    self.getfile( source,r,overwrite )
+                else:
+                    self.getfile( source,destination,overwrite )
             else:
                 if ignore_nonexisting:
-                    execlogger.debug(
-                        "File {} not found on the remote machine".format(source))
                     pass
                 else:
-                    raise IOError("The remote path {} does not exist".format(
-                        source))
+                    raise IOError("The local path {} does not exist"
+                                  .format(destination))
 
 
     def getfile(self,source,destination,overwrite=True):
@@ -501,27 +502,30 @@ class LocalTransport(aiida.transport.Transport):
             ValueError if 'local' destination is not valid
             OSError if unintentionally overwriting
         """
-        if not destination:
-            raise ValueError("Input destination to get function "
-                             "must be a non empty string")
         if not source:
-            raise IOError("Input source to get function "
-                             "must be a non empty string")
+            raise IOError("Remotepath must be a non empty string")
+        if not destination:
+            raise ValueError("Localpaths must be a non empty string")
+
+        if not os.path.isabs(destination):
+            raise ValueError("Localpaths must be an absolute path")
+
+        if not self.isdir(source):
+            raise IOError("Input remotepath is not a folder: {}".format(source))
+
+        if os.path.exists(destination) and not overwrite:
+            raise OSError("Can't overwrite existing files")
+        if os.path.isfile(destination):
+            raise OSError("Cannot copy a directory into a file")
+        
+        if os.path.isdir(destination):
+            destination = os.path.join(destination,os.path.split(source)[1])
+
         the_source = os.path.join(self.curdir,source)
-        if not os.path.exists( the_source ):
-            raise IOError("Source not found")
-        if not os.path.isabs( destination ):
-            raise ValueError("Destination must be an absolute path")
-
-        if os.path.exists(destination) and overwrite:
-            self.rmtree(destination)
-        elif os.path.exists(destination) and not overwrite:
-            raise OSError('Destination already exists: not overwriting it')
-
         shutil.copytree( the_source, destination, symlinks=dereference )
         
 
-    def copy(self,source,destination,dereference=False,pattern=None):
+    def copy(self,source,destination,dereference=False):
         """
         Copies a file or a folder from 'remote' source to
         'remote' destination.
@@ -532,9 +536,6 @@ class LocalTransport(aiida.transport.Transport):
             destination (Str)  - path to remote file
             dereference (bool) - follow symbolic links
                                  default = False
-            pattern (str) - copies list of files matching filters
-                            in Unix style. Tested on unix only.
-                            default = None
 
         Raises:
             ValueError if 'remote' source or destination is not valid
@@ -546,46 +547,44 @@ class LocalTransport(aiida.transport.Transport):
         if not destination:
             raise ValueError("Input destination to copy "
                              "must be a non empty object")
-        if not os.path.exists(os.path.join( self.curdir,source )):
-            raise OSError("Source not found")
-
-        # exotic case where destination = source
+        if not self.has_magic(source):
+            if not os.path.exists(os.path.join( self.curdir,source )):
+                raise OSError("Source not found")
         if self.normalize(source) == self.normalize(destination):
             raise ValueError("Cannot copy from itself to itself")
 
-        # by default, overwrite old files
-        if self.isfile(destination) or self.isdir(destination):
-            self.rmtree(destination)
-
-# TODO : fix the pattern option and make it work like put and get do
-
-        if pattern:
-            file_list = self.listdir(source,pattern)
-            to_copy = [os.path.join(source,i) for i in file_list ]
-            to_copy_to = [os.path.join(destination,i) for i in file_list ]
-
-            for this_src,this_dst in zip(to_copy,to_copy_to):
-                splitted_list = self._os_path_split_asunder(this_dst)
-
-                does_dir_exist = ''
-                for this_dir in splitted_list[:-1]:
-                    does_dir_exist = os.path.join(does_dir_exist,this_dir)
-                    try:
-                        self.mkdir(does_dir_exist)
-                    except OSError as e:
-                        if 'File exists' in e.message:
-                            pass
-
-                if self.isdir(this_src):
-                    return self.copytree(this_src,this_dst,dereference)
+#        # by default, overwrite old files
+#        if not destination.startswith('.'):
+#            if self.isfile(destination) or self.isdir(destination):
+#                self.rmtree(destination)
+        
+        the_destination = os.path.join(self.curdir,destination)
+        
+        if self.has_magic(source):
+            if self.has_magic(destination):
+                raise ValueError("Pahname patterns are not allowed in the "
+                                 "destination")
+            
+            to_copy_list = self.glob(source)
+            
+            if len(to_copy_list)>1:
+                if not self.path_exists(destination) or self.isfile(destination): 
+                    raise OSError("Can't copy more than one file in the same "
+                                  "destination file")
+            
+            for s in to_copy_list:
+                the_s = os.path.join(self.curdir,s)
+                if self.isfile(s):
+                    shutil.copy(the_s,the_destination)
                 else:
-                    return self.copyfile( this_src,this_dst )
-
+                    self.copytree(s,destination)
+                    
         else:
-            if self.isdir(source):
-                return self.copytree(source,destination,dereference)
+            the_source = os.path.join(self.curdir,source)
+            if self.isfile(source):
+                shutil.copy(the_source,the_destination)
             else:
-                return self.copyfile( source,destination )
+                self.copytree(source,destination)
 
 
     def copyfile(self,source,destination):
@@ -641,6 +640,11 @@ class LocalTransport(aiida.transport.Transport):
         the_destination = os.path.join( self.curdir,destination )
         if not os.path.exists(the_source):
             raise OSError("Source not found")
+        
+        # Using the Ubuntu default behavior (different from Mac)
+        if self.isdir(destination):
+            the_destination = os.path.join(the_destination,
+                                           os.path.split(source)[1])
 
         shutil.copytree( the_source, the_destination, symlinks = dereference )
             
@@ -827,4 +831,9 @@ class LocalTransport(aiida.transport.Transport):
         
         os.symlink(remotesource,remotedestination)
     
-    
+    def path_exists(self,path):
+        """
+        Check if path exists
+        """
+        return os.path.exists(os.path.join(self.curdir,path))
+        

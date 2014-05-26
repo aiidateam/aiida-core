@@ -12,12 +12,6 @@ from aiida.common import aiidalogger
 
 logger = aiidalogger.getChild('Workflow')
 
-# Name to be used for the section
-_section_name = 'workflow'
-
-# The name of the subfolder in which to put the files/directories added with add_path
-_path_subfolder_name = 'path'
-
 class Workflow(object):    
     """
     Base class to represent a workflow. This is the superclass of any workflow implementations,
@@ -34,6 +28,13 @@ class Workflow(object):
       the _increment_version_number_db routine needs to be called to increase
       the nodeversion after storing 
     """
+
+    # Name to be used for the repository section
+    _section_name = 'workflow'
+    
+    # The name of the subfolder in which to put the files/directories added with add_path
+    _path_subfolder_name = 'path'
+
     
     def __init__(self,**kwargs):
         
@@ -68,7 +69,7 @@ class Workflow(object):
                         self._dbworkflowinstance   = DbWorkflow.objects.get(uuid=uuid)
                         
                         #self.logger.info("Workflow found in the database, now retrieved")
-                        self._repo_folder = RepositoryFolder(section=_section_name, uuid=self.uuid)
+                        self._repo_folder = RepositoryFolder(section=self._section_name, uuid=self.uuid)
                         
                 except ObjectDoesNotExist:
                         raise NotExistent("No entry with the UUID {} found".format(uuid))
@@ -282,7 +283,7 @@ class Workflow(object):
         """
         
         return self.current_folder.get_subfolder(
-            _path_subfolder_name,reset_limit=True)
+            self._path_subfolder_name,reset_limit=True)
 
     def get_path_list(self, subfolder='.'):
         
@@ -340,10 +341,13 @@ class Workflow(object):
         self.path_subfolder.insert_path(src_abs,dst_path)
 
 
-    def get_abs_path(self,path,section=_path_subfolder_name):
+    def get_abs_path(self,path,section=None):
         """
         TODO: For the moment works only for one kind of files, 'path' (internal files)
         """
+        if section is None:
+            section = self._path_subfolder_name
+        
         if os.path.isabs(path):
             raise ValueError("The path in get_abs_path must be relative")
         return self.current_folder.get_subfolder(section,reset_limit=True).get_abs_path(path,check_existence=True)
@@ -383,7 +387,7 @@ class Workflow(object):
         if hasattr(self, '_params'):
             self.dbworkflowinstance.add_parameters(self._params, force=False)
         
-        self._repo_folder = RepositoryFolder(section=_section_name, uuid=self.uuid)
+        self._repo_folder = RepositoryFolder(section=self._section_name, uuid=self.uuid)
         self.repo_folder.replace_with_folder(self.get_temp_folder().abspath, move=True, overwrite=True)
         
         self._temp_folder       = None  
@@ -1220,7 +1224,7 @@ def get_workflow_info(w, tab_size = 2, short = False, pre_string = ""):
                     else:
                         last_check = c.get_scheduler_lastchecktime()
                         if last_check is not None:
-                            when_string = " {} ago".format(
+                            when_string = " {}".format(
                                str_timedelta(now-last_check, short=True,
                                              negative_to_zero = True))
                             verb_string = "was "

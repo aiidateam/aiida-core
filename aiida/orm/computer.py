@@ -119,12 +119,12 @@ class Computer(object):
             ("mpirun_command",
              "mpirun command",
              "The mpirun command needed on the cluster to run parallel MPI\n"
-             "programs. You can use the {tot_num_cpus} replacement, that will be \n"
+             "programs. You can use the {tot_num_mpiprocs} replacement, that will be \n"
              "replaced by the total number of cpus, or the other scheduler-dependent\n"
              "replacement fields (see the scheduler docs for more information)",
              False,
              ),
-             ("default_cpus_per_machine",
+             ("default_mpiprocs_per_machine",
              "Default number of CPUs per machine",
              "Enter here the default number of CPUs per machine (node) that \n"
              "should be used if nothing is otherwise specified. Leave empty \n"
@@ -240,7 +240,7 @@ class Computer(object):
         ret_lines.append(" * Work directory: {}".format(self.get_workdir()))
         ret_lines.append(" * mpirun command: {}".format(" ".join(
             self.get_mpirun_command())))
-        def_cpus_machine = self.get_default_cpus_per_machine()
+        def_cpus_machine = self.get_default_mpiprocs_per_machine()
         if def_cpus_machine is not None:
             ret_lines.append(" * Default number of cpus per machine: {}".format(
                 def_cpus_machine))
@@ -308,18 +308,18 @@ class Computer(object):
         if not hostname.strip():
             raise ValidationError("No hostname specified")
 
-    def _get_default_cpus_per_machine_string(self):
+    def _get_default_mpiprocs_per_machine_string(self):
         """
         Get the default number of CPUs per machine (node) as a string
         """
-        def_cpus_per_machine = self.get_default_cpus_per_machine()
+        def_cpus_per_machine = self.get_default_mpiprocs_per_machine()
         if def_cpus_per_machine is None:
             return ""
         else:
             return str(def_cpus_per_machine)
         
 
-    def _set_default_cpus_per_machine_string(self, string):
+    def _set_default_mpiprocs_per_machine_string(self, string):
         """
         Set the default number of CPUs per machine (node) from a string (set to
         None if the string is empty)
@@ -332,16 +332,16 @@ class Computer(object):
             try:
                 def_cpus_per_machine = int(string)
             except ValueError:
-                raise ValidationError("Invalid value for default_cpus_per_machine, "
+                raise ValidationError("Invalid value for default_mpiprocs_per_machine, "
                                       "must be a positive integer, or an empty "
                                       "string if you do not want to provide a "
                                       "default value.")                
         
-        self._default_cpus_per_machine_validator(def_cpus_per_machine)
+        self._default_mpiprocs_per_machine_validator(def_cpus_per_machine)
         
-        self.set_default_cpus_per_machine(def_cpus_per_machine)
+        self.set_default_mpiprocs_per_machine(def_cpus_per_machine)
 
-    def _default_cpus_per_machine_validator(self, def_cpus_per_machine):
+    def _default_mpiprocs_per_machine_validator(self, def_cpus_per_machine):
         """
         Validates the default number of CPUs per machine (node)
         """
@@ -351,14 +351,14 @@ class Computer(object):
             return
         
         if not isinstance(def_cpus_per_machine, int) or def_cpus_per_machine <= 0:
-            raise ValidationError("Invalid value for default_cpus_per_machine, "
+            raise ValidationError("Invalid value for default_mpiprocs_per_machine, "
                                   "must be a positive integer, or an empty "
                                   "string if you do not want to provide a "
                                   "default value.")
         
-    def _shouldcall_default_cpus_per_machine(self):
+    def _shouldcall_default_mpiprocs_per_machine(self):
         """
-        Return True if the scheduler can accept 'default_cpus_per_machine',
+        Return True if the scheduler can accept 'default_mpiprocs_per_machine',
         False otherwise.
         
         If there is a problem in determining the scheduler, return True to
@@ -377,17 +377,17 @@ class Computer(object):
             # Odd situation...
             return False
         
-        return JobResourceClass.accepts_default_cpus_per_machine()
+        return JobResourceClass.accepts_default_mpiprocs_per_machine()
 
-    def _cleanup_default_cpus_per_machine(self):
+    def _cleanup_default_mpiprocs_per_machine(self):
         """
         Called by the command line utility in case the _shouldcall_ routine
         returns False, to remove possible values that were previously set
         (e.g. if one used before a pbspro scheduler and set the
-        default_cpus_per_machine, and then switches to sge, the question is
+        default_mpiprocs_per_machine, and then switches to sge, the question is
         not asked, but the value should also be removed from the DB.
         """
-        self.set_default_cpus_per_machine(None)
+        self.set_default_mpiprocs_per_machine(None)
 
     def _get_enabled_state_string(self):
         return "True" if self.is_enabled() else "False"
@@ -580,7 +580,7 @@ class Computer(object):
             raise ValidationError("Unable to load the scheduler for this computer")
         
         subst = {i: 'value' for i in job_resource_keys}
-        subst['tot_num_cpus'] = 'value'        
+        subst['tot_num_mpiprocs'] = 'value'        
 
         try:
             for arg in mpirun_cmd:
@@ -755,7 +755,7 @@ class Computer(object):
         I also provide a sensible default that may be ok in many cases.
         """
         return self._get_property("mpirun_command",
-            ["mpirun", "-np", "{tot_num_cpus}"])
+            ["mpirun", "-np", "{tot_num_mpiprocs}"])
 
     def set_mpirun_command(self,val):
         """
@@ -767,25 +767,25 @@ class Computer(object):
                 raise TypeError("the mpirun_command must be a list of strings")
         self._set_property("mpirun_command", val)
 
-    def get_default_cpus_per_machine(self):
+    def get_default_mpiprocs_per_machine(self):
         """
         Return the default number of CPUs per machine (node) for this computer,
         or None if it was not set.
         """
-        return self._get_property("default_cpus_per_machine",
+        return self._get_property("default_mpiprocs_per_machine",
             None)
     
-    def set_default_cpus_per_machine(self, def_cpus_per_machine):
+    def set_default_mpiprocs_per_machine(self, def_cpus_per_machine):
         """
         Set the default number of CPUs per machine (node) for this computer.
         Accepts None if you do not want to set this value.
         """
         if def_cpus_per_machine is None:
-            self._del_property("default_cpus_per_machine", raise_exception=False)
+            self._del_property("default_mpiprocs_per_machine", raise_exception=False)
         else:
             if not isinstance(def_cpus_per_machine, int):
                 raise TypeError("def_cpus_per_machine must be an integer (or None)")
-        self._set_property("default_cpus_per_machine", def_cpus_per_machine)
+        self._set_property("default_mpiprocs_per_machine", def_cpus_per_machine)
 
     def get_transport_params(self):
         import json

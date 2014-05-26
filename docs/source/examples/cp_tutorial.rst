@@ -163,7 +163,7 @@ And create its instance::
 We set the parameters for the scheduler (note that it will depend on the details of your scheduler, this configuration works for PBSpro and Slurm schedulers)::
 
   calc.set_max_wallclock_seconds(30*60) # 30 min
-  calc.set_resources({"num_machines": 1, "num_cpus_per_machine": 16})
+  calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 16})
 
 We save the object in the database::
 
@@ -264,7 +264,7 @@ This is the script described in the tutorial above. Remember to check the schedu
 	QECalc = CalculationFactory('quantumespresso.cp')
 	calc = QECalc(computer=computer)
 	calc.set_max_wallclock_seconds(30*60) # 30 min
-	calc.set_resources({"num_machines": 1, "num_cpus_per_machine": 16})
+	calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 16})
 	calc.store()
 
 	calc.use_structure(s)
@@ -307,7 +307,7 @@ Again, remember to check and modify to your needs the au
 	expected_exec_name='cp.x'
 	auto_pseudos = True
 
-	num_cpus_per_machine = 16
+	num_mpiprocs_per_machine = 16
 	
 	queue = None
 
@@ -401,7 +401,7 @@ Again, remember to check and modify to your needs the au
 	QECalc = CalculationFactory('quantumespresso.cp')
 	calc = QECalc(computer=computer)
 	calc.set_max_wallclock_seconds(30*60) # 30 min
-	calc.set_resources({"num_machines": 1, "num_cpus_per_machine": num_cpus_per_machine})
+	calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": num_mpiprocs_per_machine})
 	if queue is not None:
 		calc.set_queue_name(queue)
 	calc.store()

@@ -2,7 +2,7 @@ import sys
 import os
 import subprocess
 
-from aiida.cmdline.baseclass import VerdiCommand
+from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 
 def is_daemon_user():
     """
@@ -16,7 +16,7 @@ def is_daemon_user():
     return daemon_user == this_user
 
 
-class Daemon(VerdiCommand):
+class Daemon(VerdiCommandWithSubcommands):
     """
     Manage the AiiDA daemon
     
@@ -45,39 +45,18 @@ class Daemon(VerdiCommand):
         from aiida.common import setup
 
         self.valid_subcommands = {
-            'start': self.daemon_start,
-            'stop' : self.daemon_stop,
-            'status': self.daemon_status,
-            'logshow': self.daemon_logshow,
-            'restart': self.daemon_restart,
-            'configureuser': self.configure_user,
+            'start': (self.daemon_start, self.complete_none),
+            'stop' : (self.daemon_stop, self.complete_none),
+            'status': (self.daemon_status, self.complete_none),
+            'logshow': (self.daemon_logshow, self.complete_none),
+            'restart': (self.daemon_restart, self.complete_none),
+            'configureuser': (self.configure_user, self.complete_none),
             }
 
         self.conffile_full_path = os.path.expanduser(os.path.join(
             setup.AIIDA_CONFIG_FOLDER,
             setup.DAEMON_SUBDIR,setup.DAEMON_CONF_FILE))
 
-
-    def run(self,*args):       
-        """
-        Run the specified daemon subcommand.
-        """
-        try:
-            function_to_call = self.valid_subcommands.get(
-                args[0], self.invalid_subcommand)
-        except IndexError:
-            function_to_call = self.no_subcommand
-            
-        function_to_call()
-
-    def complete(self,subargs_idx, subargs):
-        """
-        Complete the daemon subcommand.
-        """
-        if subargs_idx == 0:
-            print "\n".join(self.valid_subcommands.keys())
-        else:
-            print ""
 
     def _get_pid_full_path(self):
         """
@@ -112,20 +91,6 @@ class Daemon(VerdiCommand):
                 return None
         else:
             return None
-
-    def no_subcommand(self):
-        print >> sys.stderr, ("You have to pass a valid subcommand to "
-                              "'daemon'. Valid subcommands are:")
-        print >> sys.stderr, "\n".join("  {}".format(sc) 
-                                       for sc in self.valid_subcommands)
-        sys.exit(1)
-
-    def invalid_subcommand(self,*args):
-        print >> sys.stderr, ("You passed an invalid subcommand to 'daemon'. "
-                              "Valid subcommands are:")
-        print >> sys.stderr, "\n".join("  {}".format(sc) 
-                                       for sc in self.valid_subcommands)
-        sys.exit(1)
 
     def daemon_start(self):
         """

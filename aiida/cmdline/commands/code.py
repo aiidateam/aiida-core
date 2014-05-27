@@ -5,7 +5,7 @@ TODO: think if we want to allow to change path and prepend/append text.
 """
 import sys
 
-from aiida.cmdline.baseclass import VerdiCommand
+from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.common.utils import load_django
 
 def cmdline_fill(attributes, store, print_header=True):
@@ -510,7 +510,7 @@ class CodeInputValidationClass(object):
             
 
 
-class Code(VerdiCommand):
+class Code(VerdiCommandWithSubcommands):
     """
     Setup and manage codes to be used
 
@@ -528,34 +528,6 @@ class Code(VerdiCommand):
             'delete': (self.code_delete, self.complete_code_pks),
             }
 
-    def run(self,*args):       
-        try:
-            function_to_call = self.valid_subcommands[args[0]][0]
-        except IndexError:
-            function_to_call = self.no_subcommand
-        except KeyError:
-            function_to_call = self.invalid_subcommand
-            
-        function_to_call(*args[1:])
-
-    def complete(self,subargs_idx, subargs):
-        if subargs_idx == 0:
-            print "\n".join(self.valid_subcommands.keys())
-        elif subargs_idx == 1:
-            try:
-                first_subarg = subargs[0]
-            except  IndexError:
-                first_subarg = ''
-            try:
-                complete_function = self.valid_subcommands[first_subarg][1] 
-            except KeyError:
-                print ""
-                return
-            print complete_function()
-
-    def complete_none(self):
-        return ""
-        
     def complete_code_names(self):
         code_names = [c[1] for c in self.get_code_pks_and_labels()]
         return "\n".join(code_names)
@@ -563,20 +535,6 @@ class Code(VerdiCommand):
     def complete_code_pks(self):
         code_pks = [str(c[0]) for c in self.get_code_pks_and_labels()]
         return "\n".join(code_pks)
-
-    def no_subcommand(self,*args):
-        print >> sys.stderr, ("You have to pass a valid subcommand to "
-                              "'code'. Valid subcommands are:")
-        print >> sys.stderr, "\n".join("  {}".format(sc) 
-                                       for sc in self.valid_subcommands)
-        sys.exit(1)
-
-    def invalid_subcommand(self, *args):
-        print >> sys.stderr, ("You passed an invalid subcommand to 'code'. "
-                              "Valid subcommands are:")
-        print >> sys.stderr, "\n".join("  {}".format(sc) 
-                                       for sc in self.valid_subcommands)
-        sys.exit(1)
 
     def code_list(self, *args):
         """

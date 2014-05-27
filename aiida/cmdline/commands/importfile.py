@@ -533,7 +533,9 @@ class Import(VerdiCommand):
         
         from aiida.common.folders import SandboxFolder
         
-        parser = argparse.ArgumentParser(description='Import data in the DB.')
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Import data in the DB.')
         parser.add_argument('-w', '--webpage', nargs='+', type=str,
                             dest='webpages', metavar='URL',
                             help="Download all URLs in the given HTTP web "

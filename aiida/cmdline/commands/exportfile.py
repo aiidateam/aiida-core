@@ -445,7 +445,9 @@ class Export(VerdiCommand):
         from aiida.common.exceptions import NotExistent
         from aiida.djsite.db import models
         
-        parser = argparse.ArgumentParser(description='Export data from the DB.')
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Export data from the DB.')
         parser.add_argument('-c', '--computers', nargs='+', type=int, metavar="PK",
                             help="Export the given computers")
         parser.add_argument('-n', '--nodes', nargs='+', type=int, metavar="PK",

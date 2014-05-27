@@ -17,7 +17,7 @@ import getpass
 
 import aiida
 from aiida.common.exceptions import ConfigurationError
-from aiida.cmdline.baseclass import VerdiCommand
+from aiida.cmdline.baseclass import VerdiCommand, VerdiCommandRouter
 from aiida.cmdline import pass_to_django_manage
 
 ## Import here from other files; once imported, it will be found and
@@ -425,7 +425,9 @@ def exec_from_cmdline(argv):
 
     list_commands ={v.get_command_name(): v for v in verdilib_namespace.itervalues()
                     if inspect.isclass(v) and not v==VerdiCommand and 
-                    issubclass(v,VerdiCommand)}
+                    issubclass(v,VerdiCommand)
+                    and not v.__name__.startswith('_')
+                    and not v._abstract}
 
     # Retrieve the list of docstrings, managing correctly the 
     # case of empty docstrings. Each value is a list of lines

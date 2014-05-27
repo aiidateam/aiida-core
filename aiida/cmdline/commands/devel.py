@@ -2,11 +2,11 @@ import sys
 import os
 
 import aiida
-from aiida.cmdline.baseclass import VerdiCommand
+from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.common.utils import load_django
 from aiida.cmdline import pass_to_django_manage, execname
 
-class Devel(VerdiCommand):
+class Devel(VerdiCommandWithSubcommands):
     """
     AiiDA commands for developers
 
@@ -38,7 +38,7 @@ class Devel(VerdiCommand):
 
         self.valid_subcommands = {
             'tests': (self.run_tests, self.complete_tests),
-            'query': (self.run_query, self.complete_query),
+            'query': (self.run_query, self.complete_none), # For the moment, no completion
             }
         
         # The content of the dict is:
@@ -50,51 +50,7 @@ class Devel(VerdiCommand):
         for dbtest in db_test_list:
             self.allowed_test_folders["{}{}".format(self._dbprefix, dbtest)] = [dbtest]
         self.allowed_test_folders[self._dbrawprefix] = db_test_list
-    
-    def run(self,*args):       
-        try:
-            function_to_call = self.valid_subcommands[args[0]][0]
-        except IndexError:
-            function_to_call = self.no_subcommand
-        except KeyError:
-            function_to_call = self.invalid_subcommand
             
-        function_to_call(*args[1:])
-    
-    def complete(self,subargs_idx, subargs):
-        if subargs_idx == 0:
-            print "\n".join(self.valid_subcommands.keys())
-        elif subargs_idx >= 1:
-            try:
-                first_subarg = subargs[0]
-            except  IndexError:
-                first_subarg = ''
-            try:
-                complete_function = self.valid_subcommands[first_subarg][1] 
-            except KeyError:
-                # No completion
-                print ""
-                return
-            print complete_function(subargs_idx - 1, subargs[1:])
-
-    def complete_query(self, subargs_idx, subargs):
-        # For the moment, no completion
-        print ""
-
-    def no_subcommand(self,*args):
-        print >> sys.stderr, ("You have to pass a valid subcommand to "
-                              "'devel'. Valid subcommands are:")
-        print >> sys.stderr, "\n".join("  {}".format(sc) 
-                                       for sc in self.valid_subcommands)
-        sys.exit(1)
-
-    def invalid_subcommand(self,*args):
-        print >> sys.stderr, ("You passed an invalid subcommand to 'devel'. "
-                              "Valid subcommands are:")
-        print >> sys.stderr, "\n".join("  {}".format(sc) 
-                                       for sc in self.valid_subcommands)
-        sys.exit(1)
-        
     def run_tests(self,*args):
         import unittest
         import tempfile

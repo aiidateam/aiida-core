@@ -1,6 +1,6 @@
 import sys
 
-from aiida.cmdline.baseclass import VerdiCommand
+from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.common.utils import load_django
 
 def get_group_type_mapping():
@@ -19,7 +19,7 @@ def get_group_type_mapping():
     return {'data.upf': UPFGROUP_TYPE,
             'import': IMPORTGROUP_TYPE}
 
-class Group(VerdiCommand):
+class Group(VerdiCommandWithSubcommands):
     """
     Setup and manage groups
     
@@ -34,52 +34,6 @@ class Group(VerdiCommand):
             'list': (self.group_list, self.complete_none),
             }
 
-    def run(self,*args):       
-        """
-        Run the specified subcommand.
-        """
-        try:
-            function_to_call = self.valid_subcommands[args[0]][0]
-        except IndexError:
-            function_to_call = self.no_subcommand
-        except KeyError:
-            function_to_call = self.invalid_subcommand
-            
-        function_to_call(*args[1:])
-
-    def complete_none(self, subargs_idx, subargs):
-        return ""
-    
-    def complete(self,subargs_idx, subargs):
-        if subargs_idx == 0:
-            print "\n".join(self.valid_subcommands.keys())
-        else: # >=1 
-            try:
-                first_subarg = subargs[0]
-            except  IndexError:
-                first_subarg = ''
-            try:
-                complete_function = self.valid_subcommands[first_subarg][1] 
-            except KeyError:
-                print ""
-                return
-            print complete_function(subargs_idx-1, subargs[1:])
-
-    def no_subcommand(self):
-        print >> sys.stderr, ("You have to pass a valid subcommand to "
-                              "'group'. Valid subcommands are:")
-        print >> sys.stderr, "\n".join("  {}".format(sc) 
-                                       for sc in self.valid_subcommands)
-        sys.exit(1)
-
-    def invalid_subcommand(self,*args):
-        print >> sys.stderr, ("You passed an invalid subcommand to 'group'. "
-                              "Valid subcommands are:")
-        print >> sys.stderr, "\n".join("  {}".format(sc) 
-                                       for sc in self.valid_subcommands)
-        sys.exit(1)
-
-        
     def group_list(self, *args):
         """
         Print a list of groups in the DB. 
@@ -91,7 +45,9 @@ class Group(VerdiCommand):
         import argparse
         from aiida.orm import Group as G
         
-        parser = argparse.ArgumentParser(description='List AiiDA user-defined groups.')
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='List AiiDA user-defined groups.')
         exclusive_group = parser.add_mutually_exclusive_group()
         exclusive_group.add_argument('-A', '--all-users',
             dest='all_users',action='store_true',

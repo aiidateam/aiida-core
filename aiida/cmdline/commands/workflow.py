@@ -1,20 +1,18 @@
 import sys
-import os
-import subprocess
 
-from aiida.cmdline.baseclass import VerdiCommand
+from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 
 
-class Workflow(VerdiCommand):
+class Workflow(VerdiCommandWithSubcommands):
     """
     Manage the AiiDA worflow manager
     
     Valid subcommands are:
     * list: list the running workflows running and their state. Pass a -h
-            option for further help on valid options.
+    |        option for further help on valid options.
     * kill: kill a given workflow
+    * report: show the report of a given workflow
     """
-
 
     def __init__(self):
         """
@@ -22,45 +20,10 @@ class Workflow(VerdiCommand):
         list.
         """
         self.valid_subcommands = {
-            'list': self.workflow_list,
-            'kill': self.workflow_kill,
-            'report': self.print_report,
+            'list': (self.workflow_list, self.complete_none),
+            'kill': (self.workflow_kill, self.complete_none),
+            'report': (self.print_report, self.complete_none),
             }
-
-    def run(self,*args):       
-        """
-        Run the specified workflow subcommand.
-        """
-        try:
-            function_to_call = self.valid_subcommands.get(
-                args[0], self.invalid_subcommand)
-        except IndexError:
-            function_to_call = self.no_subcommand
-            
-        function_to_call(*args[1:])
-
-    def complete(self,subargs_idx, subargs):
-        """
-        Complete the workflow subcommand.
-        """
-        if subargs_idx == 0:
-            print "\n".join(self.valid_subcommands.keys())
-        else:
-            print ""
-
-    def no_subcommand(self):
-        print >> sys.stderr, ("You have to pass a valid subcommand to "
-                              "'workflow'. Valid subcommands are:")
-        print >> sys.stderr, "\n".join("  {}".format(sc) 
-                                       for sc in self.valid_subcommands)
-        sys.exit(1)
-
-    def invalid_subcommand(self,*args):
-        print >> sys.stderr, ("You passed an invalid subcommand to 'workflow'. "
-                              "Valid subcommands are:")
-        print >> sys.stderr, "\n".join("  {}".format(sc) 
-                                       for sc in self.valid_subcommands)
-        sys.exit(1)
 
     
     def workflow_list(self, *args):
@@ -73,7 +36,9 @@ class Workflow(VerdiCommand):
         import argparse
         import aiida.orm.workflow as wfs
         
-        parser = argparse.ArgumentParser(description='List AiiDA workflows.')
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='List AiiDA workflows.')
         parser.add_argument('-s', '--short', help="show shorter output (only subworkflows and steps, no calculations)",
                             action='store_true')
         parser.add_argument('-a', '--all-states', help="show all existing AiiDA workflows, not only running ones",

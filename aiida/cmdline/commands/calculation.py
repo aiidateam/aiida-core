@@ -3,10 +3,10 @@ import os
 import subprocess
 from aiida.common.utils import load_django
 
-from aiida.cmdline.baseclass import VerdiCommand
+from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 
 
-class Calculation(VerdiCommand):
+class Calculation(VerdiCommandWithSubcommands):
     """
     Query and interact with calculations
     
@@ -32,22 +32,6 @@ class Calculation(VerdiCommand):
             'show': (self.calculation_show, self.complete_none),
             'plugins': (self.calculation_plugins, self.complete_plugins),
             }
-
-    def run(self,*args):       
-        """
-        Run the specified subcommand.
-        """
-        try:
-            function_to_call = self.valid_subcommands[args[0]][0]
-        except IndexError:
-            function_to_call = self.no_subcommand
-        except KeyError:
-            function_to_call = self.invalid_subcommand
-            
-        function_to_call(*args[1:])
-
-    def complete_none(self, subargs_idx, subargs):
-        return ""
     
     def complete_plugins(self, subargs_idx, subargs):
         from aiida.common.pluginloader import existing_plugins
@@ -61,36 +45,6 @@ class Calculation(VerdiCommand):
 #        print >> sys.stderr, "*", subargs
         return "\n".join(return_plugins)
 
-    def complete(self,subargs_idx, subargs):
-        if subargs_idx == 0:
-            print "\n".join(self.valid_subcommands.keys())
-        else: # >=1 
-            try:
-                first_subarg = subargs[0]
-            except  IndexError:
-                first_subarg = ''
-            try:
-                complete_function = self.valid_subcommands[first_subarg][1] 
-            except KeyError:
-                print ""
-                return
-            print complete_function(subargs_idx-1, subargs[1:])
-
-    def no_subcommand(self):
-        print >> sys.stderr, ("You have to pass a valid subcommand to "
-                              "'calculation'. Valid subcommands are:")
-        print >> sys.stderr, "\n".join("  {}".format(sc) 
-                                       for sc in self.valid_subcommands)
-        sys.exit(1)
-
-    def invalid_subcommand(self,*args):
-        print >> sys.stderr, ("You passed an invalid subcommand to 'calculation'. "
-                              "Valid subcommands are:")
-        print >> sys.stderr, "\n".join("  {}".format(sc) 
-                                       for sc in self.valid_subcommands)
-        sys.exit(1)
-
-        
     def calculation_list(self, *args):
         """
         Return a list of calculations on screen. 
@@ -101,7 +55,9 @@ class Calculation(VerdiCommand):
         import argparse
         from aiida.orm.calculation import Calculation as C
         
-        parser = argparse.ArgumentParser(description='List AiiDA calculations.')
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='List AiiDA calculations.')
         # The default states are those that are shown if no option is given
         parser.add_argument('-s', '--states', nargs='+', type=str,
                             help="show only the AiiDA calculations with given state",
@@ -280,9 +236,11 @@ class Calculation(VerdiCommand):
         from aiida.common.exceptions import NotExistent,InvalidOperation
         
         import argparse
-        parser = argparse.ArgumentParser(description='List of AiiDA calculations pks.')
-        parser.add_argument('calcs', metavar='N', type=int, nargs='+',
-                            help='an integer for the accumulator')
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Kill AiiDA calculations.')
+        parser.add_argument('calcs', metavar='PK', type=int, nargs='+',
+                            help='The principal key (PK) of the calculations to kill')
         parser.add_argument('-f','--force', help='Force the kill of calculations',
                             action="store_true")
         args = list(args)

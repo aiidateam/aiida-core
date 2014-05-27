@@ -3,11 +3,11 @@ This allows to setup and configure a user from command line.
 """
 import sys
 
-from aiida.cmdline.baseclass import VerdiCommand
+from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.common.utils import load_django
 
 
-class User(VerdiCommand):
+class User(VerdiCommandWithSubcommands):
     """
     List and configure new AiiDA users.
     
@@ -22,35 +22,6 @@ class User(VerdiCommand):
             'configure': (self.user_configure, self.complete_emails),
             'list': (self.user_list, self.complete_none),
             }
-
-    def run(self,*args):       
-        try:
-            function_to_call = self.valid_subcommands[args[0]][0]
-        except IndexError:
-            function_to_call = self.no_subcommand
-        except KeyError:
-            function_to_call = self.invalid_subcommand
-            
-        function_to_call(*args[1:])
-
-    def complete(self,subargs_idx, subargs):
-        if subargs_idx == 0:
-            print "\n".join(self.valid_subcommands.keys())
-        elif subargs_idx == 1:
-            try:
-                first_subarg = subargs[0]
-            except  IndexError:
-                first_subarg = ''
-            try:
-                complete_function = self.valid_subcommands[first_subarg][1] 
-            except KeyError:
-                print ""
-                return
-            print complete_function()
-
-    def complete_none(self):
-        return ""
-        
     def complete_emails(self):
         load_django()
         
@@ -58,20 +29,6 @@ class User(VerdiCommand):
         
         emails = models.DbUser.objects.all().values_list('email',flat=True)
         return "\n".join(emails)
-
-    def no_subcommand(self,*args):
-        print >> sys.stderr, ("You have to pass a valid subcommand to "
-                              "'user'. Valid subcommands are:")
-        print >> sys.stderr, "\n".join("  {}".format(sc) 
-                                       for sc in self.valid_subcommands)
-        sys.exit(1)
-
-    def invalid_subcommand(self, *args):
-        print >> sys.stderr, ("You passed an invalid subcommand to 'user'. "
-                              "Valid subcommands are:")
-        print >> sys.stderr, "\n".join("  {}".format(sc) 
-                                       for sc in self.valid_subcommands)
-        sys.exit(1)
 
     def user_configure(self, *args):
         load_django()

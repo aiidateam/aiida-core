@@ -64,12 +64,21 @@ of packages to install- or ``yum`` in RedHat/Fedora).
 * To support  SQLite:
 
   * `SQLite3 development files`_ (required later to compile the library,
-    when configuring the python sqlite module)
+    when configuring the python sqlite module; see below for the Ubuntu 
+    module required to install these files)
+
+* To support  PostgreSQL:
+
+  * `PostgreSQL development files`_ (required later to compile the library,
+    when configuring the python psycopg2 module; see below for the Ubuntu 
+    module required to install these files)
 
 .. _git: http://git-scm.com/
 .. _python-pip: https://pypi.python.org/pypi/pip
 .. _ipython: http://ipython.org/
 .. _SQLite3 development files: http://www.sqlite.org/
+.. _PostgreSQL development files: http://www.postgresql.org/
+
 
 For Ubuntu, you can install the above packages using (tested on Ubuntu 12.04,
 names may change in different releases)::
@@ -79,6 +88,14 @@ names may change in different releases)::
       sudo apt-get install ipython
       sudo apt-get install python2.7-dev
       sudo apt-get install libsqlite3-dev
+      sudo apt-get install postgresql-server-dev-9.1
+
+.. note:: for the latter line, please use the same version (here 9.1) of the
+  postgresql server that you installed (in this case, to install the server of
+  the same version, use the ``sudo apt-get install postgresql-9.1`` command).
+  
+  If you want to use postgreSQL, use a version greated than 9.1
+  (the greatest that your distribution supports).
 
 Downloading the code
 ++++++++++++++++++++

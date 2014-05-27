@@ -25,10 +25,16 @@ pytz >= 2013b
 celery>=3.0
 django-celery >= 3.0
 supervisor>=3.0b1
+kombu
+billiard
+
+## For postgreSQL
+psycopg2
 
 # ONLY if using mysql? 
 #sudo easy_install mysql-python
 #sudo apt-get install python-mysqldb on ubuntu 
+
 # For the documentation
 #sphinx>=1.1.3
 
@@ -43,7 +49,7 @@ pysqlite>=2.6.3
 paramiko>=1.10
 
 #ICSD tools
-PyMySQL>=0.6.1
+#PyMySQL>=0.6.1
 
 # NumPy, mainly for the ArrayData objects but sometimes
 # used also for arrays in other parts of the code

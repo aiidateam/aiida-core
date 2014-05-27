@@ -431,31 +431,36 @@ def import_file(infile):
                                 dbnode_model_name][v['uuid']]
                            for v in new.itervalues()]
             
+            pks_for_group = existing_pk + new_pk
             
-            # Get an unique name for the import group, based on the current time
-            basename = timezone.localtime(timezone.now()).strftime(
-                "%Y%m%d-%H%M%S")
-            counter = 0
-            created = False
-            while not created:
-                if counter == 0:
-                    group_name = basename
-                else:
-                    group_name = "{}_{}".format(basename, counter)
-                try:
-                    group = Group(name=group_name,
-                                  type_string=IMPORTGROUP_TYPE).store()
-                    created = True
-                except UniquenessError:
-                    counter += 1
-            
-            # Add all the nodes to the new group
-            # TODO: decide if we want to return the group name
-            group.add_nodes(models.DbNode.objects.get(pk__in=(
-                existing_pk + new_pk)))
-            
-            print "IMPORTED NODES GROUPED IN IMPORT GROUP NAMED '{}'".format(group.name)
-            
+            # So that we do not create empty groups
+            if pks_for_group: 
+                # Get an unique name for the import group, based on the
+                # current (local) time
+                basename = timezone.localtime(timezone.now()).strftime(
+                    "%Y%m%d-%H%M%S")
+                counter = 0
+                created = False
+                while not created:
+                    if counter == 0:
+                        group_name = basename
+                    else:
+                        group_name = "{}_{}".format(basename, counter)
+                    try:
+                        group = Group(name=group_name,
+                                      type_string=IMPORTGROUP_TYPE).store()
+                        created = True
+                    except UniquenessError:
+                        counter += 1
+                
+                # Add all the nodes to the new group
+                # TODO: decide if we want to return the group name
+                group.add_nodes(models.DbNode.objects.filter(
+                                pk__in=pks_for_group))
+                
+                print "IMPORTED NODES GROUPED IN IMPORT GROUP NAMED '{}'".format(group.name)
+            else:
+                print "NO DBNODES TO IMPORT, SO NO GROUP CREATED"
     
     
     print "*** WARNING: MISSING EXISTING UUID CHECKS!!"

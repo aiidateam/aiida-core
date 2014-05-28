@@ -1,9 +1,9 @@
 import sys
 
-from aiida.cmdline.baseclass import VerdiCommand
+from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.common.utils import load_django
 
-class Computer(VerdiCommand):
+class Computer(VerdiCommandWithSubcommands):
     """
     Setup and manage computers to be used
 
@@ -21,58 +21,10 @@ class Computer(VerdiCommand):
             'configure': (self.computer_configure, self.complete_computers),
             'delete': (self.computer_delete, self.complete_computers),
             }
-
-    def run(self,*args):       
-        """
-        Run the specified subcommand.
-        """
-        try:
-            function_to_call = self.valid_subcommands[args[0]][0]
-        except IndexError:
-            function_to_call = self.no_subcommand
-        except KeyError:
-            function_to_call = self.invalid_subcommand
-            
-        function_to_call(*args[1:])
-
-    def complete(self,subargs_idx, subargs):
-        if subargs_idx == 0:
-            print "\n".join(self.valid_subcommands.keys())
-        elif subargs_idx == 1:
-            try:
-                first_subarg = subargs[0]
-            except  IndexError:
-                first_subarg = ''
-            try:
-                complete_function = self.valid_subcommands[first_subarg][1] 
-            except KeyError:
-                print ""
-                return
-            print complete_function()
-        # Only one-level completion allowed
-        else:
-            print self.complete_none()
-
-    def complete_none(self):
-        return ""
         
     def complete_computers(self):
         computer_names = self.get_computer_names()
         return "\n".join(computer_names)
-
-    def no_subcommand(self,*args):
-        print >> sys.stderr, ("You have to pass a valid subcommand to "
-                              "'computer'. Valid subcommands are:")
-        print >> sys.stderr, "\n".join("  {}".format(sc) 
-                                       for sc in self.valid_subcommands)
-        sys.exit(1)
-
-    def invalid_subcommand(self,*args):
-        print >> sys.stderr, ("You passed an invalid subcommand to 'computer'. "
-                              "Valid subcommands are:")
-        print >> sys.stderr, "\n".join("  {}".format(sc) 
-                                       for sc in self.valid_subcommands)
-        sys.exit(1)
 
     def computer_list(self, *args):
         """
@@ -318,15 +270,27 @@ class Computer(VerdiCommand):
         
         from aiida.common.exceptions import (
             NotExistent, ValidationError)
-        from aiida.djsite.utils import get_automatic_user
-        from aiida.djsite.db.models import DbAuthInfo
+        from aiida.djsite.utils import (
+            get_automatic_user, get_configured_user_email)
+        from aiida.djsite.db.models import DbAuthInfo, DbUser
 
-        if len(args) != 1:
-            print >> sys.stderr, ("after 'computer configure' there should be one "
-                                  "argument only, being the computer name.")
-            sys.exit(1)
+        import argparse
+        from aiida.orm.calculation import Calculation as C
         
-        computername = args[0]
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Configure a computer for a given AiiDA user.')
+        # The default states are those that are shown if no option is given
+        parser.add_argument('-u', '--user', type=str, metavar='EMAIL',
+                            help="Configure the computer for the given AiiDA user (otherwise, configure the current default user)",
+                            )
+        parser.add_argument('computer', type=str,
+                            help="The name of the computer that you want to configure")
+
+        parsed_args = parser.parse_args(args)
+
+        user_email = parsed_args.user
+        computername = parsed_args.computer
             
         try:
             computer = self.get_computer(name=computername)
@@ -335,7 +299,15 @@ class Computer(VerdiCommand):
                 computername)
             sys.exit(1)
 
-        user = get_automatic_user()
+        if user_email is None:
+            user = get_automatic_user()
+        else:
+            try:
+                user = DbUser.objects.get(email=user_email)
+            except ObjectDoesNotExist:
+                print >> sys.stderr, ("No user with email '{}' in the "
+                                      "database.".format(user_email))
+                sys.exit(1)
         
         try:
             authinfo = DbAuthInfo.objects.get(
@@ -349,8 +321,22 @@ class Computer(VerdiCommand):
 
         Transport = computer.get_transport_class()
         
+        print ("Configuring computer '{}' for the AiiDA user '{}'".format(
+            computername, user.email))
+        
         print "Computer {} has transport of type {}".format(computername,
                                                             computer.get_transport_type())
+        
+        if user.email != get_configured_user_email():
+            print "*"*72            
+            print "** {:66s} **".format("WARNING!")
+            print "** {:66s} **".format(
+                "  You are configuring a different user.")
+            print "** {:66s} **".format(
+                "  Note that the default suggestions are taken from your")
+            print "** {:66s} **".format(
+                "  local configuration files, so they may be incorrect.")
+            print "*"*72            
         
         valid_keys = Transport.get_valid_auth_params()
 

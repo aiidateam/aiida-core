@@ -371,6 +371,10 @@ class TestNodeBasic(AiidaTestCase):
         else:
             date_to_compare = date
 
+        # Do not compare microseconds (they are not stored in the case of MySQL)
+        date_to_compare = date_to_compare.replace(microsecond=0)
+        retrieved = retrieved.replace(microsecond=0)
+
         self.assertEquals(date_to_compare,retrieved)
 
 

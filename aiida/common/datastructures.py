@@ -6,9 +6,7 @@ from aiida.common.extendeddicts import DefaultFieldsAttributeDict, Enumerate
 class CalcState(Enumerate):
     pass
 
-# The order of states is not random: is the order of precedence.
-# However, this is never used at the moment in the code.
-calc_states = CalcState((
+_sorted_datastates = (
         'NEW', # just created
         'TOSUBMIT', # used by the executionmanager to submit new calculations scheduled to be submitted
         'SUBMITTING', # being submitted to cluster
@@ -25,8 +23,41 @@ calc_states = CalcState((
         'PARSINGFAILED', # error occurred during parsing phase due to a problem in the parse
         'FAILED', # The parser recognized the calculation as failed
         'IMPORTED', # The calculation was imported from another DB
-        ))
+        )
 
+# The order of states is not random: is the order of precedence.
+# However, this is never used at the moment in the code.
+calc_states = CalcState(_sorted_datastates)
+
+def sort_states(list_states):
+    """
+    Given a list of state names, return a sorted list of states (the first
+    is the most recent) sorted according to their logical appearance in
+    the DB (i.e., NEW before of SUBMITTING before of FINISHED).
+    
+    .. note:: The order of the internal variable _sorted_datastates is
+      used.
+
+    :param list_states: a list (or tuple) of state strings.
+    
+    :return: a sorted list of the given data states.
+
+    :raise ValueError: if any of the given states is not a valid state.
+    """
+    datastates_order_dict = {state: idx for idx, state in enumerate(
+            _sorted_datastates)}
+
+    try:
+        list_to_sort = [(datastates_order_dict[st], st)
+                        for st in list_states]        
+    except KeyError as e:
+        raise ValueError("At least one of the provided states is not "
+                         "valid ({})".format(e.message))
+
+    # In-place sort
+    list_to_sort.sort()
+
+    return [_[1] for _ in list_to_sort[::-1]]
 
 class CalcInfo(DefaultFieldsAttributeDict):
     """

@@ -20,7 +20,7 @@ class TestDFADExample(DefaultFieldsAttributeDict):
         if value is None:
             return
         
-        if not isinstance(value,int):
+        if not isinstance(value,(int, long)):
             raise TypeError('expecting integer')
         if value < 0:
             raise ValueError('expecting a positive or zero value')

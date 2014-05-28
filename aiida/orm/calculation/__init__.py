@@ -719,11 +719,11 @@ class Calculation(Node):
         .. note:: this method returns the UNDETERMINED state if no state
           is found in the DB.
         
+        .. note:: the 'most recent' state is obtained using the logic in the
+          ``aiida.common.datastructures.sort_states`` function.
+        
         .. todo:: Understand if the state returned when no state entry is found
           in the DB is the best choice.
-        
-        .. todo:: Understand if it is ok to return the most recently modified
-          state, or we should implement some state ordering logic.
         
         :param from_attribute: if set to True, read it from the attributes 
           (the attribute is also set with set_state, unless the state is set
@@ -734,7 +734,9 @@ class Calculation(Node):
           DB, return the "UNDETERMINED" state.
         """
         from aiida.djsite.db.models import DbCalcState
-        
+        from aiida.common.exceptions import DbContentError
+        from aiida.common.datastructures import sort_states
+
         if from_attribute:
             return self.get_attr('state', None)
         else:
@@ -742,11 +744,17 @@ class Calculation(Node):
                 return calc_states.NEW
             else:
                 this_calc_states = DbCalcState.objects.filter(
-                    dbnode=self).order_by('-time').values_list('state', flat=True)
+                    dbnode=self).values_list('state', flat=True)
                 if not this_calc_states:
                     return calc_states.UNDETERMINED
-                most_recent_state = this_calc_states[0]
-                return most_recent_state
+                else:
+                    try:
+                        most_recent_state = sort_states(this_calc_states)[0]
+                    except ValueError as e:
+                        raise DbContentError("Error in the content of the "
+                            "DbCalcState table ({})".format(e.message))
+
+                    return most_recent_state
 
     def get_state_string(self):
         """

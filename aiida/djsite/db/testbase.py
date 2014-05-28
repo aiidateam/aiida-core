@@ -20,12 +20,23 @@ class AiidaTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         import getpass
+        
+        from django.core.exceptions import ObjectDoesNotExist
+
         from aiida.djsite.db.models import DbUser
         from aiida.orm import Computer
         from aiida.djsite.utils import get_configured_user_email
 
-        cls.user = DbUser.objects.create_user(get_configured_user_email(),
-                                              'fakepwd')
+        # I create the user only once:
+        # Otherwise, get_automatic_user() will fail when the 
+        # user is recreated because it caches the user!
+        # In any case, store it in cls.user though
+        # Other possibility: flush the user cache on delete
+        try:
+            cls.user = DbUser.objects.get(email=get_configured_user_email())
+        except ObjectDoesNotExist:
+            cls.user = DbUser.objects.create_user(get_configured_user_email(),
+                                                  'fakepwd')
         cls.computer = Computer(name='localhost',
                                 hostname='localhost',
                                 transport_type='ssh',
@@ -59,9 +70,10 @@ class AiidaTestCase(unittest.TestCase):
         from aiida.djsite.db.models import DbNode
         DbNode.objects.all().delete()
 
-        try:
-            DbUser.objects.get(email=get_configured_user_email()).delete()
-        except ObjectDoesNotExist:
-            pass
+        ## I do not delete it, see discussion in setUpClass
+        #try:
+        #    DbUser.objects.get(email=get_configured_user_email()).delete()
+        #except ObjectDoesNotExist:
+        #    pass
         
         DbComputer.objects.all().delete()

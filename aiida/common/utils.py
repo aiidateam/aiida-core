@@ -155,7 +155,7 @@ def conv_to_fortran(val):
             val_str='.true.'
         else:
             val_str='.false.'
-    elif (isinstance(val,int)): 
+    elif (isinstance(val,(int,long))): 
         val_str = "{:d}".format(val)
     elif (isinstance(val,float)):
         val_str = ("{:18.10e}".format(val)).replace('e','d')

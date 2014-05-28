@@ -98,15 +98,20 @@ def update_running_calcs_status(authinfo):
                                 # Someone already set it, just skip
                                 pass
                         elif jobinfo.job_state == job_states.UNDETERMINED:
-                            try:
-                                c._set_state(calc_states.UNDETERMINED)
-                            except UniquenessError:
-                                # Someone already set it, just skip
-                                pass                            
-                            execlogger.error("There is an undetermined calc "
-                                             "with pk {}".format(
-                                c.pk), extra=logger_extra)
-                        ## Do not sret the WITHSCHEDULER state multiple times, 
+                            #try:
+                            #    c._set_state(calc_states.UNDETERMINED)
+                            #except UniquenessError:
+                            #    # Someone already set it, just skip
+                            #    pass                            
+                            #execlogger.error("There is an undetermined calc "
+                            #                 "with pk {}".format(
+                            #    c.pk), extra=logger_extra)
+                            ## Do not do anything! If it changes back to a
+                            ## valid state, that the state ordering would not
+                            ## work, and moreover it risks to go back to a
+                            ## valid WITHSCHEDULER STATE.
+                            pass
+                        ## Do not set the WITHSCHEDULER state multiple times, 
                         ## this would raise a UniquenessError
                         #else:
                         #    c._set_state(calc_states.WITHSCHEDULER)

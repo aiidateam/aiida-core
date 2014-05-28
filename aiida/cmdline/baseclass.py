@@ -187,14 +187,14 @@ class VerdiCommandWithSubcommands(VerdiCommand):
             except KeyError:
                 print ""
                 return
-            complete_data = complete_function()
+            complete_data = complete_function(subargs_idx - 1, subargs[1:])
             if complete_data is not None:
                 print complete_data
 
-    def complete_none(self):
+    def complete_none(self, subargs_idx, subargs):
         return ""
 
-    def complete_auto(self):
+    def complete_auto(self, subargs_idx, subargs):
         return None
         
     def no_subcommand(self,*args):

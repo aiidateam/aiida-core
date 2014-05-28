@@ -169,7 +169,7 @@ class _Structure(VerdiCommandWithSubcommands):
             }
 
 
-    def complete_visualizers(self):
+    def complete_visualizers(self, subargs_idx, subargs):
         plugin_names = self.get_show_plugins().keys()
         return "\n".join(plugin_names)
         

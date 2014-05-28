@@ -12,6 +12,7 @@ from aiida.common.exceptions import (
 from aiida.djsite.settings.settings import (
     AIIDANODES_UUID_VERSION, AUTH_USER_MODEL)
 from aiida.djsite.additions import CustomEmailField
+from aiida.djsite.utils import long_field_length
 
 class EmptyContextManager(object):
     def __enter__(self):
@@ -64,7 +65,7 @@ class DbUser(AbstractBaseUser, PermissionsMixin):
     email = CustomEmailField(unique=True, db_index=True)
     first_name = m.CharField(max_length=254, blank=True)
     last_name = m.CharField(max_length=254, blank=True)
-    institution = m.CharField(max_length=1024, blank=True)
+    institution = m.CharField(max_length=254, blank=True)
 
     is_staff = m.BooleanField(default=False,
         help_text='Designates whether the user can log into this admin '
@@ -316,7 +317,7 @@ class DbMultipleValueAttributeBaseClass(m.Model):
     Abstract base class for tables storing attribute + value data, of
     different data types (without any association to a Node).
     """
-    key = m.CharField(max_length=1024,db_index=True,blank=False)
+    key = m.CharField(max_length=long_field_length(),db_index=True,blank=False)
     datatype = m.CharField(max_length=10, 
                            default='none', 
                            choices=attrdatatype_choice, db_index=True)
@@ -427,7 +428,7 @@ class DbMultipleValueAttributeBaseClass(m.Model):
                 self.fval = None
                 self.dval = None
     
-            elif isinstance(value,int):
+            elif isinstance(value,(int,long)):
                 self.datatype = 'int'
                 self.ival = value
                 self.tval = ''
@@ -561,7 +562,7 @@ class DbMultipleValueAttributeBaseClass(m.Model):
             return {'datatype': 'none'}
         elif isinstance(value,bool):
             return {'datatype': 'bool', 'bval': value}
-        elif isinstance(value,int):
+        elif isinstance(value,(int,long)):
             return {'datatype': 'int', 'ival': value}
         elif isinstance(value,float):
             return {'datatype': 'float', 'fval': value}
@@ -910,7 +911,7 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
             if with_transaction:
                 sid = transaction.savepoint()
             
-            if isinstance(dbnode, int):
+            if isinstance(dbnode, (int,long)):
                 attr, _ = cls.objects.get_or_create(dbnode_id=dbnode,
                                                     key=key)
             else:
@@ -1012,10 +1013,10 @@ class DbGroup(m.Model):
     """
     uuid = UUIDField(auto=True, version=AIIDANODES_UUID_VERSION)
     # max_length is required by MySql to have indexes and unique constraints
-    name = m.CharField(max_length=1024, db_index=True)
+    name = m.CharField(max_length=255, db_index=True)
     # The type of group: a user group, a pseudopotential group,...
     # User groups have type equal to an empty string
-    type = m.CharField(default="", max_length=1024, db_index=True)
+    type = m.CharField(default="", max_length=255, db_index=True)
     dbnodes = m.ManyToManyField('DbNode', related_name='dbgroups')
     # Creation time
     time = m.DateTimeField(default=timezone.now, editable=False)
@@ -1285,7 +1286,7 @@ class DbLog(m.Model):
 
 class DbLock(m.Model):
     
-    key        = m.TextField(primary_key=True)
+    key        = m.CharField(max_length=255, primary_key=True)
     creation   = m.DateTimeField(default=timezone.now, editable=False)
     timeout    = m.IntegerField(editable=False)
     owner      = m.CharField(max_length=255, blank=False)
@@ -1535,9 +1536,11 @@ class DbWorkflowData(m.Model):
     parent       = m.ForeignKey(DbWorkflow, related_name='data')
     name         = m.CharField(max_length=255, blank=False)
     time         = m.DateTimeField(default=timezone.now, editable=False)
-    data_type    = m.TextField(blank=False, default=wf_data_types.PARAMETER)
+    data_type    = m.CharField(max_length=255,
+                               blank=False, default=wf_data_types.PARAMETER)
     
-    value_type   = m.TextField(blank=False, default=wf_data_value_types.NONE)
+    value_type   = m.CharField(max_length=255,blank=False,
+                               default=wf_data_value_types.NONE)
     json_value   = m.TextField(blank=True)
     aiida_obj    = m.ForeignKey(DbNode, blank=True, null=True)
     

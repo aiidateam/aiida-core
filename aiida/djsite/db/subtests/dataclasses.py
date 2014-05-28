@@ -47,6 +47,13 @@ class TestCalcStatus(AiidaTestCase):
         # Set a different state and check
         c._set_state(calc_states.FINISHED)
         self.assertEquals(c.get_state(), calc_states.FINISHED)
+        
+        # Try to set a previous state (that is, going backward from 
+        # FINISHED to WITHSCHEDULER, for instance)
+        # and check that this is not allowed
+        with self.assertRaises(ModificationNotAllowed):
+            c._set_state(calc_states.WITHSCHEDULER)
+        
 
 
 class TestSinglefileData(AiidaTestCase):

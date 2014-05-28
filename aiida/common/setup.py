@@ -32,6 +32,7 @@ def get_config():
     Load the previous configuration and return a dictionary.
     
     :raise ConfigurationError: If no configuration file is found.
+    :raise ValueError: if the JSON is not valid.
     """
     import json
     
@@ -320,20 +321,30 @@ def create_configuration():
 
         elif 'postgre' in confs['AIIDADB_ENGINE']:
             confs['AIIDADB_ENGINE'] = 'postgresql_psycopg2'
+            
+            old_host = confs.get('AIIDADB_HOST','localhost')
+            if not old_host:
+                old_host = 'localhost'
             readline.set_startup_hook(lambda: readline.insert_text(
-                    confs.get('AIIDADB_HOST','localhost')))
+                    old_host))
             confs['AIIDADB_HOST'] = raw_input('PostgreSQL host: ')
 
+            old_port = confs.get('AIIDADB_PORT','5432')
+            if not old_port:
+                old_port = '5432'
             readline.set_startup_hook(lambda: readline.insert_text(
-                    confs.get('AIIDADB_PORT','5432')))
+                    old_port))
             confs['AIIDADB_PORT'] = raw_input('PostgreSQL port: ')
 
             readline.set_startup_hook(lambda: readline.insert_text(
                     confs.get('AIIDADB_NAME','aiidadb')))
             confs['AIIDADB_NAME'] = raw_input('AiiDA Database name: ')
 
+            old_user = confs.get('AIIDADB_USER','aiida')
+            if not old_user:
+                old_user = 'aiida'
             readline.set_startup_hook(lambda: readline.insert_text(
-                    confs.get('AIIDADB_USER','aiida_user')))
+                    old_user))
             confs['AIIDADB_USER'] = raw_input('AiiDA Database user: ')
 
             readline.set_startup_hook(lambda: readline.insert_text(
@@ -342,20 +353,30 @@ def create_configuration():
 
         elif 'mysql' in confs['AIIDADB_ENGINE']:
             confs['AIIDADB_ENGINE'] = 'mysql'
+            
+            old_host = confs.get('AIIDADB_HOST','localhost')
+            if not old_host:
+                old_host = 'localhost'
             readline.set_startup_hook(lambda: readline.insert_text(
-                    confs.get('AIIDADB_HOST','localhost')))
+                old_host))
             confs['AIIDADB_HOST'] = raw_input('mySQL host: ')
 
+            old_port = confs.get('AIIDADB_PORT','3306')
+            if not old_port:
+                old_port = '3306'
             readline.set_startup_hook(lambda: readline.insert_text(
-                    confs.get('AIIDADB_PORT','3306')))
+                    old_port))
             confs['AIIDADB_PORT'] = raw_input('mySQL port: ')
 
             readline.set_startup_hook(lambda: readline.insert_text(
                     confs.get('AIIDADB_NAME','aiidadb')))
             confs['AIIDADB_NAME'] = raw_input('AiiDA Database name: ')
 
+            old_user = confs.get('AIIDADB_USER','aiida')
+            if not old_user:
+                old_user = 'aiida'
             readline.set_startup_hook(lambda: readline.insert_text(
-                    confs.get('AIIDADB_USER','aiida_user')))
+                    old_user))
             confs['AIIDADB_USER'] = raw_input('AiiDA Database user: ')
 
             readline.set_startup_hook(lambda: readline.insert_text(
@@ -377,3 +398,128 @@ def create_configuration():
         readline.set_startup_hook(lambda: readline.insert_text(""))
 
         
+# A table of properties.
+# The key is the property name to use in the code;
+# The value is a tuple, where:
+# - the first entry is a string used as the key in the
+#   JSON config file
+# - the second is the expected data type for data 
+#   conversion if the property is passed as a string.
+#   For valid data type strings, see the implementation of set_property
+# - the third entry is the description of the field
+# - the fourth entry is the default value. Use _NoDefaultValue() if you want 
+#   an exception to be raised if no property is found.
+
+class _NoDefaultValue(object):
+    pass
+
+_property_table = {
+    "tests.use_sqlite": (
+        "use_inmemory_sqlite_for_tests",
+        "bool",
+        "Whether to use an in-memory SQLite DB for tests (default: True)",
+        True),
+    }
+
+def get_property(name, default=_NoDefaultValue()):
+    """
+    Get a property from the json file.
+    
+    :param default: if provided, this value is returned if no value is found
+      in the database.
+    
+    :raise ValueError: if the given name is not a valid property (as stored in
+      the _property_table dictionary).
+    :raise KeyError: if the given property is not found in the config file, and
+      no default value is given or provided in _property_table.
+    """
+    from aiida.common.exceptions import ConfigurationError
+    
+    try:
+        key, _, _, table_defval = _property_table[name]
+    except KeyError:
+        raise ValueError("{} is not a recognized property".format(name))
+    
+    try:
+        try:
+            config = get_config()
+            return config[key]
+        except ConfigurationError:
+            raise KeyError("No configuration file found")
+    except KeyError:
+        if isinstance(default, _NoDefaultValue):
+            if isinstance(table_defval, _NoDefaultValue):
+                raise
+            else:
+                return table_defval
+        else:
+            return default
+
+def del_property(name):
+    """
+    Delete a property in the json file.
+    
+    :raise: KeyError if the key is not found in the configuration file.
+    """
+    from aiida.common.exceptions import ConfigurationError
+    
+    try:
+        key, _, _, _ = _property_table[name]
+    except KeyError:
+        raise ValueError("{} is not a recognized property".format(name))
+    
+    try:
+        config = get_config()
+        del config[key]
+    except ConfigurationError:
+        raise KeyError("No configuration file found")
+        
+    # If we are here, no exception was raised
+    store_config(config)
+    
+def set_property(name, value):
+    """
+    Set a property in the json file.
+    
+    :param name: The name of the property value to set.
+    :param value: the value to set. If it is a string, it is possibly casted
+      to the correct type according to the information in the _property_table
+      dictionary.
+    
+    :raise ValueError: if the provided name is not among the set of valid 
+      properties, or if the value provided as a string cannot be casted to the
+      correct type.
+    """
+    from aiida.common.exceptions import ConfigurationError
+
+    try:
+        key, type_string, _, _ = _property_table[name]
+    except KeyError:
+        raise ValueError("'{}' is not a recognized property".format(name))
+
+    actual_value = False
+
+    if type_string == "bool":
+        if isinstance(value, basestring):
+            if value.strip().lower() in ["0", "false", "f"]:            
+                actual_value = False
+            elif value.strip().lower() in ["1", "true", "t"]:
+                actual_value = True
+            else:
+                raise ValueError("Invalid bool value for property {}".format(name))
+        else:
+            actual_value = bool(value)
+    else:
+        # Implement here other data types
+        raise NotImplementedError("Type string '{}' not implemented yet".format(
+            type_string))
+        
+    try:
+        config = get_config()
+    except ConfigurationError:
+        config = {}
+
+    config[key] = actual_value
+    
+    store_config(config)
+    

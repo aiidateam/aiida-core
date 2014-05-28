@@ -5,6 +5,11 @@ import tempfile
 
 from aiida.common.utils import get_repository_folder
 
+# If True, tries to make everything (dirs, files) group-writable.
+# Otherwise, tries to make everything only readable and writable by the user.
+# TODO: put it in a global variable, and check if it really works!
+group_writable = True
+
 _valid_sections = ['node', 'workflow']
 
 class Folder(object):
@@ -32,6 +37,25 @@ class Folder(object):
         self._abspath = abspath
         self._folder_limit = folder_limit
 
+    @property
+    def mode_dir(self):        
+        """
+        Return the mode with which the folders should be created
+        """
+        if group_writable:
+            return 0o770
+        else:
+            return 0o700
+        
+    @property
+    def mode_file(self):        
+        """
+        Return the mode with which the files should be created
+        """
+        if group_writable:
+            return 0o660
+        else:
+            return 0o600
     
     def get_subfolder(self, subfolder, create=False, reset_limit=False):
         """
@@ -108,6 +132,8 @@ class Folder(object):
         """
         dest_abs_path = self.get_abs_path(name)
         os.symlink(src,dest_abs_path)
+        
+        # For symlinks, permissions should not be set
 
     def insert_path(self,src,dest_name=None,overwrite=True):
         """
@@ -189,6 +215,9 @@ class Folder(object):
 
         with open(dest_abs_path,'w') as f:
             shutil.copyfileobj(src_filelike, f)
+
+        # Set the mode
+        os.chmod(dest_abs_path, self.mode_file)
 
         return dest_abs_path
 
@@ -301,8 +330,8 @@ class Folder(object):
         already exists.
         """
         if not self.exists():
-            os.makedirs(self.abspath)
-
+            os.makedirs(self.abspath, mode=self.mode_dir)
+        
 
     def replace_with_folder(self, srcdir, move=False, overwrite=False):
         """
@@ -332,15 +361,31 @@ class Folder(object):
             raise IOError("Location {} already exists, and overwrite is set to "
                           "False".format(self.abspath))
 
-        # Create parent dir, if needed
+        # Create parent dir, if needed, with the right mode
         pardir = os.path.dirname(self.abspath)
         if not os.path.exists(pardir):
-            os.makedirs(pardir)
+            os.makedirs(pardir, mode=self.mode_dir)
 
         if move:
             shutil.move(srcdir,self.abspath)
         else:
             shutil.copytree(srcdir,self.abspath)
+        
+        # Set the mode also for the current dir, recursively
+        for dirpath, dirnames, filenames in os.walk(self.abspath,
+                                                    followlinks=False):
+            # dirpath should already be absolute, because I am passing
+            # an absolute path to os.walk
+            os.chmod(dirpath, self.mode_dir)
+            for f in filenames:
+                # do not change permissions of symlinks (this would
+                # actually change permissions of the linked file/dir)
+                # Toc check whether this is a big speed loss
+                full_file_path = os.path.join(dirpath, f)
+                if not os.path.islink(full_file_path):
+                    os.chmod(full_file_path, self.mode_file)
+        
+        
 
 class SandboxFolder(Folder):
     """

@@ -343,7 +343,7 @@ def create_configuration():
         elif 'mysql' in confs['AIIDADB_ENGINE']:
             confs['AIIDADB_ENGINE'] = 'mysql'
             readline.set_startup_hook(lambda: readline.insert_text(
-                    confs.get('AIIDADB_NAME','localhost')))
+                    confs.get('AIIDADB_HOST','localhost')))
             confs['AIIDADB_HOST'] = raw_input('mySQL host: ')
 
             readline.set_startup_hook(lambda: readline.insert_text(

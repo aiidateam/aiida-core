@@ -157,3 +157,17 @@ def get_after_database_creation_signal():
     else:
         raise ConfigurationError(
             "The settings.AFTER_DATABASE_CREATION_SIGNAL has an invalid value")
+
+def long_field_length():
+    """
+    Return the length of "long" fields.
+    This is used, for instance, for the 'key' field of attributes.
+    This returns 1024 typically, but it returns 255 if the backend is mysql.
+    """
+    from aiida.djsite.settings import settings
+    if 'mysql' in settings.DATABASES['default']['ENGINE']:
+        return 255
+    else:
+        return 1024
+
+    

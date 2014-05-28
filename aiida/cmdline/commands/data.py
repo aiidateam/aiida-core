@@ -1,9 +1,11 @@
 import sys
 
-from aiida.cmdline.baseclass import VerdiCommand
+from aiida.cmdline.baseclass import (
+    VerdiCommandRouter, VerdiCommandWithSubcommands)
 from aiida.common.utils import load_django
 
-class Data(VerdiCommand):
+
+class Data(VerdiCommandRouter):
     """
     Setup and manage data specific types
     
@@ -13,58 +15,17 @@ class Data(VerdiCommand):
     def __init__(self):
         """
         A dictionary with valid commands and functions to be called.
-        """
-        
+        """        
         ## Add here the classes to be supported.
-        self.valid_subcommands = {
+        self.routed_subcommands = {
             'upf': _Upf,
             'structure': _Structure,
             }
 
-    def no_subcommand(self,*args):
-        print >> sys.stderr, ("You have to pass a valid subcommand to "
-                              "'data'. Valid subcommands are:")
-        print >> sys.stderr, "\n".join("  {}".format(sc) 
-                                       for sc in self.valid_subcommands)
-        sys.exit(1)
-
-    def invalid_subcommand(self,*args):
-        print >> sys.stderr, ("You passed an invalid subcommand to 'data'. "
-                              "Valid subcommands are:")
-        print >> sys.stderr, "\n".join("  {}".format(sc) 
-                                       for sc in self.valid_subcommands)
-        sys.exit(1)
-
-    def run(self,*args):       
-        try:
-            function_to_call = self.valid_subcommands[args[0]]().run
-        except IndexError:
-            function_to_call = self.no_subcommand
-        except KeyError:
-            function_to_call = self.invalid_subcommand
-            
-        function_to_call(*args[1:])
-
-    def complete(self,subargs_idx, subargs):
-        if subargs_idx == 0:
-            print "\n".join(self.valid_subcommands.keys())
-        elif subargs_idx >= 1:
-            try:
-                first_subarg = subargs[0]
-            except  IndexError:
-                first_subarg = ''
-            try:
-                complete_function = self.valid_subcommands[first_subarg]().complete 
-            except KeyError:
-                print ""
-                return
-            complete_function(subargs_idx - 1, subargs[1:])
-
-        
 # Note: this class should not be exposed directly in the main module,
 # otherwise it becomes a command of 'verdi'. Instead, we want it to be a 
 # subcommand of verdi data.
-class _Upf(VerdiCommand):
+class _Upf(VerdiCommandWithSubcommands):
     """
     Setup and manage upf to be used
 
@@ -78,57 +39,6 @@ class _Upf(VerdiCommand):
             'uploadfamily': (self.uploadfamily, self.complete_auto),
             'listfamilies': (self.listfamilies, self.complete_none),
             }
-
-    def run(self,*args):       
-        try:
-            function_to_call = self.valid_subcommands[args[0]][0]
-        except IndexError:
-            function_to_call = self.no_subcommand
-        except KeyError:
-            function_to_call = self.invalid_subcommand
-            
-        function_to_call(*args[1:])
-
-    def complete(self,subargs_idx, subargs):
-        if subargs_idx == 0:
-            print "\n".join(self.valid_subcommands.keys())
-        elif subargs_idx == 1:
-            try:
-                first_subarg = subargs[0]
-            except  IndexError:
-                first_subarg = ''
-            try:
-                complete_function = self.valid_subcommands[first_subarg][1] 
-            except KeyError:
-                print ""
-                return
-            complete_data = complete_function()
-            if complete_data is not None:
-                print complete_data
-
-    def complete_none(self):
-        return ""
-
-    def complete_auto(self):
-        return None
-        
-    def no_subcommand(self,*args):
-        print >> sys.stderr, ("You have to pass a valid subcommand to "
-                              "'upf'. Valid subcommands are:")
-        print >> sys.stderr, "\n".join("  {}".format(sc) 
-                                       for sc in self.valid_subcommands)
-        sys.exit(1)
-
-    def invalid_subcommand(self,*args):
-        print >> sys.stderr, ("You passed an invalid subcommand to 'upf'. "
-                              "Valid subcommands are:")
-        print >> sys.stderr, "\n".join("  {}".format(sc) 
-                                       for sc in self.valid_subcommands)
-        sys.exit(1)
-
-    #
-    #
-    #
     
     def uploadfamily(self, *args):
         """
@@ -146,8 +56,10 @@ class _Upf(VerdiCommand):
         from aiida.orm import Computer as AiidaOrmComputer
         
         if not len(args) == 3 and not len(args) == 4:
-            print >> sys.stderr, ("\n after 'upf uploadfamily' there should be three "
-                                  "arguments: folder, group_name, group_description [optional --stop-if-existing]\n")
+            print >> sys.stderr, ("After 'upf uploadfamily' there should be three "
+                                  "arguments:")
+            print >> sys.stderr, ("folder, group_name, group_description "
+                                  "[OPTIONAL: --stop-if-existing]\n")
             sys.exit(1)
         
         folder            = os.path.abspath(args[0])
@@ -185,7 +97,9 @@ class _Upf(VerdiCommand):
         
         from aiida.orm.data.upf import UPFGROUP_TYPE
         
-        parser = argparse.ArgumentParser(description='List AiiDA upf families.')
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='List AiiDA upf families.')
         parser.add_argument('-e','--element',nargs='+', type=str, default=None,
                             help="Filter the families only to those containing "
                                  "a pseudo for each of the specified elements")
@@ -240,7 +154,7 @@ class _Upf(VerdiCommand):
             
         
     
-class _Structure(VerdiCommand):
+class _Structure(VerdiCommandWithSubcommands):
     """
     Visualize AiIDA structures
     """
@@ -254,57 +168,11 @@ class _Structure(VerdiCommand):
             'list': (self.list, self.complete_none),
             }
 
-    def run(self,*args):       
-        try:
-            function_to_call = self.valid_subcommands[args[0]][0]
-        except IndexError:
-            function_to_call = self.no_subcommand
-        except KeyError:
-            function_to_call = self.invalid_subcommand
-            
-        function_to_call(*args[1:])
-
-    def complete(self,subargs_idx, subargs):
-        if subargs_idx == 0:
-            print "\n".join(self.valid_subcommands.keys())
-        elif subargs_idx == 1:
-            try:
-                first_subarg = subargs[0]
-            except  IndexError:
-                first_subarg = ''
-            try:
-                complete_function = self.valid_subcommands[first_subarg][1] 
-            except KeyError:
-                print ""
-                return
-            complete_data = complete_function()
-            if complete_data is not None:
-                print complete_data
-
-    def complete_none(self):
-        return ""
-
-    def complete_auto(self):
-        return None
 
     def complete_visualizers(self):
         plugin_names = self.get_show_plugins().keys()
         return "\n".join(plugin_names)
         
-    def no_subcommand(self,*args):
-        print >> sys.stderr, ("You have to pass a valid subcommand to "
-                              "'upf'. Valid subcommands are:")
-        print >> sys.stderr, "\n".join("  {}".format(sc) 
-                                       for sc in self.valid_subcommands)
-        sys.exit(1)
-
-    def invalid_subcommand(self,*args):
-        print >> sys.stderr, ("You passed an invalid subcommand to 'upf'. "
-                              "Valid subcommands are:")
-        print >> sys.stderr, "\n".join("  {}".format(sc) 
-                                       for sc in self.valid_subcommands)
-        sys.exit(1)
-
     #
     #
     #
@@ -313,7 +181,9 @@ class _Structure(VerdiCommand):
         List all AiiDA structures
         """
         import argparse
-        parser = argparse.ArgumentParser(description='List AiiDA structures.')
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='List AiiDA structures.')
         parser.add_argument('-e','--element',nargs='+', type=str, default=None,
                             help="Print all structures containing desired elements")
         parser.add_argument('-eo','--element-only', type=bool, default=False,
@@ -359,7 +229,9 @@ class _Structure(VerdiCommand):
         """
         # DEVELOPER NOTE: to add a new plugin, just add a _plugin_xxx() method.
         import argparse,os
-        parser = argparse.ArgumentParser(description='Visualise AiiDA structure.')
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Visualize AiiDA structures.')
         parser.add_argument('exec_name', type=str, default=None,
                     help="Name or path to the executable of the visualization program.")
         parser.add_argument('structure_id', type=int, default=None,

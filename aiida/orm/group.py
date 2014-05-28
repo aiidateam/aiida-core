@@ -22,10 +22,11 @@ class Group(object):
         dbgroup = kwargs.pop('dbgroup', None)
                 
         if dbgroup is not None:
-            if isinstance(dbgroup, int):
+            if isinstance(dbgroup, (int,long)):
                 dbgroup = DbGroup.objects.get(pk=dbgroup)
             if not isinstance(dbgroup, DbGroup):
-                raise TypeError("dbgroup is not a DbGroup instance")
+                raise TypeError("dbgroup is not a DbGroup instance, it is "
+                                "instead {}".format(str(type(dbgroup))))
             if kwargs:
                 raise ValueError("If you pass a dbgroups, you cannot pass any "
                                  "further parameter")

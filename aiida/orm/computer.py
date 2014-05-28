@@ -350,7 +350,8 @@ class Computer(object):
         if def_cpus_per_machine is None:
             return
         
-        if not isinstance(def_cpus_per_machine, int) or def_cpus_per_machine <= 0:
+        if not isinstance(def_cpus_per_machine, (
+                int,long)) or def_cpus_per_machine <= 0:
             raise ValidationError("Invalid value for default_mpiprocs_per_machine, "
                                   "must be a positive integer, or an empty "
                                   "string if you do not want to provide a "
@@ -783,7 +784,7 @@ class Computer(object):
         if def_cpus_per_machine is None:
             self._del_property("default_mpiprocs_per_machine", raise_exception=False)
         else:
-            if not isinstance(def_cpus_per_machine, int):
+            if not isinstance(def_cpus_per_machine, (int,long)):
                 raise TypeError("def_cpus_per_machine must be an integer (or None)")
         self._set_property("default_mpiprocs_per_machine", def_cpus_per_machine)
 

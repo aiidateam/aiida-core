@@ -42,6 +42,8 @@ class Devel(VerdiCommandWithSubcommands):
             'setproperty': (self.run_setproperty, self.complete_properties), 
             'getproperty': (self.run_getproperty, self.complete_properties),
             'delproperty': (self.run_delproperty, self.complete_properties),
+            'describeproperties': (self.run_describeproperties, self.complete_none),
+            'listproperties': (self.run_listproperties, self.complete_none),
             }
         
         # The content of the dict is:
@@ -64,6 +66,58 @@ class Devel(VerdiCommandWithSubcommands):
             return " ".join(_property_table.keys())
         else:
             return ""
+    
+    def run_describeproperties(self, *args):
+        """
+        List all found properties
+        """
+        from aiida.common.setup import _property_table, _NoDefaultValue
+        
+        if args:
+            print >> sys.stderr, ("No parameters allowed for {}".format(
+                self.get_full_command_name()))
+            sys.exit(1)
+        
+        for prop in sorted(_property_table.keys()):
+            if isinstance(_property_table[prop][3], _NoDefaultValue):
+                def_val_string = ""
+            else:
+                def_val_string = " (default: {})".format(
+                    _property_table[prop][3])
+            print "{} ({}): {}{}".format(prop, _property_table[prop][1],
+                                       _property_table[prop][2],
+                                       def_val_string)
+    
+    def run_listproperties(self, *args):
+        """
+        List all found properties
+        """
+        import argparse
+        
+        from aiida.common.setup import (
+            _property_table, exists_property, get_property)
+                
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='List all custom properties stored in the user configuration file.')
+        parser.add_argument('-a', '--all',
+            dest='all',action='store_true',
+            help="Show all properties, even if not explicitly defined, if they "
+                 "have a default value.")
+        parser.set_defaults(all=False)
+        parsed_args = parser.parse_args(args)
+        
+        show_all = parsed_args.all
+        
+        for prop in sorted(_property_table.keys()):
+            try:
+                # To enforce the generation of an exception, even if
+                # there is a default value
+                if show_all or exists_property(prop):
+                    val = get_property(prop)
+                    print "{} = {}".format(prop, val)
+            except KeyError:
+                pass
 
     def run_getproperty(self, *args):
         """

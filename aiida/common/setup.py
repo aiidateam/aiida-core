@@ -417,14 +417,42 @@ _property_table = {
     "tests.use_sqlite": (
         "use_inmemory_sqlite_for_tests",
         "bool",
-        "Whether to use an in-memory SQLite DB for tests (default: True)",
+        "Whether to use an in-memory SQLite DB for tests",
         True),
     }
+
+def exists_property(name):
+    """
+    Check if a property exists in the DB.
+    
+    .. note:: this is useful if one wants explicitly to know if a property
+      is defined just because it has a default value, or because it is
+      explicitly defined in the config file.
+    
+    :param name: the name of the property to check.
+    
+    :raise ValueError: if the given name is not a valid property (as stored in
+      the _property_table dictionary).
+    """
+    from aiida.common.exceptions import ConfigurationError
+    
+    try:
+        key, _, _, table_defval = _property_table[name]
+    except KeyError:
+        raise ValueError("{} is not a recognized property".format(name))
+    
+    try:
+        config = get_config()
+        return key in config
+    except ConfigurationError: # No file found
+        return False
+        
 
 def get_property(name, default=_NoDefaultValue()):
     """
     Get a property from the json file.
-    
+
+    :param name: the name of the property to get.
     :param default: if provided, this value is returned if no value is found
       in the database.
     
@@ -459,6 +487,7 @@ def del_property(name):
     """
     Delete a property in the json file.
     
+    :param name: the name of the property to delete.
     :raise: KeyError if the key is not found in the configuration file.
     """
     from aiida.common.exceptions import ConfigurationError

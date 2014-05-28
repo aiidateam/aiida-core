@@ -352,8 +352,43 @@ class TestNodeBasic(AiidaTestCase):
             # I get a non-existing attribute
             a.get_attr('nonexisting')
 
+    def DISABLED(self):
+        """
+        This test routine is disabled for the time being; I will re-enable
+        when I have time to implement the check of the length of the 'key'.
+        """
+        def test_very_deep_attributes(self):
+            """
+            Test attributes where the total length of the key, including the
+            separators, would be longer than the field length in the DB.
+            """
+            from aiida.djsite.db import models
+            
+            n = Node()
+            
+            semi_long_string = "abcdefghijklmnopqrstuvwxyz"
+            value = "some value"
+            
+            attribute = {semi_long_string: value}
+            key_len = len(semi_long_string)
+            
+            max_len = models.DbAttribute._meta.get_field_by_name('key')[0].max_length
+            
+            while key_len < 2 * max_len:
+                # Create a deep, recursive attribute
+                attribute = {semi_long_string: attribute}
+                key_len += len(semi_long_string) + len(models.DbAttribute._sep)
+            
+            n.set_attr(semi_long_string, attribute)
+            
+            n.store()
+            
+            all_keys = models.DbAttribute.objects.filter(
+                dbnode=n.dbnode).values_list('key', flat=True)
+            
+            print max(len(i) for i in all_keys)
+
     def test_datetime_attribute(self):
-        import datetime
         from django.utils.timezone import (
             get_current_timezone, is_naive, make_aware, now)
 

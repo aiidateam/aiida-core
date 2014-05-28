@@ -691,14 +691,29 @@ class Calculation(Node):
 
         from aiida.djsite.db.models import DbCalcState
         from aiida.common.exceptions import UniquenessError
+        from aiida.common.datastructures import sort_states
         
         if self._to_be_stored:
             raise ModificationNotAllowed("Cannot set the calculation state "
                                          "before storing")
         
+        if state == calc_states.NOTFOUND:
+            raise ValueError(
+                "You cannot manually set a calculation in the '{}' "
+                "state".format(state))
+            
         if state not in calc_states:
             raise ValueError(
                 "'{}' is not a valid calculation status".format(state))
+ 
+        old_state = self.get_state()
+        state_sequence = [state, old_state]
+        
+        # sort from new to old: if they are equal, then it is a valid
+        # advance in state (otherwise, we are going backwards...)
+        if sort_states(state_sequence) != state_sequence:
+            raise ModificationNotAllowed("Cannot change the state from {} "
+                "to {}".format(old_state, state))
         
         try:
             with transaction.commit_on_success():
@@ -716,7 +731,7 @@ class Calculation(Node):
         """
         Get the state of the calculation.
         
-        .. note:: this method returns the UNDETERMINED state if no state
+        .. note:: this method returns the NOTFOUND state if no state
           is found in the DB.
         
         .. note:: the 'most recent' state is obtained using the logic in the
@@ -731,7 +746,7 @@ class Calculation(Node):
         
         :return: a string. If from_attribute is True and no attribute is found,
           return None. If from_attribute is False and no entry is found in the
-          DB, return the "UNDETERMINED" state.
+          DB, return the "NOTFOUND" state.
         """
         from aiida.djsite.db.models import DbCalcState
         from aiida.common.exceptions import DbContentError
@@ -746,7 +761,7 @@ class Calculation(Node):
                 this_calc_states = DbCalcState.objects.filter(
                     dbnode=self).values_list('state', flat=True)
                 if not this_calc_states:
-                    return calc_states.UNDETERMINED
+                    return calc_states.NOTFOUND
                 else:
                     try:
                         most_recent_state = sort_states(this_calc_states)[0]
@@ -766,7 +781,7 @@ class Calculation(Node):
         if state == calc_states.IMPORTED:
             attribute_state = self.get_state(from_attribute=True)
             if attribute_state is None:
-                attribute_state = "UNDETERMINED"
+                attribute_state = "NOTFOUND"
             return 'IMPORTED/{}'.format(attribute_state)
         else:
             return state
@@ -778,7 +793,7 @@ class Calculation(Node):
         
         :return: a boolean
         """
-        return self.get_state() in [calc_states.NEW]
+        return self.get_state() in [calc_states.NEW, calc_states.NOTFOUND]
 
     def is_running(self):
         """

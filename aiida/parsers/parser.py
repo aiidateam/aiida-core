@@ -53,7 +53,11 @@ class Parser(object):
 
     def _is_res_unlocked(self):
         """
-        verify if the calculation has been parsed yet or not
+        verify if the calculation has been parsed yet or not, that is, 
+        the state is after the "PARSING" state.
+        
+        .. todo:: see if instead of an hardcoded list of states, one can
+          use the state ordering feature.
         """
         is_unlocked = False
         if self._calc.get_state() in self._possible_after_parsing:

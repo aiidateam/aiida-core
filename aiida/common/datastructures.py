@@ -7,6 +7,7 @@ class CalcState(Enumerate):
     pass
 
 _sorted_datastates = (
+        'NOTFOUND', # not found in the DB
         'NEW', # just created
         'TOSUBMIT', # used by the executionmanager to submit new calculations scheduled to be submitted
         'SUBMITTING', # being submitted to cluster

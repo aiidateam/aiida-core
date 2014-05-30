@@ -18,6 +18,30 @@ Using AiiDA in multi-user mode
     * How to start the daemon
     * How to configure the permissions! (all AiiDA in the same group, and
       set the 'chmod -R g+s' flag to all folders and subfolders of the AiiDA repository)
+      (comment that by default now we have a flag (harcoded to True) in aiida.common.folders
+      to give write permissions to the group both to files and folders
+      created using the Folder class.
+    
+    * Some configuration
+      example::
+      
+      {u'compress': True,
+       u'key_filename': u'/home/aiida/.aiida/sshkeys/KEYFILE',
+       u'key_policy': u'RejectPolicy',
+       u'load_system_host_keys': True,
+       u'port': 22,
+       u'proxy_command': u'ssh -i /home/aiida/.aiida/sshkeys/KEYFILE USERNAME@MIDDLECOMPUTER /bin/nc FINALCOMPUTER 22',
+       u'timeout': 60,
+       u'username': u'xxx'}
+    
+    * Moreover, on the remote computer
+      do::
+         ssh-keyscan FINALCOMPUTER
+
+      and append the output to the ``known_hosts`` of the aiida daemon account.
+      Do the same also for the MIDDLECOMPUTER if a proxy_command is user.
+      
+    * 
     
 ============================
 Deploying AiiDA using Apache

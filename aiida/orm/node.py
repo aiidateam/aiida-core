@@ -851,11 +851,12 @@ class Node(object):
             separator symbol).        
         """
         from aiida.djsite.db.models import DbAttribute
+        import copy
         
         DbAttribute.validate_key(key)
         
         if self._to_be_stored:
-            self._attrs_cache[key] = value
+            self._attrs_cache[key] = copy.deepcopy(value)
         else:
             if key in self._updatable_attributes:
                 DbAttribute.set_value_for_node(self.dbnode, key,value)

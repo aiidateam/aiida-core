@@ -153,6 +153,32 @@ def try_create_secret_key():
     with open(secret_key_full_name, 'w') as f:
         f.write(generate_random_secret_key())
     
+def create_htaccess_file():
+    """
+    Creates a suitable .htaccess file in the .aiida folder (if it does not
+    exist yet), that is important 
+    
+    .. note:: some default Apache configurations ignore the ``.htaccess``
+    files unless otherwise specified: read the documentation on 
+    how to setup properly your Apache server!
+    
+    .. note:: if a ``.htaccess`` file already exists, this is not overwritten.
+    """
+    aiida_dir            = os.path.expanduser(AIIDA_CONFIG_FOLDER)
+    htaccess_full_name = os.path.join(aiida_dir,".htaccess")
+    
+    if os.path.exists(htaccess_full_name):
+        return
+    
+    with open(htaccess_full_name, 'w') as f:
+        f.write(
+"""#### No one should read this folder!
+## Please double check, though, that your Apache configuration honors
+## the .htaccess files.
+deny from all
+""")
+
+    
 def get_secret_key():
     """
     Return the secret key.
@@ -270,6 +296,8 @@ def create_base_dirs():
 
     # Create the secret key file, if needed
     try_create_secret_key()
+    
+    create_htaccess_file()
 
 def create_configuration():    
     import readline

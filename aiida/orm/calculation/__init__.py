@@ -1544,8 +1544,8 @@ class Calculation(Node):
             is used.
         """
         import os
+        import errno
         from django.utils import timezone
-        import tempfile
 
         from aiida.transport.plugins.local import LocalTransport
         from aiida.orm import Computer
@@ -1558,12 +1558,41 @@ class Calculation(Node):
         folder.create()
         
         if subfolder_name is None:
-            subfolder_basename = timezone.localtime(timezone.now()).strftime('%Y%m%d-%H%M%S-')
+            subfolder_basename = timezone.localtime(timezone.now()).strftime('%Y%m%d')
         else:
             subfolder_basename = subfolder_name
+
+        ## Find a new subfolder.
+        ## I do not user tempfile.mkdtemp, because it puts random characters
+        # at the end of the directory name, therefore making difficult to
+        # understand the order in which directories where stored
+        counter = 0
+        while True:
+            counter += 1
+            subfolder_path = os.path.join(folder.abspath, 
+                                      "{}-{:05d}".format(subfolder_basename,            
+                                                         counter))
+            # This check just tried to avoid to try to create the folder
+            # (hoping that a test of existence is faster than a 
+            # test and failure in directory creation)
+            # But it could be removed
+            if os.path.exists(subfolder_path):
+                continue
             
-        # Find a new subfolder.
-        subfolder_path = tempfile.mkdtemp(prefix = subfolder_basename, dir=folder.abspath)
+            try:
+                # Directory found, and created
+                os.mkdir(subfolder_path)
+                break
+            except OSError as e:
+                if e.errno == errno.EEXIST:
+                    # The directory has been created in the meantime,
+                    # retry with a new one...
+                    continue
+                # Some other error: raise, so we avoid infinite loops 
+                # e.g. if we are in a folder in which we do not have write
+                # permissions
+                raise
+        
         subfolder = folder.get_subfolder(
             os.path.relpath(subfolder_path,folder.abspath),
             reset_limit=True)

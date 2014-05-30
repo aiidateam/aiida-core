@@ -84,6 +84,10 @@ Some notes:
   Double check if you cannot list/read the files (e.g. connecting to
   ``http://YOURSERVER/.aiida``). 
   
+  .. todo:: Allow to have a trick to have only one file in .aiida, containing
+    the url where the actual configuration stuff resides (or some other trick
+    to physically move the configuration files out of /var/www).
+  
 * Create a ``/etc/apache2/sites-available/wsgi-aiida`` file,
   with content::
    Alias /static/awi /PATH_TO_AIIDA/aiida/djsite/awi/static/awi/

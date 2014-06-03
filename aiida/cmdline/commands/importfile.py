@@ -364,11 +364,10 @@ def import_file(infile):
                         # Here I have to deserialize the attributes                        
                         deserialized_attributes = deserialize_attributes(
                             attributes, attributes_conversion)
-
-                        for k, v in deserialized_attributes.iteritems():
-                            models.DbAttribute.set_value_for_node(
-                                dbnode=new_pk, key=k, value=v,
-                                with_transaction=False)
+                        models.DbAttribute.reset_values_for_node(
+                            dbnode=new_pk, 
+                            attributes=deserialized_attributes,
+                            with_transaction=False)
                         
             print "STORING NODE LINKS..."
             ## TODO: check that we are not creating input links of an already 

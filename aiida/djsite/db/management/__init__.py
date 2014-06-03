@@ -9,6 +9,10 @@ from aiida.djsite.utils import get_after_database_creation_signal
 from django.contrib.auth import models as auth_models
 from django.conf import settings
 
+#====================================
+#   SqLite Transive Closure
+#====================================
+
 def get_sqlite_tc_create_purgelist(links_table_name, 
               links_table_input_field, 
               links_table_output_field, 
@@ -235,6 +239,10 @@ END
 
 """
 
+#====================================
+#   Postgresql Transive Closure
+#====================================
+
 def get_pg_tc(links_table_name, 
               links_table_input_field, 
               links_table_output_field, 
@@ -414,7 +422,174 @@ CREATE TRIGGER autoupdate_tc
   EXECUTE PROCEDURE update_tc();
 
 """
+
+#====================================
+#   Mysql Transive Closure
+#====================================
+
+def get_mysql_trigger_update(db_name,
+              links_table_name, 
+              links_table_input_field, 
+              links_table_output_field, 
+              closure_table_name, 
+              closure_table_parent_field, 
+              closure_table_child_field):
     
+    
+      
+    return """
+
+CREATE TRIGGER update_tc_insert AFTER INSERT ON """+links_table_name+"""
+FOR EACH ROW
+proc_label:BEGIN
+      
+      DECLARE new_id integer;
+
+      IF ( SELECT 1 = 1 FROM """+closure_table_name+"""
+           WHERE """+closure_table_parent_field+""" = NEW."""+links_table_input_field+"""
+             AND """+closure_table_child_field+""" = NEW."""+links_table_output_field+"""
+             AND depth = 0 )
+      THEN
+        LEAVE proc_label;
+      END IF;
+
+      IF NEW."""+links_table_input_field+""" = NEW."""+links_table_output_field+"""
+      OR ( SELECT 1=1 FROM """+closure_table_name+"""
+           WHERE """+closure_table_parent_field+""" = NEW."""+links_table_output_field+"""
+           AND """+closure_table_child_field+""" = NEW."""+links_table_input_field+""")
+      THEN
+        LEAVE proc_label;
+      END IF;
+    
+      #START TRANSACTION ;
+      INSERT INTO """+closure_table_name+""" ( """+closure_table_parent_field+""", """+closure_table_child_field+""", depth)
+      VALUES ( NEW."""+links_table_input_field+""", NEW."""+links_table_output_field+""", 0);
+
+      SET new_id = LAST_INSERT_ID();
+
+      UPDATE """+closure_table_name+"""
+      SET entry_edge_id = new_id,
+          exit_edge_id = new_id,
+          direct_edge_id = new_id
+      WHERE id = new_id;
+
+      INSERT INTO """+closure_table_name+""" (
+        entry_edge_id,
+        direct_edge_id,
+        exit_edge_id,
+        """+closure_table_parent_field+""",
+        """+closure_table_child_field+""",
+        depth)
+          SELECT id
+           , new_id
+           , new_id
+           , """+closure_table_parent_field+"""
+           , NEW."""+links_table_output_field+"""
+           , depth + 1
+          FROM """+closure_table_name+"""
+          WHERE """+closure_table_child_field+""" = NEW."""+links_table_input_field+""";
+
+      INSERT INTO """+closure_table_name+""" (
+        entry_edge_id,
+        direct_edge_id,
+        exit_edge_id,
+        """+closure_table_parent_field+""",
+        """+closure_table_child_field+""",
+        depth)
+        SELECT new_id
+          , new_id
+          , id
+          , NEW."""+links_table_input_field+"""
+          , """+closure_table_child_field+"""
+          , depth + 1
+          FROM """+closure_table_name+"""
+          WHERE """+closure_table_parent_field+""" = NEW."""+links_table_output_field+""";
+
+      INSERT INTO """+closure_table_name+""" (
+        entry_edge_id,
+        direct_edge_id,
+        exit_edge_id,
+        """+closure_table_parent_field+""",
+        """+closure_table_child_field+""",
+        depth)
+        SELECT A.id
+          , new_id
+          , B.id
+          , A."""+closure_table_parent_field+"""
+          , B."""+closure_table_child_field+"""
+          , A.depth + B.depth + 2
+        FROM """+closure_table_name+""" A
+          CROSS JOIN """+closure_table_name+""" B
+        WHERE A."""+closure_table_child_field+""" = NEW."""+links_table_input_field+"""
+          AND B."""+closure_table_parent_field+""" = NEW."""+links_table_output_field+""";
+
+      #COMMIT ;
+
+  #CALL `aiidadb`.`update_tc` ('INSERT', NEW."""+links_table_input_field+""", NEW."""+links_table_output_field+""", -1, -1);
+
+END;
+
+"""
+
+def get_mysql_trigger_delete(db_name,
+              links_table_name, 
+              links_table_input_field, 
+              links_table_output_field, 
+              closure_table_name, 
+              closure_table_parent_field, 
+              closure_table_child_field):
+    
+    return """
+    
+CREATE TRIGGER update_tc_delete AFTER DELETE ON """+links_table_name+"""
+FOR EACH ROW
+proc_label:BEGIN
+
+      DECLARE num_rows integer;
+
+      IF NOT ( SELECT 1=1 FROM """+closure_table_name+"""
+           WHERE """+closure_table_parent_field+""" = OLD."""+links_table_input_field+"""
+           AND """+closure_table_child_field+""" = OLD."""+links_table_output_field+""" AND
+           depth = 0 )
+      THEN
+        LEAVE proc_label;
+      END IF;
+      
+      DELETE FROM PurgeList where 1 = 1;
+      
+      INSERT INTO PurgeList
+        SELECT id FROM """+closure_table_name+"""
+        WHERE """+closure_table_parent_field+""" = OLD."""+links_table_input_field+"""
+        AND """+closure_table_child_field+""" = OLD."""+links_table_output_field+""" AND
+        depth = 0;
+
+      purge_loop: WHILE (1 = 1) DO
+
+        INSERT INTO PurgeList
+          SELECT id FROM """+closure_table_name+"""
+            WHERE depth > 0
+            AND ( entry_edge_id IN ( SELECT Id FROM PurgeList )
+            OR direct_edge_id IN ( SELECT Id FROM PurgeList )
+            OR exit_edge_id IN ( SELECT Id FROM PurgeList ) )
+            AND Id NOT IN (SELECT Id FROM PurgeList );
+
+        SET num_rows = ROW_COUNT();
+
+        if (num_rows = 0) THEN
+          LEAVE purge_loop;
+        END IF;
+
+      END WHILE;
+
+      DELETE FROM """+closure_table_name+""" WHERE Id IN ( SELECT Id FROM PurgeList);
+
+
+END;
+""" 
+
+#====================================
+#   Installer
+#====================================
 
 def install_tc(sender, **kwargs):
     from django.db import connection, transaction
@@ -426,8 +601,54 @@ def install_tc(sender, **kwargs):
     closure_table_name = "db_dbpath"
     closure_table_parent_field = "parent_id"
     closure_table_child_field = "child_id"
-      
-    if "postgresql" in settings.DATABASES['default']['ENGINE']:
+    
+    if "mysql" in settings.DATABASES['default']['ENGINE']:
+        
+        import MySQLdb
+        import warnings
+        warnings.filterwarnings("ignore", "PROCEDURE.*")
+
+        print '== Mysql found, installing transitive closure engine =='
+        
+#         print get_mysql_tc(settings.DATABASES['default']['NAME'], links_table_name, links_table_input_field, links_table_output_field, 
+#                                  closure_table_name, closure_table_parent_field, closure_table_child_field)
+        db_name = settings.DATABASES['default']['NAME']
+        
+        print "Cleaning old triggers"
+        try:
+            cursor.execute("DROP PROCEDURE IF EXISTS `"+db_name+"`.`update_tc`;")
+        except MySQLdb.Warning:
+            pass
+        try:
+            cursor.execute("DROP TRIGGER IF EXISTS update_tc_insert;")
+        except MySQLdb.Warning:
+            pass
+        
+        try:
+            cursor.execute("DROP TRIGGER IF EXISTS update_tc_delete;")
+        except MySQLdb.Warning:
+            pass
+        
+        try:
+            cursor.execute("DROP TABLE IF EXISTS PurgeList;")
+        except MySQLdb.Warning:
+            pass
+        
+        cursor.execute("CREATE TABLE PurgeList (Id int);")
+        
+        print "Installing trigger for update"
+        cursor.execute(get_mysql_trigger_update(db_name, links_table_name, links_table_input_field, links_table_output_field, 
+                                 closure_table_name, closure_table_parent_field, closure_table_child_field))
+        transaction.commit_unless_managed()
+        
+        print "Installing trigger for delete"
+        cursor = connection.cursor()
+        cursor.execute(get_mysql_trigger_delete(db_name, links_table_name, links_table_input_field, links_table_output_field, 
+                                 closure_table_name, closure_table_parent_field, closure_table_child_field))
+        
+        transaction.commit_unless_managed()
+        
+    elif "postgresql" in settings.DATABASES['default']['ENGINE']:
         print '== Postegres found, installing transitive closure engine =='
       
         cursor.execute(get_pg_tc(links_table_name, links_table_input_field, links_table_output_field, 

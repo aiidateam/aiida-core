@@ -110,11 +110,11 @@ parameters = ParameterData(dict={
                 'wf_collect': True,
                 },
             'SYSTEM': {
-                'ecutwfc': 30.,
-                'ecutrho': 240.,
+                'ecutwfc': 40.,
+                'ecutrho': 320.,
                 },
             'ELECTRONS': {
-                'conv_thr': 1.e-6,
+                'conv_thr': 1.e-10,
                 }})
                 
 kpoints = ParameterData(dict={

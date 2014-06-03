@@ -831,8 +831,9 @@ class TestNodeBasic(AiidaTestCase):
         from aiida.djsite.db import models
         from django.db import IntegrityError, transaction
         
-        s1 = models.DbSetting(key='pippo')
-        s1.setvalue([1,2,3]) # This will also store
+        models.DbSetting.set_value(key='pippo', value=[1,2,3]) 
+        
+        s1 = models.DbSetting.objects.get(key='pippo')
         
         self.assertEqual(s1.getvalue(), [1,2,3])
         
@@ -844,6 +845,31 @@ class TestNodeBasic(AiidaTestCase):
             s2.save()
         transaction.savepoint_rollback(sid)
         
+        # Should replace pippo
+        models.DbSetting.set_value(key='pippo', value="a") 
+        s1 = models.DbSetting.objects.get(key='pippo')
+        
+        self.assertEqual(s1.getvalue(), "a")
+    
+    def test_settings_methods(self):
+        from aiida.common.globalsettings import (
+            get_global_setting_description, get_global_setting,
+            set_global_setting, del_global_setting)
+        
+        set_global_setting(key="aaa", value={'b': 'c'}, description="pippo")
+        
+        self.assertEqual(get_global_setting('aaa'), {'b': 'c'})
+        self.assertEqual(get_global_setting_description('aaa'), "pippo")
+        self.assertEqual(get_global_setting('aaa.b'), 'c')
+        self.assertEqual(get_global_setting_description('aaa.b'), "")
+    
+        del_global_setting('aaa')
+        
+        with self.assertRaises(KeyError):
+            get_global_setting('aaa.b')
+
+        with self.assertRaises(KeyError):
+            get_global_setting('aaa')
         
     def test_attr_listing(self):
         """

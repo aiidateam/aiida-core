@@ -129,7 +129,8 @@ def get_all_fields_info():
     
     # I start only with DbNode
     export_models = set([get_class_string(Model) for Model in 
-                         [models.DbNode, models.DbAttribute, models.DbLink]])
+                         [models.DbNode, models.DbAttribute,
+                          models.DbLink, models.DbGroup]])
     
     while True:
         missing_models = export_models - set(all_fields_info.keys())
@@ -234,17 +235,23 @@ def export(what, also_parents = True, also_calc_outputs = True,
                       "exists".format(outfile))
     
     all_fields_info, unique_identifiers = get_all_fields_info()
-    
+        
     entries_ids_to_add = defaultdict(list)
+    # I store a list of the actual dbnodes
+    groups_entries = []
+    group_class_string = get_class_string(models.DbGroup)
     for entry in what:
-        entries_ids_to_add[get_class_string(entry)].append(entry.pk)
+        class_string = get_class_string(entry)
+        entries_ids_to_add[class_string].append(entry.pk)
+        if class_string == group_class_string:
+            groups_entries.append(entry)
     
     if also_parents:
         # It is a defaultdict, it will provide an empty list
         given_nodes = entries_ids_to_add[get_class_string(models.DbNode)]
         
         if given_nodes:
-            # Also add the parents (to any level) to the query
+            # Alsof add the parents (to any level) to the query
             given_nodes = list(set(given_nodes + 
                 list(models.DbNode.objects.filter(
                     children__in=given_nodes).values_list('pk', flat=True))))
@@ -278,11 +285,11 @@ def export(what, also_parents = True, also_calc_outputs = True,
         new_entries_to_add = {}
         for model_name, querysets in entries_to_add.iteritems():
             Model = get_object_from_string(model_name)
+
             # I do a filter with an 'OR' (|) operator between all the possible
             # queries. querysets, if present, should always have at least one
             # element, so for the time being I do not check if it is an empty
             # list (TODO: check, otherwise I add the whole DB I believe).
-            
             dbentries = Model.objects.filter(
                 reduce(operator.or_, querysets)).distinct()
             entryvalues = dbentries.values(
@@ -327,6 +334,10 @@ def export(what, also_parents = True, also_calc_outputs = True,
     ######################################
     # I use .get because there may be no nodes to export
     all_nodes_pk = export_data.get(get_class_string(models.DbNode),{}).keys()
+    if sum(len(model_data) for model_data in export_data.values()) == 0:
+        print "No nodes to store, exiting..."
+        return
+    
     print "Exporting a total of {} db entries, of which {} nodes.".format(
         sum(len(model_data) for model_data in export_data.values()),
         len(all_nodes_pk))
@@ -362,6 +373,12 @@ def export(what, also_parents = True, also_calc_outputs = True,
             'output__uuid': 'output'})
          for l in linksquery.values(
               'input__uuid', 'output__uuid', 'label')]
+
+    print "STORING GROUP ELEMENTS..."
+    groups_uuid = {g.uuid: list(g.dbnodes.values_list('uuid', flat=True))
+                   for g in groups_entries}
+
+    print groups_uuid
     
     ######################################
     # Now I store
@@ -379,6 +396,7 @@ def export(what, also_parents = True, also_calc_outputs = True,
                     'node_attributes_conversion': node_attributes_conversion,
                     'export_data': export_data,
                     'links_uuid': links_uuid,
+                    'groups_uuid': groups_uuid,
                     }, f)
     
         metadata = {
@@ -444,6 +462,7 @@ class Export(VerdiCommand):
         from aiida.orm import Group
         from aiida.common.exceptions import NotExistent
         from aiida.djsite.db import models
+        from aiida.cmdline.commands.group import get_group_type_mapping
         
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -481,11 +500,28 @@ class Export(VerdiCommand):
         
         if parsed_args.groups is not None:
             for group_name in parsed_args.groups:
+                name, _, typestr = group_name.partition(':')                
                 try:
-                    group = Group.get(name=group_name)
+                    internal_type_string = get_group_type_mapping()[typestr]
+                except KeyError:
+                    print >> sys.stderr, "Invalid group type. Valid group types are:"
+                    print >> sys.stderr, ",".join(sorted(
+                        get_group_type_mapping().keys()))
+                    sys.exit(1)
+
+                
+                try:
+                    group = Group.get(name=name,
+                                      type_string=internal_type_string)
                 except NotExistent:
-                    print >> sys.stderr, ("No user-defined group with name '{}' "
-                                          "found. Stopping.".format(group_name))
+                    if typestr:
+                        print >> sys.stderr, (
+                            "No group of type '{}' with name '{}' "
+                            "found. Stopping.".format(typestr, name))
+                    else:
+                        print >> sys.stderr, (
+                            "No user-defined group with name '{}' "
+                            "found. Stopping.".format(name))
                     sys.exit(1)
                 node_pk_list += group.dbgroup.dbnodes.values_list('pk',flat=True)
                 groups_list.append(group.dbgroup)
@@ -509,7 +545,7 @@ class Export(VerdiCommand):
             computer_list = []
 
         # TODO: Export of groups not implemented yet!
-        what_list = node_list + computer_list # + groups_list
+        what_list = node_list + computer_list + groups_list
 
         try:
             export(what = what_list, 
@@ -520,8 +556,6 @@ class Export(VerdiCommand):
         except IOError as e:
             print >> sys.stderr, e.message
             sys.exit(1)
-
-        print "Default output file written."
 
     def complete(self,subargs_idx, subargs):
         return ""

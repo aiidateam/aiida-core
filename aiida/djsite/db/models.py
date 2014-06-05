@@ -1119,7 +1119,8 @@ class DbGroup(m.Model):
     # The owner of the group, not of the calculations
     # On user deletion, remove his/her groups too (not the calcuations, only
     # the groups
-    user = m.ForeignKey(AUTH_USER_MODEL, on_delete=m.CASCADE)
+    user = m.ForeignKey(AUTH_USER_MODEL, on_delete=m.CASCADE,
+                        related_name='dbgroups')
 
     class Meta:
         unique_together = (("name", "type"),)

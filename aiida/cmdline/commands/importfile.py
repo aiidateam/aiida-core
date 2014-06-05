@@ -153,7 +153,8 @@ def import_file(infile):
         ##########################################################################    
         linked_nodes = set(chain.from_iterable((l['input'], l['output'])
                                                for l in data['links_uuid']))
-    
+        group_nodes = set(chain.from_iterable(data['groups_uuid'].itervalues()))
+        
         # I preload the nodes, I need to check each of them later, and I also
         # store them in a reverse table
         # I break up the query due to SQLite limitations..
@@ -167,7 +168,7 @@ def import_file(infile):
         import_nodes_uuid = set(v['uuid'] for v in
                            data['export_data'][dbnode_model].values())
         
-        unknown_nodes = linked_nodes - db_nodes_uuid.union(
+        unknown_nodes = linked_nodes.union(group_nodes) - db_nodes_uuid.union(
             import_nodes_uuid)
         
         if unknown_nodes:
@@ -187,8 +188,24 @@ def import_file(infile):
                        (models.DbUser,
                         models.DbComputer,
                         models.DbNode,
+                        models.DbGroup,
                         )
                         ]
+        
+        # Models that do appear in the import file, but whose import is
+        # managed manually
+        model_manual = [get_class_string(m) for m in 
+                        (models.DbLink,
+                         models.DbAttribute,)
+                        ]
+        
+        all_known_models = model_order+model_manual
+        
+        for import_field_name in  metadata['all_fields_info']:
+            if import_field_name not in all_known_models:
+                raise NotImplementedError("Apparently, you are importing a "
+                   "file with a model '{}', but this does not appear in "
+                   "all_known_models!".format(import_field_name))
         
         for idx, model_name in enumerate(model_order):
             dependencies = []
@@ -419,6 +436,17 @@ def import_file(infile):
             else:
                 print "   (0 new links...)"
 
+            print "STORING GROUP ELEMENTS..."
+            import_groups = data['groups_uuid']
+            for groupuuid, groupnodes in import_groups.iteritems():
+                # TODO: cache these to avoid too many queries
+                group = models.DbGroup.objects.get(uuid=groupuuid)
+                nodes_to_store = [dbnode_reverse_mappings[node_uuid]
+                                  for node_uuid in groupnodes]
+                if nodes_to_store:
+                    group.dbnodes.add(*nodes_to_store)
+
+            ######################################################
             # Put everything in a specific group
             dbnode_model_name = get_class_string(models.DbNode)
             existing = existing_entries.get(dbnode_model_name, {})

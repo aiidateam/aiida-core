@@ -965,7 +965,7 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
             for k, v in attributes.iteritems():
                 nodes_to_store.extend(
                     cls.create_value(k, v,
-                        subspecifier_value=dbnode,
+                        subspecifier_value=dbnode_node,
                         ))
             
             if return_not_store:

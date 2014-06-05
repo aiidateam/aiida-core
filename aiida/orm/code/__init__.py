@@ -59,6 +59,28 @@ class Code(Node):
         else:
             return valid_codes[0]
 
+    @classmethod
+    def list_for_plugin(cls,plugin,labels=True):
+        """
+        Return a list of valid code strings for a given plugin.
+        
+        :param plugin: The string of the plugin.
+        :param labels: if True, return a list of code names, otherwise
+          return the code PKs (integers).
+        :return: a list of string, with the code names if labels is True,
+          otherwise a list of integers with the code PKs.
+        """
+        from aiida.common.exceptions import NotExistent, MultipleObjectsError
+        
+        valid_codes = list(cls.query(
+            dbattributes__key="input_plugin",
+            dbattributes__tval=plugin))
+
+        if labels:
+            return [c.label for c in valid_codes]
+        else:
+            return [c.pk for c in valid_codes]
+
     def validate(self):
         from aiida.common.exceptions import ValidationError
         

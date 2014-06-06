@@ -45,12 +45,12 @@ class LocalTransport(aiida.transport.Transport):
         """
         Opens a local transport channel
 
-        :raise ModificationNotAllowed: if the channel is already open
+        :raise InvalidOperation: if the channel is already open
         """
-        from aiida.common.exceptions import ModificationNotAllowed
+        from aiida.common.exceptions import InvalidOperation
         
         if self._is_open:
-            raise ModificationNotAllowed("Cannot open the transport twice")
+            raise InvalidOperation("Cannot open the transport twice")
 
         self._internal_dir = os.path.expanduser("~")
         self._is_open = True
@@ -61,12 +61,12 @@ class LocalTransport(aiida.transport.Transport):
         """
         Closes the local transport channel
 
-        :raise ModificationNotAllowed: if the channel is already open
+        :raise InvalidOperation: if the channel is already open
         """
-        from aiida.common.exceptions import ModificationNotAllowed
+        from aiida.common.exceptions import InvalidOperation
         
         if not self._is_open:
-            raise ModificationNotAllowed("Cannot close the transport: "
+            raise InvalidOperation("Cannot close the transport: "
                                          "it is already closed")
         self._is_open = False
 

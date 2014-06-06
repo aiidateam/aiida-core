@@ -894,8 +894,13 @@ class Computer(object):
             raise ConfigurationError('No scheduler found for {} [type {}], message: {}'.format(
                 self.name, self.get_scheduler_type(), e.message))
 
+    def __repr__(self):
+        return '<{}: {}>'.format(self.__class__.__name__, str(self))
+    
     def __str__(self):
         if self.is_enabled():
-            return "<Computer {} ({})>".format(self.name, self.hostname)
+            return "{} ({}), pk={}".format(self.name, self.hostname,
+                                           self.pk)
         else:
-            return "<Computer {} ({}) [DISABLED]>".format(self.name, self.hostname)
+            return "{} ({}) [DISABLED], pk={}".format(self.name, self.hostname,
+                                                      self.pk)

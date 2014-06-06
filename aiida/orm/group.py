@@ -109,6 +109,23 @@ class Group(object):
         """
         return unicode(self.dbgroup.uuid)
     
+    @classmethod
+    def get_or_create(cls,*args,**kwargs):
+        """
+        Try to retrieve a group from the DB with the given arguments; 
+        create (and store) a new group if such a group was not present yet.
+        
+        :return: (group, created) where group is the group (new or existing,
+          in any case already stored) and created is a boolean saying 
+        """
+        from aiida.common.exceptions import UniquenessError
+        try:
+            # Try to create and store a new class
+            return (cls(*args, **kwargs).store(), True)
+        except UniquenessError:
+            group = cls.get(*args, **kwargs)
+            return (group, False)
+    
     def __int__(self):
         """
         Convert the class to an integer. This is needed to allow querying
@@ -412,9 +429,14 @@ class Group(object):
         if self.pk is not None:
             self.dbgroup.delete()
     
+    def __repr__(self):
+        return '<{}: {}>'.format(self.__class__.__name__, str(self))
+    
     def __str__(self):
         if self.type_string:
-            return '<Group [type: {}] "{}">'.format(self.type_string, self.name)
+            return '"{}" [type {}], of user {}>'.format(
+                self.name, self.type_string, self.user.email)
         else:
-            return '<Group [user-defined] "{}">'.format(self.name)
+            return '"{}" [user-defined], of user {}>'.format(
+                self.name, self.user.email)
     

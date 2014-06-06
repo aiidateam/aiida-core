@@ -249,12 +249,14 @@ class Node(object):
             # stop
             self._set_with_defaults(**kwargs)
 
+    def __repr__(self):
+        return '<{}: {}>'.format(self.__class__.__name__, str(self))
+    
     def __str__(self):
-        classname = self.__class__.__name__
         if self._to_be_stored:
-            return "<{} (unstored)>".format(classname)
+            return "uuid={} (unstored)".format(self.uuid)
         else:
-            return "<{} (pk={})>".format(classname, self.pk)
+            return "uuid={} (pk={})".format(self.uuid, self.pk)
 
     @classmethod
     def query(cls,*args,**kwargs):

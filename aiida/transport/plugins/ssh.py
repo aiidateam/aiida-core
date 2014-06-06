@@ -358,12 +358,12 @@ class SshTransport(aiida.transport.Transport):
         Also opens a sftp channel, ready to be used.
         The current working directory is set explicitly, so it is not None.
         
-        :raise ModificationNotAllowed: if the channel is already open
+        :raise InvalidOperation: if the channel is already open
         """
-        from aiida.common.exceptions import ModificationNotAllowed
+        from aiida.common.exceptions import InvalidOperation
         
         if self._is_open:
-            raise ModificationNotAllowed("Cannot open the transport twice")
+            raise InvalidOperation("Cannot open the transport twice")
         # Open a SSHClient
         connection_arguments = self._connect_args
         proxystring = connection_arguments.pop('proxy_command', None)
@@ -396,12 +396,12 @@ class SshTransport(aiida.transport.Transport):
         
         :todo: correctly manage exceptions
         
-        :raise ModificationNotAllowed: if the channel is already open
+        :raise InvalidOperation: if the channel is already open
         """
-        from aiida.common.exceptions import ModificationNotAllowed
+        from aiida.common.exceptions import InvalidOperation
         
         if not self._is_open:
-            raise ModificationNotAllowed("Cannot close the transport: "
+            raise InvalidOperation("Cannot close the transport: "
                                          "it is already closed")
 
         self._sftp.close()

@@ -44,6 +44,7 @@ class Devel(VerdiCommandWithSubcommands):
             'delproperty': (self.run_delproperty, self.complete_properties),
             'describeproperties': (self.run_describeproperties, self.complete_none),
             'listproperties': (self.run_listproperties, self.complete_none),
+            'play': (self.run_play, self.complete_none),
             }
         
         # The content of the dict is:
@@ -557,7 +558,13 @@ class Devel(VerdiCommandWithSubcommands):
                 print "  `-> {} = {}".format(p, v)
         
 
-
+    def run_play(self, *args):
+        """
+        Open a browser and play the Aida triumphal march by Giuseppe Verdi
+        """
+        import webbrowser
+        
+        webbrowser.open_new('http://upload.wikimedia.org/wikipedia/commons/3/32/Triumphal_March_from_Aida.ogg')
 
 #In [11]: attr_res = DbAttribute.objects.filter(Q(key='cell.atoms'), ~Q(ival__gt=7))
 #

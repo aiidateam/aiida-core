@@ -38,8 +38,8 @@ class Code(Node):
     def __str__(self):
         local_str = "Local" if self.is_local() else "Remote"
         
-        return "{} code '{}' on {}".format(local_str, self.label,
-                                           self.computer.name)
+        return "{} code '{}' on {}, pk={}, uuid={}".format(local_str, self.label,
+                                           self.computer.name, self.pk, self.uuid)
 
     @classmethod
     def get(cls,label):

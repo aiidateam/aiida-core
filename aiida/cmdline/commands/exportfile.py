@@ -500,15 +500,20 @@ class Export(VerdiCommand):
         
         if parsed_args.groups is not None:
             for group_name in parsed_args.groups:
-                name, _, typestr = group_name.partition(':')                
-                try:
-                    internal_type_string = get_group_type_mapping()[typestr]
-                except KeyError:
-                    print >> sys.stderr, "Invalid group type. Valid group types are:"
-                    print >> sys.stderr, ",".join(sorted(
-                        get_group_type_mapping().keys()))
-                    sys.exit(1)
-
+                name, sep, typestr = group_name.rpartition(':')
+                if not sep:
+                    name = typestr
+                    typestr = ""
+                if typestr:
+                    try:
+                        internal_type_string = get_group_type_mapping()[typestr]
+                    except KeyError:
+                        print >> sys.stderr, "Invalid group type '{}'. Valid group types are:".format(typestr)
+                        print >> sys.stderr, ",".join(sorted(
+                                get_group_type_mapping().keys()))
+                        sys.exit(1)
+                else:
+                    internal_type_string=""
                 
                 try:
                     group = Group.get(name=name,

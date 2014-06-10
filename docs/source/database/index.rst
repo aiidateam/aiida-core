@@ -57,11 +57,7 @@ are three supported database backends:
     dictionaries/lists. These cannot be natively stored and therefore you 
     either end up storing a JSON (therefore partially losing query capability)
     or you can even incur in problems.
- 
-  * The generation of the transitive closure table is not yet supported by
-    us, therefore you lose some very useful functionality (moreover since
-    some features -- as the export feature -- rely on a valid transitive
-    closure table, you may experience problems also with such features).
+
 
 .. _SQLite: http://www.sqlite.org/
 .. _PostgreSQL: http://www.postgresql.org/

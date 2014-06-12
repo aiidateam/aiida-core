@@ -307,10 +307,15 @@ class PhCalculation(Calculation):
         from which it will inherit the outputsubfolder.
         The link will be created from parent RemoteData to PhCalculation 
         """
+        from aiida.common.exceptions import NotExistent
+        
         if not isinstance(calc,PwCalculation):
             raise ValueError("Parent calculation must be a PwCalculation")
         
         remotedatas = calc.get_outputs(type=RemoteData)
+        if not remotedatas:
+            raise NotExistent("No output remotedata found in "
+                                  "the parent")
         if len(remotedatas) != 1:
             raise UniquenessError("More than one output remotedata found in "
                                   "the parent")

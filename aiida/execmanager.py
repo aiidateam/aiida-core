@@ -583,10 +583,10 @@ def submit_calc(calc, authinfo, transport=None):
                                       "calculation {}".format(calc.pk))
                             
             remotedata = RemoteData(computer = computer, 
-                    remote_path = workdir).store()
-
-            calc._add_link_to(remotedata, label='remote_folder')
-
+                    remote_path = workdir)
+            remotedata._add_link_from(calc, label='remote_folder')
+            remotedata.store()
+            
             job_id = s.submit_from_script(t.getcwd(),script_filename)
             calc._set_job_id(job_id)
             # This should always be possible, because we should be
@@ -629,6 +629,8 @@ def retrieve_computed_for_authinfo(authinfo):
     from aiida.common.folders import SandboxFolder
     from aiida.orm.data.folder import FolderData
     from aiida.djsite.utils import get_dblogger_extra
+    from aiida.orm import DataFactory
+    from aiida.orm.data.singlefile import SinglefileData
 
     import os
     
@@ -664,13 +666,17 @@ def retrieve_computed_for_authinfo(authinfo):
                                      extra=logger_extra)
                     workdir = calc.get_remote_workdir()
                     retrieve_list = calc.get_retrieve_list()
+                    retrieve_singlefile_list=calc.get_retrieve_singlefile_list()
                     execlogger.debug("[retrieval of calc {}] "
                                      "chdir {}".format(calc.pk, workdir),
                                      extra=logger_extra)
                     t.chdir(workdir)
 
                     retrieved_files = FolderData()
+                    retrieved_files._add_link_from(calc,
+                                            label=calc.get_linkname_retrieved())
 
+                    # First, retrieve the files of folderdata
                     with SandboxFolder() as folder:
                         for item in retrieve_list:
                             execlogger.debug("[retrieval of calc {}] "
@@ -684,14 +690,47 @@ def retrieve_computed_for_authinfo(authinfo):
                         # now I store them inside the calculation
                         retrieved_files.replace_with_folder(folder.abspath,
                                                             overwrite=True)
+                        
+                    # Second, retrieve the singlefiles
+                    with SandboxFolder() as folder:
+                        singlefile_list = []
+                        for (linkname,subclassname,filename) in retrieve_singlefile_list:
+                            execlogger.debug("[retrieval of calc {}] Trying "
+                                "to retrieve remote singlefile '{}'".format(
+                                calc.pk, filename),
+                                extra=logger_extra)
+                            localfilename = os.path.join(
+                                          folder.abspath,os.path.split(item)[1])
+                            t.get(filename, localfilename,
+                                ignore_nonexisting=True)
+                            singlefile_list.append((linkname,subclassname,
+                                                    localfilename))
+                        
+                        # ignore files that have not been retrieved
+                        singlefile_list = [ i for i in singlefile_list if 
+                                           os.path.exists(i[2]) ]
+                        
+                        #after retrieving from the cluster, I create the objects
+                        singlefiles = []
+                        for (linkname,subclassname,filename) in singlefile_list:
+                            SinglefileSubclass = DataFactory(subclassname)
+                            singlefile = SinglefileSubclass()
+                            singlefile.set_file(filename)
+                            singlefile._add_link_from(calc,label=linkname) 
+                            singlefiles.append(singlefile)
 
+                    # Finally, store
                     execlogger.debug("[retrieval of calc {}] "
                                      "Storing retrieved_files={}".format(
                         calc.pk, retrieved_files.dbnode.pk),
                                      extra=logger_extra)
                     retrieved_files.store()
-                    calc._add_link_to(retrieved_files,
-                                      label=calc.get_linkname_retrieved())
+                    for fil in singlefiles:
+                        execlogger.debug("[retrieval of calc {}] "
+                                     "Storing retrieved_singlefile={}".format(
+                                     calc.pk, fil.dbnode.pk),
+                                     extra=logger_extra)
+                        fil.store()
 
                     # If I was the one retrieving, I should also be the only
                     # one parsing! I do not check

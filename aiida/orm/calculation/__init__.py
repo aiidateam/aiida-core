@@ -18,7 +18,8 @@ class Calculation(Node):
     """
     _updatable_attributes = ('state', 'job_id', 'scheduler_state',
                              'scheduler_lastchecktime',
-                             'last_jobinfo', 'remote_workdir', 'retrieve_list')
+                             'last_jobinfo', 'remote_workdir', 'retrieve_list',
+                             'retrieve_singlefile_list')
     
     # By default, no output parser
     _default_parser = None
@@ -864,6 +865,38 @@ class Calculation(Node):
         """
         return self.get_attr('retrieve_list', None)
 
+    def _set_retrieve_singlefile_list(self,retrieve_singlefile_list):
+        """
+        Set the list of information for the retrieval of singlefiles 
+        """
+        if self.get_state() not in (calc_states.SUBMITTING,
+                                    calc_states.NEW):
+            raise ModificationNotAllowed(
+                "Cannot set the retrieve_singlefile_list for a calculation "
+                "that is neither NEW nor SUBMITTING (current state is "
+                "{})".format(self.get_state()))
+
+        if not isinstance(retrieve_singlefile_list,(tuple,list)):
+            raise ValueError("You have to pass a list (or tuple) of lists of "
+                             "strings as retrieve_singlefile_list")
+        for j in retrieve_singlefile_list:
+            if (not(isinstance(j,(tuple,list))) or
+                        not(all(isinstance(i,basestring) for i in j))):
+                raise ValueError("You have to pass a list (or tuple) of lists "
+                                 "of strings as retrieve_singlefile_list")
+        self.set_attr('retrieve_singlefile_list', retrieve_singlefile_list)
+    
+    def get_retrieve_singlefile_list(self):
+        """
+        Get the list of files to be retrieved from the cluster and stored as 
+        SinglefileData's (or subclasses of it).
+        Their path is relative to the remote workdirectory path.
+        
+        :return: a list of lists of strings for 1) linknames, 
+                 2) Singlefile subclass name 3) file names
+        """
+        return self.get_attr('retrieve_singlefile_list', None)
+    
     def _set_job_id(self, job_id):
         """
         Always set as a string
@@ -1343,7 +1376,8 @@ class Calculation(Node):
         from aiida.scheduler.datastructures import JobTemplate
         from aiida.common.utils import validate_list_of_string_tuples
         from aiida.orm import Computer
-
+        from aiida.orm import DataFactory
+        
         computer = self.get_computer()
 
         code = self.get_code()
@@ -1389,6 +1423,20 @@ class Calculation(Node):
             job_tmpl.sched_error_path not in retrieve_list):
                 retrieve_list.append(job_tmpl.sched_error_path)
         self._set_retrieve_list(retrieve_list)
+        
+        retrieve_singlefile_list = (calcinfo.retrieve_singlefile_list
+                                    if calcinfo.retrieve_singlefile_list is not None
+                                    else [])
+        # a validation on the subclasses of retrieve_singlefile_list
+        SinglefileData = DataFactory('singlefile')
+        for _,subclassname,_ in retrieve_singlefile_list:
+            FileSubclass = DataFactory(subclassname)
+            if not issubclass(FileSubclass,SinglefileData):
+                raise PluginInternalError("[presubmission of calc {}] "
+                                "retrieve_singlefile_list subclass problem: "
+                                "{} is not subclass of SinglefileData".format(
+                                self.pk, FileSubclass.__name__))
+        self._set_retrieve_singlefile_list(retrieve_singlefile_list)
 
         # the if is done so that if the method returns None, this is 
         # not added. This has two advantages:
@@ -1693,6 +1741,16 @@ class Calculation(Node):
         
         return errfile_content
 
+    @property
+    def files(self):
+        """
+        To be used to get direct access to the retrieved files.
+        
+        :return: an instance of the CalculationFileManager.
+        """
+        return CalculationFileManager(self)
+
+
 class CalculationResultManager(object):
     """
     An object used internally to interface the calculation object with the Parser 
@@ -1758,4 +1816,41 @@ class CalculationResultManager(object):
         except AttributeError:
             raise KeyError("Parser '{}' did not provide a result '{}'"
                            .format(self._parser.__class__.__name__, name))
+
+
+
+class CalculationFileManager(object):
+    """
+    An object used internally to interface the calculation with the FolderData 
+    object result. 
+    It shouldn't be used explicitely by a user, but accessed through calc.files.
+    """
+    def __init__(self, calc):
+        """
+        :param calc: the calculation object.
+        """
+        # Possibly add checks here
+        self._calc = calc
+        
+    def _get_folder(self):
+        from aiida.orm.data.folder import FolderData
+        from aiida.common.exceptions import NotExistent, UniquenessError
+        folders = self._calc.get_outputs(type=FolderData)
+        if not folders:
+            raise NotExistent("No output FolderData found")
+        try:
+            folders[1]
+        except IndexError:
+            pass
+        else:
+            raise UniquenessError("More than one output folder found")
+        return folders[0]
+    
+    def path(self,name):
+        folder = self._get_folder()
+        return folder.get_abs_path(name)
+    
+    def list(self,name='.'):
+        folder = self._get_folder()
+        return folder.get_path_list(name)
 

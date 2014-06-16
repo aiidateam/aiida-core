@@ -13,12 +13,19 @@ class Q2rCalculation(NamelistsCalculation):
     _default_namelists = ['INPUT']   
     _default_parent_output_folder = os.path.join('.',
                             PhCalculation.FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX)
-    _internal_retrieve_list = [FORCE_CONSTANTS_NAME]
+    #_internal_retrieve_list = [FORCE_CONSTANTS_NAME]
     _blocked_keywords = [('INPUT','fildyn',PhCalculation.OUTPUT_DYNAMICAL_MATRIX_PREFIX),
                          ('INPUT','flfrc',FORCE_CONSTANTS_NAME),
                         ]
     _parent_folder_type = FolderData
     OUTPUT_SUBFOLDER = PhCalculation.FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX
+    
+    _linkname_forces = 'force_constants'
+    
+    _retrieve_singlefile_list = [[_linkname_forces,'singlefile',FORCE_CONSTANTS_NAME]]
+    
+    # Default PW output parser provided by AiiDA
+    _default_parser = 'quantumespresso.q2r'
     
     def set_parent_calc(self,calc):
         """
@@ -41,26 +48,12 @@ class Q2rCalculation(NamelistsCalculation):
         
         self.use_parent_folder(localdata)
 
-    def export_force_constants(self,abs_path,overwrite=False):
+    @classmethod
+    def get_linkname_force_matrix(self):
         """
-        Export the file of force constants in real space,
-        :param abs_path: absolute path to the folder where the force 
-               constants will be copied
-        """ 
-        import shutil
-        from aiida.common.exceptions import UniquenessError,NotExistent
-        
-        if not os.path.isabs(abs_path):
-            raise ValueError("Input path must be the local absolute path")
-        elif os.path.isfile(abs_path) and not overwrite:
-            raise IOError("Output file is already existing, by default can't be"
-                          " overwritten")
-        else:
-            folders = self.get_outputs(type=FolderData)
-            if not folders:
-                raise NotExistent("No output FolderData found.")
-            if len(folders)>1:
-                raise UniquenessError("More than one output FolderData found.")
-            folder = folders[0]
-            src = folder.get_abs_path(self.FORCE_CONSTANTS_NAME)
-            shutil.copy(src,abs_path)        
+        Return the name of the link between Q2rCalculation and the output 
+        force constants produced
+        """
+        return self._linkname_forces
+    
+    

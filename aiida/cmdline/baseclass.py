@@ -207,21 +207,22 @@ class VerdiCommandWithSubcommands(VerdiCommand):
             print >> sys.stderr, "\n".join("  {}".format(sc) 
                                            for sc in self.valid_subcommands)
         else:
-            print >> sys.stderr, ("There are no valid subcommand to "
-                                  "{}.".format(self.get_full_command_name()))
+            print >> sys.stderr, ("There are no valid subcommands to "
+                                  "'{}'.".format(self.get_full_command_name()))
         sys.exit(1)
 
     def invalid_subcommand(self,*args):
         import sys
         
         if self.valid_subcommands:
-            print >> sys.stderr, ("You passed an invalid subcommand to 'upf'.\n"
-                                  "Valid subcommands are:")
+            print >> sys.stderr, ("You passed an invalid subcommand to '{}'.\n"
+                                  "Valid subcommands are:".format(
+                                    self.get_full_command_name()))
             print >> sys.stderr, "\n".join("  {}".format(sc) 
                                            for sc in self.valid_subcommands)
         else:
-            print >> sys.stderr, ("There are no valid subcommand to "
-                                  "{}.".format(self.get_full_command_name()))
+            print >> sys.stderr, ("There are no valid subcommands to "
+                                  "'{}'.".format(self.get_full_command_name()))
 
         sys.exit(1)
 

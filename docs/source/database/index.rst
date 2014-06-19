@@ -81,6 +81,15 @@ no file exists yet in that position, a fresh AiiDA database will be created).
 
 PostgreSQL
 ----------
+To work with PostgreSQL, you first need to install a couple of more
+libraries, i.e. the python packages::
+
+  pip install amqp six anyjson ecdsa
+
+and install the package::
+
+  apt-get install libqp-dev
+
 To use properly configure a new database for AiiDA with MySQL, you need to
 create a new ``aiida`` user and a new ``aiidadb`` table.
 

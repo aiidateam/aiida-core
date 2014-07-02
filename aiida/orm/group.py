@@ -434,9 +434,9 @@ class Group(object):
     
     def __str__(self):
         if self.type_string:
-            return '"{}" [type {}], of user {}>'.format(
+            return '"{}" [type {}], of user {}'.format(
                 self.name, self.type_string, self.user.email)
         else:
-            return '"{}" [user-defined], of user {}>'.format(
+            return '"{}" [user-defined], of user {}'.format(
                 self.name, self.user.email)
     

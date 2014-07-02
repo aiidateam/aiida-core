@@ -81,22 +81,17 @@ no file exists yet in that position, a fresh AiiDA database will be created).
 
 PostgreSQL
 ----------
-To work with PostgreSQL, you first need to install a couple of more
-libraries, i.e. the python packages::
+.. note:: We assume here that you already installed PostgreSQL on your computer and that 
+  you know the password for the ``postgres`` user
+  (there are many tutorials online that explain how to do it,
+  depending on your operating system and distribution).
+  To install PostgreSQL under Ubuntu, you can do::
 
-  pip install amqp six anyjson ecdsa
-
-and install the package::
-
-  apt-get install libqp-dev
-
-To use properly configure a new database for AiiDA with MySQL, you need to
+    sudo apt-get install postgresql-9.1
+    sudo apt-get install postgresql-client-9.1
+    
+To properly configure a new database for AiiDA with PostgreSQL, you need to
 create a new ``aiida`` user and a new ``aiidadb`` table.
-
-We assume here that you already installed PostgreSQL on your computer and that 
-you know the password for the ``postgres`` user
-(there are many tutorials online that explain how to do it,
-depending on your operating system and distribution).
 
 To create the new ``aiida`` user and the ``aiidadb`` database, first 
 become the UNIX ``postgres`` user, typing as root::
@@ -110,7 +105,7 @@ modality to create users::
 
   psql template1
 
-To create a new aiida user for postgres, typing in the ``psql`` shell:: 
+To create a new aiida user for postgres, type in the ``psql`` shell:: 
 
   CREATE USER aiida WITH PASSWORD 'the_aiida_password';
 
@@ -129,9 +124,9 @@ and grant all privileges on this DB to the previously-created ``aiida`` user::
 
   GRANT ALL PRIVILEGES ON DATABASE aiidadb to aiida;
 
-Finally, type ``\q`` to quit the shell. 
+Finally, type ``\q`` to quit the ``template1`` shell, and ``exit`` to exit the PostgreSQL shell. 
 
-To test if this worked, and type this on a bash terminal (as a normal user)::
+To test if this worked, type this on a bash terminal (as a normal user)::
 
   psql -h localhost -d aiidadb -U aiida -W
 

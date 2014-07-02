@@ -29,20 +29,17 @@ or::
   which nc
 
 will return the absolute path to the executable).
-If this is not
-the case, download the ``netcat`` source code from `here
-<http://netcat.sourceforge.net/>`_. Then, unpack the tar.gz (or tar.bz2)
-file in a folder on computer A, ``cd`` into the folder and execute::
 
+If this is not the case, you will need to install it on your own.
+Typically, it will be sufficient to look for a netcat distribution on
+the web, unzip the downloaded package, ``cd`` into the folder and
+execute something like::
   ./configure --prefix=.
   make
   make install
-
-This will create a subdirectory ``bin``, containing the ``netcat`` and
-``nc`` executables.
-
-In any case, write down the full path to ``nc``, that we will
-need later.
+This usually creates a subfolder ``bin``, containing the ``netcat``
+and ``nc`` executables.
+Write down the full path to ``nc`` that we will need later.
 
 
 ssh/config
@@ -75,6 +72,25 @@ Once you add this lines and save the file, try to execute::
   ssh FULLHOSTNAME_B
 
 which should allow you to directly connect to ``B``.
+
+
+WARNING
++++++++
+
+There are several versions of netcat available on the web.
+We found at least one case in which the executable wasn't working
+properly.
+At the end of the connection, the ``netcat`` executable might still be
+running: as a result, you may rapidly
+leave the cluster with hundreds of opened ``ssh`` connections, one for
+every time you connect to the cluster ``B``.
+Therefore, check on both computers ``A`` and ``B`` that the number of
+processes ``netcat`` and ``ssh`` are disappearing if you close the
+connection.
+To check if such processes are running, you can execute::
+  ps -aux | grep <username>
+Remember that a cluster might have more than one login node, and the ``ssh``
+connection will randomly connect to any of them.
 
 
 AiiDA config

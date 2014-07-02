@@ -86,6 +86,10 @@ class Calculation(VerdiCommandWithSubcommands):
                             dest='all_users',action='store_true',
                             help="Show calculations for all users, rather than only for the current user")
         parser.set_defaults(all_users=False)
+        parser.add_argument('-t', '--absolute-time',
+                            dest='relative_ctime',action='store_false',
+                            help="Print the absolute creation time, rather than the relative creation time")
+        parser.set_defaults(relative_ctime=True)
         
         args = list(args)
         parsed_args = parser.parse_args(args)
@@ -100,7 +104,8 @@ class Calculation(VerdiCommandWithSubcommands):
                                      past_days=parsed_args.past_days, 
                                      pks=parsed_args.pks,
                                      all_users=parsed_args.all_users,
-                                     group=parsed_args.group) 
+                                     group=parsed_args.group,
+                                     relative_ctime=parsed_args.relative_ctime) 
     
     def calculation_show(self, *args):
         from aiida.common.exceptions import NotExistent

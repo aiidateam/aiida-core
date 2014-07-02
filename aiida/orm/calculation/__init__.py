@@ -966,7 +966,7 @@ class Calculation(Node):
     
     @classmethod
     def list_calculations(cls,states=None, past_days=None, group=None, 
-                            all_users=False, pks=[]):
+                            all_users=False, pks=[], relative_ctime=True):
         """
         This function return a string with a description of the AiiDA calculations.
 
@@ -984,6 +984,10 @@ class Calculation(Node):
             within that list are shown. Otherwise, all calculations are shown.
             If specified, sets state to None and ignores the 
             value of the ``past_days`` option.")
+        :param relative_ctime: if true, prints the creation time relative from now.
+                               (like 2days ago). Default = True
+        :param all_users: if True, list calculation belonging to all users.
+                           Default = False
         
         :return: a string with description of calculations.
         """
@@ -1060,11 +1064,14 @@ class Calculation(Node):
         if not calc_list:
             return last_check_string
         else:
-            fmt_string = '{:<10} {:<17} {:>12} {:<10} {:<22} {:<15} {:<15}'
+            # first save a matrix of results to be printed
             res_str_list = [last_check_string]
-            res_str_list.append(fmt_string.format(
-                    'Pk','State','Creation','Time',
-                    'Scheduler state','Computer','Type'))
+            str_matrix = []
+            title = ['Pk','State','Creation time',
+                     'Scheduler state','Computer','Type']
+            str_matrix.append(title)
+            len_title = [len(i) for i in title]
+            
             for calcdata in calc_list_data:
                 remote_state = "None"
                 
@@ -1090,16 +1097,34 @@ class Calculation(Node):
                                                        sched_state, when_string)
                 except ValueError:
                     raise
+
+                calc_module = from_type_to_pluginclassname(calcdata['type']).rsplit(".",1)[0]
+                if calc_module.startswith('calculation.'):
+                    calc_module = calc_module[12:]
                 
-                res_str_list.append(fmt_string.format( calcdata['pk'],
-                    states[calcdata['pk']],
-                    timezone.localtime(calcdata['ctime']).isoformat().split('T')[0],
-                    timezone.localtime(calcdata['ctime']).isoformat().split('T')[1].split('.')[0],
-                    remote_state,
-                    remote_computer,
-                    str(from_type_to_pluginclassname(
-                        calcdata['type']).split('.')[-1]),
-                    ))
+                if relative_ctime:
+                    calc_ctime = str_timedelta(now-calcdata['ctime'], negative_to_zero=True)
+                else:
+                    calc_ctime = " ".join([timezone.localtime(calcdata['ctime']).isoformat().split('T')[0],
+                            timezone.localtime(calcdata['ctime']).isoformat().split('T')[1].split('.')[0].rsplit(":",1)[0]])
+                            
+                str_matrix.append([calcdata['pk'],
+                            states[calcdata['pk']],
+                            calc_ctime,
+                            remote_state,
+                            remote_computer,
+                            calc_module
+                            ])
+
+            # prepare a formatted text of minimal row length (to fit in terminals!)
+            rows = []
+            for j in range(len(str_matrix[0])):
+                rows.append( [ len(str(i[j])) for i in str_matrix ] )
+            line_lengths = [ str(max(max(rows[i]),len_title[i])) for i in range(len(rows)) ]
+            fmt_string = "{:<" + "}|{:<".join(line_lengths) + "}"
+            for row in str_matrix:
+                res_str_list.append( fmt_string.format(*[str(i) for i in row]) )
+
             return "\n".join(res_str_list)
 
     @classmethod

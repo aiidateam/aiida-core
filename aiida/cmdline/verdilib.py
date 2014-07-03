@@ -70,19 +70,34 @@ class CompletionCommand(VerdiCommand):
           and then, no substitution is suggested.
         """
 
-        print """
+        print r"""
 function _aiida_verdi_completion
 {
     OUTPUT=$( $1 completion "$COMP_CWORD" "${COMP_WORDS[@]}" ; echo 'x')
     OUTPUT=${OUTPUT%x}
     if [ -z "$OUTPUT" ]
     then
+    # Only newline is a valid separator
+        local IFS=$'\n'
+
         COMPREPLY=( $(compgen -o default -- "${COMP_WORDS[COMP_CWORD]}" ) )
+    # Add either a slash or a space, depending on whether it is a folder
+    # or a file. printf %q escapes the filename if there are spaces.
+        for ((i=0; i < ${#COMPREPLY[@]}; i++)); do
+            [ -d "${COMPREPLY[$i]}" ] && \
+               COMPREPLY[$i]=$(printf %q%s "${COMPREPLY[$i]}" "/") || \
+               COMPREPLY[$i]=$(printf %q%s "${COMPREPLY[$i]}" " ")
+        done
+
     else
         COMPREPLY=( $(compgen -W "$OUTPUT" -- "${COMP_WORDS[COMP_CWORD]}" ) )
+        # Always add a space after each command
+        for ((i=0; i < ${#COMPREPLY[@]}; i++)); do
+            COMPREPLY[$i]="${COMPREPLY[$i]} "
+        done    
     fi
 }
-complete -F _aiida_verdi_completion verdi
+complete -o nospace -F _aiida_verdi_completion verdi
 """
 
     def complete(self, subargs_idx, subargs):
@@ -249,6 +264,13 @@ class Install(VerdiCommand):
             User().user_configure(email)        
         
         print "Install finished."
+
+    def complete(self, subargs_idx, subargs):
+        """
+        No completion after 'verdi install'.
+        """
+        print "" 
+
     
 #class SyncDB(VerdiCommand):
 #    """

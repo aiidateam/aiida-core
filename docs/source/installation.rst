@@ -94,7 +94,7 @@ names may change in different releases)::
   postgresql server that you installed (in this case, to install the server of
   the same version, use the ``sudo apt-get install postgresql-9.1`` command).
   
-  If you want to use postgreSQL, use a version greated than 9.1
+  If you want to use postgreSQL, use a version greater than 9.1
   (the greatest that your distribution supports).
 
 Downloading the code
@@ -132,6 +132,14 @@ Then, install the python dependencies is as simple as this::
 the packages as a normal user, without the need of using ``sudo`` or
 becoming root). Check that every package is installed correctly.
 
+.. note:: if the ``pip install`` command gives you this kind of error message::
+
+    OSError: [Errno 13] Permission denied: '/usr/local/bin/easy_install'
+
+  then try again as root::
+    
+    sudo pip install -U -r requirements.txt
+
 If everything went smoothly, congratulations! Now the code is installed!
 However, we need still a few steps to properly configure AiiDA for your user.
 
@@ -145,6 +153,11 @@ However, we need still a few steps to properly configure AiiDA for your user.
 
 	sudo easy_install pip==1.2.1
 
+.. note:: Several users reported the need to install also ``libqp-dev``::
+
+    apt-get install libqp-dev
+    
+  But under Ubuntu 12.04 this is not needed.
 
 AiiDA configuration
 +++++++++++++++++++
@@ -288,9 +301,24 @@ the calculations to you.
     field empty, no password will be set and no access will be granted to the
     user via the REST API and the web interface.
 
-Then, the following prompts will help you configure the database.
+Then, the following prompts will help you configure the database. Typical settings are::
 
-.. note:: Whe the "Database engine" is asked, use 'sqlite' **only if** you want
+	Insert your timezone: Europe/Zurich
+	Default user email: richard.wagner@leipzig.de
+	Database engine: sqlite3
+	AiiDA Database location: /home/wagner/.aiida/aiida.db
+	AiiDA repository directory: /home/wagner/.aiida/repository/
+	[...]
+	Configuring a new user with email 'richard.wagner@leipzig.de'
+	First name: Richard
+	Last name: Wagner
+	Institution: BRUHL, LEIPZIG
+	The user has no password, do you want to set one? [y/N] y
+	Insert the new password:
+	Insert the new password (again):
+
+
+.. note:: When the "Database engine" is asked, use 'sqlite3' **only if** you want
   to try out AiiDA without setting up a database.
   
   **However, keep in mind that for serious use, SQLite has serious
@@ -302,7 +330,9 @@ Then, the following prompts will help you configure the database.
   **Therefore, for production use of AiiDA, we strongly suggest to setup a
   "real" database** as PostgreSQL or MySQL. Then, in the "Database engine"
   field, type either 'postgres' or 'mysql' according to the database you 
-  chose to use.
+  chose to use. See :doc:`here<database/index>` for the documentation
+  to setup such databases (including info on how to proceed with ``verdi install``
+  in this case). 
 
 At the end, AiiDA will also ask to configure your user, if you set up a user
 different from ``aiida@localhost``.

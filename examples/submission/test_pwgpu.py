@@ -114,11 +114,11 @@ parameters = ParameterData(dict={
                 'wf_collect': True,
                 },
             'SYSTEM': {
-                'ecutwfc': 30.,
-                'ecutrho': 240.,
+                'ecutwfc': 40.,
+                'ecutrho': 320.,
                 },
             'ELECTRONS': {
-                'conv_thr': 1.e-6,
+                'conv_thr': 1.e-10,
                 }})
                 
 kpoints = ParameterData(dict={
@@ -137,8 +137,8 @@ calc.set_custom_scheduler_commands("#SBATCH --account=ch3")
 
 num_machines = 2
 # num_pools can be None
-#num_pools = None
-num_pools = 2
+num_pools = None
+#num_pools = 2
 
 mpis_per_machine = 1
 

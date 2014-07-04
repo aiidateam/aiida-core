@@ -352,8 +352,43 @@ class TestNodeBasic(AiidaTestCase):
             # I get a non-existing attribute
             a.get_attr('nonexisting')
 
+    def DISABLED(self):
+        """
+        This test routine is disabled for the time being; I will re-enable
+        when I have time to implement the check of the length of the 'key'.
+        """
+        def test_very_deep_attributes(self):
+            """
+            Test attributes where the total length of the key, including the
+            separators, would be longer than the field length in the DB.
+            """
+            from aiida.djsite.db import models
+            
+            n = Node()
+            
+            semi_long_string = "abcdefghijklmnopqrstuvwxyz"
+            value = "some value"
+            
+            attribute = {semi_long_string: value}
+            key_len = len(semi_long_string)
+            
+            max_len = models.DbAttribute._meta.get_field_by_name('key')[0].max_length
+            
+            while key_len < 2 * max_len:
+                # Create a deep, recursive attribute
+                attribute = {semi_long_string: attribute}
+                key_len += len(semi_long_string) + len(models.DbAttribute._sep)
+            
+            n.set_attr(semi_long_string, attribute)
+            
+            n.store()
+            
+            all_keys = models.DbAttribute.objects.filter(
+                dbnode=n.dbnode).values_list('key', flat=True)
+            
+            print max(len(i) for i in all_keys)
+
     def test_datetime_attribute(self):
-        import datetime
         from django.utils.timezone import (
             get_current_timezone, is_naive, make_aware, now)
 
@@ -796,8 +831,9 @@ class TestNodeBasic(AiidaTestCase):
         from aiida.djsite.db import models
         from django.db import IntegrityError, transaction
         
-        s1 = models.DbSetting(key='pippo')
-        s1.setvalue([1,2,3]) # This will also store
+        models.DbSetting.set_value(key='pippo', value=[1,2,3]) 
+        
+        s1 = models.DbSetting.objects.get(key='pippo')
         
         self.assertEqual(s1.getvalue(), [1,2,3])
         
@@ -809,6 +845,31 @@ class TestNodeBasic(AiidaTestCase):
             s2.save()
         transaction.savepoint_rollback(sid)
         
+        # Should replace pippo
+        models.DbSetting.set_value(key='pippo', value="a") 
+        s1 = models.DbSetting.objects.get(key='pippo')
+        
+        self.assertEqual(s1.getvalue(), "a")
+    
+    def test_settings_methods(self):
+        from aiida.common.globalsettings import (
+            get_global_setting_description, get_global_setting,
+            set_global_setting, del_global_setting)
+        
+        set_global_setting(key="aaa", value={'b': 'c'}, description="pippo")
+        
+        self.assertEqual(get_global_setting('aaa'), {'b': 'c'})
+        self.assertEqual(get_global_setting_description('aaa'), "pippo")
+        self.assertEqual(get_global_setting('aaa.b'), 'c')
+        self.assertEqual(get_global_setting_description('aaa.b'), "")
+    
+        del_global_setting('aaa')
+        
+        with self.assertRaises(KeyError):
+            get_global_setting('aaa.b')
+
+        with self.assertRaises(KeyError):
+            get_global_setting('aaa')
         
     def test_attr_listing(self):
         """

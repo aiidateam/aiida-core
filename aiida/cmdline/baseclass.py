@@ -187,14 +187,14 @@ class VerdiCommandWithSubcommands(VerdiCommand):
             except KeyError:
                 print ""
                 return
-            complete_data = complete_function()
+            complete_data = complete_function(subargs_idx - 1, subargs[1:])
             if complete_data is not None:
                 print complete_data
 
-    def complete_none(self):
+    def complete_none(self, subargs_idx, subargs):
         return ""
 
-    def complete_auto(self):
+    def complete_auto(self, subargs_idx, subargs):
         return None
         
     def no_subcommand(self,*args):
@@ -207,21 +207,22 @@ class VerdiCommandWithSubcommands(VerdiCommand):
             print >> sys.stderr, "\n".join("  {}".format(sc) 
                                            for sc in self.valid_subcommands)
         else:
-            print >> sys.stderr, ("There are no valid subcommand to "
-                                  "{}.".format(self.get_full_command_name()))
+            print >> sys.stderr, ("There are no valid subcommands to "
+                                  "'{}'.".format(self.get_full_command_name()))
         sys.exit(1)
 
     def invalid_subcommand(self,*args):
         import sys
         
         if self.valid_subcommands:
-            print >> sys.stderr, ("You passed an invalid subcommand to 'upf'.\n"
-                                  "Valid subcommands are:")
+            print >> sys.stderr, ("You passed an invalid subcommand to '{}'.\n"
+                                  "Valid subcommands are:".format(
+                                    self.get_full_command_name()))
             print >> sys.stderr, "\n".join("  {}".format(sc) 
                                            for sc in self.valid_subcommands)
         else:
-            print >> sys.stderr, ("There are no valid subcommand to "
-                                  "{}.".format(self.get_full_command_name()))
+            print >> sys.stderr, ("There are no valid subcommands to "
+                                  "'{}'.".format(self.get_full_command_name()))
 
         sys.exit(1)
 

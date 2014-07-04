@@ -22,7 +22,7 @@ class Computer(VerdiCommandWithSubcommands):
             'delete': (self.computer_delete, self.complete_computers),
             }
         
-    def complete_computers(self):
+    def complete_computers(self, subargs_idx, subargs):
         computer_names = self.get_computer_names()
         return "\n".join(computer_names)
 

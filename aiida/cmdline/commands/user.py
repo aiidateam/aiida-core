@@ -22,7 +22,7 @@ class User(VerdiCommandWithSubcommands):
             'configure': (self.user_configure, self.complete_emails),
             'list': (self.user_list, self.complete_none),
             }
-    def complete_emails(self):
+    def complete_emails(self, subargs_idx, subargs):
         load_django()
         
         from aiida.djsite.db import models

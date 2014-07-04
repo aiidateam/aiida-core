@@ -7,6 +7,7 @@ class CalcState(Enumerate):
     pass
 
 _sorted_datastates = (
+        'NOTFOUND', # not found in the DB
         'NEW', # just created
         'TOSUBMIT', # used by the executionmanager to submit new calculations scheduled to be submitted
         'SUBMITTING', # being submitted to cluster
@@ -91,6 +92,11 @@ class CalcInfo(DefaultFieldsAttributeDict):
         'local_copy_list', # a list of length-two tuples with (localabspath, relativedestpath)
         'remote_copy_list', # a list of length-three tuples with (remotemachinename, remoteabspath, relativedestpath)
         'remote_symlink_list', # a list of length-three tuples with (remotemachinename, remoteabspath, relativedestpath)
+        'retrieve_singlefile_list', # a list of files, that will be retrieved 
+                            # from cluster and saved in SinglefileData nodes
+                            # in the following format:
+                            # ["linkname_from calc to singlefile","subclass of singlefile","filename"]
+                            # filename remote = filename local
         )
 
 

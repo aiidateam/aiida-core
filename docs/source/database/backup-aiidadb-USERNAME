@@ -1,0 +1,3 @@
+#/bin/bash
+su mounet -c "/home/USERNAME/.aiida/backup_postgresql.sh"
+

@@ -17,7 +17,9 @@ class ArrayData(Data):
       cache with the :py:meth:`.clear_internal_cache` method. 
     """
 
-    _cached_arrays = {}
+    def __init__(self,*args,**kwargs):
+        super(ArrayData, self).__init__(*args, **kwargs)
+        self._cached_arrays = {}
 
     def delete_array(self, name):
         """

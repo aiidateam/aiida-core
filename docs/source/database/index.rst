@@ -79,6 +79,8 @@ for the ``AiiDA Database location`` field, that will be the file that
 will store the full database (if 
 no file exists yet in that position, a fresh AiiDA database will be created).
 
+.. note:: Do not forget to backup your database (instructions :ref:`here<backup_sqlite>`).
+
 PostgreSQL
 ----------
 .. note:: We assume here that you already installed PostgreSQL on your computer and that 
@@ -144,6 +146,8 @@ you should use the following parameters::
   AiiDA Database user: aiida
   AiiDA Database password: the_aiida_password
 
+.. note:: Do not forget to backup your database (instructions :ref:`here<backup_postgresql>`).
+
 MySQL
 -----
 To use properly configure a new database for AiiDA with MySQL, you need to
@@ -204,3 +208,81 @@ you should use the following parameters::
   AiiDA Database user: aiida
   AiiDA Database password: the_aiida_passwd
   
+.. note:: Do not forget to backup your database (instructions :ref:`here<backup_mysql>`).
+
+How to backup the databases
++++++++++++++++++++++++++++
+
+It is strongly advised to backup the content of your database daily. Below are 
+instructions to set this up for the SQLite, PostgreSQL and MySQL databases.
+
+.. _backup_sqlite:
+
+SQLite backup
+-------------
+
+Simply make sure your database folder (typically /home/USERNAME/.aiida/ containing 
+the file ``aiida.db`` and the ``repository`` directory) is properly backed up by 
+your backup software (under Ubuntu, Backup -> check the "Folders" tab).
+
+.. _backup_postgresql:
+
+PostgreSQL backup
+-----------------
+
+The database files are not put in the .aiida folder but in the system directories
+which typically are not backed up. Moreover, the database is spread over lots of files
+that, if backed up as they are at a given time, cannot be re-used to restore the database.
+
+So you need to periodically (typically once a day) dump the database contents in a file
+that will be backed up. 
+This can be done by the following bash script
+:download:`backup_postgresql.sh<backup_postgresql.sh>`::
+
+	#!/bin/bash
+	AIIDAUSER=aiida
+	AIIDADB=aiidadb
+	AIIDAPORT=5432
+	## STORE THE PASSWORD, IN THE PROPER FORMAT, IN THE ~/.pgpass file
+	## see http://www.postgresql.org/docs/current/static/libpq-pgpass.html
+	AIIDALOCALTMPDUMPFILE=~/.aiida/${AIIDADB}-backup.psql.gz
+	
+	
+	if [ -e ${AIIDALOCALTMPDUMPFILE} ]
+	then
+	    mv ${AIIDALOCALTMPDUMPFILE} ${AIIDALOCALTMPDUMPFILE}~
+	fi
+	
+	# NOTE: password stored in ~/.pgpass, where pg_dump will read it automatically
+	pg_dump -h localhost -p $AIIDAPORT -U $AIIDAUSER $AIIDADB | gzip > $AIIDALOCALTMPDUMPFILE || rm $AIIDALOCALTMPDUMPFILE
+    
+
+Before launching the script you need to create the file ``~/.pgpass`` to avoid having to enter your database 
+password each time you use the script. It should look like (:download:`.pgpass<pgpass>`)::
+
+    localhost:5432:aiidadb:aiida:YOUR_DATABASE_PASSWORD
+
+where ``YOUR_DATABASE_PASSWORD`` is the password you set up for the database.
+
+.. note:: Do not forget to put this file in ~/ and to name it ``.pgpass``.
+
+To dump the database in a file automatically everyday, you can add the following script 
+:download:`backup-aiidadb-USERNAME<backup-aiidadb-USERNAME>` in ``/etc/cron.daily/``, which will
+launch the previous script once per day::
+
+    #/bin/bash
+    su USERNAME -c "/home/USERNAME/.aiida/backup_postgresql.sh"
+
+where all instances of ``USERNAME`` are replaced by your actual user name. The ``su USERNAME``
+makes the dumped file be owned by you rather than by ``root``.
+
+Finally make sure your database folder (/home/USERNAME/.aiida/) containing this dump file
+and the ``repository`` directory, is properly backed up by 
+your backup software (under Ubuntu, Backup -> check the "Folders" tab).
+
+.. _backup_mysql:
+
+MySQL backup
+------------
+
+.. todo:: Back-up instructions for the MySQL database.

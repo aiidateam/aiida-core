@@ -214,7 +214,8 @@ How to backup the databases
 +++++++++++++++++++++++++++
 
 It is strongly advised to backup the content of your database daily. Below are 
-instructions to set this up for the SQLite, PostgreSQL and MySQL databases.
+instructions to set this up for the SQLite, PostgreSQL and MySQL databases, under Ubuntu 
+(tested with version 12.04).
 
 .. _backup_sqlite:
 

@@ -33,6 +33,7 @@ class NamelistsCalculation(Calculation):
     _blocked_keywords = [] # a list of tuples with key and value fixed
     _parent_folder_type = 'RemoteData'
     _default_parser = None
+    _retrieve_singlefile_list = []
 
     @classproperty
     def _use_methods(cls):
@@ -182,7 +183,6 @@ class NamelistsCalculation(Calculation):
                 "{}".format(",".join(input_params.keys())))
         
         # copy remote output dir, if specified
-        print parent_calc_folder
         if parent_calc_folder is not None:
             if isinstance(parent_calc_folder,RemoteData):
                 parent_calc_out_subfolder = settings_dict.pop('parent_calc_out_subfolder',
@@ -213,6 +213,8 @@ class NamelistsCalculation(Calculation):
         settings_retrieve_list = settings_dict.pop('additional_retrieve_list', [])
         calcinfo.retrieve_list += settings_retrieve_list
         calcinfo.retrieve_list += self._internal_retrieve_list
+        
+        calcinfo.retrieve_singlefile_list = self._retrieve_singlefile_list
         
         if settings_dict:
             try:

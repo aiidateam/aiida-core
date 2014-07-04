@@ -12,13 +12,11 @@ def set_global_setting(key, value, description=None):
     
     # Before storing, validate the key
     DbSetting.validate_key(key)
+
+    # This also saves in the DB    
+    DbSetting.set_value(key, value,
+                        other_attribs = {"description": description})
     
-    setting, _ = DbSetting.objects.get_or_create(key=key)
-    if description is not None:
-        setting.description = description
-    
-    # This also saves
-    setting.setvalue(value)
 
 def del_global_setting(key):
     """
@@ -35,8 +33,8 @@ def del_global_setting(key):
     except ObjectDoesNotExist:
         raise KeyError("No global setting with key={}".format(key))
 
-    setting.delvalue()
-
+    # This does not raise exceptions
+    DbSetting.del_value(key=key)
 
 def get_global_setting(key):
     """

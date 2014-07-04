@@ -357,8 +357,13 @@ class SshTransport(aiida.transport.Transport):
         
         Also opens a sftp channel, ready to be used.
         The current working directory is set explicitly, so it is not None.
-        """
         
+        :raise InvalidOperation: if the channel is already open
+        """
+        from aiida.common.exceptions import InvalidOperation
+        
+        if self._is_open:
+            raise InvalidOperation("Cannot open the transport twice")
         # Open a SSHClient
         connection_arguments = self._connect_args
         proxystring = connection_arguments.pop('proxy_command', None)
@@ -389,8 +394,16 @@ class SshTransport(aiida.transport.Transport):
         """
         Close the SFTP channel, and the SSHClient.
         
-        TODO : correctly manage exceptions
+        :todo: correctly manage exceptions
+        
+        :raise InvalidOperation: if the channel is already open
         """
+        from aiida.common.exceptions import InvalidOperation
+        
+        if not self._is_open:
+            raise InvalidOperation("Cannot close the transport: "
+                                         "it is already closed")
+
         self._sftp.close()
         self._client.close()
         self._is_open = False
@@ -411,24 +424,25 @@ class SshTransport(aiida.transport.Transport):
                 "without opening the channel first")
         return self._sftp
 
-    def __unicode__(self):
+    def __str__(self):
         """
         Return a useful string.
         """
-        conn_info = unicode(self._machine)
+        conn_info = self._machine
         try:
-            conn_info = (unicode(self._connect_args['username']) + 
-                         u'@' + conn_info)
+            conn_info = "{}@{}".format(self._connect_args['username'],
+                                       conn_info)
         except KeyError:
             # No username explicitly defined: ignore
             pass
         try:
-            conn_info += u':{}'.format(self._connect_args['port'])
+            conn_info += ':{}'.format(self._connect_args['port'])
         except KeyError:
         # No port explicitly defined: ignore
             pass
             
-        return u'{}({})'.format(self.__class__.__name__, conn_info)
+        return "{} [{}]".format("OPEN" if self._is_open else "CLOSED",
+                                conn_info)
 
     def chdir(self, path):
         """

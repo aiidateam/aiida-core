@@ -87,12 +87,12 @@ class Transport(object):
         """
         raise NotImplementedError
 
+    def __repr__(self):
+        return '<{}: {}>'.format(self.__class__.__name__, str(self))
+    
+    # redefine this in each subclass
     def __str__(self):
-        return unicode(self).encode('utf-8')
-
-    # Remember to define this in each plugin!
-    def __unicode__(self):
-        return u"[Transport class or subclass]"
+        return "[Transport class or subclass]"
 
     @classmethod
     def get_short_doc(self):

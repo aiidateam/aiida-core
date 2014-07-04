@@ -17,34 +17,17 @@ class CpParser(Parser):
     
     _outtraj_name = 'output_structure'
     
-    def __init__(self,calculation):
+    def __init__(self,calc):
         """
         Initialize the instance of CpParser
         
         :param calculation: calculation object.
         """
         # check for valid input
-        if not isinstance(calculation,CpCalculation):
+        if not isinstance(calc,CpCalculation):
             raise QEOutputParsingError("Input must calc must be a CpCalculation")
 
-        # save calc for later use
-        self._calc = calculation
-        
-        # here some logic to decide whether parser already saved the trajectory or not
-        self._set_linkname_outtrajectory(None)
-        if calculation.get_state in self._possible_after_parsing:
-            # can have been already parsed: check for outstructure
-            # find existing outputs of kind structuredata
-            out_struc = calculation.get_outputs(type=TrajectoryData,also_labels=True)
-            # get only those with the linkame of this parser plugin
-            parser_out_struc = [ i for i in out_struc if i[0] == self._outstruc_name ]
-            if not parser_out_struc: # case with no struc found
-                self._set_linkname_outtrajectory(None)
-            elif len(parser_out_struc)>1: # case with too many struc found
-                raise UniquenessError("Multiple output TrajectoryData found ({})"
-                                      "with same linkname".format(len(parser_out_struc)))
-            else: # one structure is found, with the right name
-                self._set_linkname_outtrajectory(self._outtraj_name)
+        super(CpParser, self).__init__(calc)
         
     def parse_from_data(self,data):
         """
@@ -256,7 +239,6 @@ class CpParser(Parser):
             traj.set_array(this_name,raw_trajectory[this_name])
         traj.store()
         self._calc._add_link_to(traj, label=self.get_linkname_trajectory() )        
-        self._set_linkname_outtrajectory(self._outtraj_name)
         
         # convert the dictionary into an AiiDA object
         output_params = ParameterData(dict=out_dict)
@@ -271,14 +253,8 @@ class CpParser(Parser):
         """
         Returns the name of the link to the output_structure (None if not present)
         """
-        return self.linkname_outtrajectory
+        return self._outtraj_name
     
-    def _set_linkname_outtrajectory(self,linkname):
-        """
-        Set the name of the link to the output_structure
-        """
-        setattr(self,'linkname_outtrajectory',linkname)
-
     def _check_configs(self,expected,actual):
         # here I check the consistency of the output, since sometimes 
         # the same configuration is printed more than once

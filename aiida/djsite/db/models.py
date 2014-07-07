@@ -366,13 +366,15 @@ class DbMultipleValueAttributeBaseClass(m.Model):
     def validate_key(cls, key):
         """
         Validate the key string to check if it is valid (e.g., if it does not
-        contain the separator symbol.
+        contain the separator symbol.).
         
         :return: None if the key is valid
         :raise ValidationError: if the key is not valid
         """
         from aiida.common.exceptions import ValidationError
         
+        if not isinstance(key,basestring):
+            raise ValidationError("The key must be a string.")
         if not key:
             raise ValidationError("The key cannot be an empty string.")
         if cls._sep in key:
@@ -380,155 +382,212 @@ class DbMultipleValueAttributeBaseClass(m.Model):
                 "in the key of a {}.".format(
                 cls._sep, cls.__name__))
 
-    def setvalue(self,value,with_transaction=True,check_key=True):
+    @classmethod
+    def set_value(cls,key, value, with_transaction=True,
+                      subspecifier_value=None, other_attribs={}):
         """
-        This can be called on a given row and will set the corresponding value.
+        Set a new value in the DB, possibly associated to the given subspecifier.
         
-        :param with_transaction: If you are calling this function recursively,
-           set with_transaction=False to avoid recursive transactions, that
-           can significantly increase the time spent to store dictionaries by
-           large factors. 
-        :param check_key: if True, check that the key is not empty, and that 
-           it is valid. This should bet set to False when calling this function
-           recursively, because subkeys contain the separator.
+        :note: This method also stored directly in the DB.
+        
+        :param key: a string with the key to create (must be a level-0
+          attribute, that is it cannot contain the separator cls._sep).
+        :param value: the value to store (a basic data type or a list or a dict)
+        :param subspecifier_value: must be None if this class has no
+          subspecifier set (e.g., the DbSetting class).
+          Must be the value of the subspecifier (e.g., the dbnode) for classes
+          that define it (e.g. DbAttribute and DbExtra)
+        :param with_transaction: True if you want this function to be managed
+          with transactions. Set to False if you already have a manual
+          management of transactions in the block where you are calling this
+          function (useful for speed improvements to avoid recursive
+          transactions)
+        :param other_attribs: a dictionary of other parameters, to store
+          only on the level-zero attribute (e.g. for description in DbSetting).
+        """
+        from django.db import transaction
+        
+        cls.validate_key(key)
+        
+        try:
+            if with_transaction:
+                sid = transaction.savepoint()
+                                
+            #create_value returns a list of nodes to store
+            to_store = cls.create_value(key, value,
+                    subspecifier_value=subspecifier_value,
+                    other_attribs=other_attribs)
+            
+            if to_store:
+                cls.del_value(key, subspecifier_value=subspecifier_value)
+                cls.objects.bulk_create(to_store)
+            
+            if with_transaction:
+                transaction.savepoint_commit(sid)
+        except:
+            if with_transaction:
+                transaction.savepoint_rollback(sid)
+            raise
+
+    @classmethod
+    def create_value(cls, key, value, subspecifier_value=None,
+                     other_attribs={}):
+        """
+        Create a new list of attributes, without storing them, associated
+        with the current key/value pair (and to the given subspecifier, 
+        e.g. the DbNode for DbAttributes and DbExtras).
+        
+        :note: No hits are done on the DB, in particular no check is done 
+          on the existence of the given nodes.
+          
+        :param key: a string with the key to create (can contain the 
+          separator cls._sep if this is a sub-attribute: indeed, this
+          function calls itself recursively)
+        :param value: the value to store (a basic data type or a list or a dict)
+        :param subspecifier_value: must be None if this class has no
+          subspecifier set (e.g., the DbSetting class).
+          Must be the value of the subspecifier (e.g., the dbnode) for classes
+          that define it (e.g. DbAttribute and DbExtra)
+        :param other_attribs: a dictionary of other parameters, to store
+          only on the level-zero attribute (e.g. for description in DbSetting).
+        
+        :return: always a list of class instances; it is the user 
+          responsibility to store such entries (typically with a Django
+          bulk_create() call).
         """
         import json
         import datetime 
         from django.utils.timezone import is_naive, make_aware, get_current_timezone
-        from django.db import transaction
-
-        if check_key:
-            # Check that the key is not empty or invalid, otherwise do not proceed
-            # (this would create problems if you want to store a list or dict)        
-            self.validate_key(self.key)
+    
+        if cls._subspecifier_field_name is None:
+            if subspecifier_value is not None:
+                raise ValueError("You cannot specify a subspecifier value for "
+                                 "class {} because it has no subspecifiers"
+                                 "".format(cls.__name__))
+            new_entry = cls(key=key, **other_attribs)
+        else:
+            if subspecifier_value is None:
+                raise ValueError("You also have to specify a subspecifier value "
+                                 "for class {} (the {})".format(cls.__name__,
+                                    cls._subspecifier_field_name))
+            further_params = other_attribs.copy()
+            further_params.update({cls._subspecifier_field_name:
+                               subspecifier_value})
+            new_entry = cls(key=key,**further_params)
         
-        # Needed, we call this function recursively; we cannot simply use
-        if with_transaction:
-            sid = transaction.savepoint()
-        try:
-            # I have to delete the children to start with: if this was a 
-            # dictionary or a list, I do not want to leave around pending
-            # entries. This call will do nothing if the current entry is 
-            # any other datatype
-            self.delchildren()
-
-            if value is None:
-                self.datatype = 'none'
-                self.bval = None
-                self.tval = ''
-                self.ival = None
-                self.fval = None
-                self.dval = None            
-                
-            elif isinstance(value,bool):
-                self.datatype = 'bool'
-                self.bval = value
-                self.tval = ''
-                self.ival = None
-                self.fval = None
-                self.dval = None
-    
-            elif isinstance(value,(int,long)):
-                self.datatype = 'int'
-                self.ival = value
-                self.tval = ''
-                self.bval = None
-                self.fval = None
-                self.dval = None
-    
-            elif isinstance(value,float):
-                self.datatype = 'float'
-                self.fval = value
-                self.tval = ''
-                self.ival = None
-                self.bval = None
-                self.dval = None
-    
-            elif isinstance(value,basestring):
-                self.datatype = 'txt'
-                self.tval = value
-                self.bval = None
-                self.ival = None
-                self.fval = None
-                self.dval = None
-    
-            elif isinstance(value,datetime.datetime):
-    
-                # current timezone is taken from the settings file of django
-                if is_naive(value):
-                    value_to_set = make_aware(value,get_current_timezone())
-                else:
-                    value_to_set = value
-    
-                self.datatype = 'date'
-                # TODO: time-aware and time-naive datetime objects, see
-                # https://docs.djangoproject.com/en/dev/topics/i18n/timezones/#naive-and-aware-datetime-objects
-                self.dval = value_to_set
-                self.tval = ''
-                self.bval = None
-                self.ival = None
-                self.fval = None
-
-            elif isinstance(value, list):
-                                
-                self.datatype = 'list'
-                self.dval = None
-                self.tval = ''
-                self.bval = None
-                self.ival = len(value)
-                self.fval = None
-                
-                for i, subv in enumerate(value):                           
-                    # I do not need get_or_create here, because
-                    # above I deleted all children (and I
-                    # expect no concurrency)
-                    item = self.__class__(
-                        key=("{}{}{:d}".format(self.key,self._sep, i)),
-                        **self.subspecifiers_dict)
-                    item.setvalue(subv,with_transaction=False,check_key=False)
+        list_to_return = [new_entry]
+        
+        if value is None:
+            new_entry.datatype = 'none'
+            new_entry.bval = None
+            new_entry.tval = ''
+            new_entry.ival = None
+            new_entry.fval = None
+            new_entry.dval = None            
             
-            elif isinstance(value, dict):
-                                
-                self.datatype = 'dict'
-                self.dval = None
-                self.tval = ''
-                self.bval = None
-                self.ival = len(value)
-                self.fval = None
-                
-                for subk, subv in value.iteritems():
-                    if self._sep in subk:
-                        raise ValueError("You are trying to store an entry "
-                            "that (maybe at an inner level) has"
-                            "contains the character '{}', that "
-                            "cannot be used".format(self._sep))
-                        
-                    # I do not need get_or_create here, because
-                    # above I deleted all children (and I
-                    # expect no concurrency)
-                    item = self.__class__(key=(self.key + self._sep + subk),
-                        **self.subspecifiers_dict)
-                    item.setvalue(subv,with_transaction=False,check_key=False)
-                
+        elif isinstance(value,bool):
+            new_entry.datatype = 'bool'
+            new_entry.bval = value
+            new_entry.tval = ''
+            new_entry.ival = None
+            new_entry.fval = None
+            new_entry.dval = None
+
+        elif isinstance(value,(int,long)):
+            new_entry.datatype = 'int'
+            new_entry.ival = value
+            new_entry.tval = ''
+            new_entry.bval = None
+            new_entry.fval = None
+            new_entry.dval = None
+
+        elif isinstance(value,float):
+            new_entry.datatype = 'float'
+            new_entry.fval = value
+            new_entry.tval = ''
+            new_entry.ival = None
+            new_entry.bval = None
+            new_entry.dval = None
+
+        elif isinstance(value,basestring):
+            new_entry.datatype = 'txt'
+            new_entry.tval = value
+            new_entry.bval = None
+            new_entry.ival = None
+            new_entry.fval = None
+            new_entry.dval = None
+
+        elif isinstance(value,datetime.datetime):
+
+            # current timezone is taken from the settings file of django
+            if is_naive(value):
+                value_to_set = make_aware(value,get_current_timezone())
             else:
-                try:
-                    jsondata = json.dumps(value)
-                except TypeError:
-                    raise ValueError("Unable to store the value: it must be "
-                        "either a basic datatype, or json-serializable")
-                
-                self.datatype = 'json'
-                self.tval = jsondata
-                self.bval = None
-                self.ival = None
-                self.fval = None
+                value_to_set = value
+
+            new_entry.datatype = 'date'
+            # TODO: time-aware and time-naive datetime objects, see
+            # https://docs.djangoproject.com/en/dev/topics/i18n/timezones/#naive-and-aware-datetime-objects
+            new_entry.dval = value_to_set
+            new_entry.tval = ''
+            new_entry.bval = None
+            new_entry.ival = None
+            new_entry.fval = None
+
+        elif isinstance(value, list):
+                            
+            new_entry.datatype = 'list'
+            new_entry.dval = None
+            new_entry.tval = ''
+            new_entry.bval = None
+            new_entry.ival = len(value)
+            new_entry.fval = None
             
-            self.save()
-        except:
-            # Revert this inner transation, and reraise
-            if with_transaction:
-                transaction.savepoint_rollback(sid)
-            raise
+            for i, subv in enumerate(value):                           
+                # I do not need get_or_create here, because
+                # above I deleted all children (and I
+                # expect no concurrency)
+                #NOTE: I do not pass other_attribs
+                list_to_return.extend(cls.create_value(
+                     key=("{}{}{:d}".format(key,cls._sep, i)),
+                     value=subv,
+                     subspecifier_value=subspecifier_value))
+        
+        elif isinstance(value, dict):
+                            
+            new_entry.datatype = 'dict'
+            new_entry.dval = None
+            new_entry.tval = ''
+            new_entry.bval = None
+            new_entry.ival = len(value)
+            new_entry.fval = None
+            
+            for subk, subv in value.iteritems():
+                cls.validate_key(subk)
+                                        
+                # I do not need get_or_create here, because
+                # above I deleted all children (and I
+                # expect no concurrency)
+                #NOTE: I do not pass other_attribs
+                list_to_return.extend(cls.create_value(
+                     key="{}{}{}".format(key, cls._sep, subk),
+                     value=subv,
+                     subspecifier_value=subspecifier_value))
+        else:
+            try:
+                jsondata = json.dumps(value)
+            except TypeError:
+                raise ValueError("Unable to store the value: it must be "
+                    "either a basic datatype, or json-serializable")
+            
+            new_entry.datatype = 'json'
+            new_entry.tval = jsondata
+            new_entry.bval = None
+            new_entry.ival = None
+            new_entry.fval = None
+        
+        return list_to_return
+
 
     @classmethod
     def get_query_dict(cls, value):
@@ -759,41 +818,46 @@ class DbMultipleValueAttributeBaseClass(m.Model):
             raise DbContentError("The type field '{}' is not recognized".format(
                     self.datatype))        
 
-    def delchildren(self):
+    @classmethod
+    def del_value(cls, key, only_children=False, subspecifier_value=None):
         """
-        Delete all children of this value *at any level of deepness*
-        if it is a list or a dictionary, otherwise do nothing.
-        Note that this is *not* done within a transaction: put a transaction
-        in the caller (this is because the version of Django we are using
-        does not support nested transactions properly.
-        """
-        if self.datatype == 'dict' or self.datatype == 'list':
-            # Here, I have to delete all elements, to any deepness level!
-            self.__class__.objects.filter(
-                key__startswith="{parentkey}{sep}".format(
-                parentkey=self.key, sep=self._sep),
-                **self.subspecifiers_dict).delete()
-
-    def delvalue(self):
-        """
-        Deletes this value.
-        """
-        from django.db import transaction
+        Delete a value associated with the given key (if existing).
         
-        if self.datatype == 'dict' or self.datatype == 'list':
-            with transaction.commit_on_success():
-                # Here, I have to delete all elements, to any deepness level!
-                self.delchildren()
-                # Note! I cannot simply do a delete with a 
-                # key__startswith=parentkey, because if I have an entry
-                # called 'a' that is a list and another called 'ab', the
-                # call would delete also 'ab'. Therefore, first I delete
-                # all children, then the item itself.
-                self.delete()
+        :note: No exceptions are raised if no entry is found.
+        
+        :param key: the key to delete. Can contain the separator cls._sep if
+          you want to delete a subkey.
+        :param only_children: if True, delete only children and not the 
+          entry itself.
+        :param subspecifier_value: must be None if this class has no
+          subspecifier set (e.g., the DbSetting class).
+          Must be the value of the subspecifier (e.g., the dbnode) for classes
+          that define it (e.g. DbAttribute and DbExtra)
+        """
+        from django.db.models import Q
+        
+        if cls._subspecifier_field_name is None:
+            if subspecifier_value is not None:
+                raise ValueError("You cannot specify a subspecifier value for "
+                                 "class {} because it has no subspecifiers"
+                                 "".format(cls.__name__))
+            subspecifiers_dict = {}
         else:
-            self.delete()
-
-
+            if subspecifier_value is None:
+                raise ValueError("You also have to specify a subspecifier value "
+                                 "for class {} (the {})".format(cls.__name__,
+                                    cls._subspecifier_field_name))
+            subspecifiers_dict = {cls._subspecifier_field_name:
+                    subspecifier_value}
+        
+        query = Q(key__startswith="{parentkey}{sep}".format(
+            parentkey=key, sep=cls._sep),
+            **subspecifiers_dict)
+        
+        if not only_children:
+            query.add(Q(key=key, **subspecifiers_dict), Q.OR)
+            
+        cls.objects.filter(query).delete()
 
 class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
     """
@@ -879,7 +943,48 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
             
         return tempdict
 
-
+    @classmethod
+    def reset_values_for_node(cls, dbnode, attributes, with_transaction=True,
+                              return_not_store=False):
+        from django.db import transaction
+        
+        #cls.validate_key(key)
+        
+        nodes_to_store = []
+        
+        try:
+            if with_transaction:
+                sid = transaction.savepoint()
+            
+            if isinstance(dbnode, (int,long)):
+                dbnode_node = DbNode(id=dbnode)
+            else:
+                dbnode_node = dbnode
+                        
+            #create_value returns a list of nodes to store
+            for k, v in attributes.iteritems():
+                nodes_to_store.extend(
+                    cls.create_value(k, v,
+                        subspecifier_value=dbnode_node,
+                        ))
+            
+            if return_not_store:
+                return nodes_to_store
+            else:
+                # Reset. For set, use also a filter for key__in=attributes.keys()
+                cls.objects.filter(dbnode=dbnode_node).delete()
+    
+                if nodes_to_store:
+                    cls.objects.bulk_create(nodes_to_store)
+            
+            if with_transaction:
+                transaction.savepoint_commit(sid)
+        except:
+            if with_transaction:
+                transaction.savepoint_rollback(sid)
+            raise
+    
+    
     @classmethod
     def set_value_for_node(cls, dbnode, key, value, with_transaction=True):
         """
@@ -893,7 +998,8 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
         :param dbnode: the dbnode for which the attribute should be stored;
           in an integer is passed, this is used as the PK of the dbnode, 
           without any further check (for speed reasons)
-        :param key: the key of the attribute to store
+        :param key: the key of the attribute to store; must be a level-zero
+          attribute (i.e., no separators in the key)
         :param value: the value of the attribute to store
         :param with_transaction: if True (default), do this within a transaction,
            so that nothing gets stored if a subitem cannot be created.
@@ -903,45 +1009,34 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
         :raise ValueError: if the key contains the separator symbol used 
             internally to unpack dictionaries and lists (defined in cls._sep).
         """
-        from django.db import transaction
-        
-        cls.validate_key(key)
-        
-        try:
-            if with_transaction:
-                sid = transaction.savepoint()
+        if isinstance(dbnode, (int,long)):
+            dbnode_node = DbNode(id=dbnode)
+        else:
+            dbnode_node = dbnode
+
+        cls.set_value(key, value, with_transaction=with_transaction,
+                           subspecifier_value=dbnode_node)
             
-            if isinstance(dbnode, (int,long)):
-                attr, _ = cls.objects.get_or_create(dbnode_id=dbnode,
-                                                    key=key)
-            else:
-                attr, _ = cls.objects.get_or_create(dbnode=dbnode,
-                                                    key=key)
-            # Internally, subitems are always stored without transactions
-            # to avoid, in any case, recursive transactions that are 
-            # *extremely* slow.
-            attr.setvalue(value,with_transaction=False)
-        except:
-            if with_transaction:
-                transaction.savepoint_rollback(sid)
-            raise
-    
     @classmethod
     def del_value_for_node(cls, dbnode, key):
         """
         Delete an attribute from the database for the given dbnode.
         
-        :raise AttributeError: if no key is found for the given dbnode
+        :note: no exception is raised if no attribute with the given key is
+          found in the DB.
+          
+        :param dbnode: the dbnode for which you want to delete the key.
+        :param key: the key to delete. 
+        """ 
+        cls.del_value(key, subspecifier_value=dbnode)
+    
+    @classmethod
+    def has_key(cls, dbnode, key):
         """
-        try:
-            # Call the delvalue method, that takes care of recursively deleting
-            # the subattributes, if this is a list or dictionary.
-            cls.objects.get(dbnode=dbnode, key=key).delvalue()
-        except ObjectDoesNotExist:
-            raise AttributeError("Cannot delete {} '{}' for node {}, "
-                                 "not found in db".format(
-                                 cls.__name__, key, dbnode.pk))
-        
+        Return True if the given dbnode has an attribute with the given key,
+        False otherwise.
+        """
+        return bool(cls.objects.filter(dbnode=dbnode, key=key))
     
     @python_2_unicode_compatible
     def __str__(self):
@@ -1024,7 +1119,8 @@ class DbGroup(m.Model):
     # The owner of the group, not of the calculations
     # On user deletion, remove his/her groups too (not the calcuations, only
     # the groups
-    user = m.ForeignKey(AUTH_USER_MODEL, on_delete=m.CASCADE)
+    user = m.ForeignKey(AUTH_USER_MODEL, on_delete=m.CASCADE,
+                        related_name='dbgroups')
 
     class Meta:
         unique_together = (("name", "type"),)

@@ -1,9 +1,0 @@
-sudo apt-get install python-jpype
-sudo easy_install neo4j-embedded
-
-export CLASSPATH=/usr/lib/jvm/java-6-openjdk/jre/lib/
-export JAVA_HOME=/usr/lib/jvm/java-6-openjdk/jre/
-
-sudo easy_install requests
-
-mv neo4j_conf in neo4j/conf after downloading the server http://www.neo4j.org/download (1.8.2 tested) 

@@ -29,7 +29,7 @@ Of course, no requirements are enforced on the complete coverage of the periodic
 table (also because really complete pseudopotential sets for the whole periodic
 table do not exist). In other words, this means that you can create a
 pseudopotential family containing the pseudopotentials only for a few elements
-that you are interested to.
+that you are interested in.
 
 .. note:: it is your responsibility to group together pseudopotentials of the
   same type, or obtained using the same functionals, approximations

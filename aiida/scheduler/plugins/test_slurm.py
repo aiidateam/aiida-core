@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import sys
 import unittest
 import logging
@@ -16,6 +17,11 @@ text_squeue_to_test = """862540^^^PD^^^Dependency^^^n/a^^^user1^^^20^^^640^^^(De
 861352^^^R^^^None^^^rosa11^^^user6^^^4^^^128^^^nid00[192,246,264-265]^^^normal^^^1-00:00:00^^^23:30:20^^^2013-05-22T12:43:20^^^Pressure_PBEsol_0
 863553^^^R^^^None^^^rosa1^^^user5^^^1^^^32^^^nid00471^^^normal^^^30:00^^^29:29^^^2013-05-23T11:44:11^^^bash
 """
+
+__author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
+__copyright__ = "Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
+__version__ = "0.2.0"
 
 class TestParserSqueue(unittest.TestCase):
     """

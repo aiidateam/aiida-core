@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from stat import S_ISDIR,S_ISREG
 import StringIO
 import paramiko
@@ -8,6 +9,12 @@ import aiida.transport
 from aiida.common.utils import escape_for_bash
 from aiida.transport import FileAttribute
 from aiida.common import aiidalogger
+
+__author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
+__copyright__ = "Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
+__version__ = "0.2.0"
+
 execlogger = aiidalogger.getChild('transport')
 
 # TODO : callback functions in paramiko are currently not used much and probably broken

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 A collection of function that are used to parse the output of Quantum Espresso PW.
 The function that needs to be called from outside is parse_raw_output().
@@ -15,6 +16,12 @@ from aiida.parsers.plugins.quantumespresso import QEOutputParsingError
 # but atm the output has all the informations needed for the parsing.
 
 # parameter that will be used later for comparisons
+
+__author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
+__copyright__ = "Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
+__version__ = "0.2.0"
+
 lattice_tolerance = 1.e-5
 
 default_energy_units = 'eV'

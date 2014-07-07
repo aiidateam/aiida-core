@@ -20,50 +20,17 @@ class PwParser(Parser):
     _outarray_name = 'output_array'
     _setting_key = 'parser_options'
 
-    def __init__(self,calculation):
+    def __init__(self,calc):
         """
         Initialize the instance of PwParser
         """
         self._possible_symmetries = self._get_qe_symmetry_list()
         # check for valid input
-        if not isinstance(calculation,PwCalculation):
+        if not isinstance(calc,PwCalculation):
             raise QEOutputParsingError("Input must calc must be a PwCalculation")
         
-        # save calc for later use
-        self._calc = calculation
-        
-        # here some logic to decide whether the parser has an output structure or not.
-        # set it to None by default
-        self._set_linkname_outstructure(None)
-        if calculation.get_state in self._possible_after_parsing:
-            # can have been already parsed: check for outstructure
-            # find existing outputs of kind structuredata
-            out_struc = calculation.get_outputs(type=StructureData,also_labels=True)
-            # get only those with the linkame of this parser plugin
-            parser_out_struc = [ i for i in out_struc if i[0] == self._outstruc_name ]
-            if not parser_out_struc:
-                pass
-            elif len(parser_out_struc)>1: # case with too many struc found
-                raise UniquenessError("Multiple output StructureData found ({})"
-                                      "with same linkname".format(len(parser_out_struc)))
-            else: # one structure is found, with the right name
-                self._set_linkname_outstructure(self._outstruc_name)
+        super(PwParser, self).__init__(calc)
                 
-        # same for the arraydata        
-        self._set_linkname_outarray(None)
-        if calculation.get_state in self._possible_after_parsing:
-            # can have been already parsed: check for outarrays
-            out_array = calculation.get_outputs(type=ArrayData,also_labels=True)
-            # get only those with the linkame of this parser plugin
-            parser_out_array = [ i for i in out_array if i[0] == self._outarray_name ]
-            if not parser_out_array: # nothing found
-                pass
-            elif len(parser_out_struc)>1: # too many arraydatas found
-                raise UniquenessError("Multiple output ArrayData found ({})"
-                                      "with same linkname".format(len(parser_out_struc)))
-            else: # if at least one is found
-                self._set_linkname_outarray(self._outarray_name)
-        
     def parse_from_data(self,data):
         """
         Receives in input a datanode.
@@ -201,7 +168,6 @@ class PwParser(Parser):
             array_data = ArrayData()
             for x in trajectory_data.iteritems():
                 array_data.set_array(x[0],numpy.array(x[1]))
-            self._set_linkname_outarray(self._outarray_name)
             array_data.store()
             self._calc._add_link_to(array_data, label=self.get_linkname_outarray() )
         
@@ -211,7 +177,6 @@ class PwParser(Parser):
                 
         if type_calc=='relax' or type_calc=='vc-relax':
             if 'cell' in structure_data.keys():
-                self._set_linkname_outstructure(self._outstruc_name)
                 struc = convert_qe2aiida_structure(structure_data,input_structure=in_struc)
                 struc.store()
                 self._calc._add_link_to(struc, label=self.get_linkname_outstructure() )
@@ -227,28 +192,16 @@ class PwParser(Parser):
 
     def get_linkname_outstructure(self):
         """
-        Returns the name of the link to the output_structure (None if not present)
+        Returns the name of the link to the output_structure
         """
-        return self.linkname_outstructure
-    
-    def _set_linkname_outstructure(self,linkname):
-        """
-        Set the name of the link to the output_structure
-        """
-        setattr(self,'linkname_outstructure',linkname)
-        
+        return self._outstruc_name
+            
     def get_linkname_outarray(self):
         """
-        Returns the name of the link to the output_structure (None if not present)
+        Returns the name of the link to the output_structure
         """
-        return self.linkname_outarray
+        return self._outarray_name
     
-    def _set_linkname_outarray(self,linkname):
-        """
-        Set the name of the link to the output_structure
-        """
-        setattr(self,'linkname_outarray',linkname)
-
     def get_extended_symmetries(self):
         """
         Return the extended dictionary of symmetries.
@@ -277,58 +230,6 @@ class PwParser(Parser):
                 new_list.append(new_dict)
             return new_list
             
-    def get_energy_ev(self,all_values=False):
-        """
-        Returns the float value of energy.
-
-        Args:
-            all_values: if true returns a list of energies, else only a float
-                (default=False)
-
-        Raises:
-            FailedError: calculation is failed
-            InvalidOperation: calculation has not been parsed yet
-            NotExistent: no output found
-            UniquenessError: more than one output found
-            ContentNotExistent: no key energy found in the results
-        """
-        from aiida.common.exceptions import InvalidOperation, FailedError
-        from aiida.common.exceptions import NotExistent,ContentNotExistent
-        
-        calc_state = self._calc.get_state()
-        
-        if 'FAILED' in calc_state:  # SUBMISSIONFAILED','RETRIEVALFAILED','PARSINGFAILED','FAILED',
-            raise FailedError('Calculation is in state {}'
-                              .format(calc_state))
-        
-        if calc_state != calc_states.FINISHED:
-            raise InvalidOperation("Calculation is in state {}: "
-                                   "doesn't have results yet".format(calc_state))
-        
-        out_parameters = self._calc.get_outputs(type=ParameterData,also_labels=True)
-        out_parameterdata = [ i[1] for i in out_parameters if i[0]==self.get_linkname_outparams() ]
-        
-        if not out_parameterdata:
-            raise NotExistent("No output ParameterData found")
-        
-        if len(out_parameterdata) > 1:
-            raise UniquenessError("Output ParameterData should be found once, "
-                              "found it instead {} times"
-                              .format(len(out_parameterdata)) )
-            
-        out_parameterdata = out_parameterdata[0]
-        
-        try:
-            if not all_values:
-                energy = out_parameterdata.get_attr('energy')[-1]
-            else:
-                energy = out_parameterdata.get_attr('energy')
-            # NOTE: in one case I return a list, in the other a float
-        except AttributeError:
-            raise ContentNotExistent("Key energy not found in results")
-        
-        return energy
-
     def _get_qe_symmetry_list(self):
         """
         Hard coded names and rotation matrices + inversion from QE v 5.0.2
@@ -454,31 +355,3 @@ class PwParser(Parser):
 
         return rotations
         
-    # def get_parsed_nodes(self,also_labels=False):
-    #     """
-    #     returns a list of the nodes created by the parser
-    #     """
-    #     if not self._is_res_unlocked():
-    #         from aiida.common.exceptions import InvalidOperation
-    #         raise InvalidOperation("Calculation not yet parsed")
-    #     else:
-    #         to_return = []
-            
-    #         all_params = self._calc.get_outputs(type=ParameterData,also_labels=True)
-    #         this_params = [ i[1] for i in all_params if i[0]==self.get_linkname_outparams() ]
-    #         if this_params is not None:
-    #             if also_labels:
-    #                 to_return.append( (self.get_linkname_outparams(),this_params) )
-    #             else:
-    #                 to_return.append( this_params )
-                    
-    #         all_structures = self._calc.get_outputs(type=StructureData,also_labels=True)
-    #         this_structure = [ i[1] for i in all_structures if i[0]==self.get_linkname_outstructure() ]
-    #         if this_structure is not None:
-    #             if also_labels:
-    #                 to_return.append( (self.get_linkname_outstructure(),this_structure) )
-    #             else:
-    #                 to_return.append( (self.get_linkname_outstructure(),this_structure) )
-
-    #         return to_return
-

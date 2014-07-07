@@ -44,7 +44,14 @@ class LocalTransport(aiida.transport.Transport):
     def open(self):
         """
         Opens a local transport channel
+
+        :raise InvalidOperation: if the channel is already open
         """
+        from aiida.common.exceptions import InvalidOperation
+        
+        if self._is_open:
+            raise InvalidOperation("Cannot open the transport twice")
+
         self._internal_dir = os.path.expanduser("~")
         self._is_open = True
         return self
@@ -53,14 +60,22 @@ class LocalTransport(aiida.transport.Transport):
     def close(self):
         """
         Closes the local transport channel
+
+        :raise InvalidOperation: if the channel is already open
         """
+        from aiida.common.exceptions import InvalidOperation
+        
+        if not self._is_open:
+            raise InvalidOperation("Cannot close the transport: "
+                                         "it is already closed")
         self._is_open = False
 
-    def __unicode__(self):
+    def __str__(self):
         """
         Return a description as a string.
         """
-        return u'{}'.format(self.__class__.__name__)
+        
+        return "local [{}]".format("OPEN" if self._is_open else "CLOSED")
 
     @property
     def curdir(self):

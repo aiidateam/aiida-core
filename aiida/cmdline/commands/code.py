@@ -522,19 +522,23 @@ class Code(VerdiCommandWithSubcommands):
         """
         self.valid_subcommands = {
             'list': (self.code_list, self.complete_none),
-            'show' : (self.code_show, self.complete_code_pks),
+            'show' : (self.code_show, self.complete_code_names_and_pks),
             'setup': (self.code_setup, self.complete_code_pks),
             'relabel': (self.code_relabel, self.complete_code_pks),
             'delete': (self.code_delete, self.complete_code_pks),
             }
 
-    def complete_code_names(self):
+    def complete_code_names(self, subargs_idx, subargs):
         code_names = [c[1] for c in self.get_code_pks_and_labels()]
         return "\n".join(code_names)
 
-    def complete_code_pks(self):
+    def complete_code_pks(self, subargs_idx, subargs):
         code_pks = [str(c[0]) for c in self.get_code_pks_and_labels()]
         return "\n".join(code_pks)
+
+    def complete_code_names_and_pks(self, subargs_idx, subargs):
+        return "\n".join([self.complete_code_names(subargs_idx, subargs),
+                          self.complete_code_pks(subargs_idx, subargs)])
 
     def code_list(self, *args):
         """

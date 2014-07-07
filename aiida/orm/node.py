@@ -249,12 +249,14 @@ class Node(object):
             # stop
             self._set_with_defaults(**kwargs)
 
+    def __repr__(self):
+        return '<{}: {}>'.format(self.__class__.__name__, str(self))
+    
     def __str__(self):
-        classname = self.__class__.__name__
         if self._to_be_stored:
-            return "<{} (unstored)>".format(classname)
+            return "uuid={} (unstored)".format(self.uuid)
         else:
-            return "<{} (pk={})>".format(classname, self.pk)
+            return "uuid={} (pk={})".format(self.uuid, self.pk)
 
     @classmethod
     def query(cls,*args,**kwargs):
@@ -851,11 +853,12 @@ class Node(object):
             separator symbol).        
         """
         from aiida.djsite.db.models import DbAttribute
+        import copy
         
         DbAttribute.validate_key(key)
         
         if self._to_be_stored:
-            self._attrs_cache[key] = value
+            self._attrs_cache[key] = copy.deepcopy(value)
         else:
             if key in self._updatable_attributes:
                 DbAttribute.set_value_for_node(self.dbnode, key,value)
@@ -882,6 +885,9 @@ class Node(object):
                     "DbAttribute {} does not exist".format(key))
         else:
             if key in self._updatable_attributes:
+                if not DbAttribute.has_key(self.dbnode,key):
+                    raise AttributeError("DbAttribute {} does not exist".format(
+                        key))
                 DbAttribute.del_value_for_node(self.dbnode, key)
                 self._increment_version_number_db()
             else:
@@ -993,6 +999,9 @@ class Node(object):
             raise ModificationNotAllowed(
                 "The extras of a node can be set and deleted "
                 "only after storing the node")
+        if not DbExtra.has_key(self.dbnode,key):
+            raise AttributeError("DbExtra {} does not exist".format(
+                key))
         return DbExtra.del_value_for_node(self.dbnode, key)
         self._increment_version_number_db()
 
@@ -1416,9 +1425,12 @@ class Node(object):
                     self._dbnode.save()
                     # Save its attributes 'manually' without incrementing
                     # the version for each add.
-                    for k, v in self._attrs_cache.iteritems():
-                        DbAttribute.set_value_for_node(self.dbnode,
-                            k,v, with_transaction=False)
+                    DbAttribute.reset_values_for_node(self.dbnode,
+                        attributes=self._attrs_cache,
+                        with_transaction=False)
+                    # This should not be used anymore: I delete it to
+                    # possibly free memory
+                    del self._attrs_cache
             # This is one of the few cases where it is ok to do a 'global'
             # except, also because I am re-raising the exception
             except:

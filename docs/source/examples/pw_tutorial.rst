@@ -59,7 +59,7 @@ Quantum Espresso Pw Walkthrough
 
 We've got to prepare a script to submit a job to your local installation of AiiDA.
 This example will be a rather long script: in fact there is still nothing in your database, so that we will have to load everything, like the pseudopotential files and the structure.
-In a more practical situation, you might load data from the database and perform small modification to re-use it.
+In a more practical situation, you might load data from the database and perform a small modification to re-use it.
 
 Let's say that through the ``verdi`` command you have already installed a cluster, say ``TheHive``, and that you also compiled Quantum Espresso on the cluster, and installed the code pw.x with ``verdi``, that we will call ``pw_on_TheHive``.
 
@@ -337,21 +337,21 @@ The label can be later accessed as a class property, i.e. the command::
 will return the string you previously set (empty by default).
 Another property is the description, which instead does not have a limitation on the maximum number of characters::
 
-  c.description = "A much longer description"
+  calc.description = "A much longer description"
 
 And finally, there is the possibility of comments.
 The peculiarity of this last property is that they are user dependent (like the comments that you can post on facebook pages), so it is best
-suited to calculation exposed on a website, where you want to remember
+suited for a calculation exposed on a website, where you want to remember
 the comments of each user.
 To set a comment, you need first to import the django user, and then
 write it with a dedicated method::
 
   from aiida.djsite.utils import get_automatic_user
-  c.add_comment("Some comment", user=get_automatic_user())
+  calc.add_comment("Some comment", user=get_automatic_user())
 
 The comments can be accessed with this function::
 
-  c.get_comments_tuple()
+  calc.get_comments_tuple()
 
 
 Execute

@@ -27,6 +27,10 @@ django-celery >= 3.0
 supervisor>=3.0b1
 kombu
 billiard
+amqp >= 1.4
+anyjson >= 0.3
+six >= 1.5
+ecdsa >= 0.10
 
 ## For postgreSQL
 psycopg2

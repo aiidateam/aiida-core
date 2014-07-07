@@ -18,7 +18,8 @@ class Calculation(Node):
     """
     _updatable_attributes = ('state', 'job_id', 'scheduler_state',
                              'scheduler_lastchecktime',
-                             'last_jobinfo', 'remote_workdir', 'retrieve_list')
+                             'last_jobinfo', 'remote_workdir', 'retrieve_list',
+                             'retrieve_singlefile_list')
     
     # By default, no output parser
     _default_parser = None
@@ -691,14 +692,29 @@ class Calculation(Node):
 
         from aiida.djsite.db.models import DbCalcState
         from aiida.common.exceptions import UniquenessError
+        from aiida.common.datastructures import sort_states
         
         if self._to_be_stored:
             raise ModificationNotAllowed("Cannot set the calculation state "
                                          "before storing")
         
+        if state == calc_states.NOTFOUND:
+            raise ValueError(
+                "You cannot manually set a calculation in the '{}' "
+                "state".format(state))
+            
         if state not in calc_states:
             raise ValueError(
                 "'{}' is not a valid calculation status".format(state))
+ 
+        old_state = self.get_state()
+        state_sequence = [state, old_state]
+        
+        # sort from new to old: if they are equal, then it is a valid
+        # advance in state (otherwise, we are going backwards...)
+        if sort_states(state_sequence) != state_sequence:
+            raise ModificationNotAllowed("Cannot change the state from {} "
+                "to {}".format(old_state, state))
         
         try:
             with transaction.commit_on_success():
@@ -716,7 +732,7 @@ class Calculation(Node):
         """
         Get the state of the calculation.
         
-        .. note:: this method returns the UNDETERMINED state if no state
+        .. note:: this method returns the NOTFOUND state if no state
           is found in the DB.
         
         .. note:: the 'most recent' state is obtained using the logic in the
@@ -731,7 +747,7 @@ class Calculation(Node):
         
         :return: a string. If from_attribute is True and no attribute is found,
           return None. If from_attribute is False and no entry is found in the
-          DB, return the "UNDETERMINED" state.
+          DB, return the "NOTFOUND" state.
         """
         from aiida.djsite.db.models import DbCalcState
         from aiida.common.exceptions import DbContentError
@@ -746,7 +762,7 @@ class Calculation(Node):
                 this_calc_states = DbCalcState.objects.filter(
                     dbnode=self).values_list('state', flat=True)
                 if not this_calc_states:
-                    return calc_states.UNDETERMINED
+                    return calc_states.NOTFOUND
                 else:
                     try:
                         most_recent_state = sort_states(this_calc_states)[0]
@@ -766,7 +782,7 @@ class Calculation(Node):
         if state == calc_states.IMPORTED:
             attribute_state = self.get_state(from_attribute=True)
             if attribute_state is None:
-                attribute_state = "UNDETERMINED"
+                attribute_state = "NOTFOUND"
             return 'IMPORTED/{}'.format(attribute_state)
         else:
             return state
@@ -778,7 +794,7 @@ class Calculation(Node):
         
         :return: a boolean
         """
-        return self.get_state() in [calc_states.NEW]
+        return self.get_state() in [calc_states.NEW, calc_states.NOTFOUND]
 
     def is_running(self):
         """
@@ -849,6 +865,38 @@ class Calculation(Node):
         """
         return self.get_attr('retrieve_list', None)
 
+    def _set_retrieve_singlefile_list(self,retrieve_singlefile_list):
+        """
+        Set the list of information for the retrieval of singlefiles 
+        """
+        if self.get_state() not in (calc_states.SUBMITTING,
+                                    calc_states.NEW):
+            raise ModificationNotAllowed(
+                "Cannot set the retrieve_singlefile_list for a calculation "
+                "that is neither NEW nor SUBMITTING (current state is "
+                "{})".format(self.get_state()))
+
+        if not isinstance(retrieve_singlefile_list,(tuple,list)):
+            raise ValueError("You have to pass a list (or tuple) of lists of "
+                             "strings as retrieve_singlefile_list")
+        for j in retrieve_singlefile_list:
+            if (not(isinstance(j,(tuple,list))) or
+                        not(all(isinstance(i,basestring) for i in j))):
+                raise ValueError("You have to pass a list (or tuple) of lists "
+                                 "of strings as retrieve_singlefile_list")
+        self.set_attr('retrieve_singlefile_list', retrieve_singlefile_list)
+    
+    def get_retrieve_singlefile_list(self):
+        """
+        Get the list of files to be retrieved from the cluster and stored as 
+        SinglefileData's (or subclasses of it).
+        Their path is relative to the remote workdirectory path.
+        
+        :return: a list of lists of strings for 1) linknames, 
+                 2) Singlefile subclass name 3) file names
+        """
+        return self.get_attr('retrieve_singlefile_list', None)
+    
     def _set_job_id(self, job_id):
         """
         Always set as a string
@@ -918,7 +966,7 @@ class Calculation(Node):
     
     @classmethod
     def list_calculations(cls,states=None, past_days=None, group=None, 
-                            all_users=False, pks=[]):
+                            all_users=False, pks=[], relative_ctime=True):
         """
         This function return a string with a description of the AiiDA calculations.
 
@@ -936,6 +984,10 @@ class Calculation(Node):
             within that list are shown. Otherwise, all calculations are shown.
             If specified, sets state to None and ignores the 
             value of the ``past_days`` option.")
+        :param relative_ctime: if true, prints the creation time relative from now.
+                               (like 2days ago). Default = True
+        :param all_users: if True, list calculation belonging to all users.
+                           Default = False
         
         :return: a string with description of calculations.
         """
@@ -1012,11 +1064,14 @@ class Calculation(Node):
         if not calc_list:
             return last_check_string
         else:
-            fmt_string = '{:<10} {:<17} {:>12} {:<10} {:<22} {:<15} {:<15}'
+            # first save a matrix of results to be printed
             res_str_list = [last_check_string]
-            res_str_list.append(fmt_string.format(
-                    'Pk','State','Creation','Time',
-                    'Scheduler state','Computer','Type'))
+            str_matrix = []
+            title = ['Pk','State','Creation time',
+                     'Scheduler state','Computer','Type']
+            str_matrix.append(title)
+            len_title = [len(i) for i in title]
+            
             for calcdata in calc_list_data:
                 remote_state = "None"
                 
@@ -1042,16 +1097,34 @@ class Calculation(Node):
                                                        sched_state, when_string)
                 except ValueError:
                     raise
+
+                calc_module = from_type_to_pluginclassname(calcdata['type']).rsplit(".",1)[0]
+                if calc_module.startswith('calculation.'):
+                    calc_module = calc_module[12:]
                 
-                res_str_list.append(fmt_string.format( calcdata['pk'],
-                    states[calcdata['pk']],
-                    timezone.localtime(calcdata['ctime']).isoformat().split('T')[0],
-                    timezone.localtime(calcdata['ctime']).isoformat().split('T')[1].split('.')[0],
-                    remote_state,
-                    remote_computer,
-                    str(from_type_to_pluginclassname(
-                        calcdata['type']).split('.')[-1]),
-                    ))
+                if relative_ctime:
+                    calc_ctime = str_timedelta(now-calcdata['ctime'], negative_to_zero=True)
+                else:
+                    calc_ctime = " ".join([timezone.localtime(calcdata['ctime']).isoformat().split('T')[0],
+                            timezone.localtime(calcdata['ctime']).isoformat().split('T')[1].split('.')[0].rsplit(":",1)[0]])
+                            
+                str_matrix.append([calcdata['pk'],
+                            states[calcdata['pk']],
+                            calc_ctime,
+                            remote_state,
+                            remote_computer,
+                            calc_module
+                            ])
+
+            # prepare a formatted text of minimal row length (to fit in terminals!)
+            rows = []
+            for j in range(len(str_matrix[0])):
+                rows.append( [ len(str(i[j])) for i in str_matrix ] )
+            line_lengths = [ str(max(max(rows[i]),len_title[i])) for i in range(len(rows)) ]
+            fmt_string = "{:<" + "}|{:<".join(line_lengths) + "}"
+            for row in str_matrix:
+                res_str_list.append( fmt_string.format(*[str(i) for i in row]) )
+
             return "\n".join(res_str_list)
 
     @classmethod
@@ -1328,7 +1401,8 @@ class Calculation(Node):
         from aiida.scheduler.datastructures import JobTemplate
         from aiida.common.utils import validate_list_of_string_tuples
         from aiida.orm import Computer
-
+        from aiida.orm import DataFactory
+        
         computer = self.get_computer()
 
         code = self.get_code()
@@ -1374,6 +1448,20 @@ class Calculation(Node):
             job_tmpl.sched_error_path not in retrieve_list):
                 retrieve_list.append(job_tmpl.sched_error_path)
         self._set_retrieve_list(retrieve_list)
+        
+        retrieve_singlefile_list = (calcinfo.retrieve_singlefile_list
+                                    if calcinfo.retrieve_singlefile_list is not None
+                                    else [])
+        # a validation on the subclasses of retrieve_singlefile_list
+        SinglefileData = DataFactory('singlefile')
+        for _,subclassname,_ in retrieve_singlefile_list:
+            FileSubclass = DataFactory(subclassname)
+            if not issubclass(FileSubclass,SinglefileData):
+                raise PluginInternalError("[presubmission of calc {}] "
+                                "retrieve_singlefile_list subclass problem: "
+                                "{} is not subclass of SinglefileData".format(
+                                self.pk, FileSubclass.__name__))
+        self._set_retrieve_singlefile_list(retrieve_singlefile_list)
 
         # the if is done so that if the method returns None, this is 
         # not added. This has two advantages:
@@ -1529,8 +1617,8 @@ class Calculation(Node):
             is used.
         """
         import os
+        import errno
         from django.utils import timezone
-        import tempfile
 
         from aiida.transport.plugins.local import LocalTransport
         from aiida.orm import Computer
@@ -1543,12 +1631,41 @@ class Calculation(Node):
         folder.create()
         
         if subfolder_name is None:
-            subfolder_basename = timezone.localtime(timezone.now()).strftime('%Y%m%d-%H%M%S-')
+            subfolder_basename = timezone.localtime(timezone.now()).strftime('%Y%m%d')
         else:
             subfolder_basename = subfolder_name
+
+        ## Find a new subfolder.
+        ## I do not user tempfile.mkdtemp, because it puts random characters
+        # at the end of the directory name, therefore making difficult to
+        # understand the order in which directories where stored
+        counter = 0
+        while True:
+            counter += 1
+            subfolder_path = os.path.join(folder.abspath, 
+                                      "{}-{:05d}".format(subfolder_basename,            
+                                                         counter))
+            # This check just tried to avoid to try to create the folder
+            # (hoping that a test of existence is faster than a 
+            # test and failure in directory creation)
+            # But it could be removed
+            if os.path.exists(subfolder_path):
+                continue
             
-        # Find a new subfolder.
-        subfolder_path = tempfile.mkdtemp(prefix = subfolder_basename, dir=folder.abspath)
+            try:
+                # Directory found, and created
+                os.mkdir(subfolder_path)
+                break
+            except OSError as e:
+                if e.errno == errno.EEXIST:
+                    # The directory has been created in the meantime,
+                    # retry with a new one...
+                    continue
+                # Some other error: raise, so we avoid infinite loops 
+                # e.g. if we are in a folder in which we do not have write
+                # permissions
+                raise
+        
         subfolder = folder.get_subfolder(
             os.path.relpath(subfolder_path,folder.abspath),
             reset_limit=True)
@@ -1649,6 +1766,16 @@ class Calculation(Node):
         
         return errfile_content
 
+    @property
+    def files(self):
+        """
+        To be used to get direct access to the retrieved files.
+        
+        :return: an instance of the CalculationFileManager.
+        """
+        return CalculationFileManager(self)
+
+
 class CalculationResultManager(object):
     """
     An object used internally to interface the calculation object with the Parser 
@@ -1714,4 +1841,41 @@ class CalculationResultManager(object):
         except AttributeError:
             raise KeyError("Parser '{}' did not provide a result '{}'"
                            .format(self._parser.__class__.__name__, name))
+
+
+
+class CalculationFileManager(object):
+    """
+    An object used internally to interface the calculation with the FolderData 
+    object result. 
+    It shouldn't be used explicitely by a user, but accessed through calc.files.
+    """
+    def __init__(self, calc):
+        """
+        :param calc: the calculation object.
+        """
+        # Possibly add checks here
+        self._calc = calc
+        
+    def _get_folder(self):
+        from aiida.orm.data.folder import FolderData
+        from aiida.common.exceptions import NotExistent, UniquenessError
+        folders = self._calc.get_outputs(type=FolderData)
+        if not folders:
+            raise NotExistent("No output FolderData found")
+        try:
+            folders[1]
+        except IndexError:
+            pass
+        else:
+            raise UniquenessError("More than one output folder found")
+        return folders[0]
+    
+    def path(self,name):
+        folder = self._get_folder()
+        return folder.get_abs_path(name)
+    
+    def list(self,name='.'):
+        folder = self._get_folder()
+        return folder.get_path_list(name)
 

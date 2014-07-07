@@ -39,6 +39,12 @@ class Devel(VerdiCommandWithSubcommands):
         self.valid_subcommands = {
             'tests': (self.run_tests, self.complete_tests),
             'query': (self.run_query, self.complete_none), # For the moment, no completion
+            'setproperty': (self.run_setproperty, self.complete_properties), 
+            'getproperty': (self.run_getproperty, self.complete_properties),
+            'delproperty': (self.run_delproperty, self.complete_properties),
+            'describeproperties': (self.run_describeproperties, self.complete_none),
+            'listproperties': (self.run_listproperties, self.complete_none),
+            'play': (self.run_play, self.complete_none),
             }
         
         # The content of the dict is:
@@ -50,11 +56,137 @@ class Devel(VerdiCommandWithSubcommands):
         for dbtest in db_test_list:
             self.allowed_test_folders["{}{}".format(self._dbprefix, dbtest)] = [dbtest]
         self.allowed_test_folders[self._dbrawprefix] = db_test_list
+
+    def complete_properties(self, subargs_idx, subargs):
+        """
+        I complete with subargs that were not used yet.
+        """
+        from aiida.common.setup import _property_table
+        
+        if subargs_idx == 0:
+            return " ".join(_property_table.keys())
+        else:
+            return ""
+    
+    def run_describeproperties(self, *args):
+        """
+        List all found properties
+        """
+        from aiida.common.setup import _property_table, _NoDefaultValue
+        
+        if args:
+            print >> sys.stderr, ("No parameters allowed for {}".format(
+                self.get_full_command_name()))
+            sys.exit(1)
+        
+        for prop in sorted(_property_table.keys()):
+            if isinstance(_property_table[prop][3], _NoDefaultValue):
+                def_val_string = ""
+            else:
+                def_val_string = " (default: {})".format(
+                    _property_table[prop][3])
+            print "{} ({}): {}{}".format(prop, _property_table[prop][1],
+                                       _property_table[prop][2],
+                                       def_val_string)
+    
+    def run_listproperties(self, *args):
+        """
+        List all found properties
+        """
+        import argparse
+        
+        from aiida.common.setup import (
+            _property_table, exists_property, get_property)
+                
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='List all custom properties stored in the user configuration file.')
+        parser.add_argument('-a', '--all',
+            dest='all',action='store_true',
+            help="Show all properties, even if not explicitly defined, if they "
+                 "have a default value.")
+        parser.set_defaults(all=False)
+        parsed_args = parser.parse_args(args)
+        
+        show_all = parsed_args.all
+        
+        for prop in sorted(_property_table.keys()):
+            try:
+                # To enforce the generation of an exception, even if
+                # there is a default value
+                if show_all or exists_property(prop):
+                    val = get_property(prop)
+                    print "{} = {}".format(prop, val)
+            except KeyError:
+                pass
+
+    def run_getproperty(self, *args):
+        """
+        Get a property from the config file.
+        """
+        from aiida.common.setup import get_property
+        
+        if len(args) != 1:
+            print >> sys.stderr, ("usage: {} PROPERTYNAME".format(
+                self.get_full_command_name()))
+            sys.exit()
+        
+        try:
+            value = get_property(args[0])
+        except Exception as e:
+            print >> sys.stderr, ("{} while getting the "
+                "property: {}".format(type(e).__name__, e.message))
+            sys.exit(1)
+        print "{}".format(value)
+
+    def run_delproperty(self, *args):
+        """
+        Delete a property from the config file.
+        """
+        from aiida.common.setup import del_property
+        
+        if len(args) != 1:
+            print >> sys.stderr, ("usage: {} PROPERTYNAME".format(
+                self.get_full_command_name()))
+            sys.exit()
+        
+        try:
+            del_property(args[0])
+        except KeyError:
+            print >> sys.stderr, ("No such property '{}' in the config "
+                                  "file.".format(args[0]))
+            sys.exit(1)
             
+        except Exception as e:
+            print >> sys.stderr, ("{} while getting the "
+                "property: {}".format(type(e).__name__, e.message))
+            sys.exit(1)
+
+        print "Property '{}' successfully deleted.".format(args[0])
+    
+    def run_setproperty(self, *args):
+        """
+        Define a property in the config file.
+        """
+        from aiida.common.setup import set_property
+        
+        if len(args) != 2:
+            print >> sys.stderr, ("usage: {} PROPERTYNAME PROPERTYVALUE".format(
+                self.get_full_command_name()))
+            sys.exit()
+        
+        try:
+            set_property(args[0], args[1])
+        except Exception as e:
+            print >> sys.stderr, ("{} while storing the "
+                "property: {}".format(type(e).__name__, e.message))
+            sys.exit(1)
+           
     def run_tests(self,*args):
         import unittest
         import tempfile
         from aiida.djsite.settings import settings
+        from aiida.common.setup import get_property
 
         db_test_list = []
         test_folders = []
@@ -110,7 +242,7 @@ class Devel(VerdiCommandWithSubcommands):
             # Setup a sqlite3 DB for tests (WAY faster, since it remains in-memory)
 
             # TODO: allow the use of this flag
-            if settings.confs.get('use_inmemory_sqlite_for_tests', True):
+            if get_property('tests.use_sqlite'):
                 settings.DATABASES['default'] = {'ENGINE':
                                                  'django.db.backends.sqlite3'}
             ###################################################################
@@ -426,7 +558,13 @@ class Devel(VerdiCommandWithSubcommands):
                 print "  `-> {} = {}".format(p, v)
         
 
-
+    def run_play(self, *args):
+        """
+        Open a browser and play the Aida triumphal march by Giuseppe Verdi
+        """
+        import webbrowser
+        
+        webbrowser.open_new('http://upload.wikimedia.org/wikipedia/commons/3/32/Triumphal_March_from_Aida.ogg')
 
 #In [11]: attr_res = DbAttribute.objects.filter(Q(key='cell.atoms'), ~Q(ival__gt=7))
 #

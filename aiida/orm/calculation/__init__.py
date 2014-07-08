@@ -1361,15 +1361,17 @@ class Calculation(Node):
         
         logger_extra = get_dblogger_extra(self)    
         
-        if (self.get_state() == calc_states.NEW or 
-                self.get_state() == calc_states.TOSUBMIT):
+        old_state = self.get_state()
+        
+        if (old_state == calc_states.NEW or 
+                old_state == calc_states.TOSUBMIT):
+            self._set_state(calc_states.FAILED)
             self.logger.warning("Calculation {} killed by the user "
                                 "(it was in {} state)".format(
-                                self.pk, self.get_state()), extra=logger_extra)
-            self._set_state(calc_states.FAILED)
+                                self.pk, old_state), extra=logger_extra)
             return
         
-        if self.get_state() != calc_states.WITHSCHEDULER:
+        if old_state != calc_states.WITHSCHEDULER:
             raise InvalidOperation("Cannot kill a calculation not in {} state"
                                    .format(calc_states.WITHSCHEDULER) )
         
@@ -1485,7 +1487,7 @@ class Calculation(Node):
             [self.get_append_text(),
              calcinfo.append_text,
              code.get_append_text(),
-             computer.get_prepend_text()] if _)
+             computer.get_append_text()] if _)
 
         # Set resources, also with get_default_mpiprocs_per_machine
         resources_dict = self.get_resources(full=True)

@@ -72,7 +72,8 @@ class Node(object):
                     newcls._query_type_string = ''                 
             else:
                 raise InternalError("Class {} is not in a module under "
-                                    "aiida.orm.".format(name))
+                                    "aiida.orm. (module is {})".format(
+                        name, attrs['__module__']))
             
             return newcls
 

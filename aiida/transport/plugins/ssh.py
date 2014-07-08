@@ -1299,10 +1299,34 @@ class SshTransport(aiida.transport.Transport):
         return retval, output_text, stderr_text
 
     def gotocomputer_command(self, remotedir):
+        """
+        Specific gotocomputer string to connect to a given remote computer via
+        ssh and directly go to the calculation folder.
+        
+        .. todo: add also ProxyCommand and Timeout support
+        """
 
-        return """ssh -Y -t {machine} "if [ -d {escaped_remotedir} ] ; then cd {escaped_remotedir} ; bash ; else echo '  ** The directory' ; echo '  ** {remotedir}' ; echo '  ** seems to have been deleted, I logout...' ; fi" """.format(
-            machine=self._machine, escaped_remotedir="'{}'".format(remotedir), remotedir=remotedir)
+        further_params = []
+        if 'username' in self._connect_args:
+            further_params.append("-l {}".format(escape_for_bash(
+                self._connect_args['username'])))
+        
+        if 'port' in self._connect_args:
+            further_params.append("-p {}".format(self._connect_args['port']))
 
+        if 'identity_file' in self._connect_args:
+            further_params.append("-i {}".format(escape_for_bash(
+                self._connect_args['identity_file'])))
+        
+        further_params_str = " ".join(further_params)
+        connect_string = """ssh -t {machine} {further_params} "if [ -d {escaped_remotedir} ] ; then cd {escaped_remotedir} ; bash -l ; else echo '  ** The directory' ; echo '  ** {remotedir}' ; echo '  ** seems to have been deleted, I logout...' ; fi" """.format(
+            further_params=further_params_str,
+            machine=self._machine,
+            escaped_remotedir="'{}'".format(remotedir),
+            remotedir=remotedir)
+
+        # print connect_string
+        return connect_string
         
         #return """ssh -Y -t {machine} "if [ -d {escaped_remotedir} ] ; then cd {escaped_remotedir} ; bash -c "{bash_call_escaped}" ; else echo '  ** The directory' ; echo '  ** {remotedir}' ; echo '  ** seems to have been deleted, I logout...' ; fi" """.format(
         #    machine=self._machine, escaped_remotedir="'{}'".format(remotedir), remotedir=remotedir,

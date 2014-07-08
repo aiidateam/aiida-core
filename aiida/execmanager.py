@@ -427,6 +427,9 @@ def submit_calc(calc, authinfo, transport=None):
         FeatureDisabled, InputValidationError)
     from aiida.orm.data.remote import RemoteData
     from aiida.djsite.utils import get_dblogger_extra
+
+    if not authinfo.enabled:
+        return
     
     logger_extra = get_dblogger_extra(calc)
 
@@ -437,19 +440,22 @@ def submit_calc(calc, authinfo, transport=None):
         t = transport
         must_open_t = False
 
-    # TODO: do some sort of blocking call,
-    # to be sure that the submit function is not called
-    # twice for the same calc?    
-    if calc.get_state() != calc_states.TOSUBMIT:
-        raise ValueError("Can only submit calculations with state=TOSUBMIT! "
-                         "(state of calc {} is {} instead)".format(
-                             calc.pk, calc.get_state()))
     if calc.has_cached_links():
         raise ValueError("Cannot submit calculation {} because it has "
                          "cached input links! If you "
                          "just want to test the submission, use the "
                          "test_submit() method, otherwise store all links"
                          "first".format(calc.pk))
+
+
+    # Double check, in the case the calculation was 'killed' (and therefore
+    # put in the 'FAILED' state) in the meantime
+    # Do it as near as possible to the state change below (it would be
+    # even better to do it with some sort of transaction)
+    if calc.get_state() != calc_states.TOSUBMIT:
+        raise ValueError("Can only submit calculations with state=TOSUBMIT! "
+                         "(state of calc {} is {} instead)".format(
+                             calc.pk, calc.get_state()))
                 
     # I start to submit the calculation: I set the state
     try:

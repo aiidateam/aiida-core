@@ -91,7 +91,7 @@ names may change in different releases)::
       sudo apt-get install postgresql-server-dev-9.1
 
 .. note:: for the latter line, please use the same version (in the
-	  example above is 9.1) of the
+  example above is 9.1) of the
   postgresql server that you installed (in this case, to install the server of
   the same version, use the ``sudo apt-get install postgresql-9.1`` command).
   

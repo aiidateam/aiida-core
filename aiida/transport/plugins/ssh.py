@@ -1314,9 +1314,9 @@ class SshTransport(aiida.transport.Transport):
         if 'port' in self._connect_args:
             further_params.append("-p {}".format(self._connect_args['port']))
 
-        if 'identity_file' in self._connect_args:
+        if 'key_filename' in self._connect_args:
             further_params.append("-i {}".format(escape_for_bash(
-                self._connect_args['identity_file'])))
+                self._connect_args['key_filename'])))
         
         further_params_str = " ".join(further_params)
         connect_string = """ssh -t {machine} {further_params} "if [ -d {escaped_remotedir} ] ; then cd {escaped_remotedir} ; bash -l ; else echo '  ** The directory' ; echo '  ** {remotedir}' ; echo '  ** seems to have been deleted, I logout...' ; fi" """.format(

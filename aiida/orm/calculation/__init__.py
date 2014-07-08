@@ -1393,7 +1393,8 @@ class Calculation(Node):
                                        "(maybe the calculation already finished?)"
                                        .format(self.pk, self.get_job_id()))
         else:
-            self._set_state(calc_states.FAILED)
+            # Do not set the state, but let the parser do its job
+            #self._set_state(calc_states.FAILED)
             self.logger.warning("Calculation {} killed by the user "
                                 "(it was WITHSCHEDULER)".format(self.pk),
                                 extra=logger_extra)

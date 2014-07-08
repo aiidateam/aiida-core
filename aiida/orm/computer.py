@@ -241,6 +241,7 @@ class Computer(object):
         ret_lines.append(" * UUID:           {}".format(self.uuid))
         ret_lines.append(" * Description:    {}".format(self.description))
         ret_lines.append(" * Hostname:       {}".format(self.hostname))
+        ret_lines.append(" * Enabled:        {}".format("True" if self.is_enabled() else "False"))
         ret_lines.append(" * Transport type: {}".format(self.get_transport_type()))
         ret_lines.append(" * Scheduler type: {}".format(self.get_scheduler_type()))
         ret_lines.append(" * Work directory: {}".format(self.get_workdir()))
@@ -712,6 +713,9 @@ class Computer(object):
 #        if not self.to_be_stored:
 #            raise ModificationNotAllowed("Cannot set a property after having stored the entry")
         self.dbcomputer.metadata = json.dumps(metadata_dict)
+        if not self.to_be_stored:
+            self.dbcomputer.save()
+
 
     def _del_property(self,k,raise_exception=True):
         olddata = self._get_metadata()
@@ -811,6 +815,9 @@ class Computer(object):
             self.dbcomputer.transport_params = json.dumps(val)
         except ValueError:
             raise ValueError("The set of transport_params are not JSON-able")
+        if not self.to_be_stored:
+            self.dbcomputer.save()
+
 #        else:
 #            raise ModificationNotAllowed("Cannot set a property after having stored the entry")
 
@@ -833,50 +840,111 @@ class Computer(object):
         return self.dbcomputer.name
 
     def set_name(self,val):
-        #if self.to_be_stored:
-            self.dbcomputer.name = val
+        self.dbcomputer.name = val
+        if not self.to_be_stored:
+            self.dbcomputer.save()
 
     def get_hostname(self):
         return self.dbcomputer.hostname
 
     def set_hostname(self,val):
-        #if self.to_be_stored:
-            self.dbcomputer.hostname = val
-        #else:
-        #    raise ModificationNotAllowed("Cannot set a property after having stored the entry")
+        self.dbcomputer.hostname = val
+        if not self.to_be_stored:
+            self.dbcomputer.save()
 
     def get_description(self):
         return self.dbcomputer.description
 
     def set_description(self,val):
-        #if self.to_be_stored:
-            self.dbcomputer.description = val
-        #else:
-        #    raise ModificationNotAllowed("Cannot set a property after having stored the entry")
+        self.dbcomputer.description = val
+        if not self.to_be_stored:
+            self.dbcomputer.save()
 
     def is_enabled(self):
         return self.dbcomputer.enabled
+    
+    def get_dbauthinfo(self, user):
+        """
+        Return the aiida.djsite.db.models.DbAuthInfo instance for the
+        given user on this computer, if the computer
+        is not configured for the given user.
+        
+        :param user: a DbUser instance.
+        :return: a aiida.djsite.db.models.DbAuthInfo instance
+        :raise NotExistent: if the computer is not configured for the given
+            user.
+        """
+        from django.core.exceptions import ObjectDoesNotExist
+
+        from aiida.djsite.db.models import DbAuthInfo
+        from aiida.common.exceptions import NotExistent
+
+        try:
+            return DbAuthInfo.objects.get(dbcomputer=self.dbcomputer, 
+                                   aiidauser=user)
+        except ObjectDoesNotExist:
+            raise NotExistent("The user '{}' is not configured for "
+                              "computer '{}'".format(
+                user.email, self.name))
+    
+    def is_user_configured(self, user):
+        """
+        Return True if the computer is configured for the given user, 
+        False otherwise.
+        
+        :param user: a DbUser instance.
+        :return: a boolean.
+        """
+        from aiida.common.exceptions import NotExistent
+
+        try:
+            self.get_dbauthinfo(user)
+            return True
+        except NotExistent:
+            return False
+            
+    def is_user_enabled(self, user):
+        """
+        Return True if the computer is enabled for the given user (looking only
+        at the per-user setting: the computer could still be globally disabled).
+         
+        :note: Return False also if the user is not configured for the computer.
+        
+        :param user: a DbUser instance.
+        :return: a boolean.
+        """
+        from aiida.common.exceptions import NotExistent
+
+        try:
+            dbauthinfo = self.get_dbauthinfo(user)
+            return dbauthinfo.enabled
+        except NotExistent:
+            # Return False if the user is not configured (in a sense,
+            # it is disabled for that user)
+            return False
+
 
     def set_enabled_state(self, enabled):
         self.dbcomputer.enabled = enabled
+        if not self.to_be_stored:
+            self.dbcomputer.save()
 
     def get_scheduler_type(self):
         return self.dbcomputer.scheduler_type
 
     def set_scheduler_type(self,val):
-        #if self.to_be_stored:
-            self.dbcomputer.scheduler_type = val
-        #else:
-        #    raise ModificationNotAllowed("Cannot set a property after having stored the entry")
+        
+        self.dbcomputer.scheduler_type = val
+        if not self.to_be_stored:
+            self.dbcomputer.save()
 
     def get_transport_type(self):
         return self.dbcomputer.transport_type
 
     def set_transport_type(self,val):
-        #if self.to_be_stored:
-            self.dbcomputer.transport_type = val
-        #else:
-        #    raise ModificationNotAllowed("Cannot set a property after having stored the entry")
+        self.dbcomputer.transport_type = val
+        if not self.to_be_stored:
+            self.dbcomputer.save()
     
     def get_transport_class(self):
         from aiida.transport import TransportFactory

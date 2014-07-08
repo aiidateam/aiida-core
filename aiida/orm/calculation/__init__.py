@@ -1044,13 +1044,13 @@ class Calculation(Node):
                                                    key='scheduler_state').values_list(
             'dbnode__pk', 'tval'))
         
+        # I do the query now, so that the list of pks gets cached
+        calc_list_data = calc_list.values('pk', 'dbcomputer__name', 'ctime', 'type')        
         states = {c.pk: c.get_state_string() for c in calc_list}
         
         scheduler_lastcheck = dict(DbAttribute.objects.filter(
             dbnode__in=calc_list,
             key='scheduler_lastchecktime').values_list('dbnode__pk', 'dval'))
-        
-        calc_list_data = calc_list.values('pk', 'dbcomputer__name', 'ctime', 'type')
         
         ## Get the last daemon check
         try:

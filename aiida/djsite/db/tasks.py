@@ -73,7 +73,8 @@ def get_most_recent_daemon_timestamp():
     
     if timestamps:
         # The most recent timestamp
-        return max(*timestamps)
+        
+        return max(timestamps)
     else:
         return None
 

@@ -20,11 +20,11 @@ In fact, when writing your own plugin, keep in mind that you need to
 satisfy multiple users, and the interface needs to be simple (not the
 code below). But always try to follow the Zen of Python:
 
-Simple is better than complex.
-
-Complex is better than complicated.
-
-Readability counts.
+ Simple is better than complex.
+ 
+ Complex is better than complicated.
+ 
+ Readability counts.
 
 There will be two kinds of plugins, the input and the output. The former will
 run your calculations on the cluster, the latter will make your results
@@ -32,6 +32,8 @@ readable in the database.
  
 InputPlugin
 -----------
+
+.. todo:: This is slightly outdated, update it with the newest code features.
 
 Step 1: know your code inputs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -261,8 +261,6 @@ class CpParser(Parser):
         output_params = ParameterData(dict=out_dict)
         # save it into db
         new_nodes_list.append((self.get_linkname_outparams(),output_params))
-        output_params.store()
-        self._calc._add_link_to(output_params, label=self.get_linkname_outparams() )
         
         return successful,new_nodes_list
 

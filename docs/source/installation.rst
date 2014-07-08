@@ -90,11 +90,12 @@ names may change in different releases)::
       sudo apt-get install libsqlite3-dev
       sudo apt-get install postgresql-server-dev-9.1
 
-.. note:: for the latter line, please use the same version (here 9.1) of the
+.. note:: for the latter line, please use the same version (in the
+  example above is 9.1) of the
   postgresql server that you installed (in this case, to install the server of
   the same version, use the ``sudo apt-get install postgresql-9.1`` command).
   
-  If you want to use postgreSQL, use a version greated than 9.1
+  If you want to use postgreSQL, use a version greater than 9.1
   (the greatest that your distribution supports).
 
 Downloading the code
@@ -132,6 +133,14 @@ Then, install the python dependencies is as simple as this::
 the packages as a normal user, without the need of using ``sudo`` or
 becoming root). Check that every package is installed correctly.
 
+.. note:: if the ``pip install`` command gives you this kind of error message::
+
+    OSError: [Errno 13] Permission denied: '/usr/local/bin/easy_install'
+
+  then try again as root::
+    
+    sudo pip install -U -r requirements.txt
+
 If everything went smoothly, congratulations! Now the code is installed!
 However, we need still a few steps to properly configure AiiDA for your user.
 
@@ -145,6 +154,11 @@ However, we need still a few steps to properly configure AiiDA for your user.
 
 	sudo easy_install pip==1.2.1
 
+.. note:: Several users reported the need to install also ``libqp-dev``::
+
+    apt-get install libqp-dev
+    
+  But under Ubuntu 12.04 this is not needed.
 
 AiiDA configuration
 +++++++++++++++++++
@@ -273,13 +287,14 @@ the calculations to you.
   AiiDA.
    
 .. note:: Even if you choose an email different from the default one
-  (``aiida@localhost``), an user with email ``aiida@localhost`` will be set up.
-  Anyway, its password will be set to None, effectively disabling
-  any access via this user using the API or the Web Interface.
+  (``aiida@localhost``), a user with email ``aiida@localhost`` will be
+  set up,
+  with its password set to ``None`` (disabling access via this user
+  via API or Web interface).
   
-  The existence of such a default user is particularly useful in a multi-user
-  approach, where only one user
-  should run the daemon, even if many users can simultaneously access the DB.
+  The existence of a default user is internally useful for multi-user
+  setups, where only one user 
+  runs the daemon, even if many users can simultaneously access the DB.
   See the page on :ref:`setting up AiiDA in multi-user mode<aiida_multiuser>`
   for more details (only for advanced users).
 
@@ -288,9 +303,24 @@ the calculations to you.
     field empty, no password will be set and no access will be granted to the
     user via the REST API and the web interface.
 
-Then, the following prompts will help you configure the database.
+Then, the following prompts will help you configure the database. Typical settings are::
 
-.. note:: Whe the "Database engine" is asked, use 'sqlite' **only if** you want
+	Insert your timezone: Europe/Zurich
+	Default user email: richard.wagner@leipzig.de
+	Database engine: sqlite3
+	AiiDA Database location: /home/wagner/.aiida/aiida.db
+	AiiDA repository directory: /home/wagner/.aiida/repository/
+	[...]
+	Configuring a new user with email 'richard.wagner@leipzig.de'
+	First name: Richard
+	Last name: Wagner
+	Institution: BRUHL, LEIPZIG
+	The user has no password, do you want to set one? [y/N] y
+	Insert the new password:
+	Insert the new password (again):
+
+
+.. note:: When the "Database engine" is asked, use 'sqlite3' **only if** you want
   to try out AiiDA without setting up a database.
   
   **However, keep in mind that for serious use, SQLite has serious
@@ -302,7 +332,9 @@ Then, the following prompts will help you configure the database.
   **Therefore, for production use of AiiDA, we strongly suggest to setup a
   "real" database** as PostgreSQL or MySQL. Then, in the "Database engine"
   field, type either 'postgres' or 'mysql' according to the database you 
-  chose to use.
+  chose to use. See :doc:`here<database/index>` for the documentation
+  to setup such databases (including info on how to proceed with ``verdi install``
+  in this case). 
 
 At the end, AiiDA will also ask to configure your user, if you set up a user
 different from ``aiida@localhost``.
@@ -312,23 +344,21 @@ the database. Double-check your settings before reporting an error.
 
 Start the daemon
 -----------------
-.. note:: Only one user can run the daemon on a given database instance.
-  By default, this user is the default AiiDA user (aiida@localhost).
-  If you chose a different user in the previous step, the ``verdi daemon start``
-  will refuse to start the daemon.
+If you configured your user account with your personal email (or if in
+general there are more than just one user) you will not be able to
+start the daemon with the command ``verdi daemon start`` before its configuration.
   
   *If you are working in a single-user mode, and you are sure that nobody else
   is going to run the daemon*, you can configure your user as the (only)
   one who can run the daemon.
   
-  To do so, run::
+To configure the deamon, run::
     
     verdi daemon configureuser
    
-  and (after having read and understood the warning text that appears) insert
-  the email that you used above during the ``verdi install`` phase.
+and (after having read and understood the warning text that appears) insert
+the email that you used above during the ``verdi install`` phase.
   
-  After this operation, you should be able to run the daemon normally.
 
 To try AiiDA and start the daemon, run::
 

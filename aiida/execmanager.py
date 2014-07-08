@@ -742,7 +742,11 @@ def retrieve_computed_for_authinfo(authinfo):
                     if Parser is not None:
                         # TODO: parse here
                         parser = Parser(calc)
-                        successful = parser.parse_from_calc()
+                        successful,new_nodes_tuple = parser.parse_from_calc()
+                        
+                        for label,n in new_nodes_tuple:
+                            n._add_link_from(calc,label=label)
+                            n.store()
                         
                     if successful:
                         try:

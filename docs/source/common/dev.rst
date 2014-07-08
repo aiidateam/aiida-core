@@ -11,11 +11,6 @@ Calculation datastructures
 .. automodule:: aiida.common.datastructures
    :members:
 
-Database graph
-++++++++++++++
-.. automodule:: aiida.common.dbgraph
-   :members:
-   
 Exceptions
 ++++++++++
 .. automodule:: aiida.common.exceptions

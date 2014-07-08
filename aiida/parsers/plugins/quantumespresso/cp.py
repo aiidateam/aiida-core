@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from aiida.orm.calculation.quantumespresso.cp import CpCalculation
 from aiida.parsers.plugins.quantumespresso.raw_parser_cp import *
 from aiida.parsers.plugins.quantumespresso.constants import *
@@ -9,6 +10,11 @@ from aiida.parsers.plugins.quantumespresso import convert_qe2aiida_structure
 from aiida.common.datastructures import calc_states
 from aiida.common.exceptions import UniquenessError
 from aiida.orm.data.array.trajectory import TrajectoryData
+
+__author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
+__copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
+__version__ = "0.2.0"
 
 class CpParser(Parser):
     """

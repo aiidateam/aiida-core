@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Plugin for SLURM.
 This has been tested on SLURM 2.5.4 on the CSCS.ch machines.
@@ -33,6 +34,11 @@ from aiida.scheduler.datastructures import (
 ## S   SUSPENDED       Job  has an allocation, but execution has been sus-
 ##                     pended.
 ## TO  TIMEOUT         Job terminated upon reaching its time limit.
+
+__author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
+__copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
+__version__ = "0.2.0"
 
 _map_status_slurm = {
     'CA': job_states.DONE,

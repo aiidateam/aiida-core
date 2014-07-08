@@ -155,7 +155,10 @@ def try_create_secret_key():
     secret_key_full_name = os.path.join(aiida_dir,SECRET_KEY_FNAME)
     
     if os.path.exists(secret_key_full_name):
-        return
+        # If for some reason the file is empty, regenerate it
+        with open(secret_key_full_name) as f:
+            if f.read().strip():
+                return
     
     with open(secret_key_full_name, 'w') as f:
         f.write(generate_random_secret_key())

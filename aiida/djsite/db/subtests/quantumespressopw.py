@@ -80,8 +80,9 @@ class TestQEPWInputGeneration(QETestCase):
         
         k = ParameterData(dict=k_points).store()
         
-        pseudo_dir = os.path.join(aiida.__file__, os.pardir,os.pardir,
-                     'testdata','qepseudos')
+        pseudo_dir = os.path.join(os.path.split(aiida.__file__)[0],
+                                  os.pardir,'examples',
+                                  'testdata','qepseudos')
         
         raw_pseudos = [
             ("Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF", 'Ba'),

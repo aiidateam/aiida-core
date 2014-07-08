@@ -713,6 +713,27 @@ class Node(object):
         """
         return dict(self.get_inputs(also_labels=True))
 
+    def get_outputs_dict(self):
+        """
+        Return a dictionary where the key is the label of the output link, and
+        the value is the input node.
+        
+        :return: a dictionary {label:object}
+        """
+        list_with_duplicates = self.get_outputs(also_labels=True)
+        
+        # case with duplicates
+        labels = [i[0] for i in list_with_duplicates]
+        duplicated_labels = set([ i for i in labels if labels.count(i)>1 ])
+        
+        if not duplicated_labels:
+            return dict(list_with_duplicates)
+        else:
+            # correct
+            list_outputs = [ (i[0]+"_to_{}".format(i[1].pk),i[1]) if i[0]=='code' 
+                             else i for i in list_with_duplicates ]      
+            return list_outputs
+
     def get_inputdata_dict(self, only_in_db=False):
         """
         Return a dictionary where the key is the label of the input link, and
@@ -1466,3 +1487,112 @@ class Node(object):
         if getattr(self,'_temp_folder',None) is not None:
             self._temp_folder.erase()
 
+
+
+
+
+    @property
+    def out(self):
+        """
+        To document
+        """
+        return NodeOutputManager(self)
+
+    @property
+    def inp(self):
+        """
+        To document
+        """
+        return NodeInputManager(self)
+
+
+
+class NodeOutputManager(object):
+    """
+    To document
+    """
+    def __init__(self, node):
+        """
+        :param node: the node object.
+        """
+        # Possibly add checks here
+        self._node = node
+
+    def __dir__(self):
+        """
+        Allow to list all valid output links
+        """
+        node_attributes = self._node.get_outputs_dict().keys()
+        return sorted(set(list(dir(type(self))) + list(node_attributes)))
+            
+    def __iter__(self):
+        node_attributes = self._node.get_outputs_dict().keys()
+        for k in node_attributes:
+            yield k
+    
+    def __getattr__(self,name):
+        """
+        :param name: name of the attribute to be asked to the parser results.
+        """
+        try:
+            return self._node.get_outputs_dict()[name]
+        except KeyError:
+            raise AttributeError("Node {} does not have an output with link {}"
+                                 .format(self._node.pk,name))
+
+    def __getitem__(self,name):
+        """
+        interface to get to the parser results as a dictionary.
+        
+        :param name: name of the attribute to be asked to the parser results.
+        """
+        try:
+            return self._node.get_outputs_dict()[name]
+        except KeyError:
+            raise KeyError("Node {} does not have an output with link {}"
+                           .format(self._node.pk, name))
+
+class NodeInputManager(object):
+    """
+    To document
+    """
+    def __init__(self, node):
+        """
+        :param node: the node object.
+        """
+        # Possibly add checks here
+        self._node = node
+
+    def __dir__(self):
+        """
+        Allow to list all valid input links
+        """
+        node_attributes = self._node.get_inputs_dict().keys()
+        return sorted(set(list(dir(type(self))) + list(node_attributes)))
+            
+    def __iter__(self):
+        node_attributes = self._node.get_inputs_dict().keys()
+        for k in node_attributes:
+            yield k
+    
+    def __getattr__(self,name):
+        """
+        :param name: name of the attribute to be asked to the parser results.
+        """
+        try:
+            return self._node.get_inputs_dict()[name]
+        except KeyError:
+            raise AttributeError("Node {} does not have an input with link {}"
+                                 .format(self._node.pk,name))
+
+    def __getitem__(self,name):
+        """
+        interface to get to the parser results as a dictionary.
+        
+        :param name: name of the attribute to be asked to the parser results.
+        """
+        try:
+            return self._node.get_inputs_dict()[name]
+        except KeyError:
+            raise KeyError("Node {} does not have an input with link {}"
+                           .format(self._node.pk, name))

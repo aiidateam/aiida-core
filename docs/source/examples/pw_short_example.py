@@ -1,18 +1,18 @@
 #!/usr/bin/env python
 from aiida.common.utils import load_django
 load_django()
-from aiida.orm import Code
-from aiida.orm import CalculationFactory, DataFactory
 
-ParameterData = DataFactory('parameter')
+from aiida.orm import Code, DataFactory
 StructureData = DataFactory('structure')
+ParameterData = DataFactory('parameter')
 
-codename = 'your_pw.x'
-
-pseudo_family = 'lda_pslib'
+###############################
+# Set your values here
+codename = 'pw_on_TheHive'
+pseudo_family = 'lda_pslibrary'
+###############################
 
 code = Code.get(codename)
-computer = code.get_remote_computer()
 
 # BaTiO3 cubic structure
 alat = 4. # angstrom
@@ -26,37 +26,38 @@ s.append_atom(position=(alat/2.,alat/2.,alat/2.),symbols='Ti')
 s.append_atom(position=(alat/2.,alat/2.,0.),symbols='O')
 s.append_atom(position=(alat/2.,0.,alat/2.),symbols='O')
 s.append_atom(position=(0.,alat/2.,alat/2.),symbols='O')
-s.store()
 
 parameters = ParameterData(dict={
-            'CONTROL': {
-                'calculation': 'scf',
-                'restart_mode': 'from_scratch',
-                'wf_collect': True,
-                },
-            'SYSTEM': {
-                'ecutwfc': 30.,
-                'ecutrho': 240.,
-                },
-            'ELECTRONS': {
-                'conv_thr': 1.e-6,
-                }}).store()
+          'CONTROL': {
+              'calculation': 'scf',
+              'restart_mode': 'from_scratch',
+              'wf_collect': True,
+              },
+          'SYSTEM': {
+              'ecutwfc': 30.,
+              'ecutrho': 240.,
+              },
+          'ELECTRONS': {
+              'conv_thr': 1.e-6,
+              }})
 
 kpoints = ParameterData(dict={
-                'type': 'automatic',
-                'points': [4, 4, 4, 0, 0, 0],
-                }).store()
+              'type': 'automatic',
+              'points': [4, 4, 4, 0, 0, 0],
+              })
 
-QECalc = CalculationFactory('quantumespresso.pw')
-calc = QECalc(computer=computer)
-calc.set_max_wallclock_seconds(30*60) # 30 min
-calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 16})
-calc.store()
+calc = code.new_calc(max_wallclock_seconds=3600,
+    resources={"num_machines": 1})
+calc.label = "A generic title"
+calc.description = "A much longer description"
 
 calc.use_structure(s)
 calc.use_code(code)
 calc.use_parameters(parameters)
-calc.use_pseudos_from_family(pseudo_family)
 calc.use_kpoints(kpoints)
+calc.use_pseudos_from_family(pseudo_family)
 
+calc.store_all()
+print "created calculation with PK={}".format(calc.pk)
 calc.submit()
+

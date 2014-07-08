@@ -367,20 +367,41 @@ def submit_jobs_with_authinfo(authinfo):
     # no calcs with state WITHSCHEDULER
     if len(calcs_to_inquire):
         # Open connection
-        with t:
-            for c in calcs_to_inquire:
+        try:
+            with t:
+                for c in calcs_to_inquire:
+                    try:
+                        submit_calc(calc=c, authinfo=authinfo, transport=t)
+                    except Exception as e:
+                        # TODO: implement a counter, after N retrials
+                        # set it to a status that
+                        # requires the user intervention
+                        execlogger.warning("There was an exception for "
+                            "calculation {} ({}): {}".format(
+                            c.pk, e.__class__.__name__, e.message))
+                        # I just proceed to the next calculation
+                        continue
+        # Catch exceptions also at this lavel (this happens only if there is
+        # a problem opening the transport in the 'with t' statement,
+        # because any other exception is catched and skipped above
+        except Exception as e:
+            import traceback
+            from aiida.djsite.utils import get_dblogger_extra
+
+            for calc in calcs_to_inquire:
+                logger_extra = get_dblogger_extra(calc)
                 try:
-                    submit_calc(calc=c, authinfo=authinfo, transport=t)
-                except Exception as e:
-                    # TODO: implement a counter, after N retrials
-                    # set it to a status that
-                    # requires the user intervention
-                    execlogger.warning("There was an exception for "
-                        "calculation {} ({}): {}".format(
-                        c.pk, e.__class__.__name__, e.message))
-                    # I just proceed to the next calculation
-                    continue
+                    calc._set_state(calc_states.SUBMISSIONFAILED)
+                except UniquenessError:
+                # Someone already set it, just skip
+                    pass
     
+                execlogger.error("Submission of calc {} failed, check also the "
+                                 "log file! Traceback: {}".format(calc.pk, 
+                                  traceback.format_exc()),
+                                 extra=logger_extra)
+            raise
+            
   
 
 def submit_calc(calc, authinfo, transport=None):

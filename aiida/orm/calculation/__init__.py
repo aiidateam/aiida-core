@@ -1067,8 +1067,8 @@ class Calculation(Node):
             # first save a matrix of results to be printed
             res_str_list = [last_check_string]
             str_matrix = []
-            title = ['Pk','State','Creation time',
-                     'Scheduler state','Computer','Type']
+            title = ['# Pk','State','Creation',
+                     'Sched. state','Computer','Type']
             str_matrix.append(title)
             len_title = [len(i) for i in title]
             
@@ -1100,10 +1100,12 @@ class Calculation(Node):
 
                 calc_module = from_type_to_pluginclassname(calcdata['type']).rsplit(".",1)[0]
                 if calc_module.startswith('calculation.'):
-                    calc_module = calc_module[12:]
+                    calc_module = calc_module[12:].strip()
                 
                 if relative_ctime:
-                    calc_ctime = str_timedelta(now-calcdata['ctime'], negative_to_zero=True)
+                    calc_ctime = str_timedelta(now-calcdata['ctime'],
+                                               negative_to_zero=True,
+                                               max_num_fields=1)
                 else:
                     calc_ctime = " ".join([timezone.localtime(calcdata['ctime']).isoformat().split('T')[0],
                             timezone.localtime(calcdata['ctime']).isoformat().split('T')[1].split('.')[0].rsplit(":",1)[0]])
@@ -1871,7 +1873,7 @@ class CalculationFileManager(object):
             raise UniquenessError("More than one output folder found")
         return folders[0]
     
-    def path(self,name):
+    def path(self,name='.'):
         folder = self._get_folder()
         return folder.get_abs_path(name)
     

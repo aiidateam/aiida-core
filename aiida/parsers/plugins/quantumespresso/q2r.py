@@ -33,7 +33,14 @@ class Q2rParser(Parser):
         """
         from aiida.common.exceptions import InvalidOperation
         import os
-        
+        from aiida.common import aiidalogger
+        from aiida.djsite.utils import get_dblogger_extra
+        parserlogger = aiidalogger.getChild('q2rparser')
+        logger_extra = get_dblogger_extra(self._calc)
+
+        # suppose at the start that the job is successful
+        successful = True
+
         # check if I'm not to overwrite anything
         state = self._calc.get_state()
         if state != calc_states.PARSING:
@@ -43,27 +50,25 @@ class Q2rParser(Parser):
         # load all outputs of type FolderData
         calc_outputs = self._calc.get_outputs(type=FolderData,also_labels=True)
         # look for retrieved files only
-        retrieved_files = [i[1] for i in calc_outputs if i[0]==self._calc.get_linkname_retrieved()]
-        if len(retrieved_files)!=1:
-            raise UniquenessError("Output folder should be found once, "
-                                  "found it instead {} times"
-                                  .format(len(retrieved_files)) )
+        retrieved_folders = [i[1] for i in calc_outputs if i[0]==self._calc.get_linkname_retrieved()]
+        if len(retrieved_folders)!=1:
+            successful = False
+            parserlogger.error("Output folder should be found once, fount it "
+                               "instead {} times".format(len(retrieved_folders)), 
+                               extra=logger_extra)
         # select the folder object
-        out_folder = calc_outputs[0][1]
+        out_folder = retrieved_folders[0]
         
         # check what is inside the folder
         list_of_files = out_folder.get_path_list()
         # at least the stdout should exist
         if not self._calc.OUTPUT_FILE_NAME in list_of_files:
-            #TODO add log and set calculation to failed
-            raise QEOutputParsingError("Standard output not found")
-
-        # suppose at the start that the job is successful
-        successful = True
-
+            successful = False
+            parserlogger.error("Standard output not found",extra=logger_extra)
+            return successful,()
+        
         # check that the file has finished (i.e. JOB DONE is inside the file)
-        filpath = os.path.join(out_folder.get_abs_path('.'),
-                               self._calc.OUTPUT_FILE_NAME)
+        filpath = out_folder.get_abs_path(self._calc.OUTPUT_FILE_NAME)
         with open(filpath,'r') as fil:
             lines = fil.read()
         if "JOB DONE" not in lines:
@@ -78,5 +83,7 @@ class Q2rParser(Parser):
             successful = False
             # add log for failure
         
-        return successful
+        new_nodes_list = []
+        
+        return successful,new_nodes_list
 

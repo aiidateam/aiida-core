@@ -13,14 +13,9 @@
 Welcome to AiiDA's documentation!
 =================================
 
-AiiDA is sophisticated suite designed from scratch to be a flexible
-and scalable infrastructure for atomistic simulations. Able to grant
-full data provenance of each simulation, and based on a powerful
-database scheme built for efficient data mining implementations, AiiDA
-give to user the ability to interact in a seamless way with any number
-of HPC machines and codes thanks to a flexible plugin framework and a
-workflow engine for simulations automation.
-The software is available at http://www.aiida.net .
+AiiDA is a sophisticated framework designed from scratch to be a flexible and scalable infrastructure for atomistic simulations. Being able to store the full data provenance of each simulation, and based on a tailored database solution built for efficient data mining implementations, AiiDA gives the user the ability to interact seamlessly with any number of HPC machines and codes thanks to its flexible plugin interface, together with a powerful workflow engine for the automation of simulations.
+
+The software is available at http://www.aiida.net.
 
 This is the documenation of the AiiDA framework. For the first setup, configuration and
 usage, refer to the :doc:`user's guide<user_guide/index>` below.

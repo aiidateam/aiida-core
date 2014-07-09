@@ -215,8 +215,7 @@ class BasePwCpInputGenerator(object):
 
         # Kpoints converted to uppercase
         if self._use_kpoints:
-            kpoints_dict = _uppercase_dict(kpoints.get_dict(),
-                                           dict_name='kpoints')
+            kpoints_dict = kpoints.get_dict()
 
         # I put the first-level keys as uppercase (i.e., namelist and card names)
         # and the second-level keys as lowercase
@@ -344,37 +343,44 @@ class BasePwCpInputGenerator(object):
         # ============ I prepare the k-points =============
         if self._use_kpoints:
             try:
-                kpoints_type = kpoints_dict['TYPE']
+                kpoints_type = kpoints_dict.pop('type')
             except KeyError: 
-                raise InputValidationError("No 'TYPE' specified in the "
-                                           "kpooints input node.")
+                raise InputValidationError("No 'type' specified in the "
+                                           "kpoints input node.")
         
             if kpoints_type != "gamma":
                 try:
-                    kpoints_list = kpoints_dict["POINTS"]
+                    kpoints_list = kpoints_dict.pop("points")
                     num_kpoints = len(kpoints_list)
                 except KeyError:
                     raise InputValidationError(
-                        "the kpoints input node does not contain a 'POINTS' "
+                        "the kpoints input node does not contain a 'points' "
                         "key")
                 except TypeError:
-                    raise InputValidationError("'POINTS' key is not a list")
-            if num_kpoints == 0:
-                raise InputValidationError("At least one k point must be "
-                    "provided for non-gamma calculations")
+                    raise InputValidationError(
+                        "In the kpoints input node, 'points' is not a list")
+                if num_kpoints == 0:
+                    raise InputValidationError("At least one k point must be "
+                        "provided for non-gamma calculations")
     
+            if kpoints_dict:
+                    raise InputValidationError("The following keys in the "
+                        "kpoints input node are not valid: {}".format(
+                            ",".join(kpoints_dict.keys())))
+                
             kpoints_card_list = ["K_POINTS {}\n".format(kpoints_type)]
     
             if kpoints_type == "automatic":
                 if len(kpoints_list) != 6:
                     raise InputValidationError("k-points type is automatic, but "
-                        "'POINTS' is not a list of 6 integers")
+                        "the 'points' value is not a list of 6 integers")
                 try: 
                     kpoints_card_list.append("{:d} {:d} {:d} {:d} {:d} {:d}\n"
                         "".format(*kpoints_list))
                 except ValueError:
-                    raise InputValidationError("Some elements  of the 'POINTS' key "
-                        "in the K_POINTS card are not integers")        
+                    raise InputValidationError(
+                        "Some elements  of the 'points' list "
+                        "in the input kpoints node are not integers")        
             elif kpoints_type == "gamma":
                 # nothing to be written in this case
                 pass
@@ -382,15 +388,26 @@ class BasePwCpInputGenerator(object):
                 kpoints_card_list.append("{:d}\n".format(num_kpoints))
                 try:
                     if all(len(i)==4 for i in kpoints_list):
-                        for kpoint in kpoints_list:
-                            kpoints_card_list.append(
-                                "  {:18.10f} {:18.10f} {:18.10f} {:18.10f}"
-                                "\n".format(kpoint))
+                        try:
+                            for kpoint in kpoints_list:
+                                kpoints_card_list.append(
+                                    "  {:18.10f} {:18.10f} {:18.10f} {:18.10f}"
+                                    "\n".format(
+                                        float(kpoint[0]),float(kpoint[1]),
+                                        float(kpoint[2]),float(kpoint[3])))
+                        except ValueError:
+                            raise InputValidationError(
+                                "Invalid number provided for one of the kpoints"
+                                " in the 'points' list of the input kpoints "
+                                "node. I got: {}".format(kpoint))
                     else:
-                        raise InputValidationError("'POINTS' must either all have "
+                        raise InputValidationError(
+                            "In the kpoints input node, 'points' must all have "
                             "length four (3 coordinates + last value: weight)")
                 except (KeyError, TypeError):
-                    raise InputValidationError("'POINTS' must be a list of k points, "
+                    raise InputValidationError(
+                        "In the kpoints input node, 'points' must be a list "
+                        "of k points, and"
                         "each k point must be provided as a list of 4 items: its "
                         "coordinates and its weight")
             kpoints_card = "".join(kpoints_card_list)

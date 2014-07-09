@@ -90,7 +90,8 @@ names may change in different releases)::
       sudo apt-get install libsqlite3-dev
       sudo apt-get install postgresql-server-dev-9.1
 
-.. note:: for the latter line, please use the same version (here 9.1) of the
+.. note:: for the latter line, please use the same version (in the
+  example above is 9.1) of the
   postgresql server that you installed (in this case, to install the server of
   the same version, use the ``sudo apt-get install postgresql-9.1`` command).
   
@@ -286,13 +287,14 @@ the calculations to you.
   AiiDA.
    
 .. note:: Even if you choose an email different from the default one
-  (``aiida@localhost``), an user with email ``aiida@localhost`` will be set up.
-  Anyway, its password will be set to None, effectively disabling
-  any access via this user using the API or the Web Interface.
+  (``aiida@localhost``), a user with email ``aiida@localhost`` will be
+  set up,
+  with its password set to ``None`` (disabling access via this user
+  via API or Web interface).
   
-  The existence of such a default user is particularly useful in a multi-user
-  approach, where only one user
-  should run the daemon, even if many users can simultaneously access the DB.
+  The existence of a default user is internally useful for multi-user
+  setups, where only one user 
+  runs the daemon, even if many users can simultaneously access the DB.
   See the page on :ref:`setting up AiiDA in multi-user mode<aiida_multiuser>`
   for more details (only for advanced users).
 
@@ -342,23 +344,21 @@ the database. Double-check your settings before reporting an error.
 
 Start the daemon
 -----------------
-.. note:: Only one user can run the daemon on a given database instance.
-  By default, this user is the default AiiDA user (aiida@localhost).
-  If you chose a different user in the previous step, the ``verdi daemon start``
-  will refuse to start the daemon.
+If you configured your user account with your personal email (or if in
+general there are more than just one user) you will not be able to
+start the daemon with the command ``verdi daemon start`` before its configuration.
   
   *If you are working in a single-user mode, and you are sure that nobody else
   is going to run the daemon*, you can configure your user as the (only)
   one who can run the daemon.
   
-  To do so, run::
+To configure the deamon, run::
     
     verdi daemon configureuser
    
-  and (after having read and understood the warning text that appears) insert
-  the email that you used above during the ``verdi install`` phase.
+and (after having read and understood the warning text that appears) insert
+the email that you used above during the ``verdi install`` phase.
   
-  After this operation, you should be able to run the daemon normally.
 
 To try AiiDA and start the daemon, run::
 

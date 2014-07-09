@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Plugin to create a Quantum Espresso ph.x input file.
 """
@@ -16,6 +17,12 @@ from aiida.orm.calculation.quantumespresso.pw import PwCalculation
 
 # List of namelists (uppercase) that are allowed to be found in the
 # input_data, in the correct order
+
+__author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
+__copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
+__version__ = "0.2.0"
+
 _compulsory_namelists = ['INPUTPH']
 
 # Keywords that cannot be set manually, only by the plugin

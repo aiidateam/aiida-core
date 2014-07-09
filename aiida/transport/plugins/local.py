@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 ###
 ### GP: a note on the local transport:
 ### I believe that we must not use os.chdir to keep track of the folder
@@ -12,6 +13,12 @@ from aiida.transport import FileAttribute
 import StringIO
 import glob
 from aiida.common import aiidalogger
+
+__author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
+__copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
+__version__ = "0.2.0"
+
 execlogger = aiidalogger.getChild('transport')
 
 

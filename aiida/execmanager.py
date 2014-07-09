@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 This file contains the main routines to submit, check and retrieve calculation
 results. These are general and contain only the main logic; where appropriate, 
@@ -14,6 +15,11 @@ from aiida.common.exceptions import (
     )
 from aiida.common import aiidalogger
     
+__author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
+__copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
+__version__ = "0.2.0"
+
 execlogger = aiidalogger.getChild('execmanager')
 
 def update_running_calcs_status(authinfo):
@@ -361,20 +367,41 @@ def submit_jobs_with_authinfo(authinfo):
     # no calcs with state WITHSCHEDULER
     if len(calcs_to_inquire):
         # Open connection
-        with t:
-            for c in calcs_to_inquire:
+        try:
+            with t:
+                for c in calcs_to_inquire:
+                    try:
+                        submit_calc(calc=c, authinfo=authinfo, transport=t)
+                    except Exception as e:
+                        # TODO: implement a counter, after N retrials
+                        # set it to a status that
+                        # requires the user intervention
+                        execlogger.warning("There was an exception for "
+                            "calculation {} ({}): {}".format(
+                            c.pk, e.__class__.__name__, e.message))
+                        # I just proceed to the next calculation
+                        continue
+        # Catch exceptions also at this lavel (this happens only if there is
+        # a problem opening the transport in the 'with t' statement,
+        # because any other exception is catched and skipped above
+        except Exception as e:
+            import traceback
+            from aiida.djsite.utils import get_dblogger_extra
+
+            for calc in calcs_to_inquire:
+                logger_extra = get_dblogger_extra(calc)
                 try:
-                    submit_calc(calc=c, authinfo=authinfo, transport=t)
-                except Exception as e:
-                    # TODO: implement a counter, after N retrials
-                    # set it to a status that
-                    # requires the user intervention
-                    execlogger.warning("There was an exception for "
-                        "calculation {} ({}): {}".format(
-                        c.pk, e.__class__.__name__, e.message))
-                    # I just proceed to the next calculation
-                    continue
+                    calc._set_state(calc_states.SUBMISSIONFAILED)
+                except UniquenessError:
+                # Someone already set it, just skip
+                    pass
     
+                execlogger.error("Submission of calc {} failed, check also the "
+                                 "log file! Traceback: {}".format(calc.pk, 
+                                  traceback.format_exc()),
+                                 extra=logger_extra)
+            raise
+            
   
 
 def submit_calc(calc, authinfo, transport=None):
@@ -400,6 +427,9 @@ def submit_calc(calc, authinfo, transport=None):
         FeatureDisabled, InputValidationError)
     from aiida.orm.data.remote import RemoteData
     from aiida.djsite.utils import get_dblogger_extra
+
+    if not authinfo.enabled:
+        return
     
     logger_extra = get_dblogger_extra(calc)
 
@@ -410,19 +440,22 @@ def submit_calc(calc, authinfo, transport=None):
         t = transport
         must_open_t = False
 
-    # TODO: do some sort of blocking call,
-    # to be sure that the submit function is not called
-    # twice for the same calc?    
-    if calc.get_state() != calc_states.TOSUBMIT:
-        raise ValueError("Can only submit calculations with state=TOSUBMIT! "
-                         "(state of calc {} is {} instead)".format(
-                             calc.pk, calc.get_state()))
     if calc.has_cached_links():
         raise ValueError("Cannot submit calculation {} because it has "
                          "cached input links! If you "
                          "just want to test the submission, use the "
                          "test_submit() method, otherwise store all links"
                          "first".format(calc.pk))
+
+
+    # Double check, in the case the calculation was 'killed' (and therefore
+    # put in the 'FAILED' state) in the meantime
+    # Do it as near as possible to the state change below (it would be
+    # even better to do it with some sort of transaction)
+    if calc.get_state() != calc_states.TOSUBMIT:
+        raise ValueError("Can only submit calculations with state=TOSUBMIT! "
+                         "(state of calc {} is {} instead)".format(
+                             calc.pk, calc.get_state()))
                 
     # I start to submit the calculation: I set the state
     try:
@@ -742,7 +775,11 @@ def retrieve_computed_for_authinfo(authinfo):
                     if Parser is not None:
                         # TODO: parse here
                         parser = Parser(calc)
-                        successful = parser.parse_from_calc()
+                        successful,new_nodes_tuple = parser.parse_from_calc()
+                        
+                        for label,n in new_nodes_tuple:
+                            n._add_link_from(calc,label=label)
+                            n.store()
                         
                     if successful:
                         try:

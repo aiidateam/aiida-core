@@ -162,6 +162,10 @@ class LocalTransport(aiida.transport.Transport):
         Raises:
             If the directory already exists, OSError is raised.
         """
+        # check to avoid creation of empty dirs
+        if path.endswith('/'):
+            path = path[:-1]
+
         the_path = os.path.join(self.curdir,path)
         to_create = self._os_path_split_asunder(the_path)
         this_dir = ''

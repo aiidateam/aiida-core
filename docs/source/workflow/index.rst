@@ -10,7 +10,7 @@ phonons, etc...) in AiiDA a complete workflow engine is present, where the user 
 interaction with all the AiiDA components, from the submission engine to the materials databases connections. In this framework
 a workflow is a python script that an AiiDA daemon can execute, containing several steps and eventually other sub-workflows. 
 
-How is works
+How it works
 ++++++++++++
 
 The rationale of the entire workflow infrastructure is to make efficient, reproducible and scriptable what a user can do 

@@ -64,6 +64,19 @@ should show you a prompt without errors (possibly with a message saying
   or an error. Remove/comment it until no output or error is produced: this
   should make ``sftp`` working again.
 
+Finally, try also::
+
+   ssh YOURCLUSTERADDRESS QUEUE_VISUALIZATION_COMMAND
+   
+replacing ``QUEUE_VISUALIZATION_COMMAND`` by the scheduler command that prints on screen the
+status of the queue on the cluster (i.e. ``qstat`` for PBSpro scheduler, ``squeue`` for SLURM, etc.).
+It should print a snapshot of the queue status, without any errors. 
+
+.. note:: If there are errors with the previous command, then
+	edit your ~/.bashrc file in the remote computer and add a line at the beginning
+	that adds the path to the scheduler commands, typically (here for PBSpro)::
+  	  export PATH=$PATH:/opt/pbs/default/bin
+
 .. note:: If you need to ssh to a computer A first, from which you can then
      connect to computer B you wanted to connect to, you can use the
      ``proxy_command`` feature of ssh, that we also support in

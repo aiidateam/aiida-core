@@ -73,9 +73,13 @@ status of the queue on the cluster (i.e. ``qstat`` for PBSpro scheduler, ``squeu
 It should print a snapshot of the queue status, without any errors. 
 
 .. note:: If there are errors with the previous command, then
-	edit your ~/.bashrc file in the remote computer and add a line at the beginning
-	that adds the path to the scheduler commands, typically (here for PBSpro)::
-  	  export PATH=$PATH:/opt/pbs/default/bin
+  edit your ~/.bashrc file in the remote computer and add a line at the beginning
+  that adds the path to the scheduler commands, typically (here for
+  PBSpro)::
+  
+     export PATH=$PATH:/opt/pbs/default/bin
+
+  Or, alternatively, find the path to the executables (like using ``which qsub``)
 
 .. note:: If you need to ssh to a computer A first, from which you can then
      connect to computer B you wanted to connect to, you can use the
@@ -165,7 +169,17 @@ The configuration of computers happens in two steps.
      This is intended for computer-dependent code, like for instance loading a
      module that should always be loaded on that specific computer. *Remember*
      *to end the input by pressing* ``<CTRL>+D``.
-   
+     A practical example::
+
+        export NEWVAR=1
+        source some/file
+
+     A not-to-do example::
+
+       #PBS -l nodes=4:ppn=12
+
+     (it's the plugin that will do this!)
+
    * **Text to append to each command execution**: This is a multiline string,
      whose content will be appended inside the submission script after the
      real execution of the job. It is your responsibility to write proper ``bash`` code!
@@ -352,7 +366,8 @@ You will be asked for:
   strongly discouraged, because then you will not be able to use
   the ``.new_calc`` method of the ``Code`` object.
   
-* **local**: either True (for local codes) or False (for remote codes). Depending
+* **local**: either True (for local codes) or False (for remote
+  codes). For the meaning of the distinction, see above. Depending
   on your choice, you will be asked for:
   
   * LOCAL CODES:
@@ -378,7 +393,12 @@ For any type of code, you will also be asked for:
      whose content will be prepended inside the submission script before the
      real execution of the job. It is your responsibility to write proper ``bash`` code!
      This is intended for code-dependent code, **like for instance loading the
-     modules that are required for that specific executable to run**. *Remember*
+     modules that are required for that specific executable to run**. 
+     Example::
+
+       module load intelmpi
+       
+     *Remember*
      *to end the input by pressing* ``<CTRL>+D``.
 
 * **Text to append to each command execution**: This is a multiline string,
@@ -414,11 +434,12 @@ database (the ``pk``, i.e. the principal key, and the ``uuid``).
 
    verdi code show "ID"
    
-  Finally, to delete a code (only if it wasn't used by any calculation) use::
+  Finally, to delete a code use::
 
    verdi code delete "ID"
    
-  
+  (only if it wasn't used by any calculation, otherwise an exception
+  is raised) 
    
 And now, you are ready to launch your calculations! You may want to follow to
 the examples of how you can submit a single calculation, as for instance the 

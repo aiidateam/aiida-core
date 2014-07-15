@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import os
 import shutil
 import fnmatch
@@ -9,12 +8,6 @@ from aiida.common.utils import get_repository_folder
 # If True, tries to make everything (dirs, files) group-writable.
 # Otherwise, tries to make everything only readable and writable by the user.
 # TODO: put it in a global variable, and check if it really works!
-
-__author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
-__copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.2.0"
-
 group_writable = True
 
 _valid_sections = ['node', 'workflow']

@@ -236,31 +236,7 @@ The configuration of computers happens in two steps.
   them (as for instance Calculations, or RemoteData objects). Otherwise, you 
   will get an error message. 
 
-.. note:: It is possible to **disable** a computer.
 
-  Doing so will prevent AiiDA
-  from connecting to the given computer to check the state of calculations or
-  to submit new calculations. This is particularly useful if, for instance,
-  the computer is under maintenance but you still want to use AiiDA with 
-  other computers, or submit the calculations in the AiiDA database anyway.
-  
-  When the computer comes back online, you can re-enable it; 
-  at this point pending calculations in the ``TOSUBMIT`` state will be
-  submitted, and calculations ``WITHSCHEDULER`` will be checked and possibly
-  retrieved.
-  
-  The relevant commands are::
-     
-     verdi computer enable COMPUTERNAME
-     verdi computer disable COMPUTERNAME
-     
-  Note that the above commands will disable the computer for all AiiDA users.
-  If instead, for some reason, you want to disable the computer only for a
-  given user, you can use the following command::
-  
-     verdi computer disable COMPUTERNAME --only-for-user USER_EMAIL
-  
-  (and the corresponding ``verdi computer enable`` command to re-enable it).  
 
 Code setup and configuration
 ++++++++++++++++++++++++++++

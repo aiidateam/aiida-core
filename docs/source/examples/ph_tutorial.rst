@@ -64,6 +64,7 @@ Parameter
 Just like the *PWscf* calculation, here we load the class ParameterData and we instanciate it in parameters.
 Again, ``ParameterData`` will simply represent a nested dictionary in the database, namelists at the first level, and then variables and values.
 But this time of course, we need to use the variables of *PHonon*!
+Finally, we store the object in the database.
 
 ::
 
@@ -76,79 +77,81 @@ But this time of course, we need to use the variables of *PHonon*!
 		    'nq1' : 1,
 		    'nq2' : 1,
 		    'nq3' : 1,
-		    }})
+		    }}).store()
 
 Calculation
 -----------
 
 Now we create the object PH-calculation.
-As for ``pw.x``, we simply do::
+We first load the computer by looking simply at the code::
 
-    calc = code.new_calc()
+    computer = code.get_remote_computer()
     
-and we set the parameters of the scheduler
-(and just like the PWscf, this is a configuration valid
-for the PBSpro and slurm schedulers only, see :ref:`my-reference-to-scheduler`).
+Then we load the abstract class of a PH-calculation, and we call it QEPhCalc. We then create its instance, and pass immediately the computer (class) to use::
+        
+    QEPhCalc = CalculationFactory('quantumespresso.ph')
+    calc = QEPhCalc(computer=computer)
+    
+We set the parameters of the scheduler (and just like the PWscf, this is a cofiguration that can be sufficient for the PBSpro and slurm schedulers only, see :ref:`my-reference-to-scheduler`).
     
 ::
     
+    num_mpiprocs_per_machine = 16
     calc.set_max_wallclock_seconds(30*60) # 30 min
-    calc.set_resources({"num_machines": 1})
+    calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": num_mpiprocs_per_machine})
 
-We then tell the calculation to use the code and the parameters that we prepared above::
+When we finished the scheduler setup, we store the calculation::
+    
+    calc.store()
+
+And we tell the calculation to use the code and the parameters that we prepared above::
 
     calc.use_parameters(parameters)
+    calc.use_code(code)
+
+
+
 
 Parent calculation
 ------------------
 
 The phonon calculation needs to know on which PWscf do the perturbation theory calculation.
-From the database point of view, it means that the ``PHonon`` calculation
-is always a child of a ``PWscf``.
-In practice, this means that when you want to impose this relationship,
-you decided to take the input parameters of the parent PWscf calculation,
-take its charge density and use them in the phonon run.
+From the database point of view, it means that the ``PHonon`` calculation is always a child of a ``PWscf``.
+In practice, this means that when you want to impose this relationship, you decided to take the input parameters of the parent PWscf calculation, take its charge density and use them in the phonon run.
 That's way we need to set the parent calculation.
 
-You first need to remember the ID of the parent calculation that you launched
-before (let's say it's #6): so that you can load the class of *a*
-QE-PWscf calculation (with the CalculationFactory),
-and load the object that represent *the* QE-PWscf calculation with ID #6::
+You first need to remember the ID of the parent calculation that you launched before (let's say it's #6): so that you can load the class of *a* QE-PWscf calculation (with the CalculationFactory), and load the object that represent *the* QE-PWscf calculation with ID #6::
 
-    from aiida.orm import CalculationFactory
-    PwCalculation = CalculationFactory('quantumespresso.pw')
-    parent_id = 6
-    parentcalc = PwCalculation.get_subclass_from_pk(parent_id)
+    parent_id = '6'
+    QEPwCalc = CalculationFactory('quantumespresso.pw')
+    parentcalc = QEPwCalc.get_subclass_from_pk(parent_id)
 
-Now that we loaded the parent calculation, we can set the phonon calc to
-inherit the right information from it::
+Now that we loaded the parent calculation, we can set the phonon calc to inherit the right information from it::
     
     calc.set_parent_calc( parentcalc )
 
-Note that in our database schema relations between two calculation
-objects are prohibited. The link between the two is indirect and is
-mediated by a third Data object, which represent the scratch folder
-on the remote cluster. Therefore the relation between the parent Pw
-and the child Ph appears like: Pw -> remotescratch -> Ph.
+Note that in our database schema relations between two calculation objects are prohibited. The link between the two is indirect and is mediated by a third Data object, which represent the scratch-folder on the remote cluster. Therefore the relation between the parent Pw and the child Ph appears like: Pw -> remotescratch -> Ph.
 
 Execution
 ---------
 
-Now, everything is ready, and just like PWscf, you just need to store all the
-nodes and submit this input to AiiDA, and the calculation will launch!
+Now, everything is ready, and just like PWscf, you just need to submit this input to AiiDA, and the calculation will launch!
 
 ::
 
-    calc.store_all()
     calc.submit()
+
+
+
+
+
+
 
 Script to execute
 -----------------
 
-This is the script described in the tutorial above. You can use it, just
-remember to customize it using the right parent_id,
-the code, and the proper scheduler info.
-
+This is the script described in the tutorial above. You can use it, just remember to customize it using the right parent_id, the code, and the proper scheduler info.
+Note that this script is not much tolerant to exceptions!
 ::
 
     #!/usr/bin/env python
@@ -158,11 +161,9 @@ the code, and the proper scheduler info.
     from aiida.orm import Code
     from aiida.orm import CalculationFactory, DataFactory
 
-    #####################
-    # ADAPT TO YOUR NEEDS
-    parent_id = 6
+    parent_id = '6'
+
     codename = 'my-ph.x'
-    #####################
 
     code = Code.get(codename)
 
@@ -175,27 +176,21 @@ the code, and the proper scheduler info.
 		    'nq1' : 1,
 		    'nq2' : 1,
 		    'nq3' : 1,
-		    }})
+		    }}).store()
 
     QEPwCalc = CalculationFactory('quantumespresso.pw')
     parentcalc = QEPwCalc.get_subclass_from_pk(parent_id)
 
-    calc = code.new_calc()
+    computer = code.get_remote_computer()
+    num_mpiprocs_per_machine = 16
+    QEPhCalc = CalculationFactory('quantumespresso.ph')
+    calc = QEPhCalc(computer=computer)
     calc.set_max_wallclock_seconds(30*60) # 30 min
-    calc.set_resources({"num_machines": 1})
+    calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": num_mpiprocs_per_machine})
+    calc.store()
 
     calc.use_parameters(parameters)
     calc.use_code(code)
-    calc.set_parent_calc(parentcalc)
+    calc.set_parent_calc( parentcalc )
 
-    calc.store_all()
-    print "created calculation with PK={}".format(calc.pk)
     calc.submit()
-
-Exception tolerant code
------------------------
-You can find a more sophisticated example, that checks the possible exceptions
-and prints nice error messages inside your AiiDA folder, under
-``examples/submission/test_ph.py``.
-
- 

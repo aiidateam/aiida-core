@@ -34,11 +34,9 @@ If this is not the case, you will need to install it on your own.
 Typically, it will be sufficient to look for a netcat distribution on
 the web, unzip the downloaded package, ``cd`` into the folder and
 execute something like::
-
   ./configure --prefix=.
   make
   make install
-
 This usually creates a subfolder ``bin``, containing the ``netcat``
 and ``nc`` executables.
 Write down the full path to ``nc`` that we will need later.
@@ -90,9 +88,7 @@ Therefore, check on both computers ``A`` and ``B`` that the number of
 processes ``netcat`` and ``ssh`` are disappearing if you close the
 connection.
 To check if such processes are running, you can execute::
-
   ps -aux | grep <username>
-
 Remember that a cluster might have more than one login node, and the ``ssh``
 connection will randomly connect to any of them.
 

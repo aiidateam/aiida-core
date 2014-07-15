@@ -1,12 +1,13 @@
+# -*- coding: utf-8 -*-
 from aiida.parsers.plugins.quantumespresso import QEOutputParsingError
 from xml.dom.minidom import parseString
-from aiida.parsers.plugins.quantumespresso.raw_parser_pw import read_xml_card, \
-             parse_xml_child_integer,xml_card_cell,xml_card_ions,xml_card_spin, \
-             parse_xml_child_attribute_str
-from aiida.parsers.plugins.quantumespresso.raw_parser_pw import parse_xml_child_float, \
-              parse_xml_child_str,parse_xml_child_bool,xml_card_header,   \
-              xml_card_planewaves,xml_card_exchangecorrelation
-#from aiida.parsers.plugins.quantumespresso.constants import *
+from aiida.parsers.plugins.quantumespresso.raw_parser_pw import *
+
+__author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
+__copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
+__version__ = "0.2.0"
+
 
 def parse_cp_traj_stanzas(num_elements, splitlines, prepend_name,rescale=1.):
     """

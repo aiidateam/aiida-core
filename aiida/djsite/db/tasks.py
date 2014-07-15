@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from aiida.common import aiidalogger
 import celery
 from aiida.common.exceptions import (
@@ -6,6 +7,12 @@ from aiida.djsite.settings.settings import djcelery_tasks
 
 #from celery.utils.log import get_task_logger
 ## I use the aiidalogger so that the logging is managed in the same way
+
+__author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
+__copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
+__version__ = "0.2.0"
+
 logger = aiidalogger.getChild('tasks')
 
 LOCK_EXPIRE = 60 * 1000 # Expire time for the retriever, in seconds; should
@@ -66,7 +73,8 @@ def get_most_recent_daemon_timestamp():
     
     if timestamps:
         # The most recent timestamp
-        return max(*timestamps)
+        
+        return max(timestamps)
     else:
         return None
 

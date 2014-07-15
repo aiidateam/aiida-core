@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from aiida.orm.calculation.quantumespresso.cp import CpCalculation
 from aiida.parsers.plugins.quantumespresso.raw_parser_cp import *
 from aiida.parsers.plugins.quantumespresso.constants import *
@@ -10,11 +9,6 @@ from aiida.parsers.plugins.quantumespresso import convert_qe2aiida_structure
 from aiida.common.datastructures import calc_states
 from aiida.common.exceptions import UniquenessError
 from aiida.orm.data.array.trajectory import TrajectoryData
-
-__author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
-__copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.2.0"
 
 class CpParser(Parser):
     """
@@ -53,13 +47,6 @@ class CpParser(Parser):
         """
         from aiida.common.exceptions import InvalidOperation
         import os,copy
-        import numpy # TrajectoryData also uses numpy arrays
-        from aiida.common import aiidalogger
-        from aiida.djsite.utils import get_dblogger_extra
-        parserlogger = aiidalogger.getChild('cpparser')
-        logger_extra = get_dblogger_extra(self._calc)
-
-        successful = True
         
         # check if I'm not to overwrite anything
         state = self._calc.get_state()
@@ -74,10 +61,8 @@ class CpParser(Parser):
         input_param_name = self._calc.get_linkname('parameters')
         params = [i[1] for i in calc_input_parameterdata if i[0]==input_param_name]
         if len(params) != 1:
-            successful = False
-            parserlogger.error("Found {} input_params instead of one"
-                               .format(params),extra=logger_extra)
-
+            raise UniquenessError("Found {} input_params instead of one"
+                                  .format(params))
         calc_input = params[0]
 
         # get the input structure
@@ -87,13 +72,15 @@ class CpParser(Parser):
         parser_opts_query = [i[1] for i in calc_input_parameterdata if i[0]=='parser_opts']
         # TODO: there should be a function returning the name of parser_opts
         if len(parser_opts_query)>1:
-            successful = False
-            parserlogger.error("Too many ({}) parser_opts found"
-                             .format(len(parser_opts_query)),extra=logger_extra)
-        parser_opts = parser_opts_query[0] if parser_opts_query else []
-        if parser_opts:
+            raise UniquenessError("Too many parser_opts attached are found: {}"
+                                  .format(parser_opts_query))
+        if parser_opts_query:
+            parser_opts = parser_opts_query[0]
             # TODO: this feature could be a set of flags to pass to the raw_parser
+            # in order to moderate its verbosity (like storing bands in teh database
             raise NotImplementedError("The parser_options feature is not yet implemented")
+        else:
+            parser_opts = []
 
         # load the input dictionary
         # TODO: pass this input_dict to the parser. It might need it.            
@@ -102,51 +89,46 @@ class CpParser(Parser):
         # load all outputs
         calc_outputs = self._calc.get_outputs(type=FolderData,also_labels=True)
         # look for retrieved files only
-        retrieved_folders = [i[1] for i in calc_outputs 
+        retrieved_files = [i[1] for i in calc_outputs 
                            if i[0]==self._calc.get_linkname_retrieved()]
-        if len(retrieved_folders)!=1:
-            successful = False
-            parserlogger.error("Output folder should be found once, "
-                               "found it instead {} times"
-                               .format(len(retrieved_folders)),extra=logger_extra)
-
+        if len(retrieved_files)!=1:
+            raise QEOutputParsingError("Output folder should be found once, "
+                                       "found it instead {} times"
+                                       .format(len(retrieved_files)) )
         # select the folder object
-        out_folder = retrieved_folders[0]
+        out_folder = calc_outputs[0][1]
 
         # check what is inside the folder
         list_of_files = out_folder.get_path_list()
         # at least the stdout should exist
         if not self._calc.OUTPUT_FILE_NAME in list_of_files:
-            successful = False
-            new_nodes_tuple = ()
-            parserlogger.error("Standard output not found",extra=logger_extra)
-            return successful, new_nodes_tuple
-
+            raise QEOutputParsingError("Standard output not found")
         # if there is something more, I note it down, so to call the raw parser
         # with the right options
         # look for xml
-        out_file = out_folder.get_abs_path(self._calc.OUTPUT_FILE_NAME )
+        out_file = os.path.join( out_folder.get_abs_path('.'), 
+                                 self._calc.OUTPUT_FILE_NAME )
 
         xml_file = None
         if self._calc.DATAFILE_XML_BASENAME in list_of_files:
-            xml_file = out_folder.get_abs_path(self._calc.DATAFILE_XML_BASENAME)
+            xml_file = os.path.join( out_folder.get_abs_path('.'), 
+                                     self._calc.DATAFILE_XML_BASENAME )
         
         xml_counter_file = None
         if self._calc.FILE_XML_PRINT_COUNTER in list_of_files:
-            xml_counter_file = out_folder.get_abs_path(
-                                            self._calc.FILE_XML_PRINT_COUNTER )
+            xml_counter_file = os.path.join( out_folder.get_abs_path('.'), 
+                                             self._calc.FILE_XML_PRINT_COUNTER )
         
         parsing_args = [out_file,xml_file,xml_counter_file]
         
         # call the raw parsing function
-        out_dict,raw_successful = parse_cp_raw_output(*parsing_args)
-        
-        successful= raw_successful if successful else successful
+        out_dict,successful = parse_cp_raw_output(*parsing_args)
         
         # parse the trajectory. Units in Angstrom, picoseconds and eV.
         # append everthing in the temporary dictionary raw_trajectory
         expected_configs = None
         raw_trajectory=False
+        import numpy # TrajectoryData also uses numpy arrays
         evp_keys = ['electronic_kinetic_energy','cell_temperature','ionic_temperature',
                     'scf_total_energy','enthalpy','enthalpy_plus_kinetic',
                     'energy_constant_motion','volume','pressure']
@@ -155,8 +137,8 @@ class CpParser(Parser):
 
         # =============== POSITIONS trajectory ============================
         try:
-            with open( out_folder.get_abs_path( 
-                               '{}.pos'.format(self._calc.PREFIX)) ) as posfile:
+            with open(os.path.join( out_folder.get_abs_path('.'), 
+                                    '{}.pos'.format(self._calc.PREFIX) )) as posfile:
                 pos_data = [l.split() for l in posfile]   
             #POSITIONS stored in angstrom
             traj_data = parse_cp_traj_stanzas(num_elements=out_dict['number_of_atoms'], 
@@ -255,14 +237,17 @@ class CpParser(Parser):
                             )
         for this_name in evp_keys:
             traj.set_array(this_name,raw_trajectory[this_name])
-        new_nodes_list = [(self.get_linkname_trajectory(),traj)]
+        traj.store()
+        self._calc._add_link_to(traj, label=self.get_linkname_trajectory() )        
         
         # convert the dictionary into an AiiDA object
         output_params = ParameterData(dict=out_dict)
-        # save it into db
-        new_nodes_list.append((self.get_linkname_outparams(),output_params))
         
-        return successful,new_nodes_list
+        # save it into db
+        output_params.store()
+        self._calc._add_link_to(output_params, label=self.get_linkname_outparams() )
+        
+        return successful
 
     def get_linkname_trajectory(self):
         """

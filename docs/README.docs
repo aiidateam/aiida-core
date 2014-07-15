@@ -1,0 +1,18 @@
+To build the documentation in sphinx, from the aiida top level
+directory, run:
+
+$ python setup.py build_sphinx
+
+This generates a html documentation tree under docs/build/html
+
+You can browse to docs/build/html/index.html to see the documentation
+in html format.
+
+If you run:
+
+$ python setup.py build_sphinx -b latex
+$ cd docs/build/latex
+$ make all-pdf
+
+Then you will have a aiida.pdf documentation file.
+

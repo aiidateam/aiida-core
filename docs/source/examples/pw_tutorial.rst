@@ -64,10 +64,12 @@ In a more practical situation, you might load data from the database and perform
 Let's say that through the ``verdi`` command you have already installed a cluster, say ``TheHive``, and that you also compiled Quantum Espresso on the cluster, and installed the code pw.x with ``verdi``, that we will call ``pw_on_TheHive``.
 
 Let's start writing the python script.
-First of all, we need to load the configuration concerning your
-particular installation, in particular, the details of your database installation::
+First of all, we need to load the configuration concerning your particular installation, in particular, the details of your database installation::
 
   #!/usr/bin/env python
+  import sys
+  import os
+
   from aiida.common.utils import load_django
   load_django()
 
@@ -83,6 +85,49 @@ If you setup the code ``pw_on_TheHive`` correctly, then it is sufficient to writ
   code = Code.get(codename)
 
 Where in the last line we just load the database object representing the code.
+
+This is not a exception tolerant code: there are so many errors that could happen when trying to load this code... 
+It is not strictly necessary, but we can rewrite this part, so that we 
+
+1) load the codename from the command line, 
+
+2) check if the codename is a valid string, 
+
+3) if we find a code, check that it is a pw.x file, as you should have from a standard QE distribution, 
+
+4) if exceptions are raised, try to interpret them and then stop smoothly.
+
+::
+
+  expected_exec_name='pw.x'
+  try:
+      codename = sys.argv[1]
+  except IndexError:
+      codename = None
+
+  from aiida.orm import Code
+  from aiida.common.exceptions import NotExistent
+  try:
+      if codename is None:
+          raise ValueError
+      code = Code.get(codename)
+      if not code.get_remote_exec_path().endswith(expected_exec_name):
+          raise ValueError
+  except (NotExistent, ValueError):
+      valid_code_labels = [c.label for c in Code.query(
+            attributes__key="_remote_exec_path",
+            attributes__tval__endswith="/{}".format(expected_exec_name))]
+      if valid_code_labels:
+          print >> sys.stderr, "Pass as first parameter a valid code label."
+          print >> sys.stderr, "Valid labels with a {} executable are:".format(expected_exec_name)
+          for l in valid_code_labels:
+              print >> sys.stderr, "*", l
+      else:
+          print >> sys.stderr, "Code not valid, and no valid codes for {}. Configure at least one first using".format(expected_exec_name)
+          print >> sys.stderr, "    verdi code setup"
+      sys.exit(1)
+
+It's a bit longer, but it will respond more gently to errors!
 
 Structure
 ---------
@@ -123,48 +168,26 @@ Then, we append to the empty crystal cell the atoms, specifying their element na
   s.append_atom(position=(alat/2.,alat/2.,0.),symbols='O')
   s.append_atom(position=(alat/2.,0.,alat/2.),symbols='O')
   s.append_atom(position=(0.,alat/2.,alat/2.),symbols='O')
+  s.store()
 
 To see more methods associated to the class StructureData, look at the :ref:`my-ref-to-structure` documentation.
+Note also last line: with the method store(), we saved the instance of the structure in the database.
+It is also fundamental for later use: the calculation that will use this structure, will need to find it in the database.
 
-.. note:: When you create a node (in this case a ``StructureData`` node) as 
-  described above, you are just creating it in the computer memory, and not 
-  in the database. This is particularly useful to run tests without filling
-  the AiiDA database with garbage.
-  
-  You will see how to store all the nodes in one shot toward the end of this
-  tutorial; if, however, you want to directly store the structure in the
-  database for later use, you can just call the ``store()`` method of the Node::
-  
-    s.store()
-    
-For an extended tutorial about the creation of Structure objects,
-check :doc:`this tutorial <../examples/structure_tutorial>`.
+For an extended tutorial about the creation of Structure objects, check :doc:`this tutorial <../examples/structure_tutorial>`.
 
-.. note:: AiiDA supports also ASE structures. Once you created your structure
-  with ASE, in an object instance called say ``ase_s``, you can
-  straightforwardly use it to create the AiiDA StructureData, as::
-
-    s = StructureData(ase=ase_s)
-
-  and then save it ``s.store()``.
+.. note:: AiiDA supports also ASE structures. Once you created your structure with ASE, in an object instance called say ``ase_s``, you can straightforwardly use it to create the AiiDA StructureData, as ``s = StructureData(ase=ase_s)`` and then save it ``s.store()``.
 
 Parameters
 ----------
 
-Now we need to provide also the parameters of a Quantum Espresso calculation,
-like the cutoff for the wavefunctions, some convergence threshold, etc...
-The Quantum ESPRESSO pw.x plugin requires to pass this information within a
-ParameterData object, that is a specific AiiDA data node that can store a
-dictionary (even nested) of basic data types: integers, floats, strings, lists,
-dates, ...
+Now we need to provide also the parameters of a Quantum Espresso calculation, like saying that we need a certain cutoff for the wfc, some convergence threshold, etc...
+The Quantum Espresso Pw plugin requires to pass this information with the object ParameterData.
+This object is more or less the representation of a Python dictionary in the database.
 We first load the class through the DataFactory, just like we did for the Structure.
-Then we create the instance of the object ``parameter``.
-To represent closely the structure of the QE input file,
-ParameterData is a nested dictionary, at the first level the namelists
-(capitalized), and then the variables with their values (in lower case).
-
-Note also that numbers and booleans are written in Python, i.e. ``False`` and
-not the Fortran string ``.false.``!
+Then we create the instance of the object ``parameter`` and we store it in the DB.
+To represent closely the structure of the QE input file, ParameterData is a nested dictionary, at the first level the namelists, and then the variables with their values.
+Note also that numbers and booleans are written in Python, i.e. not ``.false.`` but ``False``!.
 ::
 
   ParameterData = DataFactory('parameter')
@@ -181,114 +204,127 @@ not the Fortran string ``.false.``!
                 },
             'ELECTRONS': {
                 'conv_thr': 1.e-6,
-                }})
+                }}).store()
 
-.. note:: also in this case, we chose not to store the ``parameters`` node.
-  If we wanted, we could even have done it in a single line::
-    
-    parameters = ParameterData(dict={...}).store()
-
-
-The experienced QE user will have noticed also that a couple of variables
-are missing: the prefix, the pseudo directory and the scratch directory are
-reserved to the plugin which will use default values, and there are specific
-AiiDA methods to restart from a previous calculation.
-
-The k-points have to be saved in another ParameterData, analogously to the
-parameters::
+( The experienced QE user will have noticed also that a couple of variables are missing: the prefix, the pseudo directory and the scratch directory are reserved to the plugin which will use default values: in case you want to use the scratch of a previous calculation, it must be specified)
+The k-points have to be saved in a different ParameterData, analogously as before::
                 
   kpoints = ParameterData(dict={
                 'type': 'automatic',
                 'points': [4, 4, 4, 0, 0, 0],
-                })
+                }).store()
 
-As a further comment, this is specific to the way the plugin
-for Quantum Espresso works.
-Other codes may need more than two ParameterData, or even none of them.
-And also how this parameters have to be written depends on the plugin: 
-what is discussed here is just the format that we decided for
-the Quantum Espresso plugins.
+As a further generic comments, this is specific to the way the plugin for Quantum Espresso works.
+Other codes may need more than 2 ParameterData, or even none of them.
+And also how this parameters have to be written depends on the plugin.
+This is just the scheme that we decided for the Quantum Espresso codes.
+
+
+
 
 Calculation
 -----------
 
 Now we proceed to set up the calculation.
-Since during the setup of the code we already set the code to be a
-``quantumespresso.pw`` code, there is a simple method to create a new
-calculation::
+We first get the object representing the computer: since it is uniquely identified by the code, there is a practical method to load the computer from the code directly.
 
-  calc = code.new_calc()
+::
+
+  computer = code.get_remote_computer()
+
+Then, we load the abstract class QECalc with the CalculationFactory function (that loads the class defined inside the module quantumespresso.pw), and we create an instance ``calc`` of it, assigning immediately the computer on which it will be executed.
+
+::
+
+  from aiida.orm import CalculationFactory
+  QECalc = CalculationFactory('quantumespresso.pw')
+  calc = QECalc(computer=computer)
 
 We have to specify the details required by the scheduler.
-For example, on a SLURM or PBS scheduler, we have to specify the number
-of nodes (``num_machines``), possibly the number of MPI processes per node
-(``num_mpiprocs_per_machine``) if we want to run with a different number
-of MPI processes with respect to the default value configured when setting up
-the computer in AiiDA, the job walltime, the queue name (if desired), ...::
+For example, on a slurm or pbs scheduler, we have to specify the number of nodes (``num_machines``), the number of MPI processes per node (``num_mpiprocs_per_machine``), the job walltime, the queue name (if desired).
+For the complete scheduler documentation, see :ref:`my-reference-to-scheduler`
 
+::
+
+  queue = None
   calc.set_max_wallclock_seconds(30*60) # 30 min
-  calc.set_resources({"num_machines": 1})
-  ## OPTIONAL, use only if you need to explicitly specify a queue name
-  # calc.set_queue_name("the_queue_name")
+  num_mpiprocs_per_machine = 48
+  calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": num_mpiprocs_per_machine})
+  queue = None
+  if queue is not None:
+      calc.set_queue_name(queue)
 
-(For the complete scheduler documentation, see :ref:`my-reference-to-scheduler`)
+If we are satisfied with the configuration on the cluster, we can store the calculation in the database. 
+Note that after storing it, it will not be possible to modify it (Nor you should: you risk of compromizing the integrity of the database)!
 
-.. note:: an alternative way of calling a method starting with the string
-  ``set_``, is to pass directly the value to the ``.new_calc()`` method. This
-  is to say that the following lines::
-  
-    calc = code.new_calc()
-    calc.set_max_wallclock_seconds(3600)
-    calc.set_resources({"num_machines": 1})
-    
-  is equivalent to::
-  
-    calc = code.new_calc(max_wallclock_seconds=3600,
-        resources={"num_machines": 1})
+::
 
-At this point, we just created a "lone" calculation, that still does not know 
-anything about the inputs that we created before. We need therefore to  
-tell the calculation to use the parameters that we prepared before, by 
-properly linking them using the ``use_`` methods::
+  calc.store()
+
+And we can also print on the screen some useful information, like the calculation uuid (a unique identifier consisting in a random string) or id (a sequential integer).
+
+::
+
+  print "created calculation; with uuid='{}' and ID={}".format( calc.uuid,calc.dbnode.pk )
+
+After the object calculation is stored in the database, we can tell the calculation to use the parameters that we prepared before::
 
   calc.use_structure(s)
   calc.use_code(code)
   calc.use_parameters(parameters)
   calc.use_kpoints(kpoints)
 
-In practice, hen you say ``calc.use_structure(s)``, you are setting a link 
-between the two nodes (``s`` and ``calc``), that means that 
-``s`` is the input *structure* for *calculation* ``calc``. Also these links
-are cached and do not require to store anything in the database yet.
+This operation must be done only after the calculation is stored in the database.
+In fact, when you say ``calc.use_structure(s)``, you are trying to put an arrow inside the database, representing the input *structure* given to the *calculation*: you cannot put an arrow from A to B if they are not there!
+
+
+
 
 Pseudopotentials
 ----------------
 
-There is still one missing piece of information, that is the
-pseudopotential files, one for each element of the structure.
+There is only one missing piece of information, that is the pseudopotential files, one for each element of the structure.
+We create a list of tuples, with element name and the pseudopotential file name::
 
-In AiiDA, it is possible to specify manually which pseudopotential files to use
-for each atomic species. However, for any practical use, it is convenient
-to use the pseudopotential families.
-Its use is documented in :ref:`my-ref-to-pseudo-tutorial`.
-If you got one installed, you can simply tell the calculation to use the
-pseudopotential family with a given name, and AiiDA will take care of
-linking the proper pseudopotentials to the calculation, one for each atomic
-species present in the input structure. This can be done using::
+    raw_pseudos = [
+       ("Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF", 'Ba'),
+       ("Ti.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF", 'Ti'),
+       ("O.pbesol-n-rrkjus_psl.0.1-tested-pslib030.UPF", 'O')]
+
+Then, we loop over the filenames and
+1) define the path to the pseudopotential file with ``absname``. Here we assume that in the folder where you executed the script, there is a subfolder called ``data``, with the files inside. (Note also that the working directory ``'.'`` is called with ``__file__`` and not with ``os.getcwd()``, since the software AiiDA runs in another folder)
+2) tries to get an element from the database or create it if it doesn't exist yet
+3) creates a dictionary, useful for later, with keys of atomic species, and for values the pseudopotential-objects (and not the file names).
+
+::
+
+    UpfData = DataFactory('upf')
+    pseudos_to_use = {}
+
+    for fname, elem in raw_pseudos:
+        absname = os.path.realpath(os.path.join(os.path.dirname(__file__), "testdata","qepseudos",fname))
+        pseudo, created = UpfData.get_or_create(absname,use_first=True)
+        pseudos_to_use[elem] = pseudo
+
+As the last step, we make a loop over the atomic species, and attach its pseudopotential object to the calculation::
+
+    for k, v in pseudos_to_use.iteritems():
+        calc.use_pseudo(v, kind=k)
+
+In this example, we loaded the files directly from the hard disk. 
+For a more practical use, it is convenient to use the pseudopotential families. Its use is documented in :ref:`my-ref-to-pseudo-tutorial`.
+If you got one installed, you can simply tell the calculation to use the pseudopotential family, then AiiDA will take care of attaching the proper pseudopotential to the element::
 
   calc.use_pseudos_from_family('my_pseudo_family')
 
-Labels and comments
--------------------
 
-Sometimes it is useful to attach some notes to the calculation,
-that may help you later understand why you did such a calculation,
-or note down what you understood out of it.
-Comments are a special set of properties of the calculation, in the sense
-that it is one of the few properties that can be changed, even after
-the calculation has run.
 
-Comments come in various flavours. The most basic one is the label property,
+Comments
+--------
+
+Sometimes it is useful to attach some notes to the calculation, that may help you later understand why you did such a calculation, or note down what you understood out of it.
+Comments are a special set of properties of the calculation, in the sense that it is one of the few properties that can be changed, even after the calculation has run.
+Comments come in various flavours, first there is the label property,
 a string of max 255 characters, which is meant to be the title of the calculation.
 To create it, simply write::
 
@@ -299,22 +335,13 @@ The label can be later accessed as a class property, i.e. the command::
   calc.label
 
 will return the string you previously set (empty by default).
-Another important property to set is the description, which instead does not have a
-limitation on the maximum number of characters::
+Another property is the description, which instead does not have a limitation on the maximum number of characters::
 
   calc.description = "A much longer description"
 
-<<<<<<< HEAD
 And finally, there is the possibility of comments.
 The peculiarity of this last property is that they are user dependent (like the comments that you can post on facebook pages), so it is best
 suited for a calculation exposed on a website, where you want to remember
-=======
-And finally, there is the possibility to add comments to any calculation
-(actually, to any node).
-The peculiarity of comments is that they are user dependent
-(like the comments that you can post on facebook pages), so it is best
-suited to calculation exposed on a website, where you want to remember
->>>>>>> master
 the comments of each user.
 To set a comment, you need first to import the django user, and then
 write it with a dedicated method::
@@ -329,36 +356,15 @@ The comments can be accessed with this function::
 
 Execute
 -------
-If we are satisfied with what you created, it is time to store everything
-in the database. 
-Note that after storing it, it will not be possible to modify it
-(nor you should: you risk of compromising the integrity of the database)!
-
-Unless you already stored all the inputs beforehand, you will need to store 
-the inputs before being able to store the calculation itself.
-Since this is a very common operation, there is an utility method that will
-automatically store both all the input nodes of ``calc`` and then ``calc`` 
-itself::
-
-  calc.store_all()
-
-Once we store the calculation, it is useful to print its PK (principal key, 
-that is its identifier) that is useful in the following to interact with it::
-
-  print "created calculation; with uuid='{}' and PK={}".format(calc.uuid,calc.pk)
-
-.. note:: the PK will change if you give the calculation to someone else,
-  while the UUID (the Universally Unique IDentifier) is a string that is
-  assured to be always the same also if you share your data with collaborators.
 
 Summarizing, we created all the inputs needed by a PW calculation,
 that are: parameters, kpoints, pseudopotential files and the structure.
 We then created the calculation, where we specified that it is a PW calculation
 and we specified the details of the remote cluster.
-We set the links between the inputs and the calculation (``calc.use_***``)
-and finally we stored all this objects in the database (``.store_all()``).
- 
-That's all that the calculation needs.  Now we just need to submit it::
+We stored all this objects in the database (``.store()``), and set the links
+between the inputs and the calculation (``calc.use_***``).
+That's all that the calculation needs. 
+Now we just need to submit it::
 
    calc.submit()
 
@@ -381,20 +387,15 @@ Script: source code
 -------------------
 
 In this section you'll find two scripts that do what explained in the tutorial.
-The compact is a script with a minimal configuration required.
-You can copy and paste it (or download it), modify the two strings ``codename``
-and ``pseudo_family`` with the correct values, and execute it with::
+The compact is a script with a minimal configuration required
+You can copy and paste it to start using it, executing as::
 
-  python pw_short_example.py
+  python your_pw_codename pseudo_family_name
 
-(It requires to have one family of pseudopotentials configured).
+It requires to have one family of pseudopotentials configured.
 
-You will also find a longer version, with more exception checks, error
-management and user interaction.
-Note that the configuration of the computer resources
-(like number of nodes and machines) is hardware and scheduler dependent.
-The configuration used below should work for a pbspro or slurm cluster,
-asking to run on 1 node only.
+You will also find a longer version, with more exception checks and with the possibility to load the pseudopotentials from hard disk.
+Note that the configuration of the computer resources (like number of nodes and machines) is hardware and scheduler dependent. The configuration used below should work for a pbspro or slurm cluster, asking 1 node of 16 cpus.
 
 Compact script
 --------------
@@ -402,77 +403,246 @@ Download: :download:`this example script <pw_short_example.py>`
 
 ::
 
-  #!/usr/bin/env python
-  from aiida.common.utils import load_django
-  load_django()
-  
-  from aiida.orm import Code, DataFactory
-  StructureData = DataFactory('structure')
-  ParameterData = DataFactory('parameter')
-  
-  ###############################
-  # Set your values here
-  codename = 'pw_on_TheHive'
-  pseudo_family = 'lda_pslibrary'
-  ###############################
-  
-  code = Code.get(codename)
-  
-  # BaTiO3 cubic structure
-  alat = 4. # angstrom
-  cell = [[alat, 0., 0.,],
-          [0., alat, 0.,],
-          [0., 0., alat,],
-         ]
-  s = StructureData(cell=cell)
-  s.append_atom(position=(0.,0.,0.),symbols='Ba')
-  s.append_atom(position=(alat/2.,alat/2.,alat/2.),symbols='Ti')
-  s.append_atom(position=(alat/2.,alat/2.,0.),symbols='O')
-  s.append_atom(position=(alat/2.,0.,alat/2.),symbols='O')
-  s.append_atom(position=(0.,alat/2.,alat/2.),symbols='O')
-  
-  parameters = ParameterData(dict={
-            'CONTROL': {
-                'calculation': 'scf',
-                'restart_mode': 'from_scratch',
-                'wf_collect': True,
-                },
-            'SYSTEM': {
-                'ecutwfc': 30.,
-                'ecutrho': 240.,
-                },
-            'ELECTRONS': {
-                'conv_thr': 1.e-6,
-                }})
-  
-  kpoints = ParameterData(dict={
-                'type': 'automatic',
-                'points': [4, 4, 4, 0, 0, 0],
-                })
-  
-  calc = code.new_calc(max_wallclock_seconds=3600,
-      resources={"num_machines": 1})
-  calc.label = "A generic title"
-  calc.description = "A much longer description"
-  
-  calc.use_structure(s)
-  calc.use_code(code)
-  calc.use_parameters(parameters)
-  calc.use_kpoints(kpoints)
-  calc.use_pseudos_from_family(pseudo_family)
-  
-  calc.store_all()
-  print "created calculation with PK={}".format(calc.pk)
-  calc.submit()
-  
+    #!/usr/bin/env python
+    from aiida.common.utils import load_django
+    load_django()
+    from aiida.orm import Code
+    from aiida.orm import CalculationFactory, DataFactory
+    
+    ParameterData = DataFactory('parameter')
+    StructureData = DataFactory('structure')
+    
+    codename = 'your_pw.x'
+    
+    pseudo_family = 'lda_pslib'
+
+    code = Code.get(codename)
+    computer = code.get_remote_computer()
+
+    # BaTiO3 cubic structure
+    alat = 4. # angstrom
+    cell = [[alat, 0., 0.,],
+	    [0., alat, 0.,],
+	    [0., 0., alat,],
+	   ]
+    s = StructureData(cell=cell)
+    s.append_atom(position=(0.,0.,0.),symbols='Ba')
+    s.append_atom(position=(alat/2.,alat/2.,alat/2.),symbols='Ti')
+    s.append_atom(position=(alat/2.,alat/2.,0.),symbols='O')
+    s.append_atom(position=(alat/2.,0.,alat/2.),symbols='O')
+    s.append_atom(position=(0.,alat/2.,alat/2.),symbols='O')
+    s.store()
+
+    parameters = ParameterData(dict={
+		'CONTROL': {
+		    'calculation': 'scf',
+		    'restart_mode': 'from_scratch',
+		    'wf_collect': True,
+		    },
+		'SYSTEM': {
+		    'ecutwfc': 30.,
+		    'ecutrho': 240.,
+		    },
+		'ELECTRONS': {
+		    'conv_thr': 1.e-6,
+		    }}).store()
+
+    kpoints = ParameterData(dict={
+		    'type': 'automatic',
+		    'points': [4, 4, 4, 0, 0, 0],
+		    }).store()
+
+    QECalc = CalculationFactory('quantumespresso.pw')
+    calc = QECalc(computer=computer)
+    calc.set_max_wallclock_seconds(30*60) # 30 min
+    calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 16})
+    calc.store()
+
+    calc.use_structure(s)
+    calc.use_code(code)
+    calc.use_parameters(parameters)
+    calc.use_pseudos_from_family(pseudo_family)
+    calc.use_kpoints(kpoints)
+
+    calc.submit()
+
+
 
 
 
 Exception tolerant code
 -----------------------
-You can find a more sophisticated example, that checks the possible exceptions
-and prints nice error messages inside your AiiDA folder, under
-``examples/submission/test_pw.py``.
+Download: :download:`this example script <pw_example.py>`
 
 
+::
+
+    #!/usr/bin/env python
+    import sys
+    import os
+
+    from aiida.common.utils import load_django
+    load_django()
+
+    from aiida.common import aiidalogger
+    import logging
+    from aiida.common.exceptions import NotExistent
+    aiidalogger.setLevel(logging.INFO)
+
+    from aiida.orm import Code
+    from aiida.orm import CalculationFactory, DataFactory
+    from aiida.djsite.db.models import Group
+    UpfData = DataFactory('upf')
+    ParameterData = DataFactory('parameter')
+    StructureData = DataFactory('structure')
+
+    ################################################################
+
+    try:
+	codename = sys.argv[1]
+    except IndexError:
+	codename = None
+
+    # If True, load the pseudos from the family specified below
+    # Otherwise, use static files provided
+    expected_exec_name='pw.x'
+    auto_pseudos = False
+
+    queue = None
+    #queue = "P_share_queue"
+
+    #####
+
+    try:
+	if codename is None:
+	    raise ValueError
+	code = Code.get(codename)
+	if not code.get_remote_exec_path().endswith(expected_exec_name):
+	    raise ValueError
+    except (NotExistent, ValueError):
+	valid_code_labels = [c.label for c in Code.query(
+		attributes__key="_remote_exec_path",
+		attributes__tval__endswith="/{}".format(expected_exec_name))]
+	if valid_code_labels:
+	    print >> sys.stderr, "Pass as first parameter a valid code label."
+	    print >> sys.stderr, "Valid labels with a {} executable are:".format(expected_exec_name)
+	    for l in valid_code_labels:
+		print >> sys.stderr, "*", l
+	else:
+	    print >> sys.stderr, "Code not valid, and no valid codes for {}. Configure at least one first using".format(expected_exec_name)
+	    print >> sys.stderr, "    verdi code setup"
+	sys.exit(1)
+
+    if auto_pseudos:
+	valid_pseudo_groups = Group.objects.filter(dbnodes__type__contains='.upf.').distinct().values_list('name',flat=True)
+
+	try:
+	    pseudo_family = sys.argv[2]
+	except IndexError:
+	    print >> sys.stderr, "Error, auto_pseudos set to True. You therefore need to pass as second parameter"
+	    print >> sys.stderr, "the pseudo family name."
+	    print >> sys.stderr, "Valid groups containing at least one UPFData object are:"
+	    print >> sys.stderr, "\n".join("* {}".format(i) for i in valid_pseudo_groups)
+	    sys.exit(1)
+
+
+	if not Group.objects.filter(name=pseudo_family):
+	    print >> sys.stderr, "auto_pseudos is set to True and pseudo_family='{}',".format(pseudo_family)
+	    print >> sys.stderr, "but no group with such a name found in the DB."
+	    print >> sys.stderr, "Valid groups containing at least one UPFData object are:"
+	    print >> sys.stderr, ",".join(valid_pseudo_groups)
+	    sys.exit(1)
+
+
+    computer = code.get_remote_computer()
+
+    num_mpiprocs_per_machine = 16
+
+
+    alat = 4. # angstrom
+    cell = [[alat, 0., 0.,],
+	    [0., alat, 0.,],
+	    [0., 0., alat,],
+	   ]
+
+    # BaTiO3 cubic structure
+    s = StructureData(cell=cell)
+    s.append_atom(position=(0.,0.,0.),symbols='Ba')
+    s.append_atom(position=(alat/2.,alat/2.,alat/2.),symbols='Ti')
+    s.append_atom(position=(alat/2.,alat/2.,0.),symbols='O')
+    s.append_atom(position=(alat/2.,0.,alat/2.),symbols='O')
+    s.append_atom(position=(0.,alat/2.,alat/2.),symbols='O')
+    s.store()
+
+    parameters = ParameterData(dict={
+		'CONTROL': {
+		    'calculation': 'scf',
+		    'restart_mode': 'from_scratch',
+		    'wf_collect': True,
+		    },
+		'SYSTEM': {
+		    'ecutwfc': 30.,
+		    'ecutrho': 240.,
+		    },
+		'ELECTRONS': {
+		    'conv_thr': 1.e-6,
+		    }}).store()
+
+    kpoints = ParameterData(dict={
+		    'type': 'automatic',
+		    'points': [4, 4, 4, 0, 0, 0],
+		    }).store()
+
+    QECalc = CalculationFactory('quantumespresso.pw')
+    calc = QECalc(computer=computer)
+    calc.set_max_wallclock_seconds(30*60) # 30 min
+    calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": num_mpiprocs_per_machine})
+    if queue is not None:
+	calc.set_queue_name(queue)
+    calc.store()
+    print "created calculation; calc=Calculation(uuid='{}') # ID={}".format(
+	calc.uuid,calc.dbnode.pk)
+
+    calc.use_structure(s)
+    calc.use_code(code)
+    calc.use_parameters(parameters)
+
+    if auto_pseudos:
+	try:
+	    calc.use_pseudos_from_family(pseudo_family)
+	    print "Pseudos successfully loaded from family {}".format(pseudo_family)
+	except NotExistent:
+	    print ("Pseudo or pseudo family not found. You may want to load the "
+		   "pseudo family, or set auto_pseudos to False.")
+	    raise
+    else:
+	raw_pseudos = [
+	   ("Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF", 'Ba', 'pbesol'),
+	   ("Ti.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF", 'Ti', 'pbesol'),
+	   ("O.pbesol-n-rrkjus_psl.0.1-tested-pslib030.UPF", 'O', 'pbesol')]
+
+	pseudos_to_use = {}
+	for fname, elem, pot_type in raw_pseudos:
+	    absname = os.path.realpath(os.path.join(os.path.dirname(__file__),
+						    "testdata",
+						    "qepseudos",fname))
+	    pseudo, created = UpfData.get_or_create(
+		absname,use_first=True)
+	    if created:
+		print "Created the pseudo for {}".format(elem)
+	    else:
+		print "Using the pseudo for {} from DB: {}".format(elem,pseudo.pk)
+	    pseudos_to_use[elem] = pseudo
+
+	for k, v in pseudos_to_use.iteritems():
+	    calc.use_pseudo(v, kind=k)
+
+    calc.use_kpoints(kpoints)
+    #calc.use_settings(settings)
+    #from aiida.orm.data.remote import RemoteData
+    #calc.set_outdir(remotedata)
+
+    calc.submit()
+    print "submitted calculation; calc=Calculation(uuid='{}') # ID={}".format(
+	calc.uuid,calc.dbnode.pk)
 

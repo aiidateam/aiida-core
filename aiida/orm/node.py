@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import os
 
 from django.core.exceptions import ObjectDoesNotExist
@@ -9,11 +8,6 @@ from aiida.common.exceptions import (
     NotExistent, UniquenessError )
 from aiida.common.folders import RepositoryFolder, SandboxFolder
 
-
-__author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
-__copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.2.0"
 
 def from_type_to_pluginclassname(typestr):
     """
@@ -72,8 +66,7 @@ class Node(object):
                     newcls._query_type_string = ''                 
             else:
                 raise InternalError("Class {} is not in a module under "
-                                    "aiida.orm. (module is {})".format(
-                        name, attrs['__module__']))
+                                    "aiida.orm.".format(name))
             
             return newcls
 
@@ -719,27 +712,6 @@ class Node(object):
         :return: a dictionary {label:object}
         """
         return dict(self.get_inputs(also_labels=True))
-
-    def get_outputs_dict(self):
-        """
-        Return a dictionary where the key is the label of the output link, and
-        the value is the input node.
-        
-        :return: a dictionary {label:object}
-        """
-        list_with_duplicates = self.get_outputs(also_labels=True)
-        
-        # case with duplicates
-        labels = [i[0] for i in list_with_duplicates]
-        duplicated_labels = set([ i for i in labels if labels.count(i)>1 ])
-        
-        if not duplicated_labels:
-            return dict(list_with_duplicates)
-        else:
-            # correct
-            list_outputs = [ (i[0]+"_to_{}".format(i[1].pk),i[1]) if i[0]=='code' 
-                             else i for i in list_with_duplicates ]      
-            return list_outputs
 
     def get_inputdata_dict(self, only_in_db=False):
         """
@@ -1494,112 +1466,3 @@ class Node(object):
         if getattr(self,'_temp_folder',None) is not None:
             self._temp_folder.erase()
 
-
-
-
-
-    @property
-    def out(self):
-        """
-        To document
-        """
-        return NodeOutputManager(self)
-
-    @property
-    def inp(self):
-        """
-        To document
-        """
-        return NodeInputManager(self)
-
-
-
-class NodeOutputManager(object):
-    """
-    To document
-    """
-    def __init__(self, node):
-        """
-        :param node: the node object.
-        """
-        # Possibly add checks here
-        self._node = node
-
-    def __dir__(self):
-        """
-        Allow to list all valid output links
-        """
-        node_attributes = self._node.get_outputs_dict().keys()
-        return sorted(set(list(dir(type(self))) + list(node_attributes)))
-            
-    def __iter__(self):
-        node_attributes = self._node.get_outputs_dict().keys()
-        for k in node_attributes:
-            yield k
-    
-    def __getattr__(self,name):
-        """
-        :param name: name of the attribute to be asked to the parser results.
-        """
-        try:
-            return self._node.get_outputs_dict()[name]
-        except KeyError:
-            raise AttributeError("Node {} does not have an output with link {}"
-                                 .format(self._node.pk,name))
-
-    def __getitem__(self,name):
-        """
-        interface to get to the parser results as a dictionary.
-        
-        :param name: name of the attribute to be asked to the parser results.
-        """
-        try:
-            return self._node.get_outputs_dict()[name]
-        except KeyError:
-            raise KeyError("Node {} does not have an output with link {}"
-                           .format(self._node.pk, name))
-
-class NodeInputManager(object):
-    """
-    To document
-    """
-    def __init__(self, node):
-        """
-        :param node: the node object.
-        """
-        # Possibly add checks here
-        self._node = node
-
-    def __dir__(self):
-        """
-        Allow to list all valid input links
-        """
-        node_attributes = self._node.get_inputs_dict().keys()
-        return sorted(set(list(dir(type(self))) + list(node_attributes)))
-            
-    def __iter__(self):
-        node_attributes = self._node.get_inputs_dict().keys()
-        for k in node_attributes:
-            yield k
-    
-    def __getattr__(self,name):
-        """
-        :param name: name of the attribute to be asked to the parser results.
-        """
-        try:
-            return self._node.get_inputs_dict()[name]
-        except KeyError:
-            raise AttributeError("Node {} does not have an input with link {}"
-                                 .format(self._node.pk,name))
-
-    def __getitem__(self,name):
-        """
-        interface to get to the parser results as a dictionary.
-        
-        :param name: name of the attribute to be asked to the parser results.
-        """
-        try:
-            return self._node.get_inputs_dict()[name]
-        except KeyError:
-            raise KeyError("Node {} does not have an input with link {}"
-                           .format(self._node.pk, name))

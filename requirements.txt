@@ -9,7 +9,7 @@
 # sudo pip install --upgrade setuptools
 
 # Django
-django>=1.5.5,<1.6
+django>=1.5.1,<1.6
 
 ## For data/schema migrations
 ## Disabled for the time being.
@@ -61,9 +61,3 @@ numpy
 
 ## Tastypie, for the REST API interface
 django-tastypie>=0.11.0
-
-
-###
-## Some optional requirements:
-## For a nicer documentation theme (from read the docs):
-#sphinx_rtd_theme

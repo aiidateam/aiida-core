@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Base class for AiiDA tests
 """
@@ -8,12 +7,6 @@ from django.utils import unittest
 # The key is the name to use in the 'verdi test' command (e.g., a key 'generic'
 # can be run using 'verdi test db.generic')
 # The value must be the module name containing the subclasses of unittest.TestCase
-
-__author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
-__copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.2.0"
-
 db_test_list = {
     'generic': 'aiida.djsite.db.subtests.generic',
     'nodes': 'aiida.djsite.db.subtests.nodes',

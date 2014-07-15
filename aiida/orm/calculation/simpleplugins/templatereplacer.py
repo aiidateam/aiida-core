@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 This is a simple plugin that takes two node inputs, both of type ParameterData,
 with the following labels: template and parameters.
@@ -41,12 +40,6 @@ from aiida.common.datastructures import CalcInfo
 
 # TODO: write a 'input_type_checker' routine to automatically check the existence
 # and type of inputs + default values etc.
-
-__author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
-__copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.2.0"
-
 class TemplatereplacerCalculation(Calculation):   
     """
     Simple stub of a plugin that can be used to replace some text in a given

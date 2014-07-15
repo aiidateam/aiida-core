@@ -1,20 +1,15 @@
-# -*- coding: utf-8 -*-
 from aiida.orm.calculation.quantumespresso.pw import PwCalculation
-from aiida.parsers.plugins.quantumespresso.raw_parser_pw import parse_raw_output,QEOutputParsingError
+from aiida.parsers.plugins.quantumespresso.raw_parser_pw import *
 from aiida.orm.data.parameter import ParameterData
 from aiida.orm.data.folder import FolderData
 from aiida.parsers.parser import Parser#, ParserParamManager
 from aiida.parsers.plugins.quantumespresso import convert_qe2aiida_structure
 from aiida.common.datastructures import calc_states
-from aiida.common.exceptions import UniquenessError
+from aiida.orm.data.structure import StructureData
+from aiida.common.exceptions import UniquenessError,ValidationError
 from aiida.orm.data.array import ArrayData
 
 #TODO: I don't like the generic class always returning a name for the link to the output structure
-
-__author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
-__copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.2.0"
 
 class PwParser(Parser):
     """
@@ -54,14 +49,6 @@ class PwParser(Parser):
         import os
         import glob
         
-        # load the error logger
-        from aiida.common import aiidalogger
-        from aiida.djsite.utils import get_dblogger_extra
-        parserlogger = aiidalogger.getChild('pwparser')
-        logger_extra = get_dblogger_extra(self._calc)
-        
-        successful = True 
-        
         # check if I'm not to overwrite anything
         state = self._calc.get_state()
         if state != calc_states.PARSING:
@@ -75,9 +62,8 @@ class PwParser(Parser):
         input_param_name = self._calc.get_linkname('parameters')
         params = [i[1] for i in calc_input_parameterdata if i[0]==input_param_name]
         if len(params) != 1:
-            parserlogger.error("Found {} input_params instead of one"
-                                  .format(params),extra=logger_extra)
-            successful = False
+            raise UniquenessError("Found {} input_params instead of one"
+                                  .format(params))
         calc_input = params[0]
 
         # look for eventual flags of the parser
@@ -98,13 +84,9 @@ class PwParser(Parser):
         # look for retrieved files only
         retrieved_files = [i[1] for i in calc_outputs if i[0]==self._calc.get_linkname_retrieved()]
         if len(retrieved_files)!=1:
-            parserlogger.error("Output folder should be found once, "
-                               "found it instead {} times"
-                               .format(len(retrieved_files)),
-                               extra=logger_extra
-                               )
-            successful = False
-        
+            raise QEOutputParsingError("Output folder should be found once, "
+                                       "found it instead {} times"
+                                       .format(len(retrieved_files)) )
         # select the folder object
         out_folder = calc_outputs[0][1]
 
@@ -112,9 +94,7 @@ class PwParser(Parser):
         list_of_files = out_folder.get_path_list()
         # at least the stdout should exist
         if not self._calc.OUTPUT_FILE_NAME in list_of_files:
-            parserlogger.error("Standard output not found",extra=logger_extra)
-            successful = False
-            return successful,()
+            raise QEOutputParsingError("Standard output not found")
         # if there is something more, I note it down, so to call the raw parser
         # with the right options
         # look for xml
@@ -141,10 +121,7 @@ class PwParser(Parser):
             parsing_args.append(xml_file)
         if has_bands:
             parsing_args.append(dir_with_bands)
-        out_dict,trajectory_data,structure_data,bands_data,raw_successful = parse_raw_output(*parsing_args)
-        
-        # if calculation was not considered failed already, use the new value
-        successful = raw_successful if successful else successful
+        out_dict,trajectory_data,structure_data,bands_data,successful = parse_raw_output(*parsing_args)
         
         if bands_data:
             raise QEOutputParsingError("Bands parsing not implemented.")
@@ -169,34 +146,30 @@ class PwParser(Parser):
                             if name in this['name']:
                                 index = i
                         if index is None:
-                            parserlogger.error("Symmetry {} not found".format(name),
-                                               extra=logger_extra)
+                            raise QEOutputParsingError("Symmetry name not found.")
                         new_dict = {}
-                        # note: here I lose the information about equivalent 
-                        # ions and fractional_translation.
-                        # They will be present with all_symmetries=True
+                        # note: here I lose the information about equivalent ions and fractional_translation
+                        # they will be present with all_symmetries=True
                         new_dict['t_rev'] = this_sym['t_rev']
                         new_dict['symmetry_number'] = index
                         new_symmetries.append(new_dict)
                     out_dict['symmetries'] = new_symmetries # and overwrite the old one
             except KeyError: # no symmetries were parsed (failed case, likely)
-                parserlogger.error("No symmetries were found in output",
-                                   extra=logger_extra)
-        
-        new_nodes_list = []
+                pass
         
         # convert the dictionary into an AiiDA object
         output_params = ParameterData(dict=out_dict)
-        # return it to the execmanager
-        new_nodes_list.append((self.get_linkname_outparams(),output_params))
+        # save it into db
+        output_params.store()
+        self._calc._add_link_to(output_params, label=self.get_linkname_outparams() )
         
         if trajectory_data: # although it should always be non-empty (k-points)
             import numpy
             array_data = ArrayData()
             for x in trajectory_data.iteritems():
                 array_data.set_array(x[0],numpy.array(x[1]))
-            # return it to the exemanager
-            new_nodes_list.append((self.get_linkname_outarray(),array_data))
+            array_data.store()
+            self._calc._add_link_to(array_data, label=self.get_linkname_outarray() )
         
         # I eventually save the new structure. structure_data is unnecessary after this
         in_struc = self._calc.get_inputs_dict()['structure']
@@ -205,9 +178,10 @@ class PwParser(Parser):
         if type_calc=='relax' or type_calc=='vc-relax':
             if 'cell' in structure_data.keys():
                 struc = convert_qe2aiida_structure(structure_data,input_structure=in_struc)
-                new_nodes_list.append((self.get_linkname_outstructure(),struc))
+                struc.store()
+                self._calc._add_link_to(struc, label=self.get_linkname_outstructure() )
         
-        return successful,new_nodes_list
+        return successful
 
     def get_parser_settings_key(self):
         """

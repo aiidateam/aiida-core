@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 This module contains a set of unittest test classes that can be loaded from
 the plugin.
@@ -12,11 +11,6 @@ Plugin specific tests will be written in the plugin itself.
 # TODO : silly cases of copy/put/get from self to self
 
 import unittest
-
-__author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
-__copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.2.0"
 
 def get_all_custom_transports():
     """

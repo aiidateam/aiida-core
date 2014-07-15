@@ -1,14 +1,8 @@
-# -*- coding: utf-8 -*-
 import sys
 import os
 import subprocess
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-
-__author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
-__copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.2.0"
 
 def is_daemon_user():
     """
@@ -98,18 +92,12 @@ class Daemon(VerdiCommandWithSubcommands):
         else:
             return None
 
-    def daemon_start(self, *args):
+    def daemon_start(self):
         """
         Start the daemon
         """
         from aiida.common.utils import load_django
         load_django()
-
-        if args:
-            print >> sys.stderr, (
-                "No arguments allowed for the '{}' command.".format(
-                     self.get_full_command_name()))
-            sys.exit(1)
 
         from aiida.djsite.utils import get_daemon_user, get_configured_user_email
         
@@ -172,7 +160,7 @@ class Daemon(VerdiCommandWithSubcommands):
             else:
                 raise        
         
-    def daemon_stop(self, *args, **kwargs):
+    def daemon_stop(self, wait_for_death=True):
         """
         Stop the daemon.
         
@@ -184,13 +172,6 @@ class Daemon(VerdiCommandWithSubcommands):
         :return: None if ``wait_for_death`` is False. True/False if the process was
             actually dead or after all the retries it was still alive.
         """
-        if args:
-            print >> sys.stderr, (
-                "No arguments allowed for the '{}' command.".format(
-                     self.get_full_command_name()))
-            sys.exit(1)
-        wait_for_death = kwargs.get('wait_for_death', True)
-
         import time
         
         max_retries = 20
@@ -222,18 +203,12 @@ class Daemon(VerdiCommandWithSubcommands):
             
         return dead
             
-    def daemon_status(self, *args):
+    def daemon_status(self):
         """
         Print the status of the daemon
         """
         from aiida.common.utils import load_django
         load_django()
-        
-        if args:
-            print >> sys.stderr, (
-                "No arguments allowed for the '{}' command.".format(
-                     self.get_full_command_name()))
-            sys.exit(1)
         
         import supervisor
         import supervisor.supervisorctl
@@ -291,16 +266,10 @@ class Daemon(VerdiCommandWithSubcommands):
         else:
             print "I was able to connect to the daemon, but I did not find any process..."
         
-    def daemon_logshow(self, *args):
+    def daemon_logshow(self):
         """
         Show the log of the daemon, press CTRL+C to quit.
         """
-        if args:
-            print >> sys.stderr, (
-                "No arguments allowed for the '{}' command.".format(
-                     self.get_full_command_name()))
-            sys.exit(1)
-
         pid = self.get_daemon_pid()
         if (pid==None):
             print "Daemon not running (cannot find the PID for it)"
@@ -316,19 +285,13 @@ class Daemon(VerdiCommandWithSubcommands):
             # exit on CTRL+C
             process.kill()
  
-    def daemon_restart(self, *args):
+    def daemon_restart(self):
         """
         Restart the daemon. Before restarting, wait for the daemon to really
         shut down.
         """
         from aiida.common.utils import load_django
         load_django()
-
-        if args:
-            print >> sys.stderr, (
-                "No arguments allowed for the '{}' command.".format(
-                     self.get_full_command_name()))
-            sys.exit(1)
         
         from aiida.djsite.utils import get_daemon_user, get_configured_user_email
         
@@ -356,18 +319,12 @@ class Daemon(VerdiCommandWithSubcommands):
         else:
             self.daemon_start()
 
-    def configure_user(self, *args):
+    def configure_user(self):
         """
         Configure the user that can run the daemon.
         """
         from aiida.common.utils import load_django
         load_django()
-        
-        if args:
-            print >> sys.stderr, (
-                "No arguments allowed for the '{}' command.".format(
-                     self.get_full_command_name()))
-            sys.exit(1)        
         
         from django.utils import timezone
         

@@ -3,58 +3,70 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-.. figure:: images/AiiDA_transparent_logo.png
-    :width: 250px
-    :align: center
-    :height: 100px
-
-    Automated Interactive Infrastructure and Database for Atomistic simulations
-
 Welcome to AiiDA's documentation!
 =================================
 
-AiiDA is a sophisticated framework designed from scratch to be a flexible and scalable infrastructure for atomistic simulations. Being able to store the full data provenance of each simulation, and based on a tailored database solution built for efficient data mining implementations, AiiDA gives the user the ability to interact seamlessly with any number of HPC machines and codes thanks to its flexible plugin interface, together with a powerful workflow engine for the automation of simulations.
-
-The software is available at http://www.aiida.net.
-
-This is the documenation of the AiiDA framework. For the first setup, configuration and
-usage, refer to the :doc:`user's guide<user_guide/index>` below.
+This is the documenation of the AiiDA framework. For the basic configuration and
+simple usage, refer to the user's guide below.
 
 If, instead, you plan to add new plugins, or you simply want to understand
-AiiDA internals, refer to the :doc:`developer's guide<developer_guide/index>`.
+AiiDA internals, refer to the developer's guide.
 
 User's guide
 ++++++++++++
 
 .. toctree::
-   :maxdepth: 4
+   :maxdepth: 2
 
-   user_guide/index
+   database/index
+   installation
+   setup/computerandcodes
+   examples/scripting
+   examples/structure_tutorial
+   examples/pw_tutorial
+   examples/ph_tutorial
+   examples/cp_tutorial
+   parsers/resultmanager
+   examples/pseudo_tutorial
+
+   scheduler/index
+    
+   state/calculation_state
+
+   workflow/index
 
 Other guide resources
 +++++++++++++++++++++
-
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 2
     
-   other_guide/index
+   setup/aiida_multiuser
+   troubleshooting/index
+   website/web.rst
 
 
 Developer's guide
 +++++++++++++++++
 
 .. toctree::
-    :maxdepth: 3
-
-    developer_guide/index   
+    :maxdepth: 2
+    
+    Developer's Guide <developers> 
+    devel_tutorial/code_plugin    
 
 Modules provided with aiida
-+++++++++++++++++++++++++++
+---------------------------
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 2
    
-   module_guide/index
+   aiida.common Modules [OUTDATED] <common/dev>
+   transport/dev
+   scheduler/dev
+   cmdline/dev
+   execmanager/dev
+   djsite/dev
+   orm/dev
 
 Indices and tables
 ==================

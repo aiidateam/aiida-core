@@ -22,19 +22,20 @@ Using AiiDA in multi-user mode
       to give write permissions to the group both to files and folders
       created using the Folder class.
     
-    * Some configuration example::
+    * Some configuration
+      example::
       
-       {u'compress': True,
-        u'key_filename': u'/home/aiida/.aiida/sshkeys/KEYFILE',
-        u'key_policy': u'RejectPolicy',
-        u'load_system_host_keys': True,
-        u'port': 22,
-        u'proxy_command': u'ssh -i /home/aiida/.aiida/sshkeys/KEYFILE USERNAME@MIDDLECOMPUTER /bin/nc FINALCOMPUTER 22',
-        u'timeout': 60,
-        u'username': u'xxx'}
+      {u'compress': True,
+       u'key_filename': u'/home/aiida/.aiida/sshkeys/KEYFILE',
+       u'key_policy': u'RejectPolicy',
+       u'load_system_host_keys': True,
+       u'port': 22,
+       u'proxy_command': u'ssh -i /home/aiida/.aiida/sshkeys/KEYFILE USERNAME@MIDDLECOMPUTER /bin/nc FINALCOMPUTER 22',
+       u'timeout': 60,
+       u'username': u'xxx'}
     
-    * Moreover, on the remote computer do::
- 
+    * Moreover, on the remote computer
+      do::
          ssh-keyscan FINALCOMPUTER
 
       and append the output to the ``known_hosts`` of the aiida daemon account.
@@ -113,7 +114,6 @@ Some notes:
   
 * Create a ``/etc/apache2/sites-available/wsgi-aiida`` file,
   with content::
-
    Alias /static/awi /PATH_TO_AIIDA/aiida/djsite/awi/static/awi/
    Alias /favicon.ico /PATH_TO_AIIDA/aiida/djsite/awi/static/favicon.ico
  

@@ -7,56 +7,63 @@ to scale well defined chains of calculations on any number of input structures, 
 
 Instead of offering a limited number of automatization schemes, crafted for some specific functions (equation of states,
 phonons, etc...) in AiiDA a complete workflow engine is present, where the user can script in principle any possible
-interaction with all the AiiDA components, from the submission engine to the materials databases connections. In this framework
-a workflow is a python script that an AiiDA daemon can execute, containing several steps and eventually other sub-workflows. 
+interaction with all the AiiDA components, from the submission engine to the materials databases connections. In AiiDA a
+a workflow is a python script executed by a daemon, containing several user defined functions called steps. In each step
+all the AiiDA funcitons are available and calculations and launched and retrieved, as well as other sub-workflows.
+
+In this document we'll introduce the main workflow infrastructure from the user perspective, discussing and presenting some examples
+that will cover all the features implemented in the code. A more detailed description of each function can be found in the 
+developer documentation.  
 
 How it works
 ++++++++++++
 
-The rationale of the entire workflow infrastructure is to make efficient, reproducible and scriptable what a user can do 
-in the AiiDA shell. A workflow in this sense is nothing more than an ordered list of AiiDA commands, split in different steps
-to give some ordering necessary on successive calculation depending one from another. A workflow step is written with the same
-python language, using the same commands and libraries, stored in a file as a python class and managed by a daemon process. 
+The rationale of the entire workflow infrastructure is to make efficient, reproducible and scriptable anything a user can do 
+in the AiiDA shell. A workflow in this sense is nothing more than a list of AiiDA commands, split in different steps
+that depend one from each other and that are executed in a specific order. A workflow step is written with the same
+python language, using the same commands and libraries you use in the shell, stored in a file as a python class and 
+managed by a daemon process. 
 
 Before starting to analyze our first workflow we should summarize very shortly the main working logic of a typical workflow
-execution, starting with te definition of the management daemon. The AiiDA daemon handles all the operations of a workflow, 
-script loading, error handling and reporting, status monitoring and user interaction while in execution.  
+execution, starting with the definition of the management daemon. The AiiDA daemon handles all the operations of a workflow, 
+script loading, error handling and reporting, status monitoring and user interaction with the execution queue.
 
-The daemon iterates several simple operations:
+The daemon works essentially as an infinite loop, iterating several simple operations:
 
-1. Checks the running step in all the workflows, if there are new calculations attached to a step it submits them. 
-2. Retrieves all the finished calculations. If it exists one step of one workflow where all the calculations are correctly
-   finished it reload the workflow and executes the next step as indicated in the script.
-3. If the next step is the exit one, the workflow is terminated and the report is closed.
+1. It checks the running step in all the active workflows, if there are new calculations attached to a step it submits them. 
+2. It retrieves all the finished calculations. If one step of one workflow exists where all the calculations are correctly
+   finished it reloads the workflow and executes the next step as indicated in the script.
+3. If a workflow's next step is the exit one, the workflow is terminated and the report is closed.
 
-This simplified process is the very heart of the workflow engine, and the user can submit a new workflow to be managed both from the
-Verdi shell or a script loading the necessary Verdi environment. In the next chapter we'll initialize the Daemon and analyze a simple
-workflow, submitting it and retrieving the results.  
+This simplified process is the very heart of the workflow engine, and while the process loops a user can submit a new workflow 
+to be managed from the Verdi shell (or through a script loading the necessary Verdi environment). In the next chapter we'll 
+initialize the daemon and analyze a simple workflow, submitting it and retrieving the results.  
 
 The AiiDA daemon
 ++++++++++++++++
 
-As explained the daemon must be running to allow the execution of workflows, but thanks to the asyncronous structure of AiiDA if the 
-daemon gets interrupted (or the computer running the daemon restarted for example), once it will be restarted all the workflow
-will proceed automatically without any problem.  
-
-To launch the daemon we can use the verdi script facility from your computer's shell::
+As explained the daemon must be running to allow the execution of workflows, so the first thing needed to start it to launch the 
+daemon. We can use the verdi script facility from your computer's shell::
 
   >> verdi daemon start
 
-To stop the daemon we use the same command with the ``stop`` directive (and ``status`` to obtain more information).
+This command will laungh a background job (a deamon in fact) that will continuosly check for new or running workflow to manage. Thanks 
+to the asyncronous structure of AiiDA if the daemon gets interrupted (or the computer running the daemon restarted for example), 
+once it will be restarted all the workflow will proceed automatically without any problem. The only thing you need to do to restart the
+workflow it's exactly the same command above. To stop the daemon instead we use the same command with the ``stop`` directive, and to
+have a very fast check about the execution we can use the ``status`` directive to obtain more information.
 
 A workflow demo
 +++++++++++++++
 
-Once the daemon is running we can focus on a real workflow structure. As explained a workflow is essentially a python 
+Now that the daemon is running we can focus on how to write our first workflow. As explained a workflow is essentially a python 
 class, stored in a file accessible by AiiDA (in the same AiiDA path). By convention workflows are stored in *.py* 
 files inside the ``aiida/workflows`` directory; in the distribution you'll find some examples (some of them analyzed here) and 
-a user directory where user defined workflows can be stored. Remember to restart the daemon (``verdi daemon start``) every time 
-you add a new workflow to let AiiDA access the new classes and files.
+a user directory where user defined workflows can be stored. Since the daemon is aware only of the classes present at the time of its
+launch, remember to restart the daemon (``verdi daemon start``) every time you add a new workflow to let AiiDA see it.
 
 We can now study a very first example workflow, contained in the ``wf_demo.py`` file inside the distribution's ``workflows`` directory.
-Even if this is just a toy model, it helps us to introduce all the features and details on how a workflow functions, helping
+Even if this is just a toy model, it helps us to introduce all the features and details on how a workflow works, helping
 us to understand the more sophisticated examples reported later. 
 
 .. code-block:: python
@@ -131,8 +138,8 @@ us to understand the more sophisticated examples reported later.
         self.next(self.exit)
 
 As discussed before this is native python code, meaning that a user can load any library or script accessible from their ``PYTHONPATH``
-and interacting with any database or service of preference inside the workflow, managed by AiiDA through the daemon in a fully automatized way.
-We can now analyze all the details of the first workflow, discussing the most important methods. 
+and interacting with any database or service of preference inside the workflow. We'll now go through all the details of the first workflow,
+line by line, discussing the most important methods and discovering along the way all the features available. 
 
 **lines 1-7** Module imports. Some are necessary for the Workflow objects but many more can be added for user defined functions and libraries.
 
@@ -196,13 +203,14 @@ execute the next step, in this case the one called ``second``. In this step new 
 Running a workflow
 ++++++++++++++++++
 
-After saving the workflow inside a python file located in the ``aiida/workflows`` directory we can now launch the workflow simply invoking the
-specific workflow class and executing the ``start()`` method. It's important to remember that all the AiiDA framework needs to be accessible
-for the workflow to be launched, and this can be achieved with the verdi shell, an AiiDA-aware ipthon shell.
+After saving the workflow inside a python file located in the ``aiida/workflows`` directory, we can  launch the workflow simply invoking the
+specific workflow class and executing the ``start()`` method inside the Verdi shell. It's important to remember that all the AiiDA framework 
+needs to be accessible for the workflow to be launched, and this can be achieved either with the verdi shell or by any other python environemnt
+that has previously loaded the AiiDA framework (see the developer manual tfor this).
 
-To launch the verdi shell simply execute ``verdi shell`` from the command line; once inside the shell we have to import the workflow class we
-want to launch and this depends from the file location and name we decided. In this case we expect we'll launch the WorkflowDemo presented before,
-located in the ``wf_demo.py`` file in the clean AiiDA distribution. In the shell we execute::
+To launch the verdi shell execute ``verdi shell`` from the command line; once inside the shell we have to import the workflow class we
+want to launch (this command depends on the file location and the class name we decided). In this case we expect we'll launch the 
+WorkflowDemo presented before, located in the ``wf_demo.py`` file in the clean AiiDA distribution. In the shell we execute::
  
   >> from aiida.workflows.wf_demo import WorkflowDemo
   >> params = {"a":[1,2,3]}
@@ -214,7 +222,7 @@ In this four lines we loaded the class, we created some fictitious parameter and
 the daemon will handle all the workflow process, stepping each method, launching and retrieving calculations and monitoring possibile errors and
 problems.
 
-Since the workflow in now managed buy the daemon to interact with it we need special methods. There are basically two ways to see how the workflows
+Since the workflow in now managed by the daemon, to interact with it we need special methods. There are basically two ways to see how the workflows
 are running, calling the verbose ``list_workflows`` method present in the ``aiida.orm.workflow`` package or reading the workflow report of each
 single workflow.   
 
@@ -237,9 +245,9 @@ single workflow.
   necessary to retrive it in any other time in the future (as explained in the next point). The list methid con also be invoked from the verdi
   command line interface without accessing the shell and represents the fastest way to have a snapshot of what your AiiDA daemon is working on.
   
-* **get_report** As explained before, each workflow is equipped with a reporting facility the user can use to log any important intemediary
-  information, useful to debug the stauts or show some details. Moreover the report is also used by AiiDA as a error reporting tools, where in 
-  case of errors encoutered during the execution the AiiDA daemon will copy the entire stakc trace of the error in the workflow report before
+* **get_report** As explained, each workflow is equipped with a reporting facility the user can use to log any important intemediary
+  information, useful to debug the stauts or show some details. Moreover the report is also used by AiiDA as a error reporting tools, in 
+  case of errors encoutered during the execution the AiiDA daemon will copy the entire stack trace in the workflow report before
   halting it's execution. To access the report we have to retrive the specific workflow instance of interest and call the ``get_report()`` method.
   Using the verdi shell we can do this with a simple line of code::
   
@@ -247,17 +255,21 @@ single workflow.
   >> Workflow.get_subclass_from_pk(1).get_report()
    
   As you can see the specific ``pk`` is needed to retrive the report, and some caution is needed. In fact, it's always reccomended to get the report
-  from ``Workflow.get_subclass_from_pk`` without saving this object in a new variable, since the information generated in the report may change
+  from ``Workflow.get_subclass_from_pk`` without saving this object in a variable. The information generated in the report may change
   and the user calling a ``get_report`` method of a class instantiated in the past will probably lose the most recent additions to the report.
   
-As explained before, workflows will be hanlded by the daemon until the final step or until some error accours. In the last case, the workflow gets
-halted and only the user can remove or kill the workflow through the interactive verdi shell. TODO
+One launched, the workflows will be hanlded by the daemon until the final step or until some error accours. In the last case, the workflow gets
+halted and only the user can remove or kill the workflow through the interactive verdi shell. In the last chapter we'll see how to stop a workflow,
+remove a blocked workflows from the execution list and retrieve a already finished workflow with all its calculations.
      
 A more sophisticated workflow
 +++++++++++++++++++++++++++++
 
-In the simple example shown before we've been able to see almost all the workflow features, but nothing interesting happened. In this section we
-show a more sophisticated example, where real calculations are performed and common real-life issues are solved. TODO
+In the previous chapter we've been able to see almost all the workflow features, and we're now ready to work on some more sophisticated examples, 
+where real calculations are performed and common real-life issues are solved. As a real case example we'll compute the euqation of state 
+of a simple class of materials, XTiO3; the workflow will accept as an input the X material, it will build several structure with different 
+crystal parameters, run and retrive all the simulations, fit the curve and run an optimized final structure saving it as the workflow results, 
+aside to the final optimal cell parameter value.
 
 .. code-block:: python
   :linenos:
@@ -458,13 +470,94 @@ show a more sophisticated example, where real calculations are performed and com
                 
             self.next(self.exit)
 
+Before getting into details, you'll notice that this workflow is devided into sections by comments in the script. This is not necessary, but helps
+the user to differentiate the main parts of the code. In general it's useful to be able to recognize immediately which functions are steps and
+which are instead utility or support functions that either generate structure, modify them, add special parameters for the calculations, etc. In
+this case the support functions are reported first, under the ``Object generators`` part, while Workflow steps are reported later in the soundy
+``Workflow steps`` section. Lets now get in deeper details for each function. 
+
+* **__init__** Usual initialization function, notice again the necessary super class initialization for back compatibility.
+  
+* **start** The workflow tries to get the X material from the parameters, called in this case ``x_material``. If the entry is not present
+  in the dictionary an error will be thrown and the workflow will hang, reporting the error in the report. After that a simple line
+  in the report is added to notify the correct start and the eos step will be chained to the execution.
+
+* **eos** This step is the hearth of this workflow. At the beginning parameters needed to investigate the equation of states are retrived. In this
+  case we chose a very simple structure with only one interesting cell parameter, called ``starting_alat``. The code will take this alat as the
+  central point of a linear mesh going from 0.85 alat to 1.15 alat where only a total of ``alat_steps`` will be generated. This decision
+  is very much problem dependent, and your workflows will certanly need more parameters or more sophisticated meshes to run a satisfactory
+  equaiton of state analysis, but again this is only a tutorial and the scope is to learn the basic concepts.
+  
+  After retriving the parameters, a linear interpolation is generated between the values of interest and for each fo this values a calculation
+  is generated by the support function (see later). Each calculation is then attached to the step and finally the step chains ``optimize`` as the
+  step. As told, the manager will handle all the job execution and retrival for all the step's calculation before calling the next step, and this
+  ensures that no optimization will be done before all the alat steps are computed with success.
+
+* **optimize** In the first lines the step will retrive the initial parameters, the ``a_sweep`` attribute computed in the previous step and all
+  the calculations launched and succesfully retrived. Energy and volume in each calculation is retrived thanks to the output parser functions
+  mentioned in the other chapters, and a simple message is added to the report for each calculation.
+  
+  Having the volume and the nergy for each simulation we can run a Murnaghan fit to obtain the optimal cell parameter and expected energy, to
+  do this we use a simple fitting module present in ``aiida.tools.physics`` package called ``Murnaghan_fit``. The optimal alat is then saved in
+  the attributes and a new calculation is generated it. The calculation is atteched to the step and the ``final_step`` is atteched to the 
+  exection. 
+
+* **final_step** In this step the main result is collcted and stored. Parameters and attributes are retrived, a new entry in the report is stored
+  pointing to the optimal alat and to the final energy of the structure. Finally the calculation is added to the workflow results and the ``exit``
+  step is chained for execution.  
+
+* **get_pw_calculation (get_kpoints, get_pw_parameters, get_structure)** As you noticed to let the code clean all the functions needed to generate
+  AiiDA Calculation objects have been factored in the utility functions. These functions are highly specific for the task needed, and unrelated
+  to the workflow functions. Nevertheless they're a good example of best practise on how to write clean and reusable workflows, and we'll comment
+  the most important feature.
+  
+  ``get_pw_calculation`` is called in the workflow's steps, and it handled the entire Calculation objecty creation. First it extracts the
+  parameters from the workflow initialization necessary for the execution (the machine, the code, and the number of core, pseudos, etc..) and
+  then it generated and store the Calculation objets, returning it for later use.
+  
+  ``get_kpoints`` genetates a k-point mesh suitable for the calculation, in this case a fixed MP mesh ``4x4x4``. In a real case scenario this
+  needs much more sophisticated calculations to ensure a correct convergence, not necessary for the tutorial.
+  
+  ``get_pw_parameters`` builds the minimum set of parameters necessary to run the Quantum Espresso simulations. In this case as well parameters
+  are not for production. 
+  
+  ``get_structure`` generated the real atomic arrangement for the specific calculation. In this case the configuration is extremely simple, but
+  in principle this can be substituted with an external funtion, implementing even very sophiticated approached such as genetic algorithm evolution
+  or semi-randomic modifications, or any other structure evolution function the user wants to test.
+  
+As you noticed this workflow needs several parameters to cerrectly be executed, something natural for real case scenarios. Nevertheless the
+launching procedure is identical as for the simple example before, with just a little longer dictionary of parameters::
+
+  >> from aiida.workflows.wf_XTiO3 import WorkflowXTiO3_EOS
+  >> params = {'pw_codename':'PWcode', 'num_machines':1, 'num_cpus_per_machine':8, 'max_wallclock_seconds':30*60, 'pseudo_family':'PBE', 'alat_steps':5 }
+  >> wf = WorkflowXTiO3(params=params)
+  >> wf.start()
+
+To run this workflow remember to update the ``params`` dictionary with the correct values for you AiiDA installation (namely ``pw_codename`` and
+``pseudo_family``).
 
 
 Chaining workflows
 ++++++++++++++++++
 
-A final, an important feature of the workflow framework is the ability for a workflow to launch other workflows in every single step, allowing
-the construction of complex experiments using modular and higly reusable atomic workflows. TODO
+After the previous chapter we're now able to write a real case workflow that run in a fully automatic way EOS analysis for simple 
+structures. This covers almost all the workflow engine's features implemented in AiiDA, except for workflow chaining.
+
+Thanks to their modular structure a user can write task-specifc workflow very easly. An example is the EOS before, or an energy
+convergency procedure to find optimal cutoffs, or any other necessity the user can code. This self contained workflows can easily became
+a library of result-oriented scripts that a user would be happy to reuse several ways. This is exactly where sub-workflow comes in hand.    
+
+Workflow, in an abstract sense, are in fact calculations, that accept as input some parameters and that produce results as output. 
+The way this calculations are handled is competely transparent for the user and the engine, and if a workflow could launch other 
+workflow it would just be a natural extension of the step's calculation concept. This is in fact how workflow chaining has been 
+implemented in AiiDA. Just as with calculations, in each step a workflow can attach another workflow for executions, and the AiiDA 
+daemon will handle its execution waiting for its successful end (in case of errors in any subworkflow errors will be reported and the
+entire workflow tree will be halted, exactly like is a calculation would fail).
+
+To introduce this function we introduce our last example, where the WorkflowXTiO3_EOS is used as a sub workflow. The general idea of this
+new workflow is simple: if we're now able to compute the EOS of any XTiO3 structure we can build a workflow to loop among several X 
+materials, obtain the relaxed structure for each material and run some more sophisticated calculation. In this case we'll compute
+phonon vibrational frequncies for some XTiO3 materials, namely Ba, Sr and Pb.  
 
 .. code-block:: python
   :linenos:
@@ -478,6 +571,10 @@ the construction of complex experiments using modular and higly reusable atomic 
         def __init__(self,**kwargs):
             
             super(WorkflowXTiO3, self).__init__(**kwargs)
+
+        ## ===============================================
+        ##    Calculations generators
+        ## ===============================================
         
         def get_ph_parameters(self):
             
@@ -492,11 +589,7 @@ the construction of complex experiments using modular and higly reusable atomic 
                     }}).store()
                     
             return parameters
-        
-        ## ===============================================
-        ##    Calculations generators
-        ## ===============================================
-        
+                
         def get_ph_calculation(self, pw_calc, ph_parameters):
             
             params = self.get_parameters()
@@ -523,7 +616,7 @@ the construction of complex experiments using modular and higly reusable atomic 
             return calc
         
         ## ===============================================
-        ##    Wf steps
+        ##    Workflow steps
         ## ===============================================
         
         @Workflow.step
@@ -531,7 +624,6 @@ the construction of complex experiments using modular and higly reusable atomic 
             
             params = self.get_parameters()
             elements_alat = [('Ba',4.0),('Sr', 3.89), ('Pb', 3.9)]
-            #elements_alat = [('Ba',4.0)]
             
             for x in elements_alat:
                 
@@ -580,4 +672,26 @@ the construction of complex experiments using modular and higly reusable atomic 
                 self.append_to_report("Point q: {0} Frequencies: {1}".format(dm['q_point'],dm['frequencies']))
             
             self.next(self.exit)
-        
+
+
+Most of the code is now simple adaptation of previous examples, so we're going to comment only the most relevant differences where
+workflow chaining plays an important role.
+
+* **start** This workflow accepts the same input as the WorkflowXTiO3_EOS, but right at the beginning the workflow a list of X materials
+  is defined, with their respective initial alat. This list is iterated and for each material a new Workflow is both generated, started and
+  attached to the step. At the end ``run_ph`` is chained as the following step.
+
+* **run_ph** Only after all the subworkflows in ``start`` are succesfully completed this step will be executed, and it will immediately retrieve
+  all the subworkflow, and from each of them it will get the result calculations. As you noticed the result can be stored with any user defined key,
+  and this is necessary when someone wants to retrive it from a completed workflow. For each result a phonon calculation is launched and then
+  the ``final_step`` step is chained.
+  
+To launch this new workflow we have only to add a simply entry in the previous parameter dictionary, specifing the phonon code, as reporte here::
+
+  >> from aiida.workflows.wf_XTiO3 import WorkflowXTiO3_EOS
+  >> params = {'pw_codename':'PWcode', 'ph_codename':'PHcode', 'num_machines':1, 'num_cpus_per_machine':8, 'max_wallclock_seconds':30*60, 'pseudo_family':'PBE', 'alat_steps':5 }
+  >> wf = WorkflowXTiO3(params=params)
+  >> wf.start()
+  
+ 
+

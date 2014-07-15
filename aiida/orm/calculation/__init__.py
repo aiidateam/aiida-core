@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from aiida.orm import Node
 from aiida.common.datastructures import calc_states
 from aiida.common.exceptions import ModificationNotAllowed
@@ -9,6 +10,11 @@ from aiida.common.utils import classproperty
 #        'email_on_terminated',
 #        'rerunnable',
 #        'resourceLimits',
+
+__author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
+__copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
+__version__ = "0.2.0"
 
 _input_subfolder = 'raw_input'
 
@@ -1038,13 +1044,13 @@ class Calculation(Node):
                                                    key='scheduler_state').values_list(
             'dbnode__pk', 'tval'))
         
+        # I do the query now, so that the list of pks gets cached
+        calc_list_data = calc_list.values('pk', 'dbcomputer__name', 'ctime', 'type')        
         states = {c.pk: c.get_state_string() for c in calc_list}
         
         scheduler_lastcheck = dict(DbAttribute.objects.filter(
             dbnode__in=calc_list,
             key='scheduler_lastchecktime').values_list('dbnode__pk', 'dval'))
-        
-        calc_list_data = calc_list.values('pk', 'dbcomputer__name', 'ctime', 'type')
         
         ## Get the last daemon check
         try:
@@ -1067,8 +1073,8 @@ class Calculation(Node):
             # first save a matrix of results to be printed
             res_str_list = [last_check_string]
             str_matrix = []
-            title = ['Pk','State','Creation time',
-                     'Scheduler state','Computer','Type']
+            title = ['# Pk','State','Creation',
+                     'Sched. state','Computer','Type']
             str_matrix.append(title)
             len_title = [len(i) for i in title]
             
@@ -1100,10 +1106,12 @@ class Calculation(Node):
 
                 calc_module = from_type_to_pluginclassname(calcdata['type']).rsplit(".",1)[0]
                 if calc_module.startswith('calculation.'):
-                    calc_module = calc_module[12:]
+                    calc_module = calc_module[12:].strip()
                 
                 if relative_ctime:
-                    calc_ctime = str_timedelta(now-calcdata['ctime'], negative_to_zero=True)
+                    calc_ctime = str_timedelta(now-calcdata['ctime'],
+                                               negative_to_zero=True,
+                                               max_num_fields=1)
                 else:
                     calc_ctime = " ".join([timezone.localtime(calcdata['ctime']).isoformat().split('T')[0],
                             timezone.localtime(calcdata['ctime']).isoformat().split('T')[1].split('.')[0].rsplit(":",1)[0]])
@@ -1355,15 +1363,17 @@ class Calculation(Node):
         
         logger_extra = get_dblogger_extra(self)    
         
-        if (self.get_state() == calc_states.NEW or 
-                self.get_state() == calc_states.TOSUBMIT):
+        old_state = self.get_state()
+        
+        if (old_state == calc_states.NEW or 
+                old_state == calc_states.TOSUBMIT):
+            self._set_state(calc_states.FAILED)
             self.logger.warning("Calculation {} killed by the user "
                                 "(it was in {} state)".format(
-                                self.pk, self.get_state()), extra=logger_extra)
-            self._set_state(calc_states.FAILED)
+                                self.pk, old_state), extra=logger_extra)
             return
         
-        if self.get_state() != calc_states.WITHSCHEDULER:
+        if old_state != calc_states.WITHSCHEDULER:
             raise InvalidOperation("Cannot kill a calculation not in {} state"
                                    .format(calc_states.WITHSCHEDULER) )
         
@@ -1385,7 +1395,8 @@ class Calculation(Node):
                                        "(maybe the calculation already finished?)"
                                        .format(self.pk, self.get_job_id()))
         else:
-            self._set_state(calc_states.FAILED)
+            # Do not set the state, but let the parser do its job
+            #self._set_state(calc_states.FAILED)
             self.logger.warning("Calculation {} killed by the user "
                                 "(it was WITHSCHEDULER)".format(self.pk),
                                 extra=logger_extra)
@@ -1479,7 +1490,7 @@ class Calculation(Node):
             [self.get_append_text(),
              calcinfo.append_text,
              code.get_append_text(),
-             computer.get_prepend_text()] if _)
+             computer.get_append_text()] if _)
 
         # Set resources, also with get_default_mpiprocs_per_machine
         resources_dict = self.get_resources(full=True)
@@ -1871,7 +1882,7 @@ class CalculationFileManager(object):
             raise UniquenessError("More than one output folder found")
         return folders[0]
     
-    def path(self,name):
+    def path(self,name='.'):
         folder = self._get_folder()
         return folder.get_abs_path(name)
     

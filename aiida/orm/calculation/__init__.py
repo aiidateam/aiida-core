@@ -21,28 +21,52 @@ _input_subfolder = 'raw_input'
 class Calculation(Node):
     """
     This class provides the definition of an AiiDA calculation.
-    """
-    _updatable_attributes = ('state', 'job_id', 'scheduler_state',
-                             'scheduler_lastchecktime',
-                             'last_jobinfo', 'remote_workdir', 'retrieve_list',
-                             'retrieve_singlefile_list')
+    """    
+    def _init_internal_params(self):
+        """
+        Define here internal parameters that should be defined
+        right after the __init__. This function is actually called
+        by the __init__.
+        
+        :note: if you inherit this function, ALWAYS remember to
+          call super()._init_internal_params() as the first thing
+          in your inherited function.
+        """
+        super(Calculation, self)._init_internal_params()
+        
+        # By default, no output parser
+        self._default_parser = None
+        # Set default for the link to the retrieved folder (after calc is done)
+        self._linkname_retrieved = 'retrieved' 
+        
+        self._updatable_attributes = ('state', 'job_id', 'scheduler_state',
+                                 'scheduler_lastchecktime',
+                                 'last_jobinfo', 'remote_workdir', 'retrieve_list',
+                                 'retrieve_singlefile_list')
+         
+        # Files in which the scheduler output and error will be stored.
+        # If they are identical, outputs will be joined.
+        self.SCHED_OUTPUT_FILE = '_scheduler-stdout.txt'
+        self.SCHED_ERROR_FILE = '_scheduler-stderr.txt'
     
-    # By default, no output parser
-    _default_parser = None
-    # Set default for the link to the retrieved folder (after calc is done)
-    _linkname_retrieved = 'retrieved' 
-    
-    # Files in which the scheduler output and error will be stored.
-    # If they are identical, outputs will be joined.
-    SCHED_OUTPUT_FILE = '_scheduler-stdout.txt'
-    SCHED_ERROR_FILE = '_scheduler-stderr.txt'
-    
-    # Default values to be set for new nodes
-    @classproperty
-    def _set_defaults(cls):
-        return {"parser_name": cls._default_parser,
-                "linkname_retrieved": cls._linkname_retrieved,
-          }
+    @property
+    def _set_defaults(self):
+        """
+        Return the default parameters to set.
+        It is done as a property so that it can read the default parameters
+        defined in _init_internal_params.
+        
+        :note: It is a property because in this way, e.g. the
+        parser_name is taken from the actual subclass of calculation,
+        and not from the parent Calculation class
+        """
+        parent_dict = super(Calculation, self)._set_defaults
+        
+        parent_dict.update({
+            "parser_name": self._default_parser,
+            "linkname_retrieved": self._linkname_retrieved})
+
+        return parent_dict 
     
     # Nodes that can be added as input using the use_* methods
     @classproperty

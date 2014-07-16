@@ -316,10 +316,17 @@ class StructureData(Data):
     """
     _set_incompatibilities = [("ase","cell"),("ase","pbc")]
     
-    _set_defaults = {"pbc": [True, True, True],
+    @property
+    def _set_defaults(self):
+        parent_dict = super(StructureData, self)._set_defaults
+        
+        parent_dict.update({
+                     "pbc": [True, True, True],
                      "cell": [[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]
-                     }
+                     })
 
+        return parent_dict 
+    
     def set_ase(self, aseatoms):
         """
         Load the structure from a ASE object

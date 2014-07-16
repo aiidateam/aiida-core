@@ -23,14 +23,9 @@ __copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de L
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.2.0"
 
-_compulsory_namelists = ['INPUTPH']
-
-# Keywords that cannot be set manually, only by the plugin
-_blocked_keywords = [('INPUTPH', 'outdir'),
-    ('INPUTPH', 'iverbosity'),
-    ('INPUTPH', 'prefix'),
-    ('INPUTPH', 'fildyn'),
-    ]
+    
+# in restarts, will not copy but use symlinks
+_default_symlink_usage = False
 
 class PhCalculation(Calculation):
     """
@@ -38,22 +33,39 @@ class PhCalculation(Calculation):
     For more information, refer to http://www.quantum-espresso.org/
     """
 
-    OUTPUT_SUBFOLDER = './out/'
-    PREFIX = 'aiida'
-    INPUT_FILE_NAME = 'aiida.in'
-    OUTPUT_FILE_NAME = 'aiida.out'
-#    OUTPUT_XML_FILE_NAME = 'data-file.xml'
-    OUTPUT_XML_TENSOR_FILE_NAME = 'tensors.xml'
-    FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX = 'DYN_MAT'
-    OUTPUT_DYNAMICAL_MATRIX_PREFIX = os.path.join(FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX,
-                                                  'dynamical-matrix-')
+    def _init_internal_params(self):
+        super(PhCalculation, self)._init_internal_params()
 
-    # Default PW output parser provided by AiiDA
-    _default_parser = 'quantumespresso.ph'
+        self.OUTPUT_SUBFOLDER = './out/'
+        self.PREFIX = 'aiida'
+        self.INPUT_FILE_NAME = 'aiida.in'
+        self.OUTPUT_FILE_NAME = 'aiida.out'
+        #OUTPUT_XML_FILE_NAME = 'data-file.xml'
+        self.OUTPUT_XML_TENSOR_FILE_NAME = 'tensors.xml'
+        #FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX = 'DYN_MAT'
+        #OUTPUT_DYNAMICAL_MATRIX_PREFIX = os.path.join(FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX,
+        #                                              'dynamical-matrix-')
+    
+        # Default PW output parser provided by AiiDA
+        self._default_parser = 'quantumespresso.ph'
 
-    # in restarts, will not copy but use symlinks
-    _default_symlink_usage = False
+        self._compulsory_namelists = ['INPUTPH']
 
+        # Keywords that cannot be set manually, only by the plugin
+        self._blocked_keywords = [('INPUTPH', 'outdir'),
+                             ('INPUTPH', 'iverbosity'),
+                             ('INPUTPH', 'prefix'),
+                             ('INPUTPH', 'fildyn'),
+                             ]
+
+    @classproperty
+    def FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX(cls):
+        return 'DYN_MAT'
+
+    @classproperty
+    def OUTPUT_DYNAMICAL_MATRIX_PREFIX(cls):
+        return os.path.join(cls.FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX,
+                                                      'dynamical-matrix-')
     @classproperty
     def _use_methods(cls):
         """
@@ -174,7 +186,7 @@ class PhCalculation(Calculation):
         
         # I remove unwanted elements (for the moment, instead, I stop; to change when
         # we setup a reasonable logging)
-        for nl, flag in _blocked_keywords:
+        for nl, flag in self._blocked_keywords:
             if nl in input_params:
                 if flag in input_params[nl]:
                     raise InputValidationError(
@@ -200,7 +212,7 @@ class PhCalculation(Calculation):
                     "The 'NAMELISTS' value, if specified in the settings input "
                     "node, must be a list of strings")
         except KeyError: # list of namelists not specified in the settings; do automatic detection
-            namelists_toprint = _compulsory_namelists
+            namelists_toprint = self._compulsory_namelists
         
         input_filename = tempfolder.get_abs_path(self.INPUT_FILE_NAME)
 
@@ -230,7 +242,7 @@ class PhCalculation(Calculation):
                 "{}".format(",".join(input_params.keys())))
         
         # copy the parent scratch
-        symlink = settings_dict.pop('PARENT_FOLDER_SYMLINK',self._default_symlink_usage) # a boolean
+        symlink = settings_dict.pop('PARENT_FOLDER_SYMLINK',_default_symlink_usage) # a boolean
         if symlink:
             # I create a symlink to the whole parent ./out
             # TODO: it would be better to do a symlink of ./out/* -> ./out/

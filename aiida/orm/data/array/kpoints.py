@@ -17,10 +17,14 @@ __version__ = "0.2.0"
 class KpointsData(ArrayData):
     
     # Default values to be set for new nodes
-    @classproperty
-    def _set_defaults(cls):
-        return {"labels": [],
-          }
+    @property
+    def _set_defaults(self):
+        parent_dict = super(KpointsData, self)._set_defaults
+        
+        parent_dict.update({"labels": [],
+                            "pbc": [True, True, True]})
+
+        return parent_dict 
 
     @property
     def labels(self):

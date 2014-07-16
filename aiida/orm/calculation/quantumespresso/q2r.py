@@ -3,6 +3,7 @@ from aiida.orm.calculation.quantumespresso.namelists import NamelistsCalculation
 import os
 from aiida.orm.calculation.quantumespresso.ph import PhCalculation
 from aiida.orm.data.folder import FolderData
+from aiida.common.utils import classproperty
 
 __author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
 __copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
@@ -15,24 +16,28 @@ class Q2rCalculation(NamelistsCalculation):
     interatomic force constants in real space after a phonon calculation.
     For more information, refer to http://www.quantum-espresso.org/
     """    
-    FORCE_CONSTANTS_NAME = 'real_space_force_constants.dat'
-    _default_namelists = ['INPUT']   
-    _default_parent_output_folder = os.path.join('.',
-                            PhCalculation.FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX)
-    #_internal_retrieve_list = [FORCE_CONSTANTS_NAME]
-    _blocked_keywords = [('INPUT','fildyn',PhCalculation.OUTPUT_DYNAMICAL_MATRIX_PREFIX),
-                         ('INPUT','flfrc',FORCE_CONSTANTS_NAME),
-                        ]
-    _parent_folder_type = FolderData
-    OUTPUT_SUBFOLDER = PhCalculation.FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX
-    
-    _linkname_forces = 'force_constants'
-    
-    _retrieve_singlefile_list = [[_linkname_forces,'singlefile',FORCE_CONSTANTS_NAME]]
-    
-    # Default PW output parser provided by AiiDA
-    _default_parser = 'quantumespresso.q2r'
-    
+    def _init_internal_params(self):
+        super(Q2rCalculation, self)._init_internal_params()
+                
+        self._default_namelists = ['INPUT']   
+        self.INPUT_SUBFOLDER = os.path.join('.',
+                                PhCalculation.FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX)
+        #_internal_retrieve_list = [FORCE_CONSTANTS_NAME]
+        self._blocked_keywords = [('INPUT','fildyn',PhCalculation.OUTPUT_DYNAMICAL_MATRIX_PREFIX),
+                             ('INPUT','flfrc',self.FORCE_CONSTANTS_NAME),
+                            ]
+        self._parent_folder_type = FolderData
+        self.OUTPUT_SUBFOLDER = PhCalculation.FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX
+        
+        self._retrieve_singlefile_list = [[self.get_linkname_force_matrix(),'singlefile',self.FORCE_CONSTANTS_NAME]]
+        
+        # Default PW output parser provided by AiiDA
+        self._default_parser = 'quantumespresso.q2r'
+        
+    @classproperty
+    def FORCE_CONSTANTS_NAME(cls):
+        return 'real_space_force_constants.dat'
+   
     def set_parent_calc(self,calc):
         """
         Set the parent calculation, 
@@ -43,13 +48,14 @@ class Q2rCalculation(NamelistsCalculation):
             raise ValueError("Parent calculation must be a PhCalculation")
 
         from aiida.common.exceptions import UniquenessError
-        localdatas = calc.get_outputs(type=self._parent_folder_type)
+        localdatas = [_[1] for _ in calc.get_outputs(also_labels=True)
+                      if _[0] == calc.get_linkname_retrieved()]
         if len(localdatas) == 0:
-            raise UniquenessError("No output remotedata found in the parent "
+            raise UniquenessError("No output retrieved data found in the parent "
                                   "calc, probably it did not finish yet, "
                                   "or it crashed")
         if len(localdatas) != 1:
-            raise UniquenessError("More than one output remotedata found")
+            raise UniquenessError("More than one output retrieved data found")
         localdata = localdatas[0]
         
         self.use_parent_folder(localdata)
@@ -60,6 +66,6 @@ class Q2rCalculation(NamelistsCalculation):
         Return the name of the link between Q2rCalculation and the output 
         force constants produced
         """
-        return self._linkname_forces
+        return 'force_constants'
     
     

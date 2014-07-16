@@ -33,9 +33,9 @@ class BasePwCpInputGenerator(object):
     # Additional files that should always be retrieved for the specific plugin
     _internal_retrieve_list = []
 
-    # Default PW output parser provided by AiiDA
-    _default_parser = None
-    #_default_parser = 'quantumespresso.pw'
+    ## Default PW output parser provided by AiiDA
+    #_default_parser = None
+    ##_default_parser = 'quantumespresso.pw'
     
     _automatic_namelists = {}
 
@@ -63,18 +63,18 @@ class BasePwCpInputGenerator(object):
     # If the length of the tuple is three, the third value is the value that
     # will be automatically set.
     # Note that some values (ibrav, nat, ntyp, ...) are overridden anyway
-    _blocked_keywords = [('CONTROL', 'pseudo_dir'), # set later
-         ('CONTROL', 'outdir'),  # set later
-         ('CONTROL', 'prefix'),  # set later
-         ('SYSTEM', 'ibrav'),  # set later
-         ('SYSTEM', 'celldm'),
-         ('SYSTEM', 'nat'),  # set later
-         ('SYSTEM', 'ntyp'),  # set later
-         ('SYSTEM', 'a'), ('SYSTEM', 'b'), ('SYSTEM', 'c'),
-         ('SYSTEM', 'cosab'), ('SYSTEM', 'cosac'), ('SYSTEM', 'cosbc'),
-    ]
+#     _blocked_keywords = [('CONTROL', 'pseudo_dir'), # set later
+#          ('CONTROL', 'outdir'),  # set later
+#          ('CONTROL', 'prefix'),  # set later
+#          ('SYSTEM', 'ibrav'),  # set later
+#          ('SYSTEM', 'celldm'),
+#          ('SYSTEM', 'nat'),  # set later
+#          ('SYSTEM', 'ntyp'),  # set later
+#          ('SYSTEM', 'a'), ('SYSTEM', 'b'), ('SYSTEM', 'c'),
+    #     ('SYSTEM', 'cosab'), ('SYSTEM', 'cosac'), ('SYSTEM', 'cosbc'),
+    #]
     
-    _use_kpoints = False
+    #_use_kpoints = False
     
     @classproperty
     def _baseclass_use_methods(cls):

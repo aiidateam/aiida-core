@@ -8,7 +8,7 @@ from aiida.common.exceptions import (
     DbContentError, InternalError, ModificationNotAllowed,
     NotExistent, UniquenessError )
 from aiida.common.folders import RepositoryFolder, SandboxFolder
-
+from aiida.common.utils import classproperty
 
 __author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
 __copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
@@ -92,17 +92,7 @@ class Node(object):
     # A list of tuples, saying which attributes cannot be set at the same time
     # See documentation in the set() method.
     _set_incompatibilities = []
-    
-    # Default values to set in the __init__, if no value is explicitly provided
-    # for the given key.
-    # It is a dictionary, with k=v; if the key k is not provided to the __init__,
-    # and a value is present here, this is set.
-    ## NOTE: redefine it as a classproperty, using the @classproperty decorator
-    ##       that you can import from aiida.common.utils, if you need to
-    ##       dynamically access other class-wide attributes (see example for
-    ##       the Calculation class).
-    _set_defaults = {}
-    
+        
     @property
     def logger(self):
         """
@@ -201,6 +191,10 @@ class Node(object):
         
         # Empty cache of input links in any case
         self._inputlinks_cache = {}
+
+        # Set the internal parameters
+        # Can be redefined in the subclasses
+        self._init_internal_params()
         
         if dbnode is not None:
             if not isinstance(dbnode, DbNode):
@@ -255,7 +249,7 @@ class Node(object):
             # Automatically set all *other* attributes, if possible, otherwise
             # stop
             self._set_with_defaults(**kwargs)
-
+    
     def __repr__(self):
         return '<{}: {}>'.format(self.__class__.__name__, str(self))
     
@@ -264,6 +258,27 @@ class Node(object):
             return "uuid={} (unstored)".format(self.uuid)
         else:
             return "uuid={} (pk={})".format(self.uuid, self.pk)
+
+    def _init_internal_params(self):
+        """
+        Set here the default values for this class; this method
+        is automatically called by the init.
+        
+        :note: if you inherit this function, ALWAYS remember to
+          call super()._init_internal_params() as the first thing
+          in your inherited function.
+        """
+        pass
+
+    @property
+    def _set_defaults(self):
+        """
+        Default values to set in the __init__, if no value is explicitly provided
+        for the given key.
+        It is a dictionary, with k=v; if the key k is not provided to the __init__,
+        and a value is present here, this is set.
+        """        
+        return {}
 
     @classmethod
     def query(cls,*args,**kwargs):

@@ -733,7 +733,7 @@ def retrieve_computed_for_authinfo(authinfo):
                                 calc.pk, filename),
                                 extra=logger_extra)
                             localfilename = os.path.join(
-                                          folder.abspath,os.path.split(item)[1])
+                                          folder.abspath,os.path.split(filename)[1])
                             t.get(filename, localfilename,
                                 ignore_nonexisting=True)
                             singlefile_list.append((linkname,subclassname,

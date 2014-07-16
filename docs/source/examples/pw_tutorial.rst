@@ -304,17 +304,11 @@ limitation on the maximum number of characters::
 
   calc.description = "A much longer description"
 
-<<<<<<< HEAD
-And finally, there is the possibility of comments.
-The peculiarity of this last property is that they are user dependent (like the comments that you can post on facebook pages), so it is best
-suited for a calculation exposed on a website, where you want to remember
-=======
 And finally, there is the possibility to add comments to any calculation
 (actually, to any node).
 The peculiarity of comments is that they are user dependent
 (like the comments that you can post on facebook pages), so it is best
 suited to calculation exposed on a website, where you want to remember
->>>>>>> master
 the comments of each user.
 To set a comment, you need first to import the django user, and then
 write it with a dedicated method::

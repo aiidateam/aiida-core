@@ -10,8 +10,8 @@ results and try to parse the results with the default parser, if one is
 available for the given calculation.
 These results are stored in new nodes, and connected as output of the
 calculation. Of course, it is possible for a given calculation to check
-output nodes and get their content. However, AiiDA provides a way to access
-directly the results, using the
+output nodes and get their content. However, AiiDA provides a way to directly
+access the results, using the
 :py:class:`aiida.orm.calculation.CalculationResultManager` class,
 described in the next section.
 
@@ -31,7 +31,7 @@ The CalculationResultManager
 
 
 Each calculation has a ``res`` attribute that is a CalculationResultManager object and
-gives direct access to parsed data. 
+gives direct access to parsed data.
 
 To use it, you can just use then::
 
@@ -53,7 +53,7 @@ keys).
 Once you know which keys have been parsed, you can access the parsed
 value simply as an attribute of the ``res`` ResultManager. For
 instance, to get the final total energy, you can use::
-  
+
   print calc.res.energy
 
 that will print the total energy in units of eV, as also stated in the
@@ -67,7 +67,7 @@ provides a parser.
 .. note:: the ``CalculationResultManager`` is also integrated with
    iPython/verdi shell completion mechanism: if ``calc`` is a valid
    calculation, you can type::
-     
+
       calc.res.
 
    and then press the TAB key of the keyboard to get/complete the list of valid

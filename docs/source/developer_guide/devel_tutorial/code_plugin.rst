@@ -154,7 +154,7 @@ Every plugin class is required to have the following method::
 
   def _prepare_for_submission(self,tempfolder,inputdict):
 
-This function is called by the daemon when is trying to create a new calculation.
+This function is called by the daemon when it is trying to create a new calculation.
 
 There are two arguments:
 
@@ -182,7 +182,7 @@ for submission without the need to store all nodes on the DB.
 
 
 For the sake of clarity, it's probably going to be easier looking at
-an implemented example. Takea look at the ``NamelistsCalculation`` located in ``aiida.orm.calculation.quantumespresso.namelists``.
+an implemented example. Take a look at the ``NamelistsCalculation`` located in ``aiida.orm.calculation.quantumespresso.namelists``.
 
 
 
@@ -334,7 +334,7 @@ The parser than has just a couple of tasks:
    Database
 4. return the objects and the linkname. 
 
-.. note:: the parser should not to save any object in the DB, that is
+.. note:: The parser should not save any object in the DB, that is
 	  a task of the daemon: never use a ``.store()`` method!
 
 Basically, you just need to specify an ``__init__()`` method, and a

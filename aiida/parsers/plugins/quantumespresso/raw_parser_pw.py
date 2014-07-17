@@ -143,7 +143,9 @@ def parse_raw_output(out_file, input_dict, parser_opts=None, xml_file=None, dir_
 
     for key in out_data.keys():
         if key in xml_data.keys():
-            raise AssertionError('{} found in both dictionaries'.format(key)) # this shouldn't happen!
+            raise AssertionError(
+                '{} found in both dictionaries, values: {} vs. {}'.format(
+                    key, out_data[key], xml_data[key])) # this shouldn't happen!
         # out_data keys take precedence and overwrite xml_data keys,
         # if the same key name is shared by both
         # dictionaries (but this should not happen!)
@@ -1397,12 +1399,12 @@ def parse_pw_text_output(data, xml_data=None, structure_data=None):
                 try:
                     value = line.split('is')[1].split('ev')[0]
                     try:
-                        trajectory_data['fermi_energy'].append(value)
-                    except:
-                        trajectory_data['fermi_energy'] = [value]
-                    parsed_data['fermi_energy'+units_suffix] = default_energy_units
+                        trajectory_data['fermi_energy_outfile'].append(value)
+                    except KeyError:
+                        trajectory_data['fermi_energy_outfile'] = [value]
+                    parsed_data['fermi_energy_outfile'+units_suffix] = default_energy_units
                 except Exception:
-                    parsed_data['warnings'] = 'Error while parsing Fermi energy.'
+                    parsed_data['warnings'] = 'Error while parsing Fermi energy from the output file.'
 
 
             elif 'Forces acting on atoms (Ry/au):' in line:

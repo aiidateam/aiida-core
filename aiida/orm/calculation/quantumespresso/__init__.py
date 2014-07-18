@@ -496,10 +496,17 @@ class BasePwCpInputGenerator(object):
 
         calcinfo.uuid = self.uuid
         # Empty command line by default
-        calcinfo.cmdline_params = settings_dict.pop('CMDLINE', [])
+        cmdline_params = settings_dict.pop('CMDLINE', [])
+        #we commented calcinfo.stin_name and added it here in cmdline_params
+        #in this way the mpirun ... pw.x ... < aiida.in 
+        #is replaced by mpirun ... pw.x ... -in aiida.in
+        # in the scheduler, _get_run_line, if cmdline_params is empty, it 
+        # simply uses < calcinfo.stin_name
+        calcinfo.cmdline_params = (list(cmdline_params)
+                                   + ["-in", self.INPUT_FILE_NAME])
         calcinfo.local_copy_list = local_copy_list
         calcinfo.remote_copy_list = remote_copy_list
-        calcinfo.stdin_name = self.INPUT_FILE_NAME
+        #calcinfo.stdin_name = self.INPUT_FILE_NAME
         calcinfo.stdout_name = self.OUTPUT_FILE_NAME
         calcinfo.remote_symlink_list = remote_symlink_list
         

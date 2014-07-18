@@ -296,11 +296,14 @@ class PhCalculation(Calculation):
         
         calcinfo.uuid = self.uuid
         # Empty command line by default
-        calcinfo.cmdline_params = settings_dict.pop('CMDLINE', [])
+        cmdline_params = settings_dict.pop('CMDLINE', [])
+        calcinfo.cmdline_params = (list(cmdline_params)
+                                   + ["-in", self.INPUT_FILE_NAME])
+        
         calcinfo.local_copy_list = local_copy_list
         calcinfo.remote_copy_list = remote_copy_list
         calcinfo.remote_symlink_list = remote_symlink_list
-        calcinfo.stdin_name = self.INPUT_FILE_NAME
+        #calcinfo.stdin_name = self.INPUT_FILE_NAME
         calcinfo.stdout_name = self.OUTPUT_FILE_NAME
         
         # Retrieve by default the output file and the xml file

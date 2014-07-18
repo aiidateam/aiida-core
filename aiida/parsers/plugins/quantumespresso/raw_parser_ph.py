@@ -121,6 +121,13 @@ def parse_raw_ph_output(out_file, tensor_file=None, dynmat_files=[]):
     for key in out_data.keys():
         if key in tensor_data.keys():
             raise AssertionError('{} found in two dictionaries'.format(key))
+    for key in out_data.keys():
+        if key in dynmat_data.keys():
+            if key=='warnings': # this ke can be found in both, but is not a problem
+                out_data['warnings'] += dynmat_data['warnings']
+                del dynmat_data['warnings']
+            else:
+                raise AssertionError('{} found in two dictionaries'.format(key))
     # I don't check the dynmat_data and parser_info keys 
     final_data = dict(dynmat_data.items() + out_data.items() + 
                       tensor_data.items() + parser_info.items())

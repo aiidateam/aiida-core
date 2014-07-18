@@ -143,6 +143,8 @@ def parse_raw_output(out_file, input_dict, parser_opts=None, xml_file=None, dir_
 
     for key in out_data.keys():
         if key in xml_data.keys():
+            if key=='fermi_energy': # an exception for the (only?) key that may be found on both
+                del out_data[key]
             raise AssertionError(
                 '{} found in both dictionaries, values: {} vs. {}'.format(
                     key, out_data[key], xml_data[key])) # this shouldn't happen!
@@ -1037,9 +1039,13 @@ def parse_pw_text_output(data, xml_data=None, structure_data=None):
                     nat = int(line.split('=')[1])
                 elif 'number of atomic types' in line:
                     ntyp = int(line.split('=')[1])
+                elif 'unit-cell volume' in line:
+                    volume = float(line.split()[1].split('(a.u.)^3')[0])
                 elif 'number of Kohn-Sham states' in line:
                     nbnd = int(line.split('=')[1])
                     break
+            alat *= bohr_to_ang
+            volume *= bohr_to_ang**3
             parsed_data['warnings'].append('Xml data not found: parsing only the text output')
             parsed_data['number_of_bands'] = nbnd
             parsed_data['lattice_parameter_initial'] = alat
@@ -1050,6 +1056,7 @@ def parse_pw_text_output(data, xml_data=None, structure_data=None):
         ntyp = structure_data['number_of_species']
         nbnd = xml_data['number_of_bands']
         alat = structure_data['lattice_parameter_xml']
+        volume = structure_data['cell']['volume']
     # NOTE: lattice_parameter_xml is the lattice parameter of the xml file
     # in the units used by the code. lattice_parameter instead in angstroms.
     
@@ -1057,7 +1064,8 @@ def parse_pw_text_output(data, xml_data=None, structure_data=None):
     # useful for queries (maybe), and structure_data will not be stored as a ParameterData
     parsed_data['number_of_atoms'] = nat
     parsed_data['number_of_species'] = ntyp
-
+    parsed_data['volume'] = volume
+    
     # now grep quantities that can be considered isolated informations.
     for count,line in enumerate(data.split('\n')):
         
@@ -1399,10 +1407,10 @@ def parse_pw_text_output(data, xml_data=None, structure_data=None):
                 try:
                     value = line.split('is')[1].split('ev')[0]
                     try:
-                        trajectory_data['fermi_energy_outfile'].append(value)
+                        trajectory_data['fermi_energy'].append(value)
                     except KeyError:
-                        trajectory_data['fermi_energy_outfile'] = [value]
-                    parsed_data['fermi_energy_outfile'+units_suffix] = default_energy_units
+                        trajectory_data['fermi_energy'] = [value]
+                    parsed_data['fermi_energy'+units_suffix] = default_energy_units
                 except Exception:
                     parsed_data['warnings'] = 'Error while parsing Fermi energy from the output file.'
 

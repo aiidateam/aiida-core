@@ -49,13 +49,44 @@ creating (in this way, it will be possible to load it with
 ``CalculationFactory``).
 Save it in a subfolder at the path ``aiida/orm/calculation``.
 
+Step 1: inheritance
+^^^^^^^^^^^^^^^^^^^
+
 First define the class::
 
   class SubclassCalculation(Calculation):   
 
-Take care of inheriting the Calculation class, or the plugin will not work.
+(Substitute ``Subclass`` with the name of your plugin).
+Take care of inheriting the ``Calculation`` class, or the plugin will not work.
 
-Step 1: define input nodes
+Now, you will likely need to define some variables that belong to 
+``SubclassCalculation``.
+In order to be sure that you don't lose any variables belonging to the 
+inherited class, every subclass of calculation needs to have a method which is 
+called ``_init_internal_params()``.
+An example of it would look like::  
+
+  def _init_internal_params(self):
+      super(SubclassCalculation, self)._init_internal_params()
+
+      self.A_NEW_VARIABLE = 'nabucco'
+
+This function will be called by the ``__init__`` method and will initialize 
+the variable ``A_NEW_VARIABLE`` at the moment of the instancing.
+The second line will call the _init_internal_params() of the parent class and
+load other variables eventually defined there.
+Now you are able to access the variable ``A_NEW_VARIABLE`` also in the rest of 
+the class by calling ``self.A_NEW_VARIABLE``.
+
+.. note:: Even if you don't need to define new variables, it is safer to define 
+  the method with the call to ``super()``.
+
+.. note:: It is not recommended to rewrite an ``__init__`` by yourself: this 
+  method is inherited from the classes ``Node`` and ``Calculation``, and you 
+  shouldn't alter it unless you really know the code down to the lowest-level.
+
+
+Step 2: define input nodes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
  
 First, you need to specify what are the objects that are going to be
@@ -66,6 +97,9 @@ An example is as follows::
     from aiida.common.utils import classproperty
   
     class SubclassCalculation(Calculation):
+    
+    	def _init_internal_params(self):
+      	    super(SubclassCalculation, self)._init_internal_params()
   
         @classproperty
         def _use_methods(cls):
@@ -146,7 +180,7 @@ What did we do?
 
    
 
-Step 2: prepare a text input
+Step 3: prepare a text input
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 How are the input nodes used internally?

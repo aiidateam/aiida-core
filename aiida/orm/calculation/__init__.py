@@ -1032,7 +1032,7 @@ class Calculation(Node):
         from django.utils import timezone
         import datetime
         from django.db.models import Q
-        from aiida.djsite.db.models import DbNode
+        from aiida.djsite.db.models import DbNode,DbComputer,DbAuthInfo
         from aiida.djsite.utils import get_automatic_user
         from aiida.djsite.db.tasks import get_last_daemon_timestamp
         from aiida.common.utils import str_timedelta
@@ -1049,8 +1049,6 @@ class Calculation(Node):
                 q_object.add(Q(user=get_automatic_user()), Q.AND)
                 
             if states is not None:
-#                q_object.add(~Q(dbattributes__key='state',
-#                                dbattributes__tval=only_state,), Q.AND)
                 q_object.add( Q(dbattributes__key='state',
                                 dbattributes__tval__in=states,), Q.AND)
             if past_days is not None:
@@ -1065,11 +1063,22 @@ class Calculation(Node):
         
         from aiida.djsite.db.models import DbAttribute
         scheduler_states = dict(DbAttribute.objects.filter(dbnode__in=calc_list,
-                                                   key='scheduler_state').values_list(
-            'dbnode__pk', 'tval'))
-        
+            key='scheduler_state').values_list('dbnode__pk', 'tval'))
+
         # I do the query now, so that the list of pks gets cached
-        calc_list_data = calc_list.values('pk', 'dbcomputer__name', 'ctime', 'type')        
+        calc_list_data = calc_list.values('pk', 'dbcomputer__name', 'ctime',
+                                          'type','dbcomputer__enabled',
+                                          'dbcomputer__pk',
+                                          'dbcomputer__dbauthinfo__aiidauser__pk')
+        list_comp_pk = [ i['dbcomputer__pk'] for i in calc_list_data ]
+        list_aiduser_pk = [ i['dbcomputer__dbauthinfo__aiidauser__pk'] 
+                           for i in calc_list_data ]
+        enabled_data = DbAuthInfo.objects.filter(
+            dbcomputer__pk__in=list_comp_pk,aiidauser__pk__in=list_aiduser_pk
+            ).values_list('dbcomputer__pk','aiidauser__pk','enabled')
+        
+        enabled_auth_dict = { (i[0],i[1]):i[2] for i in enabled_data }
+        
         states = {c.pk: c.get_state_string() for c in calc_list}
         
         scheduler_lastcheck = dict(DbAttribute.objects.filter(
@@ -1090,6 +1099,15 @@ class Calculation(Node):
                     "{} ({})".format(
                     str_timedelta(now-last_daemon_check, negative_to_zero=True),
                     timezone.localtime(last_daemon_check).strftime("at %H:%M:%S on %Y-%m-%d")))
+        
+        disabled_ignorant_states = [calc_states.FINISHED,
+                                    calc_states.NOTFOUND,
+                                    calc_states.UNDETERMINED,
+                                    calc_states.SUBMISSIONFAILED,
+                                    calc_states.RETRIEVALFAILED,
+                                    calc_states.PARSINGFAILED,
+                                    calc_states.FAILED,
+                                    ]
         
         if not calc_list:
             return last_check_string
@@ -1139,12 +1157,22 @@ class Calculation(Node):
                 else:
                     calc_ctime = " ".join([timezone.localtime(calcdata['ctime']).isoformat().split('T')[0],
                             timezone.localtime(calcdata['ctime']).isoformat().split('T')[1].split('.')[0].rsplit(":",1)[0]])
-                            
+                
+                the_state = states[calcdata['pk']]
+                
+                # decide if it is needed to print enabled/disabled informations
+                user_enabled = enabled_auth_dict[(calcdata['dbcomputer__pk'],
+                    calcdata['dbcomputer__dbauthinfo__aiidauser__pk'])]
+                global_enabled = calcdata["dbcomputer__enabled"]
+                
+                enabled = "" if (user_enabled and global_enabled or 
+                    the_state in disabled_ignorant_states) else " [Disabled]"
+                
                 str_matrix.append([calcdata['pk'],
-                            states[calcdata['pk']],
+                            the_state,
                             calc_ctime,
                             remote_state,
-                            remote_computer,
+                            remote_computer + "{}".format(enabled),
                             calc_module
                             ])
 

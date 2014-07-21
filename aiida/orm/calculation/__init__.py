@@ -1031,7 +1031,7 @@ class Calculation(Node):
         
         from django.utils import timezone
         import datetime
-        from django.db.models import Q
+        from django.db.models import Q, F
         from aiida.djsite.db.models import DbNode,DbComputer,DbAuthInfo
         from aiida.djsite.utils import get_automatic_user
         from aiida.djsite.db.tasks import get_last_daemon_timestamp
@@ -1059,17 +1059,23 @@ class Calculation(Node):
             if group is not None:
                 q_object.add(Q(dbgroups__name=group, dbgroups__type=""), Q.AND)
 
-        calc_list = cls.query(q_object).distinct().order_by('ctime')
+        calc_list_pk = list(cls.query(q_object).distinct().values_list('pk', flat=True))
+
+        calc_list = cls.query(pk__in=calc_list_pk).order_by('ctime')
         
         from aiida.djsite.db.models import DbAttribute
-        scheduler_states = dict(DbAttribute.objects.filter(dbnode__in=calc_list,
+        scheduler_states = dict(DbAttribute.objects.filter(dbnode__pk__in=calc_list_pk,
             key='scheduler_state').values_list('dbnode__pk', 'tval'))
 
         # I do the query now, so that the list of pks gets cached
-        calc_list_data = calc_list.values('pk', 'dbcomputer__name', 'ctime',
-                                          'type','dbcomputer__enabled',
-                                          'dbcomputer__pk',
-                                          'dbcomputer__dbauthinfo__aiidauser__pk')
+        calc_list_data = list(
+            calc_list.filter(
+                dbcomputer__dbauthinfo__aiidauser=F('user')
+                ).distinct().order_by('ctime').values(
+                'pk', 'dbcomputer__name', 'ctime',
+                'type','dbcomputer__enabled',
+                'dbcomputer__pk',
+                'dbcomputer__dbauthinfo__aiidauser__pk'))
         list_comp_pk = [ i['dbcomputer__pk'] for i in calc_list_data ]
         list_aiduser_pk = [ i['dbcomputer__dbauthinfo__aiidauser__pk'] 
                            for i in calc_list_data ]

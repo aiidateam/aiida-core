@@ -119,14 +119,6 @@ class BasePwCpInputGenerator(object):
                              "the species) for which you want to use this "
                              "pseudo"),
                },
-            "parent_folder": {
-               'valid_types': RemoteData,
-               'additional_parameter': None,
-               'linkname': 'parent_calc_folder',
-               'docstring': ("Use a remote folder as parent folder (for "
-                             "restarts and similar"),
-               },
-
             }
 
     

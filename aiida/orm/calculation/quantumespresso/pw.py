@@ -27,14 +27,14 @@ __copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de L
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.2.0"
 
-_default_symlink_usage = False
-# false due to PWscf bug, could be set to true on versions >= 5.1.0
-
 class PwCalculation(BasePwCpInputGenerator, Calculation):   
     """
     Main DFT code (PWscf, pw.x) of the Quantum ESPRESSO distribution.
     For more information, refer to http://www.quantum-espresso.org/
     """
+    # false due to PWscf bug, could be set to true on versions >= 5.1.0
+    _default_symlink_usage = False
+
     def _init_internal_params(self):
         super(PwCalculation, self)._init_internal_params()
 

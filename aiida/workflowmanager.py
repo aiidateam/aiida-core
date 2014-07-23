@@ -50,7 +50,7 @@ def execute_steps():
     logger.info("Querying the worflow DB")
     
     w_list = Workflow.query(user=get_automatic_user(),state=wf_states.RUNNING)
-    
+        
     for w in w_list:
         
         logger.info("Found active workflow: {0}".format(w.uuid))
@@ -73,7 +73,7 @@ def execute_steps():
             s_sub_wf_failed   = [sw.uuid for sw in s.get_sub_workflows() if sw.has_failed()]
             s_sub_wf_num      = len(s.get_sub_workflows())
             
-            if s_calcs_num==len(s_calcs_finished) and s_sub_wf_num==len(s_sub_wf_finished):
+            if s_calcs_num==(len(s_calcs_finished)+len(s_calcs_failed)) and s_sub_wf_num==(len(s_sub_wf_finished) + len(s_sub_wf_failed)):
                 
                 logger.info("[{0}] Step: {1} ready to move".format(w.uuid,s.name))
                 
@@ -91,9 +91,9 @@ def execute_steps():
                     except:
                         logger.error("[{0}] Step: {1} cannot launch calculation {2}".format(w.uuid,s.name, uuid))
             
-            elif len(s_calcs_failed)>0:
-                
-                s.set_status(wf_states.ERROR)
+            ## DO NOT STOP ANYMORE IF A CALCULATION FAILS
+            #elif s_calcs_failed:
+                #s.set_status(wf_states.ERROR)
         
         
         initialized_steps    = w.get_steps(state=wf_states.INITIALIZED)
@@ -114,7 +114,11 @@ def execute_steps():
                 
                 s.set_status(wf_states.ERROR)
                 w.set_status(wf_states.ERROR)
-                
+
+    for w in w_list:
+        if w.get_steps(state=wf_states.ERROR):
+            w.set_status(wf_states.ERROR)
+            
 #         # Launch INITIALIZED Workflows with all calculations and subworkflows
 #         #
 #         initialized_steps    = w.get_steps(state=wf_states.INITIALIZED)
@@ -199,11 +203,11 @@ def advance_workflow(w_superclass, step):
             getattr(w,step.nextcall)()
             return True
         
-        except:
-            
-            exc_type, exc_value, exc_traceback = sys.exc_info()
+        except Exception:
+            import traceback
+
             w.append_to_report("ERROR ! This workflow got and error in the {0} method, we report down the stack trace".format(step.nextcall))
-            w.append_to_report("full traceback: {0}".format(exc_traceback.format_exc()))
+            w.append_to_report("full traceback: {0}".format(traceback.format_exc()))
             
             w.get_step(step.nextcall).set_status(wf_states.ERROR)
             w.set_status(wf_states.ERROR)

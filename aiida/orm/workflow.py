@@ -61,9 +61,10 @@ class Workflow(object):
             """
             from aiida.djsite.utils import get_automatic_user
             from aiida.djsite.db.models import DbWorkflow
+            import hashlib
             
             self._to_be_stored = True
-
+            
             uuid = kwargs.pop('uuid', None)
             
             if uuid is not None:
@@ -128,6 +129,14 @@ class Workflow(object):
                 if params is not None:
                     if type(params) is dict:
                         self._set_parameters(params)
+
+                # This stores the MD5 as well, to test in case the workflow has been modified after the launch 
+                self._dbworkflowinstance = DbWorkflow(user=get_automatic_user(),
+                    module = self.caller_module,
+                    module_class = self.caller_module_class,
+                    script_path = self.caller_file,
+                    script_md5 = hashlib.md5(self.caller_file).hexdigest())
+
                 
             
             self.attach_calc_lazy_storage  = {}
@@ -240,10 +249,10 @@ class Workflow(object):
         # every save; moreover in this way I should do the right thing for concurrent writings
         # I use self._dbnode because this will not do a query to update the node; here I only
         # need to get its pk
-        DbWorkflow.objects.filter(pk=self._dbworkflowinstance.pk).update(nodeversion = F('nodeversion') + 1)
+        DbWorkflow.objects.filter(pk=self.pk).update(nodeversion = F('nodeversion') + 1)
         
         # This reload internally the node of self._dbworkflowinstance
-        self.dbworkflowinstance
+        _ = self.dbworkflowinstance
         # Note: I have to reload the ojbect. I don't do it here because it is done at every call
         # to self.dbnode
         #self._dbnode = DbNode.objects.get(pk=self._dbnode.pk)
@@ -378,18 +387,14 @@ class Workflow(object):
         """
         Stores the DbWorkflow object data in the database
         """
+        if not self._to_be_stored:
+            self.logger.error("Trying to store an already saved workflow: "
+                              "pk={}".format(self.pk))
+            raise ModificationNotAllowed(
+                "Workflow with pk={} was already stored".format(self.pk))
         
-        from aiida.djsite.db.models import DbWorkflow
-        import hashlib
+        self._dbworkflowinstance.save()
         
-        
-        # This stores the MD5 as well, to test in case the workflow has been modified after the launch 
-        self._dbworkflowinstance = DbWorkflow.objects.create(user=get_automatic_user(),
-                                                        module = self.caller_module,
-                                                        module_class = self.caller_module_class,
-                                                        script_path = self.caller_file,
-                                                        script_md5 = hashlib.md5(self.caller_file).hexdigest()
-                                                        )
         if hasattr(self, '_params'):
             self.dbworkflowinstance.add_parameters(self._params, force=False)
         
@@ -490,6 +495,8 @@ class Workflow(object):
         :param name: a string with the attribute name to store
         :param value: a storable object to store
         """
+        if self._to_be_stored:
+            raise ModificationNotAllowed("You cannot add attributes before storing")
         self.dbworkflowinstance.add_attributes(_params)
     
     def add_attribute(self, _name, _value):
@@ -499,6 +506,8 @@ class Workflow(object):
         :param name: a string with the attribute name to store
         :param value: a storable object to store
         """
+        if self._to_be_stored:
+            raise ModificationNotAllowed("You cannot add attributes before storing")
         self.dbworkflowinstance.add_attribute(_name, _value)
     
     # ----------------------------
@@ -904,6 +913,23 @@ class Workflow(object):
             return stp.get_calculations(state = calc_state)
         except:
             raise AiidaException("Cannot retrieve step's calculations")
+
+
+    def get_step_workflows(self, step_method):
+        
+        """
+        Retrieves all the workflows connected to a specific step in the database. If the step
+        is not existent it returns None, useful for simpler grammatic in the worflow definition.
+        :param next_method: a Workflow step (decorated) method
+        """
+       
+        if not getattr(step_method,"is_wf_step"):
+            raise AiidaException("Cannot get step calculations from a method not decorated as Workflow method")
+        
+        step_method_name = step_method.wf_step_name
+        
+        stp = self.get_step(step_method_name)
+        return stp.get_sub_workflows()
         
 
     def kill_step_calculations(self, step):
@@ -972,15 +998,18 @@ class Workflow(object):
     def get_report(self):
         
         """
-        Return the Workflow report. In case the workflow is a subworflow of any other Workflow this method
-        calls the partent ``get_report`` method.
+        Return the Workflow report. 
+        
+        :note: once, in case the workflow is a subworflow of any other Workflow this method
+          calls the partent ``get_report`` method.
+          This is not the case anymore.
         :return: a list of strings 
         """
         
-        if len(self.dbworkflowinstance.parent_workflow_step.all())==0:
-            return self.dbworkflowinstance.report.splitlines()
-        else:
-            return Workflow.get_subclass_from_uuid(self.dbworkflowinstance.parent_workflow_step.get().parent.uuid).get_report()
+#        if len(self.dbworkflowinstance.parent_workflow_step.all())==0:
+        return self.dbworkflowinstance.report.splitlines()
+#        else:
+#            return Workflow.get_subclass_from_uuid(self.dbworkflowinstance.parent_workflow_step.get().parent.uuid).get_report()
     
     def clear_report(self):
         
@@ -998,15 +1027,18 @@ class Workflow(object):
     def append_to_report(self, text):
         
         """
-        Adds text to the Workflow report. In case the workflow is a subworflow of any other Workflow this method
-        calls the partent ``append_to_report`` method.
+        Adds text to the Workflow report. 
+        
+        :note: Once, in case the workflow is a subworflow of any other Workflow this method
+         calls the partent ``append_to_report`` method; now instead this is not the 
+         case anymore
         """
         
         
-        if len(self.dbworkflowinstance.parent_workflow_step.all())==0:
-            self.dbworkflowinstance.append_to_report(text)
-        else:
-            Workflow(uuid=self.dbworkflowinstance.parent_workflow_step.get().parent.uuid).append_to_report(text)
+#        if len(self.dbworkflowinstance.parent_workflow_step.all())==0:
+        self.dbworkflowinstance.append_to_report(text)
+#        else:
+#            Workflow(uuid=self.dbworkflowinstance.parent_workflow_step.get().parent.uuid).append_to_report(text)
         
     # ------------------------------------------------------
     #         Retrieval

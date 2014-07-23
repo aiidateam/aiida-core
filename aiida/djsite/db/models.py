@@ -1435,7 +1435,7 @@ class DbWorkflow(m.Model):
         Return the corresponding aiida instance of class aiida.worflow
         """
         from aiida.orm.workflow import Workflow
-        return Workflow(uuid=self.uuid)
+        return Workflow.get_subclass_from_uuid(self.uuid)
     
     #  ------------------------------------------------
     
@@ -1670,7 +1670,7 @@ class DbWorkflowData(m.Model):
                 self.save()
                 
         except:
-            raise ValueError("Cannot rebuild the parameter {}".format(self.name))
+            raise ValueError("Cannot set the parameter {}".format(self.name))
         
     def get_value(self):
         

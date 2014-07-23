@@ -515,8 +515,7 @@ class SshTransport(aiida.transport.Transport):
             If the directory already exists, OSError is raised.
         """
         # check to avoid creation of empty dirs
-        if path.endswith('/'):
-            path = path[:-1]
+        path = os.path.normpath(path)
         
         if path.startswith('/'):
             to_create = path.strip().split('/')[1:]

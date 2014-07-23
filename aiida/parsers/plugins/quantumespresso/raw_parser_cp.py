@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 from aiida.parsers.plugins.quantumespresso import QEOutputParsingError
 from xml.dom.minidom import parseString
-from aiida.parsers.plugins.quantumespresso.raw_parser_pw import *
+from aiida.parsers.plugins.quantumespresso.raw_parser_pw import (read_xml_card,
+                   parse_xml_child_integer,xml_card_header,parse_xml_child_bool,
+                   parse_xml_child_str,parse_xml_child_float,
+                   parse_xml_child_attribute_str,xml_card_cell,xml_card_ions,
+                   xml_card_exchangecorrelation,xml_card_spin,xml_card_planewaves)
 
 __author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
 __copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
@@ -69,13 +73,7 @@ def parse_cp_text_output(data,xml_data):
 
     parsed_data={}
     parsed_data['warnings']=[]
-
-    # use quantities from the xml file
-    nat=xml_data['number_of_atoms']
-    ntyp=xml_data['number_of_species']
-    nbnd=xml_data['number_of_bands']
-    alat=xml_data['lattice_parameter_xml'] # NOTE: lattice_parameter_xml is the lattice parameter of the xml file in the units used by the code. lattice_parameter instead in angstroms.
-
+    
     for count,line in enumerate(data):
 
         if 'warning' in line.lower():
@@ -600,11 +598,3 @@ def parse_cp_xml_output(data):
     # - others TODO are written in the function
 
     return parsed_data
-
-
-
-
-def parse_cp_raw_trajectory():
-    
-
-    return raw_trajectory

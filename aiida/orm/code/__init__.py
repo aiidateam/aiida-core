@@ -361,7 +361,7 @@ class Code(Node):
         ret_lines.append(" * Default plugin: {}".format(
             self.get_input_plugin_name()))
         ret_lines.append(" * Used by:        {} calculations".format(
-             len(self.get_outputs())))
+             self.dbnode.outputs.count()))
         if self.is_local():
             ret_lines.append(" * Type:           {}".format("local"))
             ret_lines.append(" * Exec name:      {}".format(self.get_execname()))

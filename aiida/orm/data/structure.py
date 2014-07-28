@@ -153,7 +153,7 @@ def _get_valid_cell(inputcell):
 
     return the_cell
 
-def _get_valid_pbc(inputpbc):
+def get_valid_pbc(inputpbc):
     """
     Return a list of three booleans for the periodic boundary conditions,
     in a valid format from a generic input.
@@ -356,7 +356,7 @@ class StructureData(Data):
             raise ValidationError("Invalid cell: {}".format(e.message))
 
         try:
-            _get_valid_pbc(self.pbc)
+            get_valid_pbc(self.pbc)
         except ValueError as e:
             raise ValidationError(
                 "Invalid periodic boundary conditions: {}".format(e.message))
@@ -920,7 +920,7 @@ class StructureData(Data):
         if not self._to_be_stored:
             raise ModificationNotAllowed("The StructureData object cannot be modified, "
                 "it has already been stored")
-        the_pbc = _get_valid_pbc(value)
+        the_pbc = get_valid_pbc(value)
 
         #self._pbc = the_pbc
         self.set_attr('pbc1',the_pbc[0])

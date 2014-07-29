@@ -146,7 +146,7 @@ class KpointsData(ArrayData):
 
     def _set_pbc(self, value):
         """
-        validate the pbc, than store them
+        validate the pbc, then store them
         """
         from aiida.common.exceptions import ModificationNotAllowed
         from aiida.orm.data.structure import get_valid_pbc
@@ -372,15 +372,15 @@ class KpointsData(ArrayData):
         
         return kpoints,weights
 
-    def set_kpoints(self,kpoints,carthesian=False,labels=None,weights=None):
+    def set_kpoints(self,kpoints,cartesian=False,labels=None,weights=None):
         """
         Set the list of kpoints. If a mesh has already been stored, raise a 
         ModificationNotAllowed
         
         :param kpoints: a list of kpoints, each kpoint being a list of three 
                coordinates (e.g. [[0.,0.,0.],[0.1,0.1,0.1],...])
-        :param carthesian: if True, the coordinates given in input are treated 
-                 as in carthesian units. If False, the coordinates are crystal,
+        :param cartesian: if True, the coordinates given in input are treated 
+                 as in cartesian units. If False, the coordinates are crystal,
                  i.e. in units of b1,b2,b3. Default = False
         :param labels: optional, the list of labels to be set for some of the 
                        kpoints. See labels for more info
@@ -392,8 +392,8 @@ class KpointsData(ArrayData):
         the_kpoints,the_weights = self._validate_kpoints_weights(kpoints,weights)
 
         # change reference and always store in crystal coords
-        if carthesian:
-            the_kpoints = self._change_reference(the_kpoints,to_carthesian=False)
+        if cartesian:
+            the_kpoints = self._change_reference(the_kpoints,to_cartesian=False)
         
         # check that we did not saved a mesh already
         if self.get_attr('mesh',None) is not None:
@@ -406,13 +406,13 @@ class KpointsData(ArrayData):
         if labels is not None:
             self.labels = labels
    
-    def get_kpoints(self,also_weights=False,carthesian=False):
+    def get_kpoints(self,also_weights=False,cartesian=False):
         """
         Return the list of kpoints
         
         :param also_weights: if True, returns also the list of weights. 
             Default = False
-        :param carthesian: if True, returns points in carthesian coordinates,
+        :param cartesian: if True, returns points in cartesian coordinates,
             otherwise, returns in crystal coordinates. Default = False.
         """
         try:
@@ -420,18 +420,22 @@ class KpointsData(ArrayData):
         except KeyError:
             raise AttributeError("Before the get, first set a list of kpoints")
             
-        if not all(self.pbc):
-            for i in range(3):
-                if not self.pbc[i]:
-                    kpoints[:,i] = 0.
+        try:
+            if not all(self.pbc):
+                for i in range(3):
+                    if not self.pbc[i]:
+                        kpoints[:,i] = 0.
+        except AttributeError:
+            # no pbc data found -> assume (True,True,True)
+            pass;
         # note that this operation may lead to duplicates if the kpoints were
         # set thinking that everything is 3D.
         # Atm, it's up to the user to avoid duplication, if he cares.
         # in the future, add the bravais_lattice for 2d and 1d cases, 
         # and do a set() on the kpoints lists (before storing)
         
-        if carthesian:
-            kpoints = self._change_reference(kpoints,to_carthesian=True)
+        if cartesian:
+            kpoints = self._change_reference(kpoints,to_cartesian=True)
         
         if also_weights:
             the_weights = self.get_array('weights',None)
@@ -442,9 +446,9 @@ class KpointsData(ArrayData):
         else:
             return kpoints
          
-    def _change_reference(self,kpoints,to_carthesian=True):
+    def _change_reference(self,kpoints,to_cartesian=True):
         """
-        Change reference system, from carthesian to crystal coordinates (units 
+        Change reference system, from cartesian to crystal coordinates (units 
         of b1,b2,b3) or viceversa.
         :param kpoints: a list of (3) point coordinates
         :return kpoints: a list of (3) point coordinates in the new reference
@@ -459,7 +463,7 @@ class KpointsData(ArrayData):
             rec_cell = numpy.eye(3)
             # raise InputError("Cannot change coords without cell")
         trec_cell = numpy.transpose( numpy.array(rec_cell) )
-        if to_carthesian:
+        if to_cartesian:
             matrix = trec_cell
         else:
             matrix = numpy.linalg.inv(trec_cell)
@@ -469,7 +473,7 @@ class KpointsData(ArrayData):
         return numpy.transpose(numpy.dot(matrix,numpy.transpose(kpoints)))
     
     def set_kpoints_path(self,value=None,tot_num_kpoints=None,
-                           carthesian=False):
+                           cartesian=False):
         """
         Set a path of kpoints in the Brillouin zone.
         
@@ -582,11 +586,11 @@ class KpointsData(ArrayData):
             else:
                 return points_per_piece
         
-        if carthesian:
+        if cartesian:
             try:
                 _ = self.cell
             except AttributeError:
-                raise ValueError("To use carthesian coordinates, a cell must "
+                raise ValueError("To use cartesian coordinates, a cell must "
                                  "be provided")
 
         if value is None:
@@ -634,18 +638,18 @@ class KpointsData(ArrayData):
                     if point_coordinates[piece[0]] != piece[1]: 
                         raise ValueError("Different points cannot have the same label")
                 else: 
-                    if carthesian:
+                    if cartesian:
                         point_coordinates[piece[0]] = self._change_reference(numpy.array([piece[1]]),
-                                                                             to_carthesian=False)[0]
+                                                                             to_cartesian=False)[0]
                     else:
                         point_coordinates[piece[0]] = piece[1]
                 if piece[2] in point_coordinates:
                     if point_coordinates[piece[2]] != piece[3]: 
                         raise ValueError("Different points cannot have the same label")
                 else: 
-                    if carthesian:
+                    if cartesian:
                         point_coordinates[piece[2]] = self._change_reference(numpy.array([piece[3]]),
-                                                                             to_carthesian=False)[0]
+                                                                             to_cartesian=False)[0]
                     else:
                         point_coordinates[piece[2]] = piece[3]
 
@@ -662,18 +666,18 @@ class KpointsData(ArrayData):
                     if point_coordinates[piece[0]] != piece[1]: 
                         raise ValueError("Different points cannot have the same label")
                 else: 
-                    if carthesian:
+                    if cartesian:
                         point_coordinates[piece[0]] = self._change_reference(numpy.array([piece[1]]),
-                                                                             to_carthesian=False)[0]
+                                                                             to_cartesian=False)[0]
                     else:
                         point_coordinates[piece[0]] = piece[1]
                 if piece[2] in point_coordinates:
                     if point_coordinates[piece[2]] != piece[3]: 
                         raise ValueError("Different points cannot have the same label")
                 else:
-                    if carthesian:
+                    if cartesian:
                         point_coordinates[piece[2]] = self._change_reference(numpy.array([piece[3]]),
-                                                                             to_carthesian=False)[0]
+                                                                             to_cartesian=False)[0]
                     else:
                         point_coordinates[piece[2]] = piece[3]
                     
@@ -1314,12 +1318,12 @@ class KpointsData(ArrayData):
         
         return bravais_info['extended_name'] + variation
     
-    def get_special_points(self,carthesian=False):
+    def get_special_points(self,cartesian=False):
         """
         Get the special point and path of a given structure.
         Coordinates are based on the paper: 
             arXiv:1004.2974, W. Setyawan, S. Curtarolo
-        :param carthesian: If true, returns points in carthesian coordinates.
+        :param cartesian: If true, returns points in cartesian coordinates.
                            Crystal coordinates otherwise. Default=False 
         :return special_points,path: special_points: a dictionary of 
                 point_name:point_coords key,values.
@@ -1980,12 +1984,12 @@ class KpointsData(ArrayData):
         for k in special_points.iterkeys():
             the_special_points[k] = permute(special_points[k],permutation)
             
-        # output crystal or carthesian
-        if carthesian:
+        # output crystal or cartesian
+        if cartesian:
             the_abs_special_points = {}
             for k in the_special_points.iterkeys():
                 the_abs_special_points[k] = self._change_reference(the_special_points[k],
-                                                                   to_carthesian=True)
+                                                                   to_cartesian=True)
     
             return the_abs_special_points,path
         else:

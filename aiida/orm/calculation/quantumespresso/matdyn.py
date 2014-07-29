@@ -80,7 +80,7 @@ class MatdynCalculation(NamelistsCalculation):
     # TODO: add the q-points at the end    
     def _get_following_text(self, inputdict, settings):
         """
-        Add the keypoints after the namelist.
+        Add the kpoints after the namelist.
         
         This function should consume the content of inputdict (if it requires
         a different node) or the keys inside settings, using the 'pop' method,
@@ -93,11 +93,13 @@ class MatdynCalculation(NamelistsCalculation):
         #self.logger.warning("inputdict={}, settings={}".format(
         #    inputdict, settings), extra=logger_extra)
     
-        kpoints = inputdict.pop('kpoints')
-        
-        
-        ## TODO: check it is a KpointsData
-        
+        try:
+            kpoints = inputdict.pop(self.get_linkname('kpoints'))
+        except KeyError:
+            raise InputValidationError("No kpoints specified for this calculation")
+        if not isinstance(kpoints, KpointsData):
+            raise InputValidationError("kpoints is not of type KpointsData")
+         
         klist = kpoints.get_kpoints()
         
         retlist = ["{}".format(len(klist))]

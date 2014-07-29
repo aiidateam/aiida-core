@@ -337,18 +337,18 @@ class KpointsData(ArrayData):
         
         # store
         self.set_attr('mesh',the_mesh)
-        self.set_attr('mesh_offset',the_offset)
+        self.set_attr('offset',the_offset)
 
     def get_kpoints_mesh(self):
         """
         Get the mesh of kpoints.
         
-        :return None,None: if no mesh has been set
+        :raise AttributeError: if no mesh has been set
         :return mesh,offset: a list of 3 integers and a list of three 
                 floats 0<x<1, representing the mesh and the offset of kpoints
         """
-        mesh = self.get_attr('mesh',None)
-        offset = self.get_attr('offset',None)
+        mesh = self.get_attr('mesh')
+        offset = self.get_attr('offset')
         return mesh, offset
 
     def _validate_kpoints_weights(self,kpoints,weights):

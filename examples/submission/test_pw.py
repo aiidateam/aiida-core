@@ -24,6 +24,7 @@ from aiida.orm.data.upf import UPFGROUP_TYPE
 if __name__ == "__main__":
     UpfData = DataFactory('upf')
     ParameterData = DataFactory('parameter')
+    KpointsData = DataFactory('array.kpoints')
     StructureData = DataFactory('structure')
     try:
         dontsend = sys.argv[1]
@@ -51,7 +52,7 @@ if __name__ == "__main__":
 
     queue = None
     #queue = "Q_aries_free"
-
+    settings = None
     #####
 
     try:
@@ -125,13 +126,21 @@ if __name__ == "__main__":
                     'conv_thr': 1.e-10,
                     }})
 
-    kpoints = ParameterData(dict={
-                    'type': 'automatic',
-                    'points': [4, 4, 4, 0, 0, 0],
-                    })
-
-
-
+    kpoints = KpointsData()
+    
+    # method gamma only
+    #settings = ParameterData(dict={'gamma_only':True})
+    #kpoints.set_kpoints_mesh([1,1,1])
+    
+    # method list
+    #import numpy
+    #kpoints.set_kpoints([[i,i,0] for i in numpy.linspace(0,1,10)],
+    #                    weights = [1. for i in range(10)])
+    # method mesh
+    kpoints.set_kpoints_mesh([2,2,2])
+    
+    
+    
     ## For remote codes, it is not necessary to manually set the computer,
     ## since it is set automatically by new_calc
     #computer = code.get_remote_computer()
@@ -186,7 +195,8 @@ if __name__ == "__main__":
 
     calc.use_kpoints(kpoints)
 
-    #calc.use_settings(settings)
+    if settings is not None:
+        calc.use_settings(settings)
     #from aiida.orm.data.remote import RemoteData
     #calc.set_outdir(remotedata)
 

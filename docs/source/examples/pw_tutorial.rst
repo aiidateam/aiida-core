@@ -194,14 +194,41 @@ are missing: the prefix, the pseudo directory and the scratch directory are
 reserved to the plugin which will use default values, and there are specific
 AiiDA methods to restart from a previous calculation.
 
-The k-points have to be saved in another ParameterData, analogously to the
-parameters::
+The k-points have to be saved in another kind of data, namely KpointsData::
                 
-  kpoints = ParameterData(dict={
-                'type': 'automatic',
-                'points': [4, 4, 4, 0, 0, 0],
-                })
+  KpointsData = DataFactory('array.kpoints')
+  kpoints = KpointsData.set_kpoints_mesh([4,4,4])
+  
+In this case it generates a 4*4*4 mesh without offset. To add an offset one 
+can replace the second line by::
 
+  kpoints = KpointsData.set_kpoints_mesh([4,4,4],offset=(0.5,0.5,0.5))
+
+.. note:: Only offsets of 0 or 0.5 are possible (this is imposed by PWscf).
+
+You can also specify kpoints manually, by inputing a list of points
+in crystal coordinates (here they all have equal weights)::
+
+    import numpy
+    kpoints.set_kpoints([[i,i,0] for i in numpy.linspace(0,1,10)],
+    							weights = [1. for i in range(10)])
+
+.. _gamma-only:
+.. note:: It is also possible to generate a gamma-only computation. To do so 
+  one has to specify additional settings, of type ParameterData, putting 
+  gamma-only to True::
+    
+    settings = ParameterData(dict={'gamma_only':True})
+
+  then set the kpoints mesh to a single point (gamma)::
+
+    kpoints.set_kpoints_mesh([1,1,1])
+    
+  and in the end add (after ``calc = code.new_calc()``, see below) a line to use
+  these settings::
+  
+    calc.use_settings(settings)
+    
 As a further comment, this is specific to the way the plugin
 for Quantum Espresso works.
 Other codes may need more than two ParameterData, or even none of them.
@@ -256,11 +283,16 @@ properly linking them using the ``use_`` methods::
   calc.use_parameters(parameters)
   calc.use_kpoints(kpoints)
 
-In practice, hen you say ``calc.use_structure(s)``, you are setting a link 
+In practice, when you say ``calc.use_structure(s)``, you are setting a link 
 between the two nodes (``s`` and ``calc``), that means that 
 ``s`` is the input *structure* for *calculation* ``calc``. Also these links
 are cached and do not require to store anything in the database yet.
 
+In the case of the gamma-only computation (see :ref:`above <gamma-only>`), you 
+also need to add::
+
+  calc.use_settings(settings)
+  
 Pseudopotentials
 ----------------
 

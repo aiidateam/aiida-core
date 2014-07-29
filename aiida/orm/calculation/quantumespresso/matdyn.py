@@ -28,6 +28,7 @@ class MatdynCalculation(NamelistsCalculation):
         
         self._blocked_keywords = [('INPUT','flfrq',self.PHONON_FREQUENCIES_NAME), # output
                                   ('INPUT','flvec',self.PHONON_MODES_NAME), # output
+                                  ('INPUT','q_in_cryst_coord',True), # kpoints always in crystal coordinates
                                   # this is dynamically added in the _prepare_for_submission
                                   #('INPUT','flfrc',Q2rCalculation.FORCE_CONSTANTS_NAME), # input
                                  ]

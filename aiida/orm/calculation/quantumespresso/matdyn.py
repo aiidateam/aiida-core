@@ -22,7 +22,7 @@ class MatdynCalculation(NamelistsCalculation):
         super(MatdynCalculation, self)._init_internal_params()
                 
         self.PHONON_FREQUENCIES_NAME = 'phonon_frequencies.dat'
-        self.PHONON_MODES_NAME = ''
+        self.PHONON_MODES_NAME = 'phonon_displacements.dat'
     
         self._default_namelists = ['INPUT']   
         
@@ -78,7 +78,6 @@ class MatdynCalculation(NamelistsCalculation):
         
         self.use_parent_folder(localdata)
    
-    # TODO: add the q-points at the end    
     def _get_following_text(self, inputdict, settings):
         """
         Add the kpoints after the namelist.
@@ -107,7 +106,7 @@ class MatdynCalculation(NamelistsCalculation):
         for k in klist:
             retlist.append("{:18.10f} {:18.10f} {:18.10f}".format(*k))
         
-        return "\n".join(retlist)
+        return "\n".join(retlist)+"\n"
     
     def _prepare_for_submission(self,tempfolder, inputdict): 
         from aiida.orm.data.singlefile import SinglefileData

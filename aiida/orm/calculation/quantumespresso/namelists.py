@@ -212,7 +212,7 @@ class NamelistsCalculation(Calculation):
         # copy remote output dir, if specified
         if parent_calc_folder is not None:
             if isinstance(parent_calc_folder,RemoteData):
-                parent_calc_out_subfolder = settings_dict.pop('parent_calc_out_subfolder',
+                parent_calc_out_subfolder = settings_dict.pop('PARENT_CALC_OUT_SUBFOLDER',
                                               self.INPUT_SUBFOLDER)
                 remote_copy_list.append(
                          (parent_calc_folder.get_computer().uuid,
@@ -231,7 +231,7 @@ class NamelistsCalculation(Calculation):
                  )
                 
         calcinfo = CalcInfo()
-
+        
         calcinfo.uuid = self.uuid
         # Empty command line by default
         calcinfo.cmdline_params = settings_dict.pop('CMDLINE', [])
@@ -243,7 +243,7 @@ class NamelistsCalculation(Calculation):
         # Retrieve by default the output file and the xml file
         calcinfo.retrieve_list = []        
         calcinfo.retrieve_list.append(self.OUTPUT_FILE_NAME)
-        settings_retrieve_list = settings_dict.pop('additional_retrieve_list', [])
+        settings_retrieve_list = settings_dict.pop('ADDITIONAL_RETRIEVE_LIST', [])
         calcinfo.retrieve_list += settings_retrieve_list
         calcinfo.retrieve_list += self._internal_retrieve_list
         

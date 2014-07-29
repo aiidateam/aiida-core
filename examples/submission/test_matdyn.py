@@ -83,6 +83,12 @@ if __name__ == "__main__":
                     },
                 })
     
+    # additional settings specifying that we want to retrieve also the file with
+    # phonon displacements
+    settings = ParameterData(dict={
+                'additional_retrieve_list': ['phonon_displacements.dat'],
+                })
+    
     kpoints = KpointsData()
     kpoints.set_kpoints([[i,i,0] for i in numpy.linspace(0,1,10)])
 
@@ -93,6 +99,7 @@ if __name__ == "__main__":
     calc.set_resources({"num_machines":num_machines})
 
     calc.use_parameters(parameters)
+    calc.use_settings(settings) # additional settings (comment if you don't want to retrieve the phonon displacements file)
     calc.use_kpoints(kpoints)
     parentcalc = Calculation.get_subclass_from_pk(parent_id)
     calc.set_parent_calc(parentcalc)

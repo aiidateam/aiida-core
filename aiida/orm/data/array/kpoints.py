@@ -328,9 +328,13 @@ class KpointsData(ArrayData):
             raise ValueError("The offset must be a list of three integers")
         # check that there is no list of kpoints saved already
         # I cannot have both of them at the same time
-        if self.get_array('kpoints',None) is not None:
+        try:
+            _ = self.get_array('kpoints')
             raise ModificationNotAllowed("KpointsData has already a kpoint-"
                                          "list stored")
+        except KeyError:
+            pass
+        
         # store
         self.set_attr('mesh',the_mesh)
         self.set_attr('mesh_offset',the_offset)
@@ -438,9 +442,11 @@ class KpointsData(ArrayData):
             kpoints = self._change_reference(kpoints,to_cartesian=True)
         
         if also_weights:
-            the_weights = self.get_array('weights',None)
-            if the_weights is None:
+            try:
+                the_weights = self.get_array('weights')
+            except KeyError:
                 raise AttributeError('No weights were set')
+            
             weights = numpy.array(the_weights)
             return kpoints,weights
         else:

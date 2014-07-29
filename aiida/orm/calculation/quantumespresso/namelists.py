@@ -115,7 +115,7 @@ class NamelistsCalculation(Calculation):
         except KeyError:
             raise InputValidationError("No parameters specified for this calculation")
         if not isinstance(parameters, ParameterData):
-            raise InputValidationError("parameters is not of type ParameterDa")
+            raise InputValidationError("parameters is not of type ParameterData")
         
         # Settings can be undefined, and defaults to an empty dictionary
         settings = inputdict.pop(self.get_linkname('settings'),None)

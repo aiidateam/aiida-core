@@ -44,7 +44,7 @@ In abstract term, this plugin must contain these two pieces of information:
 This is it, a minimal input plugin must have at least these two
 things.
 
-Create a new file, which has the same name of the class you are
+Create a new file, which has the same name as the class you are
 creating (in this way, it will be possible to load it with
 ``CalculationFactory``).
 Save it in a subfolder at the path ``aiida/orm/calculation``.
@@ -299,9 +299,9 @@ what it may look like::
 
 There are a couple of things to be set.
 
-1. stdin_name: the name of the standard input
+1. stdin_name: the name of the standard input.
 
-2. stdin_name: the name of the standard output
+2. stdin_name: the name of the standard output.
 
 3. cmdline_params: like parallelization flags, that will be used when
 running the code.
@@ -312,10 +312,10 @@ cluster.
 Note that all the file names you need to modify are not absolute path names (you don't know the name of the folder where it will be created) but rather the path relative to the scratch folder.
 
 5. local_copy_list: a list of length-two-tuples: (localabspath,
-relativedestpath). Copies files sitting on the aiida server to the cluster
+relativedestpath). Files to be copied from the aiida server to the cluster.
 
 6. remote_copy_list: a list of tuples: (remotemachinename, remoteabspath,
-relativedestpath). Copies a file/folder from a remote source to a
+relativedestpath). Files/folders to be copied from a remote source to a
 remote destination, sitting both on the same machine.
 
 7. retrieve_singlefile_list: a list of triplets, in the form
@@ -333,7 +333,7 @@ For the full definition of ``CalcInfo()``, refer to the source
 
 
 That's what is needed to write an input plugin.
-To test that everythin is done properly, remember to use the
+To test that everything is done properly, remember to use the
 ``calculation.submit_test()`` method, which creates locally the folder
 to be sent on cluster, without submitting the calculation on the cluster.
 
@@ -394,18 +394,21 @@ This is the DB representation of a python dictionary. If you put
 everything in a single ParameterData, then this could be easily
 accessed from the calculation with the ``.res`` method. If you have to
 store arrays / large lists or matrices, consider using ArrayData instead.
+   
 
-2. ArrayData. If you need to store large arrays of values, for
-   example, a list of points or a molecular dynamic trajectory, we
-   strongly encourage you to use this class.
-   At variance with ParameterData, the values are not stored in the
-   DB, but are written to a file (mapped back in the DB). If instead
-   you store large arrays of numbers in the DB with ParameterData, you might soon realise
-   that: a) the DB grows large really rapidly; b) the time it takes to
-   save an object in the DB gets very large.
+2. ArrayData.
+If you need to store large arrays of values, for
+example, a list of points or a molecular dynamic trajectory, we
+strongly encourage you to use this class.
+At variance with ParameterData, the values are not stored in the
+DB, but are written to a file (mapped back in the DB). If instead
+you store large arrays of numbers in the DB with ParameterData, you might soon realize
+that: a) the DB grows large really rapidly; b) the time it takes to
+save an object in the DB gets very large.
+   
 
-3. StructureData. If your code relaxes an input structure, you can end up
-  with an output structure.
+3. StructureData.
+If your code relaxes an input structure, you can end up with an output structure.
 
 Of course, you can create new classes to be stored in the DB, and use
 them at your own advantage.

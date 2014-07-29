@@ -9,6 +9,7 @@ from aiida.common.utils import classproperty
 
 from aiida.orm.data.structure import StructureData
 from aiida.orm.data.parameter import ParameterData
+from aiida.orm.data.array.kpoints import KpointsData
 from aiida.orm.data.upf import UpfData
 from aiida.orm.data.remote import RemoteData 
 
@@ -158,8 +159,8 @@ class BasePwCpInputGenerator(object):
                 kpoints = inputdict.pop(self.get_linkname('kpoints'))
             except KeyError:
                 raise InputValidationError("No kpoints specified for this calculation")
-            if not isinstance(kpoints,  ParameterData):
-                raise InputValidationError("kpoints is not of type ParameterData")
+            if not isinstance(kpoints,  KpointsData):
+                raise InputValidationError("kpoints is not of type KpointsData")
 
         # Settings can be undefined, and defaults to an empty dictionary
         settings = inputdict.pop(self.get_linkname('settings'),None)
@@ -204,10 +205,6 @@ class BasePwCpInputGenerator(object):
         ##############################
         # END OF INITIAL INPUT CHECK #
         ##############################
-
-        # Kpoints converted to uppercase
-        if self._use_kpoints:
-            kpoints_dict = kpoints.get_dict()
 
         # I put the first-level keys as uppercase (i.e., namelist and card names)
         # and the second-level keys as lowercase
@@ -335,73 +332,66 @@ class BasePwCpInputGenerator(object):
         # ============ I prepare the k-points =============
         if self._use_kpoints:
             try:
-                kpoints_type = kpoints_dict.pop('type')
-            except KeyError: 
-                raise InputValidationError("No 'type' specified in the "
-                                           "kpoints input node.")
-        
-            if kpoints_type != "gamma":
+                mesh,offset = kpoints.get_kpoints_mesh()
+                has_mesh = True
+            except AttributeError:
                 try:
-                    kpoints_list = kpoints_dict.pop("points")
+                    kpoints_list,weights = kpoints.get_kpoints(also_weights=True)
                     num_kpoints = len(kpoints_list)
-                except KeyError:
-                    raise InputValidationError(
-                        "the kpoints input node does not contain a 'points' "
-                        "key")
-                except TypeError:
-                    raise InputValidationError(
-                        "In the kpoints input node, 'points' is not a list")
-                if num_kpoints == 0:
-                    raise InputValidationError("At least one k point must be "
-                        "provided for non-gamma calculations")
-    
-            if kpoints_dict:
-                    raise InputValidationError("The following keys in the "
-                        "kpoints input node are not valid: {}".format(
-                            ",".join(kpoints_dict.keys())))
+                    has_mesh=False
+                    if num_kpoints == 0:
+                        raise InputValidationError("At least one k point must be "
+                            "provided for non-gamma calculations")
+
+                except AttributeError:
+                    raise InputValidationError("No valid kpoints have been found")
+            
+            gamma_only = settings_dict.pop("GAMMA_ONLY",False)
+            
+            if gamma_only:
+                if has_mesh:
+                    if tuple(mesh) != (1,1,1) or tuple(offset) != (0.,0.,0.):
+                        raise InputValidationError(
+                            "If a gamma_only calculation is requested, the "
+                            "kpoint mesh must be (1,1,1),offset=(0.,0.,0.)")
+                    
+                else:
+                    if ( len(kpoints_list) != 1 or 
+                         tuple(kpoints_list[0]) != tuple(0.,0.,0.) ):
+                        raise InputValidationError(
+                            "If a gamma_only calculation is requested, the "
+                            "kpoints coordinates must only be (0.,0.,0.)")
+
+                kpoints_type = "gamma"
+
+            elif has_mesh:
+                kpoints_type = "automatic"
+
+            else:
+                kpoints_type = "crystal"
+
+            kpoints_card_list = ["K_POINTS {}\n".format(kpoints_type)]   
                 
-            kpoints_card_list = ["K_POINTS {}\n".format(kpoints_type)]
     
             if kpoints_type == "automatic":
-                if len(kpoints_list) != 6:
-                    raise InputValidationError("k-points type is automatic, but "
-                        "the 'points' value is not a list of 6 integers")
-                try: 
-                    kpoints_card_list.append("{:d} {:d} {:d} {:d} {:d} {:d}\n"
-                        "".format(*kpoints_list))
-                except ValueError:
-                    raise InputValidationError(
-                        "Some elements  of the 'points' list "
-                        "in the input kpoints node are not integers")        
+                if any( [ (i!=0. and i !=0.5) for i in offset] ):
+                    raise InputValidationError("offset list must only be made "
+                                               "of 0 or 0.5 floats")
+                the_offset = [ 0 if i==0. else 1 for i in offset ]
+                the_6_integers = list(mesh) + the_offset
+                kpoints_card_list.append("{:d} {:d} {:d} {:d} {:d} {:d}\n"
+                                         "".format(*the_6_integers))
+                
             elif kpoints_type == "gamma":
                 # nothing to be written in this case
                 pass
             else:
                 kpoints_card_list.append("{:d}\n".format(num_kpoints))
-                try:
-                    if all(len(i)==4 for i in kpoints_list):
-                        try:
-                            for kpoint in kpoints_list:
-                                kpoints_card_list.append(
-                                    "  {:18.10f} {:18.10f} {:18.10f} {:18.10f}"
-                                    "\n".format(
-                                        float(kpoint[0]),float(kpoint[1]),
-                                        float(kpoint[2]),float(kpoint[3])))
-                        except ValueError:
-                            raise InputValidationError(
-                                "Invalid number provided for one of the kpoints"
-                                " in the 'points' list of the input kpoints "
-                                "node. I got: {}".format(kpoint))
-                    else:
-                        raise InputValidationError(
-                            "In the kpoints input node, 'points' must all have "
-                            "length four (3 coordinates + last value: weight)")
-                except (KeyError, TypeError):
-                    raise InputValidationError(
-                        "In the kpoints input node, 'points' must be a list "
-                        "of k points, and"
-                        "each k point must be provided as a list of 4 items: its "
-                        "coordinates and its weight")
+                for kpoint,weight in zip(kpoints_list,weights):
+                    kpoints_card_list.append(
+                        "  {:18.10f} {:18.10f} {:18.10f} {:18.10f}"
+                        "\n".format(kpoint[0],kpoint[1],kpoint[2],weight))
+                
             kpoints_card = "".join(kpoints_card_list)
             del kpoints_card_list
 

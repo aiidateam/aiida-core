@@ -98,7 +98,7 @@ class MatdynCalculation(NamelistsCalculation):
         
         ## TODO: check it is a KpointsData
         
-        klist = kpoints.get_kpoints_relative()
+        klist = kpoints.get_kpoints()
         
         retlist = ["{}".format(len(klist))]
         for k in klist:

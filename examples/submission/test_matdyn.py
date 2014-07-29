@@ -84,7 +84,7 @@ if __name__ == "__main__":
                 })
     
     kpoints = KpointsData()
-    kpoints.set_kpoints_relative([[i,i,0] for i in numpy.linspace(0,1,10)])
+    kpoints.set_kpoints([[i,i,0] for i in numpy.linspace(0,1,10)])
 
     calc = code.new_calc(computer=computer)
     calc.label = "Test QE matdyn.x"

@@ -287,15 +287,15 @@ class KpointsData(ArrayData):
         self._a1 = numpy.array(the_cell[0,:])
         self._a2 = numpy.array(the_cell[1,:])
         self._a3 = numpy.array(the_cell[2,:])
-        self._a = numpy.linalg.norm(self.a1)
-        self._b = numpy.linalg.norm(self.a2)
-        self._c = numpy.linalg.norm(self.a3)
+        self._a = numpy.linalg.norm(self._a1)
+        self._b = numpy.linalg.norm(self._a2)
+        self._c = numpy.linalg.norm(self._a3)
         self._b1 = reciprocal_cell[0,:]
         self._b2 = reciprocal_cell[1,:]
         self._b3 = reciprocal_cell[2,:]
-        self._cosalpha = numpy.dot(self.a2,self.a3)/self.b/self.c
-        self._cosbeta  = numpy.dot(self.a3,self.a1)/self.c/self.a
-        self._cosgamma = numpy.dot(self.a1,self.a2)/self.a/self.b
+        self._cosalpha = numpy.dot(self._a2,self._a3)/self._b/self._c
+        self._cosbeta  = numpy.dot(self._a3,self._a1)/self._c/self._a
+        self._cosgamma = numpy.dot(self._a1,self._a2)/self._a/self._b
         # Note: a,b,c,alpha,beta and gamma are referred to the input cell
         # not to the 'conventional' or rotated cell.
 

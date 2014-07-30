@@ -45,7 +45,7 @@ class ArrayData(Data):
         # remove both file and attribute
         self.remove_path(fname)
         try:
-            self.del_attr(name)
+            self.del_attr("{}{}".format(self.array_prefix, name))
         except (KeyError, AttributeError):
             # Should not happen, but do not crash if for some reason the 
             # property was not set.

@@ -51,6 +51,7 @@ class Devel(VerdiCommandWithSubcommands):
             'describeproperties': (self.run_describeproperties, self.complete_none),
             'listproperties': (self.run_listproperties, self.complete_none),
             'play': (self.run_play, self.complete_none),
+            'getresults': (self.calculation_getresults, self.complete_none),
             }
         
         # The content of the dict is:
@@ -94,6 +95,233 @@ class Devel(VerdiCommandWithSubcommands):
             print "{} ({}): {}{}".format(prop, _property_table[prop][1],
                                        _property_table[prop][2],
                                        def_val_string)
+
+    def calculation_getresults(self, *args):
+        from aiida.common.exceptions import AiidaException
+        from aiida.orm import Calculation as OrmCalculation
+        
+        load_django()
+        
+        class InternalError(AiidaException):
+            def __init__(self, real_exception, message):
+                self.real_exception = real_exception
+                self.message = message
+        
+        def applyfunct_len(value):
+            """
+            Return the length of an object.
+            """
+            try:
+                return len(value)
+            except Exception as e:
+                raise InternalError(e,'Error in function len, probably the object has no "len"?')
+        
+        def applyfunct_keys(value):
+            """
+            Return the keys of a dictionary.
+            """
+            try:
+                return value.keys()
+            except Exception as e:
+                raise InternalError(e,'Error in function keys, probably not a dict?')
+        
+        def apply_function(function, value):
+            """
+            The function must be defined in this file and be in the format
+            applyfunct_FUNCNAME
+            where FUNCNAME is the string passed as the parameter 'function';
+            applyfunct_FUNCNAME will accept only one parameter ('value') and
+            return an appropriate value.
+            """
+            function_prefix="applyfunct_"
+            if function is None:
+                return value
+            else:
+                try:
+                    return globals()[function_prefix+function](value)
+                except KeyError as e:
+                    # Raising an InternalError means that a default value is printed
+                    # if no function exists.
+                    # Instead, raising a ValueError will always get printed even if
+                    # a default value is printed, that is what one wants
+        #            raise InternalError(
+        #                real_exception=e, message =
+                    raise ValueError(
+                        "No such function %s. Available functions are: %s." %
+                        (function, 
+                         ", ".join(i[len(function_prefix):] for i in globals() if i.startswith(function_prefix))))
+        
+        def get_suggestions(key,correct_keys):
+            import difflib
+            import string
+            
+            similar_kws = difflib.get_close_matches(key, correct_keys)
+            if len(similar_kws)==1:
+                return "(Maybe you wanted to specify %s?)" % similar_kws[0]
+            elif len(similar_kws)>1:
+                return "(Maybe you wanted to specify one of these: %s?)" % string.join(similar_kws,', ')
+            else:
+                return "(No similar keywords found...)"
+        
+        # define a function to retrieve the data from the dictionary
+        def key_finder(in_dict,the_keys):
+            parent_dict = in_dict
+            parent_dict_name = '<root level>'
+            for new_key in the_keys:
+                try:
+                    parent_dict = parent_dict[new_key]
+                    parent_dict_name = new_key
+                except KeyError as e:
+                    raise InternalError(e,"Unable to find the key '%s' in '%s' %s" % (new_key, parent_dict_name, get_suggestions(new_key, parent_dict.keys())))
+                except Exception as e:
+                    if e.__class__ is not InternalError:
+                        raise InternalError(e,"Error retrieving the key '%s' withing '%s', maybe '%s' is not a dict?" % (the_keys[1], the_keys[0], the_keys[0]))
+                    else:
+                        raise
+            return parent_dict
+        
+        
+        def index_finder(data,indices,list_name):
+            if not indices:
+                return data
+        
+            parent_data = data
+            parent_name = list_name
+            for idx in indices:
+                try:
+                    index = int(idx)
+                    parent_data = parent_data[index]
+                    parent_name += ":%s" % index
+                except ValueError as e:
+                    raise InternalError(e,"%s is not a valid integer (in %s)." % (idx, parent_name))
+                except IndexError as e:
+                    raise InternalError(e,"Index %s is out of bounds, length of list %s is %s" % (index, parent_name, len(parent_data)))
+                except Exception as e:
+                    raise InternalError(e,"Invalid index! Maybe %s is not a list?" % parent_name)
+            return parent_data
+        
+        
+        if not args:
+            print >> sys.stderr,  "Pass some parameters."
+            sys.exit(1)
+        
+        # I convert it to a list
+        arguments = list(args)
+        
+        try:
+            sep_idx = arguments.index('--')
+        except ValueError:
+            print >> sys.stderr, "Separate parameter keys from job-ids with a --!"
+            sys.exit(1)
+        
+        keys_to_retrieve = arguments[:sep_idx]
+        job_list = arguments[sep_idx+1:]
+        
+        sep = '\t' # Default separator: a tab character
+        
+        try:
+            idx = keys_to_retrieve.index('-s')
+        
+            # First pop removes the -s parameter, second pop (now with the same
+            # index) retrieves the asked separator. Raises IndexError if nothing
+            # is provided after -s.
+            _ = keys_to_retrieve.pop(idx)
+            sep = keys_to_retrieve.pop(idx)
+        except IndexError:
+            print >> sys.stderr, "After -s you have to pass a valid separator!"
+            sys.exit(1)
+        except ValueError:
+            # No -s found, use default separator
+            pass
+        
+        print_header = True # Default: print the header
+        try:
+            keys_to_retrieve.remove('--no-header')
+            # If here, the key was found: I remove it from the list and set the
+            # the print_header flag
+            print_header = False
+        except ValueError:
+            # No --no-header found: pass
+            pass
+        
+        # check if there is at least one thing to do
+        if not job_list:
+            print >> sys.stderr,  "Failed recognizing a calculation PK."
+            sys.exit(1)
+        if not keys_to_retrieve:
+            print  >> sys.stderr, "Failed recognizing a key to parse."
+            sys.exit(1)
+        
+        # load the data
+        if print_header:
+            print "## Job list: %s" % " ".join(job_list)
+            print "#" + sep.join(str(i) for i in keys_to_retrieve)
+        for job in job_list:
+            values_to_print = []
+            in_found = True
+            out_found = True
+            c = OrmCalculation.get_subclass_from_pk(job)
+            try:
+                i = c.inp.parameters.get_dict()
+            except AttributeError:
+                i = {}
+                in_found = False
+            try:
+                o = c.out.output_parameters.get_dict()
+            except AttributeError:
+                out_found = False
+                o = {}
+
+                        
+            io = {'i': i, 'o': o, 'pk': job, 'label': c.label,
+                  'desc': c.description, 'state': c.get_state(), 
+                  'sched_state': c.get_scheduler_state(), 
+                  'owner': c.dbnode.user.email}
+            
+            try:
+                for datakey_full in keys_to_retrieve:
+                    split_for_def = datakey_full.split('=')
+                    datakey_raw = split_for_def[0] # Still can contain the function to apply
+                    def_val = "=".join(split_for_def[1:]) if len(split_for_def) > 1 else None
+        
+                    split_for_func = datakey_raw.split('/')
+                    datakey = split_for_func[0]
+                    function_to_apply = "/".join(split_for_func[1:]) if len(split_for_func) > 1 else None
+                    
+                    key_values = [str(i) for i in datakey.split(':')[0].split('.')]
+                    indices = [int(i) for i in datakey.split(':')[1:]] # empty list for simple variables.
+                    try:
+                        value_key = key_finder(io,key_values)
+                        value = index_finder(value_key,indices,list_name=datakey.split(':')[0])
+                        # Will do the correct thing if no function is supplied
+                        # and function is therefore None
+                        value = apply_function(function = function_to_apply, value = value)
+        
+                    except InternalError as e:
+                        # For any internal error, set the value to the default if
+                        # provided, otherwise re-raise the exception
+                        if def_val is not None:
+                            value = def_val
+                        else:
+                            if not out_found:
+                                if in_found:
+                                    e.message += " [NOTE: No output JSON could be found]"
+                                else:
+                                    e.message += " [NOTE: No output JSON nor input JSON could be found]" 
+                            raise e
+        
+                    values_to_print.append(value)
+            
+            # Not needed: now we can ask explicitly for a job number using the flag
+            # 'jobnum'
+            #        values_to_print.append("# %s" % str(job))
+                # print on screen
+                print sep.join(str(i) for i in values_to_print)
+            except InternalError as e:
+                print >> sys.stderr, e.message
+            except Exception as e:
+                print >> sys.stderr, "# Error loading job # %s (%s): %s" % (job, type(e), e)
+
     
     def run_listproperties(self, *args):
         """

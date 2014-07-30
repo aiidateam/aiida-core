@@ -143,11 +143,12 @@ def parse_raw_output(out_file, input_dict, parser_opts=None, xml_file=None, dir_
 
     for key in out_data.keys():
         if key in xml_data.keys():
-            if key=='fermi_energy': # an exception for the (only?) key that may be found on both
+            if key=='fermi_energy' or key=='fermi_energy_units': # an exception for the (only?) key that may be found on both
                 del out_data[key]
-            raise AssertionError(
-                '{} found in both dictionaries, values: {} vs. {}'.format(
-                    key, out_data[key], xml_data[key])) # this shouldn't happen!
+            else:
+                raise AssertionError('{} found in both dictionaries, '
+                                     'values: {} vs. {}'.format(
+                                     key, out_data[key], xml_data[key])) # this shouldn't happen!
         # out_data keys take precedence and overwrite xml_data keys,
         # if the same key name is shared by both
         # dictionaries (but this should not happen!)

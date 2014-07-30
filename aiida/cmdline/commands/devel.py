@@ -12,6 +12,51 @@ __copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de L
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.2.0"
 
+def applyfunct_len(value):
+    """
+    Return the length of an object.
+    """
+    try:
+        return len(value)
+    except Exception as e:
+        raise InternalError(e,'Error in function len, probably the object has no "len"?')
+
+def applyfunct_keys(value):
+    """
+    Return the keys of a dictionary.
+    """
+    try:
+        return value.keys()
+    except Exception as e:
+        raise InternalError(e,'Error in function keys, probably not a dict?')
+
+def apply_function(function, value):
+    """
+    The function must be defined in this file and be in the format
+    applyfunct_FUNCNAME
+    where FUNCNAME is the string passed as the parameter 'function';
+    applyfunct_FUNCNAME will accept only one parameter ('value') and
+    return an appropriate value.
+    """
+    function_prefix="applyfunct_"
+    if function is None:
+        return value
+    else:
+        try:
+            return globals()[function_prefix+function](value)
+        except KeyError as e:
+            # Raising an InternalError means that a default value is printed
+            # if no function exists.
+            # Instead, raising a ValueError will always get printed even if
+            # a default value is printed, that is what one wants
+#            raise InternalError(
+#                real_exception=e, message =
+            raise ValueError(
+                "o such function %s. Available functions are: %s." %
+                (function, 
+                 ", ".join(i[len(function_prefix):] for i in globals() if i.startswith(function_prefix))))
+
+
 class Devel(VerdiCommandWithSubcommands):
     """
     AiiDA commands for developers
@@ -107,49 +152,6 @@ class Devel(VerdiCommandWithSubcommands):
                 self.real_exception = real_exception
                 self.message = message
         
-        def applyfunct_len(value):
-            """
-            Return the length of an object.
-            """
-            try:
-                return len(value)
-            except Exception as e:
-                raise InternalError(e,'Error in function len, probably the object has no "len"?')
-        
-        def applyfunct_keys(value):
-            """
-            Return the keys of a dictionary.
-            """
-            try:
-                return value.keys()
-            except Exception as e:
-                raise InternalError(e,'Error in function keys, probably not a dict?')
-        
-        def apply_function(function, value):
-            """
-            The function must be defined in this file and be in the format
-            applyfunct_FUNCNAME
-            where FUNCNAME is the string passed as the parameter 'function';
-            applyfunct_FUNCNAME will accept only one parameter ('value') and
-            return an appropriate value.
-            """
-            function_prefix="applyfunct_"
-            if function is None:
-                return value
-            else:
-                try:
-                    return globals()[function_prefix+function](value)
-                except KeyError as e:
-                    # Raising an InternalError means that a default value is printed
-                    # if no function exists.
-                    # Instead, raising a ValueError will always get printed even if
-                    # a default value is printed, that is what one wants
-        #            raise InternalError(
-        #                real_exception=e, message =
-                    raise ValueError(
-                        "No such function %s. Available functions are: %s." %
-                        (function, 
-                         ", ".join(i[len(function_prefix):] for i in globals() if i.startswith(function_prefix))))
         
         def get_suggestions(key,correct_keys):
             import difflib

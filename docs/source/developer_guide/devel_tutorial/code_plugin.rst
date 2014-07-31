@@ -477,14 +477,17 @@ A kind of template for writing such parser for the calculation class
             # dictionary with all keys and values parsed from the out_file (i.e. enery, forces, etc...)
             # and a boolean indicating whether the calculation is successfull or not
 	    # In practice, this is the function deciding the final status of the calculation
-            parsed_ditionary,successful = parse_raw_output(out_file_lines)
+            out_dict,successful = parse_raw_output(out_file_lines)
             
             # convert the dictionary into an AiiDA object, here a
 	    # ParameterData for instance
             output_params = ParameterData(dict=out_dict)
 
 	    # prepare the list of output nodes to be returned
-	    new_nodes_list = [ ['linkname',output_params] ]
+	    # this must be a list of tuples having 2 elements each: the name of the 
+	    # linkname in the database (the one below, self.get_linkname_outparams(),
+	    # is defined in the Parser class), and the object to be saved
+	    new_nodes_list = [ (self.get_linkname_outparams(),output_params) ]
 
 	    # if false, the calculation status will be flagged as failed, to finished if true
             return successful, new_nodes_list

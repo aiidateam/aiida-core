@@ -943,7 +943,8 @@ class Workflow(object):
         from aiida.common.datastructures import calc_states
             
         for c in step.get_calculations():
-            c._set_state(calc_states.FINISHED)
+            if c.is_new() or c.is_running():
+                c.kill()
     
     # ----------------------------
     #         Support methods

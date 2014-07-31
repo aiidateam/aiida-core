@@ -31,7 +31,7 @@ class CpParser(Parser):
         """
         # check for valid input
         if not isinstance(calc,CpCalculation):
-            raise QEOutputParsingError("Input must calc must be a CpCalculation")
+            raise QEOutputParsingError("Input calc must be a CpCalculation")
 
         super(CpParser, self).__init__(calc)
         

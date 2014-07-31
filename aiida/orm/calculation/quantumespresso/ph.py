@@ -46,7 +46,7 @@ class PhCalculation(Calculation):
         #OUTPUT_DYNAMICAL_MATRIX_PREFIX = os.path.join(FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX,
         #                                              'dynamical-matrix-')
     
-        # Default PW output parser provided by AiiDA
+        # Default PH output parser provided by AiiDA
         self._default_parser = 'quantumespresso.ph'
 
         self._compulsory_namelists = ['INPUTPH']

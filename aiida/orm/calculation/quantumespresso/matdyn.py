@@ -35,9 +35,8 @@ class MatdynCalculation(NamelistsCalculation):
     
         self._internal_retrieve_list = [self.PHONON_FREQUENCIES_NAME]
         
-        # Default PW output parser provided by AiiDA
-        self._default_parser = None
-        # TODO : matdyn parser 
+        # Default Matdyn output parser provided by AiiDA
+        self._default_parser = 'quantumespresso.matdyn'
     
     @classproperty
     def _use_methods(cls):

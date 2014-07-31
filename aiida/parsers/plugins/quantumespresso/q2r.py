@@ -16,18 +16,16 @@ __version__ = "0.2.0"
 
 class Q2rParser(Parser):
     """
-    This class is the implementation of the Parser class for PHonon.
+    This class is the implementation of the Parser class for Q2r.
     """
     
-    _name_matrix = 'output_forces'
-
     def __init__(self,calculation):
         """
-        Initialize the instance of PwParser
+        Initialize the instance of Q2rParser
         """
         # check for valid input
         if not isinstance(calculation,Q2rCalculation):
-            raise QEOutputParsingError("Input must calc must be a Q2rCalculation")
+            raise QEOutputParsingError("Input calc must be a Q2rCalculation")
         
         self._calc = calculation
             
@@ -79,7 +77,8 @@ class Q2rParser(Parser):
             lines = fil.read()
         if "JOB DONE" not in lines:
             successful = False
-        
+            parserlogger.error("Computation did not finish properly",extra=logger_extra)
+       
         # check that the real space force constant matrix is present
         the_outputs = self._calc.get_outputs(also_labels=True)
         the_files = [i[1] for i in the_outputs if 

@@ -31,7 +31,7 @@ class Q2rCalculation(NamelistsCalculation):
         
         self._retrieve_singlefile_list = [[self.get_linkname_force_matrix(),'singlefile',self.FORCE_CONSTANTS_NAME]]
         
-        # Default PW output parser provided by AiiDA
+        # Default Q2r output parser provided by AiiDA
         self._default_parser = 'quantumespresso.q2r'
         
     @classproperty

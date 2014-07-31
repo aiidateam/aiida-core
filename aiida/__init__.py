@@ -11,3 +11,14 @@ def get_version():
     """
     return __version__
 
+__paper__ = "G. Pizzi, A. Cepellotti, R. Sabatini, N. Marzari and B. Kozinsky, to be submitted"
+
+def get_file_header():
+    """
+    Get a string to be put as header of files created with AiiDA
+    """
+    return """# This file has been created with AiiDA v. {}
+#  
+# If you use AiiDA for publication purposes, please cite:
+# {} 
+""".format(__version__,__paper__)

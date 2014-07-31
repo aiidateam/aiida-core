@@ -13,6 +13,7 @@ __version__ = "0.2.0"
 
 UpfData = DataFactory('upf')
 ParameterData = DataFactory('parameter')
+KpointsData = DataFactory('array.kpoints')
 StructureData = DataFactory('structure')
 
 logger = aiidalogger.getChild('WorkflowXTiO3')
@@ -182,10 +183,9 @@ class WorkflowXTiO3_EOS(Workflow):
     
     def get_kpoints(self):
         
-        kpoints = ParameterData(dict={
-                        'type': 'automatic',
-                        'points': [4, 4, 4, 0, 0, 0],
-                        }).store()
+        kpoints = KpointsData()    
+        kpoints.set_kpoints_mesh([4,4,4])
+        kpoints.store()
         
         return kpoints
     

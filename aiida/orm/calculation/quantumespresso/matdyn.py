@@ -23,17 +23,19 @@ class MatdynCalculation(NamelistsCalculation):
                 
         self.PHONON_FREQUENCIES_NAME = 'phonon_frequencies.dat'
         self.PHONON_MODES_NAME = 'phonon_displacements.dat'
+        self.PHONON_DOS_NAME = 'phonon_dos.dat'
     
         self._default_namelists = ['INPUT']   
         
-        self._blocked_keywords = [('INPUT','flfrq',self.PHONON_FREQUENCIES_NAME), # output
-                                  ('INPUT','flvec',self.PHONON_MODES_NAME), # output
+        self._blocked_keywords = [('INPUT','flfrq',self.PHONON_FREQUENCIES_NAME), # output freq.
+                                  ('INPUT','flvec',self.PHONON_MODES_NAME), # output displ.
+                                  ('INPUT','fldos',self.PHONON_DOS_NAME), # output dos
                                   ('INPUT','q_in_cryst_coord',True), # kpoints always in crystal coordinates
                                   # this is dynamically added in the _prepare_for_submission
                                   #('INPUT','flfrc',Q2rCalculation.FORCE_CONSTANTS_NAME), # input
                                  ]
     
-        self._internal_retrieve_list = [self.PHONON_FREQUENCIES_NAME]
+        self._internal_retrieve_list = [self.PHONON_FREQUENCIES_NAME, self.PHONON_DOS_NAME]
         
         # Default Matdyn output parser provided by AiiDA
         self._default_parser = 'quantumespresso.matdyn'

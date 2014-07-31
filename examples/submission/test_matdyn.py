@@ -88,9 +88,16 @@ if __name__ == "__main__":
     settings = ParameterData(dict={
                 'additional_retrieve_list': ['phonon_displacements.dat'],
                 })
-    
+
+    parentcalc = Calculation.get_subclass_from_pk(parent_id)
+
     kpoints = KpointsData()
-    kpoints.set_kpoints([[i,i,0] for i in numpy.linspace(0,1,10)])
+    try:
+        structure = parentcalc.inp.parent_calc_folder.inp.retrieved.inp.parent_calc_folder.inp.remote_folder.inp.structure
+        kpoints.set_cell_from_structure(structure)
+        kpoints.set_kpoints_path()
+    except AttributeError:
+        kpoints.set_kpoints([[i,i,0] for i in numpy.linspace(0,1,10)])
 
     calc = code.new_calc(computer=computer)
     calc.label = "Test QE matdyn.x"
@@ -101,7 +108,6 @@ if __name__ == "__main__":
     calc.use_parameters(parameters)
     calc.use_settings(settings) # additional settings (comment if you don't want to retrieve the phonon displacements file)
     calc.use_kpoints(kpoints)
-    parentcalc = Calculation.get_subclass_from_pk(parent_id)
     calc.set_parent_calc(parentcalc)
 
     if submit_test:

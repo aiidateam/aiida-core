@@ -46,7 +46,7 @@ class BandsData(KpointsData):
         except (AttributeError,TypeError):
             pass
         
-    def set_bands(self,bands):
+    def set_bands(self,bands,units=None):
         """
         Set an array of band energies of dimension (nkpoints x nbands).
         Kpoints must be set in advance. Can contain floats or None.
@@ -75,6 +75,41 @@ class BandsData(KpointsData):
                                          "float or None values")
         
         self.set_array('bands',bands)
+        self.units = units
+
+    @property
+    def units(self):
+        """
+        Units in which the data in bands were stored. A string
+        """
+        #return copy.deepcopy(self._pbc)
+        return self.get_attr('units')
+
+    @units.setter
+    def units(self,value):
+        """
+        Set the value of pbc, i.e. a tuple of three booleans, indicating if the
+        cell is periodic in the 1,2,3 crystal direction
+        """
+        the_str = str(value)
+        self.set_attr('units',the_str)
+
+    def _set_pbc(self, value):
+        """
+        validate the pbc, then store them
+        """
+        from aiida.common.exceptions import ModificationNotAllowed
+        from aiida.orm.data.structure import get_valid_pbc
+
+        if not self._to_be_stored:
+            raise ModificationNotAllowed(
+                            "The KpointsData object cannot be modified, "
+                            "it has already been stored")
+        the_pbc = get_valid_pbc(value)
+        self.set_attr('pbc1',the_pbc[0])
+        self.set_attr('pbc2',the_pbc[1])
+        self.set_attr('pbc3',the_pbc[2])
+
 
     def get_bands(self):
         """
@@ -99,6 +134,7 @@ class BandsData(KpointsData):
               - there is no path of kpoints, but a set of isolated points
               - the path is not continuous AND no labels are set  
         """
+        #TODO: check for None in bands
         import os
         from aiida import get_file_header
         
@@ -133,25 +169,39 @@ class BandsData(KpointsData):
         except AttributeError:
             labels = []
             labels_indices = []
+            
+            
         # since I can have discontinuous paths, I set on those points the distance to zero
         # as a result, where there are discontinuities in the path, 
         # I have two consecutive points with the same x coordinate
-        distances = [0.] + [ numpy.linalg.norm( kpoints[i]-kpoints[i+1] ) if not  
-                      (i in labels_indices and i+1 in labels_indices) else 0. 
-                      for i in range(len(kpoints)-1) ]
-        x = [ float(sum(distances[:i])) for i in range(len(distances)) ]
+        distances = [ numpy.linalg.norm( kpoints[i]-kpoints[i-1] ) if not  
+                      (i in labels_indices and i-1 in labels_indices) else 0. 
+                      for i in range(1,len(kpoints)) ]
+        x = [ float(sum(distances[:i])) for i in range(len(distances)+1) ]
 
         # transform the index of the labels in the coordinates of x
         the_labels = [ (x[i[0]],i[1]) for i in labels ] 
 
+        new_labels = [list(the_labels[0])]
+        # modify labels when in overlapping position
+        j=0
+        for i in range(1,len(the_labels)):
+            if new_labels[j][1] == 'G' and 'agr' in fileformat:
+                new_labels[j][1] = r"\xG"
+            if the_labels[i][0]==the_labels[i-1][0]:
+                new_labels[j][1] += "|" + the_labels[i][1]
+            else:
+                new_labels.append(list(the_labels[i]))
+                j+=1
+        
         plot_info = {}
         plot_info['x'] = x
         plot_info['y'] = bands
-        plot_info['labels'] = the_labels
+        plot_info['labels'] = new_labels
         plot_info['filename'] = path
         if extension == 'agr':
             plot_info['filename'] = os.path.splitext(path)[0] + '.dat'
-
+        
         # generic info
         if comments:
             filetext = []
@@ -161,8 +211,8 @@ class BandsData(KpointsData):
             filetext.append("#\tpoints\tbands")
             filetext.append("#\t{}\t{}".format(*bands.shape))
             filetext.append("# \tlabel\tpoint")
-            for i,l in enumerate(labels):
-                filetext.append( "#\t{}\t{:.8f}".format(l[1],x[i]) )
+            for l in new_labels:
+                filetext.append( "#\t{}\t{:.8f}".format(l[1],l[0]) )
             filetext = get_file_header() + "#\n" + "\n".join(filetext) + "\n\n"
         else:
             filetext=""
@@ -305,6 +355,7 @@ class BandsData(KpointsData):
         """
         Prepare an xmgrace agr file
         """
+        import math
         # load the x and y of every set
         bands = plot_info['y']
         x = plot_info['x']
@@ -312,13 +363,12 @@ class BandsData(KpointsData):
         labels = plot_info['labels']
         num_labels = len(labels)
 
-        print labels
-
         # axis limits
         y_max_lim = the_bands.max()
         y_min_lim = the_bands.min()
         x_min_lim = min(x) # this isn't a numpy array, but a list
         x_max_lim = max(x)
+        ytick_spacing = 10**int( math.log10( (y_max_lim - y_min_lim) ) )
 
         # prepare xticks labels
         sx1 = ""
@@ -348,13 +398,16 @@ class BandsData(KpointsData):
                                         linewidth = width
                                         )
         
+        units = self.units
+        
         graphs = agr_graph_template.substitute(x_min_lim=x_min_lim, 
                                                y_min_lim=y_min_lim,
                                                x_max_lim=x_max_lim,
                                                y_max_lim=y_max_lim,
-                                               yaxislabel="Dispersion",
+                                               yaxislabel="Dispersion ({})".format(units),
                                                xticks_template=xticks,
-                                               set_descriptions=set_descriptions
+                                               set_descriptions=set_descriptions,
+                                               ytick_spacing=ytick_spacing,
                                                )
         sets = []
         for i,this_set in enumerate(all_sets):
@@ -605,8 +658,8 @@ $xticks_template
 @    yaxis  label color 1
 @    yaxis  label place normal
 @    yaxis  tick on
-@    yaxis  tick major 0.2
-@    yaxis  tick minor ticks 3
+@    yaxis  tick major $ytick_spacing
+@    yaxis  tick minor ticks 1
 @    yaxis  tick default 6
 @    yaxis  tick place rounded true
 @    yaxis  tick in

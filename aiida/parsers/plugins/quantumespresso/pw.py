@@ -32,7 +32,7 @@ class PwParser(Parser):
         self._possible_symmetries = self._get_qe_symmetry_list()
         # check for valid input
         if not isinstance(calc,PwCalculation):
-            raise QEOutputParsingError("Input must calc must be a PwCalculation")
+            raise QEOutputParsingError("Input calc must be a PwCalculation")
         
         super(PwParser, self).__init__(calc)
                 

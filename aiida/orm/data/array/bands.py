@@ -43,7 +43,7 @@ class BandsData(KpointsData):
             pass
         try:
             self.labels = kpointsdata.labels
-        except AttributeError:
+        except (AttributeError,TypeError):
             pass
         
     def set_bands(self,bands):

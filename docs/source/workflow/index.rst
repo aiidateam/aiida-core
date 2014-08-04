@@ -457,13 +457,13 @@ aside to the final optimal cell parameter value.
         @Workflow.step   
         def final_step(self):
             
-	        from aiida.orm.data.parameter import ParameterData
+            from aiida.orm.data.parameter import ParameterData
 	        
-	        x_material   = self.get_parameter("x_material")
-	        optimal_alat = self.get_attribute("optimal_alat")
+            x_material   = self.get_parameter("x_material")
+            optimal_alat = self.get_attribute("optimal_alat")
 	        
-	        opt_calc = self.get_step_calculations(self.optimize)[0] #.get_calculations()[0]
-	        opt_e = opt_calc.get_outputs(type=ParameterData)[0].get_dict()['energy']
+            opt_calc = self.get_step_calculations(self.optimize)[0] #.get_calculations()[0]
+            opt_e = opt_calc.get_outputs(type=ParameterData)[0].get_dict()['energy']
             
             self.append_to_report(x_material+"Ti03 optimal with a="+str(optimal_alat)+", e="+str(opt_e))
             

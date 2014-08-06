@@ -750,7 +750,7 @@ class Workflow(object):
                 
                 import sys, os, traceback
                 exc_type, exc_value, exc_traceback = sys.exc_info()                
-                cls.append_to_report("ERROR ! This workflow got and error in the {0} method, we report down the stack trace".format(wrapped_method))
+                cls.append_to_report("ERROR ! This workflow got an error in the {0} method, we report down the stack trace".format(wrapped_method))
                 cls.append_to_report("full traceback: {0}".format(traceback.format_exc()))
                 method_step.set_status(wf_states.ERROR)
             

@@ -55,8 +55,8 @@ class Workflow(object):
             retrieved from the stack.
             
             :param uuid: a string with the uuid of the object to be loaded.
-            :param params: a dictionary of storable objects to inizialize the specific workflow
-            :raise: NotExistent: if there is no entry of the desired worlkflow kind with 
+            :param params: a dictionary of storable objects to initialize the specific workflow
+            :raise: NotExistent: if there is no entry of the desired workflow kind with 
                                  the given uuid.
             """
             from aiida.djsite.utils import get_automatic_user

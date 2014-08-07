@@ -445,10 +445,24 @@ class Workflow(object):
         Adds parameters to the Workflow that are both stored and used every time
         the workflow engine re-initialize the specific workflow to launch the new methods.  
         """
+        def par_validate(params):
+            the_params = {}
+            for k,v in params.itervalues():
+                if any( [isinstance(v,int),
+                         isinstance(v,bool),
+                         isinstance(v,float),
+                         isinstance(v,str)] ):
+                    the_params[k] = v
+                else:
+                    raise ValidationError("Cannot store in the DB a parameter "
+                                "which is not of type int, bool, float or str.")
+            return the_params
+        
         if self._to_be_stored:
             self._params = params
         else:
-            self.dbworkflowinstance.add_parameters(params, force=force)
+            the_params = par_validate(params)
+            self.dbworkflowinstance.add_parameters(the_params, force=force)
     
     def get_parameters(self):
         """

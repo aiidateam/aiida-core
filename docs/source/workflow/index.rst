@@ -423,8 +423,8 @@ aside to the final optimal cell parameter value.
             #  Calculate results
             #-----------------------------------------
             
-            e_calcs = [c.res.energy[-1] for c in start_calcs]
-            v_calcs = [c.res.cell['volume'] for c in start_calcs]
+            e_calcs = [c.res.energy for c in start_calcs]
+            v_calcs = [c.res.volume for c in start_calcs]
             
             e_calcs = zip(*sorted(zip(a_sweep, e_calcs)))[1]
             v_calcs = zip(*sorted(zip(a_sweep, v_calcs)))[1]
@@ -457,11 +457,13 @@ aside to the final optimal cell parameter value.
         @Workflow.step   
         def final_step(self):
             
+            from aiida.orm.data.parameter import ParameterData
+	        
             x_material   = self.get_parameter("x_material")
             optimal_alat = self.get_attribute("optimal_alat")
-            
-            opt_calc = self.get_step_calculations(self.optimize) #.get_calculations()[0]
-            opt_e = opt_calc.get_outputs(type=ParameterData)[0].get_dict()['energy'][-1]
+	        
+            opt_calc = self.get_step_calculations(self.optimize)[0] #.get_calculations()[0]
+            opt_e = opt_calc.get_outputs(type=ParameterData)[0].get_dict()['energy']
             
             self.append_to_report(x_material+"Ti03 optimal with a="+str(optimal_alat)+", e="+str(opt_e))
             
@@ -528,11 +530,11 @@ As you noticed this workflow needs several parameters to be correctly executed, 
 launching procedure is identical as for the simple example before, with just a little longer dictionary of parameters::
 
   >> from aiida.workflows.wf_XTiO3 import WorkflowXTiO3_EOS
-  >> params = {'pw_codename':'PWcode', 'num_machines':1, 'num_cpus_per_machine':8, 'max_wallclock_seconds':30*60, 'pseudo_family':'PBE', 'alat_steps':5 }
-  >> wf = WorkflowXTiO3(params=params)
+  >> params = {'pw_codename':'PWcode', 'num_machines':1, 'num_mpiprocs_per_machine':8, 'max_wallclock_seconds':30*60, 'pseudo_family':'PBE', 'alat_steps':5, 'x_material':'Ba','starting_alat':4.0}
+  >> wf = WorkflowXTiO3_EOS(params=params)
   >> wf.start()
 
-To run this workflow remember to update the ``params`` dictionary with the correct values for you AiiDA installation (namely ``pw_codename`` and
+To run this workflow remember to update the ``params`` dictionary with the correct values for your AiiDA installation (namely ``pw_codename`` and
 ``pseudo_family``).
 
 
@@ -688,7 +690,7 @@ workflow chaining plays an important role.
 To launch this new workflow we have only to add a simple entry in the previous parameter dictionary, specifing the phonon code, as reported here::
 
   >> from aiida.workflows.wf_XTiO3 import WorkflowXTiO3_EOS
-  >> params = {'pw_codename':'PWcode', 'ph_codename':'PHcode', 'num_machines':1, 'num_cpus_per_machine':8, 'max_wallclock_seconds':30*60, 'pseudo_family':'PBE', 'alat_steps':5 }
+  >> params = {'pw_codename':'PWcode', 'ph_codename':'PHcode', 'num_machines':1, 'num_mpiprocs_per_machine':8, 'max_wallclock_seconds':30*60, 'pseudo_family':'PBE', 'alat_steps':5 }
   >> wf = WorkflowXTiO3(params=params)
   >> wf.start()
   

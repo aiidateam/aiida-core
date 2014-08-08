@@ -35,19 +35,36 @@ class SinglefileData(Data):
     """
     @property
     def filename(self):
+        """
+        Returns the name of the file stored
+        """
         return self.get_attr('filename')
 
     def get_file_abs_path(self):
-        return os.path.join(self.path_subfolder.abspath,self.filename)
+        """
+        Return the absolute path to the file in the repository
+        """
+        return os.path.join(self._get_folder_pathsubfolder.abspath,self.filename)
 
     def set_file(self, filename):
-            self.add_path(filename)
+        """
+        Add a file to the singlefiledata
+        :param filename: absolute path to the file
+        """
+        self.add_path(filename)
+
+    def del_file(self, filename):
+        """
+        Remove a file from SingleFileData
+        :param filename: name of the file stored in the DB
+        """
+        self.remove_path(filename)
 
     def add_path(self,src_abs,dst_filename=None):
         """
         Add a single file
         """
-        old_file_list = self.get_path_list()
+        old_file_list = self.get_folder_list()
 
         if not os.path.isabs(src_abs):
             raise ValueError("Pass an absolute path for src_abs")
@@ -84,20 +101,20 @@ class SinglefileData(Data):
                 ## There was not file set
                 pass
 
-    def validate(self):
+    def _validate(self):
         from aiida.common.exceptions import ValidationError
 
-        super(SinglefileData,self).validate()
+        super(SinglefileData,self)._validate()
         
         try:
             filename = self.filename
         except AttributeError:
             raise ValidationError("attribute 'filename' not set.")
 
-        if [filename] != self.get_path_list():
+        if [filename] != self.get_folder_list():
             raise ValidationError("The list of files in the folder does not "
                 "match the 'filename' attribute. "
                 "_filename='{}', content: {}".format(
-                    filename, self.get_path_list()))
+                    filename, self.get_folder_list()))
         
     

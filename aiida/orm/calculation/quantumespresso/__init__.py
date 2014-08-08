@@ -20,23 +20,19 @@ __version__ = "0.2.0"
 
 class BasePwCpInputGenerator(object):
 
-    PSEUDO_SUBFOLDER = './pseudo/'
-    OUTPUT_SUBFOLDER = './out/'
-    PREFIX = 'aiida'
-    INPUT_FILE_NAME = 'aiida.in'
-    OUTPUT_FILE_NAME = 'aiida.out'
-    DATAFILE_XML_BASENAME = 'data-file.xml'
-    DATAFILE_XML = 'undefined.xml'
-#    DATAFILE_XML = os.path.join(OUTPUT_SUBFOLDER, 
-#                               '{}.save'.format(PREFIX), 
-#                               DATAFILE_XML_BASENAME)
+    _PSEUDO_SUBFOLDER = './pseudo/'
+    _OUTPUT_SUBFOLDER = './out/'
+    _PREFIX = 'aiida'
+    _INPUT_FILE_NAME = 'aiida.in'
+    _OUTPUT_FILE_NAME = 'aiida.out'
+    _DATAFILE_XML_BASENAME = 'data-file.xml'
+    _DATAFILE_XML = 'undefined.xml'
 
     # Additional files that should always be retrieved for the specific plugin
     _internal_retrieve_list = []
 
     ## Default PW output parser provided by AiiDA
-    #_default_parser = None
-    ##_default_parser = 'quantumespresso.pw'
+    # to be defined in the subclass
     
     _automatic_namelists = {}
 
@@ -44,11 +40,12 @@ class BasePwCpInputGenerator(object):
     _default_symlink_usage = True
 
     # in restarts, it will copy from the parent the following 
-    _restart_copy_from = os.path.join(OUTPUT_SUBFOLDER,'*')
+    _restart_copy_from = os.path.join(_OUTPUT_SUBFOLDER,'*')
     
     # in restarts, it will copy the previous folder in the following one 
-    _restart_copy_to = OUTPUT_SUBFOLDER
+    _restart_copy_to = _OUTPUT_SUBFOLDER
     
+    # To be specified in the subclass:
 #    _automatic_namelists = {
 #        'scf':   ['CONTROL', 'SYSTEM', 'ELECTRONS'],
 #        'nscf':  ['CONTROL', 'SYSTEM', 'ELECTRONS'],
@@ -58,7 +55,6 @@ class BasePwCpInputGenerator(object):
 #        'vc-md':    ['CONTROL', 'SYSTEM', 'ELECTRONS', 'IONS', 'CELL'],
 #        'vc-relax': ['CONTROL', 'SYSTEM', 'ELECTRONS', 'IONS', 'CELL'],
 #        }
-
 
     # Keywords that cannot be set
     # If the length of the tuple is three, the third value is the value that
@@ -236,9 +232,9 @@ class BasePwCpInputGenerator(object):
         # internal flag names must be lowercase)
         if 'CONTROL' not in input_params:
             input_params['CONTROL'] = {}
-        input_params['CONTROL']['pseudo_dir'] = self.PSEUDO_SUBFOLDER
-        input_params['CONTROL']['outdir'] = self.OUTPUT_SUBFOLDER
-        input_params['CONTROL']['prefix'] = self.PREFIX
+        input_params['CONTROL']['pseudo_dir'] = self._PSEUDO_SUBFOLDER
+        input_params['CONTROL']['outdir'] = self._OUTPUT_SUBFOLDER
+        input_params['CONTROL']['prefix'] = self._PREFIX
 
         input_params['CONTROL']['verbosity'] = input_params['CONTROL'].get(
             'verbosity', 'high') # Set to high if not specified
@@ -252,10 +248,10 @@ class BasePwCpInputGenerator(object):
 
         # ------------- ATOMIC_SPECIES ------------
         # I create the subfolder that will contain the pseudopotentials
-        tempfolder.get_subfolder(self.PSEUDO_SUBFOLDER, create=True)
+        tempfolder.get_subfolder(self._PSEUDO_SUBFOLDER, create=True)
         # I create the subfolder with the output data (sometimes Quantum
         # Espresso codes crash if an empty folder is not already there
-        tempfolder.get_subfolder(self.OUTPUT_SUBFOLDER, create=True)
+        tempfolder.get_subfolder(self._OUTPUT_SUBFOLDER, create=True)
                 
         atomic_species_card_list = ["ATOMIC_SPECIES\n"]
 
@@ -275,7 +271,7 @@ class BasePwCpInputGenerator(object):
             pseudo_filenames.append(filename)
             # I add this pseudo file to the list of files to copy            
             local_copy_list.append((ps.get_file_abs_path(),
-                                   os.path.join(self.PSEUDO_SUBFOLDER,filename)))
+                                   os.path.join(self._PSEUDO_SUBFOLDER,filename)))
             
             atomic_species_card_list.append("{} {} {}\n".format(
                 kind.name.ljust(6), kind.mass, filename))
@@ -423,7 +419,7 @@ class BasePwCpInputGenerator(object):
                     "namelists using the NAMELISTS inside the 'settings' input "
                     "node".format(sugg_string))
         
-        input_filename = tempfolder.get_abs_path(self.INPUT_FILE_NAME)
+        input_filename = tempfolder.get_abs_path(self._INPUT_FILE_NAME)
 
         with open(input_filename,'w') as infile:
             for namelist_name in namelists_toprint:
@@ -485,17 +481,17 @@ class BasePwCpInputGenerator(object):
         # in the scheduler, _get_run_line, if cmdline_params is empty, it 
         # simply uses < calcinfo.stin_name
         calcinfo.cmdline_params = (list(cmdline_params)
-                                   + ["-in", self.INPUT_FILE_NAME])
+                                   + ["-in", self._INPUT_FILE_NAME])
         calcinfo.local_copy_list = local_copy_list
         calcinfo.remote_copy_list = remote_copy_list
-        #calcinfo.stdin_name = self.INPUT_FILE_NAME
-        calcinfo.stdout_name = self.OUTPUT_FILE_NAME
+        #calcinfo.stdin_name = self._INPUT_FILE_NAME
+        calcinfo.stdout_name = self._OUTPUT_FILE_NAME
         calcinfo.remote_symlink_list = remote_symlink_list
         
         # Retrieve by default the output file and the xml file
         calcinfo.retrieve_list = []        
-        calcinfo.retrieve_list.append(self.OUTPUT_FILE_NAME)
-        calcinfo.retrieve_list.append(self.DATAFILE_XML)
+        calcinfo.retrieve_list.append(self._OUTPUT_FILE_NAME)
+        calcinfo.retrieve_list.append(self._DATAFILE_XML)
         settings_retrieve_list = settings_dict.pop('additional_retrieve_list', [])
         calcinfo.retrieve_list += settings_retrieve_list
         calcinfo.retrieve_list += self._internal_retrieve_list
@@ -560,7 +556,7 @@ class BasePwCpInputGenerator(object):
             family_name: the name of the group containing the pseudos
         """
         try:
-            structure = self.get_input(self.get_linkname('structure'))
+            structure = self.get_inputdata_dict()[self.get_linkname('structure')]
         except AttributeError:
             raise ValueError("Structure is not set yet!")
 

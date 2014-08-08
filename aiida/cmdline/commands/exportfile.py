@@ -431,7 +431,7 @@ def export(what, also_parents = True, also_calc_outputs = True,
                 reset_limit=True)
             # In this way, I copy the content of the folder, and not the folder
             # itself
-            thisnodefolder.insert_path(src=node.repo_folder.abspath,
+            thisnodefolder.insert_path(src=node._repository_folder.abspath,
                                        dest_name='.')
     
         print "COMPRESSING..."

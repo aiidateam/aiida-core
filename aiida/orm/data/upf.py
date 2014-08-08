@@ -398,11 +398,11 @@ class UpfData(SinglefileData):
     def md5sum(self):
         return self.get_attr('md5', None)
 
-    def validate(self):
+    def _validate(self):
         from aiida.common.exceptions import ValidationError, ParsingError
         import aiida.common.utils
 
-        super(UpfData,self).validate()
+        super(UpfData,self)._validate()
 
 
         upf_abspath = self.get_file_abs_path()

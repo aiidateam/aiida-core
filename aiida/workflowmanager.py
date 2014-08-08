@@ -109,7 +109,7 @@ def execute_steps():
             except:
                 
                 exc_type, exc_value, exc_traceback = sys.exc_info()
-                w.append_to_report("ERROR ! This workflow got and error in the {0} method, we report down the stack trace".format(s.name))
+                w.append_to_report("ERROR ! This workflow got an error in the {0} method, we report down the stack trace".format(s.name))
                 w.append_to_report("full traceback: {0}".format(exc_traceback.format_exc()))
                 
                 s.set_status(wf_states.ERROR)
@@ -206,7 +206,7 @@ def advance_workflow(w_superclass, step):
         except Exception:
             import traceback
 
-            w.append_to_report("ERROR ! This workflow got and error in the {0} method, we report down the stack trace".format(step.nextcall))
+            w.append_to_report("ERROR ! This workflow got an error in the {0} method, we report down the stack trace".format(step.nextcall))
             w.append_to_report("full traceback: {0}".format(traceback.format_exc()))
             
             w.get_step(step.nextcall).set_status(wf_states.ERROR)

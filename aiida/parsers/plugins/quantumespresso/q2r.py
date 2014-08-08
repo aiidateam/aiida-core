@@ -1,13 +1,9 @@
 # -*- coding: utf-8 -*-
 from aiida.orm.calculation.quantumespresso.q2r import Q2rCalculation
-from aiida.parsers.plugins.quantumespresso.raw_parser_ph import parse_raw_ph_output
-from aiida.orm.data.parameter import ParameterData
 from aiida.orm.data.folder import FolderData
 from aiida.parsers.parser import Parser
 from aiida.common.datastructures import calc_states
 from aiida.parsers.plugins.quantumespresso import QEOutputParsingError
-from aiida.common.exceptions import UniquenessError
-from aiida.orm.data.singlefile import SinglefileData
 
 __author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
 __copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
@@ -36,7 +32,6 @@ class Q2rParser(Parser):
         representing the file of forces in real space
         """
         from aiida.common.exceptions import InvalidOperation
-        import os
         from aiida.common import aiidalogger
         from aiida.djsite.utils import get_dblogger_extra
         parserlogger = aiidalogger.getChild('q2rparser')
@@ -51,28 +46,21 @@ class Q2rParser(Parser):
             raise InvalidOperation("Calculation not in {} state"
                                    .format(calc_states.PARSING) )
         
-        # load all outputs of type FolderData
-        calc_outputs = self._calc.get_outputs(type=FolderData,also_labels=True)
-        # look for retrieved files only
-        retrieved_folders = [i[1] for i in calc_outputs if i[0]==self._calc.get_linkname_retrieved()]
-        if len(retrieved_folders)!=1:
-            successful = False
-            parserlogger.error("Output folder should be found once, fount it "
-                               "instead {} times".format(len(retrieved_folders)), 
-                               extra=logger_extra)
-        # select the folder object
-        out_folder = retrieved_folders[0]
-        
+        out_folder = self._calc.get_retrieved_node()
+        if out_folder is None:
+            parserlogger.error("No retrieved folder found")
+            return False, ()
+            
         # check what is inside the folder
-        list_of_files = out_folder.get_path_list()
+        list_of_files = out_folder.get_folder_list()
         # at least the stdout should exist
-        if not self._calc.OUTPUT_FILE_NAME in list_of_files:
+        if not self._calc._OUTPUT_FILE_NAME in list_of_files:
             successful = False
             parserlogger.error("Standard output not found",extra=logger_extra)
             return successful,()
         
         # check that the file has finished (i.e. JOB DONE is inside the file)
-        filpath = out_folder.get_abs_path(self._calc.OUTPUT_FILE_NAME)
+        filpath = out_folder.get_abs_path(self._calc._OUTPUT_FILE_NAME)
         with open(filpath,'r') as fil:
             lines = fil.read()
         if "JOB DONE" not in lines:

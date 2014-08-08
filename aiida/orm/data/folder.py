@@ -31,7 +31,7 @@ class FolderData(Data):
         # TODO: implement the logic on the folder? Or set a 'locked' flag on folders?
 
         if self._to_be_stored:
-            self.path_subfolder.replace_with_folder(folder,move=False,overwrite=overwrite)
+            self._get_folder_pathsubfolder.replace_with_folder(folder,move=False,overwrite=overwrite)
         else:
             raise ModificationNotAllowed("You cannot change the files after the node has been stored")
 
@@ -44,7 +44,7 @@ class FolderData(Data):
         from aiida.common.exceptions import NotExistent
         
         try:
-            with open(self.path_subfolder.get_abs_path(
+            with open(self._get_folder_pathsubfolder.get_abs_path(
                 path, check_existence=True)) as f:
                 return f.read()
         except (OSError, IOError):

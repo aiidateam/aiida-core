@@ -15,9 +15,6 @@ import os
 from aiida.common.exceptions import NotExistent
 
 from aiida.orm import Code, DataFactory
-from aiida.djsite.db.models import DbGroup
-
-from aiida.orm.data.upf import UPFGROUP_TYPE
 
 ################################################################
 

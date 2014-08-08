@@ -38,7 +38,7 @@ class ArrayData(Data):
         import numpy
 
         fname = '{}.npy'.format(name)
-        if fname not in self.get_path_list():
+        if fname not in self.get_folder_list():
             raise KeyError("Array with name '{}' not found in node pk={}".format(
                 name, self.pk))
         
@@ -63,7 +63,7 @@ class ArrayData(Data):
         Return a list of all arrays stored in the node, listing the files (and 
         not relying on the properties).
         """
-        return [i[:-4] for i in self.get_path_list() if i.endswith('.npy')]
+        return [i[:-4] for i in self.get_folder_list() if i.endswith('.npy')]
 
 
     def _arraynames_from_properties(self):     
@@ -102,7 +102,7 @@ class ArrayData(Data):
         # raw function used only internally
         def get_array_from_file(self, name):
             fname = '{}.npy'.format(name)
-            if fname not in self.get_path_list():
+            if fname not in self.get_folder_list():
                 raise KeyError(
                     "Array with name '{}' not found in node pk={}".format(
                     name, self.pk))
@@ -168,7 +168,7 @@ class ArrayData(Data):
         self.set_attr("{}{}".format(self.array_prefix, name), list(array.shape))
     
 
-    def validate(self):
+    def _validate(self):
         """
         Check if the list of .npy files stored inside the node and the 
         list of properties match. Just a name check, no check on the size
@@ -183,4 +183,4 @@ class ArrayData(Data):
             raise ValidationError("Mismatch of files and properties for ArrayData"
                                   " node (pk={}): {} vs. {}".format(self.pk,
                                         files, properties))
-        super(ArrayData,self).validate()
+        super(ArrayData,self)._validate()

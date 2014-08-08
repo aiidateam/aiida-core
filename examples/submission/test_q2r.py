@@ -90,7 +90,7 @@ if __name__ == "__main__":
 
     calc.use_parameters(parameters)
     parentcalc = Calculation.get_subclass_from_pk(parent_id)
-    calc.set_parent_calc(parentcalc)
+    calc.use_parent_calculation(parentcalc)
 
     if submit_test:
         subfolder, script_filename = calc.submit_test()

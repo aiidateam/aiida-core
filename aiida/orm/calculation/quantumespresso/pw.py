@@ -16,11 +16,9 @@ Plugin to create a Quantum Espresso pw.x file.
 # TODO: all a lot of logger.debug stuff
 import os
 
-from aiida.orm import Calculation, DataFactory
+from aiida.orm import Calculation
 from aiida.orm.calculation.quantumespresso import BasePwCpInputGenerator
 from aiida.common.utils import classproperty
-
-from aiida.orm.data.parameter import ParameterData
 from aiida.orm.data.array.kpoints import KpointsData
 
 __author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
@@ -39,9 +37,9 @@ class PwCalculation(BasePwCpInputGenerator, Calculation):
     def _init_internal_params(self):
         super(PwCalculation, self)._init_internal_params()
 
-        self.DATAFILE_XML = os.path.join(BasePwCpInputGenerator.OUTPUT_SUBFOLDER, 
-                                   '{}.save'.format(BasePwCpInputGenerator.PREFIX), 
-                                   BasePwCpInputGenerator.DATAFILE_XML_BASENAME)
+        self.DATAFILE_XML = os.path.join(BasePwCpInputGenerator._OUTPUT_SUBFOLDER, 
+                               '{}.save'.format(BasePwCpInputGenerator._PREFIX), 
+                               BasePwCpInputGenerator._DATAFILE_XML_BASENAME)
     
         # Default PW output parser provided by AiiDA
         self._default_parser = 'quantumespresso.pw'

@@ -6,13 +6,12 @@ afterwards).
 """
 import os
 
-from aiida.orm import Calculation, DataFactory
+from aiida.orm import Calculation
 from aiida.common.exceptions import InputValidationError
 from aiida.common.datastructures import CalcInfo
 from aiida.common.utils import classproperty
 from aiida.orm.calculation.quantumespresso import (
     _lowercase_dict, _uppercase_dict, get_input_data_text)
-
 from aiida.orm.data.parameter import ParameterData 
 from aiida.orm.data.remote import RemoteData 
 from aiida.orm.data.folder import FolderData 
@@ -35,7 +34,7 @@ class NamelistsCalculation(Calculation):
         # Default name of the subfolder inside 'parent_folder'
         # from which you want to copy the files, in case
         # the parent_folder is of type FolderData
-        self.INPUT_SUBFOLDER = "./out/"
+        self._INPUT_SUBFOLDER = "./out/"
         # Default name of the subfolder inside 'parent_folder'
         # from which you want to copy the files, in case
         # the parent_folder is of type RemoteData,
@@ -46,10 +45,10 @@ class NamelistsCalculation(Calculation):
         # in the output and in which you want to place the files
         # taken from parent_folder/INPUT_SUBFOLDER, in case
         # the parent_folder is of type RemoteData or FolderData
-        self.OUTPUT_SUBFOLDER = './out/'
-        self.PREFIX = 'aiida'
-        self.INPUT_FILE_NAME = 'aiida.in'
-        self.OUTPUT_FILE_NAME = 'aiida.out'
+        self._OUTPUT_SUBFOLDER = './out/'
+        self._PREFIX = 'aiida'
+        self._INPUT_FILE_NAME = 'aiida.in'
+        self._OUTPUT_FILE_NAME = 'aiida.out'
         self._internal_retrieve_list = []
         self._default_namelists = ['INPUTPP']
         self._blocked_keywords = [] # a list of tuples with key and value fixed
@@ -187,7 +186,7 @@ class NamelistsCalculation(Calculation):
         except KeyError: # list of namelists not specified; do automatic detection
             namelists_toprint = self._default_namelists
         
-        input_filename = tempfolder.get_abs_path(self.INPUT_FILE_NAME)
+        input_filename = tempfolder.get_abs_path(self._INPUT_FILE_NAME)
 
         with open(input_filename,'w') as infile:
             for namelist_name in namelists_toprint:
@@ -213,16 +212,16 @@ class NamelistsCalculation(Calculation):
         if parent_calc_folder is not None:
             if isinstance(parent_calc_folder,RemoteData):
                 parent_calc_out_subfolder = settings_dict.pop('PARENT_CALC_OUT_SUBFOLDER',
-                                              self.INPUT_SUBFOLDER)
+                                              self._INPUT_SUBFOLDER)
                 remote_copy_list.append(
                          (parent_calc_folder.get_computer().uuid,
                           os.path.join(parent_calc_folder.get_remote_path(),
                                        parent_calc_out_subfolder),
-                          self.OUTPUT_SUBFOLDER))
+                          self._OUTPUT_SUBFOLDER))
             elif isinstance(parent_calc_folder,FolderData):
                 local_copy_list.append(
-                    (parent_calc_folder.get_abs_path(self.INPUT_SUBFOLDER),
-                        self.OUTPUT_SUBFOLDER)
+                    (parent_calc_folder.get_abs_path(self._INPUT_SUBFOLDER),
+                        self._OUTPUT_SUBFOLDER)
                     )
             elif isinstance(parent_calc_folder,SinglefileData):
                 filename =parent_calc_folder.get_file_abs_path() 
@@ -237,12 +236,12 @@ class NamelistsCalculation(Calculation):
         calcinfo.cmdline_params = settings_dict.pop('CMDLINE', [])
         calcinfo.local_copy_list = local_copy_list
         calcinfo.remote_copy_list = remote_copy_list
-        calcinfo.stdin_name = self.INPUT_FILE_NAME
-        calcinfo.stdout_name = self.OUTPUT_FILE_NAME
+        calcinfo.stdin_name = self._INPUT_FILE_NAME
+        calcinfo.stdout_name = self._OUTPUT_FILE_NAME
         
         # Retrieve by default the output file and the xml file
         calcinfo.retrieve_list = []        
-        calcinfo.retrieve_list.append(self.OUTPUT_FILE_NAME)
+        calcinfo.retrieve_list.append(self._OUTPUT_FILE_NAME)
         settings_retrieve_list = settings_dict.pop('ADDITIONAL_RETRIEVE_LIST', [])
         calcinfo.retrieve_list += settings_retrieve_list
         calcinfo.retrieve_list += self._internal_retrieve_list

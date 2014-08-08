@@ -108,7 +108,7 @@ if __name__ == "__main__":
     calc.use_parameters(parameters)
     calc.use_settings(settings) # additional settings (comment if you don't want to retrieve the phonon displacements file)
     calc.use_kpoints(kpoints)
-    calc.set_parent_calc(parentcalc)
+    calc.use_parent_calculation(parentcalc)
 
     if submit_test:
         subfolder, script_filename = calc.submit_test()

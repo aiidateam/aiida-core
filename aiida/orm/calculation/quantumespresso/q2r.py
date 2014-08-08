@@ -20,25 +20,28 @@ class Q2rCalculation(NamelistsCalculation):
         super(Q2rCalculation, self)._init_internal_params()
                 
         self._default_namelists = ['INPUT']   
-        self.INPUT_SUBFOLDER = os.path.join('.',
-                                PhCalculation.FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX)
+        self._INPUT_SUBFOLDER = os.path.join('.',
+                           PhCalculation._FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX)
         #_internal_retrieve_list = [FORCE_CONSTANTS_NAME]
-        self._blocked_keywords = [('INPUT','fildyn',PhCalculation.OUTPUT_DYNAMICAL_MATRIX_PREFIX),
-                             ('INPUT','flfrc',self.FORCE_CONSTANTS_NAME),
+        self._blocked_keywords = [('INPUT','fildyn',
+                                 PhCalculation._OUTPUT_DYNAMICAL_MATRIX_PREFIX),
+                                 ('INPUT','flfrc',self._FORCE_CONSTANTS_NAME),
                             ]
         self._parent_folder_type = FolderData
-        self.OUTPUT_SUBFOLDER = PhCalculation.FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX
+        self._OUTPUT_SUBFOLDER = PhCalculation._FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX
         
-        self._retrieve_singlefile_list = [[self.get_linkname_force_matrix(),'singlefile',self.FORCE_CONSTANTS_NAME]]
+        self._retrieve_singlefile_list = [[self.get_linkname_force_matrix(),
+                                           'singlefile',
+                                           self._FORCE_CONSTANTS_NAME]]
         
         # Default Q2r output parser provided by AiiDA
         self._default_parser = 'quantumespresso.q2r'
         
     @classproperty
-    def FORCE_CONSTANTS_NAME(cls):
+    def _FORCE_CONSTANTS_NAME(cls):
         return 'real_space_force_constants.dat'
    
-    def set_parent_calc(self,calc):
+    def use_parent_calculation(self,calc):
         """
         Set the parent calculation, 
         from which it will inherit the outputsubfolder.
@@ -47,16 +50,7 @@ class Q2rCalculation(NamelistsCalculation):
         if not isinstance(calc,PhCalculation):
             raise ValueError("Parent calculation must be a PhCalculation")
 
-        from aiida.common.exceptions import UniquenessError
-        localdatas = [_[1] for _ in calc.get_outputs(also_labels=True)
-                      if _[0] == calc.get_linkname_retrieved()]
-        if len(localdatas) == 0:
-            raise UniquenessError("No output retrieved data found in the parent "
-                                  "calc, probably it did not finish yet, "
-                                  "or it crashed")
-        if len(localdatas) != 1:
-            raise UniquenessError("More than one output retrieved data found")
-        localdata = localdatas[0]
+        localdata = calc.get_retrieved_node()
         
         self.use_parent_folder(localdata)
 

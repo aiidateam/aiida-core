@@ -461,7 +461,7 @@ A kind of template for writing such parser for the calculation class
             calc_input = params[0]
 
             # check what is inside the folder
-            list_of_files = out_folder.get_path_list()
+            list_of_files = out_folder.get_folder_list()
             # at least the stdout should exist
             if not calc.OUTPUT_FILE_NAME in list_of_files:
                 raise QEOutputParsingError("Standard output not found")

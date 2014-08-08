@@ -87,10 +87,10 @@ class Code(Node):
         else:
             return [c.pk for c in valid_codes]
 
-    def validate(self):
+    def _validate(self):
         from aiida.common.exceptions import ValidationError
         
-        super(Code,self).validate()
+        super(Code,self)._validate()
 
         if self.is_local() is None:
             raise ValidationError("You did not set whether the code is local "
@@ -101,11 +101,11 @@ class Code(Node):
                 raise ValidationError("You have to set which file is the local executable "
                                       "using the set_exec_filename() method")
                 # c[1] is True if the element is a file
-            if self.get_local_executable() not in self.get_path_list():
+            if self.get_local_executable() not in self.get_folder_list():
                 raise ValidationError("The local executable '{}' is not in the list of "
                                       "files of this code".format(self.get_local_executable()))
         else:
-            if self.get_path_list():
+            if self.get_folder_list():
                 raise ValidationError("The code is remote but it has files inside")
             if not self.get_remote_computer():
                 raise ValidationError("You did not specify a remote computer")
@@ -116,7 +116,7 @@ class Code(Node):
     def _add_link_from(self,src,label=None):
         raise ValueError("A code node cannot have any input nodes")
 
-    def can_link_as_output(self,dest):
+    def _can_link_as_output(self,dest):
         """
         Raise a ValueError if a link from self to dest is not allowed.
         
@@ -127,7 +127,7 @@ class Code(Node):
         if not isinstance(dest, Calculation):
             raise ValueError("The output of a code node can only be a calculation")
 
-        return super(Code, self).can_link_as_output(dest)
+        return super(Code, self)._can_link_as_output(dest)
 
     def set_prepend_text(self,code):
         """
@@ -366,9 +366,9 @@ class Code(Node):
             ret_lines.append(" * Type:           {}".format("local"))
             ret_lines.append(" * Exec name:      {}".format(self.get_execname()))
             ret_lines.append(" * List of files/folders:")
-            for fname in self.path_subfolder.get_content_list():
+            for fname in self._get_folder_pathsubfolder.get_content_list():
                 ret_lines.append("   * [{}] {}".format(" dir" if
-                    self.path_subfolder.isdir(fname) else "file", fname))
+                    self._get_folder_pathsubfolder.isdir(fname) else "file", fname))
         else:
             ret_lines.append(" * Type:           {}".format("remote"))
             ret_lines.append(" * Remote machine: {}".format(
@@ -416,7 +416,7 @@ def delete_code(code):
                                "has {} output links".format(
                                 len(existing_outputs)))
     else:
-        repo_folder = code.repo_folder
+        repo_folder = code._repository_folder
         with transaction.commit_on_success():
             code.dbnode.delete()
             repo_folder.erase()

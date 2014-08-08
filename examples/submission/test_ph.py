@@ -110,7 +110,7 @@ if __name__ == '__main__':
         calc.set_queue_name(queue)
 
     calc.use_parameters(parameters)
-    calc.set_parent_calc( parentcalc )
+    calc.use_parent_calculation( parentcalc )
 
     if submit_test:
         subfolder, script_filename = calc.submit_test()

@@ -93,25 +93,16 @@ class PwParser(Parser):
         # TODO: pass this input_dict to the parser. It might need it.            
         input_dict = calc_input.get_dict()
         
-        # load all outputs
-        calc_outputs = self._calc.get_outputs(type=FolderData,also_labels=True)
-        # look for retrieved files only
-        retrieved_files = [i[1] for i in calc_outputs if i[0]==self._calc.get_linkname_retrieved()]
-        if len(retrieved_files)!=1:
-            parserlogger.error("Output folder should be found once, "
-                               "found it instead {} times"
-                               .format(len(retrieved_files)),
-                               extra=logger_extra
-                               )
-            successful = False
-        
         # select the folder object
-        out_folder = calc_outputs[0][1]
+        out_folder = self._calc.get_retrieved_node()
+        if out_folder is None:
+            parserlogger.error("No retrieved folder found")
+            return False, ()
 
         # check what is inside the folder
-        list_of_files = out_folder.get_path_list()
+        list_of_files = out_folder.get_folder_list()
         # at least the stdout should exist
-        if not self._calc.OUTPUT_FILE_NAME in list_of_files:
+        if not self._calc._OUTPUT_FILE_NAME in list_of_files:
             parserlogger.error("Standard output not found",extra=logger_extra)
             successful = False
             return successful,()
@@ -119,7 +110,7 @@ class PwParser(Parser):
         # with the right options
         # look for xml
         has_xml = False
-        if self._calc.DATAFILE_XML_BASENAME in list_of_files:
+        if self._calc._DATAFILE_XML_BASENAME in list_of_files:
             has_xml = True
         # look for bands
         has_bands = False
@@ -130,9 +121,9 @@ class PwParser(Parser):
             has_bands = True
             # TODO: maybe it can be more general than bands only?
         out_file = os.path.join( out_folder.get_abs_path('.'), 
-                                 self._calc.OUTPUT_FILE_NAME )
+                                 self._calc._OUTPUT_FILE_NAME )
         xml_file = os.path.join( out_folder.get_abs_path('.'), 
-                                 self._calc.DATAFILE_XML_BASENAME )
+                                 self._calc._DATAFILE_XML_BASENAME )
         dir_with_bands = out_folder.get_abs_path('.')
         
         # call the raw parsing function

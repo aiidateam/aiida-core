@@ -21,21 +21,22 @@ class MatdynCalculation(NamelistsCalculation):
     def _init_internal_params(self):
         super(MatdynCalculation, self)._init_internal_params()
                 
-        self.PHONON_FREQUENCIES_NAME = 'phonon_frequencies.dat'
-        self.PHONON_MODES_NAME = 'phonon_displacements.dat'
-        self.PHONON_DOS_NAME = 'phonon_dos.dat'
+        self._PHONON_FREQUENCIES_NAME = 'phonon_frequencies.dat'
+        self._PHONON_MODES_NAME = 'phonon_displacements.dat'
+        self._PHONON_DOS_NAME = 'phonon_dos.dat'
     
         self._default_namelists = ['INPUT']   
         
-        self._blocked_keywords = [('INPUT','flfrq',self.PHONON_FREQUENCIES_NAME), # output freq.
-                                  ('INPUT','flvec',self.PHONON_MODES_NAME), # output displ.
-                                  ('INPUT','fldos',self.PHONON_DOS_NAME), # output dos
+        self._blocked_keywords = [('INPUT','flfrq',self._PHONON_FREQUENCIES_NAME), # output freq.
+                                  ('INPUT','flvec',self._PHONON_MODES_NAME), # output displ.
+                                  ('INPUT','fldos',self._PHONON_DOS_NAME), # output dos
                                   ('INPUT','q_in_cryst_coord',True), # kpoints always in crystal coordinates
                                   # this is dynamically added in the _prepare_for_submission
                                   #('INPUT','flfrc',Q2rCalculation.FORCE_CONSTANTS_NAME), # input
                                  ]
     
-        self._internal_retrieve_list = [self.PHONON_FREQUENCIES_NAME, self.PHONON_DOS_NAME]
+        self._internal_retrieve_list = [self._PHONON_FREQUENCIES_NAME, 
+                                        self._PHONON_DOS_NAME]
         
         # Default Matdyn output parser provided by AiiDA
         self._default_parser = 'quantumespresso.matdyn'
@@ -57,7 +58,7 @@ class MatdynCalculation(NamelistsCalculation):
             })
         return retdict
     
-    def set_parent_calc(self,calc):
+    def use_parent_calculation(self,calc):
         """
         Set the parent calculation, 
         from which it will inherit the outputsubfolder.
@@ -88,12 +89,8 @@ class MatdynCalculation(NamelistsCalculation):
         so that inputdict and settings should remain empty at the end of 
         _prepare_for_submission, if all flags/nodes were recognized
         """
-        from aiida.djsite.utils import get_dblogger_extra
-        logger_extra = get_dblogger_extra(self)    
+        from aiida.common.exceptions import InputValidationError
         
-        #self.logger.warning("inputdict={}, settings={}".format(
-        #    inputdict, settings), extra=logger_extra)
-    
         try:
             kpoints = inputdict.pop(self.get_linkname('kpoints'))
         except KeyError:
@@ -126,9 +123,9 @@ class MatdynCalculation(NamelistsCalculation):
                 " yet for MatdynCalculation; it is {}".format(
                 type(parent_calc_folder)))
             self._blocked_keywords.append(
-                ('INPUT', 'flfrc',  Q2rCalculation.FORCE_CONSTANTS_NAME ))
+                ('INPUT', 'flfrc',  Q2rCalculation._FORCE_CONSTANTS_NAME ))
                 
         calcinfo = super(MatdynCalculation, self)._prepare_for_submission(
             tempfolder, inputdict)
         return calcinfo
-         
+        

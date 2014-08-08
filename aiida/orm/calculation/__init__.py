@@ -46,8 +46,8 @@ class Calculation(Node):
          
         # Files in which the scheduler output and error will be stored.
         # If they are identical, outputs will be joined.
-        self.SCHED_OUTPUT_FILE = '_scheduler-stdout.txt'
-        self.SCHED_ERROR_FILE = '_scheduler-stderr.txt'
+        self._SCHED_OUTPUT_FILE = '_scheduler-stdout.txt'
+        self._SCHED_ERROR_FILE = '_scheduler-stderr.txt'
     
     @property
     def _set_defaults(self):
@@ -284,7 +284,7 @@ class Calculation(Node):
         
         return actual_linkname
         
-    def validate(self):
+    def _validate(self):
         """
         Verify if all the input nodes are present and valid.
 
@@ -292,7 +292,7 @@ class Calculation(Node):
         """
         from aiida.common.exceptions import MissingPluginError, ValidationError
         
-        super(Calculation,self).validate()
+        super(Calculation,self)._validate()
 
         if self.get_computer() is None:
             raise ValidationError("You did not specify any computer")
@@ -320,7 +320,7 @@ class Calculation(Node):
             raise ValidationError("withmpi property must be boolean! It in instead {}".format(str(type(self.get_withmpi()))))
            
 
-    def can_link_as_output(self,dest):
+    def _can_link_as_output(self,dest):
         """
         An output of a calculation can only be a data, and can only be set 
         when the calculation is in the SUBMITTING or RETRIEVING or
@@ -349,7 +349,7 @@ class Calculation(Node):
                 "of the following states: {}, it is instead {}".format(
                     valid_states, self.get_state()))
 
-        return super(Calculation, self).can_link_as_output(dest)
+        return super(Calculation, self)._can_link_as_output(dest)
 
     def _store_raw_input_folder(self, folder_path):
         """
@@ -367,13 +367,13 @@ class Calculation(Node):
                     self.get_state()))
 
         # get subfolder and replace with copy
-        raw_input_folder = self.current_folder.get_subfolder(
+        _raw_input_folder = self.get_folder.get_subfolder(
             _input_subfolder,create=True)
-        raw_input_folder.replace_with_folder(
+        _raw_input_folder.replace_with_folder(
             folder_path, move=False, overwrite=True)
-
+    
     @property
-    def raw_input_folder(self):
+    def _raw_input_folder(self):
         """
         Get the input folder object.
         
@@ -382,11 +382,11 @@ class Calculation(Node):
         """
         from aiida.common.exceptions import NotExistent
 
-        return_folder = self.current_folder.get_subfolder(_input_subfolder)
+        return_folder = self.get_folder.get_subfolder(_input_subfolder)
         if return_folder.exists():
             return return_folder
         else:
-            raise NotExistent("raw_input_folder not created yet")
+            raise NotExistent("_raw_input_folder not created yet")
 
     def set_queue_name(self,val):
         """
@@ -421,6 +421,9 @@ class Calculation(Node):
         Set a dictionary of custom environment variables for this calculation.
         
         Both keys and values must be strings.
+        
+        In the remote-computer submission script, it's going to export 
+        variables as ``export 'keys'='values'``
         """       
         if not isinstance(env_vars_dict, dict):
             raise ValueError("You have to pass a "
@@ -436,7 +439,7 @@ class Calculation(Node):
     
     def get_environment_variables(self):
         """
-        Return a dictionary of the environment variables that we want to set
+        Return a dictionary of the environment variables that are set
         for this calculation. 
         
         Return an empty dictionary if no special environment variables have
@@ -454,11 +457,19 @@ class Calculation(Node):
     
     def set_max_memory_kb(self,val):
         """
-        Set the maximum memory to be asked to the scheduler.
+        Set the maximum memory (in KiloBytes) to be asked to the scheduler.
         
         :param val: an integer. Default=None
         """
         self.set_attr('max_memory_kb',int(val))
+
+    def get_max_memory_kb(self):
+        """
+        Get the memory (in KiloBytes) requested to the scheduler.
+        
+        :return: an integer
+        """
+        return self.get_attr('max_memory_kb', None)
 
     def set_max_wallclock_seconds(self,val):    
         """
@@ -468,9 +479,21 @@ class Calculation(Node):
         """
         self.set_attr('max_wallclock_seconds',int(val))
 
+    def get_max_wallclock_seconds(self):
+        """
+        Get the max wallclock time in seconds requested to the scheduler.
+        
+        :return: an integer
+        """
+        return self.get_attr('max_wallclock_seconds', None)
+        
     def set_resources(self, resources_dict):
         """
-        Set the dictionary of resources to be used by the scheduler plugin.
+        Set the dictionary of resources to be used by the scheduler plugin,
+        like the number of nodes, cpus, ...
+        This dictionary is scheduler-plugin dependent. Look at the documentation
+        of the scheduler.
+        (scheduler type can be found with calc.computer.get_scheduler_type() )
         """
         # Note: for the time being, resources are only validated during the
         # 'store' because here we are not sure that a Computer has been set
@@ -531,22 +554,42 @@ class Calculation(Node):
 
     def get_prepend_text(self):
         """
-        Set the calculation-specific prepend text
+        Get the calculation-specific prepend text,
+        which is going to be prepended in the scheduler-job script, just before
+        the code execution.
         """
         return self.get_attr("prepend_text", "")
 
     def set_prepend_text(self,val):
         """
-        Set the calculation-specific prepend text
+        Set the calculation-specific prepend text,
+        which is going to be prepended in the scheduler-job script, just before
+        the code execution.
+        
+        See also ``set_custom_scheduler_commands``
+        
+        :param val: a (possibly multiline) string
         """
         self.set_attr("prepend_text", unicode(val))
 
     def get_append_text(self):
         """
-        Set the calculation-specific append text
+        Get the calculation-specific append text,
+        which is going to be appended in the scheduler-job script, just after
+        the code execution.
         """
         return self.get_attr("append_text", "")
 
+    def set_append_text(self,val):
+        """
+        Set the calculation-specific append text,
+        which is going to be appended in the scheduler-job script, just after
+        the code execution.
+        
+        :param val: a (possibly multiline) string
+        """
+        self.set_attr("append_text", unicode(val))
+    
     def set_custom_scheduler_commands(self, val):
         """
         Set a (possibly multiline) string with the commands that the user
@@ -571,28 +614,30 @@ class Calculation(Node):
         """
         return self.get_attr("custom_scheduler_commands", "")
 
-    def get_extra_mpirun_params(self):
+    def get_mpirun_extra_params(self):
         """
         Return a list of strings, that are the extra params to pass to the
         mpirun (or equivalent) command after the one provided in 
         computer.mpirun_command.
+        Example: mpirun -np 8 extra_params[0] extra_params[1] ... exec.x
         
         Return an empty list if no parameters have been defined.
         """
-        return self.get_attr("extra_mpirun_params", [])
+        return self.get_attr("mpirun_extra_params", [])
 
-    def set_extra_mpirun_params(self, extra_params):
+    def set_mpirun_extra_params(self, extra_params):
         """
         Set the extra params to pass to the
         mpirun (or equivalent) command after the one provided in 
         computer.mpirun_command.
+        Example: mpirun -np 8 extra_params[0] extra_params[1] ... exec.x
         
         :param extra_params: must be a list of strings, one for each
             extra parameter
         """
         if extra_params is None:
             try:
-                self.del_attr("extra_mpirun_params")
+                self.del_attr("mpirun_extra_params")
             except AttributeError:
                 # it was not saved, yet
                 pass
@@ -600,37 +645,14 @@ class Calculation(Node):
         
         if not isinstance(extra_params, (list, tuple)):
             raise ValueError("You must pass a list of strings to "
-                             "set_extra_mpirun_params")
+                             "set_mpirun_extra_params")
         for param in extra_params:
             if not isinstance(param, basestring):
                 raise ValueError("You must pass a list of strings to "
-                                 "set_extra_mpirun_params")
+                                 "set_mpirun_extra_params")
         
-        
-        self.set_attr("extra_mpirun_params", list(extra_params))
+        self.set_attr("mpirun_extra_params", list(extra_params))
 
-    def set_append_text(self,val):
-        """
-        Set the calculation-specific append text
-        """
-        self.set_attr("append_text", unicode(val))
-    
-    def get_max_memory_kb(self):
-        """
-        Get the memory requested to the scheduler.
-        
-        :return: an integer
-        """
-        return self.get_attr('max_memory_kb', None)
-
-    def get_max_wallclock_seconds(self):
-        """
-        Get the max wallclock time requested to the scheduler.
-        
-        :return: an integer
-        """
-        return self.get_attr('max_wallclock_seconds', None)
-        
     def _add_link_from(self,src,label=None):
         '''
         Add a link with a code as destination. Only possible if the calculation
@@ -802,7 +824,7 @@ class Calculation(Node):
 
                     return most_recent_state
 
-    def get_state_string(self):
+    def _get_state_string(self):
         """
         Return a string, that is correct also when the state is imported 
         (in this case, the string will be in the format IMPORTED/ORIGSTATE
@@ -818,7 +840,7 @@ class Calculation(Node):
             return state
 
 
-    def is_new(self):
+    def _is_new(self):
         """
         Get whether the calculation is in the NEW status.
         
@@ -826,7 +848,7 @@ class Calculation(Node):
         """
         return self.get_state() in [calc_states.NEW, calc_states.NOTFOUND]
 
-    def is_running(self):
+    def _is_running(self):
         """
         Get whether the calculation is in a running state,
         i.e. one of TOSUBMIT, SUBMITTING, WITHSCHEDULER, 
@@ -864,7 +886,7 @@ class Calculation(Node):
 				"{})".format(self.get_state()))
         self.set_attr('remote_workdir', remote_workdir)
 
-    def get_remote_workdir(self):
+    def _get_remote_workdir(self):
         """
         Get the path to the remote (on cluster) scratch folder of the calculation.
         
@@ -886,7 +908,7 @@ class Calculation(Node):
                              "as retrieve_list")
         self.set_attr('retrieve_list', retrieve_list)
 
-    def get_retrieve_list(self):
+    def _get_retrieve_list(self):
         """
         Get the list of files/directories to be retrieved on the cluster.
         Their path is relative to the remote workdirectory path.
@@ -916,7 +938,7 @@ class Calculation(Node):
                                  "of strings as retrieve_singlefile_list")
         self.set_attr('retrieve_singlefile_list', retrieve_singlefile_list)
     
-    def get_retrieve_singlefile_list(self):
+    def _get_retrieve_singlefile_list(self):
         """
         Get the list of files to be retrieved from the cluster and stored as 
         SinglefileData's (or subclasses of it).
@@ -962,7 +984,7 @@ class Calculation(Node):
         """
         return self.get_attr('scheduler_state', None)
 
-    def get_scheduler_lastchecktime(self):
+    def _get_scheduler_lastchecktime(self):
         """
         Return the time of the last update of the scheduler state by the daemon,
         or None if it was never set.
@@ -971,13 +993,12 @@ class Calculation(Node):
         """
         return self.get_attr('scheduler_lastchecktime', None)
 
-
     def _set_last_jobinfo(self,last_jobinfo):
         import pickle
         
         self.set_attr('last_jobinfo', last_jobinfo.serialize())
 
-    def get_last_jobinfo(self):
+    def _get_last_jobinfo(self):
         """
         Get the last information asked to the scheduler about the status of the job.
         
@@ -995,7 +1016,7 @@ class Calculation(Node):
             return None
     
     @classmethod
-    def list_calculations(cls,states=None, past_days=None, group=None, 
+    def _list_calculations(cls,states=None, past_days=None, group=None, 
                             all_users=False, pks=[], relative_ctime=True):
         """
         This function return a string with a description of the AiiDA calculations.
@@ -1085,7 +1106,7 @@ class Calculation(Node):
         
         enabled_auth_dict = { (i[0],i[1]):i[2] for i in enabled_data }
         
-        states = {c.pk: c.get_state_string() for c in calc_list}
+        states = {c.pk: c._get_state_string() for c in calc_list}
         
         scheduler_lastcheck = dict(DbAttribute.objects.filter(
             dbnode__in=calc_list,
@@ -1194,7 +1215,7 @@ class Calculation(Node):
             return "\n".join(res_str_list)
 
     @classmethod
-    def get_all_with_state(cls, state, computer=None, user=None, 
+    def _get_all_with_state(cls, state, computer=None, user=None, 
                            only_computer_user_pairs = False):
         """
         Filter all calculations with a given state.
@@ -1358,7 +1379,7 @@ class Calculation(Node):
         """
         self.set_attr('linkname_retrieved',linkname)
 
-    def get_linkname_retrieved(self):
+    def _get_linkname_retrieved(self):
         """
         Get the linkname of the retrieved data folder object.
         
@@ -1381,7 +1402,7 @@ class Calculation(Node):
         outputs = self.get_outputs(also_labels = True)
         
         retrieved_node = None
-        retrieved_linkname = self.get_linkname_retrieved()
+        retrieved_linkname = self._get_linkname_retrieved()
         
         for label, node in outputs:
             if label == retrieved_linkname:
@@ -1460,7 +1481,7 @@ class Calculation(Node):
                                 extra=logger_extra)
             
         
-    def presubmit(self, folder, use_unstored_links=False):
+    def _presubmit(self, folder, use_unstored_links=False):
         import os
         import StringIO
         import json
@@ -1498,11 +1519,11 @@ class Calculation(Node):
         job_tmpl.job_environment = {}
         #'email', 'email_on_started', 'email_on_terminated',
         job_tmpl.job_name = 'aiida-{}'.format(self.pk) 
-        job_tmpl.sched_output_path = self.SCHED_OUTPUT_FILE
-        if self.SCHED_ERROR_FILE == self.SCHED_OUTPUT_FILE:
+        job_tmpl.sched_output_path = self._SCHED_OUTPUT_FILE
+        if self._SCHED_ERROR_FILE == self._SCHED_OUTPUT_FILE:
             job_tmpl.sched_join_files = True
         else:
-            job_tmpl.sched_error_path = self.SCHED_ERROR_FILE
+            job_tmpl.sched_error_path = self._SCHED_ERROR_FILE
             job_tmpl.sched_join_files = False
 
         # Set retrieve path, add also scheduler STDOUT and STDERR
@@ -1561,7 +1582,7 @@ class Calculation(Node):
             subst_dict[k] = v
         mpi_args = [arg.format(**subst_dict) for arg in
                     computer.get_mpirun_command()]
-        extra_mpirun_params = self.get_extra_mpirun_params()
+        extra_mpirun_params = self.get_mpirun_extra_params()
         if self.get_withmpi():
             job_tmpl.argv = (mpi_args + extra_mpirun_params + 
                 [code.get_execname()] + 
@@ -1745,14 +1766,14 @@ class Calculation(Node):
         with t:
             t.chdir(subfolder.abspath)
         
-            calcinfo, script_filename = self.presubmit(
+            calcinfo, script_filename = self._presubmit(
                 subfolder, use_unstored_links=True)
         
             code = self.get_code()
         
             if code.is_local():
                 # Note: this will possibly overwrite files
-                for f in code.get_path_list():
+                for f in code.get_folder_list():
                     t.put(code.get_abs_path(f), f)
                 t.chmod(code.get_local_executable(), 0755) # rwxr-xr-x
 
@@ -1792,7 +1813,7 @@ class Calculation(Node):
         from aiida.common.exceptions import NotExistent
         
         # Shortcut if no error file is set
-        if self.SCHED_OUTPUT_FILE is None:
+        if self._SCHED_OUTPUT_FILE is None:
             return None
         
         retrieved_node = self.get_retrieved_node()
@@ -1801,7 +1822,7 @@ class Calculation(Node):
 
         try:
             outfile_content = retrieved_node.get_file_content(
-                self.SCHED_OUTPUT_FILE)
+                self._SCHED_OUTPUT_FILE)
         except (NotExistent):
             # Return None if no file is found
             return None
@@ -1819,7 +1840,7 @@ class Calculation(Node):
         from aiida.common.exceptions import NotExistent
 
         # Shortcut if no error file is set
-        if self.SCHED_ERROR_FILE is None:
+        if self._SCHED_ERROR_FILE is None:
             return None
 
         retrieved_node = self.get_retrieved_node()
@@ -1828,21 +1849,21 @@ class Calculation(Node):
 
         try:
             errfile_content = retrieved_node.get_file_content(
-                self.SCHED_ERROR_FILE)
+                self._SCHED_ERROR_FILE)
         except (NotExistent):
             # Return None if no file is found
             return None
         
         return errfile_content
-
-    @property
-    def files(self):
-        """
-        To be used to get direct access to the retrieved files.
-        
-        :return: an instance of the CalculationFileManager.
-        """
-        return CalculationFileManager(self)
+# 
+#     @property
+#     def files(self):
+#         """
+#         To be used to get direct access to the retrieved files.
+#         
+#         :return: an instance of the CalculationFileManager.
+#         """
+#         return CalculationFileManager(self)
 
 
 class CalculationResultManager(object):
@@ -1912,39 +1933,39 @@ class CalculationResultManager(object):
                            .format(self._parser.__class__.__name__, name))
 
 
-
-class CalculationFileManager(object):
-    """
-    An object used internally to interface the calculation with the FolderData 
-    object result. 
-    It shouldn't be used explicitely by a user, but accessed through calc.files.
-    """
-    def __init__(self, calc):
-        """
-        :param calc: the calculation object.
-        """
-        # Possibly add checks here
-        self._calc = calc
-        
-    def _get_folder(self):
-        from aiida.orm.data.folder import FolderData
-        from aiida.common.exceptions import NotExistent, UniquenessError
-        folders = self._calc.get_outputs(type=FolderData)
-        if not folders:
-            raise NotExistent("No output FolderData found")
-        try:
-            folders[1]
-        except IndexError:
-            pass
-        else:
-            raise UniquenessError("More than one output folder found")
-        return folders[0]
-    
-    def path(self,name='.'):
-        folder = self._get_folder()
-        return folder.get_abs_path(name)
-    
-    def list(self,name='.'):
-        folder = self._get_folder()
-        return folder.get_path_list(name)
+# 
+# class CalculationFileManager(object):
+#     """
+#     An object used internally to interface the calculation with the FolderData 
+#     object result. 
+#     It shouldn't be used explicitely by a user, but accessed through calc.files.
+#     """
+#     def __init__(self, calc):
+#         """
+#         :param calc: the calculation object.
+#         """
+#         # Possibly add checks here
+#         self._calc = calc
+#         
+#     def _get_folder(self):
+#         from aiida.orm.data.folder import FolderData
+#         from aiida.common.exceptions import NotExistent, UniquenessError
+#         folders = self._calc.get_outputs(type=FolderData)
+#         if not folders:
+#             raise NotExistent("No output FolderData found")
+#         try:
+#             folders[1]
+#         except IndexError:
+#             pass
+#         else:
+#             raise UniquenessError("More than one output folder found")
+#         return folders[0]
+#     
+#     def path(self,name='.'):
+#         folder = self._get_folder()
+#         return folder.get_abs_path(name)
+#     
+#     def list(self,name='.'):
+#         folder = self._get_folder()
+#         return folder.get_folder_list(name)
 

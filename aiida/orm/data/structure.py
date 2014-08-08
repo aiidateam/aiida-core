@@ -342,13 +342,13 @@ class StructureData(Data):
             raise TypeError("The value is not an ase.Atoms object")
         
 
-    def validate(self):
+    def _validate(self):
         """
         Performs some standard validation tests.
         """
         
         from aiida.common.exceptions import ValidationError
-        super(StructureData,self).validate()
+        super(StructureData,self)._validate()
 
         try:
             _get_valid_cell(self.cell)
@@ -396,7 +396,7 @@ class StructureData(Data):
                                   "are no sites with that kind: {}".format(
                                       list(kinds_without_sites)))
                
-    def exportstring(self, fileformat):
+    def _exportstring(self, fileformat):
         """
         Converts an AiiDA structure in other text format.
 
@@ -426,7 +426,7 @@ class StructureData(Data):
         if fileformat is None:
             fileformat = fname.split('.')[-1]
 
-        filecontent = self.exportstring(format)
+        filecontent = self._exportstring(format)
         with open(fname,'w') as f:  # writes in cwd, if fname is not absolute
             f.write( filecontent )
         

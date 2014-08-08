@@ -29,10 +29,10 @@ class RemoteData(Data):
         from aiida.common.exceptions import ModificationNotAllowed
         raise ModificationNotAllowed("Cannot add files or directories to a RemoteData object")
 
-    def validate(self):
+    def _validate(self):
         from aiida.common.exceptions import ValidationError
 
-        super(RemoteData,self).validate()
+        super(RemoteData,self)._validate()
         
         try:
             self.get_remote_path()

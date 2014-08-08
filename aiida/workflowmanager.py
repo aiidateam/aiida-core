@@ -62,8 +62,8 @@ def execute_steps():
             
             logger.info("[{0}] Found active step: {1}".format(w.uuid,s.name))
             
-            s_calcs_new       = [c.uuid for c in s.get_calculations() if c.is_new()]
-            s_calcs_running   = [c.uuid for c in s.get_calculations() if c.is_running()]
+            s_calcs_new       = [c.uuid for c in s.get_calculations() if c._is_new()]
+            s_calcs_running   = [c.uuid for c in s.get_calculations() if c._is_running()]
             s_calcs_finished  = [c.uuid for c in s.get_calculations() if c.has_finished_ok()]
             s_calcs_failed    = [c.uuid for c in s.get_calculations() if c.has_failed()]
             s_calcs_num       = len(s.get_calculations())

@@ -17,11 +17,9 @@ TODO: all a lot of logger.debug stuff
 """
 import os
 
-from aiida.orm import Calculation, DataFactory
+from aiida.orm import Calculation
 from aiida.orm.calculation.quantumespresso import BasePwCpInputGenerator
 from aiida.common.utils import classproperty
-
-from aiida.orm.data.parameter import ParameterData
   
 __author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
 __copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
@@ -40,15 +38,17 @@ class CpCalculation(BasePwCpInputGenerator, Calculation):
         _cp_read_unit_number = 50
         _cp_write_unit_number = 51
     
-        self.DATAFILE_XML = os.path.join(BasePwCpInputGenerator.OUTPUT_SUBFOLDER, 
-                                   '{}_{}.save'.format(BasePwCpInputGenerator.PREFIX,
-                                                       _cp_write_unit_number), 
-                                   BasePwCpInputGenerator.DATAFILE_XML_BASENAME)
+        self._DATAFILE_XML = os.path.join(
+                             BasePwCpInputGenerator._OUTPUT_SUBFOLDER, 
+                             '{}_{}.save'.format(BasePwCpInputGenerator._PREFIX,
+                                                 _cp_write_unit_number), 
+                             BasePwCpInputGenerator._DATAFILE_XML_BASENAME)
     
-        self.FILE_XML_PRINT_COUNTER = os.path.join(BasePwCpInputGenerator.OUTPUT_SUBFOLDER, 
-                                   '{}_{}.save'.format(BasePwCpInputGenerator.PREFIX,
-                                                       _cp_write_unit_number), 
-                                              self.FILE_XML_PRINT_COUNTER_BASENAME)
+        self._FILE_XML_PRINT_COUNTER = os.path.join(
+                             BasePwCpInputGenerator._OUTPUT_SUBFOLDER, 
+                             '{}_{}.save'.format(BasePwCpInputGenerator._PREFIX,
+                                                 _cp_write_unit_number), 
+                             self._FILE_XML_PRINT_COUNTER_BASENAME)
     
         # Default PW output parser provided by AiiDA
         self._default_parser = 'quantumespresso.cp'
@@ -81,33 +81,35 @@ class CpCalculation(BasePwCpInputGenerator, Calculation):
         
         # in restarts, it will copy from the parent the following 
         self._restart_copy_from = os.path.join(
-                             BasePwCpInputGenerator.OUTPUT_SUBFOLDER,
-                             '{}_{}.save'.format(BasePwCpInputGenerator.PREFIX,_cp_write_unit_number))
+                             BasePwCpInputGenerator._OUTPUT_SUBFOLDER,
+                             '{}_{}.save'.format(BasePwCpInputGenerator._PREFIX,
+                                                 _cp_write_unit_number))
         # in restarts, it will copy the previous folder in the following one 
         self._restart_copy_to = os.path.join(
-                             BasePwCpInputGenerator.OUTPUT_SUBFOLDER,
-                             '{}_{}.save'.format(BasePwCpInputGenerator.PREFIX,_cp_read_unit_number))
+                             BasePwCpInputGenerator._OUTPUT_SUBFOLDER,
+                             '{}_{}.save'.format(BasePwCpInputGenerator._PREFIX,
+                                                 _cp_read_unit_number))
 
         _cp_ext_list = ['cel', 'con', 'eig', 'evp', 'for', 'nos', 'pol', 
                         'pos', 'spr', 'str', 'the', 'vel', 'wfc']
         
         # I retrieve them all, even if I don't parse all of them
         self._internal_retrieve_list = [os.path.join(
-                                     BasePwCpInputGenerator.OUTPUT_SUBFOLDER, 
-                                     '{}.{}'.format(BasePwCpInputGenerator.PREFIX,
+                                     BasePwCpInputGenerator._OUTPUT_SUBFOLDER, 
+                                     '{}.{}'.format(BasePwCpInputGenerator._PREFIX,
                                      ext)) for ext in _cp_ext_list]
-        self._internal_retrieve_list += [self.FILE_XML_PRINT_COUNTER]
+        self._internal_retrieve_list += [self._FILE_XML_PRINT_COUNTER]
     
     @classproperty
-    def FILE_XML_PRINT_COUNTER_BASENAME(cls):
+    def _FILE_XML_PRINT_COUNTER_BASENAME(cls):
         return 'print_counter.xml'
 
     @classproperty
-    def FILE_XML_PRINT_COUNTER(cls):
-        return os.path.join(BasePwCpInputGenerator.OUTPUT_SUBFOLDER, 
-                                   '{}_{}.save'.format(BasePwCpInputGenerator.PREFIX,
-                                                       _cp_write_unit_number), 
-                                              self.FILE_XML_PRINT_COUNTER_BASENAME)
+    def _FILE_XML_PRINT_COUNTER(cls):
+        return os.path.join(BasePwCpInputGenerator._OUTPUT_SUBFOLDER, 
+                            '{}_{}.save'.format(BasePwCpInputGenerator._PREFIX,
+                                                _cp_write_unit_number), 
+                            self._FILE_XML_PRINT_COUNTER_BASENAME)
 
     @classproperty
     def _use_methods(cls):

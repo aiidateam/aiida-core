@@ -106,7 +106,7 @@ class Calculation(VerdiCommandWithSubcommands):
         if parsed_args.all_states:
             parsed_args.states = None
         
-        print C.list_calculations(states=parsed_args.states,
+        print C._list_calculations(states=parsed_args.states,
                                      past_days=parsed_args.past_days, 
                                      pks=parsed_args.pks,
                                      all_users=parsed_args.all_users,

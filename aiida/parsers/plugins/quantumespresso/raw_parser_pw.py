@@ -792,7 +792,7 @@ def parse_pw_xml_output(data,dir_with_bands=None):
             if metric=='2 pi / a':
                 value = [ float(s)/structure_dict['lattice_parameter'] for s in value ]
                 weight = float(a.getAttribute('WEIGHT'))                
-                kpoints.append([value])
+                kpoints.append(value)
                 kpoints_weights.append(weight)
         parsed_data['k_points']=kpoints
         parsed_data['k_points'+units_suffix] = k_points_default_units

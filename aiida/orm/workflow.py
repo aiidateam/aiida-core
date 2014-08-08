@@ -55,8 +55,8 @@ class Workflow(object):
             retrieved from the stack.
             
             :param uuid: a string with the uuid of the object to be loaded.
-            :param params: a dictionary of storable objects to inizialize the specific workflow
-            :raise: NotExistent: if there is no entry of the desired worlkflow kind with 
+            :param params: a dictionary of storable objects to initialize the specific workflow
+            :raise: NotExistent: if there is no entry of the desired workflow kind with 
                                  the given uuid.
             """
             from aiida.djsite.db.models import DbWorkflow
@@ -437,10 +437,24 @@ class Workflow(object):
         Adds parameters to the Workflow that are both stored and used every time
         the workflow engine re-initialize the specific workflow to launch the new methods.  
         """
+        def par_validate(params):
+            the_params = {}
+            for k,v in params.itervalues():
+                if any( [isinstance(v,int),
+                         isinstance(v,bool),
+                         isinstance(v,float),
+                         isinstance(v,str)] ):
+                    the_params[k] = v
+                else:
+                    raise ValidationError("Cannot store in the DB a parameter "
+                                "which is not of type int, bool, float or str.")
+            return the_params
+        
         if self._to_be_stored:
             self._params = params
         else:
-            self.dbworkflowinstance.add_parameters(params, force=force)
+            the_params = par_validate(params)
+            self.dbworkflowinstance.add_parameters(the_params, force=force)
     
     def get_parameters(self):
         """
@@ -716,7 +730,7 @@ class Workflow(object):
             except:
                 import sys, traceback
                 exc_type, exc_value, exc_traceback = sys.exc_info()                
-                cls.append_to_report("ERROR ! This workflow got and error in the {0} method, we report down the stack trace".format(wrapped_method))
+                cls.append_to_report("ERROR ! This workflow got an error in the {0} method, we report down the stack trace".format(wrapped_method))
                 cls.append_to_report("full traceback: {0}".format(traceback.format_exc()))
                 method_step.set_status(wf_states.ERROR)
             return None 

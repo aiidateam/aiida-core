@@ -75,13 +75,20 @@ class BandsData(KpointsData):
         if the_bands.shape[0] != len(kpoints):
             raise ValueError("There must be energy values for every kpoint") 
         
-        the_occupations = numpy.array(occupations)
-        if the_occupations.shape != the_bands.shape:
-            raise ValueError("Shape of occupations {} different than shape"
-                             "shape of bands {}".format(the_occupations.shape,
-                             the_bands.shape))
+        if occupations is not None:
+            the_occupations = numpy.array(occupations)
+            if the_occupations.shape != the_bands.shape:
+                raise ValueError("Shape of occupations {} different from shape"
+                                 "shape of bands {}".format(the_occupations.shape,
+                                 the_bands.shape))
+            
+            list_of_arrays_to_be_checked = [ [the_bands,'bands'],
+                                             [the_occupations,'occupations'] ]
+        else:
+            the_occupations = None
+            list_of_arrays_to_be_checked = [ [the_bands,'bands'] ]
         
-        for x,msg in [ [the_bands,'bands'], [the_occupations,'occupations'] ]:
+        for x,msg in list_of_arrays_to_be_checked:
             for i in range(x.shape[0]):
                 for j in range(x.shape[1]):
                     if x[i,j] is not None:

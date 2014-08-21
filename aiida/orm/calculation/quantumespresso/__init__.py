@@ -508,7 +508,6 @@ class BasePwCpInputGenerator(object):
             #                                    self.PREFIX+'.save','K*[0-9]') )
             pass
         
->>>>>>> d8d4b8cabbf1028679ecdfd1f7c31b39e3ab7863
         calcinfo.retrieve_list += settings_retrieve_list
         calcinfo.retrieve_list += self._internal_retrieve_list
         

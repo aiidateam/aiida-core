@@ -120,7 +120,7 @@ class CpParser(Parser):
         out_file = out_folder.get_abs_path(self._calc._OUTPUT_FILE_NAME )
 
         xml_file = None
-        if self._calc.DATAFILE_XML_BASENAME in list_of_files:
+        if self._calc._DATAFILE_XML_BASENAME in list_of_files:
             xml_file = out_folder.get_abs_path(self._calc._DATAFILE_XML_BASENAME)
         
         xml_counter_file = None

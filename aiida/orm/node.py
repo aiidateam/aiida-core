@@ -1230,14 +1230,14 @@ class Node(object):
     def _repository_folder(self):
         """
         Get the permanent repository folder.
-        Use preferentially the get_folder method.
+        Use preferentially the folder property.
         
         :return: the permanent RepositoryFolder object
         """
         return self._repo_folder
 
     @property
-    def get_folder(self):
+    def folder(self):
         """
         Get the folder associated with the node, 
         whether it is in the temporary or the permanent repository.
@@ -1256,7 +1256,7 @@ class Node(object):
         
         :return: a Folder object.
         """
-        return self.get_folder.get_subfolder(
+        return self.folder.get_subfolder(
             self._path_subfolder_name,reset_limit=True)
 
     def get_folder_list(self, subfolder='.'):
@@ -1334,14 +1334,14 @@ class Node(object):
         For the moment works only for one kind of files, 'path' (internal files)
         """
         if path is None:
-            return self.get_folder.abspath
+            return self.folder.abspath
         if section is None:
             section = self._path_subfolder_name
         #TODO: For the moment works only for one kind of files,
         #      'path' (internal files)
         if os.path.isabs(path):
             raise ValueError("The path in get_abs_path must be relative")
-        return self.get_folder.get_subfolder(section,
+        return self.folder.get_subfolder(section,
             reset_limit=True).get_abs_path(path,check_existence=True)
 
     def store_all(self):

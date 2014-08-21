@@ -264,7 +264,7 @@ class LocalTransport(aiida.transport.Transport):
 
         if self.has_magic(source):
             if self.has_magic(destination):
-                raise ValueError("Pahname patterns are not allowed in the "
+                raise ValueError("Pathname patterns are not allowed in the "
                                  "destination")
             
             to_copy_list = glob.glob(source) # using local glob here
@@ -433,7 +433,7 @@ class LocalTransport(aiida.transport.Transport):
 
         if self.has_magic(source):
             if self.has_magic(destination):
-                raise ValueError("Pahname patterns are not allowed in the "
+                raise ValueError("Pathname patterns are not allowed in the "
                                  "destination")
             to_copy_list = self.glob(source)
 
@@ -587,7 +587,7 @@ class LocalTransport(aiida.transport.Transport):
         
         if self.has_magic(source):
             if self.has_magic(destination):
-                raise ValueError("Pahname patterns are not allowed in the "
+                raise ValueError("Pathname patterns are not allowed in the "
                                  "destination")
             
             to_copy_list = self.glob(source)

@@ -15,3 +15,4 @@ ang_to_m=1.e-10
 ry_to_ev=13.6056917253
 hartree_to_ev = ry_to_ev*2.
 timeau_to_sec = 2.418884326155573e-17
+invcm_to_THz = 0.0299792458

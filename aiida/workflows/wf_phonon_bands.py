@@ -403,7 +403,8 @@ class Workflow_Phonon_Bands(Workflow):
         bandsdata = matdyn_calc.out.output_phonon_bands
         bands = bandsdata.get_bands()
         # export them in xmgrace format
-        output_file_name=params['output_path']+params['output_name']+"phonon_bands.agr"
+        output_file_name=os.path.join(params['output_path'],
+                                      params['output_name']+"phonon_bands.agr")
         bandsdata.export(output_file_name, overwrite = False)
         
         self.append_to_report("Phonon dispersions done and put in {0}".format(output_file_name))

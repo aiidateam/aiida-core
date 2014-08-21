@@ -792,7 +792,7 @@ def parse_pw_xml_output(data,dir_with_bands=None):
             if metric=='2 pi / a':
                 value = [ float(s)/structure_dict['lattice_parameter'] for s in value ]
                 weight = float(a.getAttribute('WEIGHT'))                
-                kpoints.append([value])
+                kpoints.append(value)
                 kpoints_weights.append(weight)
         parsed_data['k_points']=kpoints
         parsed_data['k_points'+units_suffix] = k_points_default_units
@@ -974,11 +974,11 @@ def parse_pw_xml_output(data,dir_with_bands=None):
            parsed_data['number_of_electrons']/2. < parsed_data['number_of_bands']:
         # initialize lumo
             lumo = parsed_data['homo']+10000.0
-            for list_bands in parsed_data['bands']:
+            for list_bands in bands_dict['bands']:
                 for value in list_bands:
                     if (value > parsed_data['fermi_energy']) and (value<lumo):
                         lumo=value
-            if (lumo==parsed_data['homo']+10000.0) or lumo<=parsed_data['fermy_energy']:
+            if (lumo==parsed_data['homo']+10000.0) or lumo<=parsed_data['fermi_energy']:
                 #might be an error for bandgap larger than 10000 eV...
                 raise QEOutputParsingError('Error while searching for LUMO.')
             parsed_data['lumo']=lumo

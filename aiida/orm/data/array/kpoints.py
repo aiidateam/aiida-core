@@ -367,9 +367,9 @@ class KpointsData(ArrayData):
                              .format(dimension,kpoints.shape[1]))                             
         if weights is not None:
             weights = numpy.array(weights)
-            if len(weights) != kpoints.shape[0]:
+            if weights.shape[0] != kpoints.shape[0]:
                 raise ValueError("Found {} weights but {} kpoints"
-                                 .format(len(weights), len(kpoints)))
+                                 .format(weights.shape[0], kpoints.shape[0]))
             if weights.dtype != numpy.dtype(numpy.float):
                 raise ValueError("weights must be an array of type floats. "
                                  "Found instead {}".format(weights.dtype))

@@ -38,44 +38,88 @@ class BandsData(KpointsData):
         except AttributeError:
             pass
         try:
-            self.set_kpoints( kpointsdata.get_kpoints() )
+            the_kpoints =  kpointsdata.get_kpoints()
         except AttributeError:
-            pass
+            the_kpoints = None
+        try:
+            the_weights=kpointsdata.get_kpoints(also_weights=True)[1]
+        except AttributeError:
+            the_weights = None
+        self.set_kpoints(the_kpoints, weights=the_weights)
         try:
             self.labels = kpointsdata.labels
         except (AttributeError,TypeError):
             pass
         
-    def set_bands(self,bands,units=None):
+    def _validate_bands_occupations(self,bands,occupations):
         """
-        Set an array of band energies of dimension (nkpoints x nbands).
-        Kpoints must be set in advance. Can contain floats or None.
+        Validate the list of bands and of occupations before storage.
+        Kpoints must be set in advance.
+        Bands and occupations must be convertible into arrays of 
+        Nkpoints x Nbands floats; Nkpoints must correspond to the
+        number of kpoints.
         """
         #TODO: more checks here
         try:
             kpoints = self.get_kpoints()
         except AttributeError:
             raise AttributeError("Must first set the kpoints, then the bands")
+
+        the_bands = numpy.array(bands)
         
-        if len(bands.shape)!=2:
+        if len(the_bands.shape)!=2:
             raise ValueError("bands must be an array of shape 2"
                              "(must have rows and columns) found instead {}"
-                             .format(len(bands.shape))) 
+                             .format(len(the_bands.shape))) 
         
-        if bands.shape[0] != len(kpoints):
+        if the_bands.shape[0] != len(kpoints):
             raise ValueError("There must be energy values for every kpoint") 
         
-        for i in range(bands.shape[0]):
-            for j in range(bands.shape[1]):
-                if bands[i,j] is not None:
-                    try:
-                        float(bands[i,j])
-                    except (TypeError,ValueError):
-                        raise ValueError("The bands array can only contain "
-                                         "float or None values")
+        if occupations is not None:
+            the_occupations = numpy.array(occupations)
+            if the_occupations.shape != the_bands.shape:
+                raise ValueError("Shape of occupations {} different from shape"
+                                 "shape of bands {}".format(the_occupations.shape,
+                                 the_bands.shape))
+            
+            list_of_arrays_to_be_checked = [ [the_bands,'bands'],
+                                             [the_occupations,'occupations'] ]
+        else:
+            the_occupations = None
+            list_of_arrays_to_be_checked = [ [the_bands,'bands'] ]
         
-        self.set_array('bands',bands)
+        for x,msg in list_of_arrays_to_be_checked:
+            for i in range(x.shape[0]):
+                for j in range(x.shape[1]):
+                    if x[i,j] is not None:
+                        try:
+                            float(x[i,j])
+                        except (TypeError,ValueError):
+                            raise ValueError("The {} array can only contain "
+                                             "float or None values".format(msg))
+            
+        return the_bands,the_occupations
+
+    def set_bands(self,bands,units=None,occupations=None):
+        """
+        Set an array of band energies of dimension (nkpoints x nbands).
+        Kpoints must be set in advance. Can contain floats or None.
+        :param bands: a list of nkpoints lists of nbands bands, or a 2D array 
+                of shape (nkpoints x nbands), with band energies for each kpoint
+        :param units: optional, energy units
+        :param occupations: optional, a 2D list or array of floats of same shape 
+                as bands, with the occupation associated to each band 
+        """
+        # checks bands and occupations 
+        the_bands,the_occupations = self._validate_bands_occupations(bands,
+                                                                     occupations)
+        # set bands and their units
+        self.set_array('bands',the_bands)
         self.units = units
+        
+        if the_occupations is not None:
+            # set occupations
+            self.set_array('occupations',the_occupations)
 
     @property
     def units(self):
@@ -111,15 +155,27 @@ class BandsData(KpointsData):
         self.set_attr('pbc3',the_pbc[2])
 
 
-    def get_bands(self):
+    def get_bands(self, also_occupations=False):
         """
         Returns an array (nkpoints x num_bands) of energies.
+        :param also_occupations: if True, returns also the occupations array. 
+            Default = False
         """
         try:
-            return self.get_array('bands')
+            bands=numpy.array(self.get_array('bands'))
         except KeyError:
             raise AttributeError("No stored bands has been found")
-         
+        
+        if also_occupations:
+            try:
+                occupations = numpy.array(self.get_array('occupations'))
+            except KeyError:
+                raise AttributeError('No occupations were set')
+            
+            return bands,occupations
+        else:
+            return bands
+        
     def export(self,path,fileformat=None,overwrite=False,comments=True):
         """
         Export the bands to a file.

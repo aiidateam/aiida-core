@@ -367,7 +367,7 @@ class Calculation(Node):
                     self.get_state()))
 
         # get subfolder and replace with copy
-        _raw_input_folder = self.get_folder.get_subfolder(
+        _raw_input_folder = self.folder.get_subfolder(
             _input_subfolder,create=True)
         _raw_input_folder.replace_with_folder(
             folder_path, move=False, overwrite=True)
@@ -382,7 +382,7 @@ class Calculation(Node):
         """
         from aiida.common.exceptions import NotExistent
 
-        return_folder = self.get_folder.get_subfolder(_input_subfolder)
+        return_folder = self.folder.get_subfolder(_input_subfolder)
         if return_folder.exists():
             return return_folder
         else:

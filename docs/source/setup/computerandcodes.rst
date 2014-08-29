@@ -102,11 +102,7 @@ The configuration of computers happens in two steps.
 
     verdi computer setup COMPUTERNAME
     
-   command. This command allows to create a new computer instance in the DB,
-   called ``COMPUTERNAME`` (the name is used for instance when you have
-   to pick up a computer to launch a calculation on it). Names must be unique.
-   This command should be thought as a AiiDA-wise configuration of computer,
-   independent of the AiiDA user that will actually use it.
+   command. This command allows to create a new computer instance in the DB.   
    
    .. tip:: The code will ask you a few pieces of information. At every prompt, you can
      type the ``?`` character and press ``<enter>`` to get a more detailed
@@ -115,11 +111,17 @@ The configuration of computers happens in two steps.
    .. tip:: You can press ``<CTRL>+C`` at any moment to abort the setup process.
      Nothing will be stored in the DB.
    
-   .. note:: For multiline inputs (like the preprend text and the append text, see below)
+   .. note:: For multiline inputs (like the prepend text and the append text, see below)
      you have to press ``<CTRL>+D`` to complete the input, even if you do not want
      any text.
    
    Here is a list of what is asked, together with an explanation.
+   
+   * **Computer name**: the (user-friendly) name of the new computer instance 
+     which is about to be created in the DB (the name is used for instance when 
+     you have to pick up a computer to launch a calculation on it). Names must 
+     be unique. This command should be thought as a AiiDA-wise configuration of 
+     computer, independent of the AiiDA user that will actually use it.
    
    * **Fully-qualified hostname**: the fully-qualified hostname of the computer
      to which you want to connect (i.e., with all the dots: ``bellatrix.epfl.ch``, 

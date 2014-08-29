@@ -22,7 +22,7 @@ def parse_raw_ph_output(out_file, tensor_file=None, dynmat_files=[]):
     
     Args: 
         out_file 
-            path to pw std output
+            path to ph std output
     
     Returns:
         out_dict
@@ -81,14 +81,13 @@ def parse_raw_ph_output(out_file, tensor_file=None, dynmat_files=[]):
             parser_info['parser_warnings'].append('Error while parsing the tensor files')
             pass
     
-    
     # parse ph output
     with open(out_file,'r') as f:
         out_lines = f.readlines()
-    out_data = parse_ph_text_output(out_lines)
+    out_data,critical_messages = parse_ph_text_output(out_lines)
     
-    # TODO: I should have a list of critical warnings rather than hard coded strings!
-    if 'Phonon did not reach end of self consistency' in out_data['warnings']:
+    # if there is a severe error, the calculation is FAILED
+    if any([x in out_data['warnings'] for x in critical_messages]):
         job_successful = False
     
     # parse dynamical matrices if present
@@ -200,7 +199,11 @@ def parse_ph_text_output(lines):
     """
     Parses the stdout of QE-PH.
     
-    Returns a dictionary with parsed values.
+    :param data: list of strings, the file as read by readlines()
+    
+    :return parsed_data: dictionary with parsed values.
+    :return critical_messages: a list with critical messages. If any is found in
+                               parsed_data['warnings'], the calculation is FAILED!
     """
     
     parsed_data = {}
@@ -222,12 +225,28 @@ def parse_ph_text_output(lines):
                 raise QEOutputParsingError("Unable to convert wall_time in seconds.")
             break
     
-    # TODO: find a list of the common errors of ph
-    for line in lines:
-        if 'No convergence has been achieved' in line:
-            parsed_data['warnings'].append('Phonon did not reach end of self consistency')
+    # TODO: find a more exhaustive list of the common errors of ph
     
-    return parsed_data
+    # critical warnings: if any is found, the calculation status is FAILED
+    critical_warnings = {'No convergence has been achieved':
+                         'Phonon did not reach end of self consistency',
+                         'Maximum CPU time exceeded':'Maximum CPU time exceeded',
+                         }
+    
+    minor_warnings = {'Warning:':None,
+                      }
+    
+    all_warnings = dict(critical_warnings.items() + minor_warnings.items())
+
+    for line in lines:
+        if any( i in line for i in all_warnings):
+            message = [ all_warnings[i] for i in all_warnings.keys() if i in line][0]
+            if message is None:
+                message = line
+                
+            parsed_data['warnings'].append(message)
+            
+    return parsed_data,critical_warnings.values()
 
 def parse_ph_dynmat(data):
     """

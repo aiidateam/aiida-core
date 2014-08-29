@@ -182,15 +182,23 @@ class Computer(VerdiCommandWithSubcommands):
         
         from aiida.common.exceptions import NotExistent, ValidationError
         from aiida.orm import Computer as AiidaOrmComputer
-          
-        if len(args) != 1:
-            print >> sys.stderr, ("after 'computer setup' there should be one "
-                                  "argument only, being the computer name.")
+        
+        if len(args) != 0:
+            print >> sys.stderr, ("after 'computer setup' there cannot be any "
+                                  "argument.")
             sys.exit(1)
         
         load_django()
         
-        computer_name = args[0]
+        print "At any prompt, type ? to get some help."
+        print "---------------------------------------"
+        
+        # get the new computer name
+        readline.set_startup_hook(lambda: readline.insert_text(previous_value))
+        input_txt = raw_input("=> Computer name: ")
+        if input_txt.strip() == '?':
+            print "HELP:", "The computer name"
+        computer_name = input_txt.strip()
         
         try:
             computer = self.get_computer(name=computer_name)
@@ -208,13 +216,9 @@ class Computer(VerdiCommandWithSubcommands):
         except NotExistent:
             computer = AiidaOrmComputer(name=computer_name)    
             print "Creating new computer with name '{}'".format(computer_name)
-        
-        print "At any prompt, type ? to get some help."
-        print "---------------------------------------"
-
+                                                 
         for internal_name, name, desc, multiline in (
           AiidaOrmComputer._conf_attributes):
-
             # Check if I should skip this entry
             shouldcall_name = '_shouldcall_{}'.format(internal_name)
             try:

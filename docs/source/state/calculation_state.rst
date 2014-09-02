@@ -61,7 +61,7 @@ Directly in python
 ++++++++++++++++++
 If you prefer to have more flexibility or to check the state of a calculation
 programmatically, you can execute a script like the following, where you just
-need to specify the ID of the calculation you are interested to::
+need to specify the ID of the calculation you are interested in::
 
   from aiida.common.utils import load_django
   load_django()

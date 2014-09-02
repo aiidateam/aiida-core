@@ -59,7 +59,7 @@ Quantum Espresso Pw Walkthrough
 
 We've got to prepare a script to submit a job to your local installation of AiiDA.
 This example will be a rather long script: in fact there is still nothing in your database, so that we will have to load everything, like the pseudopotential files and the structure.
-In a more practical situation, you might load data from the database and perform small modification to re-use it.
+In a more practical situation, you might load data from the database and perform a small modification to re-use it.
 
 Let's say that through the ``verdi`` command you have already installed a cluster, say ``TheHive``, and that you also compiled Quantum Espresso on the cluster, and installed the code pw.x with ``verdi``, that we will call ``pw_on_TheHive``.
 

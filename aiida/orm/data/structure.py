@@ -153,7 +153,7 @@ def _get_valid_cell(inputcell):
 
     return the_cell
 
-def _get_valid_pbc(inputpbc):
+def get_valid_pbc(inputpbc):
     """
     Return a list of three booleans for the periodic boundary conditions,
     in a valid format from a generic input.
@@ -316,10 +316,17 @@ class StructureData(Data):
     """
     _set_incompatibilities = [("ase","cell"),("ase","pbc")]
     
-    _set_defaults = {"pbc": [True, True, True],
+    @property
+    def _set_defaults(self):
+        parent_dict = super(StructureData, self)._set_defaults
+        
+        parent_dict.update({
+                     "pbc": [True, True, True],
                      "cell": [[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]
-                     }
+                     })
 
+        return parent_dict 
+    
     def set_ase(self, aseatoms):
         """
         Load the structure from a ASE object
@@ -335,13 +342,13 @@ class StructureData(Data):
             raise TypeError("The value is not an ase.Atoms object")
         
 
-    def validate(self):
+    def _validate(self):
         """
         Performs some standard validation tests.
         """
         
         from aiida.common.exceptions import ValidationError
-        super(StructureData,self).validate()
+        super(StructureData,self)._validate()
 
         try:
             _get_valid_cell(self.cell)
@@ -349,7 +356,7 @@ class StructureData(Data):
             raise ValidationError("Invalid cell: {}".format(e.message))
 
         try:
-            _get_valid_pbc(self.pbc)
+            get_valid_pbc(self.pbc)
         except ValueError as e:
             raise ValidationError(
                 "Invalid periodic boundary conditions: {}".format(e.message))
@@ -389,7 +396,7 @@ class StructureData(Data):
                                   "are no sites with that kind: {}".format(
                                       list(kinds_without_sites)))
                
-    def exportstring(self, fileformat):
+    def _exportstring(self, fileformat):
         """
         Converts an AiiDA structure in other text format.
 
@@ -419,7 +426,7 @@ class StructureData(Data):
         if fileformat is None:
             fileformat = fname.split('.')[-1]
 
-        filecontent = self.exportstring(format)
+        filecontent = self._exportstring(format)
         with open(fname,'w') as f:  # writes in cwd, if fname is not absolute
             f.write( filecontent )
         
@@ -913,7 +920,7 @@ class StructureData(Data):
         if not self._to_be_stored:
             raise ModificationNotAllowed("The StructureData object cannot be modified, "
                 "it has already been stored")
-        the_pbc = _get_valid_pbc(value)
+        the_pbc = get_valid_pbc(value)
 
         #self._pbc = the_pbc
         self.set_attr('pbc1',the_pbc[0])

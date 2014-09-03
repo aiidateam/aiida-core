@@ -363,7 +363,7 @@ class GoToComputer(VerdiCommand):
             print >> sys.stderr, e.message
             sys.exit(1)
         # get the remote directory
-        remotedir = calc.get_remote_workdir()
+        remotedir = calc._get_remote_workdir()
         if not remotedir:
             print >> sys.stderr, "No remote work directory is set for this calculation!"
             print >> sys.stderr, "(It is possible that the daemon did not submit the calculation yet)"

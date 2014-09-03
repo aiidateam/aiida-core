@@ -495,7 +495,7 @@ class TestNodeBasic(AiidaTestCase):
             a.add_path(f.name,'file1.txt')
             a.add_path(f.name,'file2.txt')
 
-        self.assertEquals(set(a.get_path_list()),set(['file1.txt','file2.txt']))
+        self.assertEquals(set(a.get_folder_list()),set(['file1.txt','file2.txt']))
         with open(a.get_abs_path('file1.txt')) as f:
             self.assertEquals(f.read(), file_content)
         with open(a.get_abs_path('file2.txt')) as f:
@@ -505,7 +505,7 @@ class TestNodeBasic(AiidaTestCase):
         self.assertNotEquals(a.uuid, b.uuid)
 
         # Check that the content is there
-        self.assertEquals(set(b.get_path_list()),set(['file1.txt','file2.txt']))
+        self.assertEquals(set(b.get_folder_list()),set(['file1.txt','file2.txt']))
         with open(b.get_abs_path('file1.txt')) as f:
             self.assertEquals(f.read(), file_content)
         with open(b.get_abs_path('file2.txt')) as f:
@@ -519,12 +519,12 @@ class TestNodeBasic(AiidaTestCase):
             b.add_path(f.name,'file3.txt')
 
         # I check the new content, and that the old one has not changed
-        self.assertEquals(set(a.get_path_list()),set(['file1.txt','file2.txt']))
+        self.assertEquals(set(a.get_folder_list()),set(['file1.txt','file2.txt']))
         with open(a.get_abs_path('file1.txt')) as f:
             self.assertEquals(f.read(), file_content)
         with open(a.get_abs_path('file2.txt')) as f:
             self.assertEquals(f.read(), file_content)
-        self.assertEquals(set(b.get_path_list()),
+        self.assertEquals(set(b.get_folder_list()),
                           set(['file1.txt','file2.txt','file3.txt']))
         with open(b.get_abs_path('file1.txt')) as f:
             self.assertEquals(f.read(), file_content)
@@ -546,13 +546,13 @@ class TestNodeBasic(AiidaTestCase):
             c.add_path(f.name,'file1.txt')       
             c.add_path(f.name,'file4.txt')
 
-        self.assertEquals(set(a.get_path_list()),set(['file1.txt','file2.txt']))
+        self.assertEquals(set(a.get_folder_list()),set(['file1.txt','file2.txt']))
         with open(a.get_abs_path('file1.txt')) as f:
             self.assertEquals(f.read(), file_content)
         with open(a.get_abs_path('file2.txt')) as f:
             self.assertEquals(f.read(), file_content)
 
-        self.assertEquals(set(c.get_path_list()),
+        self.assertEquals(set(c.get_folder_list()),
                           set(['file1.txt','file2.txt','file4.txt']))
         with open(c.get_abs_path('file1.txt')) as f:
             self.assertEquals(f.read(), file_content_different)
@@ -600,10 +600,10 @@ class TestNodeBasic(AiidaTestCase):
         a.add_path(tree_1,'tree_1')
 
         # verify if the node has the structure I expect
-        self.assertEquals(set(a.get_path_list()),set(['tree_1']))
-        self.assertEquals( set( a.get_path_list('tree_1') ),
+        self.assertEquals(set(a.get_folder_list()),set(['tree_1']))
+        self.assertEquals( set( a.get_folder_list('tree_1') ),
                            set(['file1.txt','dir1']) )
-        self.assertEquals( set( a.get_path_list(os.path.join('tree_1','dir1'))),
+        self.assertEquals( set( a.get_folder_list(os.path.join('tree_1','dir1'))),
                            set(['dir2','file2.txt']) )
         with open(a.get_abs_path( os.path.join('tree_1','file1.txt') )) as f:
             self.assertEquals(f.read(), file_content)
@@ -613,17 +613,17 @@ class TestNodeBasic(AiidaTestCase):
 
         # try to exit from the folder
         with self.assertRaises(ValueError):
-            a.get_path_list('..')
+            a.get_folder_list('..')
 
         # copy into a new node
         b = a.copy()
         self.assertNotEquals(a.uuid, b.uuid)
 
         # Check that the content is there
-        self.assertEquals(set(b.get_path_list('.')),set(['tree_1']))
-        self.assertEquals( set(b.get_path_list('tree_1')),
+        self.assertEquals(set(b.get_folder_list('.')),set(['tree_1']))
+        self.assertEquals( set(b.get_folder_list('tree_1')),
                            set(['file1.txt','dir1']) )
-        self.assertEquals( set(b.get_path_list(os.path.join('tree_1','dir1'))),
+        self.assertEquals( set(b.get_folder_list(os.path.join('tree_1','dir1'))),
                            set(['dir2','file2.txt']) )
         with open(b.get_abs_path( os.path.join('tree_1','file1.txt') )) as f:
             self.assertEquals(f.read(), file_content)
@@ -647,10 +647,10 @@ class TestNodeBasic(AiidaTestCase):
 
         # I check the new content, and that the old one has not changed
         # old
-        self.assertEquals(set(a.get_path_list('.')),set(['tree_1']))
-        self.assertEquals( set( a.get_path_list('tree_1') ),
+        self.assertEquals(set(a.get_folder_list('.')),set(['tree_1']))
+        self.assertEquals( set( a.get_folder_list('tree_1') ),
                            set(['file1.txt','dir1']) )
-        self.assertEquals( set( a.get_path_list(os.path.join('tree_1','dir1'))),
+        self.assertEquals( set( a.get_folder_list(os.path.join('tree_1','dir1'))),
                            set(['dir2','file2.txt']) )
         with open(a.get_abs_path( os.path.join('tree_1','file1.txt') )) as f:
             self.assertEquals(f.read(), file_content)
@@ -658,11 +658,11 @@ class TestNodeBasic(AiidaTestCase):
                 'tree_1','dir1','file2.txt') )) as f:
             self.assertEquals(f.read(), file_content)
         #new
-        self.assertEquals(set(b.get_path_list('.')),
+        self.assertEquals(set(b.get_folder_list('.')),
                           set(['tree_1','file3.txt']))
-        self.assertEquals( set( b.get_path_list('tree_1') ),
+        self.assertEquals( set( b.get_folder_list('tree_1') ),
                            set(['file1.txt','dir1','dir3']) )
-        self.assertEquals( set( b.get_path_list(os.path.join('tree_1','dir1'))),
+        self.assertEquals( set( b.get_folder_list(os.path.join('tree_1','dir1'))),
                            set(['dir2','file2.txt']) )
         with open(b.get_abs_path( os.path.join('tree_1','file1.txt') )) as f:
             self.assertEquals(f.read(), file_content)
@@ -686,10 +686,10 @@ class TestNodeBasic(AiidaTestCase):
         c.remove_path( os.path.join('tree_1','dir1','dir2') )
 
         # check old
-        self.assertEquals(set(a.get_path_list('.')),set(['tree_1']))
-        self.assertEquals( set( a.get_path_list('tree_1') ),
+        self.assertEquals(set(a.get_folder_list('.')),set(['tree_1']))
+        self.assertEquals( set( a.get_folder_list('tree_1') ),
                            set(['file1.txt','dir1']) )
-        self.assertEquals( set(a.get_path_list( os.path.join('tree_1','dir1'))),
+        self.assertEquals( set(a.get_folder_list( os.path.join('tree_1','dir1'))),
                            set(['dir2','file2.txt']) )
         with open(a.get_abs_path( os.path.join('tree_1','file1.txt') )) as f:
             self.assertEquals(f.read(), file_content)
@@ -698,10 +698,10 @@ class TestNodeBasic(AiidaTestCase):
             self.assertEquals(f.read(), file_content)
 
         # check new
-        self.assertEquals( set( c.get_path_list('.')),set(['tree_1']))
-        self.assertEquals( set( c.get_path_list('tree_1') ),
+        self.assertEquals( set( c.get_folder_list('.')),set(['tree_1']))
+        self.assertEquals( set( c.get_folder_list('tree_1') ),
                            set(['file1.txt','dir1']) )
-        self.assertEquals( set( c.get_path_list(os.path.join('tree_1','dir1'))),
+        self.assertEquals( set( c.get_folder_list(os.path.join('tree_1','dir1'))),
                            set(['file2.txt','file4.txt']) )
         with open(c.get_abs_path( os.path.join('tree_1','file1.txt') )) as f:
             self.assertEquals(f.read(), file_content_different)
@@ -1214,7 +1214,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
                               ("N3", n3.uuid), ("N4", n4.uuid)]))        
         
         # This will also store n1 and n2!
-        endnode.store_input_links()
+        endnode._store_input_links()
         
         self.assertEqual(set([(i[0], i[1].uuid)
                               for i in endnode.get_inputs(only_in_db=True,

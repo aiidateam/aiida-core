@@ -305,7 +305,10 @@ djcelery.setup_loader()
 
 BROKER_URL = "django://"
 CELERY_RESULT_BACKEND = "database"
-
+# Avoid to store the results in the database, it uses a lot of resources
+# and we do not need results
+CELERY_IGNORE_RESULT=True
+#CELERY_STORE_ERRORS_EVEN_IF_IGNORED=True
 #CELERYD_HIJACK_ROOT_LOGGER = False
 
 CELERYBEAT_SCHEDULER = "djcelery.schedulers.DatabaseScheduler"

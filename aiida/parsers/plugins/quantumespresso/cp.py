@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 from aiida.orm.calculation.quantumespresso.cp import CpCalculation
-from aiida.parsers.plugins.quantumespresso.raw_parser_cp import *
-from aiida.parsers.plugins.quantumespresso.constants import *
+from aiida.parsers.plugins.quantumespresso.raw_parser_cp import (
+                 QEOutputParsingError,parse_cp_traj_stanzas,parse_cp_raw_output)
+from aiida.parsers.plugins.quantumespresso.constants import (bohr_to_ang,
+                                                    timeau_to_sec,hartree_to_ev)
 from aiida.orm.data.parameter import ParameterData
 from aiida.orm.data.structure import StructureData
 from aiida.orm.data.folder import FolderData
 from aiida.parsers.parser import Parser
-from aiida.parsers.plugins.quantumespresso import convert_qe2aiida_structure
 from aiida.common.datastructures import calc_states
-from aiida.common.exceptions import UniquenessError
 from aiida.orm.data.array.trajectory import TrajectoryData
 
 __author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
@@ -31,7 +31,7 @@ class CpParser(Parser):
         """
         # check for valid input
         if not isinstance(calc,CpCalculation):
-            raise QEOutputParsingError("Input must calc must be a CpCalculation")
+            raise QEOutputParsingError("Input calc must be a CpCalculation")
 
         super(CpParser, self).__init__(calc)
         
@@ -99,24 +99,16 @@ class CpParser(Parser):
         # TODO: pass this input_dict to the parser. It might need it.            
         input_dict = calc_input.get_dict()
         
-        # load all outputs
-        calc_outputs = self._calc.get_outputs(type=FolderData,also_labels=True)
-        # look for retrieved files only
-        retrieved_folders = [i[1] for i in calc_outputs 
-                           if i[0]==self._calc.get_linkname_retrieved()]
-        if len(retrieved_folders)!=1:
-            successful = False
-            parserlogger.error("Output folder should be found once, "
-                               "found it instead {} times"
-                               .format(len(retrieved_folders)),extra=logger_extra)
-
         # select the folder object
-        out_folder = retrieved_folders[0]
+        out_folder = self._calc.get_retrieved_node()
+        if out_folder is None:
+            parserlogger.error("No retrieved folder found")
+            return False, ()
 
         # check what is inside the folder
-        list_of_files = out_folder.get_path_list()
+        list_of_files = out_folder.get_folder_list()
         # at least the stdout should exist
-        if not self._calc.OUTPUT_FILE_NAME in list_of_files:
+        if not self._calc._OUTPUT_FILE_NAME in list_of_files:
             successful = False
             new_nodes_tuple = ()
             parserlogger.error("Standard output not found",extra=logger_extra)
@@ -125,16 +117,16 @@ class CpParser(Parser):
         # if there is something more, I note it down, so to call the raw parser
         # with the right options
         # look for xml
-        out_file = out_folder.get_abs_path(self._calc.OUTPUT_FILE_NAME )
+        out_file = out_folder.get_abs_path(self._calc._OUTPUT_FILE_NAME )
 
         xml_file = None
-        if self._calc.DATAFILE_XML_BASENAME in list_of_files:
-            xml_file = out_folder.get_abs_path(self._calc.DATAFILE_XML_BASENAME)
+        if self._calc._DATAFILE_XML_BASENAME in list_of_files:
+            xml_file = out_folder.get_abs_path(self._calc._DATAFILE_XML_BASENAME)
         
         xml_counter_file = None
-        if self._calc.FILE_XML_PRINT_COUNTER in list_of_files:
+        if self._calc._FILE_XML_PRINT_COUNTER in list_of_files:
             xml_counter_file = out_folder.get_abs_path(
-                                            self._calc.FILE_XML_PRINT_COUNTER )
+                                            self._calc._FILE_XML_PRINT_COUNTER )
         
         parsing_args = [out_file,xml_file,xml_counter_file]
         
@@ -156,7 +148,7 @@ class CpParser(Parser):
         # =============== POSITIONS trajectory ============================
         try:
             with open( out_folder.get_abs_path( 
-                               '{}.pos'.format(self._calc.PREFIX)) ) as posfile:
+                            '{}.pos'.format(self._calc._PREFIX)) ) as posfile:
                 pos_data = [l.split() for l in posfile]   
             #POSITIONS stored in angstrom
             traj_data = parse_cp_traj_stanzas(num_elements=out_dict['number_of_atoms'], 
@@ -187,7 +179,7 @@ class CpParser(Parser):
         # =============== CELL trajectory ============================
         try:
             with open(os.path.join( out_folder.get_abs_path('.'), 
-                                    '{}.cel'.format(self._calc.PREFIX) )) as celfile:
+                                    '{}.cel'.format(self._calc._PREFIX) )) as celfile:
                 cel_data = [l.split() for l in celfile]   
             traj_data=parse_cp_traj_stanzas(num_elements=3, 
                                             splitlines=cel_data, 
@@ -204,7 +196,7 @@ class CpParser(Parser):
         # =============== VELOCITIES trajectory ============================
         try:
             with open(os.path.join( out_folder.get_abs_path('.'), 
-                                    '{}.vel'.format(self._calc.PREFIX) )) as velfile:
+                                    '{}.vel'.format(self._calc._PREFIX) )) as velfile:
                 vel_data = [l.split() for l in velfile]   
             traj_data=parse_cp_traj_stanzas(num_elements=out_dict['number_of_atoms'],
                                             splitlines=vel_data, 
@@ -224,7 +216,7 @@ class CpParser(Parser):
         # =============== EVP trajectory ============================
         try:
             matrix = numpy.genfromtxt(os.path.join( out_folder.get_abs_path('.'), 
-                                                    '{}.evp'.format(self._calc.PREFIX) ))
+                                                    '{}.evp'.format(self._calc._PREFIX) ))
             steps = matrix[:,0]
             steps = numpy.array(steps,dtype=int)
             
@@ -298,7 +290,6 @@ class CpParser(Parser):
         xml_positions = [i[1] for i in xml_atoms]
         ordering = [0]*len(xml_positions)
         for xml_i,xml_atom in enumerate(xml_positions):
-            read_pos = 0
             for read_i,read_atom in enumerate(positions):
                 if numpy.linalg.norm(numpy.array(read_atom)-numpy.array(xml_atom)) < 1e-5:
                     ordering[xml_i] = read_i

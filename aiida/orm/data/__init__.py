@@ -34,7 +34,7 @@ class Data(Node):
         
         return super(Data,self)._add_link_from(src,label)
     
-    def can_link_as_output(self,dest):
+    def _can_link_as_output(self,dest):
         """
         Raise a ValueError if a link from self to dest is not allowed.
         
@@ -45,6 +45,6 @@ class Data(Node):
         if not isinstance(dest, Calculation):
             raise ValueError("The output of a data node can only be a calculation")
 
-        return super(Data, self).can_link_as_output(dest)
+        return super(Data, self)._can_link_as_output(dest)
     
     

@@ -22,10 +22,12 @@ class ArrayData(Data):
       If too much RAM memory is used, you can clear the
       cache with the :py:meth:`.clear_internal_cache` method. 
     """
-
+    array_prefix = "array|"
+    
     def __init__(self,*args,**kwargs):
         super(ArrayData, self).__init__(*args, **kwargs)
         self._cached_arrays = {}
+        
 
     def delete_array(self, name):
         """
@@ -36,14 +38,14 @@ class ArrayData(Data):
         import numpy
 
         fname = '{}.npy'.format(name)
-        if fname not in self.get_path_list():
+        if fname not in self.get_folder_list():
             raise KeyError("Array with name '{}' not found in node pk={}".format(
                 name, self.pk))
         
         # remove both file and attribute
         self.remove_path(fname)
         try:
-            self.del_attr(name)
+            self.del_attr("{}{}".format(self.array_prefix, name))
         except (KeyError, AttributeError):
             # Should not happen, but do not crash if for some reason the 
             # property was not set.
@@ -54,7 +56,23 @@ class ArrayData(Data):
         Return a list of all arrays stored in the node, listing the files (and 
         not relying on the properties).
         """
-        return [i[:-4] for i in self.get_path_list() if i.endswith('.npy')]
+        return self._arraynames_from_properties()
+
+    def _arraynames_from_files(self):     
+        """
+        Return a list of all arrays stored in the node, listing the files (and 
+        not relying on the properties).
+        """
+        return [i[:-4] for i in self.get_folder_list() if i.endswith('.npy')]
+
+
+    def _arraynames_from_properties(self):     
+        """
+        Return a list of all arrays stored in the node, listing the attributes
+        starting with the correct prefix.
+        """
+        return [i[len(self.array_prefix):] for i in
+                      self.attrs() if i.startswith(self.array_prefix)]
 
     def get_shape(self, name):
         """
@@ -63,7 +81,7 @@ class ArrayData(Data):
         
         :param name: The name of the array.
         """
-        return tuple(self.get_attr(name))
+        return tuple(self.get_attr("{}{}".format(self.array_prefix, name)))
 
     def iterarrays(self):
         """
@@ -84,8 +102,9 @@ class ArrayData(Data):
         # raw function used only internally
         def get_array_from_file(self, name):
             fname = '{}.npy'.format(name)
-            if fname not in self.get_path_list():
-                raise KeyError("Array with name '{}' not found in node pk={}".format(
+            if fname not in self.get_folder_list():
+                raise KeyError(
+                    "Array with name '{}' not found in node pk={}".format(
                     name, self.pk))
         
             array = numpy.load(self.get_abs_path(fname))
@@ -145,11 +164,11 @@ class ArrayData(Data):
             self.add_path(f.name, fname)
         
         # Mainly for convenience, for querying purposes (both stores the fact
-        # that there is an array with that name, and its shape
-        self.set_attr(name, list(array.shape))
+        # that there is an array with that name, and its shape)
+        self.set_attr("{}{}".format(self.array_prefix, name), list(array.shape))
     
 
-    def validate(self):
+    def _validate(self):
         """
         Check if the list of .npy files stored inside the node and the 
         list of properties match. Just a name check, no check on the size
@@ -157,11 +176,11 @@ class ArrayData(Data):
         and memory.
         """
         from aiida.common.exceptions import ValidationError
-        files = self.arraynames()
-        properties = self.attrs()
+        files = self._arraynames_from_files()
+        properties = self._arraynames_from_properties()
         
         if set(files) != set(properties):
             raise ValidationError("Mismatch of files and properties for ArrayData"
-                                  "node (pk={}): {} vs. {}".format(self.pk,
+                                  " node (pk={}): {} vs. {}".format(self.pk,
                                         files, properties))
-        super(ArrayData,self).validate()
+        super(ArrayData,self)._validate()

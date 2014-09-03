@@ -29,6 +29,7 @@ QECalc = CalculationFactory('quantumespresso.pw')
 StructureData = DataFactory('structure')
 ParameterData = DataFactory('parameter')
 UpfData = DataFactory('upf')
+KpointsData = DataFactory('array.kpoints')
 
 class QETestCase(AiidaTestCase):
 
@@ -50,11 +51,6 @@ class TestQEPWInputGeneration(QETestCase):
         import logging
         cell = ((2.,0.,0.),(0.,2.,0.),(0.,0.,2.))
 
-        k_points = {
-            'type': 'automatic',
-            'points': [4, 4, 4, 0, 0, 0],
-            }
-        
         input_params = {
             'CONTROL': {
                 'calculation': 'vc-relax',
@@ -78,7 +74,9 @@ class TestQEPWInputGeneration(QETestCase):
         
         p = ParameterData(dict=input_params).store()
         
-        k = ParameterData(dict=k_points).store()
+        k = KpointsData()
+        k.set_kpoints_mesh([4,4,4])
+        k.store()
         
         pseudo_dir = os.path.join(os.path.split(aiida.__file__)[0],
                                   os.pardir,'examples',

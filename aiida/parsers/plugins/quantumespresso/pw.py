@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from aiida.orm.calculation.quantumespresso.pw import PwCalculation
-from aiida.parsers.plugins.quantumespresso.raw_parser_pw import parse_raw_output,QEOutputParsingError
+from aiida.parsers.plugins.quantumespresso.raw_parser_pw import (
+                            parse_raw_output,QEOutputParsingError)
 from aiida.orm.data.parameter import ParameterData
 from aiida.orm.data.folder import FolderData
 from aiida.parsers.parser import Parser#, ParserParamManager
@@ -8,6 +9,8 @@ from aiida.parsers.plugins.quantumespresso import convert_qe2aiida_structure
 from aiida.common.datastructures import calc_states
 from aiida.common.exceptions import UniquenessError
 from aiida.orm.data.array import ArrayData
+from aiida.orm.data.array.bands import BandsData
+from aiida.orm.data.array.bands import KpointsData
 
 #TODO: I don't like the generic class always returning a name for the link to the output structure
 
@@ -21,8 +24,6 @@ class PwParser(Parser):
     This class is the implementation of the Parser class for PWscf.
     """
 
-    _outstruc_name = 'output_structure'
-    _outarray_name = 'output_array'
     _setting_key = 'parser_options'
 
     def __init__(self,calc):
@@ -32,7 +33,7 @@ class PwParser(Parser):
         self._possible_symmetries = self._get_qe_symmetry_list()
         # check for valid input
         if not isinstance(calc,PwCalculation):
-            raise QEOutputParsingError("Input must calc must be a PwCalculation")
+            raise QEOutputParsingError("Input calc must be a PwCalculation")
         
         super(PwParser, self).__init__(calc)
                 
@@ -85,7 +86,7 @@ class PwParser(Parser):
                     if i[0]==self._calc.get_linkname('settings')] 
         # assume there is only one, otherwise calc already should have complained
         try:
-            parser_opts = settings_list[0].get_dict()[self._setting_key]
+            parser_opts = settings_list[0].get_dict()[self.get_parser_settings_key()]
         except (KeyError,IndexError): # no parser_opts or no settings
             parser_opts = {}
 
@@ -93,25 +94,16 @@ class PwParser(Parser):
         # TODO: pass this input_dict to the parser. It might need it.            
         input_dict = calc_input.get_dict()
         
-        # load all outputs
-        calc_outputs = self._calc.get_outputs(type=FolderData,also_labels=True)
-        # look for retrieved files only
-        retrieved_files = [i[1] for i in calc_outputs if i[0]==self._calc.get_linkname_retrieved()]
-        if len(retrieved_files)!=1:
-            parserlogger.error("Output folder should be found once, "
-                               "found it instead {} times"
-                               .format(len(retrieved_files)),
-                               extra=logger_extra
-                               )
-            successful = False
-        
         # select the folder object
-        out_folder = calc_outputs[0][1]
+        out_folder = self._calc.get_retrieved_node()
+        if out_folder is None:
+            parserlogger.error("No retrieved folder found")
+            return False, ()
 
         # check what is inside the folder
-        list_of_files = out_folder.get_path_list()
+        list_of_files = out_folder.get_folder_list()
         # at least the stdout should exist
-        if not self._calc.OUTPUT_FILE_NAME in list_of_files:
+        if not self._calc._OUTPUT_FILE_NAME in list_of_files:
             parserlogger.error("Standard output not found",extra=logger_extra)
             successful = False
             return successful,()
@@ -119,20 +111,19 @@ class PwParser(Parser):
         # with the right options
         # look for xml
         has_xml = False
-        if self._calc.DATAFILE_XML_BASENAME in list_of_files:
+        if self._calc._DATAFILE_XML_BASENAME in list_of_files:
             has_xml = True
         # look for bands
         has_bands = False
         if glob.glob( os.path.join(out_folder.get_abs_path('.'),
-                                   'K[0-9][0-9][0-9][0-9][0-9]')):
-            # Note: assuming format of kpoints subfolder is Kxxxxx
-            # I don't know what happens to QE in the case of 99999> points
+                                   'K*[0-9]')):
+            # Note: assuming format of kpoints subfolder is K*[0-9]
             has_bands = True
             # TODO: maybe it can be more general than bands only?
         out_file = os.path.join( out_folder.get_abs_path('.'), 
-                                 self._calc.OUTPUT_FILE_NAME )
+                                 self._calc._OUTPUT_FILE_NAME )
         xml_file = os.path.join( out_folder.get_abs_path('.'), 
-                                 self._calc.DATAFILE_XML_BASENAME )
+                                 self._calc._DATAFILE_XML_BASENAME )
         dir_with_bands = out_folder.get_abs_path('.')
         
         # call the raw parsing function
@@ -146,9 +137,6 @@ class PwParser(Parser):
         # if calculation was not considered failed already, use the new value
         successful = raw_successful if successful else successful
         
-        if bands_data:
-            raise QEOutputParsingError("Bands parsing not implemented.")
-
         # The symmetry info has large arrays, that occupy most of the database.
         # turns out most of this is due to 64 matrices that are repeated over and over again.
         # therefore I map part of the results in a list of dictionaries wrote here once and for all
@@ -190,12 +178,37 @@ class PwParser(Parser):
         # return it to the execmanager
         new_nodes_list.append((self.get_linkname_outparams(),output_params))
         
+        k_points_list = trajectory_data.pop('k_points',None)
+        k_points_weights_list = trajectory_data.pop('k_points_weights',None)
+        
+        if k_points_list is not None:
+            
+            # build the kpoints object
+            if out_dict['k_points_units'] not in ['2 pi / Angstrom']:
+                raise QEOutputParsingError('Error in kpoints units (should be cartesian)')
+            # converting bands into a BandsData object (including the kpoints)
+            the_kpoints_data = KpointsData()
+            the_kpoints_data.set_kpoints(k_points_list, cartesian=True,
+                                       weights = k_points_weights_list,
+                                       )
+        
+            if bands_data:
+                # converting bands into a BandsData object (including the kpoints)
+                the_bands_data = BandsData()
+                the_bands_data.set_kpointsdata(the_kpoints_data)
+                the_bands_data.set_bands(bands_data['bands'], 
+                                         units = bands_data['bands_units'],
+                                         occupations = bands_data['occupations'])
+                
+            new_nodes_list += [(self.get_linkname_out_kpoints(), 
+                        the_bands_data if bands_data else the_kpoints_data)]
+        
         if trajectory_data: # although it should always be non-empty (k-points)
             import numpy
             array_data = ArrayData()
             for x in trajectory_data.iteritems():
                 array_data.set_array(x[0],numpy.array(x[1]))
-            # return it to the exemanager
+            # return it to the execmanager
             new_nodes_list.append((self.get_linkname_outarray(),array_data))
         
         # I eventually save the new structure. structure_data is unnecessary after this
@@ -214,19 +227,25 @@ class PwParser(Parser):
         Return the name of the key to be used in the calculation settings, that
         contains the dictionary with the parser_options 
         """
-        return self._setting_key
+        return 'parser_options'
 
     def get_linkname_outstructure(self):
         """
         Returns the name of the link to the output_structure
         """
-        return self._outstruc_name
+        return 'output_structure'
             
     def get_linkname_outarray(self):
         """
         Returns the name of the link to the output_structure
         """
-        return self._outarray_name
+        return 'output_trajectory_array'
+    
+    def get_linkname_out_kpoints(self):
+        """
+        Returns the name of the link to the output_structure
+        """
+        return 'output_kpoints'
     
     def get_extended_symmetries(self):
         """

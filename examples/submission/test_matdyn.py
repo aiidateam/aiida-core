@@ -12,15 +12,16 @@ load_django()
 import sys
 import os
 
+import numpy
+
 from aiida.common.exceptions import NotExistent
 
 from aiida.orm import Code, Calculation, DataFactory
 
 ################################################################
 if __name__ == "__main__":
-    UpfData = DataFactory('upf')
     ParameterData = DataFactory('parameter')
-    StructureData = DataFactory('structure')
+    KpointsData = DataFactory('array.kpoints')
     try:
         dontsend = sys.argv[1]
         if dontsend == "--dont-send":
@@ -39,14 +40,14 @@ if __name__ == "__main__":
         codename = sys.argv[3]
     except IndexError:
         print >> sys.stderr, ("Must provide as further parameters the parent ID and "
-                         "a q2r codename")
+                         "a matdyn codename")
         sys.exit(1)
 
     num_machines = 1 # node numbers
     queue = None
 
     #####
-    expected_code_type='quantumespresso.q2r'
+    expected_code_type='quantumespresso.matdyn'
 
     try:
         parent_id = int(parent_id)
@@ -78,18 +79,35 @@ if __name__ == "__main__":
 
     parameters = ParameterData(dict={
                 'INPUT': {
-                    'zasr': 'simple',
+                    'asr': 'simple',
                     },
                 })
+    
+    # additional settings specifying that we want to retrieve also the file with
+    # phonon displacements
+    settings = ParameterData(dict={
+                'additional_retrieve_list': ['phonon_displacements.dat'],
+                })
+
+    parentcalc = Calculation.get_subclass_from_pk(parent_id)
+
+    kpoints = KpointsData()
+    try:
+        structure = parentcalc.inp.parent_calc_folder.inp.retrieved.inp.parent_calc_folder.inp.remote_folder.inp.structure
+        kpoints.set_cell_from_structure(structure)
+        kpoints.set_kpoints_path()
+    except AttributeError:
+        kpoints.set_kpoints([[i,i,0] for i in numpy.linspace(0,1,10)])
 
     calc = code.new_calc(computer=computer)
-    calc.label = "Test QE q2r.x"
-    calc.description = "Test calculation with the Quantum ESPRESSO q2r.x code"
+    calc.label = "Test QE matdyn.x"
+    calc.description = "Test calculation with the Quantum ESPRESSO matdyn.x code"
     calc.set_max_wallclock_seconds(60*30) # 30 min
     calc.set_resources({"num_machines":num_machines})
 
     calc.use_parameters(parameters)
-    parentcalc = Calculation.get_subclass_from_pk(parent_id)
+    calc.use_settings(settings) # additional settings (comment if you don't want to retrieve the phonon displacements file)
+    calc.use_kpoints(kpoints)
     calc.use_parent_calculation(parentcalc)
 
     if submit_test:

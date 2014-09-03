@@ -6,17 +6,16 @@ afterwards).
 """
 import os
 
-from aiida.orm import Calculation, DataFactory
+from aiida.orm import Calculation
 from aiida.common.exceptions import InputValidationError
 from aiida.common.datastructures import CalcInfo
 from aiida.common.utils import classproperty
 from aiida.orm.calculation.quantumespresso import (
     _lowercase_dict, _uppercase_dict, get_input_data_text)
-
 from aiida.orm.data.parameter import ParameterData 
 from aiida.orm.data.remote import RemoteData 
 from aiida.orm.data.folder import FolderData 
-
+from aiida.orm.data.singlefile import SinglefileData
     
 __author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
 __copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
@@ -29,17 +28,33 @@ class NamelistsCalculation(Calculation):
     Quantum ESPRESSO distribution (http://www.quantum-espresso.org/)
     that accept as input a Fortran-style namelist.
     """
-    OUTPUT_SUBFOLDER = './out/'
-    PREFIX = 'aiida'
-    INPUT_FILE_NAME = 'aiida.in'
-    OUTPUT_FILE_NAME = 'aiida.out'
-    _internal_retrieve_list = []
-    _default_namelists = ['INPUTPP']
-    _default_parent_output_folder = './out/'
-    _blocked_keywords = [] # a list of tuples with key and value fixed
-    _parent_folder_type = 'RemoteData'
-    _default_parser = None
-    _retrieve_singlefile_list = []
+    def _init_internal_params(self):
+        super(NamelistsCalculation, self)._init_internal_params()
+                
+        # Default name of the subfolder inside 'parent_folder'
+        # from which you want to copy the files, in case
+        # the parent_folder is of type FolderData
+        self._INPUT_SUBFOLDER = "./out/"
+        # Default name of the subfolder inside 'parent_folder'
+        # from which you want to copy the files, in case
+        # the parent_folder is of type RemoteData,
+        # unless the user specified a SETTINGS->parent_calc_out_subfolder
+        # value
+        self._default_parent_output_folder = './out/'
+        # Default name of the subfolder that you want to create
+        # in the output and in which you want to place the files
+        # taken from parent_folder/INPUT_SUBFOLDER, in case
+        # the parent_folder is of type RemoteData or FolderData
+        self._OUTPUT_SUBFOLDER = './out/'
+        self._PREFIX = 'aiida'
+        self._INPUT_FILE_NAME = 'aiida.in'
+        self._OUTPUT_FILE_NAME = 'aiida.out'
+        self._internal_retrieve_list = []
+        self._default_namelists = ['INPUTPP']
+        self._blocked_keywords = [] # a list of tuples with key and value fixed
+        self._parent_folder_type = (RemoteData, FolderData, SinglefileData)
+        self._default_parser = None
+        self._retrieve_singlefile_list = []
 
     @classproperty
     def _use_methods(cls):
@@ -62,7 +77,7 @@ class NamelistsCalculation(Calculation):
                              "for the namelists"),
                },
             "parent_folder": {
-               'valid_types': (RemoteData, FolderData),
+               'valid_types': (RemoteData, FolderData, SinglefileData),
                'additional_parameter': None,
                'linkname': 'parent_calc_folder',
                'docstring': ("Use a remote folder as parent folder (for "
@@ -99,7 +114,7 @@ class NamelistsCalculation(Calculation):
         except KeyError:
             raise InputValidationError("No parameters specified for this calculation")
         if not isinstance(parameters, ParameterData):
-            raise InputValidationError("parameters is not of type ParameterDa")
+            raise InputValidationError("parameters is not of type ParameterData")
         
         # Settings can be undefined, and defaults to an empty dictionary
         settings = inputdict.pop(self.get_linkname('settings'),None)
@@ -117,8 +132,13 @@ class NamelistsCalculation(Calculation):
         
         if parent_calc_folder is not None:
             if not isinstance(parent_calc_folder, self._parent_folder_type):
+                if not isinstance(self._parent_folder_type, tuple):
+                    possible_types = [self._parent_folder_type.__name__]
+                else:
+                    possible_types = [t.__name__ for t in self._parent_folder_type]
                 raise InputValidationError("parent_calc_folder, if specified,"
-                    "must be of type {}".format(self._parent_folder_type.__name__))
+                    "must be of type {}".format(
+                        " or ".join(self.possible_types)))
 
         following_text = self._get_following_text(inputdict, settings)
                 
@@ -166,7 +186,7 @@ class NamelistsCalculation(Calculation):
         except KeyError: # list of namelists not specified; do automatic detection
             namelists_toprint = self._default_namelists
         
-        input_filename = tempfolder.get_abs_path(self.INPUT_FILE_NAME)
+        input_filename = tempfolder.get_abs_path(self._INPUT_FILE_NAME)
 
         with open(input_filename,'w') as infile:
             for namelist_name in namelists_toprint:
@@ -191,32 +211,38 @@ class NamelistsCalculation(Calculation):
         # copy remote output dir, if specified
         if parent_calc_folder is not None:
             if isinstance(parent_calc_folder,RemoteData):
-                parent_calc_out_subfolder = settings_dict.pop('parent_calc_out_subfolder',
-                                              self._default_parent_output_folder)
+                parent_calc_out_subfolder = settings_dict.pop('PARENT_CALC_OUT_SUBFOLDER',
+                                              self._INPUT_SUBFOLDER)
                 remote_copy_list.append(
                          (parent_calc_folder.get_computer().uuid,
                           os.path.join(parent_calc_folder.get_remote_path(),
                                        parent_calc_out_subfolder),
-                          self.OUTPUT_SUBFOLDER))
+                          self._OUTPUT_SUBFOLDER))
             elif isinstance(parent_calc_folder,FolderData):
-                local_copy_list.append( (parent_calc_folder.get_abs_path(self.OUTPUT_SUBFOLDER),
-                                         self.OUTPUT_SUBFOLDER
-                                        )
-                                      )
+                local_copy_list.append(
+                    (parent_calc_folder.get_abs_path(self._INPUT_SUBFOLDER),
+                        self._OUTPUT_SUBFOLDER)
+                    )
+            elif isinstance(parent_calc_folder,SinglefileData):
+                filename =parent_calc_folder.get_file_abs_path() 
+                local_copy_list.append(
+                    (filename, os.path.basename(filename))
+                 )
+                
         calcinfo = CalcInfo()
-
+        
         calcinfo.uuid = self.uuid
         # Empty command line by default
         calcinfo.cmdline_params = settings_dict.pop('CMDLINE', [])
         calcinfo.local_copy_list = local_copy_list
         calcinfo.remote_copy_list = remote_copy_list
-        calcinfo.stdin_name = self.INPUT_FILE_NAME
-        calcinfo.stdout_name = self.OUTPUT_FILE_NAME
+        calcinfo.stdin_name = self._INPUT_FILE_NAME
+        calcinfo.stdout_name = self._OUTPUT_FILE_NAME
         
         # Retrieve by default the output file and the xml file
         calcinfo.retrieve_list = []        
-        calcinfo.retrieve_list.append(self.OUTPUT_FILE_NAME)
-        settings_retrieve_list = settings_dict.pop('additional_retrieve_list', [])
+        calcinfo.retrieve_list.append(self._OUTPUT_FILE_NAME)
+        settings_retrieve_list = settings_dict.pop('ADDITIONAL_RETRIEVE_LIST', [])
         calcinfo.retrieve_list += settings_retrieve_list
         calcinfo.retrieve_list += self._internal_retrieve_list
         

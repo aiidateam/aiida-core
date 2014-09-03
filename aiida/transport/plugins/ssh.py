@@ -515,8 +515,7 @@ class SshTransport(aiida.transport.Transport):
             If the directory already exists, OSError is raised.
         """
         # check to avoid creation of empty dirs
-        if path.endswith('/'):
-            path = path[:-1]
+        path = os.path.normpath(path)
         
         if path.startswith('/'):
             to_create = path.strip().split('/')[1:]
@@ -694,7 +693,7 @@ class SshTransport(aiida.transport.Transport):
 
         if self.has_magic(localpath):
             if self.has_magic(remotepath):
-                raise ValueError("Pahname patterns are not allowed in the "
+                raise ValueError("Pathname patterns are not allowed in the "
                                  "destination")
 
             # use the imported glob to analyze the path locally
@@ -869,7 +868,7 @@ class SshTransport(aiida.transport.Transport):
 
         if self.has_magic(remotepath):
             if self.has_magic(localpath):
-                raise ValueError("Pahname patterns are not allowed in the "
+                raise ValueError("Pathname patterns are not allowed in the "
                                  "destination")
             # use the self glob to analyze the path remotely
             to_copy_list = self.glob(remotepath)
@@ -1076,7 +1075,7 @@ class SshTransport(aiida.transport.Transport):
         
         if self.has_magic(remotesource):
             if self.has_magic(remotedestination):
-                raise ValueError("Pahname patterns are not allowed in the "
+                raise ValueError("Pathname patterns are not allowed in the "
                                  "destination")
             
             to_copy_list = self.glob(remotesource)

@@ -9,6 +9,7 @@ from aiida.common.utils import classproperty
 
 from aiida.orm.data.structure import StructureData
 from aiida.orm.data.parameter import ParameterData
+from aiida.orm.data.array.kpoints import KpointsData
 from aiida.orm.data.upf import UpfData
 from aiida.orm.data.remote import RemoteData 
 
@@ -19,23 +20,19 @@ __version__ = "0.2.0"
 
 class BasePwCpInputGenerator(object):
 
-    PSEUDO_SUBFOLDER = './pseudo/'
-    OUTPUT_SUBFOLDER = './out/'
-    PREFIX = 'aiida'
-    INPUT_FILE_NAME = 'aiida.in'
-    OUTPUT_FILE_NAME = 'aiida.out'
-    DATAFILE_XML_BASENAME = 'data-file.xml'
-    DATAFILE_XML = 'undefined.xml'
-#    DATAFILE_XML = os.path.join(OUTPUT_SUBFOLDER, 
-#                               '{}.save'.format(PREFIX), 
-#                               DATAFILE_XML_BASENAME)
+    _PSEUDO_SUBFOLDER = './pseudo/'
+    _OUTPUT_SUBFOLDER = './out/'
+    _PREFIX = 'aiida'
+    _INPUT_FILE_NAME = 'aiida.in'
+    _OUTPUT_FILE_NAME = 'aiida.out'
+    _DATAFILE_XML_BASENAME = 'data-file.xml'
+    _DATAFILE_XML = 'undefined.xml'
 
     # Additional files that should always be retrieved for the specific plugin
     _internal_retrieve_list = []
 
-    # Default PW output parser provided by AiiDA
-    _default_parser = None
-    #_default_parser = 'quantumespresso.pw'
+    ## Default PW output parser provided by AiiDA
+    # to be defined in the subclass
     
     _automatic_namelists = {}
 
@@ -43,11 +40,12 @@ class BasePwCpInputGenerator(object):
     _default_symlink_usage = True
 
     # in restarts, it will copy from the parent the following 
-    _restart_copy_from = os.path.join(OUTPUT_SUBFOLDER,'*')
+    _restart_copy_from = os.path.join(_OUTPUT_SUBFOLDER,'*')
     
     # in restarts, it will copy the previous folder in the following one 
-    _restart_copy_to = OUTPUT_SUBFOLDER
+    _restart_copy_to = _OUTPUT_SUBFOLDER
     
+    # To be specified in the subclass:
 #    _automatic_namelists = {
 #        'scf':   ['CONTROL', 'SYSTEM', 'ELECTRONS'],
 #        'nscf':  ['CONTROL', 'SYSTEM', 'ELECTRONS'],
@@ -58,23 +56,22 @@ class BasePwCpInputGenerator(object):
 #        'vc-relax': ['CONTROL', 'SYSTEM', 'ELECTRONS', 'IONS', 'CELL'],
 #        }
 
-
     # Keywords that cannot be set
     # If the length of the tuple is three, the third value is the value that
     # will be automatically set.
     # Note that some values (ibrav, nat, ntyp, ...) are overridden anyway
-    _blocked_keywords = [('CONTROL', 'pseudo_dir'), # set later
-         ('CONTROL', 'outdir'),  # set later
-         ('CONTROL', 'prefix'),  # set later
-         ('SYSTEM', 'ibrav'),  # set later
-         ('SYSTEM', 'celldm'),
-         ('SYSTEM', 'nat'),  # set later
-         ('SYSTEM', 'ntyp'),  # set later
-         ('SYSTEM', 'a'), ('SYSTEM', 'b'), ('SYSTEM', 'c'),
-         ('SYSTEM', 'cosab'), ('SYSTEM', 'cosac'), ('SYSTEM', 'cosbc'),
-    ]
+#     _blocked_keywords = [('CONTROL', 'pseudo_dir'), # set later
+#          ('CONTROL', 'outdir'),  # set later
+#          ('CONTROL', 'prefix'),  # set later
+#          ('SYSTEM', 'ibrav'),  # set later
+#          ('SYSTEM', 'celldm'),
+#          ('SYSTEM', 'nat'),  # set later
+#          ('SYSTEM', 'ntyp'),  # set later
+#          ('SYSTEM', 'a'), ('SYSTEM', 'b'), ('SYSTEM', 'c'),
+    #     ('SYSTEM', 'cosab'), ('SYSTEM', 'cosac'), ('SYSTEM', 'cosbc'),
+    #]
     
-    _use_kpoints = False
+    #_use_kpoints = False
     
     @classproperty
     def _baseclass_use_methods(cls):
@@ -119,14 +116,6 @@ class BasePwCpInputGenerator(object):
                              "the species) for which you want to use this "
                              "pseudo"),
                },
-            "parent_folder": {
-               'valid_types': RemoteData,
-               'additional_parameter': None,
-               'linkname': 'parent_calc_folder',
-               'docstring': ("Use a remote folder as parent folder (for "
-                             "restarts and similar"),
-               },
-
             }
 
     
@@ -166,8 +155,8 @@ class BasePwCpInputGenerator(object):
                 kpoints = inputdict.pop(self.get_linkname('kpoints'))
             except KeyError:
                 raise InputValidationError("No kpoints specified for this calculation")
-            if not isinstance(kpoints,  ParameterData):
-                raise InputValidationError("kpoints is not of type ParameterData")
+            if not isinstance(kpoints,  KpointsData):
+                raise InputValidationError("kpoints is not of type KpointsData")
 
         # Settings can be undefined, and defaults to an empty dictionary
         settings = inputdict.pop(self.get_linkname('settings'),None)
@@ -213,10 +202,6 @@ class BasePwCpInputGenerator(object):
         # END OF INITIAL INPUT CHECK #
         ##############################
 
-        # Kpoints converted to uppercase
-        if self._use_kpoints:
-            kpoints_dict = kpoints.get_dict()
-
         # I put the first-level keys as uppercase (i.e., namelist and card names)
         # and the second-level keys as lowercase
         # (deeper levels are unchanged)
@@ -247,9 +232,9 @@ class BasePwCpInputGenerator(object):
         # internal flag names must be lowercase)
         if 'CONTROL' not in input_params:
             input_params['CONTROL'] = {}
-        input_params['CONTROL']['pseudo_dir'] = self.PSEUDO_SUBFOLDER
-        input_params['CONTROL']['outdir'] = self.OUTPUT_SUBFOLDER
-        input_params['CONTROL']['prefix'] = self.PREFIX
+        input_params['CONTROL']['pseudo_dir'] = self._PSEUDO_SUBFOLDER
+        input_params['CONTROL']['outdir'] = self._OUTPUT_SUBFOLDER
+        input_params['CONTROL']['prefix'] = self._PREFIX
 
         input_params['CONTROL']['verbosity'] = input_params['CONTROL'].get(
             'verbosity', 'high') # Set to high if not specified
@@ -263,10 +248,10 @@ class BasePwCpInputGenerator(object):
 
         # ------------- ATOMIC_SPECIES ------------
         # I create the subfolder that will contain the pseudopotentials
-        tempfolder.get_subfolder(self.PSEUDO_SUBFOLDER, create=True)
+        tempfolder.get_subfolder(self._PSEUDO_SUBFOLDER, create=True)
         # I create the subfolder with the output data (sometimes Quantum
         # Espresso codes crash if an empty folder is not already there
-        tempfolder.get_subfolder(self.OUTPUT_SUBFOLDER, create=True)
+        tempfolder.get_subfolder(self._OUTPUT_SUBFOLDER, create=True)
                 
         atomic_species_card_list = ["ATOMIC_SPECIES\n"]
 
@@ -286,7 +271,7 @@ class BasePwCpInputGenerator(object):
             pseudo_filenames.append(filename)
             # I add this pseudo file to the list of files to copy            
             local_copy_list.append((ps.get_file_abs_path(),
-                                   os.path.join(self.PSEUDO_SUBFOLDER,filename)))
+                                   os.path.join(self._PSEUDO_SUBFOLDER,filename)))
             
             atomic_species_card_list.append("{} {} {}\n".format(
                 kind.name.ljust(6), kind.mass, filename))
@@ -343,73 +328,66 @@ class BasePwCpInputGenerator(object):
         # ============ I prepare the k-points =============
         if self._use_kpoints:
             try:
-                kpoints_type = kpoints_dict.pop('type')
-            except KeyError: 
-                raise InputValidationError("No 'type' specified in the "
-                                           "kpoints input node.")
-        
-            if kpoints_type != "gamma":
+                mesh,offset = kpoints.get_kpoints_mesh()
+                has_mesh = True
+            except AttributeError:
                 try:
-                    kpoints_list = kpoints_dict.pop("points")
+                    kpoints_list,weights = kpoints.get_kpoints(also_weights=True)
                     num_kpoints = len(kpoints_list)
-                except KeyError:
-                    raise InputValidationError(
-                        "the kpoints input node does not contain a 'points' "
-                        "key")
-                except TypeError:
-                    raise InputValidationError(
-                        "In the kpoints input node, 'points' is not a list")
-                if num_kpoints == 0:
-                    raise InputValidationError("At least one k point must be "
-                        "provided for non-gamma calculations")
-    
-            if kpoints_dict:
-                    raise InputValidationError("The following keys in the "
-                        "kpoints input node are not valid: {}".format(
-                            ",".join(kpoints_dict.keys())))
+                    has_mesh=False
+                    if num_kpoints == 0:
+                        raise InputValidationError("At least one k point must be "
+                            "provided for non-gamma calculations")
+
+                except AttributeError:
+                    raise InputValidationError("No valid kpoints have been found")
+            
+            gamma_only = settings_dict.pop("GAMMA_ONLY",False)
+            
+            if gamma_only:
+                if has_mesh:
+                    if tuple(mesh) != (1,1,1) or tuple(offset) != (0.,0.,0.):
+                        raise InputValidationError(
+                            "If a gamma_only calculation is requested, the "
+                            "kpoint mesh must be (1,1,1),offset=(0.,0.,0.)")
+                    
+                else:
+                    if ( len(kpoints_list) != 1 or 
+                         tuple(kpoints_list[0]) != tuple(0.,0.,0.) ):
+                        raise InputValidationError(
+                            "If a gamma_only calculation is requested, the "
+                            "kpoints coordinates must only be (0.,0.,0.)")
+
+                kpoints_type = "gamma"
+
+            elif has_mesh:
+                kpoints_type = "automatic"
+
+            else:
+                kpoints_type = "crystal"
+
+            kpoints_card_list = ["K_POINTS {}\n".format(kpoints_type)]   
                 
-            kpoints_card_list = ["K_POINTS {}\n".format(kpoints_type)]
     
             if kpoints_type == "automatic":
-                if len(kpoints_list) != 6:
-                    raise InputValidationError("k-points type is automatic, but "
-                        "the 'points' value is not a list of 6 integers")
-                try: 
-                    kpoints_card_list.append("{:d} {:d} {:d} {:d} {:d} {:d}\n"
-                        "".format(*kpoints_list))
-                except ValueError:
-                    raise InputValidationError(
-                        "Some elements  of the 'points' list "
-                        "in the input kpoints node are not integers")        
+                if any( [ (i!=0. and i !=0.5) for i in offset] ):
+                    raise InputValidationError("offset list must only be made "
+                                               "of 0 or 0.5 floats")
+                the_offset = [ 0 if i==0. else 1 for i in offset ]
+                the_6_integers = list(mesh) + the_offset
+                kpoints_card_list.append("{:d} {:d} {:d} {:d} {:d} {:d}\n"
+                                         "".format(*the_6_integers))
+                
             elif kpoints_type == "gamma":
                 # nothing to be written in this case
                 pass
             else:
                 kpoints_card_list.append("{:d}\n".format(num_kpoints))
-                try:
-                    if all(len(i)==4 for i in kpoints_list):
-                        try:
-                            for kpoint in kpoints_list:
-                                kpoints_card_list.append(
-                                    "  {:18.10f} {:18.10f} {:18.10f} {:18.10f}"
-                                    "\n".format(
-                                        float(kpoint[0]),float(kpoint[1]),
-                                        float(kpoint[2]),float(kpoint[3])))
-                        except ValueError:
-                            raise InputValidationError(
-                                "Invalid number provided for one of the kpoints"
-                                " in the 'points' list of the input kpoints "
-                                "node. I got: {}".format(kpoint))
-                    else:
-                        raise InputValidationError(
-                            "In the kpoints input node, 'points' must all have "
-                            "length four (3 coordinates + last value: weight)")
-                except (KeyError, TypeError):
-                    raise InputValidationError(
-                        "In the kpoints input node, 'points' must be a list "
-                        "of k points, and"
-                        "each k point must be provided as a list of 4 items: its "
-                        "coordinates and its weight")
+                for kpoint,weight in zip(kpoints_list,weights):
+                    kpoints_card_list.append(
+                        "  {:18.10f} {:18.10f} {:18.10f} {:18.10f}"
+                        "\n".format(kpoint[0],kpoint[1],kpoint[2],weight))
+                
             kpoints_card = "".join(kpoints_card_list)
             del kpoints_card_list
 
@@ -441,7 +419,7 @@ class BasePwCpInputGenerator(object):
                     "namelists using the NAMELISTS inside the 'settings' input "
                     "node".format(sugg_string))
         
-        input_filename = tempfolder.get_abs_path(self.INPUT_FILE_NAME)
+        input_filename = tempfolder.get_abs_path(self._INPUT_FILE_NAME)
 
         with open(input_filename,'w') as infile:
             for namelist_name in namelists_toprint:
@@ -496,18 +474,40 @@ class BasePwCpInputGenerator(object):
 
         calcinfo.uuid = self.uuid
         # Empty command line by default
-        calcinfo.cmdline_params = settings_dict.pop('CMDLINE', [])
+        cmdline_params = settings_dict.pop('CMDLINE', [])
+        #we commented calcinfo.stin_name and added it here in cmdline_params
+        #in this way the mpirun ... pw.x ... < aiida.in 
+        #is replaced by mpirun ... pw.x ... -in aiida.in
+        # in the scheduler, _get_run_line, if cmdline_params is empty, it 
+        # simply uses < calcinfo.stin_name
+        calcinfo.cmdline_params = (list(cmdline_params)
+                                   + ["-in", self._INPUT_FILE_NAME])
         calcinfo.local_copy_list = local_copy_list
         calcinfo.remote_copy_list = remote_copy_list
-        calcinfo.stdin_name = self.INPUT_FILE_NAME
-        calcinfo.stdout_name = self.OUTPUT_FILE_NAME
+        #calcinfo.stdin_name = self._INPUT_FILE_NAME
+        calcinfo.stdout_name = self._OUTPUT_FILE_NAME
         calcinfo.remote_symlink_list = remote_symlink_list
         
         # Retrieve by default the output file and the xml file
         calcinfo.retrieve_list = []        
-        calcinfo.retrieve_list.append(self.OUTPUT_FILE_NAME)
-        calcinfo.retrieve_list.append(self.DATAFILE_XML)
-        settings_retrieve_list = settings_dict.pop('additional_retrieve_list', [])
+        calcinfo.retrieve_list.append(self._OUTPUT_FILE_NAME)
+        calcinfo.retrieve_list.append(self._DATAFILE_XML)
+        settings_retrieve_list = settings_dict.pop('ADDITIONAL_RETRIEVE_LIST', [])
+        
+        if settings_dict.pop('ALSO_BANDS',False):
+            # To retrieve also the bands data
+            
+            # the following command is not possible now (leads to 
+            # ValueError: Pathname patterns are not allowed in the destination,
+            # upon parsing)
+            # As a temporary work around, all K points folder shave to be 
+            # put in a list, in the key 'additional_retrieve_list' of 
+            # settings_dict
+            
+            #settings_retrieve_list.append( os.path.join(self.OUTPUT_SUBFOLDER,
+            #                                    self.PREFIX+'.save','K*[0-9]') )
+            pass
+        
         calcinfo.retrieve_list += settings_retrieve_list
         calcinfo.retrieve_list += self._internal_retrieve_list
         
@@ -571,7 +571,7 @@ class BasePwCpInputGenerator(object):
             family_name: the name of the group containing the pseudos
         """
         try:
-            structure = self.get_input(self.get_linkname('structure'))
+            structure = self.get_inputdata_dict()[self.get_linkname('structure')]
         except AttributeError:
             raise ValueError("Structure is not set yet!")
 

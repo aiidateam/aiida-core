@@ -106,7 +106,7 @@ class Calculation(VerdiCommandWithSubcommands):
         if parsed_args.all_states:
             parsed_args.states = None
         
-        print C.list_calculations(states=parsed_args.states,
+        print C._list_calculations(states=parsed_args.states,
                                      past_days=parsed_args.past_days, 
                                      pks=parsed_args.pks,
                                      all_users=parsed_args.all_users,
@@ -130,6 +130,9 @@ class Calculation(VerdiCommandWithSubcommands):
                 print "*** {}: Not a valid calculation".format(calc_pk)
                 continue
             print "*** {} [{}]".format(calc_pk, calc.label)
+            code = calc.get_code()
+            if code is not None:
+                print "Using code: {}".format(code.label)
             print "##### INPUTS:"
             for k, v in calc.get_inputdata_dict().iteritems():
                 print k, v.pk, v.__class__.__name__
@@ -141,6 +144,8 @@ class Calculation(VerdiCommandWithSubcommands):
                 print ("##### NOTE! There are {} log messages for this "
                        "calculation.".format(len(log_messages)))
                 print "      Use the 'calculation logshow' command to see them."
+            if len(args)>1:
+                print ""
  
     def calculation_logshow(self, *args):
         from aiida.common.exceptions import NotExistent

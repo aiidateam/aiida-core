@@ -120,7 +120,7 @@ class TrajectoryData(ArrayData):
                 pass
         
 
-    def validate(self):
+    def _validate(self):
         """
         Verify that the required arrays are present and that their type and
         dimension are correct.

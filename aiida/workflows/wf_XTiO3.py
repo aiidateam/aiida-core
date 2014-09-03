@@ -13,6 +13,7 @@ __version__ = "0.2.0"
 
 UpfData = DataFactory('upf')
 ParameterData = DataFactory('parameter')
+KpointsData = DataFactory('array.kpoints')
 StructureData = DataFactory('structure')
 
 logger = aiidalogger.getChild('WorkflowXTiO3')
@@ -182,10 +183,9 @@ class WorkflowXTiO3_EOS(Workflow):
     
     def get_kpoints(self):
         
-        kpoints = ParameterData(dict={
-                        'type': 'automatic',
-                        'points': [4, 4, 4, 0, 0, 0],
-                        }).store()
+        kpoints = KpointsData()    
+        kpoints.set_kpoints_mesh([4,4,4])
+        kpoints.store()
         
         return kpoints
     
@@ -284,8 +284,8 @@ class WorkflowXTiO3_EOS(Workflow):
         #  Calculate results
         #-----------------------------------------
         
-        e_calcs = [c.res.energy[-1] for c in start_calcs]
-        v_calcs = [c.res.cell['volume'] for c in start_calcs]
+        e_calcs = [c.res.energy for c in start_calcs]
+        v_calcs = [c.res.volume for c in start_calcs]
         
         e_calcs = zip(*sorted(zip(a_sweep, e_calcs)))[1]
         v_calcs = zip(*sorted(zip(a_sweep, v_calcs)))[1]
@@ -318,11 +318,13 @@ class WorkflowXTiO3_EOS(Workflow):
     @Workflow.step   
     def final_step(self):
         
+        from aiida.orm.data.parameter import ParameterData
+        
         x_material   = self.get_parameter("x_material")
         optimal_alat = self.get_attribute("optimal_alat")
         
-        opt_calc = self.get_step_calculations(self.optimize) #.get_calculations()[0]
-        opt_e = opt_calc.get_outputs(type=ParameterData)[0].get_dict()['energy'][-1]
+        opt_calc = self.get_step_calculations(self.optimize)[0] #.get_calculations()[0]
+        opt_e = opt_calc.get_outputs(type=ParameterData)[0].get_dict()['energy']
         
         self.append_to_report(x_material+"Ti03 optimal with a="+str(optimal_alat)+", e="+str(opt_e))
         

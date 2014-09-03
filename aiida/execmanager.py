@@ -39,7 +39,7 @@ def update_running_calcs_status(authinfo):
         authinfo.aiidauser.email, authinfo.dbcomputer.name))
 
     # This returns an iterator over aiida Calculation objects
-    calcs_to_inquire = Calculation.get_all_with_state(
+    calcs_to_inquire = Calculation._get_all_with_state(
         state=calc_states.WITHSCHEDULER,
         computer=authinfo.dbcomputer,
         user=authinfo.aiidauser)
@@ -156,7 +156,7 @@ def update_running_calcs_status(authinfo):
                             u"the routine get_detailed_jobinfo to retrieve "
                             u"the information on "
                             u"a job after it has finished.")
-                    last_jobinfo = c.get_last_jobinfo()
+                    last_jobinfo = c._get_last_jobinfo()
                     if last_jobinfo is None:    
                         last_jobinfo = JobInfo()
                         last_jobinfo.job_id = c.get_job_id()
@@ -209,7 +209,7 @@ def retrieve_jobs():
     
     # I create a unique set of pairs (computer, aiidauser)
     computers_users_to_check = set(
-        Calculation.get_all_with_state(
+        Calculation._get_all_with_state(
             state=calc_states.COMPUTED,
             only_computer_user_pairs = True)
         )
@@ -246,7 +246,7 @@ def update_jobs():
 
     # I create a unique set of pairs (computer, aiidauser)
     computers_users_to_check = set(
-        Calculation.get_all_with_state(
+        Calculation._get_all_with_state(
             state=calc_states.WITHSCHEDULER,
             only_computer_user_pairs = True)
         )
@@ -285,7 +285,7 @@ def submit_jobs():
 
     # I create a unique set of pairs (computer, aiidauser)
     computers_users_to_check = set(
-        Calculation.get_all_with_state(
+        Calculation._get_all_with_state(
             state=calc_states.TOSUBMIT,
             only_computer_user_pairs = True)
         )
@@ -305,7 +305,7 @@ def submit_jobs():
             except AuthenticationError:
                 # Put each calculation in the SUBMISSIONFAILED state because
                 # I do not have AuthInfo to submit them
-                calcs_to_inquire = Calculation.get_all_with_state(
+                calcs_to_inquire = Calculation._get_all_with_state(
                     state=calc_states.TOSUBMIT,
                     computer=dbcomputer,
                     user=aiidauser)
@@ -355,7 +355,7 @@ def submit_jobs_with_authinfo(authinfo):
         authinfo.aiidauser.email, authinfo.dbcomputer.name))
 
     # This returns an iterator over aiida Calculation objects
-    calcs_to_inquire = Calculation.get_all_with_state(
+    calcs_to_inquire = Calculation._get_all_with_state(
         state=calc_states.TOSUBMIT,
         computer=authinfo.dbcomputer,
         user=authinfo.aiidauser)
@@ -440,7 +440,7 @@ def submit_calc(calc, authinfo, transport=None):
         t = transport
         must_open_t = False
 
-    if calc.has_cached_links():
+    if calc._has_cached_links():
         raise ValueError("Cannot submit calculation {} because it has "
                          "cached input links! If you "
                          "just want to test the submission, use the "
@@ -485,7 +485,7 @@ def submit_calc(calc, authinfo, transport=None):
                 code.pk, calc.pk, computer.name))
         
         with SandboxFolder() as folder:
-            calcinfo, script_filename = calc.presubmit(folder,
+            calcinfo, script_filename = calc._presubmit(folder,
                                                        use_unstored_links=False)
 
             # After this call, no modifications to the folder should be done
@@ -543,7 +543,7 @@ def submit_calc(calc, authinfo, transport=None):
             # But I checked for this earlier.
             if code.is_local():
                 # Note: this will possibly overwrite files
-                for f in code.get_path_list():
+                for f in code.get_folder_list():
                     t.put(code.get_abs_path(f), f)
                 t.chmod(code.get_local_executable(), 0755) # rwxr-xr-x
 
@@ -557,7 +557,7 @@ def submit_calc(calc, authinfo, transport=None):
             # local_copy_list is a list of tuples,
             # each with (src_abs_path, dest_rel_path)
             # NOTE: validation of these lists are done
-            #       inside calc.presubmit()
+            #       inside calc._presubmit()
             local_copy_list = calcinfo.local_copy_list
             remote_copy_list = calcinfo.remote_copy_list
             remote_symlink_list = calcinfo.remote_symlink_list
@@ -670,7 +670,7 @@ def retrieve_computed_for_authinfo(authinfo):
     if not authinfo.enabled:
         return
     
-    calcs_to_retrieve = Calculation.get_all_with_state(
+    calcs_to_retrieve = Calculation._get_all_with_state(
         state=calc_states.COMPUTED,
         computer=authinfo.dbcomputer,
         user=authinfo.aiidauser)
@@ -697,9 +697,9 @@ def retrieve_computed_for_authinfo(authinfo):
                 try:
                     execlogger.debug("Retrieving calc {}".format(calc.pk),
                                      extra=logger_extra)
-                    workdir = calc.get_remote_workdir()
-                    retrieve_list = calc.get_retrieve_list()
-                    retrieve_singlefile_list=calc.get_retrieve_singlefile_list()
+                    workdir = calc._get_remote_workdir()
+                    retrieve_list = calc._get_retrieve_list()
+                    retrieve_singlefile_list=calc._get_retrieve_singlefile_list()
                     execlogger.debug("[retrieval of calc {}] "
                                      "chdir {}".format(calc.pk, workdir),
                                      extra=logger_extra)
@@ -707,7 +707,7 @@ def retrieve_computed_for_authinfo(authinfo):
 
                     retrieved_files = FolderData()
                     retrieved_files._add_link_from(calc,
-                                            label=calc.get_linkname_retrieved())
+                                            label=calc._get_linkname_retrieved())
 
                     # First, retrieve the files of folderdata
                     with SandboxFolder() as folder:
@@ -733,7 +733,7 @@ def retrieve_computed_for_authinfo(authinfo):
                                 calc.pk, filename),
                                 extra=logger_extra)
                             localfilename = os.path.join(
-                                          folder.abspath,os.path.split(item)[1])
+                                          folder.abspath,os.path.split(filename)[1])
                             t.get(filename, localfilename,
                                 ignore_nonexisting=True)
                             singlefile_list.append((linkname,subclassname,

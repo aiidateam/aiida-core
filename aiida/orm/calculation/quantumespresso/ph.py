@@ -3,16 +3,14 @@
 Plugin to create a Quantum Espresso ph.x input file.
 """
 import os
-from aiida.orm import Calculation, DataFactory, CalculationFactory
+from aiida.orm import Calculation
 from aiida.common.exceptions import InputValidationError,ValidationError
 from aiida.common.datastructures import CalcInfo
 from aiida.orm.calculation.quantumespresso import get_input_data_text,_lowercase_dict,_uppercase_dict
 from aiida.common.exceptions import UniquenessError
 from aiida.common.utils import classproperty
-
 from aiida.orm.data.parameter import ParameterData 
 from aiida.orm.data.remote import RemoteData 
-from aiida.orm.data.folder import FolderData 
 from aiida.orm.calculation.quantumespresso.pw import PwCalculation 
 
 # List of namelists (uppercase) that are allowed to be found in the
@@ -23,14 +21,9 @@ __copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de L
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.2.0"
 
-_compulsory_namelists = ['INPUTPH']
-
-# Keywords that cannot be set manually, only by the plugin
-_blocked_keywords = [('INPUTPH', 'outdir'),
-    ('INPUTPH', 'iverbosity'),
-    ('INPUTPH', 'prefix'),
-    ('INPUTPH', 'fildyn'),
-    ]
+    
+# in restarts, will not copy but use symlinks
+_default_symlink_usage = False
 
 class PhCalculation(Calculation):
     """
@@ -38,22 +31,35 @@ class PhCalculation(Calculation):
     For more information, refer to http://www.quantum-espresso.org/
     """
 
-    OUTPUT_SUBFOLDER = './out/'
-    PREFIX = 'aiida'
-    INPUT_FILE_NAME = 'aiida.in'
-    OUTPUT_FILE_NAME = 'aiida.out'
-#    OUTPUT_XML_FILE_NAME = 'data-file.xml'
-    OUTPUT_XML_TENSOR_FILE_NAME = 'tensors.xml'
-    FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX = 'DYN_MAT'
-    OUTPUT_DYNAMICAL_MATRIX_PREFIX = os.path.join(FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX,
-                                                  'dynamical-matrix-')
+    def _init_internal_params(self):
+        super(PhCalculation, self)._init_internal_params()
 
-    # Default PW output parser provided by AiiDA
-    _default_parser = 'quantumespresso.ph'
+        self._OUTPUT_SUBFOLDER = './out/'
+        self._PREFIX = 'aiida'
+        self._INPUT_FILE_NAME = 'aiida.in'
+        self._OUTPUT_FILE_NAME = 'aiida.out'
+        self._OUTPUT_XML_TENSOR_FILE_NAME = 'tensors.xml'
+    
+        # Default PH output parser provided by AiiDA
+        self._default_parser = 'quantumespresso.ph'
 
-    # in restarts, will not copy but use symlinks
-    _default_symlink_usage = False
+        self._compulsory_namelists = ['INPUTPH']
 
+        # Keywords that cannot be set manually, only by the plugin
+        self._blocked_keywords = [('INPUTPH', 'outdir'),
+                             ('INPUTPH', 'iverbosity'),
+                             ('INPUTPH', 'prefix'),
+                             ('INPUTPH', 'fildyn'),
+                             ]
+
+    @classproperty
+    def _FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX(cls):
+        return 'DYN_MAT'
+
+    @classproperty
+    def _OUTPUT_DYNAMICAL_MATRIX_PREFIX(cls):
+        return os.path.join(cls._FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX,
+                                                      'dynamical-matrix-')
     @classproperty
     def _use_methods(cls):
         """
@@ -148,7 +154,7 @@ class PhCalculation(Calculation):
                           " of the parent: {}".format(old_comp.get_name()))
 
         # put by default, default_parent_output_folder = ./out
-        default_parent_output_folder = parent_calc.OUTPUT_SUBFOLDER
+        default_parent_output_folder = parent_calc._OUTPUT_SUBFOLDER
         #os.path.join(
         #                   parent_calc.OUTPUT_SUBFOLDER, 
         #                  '{}.save'.format(parent_calc.PREFIX))
@@ -174,7 +180,7 @@ class PhCalculation(Calculation):
         
         # I remove unwanted elements (for the moment, instead, I stop; to change when
         # we setup a reasonable logging)
-        for nl, flag in _blocked_keywords:
+        for nl, flag in self._blocked_keywords:
             if nl in input_params:
                 if flag in input_params[nl]:
                     raise InputValidationError(
@@ -185,10 +191,10 @@ class PhCalculation(Calculation):
         # internal flag names must be lowercase)
         if 'INPUTPH' not in input_params:
             raise InputValidationError("No namelist INPUTPH found in input") # I cannot decide what to do in the calculation
-        input_params['INPUTPH']['outdir'] = self.OUTPUT_SUBFOLDER
+        input_params['INPUTPH']['outdir'] = self._OUTPUT_SUBFOLDER
         input_params['INPUTPH']['iverbosity'] = 1 # in human language 1=high
-        input_params['INPUTPH']['prefix'] = self.PREFIX
-        input_params['INPUTPH']['fildyn'] = self.OUTPUT_DYNAMICAL_MATRIX_PREFIX
+        input_params['INPUTPH']['prefix'] = self._PREFIX
+        input_params['INPUTPH']['fildyn'] = self._OUTPUT_DYNAMICAL_MATRIX_PREFIX
 
         # =================== NAMELISTS ========================
         
@@ -200,14 +206,14 @@ class PhCalculation(Calculation):
                     "The 'NAMELISTS' value, if specified in the settings input "
                     "node, must be a list of strings")
         except KeyError: # list of namelists not specified in the settings; do automatic detection
-            namelists_toprint = _compulsory_namelists
+            namelists_toprint = self._compulsory_namelists
         
-        input_filename = tempfolder.get_abs_path(self.INPUT_FILE_NAME)
+        input_filename = tempfolder.get_abs_path(self._INPUT_FILE_NAME)
 
         # create a folder for the dynamical matrices
         if not restart_flag: # if it is a restart, it will be copied over
-            tempfolder.get_subfolder(self.FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX,
-                                 create=True)
+            tempfolder.get_subfolder(self._FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX,
+                                     create=True)
         
         with open(input_filename,'w') as infile:
             infile.write('AiiDA calculation\n')
@@ -230,23 +236,16 @@ class PhCalculation(Calculation):
                 "{}".format(",".join(input_params.keys())))
         
         # copy the parent scratch
-        symlink = settings_dict.pop('PARENT_FOLDER_SYMLINK',self._default_symlink_usage) # a boolean
+        symlink = settings_dict.pop('PARENT_FOLDER_SYMLINK',
+                                    _default_symlink_usage) # a boolean
         if symlink:
             # I create a symlink to the whole parent ./out
             # TODO: it would be better to do a symlink of ./out/* -> ./out/
-            # tempfolder.get_subfolder(self.OUTPUT_SUBFOLDER, create=True)
             remote_symlink_list.append(
                         (parent_calc_folder.get_computer().uuid,
                          os.path.join(parent_calc_folder.get_remote_path(),
                                      parent_calc_out_subfolder),
-                         self.OUTPUT_SUBFOLDER))
-#             remote_symlink_list.append(
-#                 (parent_calc_folder.get_computer().uuid,
-#                  os.path.join(parent_calc_folder.get_remote_path(),
-#                               parent_calc_out_subfolder),
-#                  #os.path.join(self.OUTPUT_SUBFOLDER,'{}.save'.format(self.PREFIX))
-#                  self.OUTPUT_SUBFOLDER
-#                  ))
+                         self._OUTPUT_SUBFOLDER))
             pass
         else:
             # here I copy the whole folder ./out
@@ -254,29 +253,22 @@ class PhCalculation(Calculation):
                 (parent_calc_folder.get_computer().uuid,
                  os.path.join(parent_calc_folder.get_remote_path(),
                               parent_calc_out_subfolder),
-                 self.OUTPUT_SUBFOLDER))
+                 self._OUTPUT_SUBFOLDER))
         
         if restart_flag: # in this case, copy in addition also the dynamical matrices
             if symlink:
                 remote_symlink_list.append(
                     (parent_calc_folder.get_computer().uuid,
                      os.path.join(parent_calc_folder.get_remote_path(),
-                              self.FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX),
-                     self.FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX))
-#                 # and here I copy ./out/_ph0 # copied already by ./out
-#                 remote_symlink_list.append(
-#                         (parent_calc_folder.get_computer().uuid,
-#                          os.path.join(parent_calc_folder.get_remote_path(),
-#                                       self.OUTPUT_SUBFOLDER,'_ph0'),
-#                          os.path.join(self.OUTPUT_SUBFOLDER,'_ph0')
-#                          ))
+                              self._FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX),
+                     self._FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX))
 
             else:
                 # copy the dynamical matrices
                 remote_copy_list.append(
                     (parent_calc_folder.get_computer().uuid,
                      os.path.join(parent_calc_folder.get_remote_path(),
-                              self.FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX),
+                              self._FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX),
                      '.'))
                 # no need to copy the _ph0, since I copied already the whole ./out folder
         
@@ -284,22 +276,24 @@ class PhCalculation(Calculation):
         
         calcinfo.uuid = self.uuid
         # Empty command line by default
-        calcinfo.cmdline_params = settings_dict.pop('CMDLINE', [])
+        cmdline_params = settings_dict.pop('CMDLINE', [])
+        calcinfo.cmdline_params = (list(cmdline_params)
+                                   + ["-in", self._INPUT_FILE_NAME])
+        
         calcinfo.local_copy_list = local_copy_list
         calcinfo.remote_copy_list = remote_copy_list
         calcinfo.remote_symlink_list = remote_symlink_list
-        calcinfo.stdin_name = self.INPUT_FILE_NAME
-        calcinfo.stdout_name = self.OUTPUT_FILE_NAME
+        calcinfo.stdout_name = self._OUTPUT_FILE_NAME
         
         # Retrieve by default the output file and the xml file
         calcinfo.retrieve_list = []        
-        calcinfo.retrieve_list.append(self.OUTPUT_FILE_NAME)
-        calcinfo.retrieve_list.append(self.FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX)
+        calcinfo.retrieve_list.append(self._OUTPUT_FILE_NAME)
+        calcinfo.retrieve_list.append(self._FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX)
         calcinfo.retrieve_list.append(  
-                os.path.join(self.OUTPUT_SUBFOLDER,
+                os.path.join(self._OUTPUT_SUBFOLDER,
                              '_ph0',
-                             '{}.phsave'.format(self.PREFIX),
-                             self.OUTPUT_XML_TENSOR_FILE_NAME))
+                             '{}.phsave'.format(self._PREFIX),
+                             self._OUTPUT_XML_TENSOR_FILE_NAME))
         
         if settings_dict:
             raise InputValidationError("The following keys have been found in "
@@ -308,7 +302,7 @@ class PhCalculation(Calculation):
         
         return calcinfo
         
-    def set_parent_calc(self,calc):
+    def use_parent_calculation(self,calc):
         """
         Set the parent calculation of Ph, 
         from which it will inherit the outputsubfolder.
@@ -344,31 +338,6 @@ class PhCalculation(Calculation):
                                   "ph calculation")
 
         self.use_parent_folder(remotedata)
-        
-    def get_parent_calc(self):
-        """
-        Return the parent calculation of Ph, 
-        from which it will inherit the outputsubfolder.
-        Raise NotExistent if no parent_calculation was set.
-        """       
-        from aiida.common.exceptions import NotExistent
-        
-        try:
-            parentremotedata = self.get_inputs_dict()[
-                self._use_methods['parent_folder']['linkname']]
-        except KeyError:
-            raise NotExistent("No parent was set.")
-        
-        parentcalcs = parentremotedata.get_inputs(type=PwCalculation)
-        if not parentcalcs: # case of restart
-            parentcalcs = parentremotedata.get_inputs(type=PhCalculation)
-
-        if len(parentcalcs) > 1:
-            raise UniquenessError("More than one input calculation found")
-        if parentcalcs:
-            return parentcalcs[0]
-        else:
-            raise NotExistent("No valid parent calculation was found")
             
     def create_restart(self,restart_if_failed=False,
                        parent_folder_symlink=_default_symlink_usage):

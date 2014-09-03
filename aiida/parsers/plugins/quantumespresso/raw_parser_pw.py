@@ -143,7 +143,12 @@ def parse_raw_output(out_file, input_dict, parser_opts=None, xml_file=None, dir_
 
     for key in out_data.keys():
         if key in xml_data.keys():
-            raise AssertionError('{} found in both dictionaries'.format(key)) # this shouldn't happen!
+            if key=='fermi_energy' or key=='fermi_energy_units': # an exception for the (only?) key that may be found on both
+                del out_data[key]
+            else:
+                raise AssertionError('{} found in both dictionaries, '
+                                     'values: {} vs. {}'.format(
+                                     key, out_data[key], xml_data[key])) # this shouldn't happen!
         # out_data keys take precedence and overwrite xml_data keys,
         # if the same key name is shared by both
         # dictionaries (but this should not happen!)
@@ -787,7 +792,7 @@ def parse_pw_xml_output(data,dir_with_bands=None):
             if metric=='2 pi / a':
                 value = [ float(s)/structure_dict['lattice_parameter'] for s in value ]
                 weight = float(a.getAttribute('WEIGHT'))                
-                kpoints.append([value])
+                kpoints.append(value)
                 kpoints_weights.append(weight)
         parsed_data['k_points']=kpoints
         parsed_data['k_points'+units_suffix] = k_points_default_units
@@ -969,11 +974,11 @@ def parse_pw_xml_output(data,dir_with_bands=None):
            parsed_data['number_of_electrons']/2. < parsed_data['number_of_bands']:
         # initialize lumo
             lumo = parsed_data['homo']+10000.0
-            for list_bands in parsed_data['bands']:
+            for list_bands in bands_dict['bands']:
                 for value in list_bands:
                     if (value > parsed_data['fermi_energy']) and (value<lumo):
                         lumo=value
-            if (lumo==parsed_data['homo']+10000.0) or lumo<=parsed_data['fermy_energy']:
+            if (lumo==parsed_data['homo']+10000.0) or lumo<=parsed_data['fermi_energy']:
                 #might be an error for bandgap larger than 10000 eV...
                 raise QEOutputParsingError('Error while searching for LUMO.')
             parsed_data['lumo']=lumo
@@ -1012,9 +1017,10 @@ def parse_pw_text_output(data, xml_data=None, structure_data=None):
     # critical warnings: if any is found, the calculation status is FAILED
     critical_warnings = {'The maximum number of steps has been reached.':"The maximum step of the ionic/electronic relaxation has been reached.",
                          'convergence NOT achieved after':"The scf cycle did not reach convergence.",
-                         'c_bands':'Some bands did not reach convergence',  # this and the next are possible warnings
+                         'eigenvalues not converged':None,
                          'iterations completed, stopping':'Maximum number of iterations reached in Wentzcovitch Damped Dynamics.',
                          'Maximum CPU time exceeded':'Maximum CPU time exceeded',
+                         '%%%%%%%%%%%%%%':None,
                          }
     
     minor_warnings = {'Warning:':None,
@@ -1035,9 +1041,13 @@ def parse_pw_text_output(data, xml_data=None, structure_data=None):
                     nat = int(line.split('=')[1])
                 elif 'number of atomic types' in line:
                     ntyp = int(line.split('=')[1])
+                elif 'unit-cell volume' in line:
+                    volume = float(line.split('=')[1].split('(a.u.)^3')[0])
                 elif 'number of Kohn-Sham states' in line:
                     nbnd = int(line.split('=')[1])
                     break
+            alat *= bohr_to_ang
+            volume *= bohr_to_ang**3
             parsed_data['warnings'].append('Xml data not found: parsing only the text output')
             parsed_data['number_of_bands'] = nbnd
             parsed_data['lattice_parameter_initial'] = alat
@@ -1048,6 +1058,7 @@ def parse_pw_text_output(data, xml_data=None, structure_data=None):
         ntyp = structure_data['number_of_species']
         nbnd = xml_data['number_of_bands']
         alat = structure_data['lattice_parameter_xml']
+        volume = structure_data['cell']['volume']
     # NOTE: lattice_parameter_xml is the lattice parameter of the xml file
     # in the units used by the code. lattice_parameter instead in angstroms.
     
@@ -1055,7 +1066,8 @@ def parse_pw_text_output(data, xml_data=None, structure_data=None):
     # useful for queries (maybe), and structure_data will not be stored as a ParameterData
     parsed_data['number_of_atoms'] = nat
     parsed_data['number_of_species'] = ntyp
-
+    parsed_data['volume'] = volume
+    
     # now grep quantities that can be considered isolated informations.
     for count,line in enumerate(data.split('\n')):
         
@@ -1149,6 +1161,7 @@ def parse_pw_text_output(data, xml_data=None, structure_data=None):
             message = [ all_warnings[i] for i in all_warnings.keys() if i in line][0]
             if message is None:
                 message = line
+                
             if 'iterations completed, stopping' in line:
                 value = message
                 message = None
@@ -1156,36 +1169,44 @@ def parse_pw_text_output(data, xml_data=None, structure_data=None):
                     dynamic_iterations = int(line.split()[3])
                     if max_dynamic_iterations == dynamic_iterations:
                         message = value
-            if 'c_bands' in line:
+                        
+            if 'c_bands' and 'eigenvalues not converged' in line:
                 # even if some bands are not converged, this is a problem only
                 # if it happens at the last scf step
-                value = message
-                message = None
-                if 'eigenvalues not converged' in line:
-                    try:
-                        problem = False
-                        num_not_conv=int(line.split()[1])
-                        doloop=True
-                        j=0
-                        while doloop:
-                            j+=1
-                            line2=data[count+j]
-                            if 'iteration #' in line2:
-                                break
-                            elif 'End of self-consistent calculation' in line2 or \
-                                'End of band structure calculation' in line2:
-                                problem=True
-                                break
-                            if count+j==len(data)-2:   #-2 for the safety of not reaching the end of file
-                                raise QEOutputParsingError('Error while parsing. While trying to understand'
-                                                       ' the position of c_bands non convergence error,'
-                                                       'reached the end of the file.')
-                            if problem:
-                                parsed_data['bands_not_converged'] = num_not_conv
-                                message = value
-                    except Exception:
-                        parsed_data['warnings'].append('Error while parsing c_bands errors.')
-
+                # start a loop to find the end of scf step
+                # if another iteration is found, no warning is needed
+                doloop = True  
+                j = 0
+                while doloop:
+                    line2 = data.split('\n')[count+j]
+                    if "iteration #" in line2:
+                        doloop = False
+                        message = None
+                    if "End of self-consistent calculation" in line2:
+                        doloop = False # to prevent going until the end of file
+                    j += 1
+                    
+            if '%%%%%%%%%%%%%%' in line:
+                # find the indices of the lines with problems
+                found_endpoint = False
+                init_problem = count
+                for count2,line2 in enumerate(data.split('\n')[count+1:]):
+                    end_problem = count + count2 + 1
+                    if "%%%%%%%%%%%%" in line2:
+                        found_endpoint = True
+                        break
+                if not found_endpoint:
+                    message = None
+                else:
+                    # build a dictionary with the lines
+                    prob_list = data.split('\n')[init_problem:end_problem+1]
+                    irred_list = list(set(prob_list))
+                    message = ""
+                    for v in prob_list:
+                        if v in irred_list:
+                            #irred_list.pop(v)
+                            message += irred_list.pop(irred_list.index(v)) + '\n'  
+                        
             # if it found something, add to log
             if message is not None:
                 parsed_data['warnings'].append(message)
@@ -1398,11 +1419,11 @@ def parse_pw_text_output(data, xml_data=None, structure_data=None):
                     value = line.split('is')[1].split('ev')[0]
                     try:
                         trajectory_data['fermi_energy'].append(value)
-                    except:
+                    except KeyError:
                         trajectory_data['fermi_energy'] = [value]
                     parsed_data['fermi_energy'+units_suffix] = default_energy_units
                 except Exception:
-                    parsed_data['warnings'] = 'Error while parsing Fermi energy.'
+                    parsed_data['warnings'] = 'Error while parsing Fermi energy from the output file.'
 
 
             elif 'Forces acting on atoms (Ry/au):' in line:

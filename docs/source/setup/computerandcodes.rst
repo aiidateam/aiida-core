@@ -64,6 +64,23 @@ should show you a prompt without errors (possibly with a message saying
   or an error. Remove/comment it until no output or error is produced: this
   should make ``sftp`` working again.
 
+Finally, try also::
+
+   ssh YOURCLUSTERADDRESS QUEUE_VISUALIZATION_COMMAND
+   
+replacing ``QUEUE_VISUALIZATION_COMMAND`` by the scheduler command that prints on screen the
+status of the queue on the cluster (i.e. ``qstat`` for PBSpro scheduler, ``squeue`` for SLURM, etc.).
+It should print a snapshot of the queue status, without any errors. 
+
+.. note:: If there are errors with the previous command, then
+  edit your ~/.bashrc file in the remote computer and add a line at the beginning
+  that adds the path to the scheduler commands, typically (here for
+  PBSpro)::
+  
+     export PATH=$PATH:/opt/pbs/default/bin
+
+  Or, alternatively, find the path to the executables (like using ``which qsub``)
+
 .. note:: If you need to ssh to a computer A first, from which you can then
      connect to computer B you wanted to connect to, you can use the
      ``proxy_command`` feature of ssh, that we also support in
@@ -85,11 +102,7 @@ The configuration of computers happens in two steps.
 
     verdi computer setup COMPUTERNAME
     
-   command. This command allows to create a new computer instance in the DB,
-   called ``COMPUTERNAME`` (the name is used for instance when you have
-   to pick up a computer to launch a calculation on it). Names must be unique.
-   This command should be thought as a AiiDA-wise configuration of computer,
-   independent of the AiiDA user that will actually use it.
+   command. This command allows to create a new computer instance in the DB.   
    
    .. tip:: The code will ask you a few pieces of information. At every prompt, you can
      type the ``?`` character and press ``<enter>`` to get a more detailed
@@ -98,11 +111,17 @@ The configuration of computers happens in two steps.
    .. tip:: You can press ``<CTRL>+C`` at any moment to abort the setup process.
      Nothing will be stored in the DB.
    
-   .. note:: For multiline inputs (like the preprend text and the append text, see below)
+   .. note:: For multiline inputs (like the prepend text and the append text, see below)
      you have to press ``<CTRL>+D`` to complete the input, even if you do not want
      any text.
    
    Here is a list of what is asked, together with an explanation.
+   
+   * **Computer name**: the (user-friendly) name of the new computer instance 
+     which is about to be created in the DB (the name is used for instance when 
+     you have to pick up a computer to launch a calculation on it). Names must 
+     be unique. This command should be thought as a AiiDA-wise configuration of 
+     computer, independent of the AiiDA user that will actually use it.
    
    * **Fully-qualified hostname**: the fully-qualified hostname of the computer
      to which you want to connect (i.e., with all the dots: ``bellatrix.epfl.ch``, 
@@ -152,7 +171,17 @@ The configuration of computers happens in two steps.
      This is intended for computer-dependent code, like for instance loading a
      module that should always be loaded on that specific computer. *Remember*
      *to end the input by pressing* ``<CTRL>+D``.
-   
+     A practical example::
+
+        export NEWVAR=1
+        source some/file
+
+     A not-to-do example::
+
+       #PBS -l nodes=4:ppn=12
+
+     (it's the plugin that will do this!)
+
    * **Text to append to each command execution**: This is a multiline string,
      whose content will be appended inside the submission script after the
      real execution of the job. It is your responsibility to write proper ``bash`` code!
@@ -339,7 +368,8 @@ You will be asked for:
   strongly discouraged, because then you will not be able to use
   the ``.new_calc`` method of the ``Code`` object.
   
-* **local**: either True (for local codes) or False (for remote codes). Depending
+* **local**: either True (for local codes) or False (for remote
+  codes). For the meaning of the distinction, see above. Depending
   on your choice, you will be asked for:
   
   * LOCAL CODES:
@@ -365,7 +395,12 @@ For any type of code, you will also be asked for:
      whose content will be prepended inside the submission script before the
      real execution of the job. It is your responsibility to write proper ``bash`` code!
      This is intended for code-dependent code, **like for instance loading the
-     modules that are required for that specific executable to run**. *Remember*
+     modules that are required for that specific executable to run**. 
+     Example::
+
+       module load intelmpi
+       
+     *Remember*
      *to end the input by pressing* ``<CTRL>+D``.
 
 * **Text to append to each command execution**: This is a multiline string,
@@ -401,11 +436,12 @@ database (the ``pk``, i.e. the principal key, and the ``uuid``).
 
    verdi code show "ID"
    
-  Finally, to delete a code (only if it wasn't used by any calculation) use::
+  Finally, to delete a code use::
 
    verdi code delete "ID"
    
-  
+  (only if it wasn't used by any calculation, otherwise an exception
+  is raised) 
    
 And now, you are ready to launch your calculations! You may want to follow to
 the examples of how you can submit a single calculation, as for instance the 

@@ -17,11 +17,9 @@ import logging
 from aiida.common.exceptions import NotExistent
 aiidalogger.setLevel(logging.INFO)
 
-from aiida.orm.data.upf import UPFGROUP_TYPE
 from aiida.orm import Code
 from aiida.orm import DataFactory
-from aiida.djsite.db.models import DbGroup
-
+from aiida.orm.data.array.kpoints import KpointsData
 ################################################################
 
 if __name__ == "__main__":
@@ -129,10 +127,8 @@ if __name__ == "__main__":
                     'conv_thr': 1.e-10,
                     }})
 
-    kpoints = ParameterData(dict={
-                    'type': 'automatic',
-                    'points': [4, 4, 4, 0, 0, 0],
-                    })
+    kpoints = KpointsData()
+    kpoints.set_kpoints_mesh([4,4,4])
 
     calc = code.new_calc()
     calc.label = "Test QE pw.x"
@@ -160,7 +156,7 @@ if __name__ == "__main__":
     extra_mpi_params = "-N {} -d {} -cc none".format(
         str(mpis_per_machine),
         str(computer.get_default_mpiprocs_per_machine()))
-    calc.set_extra_mpirun_params(extra_mpi_params.split())
+    calc.set_mpirun_extra_params(extra_mpi_params.split())
     calc.set_environment_variables({
             "OMP_NUM_THREADS": str(computer.get_default_mpiprocs_per_machine()),
             "MKL_NUM_THREADS": str(computer.get_default_mpiprocs_per_machine()),

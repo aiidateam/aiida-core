@@ -5,6 +5,7 @@ load_django()
 from aiida.orm import Code, DataFactory
 StructureData = DataFactory('structure')
 ParameterData = DataFactory('parameter')
+KpointsData = DataFactory('array.kpoints')
 
 ###############################
 # Set your values here
@@ -41,10 +42,8 @@ parameters = ParameterData(dict={
               'conv_thr': 1.e-6,
               }})
 
-kpoints = ParameterData(dict={
-              'type': 'automatic',
-              'points': [4, 4, 4, 0, 0, 0],
-              })
+kpoints = KpointsData()
+kpoints.set_kpoints_mesh([4,4,4])
 
 calc = code.new_calc(max_wallclock_seconds=3600,
     resources={"num_machines": 1})

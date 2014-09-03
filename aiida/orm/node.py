@@ -8,7 +8,7 @@ from aiida.common.exceptions import (
     DbContentError, InternalError, ModificationNotAllowed,
     NotExistent, UniquenessError )
 from aiida.common.folders import RepositoryFolder, SandboxFolder
-
+from aiida.common.utils import classproperty
 
 __author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
 __copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
@@ -92,17 +92,7 @@ class Node(object):
     # A list of tuples, saying which attributes cannot be set at the same time
     # See documentation in the set() method.
     _set_incompatibilities = []
-    
-    # Default values to set in the __init__, if no value is explicitly provided
-    # for the given key.
-    # It is a dictionary, with k=v; if the key k is not provided to the __init__,
-    # and a value is present here, this is set.
-    ## NOTE: redefine it as a classproperty, using the @classproperty decorator
-    ##       that you can import from aiida.common.utils, if you need to
-    ##       dynamically access other class-wide attributes (see example for
-    ##       the Calculation class).
-    _set_defaults = {}
-    
+        
     @property
     def logger(self):
         """
@@ -191,7 +181,7 @@ class Node(object):
           (It is not possible to assign a uuid to a new Node.)
         """
         from aiida.djsite.utils import get_automatic_user
-        from aiida.djsite.db.models import DbNode, DbAttribute
+        from aiida.djsite.db.models import DbNode
         from aiida.common.utils import get_new_uuid
 
         self._to_be_stored = False
@@ -201,6 +191,10 @@ class Node(object):
         
         # Empty cache of input links in any case
         self._inputlinks_cache = {}
+
+        # Set the internal parameters
+        # Can be redefined in the subclasses
+        self._init_internal_params()
         
         if dbnode is not None:
             if not isinstance(dbnode, DbNode):
@@ -227,7 +221,7 @@ class Node(object):
 #                # Note: the validation often requires to load at least one
 #                # attribute, and therefore it will take a lot of time
 #                # because it has to cache every attribute.
-#                self.validate()
+#                self._validate()
 #            except ValidationError as e:
 #                raise DbContentError("The data in the DB with UUID={} is not "
 #                                     "valid for class {}: {}".format(
@@ -245,7 +239,7 @@ class Node(object):
             #       folders!
             self._temp_folder = SandboxFolder() # This is also created
             # Create the 'path' subfolder in the Sandbox
-            self.path_subfolder.create()
+            self._get_folder_pathsubfolder.create()
             # Used only before the first save
             self._attrs_cache = {}
             # If this is changed, fix also the importer
@@ -255,7 +249,7 @@ class Node(object):
             # Automatically set all *other* attributes, if possible, otherwise
             # stop
             self._set_with_defaults(**kwargs)
-
+    
     def __repr__(self):
         return '<{}: {}>'.format(self.__class__.__name__, str(self))
     
@@ -264,6 +258,27 @@ class Node(object):
             return "uuid={} (unstored)".format(self.uuid)
         else:
             return "uuid={} (pk={})".format(self.uuid, self.pk)
+
+    def _init_internal_params(self):
+        """
+        Set here the default values for this class; this method
+        is automatically called by the init.
+        
+        :note: if you inherit this function, ALWAYS remember to
+          call super()._init_internal_params() as the first thing
+          in your inherited function.
+        """
+        pass
+
+    @property
+    def _set_defaults(self):
+        """
+        Default values to set in the __init__, if no value is explicitly provided
+        for the given key.
+        It is a dictionary, with k=v; if the key k is not provided to the __init__,
+        and a value is present here, this is set.
+        """        
+        return {}
 
     @classmethod
     def query(cls,*args,**kwargs):
@@ -442,7 +457,7 @@ class Node(object):
                 self._dbnode.save()
                 self._increment_version_number_db()
 
-    def validate(self):
+    def _validate(self):
         """
         Check if the attributes and files retrieved from the DB are valid.
         Raise a ValidationError if something is wrong.
@@ -453,7 +468,7 @@ class Node(object):
 
         For the base class, this is always valid. Subclasses will
         reimplement this.
-        In the subclass, always call the super().validate() method first!
+        In the subclass, always call the super()._validate() method first!
         """
         return True
 
@@ -465,7 +480,7 @@ class Node(object):
         """
         return self.dbnode.user
 
-    def has_cached_links(self):
+    def _has_cached_links(self):
         """
         Return True if there is at least one cached (input) link, that is a
         link that is not stored yet in the database. False otherwise.
@@ -623,7 +638,7 @@ class Node(object):
         # Check if the source allows output links from this node
         # (will raise ValueError if 
         # this is not the case)
-        src.can_link_as_output(self)
+        src._can_link_as_output(self)
 
         if self._to_be_stored:
             raise ModificationNotAllowed(
@@ -701,7 +716,7 @@ class Node(object):
             raise ValueError("dest must be a Node instance")
         dest._add_link_from(self,label)
 
-    def can_link_as_output(self,dest):
+    def _can_link_as_output(self,dest):
         """
         Raise a ValueError if a link from self to dest is not allowed.
         Implement in subclasses.
@@ -724,8 +739,12 @@ class Node(object):
         """
         Return a dictionary where the key is the label of the output link, and
         the value is the input node.
+        If more than one output is found with the same link, appends to the key 
+        a string "_to_pk", where pk is the pk of the link destination.
         
         :return: a dictionary {label:object}
+        
+        WARNING: usage of this function is deprecated, as it might be changed
         """
         list_with_duplicates = self.get_outputs(also_labels=True)
         
@@ -753,16 +772,6 @@ class Node(object):
         return dict(self.get_inputs(type=Data, also_labels=True,
                                     only_in_db=only_in_db))
 
-    def get_input(self, name):
-        """
-        Return the input with a given name, or None if no input with that name
-        is set.
-
-        :param str name: the label of the input object
-        :return: the input object
-        """
-        return self.get_inputdata_dict().get(name, None)
-
     def get_inputs(self,type=None,also_labels=False, only_in_db=False):
         """
         Return a list of nodes that enter (directly) in this node
@@ -781,8 +790,6 @@ class Node(object):
 
         inputs_list = [(i.label, i.input.get_aiida_class()) for i in
                        DbLink.objects.filter(output=self.dbnode).distinct()]
-        
-        
         
         if not only_in_db:
             # Needed for the check
@@ -804,8 +811,7 @@ class Node(object):
             return list(filtered_list)
         else:
             return [i[1] for i in filtered_list]
-            
-
+        
     def get_outputs(self,type=None,also_labels=False):
         """
         Return a list of nodes that exit (directly) from this node
@@ -1106,7 +1112,7 @@ class Node(object):
         from aiida.djsite.db.models import DbAttribute
         
         if self._to_be_stored:
-            for k, v in self._attrs_cache.iteritems():
+            for k in self._attrs_cache.iterkeys():
                 yield k
         else:          
             attrlist = DbAttribute.list_all_node_elements(self.dbnode)
@@ -1188,7 +1194,7 @@ class Node(object):
         for k, v in self.iterattrs(also_updatable=False):
             newobject.set_attr(k,v)
 
-        for path in self.get_path_list():
+        for path in self.get_folder_list():
             newobject.add_path(self.get_abs_path(path),path)
 
         return newobject
@@ -1213,57 +1219,56 @@ class Node(object):
     def dbnode(self):
         """
         :return: the corresponding Django DbNode object.
-        """
-        from aiida.djsite.db.models import DbNode
-        
+        """       
         # I also update the internal _dbnode variable, if it was saved
+#        from aiida.djsite.db.models import DbNode
 #        if not self._to_be_stored:
 #            self._dbnode = DbNode.objects.get(pk=self._dbnode.pk)
         return self._dbnode
 
     @property
-    def repo_folder(self):
+    def _repository_folder(self):
         """
         Get the permanent repository folder.
-        Use preferentially the current_folder method.
+        Use preferentially the folder property.
         
         :return: the permanent RepositoryFolder object
         """
         return self._repo_folder
 
     @property
-    def current_folder(self):
+    def folder(self):
         """
-        Get the current repository folder, 
-        whether the temporary or the permanent.
+        Get the folder associated with the node, 
+        whether it is in the temporary or the permanent repository.
         
         :return: the RepositoryFolder object.
         """
         if self._to_be_stored:
-            return self.get_temp_folder()
+            return self._get_temp_folder()
         else:
-            return self.repo_folder
+            return self._repository_folder
 
     @property
-    def path_subfolder(self):
+    def _get_folder_pathsubfolder(self):
         """
         Get the subfolder in the repository.
         
         :return: a Folder object.
         """
-        return self.current_folder.get_subfolder(
+        return self.folder.get_subfolder(
             self._path_subfolder_name,reset_limit=True)
 
-    def get_path_list(self, subfolder='.'):
+    def get_folder_list(self, subfolder='.'):
         """
         Get the the list of files/directory in the repository of the object.
         
         :param str,optional subfolder: get the list of a subfolder
         :return: a list of strings.
         """
-        return self.path_subfolder.get_subfolder(subfolder).get_content_list()
+        return self._get_folder_pathsubfolder.get_subfolder(subfolder).get_content_list()
 
-    def get_temp_folder(self):
+    def _get_temp_folder(self):
         """
         Get the folder of the Node in the temporary repository.
         
@@ -1288,7 +1293,7 @@ class Node(object):
         if os.path.isabs(path):
             raise ValueError("The destination path in remove_path "
                              "must be a relative path")
-        self.path_subfolder.remove_path(path)
+        self._get_folder_pathsubfolder.remove_path(path)
 
     def add_path(self,src_abs,dst_path):
         """
@@ -1313,27 +1318,30 @@ class Node(object):
         if os.path.isabs(dst_path):
             raise ValueError("The destination path in add_path must be a"
                 "filename without any subfolder")
-        self.path_subfolder.insert_path(src_abs,dst_path)
+        self._get_folder_pathsubfolder.insert_path(src_abs,dst_path)
 
 
-    def get_abs_path(self,path,section=None):
+    def get_abs_path(self,path=None,section=None):
         """
         Get the absolute path to the folder associated with the
         Node in the AiiDA repository.
         
-        :param str path: the name of the subfolder inside the section.
+        :param str path: the name of the subfolder inside the section. If None
+                         returns the abspath of the folder. Default = None.
         :param section: the name of the subfolder ('path' by default).
         :return: a string with the absolute path
         
         For the moment works only for one kind of files, 'path' (internal files)
         """
+        if path is None:
+            return self.folder.abspath
         if section is None:
             section = self._path_subfolder_name
         #TODO: For the moment works only for one kind of files,
         #      'path' (internal files)
         if os.path.isabs(path):
             raise ValueError("The path in get_abs_path must be relative")
-        return self.current_folder.get_subfolder(section,
+        return self.folder.get_subfolder(section,
             reset_limit=True).get_abs_path(path,check_existence=True)
 
     def store_all(self):
@@ -1342,11 +1350,11 @@ class Node(object):
         linked nodes, if they were not stored yet.
         """
         self.store()
-        self.store_input_links(store_parents=True)
+        self._store_input_links(store_parents=True)
         
         return self
 
-    def store_input_links(self, store_parents=True, only_stored=False):
+    def _store_input_links(self, store_parents=True, only_stored=False):
         """
         Store all input links that are in the local cache, transferring them 
         to the DB.
@@ -1386,7 +1394,7 @@ class Node(object):
                         raise ModificationNotAllowed(
                             "Cannot store the input link '{}' because the "
                             "source node is not stored. Either store it first, "
-                            "or call store_input_links with the store_parents "
+                            "or call _store_input_links with the store_parents "
                             "parameter set to True".format(link))
             else:
                 for link in self._inputlinks_cache:
@@ -1434,7 +1442,7 @@ class Node(object):
         if self._to_be_stored:
 
             # As a first thing, I check if the data is valid
-            self.validate()
+            self._validate()
             # I save the corresponding django entry
             # I set the folder
             # NOTE: I first store the files, then only if this is successful,
@@ -1442,8 +1450,8 @@ class Node(object):
             # I assume that if a node exists in the DB, its folder is in place.
             # On the other hand, periodically the user might need to run some
             # bookkeeping utility to check for lone folders.
-            self.repo_folder.replace_with_folder(
-                self.get_temp_folder().abspath, move=True, overwrite=True)
+            self._repository_folder.replace_with_folder(
+                self._get_temp_folder().abspath, move=True, overwrite=True)
 
             # I do the transaction only during storage on DB to avoid timeout
             # problems, especially with SQLite
@@ -1464,8 +1472,8 @@ class Node(object):
             except:
                 # I put back the files in the sandbox folder since the
                 # transaction did not succeed
-                self.get_temp_folder().replace_with_folder(
-                    self.repo_folder.abspath, move=True, overwrite=True)                
+                self._get_temp_folder().replace_with_folder(
+                    self._repository_folder.abspath, move=True, overwrite=True)                
                 raise
             
             self._temp_folder = None            
@@ -1473,7 +1481,7 @@ class Node(object):
             
             # Here, I store those links that were in the cache and that are
             # between stored nodes.
-            self.store_input_links(store_parents=False, only_stored=True)
+            self._store_input_links(store_parents=False, only_stored=True)
         else:
             self.logger.error("Trying to store an already saved node: "
                               "pk={}".format(self.pk))

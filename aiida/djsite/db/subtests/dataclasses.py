@@ -83,7 +83,7 @@ class TestSinglefileData(AiidaTestCase):
 
         the_uuid = a.uuid
 
-        self.assertEquals(a.get_path_list(),[basename])
+        self.assertEquals(a.get_folder_list(),[basename])
 
         with open(a.get_abs_path(basename)) as f:
             self.assertEquals(f.read(), file_content)
@@ -92,13 +92,13 @@ class TestSinglefileData(AiidaTestCase):
 
         with open(a.get_abs_path(basename)) as f:
             self.assertEquals(f.read(), file_content)
-        self.assertEquals(a.get_path_list(),[basename])
+        self.assertEquals(a.get_folder_list(),[basename])
 
         b = Node.get_subclass_from_uuid(the_uuid)
 
         # I check the retrieved object
         self.assertTrue(isinstance(b,SinglefileData))
-        self.assertEquals(b.get_path_list(),[basename])
+        self.assertEquals(b.get_folder_list(),[basename])
         with open(b.get_abs_path(basename)) as f:
             self.assertEquals(f.read(), file_content)
 

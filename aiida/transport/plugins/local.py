@@ -162,6 +162,9 @@ class LocalTransport(aiida.transport.Transport):
         Raises:
             If the directory already exists, OSError is raised.
         """
+        # check to avoid creation of empty dirs
+        path = os.path.normpath(path)
+        
         the_path = os.path.join(self.curdir,path)
         to_create = self._os_path_split_asunder(the_path)
         this_dir = ''
@@ -261,7 +264,7 @@ class LocalTransport(aiida.transport.Transport):
 
         if self.has_magic(source):
             if self.has_magic(destination):
-                raise ValueError("Pahname patterns are not allowed in the "
+                raise ValueError("Pathname patterns are not allowed in the "
                                  "destination")
             
             to_copy_list = glob.glob(source) # using local glob here
@@ -430,7 +433,7 @@ class LocalTransport(aiida.transport.Transport):
 
         if self.has_magic(source):
             if self.has_magic(destination):
-                raise ValueError("Pahname patterns are not allowed in the "
+                raise ValueError("Pathname patterns are not allowed in the "
                                  "destination")
             to_copy_list = self.glob(source)
 
@@ -584,7 +587,7 @@ class LocalTransport(aiida.transport.Transport):
         
         if self.has_magic(source):
             if self.has_magic(destination):
-                raise ValueError("Pahname patterns are not allowed in the "
+                raise ValueError("Pathname patterns are not allowed in the "
                                  "destination")
             
             to_copy_list = self.glob(source)

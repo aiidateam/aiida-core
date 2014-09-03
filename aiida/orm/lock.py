@@ -23,7 +23,7 @@ class LockManager(object):
         
         """
         The class tries to generate a new DbLock object with a key, unique in the model. If
-        the creation goes good the Lock is generated and returned, if not and error is raised.
+        the creation goes good the Lock is generated and returned, if not an error is raised.
         :param key: the unique lock key, a string
         :param timeout: how long the 
         :return: a Lock object

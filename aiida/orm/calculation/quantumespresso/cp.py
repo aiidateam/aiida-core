@@ -17,11 +17,9 @@ TODO: all a lot of logger.debug stuff
 """
 import os
 
-from aiida.orm import Calculation, DataFactory
+from aiida.orm import Calculation
 from aiida.orm.calculation.quantumespresso import BasePwCpInputGenerator
 from aiida.common.utils import classproperty
-
-from aiida.orm.data.parameter import ParameterData
   
 __author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
 __copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
@@ -34,57 +32,84 @@ class CpCalculation(BasePwCpInputGenerator, Calculation):
     Quantum ESPRESSO distribution.
     For more information, refer to http://www.quantum-espresso.org/
     """
-    _cp_read_unit_number = 50
-    _cp_write_unit_number = 51
-
-    DATAFILE_XML = os.path.join(BasePwCpInputGenerator.OUTPUT_SUBFOLDER, 
-                               '{}_{}.save'.format(BasePwCpInputGenerator.PREFIX,
-                                                   _cp_write_unit_number), 
-                               BasePwCpInputGenerator.DATAFILE_XML_BASENAME)
-
-    FILE_XML_PRINT_COUNTER_BASENAME = 'print_counter.xml'
-    FILE_XML_PRINT_COUNTER = os.path.join(BasePwCpInputGenerator.OUTPUT_SUBFOLDER, 
-                               '{}_{}.save'.format(BasePwCpInputGenerator.PREFIX,
-                                                   _cp_write_unit_number), 
-                                          FILE_XML_PRINT_COUNTER_BASENAME)
-
-    # Default PW output parser provided by AiiDA
-    _default_parser = 'quantumespresso.cp'
+    def _init_internal_params(self):
+        super(CpCalculation, self)._init_internal_params()
+                
+        _cp_read_unit_number = 50
+        _cp_write_unit_number = 51
     
-    _automatic_namelists = {
-        'scf':   ['CONTROL', 'SYSTEM', 'ELECTRONS'],
-        'nscf':  ['CONTROL', 'SYSTEM', 'ELECTRONS'],
-        'relax': ['CONTROL', 'SYSTEM', 'ELECTRONS', 'IONS'],
-        'cp':    ['CONTROL', 'SYSTEM', 'ELECTRONS', 'IONS'],
-        'vc-cp':    ['CONTROL', 'SYSTEM', 'ELECTRONS', 'IONS', 'CELL'],
-        'vc-relax': ['CONTROL', 'SYSTEM', 'ELECTRONS', 'IONS', 'CELL'],
-        'vc-wf': ['CONTROL', 'SYSTEM', 'ELECTRONS', 'WANNIER'],
-        }
+        self._DATAFILE_XML = os.path.join(
+                             BasePwCpInputGenerator._OUTPUT_SUBFOLDER, 
+                             '{}_{}.save'.format(BasePwCpInputGenerator._PREFIX,
+                                                 _cp_write_unit_number), 
+                             BasePwCpInputGenerator._DATAFILE_XML_BASENAME)
+    
+        self._FILE_XML_PRINT_COUNTER = os.path.join(
+                             BasePwCpInputGenerator._OUTPUT_SUBFOLDER, 
+                             '{}_{}.save'.format(BasePwCpInputGenerator._PREFIX,
+                                                 _cp_write_unit_number), 
+                             self._FILE_XML_PRINT_COUNTER_BASENAME)
+    
+        # Default PW output parser provided by AiiDA
+        self._default_parser = 'quantumespresso.cp'
+        
+        self._automatic_namelists = {
+            'scf':   ['CONTROL', 'SYSTEM', 'ELECTRONS'],
+            'nscf':  ['CONTROL', 'SYSTEM', 'ELECTRONS'],
+            'relax': ['CONTROL', 'SYSTEM', 'ELECTRONS', 'IONS'],
+            'cp':    ['CONTROL', 'SYSTEM', 'ELECTRONS', 'IONS'],
+            'vc-cp':    ['CONTROL', 'SYSTEM', 'ELECTRONS', 'IONS', 'CELL'],
+            'vc-relax': ['CONTROL', 'SYSTEM', 'ELECTRONS', 'IONS', 'CELL'],
+            'vc-wf': ['CONTROL', 'SYSTEM', 'ELECTRONS', 'WANNIER'],
+            }
+    
+        # Keywords that cannot be set
+        self._blocked_keywords = [('CONTROL', 'pseudo_dir'), # set later
+             ('CONTROL', 'outdir'),  # set later
+             ('CONTROL', 'prefix'),  # set later
+             ('SYSTEM', 'ibrav'),  # set later
+             ('SYSTEM', 'celldm'),
+             ('SYSTEM', 'nat'),  # set later
+             ('SYSTEM', 'ntyp'),  # set later
+             ('SYSTEM', 'a'), ('SYSTEM', 'b'), ('SYSTEM', 'c'),
+             ('SYSTEM', 'cosab'), ('SYSTEM', 'cosac'), ('SYSTEM', 'cosbc'),
+             ('CONTROL', 'ndr', _cp_read_unit_number),
+             ('CONTROL', 'ndw', _cp_write_unit_number),
+        ]
+        
+        self._use_kpoints = False
+        
+        # in restarts, it will copy from the parent the following 
+        self._restart_copy_from = os.path.join(
+                             BasePwCpInputGenerator._OUTPUT_SUBFOLDER,
+                             '{}_{}.save'.format(BasePwCpInputGenerator._PREFIX,
+                                                 _cp_write_unit_number))
+        # in restarts, it will copy the previous folder in the following one 
+        self._restart_copy_to = os.path.join(
+                             BasePwCpInputGenerator._OUTPUT_SUBFOLDER,
+                             '{}_{}.save'.format(BasePwCpInputGenerator._PREFIX,
+                                                 _cp_read_unit_number))
 
-    # Keywords that cannot be set
-    _blocked_keywords = [('CONTROL', 'pseudo_dir'), # set later
-         ('CONTROL', 'outdir'),  # set later
-         ('CONTROL', 'prefix'),  # set later
-         ('SYSTEM', 'ibrav'),  # set later
-         ('SYSTEM', 'celldm'),
-         ('SYSTEM', 'nat'),  # set later
-         ('SYSTEM', 'ntyp'),  # set later
-         ('SYSTEM', 'a'), ('SYSTEM', 'b'), ('SYSTEM', 'c'),
-         ('SYSTEM', 'cosab'), ('SYSTEM', 'cosac'), ('SYSTEM', 'cosbc'),
-         ('CONTROL', 'ndr', _cp_read_unit_number),
-         ('CONTROL', 'ndw', _cp_write_unit_number),
-    ]
+        _cp_ext_list = ['cel', 'con', 'eig', 'evp', 'for', 'nos', 'pol', 
+                        'pos', 'spr', 'str', 'the', 'vel', 'wfc']
+        
+        # I retrieve them all, even if I don't parse all of them
+        self._internal_retrieve_list = [os.path.join(
+                                     BasePwCpInputGenerator._OUTPUT_SUBFOLDER, 
+                                     '{}.{}'.format(BasePwCpInputGenerator._PREFIX,
+                                     ext)) for ext in _cp_ext_list]
+        self._internal_retrieve_list += [self._FILE_XML_PRINT_COUNTER]
     
-    _use_kpoints = False
-    
-    # in restarts, it will copy from the parent the following 
-    _restart_copy_from = os.path.join(
-                         BasePwCpInputGenerator.OUTPUT_SUBFOLDER,
-                         '{}_{}.save'.format(BasePwCpInputGenerator.PREFIX,_cp_write_unit_number))
-    # in restarts, it will copy the previous folder in the following one 
-    _restart_copy_to = os.path.join(
-                         BasePwCpInputGenerator.OUTPUT_SUBFOLDER,
-                         '{}_{}.save'.format(BasePwCpInputGenerator.PREFIX,_cp_read_unit_number))
+    @classproperty
+    def _FILE_XML_PRINT_COUNTER_BASENAME(cls):
+        return 'print_counter.xml'
+
+    @classproperty
+    def _FILE_XML_PRINT_COUNTER(cls):
+        return os.path.join(BasePwCpInputGenerator._OUTPUT_SUBFOLDER, 
+                            '{}_{}.save'.format(BasePwCpInputGenerator._PREFIX,
+                                                _cp_write_unit_number), 
+                            self._FILE_XML_PRINT_COUNTER_BASENAME)
 
     @classproperty
     def _use_methods(cls):
@@ -97,12 +122,3 @@ class CpCalculation(BasePwCpInputGenerator, Calculation):
         return retdict
     
     
-    _cp_ext_list = ['cel', 'con', 'eig', 'evp', 'for', 'nos', 'pol', 
-                    'pos', 'spr', 'str', 'the', 'vel', 'wfc']
-    
-    # I retrieve them all, even if I don't parse all of them
-    _internal_retrieve_list = [os.path.join(
-                                 BasePwCpInputGenerator.OUTPUT_SUBFOLDER, 
-                                 '{}.{}'.format(BasePwCpInputGenerator.PREFIX,
-                                 ext)) for ext in _cp_ext_list]
-    _internal_retrieve_list += [FILE_XML_PRINT_COUNTER]

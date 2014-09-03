@@ -532,7 +532,7 @@ class Transport(object):
         else:
             self.logger.error("Problem executing whoami. Exit code: {}, stdout: '{}', "
                               "stderr: '{}'".format(retval, username, stderr))
-            raise IOError("Error while executing cp. Exit code: {}".format(retval) )
+            raise IOError("Error while executing whoami. Exit code: {}".format(retval) )
 
 
     def path_exists(self,path):

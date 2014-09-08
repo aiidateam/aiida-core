@@ -127,7 +127,7 @@ class Workflow(object):
                 
                 if params is not None:
                     if type(params) is dict:
-                        self._set_parameters(params)
+                        self.set_params(params)
 
                 # This stores the MD5 as well, to test in case the workflow has been modified after the launch 
                 self._dbworkflowinstance = DbWorkflow(user=get_automatic_user(),
@@ -432,7 +432,7 @@ class Workflow(object):
     #         Parameters, attribute, results
     # --------------------------------------------
     
-    def _set_parameters(self, params, force=False):
+    def set_params(self, params, force=False):
         """
         Adds parameters to the Workflow that are both stored and used every time
         the workflow engine re-initialize the specific workflow to launch the new methods.  

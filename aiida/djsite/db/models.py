@@ -1659,7 +1659,8 @@ class DbWorkflowData(m.Model):
         try:
             
             if isinstance(arg, Node) or issubclass(arg.__class__, Node):
-                
+                if arg.pk is None:
+                    raise ValueError("Cannot add an unstored node as an attribute of a Workflow!")
                 self.aiida_obj  = arg.dbnode
                 self.value_type = wf_data_value_types.AIIDA
                 self.save()

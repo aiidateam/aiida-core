@@ -197,12 +197,13 @@ AiiDA methods to restart from a previous calculation.
 The k-points have to be saved in another kind of data, namely KpointsData::
                 
   KpointsData = DataFactory('array.kpoints')
-  kpoints = KpointsData.set_kpoints_mesh([4,4,4])
+  kpoints = KpointsData()
+  kpoints.set_kpoints_mesh([4,4,4])
   
 In this case it generates a 4*4*4 mesh without offset. To add an offset one 
-can replace the second line by::
+can replace the last line by::
 
-  kpoints = KpointsData.set_kpoints_mesh([4,4,4],offset=(0.5,0.5,0.5))
+  kpoints.set_kpoints_mesh([4,4,4],offset=(0.5,0.5,0.5))
 
 .. note:: Only offsets of 0 or 0.5 are possible (this is imposed by PWscf).
 
@@ -211,7 +212,7 @@ in crystal coordinates (here they all have equal weights)::
 
     import numpy
     kpoints.set_kpoints([[i,i,0] for i in numpy.linspace(0,1,10)],
-    							weights = [1. for i in range(10)])
+        weights = [1. for i in range(10)])
 
 .. _gamma-only:
 .. note:: It is also possible to generate a gamma-only computation. To do so 
@@ -435,6 +436,7 @@ Download: :download:`this example script <pw_short_example.py>`
   from aiida.orm import Code, DataFactory
   StructureData = DataFactory('structure')
   ParameterData = DataFactory('parameter')
+  KpointsData = DataFactory('array.kpoints')
   
   ###############################
   # Set your values here
@@ -471,10 +473,8 @@ Download: :download:`this example script <pw_short_example.py>`
                 'conv_thr': 1.e-6,
                 }})
   
-  kpoints = ParameterData(dict={
-                'type': 'automatic',
-                'points': [4, 4, 4, 0, 0, 0],
-                })
+  kpoints = KpointsData()
+  kpoints.set_kpoints_mesh([4,4,4])
   
   calc = code.new_calc(max_wallclock_seconds=3600,
       resources={"num_machines": 1})

@@ -107,7 +107,8 @@ modality to create users::
 
   psql template1
 
-To create a new aiida user for postgres, type in the ``psql`` shell:: 
+To create a new user for postgres (you can call it simply ``aiida``, as in the
+example below), type in the ``psql`` shell:: 
 
   CREATE USER aiida WITH PASSWORD 'the_aiida_password';
 
@@ -222,6 +223,9 @@ instructions to set this up for the SQLite, PostgreSQL and MySQL databases, unde
 SQLite backup
 -------------
 
+.. note:: perform the following operation after having set up AiiDA. Only then
+  the ``~/.aiida`` folder (and the files within) will be created.
+
 Simply make sure your database folder (typically /home/USERNAME/.aiida/ containing 
 the file ``aiida.db`` and the ``repository`` directory) is properly backed up by 
 your backup software (under Ubuntu, Backup -> check the "Folders" tab).
@@ -231,7 +235,10 @@ your backup software (under Ubuntu, Backup -> check the "Folders" tab).
 PostgreSQL backup
 -----------------
 
-The database files are not put in the .aiida folder but in the system directories
+.. note:: perform the following operation after having set up AiiDA. Only then
+  the ``~/.aiida`` folder (and the files within) will be created.
+
+The database files are not put in the ``.aiida`` folder but in the system directories
 which typically are not backed up. Moreover, the database is spread over lots of files
 that, if backed up as they are at a given time, cannot be re-used to restore the database.
 
@@ -277,7 +284,7 @@ launch the previous script once per day::
 where all instances of ``USERNAME`` are replaced by your actual user name. The ``su USERNAME``
 makes the dumped file be owned by you rather than by ``root``.
 
-Finally make sure your database folder (/home/USERNAME/.aiida/) containing this dump file
+Finally make sure your database folder (``/home/USERNAME/.aiida/``) containing this dump file
 and the ``repository`` directory, is properly backed up by 
 your backup software (under Ubuntu, Backup -> check the "Folders" tab).
 
@@ -287,3 +294,6 @@ MySQL backup
 ------------
 
 .. todo:: Back-up instructions for the MySQL database.
+
+We do not have explicit instructions on how to back-up MySQL yet, but you
+can find plenty of information on Google.

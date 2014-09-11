@@ -100,7 +100,7 @@ The configuration of computers happens in two steps.
 
 1. **Setup of the computer**, using the::
 
-    verdi computer setup COMPUTERNAME
+    verdi computer setup
     
    command. This command allows to create a new computer instance in the DB.   
    

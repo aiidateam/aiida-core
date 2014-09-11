@@ -1073,11 +1073,11 @@ class SshTransport(aiida.transport.Transport):
             raise ValueError('Input to copy() must be a non empty string. ' +
                              'Found instead %s as remotedestination' % remotedestination)
         
+        if self.has_magic(remotedestination):
+            raise ValueError("Pathname patterns are not allowed in the "
+                             "destination")
+
         if self.has_magic(remotesource):
-            if self.has_magic(remotedestination):
-                raise ValueError("Pathname patterns are not allowed in the "
-                                 "destination")
-            
             to_copy_list = self.glob(remotesource)
             
             if len(to_copy_list)>1:

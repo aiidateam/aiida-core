@@ -46,27 +46,14 @@ class KpointsData(ArrayData):
         :param value: something compatible with a 3x3 tuple of floats
         """
         from aiida.common.exceptions import ModificationNotAllowed
-        from aiida.orm.data.structure import calc_cell_volume
+        from aiida.orm.data.structure import _get_valid_cell
         if not self._to_be_stored:
             raise ModificationNotAllowed(
                 "KpointsData cannot be modified, "
                 "it has already been stored")
         
-        _volume_threshold = 1.e-6
-        try:
-            the_cell = tuple(tuple(float(c) for c in i) for i in value)
-            if len(the_cell) != 3:
-                raise ValueError
-            if any(len(i) != 3 for i in the_cell):
-                raise ValueError
-        except (IndexError,ValueError,TypeError):
-            raise ValueError("Cell must be a list of the three vectors, each "
-                             "defined as a list of three coordinates.") 
-        
-        if abs(calc_cell_volume(the_cell)) < _volume_threshold:
-            raise ValueError("The cell volume is zero. Invalid cell.")
-        
-        #the_cell = _get_valid_cell(value)
+        the_cell = _get_valid_cell(value)
+
         self.set_attr('cell',the_cell)
         
     @property
@@ -262,7 +249,7 @@ class KpointsData(ArrayData):
         Set a cell to be used for symmetry analysis.
         To set a cell from an AiiDA structure, use "set_cell_from_structure".
         
-        "param cell: 3x3 matrix of cell vectors. Orientation: each row 
+        :param cell: 3x3 matrix of cell vectors. Orientation: each row 
                      represent a lattice vector
         :param pbc: list of 3 booleans, True if in the nth crystal direction the
                     structure is periodic. Default = [True,True,True]

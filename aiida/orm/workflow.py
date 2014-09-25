@@ -1172,7 +1172,8 @@ def get_workflow_info(w, tab_size = 2, short = False, pre_string = ""):
                w.module_class, wf_labelstring, w.pk, w.state, str_timedelta(
                     now-w.ctime, negative_to_zero = True)))
 
-    steps = w.steps.all()
+    # order all steps by time
+    steps = w.steps.all().order_by('time')
 
     for idx, s in enumerate(steps):
         lines.append(pre_string + "|"+'-'*(tab_size-1) +

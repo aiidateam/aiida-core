@@ -145,7 +145,7 @@ def _get_valid_cell(inputcell):
         if any(len(i) != 3 for i in the_cell):
             raise ValueError
     except (IndexError,ValueError,TypeError):
-        raise ValueError("Cell must be a list of three vectors, each "
+        raise ValueError("Cell must be a list of the three vectors, each "
                          "defined as a list of three coordinates.") 
     
     if abs(calc_cell_volume(the_cell)) < _volume_threshold:

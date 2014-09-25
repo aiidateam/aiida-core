@@ -2,7 +2,7 @@
 """
 Plugin to create a Quantum Espresso ph.x input file.
 """
-import os, copy
+import os
 from aiida.orm import Calculation
 from aiida.common.exceptions import InputValidationError,ValidationError
 from aiida.common.datastructures import CalcInfo
@@ -11,9 +11,7 @@ from aiida.common.exceptions import UniquenessError
 from aiida.common.utils import classproperty
 from aiida.orm.data.parameter import ParameterData 
 from aiida.orm.data.remote import RemoteData 
-from aiida.orm.data.upf import UpfData
 from aiida.orm.calculation.quantumespresso.pw import PwCalculation 
-from aiida.orm.calculation.quantumespresso import BasePwCpInputGenerator
 
 # List of namelists (uppercase) that are allowed to be found in the
 # input_data, in the correct order
@@ -244,18 +242,10 @@ class PhCalculation(Calculation):
             # I create a symlink to the whole parent ./out
             # TODO: it would be better to do a symlink of ./out/* -> ./out/
             remote_symlink_list.append(
-                (parent_calc_folder.get_computer().uuid,
-                 os.path.join(parent_calc_folder.get_remote_path(),
-                              parent_calc_out_subfolder),
-                 self._OUTPUT_SUBFOLDER))
-            # I also create a symlink for the ./pseudo folder
-            # TODO: suppress this when the recover option of QE will be fixed 
-            # (bug when trying to find pseudo file) 
-            remote_symlink_list.append(
-                (parent_calc_folder.get_computer().uuid,
-                 os.path.join(parent_calc_folder.get_remote_path(),
-                              self._get_pseudo_folder()),
-                        self._get_pseudo_folder()))
+                        (parent_calc_folder.get_computer().uuid,
+                         os.path.join(parent_calc_folder.get_remote_path(),
+                                     parent_calc_out_subfolder),
+                         self._OUTPUT_SUBFOLDER))
             pass
         else:
             # here I copy the whole folder ./out
@@ -264,15 +254,6 @@ class PhCalculation(Calculation):
                  os.path.join(parent_calc_folder.get_remote_path(),
                               parent_calc_out_subfolder),
                  self._OUTPUT_SUBFOLDER))
-            # I also copy the ./pseudo folder
-            # TODO: suppress this when the recover option of QE will be fixed 
-            # (bug when trying to find pseudo file) 
-            remote_copy_list.append(
-                (parent_calc_folder.get_computer().uuid,
-                 os.path.join(parent_calc_folder.get_remote_path(),
-                              self._get_pseudo_folder()),
-                        self._get_pseudo_folder()))
-            
         
         if restart_flag: # in this case, copy in addition also the dynamical matrices
             if symlink:
@@ -329,10 +310,8 @@ class PhCalculation(Calculation):
         """
         from aiida.common.exceptions import NotExistent
         
-        if ( (not isinstance(calc,PwCalculation)) 
-                        and (not isinstance(calc,PhCalculation)) ):
-            raise ValueError("Parent calculation must be a PwCalculation "
-                             "or a PhCalculation")
+        if not isinstance(calc,PwCalculation):
+            raise ValueError("Parent calculation must be a PwCalculation")
         
         remotedatas = calc.get_outputs(type=RemoteData)
         if not remotedatas:
@@ -360,23 +339,6 @@ class PhCalculation(Calculation):
 
         self.use_parent_folder(remotedata)
             
-    def _get_pseudo_folder(self):
-        """
-        Get the calculation-specific pseudo folder (relative path).
-        Default given by BasePwCpInputGenerator._PSEUDO_SUBFOLDER
-        """
-        return self.get_attr("pseudo_folder",
-                             BasePwCpInputGenerator._PSEUDO_SUBFOLDER)
-
-    def _set_pseudo_folder(self,pseudo_folder):
-        """
-        Get the calculation-specific pseudo folder.
-        
-        :param pseudo_folder: a string with the relative path (in the remote 
-        directory) to the pseudo folder
-        """
-        self.set_attr("pseudo_folder", unicode(pseudo_folder))
-    
     def create_restart(self,restart_if_failed=False,
                        parent_folder_symlink=_default_symlink_usage):
         """
@@ -416,7 +378,7 @@ class PhCalculation(Calculation):
         labelstring = c2.label + " Restart of ph.x."
         c2.label = labelstring.lstrip()
         
-        # set the parameters and code
+        # set the 
         c2.use_parameters(inp_dict)
         c2.use_code(code)
         
@@ -433,6 +395,5 @@ class PhCalculation(Calculation):
             c2.use_settings(settings)
         
         c2._set_parent_remotedata( remote_folder )
-        
         return c2
     

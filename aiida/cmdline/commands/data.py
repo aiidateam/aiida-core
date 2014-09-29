@@ -282,7 +282,7 @@ class _Structure(VerdiCommandWithSubcommands):
         """
         import tempfile,subprocess
         with tempfile.NamedTemporaryFile(suffix='.xsf') as f:
-            f.write(structure.exportstring('xsf'))
+            f.write(structure._exportstring('xsf'))
             f.flush()
             
             try:
@@ -307,7 +307,7 @@ class _Structure(VerdiCommandWithSubcommands):
         """
         import tempfile,subprocess
         with tempfile.NamedTemporaryFile(suffix='.xsf') as f:
-            f.write(structure.exportstring('xsf'))
+            f.write(structure._exportstring('xsf'))
             f.flush()
             
             try:

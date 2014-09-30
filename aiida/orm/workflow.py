@@ -1167,7 +1167,8 @@ def get_workflow_info(w, tab_size = 2, short = False, pre_string = ""):
         wf_labelstring = "'{}', ".format(w.label)
     else:
         wf_labelstring = ""
-
+    
+    lines.append(pre_string) # put an empty line before any workflow
     lines.append(pre_string + "+ Workflow {} ({}pk={}) is {} [{}]".format(
                w.module_class, wf_labelstring, w.pk, w.state, str_timedelta(
                     now-w.ctime, negative_to_zero = True)))

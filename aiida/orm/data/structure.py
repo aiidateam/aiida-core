@@ -425,8 +425,7 @@ class StructureData(Data):
         """
         if fileformat is None:
             fileformat = fname.split('.')[-1]
-
-        filecontent = self._exportstring(format)
+        filecontent = self._exportstring(fileformat)
         with open(fname,'w') as f:  # writes in cwd, if fname is not absolute
             f.write( filecontent )
         

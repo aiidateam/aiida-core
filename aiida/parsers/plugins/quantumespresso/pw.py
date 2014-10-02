@@ -131,7 +131,12 @@ class PwParser(Parser):
         if has_xml:
             parsing_args.append(xml_file)
         if has_bands:
-            parsing_args.append(dir_with_bands)
+            if not has_xml:
+                parserlogger.warning("Cannot parse bands if xml file not "
+                                     "found",extra=logger_extra)
+            else:
+                parsing_args.append(dir_with_bands)
+        
         out_dict,trajectory_data,structure_data,bands_data,raw_successful = parse_raw_output(*parsing_args)
         
         # if calculation was not considered failed already, use the new value

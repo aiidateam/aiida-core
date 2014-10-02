@@ -112,7 +112,6 @@ class MatdynCalculation(NamelistsCalculation):
         parent_calc_folder = inputdict.get(self.get_linkname('parent_folder'),
                                            None)
         
-        
         if isinstance(parent_calc_folder, SinglefileData):
             self._blocked_keywords.append(
                 ('INPUT', 'flfrc', os.path.split(

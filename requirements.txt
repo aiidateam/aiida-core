@@ -9,7 +9,7 @@
 # sudo pip install --upgrade setuptools
 
 # Django
-django>=1.5.5,<1.6
+django>=1.5.5,<=1.5.8
 
 ## For data/schema migrations
 ## Disabled for the time being.

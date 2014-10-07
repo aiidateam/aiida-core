@@ -24,8 +24,8 @@ pytz >= 2013b
 # For the daemon
 celery>=3.0
 django-celery >= 3.0
-supervisor>=3.0b1
-kombu
+supervisor==3.0b1
+kombu==3.0.20
 billiard
 amqp >= 1.4
 anyjson >= 0.3

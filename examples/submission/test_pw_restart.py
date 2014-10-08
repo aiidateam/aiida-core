@@ -27,6 +27,9 @@ from aiida.orm import CalculationFactory, DataFactory
 # (no need to specify codename):
 # ./test_pw_restart --send pw_parent_calc_pk
 
+# NOTE: if calculation was vc-relax, restart works only if wf_collect was
+# set to False ...
+
 
 ################################################################
 if __name__ == '__main__':

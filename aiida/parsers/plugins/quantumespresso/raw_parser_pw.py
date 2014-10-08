@@ -639,7 +639,10 @@ def xml_card_exchangecorrelation(parsed_data,dom):
         parse_xml_child_str(tagname,target_tags)
 
     tagname='LDA_PLUS_U_CALCULATION'
-    parsed_data[tagname.lower()] = parse_xml_child_bool(tagname,target_tags)
+    try:
+        parsed_data[tagname.lower()] = parse_xml_child_bool(tagname,target_tags)
+    except Exception:
+        parsed_data[tagname.lower()] = False
     
     if parsed_data[tagname.lower()]: # if it is a plus U calculation, I expect more infos
         tagname = 'HUBBARD_L'
@@ -688,6 +691,12 @@ def xml_card_exchangecorrelation(parsed_data,dom):
     try:
         tagname='NON_LOCAL_DF'
         parsed_data[tagname.lower()] = parse_xml_child_integer(tagname,target_tags)
+    except Exception:
+        pass
+
+    try:
+        tagname='VDW_KERNEL_NAME'
+        parsed_data[tagname.lower()] = parse_xml_child_str(tagname,target_tags)
     except Exception:
         pass
 

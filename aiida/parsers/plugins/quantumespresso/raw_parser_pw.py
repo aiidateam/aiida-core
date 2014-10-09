@@ -9,7 +9,7 @@ by operative decision doesn't have much structure encoded, [the values are simpl
 from xml.dom.minidom import parseString
 import os
 import string
-from aiida.parsers.plugins.quantumespresso.constants import ry_to_ev,hartree_to_ev,bohr_to_ang
+from aiida.parsers.plugins.quantumespresso.constants import ry_to_ev,hartree_to_ev,bohr_to_ang,ry_si,bohr_si
 from aiida.parsers.plugins.quantumespresso import QEOutputParsingError
 
 # TODO: it could be possible to use info of the input file to parse output. 
@@ -32,8 +32,6 @@ default_dipole_units = 'Debye'
 default_magnetization_units = 'Bohrmag / cell'
 default_force_units = 'ev / angstrom'
 default_stress_units = 'GPascal'
-ry_si = 4.35974394/2. * 10**(-18)
-bohr_si = 0.52917720859 * 10**(-10)
 default_polarization_units = 'C / m^2'
        
 def parse_raw_output(out_file, input_dict, parser_opts=None, xml_file=None, dir_with_bands=None):

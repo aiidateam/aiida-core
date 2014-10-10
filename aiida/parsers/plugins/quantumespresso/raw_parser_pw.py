@@ -1003,7 +1003,7 @@ def parse_pw_text_output(data, xml_data=None, structure_data=None):
     """
     Parses the text output of QE-PWscf.
     
-    :param data: list of strings, the file as read by readlines()
+    :param data: list of strings, the file as read by read()
     :param xml_data: the dictionary with the keys read from xml.
     :param structure_data: dictionary, coming from the xml, with info on the structure
     
@@ -1472,10 +1472,13 @@ def parse_pw_text_output(data, xml_data=None, structure_data=None):
             elif 'entering subroutine stress ...' in line:
                 try:
                     stress = []
-                    if '(Ry/bohr**3)' not in data_step[count+2]:
+                    for k in range (10):
+                        if "P=" in data_step[count+k+1]:
+                            count2 = count+k+1
+                    if '(Ry/bohr**3)' not in data_step[count2]:
                         raise QEOutputParsingError('Error while parsing stress: unexpected units.')
                     for k in range(3):
-                        line2 = data_step[count+k+3].split()
+                        line2 = data_step[count2+k+1].split()
                         vec = [ float(s)*10**(-9)*ry_si/(bohr_si)**3 for s in line2[0:3] ]
                         stress.append(vec)
                     try:

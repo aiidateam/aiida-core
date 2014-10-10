@@ -109,7 +109,7 @@ if __name__ == "__main__":
             print >> sys.stderr, ",".join(i.name for i in valid_pseudo_groups)
             sys.exit(1)
 
-    max_seconds = 50
+    max_seconds = 100
     
     parameters = ParameterData(dict={
                 'CONTROL': {
@@ -132,7 +132,7 @@ if __name__ == "__main__":
     
     calc = code.new_calc()
     calc.label = "Test QE pw.x"
-    calc.description = "Test calculation with the Quantum ESPRESSO pw.x code"
+    calc.description = "Test vc-relax calculation with the Quantum ESPRESSO pw.x code"
     calc.set_max_wallclock_seconds(max_seconds)
     # Valid only for Slurm and PBS (using default values for the
     # number_cpus_per_machine), change for SGE-like schedulers 

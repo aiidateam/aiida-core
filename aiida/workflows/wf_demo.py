@@ -29,8 +29,8 @@ class WorkflowDemo(Workflow):
         
         calc = CustomCalc(computer=computer,withmpi=True)
         calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
-        calc._set_state(calc_states.FINISHED)
         calc.store()
+        calc._set_state(calc_states.FINISHED)
         
         return calc
     
@@ -50,7 +50,7 @@ class WorkflowDemo(Workflow):
         self.append_to_report("Starting workflow with params: {0}".format(p))
         
         # Testing attachments
-        n = Node()
+        n = Node().store()
         attrs = {"a": [1,2,3], "n": n}
         self.add_attributes(attrs)
 
@@ -91,8 +91,8 @@ class SubWorkflowDemo(Workflow):
         
         calc = CustomCalc(computer=computer,withmpi=True)
         calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
-        calc._set_state(calc_states.FINISHED)
         calc.store()
+        calc._set_state(calc_states.FINISHED)
         
         return calc
     
@@ -146,8 +146,8 @@ class BranchWorkflowDemo(Workflow):
         
         calc = CustomCalc(computer=computer,withmpi=True)
         calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
-        calc._set_state(calc_states.FINISHED)
         calc.store()
+        calc._set_state(calc_states.FINISHED)
         
         return calc
     
@@ -232,8 +232,8 @@ class LoopBranchWorkflowDemo(Workflow):
         
         calc = CustomCalc(computer=computer,withmpi=True)
         calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
-        calc._set_state(calc_states.FINISHED)
         calc.store()
+        calc._set_state(calc_states.FINISHED)
         
         return calc
     

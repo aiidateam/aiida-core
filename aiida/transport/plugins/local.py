@@ -598,17 +598,23 @@ class LocalTransport(aiida.transport.Transport):
                                   "destination file")
             
             for s in to_copy_list:
+                # If s is an absolute path, then the_s = s
                 the_s = os.path.join(self.curdir,s)
                 if self.isfile(s):
+                    # With shutil, use the full path (the_s)
                     shutil.copy(the_s,the_destination)
                 else:
+                    # With self.copytree, the (possible) relative path is OK
                     self.copytree(s,destination)
                     
         else:
+            # If s is an absolute path, then the_source = source
             the_source = os.path.join(self.curdir,source)
             if self.isfile(source):
+                # With shutil, use the full path (the_source)
                 shutil.copy(the_source,the_destination)
             else:
+                # With self.copytree, the (possible) relative path is OK
                 self.copytree(source,destination)
 
 

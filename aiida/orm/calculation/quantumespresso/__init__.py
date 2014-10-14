@@ -331,16 +331,21 @@ class BasePwCpInputGenerator(object):
                 mesh,offset = kpoints.get_kpoints_mesh()
                 has_mesh = True
             except AttributeError:
+
                 try:
-                    kpoints_list,weights = kpoints.get_kpoints(also_weights=True)
+                    kpoints_list = kpoints.get_kpoints()
                     num_kpoints = len(kpoints_list)
                     has_mesh=False
                     if num_kpoints == 0:
                         raise InputValidationError("At least one k point must be "
                             "provided for non-gamma calculations")
-
-                except AttributeError:
+                except AttributeError:                
                     raise InputValidationError("No valid kpoints have been found")
+
+                try:
+                    _,weights = kpoints.get_kpoints(also_weights=True)
+                except AttributeError:
+                    weights = [1.] * num_kpoints
             
             gamma_only = settings_dict.pop("GAMMA_ONLY",False)
             

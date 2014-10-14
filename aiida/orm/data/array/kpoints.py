@@ -269,7 +269,7 @@ class KpointsData(ArrayData):
         # save a lot of variables that are used later, and just depend on the
         # cell
         the_cell = numpy.array(self.cell)
-        reciprocal_cell = 2.*numpy.pi*numpy.linalg.inv(the_cell)
+        reciprocal_cell = 2.*numpy.pi*numpy.linalg.inv(the_cell).transpose()
         self.reciprocal_cell = reciprocal_cell
         self._a1 = numpy.array(the_cell[0,:])
         self._a2 = numpy.array(the_cell[1,:])
@@ -277,9 +277,9 @@ class KpointsData(ArrayData):
         self._a = numpy.linalg.norm(self._a1)
         self._b = numpy.linalg.norm(self._a2)
         self._c = numpy.linalg.norm(self._a3)
-        self._b1 = reciprocal_cell[:,0]
-        self._b2 = reciprocal_cell[:,1]
-        self._b3 = reciprocal_cell[:,2]
+        self._b1 = reciprocal_cell[0,:]
+        self._b2 = reciprocal_cell[1,:]
+        self._b3 = reciprocal_cell[2,:]
         self._cosalpha = numpy.dot(self._a2,self._a3)/self._b/self._c
         self._cosbeta  = numpy.dot(self._a3,self._a1)/self._c/self._a
         self._cosgamma = numpy.dot(self._a1,self._a2)/self._a/self._b
@@ -455,11 +455,11 @@ class KpointsData(ArrayData):
         except AttributeError:
             rec_cell = numpy.eye(3)
             # raise InputError("Cannot change coords without cell")
-        #trec_cell = numpy.transpose( numpy.array(rec_cell) )
+        trec_cell = numpy.transpose( numpy.array(rec_cell) )
         if to_cartesian:
-            matrix = rec_cell
+            matrix = trec_cell
         else:
-            matrix = numpy.linalg.inv(rec_cell)
+            matrix = numpy.linalg.inv(trec_cell)
         
         # note: kpoints is a list Nx3, matrix is 3x3.
         # hence, first transpose kpoints, then multiply, finally transpose it back

@@ -109,13 +109,14 @@ if __name__ == "__main__":
             print >> sys.stderr, ",".join(i.name for i in valid_pseudo_groups)
             sys.exit(1)
 
+    max_seconds = 100
+    
     parameters = ParameterData(dict={
                 'CONTROL': {
-                    'calculation': 'scf',
+                    'calculation': 'vc-relax',
                     'restart_mode': 'from_scratch',
                     'wf_collect': True,
-                    'tstress': True,
-                    'tprnfor': True,
+                    'max_seconds': max_seconds,
                     },
                 'SYSTEM': {
                     'ecutwfc': 40.,
@@ -126,42 +127,13 @@ if __name__ == "__main__":
                     }})
 
     kpoints = KpointsData()
-    
-    # method gamma only
-    #settings = ParameterData(dict={'gamma_only':True})
-    #kpoints.set_kpoints_mesh([1,1,1])
-    
-    # method list
-    #import numpy
-    #kpoints.set_kpoints([[i,i,0] for i in numpy.linspace(0,1,10)],
-    #                    weights = [1. for i in range(10)])
-    
-    # method mesh
-    kpoints_mesh = 2
+    kpoints_mesh = 4
     kpoints.set_kpoints_mesh([kpoints_mesh,kpoints_mesh,kpoints_mesh])
     
-    # to retrieve the bands (NOTE: for now - until the pattern retrieve is 
-    # implemented) - we need to add manually all possible K folders !)
-    
-    #settings_dict={'also_bands': True}
-    #kpoints_folder_list=[]
-    #for i in range(1,kpoints_mesh**3+1):
-    #    kpoints_folder_list.append('./out/aiida.save/K{0:{fill}5}'.format(i,fill='0'))
-    #settings_dict.update({
-    #            'additional_retrieve_list': kpoints_folder_list,
-    #            })
-    #settings = ParameterData(dict=settings_dict)
-    
-    
-    ## For remote codes, it is not necessary to manually set the computer,
-    ## since it is set automatically by new_calc
-    #computer = code.get_remote_computer()
-    #calc = code.new_calc(computer=computer)
-
     calc = code.new_calc()
     calc.label = "Test QE pw.x"
-    calc.description = "Test calculation with the Quantum ESPRESSO pw.x code"
-    calc.set_max_wallclock_seconds(30*60) # 30 min
+    calc.description = "Test vc-relax calculation with the Quantum ESPRESSO pw.x code"
+    calc.set_max_wallclock_seconds(max_seconds)
     # Valid only for Slurm and PBS (using default values for the
     # number_cpus_per_machine), change for SGE-like schedulers 
     calc.set_resources({"num_machines": 1})

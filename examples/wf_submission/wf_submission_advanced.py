@@ -22,11 +22,11 @@ def launch_ws():
     """
             
     import aiida.orm.workflow as wf
-    from aiida.workflows import wf_sub_demo
+    from aiida.workflows import wf_demo
     from aiida.common.datastructures import wf_states
     
     params = {}
     params['nmachine']=2
 
-    w = wf_sub_demo.WorkflowDemoSubWorkflow()
+    w = wf_demo.SubWorkflowDemo()
     w.start()

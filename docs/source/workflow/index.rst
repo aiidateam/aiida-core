@@ -689,7 +689,7 @@ workflow chaining plays an important role.
   
 To launch this new workflow we have only to add a simple entry in the previous parameter dictionary, specifing the phonon code, as reported here::
 
-  >> from aiida.workflows.wf_XTiO3 import WorkflowXTiO3_EOS
+  >> from aiida.workflows.wf_XTiO3 import WorkflowXTiO3
   >> params = {'pw_codename':'PWcode', 'ph_codename':'PHcode', 'num_machines':1, 'num_mpiprocs_per_machine':8, 'max_wallclock_seconds':30*60, 'pseudo_family':'PBE', 'alat_steps':5 }
   >> wf = WorkflowXTiO3(params=params)
   >> wf.start()

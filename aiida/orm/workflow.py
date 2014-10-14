@@ -127,7 +127,7 @@ class Workflow(object):
                 
                 if params is not None:
                     if type(params) is dict:
-                        self._set_parameters(params)
+                        self.set_params(params)
 
                 # This stores the MD5 as well, to test in case the workflow has been modified after the launch 
                 self._dbworkflowinstance = DbWorkflow(user=get_automatic_user(),
@@ -432,7 +432,7 @@ class Workflow(object):
     #         Parameters, attribute, results
     # --------------------------------------------
     
-    def _set_parameters(self, params, force=False):
+    def set_params(self, params, force=False):
         """
         Adds parameters to the Workflow that are both stored and used every time
         the workflow engine re-initialize the specific workflow to launch the new methods.  
@@ -1167,12 +1167,14 @@ def get_workflow_info(w, tab_size = 2, short = False, pre_string = ""):
         wf_labelstring = "'{}', ".format(w.label)
     else:
         wf_labelstring = ""
-
+    
+    lines.append(pre_string) # put an empty line before any workflow
     lines.append(pre_string + "+ Workflow {} ({}pk={}) is {} [{}]".format(
                w.module_class, wf_labelstring, w.pk, w.state, str_timedelta(
                     now-w.ctime, negative_to_zero = True)))
 
-    steps = w.steps.all()
+    # order all steps by time
+    steps = w.steps.all().order_by('time')
 
     for idx, s in enumerate(steps):
         lines.append(pre_string + "|"+'-'*(tab_size-1) +

@@ -9,7 +9,7 @@ by operative decision doesn't have much structure encoded, [the values are simpl
 from xml.dom.minidom import parseString
 import os
 import string
-from aiida.parsers.plugins.quantumespresso.constants import ry_to_ev,hartree_to_ev,bohr_to_ang
+from aiida.parsers.plugins.quantumespresso.constants import ry_to_ev,hartree_to_ev,bohr_to_ang,ry_si,bohr_si
 from aiida.parsers.plugins.quantumespresso import QEOutputParsingError
 
 # TODO: it could be possible to use info of the input file to parse output. 
@@ -32,8 +32,6 @@ default_dipole_units = 'Debye'
 default_magnetization_units = 'Bohrmag / cell'
 default_force_units = 'ev / angstrom'
 default_stress_units = 'GPascal'
-ry_si = 4.35974394/2. * 10**(-18)
-bohr_si = 0.52917720859 * 10**(-10)
 default_polarization_units = 'C / m^2'
        
 def parse_raw_output(out_file, input_dict, parser_opts=None, xml_file=None, dir_with_bands=None):
@@ -639,7 +637,10 @@ def xml_card_exchangecorrelation(parsed_data,dom):
         parse_xml_child_str(tagname,target_tags)
 
     tagname='LDA_PLUS_U_CALCULATION'
-    parsed_data[tagname.lower()] = parse_xml_child_bool(tagname,target_tags)
+    try:
+        parsed_data[tagname.lower()] = parse_xml_child_bool(tagname,target_tags)
+    except Exception:
+        parsed_data[tagname.lower()] = False
     
     if parsed_data[tagname.lower()]: # if it is a plus U calculation, I expect more infos
         tagname = 'HUBBARD_L'
@@ -688,6 +689,12 @@ def xml_card_exchangecorrelation(parsed_data,dom):
     try:
         tagname='NON_LOCAL_DF'
         parsed_data[tagname.lower()] = parse_xml_child_integer(tagname,target_tags)
+    except Exception:
+        pass
+
+    try:
+        tagname='VDW_KERNEL_NAME'
+        parsed_data[tagname.lower()] = parse_xml_child_str(tagname,target_tags)
     except Exception:
         pass
 
@@ -996,7 +1003,7 @@ def parse_pw_text_output(data, xml_data=None, structure_data=None):
     """
     Parses the text output of QE-PWscf.
     
-    :param data: list of strings, the file as read by readlines()
+    :param data: list of strings, the file as read by read()
     :param xml_data: the dictionary with the keys read from xml.
     :param structure_data: dictionary, coming from the xml, with info on the structure
     
@@ -1465,10 +1472,13 @@ def parse_pw_text_output(data, xml_data=None, structure_data=None):
             elif 'entering subroutine stress ...' in line:
                 try:
                     stress = []
-                    if '(Ry/bohr**3)' not in data_step[count+2]:
+                    for k in range (10):
+                        if "P=" in data_step[count+k+1]:
+                            count2 = count+k+1
+                    if '(Ry/bohr**3)' not in data_step[count2]:
                         raise QEOutputParsingError('Error while parsing stress: unexpected units.')
                     for k in range(3):
-                        line2 = data_step[count+k+3].split()
+                        line2 = data_step[count2+k+1].split()
                         vec = [ float(s)*10**(-9)*ry_si/(bohr_si)**3 for s in line2[0:3] ]
                         stress.append(vec)
                     try:

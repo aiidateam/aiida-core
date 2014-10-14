@@ -30,8 +30,10 @@ def launch_ws():
 
     w = wf_demo.WorkflowDemo()
     w.set_params(params)
+    w.store()
     w.start()
     
-    w = wf_demo.WorkflowDemoBranch()
+    w = wf_demo.BranchWorkflowDemo()
     w.set_params(params)
+    w.store()
     w.start()

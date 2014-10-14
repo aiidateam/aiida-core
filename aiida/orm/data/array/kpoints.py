@@ -455,11 +455,11 @@ class KpointsData(ArrayData):
         except AttributeError:
             rec_cell = numpy.eye(3)
             # raise InputError("Cannot change coords without cell")
-        trec_cell = numpy.transpose( numpy.array(rec_cell) )
+        #trec_cell = numpy.transpose( numpy.array(rec_cell) )
         if to_cartesian:
-            matrix = trec_cell
+            matrix = rec_cell
         else:
-            matrix = numpy.linalg.inv(trec_cell)
+            matrix = numpy.linalg.inv(rec_cell)
         
         # note: kpoints is a list Nx3, matrix is 3x3.
         # hence, first transpose kpoints, then multiply, finally transpose it back

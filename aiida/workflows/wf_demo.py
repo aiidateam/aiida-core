@@ -69,7 +69,7 @@ class WorkflowDemo(Workflow):
         self.append_to_report("Execution second_step with attachments: {0}".format(a))
         
         # Test results
-        self.add_result("scf.converged", calcs[0])
+        self.add_result("scf_converged", calcs[0])
         
         self.next(self.exit)
 
@@ -124,7 +124,7 @@ class SubWorkflowDemo(Workflow):
         s_wfs = self.get_step(self.start).get_sub_workflows()
         
         for s_wf in s_wfs:
-            self.append_to_report("Workflow {0} has results {1}".format(s_wf.uuid, s_wf.get_result("scf.converged")))
+            self.append_to_report("Workflow {0} has results {1}".format(s_wf.uuid, s_wf.get_result("scf_converged")))
         
         self.next(self.exit)
 
@@ -266,10 +266,10 @@ class LoopBranchWorkflowDemo(Workflow):
         
         calcs_convergence = self.get_step_calculations(self.convergence)
         
-        self.append_to_report("Third runned and retived calculation:")
+        self.append_to_report("Third ran and retrieved calculation:")
         for c in calcs_convergence:
             self.append_to_report("Calculation {0}".format(c.uuid))
         
-        self.add_result("scf:cnverged", calcs_convergence[len(calcs_convergence)-1])
+        self.add_result("scf_converged", calcs_convergence[len(calcs_convergence)-1])
         
         self.next(self.exit)

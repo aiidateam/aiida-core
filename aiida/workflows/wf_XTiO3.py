@@ -328,7 +328,7 @@ class WorkflowXTiO3_EOS(Workflow):
         
         self.append_to_report(x_material+"Ti03 optimal with a="+str(optimal_alat)+", e="+str(opt_e))
         
-        self.add_result("scf.converged", opt_calc)
+        self.add_result("scf_converged", opt_calc)
             
         self.next(self.exit)
 

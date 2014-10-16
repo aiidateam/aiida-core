@@ -133,7 +133,7 @@ us to understand the more sophisticated examples reported later.
         self.append_to_report("Execution second_step with attachments: {0}".format(a))
         
         # Test results
-        self.add_result("scf.converged", calcs[0])
+        self.add_result("scf_converged", calcs[0])
         
         self.next(self.exit)
 
@@ -467,7 +467,7 @@ aside to the final optimal cell parameter value.
             
             self.append_to_report(x_material+"Ti03 optimal with a="+str(optimal_alat)+", e="+str(opt_e))
             
-            self.add_result("scf.converged", opt_calc)
+            self.add_result("scf_converged", opt_calc)
                 
             self.next(self.exit)
 

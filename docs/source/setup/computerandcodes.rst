@@ -32,13 +32,18 @@ copied on the disk instead of opening an SFTP connection).
 If you plan to use the ``local`` transport, you can skip to the next section.
 
 If you plan to use the ``SSH`` transport, you have to configure a password-less
-login from your user to the cluster. To do so, type::
+login from your user to the cluster. To do so type first (only if you do not 
+already have some keys in your local ``~/.ssh directory`` - i.e. files like 
+``id_rsa.pub``)::
 
     ssh-keygen
+    
+Then copy your keys to the remote computer (in ~/.ssh/authorized_keys) with::
+
     ssh-copy-id YOURUSERNAME@YOURCLUSTERADDRESS
 
 replacing ``YOURUSERNAME`` and ``YOURCLUSTERADDRESS`` by respectively your username 
-and cluster address. Then add the following lines to ~/.ssh/config (leaving an empty
+and cluster address. Finally add the following lines to ~/.ssh/config (leaving an empty
 line before and after)::
 
   Host YOURCLUSTERADDRESS

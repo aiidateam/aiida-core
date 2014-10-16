@@ -1527,6 +1527,27 @@ class Node(object):
         """
         return NodeInputManager(self)
 
+    @property
+    def has_children(self):
+        """
+        Property to understand if children are attached to the node
+        :return: a boolean
+        """
+        # use the transitive closure
+        from aiida.djsite.db.models import DbPath
+        childrens = DbPath.objects.filter(parent=self.pk)
+        return False if not childrens else True
+
+    @property
+    def has_parents(self):
+        """
+        Property to understand if parents are attached to the node
+        :return: a boolean
+        """
+        # use the transitive closure
+        from aiida.djsite.db.models import DbPath
+        parents = DbPath.objects.filter(child=self.pk)
+        return False if not parents else True
 
 
 class NodeOutputManager(object):

@@ -746,20 +746,27 @@ class Node(object):
         
         WARNING: usage of this function is deprecated, as it might be changed
         """
-        list_with_duplicates = self.get_outputs(also_labels=True)
+        all_outputs = self.get_outputs(also_labels=True)
         
-        # case with duplicates
-        labels = [i[0] for i in list_with_duplicates]
-        duplicated_labels = set([ i for i in labels if labels.count(i)>1 ])
-        
-        if not duplicated_labels:
-            return dict(list_with_duplicates)
-        else:
-            # correct
-            list_outputs = [ (i[0]+"_to_{}".format(i[1].pk),i[1]) if i[0]=='code' 
-                             else i for i in list_with_duplicates ]      
-            return list_outputs
+        all_linknames = [i[0] for i in all_outputs]
+        linknames_set = list(set(all_linknames))
 
+        # prepare a new output list
+        new_outputs = {}
+        # first add the defaults
+        for irreducible_linkname in linknames_set: 
+            this_elements = [ i[1] for i in all_outputs if i[0]==irreducible_linkname]
+            # select the oldest element
+            last_element = sorted(this_elements, key=lambda x:x.ctime)[0]
+            # for this one add the default value
+            new_outputs[irreducible_linkname] = last_element
+            
+            # now for everyone append the string with the pk
+            for i in  this_elements:
+                new_outputs[ irreducible_linkname+"_{}".format(i.pk)] = i
+
+        return new_outputs
+        
     def get_inputdata_dict(self, only_in_db=False):
         """
         Return a dictionary where the key is the label of the input link, and

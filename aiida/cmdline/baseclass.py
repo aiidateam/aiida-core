@@ -184,7 +184,7 @@ class VerdiCommandWithSubcommands(VerdiCommand):
     def complete(self,subargs_idx, subargs):
         if subargs_idx == 0:
             print "\n".join(self.valid_subcommands.keys())
-        elif subargs_idx == 1:
+        elif subargs_idx >= 1:
             try:
                 first_subarg = subargs[0]
             except  IndexError:

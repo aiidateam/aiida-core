@@ -210,7 +210,7 @@ class Install(VerdiCommand):
     """
     def run(self,*args):
         import readline
-        from aiida.common.utils import load_django
+        from aiida import load_dbenv
         from aiida.common.setup import create_base_dirs, create_configuration        
 
         cmdline_args = list(args)
@@ -245,7 +245,7 @@ class Install(VerdiCommand):
 
         # I create here the default user
         print "Loading new environment..."
-        load_django()
+        load_dbenv()
         
         from aiida.common.setup import DEFAULT_AIIDA_USER
         from aiida.djsite.db import models
@@ -325,7 +325,7 @@ class GoToComputer(VerdiCommand):
     def run(self,*args):
         from aiida.common.exceptions import NotExistent
         from aiida.orm import Node, Calculation
-        from aiida.common.utils import load_django
+        from aiida import load_dbenv
         
         try:
             calc_id = args[0]
@@ -340,7 +340,7 @@ class GoToComputer(VerdiCommand):
             is_pk=False
 
         print "Loading environment..."
-        load_django()
+        load_dbenv()
 
         try:
             if is_pk:

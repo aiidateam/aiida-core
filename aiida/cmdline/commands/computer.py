@@ -2,7 +2,7 @@
 import sys
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.common.utils import load_django
+from aiida import load_dbenv
 
 __author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
 __copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
@@ -188,7 +188,7 @@ class Computer(VerdiCommandWithSubcommands):
                                   "argument.")
             sys.exit(1)
         
-        load_django()
+        load_dbenv()
         
         print "At any prompt, type ? to get some help."
         print "---------------------------------------"
@@ -377,7 +377,7 @@ class Computer(VerdiCommandWithSubcommands):
         """
         Configure the authentication information for a given computer
         """
-        load_django()
+        load_dbenv()
 
         import readline
         import inspect
@@ -558,7 +558,7 @@ class Computer(VerdiCommandWithSubcommands):
         """
         Enable a computer.
         """
-        load_django()
+        load_dbenv()
 
         import argparse
 
@@ -629,7 +629,7 @@ class Computer(VerdiCommandWithSubcommands):
         submit new calculations or check for the state of existing calculations.
         Useful, for instance, if you know that a computer is under maintenance.
         """
-        load_django()
+        load_dbenv()
 
         import argparse
         
@@ -701,7 +701,7 @@ class Computer(VerdiCommandWithSubcommands):
         """
         from aiida.orm import Computer as AiidaOrmComputer
 
-        load_django()
+        load_dbenv()
         return AiidaOrmComputer.list_names()
 
     def get_computer(self, name):
@@ -710,6 +710,6 @@ class Computer(VerdiCommandWithSubcommands):
         """    
         from aiida.orm import Computer as AiidaOrmComputer
         
-        load_django()        
+        load_dbenv()        
         return AiidaOrmComputer.get(name)
     

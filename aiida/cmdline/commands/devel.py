@@ -4,7 +4,7 @@ import os
 
 import aiida
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.common.utils import load_django
+from aiida import load_dbenv
 from aiida.cmdline import pass_to_django_manage, execname
 
 __author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
@@ -152,7 +152,7 @@ class Devel(VerdiCommandWithSubcommands):
         from aiida.common.exceptions import AiidaException
         from aiida.orm import Calculation as OrmCalculation
         
-        load_django()
+        load_dbenv()
         
         class InternalError(AiidaException):
             def __init__(self, real_exception, message):
@@ -735,7 +735,7 @@ class Devel(VerdiCommandWithSubcommands):
         
         
     def run_query(self, *args):
-        load_django()
+        load_dbenv()
         from django.db.models import Q
         from aiida.djsite.db.models import DbNode
                 

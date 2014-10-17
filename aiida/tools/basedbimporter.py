@@ -37,3 +37,28 @@ class BaseDBImporter(object):
         database using updated parameters, if already connected.
         """
         raise NotImplementedError( "not implemented in base class" )
+
+class BaseDBSearchResults(object):
+    """
+    Base class for database results.
+    """
+
+    def fetch_all(self):
+        """
+        Returns all query results as an array of DBEntry.
+        """
+        raise NotImplementedError( "not implemented in base class" )
+
+    def next(self):
+        """
+        Returns the next result of the query, throws **StopIteration**
+        when called after the last result.
+        """
+        raise NotImplementedError( "not implemented in base class" )
+
+
+    def at(self, position):
+        """
+        Returns ``position``-th result from the result array (zero-based).
+        """
+        raise NotImplementedError( "not implemented in base class" )

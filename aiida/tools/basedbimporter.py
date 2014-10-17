@@ -56,7 +56,6 @@ class BaseDBSearchResults(object):
         """
         raise NotImplementedError( "not implemented in base class" )
 
-
     def at(self, position):
         """
         Returns ``position``-th result from the result array (zero-based).

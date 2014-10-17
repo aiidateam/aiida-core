@@ -1145,7 +1145,41 @@ class Node(object):
         return list(DbComment.objects.filter(dbnode=self._dbnode).order_by(
             'ctime').values_list(
             'user__email', 'ctime', 'mtime', 'content'))
-
+        
+    def _update_comment(self,new_field,index,user):
+        """
+        Function called by verdi comment update
+        """
+        from aiida.djsite.db.models import DbComment
+        
+        comment = DbComment.objects.filter(dbnode=self._dbnode
+                                           ).order_by('ctime')[index]
+        
+        if not isinstance(new_field,str):
+            raise ValueError("Non string comments are not accepted")
+        
+        if str(user) != str(comment.user.email):
+            raise ModificationNotAllowed(
+               "Only user {} can modify the comment".format(comment.user.email))
+        
+        comment.content = new_field
+        comment.save()
+    
+    def _remove_comment(self,index,user):
+        """
+        Function called by verdi comment remove
+        """
+        from aiida.djsite.db.models import DbComment
+        
+        comment = DbComment.objects.filter(dbnode=self._dbnode
+                                           ).order_by('ctime')[index]
+        
+        if str(user) != str(comment.user.email):
+            raise ModificationNotAllowed(
+               "Only user {} can modify the comment".format(comment.user.email))
+        
+        comment.delete()
+        
     def _increment_version_number_db(self):
         """
         This function increments the version number in the DB.

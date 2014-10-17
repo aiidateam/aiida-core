@@ -34,6 +34,7 @@ from aiida.cmdline.commands.group import Group
 from aiida.cmdline.commands.importfile import Import
 from aiida.cmdline.commands.user import User
 from aiida.cmdline.commands.workflow import Workflow
+from aiida.cmdline.commands.comment import Comment
 
 
 from aiida.cmdline import execname
@@ -324,7 +325,8 @@ class GoToComputer(VerdiCommand):
     """
     def run(self,*args):
         from aiida.common.exceptions import NotExistent
-        from aiida.orm import Node, Calculation
+        from aiida.orm import Calculation
+        from aiida.orm import Node as AiidaOrmNode
         from aiida import load_dbenv
         
         try:
@@ -344,9 +346,9 @@ class GoToComputer(VerdiCommand):
 
         try:
             if is_pk:
-                calc = Node.get_subclass_from_pk(pk)
+                calc = AiidaOrmNode.get_subclass_from_pk(pk)
             else:
-                calc = Node.get_subclass_from_pk(uuid)
+                calc = AiidaOrmNode.get_subclass_from_pk(uuid)
         except NotExistent:
             print >> sys.stderr, "No node exists with ID={}.".format(calc_id)
             sys.exit(1)

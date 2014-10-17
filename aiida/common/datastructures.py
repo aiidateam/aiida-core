@@ -68,11 +68,16 @@ def sort_states(list_states):
 
 class CalcInfo(DefaultFieldsAttributeDict):
     """
-    This object will store the data returned by the code plugin and to be
+    This object will store the data returned by the calculation plugin and to be
     passed to the ExecManager 
     
     # TODO:
     * dynresources_info
+    
+    :todo: probably some of the fields below are not used anymore inside
+      calcinfo, but are rather directly set from calculation attributes to
+      the JobInfo to be passed to the ExecManager
+      (see, for instance, 'queue_name').
     """
     _default_fields = (
         'job_environment', # TODO UNDERSTAND THIS!
@@ -87,7 +92,8 @@ class CalcInfo(DefaultFieldsAttributeDict):
         'stdout_name',
         'stderr_name',
         'join_files',
-        'queue_name', 
+        #'queue_name', This is not used in CalcInfo, it is automatically set from
+                       # calculation attributes to JobInfo
         'num_machines',
         'num_mpiprocs_per_machine',
         'priority',

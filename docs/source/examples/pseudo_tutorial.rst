@@ -55,7 +55,7 @@ set in the ``description`` field of the group.
 
 .. note:: This command will first check the MD5 checksum of each file, and
   it will not create a new UPFData node if the pseudopotential is already 
-  present in the DB. In this case, it will simply exist that UpfData node
+  present in the DB. In this case, it will simply add that UpfData node
   to the group with name ``name_of_the_family``.
 
 .. note:: if you add the optional flag ``--stop-if-existing``, 

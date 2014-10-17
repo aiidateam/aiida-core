@@ -493,7 +493,9 @@ class Node(object):
         Both nodes must be a Node instance (or a subclass of Node)
         :note: In subclasses, change only this. Moreover, remember to call
            the super() method in order to properly use the caching logic!
-        
+        :note: There is no _add_link_to, in order to avoid that someone 
+           redefines that method and forgets about using the caching mechanism.
+           Given that it is not restrictive, always use the _add_link_from!
         
         :param src: the source object
         :param str label: the name of the label to set the link from src.
@@ -703,19 +705,6 @@ class Node(object):
                                       "name (raw message was {})"
                                       "".format(e.message))
 
-    def _add_link_to(self,dest,label=None):
-        """
-        Add a link from the current node to the 'dest' node.
-        Both nodes must be a Node instance (or a subclass of Node)
-        (Do not change in subclasses, subclass the _add_link_from class only.)
-        
-        :param dest: destination Node object to set the link to.
-        :param str label: the name of the link. Default=None
-        """
-        if not isinstance(dest,Node):
-            raise ValueError("dest must be a Node instance")
-        dest._add_link_from(self,label)
-
     def _can_link_as_output(self,dest):
         """
         Raise a ValueError if a link from self to dest is not allowed.
@@ -746,20 +735,27 @@ class Node(object):
         
         WARNING: usage of this function is deprecated, as it might be changed
         """
-        list_with_duplicates = self.get_outputs(also_labels=True)
+        all_outputs = self.get_outputs(also_labels=True)
         
-        # case with duplicates
-        labels = [i[0] for i in list_with_duplicates]
-        duplicated_labels = set([ i for i in labels if labels.count(i)>1 ])
-        
-        if not duplicated_labels:
-            return dict(list_with_duplicates)
-        else:
-            # correct
-            list_outputs = [ (i[0]+"_to_{}".format(i[1].pk),i[1]) if i[0]=='code' 
-                             else i for i in list_with_duplicates ]      
-            return list_outputs
+        all_linknames = [i[0] for i in all_outputs]
+        linknames_set = list(set(all_linknames))
 
+        # prepare a new output list
+        new_outputs = {}
+        # first add the defaults
+        for irreducible_linkname in linknames_set: 
+            this_elements = [ i[1] for i in all_outputs if i[0]==irreducible_linkname]
+            # select the oldest element
+            last_element = sorted(this_elements, key=lambda x:x.ctime)[0]
+            # for this one add the default value
+            new_outputs[irreducible_linkname] = last_element
+            
+            # now for everyone append the string with the pk
+            for i in  this_elements:
+                new_outputs[ irreducible_linkname+"_{}".format(i.pk)] = i
+
+        return new_outputs
+        
     def get_inputdata_dict(self, only_in_db=False):
         """
         Return a dictionary where the key is the label of the input link, and
@@ -1520,6 +1516,27 @@ class Node(object):
         """
         return NodeInputManager(self)
 
+    @property
+    def has_children(self):
+        """
+        Property to understand if children are attached to the node
+        :return: a boolean
+        """
+        # use the transitive closure
+        from aiida.djsite.db.models import DbPath
+        childrens = DbPath.objects.filter(parent=self.pk)
+        return False if not childrens else True
+
+    @property
+    def has_parents(self):
+        """
+        Property to understand if parents are attached to the node
+        :return: a boolean
+        """
+        # use the transitive closure
+        from aiida.djsite.db.models import DbPath
+        parents = DbPath.objects.filter(child=self.pk)
+        return False if not parents else True
 
 
 class NodeOutputManager(object):

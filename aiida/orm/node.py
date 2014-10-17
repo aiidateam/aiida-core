@@ -493,7 +493,9 @@ class Node(object):
         Both nodes must be a Node instance (or a subclass of Node)
         :note: In subclasses, change only this. Moreover, remember to call
            the super() method in order to properly use the caching logic!
-        
+        :note: There is no _add_link_to, in order to avoid that someone 
+           redefines that method and forgets about using the caching mechanism.
+           Given that it is not restrictive, always use the _add_link_from!
         
         :param src: the source object
         :param str label: the name of the label to set the link from src.
@@ -702,19 +704,6 @@ class Node(object):
                 raise UniquenessError("There is already a link with the same "
                                       "name (raw message was {})"
                                       "".format(e.message))
-
-    def _add_link_to(self,dest,label=None):
-        """
-        Add a link from the current node to the 'dest' node.
-        Both nodes must be a Node instance (or a subclass of Node)
-        (Do not change in subclasses, subclass the _add_link_from class only.)
-        
-        :param dest: destination Node object to set the link to.
-        :param str label: the name of the link. Default=None
-        """
-        if not isinstance(dest,Node):
-            raise ValueError("dest must be a Node instance")
-        dest._add_link_from(self,label)
 
     def _can_link_as_output(self,dest):
         """

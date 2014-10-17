@@ -43,9 +43,10 @@ class Code(Node):
 
     def __str__(self):
         local_str = "Local" if self.is_local() else "Remote"
+        computer_str = "repository" if self.is_local() else self.computer.name
         
         return "{} code '{}' on {}, pk={}, uuid={}".format(local_str, self.label,
-                                           self.computer.name, self.pk, self.uuid)
+                                           computer_str, self.pk, self.uuid)
 
     @classmethod
     def get(cls,label):

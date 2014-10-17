@@ -102,8 +102,8 @@ class Daemon(VerdiCommandWithSubcommands):
         """
         Start the daemon
         """
-        from aiida.common.utils import load_django
-        load_django()
+        from aiida import load_dbenv
+        load_dbenv()
 
         if args:
             print >> sys.stderr, (
@@ -226,8 +226,8 @@ class Daemon(VerdiCommandWithSubcommands):
         """
         Print the status of the daemon
         """
-        from aiida.common.utils import load_django
-        load_django()
+        from aiida import load_dbenv
+        load_dbenv()
         
         if args:
             print >> sys.stderr, (
@@ -321,8 +321,8 @@ class Daemon(VerdiCommandWithSubcommands):
         Restart the daemon. Before restarting, wait for the daemon to really
         shut down.
         """
-        from aiida.common.utils import load_django
-        load_django()
+        from aiida import load_dbenv
+        load_dbenv()
 
         if args:
             print >> sys.stderr, (
@@ -360,8 +360,8 @@ class Daemon(VerdiCommandWithSubcommands):
         """
         Configure the user that can run the daemon.
         """
-        from aiida.common.utils import load_django
-        load_django()
+        from aiida import load_dbenv
+        load_dbenv()
         
         if args:
             print >> sys.stderr, (

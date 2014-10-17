@@ -7,11 +7,11 @@ In order to run a script that interacts with the database, you need
 to select the proper settings for the database, otherwise you will
 get an ``ImproperlyConfigured`` exception from Django.
 
-To simplify the procedure, we provide an utility command, ``load_django``.
+To simplify the procedure, we provide an utility command, ``load_dbenv``.
 As the first two lines of your script, write::
   
-  from aiida.common.utils import load_django
-  load_django()
+  from aiida import load_dbenv
+  load_dbenv()
 
 From there on, you can import without problems any module and interact with
 the database (submit calculations, perform queries, ...).
@@ -29,7 +29,7 @@ This command will run an IPython shell, if ipython is installed in the system
 (it also supports bpython), which has many nice features, including TAB 
 completion and much more.
 
-Moreover, it will automatically execute the ``load_django`` command, and
+Moreover, it will automatically execute the ``load_dbenv`` command, and
 automatically import the following modules/classes::
   
   from aiida.orm import (Node, Calculation, Code, Data,

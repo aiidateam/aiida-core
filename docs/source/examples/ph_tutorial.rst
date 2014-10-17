@@ -39,8 +39,8 @@ As before, we write a script step-by-step.
 We first load a couple of useful modules that you already met in the previous tutorial, and load the database settings::
 
     #!/usr/bin/env python
-    from aiida.common.utils import load_django
-    load_django()
+    from aiida import load_dbenv
+    load_dbenv()
 
     from aiida.orm import Code
     from aiida.orm import CalculationFactory, DataFactory
@@ -152,8 +152,8 @@ the code, and the proper scheduler info.
 ::
 
     #!/usr/bin/env python
-    from aiida.common.utils import load_django
-    load_django()
+    from aiida import load_dbenv
+    load_dbenv()
 
     from aiida.orm import Code
     from aiida.orm import CalculationFactory, DataFactory

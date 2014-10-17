@@ -26,7 +26,7 @@ __version__ = "0.2.0"
 # The version is checked at code load time to verify that the code schema
 # version and the DB schema version are the same. (The DB schema version
 # is stored in the DbSetting table and the check is done in the 
-# load_django() function).
+# load_dbenv() function).
 SCHEMA_VERSION="1.0.0"
 
 class EmptyContextManager(object):

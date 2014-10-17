@@ -2,7 +2,7 @@
 import sys
 
 from aiida.cmdline.baseclass import VerdiCommand
-from aiida.common.utils import load_django, export_shard_uuid, grouper
+from aiida import load_dbenv, export_shard_uuid, grouper
 
 __author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
 __copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
@@ -558,7 +558,7 @@ class Import(VerdiCommand):
     purposes or to share data with collaborators.
     """
     def run(self,*args):                    
-        load_django()
+        load_dbenv()
         
         import argparse
         import traceback

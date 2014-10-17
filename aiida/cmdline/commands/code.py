@@ -7,7 +7,7 @@ TODO: think if we want to allow to change path and prepend/append text.
 import sys
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.common.utils import load_django
+from aiida import load_dbenv
 
 __author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
 __copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
@@ -306,7 +306,7 @@ class CodeInputValidationClass(object):
         """
         from aiida.orm import Computer as AiidaOrmComputer
         from aiida.common.exceptions import ValidationError, NotExistent
-        load_django()
+        load_dbenv()
         
         try:
             computer = AiidaOrmComputer.get(string)
@@ -572,7 +572,7 @@ class Code(VerdiCommandWithSubcommands):
         """
         from aiida.orm import Code as AiidaOrmCode
 
-        load_django()
+        load_dbenv()
         return sorted([(c.pk, c.label) for c in AiidaOrmCode.query()])
 
 
@@ -589,7 +589,7 @@ class Code(VerdiCommandWithSubcommands):
         from aiida.orm import Code as AiidaOrmCode
         from aiida.common.exceptions import NotExistent, MultipleObjectsError
         
-        load_django()
+        load_dbenv()
         try:
             code_int = int(code_id)
             try:
@@ -627,7 +627,7 @@ class Code(VerdiCommandWithSubcommands):
         """
         Show information on a given code
         """
-        load_django()
+        load_dbenv()
         if len(args) != 1:
             print >> sys.stderr, ("after 'code show' there should be one "
                                   "argument only, being the code id.")
@@ -639,7 +639,7 @@ class Code(VerdiCommandWithSubcommands):
     def code_setup(self, *args):
         from aiida.common.exceptions import ValidationError
 
-        load_django()
+        load_dbenv()
           
         if len(args) != 0:
             print >> sys.stderr, ("after 'code setup' there cannot be any "

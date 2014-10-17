@@ -58,9 +58,9 @@ def pass_to_django_manage(argv):
     """
     Call the corresponding django manage.py command
     """
-    from aiida.common.utils import load_django
+    from aiida import load_dbenv
     import django.core.management
     
-    load_django()
+    load_dbenv()
     django.core.management.execute_from_command_line(argv)
       

@@ -122,7 +122,10 @@ class Devel(VerdiCommandWithSubcommands):
     
     def run_describeproperties(self, *args):
         """
-        List all found properties
+        List all valid properties that can be stored in the AiiDA config file.
+        
+        Only properties listed in the ``_property_table`` of
+        ``aida.common.setup`` can be used.
         """
         from aiida.common.setup import _property_table, _NoDefaultValue
         
@@ -142,6 +145,10 @@ class Devel(VerdiCommandWithSubcommands):
                                        def_val_string)
 
     def calculation_getresults(self, *args):
+        """
+        Routine to get a list of results of a set of calculations, still
+        under development.
+        """
         from aiida.common.exceptions import AiidaException
         from aiida.orm import Calculation as OrmCalculation
         
@@ -327,7 +334,7 @@ class Devel(VerdiCommandWithSubcommands):
     
     def run_listproperties(self, *args):
         """
-        List all found properties
+        List all found global AiiDA properties.
         """
         import argparse
         
@@ -358,7 +365,7 @@ class Devel(VerdiCommandWithSubcommands):
 
     def run_getproperty(self, *args):
         """
-        Get a property from the config file.
+        Get a global AiiDA property from the config file in .aiida.
         """
         from aiida.common.setup import get_property
         
@@ -377,7 +384,7 @@ class Devel(VerdiCommandWithSubcommands):
 
     def run_delproperty(self, *args):
         """
-        Delete a property from the config file.
+        Delete a global AiiDA property from the config file in .aiida.
         """
         from aiida.common.setup import del_property
         
@@ -402,7 +409,10 @@ class Devel(VerdiCommandWithSubcommands):
     
     def run_setproperty(self, *args):
         """
-        Define a property in the config file.
+        Define a global AiiDA property in the config file in .aiida.
+
+        Only properties in the _property_table of aiida.common.setup can 
+        be modified.
         """
         from aiida.common.setup import set_property
         

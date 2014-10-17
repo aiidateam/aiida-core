@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
-import os, os.path
+import os.path
 import string
-import logging
 
 from aiida.common.exceptions import ConfigurationError
 
@@ -9,6 +8,15 @@ __author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marza
 __copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.2.0"
+
+def load_django():
+    import warnings
+    from aiida.djsite.utils import load_dbenv
+    
+    warnings.warn("The load_django function has been "
+        "replaced by the aiida.load_dbenv() function.", DeprecationWarning)
+    
+    load_dbenv()
 
 class classproperty(object):
     """
@@ -23,9 +31,6 @@ class classproperty(object):
     def __get__(self, instance, owner):
         return self.getter(owner)
    
-def load_django():
-    os.environ['DJANGO_SETTINGS_MODULE'] = 'aiida.djsite.settings.settings'
-
 def get_new_uuid():
     """
     Return a new UUID (typically to be used for new nodes).

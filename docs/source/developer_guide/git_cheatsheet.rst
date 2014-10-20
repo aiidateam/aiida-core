@@ -54,7 +54,7 @@ then delete the old one. One way to do it, is first editing ``~/.git/config``
 so that the branch points to the new remote name, changing
 ``refs/heads/oldname`` to ``refs/heads/newname`` in the correct section::
 
-[branch "newname"]
+  [branch "newname"]
     remote = origin
     merge = refs/heads/newname
     
@@ -140,7 +140,7 @@ develop), you can:
   (this will fetch that branch into a temporary location called ``FETCH_HEAD``).
 * Merge the modifications::
 
-  git merge FETCH_HEAD
+    git merge FETCH_HEAD
  
  * Fix any merge conflicts (if any) and commit.
  * Finally, push the merged result into the main repository::

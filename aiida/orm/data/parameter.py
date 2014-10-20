@@ -20,7 +20,7 @@ class ParameterData(Data):
     def set_dict(self, dict):
         # I set the keys
         for k, v in dict.iteritems():
-            self.set_attr(k, v)
+            self._set_attr(k, v)
 
     def get_dict(self):
         """

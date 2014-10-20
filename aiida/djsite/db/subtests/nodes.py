@@ -221,13 +221,13 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
     def test_links_and_queries(self):
         from aiida.djsite.db.models import DbNode, DbLink
         a  = Node()
-        a.set_attr('myvalue', 123)
+        a._set_attr('myvalue', 123)
         a.store()
         
         a2 = Node().store()
         
         a3 = Node()
-        a3.set_attr('myvalue', 145)
+        a3._set_attr('myvalue', 145)
         a3.store()
         
         a4 = Node().store()        
@@ -310,15 +310,15 @@ class TestNodeBasic(AiidaTestCase):
 
     def test_attr_before_storing(self):
         a = Node()
-        a.set_attr('k1', self.boolval)
-        a.set_attr('k2', self.intval)
-        a.set_attr('k3', self.floatval)
-        a.set_attr('k4', self.stringval)
-        a.set_attr('k5', self.dictval)
-        a.set_attr('k6', self.listval)
-        a.set_attr('k7', self.emptydict)
-        a.set_attr('k8', self.emptylist)
-        a.set_attr('k9', None)
+        a._set_attr('k1', self.boolval)
+        a._set_attr('k2', self.intval)
+        a._set_attr('k3', self.floatval)
+        a._set_attr('k4', self.stringval)
+        a._set_attr('k5', self.dictval)
+        a._set_attr('k6', self.listval)
+        a._set_attr('k7', self.emptydict)
+        a._set_attr('k8', self.emptylist)
+        a._set_attr('k9', None)
 
         # Now I check if I can retrieve them, before the storage
         self.assertEquals(self.boolval,   a.get_attr('k1'))
@@ -332,23 +332,23 @@ class TestNodeBasic(AiidaTestCase):
         self.assertIsNone(a.get_attr('k9'))
 
         # And now I try to delete the keys
-        a.del_attr('k1')
-        a.del_attr('k2')
-        a.del_attr('k3')
-        a.del_attr('k4')
-        a.del_attr('k5')
-        a.del_attr('k6')
-        a.del_attr('k7')
-        a.del_attr('k8')
-        a.del_attr('k9')
+        a._del_attr('k1')
+        a._del_attr('k2')
+        a._del_attr('k3')
+        a._del_attr('k4')
+        a._del_attr('k5')
+        a._del_attr('k6')
+        a._del_attr('k7')
+        a._del_attr('k8')
+        a._del_attr('k9')
 
         with self.assertRaises(AttributeError):
             # I delete twice the same attribute
-            a.del_attr('k1')
+            a._del_attr('k1')
 
         with self.assertRaises(AttributeError):
             # I delete a non-existing attribute
-            a.del_attr('nonexisting')
+            a._del_attr('nonexisting')
 
         with self.assertRaises(AttributeError):
             # I get a deleted attribute
@@ -385,7 +385,7 @@ class TestNodeBasic(AiidaTestCase):
                 attribute = {semi_long_string: attribute}
                 key_len += len(semi_long_string) + len(models.DbAttribute._sep)
             
-            n.set_attr(semi_long_string, attribute)
+            n._set_attr(semi_long_string, attribute)
             
             n.store()
             
@@ -402,7 +402,7 @@ class TestNodeBasic(AiidaTestCase):
 
         date = now()
 
-        a.set_attr('some_date', date)
+        a._set_attr('some_date', date)
         a.store()
 
         retrieved = a.get_attr('some_date')
@@ -436,7 +436,7 @@ class TestNodeBasic(AiidaTestCase):
             }
 
         for k,v in attrs_to_set.iteritems():
-            a.set_attr(k, v)
+            a._set_attr(k, v)
 
         a.store()
 
@@ -453,9 +453,9 @@ class TestNodeBasic(AiidaTestCase):
         # I modify an attribute and add a new one; I mirror it in the dictionary
         # for later checking
         b_expected_attributes = copy.deepcopy(attrs_to_set)
-        b.set_attr('integer', 489)
+        b._set_attr('integer', 489)
         b_expected_attributes['integer'] = 489
-        b.set_attr('new', 'cvb')
+        b._set_attr('new', 'cvb')
         b_expected_attributes['new'] = 'cvb'
 
         # I check before storing that the attributes are ok
@@ -715,13 +715,13 @@ class TestNodeBasic(AiidaTestCase):
 
     def test_attr_after_storing(self):
         a = Node()
-        a.set_attr('none', None)
-        a.set_attr('bool', self.boolval)
-        a.set_attr('integer', self.intval)
-        a.set_attr('float', self.floatval)
-        a.set_attr('string', self.stringval)
-        a.set_attr('dict', self.dictval)
-        a.set_attr('list', self.listval)
+        a._set_attr('none', None)
+        a._set_attr('bool', self.boolval)
+        a._set_attr('integer', self.intval)
+        a._set_attr('float', self.floatval)
+        a._set_attr('string', self.stringval)
+        a._set_attr('dict', self.dictval)
+        a._set_attr('list', self.listval)
 
         a.store()
 
@@ -737,20 +737,20 @@ class TestNodeBasic(AiidaTestCase):
         # And now I try to edit/delete the keys; I should not be able to do it
         # after saving. I try only for a couple of attributes
         with self.assertRaises(ModificationNotAllowed):                
-            a.del_attr('bool')
+            a._del_attr('bool')
         with self.assertRaises(ModificationNotAllowed):                
-            a.set_attr('integer',13)
+            a._set_attr('integer',13)
 
 
     def test_attr_with_reload(self):
         a = Node()
-        a.set_attr('none', None)
-        a.set_attr('bool', self.boolval)
-        a.set_attr('integer', self.intval)
-        a.set_attr('float', self.floatval)
-        a.set_attr('string', self.stringval)
-        a.set_attr('dict', self.dictval)
-        a.set_attr('list', self.listval)
+        a._set_attr('none', None)
+        a._set_attr('bool', self.boolval)
+        a._set_attr('integer', self.intval)
+        a._set_attr('float', self.floatval)
+        a._set_attr('string', self.stringval)
+        a._set_attr('dict', self.dictval)
+        a._set_attr('list', self.listval)
 
         a.store()
 
@@ -775,7 +775,7 @@ class TestNodeBasic(AiidaTestCase):
 
 
         with self.assertRaises(ModificationNotAllowed):                
-            a.set_attr('i',12)
+            a._set_attr('i',12)
 
     def test_attrs_and_extras_wrong_keyname(self):
         """
@@ -789,7 +789,7 @@ class TestNodeBasic(AiidaTestCase):
 
         with self.assertRaises(ValidationError):
             # I did not store, I cannot modify
-            a.set_attr('name'+separator, 'blablabla')
+            a._set_attr('name'+separator, 'blablabla')
         
         with self.assertRaises(ValidationError):
             # I did not store, I cannot modify
@@ -797,12 +797,12 @@ class TestNodeBasic(AiidaTestCase):
 
     def test_attr_and_extras(self):
         a = Node()
-        a.set_attr('bool', self.boolval)
-        a.set_attr('integer', self.intval)
-        a.set_attr('float', self.floatval)
-        a.set_attr('string', self.stringval)
-        a.set_attr('dict', self.dictval)
-        a.set_attr('list', self.listval)
+        a._set_attr('bool', self.boolval)
+        a._set_attr('integer', self.intval)
+        a._set_attr('float', self.floatval)
+        a._set_attr('string', self.stringval)
+        a._set_attr('dict', self.dictval)
+        a._set_attr('list', self.listval)
 
         with self.assertRaises(ModificationNotAllowed):
             # I did not store, I cannot modify
@@ -893,7 +893,7 @@ class TestNodeBasic(AiidaTestCase):
             }
 
         for k,v in attrs_to_set.iteritems():
-            a.set_attr(k, v)
+            a._set_attr(k, v)
 
         a.store()
 
@@ -936,7 +936,7 @@ class TestNodeBasic(AiidaTestCase):
             }
 
         for k,v in attrs_to_set.iteritems():
-            a.set_attr(k, v)
+            a._set_attr(k, v)
             
         # Check before storing
         self.assertEquals(267,a.get_attr('state'))
@@ -954,14 +954,14 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(a.dbnode.nodeversion, 2)
 
         # I check that I can set this attribute
-        a.set_attr('state', 999)
+        a._set_attr('state', 999)
 
         # I check increment on new version
         self.assertEquals(a.dbnode.nodeversion, 3)
 
         with self.assertRaises(ModificationNotAllowed):
             # I check that I cannot modify this attribute
-            a.set_attr('otherattribute', 222)
+            a._set_attr('otherattribute', 222)
 
         # I check that the counter was not incremented
         self.assertEquals(a.dbnode.nodeversion, 3)
@@ -998,7 +998,7 @@ class TestNodeBasic(AiidaTestCase):
             }
 
         for k,v in attrs_to_set.iteritems():
-            a.set_attr(k, v)
+            a._set_attr(k, v)
             
         # Check before storing
         self.assertEquals(267,a.get_attr('state'))
@@ -1012,7 +1012,7 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(a.dbnode.nodeversion, 1)
 
         # I should be able to delete the attribute
-        a.del_attr('state')
+        a._del_attr('state')
 
         # I check increment on new version
         self.assertEquals(a.dbnode.nodeversion, 2)

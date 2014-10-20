@@ -45,7 +45,7 @@ class ArrayData(Data):
         # remove both file and attribute
         self.remove_path(fname)
         try:
-            self.del_attr("{}{}".format(self.array_prefix, name))
+            self._del_attr("{}{}".format(self.array_prefix, name))
         except (KeyError, AttributeError):
             # Should not happen, but do not crash if for some reason the 
             # property was not set.
@@ -165,7 +165,7 @@ class ArrayData(Data):
         
         # Mainly for convenience, for querying purposes (both stores the fact
         # that there is an array with that name, and its shape)
-        self.set_attr("{}{}".format(self.array_prefix, name), list(array.shape))
+        self._set_attr("{}{}".format(self.array_prefix, name), list(array.shape))
     
 
     def _validate(self):

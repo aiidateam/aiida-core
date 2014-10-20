@@ -395,9 +395,9 @@ class Calculation(Node):
         :param str val: the queue name
         """
         if val is None:
-            self.set_attr('queue_name',None)
+            self._set_attr('queue_name',None)
         else:
-            self.set_attr('queue_name',unicode(val))
+            self._set_attr('queue_name',unicode(val))
 
     def set_import_sys_environment(self,val):
         """
@@ -406,7 +406,7 @@ class Calculation(Node):
         
         :param bool val: load the environment if True 
         """
-        self.set_attr('import_sys_environment',bool(val))
+        self._set_attr('import_sys_environment',bool(val))
 
     def get_import_sys_environment(self):
         """
@@ -435,7 +435,7 @@ class Calculation(Node):
                     "dictionary passed to set_environment_variables must be "
                     "strings.")
         
-        return self.set_attr('custom_environment_variables',env_vars_dict)
+        return self._set_attr('custom_environment_variables',env_vars_dict)
     
     def get_environment_variables(self):
         """
@@ -453,7 +453,7 @@ class Calculation(Node):
 
         :param val: the values of priority as accepted by the cluster scheduler.
         """
-        self.set_attr('priority',unicode(val))
+        self._set_attr('priority',unicode(val))
     
     def set_max_memory_kb(self,val):
         """
@@ -461,7 +461,7 @@ class Calculation(Node):
         
         :param val: an integer. Default=None
         """
-        self.set_attr('max_memory_kb',int(val))
+        self._set_attr('max_memory_kb',int(val))
 
     def get_max_memory_kb(self):
         """
@@ -477,7 +477,7 @@ class Calculation(Node):
         
         :param val: An integer. Default=None
         """
-        self.set_attr('max_wallclock_seconds',int(val))
+        self._set_attr('max_wallclock_seconds',int(val))
 
     def get_max_wallclock_seconds(self):
         """
@@ -499,7 +499,7 @@ class Calculation(Node):
         # 'store' because here we are not sure that a Computer has been set
         # yet (in particular, if both computer and resources are set together
         # using the .set() method).
-        self.set_attr('jobresource_params', resources_dict)
+        self._set_attr('jobresource_params', resources_dict)
     
     def set_withmpi(self,val):
         """
@@ -507,7 +507,7 @@ class Calculation(Node):
         
         :param val: A boolean. Default=True
         """
-        self.set_attr('withmpi',val)
+        self._set_attr('withmpi',val)
 
     def get_withmpi(self):        
         """
@@ -570,7 +570,7 @@ class Calculation(Node):
         
         :param val: a (possibly multiline) string
         """
-        self.set_attr("prepend_text", unicode(val))
+        self._set_attr("prepend_text", unicode(val))
 
     def get_append_text(self):
         """
@@ -588,7 +588,7 @@ class Calculation(Node):
         
         :param val: a (possibly multiline) string
         """
-        self.set_attr("append_text", unicode(val))
+        self._set_attr("append_text", unicode(val))
     
     def set_custom_scheduler_commands(self, val):
         """
@@ -600,7 +600,7 @@ class Calculation(Node):
         inserted: with this method, the string is inserted before any 
         non-scheduler command.
         """
-        self.set_attr("custom_scheduler_commands", unicode(val))
+        self._set_attr("custom_scheduler_commands", unicode(val))
 
     def get_custom_scheduler_commands(self):
         """
@@ -637,7 +637,7 @@ class Calculation(Node):
         """
         if extra_params is None:
             try:
-                self.del_attr("mpirun_extra_params")
+                self._del_attr("mpirun_extra_params")
             except AttributeError:
                 # it was not saved, yet
                 pass
@@ -651,7 +651,7 @@ class Calculation(Node):
                 raise ValueError("You must pass a list of strings to "
                                  "set_mpirun_extra_params")
         
-        self.set_attr("mpirun_extra_params", list(extra_params))
+        self._set_attr("mpirun_extra_params", list(extra_params))
 
     def _add_link_from(self,src,label=None):
         '''
@@ -778,7 +778,7 @@ class Calculation(Node):
         # For non-imported states, also set in the attribute (so that, if we
         # export, we can still see the original state the calculation had.
         if state != calc_states.IMPORTED:
-            self.set_attr('state', state)
+            self._set_attr('state', state)
 
     def get_state(self, from_attribute=False):
         """
@@ -884,7 +884,7 @@ class Calculation(Node):
                 "Cannot set the remote workdir if you are not "
 			    "submitting the calculation (current state is "
 				"{})".format(self.get_state()))
-        self.set_attr('remote_workdir', remote_workdir)
+        self._set_attr('remote_workdir', remote_workdir)
 
     def _get_remote_workdir(self):
         """
@@ -906,7 +906,7 @@ class Calculation(Node):
 	           not(all(isinstance(i,basestring) for i in retrieve_list))):
             raise ValueError("You have to pass a list (or tuple) of strings "
                              "as retrieve_list")
-        self.set_attr('retrieve_list', retrieve_list)
+        self._set_attr('retrieve_list', retrieve_list)
 
     def _get_retrieve_list(self):
         """
@@ -936,7 +936,7 @@ class Calculation(Node):
                         not(all(isinstance(i,basestring) for i in j))):
                 raise ValueError("You have to pass a list (or tuple) of lists "
                                  "of strings as retrieve_singlefile_list")
-        self.set_attr('retrieve_singlefile_list', retrieve_singlefile_list)
+        self._set_attr('retrieve_singlefile_list', retrieve_singlefile_list)
     
     def _get_retrieve_singlefile_list(self):
         """
@@ -958,7 +958,7 @@ class Calculation(Node):
 					 "submitting the calculation (current state is "
 					 "{})".format(self.get_state()))
 
-        return self.set_attr('job_id', unicode(job_id))
+        return self._set_attr('job_id', unicode(job_id))
     
     def get_job_id(self):
         """
@@ -973,8 +973,8 @@ class Calculation(Node):
         # I just convert it to a string
         from django.utils import timezone
         
-        self.set_attr('scheduler_state', unicode(state))
-        self.set_attr('scheduler_lastchecktime', timezone.now())
+        self._set_attr('scheduler_state', unicode(state))
+        self._set_attr('scheduler_lastchecktime', timezone.now())
                 
     def get_scheduler_state(self):
         """
@@ -996,7 +996,7 @@ class Calculation(Node):
     def _set_last_jobinfo(self,last_jobinfo):
         import pickle
         
-        self.set_attr('last_jobinfo', last_jobinfo.serialize())
+        self._set_attr('last_jobinfo', last_jobinfo.serialize())
 
     def _get_last_jobinfo(self):
         """
@@ -1340,7 +1340,7 @@ class Calculation(Node):
         :param parser: a string identifying the module of the parser. 
               Such module must be located within the folder 'aiida/parsers/plugins'
         """                
-        self.set_attr('parser', parser)
+        self._set_attr('parser', parser)
 
     def get_parser_name(self):
         """
@@ -1377,7 +1377,7 @@ class Calculation(Node):
         
         :param linkname: a string.
         """
-        self.set_attr('linkname_retrieved',linkname)
+        self._set_attr('linkname_retrieved',linkname)
 
     def _get_linkname_retrieved(self):
         """

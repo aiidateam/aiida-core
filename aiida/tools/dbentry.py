@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import urllib2
-
 class DBEntry(object):
     """
     Represents the entry from the structure database (COD, ICSD, ...).
@@ -18,18 +16,27 @@ class DBEntry(object):
         Creates an instance of DBEntry, related to the supplied URL.
         Downloads corresponding CIF file.
         """
+        import urllib2
         self.url = url
         if 'source_db' in kwargs.keys():
             self.source_db = kwargs['source_db']
         if 'db_id' in kwargs.keys():
             self.db_id = kwargs['db_id']
-        cif = urllib2.urlopen( self.url ).read()
+        self.cif = urllib2.urlopen( self.url ).read()
 
     def get_raw_cif(self):
         """
         Returns raw contents of a CIF file as string.
         """
         return self.cif
+
+    def get_ase_structure(self):
+        """
+        Returns ASE representation of the CIF.
+        """
+        import ase.io.cif
+        import StringIO
+        return ase.io.cif.read_cif( StringIO.StringIO( self.cif ) )
 
     def get_cif_node(self):
         """

@@ -7,7 +7,7 @@ class BaseDBImporter(object):
 
     configuration = {}
 
-    def __init__():
+    def __init__(self):
         """
         Prepare for queries. In case alive connection to any database is
         required for the life of *DBImporter object, the connection should

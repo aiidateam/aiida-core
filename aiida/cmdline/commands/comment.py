@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-This allows to setup and configure a code from command line.
-
-TODO: think if we want to allow to change path and prepend/append text.
+This allows to manage comments from command line.
 """
 import sys
 

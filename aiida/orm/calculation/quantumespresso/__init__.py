@@ -114,7 +114,9 @@ class BasePwCpInputGenerator(object):
                              "an additional parameter ('kind') specifying the "
                              "name of the structure kind (i.e., the name of "
                              "the species) for which you want to use this "
-                             "pseudo"),
+                             "pseudo. You can pass either a string, or a "
+                             "list of strings if more than one kind uses the "
+                             "same pseudo"),
                },
             }
 
@@ -171,13 +173,20 @@ class BasePwCpInputGenerator(object):
                                             dict_name='settings')
         
         pseudos = {}
+        # I create here a dictionary that associates each kind name to a pseudo
         for link in inputdict.keys():
             if link.startswith(self._get_linkname_pseudo_prefix()):
-                kind = link[len(self._get_linkname_pseudo_prefix()):]
-                pseudos[kind] = inputdict.pop(link)
-                if not isinstance(pseudos[kind], UpfData):
-                    raise InputValidationError("Pseudo for kind {} is not of "
-                                               "type UpfData".format(kind))
+                kindstring = link[len(self._get_linkname_pseudo_prefix()):]
+                kinds = kindstring.split('_')
+                the_pseudo = inputdict.pop(link)
+                if not isinstance(the_pseudo, UpfData):
+                    raise InputValidationError("Pseudo for kind(s) {} is not of "
+                        "type UpfData".format(",".join(kinds)))
+                for kind in kinds:
+                    if kind in pseudos:
+                        raise InputValidationError("Pseudo for kind {} passed "
+                            "more than one time".format(kind))
+                    pseudos[kind] = the_pseudo
 
         parent_calc_folder = inputdict.pop(self.get_linkname('parent_folder'),None)
         if parent_calc_folder is not None:
@@ -253,10 +262,16 @@ class BasePwCpInputGenerator(object):
         # Espresso codes crash if an empty folder is not already there
         tempfolder.get_subfolder(self._OUTPUT_SUBFOLDER, create=True)
                 
-        atomic_species_card_list = ["ATOMIC_SPECIES\n"]
+        atomic_species_card_list = []
 
         # Keep track of the filenames to avoid to overwrite files
-        pseudo_filenames = []
+        # I use a dictionary where the key is the pseudo PK and the value
+        # is the filename I used. In this way, I also use the same filename
+        # if more than one kind uses the same pseudo. 
+        pseudo_filenames = {}
+        
+        # I keep track of the order of species
+        kind_names = []
         # I add the pseudopotential files to the list of files to be copied
         for kind in structure.kinds:
             # This should not give errors, I already checked before that
@@ -267,16 +282,40 @@ class BasePwCpInputGenerator(object):
                     "vacancies. This is not allowed for pw.x input structures."
                     "".format(kind.name))
 
-            filename = get_unique_filename(ps.filename, pseudo_filenames)
-            pseudo_filenames.append(filename)
-            # I add this pseudo file to the list of files to copy            
-            local_copy_list.append((ps.get_file_abs_path(),
-                                   os.path.join(self._PSEUDO_SUBFOLDER,filename)))
-            
+            try:
+                # It it is the same pseudopotential file, use the same filename
+                filename = pseudo_filenames[ps.pk]
+            except KeyError:
+                # The pseudo was not encountered yet; use a new name and
+                # also add it to the local copy list
+                filename = get_unique_filename(ps.filename,
+                                               pseudo_filenames.values())
+                pseudo_filenames[ps.pk] = filename
+                # I add this pseudo file to the list of files to copy            
+                local_copy_list.append((ps.get_file_abs_path(),
+                                        os.path.join(self._PSEUDO_SUBFOLDER,
+                                                     filename)))
+            kind_names.append(kind.name)
             atomic_species_card_list.append("{} {} {}\n".format(
                 kind.name.ljust(6), kind.mass, filename))
-        atomic_species_card = "".join(atomic_species_card_list)
-        del atomic_species_card_list # Free memory
+
+        # I join the lines, but I resort them using the alphabetical order of
+        # species, given by the kind_names list. I also store the mapping_species
+        # list, with the order of species used in the file
+        mapping_species, sorted_atomic_species_card_list = zip(
+            *sorted(zip(kind_names, atomic_species_card_list)))
+        # The format of mapping_species required later is a dictionary, whose
+        # values are the indices, so I convert to this format
+        # Note the (idx+1) to convert to fortran 1-based lists
+        mapping_species = {sp_name: (idx+1) for idx, sp_name
+                           in enumerate(mapping_species)}
+        # I add the first line
+        sorted_atomic_species_card_list = (["ATOMIC_SPECIES\n"] + 
+            list(sorted_atomic_species_card_list))
+        atomic_species_card = "".join(sorted_atomic_species_card_list)
+        # Free memory
+        del sorted_atomic_species_card_list
+        del atomic_species_card_list
 
         # ------------ ATOMIC_POSITIONS -----------
         atomic_positions_card_list = ["ATOMIC_POSITIONS angstrom\n"]
@@ -433,7 +472,7 @@ class BasePwCpInputGenerator(object):
                 # empty namelist
                 namelist = input_params.pop(namelist_name,{})
                 for k, v in sorted(namelist.iteritems()):
-                    infile.write(get_input_data_text(k,v))
+                    infile.write(get_input_data_text(k,v,mapping=mapping_species))
                 infile.write("/\n")
 
             # Write cards now
@@ -540,8 +579,8 @@ class BasePwCpInputGenerator(object):
         """
         The prefix for the name of the link used for the pseudo for kind 'kind'
         
-        Args:
-            kind: a string for the atomic kind for which we want to get the link name
+        :param kind: a string for the atomic kind for which we want
+          to get the link name
         """
         return "pseudo_"
 
@@ -552,11 +591,22 @@ class BasePwCpInputGenerator(object):
         It appends the pseudo name to the pseudo_prefix, as returned by the
         _get_linkname_pseudo_prefix() method.
         
-        Args:
-            kind: a string for the atomic kind for which we want to get the
-            link name
+        :note: if a list of strings is given, the elements are appended
+          in the same order, separated by underscores
+        
+        :param kind: a string (or list of strings) for the atomic kind(s) for 
+            which we want to get the link name
         """
-        return "{}{}".format(cls._get_linkname_pseudo_prefix(),kind)
+        # If it is a list of strings, and not a single string: join them
+        # by underscore
+        if isinstance(kind, (tuple, list)):
+            suffix_string = "_".join(kind) 
+        elif isinstance(kind, basestring):
+            suffix_string = kind
+        else:
+            raise TypeError("The parameter 'kind' of _get_linkname_pseudo can "
+                            "only be a string or a list of strings")
+        return "{}{}".format(cls._get_linkname_pseudo_prefix(),suffix_string)
 
 
     def use_pseudos_from_family(self, family_name):
@@ -564,20 +614,37 @@ class BasePwCpInputGenerator(object):
         Set the pseudo to use for all atomic kinds, picking pseudos from the
         family with name family_name.
         
-        Note: The structure must already be set.
+        :note: The structure must already be set.
         
-        Args:
-            family_name: the name of the group containing the pseudos
+        :param family_name: the name of the group containing the pseudos
         """
+        from collections import defaultdict
+    
         try:
             structure = self.get_inputdata_dict()[self.get_linkname('structure')]
         except AttributeError:
-            raise ValueError("Structure is not set yet!")
+            raise ValueError("Structure is not set yet! Therefore, the method "
+                             "use_pseudos_from_family cannot automatically set "
+                             "the pseudos")
 
-        pseudo_list = get_pseudos_from_structure(structure, family_name)
+        # A dict {kind_name: pseudo_object}
+        kind_pseudo_dict = get_pseudos_from_structure(structure, family_name)
         
-        for kindname, pseudo in pseudo_list.iteritems():
-            self.use_pseudo(pseudo, kindname)
+        # We have to group the species by pseudo, I use the pseudo PK
+        # pseudo_dict will just map PK->pseudo_object
+        pseudo_dict = {} 
+        # Will contain a list of all species of the pseudo with given PK
+        pseudo_species = defaultdict(list) 
+        
+        for kindname, pseudo in kind_pseudo_dict.iteritems():
+            pseudo_dict[pseudo.pk] = pseudo
+            pseudo_species[pseudo.pk].append(kindname)
+                
+        for pseudo_pk in pseudo_dict:
+            pseudo = pseudo_dict[pseudo_pk]
+            kinds = pseudo_species[pseudo_pk]
+            # I set the pseudo for all species, sorting alphabetically
+            self.use_pseudo(pseudo, sorted(kinds))
 
     def _set_parent_remotedata(self,remotedata):
         """
@@ -663,21 +730,51 @@ class BasePwCpInputGenerator(object):
         
         return c2
 
-def get_input_data_text(key,val):
+def get_input_data_text(key,val, mapping=None):
     """
     Given a key and a value, return a string (possibly multiline for arrays)
     with the text to be added to the input file.
     
-    Args:
-        key: the flag name
-        val: the flag value. If it is an array, a line for each element
+    :param key: the flag name
+    :param val: the flag value. If it is an array, a line for each element
             is produced, with variable indexing starting from 1.
             Each value is formatted using the conv_to_fortran function.
+    :param mapping: Optional parameter, must be provided if val is a dictionary.
+            It maps each key of the 'val' dictionary to the corresponding 
+            list index. For instance, if ``key='magn'``, 
+            ``val = {'Fe': 0.1, 'O': 0.2}`` and ``mapping = {'Fe': 2, 'O': 1}``,
+            this function will return the two lines ``magn(1) = 0.2`` and
+            ``magn(2) = 0.1``. This parameter is ignored if 'val' 
+            is not a dictionary. 
     """
     from aiida.common.utils import conv_to_fortran
     # I don't try to do iterator=iter(val) and catch TypeError because
     # it would also match strings
-    if hasattr(val,'__iter__'):
+    # I check first the dictionary, because it would also match hasattr(__iter__)
+    if isinstance(val, dict):
+        if mapping is None:
+            raise ValueError("If 'val' is a dictionary, you must provide also "
+                             "the 'mapping' parameter")
+
+        # At difference with the case of a list, at the beginning list_of_strings
+        # is a list of 2-tuples where the first element is the idx, and the 
+        # second is the actual line. This is used at the end to resort everything.
+        list_of_strings = []
+        for elemk, itemval in val.iteritems():
+            try:
+                idx = mapping[elemk]
+            except KeyError:
+                raise ValueError("Unable to find the key '{}' in the mapping "
+                                 "dictionary".format(elemk))
+            
+            list_of_strings.append((idx,"  {0}({2}) = {1}\n".format(
+                key, conv_to_fortran(itemval), idx)))
+        
+        # I first have to resort, then to remove the index from the first
+        # column, finally to join the strings
+        list_of_strings = zip(*sorted(list_of_strings))[1]
+        return "".join(list_of_strings)                          
+    elif hasattr(val,'__iter__'):
         # a list/array/tuple of values
         list_of_strings = [
             "  {0}({2}) = {1}\n".format(key, conv_to_fortran(itemval),

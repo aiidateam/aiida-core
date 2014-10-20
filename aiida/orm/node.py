@@ -508,7 +508,15 @@ class Node(object):
         # it here.
         if label in self._inputlinks_cache:
             raise UniquenessError("Input link with name '{}' already present "
-                                  "in the internal cache")
+                                  "in the internal cache".format(label))
+        # See if I am pointing to already saved nodes and I am already
+        # linking to a given node
+        if src.uuid in [_.uuid for _ in 
+              self._inputlinks_cache.values()]:
+            raise UniquenessError("A link from node with UUID={} and "
+                "the current node (UUID={}) already exists!".format(
+                src.uuid, self.uuid))
+            
         
         # If both are stored, write directly on the DB
         if not self._to_be_stored and not src._to_be_stored:
@@ -555,6 +563,16 @@ class Node(object):
             except KeyError:
                 pass
         else: # at least one is not stored: set in the internal cache
+            # See if I am pointing to already saved nodes and I am already
+            # linking to a given node
+            # It is similar to the 'add' method, but if I am replacing the 
+            # same node, I will not complain (k!=label)
+            if src.uuid in [v.uuid for k, v in 
+                  self._inputlinks_cache.iteritems() if k != label]:
+                raise UniquenessError("A link from node with UUID={} and "
+                    "the current node (UUID={}) already exists!".format(
+                    src.uuid, self.uuid))
+            
             self._inputlinks_cache[label] = src
 
     def _remove_link_from(self, src, label):

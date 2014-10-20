@@ -5,6 +5,10 @@ import dbentry
 import MySQLdb
 
 class CODImporter(basedbimporter.BaseDBImporter):
+    """
+    Database importer for Crystallography Open Database.
+    """
+
     db_parameters = { 'host':   'www.crystallography.net',
                       'user':   'cod_reader',
                       'passwd': '',
@@ -96,6 +100,9 @@ class CODImporter(basedbimporter.BaseDBImporter):
         self.db = self.connect()
 
     def connect_db(self):
+        """
+        Connects to the MySQL database for performing searches.
+        """
         self.db = MySQLdb.connect( host =   self.db_parameters['host'],
                                    user =   self.db_parameters['user'],
                                    passwd = self.db_parameters['passwd'],
@@ -103,6 +110,7 @@ class CODImporter(basedbimporter.BaseDBImporter):
         self.cursor = self.db.cursor()
 
 class CODSearchResults(basedbimporter.BaseDBSearchResults):
+
     base_url = "http://www.crystallography.net/cod/"
     db_name = "COD"
     results  = []

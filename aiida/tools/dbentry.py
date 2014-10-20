@@ -14,6 +14,10 @@ class DBEntry(object):
     cif = "" # Contents of raw CIF file
 
     def __init__(self, url, **kwargs):
+        """
+        Creates an instance of DBEntry, related to the supplied URL.
+        Downloads corresponding CIF file.
+        """
         self.url = url
         if 'source_db' in kwargs.keys():
             self.source_db = kwargs['source_db']

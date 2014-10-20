@@ -10,32 +10,79 @@ class CODImporter(basedbimporter.BaseDBImporter):
                       'passwd': '',
                       'db':     'cod' }
 
-    keyword_aliases = { 'id':                 'file',
-                        'number_of_elements': 'nel',
-                        'mineral_name':       'mineral',
-                        'chemical_name':      'chemname',
-                        'volume':             'vol',
-                        'spacegroup':         'sg',
-                      }
+    def int_clause(self, key, values):
+        return key + " IN (" + ", ".join( map( lambda i: str( i ),
+                                               values ) ) + ")"
+
+    def str_exact_clause(self, key, values):
+        return key + \
+               " IN (" + ", ".join( map( lambda f: "'" + f + "'", \
+                                         values ) ) + ")"
+    def formula_clause(self, key, values):
+        return self.str_exact_clause( key, \
+                                      map( lambda f: "- " + f + " -", values ) )
+
+    def str_fuzzy_clause(self, key, values):
+        return " OR ".join( map( lambda s: key + \
+                                           " LIKE '%" + s + "%'", values ) )
+
+    def composition_clause(self, key, values):
+        return " AND ".join( map( lambda e: "formula REGEXP ' " + e + "[0-9 ]'",
+                                  values ) )
+
+    def double_clause(self, key, values, precision):
+        return " OR ".join( map( lambda d: key + \
+                                           " BETWEEN " + \
+                                           str( d - precision ) + " AND " + \
+                                           str( d + precision ),
+                                 values ) )
+
+    length_precision = 0.001
+    angle_precision  = 0.001
+    volume_precision = 0.001
+
+    def length_clause(self, key, values):
+        return self.double_clause(key, values, self.length_precision)
+
+    def angle_clause(self, key, values):
+        return self.double_clause(key, values, self.angle_precision)
+
+    def volume_clause(self, key, values):
+        return self.double_clause(key, values, self.volume_precision)
+
+    keywords = { 'id'                : [ 'file',     int_clause ],
+                 'element'           : [ 'element',  composition_clause ],
+                 'number_of_elements': [ 'nel',      int_clause ],
+                 'mineral_name'      : [ 'mineral',  str_fuzzy_clause ],
+                 'chemical_name'     : [ 'chemname', str_fuzzy_clause ],
+                 'formula'           : [ 'formula',  formula_clause ],
+                 'volume'            : [ 'vol',      volume_clause ],
+                 'spacegroup'        : [ 'sg',       str_exact_clause ],
+                 'a'                 : [ 'a',        length_clause ],
+                 'b'                 : [ 'b',        length_clause ],
+                 'c'                 : [ 'c',        length_clause ],
+                 'alpha'             : [ 'alpha',    angle_clause ],
+                 'beta'              : [ 'beta',     angle_clause ],
+                 'gamma'             : [ 'gamma',    angle_clause ] }
 
     def __init__(self):
         self.connect_db()
 
     def query(self, **kwargs):
-        sql_parts = [ "(status IS NULL OR status != 'retracted')",
-                      "(duplicateof IS NULL)" ]
+        sql_parts = [ "(status IS NULL OR status != 'retracted')" ]
         for key in kwargs.keys():
-            keyname = key
-            operand = ""
-            if isinstance( kwargs[key], list ):
-                operand = "IN ('" + "', '".join( kwargs[key] ) + "')"
-            else:
-                operand = "= '" + kwargs[key] + "'"
-            if key in self.keyword_aliases.keys():
-                keyname = self.keyword_aliases[key]
-            sql_parts.append( "(" + keyname + " " + operand + ")" )
-        self.cursor.execute( "SELECT file FROM data WHERE " +
-                             " AND ".join( sql_parts ) + " LIMIT 5" )
+            if key not in self.keywords.keys():
+                raise NotImplementedError( 'search keyword ' + key + \
+                                           ' is not implemented for COD' )
+            if not isinstance( kwargs[key], list ):
+                kwargs[key] = [ kwargs[key] ]
+            sql_parts.append( "(" + self.keywords[key][1]( self, \
+                                                           self.keywords[key][0], \
+                                                           kwargs[key] ) + \
+                              ")" )
+        self.query_sql = "SELECT file FROM data WHERE " + \
+                         " AND ".join( sql_parts )
+        self.cursor.execute( self.query_sql )
         self.db.commit()
         results = []
         for row in self.cursor.fetchall():

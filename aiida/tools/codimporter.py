@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
-import basedbimporter
-import dbentry
+import aiida.tools.basedbimporter
+import aiida.tools.dbentry
 import MySQLdb
 
-class CODImporter(basedbimporter.BaseDBImporter):
+class CODImporter(aiida.tools.basedbimporter.BaseDBImporter):
     """
     Database importer for Crystallography Open Database.
     """
@@ -70,7 +70,9 @@ class CODImporter(basedbimporter.BaseDBImporter):
                  'gamma'             : [ 'gamma',    angle_clause ] }
 
     def __init__(self):
-        pass
+        self.db        = None
+        self.cursor    = None
+        self.query_sql = None
 
     def query(self, **kwargs):
         sql_parts = [ "(status IS NULL OR status != 'retracted')" ]
@@ -98,9 +100,9 @@ class CODImporter(basedbimporter.BaseDBImporter):
         return CODSearchResults( results )
 
     def setup_db(self, **kwargs):
-        for p in self.db.keys():
-            if p in kwargs.keys():
-                self.db_parameters[p] = kwargs[p]
+        for key in self.db_parameters.keys():
+            if key in kwargs.keys():
+                self.db_parameters[key] = kwargs[key]
 
     def connect_db(self):
         """
@@ -118,7 +120,7 @@ class CODImporter(basedbimporter.BaseDBImporter):
         """
         self.db.close()
 
-class CODSearchResults(basedbimporter.BaseDBSearchResults):
+class CODSearchResults(aiida.tools.basedbimporter.BaseDBSearchResults):
 
     base_url = "http://www.crystallography.net/cod/"
     db_name = "COD"
@@ -133,10 +135,10 @@ class CODSearchResults(basedbimporter.BaseDBSearchResults):
         for i in range( 0, len( self.results )-1 ):
             if i not in self.entries:
                 self.entries[i] = \
-                    dbentry.DBEntry( self.base_url + \
-                                     self.results[i] + ".cif", \
-                                     source_db = self.db_name, \
-                                     db_id = self.results[i] )
+                    aiida.tools.dbentry.DBEntry( self.base_url + \
+                                                 self.results[i] + ".cif", \
+                                                 source_db = self.db_name, \
+                                                 db_id = self.results[i] )
         return self.entries.values()
 
     def next(self):
@@ -144,10 +146,10 @@ class CODSearchResults(basedbimporter.BaseDBSearchResults):
             self.position = self.position + 1
             if self.position not in self.entries:
                 self.entries[self.position-1] = \
-                    dbentry.DBEntry( self.base_url + \
-                                     self.results[self.position-1] + ".cif", \
-                                     source_db = self.db_name, \
-                                     db_id = self.results[self.position-1] )
+                    aiida.tools.dbentry.DBEntry( self.base_url + \
+                                                 self.results[self.position-1] + ".cif", \
+                                                 source_db = self.db_name, \
+                                                 db_id = self.results[self.position-1] )
             return self.entries[self.position-1]
         else:
             raise StopIteration()
@@ -157,8 +159,8 @@ class CODSearchResults(basedbimporter.BaseDBSearchResults):
             raise IndexError( "index out of bounds" )
         if position not in self.entries:
             self.entries[position] = \
-                dbentry.DBEntry( self.base_url + \
-                                 self.results[position-1] + ".cif", \
-                                 source_db = self.db_name, \
-                                 db_id = self.results[self.position-1] )
+                aiida.tools.dbentry.DBEntry( self.base_url + \
+                                             self.results[position-1] + ".cif", \
+                                             source_db = self.db_name, \
+                                             db_id = self.results[self.position-1] )
         return self.entries[position]

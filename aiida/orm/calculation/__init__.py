@@ -902,10 +902,25 @@ class Calculation(Node):
 				"that is neither NEW nor SUBMITTING (current state is "
 		        "{})".format(self.get_state()))
 
-        if (not(isinstance(retrieve_list,(tuple,list))) or
-	           not(all(isinstance(i,basestring) for i in retrieve_list))):
-            raise ValueError("You have to pass a list (or tuple) of strings "
-                             "as retrieve_list")
+        # accept format of: [ 'remotename',
+        #                     ['remotepath','localpath',0] ]
+        # where the last number is used to decide the localname, see CalcInfo or execmanager         
+        
+        if not(isinstance(retrieve_list,(tuple,list))):
+            raise ValueError("You should pass a list/tuple")
+        for item in retrieve_list:
+            if not isinstance(item,basestring):
+                if ( not(isinstance(item,(tuple,list))) or
+                     len(item)!=3):
+                    raise ValueError("You should pass a list containing either "
+                                     "strings or lists/tuples")
+                if ( not(isinstance(item[0],basestring)) or
+                     not(isinstance(item[1],basestring)) or
+                     not(isinstance(item[2],int)) ):
+                    raise ValueError("You have to pass a list (or tuple) of "
+                                     "lists, with remotepath(string), "
+                                     "localpath(string) and depth (integer)")
+
         self._set_attr('retrieve_list', retrieve_list)
 
     def _get_retrieve_list(self):

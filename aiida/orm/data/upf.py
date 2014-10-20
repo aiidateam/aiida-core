@@ -352,8 +352,8 @@ class UpfData(SinglefileData):
             raise ParsingError("No 'element' parsed in the UPF file {};"
                                " unable to store".format(self.filename))
         
-        self.set_attr('element', str(element))
-        self.set_attr('md5', md5sum)
+        self._set_attr('element', str(element))
+        self._set_attr('md5', md5sum)
 
         return super(UpfData, self).store()
 
@@ -387,8 +387,8 @@ class UpfData(SinglefileData):
         
         super(UpfData,self).set_file(filename)
             
-        self.set_attr('element', str(element))
-        self.set_attr('md5', md5sum)
+        self._set_attr('element', str(element))
+        self._set_attr('md5', md5sum)
         
     @property
     def element(self):

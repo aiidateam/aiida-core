@@ -869,7 +869,7 @@ class Node(object):
             raise ModificationNotAllowed(
                 "Node with uuid={} was already stored".format(self.uuid))
             
-    def set_attr(self, key, value):
+    def _set_attr(self, key, value):
         """
         Set a new attribute to the Node (in the DbAttribute table).
         
@@ -897,7 +897,7 @@ class Node(object):
                 raise ModificationNotAllowed(
                     "Cannot set an attribute after saving a node")
 
-    def del_attr(self, key):
+    def _del_attr(self, key):
         """
         Delete an attribute.
 
@@ -1222,7 +1222,7 @@ class Node(object):
         newobject.dbnode.dbcomputer = self.dbnode.dbcomputer # Inherit computer
         
         for k, v in self.iterattrs(also_updatable=False):
-            newobject.set_attr(k,v)
+            newobject._set_attr(k,v)
 
         for path in self.get_folder_list():
             newobject.add_path(self.get_abs_path(path),path)

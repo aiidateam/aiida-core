@@ -91,12 +91,12 @@ class SinglefileData(Data):
         for delete_me in old_file_list:
             self.remove_path(delete_me)
 
-        self.set_attr('filename', final_filename)
+        self._set_attr('filename', final_filename)
 
     def remove_path(self,filename):
         if filename == self.get_attr('filename',None):
             try:
-                self.del_attr('filename')
+                self._del_attr('filename')
             except AttributeError:
                 ## There was not file set
                 pass

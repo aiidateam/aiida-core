@@ -20,7 +20,7 @@ class RemoteData(Data):
         return self.get_attr('remote_path')
 
     def set_remote_path(self,val):
-        self.set_attr('remote_path', val)
+        self._set_attr('remote_path', val)
 
     def add_path(self,src_abs,dst_filename=None):
         """

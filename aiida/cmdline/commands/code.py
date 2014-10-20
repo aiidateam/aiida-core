@@ -713,7 +713,8 @@ class Code(VerdiCommandWithSubcommands):
         if code.is_local():
             set_params.local_rel_path = code.get_local_executable()
             # I don't have saved the folder with code, so I will just have the list of files
-            file_list = [ os.path.join(code.get_abs_path(),'path',i) for i in code.get_folder_list() ]
+            #file_list = [ code._get_folder_pathsubfolder.get_abs_path(i)
+            #    for i in code.get_folder_list() ]
         else:
             set_params.computer = code.computer
             set_params.remote_abs_path = code.get_remote_exec_path()

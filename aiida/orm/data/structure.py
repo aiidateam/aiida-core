@@ -541,7 +541,7 @@ class StructureData(Data):
             
         # If here, no exceptions have been raised, so I add the site.
         # I join two lists. Do not use .append, which would work in-place
-        self.set_attr('kinds',self.get_attr('kinds',[]) + [new_kind.get_raw()])
+        self._set_attr('kinds',self.get_attr('kinds',[]) + [new_kind.get_raw()])
 
     def append_site(self,site):
         """
@@ -565,7 +565,7 @@ class StructureData(Data):
             
         # If here, no exceptions have been raised, so I add the site.
         # I join two lists. Do not use .append, which would work in-place
-        self.set_attr('sites',self.get_attr('sites',[]) + [new_site.get_raw()])
+        self._set_attr('sites',self.get_attr('sites',[]) + [new_site.get_raw()])
 
     def append_atom(self,**kwargs):
         """
@@ -741,7 +741,7 @@ class StructureData(Data):
                 "The StructureData object cannot be modified, "
                 "it has already been stored")
 
-        self.set_attr('kinds', [])
+        self._set_attr('kinds', [])
         self.clear_sites()
 
     def clear_sites(self):
@@ -755,7 +755,7 @@ class StructureData(Data):
                 "The StructureData object cannot be modified, "
                 "it has already been stored")
 
-        self.set_attr('sites', [])
+        self._set_attr('sites', [])
 
     @property
     def sites(self):
@@ -827,7 +827,7 @@ class StructureData(Data):
                 "it has already been stored")
 
         the_cell = _get_valid_cell(value)
-        self.set_attr('cell', the_cell)
+        self._set_attr('cell', the_cell)
 
     def reset_cell(self,new_cell):
         """
@@ -843,7 +843,7 @@ class StructureData(Data):
         if not self._to_be_stored:
             raise ModificationNotAllowed()
 
-        self.set_attr('cell', new_cell)
+        self._set_attr('cell', new_cell)
         
     def reset_sites_positions(self,new_positions,conserve_particle=True):
         """
@@ -922,9 +922,9 @@ class StructureData(Data):
         the_pbc = get_valid_pbc(value)
 
         #self._pbc = the_pbc
-        self.set_attr('pbc1',the_pbc[0])
-        self.set_attr('pbc2',the_pbc[1])
-        self.set_attr('pbc3',the_pbc[2])
+        self._set_attr('pbc1',the_pbc[0])
+        self._set_attr('pbc2',the_pbc[1])
+        self._set_attr('pbc3',the_pbc[2])
 
     def is_alloy(self):
         """

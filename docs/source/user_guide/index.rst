@@ -14,6 +14,7 @@ User's guide
    ../examples/cp_tutorial
    ../parsers/resultmanager
    ../examples/pseudo_tutorial
+   ../verdi/verdi_user_guide
    ../scheduler/index
    ../state/calculation_state
    ../workflow/index

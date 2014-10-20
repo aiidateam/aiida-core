@@ -173,10 +173,10 @@ What did we do?
 7. Finally, ``docstring`` will contain the documentation of the function, 
    that the user can obtain by printing e..g. ``use_pseudo.__doc__``.
 
-
-
-
-
+:note: The actual implementation of the ``use_pseudo`` method in the
+  Quantum ESPRESSO tutorial is slightly different, as it allows the user
+  to specify a list of kinds that are associated with the same pseudopotential
+  file (while in the example above only one kind string can be passed).
 
    
 

@@ -490,7 +490,8 @@ class Devel(VerdiCommandWithSubcommands):
             # TODO: allow the use of this flag
             if get_property('tests.use_sqlite'):
                 settings.DATABASES['default'] = {'ENGINE':
-                                                 'django.db.backends.sqlite3'}
+                                                 'django.db.backends.sqlite3',
+                                                 'NAME': ":memory:"}
             ###################################################################
             # IMPORTANT! Choose a different repository location, otherwise 
             # real data will be destroyed during tests!!

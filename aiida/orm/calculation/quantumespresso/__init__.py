@@ -501,17 +501,11 @@ class BasePwCpInputGenerator(object):
         
         if settings_dict.pop('ALSO_BANDS',False):
             # To retrieve also the bands data
-            
-            # the following command is not possible now (leads to 
-            # ValueError: Pathname patterns are not allowed in the destination,
-            # upon parsing)
-            # As a temporary work around, all K points folder shave to be 
-            # put in a list, in the key 'additional_retrieve_list' of 
-            # settings_dict
-            
-            #settings_retrieve_list.append( os.path.join(self.OUTPUT_SUBFOLDER,
-            #                                    self.PREFIX+'.save','K*[0-9]') )
-            pass
+            settings_retrieve_list.append( [os.path.join(self._OUTPUT_SUBFOLDER,
+                                                self._PREFIX+'.save','K*[0-9]','eigenval.xml'),
+                                            '.',
+                                            2]
+                                          )
         
         calcinfo.retrieve_list += settings_retrieve_list
         calcinfo.retrieve_list += self._internal_retrieve_list

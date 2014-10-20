@@ -136,7 +136,7 @@ class BandsData(KpointsData):
         cell is periodic in the 1,2,3 crystal direction
         """
         the_str = str(value)
-        self.set_attr('units',the_str)
+        self._set_attr('units',the_str)
 
     def _set_pbc(self, value):
         """
@@ -150,9 +150,9 @@ class BandsData(KpointsData):
                             "The KpointsData object cannot be modified, "
                             "it has already been stored")
         the_pbc = get_valid_pbc(value)
-        self.set_attr('pbc1',the_pbc[0])
-        self.set_attr('pbc2',the_pbc[1])
-        self.set_attr('pbc3',the_pbc[2])
+        self._set_attr('pbc1',the_pbc[0])
+        self._set_attr('pbc2',the_pbc[1])
+        self._set_attr('pbc3',the_pbc[2])
 
 
     def get_bands(self, also_occupations=False):

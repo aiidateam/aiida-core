@@ -54,7 +54,7 @@ class KpointsData(ArrayData):
         
         the_cell = _get_valid_cell(value)
 
-        self.set_attr('cell',the_cell)
+        self._set_attr('cell',the_cell)
         
     @property
     def bravais_lattice(self):
@@ -96,7 +96,7 @@ class KpointsData(ArrayData):
         except KeyError:
             pass
             
-        self.set_attr('bravais_lattice',bravais_lattice)
+        self._set_attr('bravais_lattice',bravais_lattice)
     
     def _get_or_create_bravais_lattice(self):
         """
@@ -143,9 +143,9 @@ class KpointsData(ArrayData):
                             "The KpointsData object cannot be modified, "
                             "it has already been stored")
         the_pbc = get_valid_pbc(value)
-        self.set_attr('pbc1',the_pbc[0])
-        self.set_attr('pbc2',the_pbc[1])
-        self.set_attr('pbc3',the_pbc[2])
+        self._set_attr('pbc1',the_pbc[0])
+        self._set_attr('pbc2',the_pbc[1])
+        self._set_attr('pbc3',the_pbc[2])
 
     @property
     def labels(self):
@@ -183,8 +183,8 @@ class KpointsData(ArrayData):
         if any( [i>len(self.get_kpoints())-1 for i in label_numbers]):
             raise ValueError("Index of label exceeding the list of kpoints")
         
-        self.set_attr('label_numbers',label_numbers)
-        self.set_attr('labels',labels)
+        self._set_attr('label_numbers',label_numbers)
+        self._set_attr('labels',labels)
         
 # I commented this part, which atm I would leave it up to the user to set 
 # new labels every time he modifies them. Anyway, labels should be set more 
@@ -323,8 +323,8 @@ class KpointsData(ArrayData):
             pass
         
         # store
-        self.set_attr('mesh',the_mesh)
-        self.set_attr('offset',the_offset)
+        self._set_attr('mesh',the_mesh)
+        self._set_attr('offset',the_offset)
 
     def get_kpoints_mesh(self):
         """

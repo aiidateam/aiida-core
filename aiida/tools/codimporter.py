@@ -70,7 +70,7 @@ class CODImporter(basedbimporter.BaseDBImporter):
                  'gamma'             : [ 'gamma',    angle_clause ] }
 
     def __init__(self):
-        self.connect_db()
+        pass
 
     def query(self, **kwargs):
         sql_parts = [ "(status IS NULL OR status != 'retracted')" ]
@@ -86,18 +86,21 @@ class CODImporter(basedbimporter.BaseDBImporter):
                               ")" )
         self.query_sql = "SELECT file FROM data WHERE " + \
                          " AND ".join( sql_parts )
+
+        self.connect_db()
         self.cursor.execute( self.query_sql )
         self.db.commit()
         results = []
         for row in self.cursor.fetchall():
             results.append( str( row[0] ) )
+        self.disconnect_db()
+
         return CODSearchResults( results )
 
     def setup_db(self, **kwargs):
         for p in self.db.keys():
             if p in kwargs.keys():
                 self.db_parameters[p] = kwargs[p]
-        self.db = self.connect()
 
     def connect_db(self):
         """
@@ -108,6 +111,12 @@ class CODImporter(basedbimporter.BaseDBImporter):
                                    passwd = self.db_parameters['passwd'],
                                    db =     self.db_parameters['db'] )
         self.cursor = self.db.cursor()
+
+    def disconnect_db(self):
+        """
+        Closes connection to the MySQL database.
+        """
+        self.db.close()
 
 class CODSearchResults(basedbimporter.BaseDBSearchResults):
 

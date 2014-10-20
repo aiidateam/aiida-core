@@ -1326,18 +1326,53 @@ class TestSubNodesAndLinks(AiidaTestCase):
        
     def test_link_with_unstored(self): 
         """
-        In the present version, I cannot add links between unstored nodes.
-        If we change this, remember to duplicate most of the tests that check
-        for the links to perform similar tests also before storing.
+        It is possible to store links between nodes even if they are unstored;
+        these links are cached. However, if working in the cache, an explicit
+        link name must be provided.
         """
         n1 = Node()
         n2 = Node()
         n3 = Node()
+        n4 = Node()
+
+        # No link names provided
+        with self.assertRaises(ModificationNotAllowed):
+            n4._add_link_from(n1)
+        
+        # Caching the links
+        n2._add_link_from(n1, label='l1')
+        n3._add_link_from(n2, label='l2')
+        n3._add_link_from(n1, label='l3')
+
+        # Twice the same link name
+        with self.assertRaises(UniquenessError):
+            n3._add_link_from(n4, label='l2')
+
+        # Twice the link to the same node
+        with self.assertRaises(UniquenessError):
+            n3._add_link_from(n2, label='l4')
+        
+        # Same error also in _replace_link_from
+        with self.assertRaises(UniquenessError):
+            n3._replace_link_from(n2, label='l4')
+
+        n2_in_links = [(l, n.uuid) for l, n in n2.get_inputs_dict().iteritems()]
+        self.assertEquals(sorted(n2_in_links), sorted([('l1', n1.uuid),
+                                                       ]))        
+        n3_in_links = [(l, n.uuid) for l, n in n3.get_inputs_dict().iteritems()]
+        self.assertEquals(sorted(n3_in_links), sorted([('l2', n2.uuid),
+                                                       ('l3', n1.uuid),
+                                                       ]))        
+                
+        n2.store_all()
+        n3.store_all()
     
-        with self.assertRaises(ModificationNotAllowed):
-            n2._add_link_from(n1)
-        with self.assertRaises(ModificationNotAllowed):
-            n3._add_link_from(n2)
+        n1_out_links = [(l, n.pk) for l, n in n1.get_outputs(also_labels=True)]
+        self.assertEquals(sorted(n1_out_links), sorted([('l1', n2.pk),
+                                                        ('l3', n3.pk),
+                                                        ]))
+        n2_out_links = [(l, n.pk) for l, n in n2.get_outputs(also_labels=True)]
+        self.assertEquals(sorted(n2_out_links), sorted([('l2', n3.pk)]))
     
     def test_valid_links(self):
         import tempfile

@@ -491,6 +491,9 @@ class StructureData(Data):
               Otherwise, the name is made unique first, by adding to the string
               containing the list of chemical symbols a number starting from 1,
               until an unique name is found
+
+        .. note :: checks of equality of species are done using
+          the :py:meth:`~Kind.compare_with` method.
         """
         aseatom = kwargs.pop('ase',None)
         if aseatom is not None:
@@ -517,8 +520,7 @@ class StructureData(Data):
             exists_already = False
             for existing_kind in _kinds:
                 
-                if (kind.compare_with(existing_kind)[0] and
-                    kind.name == existing_kind.name):
+                if (kind.compare_with(existing_kind)[0]):
                     kind = existing_kind
                     exists_already = True
                     break
@@ -882,6 +884,13 @@ class Kind(object):
         self._weights = None
         self._name = None
 
+        # It will be remain to None in general; it is used to further
+        # identify this species. At the moment, it is used only when importing
+        # from ASE, if the species had a tag (different from zero).
+        ## NOTE! This is not persisted on DB but only used while the class
+        # is loaded in memory (i.e., it is not output with the get_raw() method)
+        self._internal_tag = None
+
         # Logic to create the site from the raw format
         if 'raw' in kwargs:
             if len(kwargs) != 1:
@@ -937,6 +946,7 @@ class Kind(object):
                     "{}]".format(str(type(aseatom))))
             if aseatom.tag != 0:
                 self.set_automatic_kind_name(tag=aseatom.tag)
+                self._internal_tag = aseatom.tag
             else:
                 self.set_automatic_kind_name()
         else:
@@ -1050,11 +1060,15 @@ class Kind(object):
 
     def compare_with(self, other_kind):
         """
-        Compare with another Site object to check if they are different.
+        Compare with another Kind object to check if they are different.
         
         Note! This does NOT check the 'type' attribute. Instead, it compares
         (with reasonable thresholds, where applicable): the mass, and the list
-        of symbols and of weights.
+        of symbols and of weights. Moreover, it compares the
+        ``_internal_tag``, if defined (at the moment, defined automatically
+        only when importing the Kind from ASE, if the atom has a non-zero tag).
+        Note that the _internal_tag is only used while the class is loaded,
+        but is not persisted on the database.
 
         :return: A tuple with two elements. The first one is True if the two sites
             are 'equivalent' (same mass, symbols and weights), False otherwise.
@@ -1084,6 +1098,11 @@ class Kind(object):
         if abs(self.mass - other_kind.mass) > _mass_threshold:
             return (False, "Masses are different ({} vs. {})"
                     "".format(self.mass, other_kind.mass))
+
+        if self._internal_tag != other_kind._internal_tag:
+            return (False, "Internal tags are different ({} vs. {})"
+                    "".format(self._internal_tag, other_kind._internal_tag))
+            
     
         # If we got here, the two Site objects are similar enough
         # to be considered of the same kind

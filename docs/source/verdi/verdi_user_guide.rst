@@ -94,13 +94,19 @@ autocompletion of the verdi commands.
 Manages the daemon, i.e. the process that runs in background and that manages 
 submission/retrieval of calculations.
 
-  *  **status**: see the status of the daemon. Typically, it will be in the states
-    ``Daemon not running`` or you will see two processes with state ``RUNNING``.
+  *  **status**: see the status of the daemon. Typically, it will either show
+     ``Daemon not running`` or you will see two
+     processes with state ``RUNNING``.
+    
   *  **stop**: stops the daemon
+  
   *  **configureuser**: sets the user which is running the daemon. See the 
      installation guide for more details.
+     
   *  **start**: starts the daemon.
+  
   *  **logshow**: show the last lines of the daemon log (use for debugging)
+  
   *  **restart**: restarts the daemon.
   
   
@@ -109,11 +115,15 @@ submission/retrieval of calculations.
 Manages database data objects.
 
   *  **upf**: handles the Pseudopotential Datas
+  
     * **listfamilies**: list presently stored families of pseudopotentials
+    
     * **uploadfamily**: install a new family (group) of pseudopotentials
   
   *  **structure**: handles the StructureData 
+  
     * **list**: list currently saved nodes of StructureData kind
+    
     * **show**: use a third-party visualizer (like vmd or xcrysden) 
       to graphically show the StructureData
 

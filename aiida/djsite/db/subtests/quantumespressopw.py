@@ -139,17 +139,22 @@ class TestQEPWInputGeneration(QETestCase):
         values.
         """       
         import logging
-        from aiida.orm.data.structure import Kind, Site
 
         s = StructureData(cell=[
            [2.871,   0.,   0.],
            [0.,   2.871,   0.],
            [  0.,   0.,   2.871]])
-        s.append_kind(Kind(symbols='Ba', name='Ba1'))
-        s.append_kind(Kind(symbols='Ba', name='Ba2'))
-        s.append_site(Site(kind_name='Ba1', position=[0.,0.,0.]))
-        s.append_site(Site(kind_name='Ba2', position=[1.4355,1.4355,1.4355]))
 
+        ## I leave this as a reference, but I use instead the
+        ## append_atom method
+        #from aiida.orm.data.structure import Kind, Site
+        #s.append_kind(Kind(symbols='Ba', name='Ba1'))
+        #s.append_kind(Kind(symbols='Ba', name='Ba2'))
+        #s.append_site(Site(kind_name='Ba1', position=[0.,0.,0.]))
+        #s.append_site(Site(kind_name='Ba2', position=[1.4355,1.4355,1.4355]))
+        s.append_atom(symbols='Ba', position=[0.,0.,0.], name='Ba1')
+        s.append_atom(symbols='Ba', position=[1.4355,1.4355,1.4355], name='Ba2') 
+    
         input_params = {
             'CONTROL': {
                 'calculation': 'vc-relax',

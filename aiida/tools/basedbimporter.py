@@ -46,7 +46,7 @@ class BaseDBSearchResults(object):
 
     def fetch_all(self):
         """
-        Returns all query results as an array of DBEntry.
+        Returns all query results as an array of BaseDBEntry.
         """
         results = []
         for entry in self:
@@ -55,14 +55,14 @@ class BaseDBSearchResults(object):
 
     def next(self):
         """
-        Returns the next result of the query (instance of DBEntry), throws
-        **StopIteration** when called after the last result.
+        Returns the next result of the query (instance of BaseDBEntry),
+        throws **StopIteration** when called after the last result.
         """
         raise NotImplementedError( "not implemented in base class" )
 
     def at(self, position):
         """
-        Returns ``position``-th result (instance of DBEntry) from the
+        Returns ``position``-th result (instance of BaseDBEntry) from the
         result array (zero-based).
         """
         raise NotImplementedError( "not implemented in base class" )

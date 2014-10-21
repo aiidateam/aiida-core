@@ -126,12 +126,14 @@ class CODImporter(aiida.tools.basedbimporter.BaseDBImporter):
                          " AND ".join( sql_parts )
 
         self._connect_db()
-        self.cursor.execute( self.query_sql )
-        self.db.commit()
         results = []
-        for row in self.cursor.fetchall():
-            results.append( str( row[0] ) )
-        self._disconnect_db()
+        try:
+            self.cursor.execute( self.query_sql )
+            self.db.commit()
+            for row in self.cursor.fetchall():
+                results.append( str( row[0] ) )
+        finally:
+            self._disconnect_db()
 
         return CODSearchResults( results )
 

@@ -15,30 +15,50 @@ class CODImporter(aiida.tools.basedbimporter.BaseDBImporter):
                       'db':     'cod' }
 
     def int_clause(self, key, values):
+        """
+        Returns SQL query predicate for querying integer fields.
+        """
         return key + " IN (" + ", ".join( map( lambda i: str( int( i ) ),
                                                values ) ) + ")"
 
     def str_exact_clause(self, key, values):
+        """
+        Returns SQL query predicate for querying string fields.
+        """
         return key + \
                " IN (" + ", ".join( map( lambda f: "'" + f + "'", \
                                          values ) ) + ")"
     def formula_clause(self, key, values):
+        """
+        Returns SQL query predicate for querying formula fields.
+        """
         return self.str_exact_clause( key, \
-                                      map( lambda f: "- " + f + " -", values ) )
+                                      map( lambda f: "- " + f + " -", \
+                                           values ) )
 
     def str_fuzzy_clause(self, key, values):
+        """
+        Returns SQL query predicate for fuzzy querying of string fields.
+        """
         return " OR ".join( map( lambda s: key + \
                                            " LIKE '%" + s + "%'", values ) )
 
     def composition_clause(self, key, values):
-        return " AND ".join( map( lambda e: "formula REGEXP ' " + e + "[0-9 ]'",
+        """
+        Returns SQL query predicate for querying elements in formula fields.
+        """
+        return " AND ".join( map( lambda e: "formula REGEXP ' " + \
+                                            e + "[0-9 ]'", \
                                   values ) )
 
     def double_clause(self, key, values, precision):
+        """
+        Returns SQL query predicate for querying double-valued fields.
+        """
         return " OR ".join( map( lambda d: key + \
                                            " BETWEEN " + \
                                            str( d - precision ) + " AND " + \
-                                           str( d + precision ),
+                                           str( d + precision ), \
                                  values ) )
 
     length_precision = 0.001
@@ -46,12 +66,21 @@ class CODImporter(aiida.tools.basedbimporter.BaseDBImporter):
     volume_precision = 0.001
 
     def length_clause(self, key, values):
+        """
+        Returns SQL query predicate for querying lattice vector lengths.
+        """
         return self.double_clause(key, values, self.length_precision)
 
     def angle_clause(self, key, values):
+        """
+        Returns SQL query predicate for querying lattice angles.
+        """
         return self.double_clause(key, values, self.angle_precision)
 
     def volume_clause(self, key, values):
+        """
+        Returns SQL query predicate for querying unit cell volume.
+        """
         return self.double_clause(key, values, self.volume_precision)
 
     keywords = { 'id'                : [ 'file',     int_clause ],
@@ -79,6 +108,10 @@ class CODImporter(aiida.tools.basedbimporter.BaseDBImporter):
         self.query_sql = None
 
     def query(self, **kwargs):
+        """
+        Performs a query on the COD database using ``keyword = value`` pairs,
+        specified in ``kwargs``. Returns an instance of CODSearchResults.
+        """
         sql_parts = [ "(status IS NULL OR status != 'retracted')" ]
         for key in kwargs.keys():
             if key not in self.keywords.keys():
@@ -104,6 +137,9 @@ class CODImporter(aiida.tools.basedbimporter.BaseDBImporter):
         return CODSearchResults( results )
 
     def setup_db(self, **kwargs):
+        """
+        Changes the database connection details.
+        """
         for key in self.db_parameters.keys():
             if key in kwargs.keys():
                 self.db_parameters[key] = kwargs[key]
@@ -124,7 +160,11 @@ class CODImporter(aiida.tools.basedbimporter.BaseDBImporter):
         """
         self.db.close()
 
+
 class CODSearchResults(aiida.tools.basedbimporter.BaseDBSearchResults):
+    """
+    Results of the search, performed on COD.
+    """
 
     base_url = "http://www.crystallography.net/cod/"
     db_name = "COD"
@@ -136,6 +176,9 @@ class CODSearchResults(aiida.tools.basedbimporter.BaseDBSearchResults):
         self.results = results
 
     def fetch_all(self):
+        """
+        Returns all results as an list of DBEntry.
+        """
         for i in range( 0, len( self.results )-1 ):
             if i not in self.entries:
                 self.entries[i] = \
@@ -146,6 +189,9 @@ class CODSearchResults(aiida.tools.basedbimporter.BaseDBSearchResults):
         return self.entries.values()
 
     def next(self):
+        """
+        Returns next result as DBEntry.
+        """
         if len( self.results ) > self.position:
             self.position = self.position + 1
             if self.position not in self.entries:
@@ -159,6 +205,9 @@ class CODSearchResults(aiida.tools.basedbimporter.BaseDBSearchResults):
             raise StopIteration()
 
     def at(self, position):
+        """
+        Returns ``position``-th result as DBEntry.
+        """
         if position < 0 | position >= len( self.results ):
             raise IndexError( "index out of bounds" )
         if position not in self.entries:

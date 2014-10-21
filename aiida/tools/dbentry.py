@@ -5,19 +5,15 @@ class DBEntry(object):
     Represents the entry from the structure database (COD, ICSD, ...).
     """
 
-    url = ""
-    source_db = "" # Identification of the source database
-    db_id = ""     # Structure identifyer
-
-    cif = "" # Contents of raw CIF file
-
     def __init__(self, url, **kwargs):
         """
         Creates an instance of DBEntry, related to the supplied URL.
         Downloads corresponding CIF file.
         """
         import urllib2
-        self.url = url
+        self.url       = url
+        self.source_db = None
+        self.db_id     = None
         if 'source_db' in kwargs.keys():
             self.source_db = kwargs['source_db']
         if 'db_id' in kwargs.keys():

@@ -9,11 +9,6 @@ class CODImporter(aiida.tools.basedbimporter.BaseDBImporter):
     Database importer for Crystallography Open Database.
     """
 
-    db_parameters = { 'host':   'www.crystallography.net',
-                      'user':   'cod_reader',
-                      'passwd': '',
-                      'db':     'cod' }
-
     def int_clause(self, key, values):
         """
         Returns SQL query predicate for querying integer fields.
@@ -106,6 +101,10 @@ class CODImporter(aiida.tools.basedbimporter.BaseDBImporter):
         self.db        = None
         self.cursor    = None
         self.query_sql = None
+        self.db_parameters = { 'host':   'www.crystallography.net',
+                               'user':   'cod_reader',
+                               'passwd': '',
+                               'db':     'cod' }
         self.setup_db( **kwargs )
 
     def query(self, **kwargs):
@@ -166,15 +165,13 @@ class CODSearchResults(aiida.tools.basedbimporter.BaseDBSearchResults):
     """
     Results of the search, performed on COD.
     """
-
     base_url = "http://www.crystallography.net/cod/"
     db_name = "COD"
-    results  = []
-    entries  = {}
-    position = 0
 
     def __init__(self, results):
         self.results = results
+        self.entries = {}
+        self.position = 0
 
     def next(self):
         """
@@ -203,5 +200,5 @@ class CODSearchResults(aiida.tools.basedbimporter.BaseDBSearchResults):
                 aiida.tools.dbentry.DBEntry( self.base_url + \
                                              self.results[position-1] + ".cif", \
                                              source_db = self.db_name, \
-                                             db_id = self.results[self.position-1] )
+                                             db_id = self.results[position-1] )
         return self.entries[position]

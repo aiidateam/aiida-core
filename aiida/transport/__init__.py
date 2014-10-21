@@ -594,6 +594,8 @@ class Transport(object):
             names = self.listdir(dirname)
         except os.error:
             return []
+        except IOError:
+            return []
         if pattern[0] != '.':
             names = filter(lambda x: x[0] != '.', names)
         return fnmatch.filter(names, pattern)

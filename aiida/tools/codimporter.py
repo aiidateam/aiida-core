@@ -102,10 +102,11 @@ class CODImporter(aiida.tools.basedbimporter.BaseDBImporter):
                  'title'             : [ 'title',    str_fuzzy_clause ],
                  'year'              : [ 'year',     int_clause ] }
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         self.db        = None
         self.cursor    = None
         self.query_sql = None
+        self.setup_db( **kwargs )
 
     def query(self, **kwargs):
         """
@@ -174,19 +175,6 @@ class CODSearchResults(aiida.tools.basedbimporter.BaseDBSearchResults):
 
     def __init__(self, results):
         self.results = results
-
-    def fetch_all(self):
-        """
-        Returns all results as an list of DBEntry.
-        """
-        for i in range( 0, len( self.results )-1 ):
-            if i not in self.entries:
-                self.entries[i] = \
-                    aiida.tools.dbentry.DBEntry( self.base_url + \
-                                                 self.results[i] + ".cif", \
-                                                 source_db = self.db_name, \
-                                                 db_id = self.results[i] )
-        return self.entries.values()
 
     def next(self):
         """

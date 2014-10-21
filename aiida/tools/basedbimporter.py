@@ -5,16 +5,6 @@ class BaseDBImporter(object):
     Base class for database importers.
     """
 
-    configuration = {}
-
-    def __init__(self):
-        """
-        Prepare for queries. In case alive connection to any database is
-        required for the life of *DBImporter object, the connection should
-        be opened here.
-        """
-        raise NotImplementedError( "can not create object of base class" )
-
     def query(self, **kwargs):
         """
         Method to query the database. The method should be able to process the
@@ -48,14 +38,6 @@ class BaseDBSearchResults(object):
     Base class for database results.
     """
 
-    def __init__(self, *args, **kwargs):
-        """
-        Creates an instance of *DBSearchResults. All information, connected
-        with the results of query performed, should be passed to the
-        instance during it's creation.
-        """
-        raise NotImplementedError( "can not create object of base class" )
-
     def __iter__(self):
         """
         Instances of *DBSearchResults can be used as iterators.
@@ -66,7 +48,10 @@ class BaseDBSearchResults(object):
         """
         Returns all query results as an array of DBEntry.
         """
-        raise NotImplementedError( "not implemented in base class" )
+        results = []
+        for entry in self:
+            results.append( entry )
+        return results
 
     def next(self):
         """

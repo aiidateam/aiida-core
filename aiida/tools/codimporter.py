@@ -15,7 +15,7 @@ class CODImporter(aiida.tools.basedbimporter.BaseDBImporter):
                       'db':     'cod' }
 
     def int_clause(self, key, values):
-        return key + " IN (" + ", ".join( map( lambda i: str( i ),
+        return key + " IN (" + ", ".join( map( lambda i: str( int( i ) ),
                                                values ) ) + ")"
 
     def str_exact_clause(self, key, values):
@@ -67,7 +67,11 @@ class CODImporter(aiida.tools.basedbimporter.BaseDBImporter):
                  'c'                 : [ 'c',        length_clause ],
                  'alpha'             : [ 'alpha',    angle_clause ],
                  'beta'              : [ 'beta',     angle_clause ],
-                 'gamma'             : [ 'gamma',    angle_clause ] }
+                 'gamma'             : [ 'gamma',    angle_clause ],
+                 'authors'           : [ 'authors',  str_fuzzy_clause ],
+                 'journal'           : [ 'journal',  str_fuzzy_clause ],
+                 'title'             : [ 'title',    str_fuzzy_clause ],
+                 'year'              : [ 'year',     int_clause ] }
 
     def __init__(self):
         self.db        = None

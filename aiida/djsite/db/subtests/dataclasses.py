@@ -656,7 +656,7 @@ class TestStructureData(AiidaTestCase):
 
         kind_of_each_site = [site.kind.name for site in s.sites]
         self.assertEquals(kind_of_each_site,
-                          ['Fe', 'Fe', 'Fe', 'Fe1', 'Fe2'])
+                          ['Fe', 'Fe', 'Fe', 'Fe1', 'Fe1'])
 
     def test_kind_6(self):
         """

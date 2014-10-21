@@ -14,11 +14,18 @@ class DBEntry(object):
         self.url       = url
         self.source_db = None
         self.db_id     = None
+        self._cif      = None
         if 'source_db' in kwargs.keys():
             self.source_db = kwargs['source_db']
         if 'db_id' in kwargs.keys():
             self.db_id = kwargs['db_id']
-        self.cif = urllib2.urlopen( self.url ).read()
+
+    @property
+    def cif(self):
+        if self._cif is None:
+            import urllib2
+            self._cif = urllib2.urlopen( self.url ).read()
+        return self._cif
 
     def get_raw_cif(self):
         """

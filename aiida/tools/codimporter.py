@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import aiida.tools.basedbimporter
-import aiida.tools.dbentry
 import MySQLdb
 
 class CODImporter(aiida.tools.basedbimporter.BaseDBImporter):
@@ -175,30 +174,63 @@ class CODSearchResults(aiida.tools.basedbimporter.BaseDBSearchResults):
 
     def next(self):
         """
-        Returns next result as DBEntry.
+        Returns next result as CODEntry.
         """
         if len( self.results ) > self.position:
             self.position = self.position + 1
             if self.position not in self.entries:
                 self.entries[self.position-1] = \
-                    aiida.tools.dbentry.DBEntry( self.base_url + \
-                                                 self.results[self.position-1] + ".cif", \
-                                                 source_db = self.db_name, \
-                                                 db_id = self.results[self.position-1] )
+                    aiida.tools.codimporter.CODEntry( self.base_url + \
+                                                      self.results[self.position-1] + ".cif", \
+                                                      source_db = self.db_name, \
+                                                      db_id = self.results[self.position-1] )
             return self.entries[self.position-1]
         else:
             raise StopIteration()
 
     def at(self, position):
         """
-        Returns ``position``-th result as DBEntry.
+        Returns ``position``-th result as CODEntry.
         """
         if position < 0 | position >= len( self.results ):
             raise IndexError( "index out of bounds" )
         if position not in self.entries:
             self.entries[position] = \
-                aiida.tools.dbentry.DBEntry( self.base_url + \
-                                             self.results[position] + ".cif", \
-                                             source_db = self.db_name, \
-                                             db_id = self.results[position] )
+                aiida.tools.codimporter.CODEntry( self.base_url + \
+                                                  self.results[position] + ".cif", \
+                                                  source_db = self.db_name, \
+                                                  db_id = self.results[position] )
         return self.entries[position]
+
+class CODEntry(aiida.tools.basedbimporter.BaseDBEntry):
+    """
+    Represents an entry from COD.
+    """
+
+    def __init__(self, url, **kwargs):
+        """
+        Creates an instance of CODEntry, related to the supplied URL.
+        """
+        self.url       = url
+        self.source_db = None
+        self.db_id     = None
+        self._cif      = None
+        if 'source_db' in kwargs.keys():
+            self.source_db = kwargs['source_db']
+        if 'db_id' in kwargs.keys():
+            self.db_id = kwargs['db_id']
+
+    @property
+    def cif(self):
+        if self._cif is None:
+            import urllib2
+            self._cif = urllib2.urlopen( self.url ).read()
+        return self._cif
+
+    def get_ase_structure(self):
+        """
+        Returns ASE representation of the CIF.
+        """
+        import ase.io.cif
+        import StringIO
+        return ase.io.cif.read_cif( StringIO.StringIO( self.cif ) )

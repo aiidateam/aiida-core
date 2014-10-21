@@ -66,3 +66,47 @@ class BaseDBSearchResults(object):
         result array (zero-based).
         """
         raise NotImplementedError( "not implemented in base class" )
+
+class BaseDBEntry(object):
+    """
+    Represents an entry from the structure database (COD, ICSD, ...).
+    """
+
+    @property
+    def cif(self):
+        """
+        Returns raw contents of a CIF file as string.
+        """
+        raise NotImplementedError( "not implemented in base class" )
+
+    def get_raw_cif(self):
+        """
+        Returns raw contents of a CIF file as string.
+        """
+        return self.cif
+
+    def get_ase_structure(self):
+        """
+        Returns ASE representation of the CIF.
+        """
+        raise NotImplementedError( "not implemented in base class" )
+
+    def get_cif_node(self):
+        """
+        Returns CIF node, that can be used in AiiDA workflow.
+        """
+        raise NotImplementedError( "not implemented in base class" )
+
+    def get_aiida_structure(self):
+        """
+        Returns AiiDA-compatible structure, representing the crystal
+        structure from the CIF file.
+        """
+        raise NotImplementedError( "not implemented in base class" )
+
+    def get_parsed_cif(self):
+        """
+        Returns data structure, representing the CIF file. Can be created
+        using **PyCIFRW** or any other open-source parser.
+        """
+        raise NotImplementedError( "not implemented in base class" )

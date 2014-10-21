@@ -126,13 +126,13 @@ class CODImporter(aiida.tools.basedbimporter.BaseDBImporter):
         self.query_sql = "SELECT file FROM data WHERE " + \
                          " AND ".join( sql_parts )
 
-        self.connect_db()
+        self._connect_db()
         self.cursor.execute( self.query_sql )
         self.db.commit()
         results = []
         for row in self.cursor.fetchall():
             results.append( str( row[0] ) )
-        self.disconnect_db()
+        self._disconnect_db()
 
         return CODSearchResults( results )
 
@@ -144,7 +144,7 @@ class CODImporter(aiida.tools.basedbimporter.BaseDBImporter):
             if key in kwargs.keys():
                 self.db_parameters[key] = kwargs[key]
 
-    def connect_db(self):
+    def _connect_db(self):
         """
         Connects to the MySQL database for performing searches.
         """
@@ -154,7 +154,7 @@ class CODImporter(aiida.tools.basedbimporter.BaseDBImporter):
                                    db =     self.db_parameters['db'] )
         self.cursor = self.db.cursor()
 
-    def disconnect_db(self):
+    def _disconnect_db(self):
         """
         Closes connection to the MySQL database.
         """
@@ -198,7 +198,7 @@ class CODSearchResults(aiida.tools.basedbimporter.BaseDBSearchResults):
         if position not in self.entries:
             self.entries[position] = \
                 aiida.tools.dbentry.DBEntry( self.base_url + \
-                                             self.results[position-1] + ".cif", \
+                                             self.results[position] + ".cif", \
                                              source_db = self.db_name, \
-                                             db_id = self.results[position-1] )
+                                             db_id = self.results[position] )
         return self.entries[position]

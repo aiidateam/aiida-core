@@ -56,6 +56,12 @@ class BaseDBSearchResults(object):
         """
         raise NotImplementedError( "can not create object of base class" )
 
+    def __iter__(self):
+        """
+        Instances of *DBSearchResults can be used as iterators.
+        """
+        return self
+
     def fetch_all(self):
         """
         Returns all query results as an array of DBEntry.

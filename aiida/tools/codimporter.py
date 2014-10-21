@@ -178,13 +178,7 @@ class CODSearchResults(aiida.tools.basedbimporter.BaseDBSearchResults):
         """
         if len( self.results ) > self.position:
             self.position = self.position + 1
-            if self.position not in self.entries:
-                self.entries[self.position-1] = \
-                    aiida.tools.codimporter.CODEntry( self.base_url + \
-                                                      self.results[self.position-1] + ".cif", \
-                                                      source_db = self.db_name, \
-                                                      db_id = self.results[self.position-1] )
-            return self.entries[self.position-1]
+            return self.at( self.position - 1 )
         else:
             raise StopIteration()
 

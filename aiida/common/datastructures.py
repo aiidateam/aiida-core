@@ -100,7 +100,16 @@ class CalcInfo(DefaultFieldsAttributeDict):
         'max_wallclock_seconds',
         'max_memory_kb',
         'rerunnable',
-        'retrieve_list', # a list of files or patterns to retrieve
+        'retrieve_list', # a list of files or patterns to retrieve, with two  
+        # possible formats: [ 'remotepath',  # just the name of the file to retrieve. Will be put in '.' of the repositorym with name os.path.split(item)[1]
+        #                     ['remotepath','localpath',depth]  ]
+        # second format will copy the remotepath file/folder to localpath.
+        # if remotepath is a file/folder, localpath will be its local name
+        # if remotepath has file patterns, localpath should only be '.'
+        # depth is an integer to decide the localname: will be os.path.join(localpath, filename )
+        # where filename takes remotepath.split() and joins the last #depth elements  
+        # use the second option if you are using file patterns (*,[0-9],...) 
+        # ALL PATHS ARE RELATIVE! 
         'local_copy_list', # a list of length-two tuples with (localabspath, relativedestpath)
         'remote_copy_list', # a list of length-three tuples with (remotemachinename, remoteabspath, relativedestpath)
         'remote_symlink_list', # a list of length-three tuples with (remotemachinename, remoteabspath, relativedestpath)

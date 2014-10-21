@@ -630,6 +630,34 @@ class TestStructureData(AiidaTestCase):
                           ['Ba', 'Ti', 'Ti2', 'Ba1'])
         self.assertEquals(len(a.sites),5)
 
+    def test_kind_5_bis(self):
+        """
+        Test the management of kinds (automatic creation of new kind
+        if name is not specified and properties are different).
+        This test was failing in, e.g., commit f6a8f4b.
+        """
+        from aiida.orm.data.structure import StructureData
+        from aiida.common.constants import elements
+        
+        s = StructureData(cell=((6.,0.,0.),(0.,6.,0.),(0.,0.,6.)))
+
+        s.append_atom(symbols='Fe', position=[0,0,0], mass=12)
+        s.append_atom(symbols='Fe', position=[1,0,0], mass=12)
+        s.append_atom(symbols='Fe', position=[2,0,0], mass=12)
+        s.append_atom(symbols='Fe', position=[2,0,0])
+        s.append_atom(symbols='Fe', position=[4,0,0])
+
+        # I expect only two species, the first one with name 'Fe', mass 12, 
+        # and referencing the first three atoms; the second with name
+        # 'Fe1', mass = elements[26]['mass'], and referencing the last two atoms
+        self.assertEquals(
+            set([(k.name, k.mass) for k in s.kinds]),
+            set([('Fe', 12.0), ('Fe1', elements[26]['mass'])]))
+
+        kind_of_each_site = [site.kind.name for site in s.sites]
+        self.assertEquals(kind_of_each_site,
+                          ['Fe', 'Fe', 'Fe', 'Fe1', 'Fe2'])
+
     def test_kind_6(self):
         """
         Test the returning of kinds from the string name (most of the code

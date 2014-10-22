@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
+"""
+This module is used to interface AiiDA with the Moka GUI.
+"""
 from xmlrpclib import ServerProxy, Error
-from .io import dirty_qe
-# server = ServerProxy("http://localhost:8000") # local server
 
 __author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
 __copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
@@ -87,3 +88,56 @@ def get_many(verbose=False):
     except Error as v:
         print "ERROR", v
 
+def dirty_qe(s, fout=None, force_kind_order = False, velocities=None):
+    import aiida.orm.data.structure as struct
+    import StringIO
+    
+    if not isinstance(s, struct.StructureData):
+        return
+    
+    output = StringIO.StringIO()
+    
+    output.write("&system\n");
+    output.write("nat="+str(len(s.sites))+", ntyp="+str(len(s.kinds))+",\n");
+    output.write("ibrav=0, celldm(1)=1.88972687000");
+    output.write("\n");
+    
+    #   Species
+    output.write("\nATOMIC_SPECIES\n")
+    for k in s.kinds:
+        output.write("{0}\t{1:7.2f}\t{2}\n".format(k.name,k.mass,k.symbol+".UPF"))
+
+    #   Positions
+    output.write("\nATOMIC_POSITIONS (angstrom)\n")
+    
+    if force_kind_order:
+        for k in s.kinds:
+            for i in s.sites:
+                if i.kind == k.symbol:
+                    output.write("{0}\t{1:15.10f}\t{2:15.10f}\t{3:15.10f}\n".format(i.kind, i.position[0], i.position[1], i.position[2]))
+    else:
+        for i in s.sites:
+            for k in s.kinds:
+                if i.kind == k.symbol:
+                    output.write("{0}\t{1:15.10f}\t{2:15.10f}\t{3:15.10f}\n".format(i.kind, i.position[0], i.position[1], i.position[2]))
+        
+    
+    #   Cell    
+    output.write("\nCELL_PARAMETERS\n")
+    for i in range(3):
+        output.write("{0:15.10f}\t{1:15.10f}\t{2:15.10f}\n".format(s.cell[i][0], s.cell[i][1], s.cell[i][2]))
+   
+    # Velocities
+    if velocities is not None:
+        output.write("\nATOMIC_VELOCITIES\n")
+        for v in velocities:
+            output.write("{0}\t{1:15.10f}\t{2:15.10f}\t{3:15.10f}\n".format(v[0], v[1][0], v[1][1], v[1][2]))
+   
+    data =  output.getvalue()
+    output.close()
+    
+    if fout is not None:
+         with open(fout, "w") as f:
+            f.write(data)
+   
+    return data

@@ -1,15 +1,14 @@
 # -*- coding: utf-8 -*-
+"""
+This module contains some functions to manage inputs and outputs from the
+Car-Parrinello cp.x code of Quantum ESPRESSO.
+Currently unmantained, may be removed or reused at any time!
+"""
 
 __author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
 __copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.2.0"
-
-'''
-Created on Oct 30, 2013
-
-@author: riki
-'''
 
 RyToBhor         = 0.52917720859
 k_boltzmann_si   = 1.3806504E-23
@@ -21,6 +20,35 @@ k_boltzmann_au   = k_boltzmann_si / hartree_si
 autoev           = hartree_si / electronmass_si
 rytoev           = autoev / 2.0
 amu_au           = amu_si / electronmass_si
+
+def generate_cp_velocities(s, temp, force_kind_order = False, seed=None):
+    
+    import numpy as np
+    import aiida.orm.data.structure as struct
+    
+    if not isinstance(s, struct.StructureData):
+        return
+    
+    masses   = []
+    elements = []
+    kinds = s.kinds
+    
+    if force_kind_order:
+        for k in kinds:
+            for s in s.sites:
+                if s.kind == k.name:
+                    elements.append(k.name)
+                    masses.append(k.mass)
+    else:
+        for s in s.sites:
+            for k in kinds:
+                if s.kind == k.name:
+                    elements.append(k.name)
+                    masses.append(k.mass)
+    
+    vi = MaxwellBoltzmannDistribution(np.array(masses), temp, seed=seed)
+    
+    return zip(elements, vi[:])
 
 class StepArray(object):
     

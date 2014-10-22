@@ -233,7 +233,7 @@ def BaseFactory(module, base_class, base_modname):
     In the latter case, the plugin class must have a specific name and be
     located in a specific file:
     if for instance plugin_name == 'ssh' and base_class.__name__ == 'Transport',
-    thend there must be a class named 'SshTransport' which is a subclass of base_class
+    then there must be a class named 'SshTransport' which is a subclass of base_class
     in a file 'ssh.py' in the plugins_module folder.
     """   
     try:

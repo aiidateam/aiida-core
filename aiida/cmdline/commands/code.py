@@ -7,7 +7,7 @@ TODO: think if we want to allow to change path and prepend/append text.
 import sys
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.common.utils import load_django
+from aiida import load_dbenv
 
 __author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
 __copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
@@ -306,7 +306,7 @@ class CodeInputValidationClass(object):
         """
         from aiida.orm import Computer as AiidaOrmComputer
         from aiida.common.exceptions import ValidationError, NotExistent
-        load_django()
+        load_dbenv()
         
         try:
             computer = AiidaOrmComputer.get(string)
@@ -531,6 +531,7 @@ class Code(VerdiCommandWithSubcommands):
             'show' : (self.code_show, self.complete_code_names_and_pks),
             'setup': (self.code_setup, self.complete_code_pks),
             'relabel': (self.code_relabel, self.complete_code_pks),
+            'update': (self.code_update, self.complete_code_pks),
             'delete': (self.code_delete, self.complete_code_pks),
             }
 
@@ -571,7 +572,7 @@ class Code(VerdiCommandWithSubcommands):
         """
         from aiida.orm import Code as AiidaOrmCode
 
-        load_django()
+        load_dbenv()
         return sorted([(c.pk, c.label) for c in AiidaOrmCode.query()])
 
 
@@ -588,7 +589,7 @@ class Code(VerdiCommandWithSubcommands):
         from aiida.orm import Code as AiidaOrmCode
         from aiida.common.exceptions import NotExistent, MultipleObjectsError
         
-        load_django()
+        load_dbenv()
         try:
             code_int = int(code_id)
             try:
@@ -626,7 +627,7 @@ class Code(VerdiCommandWithSubcommands):
         """
         Show information on a given code
         """
-        load_django()
+        load_dbenv()
         if len(args) != 1:
             print >> sys.stderr, ("after 'code show' there should be one "
                                   "argument only, being the code id.")
@@ -638,7 +639,7 @@ class Code(VerdiCommandWithSubcommands):
     def code_setup(self, *args):
         from aiida.common.exceptions import ValidationError
 
-        load_django()
+        load_dbenv()
           
         if len(args) != 0:
             print >> sys.stderr, ("after 'code setup' there cannot be any "
@@ -660,7 +661,6 @@ class Code(VerdiCommandWithSubcommands):
                 
         print "Code '{}' successfully stored in DB.".format(code.label)
         print "pk={}, uuid={}".format(code.pk, code.uuid)
-
       
     def code_relabel(self, *args):
         if len(args) != 1:
@@ -680,7 +680,99 @@ class Code(VerdiCommandWithSubcommands):
         code.label = set_params.label
         code.description = set_params.description
 
+    def code_update(self, *args):
+        import os,datetime
+        from aiida.djsite.utils import get_automatic_user
+        from aiida.common.exceptions import ModificationNotAllowed
+        if len(args) != 1:
+            print >> sys.stderr, ("after 'code relabel' there should be one "
+                                  "argument only, being the code id.")
+            sys.exit(1)
 
+        code = self.get_code(args[0])
+
+        if code.has_children:
+            print "***********************************"
+            print "|                                 |"
+            print "|            WARNING!             |"
+            print "| Consider to create another code |"
+            print "| You risk of losing the history  |"
+            print "|                                 |"
+            print "***********************************"
+        
+        # load existing stuff
+        set_params = CodeInputValidationClass()
+        set_params.label = code.label
+        set_params.description = code.description
+        set_params.input_plugin = code.get_input_plugin_name()
+        
+        
+        was_local_before = code.is_local()
+        set_params.is_local = code.is_local()
+        
+        if code.is_local():
+            set_params.local_rel_path = code.get_local_executable()
+            # I don't have saved the folder with code, so I will just have the list of files
+            #file_list = [ code._get_folder_pathsubfolder.get_abs_path(i)
+            #    for i in code.get_folder_list() ]
+        else:
+            set_params.computer = code.computer
+            set_params.remote_abs_path = code.get_remote_exec_path()
+        
+        set_params.prepend_text = code.get_prepend_text()
+        set_params.append_text = code.get_append_text()
+        
+        # ask for the new values
+        set_params.ask()
+        
+        # prepare a comment containing the previous version of the code
+        now = datetime.datetime.now()
+        new_comment = []
+        new_comment.append("Code modified on {}".format(now))
+        new_comment.append("Old configuration was:")
+        new_comment.append("label: {}".format(code.label))
+        new_comment.append("description: {}".format(code.description))
+        new_comment.append("input_plugin_name: {}".format(code.get_input_plugin_name()))
+        new_comment.append("is_local: {}".format(code.is_local()))
+        if was_local_before:
+            new_comment.append("local_executable: {}".format(code.get_local_executable()))
+        else:
+            new_comment.append("computer: {}".format(code.computer))
+            new_comment.append("remote_exec_path: {}".format(code.get_remote_exec_path()))
+        new_comment.append("prepend_text: {}".format(code.get_prepend_text()))
+        new_comment.append("append_text: {}".format(code.get_append_text()))
+        comment = "\n".join(new_comment)
+        
+        if set_params.is_local:
+            print "WARNING: => Folder with the code, and" 
+            print "         => Relative path of the executable, "
+            print "         will be ignored! It is not possible to replace "
+            print "         the scripts, you have to create a new code for that."
+        else:
+            if was_local_before:
+                # some old files will be left in the repository, and I cannot delete them
+                print >> sys.stderr, ("It is not possible to change a "
+                                      "code from local to remote.\n"
+                                      "Modification cancelled.")
+                sys.exit(1)
+            print "WARNING: => computer, and"
+            print "         => remote absolute path,"
+            print "         will be ignored! It is not possible to replace them"
+            print "         you have to create a new code for that."
+
+#            print set_params.computer
+#            code.computer = set_params.computer
+#            code.set_remote_computer_exec( (set_params.computer,set_params.remote_abs_path ) )
+        
+        code.label = set_params.label
+        code.description = set_params.description
+        code.set_input_plugin_name(set_params.input_plugin)
+        code.set_prepend_text(set_params.prepend_text)    
+        code.set_append_text(set_params.append_text)    
+        
+        # store comment, to track history
+        code.add_comment(comment,user=get_automatic_user())
+        
     def code_delete(self, *args):
         """
         Delete a code

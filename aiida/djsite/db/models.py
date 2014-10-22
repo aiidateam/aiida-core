@@ -20,6 +20,15 @@ __copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de L
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.2.0"
 
+# This variable identifies the schema version of this file.
+# Every time you change the schema below in *ANY* way, REMEMBER TO CHANGE
+# the version here!
+# The version is checked at code load time to verify that the code schema
+# version and the DB schema version are the same. (The DB schema version
+# is stored in the DbSetting table and the check is done in the 
+# load_dbenv() function).
+SCHEMA_VERSION="1.0.0"
+
 class EmptyContextManager(object):
     def __enter__(self):
         pass

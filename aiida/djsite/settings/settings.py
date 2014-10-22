@@ -343,4 +343,3 @@ CELERYBEAT_SCHEDULE = {
         'schedule': timedelta(seconds=5),
         },
 }
-

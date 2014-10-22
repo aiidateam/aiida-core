@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from aiida.common.utils import load_django
+from aiida import load_dbenv
 
 __author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
 __copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.2.0"
 
-load_django()
+load_dbenv()
 
 import sys
 import os
@@ -140,18 +140,10 @@ if __name__ == "__main__":
     kpoints_mesh = 2
     kpoints.set_kpoints_mesh([kpoints_mesh,kpoints_mesh,kpoints_mesh])
     
-    # to retrieve the bands (NOTE: for now - until the pattern retrieve is 
-    # implemented) - we need to add manually all possible K folders !)
-    
-    #settings_dict={'also_bands': True}
-    #kpoints_folder_list=[]
-    #for i in range(1,kpoints_mesh**3+1):
-    #    kpoints_folder_list.append('./out/aiida.save/K{0:{fill}5}'.format(i,fill='0'))
-    #settings_dict.update({
-    #            'additional_retrieve_list': kpoints_folder_list,
-    #            })
-    #settings = ParameterData(dict=settings_dict)
-    
+    # to retrieve the bands
+    # (the object settings is optional)
+    settings_dict={'also_bands': True}
+    settings = ParameterData(dict=settings_dict)
     
     ## For remote codes, it is not necessary to manually set the computer,
     ## since it is set automatically by new_calc

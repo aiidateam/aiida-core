@@ -2,7 +2,7 @@
 import sys
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.common.utils import load_django
+from aiida import load_dbenv
 
 __author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
 __copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
@@ -27,6 +27,7 @@ class Computer(VerdiCommandWithSubcommands):
             'disable': (self.computer_disable, self.complete_computers),
             'rename': (self.computer_rename, self.complete_computers),
             'configure': (self.computer_configure, self.complete_computers),
+            'test': (self.computer_test, self.complete_computers),
             'delete': (self.computer_delete, self.complete_computers),
             }
         
@@ -39,7 +40,6 @@ class Computer(VerdiCommandWithSubcommands):
         List available computers
         """
         import argparse
-        
         
         from aiida.orm import Computer as AiiDAOrmComputer
         from aiida.djsite.utils import get_automatic_user
@@ -188,7 +188,7 @@ class Computer(VerdiCommandWithSubcommands):
                                   "argument.")
             sys.exit(1)
         
-        load_django()
+        load_dbenv()
         
         print "At any prompt, type ? to get some help."
         print "---------------------------------------"
@@ -377,7 +377,7 @@ class Computer(VerdiCommandWithSubcommands):
         """
         Configure the authentication information for a given computer
         """
-        load_django()
+        load_dbenv()
 
         import readline
         import inspect
@@ -554,11 +554,230 @@ class Computer(VerdiCommandWithSubcommands):
          
         print "Computer '{}' deleted.".format(computername)
 
+    def computer_test(self, *args):
+        """
+        Test the connection to a computer.
+        
+        It tries to connect, to get the list of calculations on the queue and
+        to perform other tests.
+        """
+        import argparse
+        import traceback
+        
+        load_dbenv()
+        from django.core.exceptions import ObjectDoesNotExist
+        from aiida.common.exceptions import NotExistent
+        from aiida.djsite.db.models import DbUser
+        from aiida.djsite.utils import get_automatic_user
+        from aiida.orm.computer import Computer as OrmComputer
+
+        parser = argparse.ArgumentParser(
+        prog=self.get_full_command_name(),
+            description='Test a remote computer')
+        # The default states are those that are shown if no option is given
+        parser.add_argument('-u', '--user', type=str, metavar='EMAIL',
+                            dest='user_email',
+                            help="Test the connection for a given AiiDA user."
+                                "If not specified, uses the current "
+                                "default user.",
+                            )
+        parser.add_argument('-t', '--traceback', action='store_true', 
+                            help="Print the full traceback in case an exception "
+                            "is raised",
+                            )
+        parser.add_argument('computer', type=str,
+                            help="The name of the computer that you "
+                                "want to test")
+
+        parsed_args = parser.parse_args(args)
+
+        user_email = parsed_args.user_email
+        computername = parsed_args.computer
+        print_traceback = parsed_args.traceback
+            
+        try:
+            computer = self.get_computer(name=computername)
+        except NotExistent:
+            print >> sys.stderr, "No computer exists with name '{}'".format(
+                computername)
+            sys.exit(1)
+
+        if user_email is None:
+            user = get_automatic_user()
+        else:
+            try:
+                user = DbUser.objects.get(email=user_email)
+            except ObjectDoesNotExist:
+                print >> sys.stderr, ("No user with email '{}' in the "
+                                      "database.".format(user_email))
+                sys.exit(1)            
+
+        print "Testing computer '{}' for user {}...".format(computername,
+                                                            user.email)
+        try:
+            dbauthinfo = computer.get_dbauthinfo(user)
+        except NotExistent:
+            print >> sys.stderr, ("User with email '{}' is not yet configured "
+                                  "for computer '{}' yet.".format(
+                user.email, computername))
+            sys.exit(1)
+
+        warning_string = None
+        if not dbauthinfo.enabled:
+            warning_string = ("** NOTE! Computer is disabled for the "
+                "specified user!\n   Do you really want to test it? [y/N] ")
+        if not computer.is_enabled():
+            warning_string = ("** NOTE! Computer is disabled!\n"
+                "   Do you really want to test it? [y/N] ")
+        if warning_string:
+            answer = raw_input(warning_string)
+            if not(answer == 'y' or answer == 'Y'):
+                sys.exit(0)
+
+
+        s = OrmComputer(dbcomputer=dbauthinfo.dbcomputer).get_scheduler()
+        t = dbauthinfo.get_transport()      
+
+        ## STARTING TESTS HERE        
+        num_failures = 0
+        num_tests = 0
+
+        try:   
+            print "> Testing connection..."     
+            with t:
+                s.set_transport(t)
+                num_tests += 1
+                for test in [self._computer_test_get_jobs,
+                             self._computer_create_temp_file]:
+                    num_tests += 1
+                    try:
+                        succeeded = test(transport=t, scheduler=s,
+                                         dbauthinfo=dbauthinfo)
+                    except Exception as e:
+                        print "* The test raised an exception!"
+                        if print_traceback:
+                            print "** Full traceback:"
+                            # Indent
+                            print "\n".join(["   {}".format(l) for l
+                                           in traceback.format_exc().splitlines()])
+                        else:
+                            print "** {}: {}".format(e.__class__.__name__,
+                                                       e.message)
+                            print ("** (use the --traceback option to see the "
+                                   "full traceback)")
+                        succeeded = False
+                        
+                    if not succeeded: 
+                        num_failures += 1
+
+            if num_failures:
+                print "Some tests failed! ({} out of {} failed)".format(
+                    num_failures, num_tests)
+            else:
+                print "Test completed (all {} tests succeeded)".format(
+                    num_tests)
+        except Exception as e:
+            print "** Error while trying to connect to the computer! I cannot "
+            print "   perform following tests, so I stop."
+            if print_traceback:
+                print "** Full traceback:"
+                # Indent
+                print "\n".join(["   {}".format(l) for l
+                               in traceback.format_exc().splitlines()])
+            else:
+                print "{}: {}".format(e.__class__.__name__, e.message)
+                print ("(use the --traceback option to see the "
+                       "full traceback)")
+            succeeded = False
+            
+    def _computer_test_get_jobs(self, transport, scheduler, dbauthinfo):  
+        """
+        Internal test to check if it is possible to check the queue state.
+        
+        :note: exceptions could be raised
+        
+        :param transport: an open transport
+        :param scheduler: the corresponding scheduler class
+        :param dbauthinfo: the dbauthinfo object (from which one can get
+          computer and aiidauser)
+        :return: True if the test succeeds, False if it fails.
+        """
+        print "> Getting job list..."
+        found_jobs = scheduler.getJobs(as_dict=True)
+        print "  `-> OK, {} jobs found in the queue.".format(len(found_jobs))
+        return True
+
+    def _computer_create_temp_file(self, transport, scheduler, dbauthinfo):  
+        """
+        Internal test to check if it is possible to create a temporary file
+        and then delete it in the work directory
+        
+        :note: exceptions could be raised
+        
+        :param transport: an open transport
+        :param scheduler: the corresponding scheduler class
+        :param dbauthinfo: the dbauthinfo object (from which one can get
+          computer and aiidauser)
+        :return: True if the test succeeds, False if it fails.
+        """
+        import tempfile
+        import datetime
+        import os
+        
+        file_content = "Test from 'verdi computer test' on {}".format(
+            datetime.datetime.now().isoformat())
+        print "> Creating a temporary file in the work directory..."
+        print "  `-> Getting the remote user name..."
+        remote_user = transport.whoami()
+        print "      [remote username: {}]".format(remote_user)
+        workdir = dbauthinfo.get_workdir().format(
+             username=remote_user)        
+        print "      [Work directory: {}]".format(workdir)
+        with tempfile.NamedTemporaryFile() as f:
+            fname = os.path.split(f.name)[1]
+            print "  `-> Creating the file {}...".format(fname)
+            remote_file_path = os.path.join(workdir, fname)
+            f.write(file_content)
+            f.flush()
+            transport.putfile(f.name, remote_file_path)
+        print "  `-> Checking if the file has been created..."
+        if not transport.path_exists(remote_file_path):
+            print "* ERROR! The file was not found!"
+            return False
+        else:
+            print "      [OK]"
+        print "  `-> Retrieving the file and checking its content..."
+        
+        fd, destfile = tempfile.mkstemp()
+        os.close(fd)
+        try:
+            transport.getfile(remote_file_path, destfile)
+            with open(destfile) as f:
+                read_string = f.read()
+            print "      [Retrieved]"      
+            if read_string != file_content:
+                print ("* ERROR! The file content is different from what was "
+                       "expected!")
+                print "** Expected:"
+                print file_content
+                print "** Found:"
+                print read_string
+                return False
+            else:
+                print "      [Content OK]"
+        finally:
+            os.remove(destfile)
+            
+        print "  `-> Removing the file..."
+        transport.remove(remote_file_path)
+        print "  [Deleted successfully]"
+        return True
+
     def computer_enable(self, *args):
         """
         Enable a computer.
         """
-        load_django()
+        load_dbenv()
 
         import argparse
 
@@ -619,7 +838,7 @@ class Computer(VerdiCommandWithSubcommands):
                 print >> sys.stderr, ("User with email '{}' is not configured "
                                       "for computer '{}' yet.".format(
                     user_email, computername))
-
+                sys.exit(1)
 
     def computer_disable(self, *args):
         """
@@ -629,7 +848,7 @@ class Computer(VerdiCommandWithSubcommands):
         submit new calculations or check for the state of existing calculations.
         Useful, for instance, if you know that a computer is under maintenance.
         """
-        load_django()
+        load_dbenv()
 
         import argparse
         
@@ -701,7 +920,7 @@ class Computer(VerdiCommandWithSubcommands):
         """
         from aiida.orm import Computer as AiidaOrmComputer
 
-        load_django()
+        load_dbenv()
         return AiidaOrmComputer.list_names()
 
     def get_computer(self, name):
@@ -710,6 +929,6 @@ class Computer(VerdiCommandWithSubcommands):
         """    
         from aiida.orm import Computer as AiidaOrmComputer
         
-        load_django()        
+        load_dbenv()        
         return AiidaOrmComputer.get(name)
     

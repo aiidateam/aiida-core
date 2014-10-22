@@ -497,6 +497,7 @@ def submit_calc(calc, authinfo, transport=None):
             remote_user = t.whoami()
             computer = calc.get_computer()
             # TODO Doc: {username} field
+            # TODO: if something is changed here, fix also 'verdi computer test'
             remote_working_directory = authinfo.get_workdir().format(
                 username=remote_user)
             if not remote_working_directory.strip():
@@ -712,13 +713,50 @@ def retrieve_computed_for_authinfo(authinfo):
                     # First, retrieve the files of folderdata
                     with SandboxFolder() as folder:
                         for item in retrieve_list:
-                            execlogger.debug("[retrieval of calc {}] "
-                                "Trying to retrieve remote item '{}'".format(
-                                calc.pk, item),
-                                extra=logger_extra)
-                            t.get(item, os.path.join(
-                                folder.abspath,os.path.split(item)[1]),
-                                ignore_nonexisting=True)
+                            # I have two possibilities: 
+                            # * item is a string 
+                            # * or is a list
+                            # then I have other two possibilities:
+                            # * there are file patterns
+                            # * or not
+                            # First decide the name of the files
+                            if isinstance(item,list):
+                                tmp_rname,tmp_lname,depth = item
+                                # if there are more than one file I do something differently
+                                if t.has_magic(tmp_rname):
+                                    remote_names = t.glob(tmp_rname)
+                                    local_names = []
+                                    for rem in remote_names:
+                                        to_append = rem.split(os.path.sep)[-depth:] if depth>0 else []
+                                        local_names.append( os.path.sep.join([tmp_lname]+to_append) )
+                                else:
+                                    remote_names = [tmp_rname]
+                                    to_append = remote_names.split(os.path.sep)[-depth:] if depth>0 else []
+                                    local_names = [os.path.sep.join([tmp_lname]+to_append)]
+                                if depth>1: # create directories in the folder, if needed
+                                    for this_local_file in local_names:
+                                        new_folder = os.path.join(
+                                                        folder.abspath,
+                                                        os.path.split(this_local_file)[0])
+                                        if not os.path.exists(new_folder):
+                                            os.makedirs(new_folder)
+                            else: # it is a string
+                                if t.has_magic(item):
+                                    remote_names = t.glob(item)
+                                    local_names = [ os.path.split(rem)[1] for rem in remote_names ]
+                                else:
+                                    remote_names = [item]
+                                    local_names = [ os.path.split(item)[1] ]
+
+                            for rem,loc in zip(remote_names,local_names):                            
+                                execlogger.debug("[retrieval of calc {}] "
+                                    "Trying to retrieve remote item '{}'".format(
+                                    calc.pk, rem),
+                                    extra=logger_extra)
+                                t.get(rem, 
+                                      os.path.join(folder.abspath,loc),
+                                      ignore_nonexisting=True)
+                        
                         # Here I retrieved everything; 
                         # now I store them inside the calculation
                         retrieved_files.replace_with_folder(folder.abspath,

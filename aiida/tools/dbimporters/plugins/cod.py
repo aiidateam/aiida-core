@@ -109,7 +109,7 @@ class CodDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
     def query(self, **kwargs):
         """
         Performs a query on the COD database using ``keyword = value`` pairs,
-        specified in ``kwargs``. Returns an instance of CODSearchResults.
+        specified in ``kwargs``. Returns an instance of CodSearchResults.
         """
         sql_parts = [ "(status IS NULL OR status != 'retracted')" ]
         for key in kwargs.keys():
@@ -135,7 +135,7 @@ class CodDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         finally:
             self._disconnect_db()
 
-        return CODSearchResults( results )
+        return CodSearchResults( results )
 
     def setup_db(self, **kwargs):
         """
@@ -162,7 +162,7 @@ class CodDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         self.db.close()
 
 
-class CODSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
+class CodSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
     """
     Results of the search, performed on COD.
     """
@@ -176,7 +176,7 @@ class CODSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
 
     def next(self):
         """
-        Returns next result as CODEntry.
+        Returns next result as CodEntry.
         """
         if len( self.results ) > self.position:
             self.position = self.position + 1
@@ -186,26 +186,26 @@ class CODSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
 
     def at(self, position):
         """
-        Returns ``position``-th result as CODEntry.
+        Returns ``position``-th result as CodEntry.
         """
         if position < 0 | position >= len( self.results ):
             raise IndexError( "index out of bounds" )
         if position not in self.entries:
-            self.entries[position] = \
-                aiida.tools.codimporter.CODEntry( self.base_url + \
-                                                  self.results[position] + ".cif", \
-                                                  source_db = self.db_name, \
-                                                  db_id = self.results[position] )
+            self.entries[position] =
+                CodEntry( self.base_url + \
+                          self.results[position] + ".cif", \
+                          source_db = self.db_name, \
+                          db_id = self.results[position] )
         return self.entries[position]
 
-class CODEntry(aiida.tools.dbimporters.baseclasses.DbEntry):
+class CodEntry(aiida.tools.dbimporters.baseclasses.DbEntry):
     """
     Represents an entry from COD.
     """
 
     def __init__(self, url, **kwargs):
         """
-        Creates an instance of CODEntry, related to the supplied URL.
+        Creates an instance of CodEntry, related to the supplied URL.
         """
         self.url       = url
         self.source_db = None

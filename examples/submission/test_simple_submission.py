@@ -14,8 +14,8 @@ if __name__ == "__main__":
         print >> sys.stderr, "Pass the machine name."
         sys.exit(1)
 
-    from aiida.common.utils import load_django
-    load_django()
+    from aiida import load_dbenv
+    load_dbenv()
 
     from aiida.common import aiidalogger
     import logging

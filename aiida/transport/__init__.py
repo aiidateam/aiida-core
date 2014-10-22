@@ -564,7 +564,8 @@ class Transport(object):
             return
         dirname, basename = os.path.split(pathname)
         if not dirname:
-            for name in self.glob1(os.curdir, basename):
+#            for name in self.glob1(os.curdir, basename): # ORIGINAL
+            for name in self.glob1(self.getcwd(), basename):
                 yield name
             return
         if self.has_magic(dirname):
@@ -585,14 +586,18 @@ class Transport(object):
     
     def glob1(self,dirname, pattern):
         if not dirname:
-            dirname = os.curdir
+#            dirname = os.curdir # ORIGINAL
+            dirname = self.getcwd()
         if isinstance(pattern, unicode) and not isinstance(dirname, unicode):
             dirname = unicode(dirname, sys.getfilesystemencoding() or
                                        sys.getdefaultencoding())
         try:
             #names = os.listdir(dirname)
+            print dirname
             names = self.listdir(dirname)
         except os.error:
+            return []
+        except IOError:
             return []
         if pattern[0] != '.':
             names = filter(lambda x: x[0] != '.', names)

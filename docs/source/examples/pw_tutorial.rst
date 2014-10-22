@@ -68,8 +68,8 @@ First of all, we need to load the configuration concerning your
 particular installation, in particular, the details of your database installation::
 
   #!/usr/bin/env python
-  from aiida.common.utils import load_django
-  load_django()
+  from aiida import load_dbenv
+  load_dbenv()
 
 Code
 ----
@@ -430,8 +430,8 @@ Download: :download:`this example script <pw_short_example.py>`
 ::
 
   #!/usr/bin/env python
-  from aiida.common.utils import load_django
-  load_django()
+  from aiida import load_dbenv
+  load_dbenv()
   
   from aiida.orm import Code, DataFactory
   StructureData = DataFactory('structure')

@@ -5,7 +5,7 @@ This allows to setup and configure a user from command line.
 import sys
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.common.utils import load_django
+from aiida import load_dbenv
 
 
 __author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
@@ -29,7 +29,7 @@ class User(VerdiCommandWithSubcommands):
             'list': (self.user_list, self.complete_none),
             }
     def complete_emails(self, subargs_idx, subargs):
-        load_django()
+        load_dbenv()
         
         from aiida.djsite.db import models
         
@@ -37,7 +37,7 @@ class User(VerdiCommandWithSubcommands):
         return "\n".join(emails)
 
     def user_configure(self, *args):
-        load_django()
+        load_dbenv()
 
         import readline
         import getpass
@@ -140,7 +140,7 @@ class User(VerdiCommandWithSubcommands):
                 print "         via the REST API and the Web Interface."
 
     def user_list(self, *args):
-        load_django()
+        load_dbenv()
         
         from aiida.djsite.db.models import DbUser
         from aiida.djsite.utils import get_configured_user_email

@@ -2,7 +2,7 @@
 import sys
 import os
 import subprocess
-from aiida.common.utils import load_django
+from aiida import load_dbenv
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 
@@ -55,7 +55,7 @@ class Calculation(VerdiCommandWithSubcommands):
         """
         Return a list of calculations on screen. 
         """
-        load_django()
+        load_dbenv()
         from aiida.common.datastructures import calc_states
         
         import argparse
@@ -118,7 +118,7 @@ class Calculation(VerdiCommandWithSubcommands):
         from aiida.orm import Calculation as OrmCalculation
         from aiida.djsite.utils import get_log_messages
         
-        load_django()
+        load_dbenv()
         
         for calc_pk in args:
             try:
@@ -153,7 +153,7 @@ class Calculation(VerdiCommandWithSubcommands):
         from aiida.djsite.utils import get_log_messages
         from aiida.common.datastructures import calc_states
         
-        load_django()
+        load_dbenv()
         
         for calc_pk in args:
             try:
@@ -210,7 +210,7 @@ class Calculation(VerdiCommandWithSubcommands):
         from aiida.common.pluginloader import existing_plugins
         from aiida.common.exceptions import MissingPluginError
         
-        load_django()
+        load_dbenv()
         
         if args:
             for arg in args:
@@ -244,8 +244,8 @@ class Calculation(VerdiCommandWithSubcommands):
         Pass a list of calculation PKs to kill them.
         If you also pass the -f option, no confirmation will be asked.
         """
-        from aiida.common.utils import load_django
-        load_django()
+        from aiida import load_dbenv
+        load_dbenv()
         
         from aiida.cmdline import wait_for_confirmation
         from aiida.orm.calculation import Calculation as Calc

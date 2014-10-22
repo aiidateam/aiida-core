@@ -493,7 +493,9 @@ class Node(object):
         Both nodes must be a Node instance (or a subclass of Node)
         :note: In subclasses, change only this. Moreover, remember to call
            the super() method in order to properly use the caching logic!
-        
+        :note: There is no _add_link_to, in order to avoid that someone 
+           redefines that method and forgets about using the caching mechanism.
+           Given that it is not restrictive, always use the _add_link_from!
         
         :param src: the source object
         :param str label: the name of the label to set the link from src.
@@ -506,7 +508,15 @@ class Node(object):
         # it here.
         if label in self._inputlinks_cache:
             raise UniquenessError("Input link with name '{}' already present "
-                                  "in the internal cache")
+                                  "in the internal cache".format(label))
+        # See if I am pointing to already saved nodes and I am already
+        # linking to a given node
+        if src.uuid in [_.uuid for _ in 
+              self._inputlinks_cache.values()]:
+            raise UniquenessError("A link from node with UUID={} and "
+                "the current node (UUID={}) already exists!".format(
+                src.uuid, self.uuid))
+            
         
         # If both are stored, write directly on the DB
         if not self._to_be_stored and not src._to_be_stored:
@@ -553,6 +563,16 @@ class Node(object):
             except KeyError:
                 pass
         else: # at least one is not stored: set in the internal cache
+            # See if I am pointing to already saved nodes and I am already
+            # linking to a given node
+            # It is similar to the 'add' method, but if I am replacing the 
+            # same node, I will not complain (k!=label)
+            if src.uuid in [v.uuid for k, v in 
+                  self._inputlinks_cache.iteritems() if k != label]:
+                raise UniquenessError("A link from node with UUID={} and "
+                    "the current node (UUID={}) already exists!".format(
+                    src.uuid, self.uuid))
+            
             self._inputlinks_cache[label] = src
 
     def _remove_link_from(self, src, label):
@@ -702,19 +722,6 @@ class Node(object):
                 raise UniquenessError("There is already a link with the same "
                                       "name (raw message was {})"
                                       "".format(e.message))
-
-    def _add_link_to(self,dest,label=None):
-        """
-        Add a link from the current node to the 'dest' node.
-        Both nodes must be a Node instance (or a subclass of Node)
-        (Do not change in subclasses, subclass the _add_link_from class only.)
-        
-        :param dest: destination Node object to set the link to.
-        :param str label: the name of the link. Default=None
-        """
-        if not isinstance(dest,Node):
-            raise ValueError("dest must be a Node instance")
-        dest._add_link_from(self,label)
 
     def _can_link_as_output(self,dest):
         """
@@ -880,7 +887,7 @@ class Node(object):
             raise ModificationNotAllowed(
                 "Node with uuid={} was already stored".format(self.uuid))
             
-    def set_attr(self, key, value):
+    def _set_attr(self, key, value):
         """
         Set a new attribute to the Node (in the DbAttribute table).
         
@@ -908,7 +915,7 @@ class Node(object):
                 raise ModificationNotAllowed(
                     "Cannot set an attribute after saving a node")
 
-    def del_attr(self, key):
+    def _del_attr(self, key):
         """
         Delete an attribute.
 
@@ -1156,7 +1163,41 @@ class Node(object):
         return list(DbComment.objects.filter(dbnode=self._dbnode).order_by(
             'ctime').values_list(
             'user__email', 'ctime', 'mtime', 'content'))
-
+        
+    def _update_comment(self,new_field,index,user):
+        """
+        Function called by verdi comment update
+        """
+        from aiida.djsite.db.models import DbComment
+        
+        comment = DbComment.objects.filter(dbnode=self._dbnode
+                                           ).order_by('ctime')[index]
+        
+        if not isinstance(new_field,str):
+            raise ValueError("Non string comments are not accepted")
+        
+        if str(user) != str(comment.user.email):
+            raise ModificationNotAllowed(
+               "Only user {} can modify the comment".format(comment.user.email))
+        
+        comment.content = new_field
+        comment.save()
+    
+    def _remove_comment(self,index,user):
+        """
+        Function called by verdi comment remove
+        """
+        from aiida.djsite.db.models import DbComment
+        
+        comment = DbComment.objects.filter(dbnode=self._dbnode
+                                           ).order_by('ctime')[index]
+        
+        if str(user) != str(comment.user.email):
+            raise ModificationNotAllowed(
+               "Only user {} can modify the comment".format(comment.user.email))
+        
+        comment.delete()
+        
     def _increment_version_number_db(self):
         """
         This function increments the version number in the DB.
@@ -1199,7 +1240,7 @@ class Node(object):
         newobject.dbnode.dbcomputer = self.dbnode.dbcomputer # Inherit computer
         
         for k, v in self.iterattrs(also_updatable=False):
-            newobject.set_attr(k,v)
+            newobject._set_attr(k,v)
 
         for path in self.get_folder_list():
             newobject.add_path(self.get_abs_path(path),path)
@@ -1527,6 +1568,27 @@ class Node(object):
         """
         return NodeInputManager(self)
 
+    @property
+    def has_children(self):
+        """
+        Property to understand if children are attached to the node
+        :return: a boolean
+        """
+        # use the transitive closure
+        from aiida.djsite.db.models import DbPath
+        childrens = DbPath.objects.filter(parent=self.pk)
+        return False if not childrens else True
+
+    @property
+    def has_parents(self):
+        """
+        Property to understand if parents are attached to the node
+        :return: a boolean
+        """
+        # use the transitive closure
+        from aiida.djsite.db.models import DbPath
+        parents = DbPath.objects.filter(child=self.pk)
+        return False if not parents else True
 
 
 class NodeOutputManager(object):

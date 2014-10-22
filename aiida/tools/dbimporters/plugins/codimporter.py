@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
-import aiida.tools.basedbimporter
+import aiida.tools.dbimporters
 import MySQLdb
 
-class CODImporter(aiida.tools.basedbimporter.BaseDBImporter):
+class CODImporter(aiida.tools.dbimporters.BaseDBImporter):
     """
     Database importer for Crystallography Open Database.
     """
@@ -160,7 +160,7 @@ class CODImporter(aiida.tools.basedbimporter.BaseDBImporter):
         self.db.close()
 
 
-class CODSearchResults(aiida.tools.basedbimporter.BaseDBSearchResults):
+class CODSearchResults(aiida.tools.dbimporters.BaseDBSearchResults):
     """
     Results of the search, performed on COD.
     """
@@ -196,7 +196,7 @@ class CODSearchResults(aiida.tools.basedbimporter.BaseDBSearchResults):
                                                   db_id = self.results[position] )
         return self.entries[position]
 
-class CODEntry(aiida.tools.basedbimporter.BaseDBEntry):
+class CODEntry(aiida.tools.dbimporters.BaseDBEntry):
     """
     Represents an entry from COD.
     """

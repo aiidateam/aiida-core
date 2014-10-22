@@ -4,6 +4,10 @@
 Using AiiDA in multi-user mode
 ==============================
 
+.. note:: multi-user mode is still not fully supported, and the way it
+  works will change significantly soon. Do not use unless you know what you
+  are doing.
+
 .. todo:: To be documented.
 
    Discuss:

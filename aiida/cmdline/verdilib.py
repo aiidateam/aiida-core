@@ -414,7 +414,7 @@ def get_listparams():
 
     name_desc = sorted(name_desc)
     
-    return ("List of available commands:" + os.linesep +
+    return ("List of the most relevant available commands:" + os.linesep +
             os.linesep.join(["  * {} {}".format(name, desc) 
                              for name, desc in name_desc]))
 
@@ -450,6 +450,9 @@ def exec_from_cmdline(argv):
     from aiida.cmdline import verdilib
     import inspect
 
+    #List of command names that should be hidden or not completed.
+    hidden_commands = ['completion', 'completioncommand', 'listparams']
+
     # Retrieve the list of commands
     verdilib_namespace = verdilib.__dict__
 
@@ -467,6 +470,8 @@ def exec_from_cmdline(argv):
     short_doc = {}
     long_doc = {}
     for k, v in raw_docstrings.iteritems():
+        if k in hidden_commands:
+            continue
         lines = [l.strip() for l in v] 
         empty_lines = [bool(l) for l in lines]
         try:

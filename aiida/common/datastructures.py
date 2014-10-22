@@ -68,11 +68,16 @@ def sort_states(list_states):
 
 class CalcInfo(DefaultFieldsAttributeDict):
     """
-    This object will store the data returned by the code plugin and to be
+    This object will store the data returned by the calculation plugin and to be
     passed to the ExecManager 
     
     # TODO:
     * dynresources_info
+    
+    :todo: probably some of the fields below are not used anymore inside
+      calcinfo, but are rather directly set from calculation attributes to
+      the JobInfo to be passed to the ExecManager
+      (see, for instance, 'queue_name').
     """
     _default_fields = (
         'job_environment', # TODO UNDERSTAND THIS!
@@ -87,14 +92,24 @@ class CalcInfo(DefaultFieldsAttributeDict):
         'stdout_name',
         'stderr_name',
         'join_files',
-        'queue_name', 
+        #'queue_name', This is not used in CalcInfo, it is automatically set from
+                       # calculation attributes to JobInfo
         'num_machines',
         'num_mpiprocs_per_machine',
         'priority',
         'max_wallclock_seconds',
         'max_memory_kb',
         'rerunnable',
-        'retrieve_list', # a list of files or patterns to retrieve
+        'retrieve_list', # a list of files or patterns to retrieve, with two  
+        # possible formats: [ 'remotepath',  # just the name of the file to retrieve. Will be put in '.' of the repositorym with name os.path.split(item)[1]
+        #                     ['remotepath','localpath',depth]  ]
+        # second format will copy the remotepath file/folder to localpath.
+        # if remotepath is a file/folder, localpath will be its local name
+        # if remotepath has file patterns, localpath should only be '.'
+        # depth is an integer to decide the localname: will be os.path.join(localpath, filename )
+        # where filename takes remotepath.split() and joins the last #depth elements  
+        # use the second option if you are using file patterns (*,[0-9],...) 
+        # ALL PATHS ARE RELATIVE! 
         'local_copy_list', # a list of length-two tuples with (localabspath, relativedestpath)
         'remote_copy_list', # a list of length-three tuples with (remotemachinename, remoteabspath, relativedestpath)
         'remote_symlink_list', # a list of length-three tuples with (remotemachinename, remoteabspath, relativedestpath)

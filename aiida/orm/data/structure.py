@@ -22,111 +22,7 @@ _sum_threshold = 1.e-6
 _volume_threshold = 1.e-6
 
 # Element table
-elements = {
-    1: {   'mass': 1.0079400000000001, 'name': 'Hydrogen', 'symbol': 'H'},
-    2: {   'mass': 4.0026000000000002, 'name': 'Helium', 'symbol': 'He'},
-    3: {   'mass': 6.9409999999999998, 'name': 'Lithium', 'symbol': 'Li'},
-    4: {   'mass': 9.0121800000000007, 'name': 'Beryllium', 'symbol': 'Be'},
-    5: {   'mass': 10.811, 'name': 'Boron', 'symbol': 'B'},
-    6: {   'mass': 12.010999999999999, 'name': 'Carbon', 'symbol': 'C'},
-    7: {   'mass': 14.0067, 'name': 'Nitrogen', 'symbol': 'N'},
-    8: {   'mass': 15.9994, 'name': 'Oxygen', 'symbol': 'O'},
-    9: {   'mass': 18.9984, 'name': 'Fluorine', 'symbol': 'F'},
-    10: {   'mass': 20.1797, 'name': 'Neon', 'symbol': 'Ne'},
-    11: {   'mass': 22.98977, 'name': 'Sodium', 'symbol': 'Na'},
-    12: {   'mass': 24.305, 'name': 'Magnesium', 'symbol': 'Mg'},
-    13: {   'mass': 26.981539999999999, 'name': 'Aluminium', 'symbol': 'Al'},
-    14: {   'mass': 28.0855, 'name': 'Silicon', 'symbol': 'Si'},
-    15: {   'mass': 30.973759999999999, 'name': 'Phosphorus', 'symbol': 'P'},
-    16: {   'mass': 32.066000000000003, 'name': 'Sulfur', 'symbol': 'S'},
-    17: {   'mass': 35.4527, 'name': 'Chlorine', 'symbol': 'Cl'},
-    18: {   'mass': 39.948, 'name': 'Argon', 'symbol': 'Ar'},
-    19: {   'mass': 39.098300000000002, 'name': 'Potassium', 'symbol': 'K'},
-    20: {   'mass': 40.078000000000003, 'name': 'Calcium', 'symbol': 'Ca'},
-    21: {   'mass': 44.9559, 'name': 'Scandium', 'symbol': 'Sc'},
-    22: {   'mass': 47.880000000000003, 'name': 'Titanium', 'symbol': 'Ti'},
-    23: {   'mass': 50.941499999999998, 'name': 'Vanadium', 'symbol': 'V'},
-    24: {   'mass': 51.996000000000002, 'name': 'Chromium', 'symbol': 'Cr'},
-    25: {   'mass': 54.938000000000002, 'name': 'Manganese', 'symbol': 'Mn'},
-    26: {   'mass': 55.847000000000001, 'name': 'Iron', 'symbol': 'Fe'},
-    27: {   'mass': 58.933199999999999, 'name': 'Cobalt', 'symbol': 'Co'},
-    28: {   'mass': 58.693399999999997, 'name': 'Nickel', 'symbol': 'Ni'},
-    29: {   'mass': 63.545999999999999, 'name': 'Copper', 'symbol': 'Cu'},
-    30: {   'mass': 65.390000000000001, 'name': 'Zinc', 'symbol': 'Zn'},
-    31: {   'mass': 69.722999999999999, 'name': 'Gallium', 'symbol': 'Ga'},
-    32: {   'mass': 72.609999999999999, 'name': 'Germanium', 'symbol': 'Ge'},
-    33: {   'mass': 74.921599999999998, 'name': 'Arsenic', 'symbol': 'As'},
-    34: {   'mass': 78.959999999999994, 'name': 'Selenium', 'symbol': 'Se'},
-    35: {   'mass': 79.903999999999996, 'name': 'Bromine', 'symbol': 'Br'},
-    36: {   'mass': 83.799999999999997, 'name': 'Krypton', 'symbol': 'Kr'},
-    37: {   'mass': 85.467799999999997, 'name': 'Rubidium', 'symbol': 'Rb'},
-    38: {   'mass': 87.620000000000005, 'name': 'Strontium', 'symbol': 'Sr'},
-    39: {   'mass': 88.905900000000003, 'name': 'Yttrium', 'symbol': 'Y'},
-    40: {   'mass': 91.224000000000004, 'name': 'Zirconium', 'symbol': 'Zr'},
-    41: {   'mass': 92.906400000000005, 'name': 'Niobium', 'symbol': 'Nb'},
-    42: {   'mass': 95.939999999999998, 'name': 'Molybdenum', 'symbol': 'Mo'},
-    43: {   'mass': 98.0, 'name': 'Technetium', 'symbol': 'Tc'},
-    44: {   'mass': 101.06999999999999, 'name': 'Ruthenium', 'symbol': 'Ru'},
-    45: {   'mass': 102.9055, 'name': 'Rhodium', 'symbol': 'Rh'},
-    46: {   'mass': 106.42, 'name': 'Palladium', 'symbol': 'Pd'},
-    47: {   'mass': 107.86799999999999, 'name': 'Silver', 'symbol': 'Ag'},
-    48: {   'mass': 112.41, 'name': 'Cadmium', 'symbol': 'Cd'},
-    49: {   'mass': 114.81999999999999, 'name': 'Indium', 'symbol': 'In'},
-    50: {   'mass': 118.70999999999999, 'name': 'Tin', 'symbol': 'Sn'},
-    51: {   'mass': 121.75700000000001, 'name': 'Antimony', 'symbol': 'Sb'},
-    52: {   'mass': 127.59999999999999, 'name': 'Tellurium', 'symbol': 'Te'},
-    53: {   'mass': 126.9045, 'name': 'Iodine', 'symbol': 'I'},
-    54: {   'mass': 131.28999999999999, 'name': 'Xenon', 'symbol': 'Xe'},
-    55: {   'mass': 132.90539999999999, 'name': 'Caesium', 'symbol': 'Cs'},
-    56: {   'mass': 137.33000000000001, 'name': 'Barium', 'symbol': 'Ba'},
-    57: {   'mass': 138.90549999999999, 'name': 'Lanthanum', 'symbol': 'La'},
-    58: {   'mass': 140.12, 'name': 'Cerium', 'symbol': 'Ce'},
-    59: {   'mass': 140.90770000000001, 'name': 'Praseodymium', 'symbol': 'Pr'},
-    60: {   'mass': 144.24000000000001, 'name': 'Neodymium', 'symbol': 'Nd'},
-    61: {   'mass': 145.0, 'name': 'Promethium', 'symbol': 'Pm'},
-    62: {   'mass': 150.36000000000001, 'name': 'Samarium', 'symbol': 'Sm'},
-    63: {   'mass': 151.965, 'name': 'Europium', 'symbol': 'Eu'},
-    64: {   'mass': 157.25, 'name': 'Gadolinium', 'symbol': 'Gd'},
-    65: {   'mass': 158.92529999999999, 'name': 'Terbium', 'symbol': 'Tb'},
-    66: {   'mass': 162.5, 'name': 'Dysprosium', 'symbol': 'Dy'},
-    67: {   'mass': 164.93029999999999, 'name': 'Holmium', 'symbol': 'Ho'},
-    68: {   'mass': 167.25999999999999, 'name': 'Erbium', 'symbol': 'Er'},
-    69: {   'mass': 168.9342, 'name': 'Thulium', 'symbol': 'Tm'},
-    70: {   'mass': 173.03999999999999, 'name': 'Ytterbium', 'symbol': 'Yb'},
-    71: {   'mass': 174.96700000000001, 'name': 'Lutetium', 'symbol': 'Lu'},
-    72: {   'mass': 178.49000000000001, 'name': 'Hafnium', 'symbol': 'Hf'},
-    73: {   'mass': 180.9479, 'name': 'Tantalum', 'symbol': 'Ta'},
-    74: {   'mass': 183.84999999999999, 'name': 'Tungsten', 'symbol': 'W'},
-    75: {   'mass': 186.20699999999999, 'name': 'Rhenium', 'symbol': 'Re'},
-    76: {   'mass': 190.19999999999999, 'name': 'Osmium', 'symbol': 'Os'},
-    77: {   'mass': 192.22, 'name': 'Iridium', 'symbol': 'Ir'},
-    78: {   'mass': 195.08000000000001, 'name': 'Platinum', 'symbol': 'Pt'},
-    79: {   'mass': 196.9665, 'name': 'Gold', 'symbol': 'Au'},
-    80: {   'mass': 200.59, 'name': 'Mercury', 'symbol': 'Hg'},
-    81: {   'mass': 204.38300000000001, 'name': 'Thallium', 'symbol': 'Tl'},
-    82: {   'mass': 207.19999999999999, 'name': 'Lead', 'symbol': 'Pb'},
-    83: {   'mass': 208.9804, 'name': 'Bismuth', 'symbol': 'Bi'},
-    84: {   'mass': 209.0, 'name': 'Polonium', 'symbol': 'Po'},
-    85: {   'mass': 210.0, 'name': 'Astatine', 'symbol': 'At'},
-    86: {   'mass': 222.0, 'name': 'Radon', 'symbol': 'Rn'},
-    87: {   'mass': 223.0, 'name': 'Francium', 'symbol': 'Fr'},
-    88: {   'mass': 226.02539999999999, 'name': 'Radium', 'symbol': 'Ra'},
-    89: {   'mass': 227.0, 'name': 'Actinium', 'symbol': 'Ac'},
-    90: {   'mass': 232.03809999999999, 'name': 'Thorium', 'symbol': 'Th'},
-    91: {   'mass': 231.0359, 'name': 'Protactinium', 'symbol': 'Pa'},
-    92: {   'mass': 238.029, 'name': 'Uranium', 'symbol': 'U'},
-    93: {   'mass': 237.04820000000001, 'name': 'Neptunium', 'symbol': 'Np'},
-    94: {   'mass': 244.0, 'name': 'Plutonium', 'symbol': 'Pu'},
-    95: {   'mass': 243.0, 'name': 'Americium', 'symbol': 'Am'},
-    96: {   'mass': 247.0, 'name': 'Curium', 'symbol': 'Cm'},
-    97: {   'mass': 247.0, 'name': 'Berkelium', 'symbol': 'Bk'},
-    98: {   'mass': 251.0, 'name': 'Californium', 'symbol': 'Cf'},
-    99: {   'mass': 252.0, 'name': 'Einsteinium', 'symbol': 'Es'},
-    100: {   'mass': 257.0, 'name': 'Fermium', 'symbol': 'Fm'},
-    101: {   'mass': 258.0, 'name': 'Mendelevium', 'symbol': 'Md'},
-    102: {   'mass': 259.0, 'name': 'Nobelium', 'symbol': 'No'},
-    103: {   'mass': 262.0, 'name': 'Lawrencium', 'symbol': 'Lr'}
-    }
+from aiida.common.constants import elements
 
 _valid_symbols = tuple(i['symbol'] for i in elements.values())
 _atomic_masses = {el['symbol']: el['mass'] for el in elements.values()}
@@ -541,7 +437,7 @@ class StructureData(Data):
             
         # If here, no exceptions have been raised, so I add the site.
         # I join two lists. Do not use .append, which would work in-place
-        self.set_attr('kinds',self.get_attr('kinds',[]) + [new_kind.get_raw()])
+        self._set_attr('kinds',self.get_attr('kinds',[]) + [new_kind.get_raw()])
 
     def append_site(self,site):
         """
@@ -565,7 +461,7 @@ class StructureData(Data):
             
         # If here, no exceptions have been raised, so I add the site.
         # I join two lists. Do not use .append, which would work in-place
-        self.set_attr('sites',self.get_attr('sites',[]) + [new_site.get_raw()])
+        self._set_attr('sites',self.get_attr('sites',[]) + [new_site.get_raw()])
 
     def append_atom(self,**kwargs):
         """
@@ -595,6 +491,9 @@ class StructureData(Data):
               Otherwise, the name is made unique first, by adding to the string
               containing the list of chemical symbols a number starting from 1,
               until an unique name is found
+
+        .. note :: checks of equality of species are done using
+          the :py:meth:`~Kind.compare_with` method.
         """
         aseatom = kwargs.pop('ase',None)
         if aseatom is not None:
@@ -621,8 +520,7 @@ class StructureData(Data):
             exists_already = False
             for existing_kind in _kinds:
                 
-                if (kind.compare_with(existing_kind)[0] and
-                    kind.name == existing_kind.name):
+                if (kind.compare_with(existing_kind)[0]):
                     kind = existing_kind
                     exists_already = True
                     break
@@ -741,7 +639,7 @@ class StructureData(Data):
                 "The StructureData object cannot be modified, "
                 "it has already been stored")
 
-        self.set_attr('kinds', [])
+        self._set_attr('kinds', [])
         self.clear_sites()
 
     def clear_sites(self):
@@ -755,7 +653,7 @@ class StructureData(Data):
                 "The StructureData object cannot be modified, "
                 "it has already been stored")
 
-        self.set_attr('sites', [])
+        self._set_attr('sites', [])
 
     @property
     def sites(self):
@@ -827,7 +725,7 @@ class StructureData(Data):
                 "it has already been stored")
 
         the_cell = _get_valid_cell(value)
-        self.set_attr('cell', the_cell)
+        self._set_attr('cell', the_cell)
 
     def reset_cell(self,new_cell):
         """
@@ -843,7 +741,7 @@ class StructureData(Data):
         if not self._to_be_stored:
             raise ModificationNotAllowed()
 
-        self.set_attr('cell', new_cell)
+        self._set_attr('cell', new_cell)
         
     def reset_sites_positions(self,new_positions,conserve_particle=True):
         """
@@ -922,9 +820,9 @@ class StructureData(Data):
         the_pbc = get_valid_pbc(value)
 
         #self._pbc = the_pbc
-        self.set_attr('pbc1',the_pbc[0])
-        self.set_attr('pbc2',the_pbc[1])
-        self.set_attr('pbc3',the_pbc[2])
+        self._set_attr('pbc1',the_pbc[0])
+        self._set_attr('pbc2',the_pbc[1])
+        self._set_attr('pbc3',the_pbc[2])
 
     def is_alloy(self):
         """
@@ -986,6 +884,13 @@ class Kind(object):
         self._weights = None
         self._name = None
 
+        # It will be remain to None in general; it is used to further
+        # identify this species. At the moment, it is used only when importing
+        # from ASE, if the species had a tag (different from zero).
+        ## NOTE! This is not persisted on DB but only used while the class
+        # is loaded in memory (i.e., it is not output with the get_raw() method)
+        self._internal_tag = None
+
         # Logic to create the site from the raw format
         if 'raw' in kwargs:
             if len(kwargs) != 1:
@@ -1041,6 +946,7 @@ class Kind(object):
                     "{}]".format(str(type(aseatom))))
             if aseatom.tag != 0:
                 self.set_automatic_kind_name(tag=aseatom.tag)
+                self._internal_tag = aseatom.tag
             else:
                 self.set_automatic_kind_name()
         else:
@@ -1154,11 +1060,15 @@ class Kind(object):
 
     def compare_with(self, other_kind):
         """
-        Compare with another Site object to check if they are different.
+        Compare with another Kind object to check if they are different.
         
         Note! This does NOT check the 'type' attribute. Instead, it compares
         (with reasonable thresholds, where applicable): the mass, and the list
-        of symbols and of weights.
+        of symbols and of weights. Moreover, it compares the
+        ``_internal_tag``, if defined (at the moment, defined automatically
+        only when importing the Kind from ASE, if the atom has a non-zero tag).
+        Note that the _internal_tag is only used while the class is loaded,
+        but is not persisted on the database.
 
         :return: A tuple with two elements. The first one is True if the two sites
             are 'equivalent' (same mass, symbols and weights), False otherwise.
@@ -1188,6 +1098,11 @@ class Kind(object):
         if abs(self.mass - other_kind.mass) > _mass_threshold:
             return (False, "Masses are different ({} vs. {})"
                     "".format(self.mass, other_kind.mass))
+
+        if self._internal_tag != other_kind._internal_tag:
+            return (False, "Internal tags are different ({} vs. {})"
+                    "".format(self._internal_tag, other_kind._internal_tag))
+            
     
         # If we got here, the two Site objects are similar enough
         # to be considered of the same kind

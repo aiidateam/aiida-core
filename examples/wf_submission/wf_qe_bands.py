@@ -60,6 +60,6 @@ def launch_ws():
     print "Launched workflow", w.uuid
 
 if __name__ == '__main__':
-    from aiida.common.utils import load_django
-    load_django()
+    from aiida import load_dbenv
+    load_dbenv()
     launch_ws()

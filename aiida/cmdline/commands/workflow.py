@@ -36,8 +36,8 @@ class Workflow(VerdiCommandWithSubcommands):
         """
         Return a list of workflows on screen
         """
-        from aiida.common.utils import load_django
-        load_django()
+        from aiida import load_dbenv
+        load_dbenv()
 
         import argparse
         import aiida.orm.workflow as wfs
@@ -68,9 +68,9 @@ class Workflow(VerdiCommandWithSubcommands):
         """
         Print the report of a workflow.
         """
-        from aiida.common.utils import load_django
+        from aiida import load_dbenv
         from aiida.common.exceptions import NotExistent
-        load_django()
+        load_dbenv()
 
         from aiida.orm.workflow import Workflow
         
@@ -102,8 +102,8 @@ class Workflow(VerdiCommandWithSubcommands):
         Pass a list of workflow PKs to kill them.
         If you also pass the -f option, no confirmation will be asked.
         """
-        from aiida.common.utils import load_django
-        load_django()
+        from aiida import load_dbenv
+        load_dbenv()
 
         from aiida.cmdline import wait_for_confirmation
         from aiida.orm.workflow import kill_from_pk

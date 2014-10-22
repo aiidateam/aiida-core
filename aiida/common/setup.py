@@ -451,6 +451,14 @@ def create_configuration():
 class _NoDefaultValue(object):
     pass
 
+# Only properties listed here can be changed/set with the command line.
+# These properties are stored in the aiida config file.
+# Each entry key is the name of the property used on the command line;
+# the value must be a 4-tuple, whose elements are
+# 1. the key actually used in the config json file
+# 2. the type
+# 3. A human-readable description
+# 4. The default value, if no setting is found
 _property_table = {
     "tests.use_sqlite": (
         "use_inmemory_sqlite_for_tests",

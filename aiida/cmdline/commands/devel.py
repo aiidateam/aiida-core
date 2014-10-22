@@ -4,7 +4,7 @@ import os
 
 import aiida
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-from aiida.common.utils import load_django
+from aiida import load_dbenv
 from aiida.cmdline import pass_to_django_manage, execname
 
 __author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
@@ -122,7 +122,10 @@ class Devel(VerdiCommandWithSubcommands):
     
     def run_describeproperties(self, *args):
         """
-        List all found properties
+        List all valid properties that can be stored in the AiiDA config file.
+        
+        Only properties listed in the ``_property_table`` of
+        ``aida.common.setup`` can be used.
         """
         from aiida.common.setup import _property_table, _NoDefaultValue
         
@@ -142,10 +145,14 @@ class Devel(VerdiCommandWithSubcommands):
                                        def_val_string)
 
     def calculation_getresults(self, *args):
+        """
+        Routine to get a list of results of a set of calculations, still
+        under development.
+        """
         from aiida.common.exceptions import AiidaException
         from aiida.orm import Calculation as OrmCalculation
         
-        load_django()
+        load_dbenv()
         
         class InternalError(AiidaException):
             def __init__(self, real_exception, message):
@@ -327,7 +334,7 @@ class Devel(VerdiCommandWithSubcommands):
     
     def run_listproperties(self, *args):
         """
-        List all found properties
+        List all found global AiiDA properties.
         """
         import argparse
         
@@ -358,7 +365,7 @@ class Devel(VerdiCommandWithSubcommands):
 
     def run_getproperty(self, *args):
         """
-        Get a property from the config file.
+        Get a global AiiDA property from the config file in .aiida.
         """
         from aiida.common.setup import get_property
         
@@ -377,7 +384,7 @@ class Devel(VerdiCommandWithSubcommands):
 
     def run_delproperty(self, *args):
         """
-        Delete a property from the config file.
+        Delete a global AiiDA property from the config file in .aiida.
         """
         from aiida.common.setup import del_property
         
@@ -402,7 +409,10 @@ class Devel(VerdiCommandWithSubcommands):
     
     def run_setproperty(self, *args):
         """
-        Define a property in the config file.
+        Define a global AiiDA property in the config file in .aiida.
+
+        Only properties in the _property_table of aiida.common.setup can 
+        be modified.
         """
         from aiida.common.setup import set_property
         
@@ -480,7 +490,8 @@ class Devel(VerdiCommandWithSubcommands):
             # TODO: allow the use of this flag
             if get_property('tests.use_sqlite'):
                 settings.DATABASES['default'] = {'ENGINE':
-                                                 'django.db.backends.sqlite3'}
+                                                 'django.db.backends.sqlite3',
+                                                 'NAME': ":memory:"}
             ###################################################################
             # IMPORTANT! Choose a different repository location, otherwise 
             # real data will be destroyed during tests!!
@@ -725,7 +736,7 @@ class Devel(VerdiCommandWithSubcommands):
         
         
     def run_query(self, *args):
-        load_django()
+        load_dbenv()
         from django.db.models import Q
         from aiida.djsite.db.models import DbNode
                 

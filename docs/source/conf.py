@@ -215,8 +215,8 @@ latex_documents = [
 # Note by Andrea Cepellotti:
 # Sphinx tries to load every module that is trying to document
 # some of them requires the DJANGO_SETTINGS_MODULE variable to be set
-from aiida.common.utils import load_django
-load_django()
+from aiida import load_dbenv
+load_dbenv()
 
 
 # -- Options for manual page output --------------------------------------------

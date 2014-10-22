@@ -5,6 +5,12 @@ Excellent and thorough documentation on how to use GIT can be found online on
 the official GIT documentation or by searching on Google. We summarize here
 only a set of commands that may be useful.
 
+Interesting online resources
+----------------------------
+
+* `Atlassian forking-workflow guide <https://www.atlassian.com/git/tutorials/comparing-workflows/forking-workflow>`_
+* `Gitflow model <http://nvie.com/posts/a-successful-git-branching-model/>`_
+
 Switch to another branch
 ------------------------
 You can switch to another branch with::
@@ -48,7 +54,7 @@ then delete the old one. One way to do it, is first editing ``~/.git/config``
 so that the branch points to the new remote name, changing
 ``refs/heads/oldname`` to ``refs/heads/newname`` in the correct section::
 
-[branch "newname"]
+  [branch "newname"]
     remote = origin
     merge = refs/heads/newname
     
@@ -106,4 +112,41 @@ then under "Branch management".
   (this removes one commit only, and you should have no local modifications;
   if you do it, be sure to avoid losing your modifications!)
   
+Merge from a different repository
+---------------------------------
   
+It is possible to do a pull request of a forked repository from the BitBucket
+web interface. However, if one just wants to keep in sync, e.g., the main
+AiiDA repository with a fork you are working into without creating a pull
+request (e.g., for daily merge of your fork's develop into the main repo's
+develop), you can:
+  
+* commit and pull all your changes in your fork
+* from the BitBucket web interface, sync your fork with the main repository,
+  if needed
+* go in a local cloned version of the main repository
+* [*only the first time*] add a remote pointing to the new repository, with
+  the name you prefer (here: ``myfork``)::
+    
+    git remote add myfork git@bitbucket.org:BUTBUCKETUSER/FORKEDREPO.git
+    
+* checkout to the correct branch you want to merge into (``git
+  checkout develop``)
+* do a ``git pull`` (just in case)
+* Fetch the correct branch of the other repository (e.g., the develop branch)::
+  
+    git fetch myfork develop
+    
+  (this will fetch that branch into a temporary location called ``FETCH_HEAD``).
+* Merge the modifications::
+
+    git merge FETCH_HEAD
+ 
+ * Fix any merge conflicts (if any) and commit.
+ * Finally, push the merged result into the main repository::
+ 
+     git push
+   
+   (or, if you did not use the default remote with ``--set-upstream``, specify
+   the correct remote branch, e.g. ``git push origin develop``).
+   

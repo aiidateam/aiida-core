@@ -39,13 +39,13 @@ standard python ``.py`` file. The only modification that you need to do is
 to add, at the beginning of the file and before loading any other AiiDA module,
 the following two lines::
   
-  from aiida.common.utils import load_django
-  load_django()
+  from aiida import load_dbenv
+  load_dbenv()
   
 that will load the database settings and allow AiiDA to reach your database.
 Then, you can load as usual python and AiiDA modules and classes, and use them.
 If you want to have the same environment of the ``verdi shell`` interactive
-shell, you can also add (below the ``load_django`` call) the following lines::
+shell, you can also add (below the ``load_dbenv`` call) the following lines::
 
   
   from aiida.orm import Calculation, Code, Computer, Data, Node

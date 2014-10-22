@@ -470,6 +470,7 @@ class TestStructureData(AiidaTestCase):
     """
     Tests the creation of StructureData objects (cell and pbc).
     """
+    from aiida.orm.data.structure import has_ase
 
     def test_cell_ok_and_atoms(self):
         """
@@ -629,6 +630,68 @@ class TestStructureData(AiidaTestCase):
         self.assertEquals([k.name for k in a.kinds],
                           ['Ba', 'Ti', 'Ti2', 'Ba1'])
         self.assertEquals(len(a.sites),5)
+
+    def test_kind_5_bis(self):
+        """
+        Test the management of kinds (automatic creation of new kind
+        if name is not specified and properties are different).
+        This test was failing in, e.g., commit f6a8f4b.
+        """
+        from aiida.orm.data.structure import StructureData
+        from aiida.common.constants import elements
+        
+        s = StructureData(cell=((6.,0.,0.),(0.,6.,0.),(0.,0.,6.)))
+
+        s.append_atom(symbols='Fe', position=[0,0,0], mass=12)
+        s.append_atom(symbols='Fe', position=[1,0,0], mass=12)
+        s.append_atom(symbols='Fe', position=[2,0,0], mass=12)
+        s.append_atom(symbols='Fe', position=[2,0,0])
+        s.append_atom(symbols='Fe', position=[4,0,0])
+
+        # I expect only two species, the first one with name 'Fe', mass 12, 
+        # and referencing the first three atoms; the second with name
+        # 'Fe1', mass = elements[26]['mass'], and referencing the last two atoms
+        self.assertEquals(
+            set([(k.name, k.mass) for k in s.kinds]),
+            set([('Fe', 12.0), ('Fe1', elements[26]['mass'])]))
+
+        kind_of_each_site = [site.kind_name for site in s.sites]
+        self.assertEquals(kind_of_each_site,
+                          ['Fe', 'Fe', 'Fe', 'Fe1', 'Fe1'])
+
+    @unittest.skipIf(not has_ase(),"Unable to import ase")
+    def test_kind_5_bis_ase(self):
+        """
+        Same test as test_kind_5_bis, but using ase
+        """
+        from aiida.orm.data.structure import StructureData
+        import ase
+        
+        asecell = ase.Atoms('Fe5', cell=((6.,0.,0.),(0.,6.,0.),(0.,0.,6.)))
+        asecell.set_positions([
+            [0,0,0],
+            [1,0,0],
+            [2,0,0],
+            [3,0,0],
+            [4,0,0],
+            ])
+        
+        asecell[0].mass = 12.
+        asecell[1].mass = 12.
+        asecell[2].mass = 12.
+
+        s = StructureData(ase=asecell)
+
+        # I expect only two species, the first one with name 'Fe', mass 12, 
+        # and referencing the first three atoms; the second with name
+        # 'Fe1', mass = elements[26]['mass'], and referencing the last two atoms
+        self.assertEquals(
+            set([(k.name, k.mass) for k in s.kinds]),
+            set([('Fe', 12.0), ('Fe1', asecell[3].mass)]))
+
+        kind_of_each_site = [site.kind_name for site in s.sites]
+        self.assertEquals(kind_of_each_site,
+                          ['Fe', 'Fe', 'Fe', 'Fe1', 'Fe1'])
 
     def test_kind_6(self):
         """

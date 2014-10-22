@@ -137,7 +137,7 @@ For each of the above types of tests, a different testing approach is followed
       (nodes, links, ... are deleted) so that the temporary database
       is ready to run the tests of the following test classes.
      
-   :note: it is *extremely important* that these tests are run from the 
+   .. note:: it is *extremely important* that these tests are run from the 
      ``verdi devel tests`` command line interface. Not only this will ensure
      that a temporary database is used (via Django), but also that a temporary
      repository folder is used. Otherwise, you risk to corrupt your database
@@ -166,12 +166,12 @@ For each of the above types of tests, a different testing approach is followed
    
      verdi devel tests db.newtests
    
-   :note: If in the list of parameters to ``verdi devel tests`` you add
+   .. note:: If in the list of parameters to ``verdi devel tests`` you add
      also a ``db`` parameter, then all database-related tests will be run, i.e.,
      all tests that start with ``db.`` (or, if you want, all tests in the
      ``db_test_list`` described above).
    
-   :note: By default, the test database is created using an in-memory SQLite
+   .. note:: By default, the test database is created using an in-memory SQLite
      database, which is much faster than creating from scratch a new test
      database with PostgreSQL or SQLite. However, if you want to test
      database-specific settings and you want to use the same type of database

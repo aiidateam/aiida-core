@@ -11,7 +11,12 @@ __version__ = "0.2.0"
 logger       = aiida.common.aiidalogger.getChild('input')
 
 def import_qeinput(fname):
+    """
+    This function imports a AiiDA structure from a Quantum ESPRESSO
+    input file.
     
+    :param fname: the file name that should be read
+    """
     import ase
     import aiida.orm.data.structure as struct
     
@@ -365,103 +370,7 @@ def import_qeinput(fname):
     s_ase = ase.Atoms(numbers=atomic_nums,positions=atomic_pos,cell=cell,pbc=True, masses=atomic_masses)
     return struct.StructureData(ase = s_ase, raw_kinds = atomic_raw_kinds)
 
+
     
 
-def import_cif(fname):
-    from aiida.djsite.utils import get_automatic_user
-    
-    import ase.io
-    import aiida.orm.data.structure as struct
-    
-    ase_s = ase.io.read(fname, format="cif")
-    s = struct.StructureData(ase=ase_s)
-    s.store()
-    s.add_comment("Origin: "+fname, user=get_automatic_user())
-    
-    return s
 
-def generate_cp_velocities(s, temp, force_kind_order = False, seed=None):
-    
-    import numpy as np
-    import aiida.orm.data.structure as struct
-    import aiida.tools.analytics as an
-    
-    if not isinstance(s, struct.StructureData):
-        return
-    
-    masses   = []
-    elements = []
-    kinds = s.kinds
-    
-    if force_kind_order:
-        for k in kinds:
-            for s in s.sites:
-                if s.kind == k.name:
-                    elements.append(k.name)
-                    masses.append(k.mass)
-    else:
-        for s in s.sites:
-            for k in kinds:
-                if s.kind == k.name:
-                    elements.append(k.name)
-                    masses.append(k.mass)
-    
-    vi = an.MaxwellBoltzmannDistribution(np.array(masses), temp, seed=seed)
-    
-    return zip(elements, vi[:])
-    
-
-def dirty_qe(s, fout=None, force_kind_order = False, velocities=None):
-    
-    import aiida.orm.data.structure as struct
-    import StringIO
-    
-    if not isinstance(s, struct.StructureData):
-        return
-    
-    output = StringIO.StringIO()
-    
-    output.write("&system\n");
-    output.write("nat="+str(len(s.sites))+", ntyp="+str(len(s.kinds))+",\n");
-    output.write("ibrav=0, celldm(1)=1.88972687000");
-    output.write("\n");
-    
-    #   Species
-    output.write("\nATOMIC_SPECIES\n")
-    for k in s.kinds:
-        output.write("{0}\t{1:7.2f}\t{2}\n".format(k.name,k.mass,k.symbol+".UPF"))
-
-    #   Positions
-    output.write("\nATOMIC_POSITIONS (angstrom)\n")
-    
-    if force_kind_order:
-        for k in s.kinds:
-            for i in s.sites:
-                if i.kind == k.symbol:
-                    output.write("{0}\t{1:15.10f}\t{2:15.10f}\t{3:15.10f}\n".format(i.kind, i.position[0], i.position[1], i.position[2]))
-    else:
-        for i in s.sites:
-            for k in s.kinds:
-                if i.kind == k.symbol:
-                    output.write("{0}\t{1:15.10f}\t{2:15.10f}\t{3:15.10f}\n".format(i.kind, i.position[0], i.position[1], i.position[2]))
-        
-    
-    #   Cell    
-    output.write("\nCELL_PARAMETERS\n")
-    for i in range(3):
-        output.write("{0:15.10f}\t{1:15.10f}\t{2:15.10f}\n".format(s.cell[i][0], s.cell[i][1], s.cell[i][2]))
-   
-    # Velocities
-    if velocities is not None:
-        output.write("\nATOMIC_VELOCITIES\n")
-        for v in velocities:
-            output.write("{0}\t{1:15.10f}\t{2:15.10f}\t{3:15.10f}\n".format(v[0], v[1][0], v[1][1], v[1][2]))
-   
-    data =  output.getvalue()
-    output.close()
-    
-    if fout is not None:
-         with open(fout, "w") as f:
-            f.write(data)
-   
-    return data

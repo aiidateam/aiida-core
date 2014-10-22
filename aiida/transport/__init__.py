@@ -593,7 +593,7 @@ class Transport(object):
                                        sys.getdefaultencoding())
         try:
             #names = os.listdir(dirname)
-            print dirname
+            #print dirname
             names = self.listdir(dirname)
         except os.error:
             return []

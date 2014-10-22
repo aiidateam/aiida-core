@@ -410,7 +410,6 @@ aside to the final optimal cell parameter value.
         def optimize(self):
             
             from aiida.orm.data.parameter import ParameterData
-            import aiida.tools.physics as ps
             
             x_material   = self.get_parameter("x_material")
             a_sweep      = self.get_attribute("a_sweep")
@@ -437,7 +436,7 @@ aside to the final optimal cell parameter value.
             #  Find optimal alat
             #-----------------------------------------
             
-            murnpars, ier = ps.Murnaghan_fit(e_calcs, v_calcs)
+            murnpars, ier = Murnaghan_fit(e_calcs, v_calcs)
             
             # New optimal alat
             optimal_alat  = murnpars[3]** (1 / 3.0)
@@ -499,7 +498,7 @@ this case the support functions are reported first, under the ``Object generator
   mentioned in the other chapters, and a simple message is added to the report for each calculation.
   
   Having the volume and the energy for each simulation we can run a Murnaghan fit to obtain the optimal cell parameter and expected energy, to
-  do this we use a simple fitting module present in ``aiida.tools.physics`` package called ``Murnaghan_fit``. The optimal alat is then saved in
+  do this we use a simple fitting function ``Murnaghan_fit`` defined at the bottom of the workflow file ``wf_XTiO3.py``. The optimal alat is then saved in
   the attributes and a new calculation is generated for it. The calculation is attached to the step and the ``final_step`` is attached to the 
   execution. 
 

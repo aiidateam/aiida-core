@@ -43,9 +43,10 @@ class Code(Node):
 
     def __str__(self):
         local_str = "Local" if self.is_local() else "Remote"
+        computer_str = "repository" if self.is_local() else self.computer.name
         
         return "{} code '{}' on {}, pk={}, uuid={}".format(local_str, self.label,
-                                           self.computer.name, self.pk, self.uuid)
+                                           computer_str, self.pk, self.uuid)
 
     @classmethod
     def get(cls,label):
@@ -134,7 +135,7 @@ class Code(Node):
         Pass a string of code that will be put in the scheduler script before the
         execution of the code.
         """
-        self.set_attr('prepend_text', unicode(code))
+        self._set_attr('prepend_text', unicode(code))
 
     def get_prepend_text(self):
         """
@@ -149,9 +150,9 @@ class Code(Node):
         generation of a new calculation.
         """
         if input_plugin is None:
-            self.set_attr('input_plugin', None)
+            self._set_attr('input_plugin', None)
         else:
-            self.set_attr('input_plugin', unicode(input_plugin))
+            self._set_attr('input_plugin', unicode(input_plugin))
         
     def get_input_plugin_name(self):
         """
@@ -165,7 +166,7 @@ class Code(Node):
         Pass a string of code that will be put in the scheduler script after the
         execution of the code.
         """
-        self.set_attr('append_text', unicode(code))
+        self._set_attr('append_text', unicode(code))
 
     def get_append_text(self):
         """
@@ -179,7 +180,7 @@ class Code(Node):
         Implicitly set the code as local.
         """
         self._set_local()
-        self.set_attr('local_executable',exec_name)
+        self._set_attr('local_executable',exec_name)
 
     def get_local_executable(self):
         return self.get_attr('local_executable', u"")
@@ -220,7 +221,7 @@ class Code(Node):
         self._set_remote()
 
         self.dbnode.dbcomputer = remote_dbcomputer
-        self.set_attr('remote_exec_path', remote_exec_path)
+        self._set_attr('remote_exec_path', remote_exec_path)
 
     def get_remote_exec_path(self):
         if self.is_local():
@@ -243,10 +244,10 @@ class Code(Node):
 
         It also deletes the flags related to the local case (if any)
         """
-        self.set_attr('is_local', True)
+        self._set_attr('is_local', True)
         self.dbnode.dbcomputer = None
         try:
-            self.del_attr('remote_exec_path')
+            self._del_attr('remote_exec_path')
         except AttributeError:
             pass
 
@@ -258,9 +259,9 @@ class Code(Node):
 
         It also deletes the flags related to the local case (if any)
         """
-        self.set_attr('is_local', False)
+        self._set_attr('is_local', False)
         try:
-            self.del_attr('local_executable')
+            self._del_attr('local_executable')
         except AttributeError:
             pass
 

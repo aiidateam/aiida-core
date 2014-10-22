@@ -6,6 +6,15 @@ __copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de L
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.2.0"
 
+def load_dbenv():    
+    """
+    Load the database environment (Django) and perform some checks
+    """
+    import os
+    os.environ['DJANGO_SETTINGS_MODULE'] = 'aiida.djsite.settings.settings'
+    # Check schema version and the existence of the needed tables
+    check_schema_version()
+
 class DBLogHandler(logging.Handler):
     def emit(self, record):
         from django.core.exceptions import ImproperlyConfigured 
@@ -176,4 +185,65 @@ def long_field_length():
     else:
         return 1024
 
+def get_db_schema_version():
+    """
+    Get the current schema version stored in the DB. Return None if
+    it is not stored.
+    """
+    from aiida.common.globalsettings import get_global_setting
+    
+    try:
+        return get_global_setting('db|schemaversion')
+    except KeyError:
+        return None
+
+def set_db_schema_version(version):
+    """
+    Set the schema version stored in the DB. Use only if you know what
+    you are doing.
+    """
+    from aiida.common.globalsettings import set_global_setting
+    
+    return set_global_setting('db|schemaversion', version, description=
+                              "The version of the schema used in this "
+                              "database.")
+
+def check_schema_version():
+    """
+    Check if the version stored in the database is the same of the version
+    of the code.
+    
+    :note: if the DbSetting table does not exist, this function does not
+      fail. The reason is to avoid to have problems before running the first
+      syncdb call.
+      
+    :note: if no version is found, the version is set to the version of the
+      code. This is useful to have the code automatically set the DB version
+      at the first code execution.
+    
+    :raise ConfigurationError: if the two schema versions do not match.
+      Otherwise, just return.
+    """
+    import aiida.djsite.db.models
+    from django.db import connection
+    from aiida.common.exceptions import ConfigurationError
+
+    # Do not do anything if the table does not exist yet
+    if 'db_dbsetting' not in connection.introspection.table_names():
+        return
+    
+    code_schema_version = aiida.djsite.db.models.SCHEMA_VERSION
+    db_schema_version = get_db_schema_version()
+    
+    if db_schema_version is None:
+        # No code schema defined yet, I set it to the code version
+        set_db_schema_version(code_schema_version)
+        db_schema_version = get_db_schema_version()
+    
+    if code_schema_version != db_schema_version:
+        raise ConfigurationError("The code schema version is {}, but the "
+                                 "version stored in the database (DbSetting "
+                                 "table) is {}, I stop.".format(
+                                    code_schema_version, db_schema_version))
+    
     

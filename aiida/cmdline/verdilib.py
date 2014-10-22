@@ -34,6 +34,7 @@ from aiida.cmdline.commands.group import Group
 from aiida.cmdline.commands.importfile import Import
 from aiida.cmdline.commands.user import User
 from aiida.cmdline.commands.workflow import Workflow
+from aiida.cmdline.commands.comment import Comment
 
 
 from aiida.cmdline import execname
@@ -210,7 +211,7 @@ class Install(VerdiCommand):
     """
     def run(self,*args):
         import readline
-        from aiida.common.utils import load_django
+        from aiida import load_dbenv
         from aiida.common.setup import create_base_dirs, create_configuration        
 
         cmdline_args = list(args)
@@ -245,7 +246,7 @@ class Install(VerdiCommand):
 
         # I create here the default user
         print "Loading new environment..."
-        load_django()
+        load_dbenv()
         
         from aiida.common.setup import DEFAULT_AIIDA_USER
         from aiida.djsite.db import models
@@ -324,8 +325,9 @@ class GoToComputer(VerdiCommand):
     """
     def run(self,*args):
         from aiida.common.exceptions import NotExistent
-        from aiida.orm import Node, Calculation
-        from aiida.common.utils import load_django
+        from aiida.orm import Calculation
+        from aiida.orm import Node as AiidaOrmNode
+        from aiida import load_dbenv
         
         try:
             calc_id = args[0]
@@ -340,13 +342,13 @@ class GoToComputer(VerdiCommand):
             is_pk=False
 
         print "Loading environment..."
-        load_django()
+        load_dbenv()
 
         try:
             if is_pk:
-                calc = Node.get_subclass_from_pk(pk)
+                calc = AiidaOrmNode.get_subclass_from_pk(pk)
             else:
-                calc = Node.get_subclass_from_pk(uuid)
+                calc = AiidaOrmNode.get_subclass_from_pk(uuid)
         except NotExistent:
             print >> sys.stderr, "No node exists with ID={}.".format(calc_id)
             sys.exit(1)

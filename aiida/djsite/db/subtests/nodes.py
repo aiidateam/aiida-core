@@ -23,12 +23,12 @@ class TestTransitiveNoLoops(AiidaTestCase):
         n3 = Node().store()
         n4 = Node().store()
 
-        n1._add_link_to(n2)
-        n2._add_link_to(n3)
-        n3._add_link_to(n4)
-
+        n2._add_link_from(n1)
+        n3._add_link_from(n2)
+        n4._add_link_from(n3)
+        
         with self.assertRaises(ValueError): # This would generate a loop
-            n4._add_link_to(n1)
+            n1._add_link_from(n4)
 
 class TestTransitiveClosureDeletion(AiidaTestCase):
     """
@@ -51,31 +51,31 @@ class TestTransitiveClosureDeletion(AiidaTestCase):
         # I create a strange graph, inserting links in a order
         # such that I often have to create the transitive closure
         # between two graphs
-        n2._add_link_to(n3)
-        n1._add_link_to(n2)
-        n3._add_link_to(n5)
-        n4._add_link_to(n5)
-        n2._add_link_to(n4)
+        n3._add_link_from(n2)
+        n2._add_link_from(n1)
+        n5._add_link_from(n3)
+        n5._add_link_from(n4)
+        n4._add_link_from(n2)
 
-
-        n6._add_link_to(n7)
-        n7._add_link_to(n8)
+        
+        n7._add_link_from(n6)
+        n8._add_link_from(n7)
 
         # Yet, no links from 1 to 8
         self.assertEquals(
             len(DbPath.objects.filter(parent=n1,child=n8).distinct()),0)
 
-        n5._add_link_to(n6)
+        n6._add_link_from(n5)
         # Yet, now 2 links from 1 to 8
         self.assertEquals(
             len(DbPath.objects.filter(parent=n1,child=n8).distinct()),2)
 
-        n9._add_link_to(n7)
+        n7._add_link_from(n9)
         # Still two links...
         self.assertEquals(
             len(DbPath.objects.filter(parent=n1,child=n8).distinct()),2)
 
-        n6._add_link_to(n9)
+        n9._add_link_from(n6)
         # And now there should be 4 nodes
         self.assertEquals(
             len(DbPath.objects.filter(parent=n1,child=n8).distinct()),4)
@@ -117,7 +117,7 @@ class TestTransitiveClosureDeletion(AiidaTestCase):
 
         # Finally, I reconnect in a different way the two graphs and 
         # check that 1 and 8 are again connected
-        n3._add_link_to(n4)
+        n4._add_link_from(n3)
         self.assertEquals(
             len(DbPath.objects.filter(parent=n1,child=n8).distinct()),1)          
 
@@ -192,10 +192,10 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
         a3 = Node().store()
         a4 = Node().store()        
 
-        a1._add_link_to(a2)
-        a2._add_link_to(a3)
+        a2._add_link_from(a1)
+        a3._add_link_from(a2)
         a4._add_link_from(a2)
-        a3._add_link_to(a4)
+        a4._add_link_from(a3)
 
         # I check that I get the correct links
         self.assertEquals(set([n.uuid for n in a1.get_inputs()]),
@@ -221,21 +221,21 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
     def test_links_and_queries(self):
         from aiida.djsite.db.models import DbNode, DbLink
         a  = Node()
-        a.set_attr('myvalue', 123)
+        a._set_attr('myvalue', 123)
         a.store()
         
         a2 = Node().store()
         
         a3 = Node()
-        a3.set_attr('myvalue', 145)
+        a3._set_attr('myvalue', 145)
         a3.store()
         
         a4 = Node().store()        
 
-        a._add_link_to(a2)
-        a2._add_link_to(a3)
+        a2._add_link_from(a)
+        a3._add_link_from(a2)
         a4._add_link_from(a2)
-        a3._add_link_to(a4)
+        a4._add_link_from(a3)
 
         b = Node.query(pk=a2)
         self.assertEquals(len(b), 1)
@@ -310,15 +310,15 @@ class TestNodeBasic(AiidaTestCase):
 
     def test_attr_before_storing(self):
         a = Node()
-        a.set_attr('k1', self.boolval)
-        a.set_attr('k2', self.intval)
-        a.set_attr('k3', self.floatval)
-        a.set_attr('k4', self.stringval)
-        a.set_attr('k5', self.dictval)
-        a.set_attr('k6', self.listval)
-        a.set_attr('k7', self.emptydict)
-        a.set_attr('k8', self.emptylist)
-        a.set_attr('k9', None)
+        a._set_attr('k1', self.boolval)
+        a._set_attr('k2', self.intval)
+        a._set_attr('k3', self.floatval)
+        a._set_attr('k4', self.stringval)
+        a._set_attr('k5', self.dictval)
+        a._set_attr('k6', self.listval)
+        a._set_attr('k7', self.emptydict)
+        a._set_attr('k8', self.emptylist)
+        a._set_attr('k9', None)
 
         # Now I check if I can retrieve them, before the storage
         self.assertEquals(self.boolval,   a.get_attr('k1'))
@@ -332,23 +332,23 @@ class TestNodeBasic(AiidaTestCase):
         self.assertIsNone(a.get_attr('k9'))
 
         # And now I try to delete the keys
-        a.del_attr('k1')
-        a.del_attr('k2')
-        a.del_attr('k3')
-        a.del_attr('k4')
-        a.del_attr('k5')
-        a.del_attr('k6')
-        a.del_attr('k7')
-        a.del_attr('k8')
-        a.del_attr('k9')
+        a._del_attr('k1')
+        a._del_attr('k2')
+        a._del_attr('k3')
+        a._del_attr('k4')
+        a._del_attr('k5')
+        a._del_attr('k6')
+        a._del_attr('k7')
+        a._del_attr('k8')
+        a._del_attr('k9')
 
         with self.assertRaises(AttributeError):
             # I delete twice the same attribute
-            a.del_attr('k1')
+            a._del_attr('k1')
 
         with self.assertRaises(AttributeError):
             # I delete a non-existing attribute
-            a.del_attr('nonexisting')
+            a._del_attr('nonexisting')
 
         with self.assertRaises(AttributeError):
             # I get a deleted attribute
@@ -385,7 +385,7 @@ class TestNodeBasic(AiidaTestCase):
                 attribute = {semi_long_string: attribute}
                 key_len += len(semi_long_string) + len(models.DbAttribute._sep)
             
-            n.set_attr(semi_long_string, attribute)
+            n._set_attr(semi_long_string, attribute)
             
             n.store()
             
@@ -402,7 +402,7 @@ class TestNodeBasic(AiidaTestCase):
 
         date = now()
 
-        a.set_attr('some_date', date)
+        a._set_attr('some_date', date)
         a.store()
 
         retrieved = a.get_attr('some_date')
@@ -436,7 +436,7 @@ class TestNodeBasic(AiidaTestCase):
             }
 
         for k,v in attrs_to_set.iteritems():
-            a.set_attr(k, v)
+            a._set_attr(k, v)
 
         a.store()
 
@@ -453,9 +453,9 @@ class TestNodeBasic(AiidaTestCase):
         # I modify an attribute and add a new one; I mirror it in the dictionary
         # for later checking
         b_expected_attributes = copy.deepcopy(attrs_to_set)
-        b.set_attr('integer', 489)
+        b._set_attr('integer', 489)
         b_expected_attributes['integer'] = 489
-        b.set_attr('new', 'cvb')
+        b._set_attr('new', 'cvb')
         b_expected_attributes['new'] = 'cvb'
 
         # I check before storing that the attributes are ok
@@ -715,13 +715,13 @@ class TestNodeBasic(AiidaTestCase):
 
     def test_attr_after_storing(self):
         a = Node()
-        a.set_attr('none', None)
-        a.set_attr('bool', self.boolval)
-        a.set_attr('integer', self.intval)
-        a.set_attr('float', self.floatval)
-        a.set_attr('string', self.stringval)
-        a.set_attr('dict', self.dictval)
-        a.set_attr('list', self.listval)
+        a._set_attr('none', None)
+        a._set_attr('bool', self.boolval)
+        a._set_attr('integer', self.intval)
+        a._set_attr('float', self.floatval)
+        a._set_attr('string', self.stringval)
+        a._set_attr('dict', self.dictval)
+        a._set_attr('list', self.listval)
 
         a.store()
 
@@ -737,20 +737,20 @@ class TestNodeBasic(AiidaTestCase):
         # And now I try to edit/delete the keys; I should not be able to do it
         # after saving. I try only for a couple of attributes
         with self.assertRaises(ModificationNotAllowed):                
-            a.del_attr('bool')
+            a._del_attr('bool')
         with self.assertRaises(ModificationNotAllowed):                
-            a.set_attr('integer',13)
+            a._set_attr('integer',13)
 
 
     def test_attr_with_reload(self):
         a = Node()
-        a.set_attr('none', None)
-        a.set_attr('bool', self.boolval)
-        a.set_attr('integer', self.intval)
-        a.set_attr('float', self.floatval)
-        a.set_attr('string', self.stringval)
-        a.set_attr('dict', self.dictval)
-        a.set_attr('list', self.listval)
+        a._set_attr('none', None)
+        a._set_attr('bool', self.boolval)
+        a._set_attr('integer', self.intval)
+        a._set_attr('float', self.floatval)
+        a._set_attr('string', self.stringval)
+        a._set_attr('dict', self.dictval)
+        a._set_attr('list', self.listval)
 
         a.store()
 
@@ -775,7 +775,7 @@ class TestNodeBasic(AiidaTestCase):
 
 
         with self.assertRaises(ModificationNotAllowed):                
-            a.set_attr('i',12)
+            a._set_attr('i',12)
 
     def test_attrs_and_extras_wrong_keyname(self):
         """
@@ -789,7 +789,7 @@ class TestNodeBasic(AiidaTestCase):
 
         with self.assertRaises(ValidationError):
             # I did not store, I cannot modify
-            a.set_attr('name'+separator, 'blablabla')
+            a._set_attr('name'+separator, 'blablabla')
         
         with self.assertRaises(ValidationError):
             # I did not store, I cannot modify
@@ -797,12 +797,12 @@ class TestNodeBasic(AiidaTestCase):
 
     def test_attr_and_extras(self):
         a = Node()
-        a.set_attr('bool', self.boolval)
-        a.set_attr('integer', self.intval)
-        a.set_attr('float', self.floatval)
-        a.set_attr('string', self.stringval)
-        a.set_attr('dict', self.dictval)
-        a.set_attr('list', self.listval)
+        a._set_attr('bool', self.boolval)
+        a._set_attr('integer', self.intval)
+        a._set_attr('float', self.floatval)
+        a._set_attr('string', self.stringval)
+        a._set_attr('dict', self.dictval)
+        a._set_attr('list', self.listval)
 
         with self.assertRaises(ModificationNotAllowed):
             # I did not store, I cannot modify
@@ -893,7 +893,7 @@ class TestNodeBasic(AiidaTestCase):
             }
 
         for k,v in attrs_to_set.iteritems():
-            a.set_attr(k, v)
+            a._set_attr(k, v)
 
         a.store()
 
@@ -936,7 +936,7 @@ class TestNodeBasic(AiidaTestCase):
             }
 
         for k,v in attrs_to_set.iteritems():
-            a.set_attr(k, v)
+            a._set_attr(k, v)
             
         # Check before storing
         self.assertEquals(267,a.get_attr('state'))
@@ -954,14 +954,14 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(a.dbnode.nodeversion, 2)
 
         # I check that I can set this attribute
-        a.set_attr('state', 999)
+        a._set_attr('state', 999)
 
         # I check increment on new version
         self.assertEquals(a.dbnode.nodeversion, 3)
 
         with self.assertRaises(ModificationNotAllowed):
             # I check that I cannot modify this attribute
-            a.set_attr('otherattribute', 222)
+            a._set_attr('otherattribute', 222)
 
         # I check that the counter was not incremented
         self.assertEquals(a.dbnode.nodeversion, 3)
@@ -998,7 +998,7 @@ class TestNodeBasic(AiidaTestCase):
             }
 
         for k,v in attrs_to_set.iteritems():
-            a.set_attr(k, v)
+            a._set_attr(k, v)
             
         # Check before storing
         self.assertEquals(267,a.get_attr('state'))
@@ -1012,7 +1012,7 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(a.dbnode.nodeversion, 1)
 
         # I should be able to delete the attribute
-        a.del_attr('state')
+        a._del_attr('state')
 
         # I check increment on new version
         self.assertEquals(a.dbnode.nodeversion, 2)
@@ -1185,7 +1185,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         # Nothing stored
         endnode._add_link_from(n1, "N1")
         # Try also reverse storage
-        n2._add_link_to(endnode, "N2")
+        endnode._add_link_from(n2, "N2")
         
         self.assertEqual(endnode.get_inputs(only_in_db=True), [])
         self.assertEqual(set([(i[0], i[1].uuid)
@@ -1195,7 +1195,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         # Endnode not stored yet, n3 and n4 already stored        
         endnode._add_link_from(n3, "N3")
         # Try also reverse storage
-        n4._add_link_to(endnode, "N4")
+        endnode._add_link_from(n4, "N4")
         
         self.assertEqual(endnode.get_inputs(only_in_db=True), [])
         self.assertEqual(set([(i[0], i[1].uuid)
@@ -1269,8 +1269,8 @@ class TestSubNodesAndLinks(AiidaTestCase):
 
         n3._add_link_from(n1, label='label1')
         # This should be allowed since it is an output label with the same name
-        n3._add_link_to(n4, label='label1')
-
+        n4._add_link_from(n3, label='label1')
+        
         # An input link with that name already exists
         with self.assertRaises(UniquenessError):
             n3._add_link_from(n2, label='label1')
@@ -1278,7 +1278,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         # instead, for outputs, I can have multiple times the same label
         # (think to the case where n3 is a StructureData, and both n4 and n5
         #  are calculations that use as label 'input_cell')
-        n3._add_link_to(n5, label='label1')
+        n5._add_link_from(n3, label='label1')
 
     def test_links_label_autogenerator(self):
         n1 = Node().store()
@@ -1326,18 +1326,53 @@ class TestSubNodesAndLinks(AiidaTestCase):
        
     def test_link_with_unstored(self): 
         """
-        In the present version, I cannot add links between unstored nodes.
-        If we change this, remember to duplicate most of the tests that check
-        for the links to perform similar tests also before storing.
+        It is possible to store links between nodes even if they are unstored;
+        these links are cached. However, if working in the cache, an explicit
+        link name must be provided.
         """
         n1 = Node()
         n2 = Node()
         n3 = Node()
+        n4 = Node()
+
+        # No link names provided
+        with self.assertRaises(ModificationNotAllowed):
+            n4._add_link_from(n1)
+        
+        # Caching the links
+        n2._add_link_from(n1, label='l1')
+        n3._add_link_from(n2, label='l2')
+        n3._add_link_from(n1, label='l3')
+
+        # Twice the same link name
+        with self.assertRaises(UniquenessError):
+            n3._add_link_from(n4, label='l2')
+
+        # Twice the link to the same node
+        with self.assertRaises(UniquenessError):
+            n3._add_link_from(n2, label='l4')
+        
+        # Same error also in _replace_link_from
+        with self.assertRaises(UniquenessError):
+            n3._replace_link_from(n2, label='l4')
+
+        n2_in_links = [(l, n.uuid) for l, n in n2.get_inputs_dict().iteritems()]
+        self.assertEquals(sorted(n2_in_links), sorted([('l1', n1.uuid),
+                                                       ]))        
+        n3_in_links = [(l, n.uuid) for l, n in n3.get_inputs_dict().iteritems()]
+        self.assertEquals(sorted(n3_in_links), sorted([('l2', n2.uuid),
+                                                       ('l3', n1.uuid),
+                                                       ]))        
+                
+        n2.store_all()
+        n3.store_all()
     
-        with self.assertRaises(ModificationNotAllowed):
-            n2._add_link_from(n1)
-        with self.assertRaises(ModificationNotAllowed):
-            n2._add_link_to(n3)
+        n1_out_links = [(l, n.pk) for l, n in n1.get_outputs(also_labels=True)]
+        self.assertEquals(sorted(n1_out_links), sorted([('l1', n2.pk),
+                                                        ('l3', n3.pk),
+                                                        ]))
+        n2_out_links = [(l, n.pk) for l, n in n2.get_outputs(also_labels=True)]
+        self.assertEquals(sorted(n2_out_links), sorted([('l2', n3.pk)]))
     
     def test_valid_links(self):
         import tempfile
@@ -1373,17 +1408,17 @@ class TestSubNodesAndLinks(AiidaTestCase):
             _ = Calculation(computer=1,
                             resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1}).store()
         
-        d1._add_link_to(calc)
+        calc._add_link_from(d1)
         calc._add_link_from(d2,label='some_label')
         calc.use_code(code)
 
         # Cannot link to itself
         with self.assertRaises(ValueError):
-            d1._add_link_to(d1)
+            d1._add_link_from(d1)
 
         # I try to add wrong links (data to data, calc to calc, etc.)
         with self.assertRaises(ValueError):
-            d1._add_link_to(d2)
+            d2._add_link_from(d1)
 
         with self.assertRaises(ValueError):
             d1._add_link_from(d2)

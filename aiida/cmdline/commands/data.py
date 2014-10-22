@@ -3,7 +3,7 @@ import sys
 
 from aiida.cmdline.baseclass import (
     VerdiCommandRouter, VerdiCommandWithSubcommands)
-from aiida.common.utils import load_django
+from aiida import load_dbenv
 
 
 __author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
@@ -84,7 +84,7 @@ class _Upf(VerdiCommandWithSubcommands):
             print >> sys.stderr, 'Cannot find directory: '+folder
             sys.exit(1)
             
-        load_django()
+        load_dbenv()
         
         import aiida.orm.data.upf as upf
         files_found, files_uploaded = upf.upload_upf_family(folder, group_name, 
@@ -117,7 +117,7 @@ class _Upf(VerdiCommandWithSubcommands):
         args = list(args)
         parsed_args = parser.parse_args(args)
 
-        load_django()
+        load_dbenv()
         
         from aiida.orm import DataFactory
         
@@ -198,7 +198,7 @@ class _Structure(VerdiCommandWithSubcommands):
                             help="add a filter to show only structures created in the past N days",
                             type=int, action='store')
          
-        load_django()        
+        load_dbenv()        
         import datetime
         from aiida.orm import DataFactory
         from django.db.models import Q
@@ -258,7 +258,7 @@ class _Structure(VerdiCommandWithSubcommands):
             print "{}.".format(",".join(self.get_show_plugins()))
             sys.exit(1)
         
-        load_django()
+        load_dbenv()
         from aiida.orm import DataFactory
         StructureData = DataFactory('structure')
         st = StructureData.get_subclass_from_pk(structure_id)

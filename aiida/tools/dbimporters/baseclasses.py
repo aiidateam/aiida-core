@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-class DBImporter(object):
+class DbImporter(object):
     """
     Base class for database importers.
     """
@@ -33,20 +33,20 @@ class DBImporter(object):
         """
         raise NotImplementedError( "not implemented in base class" )
 
-class DBSearchResults(object):
+class DbSearchResults(object):
     """
     Base class for database results.
     """
 
     def __iter__(self):
         """
-        Instances of *DBSearchResults can be used as iterators.
+        Instances of *DbSearchResults can be used as iterators.
         """
         return self
 
     def fetch_all(self):
         """
-        Returns all query results as an array of BaseDBEntry.
+        Returns all query results as an array of BaseDbEntry.
         """
         results = []
         for entry in self:
@@ -55,19 +55,19 @@ class DBSearchResults(object):
 
     def next(self):
         """
-        Returns the next result of the query (instance of BaseDBEntry),
+        Returns the next result of the query (instance of BaseDbEntry),
         throws **StopIteration** when called after the last result.
         """
         raise NotImplementedError( "not implemented in base class" )
 
     def at(self, position):
         """
-        Returns ``position``-th result (instance of BaseDBEntry) from the
+        Returns ``position``-th result (instance of BaseDbEntry) from the
         result array (zero-based).
         """
         raise NotImplementedError( "not implemented in base class" )
 
-class DBEntry(object):
+class DbEntry(object):
     """
     Represents an entry from the structure database (COD, ICSD, ...).
     """

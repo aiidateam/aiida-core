@@ -5,3 +5,4 @@ __copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de L
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.2.0"
 
+from aiida.tools.dbimporters import DbImporterFactory

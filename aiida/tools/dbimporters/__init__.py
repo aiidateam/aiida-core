@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 
-def DBImporterFactory(pluginname):
+def DbImporterFactory(pluginname):
     """
-    This function loads the correct DBImporter plugin class
+    This function loads the correct DbImporter plugin class
     """
     from aiida.common.pluginloader import BaseFactory
-    from aiida.tools.dbimporters.baseclasses import DBImporter
+    from aiida.tools.dbimporters.baseclasses import DbImporter
     
-    return BaseFactory(pluginname, DBImporter, "aiida.tools.dbimporters.plugins")
+    return BaseFactory(pluginname, DbImporter, "aiida.tools.dbimporters.plugins")
 
     raise NotImplementedError
 

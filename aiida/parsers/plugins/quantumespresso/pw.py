@@ -178,11 +178,6 @@ class PwParser(Parser):
         
         new_nodes_list = []
         
-        # convert the dictionary into an AiiDA object
-        output_params = ParameterData(dict=out_dict)
-        # return it to the execmanager
-        new_nodes_list.append((self.get_linkname_outparams(),output_params))
-        
         k_points_list = trajectory_data.pop('k_points',None)
         k_points_weights_list = trajectory_data.pop('k_points_weights',None)
         
@@ -199,14 +194,32 @@ class PwParser(Parser):
         
             if bands_data:
                 # converting bands into a BandsData object (including the kpoints)
-                the_bands_data = BandsData()
-                the_bands_data.set_kpointsdata(the_kpoints_data)
-                the_bands_data.set_bands(bands_data['bands'], 
-                                         units = bands_data['bands_units'],
-                                         occupations = bands_data['occupations'])
+                the_bands_data1 = BandsData()
+                the_bands_data1.set_kpointsdata(the_kpoints_data)
+                the_bands_data1.set_bands(bands_data['bands'][0], 
+                                          units = bands_data['bands_units'],
+                                          occupations = bands_data['occupations'][0])
                 
-            new_nodes_list += [(self.get_linkname_out_kpoints(), 
-                        the_bands_data if bands_data else the_kpoints_data)]
+                try:
+                    the_bands_data2 = BandsData()
+                    the_bands_data2.set_kpointsdata(the_kpoints_data)
+                    the_bands_data2.set_bands(bands_data['bands'][1], 
+                                              units = bands_data['bands_units'],
+                                              occupations = bands_data['occupations'][1])
+                    
+                    new_nodes_list += [('output_band1',the_bands_data1),
+                                       ('output_band2',the_bands_data2)]
+                    out_dict['linknames_band'] = ['output_band1','output_band2']
+                except IndexError:
+                    new_nodes_list += [('output_band',the_bands_data1)]
+                    out_dict['linknames_band'] = ['output_band']
+            else:
+                new_nodes_list += [(self.get_linkname_out_kpoints(),the_kpoints_data)]
+        
+        # convert the dictionary into an AiiDA object
+        output_params = ParameterData(dict=out_dict)
+        # return it to the execmanager
+        new_nodes_list.append((self.get_linkname_outparams(),output_params))
         
         if trajectory_data: # although it should always be non-empty (k-points)
             import numpy

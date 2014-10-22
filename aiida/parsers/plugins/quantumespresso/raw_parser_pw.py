@@ -928,43 +928,78 @@ def parse_pw_xml_output(data,dir_with_bands=None):
     bands_dict = {}
     if dir_with_bands:
         try:
-            occupations = []
-            bands=[]
+            occupations1 = []
+            occupations2 = []
+            bands1 = []
+            bands2 = []
             for i in range(parsed_data['number_of_k_points']):
                 tagname='K-POINT.'+str(i+1)
                 a=target_tags.getElementsByTagName(tagname)[0]
-                tagname2='DATAFILE'
-                b=a.getElementsByTagName(tagname2)[0]
-                attrname='iotk_link'
-                value=str(b.getAttribute(attrname)).rstrip().replace('\n','')
 
-                eigenval_n = os.path.join(dir_with_bands,value)
-
-                # load the eigenval.xml file
-                with open(eigenval_n,'r') as eigenval_f:
-                    f = eigenval_f.read()
+                def read_bands_and_occupations(eigenval_n):
+                    # load the eigenval.xml file
+                    with open(eigenval_n,'r') as eigenval_f:
+                        f = eigenval_f.read()
+                        
+                    eig_dom = parseString(f)
                     
-                eig_dom = parseString(f)
+                    tagname = 'UNITS_FOR_ENERGIES'
+                    a = eig_dom.getElementsByTagName(tagname)[0]
+                    attrname = 'UNITS'
+                    metric = str(a.getAttribute(attrname))
+                    if metric not in ['Hartree']:
+                        raise QEOutputParsingError('Error parsing eigenvalues xml file, ' + \
+                                                   'units {} not implemented.'.format(metric))
+                    
+                    tagname='EIGENVALUES'
+                    a=eig_dom.getElementsByTagName(tagname)[0]
+                    b=a.childNodes[0]
+                    value_e = [ float(s)*hartree_to_ev for s in b.data.split() ]
+                    
+                    tagname='OCCUPATIONS'
+                    a = eig_dom.getElementsByTagName(tagname)[0]
+                    b = a.childNodes[0]
+                    value_o = [ float(s) for s in b.data.split() ]
+                    return value_e,value_o
+            
+                # two cases: in cases of magnetic calculations, I have both spins    
+                try:
+                    tagname2 = 'DATAFILE'
+                    b = a.getElementsByTagName(tagname2)[0]
+                    attrname = 'iotk_link'
+                    value = str(b.getAttribute(attrname)).rstrip().replace('\n','')
+                    eigenval_n =  os.path.join(dir_with_bands,value)
 
-                tagname = 'UNITS_FOR_ENERGIES'
-                a = eig_dom.getElementsByTagName(tagname)[0]
-                attrname = 'UNITS'
-                metric = str(a.getAttribute(attrname))
-                if metric not in ['Hartree']:
-                    raise QEOutputParsingError('Error parsing eigenvalues xml file, ' + \
-                                               'units {} not implemented.'.format(metric))
+                    value_e,value_o = read_bands_and_occupations(eigenval_n)
+                    bands1.append(value_e)
+                    occupations1.append(value_o)
+                    
+                except IndexError:
+                    tagname2='DATAFILE.1'
+                    b1 = a.getElementsByTagName(tagname2)[0]
+                    tagname2='DATAFILE.2'
+                    b2 = a.getElementsByTagName(tagname2)[0]
+                    attrname = 'iotk_link'
+                    value1 = str(b1.getAttribute(attrname)).rstrip().replace('\n','')
+                    value2 = str(b2.getAttribute(attrname)).rstrip().replace('\n','')
+                    
+                    eigenval_n =  os.path.join(dir_with_bands,value1)
+                    value_e,value_o = read_bands_and_occupations(eigenval_n)
+                    bands1.append(value_e)
+                    occupations1.append(value_o)
 
-                tagname='EIGENVALUES'
-                a=eig_dom.getElementsByTagName(tagname)[0]
-                b=a.childNodes[0]
-                value=[ float(s)*hartree_to_ev for s in b.data.split() ]
-                bands.append(value)
+                    eigenval_n =  os.path.join(dir_with_bands,value2)
+                    value_e,value_o = read_bands_and_occupations(eigenval_n)
+                    bands2.append(value_e)
+                    occupations2.append(value_o)
 
-                tagname='OCCUPATIONS'
-                a = eig_dom.getElementsByTagName(tagname)[0]
-                b = a.childNodes[0]
-                value=[ float(s) for s in b.data.split() ]
-                occupations.append(value)
+            occupations = [occupations1]
+            bands = [bands1]
+            if occupations2:
+                occupations.append(occupations2)
+            if bands2:
+                bands.append(bands2)
+            
             bands_dict['occupations'] = occupations
             bands_dict['bands'] = bands
             bands_dict['bands'+units_suffix] = default_energy_units
@@ -979,17 +1014,20 @@ def parse_pw_xml_output(data,dir_with_bands=None):
         # if there is at least an empty band:
         if parsed_data['smearing_method'] or  \
            parsed_data['number_of_electrons']/2. < parsed_data['number_of_bands']:
-        # initialize lumo
-            lumo = parsed_data['homo']+10000.0
-            for list_bands in bands_dict['bands']:
-                for value in list_bands:
-                    if (value > parsed_data['fermi_energy']) and (value<lumo):
-                        lumo=value
-            if (lumo==parsed_data['homo']+10000.0) or lumo<=parsed_data['fermi_energy']:
-                #might be an error for bandgap larger than 10000 eV...
-                raise QEOutputParsingError('Error while searching for LUMO.')
-            parsed_data['lumo']=lumo
-            parsed_data['lumo'+units_suffix] = default_energy_units
+            
+            # #TODO: currently I do it only for non magnetic systems
+            if len(bands_dict['occupations'])==1:
+            # initialize lumo
+                lumo = parsed_data['homo']+10000.0
+                for list_bands in bands_dict['bands']:
+                    for value in list_bands:
+                        if (value > parsed_data['fermi_energy']) and (value<lumo):
+                            lumo=value
+                if (lumo==parsed_data['homo']+10000.0) or lumo<=parsed_data['fermi_energy']:
+                    #might be an error for bandgap larger than 10000 eV...
+                    raise QEOutputParsingError('Error while searching for LUMO.')
+                parsed_data['lumo']=lumo
+                parsed_data['lumo'+units_suffix] = default_energy_units
     
     # CARD symmetries
     parsed_data = copy.deepcopy(xml_card_symmetries(parsed_data,dom))

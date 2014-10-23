@@ -497,6 +497,7 @@ def submit_calc(calc, authinfo, transport=None):
             remote_user = t.whoami()
             computer = calc.get_computer()
             # TODO Doc: {username} field
+            # TODO: if something is changed here, fix also 'verdi computer test'
             remote_working_directory = authinfo.get_workdir().format(
                 username=remote_user)
             if not remote_working_directory.strip():

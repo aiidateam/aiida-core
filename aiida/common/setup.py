@@ -294,6 +294,7 @@ def create_base_dirs():
   
     if (not os.path.isdir(aiida_dir)):
         os.makedirs(aiida_dir)
+    os.chmod(aiida_dir, 0700)
     
     if (not os.path.isdir(aiida_daemon_dir)):
         os.makedirs(aiida_daemon_dir)

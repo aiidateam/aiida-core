@@ -110,10 +110,10 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         Performs a query on the Icsd database using ``keyword = value`` pairs,
         specified in ``kwargs``. Returns an instance of IcsdSearchResults.
         """
+        import urllib
 
         self.actual_args = {
             "action": "Search",
-            "page" : "{}",
             "nb_rows" : "100", #max is 100
             "order_by" : "yearDesc",
             "authors" : "",
@@ -123,20 +123,21 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
 
         for k, v in kwargs.iteritems():
             try:
-                realname, newv = keywords[k](k,v)
+                realname, newv = self.keywords[k](k,v)
                 # Because different keys correspond to the same search field.
-                if realname in  ["authors", "volume","mineral"]:
+                if realname in  ["authors","volume","mineral"]:
                     self.actual_args[realname] = self.actual_args[realname] + newv + " "
-
                 else:
                     self.actual_args[realname] = newv
             except KeyError as e:
                 raise TypeError("ICSDImporter got an unexpected keyword argument '{}'".format(e.message))
 
         url_values = urllib.urlencode(self.actual_args)
-        query_url = self.urladd + url_values
+        query_url = self.db_parameters["urladd"] + url_values
+        
+        print query_url
 
-        return IcsdSearchResults(query = query_url, server = self.server)
+        return IcsdSearchResults(query = query_url, server = self.db_parameters["server"])
 
 
 
@@ -148,22 +149,6 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
             if key in kwargs.keys():
                 self.db_parameters[key] = kwargs[key]
 
-    def _connect_db(self):
-        """
-        Connects to the MySQL database for performing searches.
-        """
-        self.db = MySQLdb.connect( host =   self.db_parameters['host'],
-                                   user =   self.db_parameters['user'],
-                                   passwd = self.db_parameters['passwd'],
-                                   db =     self.db_parameters['db'] )
-        self.cursor = self.db.cursor()
-
-    def _disconnect_db(self):
-        """
-        Closes connection to the MySQL database.
-        """
-        self.db.close()
-
 
 class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
     """
@@ -173,10 +158,8 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
     cif_url = "index.php?format=cif&action=Export&id%5B%5D={}"
     db_name = "Icsd"
 
-    def __init__(self, results):
-        import urllib2
-        from bs4 import BeautifulSoup
-        import re
+    def __init__(self, query, server):
+
 
         self.server = server
         self.query = query
@@ -186,7 +169,7 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
         self.page = 1
         self.position = 0
 
-        query_page()
+        self.query_page()
 
     def next(self):
         """
@@ -195,10 +178,10 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
         if len( self.results ) > self.position:
             self.position = self.position + 1
             return self.at( self.position - 1 )
-        elif number_of_results > self.position:
+        elif self.number_of_results > self.position:
             self.position = self.position + 1
             self.page = self.page + 1
-            query_page()
+            self.query_page()
             return self.at (self.position - 1)
         else:
             raise StopIteration()
@@ -207,28 +190,35 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
         """
         Returns ``position``-th result as IcsdEntry.
         """
-        if position < 0 | position >= number_of_results:
+        if position < 0 | position >= self.number_of_results:
             raise IndexError( "index out of bounds" )
         if position not in self.entries:
-            self.entries[position] = IcsdEntry( self.server + cif_url.format(self.results[position]), \
+            self.entries[position] = IcsdEntry( self.server + self.cif_url.format(self.results[position]), \
                           source_db = self.db_name, \
                           db_id = self.results[position] )
         return self.entries[position]
 
     def query_page(self):
+        import urllib2
+        from bs4 import BeautifulSoup
+        import re
+        print self.page
+        print str(self.page)
+        print self.query
+        print self.server + self.query +"&page={}".format(str(self.page))
 
-        self.html = urllib2.urlopen(self.query.format(self.page)).read()
+        self.html = urllib2.urlopen(self.server + self.query.format(str(self.page))).read()
 
         self.soup = BeautifulSoup(self.html)
 
-        if number_of_results is None:
+        if self.number_of_results is None:
             #is there a better way to get this number?
-            number_of_results = int(re.findall(r'\d+', str(self.soup.find_all("i")[-1])[0]))
+            number_of_results = int(re.findall(r'\d+', str(self.soup.find_all("i")[-1]))[0])
             print number_of_results
 
         for i in self.soup.find_all('input', type="checkbox"):
             #x = SearchResult(server, cif_url, i['id'])
-            results.append(i['id'])
+            self.results.append(i['id'])
 
 
 class IcsdEntry(aiida.tools.dbimporters.baseclasses.DbEntry):
@@ -302,3 +292,4 @@ def correct_cif(cif):
             else:
                 lines[author_index+inc] = "'" + lines[author_index+inc] + "'"
                 inc = inc + 1
+

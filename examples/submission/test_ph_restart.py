@@ -137,7 +137,7 @@ if __name__ == '__main__':
             ('Maximum CPU time exceeded' in parentcalc.res.warnings) ):
         
             calc = parentcalc.create_restart(restart_if_failed=True)
-            calc.label = "Test QE ph.x restart"
+            #calc.label = "Test QE ph.x restart"
             calc.description = "Test restart calculation with the Quantum ESPRESSO ph.x code"
         
         else:

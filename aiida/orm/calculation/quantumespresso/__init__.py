@@ -541,10 +541,9 @@ class BasePwCpInputGenerator(object):
         if settings_dict.pop('ALSO_BANDS',False):
             # To retrieve also the bands data
             settings_retrieve_list.append( [os.path.join(self._OUTPUT_SUBFOLDER,
-                                                self._PREFIX+'.save','K*[0-9]','eigenval.xml'),
-                                            '.',
-                                            2]
-                                          )
+                                self._PREFIX+'.save','K*[0-9]','eigenval*.xml'),
+                                '.',
+                                2])
         
         calcinfo.retrieve_list += settings_retrieve_list
         calcinfo.retrieve_list += self._internal_retrieve_list

@@ -42,7 +42,7 @@ cell: one iron (Fe) atom in the origin, and one oxygen (O) at the center of
 the cube (this cell has been just chosen as an example and most probably does
 not exist).
 
-:note: As you can see in the example above, both the cell coordinates and
+.. note:: As you can see in the example above, both the cell coordinates and
   the atom coordinates are expressed in angstrom, and the position of
   the atoms are given in a global absolute reference frame.
   
@@ -90,7 +90,7 @@ Utility methods ``s.is_alloy()`` and ``s.has_vacancies()`` can be used to
 verify, respectively, if more than one element if given in the symbols list,
 and if the sum of all weights is smaller than one.
 
-:note: if you pass more than one symbol, the method ``s.is_alloy()`` will 
+.. note:: if you pass more than one symbol, the method ``s.is_alloy()`` will 
   always return ``True``, even if only one symbol has occupancy 1. and 
   all others have occupancy zero::
     
@@ -164,15 +164,16 @@ the following way:
   
   To create two species ``Fe1`` and ``Fe2`` for iron, with the same mass.
   
-  :note: You do not need to specify explicitly the mass if the default one
+  .. note:: You do not need to specify explicitly the mass if the default one
     is ok for you. However, when you pass explicitly a name and it coincides
     with the name of an existing species, all properties that you
     specify must be identical to the ones of the existing species, or the 
     method will raise an exception.
   
-  :note: If you prefer to work with the internal
-    :py:class:`~aiida.orm.data.structure.Kind` and 
-    :py:class:`~aiida.orm.data.structure.Site` classes, you can obtain the same
+  .. note:: If you prefer to work with the 
+    internal :py:class:`~aiida.orm.data.structure.Kind` 
+    and :py:class:`~aiida.orm.data.structure.Site` classes,
+    you can obtain the same
     result of the two lines above with::
     
       from aiida.orm.data.structure import Kind, Site
@@ -191,7 +192,7 @@ method::
     
     ase_atoms = aiida_structure.get_ase()
 
-:note: As we support alloys and vacancies in AiiDA, while ``ase.Atom`` does not,
+.. note:: As we support alloys and vacancies in AiiDA, while ``ase.Atom`` does not,
   it is not possible to export to ASE a structure with vacancies or alloys.
 
 If instead you have as ASE Atoms object and you want to load the structure
@@ -237,7 +238,7 @@ symbol in order to get the species name::
   Fe1
   Fe2
   
-:note: in complicated cases (multiple tags, masses, ...),
+.. note:: in complicated cases (multiple tags, masses, ...),
   it is possible that exporting a AiiDA structure
   to ASE and then importing it again will not perfectly preserve the kinds and
   kind names.

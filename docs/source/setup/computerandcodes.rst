@@ -247,6 +247,14 @@ The configuration of computers happens in two steps.
            
  After these two steps have been completed, your computer is ready to go!
 
+.. note:: To check if you set up the computer correctly,
+  execute::
+
+    verdi computer test COMPUTERNAME
+     
+  that will run a few tests (file copy, file retrieval, check of the jobs in
+  the scheduler queue) to verify that everything works as expected.
+
 .. note:: If you are not sure if your computer is already set up, use the command::
    
      verdi computer list

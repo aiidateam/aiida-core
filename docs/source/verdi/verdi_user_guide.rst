@@ -75,19 +75,21 @@ autocompletion of the verdi commands.
 ``verdi computer``
 ++++++++++++++++++
 
-  *  **rename**: changes the name of a computer.
+  *  **setup**: creates a new computer object
+  *  **configure**: set up some extra info that can be used in the connection
+     with that computer.
   *  **enable**: to enable a computer. If the computer is disabled, the daemon 
      will not try to connect to the computer, so it will not retrieve or launch 
      calculations. Useful if a computer is under mantainance. 
-  *  **configure**: set up some extra info that can be used in the connection
-     with that computer.
-  *  **show**: shows the details of an installed computer
-  *  **setup**: creates a new computer object
-  *  **list**: list all installed computers
+  *  **rename**: changes the name of a computer.
   *  **disable**: disable a computer (see enable for a larger description)
+  *  **show**: shows the details of an installed computer
+  *  **list**: list all installed computers
   *  **delete**: deletes a computer node. Works only if the computer node is 
      a disconnected node in the database (has not been used yet)
-
+  *  **test**: tests if the current user (or a given user) can connect to the
+     computer and if basic operations perform as expected (file copy, getting
+     the list of jobs in the scheduler queue, ...)
 
 ``verdi daemon``
 ++++++++++++++++

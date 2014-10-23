@@ -40,6 +40,9 @@ def parse_raw_output(out_file, input_dict, parser_opts=None, xml_file=None, dir_
     Receives in input the paths to the output file and the xml file.
     
     :param out_file: path to pw std output
+    :param input_dict: not used
+    :param parser_opts: not used
+    :param dir_with_bands: path to directory with all k-points (Kxxxxx) folders
     :param xml_file: path to QE data-file.xml
     
     :returns out_dict: a dictionary with parsed data
@@ -70,7 +73,6 @@ def parse_raw_output(out_file, input_dict, parser_opts=None, xml_file=None, dir_
             with open(xml_file,'r') as f:                
                 xml_lines = f.read() # Note: read() and not readlines()
         except IOError:
-            raise
             raise QEOutputParsingError("Failed to open xml file: {}.".format(xml_file))
 
         xml_data,structure_data,bands_data = parse_pw_xml_output(xml_lines,dir_with_bands)
@@ -707,10 +709,13 @@ def parse_pw_xml_output(data,dir_with_bands=None):
     Returns a dictionary with parsed values
     """
     import copy
+    from xml.parsers.expat import ExpatError
     # NOTE : I often assume that if the xml file has been written, it has no
     # internal errors.
-    
-    dom = parseString(data)
+    try:
+        dom = parseString(data)
+    except ExpatError:
+        return {'xml_warnings':"Error in XML parseString: bad format"},{},{}
     
     parsed_data = {}
     
@@ -1077,7 +1082,7 @@ def parse_pw_text_output(data, xml_data=None, structure_data=None):
     all_warnings = dict(critical_warnings.items() + minor_warnings.items())
 
     # Find some useful quantities.
-    if not xml_data and not structure_data:
+    if not xml_data.get('number_of_bands',None) and not structure_data:
         try:
             for line in data.split('\n'):
                 if 'lattice parameter (alat)' in line:

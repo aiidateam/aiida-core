@@ -110,7 +110,7 @@ class Folder(object):
         :param pattern: a pattern for the file/folder names, using Unix filename
                 pattern matching (see Python standard module fnmatch).
                 By default, pattern is '*', matching all files and folders.
-        :param only_filenames: if False (default), return pairs (name, is_file).
+        :param only_paths: if False (default), return pairs (name, is_file).
                 if True, return only a flat list.
 
         :Returns:

@@ -32,6 +32,7 @@ from aiida.cmdline.commands.devel import Devel
 from aiida.cmdline.commands.exportfile import Export
 from aiida.cmdline.commands.group import Group
 from aiida.cmdline.commands.importfile import Import
+from aiida.cmdline.commands.node import Node
 from aiida.cmdline.commands.user import User
 from aiida.cmdline.commands.workflow import Workflow
 from aiida.cmdline.commands.comment import Comment

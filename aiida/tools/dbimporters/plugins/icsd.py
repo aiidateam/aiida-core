@@ -6,65 +6,55 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
     """
     Database importer for ICSD.
     """
+    # Put similar functions together into one
 
-    def parse_icsdcode(k,code_list):
+    def parse_all(k,v):
         """
-        Should take list as well as single entry
+        Takes numbers, strings, list and returns a string.
         """
-        if type(code_list) is list:
-            retval = ' '.join(code_list)
-        elif type(code_list) is int:
-            retval = str(code_list)
-        elif type(code_list) is str:
-            retval = code_list
-        return ("authors", retval)
+        if type(v) is list:
+            retval = ' '.join(v)
+        elif type(v) is int:
+            retval = str(v)
+        elif type(v) is str:
+            retval = v
+        return retval
 
-    def parse_elements(k,el_list):
-        #retval = v.split()
-        retval = ' '.join(el_list)
-        return ("elements", retval)
-
-    def parse_num(k,v):
-        retval = v
-        return ("elementc", retval)
+    def parse_number(k,v):
+        """
+        int to string
+        """
+        if type(v) is int:
+            retval = str(v)
+        elif type (v) is str:
+            retval = v
+        return retval
 
     def parse_mineral(k,v):
-        retval = v
-        return ("mineral", retval)
-
-    def parse_formula(k,v):
-        #should start with either A=, P= or T=
-        #do some checks
-        retval = v
-        return ("formula", retval)
-
-    def parse_spacegroup(k,v):
-        #should start with either A=, P= or T=
-        #do some checks
-        retval = v
-        return ("spaceg", retval)
-
-    def parse_journal(k,v):
-        #should start with either A=, P= or T=
-        #do some checks
-        retval = v
-        return ("journal", retval)
-
-    def parse_title(k,v):
-        retval = v
-        return ("title", retval)
-
-    def parse_year(k,v):
-        retval = v
-        return ("year", retval)
+        if k == "mineral_name":
+            retval = "M="+ v
+        elif k == "chemical_name":
+            retval = "C=" + v
+        return retval
 
     def parse_volume(k,v):
-        # volume v=, density d=, molecular mass m=
-        # cell dimensions a= b= c=, angles al be ga
-        retval = v
-        return ("volume", retval)
+        if k == "volume":
+            return "v=" + v
+        elif k == "a":
+            return "a=" + v
+        elif k == "b":
+            return "b=" + v
+        elif k == "c":
+            return "c=" + v
+        elif k == "alpha":
+            return "al=" + v
+        elif k == "beta":
+            return "be=" + v
+        elif k == "gamma":
+            return "ga=" + v
 
-    def parse_system(v):
+
+    def parse_system(k,v):
         valid_systems = {
         "cubic": "CU",
         "hexagonal": "HE",
@@ -74,33 +64,36 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         "trigonal": "TG",
         "triclinic": "TC"
         }
+        return valid_systems[v]
 
-    keywords = { 'id'                : parse_icsdcode,
-                 'element'           : parse_elements,
-                 'number_of_elements': parse_num,
-                 'mineral_name'      : parse_mineral,
-                 'chemical_name'     : parse_mineral,
-                 'formula'           : parse_formula,
-                 'volume'            : parse_volume,
-                 'spacegroup'        : parse_spacegroup,
-                 'a'                 : parse_volume,
-                 'b'                 : parse_volume,
-                 'c'                 : parse_volume,
-                 'alpha'             : parse_volume,
-                 'beta'              : parse_volume,
-                 'gamma'             : parse_volume,
-                 'authors'           : parse_icsdcode,
-                 'journal'           : parse_journal,
-                 'title'             : parse_title,
-                 'year'              : parse_year}
+    keywords = { "id"                : ("authors", parse_all),
+                 "authors"           : ("authors", parse_all),
+                 "element"           : ("elements", parse_all),
+                 "number_of_elements": ("elementc", parse_all),
+                 "mineral_name"      : ("mineral", parse_mineral),
+                 "chemical_name"     : ("mineral", parse_mineral),
+                 "formula"           : ("formula", parse_all),
+                 "volume"            : ("volume", parse_volume),
+                 "a"                 : ("volume", parse_volume),
+                 "b"                 : ("volume", parse_volume),
+                 "c"                 : ("volume", parse_volume),
+                 "alpha"             : ("volume", parse_volume),
+                 "beta"              : ("volume", parse_volume),
+                 "gamma"             : ("volume", parse_volume),
+                 "spacegroup"        : ("spaceg", parse_all),
+                 "journal"           : ("journal", parse_all),
+                 "title"             : ("title", parse_all),
+                 "year"              : ("year", parse_all),
+                 #"crystal_system"    : ("system", parse_system),
+                 }
 
     def __init__(self, **kwargs):
         #import logging
-        #aiidalogger  =  logging.getLogger('aiida')
-        #self.logger  =  aiidalogger.getChild('ICSDImporter')
-        self.db_parameters = { 'server':   '',
-                               #'db':     'icsd',
-                               'urladd': 'index.php?',
+        #aiidalogger  =  logging.getLogger("aiida")
+        #self.logger  =  aiidalogger.getChild("ICSDImporter")
+        self.db_parameters = { "server":   "",
+                               #"db":     "icsd",
+                               "urladd": "index.php?",
                                #'urladd': 'index.php?format=cif&action=Export&id%5B%5D={}'
                             }
         self.setup_db( **kwargs )
@@ -123,7 +116,8 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
 
         for k, v in kwargs.iteritems():
             try:
-                realname, newv = self.keywords[k](k,v)
+                realname = self.keywords[k][0]
+                newv = self.keywords[k][1](k,v)
                 # Because different keys correspond to the same search field.
                 if realname in  ["authors","volume","mineral"]:
                     self.actual_args[realname] = self.actual_args[realname] + newv + " "
@@ -134,8 +128,6 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
 
         url_values = urllib.urlencode(self.actual_args)
         query_url = self.db_parameters["urladd"] + url_values
-        
-        print query_url
 
         return IcsdSearchResults(query = query_url, server = self.db_parameters["server"])
 
@@ -202,10 +194,6 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
         import urllib2
         from bs4 import BeautifulSoup
         import re
-        print self.page
-        print str(self.page)
-        print self.query
-        print self.server + self.query +"&page={}".format(str(self.page))
 
         self.html = urllib2.urlopen(self.server + self.query.format(str(self.page))).read()
 
@@ -214,7 +202,6 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
         if self.number_of_results is None:
             #is there a better way to get this number?
             number_of_results = int(re.findall(r'\d+', str(self.soup.find_all("i")[-1]))[0])
-            print number_of_results
 
         for i in self.soup.find_all('input', type="checkbox"):
             #x = SearchResult(server, cif_url, i['id'])

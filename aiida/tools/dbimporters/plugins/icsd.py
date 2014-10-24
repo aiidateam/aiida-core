@@ -99,9 +99,14 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         self.setup_db( **kwargs )
 
     def query(self, **kwargs):
+        #query web or mysql db
+        return self._queryweb( **kwargs)
+
+    def _queryweb(self, **kwargs):
         """
         Performs a query on the Icsd database using ``keyword = value`` pairs,
         specified in ``kwargs``. Returns an instance of IcsdSearchResults.
+        Web search has a maximum result number fixed at 1000.
         """
         import urllib
 

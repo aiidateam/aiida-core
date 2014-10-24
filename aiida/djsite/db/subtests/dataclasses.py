@@ -102,6 +102,69 @@ class TestSinglefileData(AiidaTestCase):
         with open(b.get_abs_path(basename)) as f:
             self.assertEquals(f.read(), file_content)
 
+class TestCifData(AiidaTestCase):
+    """
+    Tests for CifData class.
+    """
+    def test_reload_cifdata(self):
+        import os
+        import tempfile
+
+        from aiida.orm.data.cif import CifData
+
+        file_content = "data_test _cell_length_a 10(1)"
+        with tempfile.NamedTemporaryFile() as f:
+            filename = f.name
+            basename = os.path.split(filename)[1]
+            f.write(file_content)
+            f.flush()
+            a = CifData(file=filename)
+
+        the_uuid = a.uuid
+
+        self.assertEquals(a.get_folder_list(),[basename])
+
+        with open(a.get_abs_path(basename)) as f:
+            self.assertEquals(f.read(), file_content)
+
+        a.store()
+
+        with open(a.get_abs_path(basename)) as f:
+            self.assertEquals(f.read(), file_content)
+        self.assertEquals(a.get_folder_list(),[basename])
+
+        b = Node.get_subclass_from_uuid(the_uuid)
+
+        # I check the retrieved object
+        self.assertTrue(isinstance(b,CifData))
+        self.assertEquals(b.get_folder_list(),[basename])
+        with open(b.get_abs_path(basename)) as f:
+            self.assertEquals(f.read(), file_content)
+
+        # Checking the get_or_create() method:
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(file_content)
+            f.flush()
+            c, created = CifData.get_or_create(f.name,store_cif=False)
+
+        self.assertTrue(isinstance(c,CifData))
+        self.assertTrue(not created)
+
+        with open(c.get_file_abs_path()) as f:
+            self.assertEquals(f.read(), file_content)
+
+        other_content = "data_test _cell_length_b 10(1)"
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(other_content)
+            f.flush()
+            c, created = CifData.get_or_create(f.name,store_cif=False)
+
+        self.assertTrue(isinstance(c,CifData))
+        self.assertTrue(created)
+
+        with open(c.get_file_abs_path()) as f:
+            self.assertEquals(f.read(), other_content)
+
 class TestKindValidSymbols(AiidaTestCase):
     """
     Tests the symbol validation of the

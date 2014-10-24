@@ -701,8 +701,11 @@ class BasePwCpInputGenerator(object):
         
         c2 = self.copy()
         
-        labelstring = c2.label + " Restart of {} {}.".format(
+        if not 'Restart' in c2.label:
+            labelstring = c2.label + " Restart of {} {}.".format(
                                         self.__class__.__name__,self.pk)
+        else:
+            labelstring = " Restart of {} {}.".format(self.__class__.__name__,self.pk)
         c2.label = labelstring.lstrip()
         
         # set the new links

@@ -61,6 +61,23 @@ class CifData(SinglefileData):
             else:        
                 return (cifs[0], False)
 
+    @property
+    def values(self):
+        """
+        Returns parsed CIF file.
+        """
+        if self._values is None:
+            import CifFile
+            self._values = CifFile.ReadCif( self.get_file_abs_path() )
+        return self._values
+
+    def __init__(self, **kwargs):
+        """
+        Initialises an instance of CifData.
+        """
+        super(CifData,self).__init__(**kwargs)
+        self._values = None
+
     def store(self):
         """
         Store the node.

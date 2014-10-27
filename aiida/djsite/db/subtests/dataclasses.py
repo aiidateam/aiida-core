@@ -101,6 +101,45 @@ class TestCodDbImporter(AiidaTestCase):
                           "formula REGEXP ' Cl[0-9 ]') AND "
                           "(nel IN (5)) AND (sg IN ('P -1'))")
 
+    def test_datatype_checks(self):
+        """
+        Rather complicated, but wide-coverage test for data types, accepted
+        and rejected by CodDbImporter.*_clause methods.
+        """
+        from aiida.tools.dbimporters.plugins.cod import CodDbImporter
+
+        codi = CodDbImporter()
+        messages = [ "",
+                     "incorrect value for keyword 'test' -- " + \
+                     "only integers and strings are accepted",
+                     "incorrect value for keyword 'test' -- " + \
+                     "only strings are accepted",
+                     "incorrect value for keyword 'test' -- " + \
+                     "only integers and floats are accepted",
+                     "invalid literal for int() with base 10: 'text'" ]
+        values = [ 10, 'text', '10', 1.0 / 3, [ 1, 2, 3 ] ]
+        methods = [ codi.int_clause,
+                    codi.str_exact_clause,
+                    codi.formula_clause,
+                    codi.str_fuzzy_clause,
+                    codi.composition_clause,
+                    codi.volume_clause ]
+        results = [ [ 0, 4, 0, 1, 1 ],
+                    [ 0, 0, 0, 1, 1 ],
+                    [ 2, 0, 0, 2, 2 ],
+                    [ 0, 0, 0, 1, 1 ],
+                    [ 2, 0, 0, 2, 2 ],
+                    [ 0, 3, 3, 0, 3 ] ]
+
+        for i in range( 0, len( methods ) ):
+            for j in range( 0, len( values ) ):
+                message = messages[0]
+                try:
+                    methods[i]( "test", "test", [ values[j] ] )
+                except ValueError as e:
+                    message = e.message
+                self.assertEquals(message, messages[results[i][j]])
+
 class TestSinglefileData(AiidaTestCase):
     """
     Test the SinglefileData class.

@@ -49,6 +49,12 @@ class DbImporter(object):
         """
         raise NotImplementedError("not implemented in base class")
 
+    def get_supported_keywords(self):
+        """
+        Returns the list of all supported query keywords.
+        """
+        raise NotImplementedError("not implemented in base class")
+
 class DbSearchResults(object):
     """
     Base class for database results.

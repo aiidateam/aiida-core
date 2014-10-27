@@ -124,7 +124,8 @@ class CifData(SinglefileData):
             attr_md5 = self.get_attr('md5')
         except AttributeError:
             raise ValidationError("attribute 'md5' not set.")
-        if attr_md5 != self.generate_md5():
+        md5 = self.generate_md5()
+        if attr_md5 != md5:
             raise ValidationError("Attribute 'md5' says '{}' but '{}' was "
                                   "parsed instead.".format(
-                    attr_element, element))
+                    attr_md5, md5))

@@ -150,17 +150,17 @@ class CodDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
     def __init__(self, **kwargs):
         self.db         = None
         self.cursor     = None
-        self._query_sql = None
         self.db_parameters = { 'host':   'www.crystallography.net',
                                'user':   'cod_reader',
                                'passwd': '',
                                'db':     'cod' }
         self.setup_db( **kwargs )
 
-    def query(self, **kwargs):
+    def query_sql(self, **kwargs):
         """
-        Performs a query on the COD database using ``keyword = value`` pairs,
-        specified in ``kwargs``. Returns an instance of CodSearchResults.
+        Forms a SQL query for querying the COD database using
+        ``keyword = value`` pairs, specified in ``kwargs``. Returns a
+        string with SQL statement.
         """
         sql_parts = [ "(status IS NULL OR status != 'retracted')" ]
         for key in self.keywords.keys():
@@ -179,13 +179,18 @@ class CodDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
                 "search keyword(s) '" + \
                 "', '".join( kwargs.keys() ) + "' " + \
                 "is(are) not implemented for COD" )
-        self._query_sql = "SELECT file FROM data WHERE " + \
-                          " AND ".join( sql_parts )
+        return "SELECT file FROM data WHERE " + " AND ".join( sql_parts )
 
+    def query(self, **kwargs):
+        """
+        Performs a query on the COD database using ``keyword = value`` pairs,
+        specified in ``kwargs``. Returns an instance of CodSearchResults.
+        """
+        query_statement = self.query_sql( **kwargs )
         self._connect_db()
         results = []
         try:
-            self.cursor.execute( self._query_sql )
+            self.cursor.execute( query_statement )
             self.db.commit()
             for row in self.cursor.fetchall():
                 results.append( str( row[0] ) )

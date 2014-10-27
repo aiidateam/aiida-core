@@ -183,6 +183,12 @@ class CodDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
                 "', available parameters: '" + \
                 "', '".join( self.db_parameters.keys() ) + "'" )
 
+    def get_supported_keywords(self):
+        """
+        Returns the list of all supported query keywords.
+        """
+        return self.keywords.keys()
+
     def _connect_db(self):
         """
         Connects to the MySQL database for performing searches.

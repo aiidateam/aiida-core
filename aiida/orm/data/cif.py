@@ -1,6 +1,16 @@
 # -*- coding: utf-8 -*-
 from aiida.orm.data.singlefile import SinglefileData
 
+def has_pycifrw():
+    """
+    :return: True if the PyCifRW module can be imported, False otherwise.
+    """
+    try:
+        import CifFile
+    except ImportError:
+        return False
+    return True
+
 class CifData(SinglefileData): 
     """
     Wrapper for Crystallographic Interchange File (CIF)

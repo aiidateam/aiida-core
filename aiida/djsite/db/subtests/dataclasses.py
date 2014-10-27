@@ -106,6 +106,8 @@ class TestCifData(AiidaTestCase):
     """
     Tests for CifData class.
     """
+    from aiida.orm.data.cif import has_pycifrw
+
     def test_reload_cifdata(self):
         import os
         import tempfile
@@ -164,6 +166,21 @@ class TestCifData(AiidaTestCase):
 
         with open(c.get_file_abs_path()) as f:
             self.assertEquals(f.read(), other_content)
+
+    @unittest.skipIf(not has_pycifrw(),"Unable to import PyCifRW")
+    def test_parse_cifdata(self):
+        import os
+        import tempfile
+
+        from aiida.orm.data.cif import CifData
+
+        file_content = "data_test _cell_length_a 10(1)"
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(file_content)
+            f.flush()
+            a = CifData(file=f.name)
+
+        self.assertEquals(a.values.keys(), ['test'])
 
 class TestKindValidSymbols(AiidaTestCase):
     """

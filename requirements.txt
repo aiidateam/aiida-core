@@ -55,6 +55,9 @@ paramiko>=1.10
 #ICSD tools
 #PyMySQL>=0.6.1
 
+# PyCifRW for parsing CIF files in aiida.orm.data.cif
+#PyCifRW>=3.6.2
+
 # NumPy, mainly for the ArrayData objects but sometimes
 # used also for arrays in other parts of the code
 numpy

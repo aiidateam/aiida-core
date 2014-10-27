@@ -8,47 +8,71 @@ class CodDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
     Database importer for Crystallography Open Database.
     """
 
-    def int_clause(self, key, values):
+    def int_clause(self, key, alias, values):
         """
         Returns SQL query predicate for querying integer fields.
         """
+        for e in values:
+            if not isinstance( e, int ) and not isinstance( e, str ):
+                raise ValueError("incorrect value for keyword '" + alias + \
+                                 "' -- only integers and strings are accepted")
         return key + " IN (" + ", ".join( map( lambda i: str( int( i ) ),
                                                values ) ) + ")"
 
-    def str_exact_clause(self, key, values):
+    def str_exact_clause(self, key, alias, values):
         """
         Returns SQL query predicate for querying string fields.
         """
+        for e in values:
+            if not isinstance( e, int ) and not isinstance( e, str ):
+                raise ValueError("incorrect value for keyword '" + alias + \
+                                 "' -- only integers and strings are accepted")
         return key + \
-               " IN (" + ", ".join( map( lambda f: "'" + f + "'", \
+               " IN (" + ", ".join( map( lambda f: "'" + str(f) + "'", \
                                          values ) ) + ")"
-    def formula_clause(self, key, values):
+    def formula_clause(self, key, alias, values):
         """
         Returns SQL query predicate for querying formula fields.
         """
+        for e in values:
+            if not isinstance( e, str ):
+                raise ValueError("incorrect value for keyword '" + alias + \
+                                 "' -- only strings are accepted")
         return self.str_exact_clause( key, \
-                                      map( lambda f: "- " + f + " -", \
+                                      map( lambda f: "- " + str(f) + " -", \
                                            values ) )
 
-    def str_fuzzy_clause(self, key, values):
+    def str_fuzzy_clause(self, key, alias, values):
         """
         Returns SQL query predicate for fuzzy querying of string fields.
         """
+        for e in values:
+            if not isinstance( e, int ) and not isinstance( e, str ):
+                raise ValueError("incorrect value for keyword '" + alias + \
+                                 "' -- only integers and strings are accepted")
         return " OR ".join( map( lambda s: key + \
-                                           " LIKE '%" + s + "%'", values ) )
+                                           " LIKE '%" + str(s) + "%'", values ) )
 
-    def composition_clause(self, key, values):
+    def composition_clause(self, key, alias, values):
         """
         Returns SQL query predicate for querying elements in formula fields.
         """
+        for e in values:
+            if not isinstance( e, str ):
+                raise ValueError("incorrect value for keyword '" + alias + \
+                                 "' -- only strings are accepted")
         return " AND ".join( map( lambda e: "formula REGEXP ' " + \
                                             e + "[0-9 ]'", \
                                   values ) )
 
-    def double_clause(self, key, values, precision):
+    def double_clause(self, key, alias, values, precision):
         """
         Returns SQL query predicate for querying double-valued fields.
         """
+        for e in values:
+            if not isinstance( e, int ) and not isinstance( e, float ):
+                raise ValueError("incorrect value for keyword '" + alias + \
+                                 "' -- only integers and floats are accepted")
         return " OR ".join( map( lambda d: key + \
                                            " BETWEEN " + \
                                            str( d - precision ) + " AND " + \
@@ -61,35 +85,35 @@ class CodDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
     temperature_precision = 0.001
     pressure_precision    = 1
 
-    def length_clause(self, key, values):
+    def length_clause(self, key, alias, values):
         """
         Returns SQL query predicate for querying lattice vector lengths.
         """
-        return self.double_clause(key, values, self.length_precision)
+        return self.double_clause(key, alias, values, self.length_precision)
 
-    def angle_clause(self, key, values):
+    def angle_clause(self, key, alias, values):
         """
         Returns SQL query predicate for querying lattice angles.
         """
-        return self.double_clause(key, values, self.angle_precision)
+        return self.double_clause(key, alias, values, self.angle_precision)
 
-    def volume_clause(self, key, values):
+    def volume_clause(self, key, alias, values):
         """
         Returns SQL query predicate for querying unit cell volume.
         """
-        return self.double_clause(key, values, self.volume_precision)
+        return self.double_clause(key, alias, values, self.volume_precision)
 
-    def temperature_clause(self, key, values):
+    def temperature_clause(self, key, alias, values):
         """
         Returns SQL query predicate for querying temperature.
         """
-        return self.double_clause(key, values, self.temperature_precision)
+        return self.double_clause(key, alias, values, self.temperature_precision)
 
-    def pressure_clause(self, key, values):
+    def pressure_clause(self, key, alias, values):
         """
         Returns SQL query predicate for querying pressure.
         """
-        return self.double_clause(key, values, self.pressure_precision)
+        return self.double_clause(key, alias, values, self.pressure_precision)
 
     keywords = { 'id'                : [ 'file',          int_clause ],
                  'element'           : [ 'element',       composition_clause ],
@@ -147,6 +171,7 @@ class CodDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
                 sql_parts.append( \
                     "(" + self.keywords[key][1]( self, \
                                                  self.keywords[key][0], \
+                                                 key, \
                                                  values ) + \
                     ")" )
         if len( kwargs.keys() ) > 0:

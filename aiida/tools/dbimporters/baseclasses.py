@@ -18,11 +18,27 @@ class DbImporter(object):
         * formula -- chemical formula
         * volume -- volume of the unit cell in cubic angstroms
         * spacegroup -- symmetry space group symbol in Hermann-Mauguin notation
-        * a, b, c, alpha, beta, gamma -- lattice parameters
+        * spacegroup_hall -- symmetry space group symbol in Hall notation
+        * a, b, c -- length of lattice vectors in angstroms
+        * alpha, beta, gamma -- angles between lattice vectors in degrees
+        * z -- number of the formula units in the unit cell
+        * measurement_temp -- temperature in kelvins at which the unit-cell
+          parameters were measured
+        * measurement_pressure -- pressure in kPa at which the unit-cell
+          parameters were measured
+        * diffraction_temp -- mean temperature in kelvins at which the
+          intensities were measured
+        * diffraction_pressure -- mean pressure in kPa at which the
+          intensities were measured
         * authors -- authors of the publication
         * journal -- name of the journal
         * title -- title of the publication
         * year -- year of the publication
+        * journal_volume -- journal volume of the publication
+        * journal_issue -- journal issue of the publication
+        * first_page -- first page of the publication
+        * last_page -- last page of the publication
+        * doi -- digital object identifyer (DOI), refering to the pulication
         """
         raise NotImplementedError( "not implemented in base class" )
 

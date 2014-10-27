@@ -1,6 +1,16 @@
 # -*- coding: utf-8 -*-
 from aiida.orm.data.singlefile import SinglefileData
 
+def has_pycifrw():
+    """
+    :return: True if the PyCifRW module can be imported, False otherwise.
+    """
+    try:
+        import CifFile
+    except ImportError:
+        return False
+    return True
+
 class CifData(SinglefileData): 
     """
     Wrapper for Crystallographic Interchange File (CIF)
@@ -60,6 +70,23 @@ class CifData(SinglefileData):
                                       ",".join([str(i.pk) for i in cifs])))
             else:        
                 return (cifs[0], False)
+
+    @property
+    def values(self):
+        """
+        Returns parsed CIF file.
+        """
+        if self._values is None:
+            import CifFile
+            self._values = CifFile.ReadCif( self.get_file_abs_path() )
+        return self._values
+
+    def __init__(self, **kwargs):
+        """
+        Initialises an instance of CifData.
+        """
+        super(CifData,self).__init__(**kwargs)
+        self._values = None
 
     def store(self):
         """

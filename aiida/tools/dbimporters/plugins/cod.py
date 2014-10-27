@@ -112,16 +112,21 @@ class CodDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         specified in ``kwargs``. Returns an instance of CodSearchResults.
         """
         sql_parts = [ "(status IS NULL OR status != 'retracted')" ]
-        for key in kwargs.keys():
-            if key not in self.keywords.keys():
-                raise NotImplementedError( 'search keyword ' + key + \
-                                           ' is not implemented for COD' )
-            if not isinstance( kwargs[key], list ):
-                kwargs[key] = [ kwargs[key] ]
-            sql_parts.append( "(" + self.keywords[key][1]( self, \
-                                                           self.keywords[key][0], \
-                                                           kwargs[key] ) + \
-                              ")" )
+        for key in self.keywords.keys():
+            if key in kwargs.keys():
+                values = kwargs.pop(key)
+                if not isinstance( values, list ):
+                    values = [ values ]
+                sql_parts.append( \
+                    "(" + self.keywords[key][1]( self, \
+                                                 self.keywords[key][0], \
+                                                 values ) + \
+                    ")" )
+        if len( kwargs.keys() ) > 0:
+            raise NotImplementedError( \
+                "search keyword(s) '" + \
+                "', '".join( kwargs.keys() ) + "' " + \
+                "is(are) not implemented for COD" )
         self.query_sql = "SELECT file FROM data WHERE " + \
                          " AND ".join( sql_parts )
 

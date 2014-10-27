@@ -39,6 +39,7 @@ class CodDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only strings are accepted")
         return self.str_exact_clause( key, \
+                                      alias, \
                                       map( lambda f: "- " + str(f) + " -", \
                                            values ) )
 

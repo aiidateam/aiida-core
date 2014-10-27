@@ -143,7 +143,13 @@ class CodDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         """
         for key in self.db_parameters.keys():
             if key in kwargs.keys():
-                self.db_parameters[key] = kwargs[key]
+                self.db_parameters[key] = kwargs.pop(key)
+        if len( kwargs.keys() ) > 0:
+            raise NotImplementedError( \
+                "unknown database connection parameter(s): '" + \
+                "', '".join( kwargs.keys() ) + \
+                "', available parameters: '" + \
+                "', '".join( self.db_parameters.keys() ) + "'" )
 
     def _connect_db(self):
         """
@@ -191,7 +197,7 @@ class CodSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
         if position < 0 | position >= len( self.results ):
             raise IndexError( "index out of bounds" )
         if position not in self.entries:
-            self.entries[position] =
+            self.entries[position] = \
                 CodEntry( self.base_url + \
                           self.results[position] + ".cif", \
                           source_db = self.db_name, \

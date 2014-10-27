@@ -60,7 +60,46 @@ class TestCalcStatus(AiidaTestCase):
         with self.assertRaises(ModificationNotAllowed):
             c._set_state(calc_states.WITHSCHEDULER)
         
+class TestCodDbImporter(AiidaTestCase):
+    """
+    Test the CodDbImporter class.
+    """
+    def test_query_construction_1(self):
+        from aiida.tools.dbimporters.plugins.cod import CodDbImporter
 
+        codi = CodDbImporter()
+        q = codi.query_sql( id = [ "1000000", 3000000 ],
+                            element = [ "C", "H", "Cl" ],
+                            number_of_elements = 5,
+                            chemical_name = [ "caffeine", "serotonine" ],
+                            formula = [ "C6 H6" ],
+                            volume = [ 100, 120.005 ],
+                            spacegroup = "P -1",
+                            a = [ 10 / 3, 1 ],
+                            alpha = [ 10 / 6, 0 ],
+                            measurement_temp = [ 0, 10.5 ],
+                            measurement_pressure = [ 1000, 1001 ] )
+        self.assertEquals(q, \
+                          "SELECT file FROM data WHERE "
+                          "(status IS NULL OR status != 'retracted') AND "
+                          "(file IN (1000000, 3000000)) AND "
+                          "(chemname LIKE '%caffeine%' OR "
+                          "chemname LIKE '%serotonine%') AND "
+                          "(formula IN ('- C6 H6 -')) AND "
+                          "(a BETWEEN 2.999 AND 3.001 OR "
+                          "a BETWEEN 0.999 AND 1.001) AND "
+                          "(celltemp BETWEEN -0.001 AND 0.001 OR "
+                          "celltemp BETWEEN 10.499 AND 10.501) AND "
+                          "(vol BETWEEN 99.999 AND 100.001 OR "
+                          "vol BETWEEN 120.004 AND 120.006) AND "
+                          "(alpha BETWEEN 0.999 AND 1.001 OR "
+                          "alpha BETWEEN -0.001 AND 0.001) AND "
+                          "(cellpressure BETWEEN 999 AND 1001 OR "
+                          "cellpressure BETWEEN 1000 AND 1002) AND "
+                          "(formula REGEXP ' C[0-9 ]' AND "
+                          "formula REGEXP ' H[0-9 ]' AND "
+                          "formula REGEXP ' Cl[0-9 ]') AND "
+                          "(nel IN (5)) AND (sg IN ('P -1'))")
 
 class TestSinglefileData(AiidaTestCase):
     """

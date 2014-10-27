@@ -40,14 +40,14 @@ class DbImporter(object):
         * last_page -- last page of the publication
         * doi -- digital object identifyer (DOI), refering to the pulication
         """
-        raise NotImplementedError( "not implemented in base class" )
+        raise NotImplementedError("not implemented in base class")
 
     def setup_db(self, **kwargs):
         """
         Sets the database parameters. The method should reconnect to the
         database using updated parameters, if already connected.
         """
-        raise NotImplementedError( "not implemented in base class" )
+        raise NotImplementedError("not implemented in base class")
 
 class DbSearchResults(object):
     """
@@ -66,7 +66,7 @@ class DbSearchResults(object):
         """
         results = []
         for entry in self:
-            results.append( entry )
+            results.append(entry)
         return results
 
     def next(self):
@@ -74,14 +74,14 @@ class DbSearchResults(object):
         Returns the next result of the query (instance of BaseDbEntry),
         throws **StopIteration** when called after the last result.
         """
-        raise NotImplementedError( "not implemented in base class" )
+        raise NotImplementedError("not implemented in base class")
 
     def at(self, position):
         """
         Returns ``position``-th result (instance of BaseDbEntry) from the
         result array (zero-based).
         """
-        raise NotImplementedError( "not implemented in base class" )
+        raise NotImplementedError("not implemented in base class")
 
 class DbEntry(object):
     """
@@ -93,7 +93,7 @@ class DbEntry(object):
         """
         Returns raw contents of a CIF file as string.
         """
-        raise NotImplementedError( "not implemented in base class" )
+        raise NotImplementedError("not implemented in base class")
 
     def get_raw_cif(self):
         """
@@ -105,24 +105,24 @@ class DbEntry(object):
         """
         Returns ASE representation of the CIF.
         """
-        raise NotImplementedError( "not implemented in base class" )
+        raise NotImplementedError("not implemented in base class")
 
     def get_cif_node(self):
         """
         Returns CIF node, that can be used in AiiDA workflow.
         """
-        raise NotImplementedError( "not implemented in base class" )
+        raise NotImplementedError("not implemented in base class")
 
     def get_aiida_structure(self):
         """
         Returns AiiDA-compatible structure, representing the crystal
         structure from the CIF file.
         """
-        raise NotImplementedError( "not implemented in base class" )
+        raise NotImplementedError("not implemented in base class")
 
     def get_parsed_cif(self):
         """
         Returns data structure, representing the CIF file. Can be created
         using **PyCIFRW** or any other open-source parser.
         """
-        raise NotImplementedError( "not implemented in base class" )
+        raise NotImplementedError("not implemented in base class")

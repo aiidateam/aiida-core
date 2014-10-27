@@ -140,6 +140,16 @@ class TestCodDbImporter(AiidaTestCase):
                     message = e.message
                 self.assertEquals(message, messages[results[i][j]])
 
+    def test_dbentry_creation(self):
+        from aiida.tools.dbimporters.plugins.cod import CodEntry
+        from aiida.tools.dbimporters.plugins.cod import CodSearchResults
+
+        results = CodSearchResults( [ "1000000", "1000001", "2000000" ] )
+        self.assertEquals(results.at(1).url, \
+                          "http://www.crystallography.net/cod/1000001.cif")
+        self.assertEquals(results.next().url, \
+                          "http://www.crystallography.net/cod/1000000.cif")
+
 class TestSinglefileData(AiidaTestCase):
     """
     Test the SinglefileData class.

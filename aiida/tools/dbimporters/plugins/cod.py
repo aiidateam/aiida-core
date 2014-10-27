@@ -97,9 +97,9 @@ class CodDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
                  'year'              : [ 'year',     int_clause ] }
 
     def __init__(self, **kwargs):
-        self.db        = None
-        self.cursor    = None
-        self.query_sql = None
+        self.db         = None
+        self.cursor     = None
+        self._query_sql = None
         self.db_parameters = { 'host':   'www.crystallography.net',
                                'user':   'cod_reader',
                                'passwd': '',
@@ -127,13 +127,13 @@ class CodDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
                 "search keyword(s) '" + \
                 "', '".join( kwargs.keys() ) + "' " + \
                 "is(are) not implemented for COD" )
-        self.query_sql = "SELECT file FROM data WHERE " + \
-                         " AND ".join( sql_parts )
+        self._query_sql = "SELECT file FROM data WHERE " + \
+                          " AND ".join( sql_parts )
 
         self._connect_db()
         results = []
         try:
-            self.cursor.execute( self.query_sql )
+            self.cursor.execute( self._query_sql )
             self.db.commit()
             for row in self.cursor.fetchall():
                 results.append( str( row[0] ) )

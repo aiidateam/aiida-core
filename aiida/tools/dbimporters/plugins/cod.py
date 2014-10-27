@@ -55,9 +55,10 @@ class CodDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
                                            str( d + precision ), \
                                  values ) )
 
-    length_precision = 0.001
-    angle_precision  = 0.001
-    volume_precision = 0.001
+    length_precision      = 0.001
+    angle_precision       = 0.001
+    volume_precision      = 0.001
+    temperature_precision = 0.001
 
     def length_clause(self, key, values):
         """
@@ -77,24 +78,39 @@ class CodDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         """
         return self.double_clause(key, values, self.volume_precision)
 
-    keywords = { 'id'                : [ 'file',     int_clause ],
-                 'element'           : [ 'element',  composition_clause ],
-                 'number_of_elements': [ 'nel',      int_clause ],
-                 'mineral_name'      : [ 'mineral',  str_fuzzy_clause ],
-                 'chemical_name'     : [ 'chemname', str_fuzzy_clause ],
-                 'formula'           : [ 'formula',  formula_clause ],
-                 'volume'            : [ 'vol',      volume_clause ],
-                 'spacegroup'        : [ 'sg',       str_exact_clause ],
-                 'a'                 : [ 'a',        length_clause ],
-                 'b'                 : [ 'b',        length_clause ],
-                 'c'                 : [ 'c',        length_clause ],
-                 'alpha'             : [ 'alpha',    angle_clause ],
-                 'beta'              : [ 'beta',     angle_clause ],
-                 'gamma'             : [ 'gamma',    angle_clause ],
-                 'authors'           : [ 'authors',  str_fuzzy_clause ],
-                 'journal'           : [ 'journal',  str_fuzzy_clause ],
-                 'title'             : [ 'title',    str_fuzzy_clause ],
-                 'year'              : [ 'year',     int_clause ] }
+    def temperature_clause(self, key, values):
+        """
+        Returns SQL query predicate for querying temperature.
+        """
+        return self.double_clause(key, values, self.temperature_precision)
+
+    keywords = { 'id'                : [ 'file',      int_clause ],
+                 'element'           : [ 'element',   composition_clause ],
+                 'number_of_elements': [ 'nel',       int_clause ],
+                 'mineral_name'      : [ 'mineral',   str_fuzzy_clause ],
+                 'chemical_name'     : [ 'chemname',  str_fuzzy_clause ],
+                 'formula'           : [ 'formula',   formula_clause ],
+                 'volume'            : [ 'vol',       volume_clause ],
+                 'spacegroup'        : [ 'sg',        str_exact_clause ],
+                 'spacegroup_hall'   : [ 'sgHall',    str_exact_clause ],
+                 'a'                 : [ 'a',         length_clause ],
+                 'b'                 : [ 'b',         length_clause ],
+                 'c'                 : [ 'c',         length_clause ],
+                 'alpha'             : [ 'alpha',     angle_clause ],
+                 'beta'              : [ 'beta',      angle_clause ],
+                 'gamma'             : [ 'gamma',     angle_clause ],
+                 'z'                 : [ 'Z',         int_clause ],
+                 'measurement_temp'  : [ 'celltemp',  temperature_clause ],
+                 'diffraction_temp'  : [ 'diffrtemp', temperature_clause ],
+                 'authors'           : [ 'authors',   str_fuzzy_clause ],
+                 'journal'           : [ 'journal',   str_fuzzy_clause ],
+                 'title'             : [ 'title',     str_fuzzy_clause ],
+                 'year'              : [ 'year',      int_clause ],
+                 'journal_volume'    : [ 'volume',    int_clause ],
+                 'journal_issue'     : [ 'issue',     str_exact_clause ],
+                 'first_page'        : [ 'firstpage', str_exact_clause ],
+                 'last_page'         : [ 'lastpage',  str_exact_clause ],
+                 'doi'               : [ 'doi',       str_exact_clause ] }
 
     def __init__(self, **kwargs):
         self.db         = None

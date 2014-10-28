@@ -48,6 +48,12 @@ class Calculation(Node):
         # If they are identical, outputs will be joined.
         self._SCHED_OUTPUT_FILE = '_scheduler-stdout.txt'
         self._SCHED_ERROR_FILE = '_scheduler-stderr.txt'
+        
+        # Files that should be shown by default
+        # Set it to None if you do not have a default file
+        # Used, e.g., by 'verdi calculation inputshow/outputshow
+        self._DEFAULT_INPUT_FILE = None
+        self._DEFAULT_OUTPUT_FILE = None
     
     @property
     def _set_defaults(self):

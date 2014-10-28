@@ -100,6 +100,10 @@ class CpCalculation(BasePwCpInputGenerator, Calculation):
                                      ext)) for ext in _cp_ext_list]
         self._internal_retrieve_list += [self._FILE_XML_PRINT_COUNTER]
     
+        # Default input and output files
+        self._DEFAULT_INPUT_FILE = 'aiida.in'
+        self._DEFAULT_OUTPUT_FILE = 'aiida.out'
+    
     @classproperty
     def _FILE_XML_PRINT_COUNTER_BASENAME(cls):
         return 'print_counter.xml'

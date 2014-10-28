@@ -211,6 +211,13 @@ class _Repo(VerdiCommandWithSubcommands):
         except ValueError as e:
             print >> sys.stderr, e.message
             sys.exit(1)
+        except IOError as e:
+            import errno
+            # Ignore Broken pipe errors, re-raise everything else
+            if e.errno == errno.EPIPE:
+                pass
+            else:
+                raise
         
            
             

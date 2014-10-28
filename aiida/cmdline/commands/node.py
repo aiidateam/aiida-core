@@ -11,6 +11,99 @@ __copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de L
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.2.0"
 
+def list_repo_files(node, path, color):
+    """
+    Given a Node and a relative path prints in output the list of files 
+    in the given path in the Node repository directory.
+    
+    :param node: a Node instance
+    :param path: a string with the relative path to list. Can be a file.
+    :param color: boolean, if True prints with the codes to show colors.
+    :raise ValueError: if the file or directory is not found.
+    """
+    import os
+    
+    f = node.folder
+    
+    is_dir = False
+    parts = path.split(os.path.sep)
+    # except the last item
+    for item in parts[:-1]:
+        f = f.get_subfolder(item)
+    if parts:
+        if f.isdir(parts[-1]):
+            f = f.get_subfolder(parts[-1])
+            is_dir = True
+        else:
+            fname = parts[-1]
+    else:
+        is_dir = True
+
+    if is_dir:
+        if not f.isdir('.'):
+            raise ValueError(
+                "{}: No such file or directory in the repo".format(path))
+    
+        for elem, elem_is_file in sorted(f.get_content_list(only_paths=False)):
+            if elem_is_file or not color:
+                print elem
+            else:
+                # BOLD("1;") and color 34=blue
+                outstr = "\x1b[1;{color_id}m{elem}\x1b[0m".format(color_id=34,
+                                                                  elem=elem)
+                print outstr
+    else:
+        if not f.isfile(fname):
+            raise ValueError(
+                "{}: No such file or directory in the repo".format(path))
+        
+        print fname
+    
+
+def cat_repo_files(node, path):
+    """
+    Given a Node and a relative path to a file in the Node repository directory,
+    prints in output the content of the file.
+    
+    :param node: a Node instance
+    :param path: a string with the relative path to list. Must be a file.
+    :raise ValueError: if the file is not found, or is a directory.
+    """
+    import os
+    
+    f = node.folder
+    
+    is_dir = False
+    parts = path.split(os.path.sep)
+    # except the last item
+    for item in parts[:-1]:
+        f = f.get_subfolder(item)
+    if parts:
+        if f.isdir(parts[-1]):
+            f = f.get_subfolder(parts[-1])
+            is_dir = True
+        else:
+            fname = parts[-1]
+    else:
+        is_dir = True
+
+    if is_dir:
+        if not f.isdir('.'):
+            raise ValueError(
+                "{}: No such file or directory in the repo".format(path))
+        else:
+            raise ValueError("{}: is a directory".format(path))
+    else:
+        if not f.isfile(fname):
+            raise ValueError(
+                "{}: No such file or directory in the repo".format(path))
+            
+        absfname = f.get_abs_path(fname)
+        with open(absfname) as f:
+            for l in f:
+                sys.stdout.write(l)
+
+
 class Node(VerdiCommandRouter):
     """
     Manage operations on AiiDA nodes
@@ -48,7 +141,7 @@ class _Repo(VerdiCommandWithSubcommands):
         List the files in the repository folder.
         """
         import argparse
-        import os
+        from aiida.common.exceptions import NotExistent
         
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -72,49 +165,25 @@ class _Repo(VerdiCommandWithSubcommands):
         load_dbenv()
         from aiida.orm import Node as OrmNode        
         
-        n = OrmNode.get_subclass_from_pk(parsed_args.pk)
-        f = n.folder
+        try:
+            n = OrmNode.get_subclass_from_pk(parsed_args.pk)
+        except NotExistent as e:
+            print >> sys.stderr, e.message
+            sys.exit(1)
         
-        is_dir = False
-        parts = parsed_args.path.split(os.path.sep)
-        # except the last item
-        for item in parts[:-1]:
-            f = f.get_subfolder(item)
-        if parts:
-            if f.isdir(parts[-1]):
-                f = f.get_subfolder(parts[-1])
-                is_dir = True
-            else:
-                fname = parts[-1]
-        else:
-            is_dir = True
-
-        if is_dir:
-            if not f.isdir('.'):
-                print >> sys.stderr, "{}: No such file or directory in the repo".format(parsed_args.path)
-                sys.exit(1)
+        try:
+            list_repo_files(n, parsed_args.path, parsed_args.color)
+        except ValueError as e:
+            print >> sys.stderr, e.message
+            sys.exit(1)
         
-            for elem, elem_is_file in sorted(f.get_content_list(only_paths=False)):
-                if elem_is_file or not parsed_args.color:
-                    print elem
-                else:
-                    # BOLD("1;") and color 34=blue
-                    outstr = "\x1b[1;{color_id}m{elem}\x1b[0m".format(color_id=34,
-                                                                      elem=elem)
-                    print outstr
-        else:
-            if not f.isfile(fname):
-                print >> sys.stderr, "{}: No such file or directory in the repo".format(parsed_args.path)
-                sys.exit(1)
-            
-            print fname
         
     def cat(self, *args):
         """
         Output the content of a file in the repository folder.
         """
         import argparse
-        import os
+        from aiida.common.exceptions import NotExistent
         
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -131,39 +200,17 @@ class _Repo(VerdiCommandWithSubcommands):
         load_dbenv()
         from aiida.orm import Node as OrmNode        
         
-        n = OrmNode.get_subclass_from_pk(parsed_args.pk)
-        f = n.folder
+        try:
+            n = OrmNode.get_subclass_from_pk(parsed_args.pk)
+        except NotExistent as e:
+            print >> sys.stderr, e.message
+            sys.exit(1)
         
-        is_dir = False
-        parts = parsed_args.path.split(os.path.sep)
-        # except the last item
-        for item in parts[:-1]:
-            f = f.get_subfolder(item)
-        if parts:
-            if f.isdir(parts[-1]):
-                f = f.get_subfolder(parts[-1])
-                is_dir = True
-            else:
-                fname = parts[-1]
-        else:
-            is_dir = True
-
-        if is_dir:
-            if not f.isdir('.'):
-                print >> sys.stderr, "{}: No such file or directory in the repo".format(parsed_args.path)
-                sys.exit(1)
-            else:
-                print >> sys.stderr, "{}: is a directory".format(parsed_args.path)
-                sys.exit(1)                
-
-        else:
-            if not f.isfile(fname):
-                print >> sys.stderr, "{}: No such file or directory in the repo".format(parsed_args.path)
-                sys.exit(1)
-                
-            absfname = f.get_abs_path(fname)
-            with open(absfname) as f:
-                for l in f:
-                    sys.stdout.write(l)
+        try:
+            cat_repo_files(n, parsed_args.path)
+        except ValueError as e:
+            print >> sys.stderr, e.message
+            sys.exit(1)
+        
            
             

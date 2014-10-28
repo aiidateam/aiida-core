@@ -51,6 +51,11 @@ class PhCalculation(Calculation):
                              ('INPUTPH', 'prefix'),
                              ('INPUTPH', 'fildyn'),
                              ]
+        
+        # Default input and output files
+        self._DEFAULT_INPUT_FILE = 'aiida.in'
+        self._DEFAULT_OUTPUT_FILE = 'aiida.out'
+
 
     @classproperty
     def _FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX(cls):

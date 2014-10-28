@@ -21,6 +21,7 @@ list:
 * **group**:               setup and manage groups
 * **import**:              export nodes and group of nodes
 * **install**:             install/setup aiida for the current user
+* **node**:                manage operations on AiiDA nodes
 * **runserver**:           run the AiiDA webserver on localhost
 * **shell**:               run the interactive shell with the Django environment
 * **user**:                list and configure new AiiDA users.
@@ -35,11 +36,14 @@ Following below, a list with the subcommands available.
   * **kill**: stop the execution on the cluster of a calculation.
   * **logshow**: shows the logs/errors produced by a calculation
   * **plugins**: lists the supported calculation plugins
+  * **inputcat**: shows an input file of a calculation node.
+  * **inputls**: shows the list of the input files of a calculation node.
   * **list**: list the AiiDA calculations. By default, lists only the running 
     calculations.
+  * **outputcat**: shows an ouput file of a calculation node. 
+  * **outputls**: shows the list of the output files of a calculation node.
   * **show**: shows the database information related to the calculation: 
     used code, all the input nodes and all the output nodes. 
-
 
 ``verdi code``
 ++++++++++++++
@@ -174,6 +178,11 @@ Imports data (coming from other AiiDA databases) in the current database
 Used in the installation to configure the database.
 If it finds an already installed database, it updates the tables migrating them 
 to the new schema.
+
+``verdi node``
++++++++++++++++
+
+  *  **repo**: Show files and their contents in the local repository
 
 ``verdi runserver``
 +++++++++++++++++++

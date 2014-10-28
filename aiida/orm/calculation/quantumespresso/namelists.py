@@ -56,6 +56,11 @@ class NamelistsCalculation(Calculation):
         self._default_parser = None
         self._retrieve_singlefile_list = []
 
+        # Default input and output files
+        self._DEFAULT_INPUT_FILE = 'aiida.in'
+        self._DEFAULT_OUTPUT_FILE = 'aiida.out'
+
+
     @classproperty
     def _use_methods(cls):
         """

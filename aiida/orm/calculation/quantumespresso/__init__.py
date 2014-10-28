@@ -19,7 +19,9 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.2.0"
 
 class BasePwCpInputGenerator(object):
-
+    """
+    Baseclass for the common things between CP and PW of Quantum ESPRESSO.
+    """
     _PSEUDO_SUBFOLDER = './pseudo/'
     _OUTPUT_SUBFOLDER = './out/'
     _PREFIX = 'aiida'
@@ -27,6 +29,9 @@ class BasePwCpInputGenerator(object):
     _OUTPUT_FILE_NAME = 'aiida.out'
     _DATAFILE_XML_BASENAME = 'data-file.xml'
     _DATAFILE_XML = 'undefined.xml'
+
+    ## NOTE!! DO NOT UPDATE lists and dictionaries defined here,
+    ## they will be changed for all classes of the current run!
 
     # Additional files that should always be retrieved for the specific plugin
     _internal_retrieve_list = []

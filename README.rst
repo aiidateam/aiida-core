@@ -27,5 +27,4 @@ If you use AiiDA in your research, please consider citing the following work:
 
 License
 -------
-AiiDA is released under the MIT License. The terms of the license can
-be found in the LICENSE.txt file.
+The terms of the AiiDA license can be found in the LICENSE.txt file.

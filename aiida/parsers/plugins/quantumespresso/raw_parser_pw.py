@@ -1015,24 +1015,24 @@ def parse_pw_xml_output(data,dir_with_bands=None):
     parsed_data['homo'] = parsed_data['fermi_energy']
     parsed_data['homo'+units_suffix] = default_energy_units
     
-    if dir_with_bands:
-        # if there is at least an empty band:
-        if parsed_data['smearing_method'] or  \
-           parsed_data['number_of_electrons']/2. < parsed_data['number_of_bands']:
-            
-            # #TODO: currently I do it only for non magnetic systems
-            if len(bands_dict['occupations'])==1:
-            # initialize lumo
-                lumo = parsed_data['homo']+10000.0
-                for list_bands in bands_dict['bands']:
-                    for value in list_bands:
-                        if (value > parsed_data['fermi_energy']) and (value<lumo):
-                            lumo=value
-                if (lumo==parsed_data['homo']+10000.0) or lumo<=parsed_data['fermi_energy']:
-                    #might be an error for bandgap larger than 10000 eV...
-                    raise QEOutputParsingError('Error while searching for LUMO.')
-                parsed_data['lumo']=lumo
-                parsed_data['lumo'+units_suffix] = default_energy_units
+#     if dir_with_bands:
+#         # if there is at least an empty band:
+#         if parsed_data['smearing_method'] or  \
+#            parsed_data['number_of_electrons']/2. < parsed_data['number_of_bands']:
+#             
+#             #TODO: currently I do it only for non magnetic systems
+#             if len(bands_dict['occupations'])==1:
+#             # initialize lumo
+#                 lumo = parsed_data['homo']+10000.0
+#                 for list_bands in bands_dict['bands']:
+#                     for value in list_bands:
+#                         if (value > parsed_data['fermi_energy']) and (value<lumo):
+#                             lumo=value
+#                 if (lumo==parsed_data['homo']+10000.0) or lumo<=parsed_data['fermi_energy']:
+#                     #might be an error for bandgap larger than 10000 eV...
+#                     raise QEOutputParsingError('Error while searching for LUMO.')
+#                 parsed_data['lumo']=lumo
+#                 parsed_data['lumo'+units_suffix] = default_energy_units
     
     # CARD symmetries
     parsed_data = copy.deepcopy(xml_card_symmetries(parsed_data,dom))

@@ -182,6 +182,29 @@ class TestCifData(AiidaTestCase):
 
         self.assertEquals(a.values.keys(), ['test'])
 
+    @unittest.skipIf(not has_pycifrw(),"Unable to import PyCifRW")
+    def test_change_cifdata_file(self):
+        import os
+        import tempfile
+
+        from aiida.orm.data.cif import CifData
+
+        file_content_1 = "data_test _cell_length_a 10(1)"
+        file_content_2 = "data_test _cell_length_a 11(1)"
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(file_content_1)
+            f.flush()
+            a = CifData(file=f.name)
+
+        self.assertEquals(a.values['test']['_cell_length_a'],'10(1)')
+
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(file_content_2)
+            f.flush()
+            a.set_file(f.name)
+
+        self.assertEquals(a.values['test']['_cell_length_a'],'11(1)')
+
 class TestKindValidSymbols(AiidaTestCase):
     """
     Tests the symbol validation of the

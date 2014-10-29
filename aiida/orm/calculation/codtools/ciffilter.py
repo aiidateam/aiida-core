@@ -18,8 +18,9 @@ class CiffilterCalculation(Calculation):
         super(CiffilterCalculation, self)._init_internal_params()
 
         # Default input and output files
-        self._DEFAULT_INPUT_FILE = 'aiida.in'
+        self._DEFAULT_INPUT_FILE  = 'aiida.in'
         self._DEFAULT_OUTPUT_FILE = 'aiida.out'
+        self._DEFAULT_ERROR_FILE  = 'aiida.err'
 
     @classproperty
     def _use_methods(cls):
@@ -86,7 +87,9 @@ class CiffilterCalculation(Calculation):
         calcinfo.remote_copy_list = []
         calcinfo.stdin_name  = self._DEFAULT_INPUT_FILE
         calcinfo.stdout_name = self._DEFAULT_OUTPUT_FILE
-        calcinfo.retrieve_list = [self._DEFAULT_OUTPUT_FILE]
+        calcinfo.stderr_name = self._DEFAULT_ERROR_FILE
+        calcinfo.retrieve_list = [self._DEFAULT_OUTPUT_FILE,
+                                  self._DEFAULT_ERROR_FILE]
         calcinfo.retrieve_singlefile_list = []
 
         return calcinfo

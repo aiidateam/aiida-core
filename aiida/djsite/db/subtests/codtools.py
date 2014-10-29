@@ -46,5 +46,7 @@ class TestCodtools(AiidaTestCase):
                            '--start-data-block-number 1234567',
                            '--reformat-spacegroup', '-s'])
 
+        self.assertEquals(calc['stderr_name'], 'aiida.err')
+
         with open("{}/{}".format(f.abspath,calc['stdin_name'])) as i:
             self.assertEquals(i.read(), file_content)

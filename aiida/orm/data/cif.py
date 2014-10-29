@@ -78,7 +78,9 @@ class CifData(SinglefileData):
             raise ValueError("No such converter '{}' available".format(converter))
 
     def _get_aiida_structure_ase(self):
-        raise NotImplementedError
+        from aiida.orm.data.structure import StructureData
+        import ase.io.cif
+        return StructureData(ase=ase.io.cif.read_cif(self.get_file_abs_path()))
 
     @property
     def values(self):

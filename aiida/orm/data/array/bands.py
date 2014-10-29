@@ -8,10 +8,9 @@ from aiida.orm.data.array.kpoints import KpointsData
 import numpy
 from string import Template
 
-__author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
-__copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.2.0"
+__copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
+__license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
+__version__ = "0.2.1"
 
 #TODO: set and get bands could have more functionalities: how do I know the number of bands for example?
 #TODO: a function that exports to a file an array that can be plotted with xmgrace or gnuplot

@@ -71,6 +71,17 @@ class CifData(SinglefileData):
             else:        
                 return (cifs[0], False)
 
+    def _get_aiida_structure(self, converter='ase'):
+        try:
+            getattr(self, '_get_aiida_structure_{}'.format(converter))
+        except AttributeError:
+            raise ValueError("No such converter '{}' available".format(converter))
+
+    def _get_aiida_structure_ase(self):
+        from aiida.orm.data.structure import StructureData
+        import ase.io.cif
+        return StructureData(ase=ase.io.cif.read_cif(self.get_file_abs_path()))
+
     @property
     def values(self):
         """
@@ -101,6 +112,7 @@ class CifData(SinglefileData):
         """
         super(CifData,self).set_file(filename)
         self._set_attr('md5', self.generate_md5())
+        self._values = None
 
     def generate_md5(self):
         """

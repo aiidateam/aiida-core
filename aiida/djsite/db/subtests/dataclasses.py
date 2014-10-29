@@ -107,6 +107,7 @@ class TestCifData(AiidaTestCase):
     Tests for CifData class.
     """
     from aiida.orm.data.cif import has_pycifrw
+    from aiida.orm.data.structure import has_ase
 
     def test_reload_cifdata(self):
         import os
@@ -181,6 +182,60 @@ class TestCifData(AiidaTestCase):
             a = CifData(file=f.name)
 
         self.assertEquals(a.values.keys(), ['test'])
+
+    @unittest.skipIf(not has_pycifrw(),"Unable to import PyCifRW")
+    def test_change_cifdata_file(self):
+        import os
+        import tempfile
+
+        from aiida.orm.data.cif import CifData
+
+        file_content_1 = "data_test _cell_length_a 10(1)"
+        file_content_2 = "data_test _cell_length_a 11(1)"
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(file_content_1)
+            f.flush()
+            a = CifData(file=f.name)
+
+        self.assertEquals(a.values['test']['_cell_length_a'],'10(1)')
+
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(file_content_2)
+            f.flush()
+            a.set_file(f.name)
+
+        self.assertEquals(a.values['test']['_cell_length_a'],'11(1)')
+
+    @unittest.skipIf(not has_ase(),"Unable to import ase")
+    def test_get_aiida_structure(self):
+        import os
+        import tempfile
+
+        from aiida.orm.data.cif import CifData
+
+        with tempfile.NamedTemporaryFile() as f:
+            f.write('''
+                data_test
+                _cell_length_a    10
+                _cell_length_b    10
+                _cell_length_c    10
+                _cell_angle_alpha 90
+                _cell_angle_beta  90
+                _cell_angle_gamma 90
+                loop_
+                _atom_site_label
+                _atom_site_fract_x
+                _atom_site_fract_y
+                _atom_site_fract_z
+                C 0 0 0
+                O 0.5 0.5 0.5
+            ''')
+            f.flush()
+            a = CifData(file=f.name)
+
+        c = a._get_aiida_structure_ase()
+
+        self.assertEquals(c.get_kind_names(), ['C','O'])
 
 class TestKindValidSymbols(AiidaTestCase):
     """

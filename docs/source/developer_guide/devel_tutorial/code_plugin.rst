@@ -435,74 +435,74 @@ A kind of template for writing such parser for the calculation class
             Initialize the instance of NewParser
             """
             # check for valid input
-        if not isinstance(calc,NewCalculation):
-            raise ParsingError("Input must calc must be a NewCalculation")
-        
-        super(NewParser, self).__init__(calc)
+            if not isinstance(calc,NewCalculation):
+                raise ParsingError("Input must calc must be a NewCalculation")
+            
+            super(NewParser, self).__init__(calc)
 
         def parse_from_calc(self):
             """
             Parses the calculation-output datafolder, and stores
             results.
             """           
-        # load the error logger
-        from aiida.common import aiidalogger
-        from aiida.djsite.utils import get_dblogger_extra
-        parserlogger = aiidalogger.getChild('newparser')
-        logger_extra = get_dblogger_extra(self._calc)
+            # load the error logger
+            from aiida.common import aiidalogger
+            from aiida.djsite.utils import get_dblogger_extra
+            parserlogger = aiidalogger.getChild('newparser')
+            logger_extra = get_dblogger_extra(self._calc)
 
-        # check the calc status, not to overwrite anything
-        state = calc.get_state()
-        if state != calc_states.PARSING:
-            raise InvalidOperation("Calculation not in {} state"
-                                   .format(calc_states.PARSING) )
+            # check the calc status, not to overwrite anything
+            state = calc.get_state()
+            if state != calc_states.PARSING:
+                raise InvalidOperation("Calculation not in {} state"
+                                       .format(calc_states.PARSING) )
 
-        # retrieve the whole list of input links
-        calc_input_parameterdata = self._calc.get_inputs(type=ParameterData,
-                                                         also_labels=True)
+            # retrieve the whole list of input links
+            calc_input_parameterdata = self._calc.get_inputs(type=ParameterData,
+                                                             also_labels=True)
 
-        # then look for parameterdata only
-        input_param_name = self._calc.get_linkname('parameters')
-        params = [i[1] for i in calc_input_parameterdata if i[0]==input_param_name]
-        if len(params) != 1:
-            parserlogger.error("Found {} input_params instead of one"
-                                  .format(params),extra=logger_extra)
-            successful = False
-            calc_input = params[0]
+            # then look for parameterdata only
+            input_param_name = self._calc.get_linkname('parameters')
+            params = [i[1] for i in calc_input_parameterdata if i[0]==input_param_name]
+            if len(params) != 1:
+                parserlogger.error("Found {} input_params instead of one"
+                                      .format(params),extra=logger_extra)
+                successful = False
+                calc_input = params[0]
 
-            # check what is inside the folder
-            list_of_files = out_folder.get_folder_list()
-            # at least the stdout should exist
-            if not calc.OUTPUT_FILE_NAME in list_of_files:
-                raise QEOutputParsingError("Standard output not found")
-            # get the path to the standard output
-            out_file = os.path.join( out_folder.get_abs_path('.'), 
-                                     calc.OUTPUT_FILE_NAME )
+                # check what is inside the folder
+                list_of_files = out_folder.get_folder_list()
+                # at least the stdout should exist
+                if not calc.OUTPUT_FILE_NAME in list_of_files:
+                    raise QEOutputParsingError("Standard output not found")
+                # get the path to the standard output
+                out_file = os.path.join( out_folder.get_abs_path('.'), 
+                                         calc.OUTPUT_FILE_NAME )
 
 
-        # read the file
-        with open(out_file) as f:
-            out_file_lines = f.readlines()
+            # read the file
+            with open(out_file) as f:
+                out_file_lines = f.readlines()
 
-        # call the raw parsing function. Here it was thought to return a
-        # dictionary with all keys and values parsed from the out_file (i.e. enery, forces, etc...)
-        # and a boolean indicating whether the calculation is successfull or not
-        # In practice, this is the function deciding the final status of the calculation
-        out_dict,successful = parse_raw_output(out_file_lines)
-            
-        # convert the dictionary into an AiiDA object, here a
-        # ParameterData for instance
-        output_params = ParameterData(dict=out_dict)
+            # call the raw parsing function. Here it was thought to return a
+            # dictionary with all keys and values parsed from the out_file (i.e. enery, forces, etc...)
+            # and a boolean indicating whether the calculation is successfull or not
+            # In practice, this is the function deciding the final status of the calculation
+            out_dict,successful = parse_raw_output(out_file_lines)
+                
+            # convert the dictionary into an AiiDA object, here a
+            # ParameterData for instance
+            output_params = ParameterData(dict=out_dict)
 
-        # prepare the list of output nodes to be returned
-        # this must be a list of tuples having 2 elements each: the name of the 
-        # linkname in the database (the one below, self.get_linkname_outparams(),
-        # is defined in the Parser class), and the object to be saved
-        new_nodes_list = [ (self.get_linkname_outparams(),output_params) ]
+            # prepare the list of output nodes to be returned
+            # this must be a list of tuples having 2 elements each: the name of the 
+            # linkname in the database (the one below, self.get_linkname_outparams(),
+            # is defined in the Parser class), and the object to be saved
+            new_nodes_list = [ (self.get_linkname_outparams(),output_params) ]
 
-        # The calculation state will be set to failed if successful=False,
-        # to finished otherwise
-        return successful, new_nodes_list
+            # The calculation state will be set to failed if successful=False,
+            # to finished otherwise
+            return successful, new_nodes_list
 
 
 

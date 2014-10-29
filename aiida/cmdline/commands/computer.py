@@ -732,7 +732,14 @@ class Computer(VerdiCommandWithSubcommands):
         print "      [remote username: {}]".format(remote_user)
         workdir = dbauthinfo.get_workdir().format(
              username=remote_user)        
-        print "      [Work directory: {}]".format(workdir)
+        print "      [Checking/creating work directory: {}]".format(workdir)
+
+        try:
+            transport.chdir(workdir)
+        except IOError:
+            transport.makedirs(workdir)
+            transport.chdir(workdir)
+        
         with tempfile.NamedTemporaryFile() as f:
             fname = os.path.split(f.name)[1]
             print "  `-> Creating the file {}...".format(fname)

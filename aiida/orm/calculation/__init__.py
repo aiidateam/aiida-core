@@ -1112,14 +1112,14 @@ class Calculation(Node):
         # I do the query now, so that the list of pks gets cached
         calc_list_data = list(
             calc_list.filter(
-                dbcomputer__dbauthinfo__aiidauser=F('user')
+                #dbcomputer__dbauthinfo__aiidauser=F('user')
                 ).distinct().order_by('ctime').values(
                 'pk', 'dbcomputer__name', 'ctime',
                 'type','dbcomputer__enabled',
                 'dbcomputer__pk',
-                'dbcomputer__dbauthinfo__aiidauser__pk'))
+                'user__pk'))
         list_comp_pk = [ i['dbcomputer__pk'] for i in calc_list_data ]
-        list_aiduser_pk = [ i['dbcomputer__dbauthinfo__aiidauser__pk'] 
+        list_aiduser_pk = [ i['user__pk'] 
                            for i in calc_list_data ]
         enabled_data = DbAuthInfo.objects.filter(
             dbcomputer__pk__in=list_comp_pk,aiidauser__pk__in=list_aiduser_pk
@@ -1208,9 +1208,11 @@ class Calculation(Node):
                 
                 the_state = states[calcdata['pk']]
                 
-                # decide if it is needed to print enabled/disabled informations
-                user_enabled = enabled_auth_dict[(calcdata['dbcomputer__pk'],
-                    calcdata['dbcomputer__dbauthinfo__aiidauser__pk'])]
+                # decide if it is needed to print enabled/disabled information
+                # By default, if the computer is not configured for the
+                # given user, assume it is user_enabled
+                user_enabled = enabled_auth_dict.get((calcdata['dbcomputer__pk'],
+                    calcdata['user__pk']), True)
                 global_enabled = calcdata["dbcomputer__enabled"]
                 
                 enabled = "" if (user_enabled and global_enabled or 

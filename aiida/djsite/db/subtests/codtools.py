@@ -19,6 +19,7 @@ class TestCodtools(AiidaTestCase):
         import tempfile
         from aiida.orm.data.cif import CifData
         from aiida.orm.data.parameter import ParameterData
+        from aiida.common.exceptions import InputValidationError
 
         file_content = "data_test _cell_length_a 10(1)"
         with tempfile.NamedTemporaryFile() as f:
@@ -34,10 +35,24 @@ class TestCodtools(AiidaTestCase):
             })
 
         c = CodtoolsCalculation()
+        f = SandboxFolder()
+
+        with self.assertRaises(InputValidationError):
+            c._prepare_for_submission(f, c.get_inputdata_dict())
+
+        with self.assertRaises(TypeError):
+            c.use_cif(None)
+
         c.use_cif(cif)
+
+        calc = c._prepare_for_submission(f, c.get_inputdata_dict())
+        self.assertEquals(calc['cmdline_params'], [])
+
+        with self.assertRaises(TypeError):
+            c.use_parameters(None)
+
         c.use_parameters(p)
 
-        f = SandboxFolder()
         calc = c._prepare_for_submission(f, c.get_inputdata_dict())
 
         self.assertEquals(calc['cmdline_params'],
@@ -46,7 +61,8 @@ class TestCodtools(AiidaTestCase):
                            '-s', '--reformat-spacegroup',
                            '--start-data-block-number 1234567'])
 
-        self.assertEquals(calc['stderr_name'], 'aiida.err')
+        self.assertEquals(calc['stdout_name'], c._DEFAULT_OUTPUT_FILE)
+        self.assertEquals(calc['stderr_name'], c._DEFAULT_ERROR_FILE)
 
         with open("{}/{}".format(f.abspath,calc['stdin_name'])) as i:
             self.assertEquals(i.read(), file_content)

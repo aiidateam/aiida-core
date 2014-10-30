@@ -27,14 +27,10 @@ class TestCodtools(AiidaTestCase):
             cif = CifData(file=f.name)
 
         p = ParameterData(dict={
-                'values': {
                     'start-data-block-number': '1234567',
                     'extra-tag-list': [ 'cod.lst', 'tcod.lst' ],
-                },
-                'flags': [
-                    'reformat-spacegroup',
-                    's'
-                ]
+                    'reformat-spacegroup': True,
+                    's': True,
             })
 
         c = CodtoolsCalculation()
@@ -47,8 +43,8 @@ class TestCodtools(AiidaTestCase):
         self.assertEquals(calc['cmdline_params'],
                           ['--extra-tag-list cod.lst',
                            '--extra-tag-list tcod.lst',
-                           '--start-data-block-number 1234567',
-                           '--reformat-spacegroup', '-s'])
+                           '-s', '--reformat-spacegroup',
+                           '--start-data-block-number 1234567'])
 
         self.assertEquals(calc['stderr_name'], 'aiida.err')
 

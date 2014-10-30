@@ -5,6 +5,8 @@ This plugin is in the development stage. Andrius Merkys, 2014-10-29
 """
 from aiida.parsers.parser import Parser
 from aiida.orm.calculation.codtools import CodtoolsCalculation
+from aiida.orm.data.cif import CifData
+from aiida.orm.data.parameter import ParameterData
 from aiida.common.datastructures import calc_states
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
@@ -90,6 +92,8 @@ class CodtoolsParser(Parser):
         out_folder = self._calc.get_retrieved_node()
         if out_folder is None:
             raise IOError("No retrieved folder found")
+
+        list_of_files = out_folder.get_folder_list()
 
         output_path = None
         error_path  = None

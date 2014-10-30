@@ -60,7 +60,7 @@ class CodtoolsParser(Parser):
         if output_path is not None and os.path.getsize(output_path) > 0:
             cif = CifData(file=output_path)
 
-        messages = None
+        messages = []
         if error_path is not None:
             with open(error_path) as f:
                 content = f.readlines()
@@ -69,10 +69,9 @@ class CodtoolsParser(Parser):
         output_nodes = []
         if cif is not None:
             output_nodes.append(('cif',cif))
-        if messages is not None:
-            output_nodes.append(('messages',
-                                 ParameterData(dict={'output_messages':
-                                                     messages})))
+        output_nodes.append(('messages',
+                             ParameterData(dict={'output_messages':
+                                                 messages})))
         return True, output_nodes
 
     def _fetch_output_files(self):

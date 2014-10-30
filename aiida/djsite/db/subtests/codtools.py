@@ -91,11 +91,13 @@ class TestCodtools(AiidaTestCase):
         success, nodes = parser.parse_from_calc()
 
         self.assertEquals(success, True)
-        self.assertEquals(len(nodes), 1)
+        self.assertEquals(len(nodes), 2)
         self.assertEquals(nodes[0][0], 'cif')
         self.assertEquals(isinstance(nodes[0][1], CifData), True)
         self.assertEquals(nodes[0][1].generate_md5(),
                           'b5bb739a254514961a157503daf715eb')
+        self.assertEquals(nodes[1][0], 'messages')
+        self.assertEquals(len(nodes[1][1].get_dict()['output_messages']), 0)
 
     def test_2(self):
         import tempfile

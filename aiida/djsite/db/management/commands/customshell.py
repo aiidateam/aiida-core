@@ -18,6 +18,19 @@ __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausan
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
 __version__ = "0.2.1"
 
+default_modules_list = [
+            #    ("aiida.djsite.db.models","DbNode","DbNode"),
+                        ("aiida.orm","Node","Node"),
+                        ("aiida.orm","Calculation","Calculation"),
+                        ("aiida.orm","Code","Code"),
+                        ("aiida.orm","Data","Data"),
+                        ("aiida.orm","CalculationFactory","CalculationFactory"),
+                        ("aiida.orm","DataFactory","DataFactory"),
+                        ("aiida.orm","Computer","Computer"),
+                        ("aiida.orm","Group","Group"),
+                        ("aiida.djsite.db","models","models"),
+                        ]
+
 class Command(NoArgsCommand):
     shells = ['ipython', 'bpython']
 
@@ -34,18 +47,7 @@ class Command(NoArgsCommand):
 
     def get_start_namespace(self):
         user_ns = {}
-        for app_mod, model_name, alias in [
-            #    ("aiida.djsite.db.models","DbNode","DbNode"),
-            ("aiida.orm","Node","Node"),
-            ("aiida.orm","Calculation","Calculation"),
-            ("aiida.orm","Code","Code"),
-            ("aiida.orm","Data","Data"),
-            ("aiida.orm","CalculationFactory","CalculationFactory"),
-            ("aiida.orm","DataFactory","DataFactory"),
-            ("aiida.orm","Computer","Computer"),
-            ("aiida.orm","Group","Group"),
-            ("aiida.djsite.db","models","models"),
-            ]:
+        for app_mod, model_name, alias in default_modules_list:
             user_ns[alias] = getattr(__import__(app_mod, {}, {}, model_name), model_name)
         
         return user_ns

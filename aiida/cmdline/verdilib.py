@@ -395,6 +395,71 @@ class Runserver(VerdiCommand):
         pass_to_django_manage([execname, 'runserver'] + list(args))
 
 
+class Run(VerdiCommand):
+    """
+    Execute an AiiDA script
+    """
+    def run(self,*args):
+        from aiida import load_dbenv
+        load_dbenv()
+        import argparse
+        import aiida.cmdline
+        from aiida.djsite.db.management.commands.customshell import default_modules_list
+        import aiida.orm.autogroup
+        from aiida.orm.autogroup import Autogroup
+        
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Execute an AiiDA script.')
+        parser.add_argument('scriptname', metavar='ScriptName', type=str,
+                            help='The name of the script you want to execute')
+        parser.add_argument('-g','--group', type=bool, default=True, 
+                            help='Enables the autogrouping, default = True')
+        parser.add_argument('-n','--groupname', type=str, default=None, 
+                            help='Specify the name of the auto group')
+#        parser.add_argument('-o','--grouponly', type=str, nargs='+', default=['all'],
+#                            help='Limit the grouping to specific classes (by default, all classes are grouped')
+        parser.add_argument('-e','--exclude', type=str, nargs='+', default=[],
+                            help=('Autogroup only specific calculation classes.'
+                                  " Select them by their module name.")
+                            )
+        parser.add_argument('-E','--excludesubclasses', type=str, nargs='+', default=[],
+                            help=('Autogroup only specific calculation classes.'
+                                  " Select them by their module name.")
+                            )
+        parser.add_argument('-i','--include', type=str, nargs='+', default=['all'],
+                            help=('Autogroup only specific data classes.'
+                                  " Select them by their module name.")
+                            )
+        parser.add_argument('-I','--includesubclasses', type=str, nargs='+', default=[],
+                            help=('Autogroup only specific code classes.'
+                                  " Select them by their module name.")
+                            )
+        parsed_args = parser.parse_args(args)
+        
+        # dynamically load modules (the same of verdi shell)
+        for app_mod, model_name, alias in default_modules_list:
+            locals()["{}".format(alias)] = getattr(
+                            __import__(app_mod, {}, {}, model_name), model_name)
+        
+        if parsed_args.group:
+            automatic_group_name = parsed_args.groupname
+            if automatic_group_name is None:
+                import datetime
+                now = datetime.datetime.now()
+                automatic_group_name = "Verdi autogroup on "+ now.strftime("%Y-%m-%d %H:%M:%S") 
+            
+            aiida_verdilib_autogroup = Autogroup()
+            aiida_verdilib_autogroup.set_exclude(parsed_args.exclude)
+            aiida_verdilib_autogroup.set_include(parsed_args.include)
+            aiida_verdilib_autogroup.set_exclude_with_subclasses(parsed_args.excludesubclasses)
+            aiida_verdilib_autogroup.set_include_with_subclasses(parsed_args.includesubclasses)
+            aiida_verdilib_autogroup.set_group_name(automatic_group_name)
+            aiida.orm.autogroup.current_autogroup = aiida_verdilib_autogroup
+        
+        with open(parsed_args.scriptname) as f:
+            exec(f)
+        
 ########################################################################
 # HERE ENDS THE COMMAND FUNCTION LIST
 ########################################################################

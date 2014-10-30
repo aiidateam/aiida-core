@@ -4,7 +4,7 @@ Plugin to parse outputs from the scripts from cod-tools package.
 This plugin is in the development stage. Andrius Merkys, 2014-10-29
 """
 from aiida.parsers.parser import Parser
-from aiida.orm.calculation.codtools.ciffilter import CiffilterCalculation
+from aiida.orm.calculation.codtools import CodtoolsCalculation
 from aiida.common.datastructures import calc_states
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
@@ -21,8 +21,8 @@ class CodtoolsParser(Parser):
         Initialize the instance of CodtoolsParser
         """
         # check for valid input
-        if not isinstance(calc, CiffilterCalculation):
-            raise ParsingError("Input must calc must be a CiffilterCalculation")
+        if not isinstance(calc, CodtoolsCalculation):
+            raise ParsingError("Input must calc must be a CodtoolsCalculation")
         super(CodtoolsParser, self).__init__(calc)
 
     def parse_from_calc(self):

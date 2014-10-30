@@ -6,7 +6,7 @@ import os
 
 from aiida.djsite.db.testbase import AiidaTestCase
 from aiida.common.folders import SandboxFolder
-from aiida.orm.calculation.codtools.ciffilter import CiffilterCalculation
+from aiida.orm.calculation.codtools import CodtoolsCalculation
 import aiida
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
@@ -37,7 +37,7 @@ class TestCodtools(AiidaTestCase):
                 ]
             })
 
-        c = CiffilterCalculation()
+        c = CodtoolsCalculation()
         c.use_cif(cif)
         c.use_parameters(p)
 

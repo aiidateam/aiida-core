@@ -6,7 +6,7 @@ import os
 
 from aiida.djsite.db.testbase import AiidaTestCase
 from aiida.common.folders import SandboxFolder
-from aiida.orm.calculation.codtools.ciffilter import CiffilterCalculation
+from aiida.orm.calculation.codtools import CodtoolsCalculation
 import aiida
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
@@ -19,6 +19,7 @@ class TestCodtools(AiidaTestCase):
         import tempfile
         from aiida.orm.data.cif import CifData
         from aiida.orm.data.parameter import ParameterData
+        from aiida.common.exceptions import InputValidationError
 
         file_content = "data_test _cell_length_a 10(1)"
         with tempfile.NamedTemporaryFile() as f:
@@ -27,30 +28,41 @@ class TestCodtools(AiidaTestCase):
             cif = CifData(file=f.name)
 
         p = ParameterData(dict={
-                'values': {
                     'start-data-block-number': '1234567',
                     'extra-tag-list': [ 'cod.lst', 'tcod.lst' ],
-                },
-                'flags': [
-                    'reformat-spacegroup',
-                    's'
-                ]
+                    'reformat-spacegroup': True,
+                    's': True,
             })
 
-        c = CiffilterCalculation()
+        c = CodtoolsCalculation()
+        f = SandboxFolder()
+
+        with self.assertRaises(InputValidationError):
+            c._prepare_for_submission(f, c.get_inputdata_dict())
+
+        with self.assertRaises(TypeError):
+            c.use_cif(None)
+
         c.use_cif(cif)
+
+        calc = c._prepare_for_submission(f, c.get_inputdata_dict())
+        self.assertEquals(calc['cmdline_params'], [])
+
+        with self.assertRaises(TypeError):
+            c.use_parameters(None)
+
         c.use_parameters(p)
 
-        f = SandboxFolder()
         calc = c._prepare_for_submission(f, c.get_inputdata_dict())
 
         self.assertEquals(calc['cmdline_params'],
                           ['--extra-tag-list cod.lst',
                            '--extra-tag-list tcod.lst',
-                           '--start-data-block-number 1234567',
-                           '--reformat-spacegroup', '-s'])
+                           '-s', '--reformat-spacegroup',
+                           '--start-data-block-number 1234567'])
 
-        self.assertEquals(calc['stderr_name'], 'aiida.err')
+        self.assertEquals(calc['stdout_name'], c._DEFAULT_OUTPUT_FILE)
+        self.assertEquals(calc['stderr_name'], c._DEFAULT_ERROR_FILE)
 
         with open("{}/{}".format(f.abspath,calc['stdin_name'])) as i:
             self.assertEquals(i.read(), file_content)

@@ -65,13 +65,14 @@ class CodtoolsParser(Parser):
             with open(error_path) as f:
                 content = f.readlines()
             messages = [x.strip('\n') for x in content]
-        p = ParameterData(dict={'output_messages': messages})
 
         output_nodes = []
         if cif is not None:
             output_nodes.append(('cif',cif))
         if messages is not None:
-            output_nodes.append(('messages',messages))
+            output_nodes.append(('messages',
+                                 ParameterData(dict={'output_messages':
+                                                     messages})))
         return True, output_nodes
 
     def _fetch_output_files(self):

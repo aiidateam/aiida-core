@@ -17,10 +17,9 @@ from aiida.parsers.plugins.quantumespresso import QEOutputParsingError
 
 # parameter that will be used later for comparisons
 
-__author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
-__copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.2.0"
+__copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
+__license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
+__version__ = "0.2.1"
 
 lattice_tolerance = 1.e-5
 
@@ -40,6 +39,9 @@ def parse_raw_output(out_file, input_dict, parser_opts=None, xml_file=None, dir_
     Receives in input the paths to the output file and the xml file.
     
     :param out_file: path to pw std output
+    :param input_dict: not used
+    :param parser_opts: not used
+    :param dir_with_bands: path to directory with all k-points (Kxxxxx) folders
     :param xml_file: path to QE data-file.xml
     
     :returns out_dict: a dictionary with parsed data
@@ -70,7 +72,6 @@ def parse_raw_output(out_file, input_dict, parser_opts=None, xml_file=None, dir_
             with open(xml_file,'r') as f:                
                 xml_lines = f.read() # Note: read() and not readlines()
         except IOError:
-            raise
             raise QEOutputParsingError("Failed to open xml file: {}.".format(xml_file))
 
         xml_data,structure_data,bands_data = parse_pw_xml_output(xml_lines,dir_with_bands)
@@ -707,10 +708,13 @@ def parse_pw_xml_output(data,dir_with_bands=None):
     Returns a dictionary with parsed values
     """
     import copy
+    from xml.parsers.expat import ExpatError
     # NOTE : I often assume that if the xml file has been written, it has no
     # internal errors.
-    
-    dom = parseString(data)
+    try:
+        dom = parseString(data)
+    except ExpatError:
+        return {'xml_warnings':"Error in XML parseString: bad format"},{},{}
     
     parsed_data = {}
     
@@ -1010,24 +1014,24 @@ def parse_pw_xml_output(data,dir_with_bands=None):
     parsed_data['homo'] = parsed_data['fermi_energy']
     parsed_data['homo'+units_suffix] = default_energy_units
     
-    if dir_with_bands:
-        # if there is at least an empty band:
-        if parsed_data['smearing_method'] or  \
-           parsed_data['number_of_electrons']/2. < parsed_data['number_of_bands']:
-            
-            # #TODO: currently I do it only for non magnetic systems
-            if len(bands_dict['occupations'])==1:
-            # initialize lumo
-                lumo = parsed_data['homo']+10000.0
-                for list_bands in bands_dict['bands']:
-                    for value in list_bands:
-                        if (value > parsed_data['fermi_energy']) and (value<lumo):
-                            lumo=value
-                if (lumo==parsed_data['homo']+10000.0) or lumo<=parsed_data['fermi_energy']:
-                    #might be an error for bandgap larger than 10000 eV...
-                    raise QEOutputParsingError('Error while searching for LUMO.')
-                parsed_data['lumo']=lumo
-                parsed_data['lumo'+units_suffix] = default_energy_units
+#     if dir_with_bands:
+#         # if there is at least an empty band:
+#         if parsed_data['smearing_method'] or  \
+#            parsed_data['number_of_electrons']/2. < parsed_data['number_of_bands']:
+#             
+#             #TODO: currently I do it only for non magnetic systems
+#             if len(bands_dict['occupations'])==1:
+#             # initialize lumo
+#                 lumo = parsed_data['homo']+10000.0
+#                 for list_bands in bands_dict['bands']:
+#                     for value in list_bands:
+#                         if (value > parsed_data['fermi_energy']) and (value<lumo):
+#                             lumo=value
+#                 if (lumo==parsed_data['homo']+10000.0) or lumo<=parsed_data['fermi_energy']:
+#                     #might be an error for bandgap larger than 10000 eV...
+#                     raise QEOutputParsingError('Error while searching for LUMO.')
+#                 parsed_data['lumo']=lumo
+#                 parsed_data['lumo'+units_suffix] = default_energy_units
     
     # CARD symmetries
     parsed_data = copy.deepcopy(xml_card_symmetries(parsed_data,dom))
@@ -1077,7 +1081,7 @@ def parse_pw_text_output(data, xml_data=None, structure_data=None):
     all_warnings = dict(critical_warnings.items() + minor_warnings.items())
 
     # Find some useful quantities.
-    if not xml_data and not structure_data:
+    if not xml_data.get('number_of_bands',None) and not structure_data:
         try:
             for line in data.split('\n'):
                 if 'lattice parameter (alat)' in line:

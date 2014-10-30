@@ -14,10 +14,9 @@ from aiida.orm.data.array.bands import KpointsData
 
 #TODO: I don't like the generic class always returning a name for the link to the output structure
 
-__author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
-__copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.2.0"
+__copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
+__license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
+__version__ = "0.2.1"
 
 class PwParser(Parser):
     """
@@ -178,6 +177,15 @@ class PwParser(Parser):
         
         new_nodes_list = []
         
+        # I eventually save the new structure. structure_data is unnecessary after this
+        in_struc = self._calc.get_inputs_dict()['structure']
+        type_calc = input_dict['CONTROL']['calculation']
+        struc = in_struc
+        if type_calc in ['relax','vc-relax','md','vc-md']:
+            if 'cell' in structure_data.keys():
+                struc = convert_qe2aiida_structure(structure_data,input_structure=in_struc)
+                new_nodes_list.append((self.get_linkname_outstructure(),struc))
+        
         k_points_list = trajectory_data.pop('k_points',None)
         k_points_weights_list = trajectory_data.pop('k_points_weights',None)
         
@@ -187,22 +195,42 @@ class PwParser(Parser):
             if out_dict['k_points_units'] not in ['2 pi / Angstrom']:
                 raise QEOutputParsingError('Error in kpoints units (should be cartesian)')
             # converting bands into a BandsData object (including the kpoints)
-            the_kpoints_data = KpointsData()
-            the_kpoints_data.set_kpoints(k_points_list, cartesian=True,
-                                       weights = k_points_weights_list,
-                                       )
-        
+            
+            kpoints_from_output = KpointsData()
+            kpoints_from_output.set_cell_from_structure(struc)
+            kpoints_from_output.set_kpoints(k_points_list, cartesian=True,
+                                            weights = k_points_weights_list)
+            kpoints_from_input = self._calc.inp.kpoints
+            
+            if not bands_data:
+                try:
+                    kpoints_from_input.get_kpoints()
+                except AttributeError:
+                    new_nodes_list += [(self.get_linkname_out_kpoints(),kpoints_from_output)]
+            
             if bands_data:
                 # converting bands into a BandsData object (including the kpoints)
+                
+                kpoints_for_bands = kpoints_from_output
+                
+                try:
+                    kpoints_from_input.get_kpoints()
+                    kpoints_for_bands.labels = kpoints_from_input.labels
+                except (AttributeError,ValueError):
+                    # AttributeError: no list of kpoints in input
+                    # ValueError: labels from input do not match the output 
+                    #      list of kpoints (some kpoints are missing)
+                    pass
+                    
                 the_bands_data1 = BandsData()
-                the_bands_data1.set_kpointsdata(the_kpoints_data)
+                the_bands_data1.set_kpointsdata(kpoints_for_bands)
                 the_bands_data1.set_bands(bands_data['bands'][0], 
                                           units = bands_data['bands_units'],
                                           occupations = bands_data['occupations'][0])
                 
                 try:
                     the_bands_data2 = BandsData()
-                    the_bands_data2.set_kpointsdata(the_kpoints_data)
+                    the_bands_data2.set_kpointsdata(kpoints_for_bands)
                     the_bands_data2.set_bands(bands_data['bands'][1], 
                                               units = bands_data['bands_units'],
                                               occupations = bands_data['occupations'][1])
@@ -213,8 +241,6 @@ class PwParser(Parser):
                 except IndexError:
                     new_nodes_list += [('output_band',the_bands_data1)]
                     out_dict['linknames_band'] = ['output_band']
-            else:
-                new_nodes_list += [(self.get_linkname_out_kpoints(),the_kpoints_data)]
         
         # convert the dictionary into an AiiDA object
         output_params = ParameterData(dict=out_dict)
@@ -228,15 +254,6 @@ class PwParser(Parser):
                 array_data.set_array(x[0],numpy.array(x[1]))
             # return it to the execmanager
             new_nodes_list.append((self.get_linkname_outarray(),array_data))
-        
-        # I eventually save the new structure. structure_data is unnecessary after this
-        in_struc = self._calc.get_inputs_dict()['structure']
-        type_calc = input_dict['CONTROL']['calculation']
-                
-        if type_calc=='relax' or type_calc=='vc-relax':
-            if 'cell' in structure_data.keys():
-                struc = convert_qe2aiida_structure(structure_data,input_structure=in_struc)
-                new_nodes_list.append((self.get_linkname_outstructure(),struc))
         
         return successful,new_nodes_list
 

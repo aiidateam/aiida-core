@@ -16,10 +16,9 @@ from aiida.orm.calculation.quantumespresso.pw import PwCalculation
 # List of namelists (uppercase) that are allowed to be found in the
 # input_data, in the correct order
 
-__author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
-__copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.2.0"
+__copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
+__license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
+__version__ = "0.2.1"
 
     
 # in restarts, will not copy but use symlinks
@@ -51,6 +50,11 @@ class PhCalculation(Calculation):
                              ('INPUTPH', 'prefix'),
                              ('INPUTPH', 'fildyn'),
                              ]
+        
+        # Default input and output files
+        self._DEFAULT_INPUT_FILE = 'aiida.in'
+        self._DEFAULT_OUTPUT_FILE = 'aiida.out'
+
 
     @classproperty
     def _FOLDER_OUTPUT_DYNAMICAL_MATRIX_PREFIX(cls):
@@ -375,7 +379,11 @@ class PhCalculation(Calculation):
         
         c2 = self.copy()
         
-        labelstring = c2.label + " Restart of ph.x."
+        if not 'Restart' in c2.label:
+            labelstring = c2.label + " Restart of {} {}.".format(
+                                        self.__class__.__name__,self.pk)
+        else:
+            labelstring = " Restart of {} {}.".format(self.__class__.__name__,self.pk)
         c2.label = labelstring.lstrip()
         
         # set the 

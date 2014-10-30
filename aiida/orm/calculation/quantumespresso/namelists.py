@@ -17,10 +17,9 @@ from aiida.orm.data.remote import RemoteData
 from aiida.orm.data.folder import FolderData 
 from aiida.orm.data.singlefile import SinglefileData
     
-__author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
-__copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.2.0"
+__copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
+__license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
+__version__ = "0.2.1"
 
 class NamelistsCalculation(Calculation):   
     """
@@ -55,6 +54,11 @@ class NamelistsCalculation(Calculation):
         self._parent_folder_type = (RemoteData, FolderData, SinglefileData)
         self._default_parser = None
         self._retrieve_singlefile_list = []
+
+        # Default input and output files
+        self._DEFAULT_INPUT_FILE = 'aiida.in'
+        self._DEFAULT_OUTPUT_FILE = 'aiida.out'
+
 
     @classproperty
     def _use_methods(cls):

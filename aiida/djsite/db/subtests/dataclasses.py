@@ -8,10 +8,9 @@ from aiida.orm import Node
 from aiida.common.exceptions import ModificationNotAllowed, UniquenessError
 from aiida.djsite.db.testbase import AiidaTestCase
         
-__author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
-__copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.2.0"
+__copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
+__license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
+__version__ = "0.2.1"
 
 class TestCalcStatus(AiidaTestCase):        
     """
@@ -101,6 +100,141 @@ class TestSinglefileData(AiidaTestCase):
         self.assertEquals(b.get_folder_list(),[basename])
         with open(b.get_abs_path(basename)) as f:
             self.assertEquals(f.read(), file_content)
+
+class TestCifData(AiidaTestCase):
+    """
+    Tests for CifData class.
+    """
+    from aiida.orm.data.cif import has_pycifrw
+    from aiida.orm.data.structure import has_ase
+
+    def test_reload_cifdata(self):
+        import os
+        import tempfile
+
+        from aiida.orm.data.cif import CifData
+
+        file_content = "data_test _cell_length_a 10(1)"
+        with tempfile.NamedTemporaryFile() as f:
+            filename = f.name
+            basename = os.path.split(filename)[1]
+            f.write(file_content)
+            f.flush()
+            a = CifData(file=filename)
+
+        the_uuid = a.uuid
+
+        self.assertEquals(a.get_folder_list(),[basename])
+
+        with open(a.get_abs_path(basename)) as f:
+            self.assertEquals(f.read(), file_content)
+
+        a.store()
+
+        with open(a.get_abs_path(basename)) as f:
+            self.assertEquals(f.read(), file_content)
+        self.assertEquals(a.get_folder_list(),[basename])
+
+        b = Node.get_subclass_from_uuid(the_uuid)
+
+        # I check the retrieved object
+        self.assertTrue(isinstance(b,CifData))
+        self.assertEquals(b.get_folder_list(),[basename])
+        with open(b.get_abs_path(basename)) as f:
+            self.assertEquals(f.read(), file_content)
+
+        # Checking the get_or_create() method:
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(file_content)
+            f.flush()
+            c, created = CifData.get_or_create(f.name,store_cif=False)
+
+        self.assertTrue(isinstance(c,CifData))
+        self.assertTrue(not created)
+
+        with open(c.get_file_abs_path()) as f:
+            self.assertEquals(f.read(), file_content)
+
+        other_content = "data_test _cell_length_b 10(1)"
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(other_content)
+            f.flush()
+            c, created = CifData.get_or_create(f.name,store_cif=False)
+
+        self.assertTrue(isinstance(c,CifData))
+        self.assertTrue(created)
+
+        with open(c.get_file_abs_path()) as f:
+            self.assertEquals(f.read(), other_content)
+
+    @unittest.skipIf(not has_pycifrw(),"Unable to import PyCifRW")
+    def test_parse_cifdata(self):
+        import os
+        import tempfile
+
+        from aiida.orm.data.cif import CifData
+
+        file_content = "data_test _cell_length_a 10(1)"
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(file_content)
+            f.flush()
+            a = CifData(file=f.name)
+
+        self.assertEquals(a.values.keys(), ['test'])
+
+    @unittest.skipIf(not has_pycifrw(),"Unable to import PyCifRW")
+    def test_change_cifdata_file(self):
+        import os
+        import tempfile
+
+        from aiida.orm.data.cif import CifData
+
+        file_content_1 = "data_test _cell_length_a 10(1)"
+        file_content_2 = "data_test _cell_length_a 11(1)"
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(file_content_1)
+            f.flush()
+            a = CifData(file=f.name)
+
+        self.assertEquals(a.values['test']['_cell_length_a'],'10(1)')
+
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(file_content_2)
+            f.flush()
+            a.set_file(f.name)
+
+        self.assertEquals(a.values['test']['_cell_length_a'],'11(1)')
+
+    @unittest.skipIf(not has_ase(),"Unable to import ase")
+    def test_get_aiida_structure(self):
+        import os
+        import tempfile
+
+        from aiida.orm.data.cif import CifData
+
+        with tempfile.NamedTemporaryFile() as f:
+            f.write('''
+                data_test
+                _cell_length_a    10
+                _cell_length_b    10
+                _cell_length_c    10
+                _cell_angle_alpha 90
+                _cell_angle_beta  90
+                _cell_angle_gamma 90
+                loop_
+                _atom_site_label
+                _atom_site_fract_x
+                _atom_site_fract_y
+                _atom_site_fract_z
+                C 0 0 0
+                O 0.5 0.5 0.5
+            ''')
+            f.flush()
+            a = CifData(file=f.name)
+
+        c = a._get_aiida_structure_ase()
+
+        self.assertEquals(c.get_kind_names(), ['C','O'])
 
 class TestKindValidSymbols(AiidaTestCase):
     """

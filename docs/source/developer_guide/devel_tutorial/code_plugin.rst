@@ -85,6 +85,20 @@ the class by calling ``self.A_NEW_VARIABLE``.
   method is inherited from the classes ``Node`` and ``Calculation``, and you 
   shouldn't alter it unless you really know the code down to the lowest-level.
 
+.. note:: The following is a list of
+  relevant parameters you may want to (re)define in ``_init_internal_params``:
+  
+  * ``self._default_parser``: set to the string of the default parser to be
+    used, in the form accepted by the plugin loader (e.g., for the
+    Quantum ESPRESSO plugin for phonons, this would be "quantumespresso.ph",
+    loaded from the ``aiida.parsers.plugins`` module).
+  * ``self._DEFAULT_INPUT_FILE``: specify here the relative path to the
+    filename of the default file that should be shown by
+    ``verdi calculation outputcat --default`` . If not specified, the default
+    value is ``None`` and ``verdi calculation outputcat`` will not accept the
+    ``--default`` option, but it will instead always ask for a specific path name.
+  * ``self._DEFAULT_OUTPUT_FILE``: same of ``_DEFAULT_INPUT_FILE``, but for
+    the default output file.
 
 Step 2: define input nodes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -218,51 +232,49 @@ for submission without the need to store all nodes on the DB.
 For the sake of clarity, it's probably going to be easier looking at
 an implemented example. Take a look at the ``NamelistsCalculation`` located in ``aiida.orm.calculation.quantumespresso.namelists``.
 
-
-
 How does the method ``_prepare_for_submission`` work in practice?
 
 1. You should start by checking if the input nodes passed in ``inputdict``
-are logically sufficient to run an actual calculation. 
-Remember to raise an exception (for example ``InputValidationError``) if something is missing or if something
-unexpected is found. Ideally, it is better
-to discover now if something is missing, rather than waiting the queue
-on the cluster and see that your job has crashed.
-Also, if there are some nodes left unused, you are gonna leave a DB more
-complicated than what has really been, and therefore is better to stop
-the calculation now.
+   are logically sufficient to run an actual calculation. 
+   Remember to raise an exception (for example ``InputValidationError``) if something is missing or if something
+   unexpected is found. Ideally, it is better
+   to discover now if something is missing, rather than waiting the queue
+   on the cluster and see that your job has crashed.
+   Also, if there are some nodes left unused, you are gonna leave a DB more
+   complicated than what has really been, and therefore is better to stop
+   the calculation now.
 
 2. create an input file (or more if needed). In the Namelist plugin is
-done like::
+   done like::
 
-  input_filename = tempfolder.get_abs_path(self.INPUT_FILE_NAME)
-  with open(input_filename,'w') as infile:
-       # Here write the information of a ParameterData inside this
-       # file
+    input_filename = tempfolder.get_abs_path(self.INPUT_FILE_NAME)
+    with open(input_filename,'w') as infile:
+        # Here write the information of a ParameterData inside this
+        # file
 
-Note that here it all depends on how you decided the ParameterData to
-be written. In the namelists plugin we decided the convention that a ParameterData of
-the format::
+   Note that here it all depends on how you decided the ParameterData to
+   be written. In the namelists plugin we decided the convention that a ParameterData of
+   the format::
 
-  ParameterData(dict={"INPUT":{'smearing':2,
-                               'cutoff':30}
-                      })
+     ParameterData(dict={"INPUT":{'smearing':2,
+                                  'cutoff':30}
+                         })
 
-is written in the input file as::
+   is written in the input file as::
 
-  &INPUT
-      smearing = 2,
-      cutoff=30,
-  /
+     &INPUT
+         smearing = 2,
+         cutoff=30,
+     /
 
-Of course, it's up to you to decide a convention which defines how to convert the
-dictionary to the input file.
-You can also impose some default values for simplicity. For example,
-the location of the scratch directory, if needed, should be imposed by
-the plugin and not by the user, and similarly you can/should decide the
-naming of output files.
+   Of course, it's up to you to decide a convention which defines how to convert the
+   dictionary to the input file.
+   You can also impose some default values for simplicity. For example,
+   the location of the scratch directory, if needed, should be imposed by
+   the plugin and not by the user, and similarly you can/should decide the
+   naming of output files.
 
-.. note:: it is convenient to avoid hard coding of all the variables
+   .. note:: it is convenient to avoid hard coding of all the variables
 	  that your code has. The convention stated above is
 	  sufficient for all inputs structured as fortran cards,
 	  without the need of knowing which variables are accepted.
@@ -276,8 +288,8 @@ naming of output files.
 
 4. return a ``CalcInfo`` object.
 
-This object contains some accessory information. Here's a template of
-what it may look like::
+   This object contains some accessory information. Here's a template of
+   what it may look like::
 
         calcinfo = CalcInfo()
 
@@ -285,59 +297,57 @@ what it may look like::
         calcinfo.cmdline_params = settings_dict.pop('CMDLINE', [])
         calcinfo.local_copy_list = local_copy_list
         calcinfo.remote_copy_list = remote_copy_list
-	### Modify here and put a name for standard input/output files
+	    ### Modify here and put a name for standard input/output files
         calcinfo.stdin_name = self.INPUT_FILE_NAME
         calcinfo.stdout_name = self.OUTPUT_FILE_NAME
-	###        
-	calcinfo.retrieve_list = []
-	### Modify here !
+        ###        
+        calcinfo.retrieve_list = []
+        ### Modify here !
         calcinfo.retrieve_list.append('Every file/folder you want to store back locally')
-	### Modify here!
-	calcinfo.retrieve_singlefile_list = []
+        ### Modify here!
+        calcinfo.retrieve_singlefile_list = []
 	
         return calcinfo
 
-There are a couple of things to be set.
+   There are a couple of things to be set.
 
-1. stdin_name: the name of the standard input.
+   1. stdin_name: the name of the standard input.
 
-2. stdin_name: the name of the standard output.
+   2. stdin_name: the name of the standard output.
 
-3. cmdline_params: like parallelization flags, that will be used when
-running the code.
+   3. cmdline_params: like parallelization flags, that will be used when
+      running the code.
 
-4. retrieve_list: a list of relative file pathnames, that will be copied
-from the cluster to the aiida server, after the calculation has run on
-cluster.
-Note that all the file names you need to modify are not absolute path names (you don't know the name of the folder where it will be created) but rather the path relative to the scratch folder.
+   4. retrieve_list: a list of relative file pathnames, that will be copied
+      from the cluster to the aiida server, after the calculation has run on
+      cluster.
+      Note that all the file names you need to modify are not absolute path names (you don't know the name of the folder where it will be created) but rather the path relative to the scratch folder.
 
-5. local_copy_list: a list of length-two-tuples: (localabspath,
-relativedestpath). Files to be copied from the aiida server to the cluster.
+   5. local_copy_list: a list of length-two-tuples: (localabspath,
+      relativedestpath). Files to be copied from the aiida server to the cluster.
 
-6. remote_copy_list: a list of tuples: (remotemachinename, remoteabspath,
-relativedestpath). Files/folders to be copied from a remote source to a
-remote destination, sitting both on the same machine.
+   6. remote_copy_list: a list of tuples: (remotemachinename, remoteabspath,
+      relativedestpath). Files/folders to be copied from a remote source to a
+      remote destination, sitting both on the same machine.
 
-7. retrieve_singlefile_list: a list of triplets, in the form
-["linkname_from calc to singlefile","subclass of
-singlefile","filename"]. If this is specified, at the end of the
-calculation it will be created a SinglefileData-like object in the
-Database, children of the calculation, if of course the file is found
-on the cluster.
+   7. retrieve_singlefile_list: a list of triplets, in the form
+      ``["linkname_from calc to singlefile","subclass of
+      singlefile","filename"]``. If this is specified, at the end of the
+      calculation it will be created a SinglefileData-like object in the
+      Database, children of the calculation, if of course the file is found
+      on the cluster.
 
-If you need to change other settings to make the plugin work, you
-likely need to add more information to the calcinfo than what we
-showed here.
-For the full definition of ``CalcInfo()``, refer to the source
-``aiida.common.datastructures``.
+   If you need to change other settings to make the plugin work, you
+   likely need to add more information to the calcinfo than what we
+   showed here.
+   For the full definition of ``CalcInfo()``, refer to the source
+   ``aiida.common.datastructures``.
 
 
 That's what is needed to write an input plugin.
 To test that everything is done properly, remember to use the
 ``calculation.submit_test()`` method, which creates locally the folder
 to be sent on cluster, without submitting the calculation on the cluster.
-
-
 
 OutputPlugin
 ------------
@@ -374,41 +384,40 @@ The parser than has just a couple of tasks:
 Basically, you just need to specify an ``__init__()`` method, and a
 function ``parse_from_calc(calc)__``, which does the actual work.
 
-The difficult and long part is the point 3), which is the actual
+The difficult and long part is the point 3, which is the actual
 parsing stage, which convert text into python objects.
 Here, you should try to parse as much as you can from the output files.
 The more you will write, the better it will be.
-*Note also that not only you should parse physical values, a very
-important thing that could be used by workflows are exceptions or
-others errors occurring in the calculation. 
-You could save them in a dedicated key of the dictionary (say
-'warnings'), later a  workflow can easily read the exceptions from the
-results and perform a dedicated correction!*
+
+.. note:: You should not only parse physical values, a very
+  important thing that could be used by workflows are exceptions or
+  others errors occurring in the calculation. 
+  You could save them in a dedicated key of the dictionary (say
+  'warnings'), later a  workflow can easily read the exceptions from the
+  results and perform a dedicated correction!
 
 In principle, you can save the information in an arbitrary number of
 objects.
 The most useful classes to store the information back into the DB are:
 
-1. ParameterData. 
-This is the DB representation of a python dictionary. If you put
-everything in a single ParameterData, then this could be easily
-accessed from the calculation with the ``.res`` method. If you have to
-store arrays / large lists or matrices, consider using ArrayData instead.
-   
+1. ``ParameterData``:
+   This is the DB representation of a python dictionary. If you put
+   everything in a single ParameterData, then this could be easily
+   accessed from the calculation with the ``.res`` method. If you have to
+   store arrays / large lists or matrices, consider using ArrayData instead.
 
-2. ArrayData.
-If you need to store large arrays of values, for
-example, a list of points or a molecular dynamic trajectory, we
-strongly encourage you to use this class.
-At variance with ParameterData, the values are not stored in the
-DB, but are written to a file (mapped back in the DB). If instead
-you store large arrays of numbers in the DB with ParameterData, you might soon realize
-that: a) the DB grows large really rapidly; b) the time it takes to
-save an object in the DB gets very large.
-   
+2. ``ArrayData``:
+   If you need to store large arrays of values, for
+   example, a list of points or a molecular dynamic trajectory, we
+   strongly encourage you to use this class.
+   At variance with ParameterData, the values are not stored in the
+   DB, but are written to a file (mapped back in the DB). If instead
+   you store large arrays of numbers in the DB with ParameterData, you might soon realize
+   that: a) the DB grows large really rapidly; b) the time it takes to
+   save an object in the DB gets very large.
 
-3. StructureData.
-If your code relaxes an input structure, you can end up with an output structure.
+3. ``StructureData``:
+   If your code relaxes an input structure, you can end up with an output structure.
 
 Of course, you can create new classes to be stored in the DB, and use
 them at your own advantage.
@@ -426,70 +435,73 @@ A kind of template for writing such parser for the calculation class
             Initialize the instance of NewParser
             """
             # check for valid input
-	    if not isinstance(calc,NewCalculation):
-	        raise ParsingError("Input must calc must be a NewCalculation")
-        
-	    super(NewParser, self).__init__(calc)
+            if not isinstance(calc,NewCalculation):
+                raise ParsingError("Input must calc must be a NewCalculation")
+            
+            super(NewParser, self).__init__(calc)
 
         def parse_from_calc(self):
             """
             Parses the calculation-output datafolder, and stores
             results.
             """           
-	    # load the error logger
-	    from aiida.common import aiidalogger
-	    from aiida.djsite.utils import get_dblogger_extra
-	    parserlogger = aiidalogger.getChild('newparser')
-	    logger_extra = get_dblogger_extra(self._calc)
+            # load the error logger
+            from aiida.common import aiidalogger
+            from aiida.djsite.utils import get_dblogger_extra
+            parserlogger = aiidalogger.getChild('newparser')
+            logger_extra = get_dblogger_extra(self._calc)
 
-	    # check the calc status, not to overwrite anything
+            # check the calc status, not to overwrite anything
             state = calc.get_state()
             if state != calc_states.PARSING:
                 raise InvalidOperation("Calculation not in {} state"
                                        .format(calc_states.PARSING) )
 
-	    # retrieve the whole list of input links
-	    calc_input_parameterdata = self._calc.get_inputs(type=ParameterData,
-                                                         also_labels=True)
+            # retrieve the whole list of input links
+            calc_input_parameterdata = self._calc.get_inputs(type=ParameterData,
+                                                             also_labels=True)
+
             # then look for parameterdata only
-	    input_param_name = self._calc.get_linkname('parameters')
-	    params = [i[1] for i in calc_input_parameterdata if i[0]==input_param_name]
-	    if len(params) != 1:
-	        parserlogger.error("Found {} input_params instead of one"
-                                  .format(params),extra=logger_extra)
+            input_param_name = self._calc.get_linkname('parameters')
+            params = [i[1] for i in calc_input_parameterdata if i[0]==input_param_name]
+            if len(params) != 1:
+                parserlogger.error("Found {} input_params instead of one"
+                                      .format(params),extra=logger_extra)
                 successful = False
-            calc_input = params[0]
+                calc_input = params[0]
 
-            # check what is inside the folder
-            list_of_files = out_folder.get_folder_list()
-            # at least the stdout should exist
-            if not calc.OUTPUT_FILE_NAME in list_of_files:
-                raise QEOutputParsingError("Standard output not found")
-            # get the path to the standard output
-            out_file = os.path.join( out_folder.get_abs_path('.'), 
-                                     calc.OUTPUT_FILE_NAME )
+                # check what is inside the folder
+                list_of_files = out_folder.get_folder_list()
+                # at least the stdout should exist
+                if not calc.OUTPUT_FILE_NAME in list_of_files:
+                    raise QEOutputParsingError("Standard output not found")
+                # get the path to the standard output
+                out_file = os.path.join( out_folder.get_abs_path('.'), 
+                                         calc.OUTPUT_FILE_NAME )
 
-	    # read the file
-	    with open(out_file) as f:
-	        out_file_lines = f.readlines()
+
+            # read the file
+            with open(out_file) as f:
+                out_file_lines = f.readlines()
 
             # call the raw parsing function. Here it was thought to return a
             # dictionary with all keys and values parsed from the out_file (i.e. enery, forces, etc...)
             # and a boolean indicating whether the calculation is successfull or not
-	    # In practice, this is the function deciding the final status of the calculation
+            # In practice, this is the function deciding the final status of the calculation
             out_dict,successful = parse_raw_output(out_file_lines)
-            
+                
             # convert the dictionary into an AiiDA object, here a
-	    # ParameterData for instance
+            # ParameterData for instance
             output_params = ParameterData(dict=out_dict)
 
-	    # prepare the list of output nodes to be returned
-	    # this must be a list of tuples having 2 elements each: the name of the 
-	    # linkname in the database (the one below, self.get_linkname_outparams(),
-	    # is defined in the Parser class), and the object to be saved
-	    new_nodes_list = [ (self.get_linkname_outparams(),output_params) ]
+            # prepare the list of output nodes to be returned
+            # this must be a list of tuples having 2 elements each: the name of the 
+            # linkname in the database (the one below, self.get_linkname_outparams(),
+            # is defined in the Parser class), and the object to be saved
+            new_nodes_list = [ (self.get_linkname_outparams(),output_params) ]
 
-	    # if false, the calculation status will be flagged as failed, to finished if true
+            # The calculation state will be set to failed if successful=False,
+            # to finished otherwise
             return successful, new_nodes_list
 
 

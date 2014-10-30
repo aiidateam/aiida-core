@@ -10,6 +10,7 @@ from aiida.orm import Calculation
 from aiida.orm.data.cif import CifData
 from aiida.orm.data.parameter import ParameterData
 from aiida.common.datastructures import CalcInfo
+from aiida.common.exceptions import InputValidationError
 from aiida.common.utils import classproperty
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."

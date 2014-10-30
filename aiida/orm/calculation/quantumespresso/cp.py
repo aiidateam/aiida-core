@@ -21,10 +21,9 @@ from aiida.orm import Calculation
 from aiida.orm.calculation.quantumespresso import BasePwCpInputGenerator
 from aiida.common.utils import classproperty
   
-__author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
-__copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.2.0"
+__copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
+__license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
+__version__ = "0.2.1"
 
 class CpCalculation(BasePwCpInputGenerator, Calculation):   
     """
@@ -99,6 +98,10 @@ class CpCalculation(BasePwCpInputGenerator, Calculation):
                                      '{}.{}'.format(BasePwCpInputGenerator._PREFIX,
                                      ext)) for ext in _cp_ext_list]
         self._internal_retrieve_list += [self._FILE_XML_PRINT_COUNTER]
+    
+        # Default input and output files
+        self._DEFAULT_INPUT_FILE = 'aiida.in'
+        self._DEFAULT_OUTPUT_FILE = 'aiida.out'
     
     @classproperty
     def _FILE_XML_PRINT_COUNTER_BASENAME(cls):

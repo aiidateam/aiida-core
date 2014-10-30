@@ -10,10 +10,9 @@ from aiida.common.utils import get_repository_folder
 # Otherwise, tries to make everything only readable and writable by the user.
 # TODO: put it in a global variable, and check if it really works!
 
-__author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
-__copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.2.0"
+__copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
+__license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
+__version__ = "0.2.1"
 
 group_writable = True
 
@@ -110,7 +109,7 @@ class Folder(object):
         :param pattern: a pattern for the file/folder names, using Unix filename
                 pattern matching (see Python standard module fnmatch).
                 By default, pattern is '*', matching all files and folders.
-        :param only_filenames: if False (default), return pairs (name, is_file).
+        :param only_paths: if False (default), return pairs (name, is_file).
                 if True, return only a flat list.
 
         :Returns:

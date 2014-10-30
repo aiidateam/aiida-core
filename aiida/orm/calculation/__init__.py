@@ -11,10 +11,9 @@ from aiida.common.utils import classproperty
 #        'rerunnable',
 #        'resourceLimits',
 
-__author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
-__copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.2.0"
+__copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
+__license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
+__version__ = "0.2.1"
 
 _input_subfolder = 'raw_input'
 
@@ -48,6 +47,12 @@ class Calculation(Node):
         # If they are identical, outputs will be joined.
         self._SCHED_OUTPUT_FILE = '_scheduler-stdout.txt'
         self._SCHED_ERROR_FILE = '_scheduler-stderr.txt'
+        
+        # Files that should be shown by default
+        # Set it to None if you do not have a default file
+        # Used, e.g., by 'verdi calculation inputshow/outputshow
+        self._DEFAULT_INPUT_FILE = None
+        self._DEFAULT_OUTPUT_FILE = None
     
     @property
     def _set_defaults(self):
@@ -1106,14 +1111,14 @@ class Calculation(Node):
         # I do the query now, so that the list of pks gets cached
         calc_list_data = list(
             calc_list.filter(
-                dbcomputer__dbauthinfo__aiidauser=F('user')
+                #dbcomputer__dbauthinfo__aiidauser=F('user')
                 ).distinct().order_by('ctime').values(
                 'pk', 'dbcomputer__name', 'ctime',
                 'type','dbcomputer__enabled',
                 'dbcomputer__pk',
-                'dbcomputer__dbauthinfo__aiidauser__pk'))
+                'user__pk'))
         list_comp_pk = [ i['dbcomputer__pk'] for i in calc_list_data ]
-        list_aiduser_pk = [ i['dbcomputer__dbauthinfo__aiidauser__pk'] 
+        list_aiduser_pk = [ i['user__pk'] 
                            for i in calc_list_data ]
         enabled_data = DbAuthInfo.objects.filter(
             dbcomputer__pk__in=list_comp_pk,aiidauser__pk__in=list_aiduser_pk
@@ -1202,9 +1207,11 @@ class Calculation(Node):
                 
                 the_state = states[calcdata['pk']]
                 
-                # decide if it is needed to print enabled/disabled informations
-                user_enabled = enabled_auth_dict[(calcdata['dbcomputer__pk'],
-                    calcdata['dbcomputer__dbauthinfo__aiidauser__pk'])]
+                # decide if it is needed to print enabled/disabled information
+                # By default, if the computer is not configured for the
+                # given user, assume it is user_enabled
+                user_enabled = enabled_auth_dict.get((calcdata['dbcomputer__pk'],
+                    calcdata['user__pk']), True)
                 global_enabled = calcdata["dbcomputer__enabled"]
                 
                 enabled = "" if (user_enabled and global_enabled or 

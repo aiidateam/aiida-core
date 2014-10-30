@@ -66,25 +66,25 @@ class CodtoolsCalculation(Calculation):
         shutil.copy( cif.get_file_abs_path(), input_filename )
 
         commandline_params = []
-        if 'values' in parameters.get_dict():
-            for k in parameters.get_dict()['values'].keys():
-                v = parameters.get_dict()['values'][k]
-                if not isinstance(v, list):
-                    v = [ v ]
-                if len( k ) == 1:
-                    k = "-{}".format( k )
+        for k in parameters.get_dict().keys():
+            v = parameters.get_dict()[k]
+            if v is None:
+                continue
+            if not isinstance(v, list):
+                v = [ v ]
+            key = None
+            if len( k ) == 1:
+                key = "-{}".format( k )
+            else:
+                key = "--{}".format( k )
+            for val in v:
+                if isinstance(val, bool) and val == False:
+                    continue
+                if isinstance(val, bool):
+                    commandline_params.append( key )
                 else:
-                    k = "--{}".format( k )
-                for val in v:
-                    commandline_params.append( "{} {}".format( k, val ) )
+                    commandline_params.append( "{} {}".format( key, val ) )
 
-        if 'flags' in parameters.get_dict():
-            for f in parameters.get_dict()['flags']:
-                if len( f ) == 1:
-                    f = "-{}".format( f )
-                else:
-                    f = "--{}".format( f )
-                commandline_params.append( f )
 
         calcinfo = CalcInfo()
         calcinfo.uuid = self.uuid

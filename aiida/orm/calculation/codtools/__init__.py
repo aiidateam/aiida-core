@@ -25,6 +25,8 @@ class CodtoolsCalculation(Calculation):
     def _init_internal_params(self):
         super(CodtoolsCalculation, self)._init_internal_params()
 
+        self._default_parser = 'codtools'
+
         # Default input and output files
         self._DEFAULT_INPUT_FILE  = 'aiida.in'
         self._DEFAULT_OUTPUT_FILE = 'aiida.out'

@@ -71,7 +71,7 @@ if __name__ == "__main__":
         f.write(CodDbImporter().query(id=1000000).at(0).cif)
         f.flush()
         cif = CifData(file=f.name)
-    parameters = ParameterData(dict={"fix-errors":True})
+    parameters = ParameterData(dict={"fix-syntax-errors":True,"use-perl-parser":True})
     computer = Computer.get( Computer.list_names()[0] )
 
     calc = code.new_calc()

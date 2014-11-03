@@ -25,24 +25,33 @@ from aiida.tools.dbimporters.plugins.cod import CodDbImporter
 if __name__ == "__main__":
     CifData = DataFactory('cif')
     ParameterData = DataFactory('parameter')
-    try:
-        dontsend = sys.argv[1]
-        if dontsend == "--dont-send":
-            submit_test = True
-        elif dontsend == "--send":
+    submit_test = None
+    codename = None
+    options = {}
+    files = []
+
+    sys.argv.pop(0)
+    while len(sys.argv) > 0:
+        arg = sys.argv.pop(0)
+        if arg == '--send':
             submit_test = False
+            codename = sys.argv.pop(0)
+        elif arg == '--dont-send':
+            submit_test = True
+            codename = sys.argv.pop(0)
+        elif arg == '--arg':
+            argkey = None
+            argval = None
+            if '=' in sys.argv[0]:
+                argkey, argval = sys.argv.pop(0).split('=', 1)
+            else:
+                argkey = sys.argv.pop(0)
+                argval = True
+            if argkey not in options.keys():
+                options[argkey] = []
+            options[argkey].append( argval )
         else:
-            raise IndexError
-    except IndexError:
-        print >> sys.stderr, ("The first parameter can only be either "
-                              "--send or --dont-send")
-        sys.exit(1)
-
-
-    try:
-        codename = sys.argv[2]
-    except IndexError:
-        codename = None
+            files.append( arg )
 
     expected_code_type = "codtools"
 
@@ -66,12 +75,19 @@ if __name__ == "__main__":
             print >> sys.stderr, "    verdi code setup"
         sys.exit(1)
 
-    import tempfile
-    with tempfile.NamedTemporaryFile() as f:
-        f.write(CodDbImporter().query(id=2000229).at(0).cif)
-        f.flush()
-        cif = CifData(file=f.name)
-    parameters = ParameterData(dict={"use-attached-hydrogens":True})
+    cif = None
+    if len(files) == 0:
+        import tempfile
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(CodDbImporter().query(id=1000000).at(0).cif)
+            f.flush()
+            cif = CifData(file=f.name)
+    elif len(files) > 1:
+        raise ValueError("Please specify a single CIF file")
+    else:
+        cif = CifData(file=os.path.abspath(files[0]))
+
+    parameters = ParameterData(dict=options)
     computer = Computer.get( Computer.list_names()[0] )
 
     calc = code.new_calc()

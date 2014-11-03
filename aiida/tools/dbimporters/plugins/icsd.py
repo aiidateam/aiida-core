@@ -62,7 +62,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
             if not isinstance( e, str ):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only strings are accepted")
-        return " AND ".join( map( lambda e: "formula REGEXP ' " + \
+        return " AND ".join( map( lambda e: "STRUCT_FORM REGEXP ' " + \
                                             e + "[0-9 ]'", \
                                   values ) )
 
@@ -239,7 +239,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
                  }
 
     keywords_db = {'id'             : [ 'COLL_CODE',          int_clause ],
-                 'element'           : [ 'STRUCT_FOR;',       composition_clause ],
+                 'element'           : [ 'STRUCT_FORM;',       composition_clause ],
                  'number_of_elements': [ 'EL_COUNT',           int_clause ],
                  'chemical_name'     : [ 'CHEM_NAME',      str_fuzzy_clause ],
                  'formula'           : [ 'SUM_FORM',       formula_clause ],
@@ -274,7 +274,8 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
                                "host":   "",
                                "user":   "dba",
                                "passwd": "",
-                               "db":     "icsd"
+                               "db":     "icsd",
+                               "port": "3306"
                             }
         self.setup_db( **kwargs )
 
@@ -364,7 +365,7 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
     Results of the search, performed on Icsd.
     """
 
-    cif_url = "index.php?format=cif&action=Export&id%5B%5D={}"
+    cif_url = "/index.php?format=cif&action=Export&id%5B%5D={}"
     db_name = "Icsd"
 
     def __init__(self, query, db_parameters):
@@ -378,8 +379,9 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
         self.entries = {}
         self.page = 1
         self.position = 0
-        self.sql_select_query = "SELECT icsd.IDNUM, icsd.COLL_CODE, icsd.STRUC_FROM "
+        self.sql_select_query = "SELECT icsd.IDNUM, icsd.COLL_CODE, icsd.STRUCT_FORM "
         self.sql_from_query = "FROM icsd.icsd "
+        #self.sql_from_query = "FROM icsd.icsd "
 
         self.query_page()
 
@@ -405,7 +407,7 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
         if position < 0 | position >= self.number_of_results:
             raise IndexError( "index out of bounds" )
         if position not in self.entries:
-            self.entries[position] = IcsdEntry( self.db_parameters["server"]+ self.cif_url.format(self.results[position]), \
+            self.entries[position] = IcsdEntry( self.db_parameters["server"]+ self.db_parameters["db"] + self.cif_url.format(self.results[position]), \
                           source_db = self.db_name, \
                           db_id = self.results[position] )
         return self.entries[position]
@@ -414,18 +416,26 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
 
     def query_page(self):
         if self.db_parameters["querydb"]:
+
             self._connect_db()
-            query_statement = self.sql_select_query+ self.sql_from_query + self.query + " LIMIT " + str((self.page-1)*100) + " " + str(self.page*100)
+            query_statement = self.sql_select_query+ self.sql_from_query + self.query + " LIMIT " + str((self.page-1)*100) + ", " + str(self.page*100)
         #try:
+
             self.cursor.execute( query_statement )
+            print "cursor"
             self.db.commit()
+            print "commit"
             for row in self.cursor.fetchall():
                 self.results.append( str( row[1] ) )
 
+
             if self.number_of_results is None:
-                self.cursor.execute( "SELECT FOUND_ROWS()")
-                self.db.commit()
-                self.number_of_results = self.cursor.fetch()[0]
+                self.number_of_results = 100
+
+                #self.cursor.execute( "SELECT FOUND_ROWS()")
+                #self.db.commit()
+                #self.number_of_results = self.cursor.fetch()[0]
+
 
         #finally:
             self._disconnect_db()
@@ -456,6 +466,7 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
                                    user =   self.db_parameters['user'],
                                    passwd = self.db_parameters['passwd'],
                                    #db =     self.db_parameters['db']
+                                   port = int(self.db_parameters['port'])
                                    )
         self.cursor = self.db.cursor()
 

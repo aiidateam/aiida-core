@@ -56,23 +56,7 @@ class CodtoolsParser(Parser):
                                extra=logger_extra)
             return False, ()
 
-        cif = None
-        if output_path is not None and os.path.getsize(output_path) > 0:
-            cif = CifData(file=output_path)
-
-        messages = []
-        if error_path is not None:
-            with open(error_path) as f:
-                content = f.readlines()
-            messages = [x.strip('\n') for x in content]
-
-        output_nodes = []
-        if cif is not None:
-            output_nodes.append(('cif',cif))
-        output_nodes.append(('messages',
-                             ParameterData(dict={'output_messages':
-                                                 messages})))
-        return True, output_nodes
+        return True, self._get_output_nodes(output_path, error_path)
 
     def _fetch_output_files(self):
         """
@@ -106,3 +90,28 @@ class CodtoolsParser(Parser):
                                         self._calc._DEFAULT_ERROR_FILE )
 
         return output_path, error_path
+
+    def _get_output_nodes(self, output_path, error_path):
+        """
+        Extracts output nodes from the standard output and standard error
+        files.
+        """
+        import os
+
+        cif = None
+        if output_path is not None and os.path.getsize(output_path) > 0:
+            cif = CifData(file=output_path)
+
+        messages = []
+        if error_path is not None:
+            with open(error_path) as f:
+                content = f.readlines()
+            messages = [x.strip('\n') for x in content]
+
+        output_nodes = []
+        if cif is not None:
+            output_nodes.append(('cif',cif))
+        output_nodes.append(('messages',
+                             ParameterData(dict={'output_messages':
+                                                 messages})))
+        return output_nodes

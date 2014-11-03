@@ -53,7 +53,7 @@ if __name__ == "__main__":
         else:
             files.append( arg )
 
-    expected_code_type = "codtools"
+    expected_code_type = "codtools.cifcellcontents"
 
     try:
         if codename is None:

@@ -21,6 +21,7 @@ list:
 * **group**:               setup and manage groups
 * **import**:              export nodes and group of nodes
 * **install**:             install/setup aiida for the current user
+* **node**:                manage operations on AiiDA nodes
 * **runserver**:           run the AiiDA webserver on localhost
 * **shell**:               run the interactive shell with the Django environment
 * **user**:                list and configure new AiiDA users.
@@ -35,11 +36,14 @@ Following below, a list with the subcommands available.
   * **kill**: stop the execution on the cluster of a calculation.
   * **logshow**: shows the logs/errors produced by a calculation
   * **plugins**: lists the supported calculation plugins
+  * **inputcat**: shows an input file of a calculation node.
+  * **inputls**: shows the list of the input files of a calculation node.
   * **list**: list the AiiDA calculations. By default, lists only the running 
     calculations.
+  * **outputcat**: shows an ouput file of a calculation node. 
+  * **outputls**: shows the list of the output files of a calculation node.
   * **show**: shows the database information related to the calculation: 
     used code, all the input nodes and all the output nodes. 
-
 
 ``verdi code``
 ++++++++++++++
@@ -75,19 +79,21 @@ autocompletion of the verdi commands.
 ``verdi computer``
 ++++++++++++++++++
 
-  *  **rename**: changes the name of a computer.
+  *  **setup**: creates a new computer object
+  *  **configure**: set up some extra info that can be used in the connection
+     with that computer.
   *  **enable**: to enable a computer. If the computer is disabled, the daemon 
      will not try to connect to the computer, so it will not retrieve or launch 
      calculations. Useful if a computer is under mantainance. 
-  *  **configure**: set up some extra info that can be used in the connection
-     with that computer.
-  *  **show**: shows the details of an installed computer
-  *  **setup**: creates a new computer object
-  *  **list**: list all installed computers
+  *  **rename**: changes the name of a computer.
   *  **disable**: disable a computer (see enable for a larger description)
+  *  **show**: shows the details of an installed computer
+  *  **list**: list all installed computers
   *  **delete**: deletes a computer node. Works only if the computer node is 
      a disconnected node in the database (has not been used yet)
-
+  *  **test**: tests if the current user (or a given user) can connect to the
+     computer and if basic operations perform as expected (file copy, getting
+     the list of jobs in the scheduler queue, ...)
 
 ``verdi daemon``
 ++++++++++++++++
@@ -172,6 +178,11 @@ Imports data (coming from other AiiDA databases) in the current database
 Used in the installation to configure the database.
 If it finds an already installed database, it updates the tables migrating them 
 to the new schema.
+
+``verdi node``
++++++++++++++++
+
+  *  **repo**: Show files and their contents in the local repository
 
 ``verdi runserver``
 +++++++++++++++++++

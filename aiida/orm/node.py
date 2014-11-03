@@ -10,10 +10,9 @@ from aiida.common.exceptions import (
 from aiida.common.folders import RepositoryFolder, SandboxFolder
 from aiida.common.utils import classproperty
 
-__author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
-__copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.2.0"
+__copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
+__license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
+__version__ = "0.2.1"
 
 def from_type_to_pluginclassname(typestr):
     """
@@ -1486,6 +1485,7 @@ class Node(object):
         from django.db import transaction
         
         from aiida.djsite.db.models import DbAttribute
+        import aiida.orm.autogroup
 
         if self._to_be_stored:
 
@@ -1535,7 +1535,20 @@ class Node(object):
                               "pk={}".format(self.pk))
             raise ModificationNotAllowed(
                 "Node with pk={} was already stored".format(self.pk))
-
+        
+        # Set up autogrouping used be verdi run
+        autogroup = aiida.orm.autogroup.current_autogroup
+        grouptype = aiida.orm.autogroup.VERDIAUTOGROUP_TYPE
+        if autogroup is not None:
+            if not isinstance(autogroup,aiida.orm.autogroup.Autogroup):
+                raise ValidationError("current_autogroup is not an AiiDA Autogroup")
+            if autogroup.is_to_be_grouped(self):
+                group_name = autogroup.get_group_name()
+                if group_name is not None:
+                    from aiida.orm.group import Group
+                    g = Group.get_or_create(name=group_name,type_string=grouptype)[0]
+                    g.add_nodes(self)
+        
         # This is useful because in this way I can do
         # n = Node().store()
         return self
@@ -1557,14 +1570,21 @@ class Node(object):
     @property
     def out(self):
         """
-        To document
+        Traverse the graph of the database.
+        Returns a databaseobject, linked to the current node, by means of the linkname.
+        Example:
+        B = A.out.results: Returns the object B, with link from A to B, with linkname parameters 
         """
         return NodeOutputManager(self)
 
     @property
     def inp(self):
         """
-        To document
+        Traverse the graph of the database.
+        Returns a databaseobject, linked to the current node, by means of the linkname.
+        Example:
+        B = A.inp.parameters: returns the object (B), with link from B to A, with linkname parameters
+        C= A.inp: returns an InputManager, an object that is meant to be accessed as the previous example
         """
         return NodeInputManager(self)
 

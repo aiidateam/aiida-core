@@ -6,10 +6,9 @@ import aiida
 # The username (email) used by the default superuser, that should also run 
 # as the daemon
 
-__author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
-__copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.2.0"
+__copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
+__license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
+__version__ = "0.2.1"
 
 DEFAULT_AIIDA_USER="aiida@localhost"
 
@@ -294,6 +293,7 @@ def create_base_dirs():
   
     if (not os.path.isdir(aiida_dir)):
         os.makedirs(aiida_dir)
+    os.chmod(aiida_dir, 0700)
     
     if (not os.path.isdir(aiida_daemon_dir)):
         os.makedirs(aiida_daemon_dir)

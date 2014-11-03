@@ -32,6 +32,7 @@ from aiida.cmdline.commands.devel import Devel
 from aiida.cmdline.commands.exportfile import Export
 from aiida.cmdline.commands.group import Group
 from aiida.cmdline.commands.importfile import Import
+from aiida.cmdline.commands.node import Node
 from aiida.cmdline.commands.user import User
 from aiida.cmdline.commands.workflow import Workflow
 from aiida.cmdline.commands.comment import Comment
@@ -43,10 +44,9 @@ from aiida.cmdline import execname
 # HERE STARTS THE COMMAND FUNCTION LIST
 ########################################################################
 
-__author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
-__copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.2.0"
+__copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
+__license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
+__version__ = "0.2.1"
 
 class CompletionCommand(VerdiCommand):
     """
@@ -395,6 +395,71 @@ class Runserver(VerdiCommand):
         pass_to_django_manage([execname, 'runserver'] + list(args))
 
 
+class Run(VerdiCommand):
+    """
+    Execute an AiiDA script
+    """
+    def run(self,*args):
+        from aiida import load_dbenv
+        load_dbenv()
+        import argparse
+        import aiida.cmdline
+        from aiida.djsite.db.management.commands.customshell import default_modules_list
+        import aiida.orm.autogroup
+        from aiida.orm.autogroup import Autogroup
+        
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Execute an AiiDA script.')
+        parser.add_argument('scriptname', metavar='ScriptName', type=str,
+                            help='The name of the script you want to execute')
+        parser.add_argument('-g','--group', type=bool, default=True, 
+                            help='Enables the autogrouping, default = True')
+        parser.add_argument('-n','--groupname', type=str, default=None, 
+                            help='Specify the name of the auto group')
+#        parser.add_argument('-o','--grouponly', type=str, nargs='+', default=['all'],
+#                            help='Limit the grouping to specific classes (by default, all classes are grouped')
+        parser.add_argument('-e','--exclude', type=str, nargs='+', default=[],
+                            help=('Autogroup only specific calculation classes.'
+                                  " Select them by their module name.")
+                            )
+        parser.add_argument('-E','--excludesubclasses', type=str, nargs='+', default=[],
+                            help=('Autogroup only specific calculation classes.'
+                                  " Select them by their module name.")
+                            )
+        parser.add_argument('-i','--include', type=str, nargs='+', default=['all'],
+                            help=('Autogroup only specific data classes.'
+                                  " Select them by their module name.")
+                            )
+        parser.add_argument('-I','--includesubclasses', type=str, nargs='+', default=[],
+                            help=('Autogroup only specific code classes.'
+                                  " Select them by their module name.")
+                            )
+        parsed_args = parser.parse_args(args)
+        
+        # dynamically load modules (the same of verdi shell)
+        for app_mod, model_name, alias in default_modules_list:
+            locals()["{}".format(alias)] = getattr(
+                            __import__(app_mod, {}, {}, model_name), model_name)
+        
+        if parsed_args.group:
+            automatic_group_name = parsed_args.groupname
+            if automatic_group_name is None:
+                import datetime
+                now = datetime.datetime.now()
+                automatic_group_name = "Verdi autogroup on "+ now.strftime("%Y-%m-%d %H:%M:%S") 
+            
+            aiida_verdilib_autogroup = Autogroup()
+            aiida_verdilib_autogroup.set_exclude(parsed_args.exclude)
+            aiida_verdilib_autogroup.set_include(parsed_args.include)
+            aiida_verdilib_autogroup.set_exclude_with_subclasses(parsed_args.excludesubclasses)
+            aiida_verdilib_autogroup.set_include_with_subclasses(parsed_args.includesubclasses)
+            aiida_verdilib_autogroup.set_group_name(automatic_group_name)
+            aiida.orm.autogroup.current_autogroup = aiida_verdilib_autogroup
+        
+        with open(parsed_args.scriptname) as f:
+            exec(f)
+        
 ########################################################################
 # HERE ENDS THE COMMAND FUNCTION LIST
 ########################################################################
@@ -414,7 +479,7 @@ def get_listparams():
 
     name_desc = sorted(name_desc)
     
-    return ("List of available commands:" + os.linesep +
+    return ("List of the most relevant available commands:" + os.linesep +
             os.linesep.join(["  * {} {}".format(name, desc) 
                              for name, desc in name_desc]))
 
@@ -450,6 +515,9 @@ def exec_from_cmdline(argv):
     from aiida.cmdline import verdilib
     import inspect
 
+    #List of command names that should be hidden or not completed.
+    hidden_commands = ['completion', 'completioncommand', 'listparams']
+
     # Retrieve the list of commands
     verdilib_namespace = verdilib.__dict__
 
@@ -467,6 +535,8 @@ def exec_from_cmdline(argv):
     short_doc = {}
     long_doc = {}
     for k, v in raw_docstrings.iteritems():
+        if k in hidden_commands:
+            continue
         lines = [l.strip() for l in v] 
         empty_lines = [bool(l) for l in lines]
         try:

@@ -17,9 +17,9 @@ from aiida.orm import Code, Computer, DataFactory
 from aiida.tools.dbimporters.plugins.cod import CodDbImporter
 
 ################################################################
-# Test for cif_filter script from cod-tools package.
+# Test for cif_cell_contents script from cod-tools package.
 # Input plugin: codtools
-# Accepted codes: cif_filter
+# Accepted codes: cif_cell_contents
 ################################################################
 
 if __name__ == "__main__":
@@ -27,7 +27,7 @@ if __name__ == "__main__":
     ParameterData = DataFactory('parameter')
     submit_test = None
     codename = None
-    options = {"use-perl-parser":True}
+    options = {}
     files = []
 
     sys.argv.pop(0)
@@ -53,7 +53,7 @@ if __name__ == "__main__":
         else:
             files.append( arg )
 
-    expected_code_type = "codtools"
+    expected_code_type = "codtools.cifcellcontents"
 
     try:
         if codename is None:
@@ -91,8 +91,8 @@ if __name__ == "__main__":
     computer = Computer.get( Computer.list_names()[0] )
 
     calc = code.new_calc()
-    calc.label = "Test cod-tools cif_filter"
-    calc.description = "Test calculation with the cod-tools cif_filter"
+    calc.label = "Test cod-tools cif_cell_contents"
+    calc.description = "Test calculation with the cod-tools cif_cell_contents"
     calc.set_max_wallclock_seconds(30*60) # 30 min
     calc.set_resources({"num_machines": 1})
     calc.set_computer(computer)

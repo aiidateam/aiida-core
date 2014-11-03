@@ -63,10 +63,10 @@ class TestCodtools(AiidaTestCase):
         calc = c._prepare_for_submission(f, c.get_inputdata_dict())
 
         self.assertEquals(calc['cmdline_params'],
-                          ['--extra-tag-list cod.lst',
-                           '--extra-tag-list tcod.lst',
+                          ['--extra-tag-list', 'cod.lst',
+                           '--extra-tag-list', 'tcod.lst',
                            '-s', '--reformat-spacegroup',
-                           '--start-data-block-number 1234567'])
+                           '--start-data-block-number', '1234567'])
 
         self.assertEquals(calc['stdout_name'], c._DEFAULT_OUTPUT_FILE)
         self.assertEquals(calc['stderr_name'], c._DEFAULT_ERROR_FILE)

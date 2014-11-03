@@ -7,24 +7,17 @@ from aiida import load_dbenv
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 
 
-__author__ = "Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari, and Boris Kozinsky"
-__copyright__ = u"Copyright (c), 2012-2014, École Polytechnique Fédérale de Lausanne (EPFL), Laboratory of Theory and Simulation of Materials (THEOS), MXC - Station 12, 1015 Lausanne, Switzerland. All rights reserved."
-__license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.2.0"
+__copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
+__license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
+__version__ = "0.2.1"
 
 class Calculation(VerdiCommandWithSubcommands):
     """
     Query and interact with calculations
     
-    Valid subcommands are:
-    * kill:    kill a given calculation
-    * list:    list the running calculations running and their state. Pass a -h
-    |          option for further help on valid options.
-    * logshow: show the log messages for a given calculation
-    * plugins: list (and describe) the existing available calculation plugins
-    * show:    show more details on a given calculation
+    Different subcommands allow to list the running calculations, show the
+    content of the input/output files, see the logs, etc.
     """
-
 
     def __init__(self):
         """
@@ -35,6 +28,10 @@ class Calculation(VerdiCommandWithSubcommands):
             'list': (self.calculation_list, self.complete_none),
             'logshow': (self.calculation_logshow, self.complete_none),
             'kill': (self.calculation_kill, self.complete_none),
+            'inputls': (self.calculation_inputls, self.complete_none),
+            'outputls': (self.calculation_outputls, self.complete_none),
+            'inputcat': (self.calculation_inputcat, self.complete_none),
+            'outputcat': (self.calculation_outputcat, self.complete_none),
             'show': (self.calculation_show, self.complete_none),
             'plugins': (self.calculation_plugins, self.complete_plugins),
             }
@@ -236,6 +233,263 @@ class Calculation(VerdiCommandWithSubcommands):
             else:
                 print "## No calculation plugins found"
                 
+    def calculation_inputcat(self, *args):
+        """
+        Show an input file of a calculation node. 
+        
+        It shows the files in the raw_input subdirectory.
+        Use the -h option for more help on the command line options.
+        """
+        from aiida.cmdline.commands.node import cat_repo_files
+        from aiida.common.exceptions import NotExistent
+        
+        import argparse
+        
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Output the content of a file in the repository folder.')
+        parser.add_argument('-p', '--pk', type=int, required=True, 
+                            help='The pk of the node')
+        parser.add_argument('-d', '--default', action='store_true', 
+                            help="Open the default output file, if specified "
+                            "by the Calculation plugin. If specified, do not "
+                            "pass any 'path'")
+        parser.add_argument('path', type=str, default=None, nargs='?',
+                            help='The relative path of the file you '
+                            'want to show. You must specify it if you do not '
+                            'pass the --default flag')
+        
+        args = list(args)
+        parsed_args = parser.parse_args(args)
+
+        if parsed_args.default and parsed_args.path:
+            sys.stderr.write(parser.format_usage())
+            sys.stderr.write("{}: error: If you pass --default, "
+                "you cannot pass also a path.\n".format(
+                    self.get_full_command_name()))
+            sys.exit(1)
+            
+        if not parsed_args.default and not parsed_args.path:
+            sys.stderr.write(parser.format_usage())
+            sys.stderr.write("{}: error: pass either --default "
+                "or a path.\n".format(
+                    self.get_full_command_name()))
+            sys.exit(1)
+
+        load_dbenv()
+        from aiida.orm import Calculation as OrmCalculation        
+        from aiida.common.pluginloader import get_class_typestring
+        
+        try:
+            n = OrmCalculation.get_subclass_from_pk(parsed_args.pk)
+        except NotExistent as e:
+            print >> sys.stderr, e.message
+            sys.exit(1)
+
+        path = parsed_args.path
+        if parsed_args.default:
+            path = n._DEFAULT_INPUT_FILE
+            if path is None:
+                base_class, plugin_string, class_name = get_class_typestring(
+                    n._plugin_type_string)
+                print >> sys.stderr, ("Calculation '{}' does not define a "
+                    "default input file. Please specify a path "
+                    "explicitly".format(plugin_string))
+                sys.exit(1)
+        
+        try:
+            cat_repo_files(n, os.path.join('raw_input', path))
+        except ValueError as e:
+            print >> sys.stderr, e.message
+            sys.exit(1)
+        except IOError as e:
+            import errno
+            # Ignore Broken pipe errors, re-raise everything else
+            if e.errno == errno.EPIPE:
+                pass
+            else:
+                raise
+
+
+    def calculation_inputls(self, *args):
+        """
+        Show the list of input files of a calculation node. 
+        
+        It shows the files in the raw_input subdirectory.
+        Use the -h option for more help on the command line options.
+        """
+        import argparse
+        from aiida.common.exceptions import NotExistent
+        from aiida.cmdline.commands.node import list_repo_files
+        
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='List input files in the repository folder.')
+
+        parser.add_argument('-c','--color', action='store_true',
+                            help="Color folders with a different color")
+        parser.add_argument('-p', '--pk', type=int, required=True, 
+                            help='The pk of the node')
+        parser.add_argument('path', type=str, default='.', nargs='?',
+                            help='The relative path of the file you '
+                            'want to show')
+        
+        args = list(args)
+        parsed_args = parser.parse_args(args)
+
+        load_dbenv()
+        from aiida.orm import Node as OrmNode        
+        
+        try:
+            n = OrmNode.get_subclass_from_pk(parsed_args.pk)
+        except NotExistent as e:
+            print >> sys.stderr, e.message
+            sys.exit(1)
+        
+        try:
+            list_repo_files(n, os.path.join('raw_input', parsed_args.path),
+                            parsed_args.color)
+        except ValueError as e:
+            print >> sys.stderr, e.message
+            sys.exit(1)
+
+    def calculation_outputls(self, *args):
+        """
+        Show the list of output files of a calculation node. 
+        
+        It lists the files in the 'path' subdirectory of the output node
+        of files retrieved by the parser. Therefore, this will not work
+        before files are retrieved by the daemon.
+        Use the -h option for more help on the command line options.
+        """
+        import argparse
+        from aiida.common.exceptions import NotExistent
+        from aiida.cmdline.commands.node import list_repo_files
+        
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='List ourput files in the repository folder.')
+
+        parser.add_argument('-c','--color', action='store_true',
+                            help="Color folders with a different color")
+        parser.add_argument('-p', '--pk', type=int, required=True, 
+                            help='The pk of the node')
+        parser.add_argument('path', type=str, default='.', nargs='?',
+                            help='The relative path of the file you '
+                            'want to show')
+        
+        args = list(args)
+        parsed_args = parser.parse_args(args)
+
+        load_dbenv()
+        from aiida.orm import Node as OrmNode        
+        
+        try:
+            n = OrmNode.get_subclass_from_pk(parsed_args.pk)
+        except NotExistent as e:
+            print >> sys.stderr, e.message
+            sys.exit(1)
+
+        try:
+            parsed_node = n.out.retrieved
+        except AttributeError:
+            print >> sys.stderr, ("No 'retrieved' node found. Have the "
+                "calculation files already been retrieved?")
+            sys.exit(1)
+
+        try:
+            list_repo_files(parsed_node,
+                            os.path.join('path', parsed_args.path),
+                            parsed_args.color)
+        except ValueError as e:
+            print >> sys.stderr, e.message
+            sys.exit(1)
+
+    def calculation_outputcat(self, *args):
+        """
+        Show an output file of a calculation node. 
+        
+        It shows the files in the 'path' subdirectory of the output node
+        of files retrieved by the parser. Therefore, this will not work
+        before files are retrieved by the daemon.
+        Use the -h option for more help on the command line options.
+        """
+        from aiida.cmdline.commands.node import cat_repo_files
+        from aiida.common.exceptions import NotExistent
+        
+        import argparse
+        
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Output the content of a file in the repository folder.')
+        parser.add_argument('-p', '--pk', type=int, required=True, 
+                            help='The pk of the node')
+        parser.add_argument('-d', '--default', action='store_true', 
+                            help="Open the default output file, if specified "
+                            "by the Calculation plugin. If specified, do not "
+                            "pass any 'path'")
+        parser.add_argument('path', type=str, default=None, nargs='?',
+                            help='The relative path of the file you '
+                            'want to show. You must specify it if you do not '
+                            'pass the --default flag')
+        args = list(args)
+        parsed_args = parser.parse_args(args)
+
+        if parsed_args.default and parsed_args.path:
+            sys.stderr.write(parser.format_usage())
+            sys.stderr.write("{}: error: If you pass --default, "
+                "you cannot pass also a path.\n".format(
+                    self.get_full_command_name()))
+            sys.exit(1)
+            
+        if not parsed_args.default and not parsed_args.path:
+            sys.stderr.write(parser.format_usage())
+            sys.stderr.write("{}: error: pass either --default "
+                "or a path.\n".format(
+                    self.get_full_command_name()))
+            sys.exit(1)
+        
+        load_dbenv()
+        from aiida.orm import Calculation as OrmCalculation        
+        from aiida.common.pluginloader import get_class_typestring
+        
+        try:
+            n = OrmCalculation.get_subclass_from_pk(parsed_args.pk)
+        except NotExistent as e:
+            print >> sys.stderr, e.message
+            sys.exit(1)
+
+        path = parsed_args.path
+        if parsed_args.default:
+            path = n._DEFAULT_OUTPUT_FILE
+            if path is None:
+                base_class, plugin_string, class_name = get_class_typestring(
+                    n._plugin_type_string)
+                print >> sys.stderr, ("Calculation '{}' does not define a "
+                    "default output file. Please specify a path "
+                    "explicitly".format(plugin_string))
+                sys.exit(1)
+
+        try:
+            parsed_node = n.out.retrieved
+        except AttributeError:
+            print >> sys.stderr, ("No 'retrieved' node found. Have the "
+                "calculation files already been retrieved?")
+            sys.exit(1)
+        
+        try:
+            cat_repo_files(parsed_node, os.path.join('path', path))
+        except ValueError as e:
+            print >> sys.stderr, e.message
+            sys.exit(1)
+        except IOError as e:
+            import errno
+            # Ignore Broken pipe errors, re-raise everything else
+            if e.errno == errno.EPIPE:
+                pass
+            else:
+                raise
+
     
     def calculation_kill(self, *args):
         """

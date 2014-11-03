@@ -25,6 +25,7 @@ class Data(VerdiCommandRouter):
         self.routed_subcommands = {
             'upf': _Upf,
             'structure': _Structure,
+            'cif': _Cif,
             }
 
 # Note: this class should not be exposed directly in the main module,
@@ -324,3 +325,135 @@ class _Structure(VerdiCommandWithSubcommands):
                 else:
                     raise
 
+class _Cif(VerdiCommandWithSubcommands):
+    """
+    Visualize CIF structures
+    """
+
+    def __init__(self):
+        """
+        A dictionary with valid commands and functions to be called.
+        """
+        self.valid_subcommands = {
+            'show': (self.show, self.complete_visualizers),
+            'list': (self.list, self.complete_none),
+            }
+
+    def complete_visualizers(self, subargs_idx, subargs):
+        plugin_names = self.get_show_plugins().keys()
+        return "\n".join(plugin_names)
+
+    def list(self, *args):
+        """
+        List all CIF structures
+        """
+        import argparse
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='List CIF structures.')
+        parser.add_argument('-e','--element',nargs='+', type=str, default=None,
+                            help="Print all structures containing desired elements")
+        parser.add_argument('-eo','--element-only', type=bool, default=False,
+                            help="If set, structures do not contain different elements")
+        parser.add_argument('-p', '--past-days', metavar='N',
+                            help="add a filter to show only structures created in the past N days",
+                            type=int, action='store')
+
+        load_dbenv()
+        import datetime
+        from aiida.orm import DataFactory
+        from django.db.models import Q
+        from django.utils import timezone
+        from aiida.djsite.utils import get_automatic_user
+
+        args = list(args)
+        parsed_args = parser.parse_args(args)
+
+        CifData = DataFactory('cif')
+        now = timezone.now()
+        q_object = Q(user=get_automatic_user())
+
+        if parsed_args.past_days is not None:
+            now = timezone.now()
+            n_days_ago = now - datetime.timedelta(days=parsed_args.past_days)
+            q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
+        if parsed_args.element is not None:
+            print "Not implemented element search"
+            sys.exit(1)
+
+        cif_list = CifData.query(q_object).distinct().order_by('ctime')
+
+        if cif_list:
+            to_print = 'ID\n'
+            for cif in cif_list:
+                to_print += '{}\n'.format(cif.pk)
+
+            print to_print
+
+    def show(self, *args):
+        """
+        Show the CIF structure node with a visualisation program.
+        """
+        # DEVELOPER NOTE: to add a new plugin, just add a _plugin_xxx() method.
+        import argparse,os
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Visualize CIF structures.')
+        parser.add_argument('exec_name', type=str, default=None,
+                    help="Name or path to the executable of the visualization program.")
+        parser.add_argument('structure_id', type=int, default=None,
+                            help="ID of the structure to be plotted.")
+        args = list(args)
+        parsed_args = parser.parse_args(args)
+
+        exec_name = parsed_args.exec_name
+        structure_id = parsed_args.structure_id
+
+        # I can give in input the whole path to executable
+        code_name = os.path.split(exec_name)[-1]
+
+        try:
+            func = self.get_show_plugins()[code_name]
+        except KeyError:
+            print "Not implemented; implemented plugins are:"
+            print "{}.".format(",".join(self.get_show_plugins()))
+            sys.exit(1)
+
+        load_dbenv()
+        from aiida.orm import DataFactory
+        CifData = DataFactory('cif')
+        st = CifData.get_subclass_from_pk(structure_id)
+
+        func(exec_name, st)
+
+    def get_show_plugins(self):
+        """
+        Get the list of all implemented plugins for visualizing the CIF structure.
+        """
+        prefix = '_plugin_'
+        method_names = dir(self) # get list of class methods names
+        valid_formats = [ i[len(prefix):] for i in method_names
+                         if i.startswith(prefix)] # filter them
+
+        return {k: getattr(self,prefix + k) for k in valid_formats}
+
+    def _plugin_jmol(self,exec_name,structure):
+        """
+        Plugin for jmol
+        """
+        import subprocess
+
+        try:
+            subprocess.check_output([exec_name, structure.get_file_abs_path()])
+        except subprocess.CalledProcessError:
+            # The program died: just print a message
+            print "Note: the call to {} ended with an error.".format(
+                exec_name)
+        except OSError as e:
+            if e.errno == 2:
+                print ("No executable '{}' found. Add to the path, "
+                       "or try with an absolute path.".format(
+                       exec_name))
+                sys.exit(1)
+            else:
+                raise

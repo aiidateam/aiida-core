@@ -10,33 +10,32 @@ __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausan
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
 __version__ = "0.2.1"
 
-class CifcodcheckParser(CodtoolsParser):
+class CifcellcontentsParser(CodtoolsParser):
     """
-    Specific parser for the output of cif_cod_tools script.
+    Specific parser for the output of cif_cell_contents script.
     """
     def _get_output_nodes(self, output_path, error_path):
         """
         Extracts output nodes from the standard output and standard error
         files.
         """
-        import re
 
-        messages = []
+        formulae = []
         if output_path is not None:
             with open(output_path) as f:
                 content = f.readlines()
-            lines = [x.strip('\n') for x in content]
-            if re.search( ' OK$', lines[0] ) is not None:
-                lines.pop(0)
-            messages.extend(lines)
+            formulae = [x.strip('\n') for x in content]
 
+        messages = []
         if error_path is not None:
             with open(error_path) as f:
                 content = f.readlines()
-            lines = [x.strip('\n') for x in content]
-            messages.extend(lines)
+            messages = [x.strip('\n') for x in content]
 
         output_nodes = []
+        output_nodes.append(('formulae',
+                             ParameterData(dict={'formulae':
+                                                 formulae})))
         output_nodes.append(('messages',
                              ParameterData(dict={'output_messages':
                                                  messages})))

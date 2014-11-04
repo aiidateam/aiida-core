@@ -28,6 +28,7 @@ default_modules_list = [
                         ("aiida.orm","DataFactory","DataFactory"),
                         ("aiida.orm","Computer","Computer"),
                         ("aiida.orm","Group","Group"),
+                        ("aiida.orm.workflow","Workflow","Workflow"),
                         ("aiida.djsite.db","models","models"),
                         ]
 

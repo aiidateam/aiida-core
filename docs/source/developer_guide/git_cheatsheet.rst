@@ -11,6 +11,21 @@ Interesting online resources
 * `Atlassian forking-workflow guide <https://www.atlassian.com/git/tutorials/comparing-workflows/forking-workflow>`_
 * `Gitflow model <http://nvie.com/posts/a-successful-git-branching-model/>`_
 
+View commits that would be pushed
+---------------------------------
+If you want to see which commits would be sent to the remote repository upon a
+``git push`` command, you can use (e.g. if you want to compare with the
+``origin/develop`` remote branch)::
+
+  git log origin/develop..HEAD
+  
+to see the logs of the commits, or::
+
+  git diff origin/develop..HEAD
+  
+to see also the differences among the current ``HEAD`` and the version on 
+``origin/develop``.
+
 Switch to another branch
 ------------------------
 You can switch to another branch with::
@@ -150,3 +165,15 @@ develop), you can:
    (or, if you did not use the default remote with ``--set-upstream``, specify
    the correct remote branch, e.g. ``git push origin develop``).
    
+   
+
+.. note:: If you want to fetch and transfer also tags,
+  use instead::
+
+    git fetch -t myfork develop
+    git merge FETCH_HEAD
+    git push --tags
+     
+  to get the tags from myfork and then push them in the current repository.
+     
+     

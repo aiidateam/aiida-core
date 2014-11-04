@@ -996,6 +996,21 @@ class Node(object):
         DbExtra.set_value_for_node(self.dbnode, key,value)
         self._increment_version_number_db()
             
+    def set_extras(self, the_dict):
+        """
+        Immediately sets several extras of a calculation, in the DB!
+        No .store() to be called.
+        Can be used *only* after saving.
+
+        :param the_dict: a dictionary of key:value to be set as extras
+        """
+        
+        try:
+            for key,value in the_dict.iteritems():
+                self.set_extra(key,value)
+        except AttributeError:
+            raise AttributeError("set_extras takes a dictionary as argument")
+
     def get_extra(self, key, *args):
         """
         Get the value of a extras, reading directly from the DB!
@@ -1028,6 +1043,23 @@ class Node(object):
                 return args[0]
             except IndexError:
                 raise e
+
+    def get_extras(self):
+        """
+        Get the value of extras, reading directly from the DB!
+        Since extras can be added only after storing the node, this
+        function is meaningful to be called only after the .store() method.
+        
+        :return: the dictionary of extras ({} if no extras)
+        """
+        
+        from aiida.djsite.db.models import DbExtra
+
+        if self._to_be_stored:
+            raise AttributeError("DbExtra does not exist yet, the "
+                                 "node is not stored")
+        else:
+            return DbExtra.get_all_values_for_node(dbnode=self.dbnode)
 
     def del_extra(self,key):
         """
@@ -1483,7 +1515,7 @@ class Node(object):
         #TODO: This needs to be generalized, allowing for flexible methods
         # for storing data and its attributes.
         from django.db import transaction
-        
+        from aiida.common.exceptions import ValidationError
         from aiida.djsite.db.models import DbAttribute
         import aiida.orm.autogroup
 

@@ -379,7 +379,7 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
         self.entries = {}
         self.page = 1
         self.position = 0
-        self.sql_select_query = "SELECT icsd.IDNUM, icsd.COLL_CODE, icsd.STRUCT_FORM "
+        self.sql_select_query = "SELECT SQL_CALC_FOUND_ROWS icsd.IDNUM, icsd.COLL_CODE, icsd.STRUCT_FORM "
         self.sql_from_query = "FROM icsd.icsd "
         #self.sql_from_query = "FROM icsd.icsd "
 
@@ -422,20 +422,16 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
         #try:
 
             self.cursor.execute( query_statement )
-            print "cursor"
             self.db.commit()
-            print "commit"
+
             for row in self.cursor.fetchall():
-                self.results.append( str( row[1] ) )
+                self.results.append( str( row[0] ) )
 
 
             if self.number_of_results is None:
-                self.number_of_results = 100
-
-                #self.cursor.execute( "SELECT FOUND_ROWS()")
-                #self.db.commit()
+                self.cursor.execute( "SELECT FOUND_ROWS()")
                 #self.number_of_results = self.cursor.fetch()[0]
-
+                self.number_of_results =  int(self.cursor.fetchone()[0])
 
         #finally:
             self._disconnect_db()

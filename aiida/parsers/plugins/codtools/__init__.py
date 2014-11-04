@@ -5,6 +5,8 @@ This plugin is in the development stage. Andrius Merkys, 2014-10-29
 """
 from aiida.parsers.parser import Parser
 from aiida.orm.calculation.codtools import CodtoolsCalculation
+from aiida.orm.data.cif import CifData
+from aiida.orm.data.parameter import ParameterData
 from aiida.common.datastructures import calc_states
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
@@ -54,23 +56,7 @@ class CodtoolsParser(Parser):
                                extra=logger_extra)
             return False, ()
 
-        cif = None
-        if output_path is not None and os.path.getsize(output_path) > 0:
-            cif = CifData(file=output_path)
-
-        messages = None
-        if error_path is not None:
-            with open(error_path) as f:
-                content = f.readlines()
-            messages = [x.strip('\n') for x in content]
-        p = ParameterData(dict={'output_messages': messages})
-
-        output_nodes = []
-        if cif is not None:
-            output_nodes.append(('cif',cif))
-        if messages is not None:
-            output_nodes.append(('messages',messages))
-        return True, output_nodes
+        return True, self._get_output_nodes(output_path, error_path)
 
     def _fetch_output_files(self):
         """
@@ -91,6 +77,8 @@ class CodtoolsParser(Parser):
         if out_folder is None:
             raise IOError("No retrieved folder found")
 
+        list_of_files = out_folder.get_folder_list()
+
         output_path = None
         error_path  = None
 
@@ -102,3 +90,28 @@ class CodtoolsParser(Parser):
                                         self._calc._DEFAULT_ERROR_FILE )
 
         return output_path, error_path
+
+    def _get_output_nodes(self, output_path, error_path):
+        """
+        Extracts output nodes from the standard output and standard error
+        files.
+        """
+        import os
+
+        cif = None
+        if output_path is not None and os.path.getsize(output_path) > 0:
+            cif = CifData(file=output_path)
+
+        messages = []
+        if error_path is not None:
+            with open(error_path) as f:
+                content = f.readlines()
+            messages = [x.strip('\n') for x in content]
+
+        output_nodes = []
+        if cif is not None:
+            output_nodes.append(('cif',cif))
+        output_nodes.append(('messages',
+                             ParameterData(dict={'output_messages':
+                                                 messages})))
+        return output_nodes

@@ -6,7 +6,7 @@ This plugin is in the development stage. Andrius Merkys, 2014-10-29
 import os
 import shutil
 
-from aiida.orm import Calculation
+from aiida.orm.calculation.codtools import CodtoolsCalculation
 from aiida.orm.data.cif import CifData
 from aiida.orm.data.parameter import ParameterData
 from aiida.common.datastructures import CalcInfo
@@ -17,39 +17,17 @@ __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausan
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
 __version__ = "0.2.1"
 
-class CodtoolsCalculation(Calculation):
+class CifsplitprimitiveCalculation(CodtoolsCalculation):
     """
-    Generic input plugin for scripts from cod-tools package.
+    Specific input plugin for cif_cell_contents from cod-tools package.
     """
 
     def _init_internal_params(self):
-        super(CodtoolsCalculation, self)._init_internal_params()
+        super(CifsplitprimitiveCalculation, self)._init_internal_params()
 
-        self._default_parser = 'codtools'
+        self._default_parser = 'codtools.cifsplitprimitive'
 
-        # Default input and output files
-        self._DEFAULT_INPUT_FILE  = 'aiida.in'
-        self._DEFAULT_OUTPUT_FILE = 'aiida.out'
-        self._DEFAULT_ERROR_FILE  = 'aiida.err'
-
-    @classproperty
-    def _use_methods(cls):
-        retdict = Calculation._use_methods
-        retdict.update({
-            "cif": {
-               'valid_types': CifData,
-               'additional_parameter': None,
-               'linkname': 'cif',
-               'docstring': "A CIF file to be processed",
-               },
-            "parameters": {
-               'valid_types': ParameterData,
-               'additional_parameter': None,
-               'linkname': 'parameters',
-               'docstring': "Parameters used in command line",
-               },
-            })
-        return retdict
+        self._SPLIT_DIR = 'split'
 
     def _prepare_for_submission(self,tempfolder,inputdict):
         try:
@@ -68,7 +46,10 @@ class CodtoolsCalculation(Calculation):
         input_filename = tempfolder.get_abs_path(self._DEFAULT_INPUT_FILE)
         shutil.copy( cif.get_file_abs_path(), input_filename )
 
-        commandline_params = []
+        split_dir = tempfolder.get_abs_path(self._SPLIT_DIR)
+        os.mkdir(split_dir)
+
+        commandline_params = [ '--output-dir', self._SPLIT_DIR ]
         for k in parameters.get_dict().keys():
             v = parameters.get_dict()[k]
             if v is None:
@@ -89,7 +70,6 @@ class CodtoolsCalculation(Calculation):
 
         calcinfo = CalcInfo()
         calcinfo.uuid = self.uuid
-        # The command line parameters should be generated from 'parameters'
         calcinfo.cmdline_params = commandline_params
         calcinfo.local_copy_list = []
         calcinfo.remote_copy_list = []
@@ -97,7 +77,8 @@ class CodtoolsCalculation(Calculation):
         calcinfo.stdout_name = self._DEFAULT_OUTPUT_FILE
         calcinfo.stderr_name = self._DEFAULT_ERROR_FILE
         calcinfo.retrieve_list = [self._DEFAULT_OUTPUT_FILE,
-                                  self._DEFAULT_ERROR_FILE]
+                                  self._DEFAULT_ERROR_FILE,
+                                  self._SPLIT_DIR]
         calcinfo.retrieve_singlefile_list = []
 
         return calcinfo

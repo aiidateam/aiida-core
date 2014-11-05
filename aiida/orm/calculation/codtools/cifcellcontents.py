@@ -5,13 +5,13 @@ This plugin is in the development stage. Andrius Merkys, 2014-10-29
 """
 import os
 
-from aiida.orm.calculation.codtools import CodtoolsCalculation
+from aiida.orm.calculation.codtools.ciffilter import CiffilterCalculation
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
 __version__ = "0.2.1"
 
-class CifcellcontentsCalculation(CodtoolsCalculation):
+class CifcellcontentsCalculation(CiffilterCalculation):
     """
     Specific input plugin for cif_cell_contents from cod-tools package.
     """

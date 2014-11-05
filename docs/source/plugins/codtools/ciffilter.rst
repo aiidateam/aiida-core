@@ -10,10 +10,16 @@ messages/errors in the standard output (if any), without modifications.
 
 Supported codes
 ---------------
+* cif_adjust_journal_name_volume
+* cif_CODify
 * cif_correct_tags
+* cif_create_AMCSD_pressure_temp_tags
+* cif_estimate_spacegroup
 * cif_eval_numbers
+* cif_fillcell
 * cif_filter
 * cif_fix_values
+* cif_hkl_check
 * cif_mark_disorder
 * cif_molecule
 * cif_p1

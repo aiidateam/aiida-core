@@ -1,5 +1,5 @@
-cod-tools
-+++++++++
+codtools.ciffilter
+++++++++++++++++++
 
 Description
 -----------

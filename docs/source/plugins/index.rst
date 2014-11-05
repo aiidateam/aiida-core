@@ -11,3 +11,5 @@ Available plugins
    :maxdepth: 4
 
    codtools/ciffilter
+   codtools/cifcellcontents
+   codtools/cifsplitprimitive

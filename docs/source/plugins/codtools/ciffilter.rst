@@ -57,14 +57,20 @@ Inputs
 
     .. note:: it should be kept in mind that no escaping of Shell
       metacharacters are performed by the plugin. AiiDA encloses each
-      command line argument with single quotes and that's being relied to.
+      command line argument with single quotes and that's being relied on.
 
 Outputs
 -------
 * CifData
     A CIF file.
 * ParameterData (optional)
-    Contains lines of output messages and/or errors.
+    Contains lines of output messages and/or errors. For example::
+
+        print ParameterData.get_subclass_from_pk(1).get_dict()
+
+    would print::
+
+        {u'output_messages': [u'cif_cod_check: test.cif data_4000000: _publ_section_title is undefined']}
 
 Errors
 ------

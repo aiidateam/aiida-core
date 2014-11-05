@@ -6,8 +6,8 @@ import os
 
 from aiida.djsite.db.testbase import AiidaTestCase
 from aiida.common.folders import SandboxFolder
-from aiida.orm.calculation.codtools import CodtoolsCalculation
-from aiida.parsers.plugins.codtools import CodtoolsParser
+from aiida.orm.calculation.codtools.ciffilter import CiffilterCalculation
+from aiida.parsers.plugins.codtools.ciffilter import CiffilterParser
 import aiida
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
@@ -37,7 +37,7 @@ class TestCodtools(AiidaTestCase):
                     's': True,
             })
 
-        c = CodtoolsCalculation(computer=self.computer,
+        c = CiffilterCalculation(computer=self.computer,
                                 resources={
                                     'num_machines': 1,
                                     'num_mpiprocs_per_machine': 1}
@@ -87,7 +87,7 @@ class TestCodtools(AiidaTestCase):
             o.write(file_content)
             o.flush()
 
-        parser = CodtoolsParser(c)
+        parser = CiffilterParser(c)
         success, nodes = parser.parse_from_calc()
 
         self.assertEquals(success, True)
@@ -113,7 +113,7 @@ class TestCodtools(AiidaTestCase):
             f.write(file_content)
             f.flush()
             cif = CifData(file=f.name)
-        c = CodtoolsCalculation(computer=self.computer,
+        c = CiffilterCalculation(computer=self.computer,
                                 resources={
                                     'num_machines': 1,
                                     'num_mpiprocs_per_machine': 1}
@@ -141,7 +141,7 @@ class TestCodtools(AiidaTestCase):
             o.write(errors)
             o.flush()
 
-        parser = CodtoolsParser(c)
+        parser = CiffilterParser(c)
         success, nodes = parser.parse_from_calc()
 
         self.assertEquals(success, True)
@@ -168,10 +168,10 @@ class TestCodtools(AiidaTestCase):
             f.write(file_content)
             f.flush()
             cif = CifData(file=f.name)
-        c = CodtoolsCalculation(computer=self.computer,
-                                resources={
-                                    'num_machines': 1,
-                                    'num_mpiprocs_per_machine': 1}
+        c = CiffilterCalculation(computer=self.computer,
+                                 resources={
+                                     'num_machines': 1,
+                                     'num_mpiprocs_per_machine': 1}
                                 )
         f = SandboxFolder()
 

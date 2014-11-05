@@ -10,4 +10,6 @@ Available plugins
 .. toctree::
    :maxdepth: 4
 
-   codtools
+   codtools/ciffilter
+   codtools/cifcellcontents
+   codtools/cifsplitprimitive

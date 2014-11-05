@@ -1,9 +1,12 @@
-cod-tools
-+++++++++
+codtools.ciffilter
+++++++++++++++++++
 
 Description
 -----------
-This plugin is designed for filter-like codes from the **cod-tools** package.
+This plugin is designed for filter-like codes from the **cod-tools**
+package, but can be adapted to any command line utilities, accepting
+CIF file as standard input and producing CIF file as standard output and
+messages/errors in the standard output (if any), without modifications.
 
 Supported codes
 ---------------
@@ -20,6 +23,8 @@ Supported codes
 * cif_select [#]_
 * cif_set_value
 * cif_symop_apply
+
+.. _codtools_ciffilter_inputs:
 
 Inputs
 ------

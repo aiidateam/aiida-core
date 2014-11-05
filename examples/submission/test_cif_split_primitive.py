@@ -14,7 +14,6 @@ import os
 from aiida.common.exceptions import NotExistent
 
 from aiida.orm import Code, Computer, DataFactory
-from aiida.tools.dbimporters.plugins.cod import CodDbImporter
 
 ################################################################
 # Test for cif_filter script from cod-tools package.
@@ -76,16 +75,10 @@ if __name__ == "__main__":
         sys.exit(1)
 
     cif = None
-    if len(files) == 0:
-        import tempfile
-        with tempfile.NamedTemporaryFile() as f:
-            f.write(CodDbImporter().query(id=1000000).at(0).cif)
-            f.flush()
-            cif = CifData(file=f.name)
-    elif len(files) > 1:
-        raise ValueError("Please specify a single CIF file")
-    else:
+    if len(files) == 1:
         cif = CifData(file=os.path.abspath(files[0]))
+    else:
+        raise ValueError("Please specify a single CIF file")
 
     parameters = ParameterData(dict=options)
     computer = Computer.get( Computer.list_names()[0] )

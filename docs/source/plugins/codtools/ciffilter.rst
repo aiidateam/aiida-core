@@ -34,7 +34,30 @@ Inputs
     Contains the command line parameters, specified in key-value fashion.
     Leading dashes (single or double) must be stripped from the keys.
     Values can be arrays with multiple items. Keys without values should
-    point to boolean ``True`` value.
+    point to boolean ``True`` value. In example::
+
+        calc = Code.get('cif_filter').new_calc()
+        calc.use_parameters(ParameterData(dict={
+                's'                       : True,
+                'exclude-empty-tags'      : True,
+                'dont-reformat-spacegroup': True,
+                'add-cif-header'          : [ 'standard.txt', 'user.txt' ],
+                'bibliography'            : 'bibliography.cif',
+            }))
+
+    is equivallent to command line::
+
+        cif_filter \
+            -s \
+            --exclude-empty-tags \
+            --dont-reformat-spacegroup \
+            --add-cif-header standard.txt \
+            --add-cif-header user.txt \
+            --bibliography bibliography.cif
+
+    .. note:: it should be kept in mind that no escaping of Shell
+      metacharacters are performed by the plugin. AiiDA encloses each
+      command line argument with single quotes and that's being relied to.
 
 Outputs
 -------

@@ -23,7 +23,14 @@ Outputs
 -------
 * ParameterData
     Contains formula/formulae as well as the lines of output messages
-    and/or errors.
+    and/or errors. For example::
+
+        print ParameterData.get_subclass_from_pk(1).get_dict()
+
+    would print::
+
+        {u'formulae'       : [u'C26 H26 Fe', u'C24 H17 F5 Fe'],
+         u'output_messages': []}
 
 Errors
 ------

@@ -7,6 +7,7 @@ User's guide
    ../database/index
    ../installation
    ../setup/computerandcodes
+   ../plugins/index
    ../examples/scripting
    ../examples/structure_tutorial
    ../examples/pw_tutorial

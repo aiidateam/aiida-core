@@ -745,12 +745,12 @@ class Node(object):
         """
         Return a dictionary where the key is the label of the output link, and
         the value is the input node.
-        If more than one output is found with the same link, appends to the key 
-        a string "_to_pk", where pk is the pk of the link destination.
+        As some Nodes (Datas in particular) can have more than one output with 
+        the same label, all keys have the name of the link with appended the pk
+        of the node in output.
+        The key without pk appended corresponds to the oldest node.
         
-        :return: a dictionary {label:object}
-        
-        WARNING: usage of this function is deprecated, as it might be changed
+        :return: a dictionary {linkname:object}
         """
         all_outputs = self.get_outputs(also_labels=True)
         
@@ -770,7 +770,7 @@ class Node(object):
             # now for everyone append the string with the pk
             for i in  this_elements:
                 new_outputs[ irreducible_linkname+"_{}".format(i.pk)] = i
-
+        
         return new_outputs
         
     def get_inputdata_dict(self, only_in_db=False):
@@ -1293,7 +1293,6 @@ class Node(object):
         """
         return self.dbnode.pk
 
-
     @property
     def dbnode(self):
         """
@@ -1399,7 +1398,6 @@ class Node(object):
                 "filename without any subfolder")
         self._get_folder_pathsubfolder.insert_path(src_abs,dst_path)
 
-
     def get_abs_path(self,path=None,section=None):
         """
         Get the absolute path to the folder associated with the
@@ -1498,7 +1496,6 @@ class Node(object):
             for link in links_to_store:
                 del self._inputlinks_cache[link]
 
-
     def store(self):
         """
         Store a new node in the DB, also saving its repository directory
@@ -1584,8 +1581,7 @@ class Node(object):
         # This is useful because in this way I can do
         # n = Node().store()
         return self
-
-
+    
     def __del__(self):
         """
         Called only upon real object destruction from memory
@@ -1594,11 +1590,7 @@ class Node(object):
         """
         if getattr(self,'_temp_folder',None) is not None:
             self._temp_folder.erase()
-
-
-
-
-
+    
     @property
     def out(self):
         """
@@ -1687,6 +1679,7 @@ class NodeOutputManager(object):
         except KeyError:
             raise KeyError("Node {} does not have an output with link {}"
                            .format(self._node.pk, name))
+
 
 class NodeInputManager(object):
     """

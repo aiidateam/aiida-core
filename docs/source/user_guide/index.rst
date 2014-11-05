@@ -17,4 +17,5 @@ User's guide
    ../verdi/verdi_user_guide
    ../scheduler/index
    ../state/calculation_state
+   ../database/dbusage
    ../workflow/index

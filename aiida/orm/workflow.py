@@ -837,7 +837,12 @@ class Workflow(object):
         import inspect
 
         if (not issubclass(calc.__class__,Calculation) and not isinstance(calc, Calculation)):
-            raise AiidaException("Cannot add a calculation not of type Calculation")                        
+            raise AiidaException("Cannot add a calculation not of type Calculation")
+
+        for node in calc.get_inputs():
+            if node.pk == None:
+                raise AiidaException("Cannot add a calculation with "
+                                     "unstored inputs")
 
         curframe = inspect.currentframe()
         calframe = inspect.getouterframes(curframe, 2)

@@ -15,7 +15,6 @@ class CifcellcontentsCalculation(CiffilterCalculation):
     """
     Specific input plugin for cif_cell_contents from cod-tools package.
     """
-
     def _init_internal_params(self):
         super(CifcellcontentsCalculation, self)._init_internal_params()
 

@@ -16,6 +16,11 @@ from the package can be obtained by invoking commands with ``--help`` and
 .. _Crystallographic Information Framework (CIF) files: http://www.iucr.org/resources/cif
 .. _Crystallography Open Database: http://www.crystallography.net
 
+* cif_cod_check
+    Parse a CIF file, check if certain data values match COD
+    requirements and IUCr data validation criteria (Version: 2000.06.09,
+    ftp://ftp.iucr.ac.uk/pub/dvntests or ftp://ftp.iucr.org/pub/dvntests)
+
 * cif_filter
     Parse a CIF file and print out essential data values in the CIF
     format, the COD CIF style.
@@ -96,4 +101,5 @@ Plugins
 
    ciffilter
    cifcellcontents
+   cifcodcheck
    cifsplitprimitive

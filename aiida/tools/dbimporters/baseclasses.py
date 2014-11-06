@@ -121,7 +121,12 @@ class DbEntry(object):
         """
         Returns CIF node, that can be used in AiiDA workflow.
         """
-        raise NotImplementedError("not implemented in base class")
+        from aiida.orm.data.cif import CifData
+        import tempfile
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(self.cif)
+            f.flush()
+        return CifData(file=f)
 
     def get_aiida_structure(self):
         """

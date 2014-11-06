@@ -42,6 +42,16 @@ from the package can be obtained by invoking commands with ``--help`` and
 * cif_molecule
     Restores molecules from a CIF file.
 
+* cif_split_primitive
+    Split CIF files into separate files with one data\_ section each.
+
+    This is a very naive and primitive version of the splitter, which
+    expects each data\_... section to start on a new line. It may fail on
+    some CIF files that do not follow such convention. For splitting of
+    any correctly formatted CIF files, one must do full CIF parsing
+    using CIF grammar and tokenisation of the file.
+
+
 Installation
 ^^^^^^^^^^^^
 Currently **cod-tools** package is distributed via source code only. To

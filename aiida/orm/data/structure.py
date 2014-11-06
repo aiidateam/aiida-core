@@ -363,7 +363,20 @@ class StructureData(Data):
                 self.get_kind(site.kind_name).symbols[0]]
             return_string += "%18.10f %18.10f %18.10f\n" % tuple(site.position)
         return return_string
-                
+
+    def _prepare_cif(self):
+        """
+        Write the given structure to a string of format CIF.
+        """
+        import ase.io.cif
+        import tempfile
+        cif_string = None
+        with tempfile.NamedTemporaryFile() as f:
+            ase.io.cif.write_cif(f.name, self.get_ase())
+            with open(f.name) as infile:
+                cif_string = infile.read()
+        return cif_string
+
     def get_symbols_set(self):
         """
         Return a set containing the names of all elements involved in

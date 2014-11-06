@@ -149,6 +149,21 @@ class TestCodDbImporter(AiidaTestCase):
         self.assertEquals(results.next().url, \
                           "http://www.crystallography.net/cod/1000000.cif")
 
+    def test_dbentry_to_cif_node(self):
+        """
+        Tests the creation of CifData node from CodEntry.
+        """
+        from aiida.tools.dbimporters.plugins.cod import CodEntry
+        from aiida.orm.data.cif import CifData
+
+        entry = CodEntry("http://www.crystallography.net/cod/1000000.cif")
+        entry._cif = "data_test _publ_section_title 'Test structure'"
+
+        cif = entry.get_cif_node()
+        self.assertEquals(isinstance(cif,CifData),True)
+        self.assertEquals(cif.get_attr('md5'),
+                          '070711e8e99108aade31d20cd5c94c48')
+
 class TestSinglefileData(AiidaTestCase):
     """
     Test the SinglefileData class.

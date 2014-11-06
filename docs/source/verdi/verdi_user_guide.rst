@@ -22,6 +22,7 @@ list:
 * **import**:              export nodes and group of nodes
 * **install**:             install/setup aiida for the current user
 * **node**:                manage operations on AiiDA nodes
+* **run**:                  execute an AiiDA script
 * **runserver**:           run the AiiDA webserver on localhost
 * **shell**:               run the interactive shell with the Django environment
 * **user**:                list and configure new AiiDA users.
@@ -183,6 +184,13 @@ to the new schema.
 +++++++++++++++
 
   *  **repo**: Show files and their contents in the local repository
+
+``verdi run``
++++++++++++++
+
+Run a python script for AiiDA. This is the command line equivalent of the verdi
+shell. Has also features of autogroupin: by default, every node created in one
+a call of verdi run will be grouped together.
 
 ``verdi runserver``
 +++++++++++++++++++

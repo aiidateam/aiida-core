@@ -7,6 +7,7 @@ User's guide
    ../database/index
    ../installation
    ../setup/computerandcodes
+   ../plugins/index
    ../examples/scripting
    ../examples/structure_tutorial
    ../examples/pw_tutorial
@@ -17,4 +18,5 @@ User's guide
    ../verdi/verdi_user_guide
    ../scheduler/index
    ../state/calculation_state
+   ../database/dbusage
    ../workflow/index

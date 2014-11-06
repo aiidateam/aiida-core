@@ -21,11 +21,14 @@ class CiffilterCalculation(Calculation):
     """
     Generic input plugin for scripts from cod-tools package.
     """
-
     def _init_internal_params(self):
         super(CiffilterCalculation, self)._init_internal_params()
 
+        # Name of the default parser
         self._default_parser = 'codtools.ciffilter'
+
+        # Default command line parameters
+        self._default_commandline_params = []
 
         # Default input and output files
         self._DEFAULT_INPUT_FILE  = 'aiida.in'
@@ -68,7 +71,7 @@ class CiffilterCalculation(Calculation):
         input_filename = tempfolder.get_abs_path(self._DEFAULT_INPUT_FILE)
         shutil.copy( cif.get_file_abs_path(), input_filename )
 
-        commandline_params = []
+        commandline_params = self._default_commandline_params
         for k in parameters.get_dict().keys():
             v = parameters.get_dict()[k]
             if v is None:

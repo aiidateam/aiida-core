@@ -65,6 +65,8 @@ Inputs
       metacharacters are performed by the plugin. AiiDA encloses each
       command line argument with single quotes and that's being relied on.
 
+.. _codtools_ciffilter_outputs:
+
 Outputs
 -------
 * CifData

@@ -49,7 +49,7 @@ class Workflow(object):
             
             If initialized with an uuid the Workflow is loaded from the DB, if not a new
             workflow is generated and added to the DB following the stack frameworks. This 
-            means that only modules inside aiida.worflows are allowed to implements
+            means that only modules inside aiida.workflows are allowed to implements
             the workflow super calls and be stored. The caller names, modules and files are
             retrieved from the stack.
             
@@ -666,23 +666,23 @@ class Workflow(object):
     @classmethod
     def step(cls, fun):
         """
-        This moethod is used as a decorator for workflow steps, and handles the method's execution, 
+        This method is used as a decorator for workflow steps, and handles the method's execution, 
         the status updates and the eventual errors.
         
         The decorator generates a wrapper around the input function to execute, adding with the correct 
-        step name and a utility variable to make it distinguable from non-step methods. 
+        step name and a utility variable to make it distinguishable from non-step methods. 
         
         When a step is launched, the wrapper tries to run the function in case of error the status of 
-        the workflow is moved to ERROR and the tracebask is stored in the report. In general the input 
+        the workflow is moved to ERROR and the traceback is stored in the report. In general the input 
         method is a step obtained from the Workflow object, and the decorator simply handles a controlled 
         execution of the step allowing the code not to break in case of error in the step's source code.
           
-        The wrapper also tests not to run two times the same step, unsless a Workflow is in ERROR state, in this
+        The wrapper also tests not to run two times the same step, unless a Workflow is in ERROR state, in this
         case all the calculations and subworkflows of the step are killed and a new execution is allowed.
         
-        :param fun: a methos to wrap, making it a Workflow step
-        :raise: AiidaException: in case the worflow status doesn't allow the execution 
-        :return: the wrapped methos, 
+        :param fun: a methods to wrap, making it a Workflow step
+        :raise: AiidaException: in case the workflow status doesn't allow the execution 
+        :return: the wrapped methods, 
         """
         
         
@@ -690,8 +690,8 @@ class Workflow(object):
         
         wrapped_method = fun.__name__
         
-        # This function gets called only if the method is launched with the execution brakets ()
-        # Otherwise, when the methid is addressed in a next() call this never gets called and only the 
+        # This function gets called only if the method is launched with the execution brackets ()
+        # Otherwise, when the method is addressed in a next() call this never gets called and only the 
         # attributes are added
         def wrapper(cls, *args, **kwargs):
             
@@ -758,11 +758,11 @@ class Workflow(object):
         
         If during the execution of the caller method the user launched calculations or subworkflows, this 
         method will add them to the database, making them available to the workflow manager to be launched.
-        In fact all the calculation and subworflow submissions are lazy method, really executed by this call. 
+        In fact all the calculation and subworkflow submissions are lazy method, really executed by this call. 
         
         :param next_method: a Workflow step method to execute after the caller method
         :raise: AiidaException: in case the caller method cannot be found or validated  
-        :return: the wrapped methos, decorated with the correct step name
+        :return: the wrapped methods, decorated with the correct step name
         """
         import inspect
         import hashlib
@@ -827,8 +827,8 @@ class Workflow(object):
     def attach_calculation(self, calc):
         """
         Adds a calculation to the caller step in the database. This is a lazy call, no
-        calculations will be launched untile the ``next`` method gets called. For a step to be 
-        completed all the calculations linked have to be in RETRIVED state, after which the next 
+        calculations will be launched until the ``next`` method gets called. For a step to be 
+        completed all the calculations linked have to be in RETRIEVED state, after which the next 
         method gets called from the workflow manager.
         :param next_method: a Calculation object
         :raise: AiidaException: in case the input is not of Calculation type
@@ -850,7 +850,7 @@ class Workflow(object):
     def attach_workflow(self, sub_wf):
         """
         Adds a workflow to the caller step in the database. This is a lazy call, no
-        workflow will be started untile the ``next`` method gets called. For a step to be 
+        workflow will be started until the ``next`` method gets called. For a step to be 
         completed all the workflows linked have to be in FINISHED state, after which the next 
         method gets called from the workflow manager.
         :param next_method: a Workflow object
@@ -872,7 +872,7 @@ class Workflow(object):
     def get_step_calculations(self, step_method, calc_state = None):
         """
         Retrieves all the calculations connected to a specific step in the database. If the step
-        is not existent it returns None, useful for simpler grammatic in the worflow definition.
+        is not existent it returns None, useful for simpler grammatic in the workflow definition.
         :param next_method: a Workflow step (decorated) method
         :param calc_state: a specific state to filter the calculations to retrieve
         :return: a list of Calculations objects
@@ -892,7 +892,7 @@ class Workflow(object):
     def get_step_workflows(self, step_method):
         """
         Retrieves all the workflows connected to a specific step in the database. If the step
-        is not existent it returns None, useful for simpler grammatic in the worflow definition.
+        is not existent it returns None, useful for simpler grammatic in the workflow definition.
         :param next_method: a Workflow step (decorated) method
         """
        
@@ -923,7 +923,7 @@ class Workflow(object):
         """
         Stop the Workflow execution and change its state to FINISHED.
         
-        This method Calls the ``kill`` method for each Calculation and each subworklow 
+        This method Calls the ``kill`` method for each Calculation and each subworkflow 
         linked to each RUNNING step.
         """
         for s in self.get_steps(state=wf_states.RUNNING):
@@ -937,7 +937,7 @@ class Workflow(object):
     
     def sleep(self):
         """
-        Changes the workflow status to SLEEP, only possibile to call from a Workflow step decorated method.
+        Changes the workflow status to SLEEP, only possible to call from a Workflow step decorated method.
         """
         import inspect
         
@@ -959,8 +959,8 @@ class Workflow(object):
         """
         Return the Workflow report. 
         
-        :note: once, in case the workflow is a subworflow of any other Workflow this method
-          calls the partent ``get_report`` method.
+        :note: once, in case the workflow is a subworkflow of any other Workflow this method
+          calls the parent ``get_report`` method.
           This is not the case anymore.
         :return: a list of strings 
         """       
@@ -972,7 +972,7 @@ class Workflow(object):
     def clear_report(self):
         """
         Wipe the Workflow report. In case the workflow is a subworflow of any other Workflow this method
-        calls the partent ``clear_report`` method.
+        calls the parent ``clear_report`` method.
         """
         
         if len(self.dbworkflowinstance.parent_workflow_step.all())==0:
@@ -985,8 +985,8 @@ class Workflow(object):
         """
         Adds text to the Workflow report. 
         
-        :note: Once, in case the workflow is a subworflow of any other Workflow this method
-         calls the partent ``append_to_report`` method; now instead this is not the 
+        :note: Once, in case the workflow is a subworkflow of any other Workflow this method
+         calls the parent ``append_to_report`` method; now instead this is not the 
          case anymore
         """
         
@@ -1127,7 +1127,7 @@ def kill_from_uuid(uuid):
 def kill_all():
     """
     Kills all the workflows not in FINISHED state running the ``kill_from_uuid``
-    mathod in a loop.
+    method in a loop.
     
     :param uuid: the UUID of the workflow to kill
     """

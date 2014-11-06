@@ -3,10 +3,12 @@
 Tests for the codtools input plugins.
 """
 import os
+import tempfile
 
 from aiida.djsite.db.testbase import AiidaTestCase
 from aiida.common.folders import SandboxFolder
-from aiida.orm.calculation.codtools.ciffilter import CiffilterCalculation
+from aiida.orm import CalculationFactory
+from aiida.orm import DataFactory
 from aiida.parsers.plugins.codtools.ciffilter import CiffilterParser
 import aiida
 
@@ -17,12 +19,13 @@ __version__ = "0.2.1"
 class TestCodtools(AiidaTestCase):
 
     def test_1(self):
-        import tempfile
-        from aiida.orm.data.cif import CifData
-        from aiida.orm.data.folder import FolderData
-        from aiida.orm.data.parameter import ParameterData
         from aiida.common.exceptions import InputValidationError
         from aiida.common.datastructures import calc_states
+
+        CifData = DataFactory('cif')
+        FolderData = DataFactory('folder')
+        ParameterData = DataFactory('parameter')
+        CiffilterCalculation = CalculationFactory('codtools.ciffilter')
 
         file_content = "data_test _cell_length_a 10(1)"
         with tempfile.NamedTemporaryFile() as f:
@@ -100,12 +103,13 @@ class TestCodtools(AiidaTestCase):
         self.assertEquals(len(nodes[1][1].get_dict()['output_messages']), 0)
 
     def test_2(self):
-        import tempfile
-        from aiida.orm.data.cif import CifData
-        from aiida.orm.data.folder import FolderData
-        from aiida.orm.data.parameter import ParameterData
         from aiida.common.exceptions import InputValidationError
         from aiida.common.datastructures import calc_states
+
+        CifData = DataFactory('cif')
+        FolderData = DataFactory('folder')
+        ParameterData = DataFactory('parameter')
+        CiffilterCalculation = CalculationFactory('codtools.ciffilter')
 
         file_content = "data_test _cell_length_a 10(1)"
         errors = "first line\nlast line"
@@ -113,6 +117,7 @@ class TestCodtools(AiidaTestCase):
             f.write(file_content)
             f.flush()
             cif = CifData(file=f.name)
+
         c = CiffilterCalculation(computer=self.computer,
                                 resources={
                                     'num_machines': 1,
@@ -154,13 +159,14 @@ class TestCodtools(AiidaTestCase):
         self.assertEquals(isinstance(nodes[1][1], ParameterData), True)
 
     def test_3(self):
-        import tempfile
         from aiida.parsers.plugins.codtools.cifcodcheck import CifcodcheckParser
-        from aiida.orm.data.cif import CifData
-        from aiida.orm.data.folder import FolderData
-        from aiida.orm.data.parameter import ParameterData
         from aiida.common.exceptions import InputValidationError
         from aiida.common.datastructures import calc_states
+
+        CifData = DataFactory('cif')
+        FolderData = DataFactory('folder')
+        ParameterData = DataFactory('parameter')
+        CifcodcheckCalculation = CalculationFactory('codtools.cifcodcheck')
 
         file_content = "data_test _cell_length_a 10(1)"
         errors = "first line\nlast line"
@@ -168,11 +174,11 @@ class TestCodtools(AiidaTestCase):
             f.write(file_content)
             f.flush()
             cif = CifData(file=f.name)
-        c = CiffilterCalculation(computer=self.computer,
-                                 resources={
-                                     'num_machines': 1,
-                                     'num_mpiprocs_per_machine': 1}
-                                )
+        c = CifcodcheckCalculation(computer=self.computer,
+                                   resources={
+                                       'num_machines': 1,
+                                       'num_mpiprocs_per_machine': 1}
+                                  )
         f = SandboxFolder()
 
         c.use_cif(cif)
@@ -210,10 +216,9 @@ class TestCodtools(AiidaTestCase):
                           stdout_messages + stderr_messages)
 
     def test_4(self):
-        from aiida.orm.calculation.codtools.cifcellcontents import CifcellcontentsCalculation
         from aiida.parsers.plugins.codtools.cifcellcontents import CifcellcontentsParser
-        import tempfile
-        import os
+
+        CifcellcontentsCalculation = CalculationFactory('codtools.cifcellcontents')
 
         stdout = '''4000000	C26 H26 Fe
 4000001	C24 H17 F5 Fe

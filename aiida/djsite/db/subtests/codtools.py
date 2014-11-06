@@ -208,3 +208,48 @@ class TestCodtools(AiidaTestCase):
         self.assertEquals(isinstance(nodes[0][1], ParameterData), True)
         self.assertEquals(nodes[0][1].get_dict()['output_messages'],
                           stdout_messages + stderr_messages)
+
+    def test_4(self):
+        from aiida.orm.calculation.codtools.cifcellcontents import CifcellcontentsCalculation
+        from aiida.parsers.plugins.codtools.cifcellcontents import CifcellcontentsParser
+        import tempfile
+        import os
+
+        stdout = '''4000000	C26 H26 Fe
+4000001	C24 H17 F5 Fe
+4000002	C24 H17 F5 Fe
+4000003	C24 H17 F5 Fe
+4000004	C22 H8 F10 Fe
+4000005	Sn3 Ti2
+4000006	C10 H9 Cl0.603 N O1.397 S6
+4000007	C30 H46 O3 S
+4000008	C2 H10 F Mn N2 O9 V3
+4000009	C4 H18 Mn N4 O12 V4
+'''
+        stderr = ''
+
+        f = SandboxFolder()
+        stdout_file = "{}/{}".format(f.abspath,"aiida.out")
+        stderr_file = "{}/{}".format(f.abspath,"aiida.err")
+
+        with open(stdout_file, 'w') as of:
+            of.write(stdout)
+            of.flush()
+        with open(stderr_file, 'w') as ef:
+            ef.write(stderr)
+            ef.flush()
+
+        parser = CifcellcontentsParser(CifcellcontentsCalculation())
+        output_nodes = parser._get_output_nodes(stdout_file,stderr_file)
+        self.assertEquals(output_nodes[0][1].get_dict(),{
+                          'formulae': {
+                                '4000003': 'C24 H17 F5 Fe',
+                                '4000002': 'C24 H17 F5 Fe',
+                                '4000001': 'C24 H17 F5 Fe',
+                                '4000000': 'C26 H26 Fe',
+                                '4000007': 'C30 H46 O3 S',
+                                '4000006': 'C10 H9 Cl0.603 N O1.397 S6',
+                                '4000005': 'Sn3 Ti2',
+                                '4000004': 'C22 H8 F10 Fe',
+                                '4000009': 'C4 H18 Mn N4 O12 V4',
+                                '4000008': 'C2 H10 F Mn N2 O9 V3'}})

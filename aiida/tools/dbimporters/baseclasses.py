@@ -126,7 +126,7 @@ class DbEntry(object):
         with tempfile.NamedTemporaryFile() as f:
             f.write(self.cif)
             f.flush()
-        return CifData(file=f)
+            return CifData(file=f.name)
 
     def get_aiida_structure(self):
         """

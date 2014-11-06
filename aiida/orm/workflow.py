@@ -139,10 +139,16 @@ class Workflow(object):
             
             self.attach_calc_lazy_storage  = {}
             self.attach_subwf_lazy_storage = {}
-            
-            
-            
-            
+
+    def __repr__(self):
+        return '<{}: {}>'.format(self.__class__.__name__, str(self))
+                
+    def __str__(self):
+        if self._to_be_stored:
+            return "uuid={} (unstored)".format(self.uuid)
+        else:
+            return "uuid={} (pk={})".format(self.uuid, self.pk)
+    
     ## --------------------------------------
     ##    DB Instance
     ## --------------------------------------

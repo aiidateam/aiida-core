@@ -3,11 +3,13 @@
 Tests for the codtools input plugins.
 """
 import os
+import tempfile
 
 from aiida.djsite.db.testbase import AiidaTestCase
 from aiida.common.folders import SandboxFolder
-from aiida.orm.calculation.codtools import CodtoolsCalculation
-from aiida.parsers.plugins.codtools import CodtoolsParser
+from aiida.orm import CalculationFactory
+from aiida.orm import DataFactory
+from aiida.parsers.plugins.codtools.ciffilter import CiffilterParser
 import aiida
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
@@ -17,12 +19,13 @@ __version__ = "0.2.1"
 class TestCodtools(AiidaTestCase):
 
     def test_1(self):
-        import tempfile
-        from aiida.orm.data.cif import CifData
-        from aiida.orm.data.folder import FolderData
-        from aiida.orm.data.parameter import ParameterData
         from aiida.common.exceptions import InputValidationError
         from aiida.common.datastructures import calc_states
+
+        CifData = DataFactory('cif')
+        FolderData = DataFactory('folder')
+        ParameterData = DataFactory('parameter')
+        CiffilterCalculation = CalculationFactory('codtools.ciffilter')
 
         file_content = "data_test _cell_length_a 10(1)"
         with tempfile.NamedTemporaryFile() as f:
@@ -37,7 +40,7 @@ class TestCodtools(AiidaTestCase):
                     's': True,
             })
 
-        c = CodtoolsCalculation(computer=self.computer,
+        c = CiffilterCalculation(computer=self.computer,
                                 resources={
                                     'num_machines': 1,
                                     'num_mpiprocs_per_machine': 1}
@@ -63,10 +66,10 @@ class TestCodtools(AiidaTestCase):
         calc = c._prepare_for_submission(f, c.get_inputdata_dict())
 
         self.assertEquals(calc['cmdline_params'],
-                          ['--extra-tag-list cod.lst',
-                           '--extra-tag-list tcod.lst',
+                          ['--extra-tag-list', 'cod.lst',
+                           '--extra-tag-list', 'tcod.lst',
                            '-s', '--reformat-spacegroup',
-                           '--start-data-block-number 1234567'])
+                           '--start-data-block-number', '1234567'])
 
         self.assertEquals(calc['stdout_name'], c._DEFAULT_OUTPUT_FILE)
         self.assertEquals(calc['stderr_name'], c._DEFAULT_ERROR_FILE)
@@ -87,7 +90,7 @@ class TestCodtools(AiidaTestCase):
             o.write(file_content)
             o.flush()
 
-        parser = CodtoolsParser(c)
+        parser = CiffilterParser(c)
         success, nodes = parser.parse_from_calc()
 
         self.assertEquals(success, True)
@@ -100,12 +103,13 @@ class TestCodtools(AiidaTestCase):
         self.assertEquals(len(nodes[1][1].get_dict()['output_messages']), 0)
 
     def test_2(self):
-        import tempfile
-        from aiida.orm.data.cif import CifData
-        from aiida.orm.data.folder import FolderData
-        from aiida.orm.data.parameter import ParameterData
         from aiida.common.exceptions import InputValidationError
         from aiida.common.datastructures import calc_states
+
+        CifData = DataFactory('cif')
+        FolderData = DataFactory('folder')
+        ParameterData = DataFactory('parameter')
+        CiffilterCalculation = CalculationFactory('codtools.ciffilter')
 
         file_content = "data_test _cell_length_a 10(1)"
         errors = "first line\nlast line"
@@ -113,7 +117,8 @@ class TestCodtools(AiidaTestCase):
             f.write(file_content)
             f.flush()
             cif = CifData(file=f.name)
-        c = CodtoolsCalculation(computer=self.computer,
+
+        c = CiffilterCalculation(computer=self.computer,
                                 resources={
                                     'num_machines': 1,
                                     'num_mpiprocs_per_machine': 1}
@@ -141,7 +146,7 @@ class TestCodtools(AiidaTestCase):
             o.write(errors)
             o.flush()
 
-        parser = CodtoolsParser(c)
+        parser = CiffilterParser(c)
         success, nodes = parser.parse_from_calc()
 
         self.assertEquals(success, True)
@@ -154,13 +159,14 @@ class TestCodtools(AiidaTestCase):
         self.assertEquals(isinstance(nodes[1][1], ParameterData), True)
 
     def test_3(self):
-        import tempfile
         from aiida.parsers.plugins.codtools.cifcodcheck import CifcodcheckParser
-        from aiida.orm.data.cif import CifData
-        from aiida.orm.data.folder import FolderData
-        from aiida.orm.data.parameter import ParameterData
         from aiida.common.exceptions import InputValidationError
         from aiida.common.datastructures import calc_states
+
+        CifData = DataFactory('cif')
+        FolderData = DataFactory('folder')
+        ParameterData = DataFactory('parameter')
+        CifcodcheckCalculation = CalculationFactory('codtools.cifcodcheck')
 
         file_content = "data_test _cell_length_a 10(1)"
         errors = "first line\nlast line"
@@ -168,11 +174,11 @@ class TestCodtools(AiidaTestCase):
             f.write(file_content)
             f.flush()
             cif = CifData(file=f.name)
-        c = CodtoolsCalculation(computer=self.computer,
-                                resources={
-                                    'num_machines': 1,
-                                    'num_mpiprocs_per_machine': 1}
-                                )
+        c = CifcodcheckCalculation(computer=self.computer,
+                                   resources={
+                                       'num_machines': 1,
+                                       'num_mpiprocs_per_machine': 1}
+                                  )
         f = SandboxFolder()
 
         c.use_cif(cif)
@@ -208,3 +214,47 @@ class TestCodtools(AiidaTestCase):
         self.assertEquals(isinstance(nodes[0][1], ParameterData), True)
         self.assertEquals(nodes[0][1].get_dict()['output_messages'],
                           stdout_messages + stderr_messages)
+
+    def test_4(self):
+        from aiida.parsers.plugins.codtools.cifcellcontents import CifcellcontentsParser
+
+        CifcellcontentsCalculation = CalculationFactory('codtools.cifcellcontents')
+
+        stdout = '''4000000	C26 H26 Fe
+4000001	C24 H17 F5 Fe
+4000002	C24 H17 F5 Fe
+4000003	C24 H17 F5 Fe
+4000004	C22 H8 F10 Fe
+4000005	Sn3 Ti2
+4000006	C10 H9 Cl0.603 N O1.397 S6
+4000007	C30 H46 O3 S
+4000008	C2 H10 F Mn N2 O9 V3
+4000009	C4 H18 Mn N4 O12 V4
+'''
+        stderr = ''
+
+        f = SandboxFolder()
+        stdout_file = "{}/{}".format(f.abspath,"aiida.out")
+        stderr_file = "{}/{}".format(f.abspath,"aiida.err")
+
+        with open(stdout_file, 'w') as of:
+            of.write(stdout)
+            of.flush()
+        with open(stderr_file, 'w') as ef:
+            ef.write(stderr)
+            ef.flush()
+
+        parser = CifcellcontentsParser(CifcellcontentsCalculation())
+        output_nodes = parser._get_output_nodes(stdout_file,stderr_file)
+        self.assertEquals(output_nodes[0][1].get_dict(),{
+                          'formulae': {
+                                '4000003': 'C24 H17 F5 Fe',
+                                '4000002': 'C24 H17 F5 Fe',
+                                '4000001': 'C24 H17 F5 Fe',
+                                '4000000': 'C26 H26 Fe',
+                                '4000007': 'C30 H46 O3 S',
+                                '4000006': 'C10 H9 Cl0.603 N O1.397 S6',
+                                '4000005': 'Sn3 Ti2',
+                                '4000004': 'C22 H8 F10 Fe',
+                                '4000009': 'C4 H18 Mn N4 O12 V4',
+                                '4000008': 'C2 H10 F Mn N2 O9 V3'}})

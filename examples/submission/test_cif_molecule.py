@@ -84,8 +84,8 @@ if __name__ == "__main__":
     computer = Computer.get( Computer.list_names()[0] )
 
     calc = code.new_calc()
-    calc.label = "Test cod-tools cif_filter"
-    calc.description = "Test calculation with the cod-tools cif_filter"
+    calc.label = "Test cod-tools cif_molecule"
+    calc.description = "Test calculation with the cod-tools cif_molecule"
     calc.set_max_wallclock_seconds(30*60) # 30 min
     calc.set_resources({"num_machines": 1})
     calc.set_computer(computer)

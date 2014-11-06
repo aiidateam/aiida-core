@@ -19,12 +19,15 @@ class CifcellcontentsParser(CiffilterParser):
         Extracts output nodes from the standard output and standard error
         files.
         """
-
-        formulae = []
+        import re
+        formulae = {}
         if output_path is not None:
             with open(output_path) as f:
                 content = f.readlines()
-            formulae = [x.strip('\n') for x in content]
+            content = [x.strip('\n') for x in content]
+            for line in content:
+                datablock,formula = re.split('\s+',line,1)
+                formulae[datablock] = formula
 
         messages = []
         if error_path is not None:

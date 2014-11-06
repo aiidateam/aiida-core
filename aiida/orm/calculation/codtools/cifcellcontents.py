@@ -20,3 +20,4 @@ class CifcellcontentsCalculation(CiffilterCalculation):
         super(CifcellcontentsCalculation, self)._init_internal_params()
 
         self._default_parser = 'codtools.cifcellcontents'
+        self._default_commandline_params = [ '--print-datablock-name' ]

@@ -181,6 +181,9 @@ of the basic ones:
   about what to do after all the calculations in the steps (on possible sub-workflows, as we'll see later) are terminated. The argument of
   this function has to be a ``Workflow.step`` decorated method of the same workflow class, or in case this is the last step to be executed you can
   use the common method ``self.exit``, always present in each Workflow subclass.
+
+  .. note:: make sure to ``store()`` all input nodes for the attached calculations, as unstored nodes will be lost during the transition
+    from one step to another.
   
 **lines 53-67** When the workflow will be launched through the ``start`` method, the AiiDA daemon will load the workflow, execute the step, 
 launch all the calculations and monitor their status. Once all the calculations in ``start`` will be finished the daemon will then load and 

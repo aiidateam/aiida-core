@@ -4,15 +4,38 @@ cod-tools
 Description
 ^^^^^^^^^^^
 **cod-tools** is an open-source collection of command line scripts for
-handling of `CIF (Crystallographic Information Framework) files`_. Detailed
-information for the usage of each individual script from the package can be
-obtained by invoking commands with ``--help`` and ``--usage`` command line
-options. For example::
+handling of `Crystallographic Information Framework (CIF) files`_. The
+package is developed by the team of `Crystallography Open Database`_ (COD)
+developers. Detailed information for the usage of each individual script
+from the package can be obtained by invoking commands with ``--help`` and
+``--usage`` command line options. For example::
 
     cif_filter --help
     cif_filter --usage
 
-.. _CIF (Crystallographic Information Framework) files: http://www.iucr.org/resources/cif
+.. _Crystallographic Information Framework (CIF) files: http://www.iucr.org/resources/cif
+.. _Crystallography Open Database: http://www.crystallography.net
+
+* cif_filter
+    Parse a CIF file and print out essential data values in the CIF
+    format, the COD CIF style.
+
+    This script has also many capabilities -- it can restore spacegroup
+    symbols from symmetry operators (consulting pre-defined tables),
+    parse and tidy-up ``_chemical_formula_sum``, compute cell volume,
+    exclude unknown or "empty" tags, and add specified bibliography data.
+
+* cif_fix_values
+    Correct temperature values which have units specified or convert
+    between Celsius degrees and Kelvins. Changes 'room/ambiante
+    temperature' to the appropriate numeric value.
+    Fixes other undefined values (no, not measured, etc.) to '?' symbol.
+    Determine a report about changes made into standart I/O streams.
+
+    Fixes enumeration values in CIF file against CIF dictionaries.
+
+* cif_molecule
+    Restores molecules from a CIF file.
 
 Installation
 ^^^^^^^^^^^^

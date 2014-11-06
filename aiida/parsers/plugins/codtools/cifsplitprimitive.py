@@ -4,6 +4,7 @@ Plugin to parse outputs from the scripts from cod-tools package.
 This plugin is in the development stage. Andrius Merkys, 2014-10-29
 """
 from aiida.parsers.plugins.codtools.ciffilter import CiffilterParser
+from aiida.orm.calculation.codtools.cifsplitprimitive import CifsplitprimitiveCalculation
 from aiida.orm.data.cif import CifData
 from aiida.orm.data.parameter import ParameterData
 
@@ -15,6 +16,11 @@ class CifsplitprimitiveParser(CiffilterParser):
     """
     Specific parser for the output of cif_split_primitive script.
     """
+    def _check_calc_compatibility(self,calc):
+        from aiida.common.exceptions import ParsingError
+        if not isinstance(calc,CifsplitprimitiveCalculation):
+            raise ParsingError("Input calc must be a CifsplitprimitiveCalculation")
+
     def _get_output_nodes(self, output_path, error_path):
         """
         Extracts output nodes from the standard output and standard error

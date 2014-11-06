@@ -15,16 +15,20 @@ __version__ = "0.2.1"
 
 class CiffilterParser(Parser):
     """
-    Specific parser for the output of cif_cell_contents script.
+    Parser for the output of filter scripts from cod-tools package.
     """
     def __init__(self,calc):
         """
         Initialize the instance of CiffilterParser
         """
         # check for valid input
-        if not isinstance(calc, CiffilterCalculation):
-            raise ParsingError("Input must calc must be a CiffilterCalculation")
+        self._check_calc_compatibility(calc)
         super(CiffilterParser, self).__init__(calc)
+
+    def _check_calc_compatibility(self,calc):
+        from aiida.common.exceptions import ParsingError
+        if not isinstance(calc,CiffilterCalculation):
+            raise ParsingError("Input calc must be a CiffilterCalculation")
 
     def parse_from_calc(self):
         """

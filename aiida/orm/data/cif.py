@@ -103,7 +103,8 @@ class CifData(SinglefileData):
         self._db_source_attrs = ['db_source',
                                  'db_url',
                                  'db_id',
-                                 'db_version']
+                                 'db_version',
+                                 'url']
         super(CifData,self).__init__(**kwargs)
         self._values = None
 

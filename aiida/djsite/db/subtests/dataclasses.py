@@ -122,6 +122,12 @@ class TestCifData(AiidaTestCase):
             f.flush()
             a = CifData(file=filename)
 
+        a.source = {'db_source': 'COD',
+                    'db_id'    : '0000001'}
+
+        with self.assertRaises(ValueError):
+            a.source = {'db_kind': 'small molecule'}
+
         the_uuid = a.uuid
 
         self.assertEquals(a.get_folder_list(),[basename])
@@ -130,6 +136,13 @@ class TestCifData(AiidaTestCase):
             self.assertEquals(f.read(), file_content)
 
         a.store()
+
+        self.assertEquals(a.source,{
+            'db_source' : 'COD',
+            'db_url'    : '',
+            'db_id'     : '0000001',
+            'db_version': ''
+        })
 
         with open(a.get_abs_path(basename)) as f:
             self.assertEquals(f.read(), file_content)

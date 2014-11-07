@@ -120,7 +120,8 @@ class TestCifData(AiidaTestCase):
             basename = os.path.split(filename)[1]
             f.write(file_content)
             f.flush()
-            a = CifData(file=filename)
+            a = CifData(file=filename,
+                        source={'db_version': '1234'})
 
         a.source = {'db_source': 'COD',
                     'db_id'    : '0000001'}
@@ -141,7 +142,7 @@ class TestCifData(AiidaTestCase):
             'db_source' : 'COD',
             'db_url'    : '',
             'db_id'     : '0000001',
-            'db_version': ''
+            'db_version': '1234'
         })
 
         with open(a.get_abs_path(basename)) as f:

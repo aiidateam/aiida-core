@@ -98,6 +98,26 @@ class DbEntry(object):
     Represents an entry from the structure database (COD, ICSD, ...).
     """
 
+    def __init__(self):
+        """
+        Sets the basic parameters for the database entry:
+
+        * source -- identifying the location and version of the source
+          for the entry, containing:
+        ** db_source -- name of the source database
+        ** db_url -- URL of the source database
+        ** db_id -- structure identifyer in the database
+        ** db_version -- version of the database
+        ** url -- URL of the structure (should be permanent)
+        """
+        self.source = {
+            'db_source' : None,
+            'db_url'    : None,
+            'db_id'     : None,
+            'db_version': None,
+            'url'       : None
+        }
+
     @property
     def cif(self):
         """
@@ -126,7 +146,7 @@ class DbEntry(object):
         with tempfile.NamedTemporaryFile() as f:
             f.write(self.cif)
             f.flush()
-            return CifData(file=f.name)
+            return CifData(file=f.name, source=self.source)
 
     def get_aiida_structure(self):
         """

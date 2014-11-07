@@ -142,7 +142,8 @@ class TestCifData(AiidaTestCase):
             'db_source' : 'COD',
             'db_url'    : '',
             'db_id'     : '0000001',
-            'db_version': '1234'
+            'db_version': '1234',
+            'url'       : '',
         })
 
         with open(a.get_abs_path(basename)) as f:

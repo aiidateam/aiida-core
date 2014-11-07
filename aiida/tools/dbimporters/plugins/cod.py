@@ -269,7 +269,6 @@ class CodSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
             self.entries[position] = \
                 CodEntry( self.base_url + \
                           self.results[position] + ".cif", \
-                          source_db = self.db_name, \
                           db_id = self.results[position] )
         return self.entries[position]
 
@@ -282,20 +281,25 @@ class CodEntry(aiida.tools.dbimporters.baseclasses.DbEntry):
         """
         Creates an instance of CodEntry, related to the supplied URL.
         """
-        self.url       = url
-        self.source_db = None
-        self.db_id     = None
+        super(CodEntry, self).__init__(**kwargs)
+        self.source = {
+            'db_source' : 'Crystallography Open Database',
+            'db_url'    : 'http://www.crystallography.net',
+            'db_id'     : None,
+            'db_version': None,
+            'url'       : url
+        }
         self._cif      = None
-        if 'source_db' in kwargs.keys():
-            self.source_db = kwargs['source_db']
         if 'db_id' in kwargs.keys():
-            self.db_id = kwargs['db_id']
+            self.source['db_id'] = kwargs.pop('db_id')
+        if 'db_version' in kwargs.keys():
+            self.source['db_version'] = kwargs.pop('source_db')
 
     @property
     def cif(self):
         if self._cif is None:
             import urllib2
-            self._cif = urllib2.urlopen( self.url ).read()
+            self._cif = urllib2.urlopen( self.source['url'] ).read()
         return self._cif
 
     def get_ase_structure(self):

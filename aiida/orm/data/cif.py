@@ -103,7 +103,8 @@ class CifData(SinglefileData):
         self._db_source_attrs = ['db_source',
                                  'db_url',
                                  'db_id',
-                                 'db_version']
+                                 'db_version',
+                                 'url']
         super(CifData,self).__init__(**kwargs)
         self._values = None
 
@@ -146,6 +147,12 @@ class CifData(SinglefileData):
                              ", ".join(source.keys()) +
                              ": only " + ", ".join(self._db_source_attrs) +
                              " are supported")
+
+    def set_source(self, source):
+        """
+        Set the file source descriptions.
+        """
+        self.source = source
 
     def generate_md5(self):
         """

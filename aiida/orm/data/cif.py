@@ -100,6 +100,10 @@ class CifData(SinglefileData):
         """
         Initialises an instance of CifData.
         """
+        self._db_source_attrs = ['db_source',
+                                 'db_url',
+                                 'db_id',
+                                 'db_version']
         super(CifData,self).__init__(**kwargs)
         self._values = None
 
@@ -117,6 +121,31 @@ class CifData(SinglefileData):
         super(CifData,self).set_file(filename)
         self._set_attr('md5', self.generate_md5())
         self._values = None
+
+    @property
+    def source(self):
+        """
+        Get the file source descriptions.
+        """
+        source_dict = {}
+        for k in self._db_source_attrs:
+            source_dict[k] = self.get_attr(k, "")
+        return source_dict
+
+    @source.setter
+    def source(self, source):
+        """
+        Set the file source descriptions.
+        """
+        for k in source.keys():
+            if k in self._db_source_attrs:
+                v = source.pop(k)
+                self._set_attr(k,v)
+        if len(source.keys())>0:
+            raise ValueError("Unknown data source attribute(s) " +
+                             ", ".join(source.keys()) +
+                             ": only " + ", ".join(self._db_source_attrs) +
+                             " are supported")
 
     def generate_md5(self):
         """

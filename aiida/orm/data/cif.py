@@ -147,6 +147,12 @@ class CifData(SinglefileData):
                              ": only " + ", ".join(self._db_source_attrs) +
                              " are supported")
 
+    def set_source(self, source):
+        """
+        Set the file source descriptions.
+        """
+        self.source = source
+
     def generate_md5(self):
         """
         Generate MD5 hash of the file's contents on-the-fly.

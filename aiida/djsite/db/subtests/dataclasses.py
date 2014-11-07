@@ -144,9 +144,9 @@ class TestCodDbImporter(AiidaTestCase):
         from aiida.tools.dbimporters.plugins.cod import CodSearchResults
 
         results = CodSearchResults( [ "1000000", "1000001", "2000000" ] )
-        self.assertEquals(results.at(1).url, \
+        self.assertEquals(results.at(1).source['url'], \
                           "http://www.crystallography.net/cod/1000001.cif")
-        self.assertEquals(results.next().url, \
+        self.assertEquals(results.next().source['url'], \
                           "http://www.crystallography.net/cod/1000000.cif")
 
     def test_dbentry_to_cif_node(self):
@@ -163,6 +163,13 @@ class TestCodDbImporter(AiidaTestCase):
         self.assertEquals(isinstance(cif,CifData),True)
         self.assertEquals(cif.get_attr('md5'),
                           '070711e8e99108aade31d20cd5c94c48')
+        self.assertEquals(cif.source,{
+            'db_source': 'Crystallography Open Database',
+            'db_url': 'http://www.crystallography.net',
+            'db_id': None,
+            'db_version': None,
+            'url': 'http://www.crystallography.net/cod/1000000.cif'
+        })
 
 class TestSinglefileData(AiidaTestCase):
     """

@@ -79,7 +79,7 @@ class TestCodDbImporter(AiidaTestCase):
                             measurement_temp = [ 0, 10.5 ],
                             measurement_pressure = [ 1000, 1001 ] )
         self.assertEquals(q, \
-                          "SELECT file FROM data WHERE "
+                          "SELECT file, svnrevision FROM data WHERE "
                           "(status IS NULL OR status != 'retracted') AND "
                           "(file IN (1000000, 3000000)) AND "
                           "(chemname LIKE '%caffeine%' OR "
@@ -140,12 +140,17 @@ class TestCodDbImporter(AiidaTestCase):
                 self.assertEquals(message, messages[results[i][j]])
 
     def test_dbentry_creation(self):
+        """
+        Tests the creation of CodEntry from CodSearchResults.
+        """
         from aiida.tools.dbimporters.plugins.cod import CodEntry
         from aiida.tools.dbimporters.plugins.cod import CodSearchResults
 
-        results = CodSearchResults( [ "1000000", "1000001", "2000000" ] )
+        results = CodSearchResults( [ { 'id': '1000000', 'svnrevision': None },
+                                      { 'id': '1000001', 'svnrevision': '1234' },
+                                      { 'id': '2000000', 'svnrevision': '1234' } ] )
         self.assertEquals(results.at(1).source['url'], \
-                          "http://www.crystallography.net/cod/1000001.cif")
+                          "http://www.crystallography.net/cod/1000001.cif@1234")
         self.assertEquals(results.next().source['url'], \
                           "http://www.crystallography.net/cod/1000000.cif")
 

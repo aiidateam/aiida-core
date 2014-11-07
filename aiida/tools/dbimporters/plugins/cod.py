@@ -180,7 +180,8 @@ class CodDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
                 "search keyword(s) '" + \
                 "', '".join( kwargs.keys() ) + "' " + \
                 "is(are) not implemented for COD" )
-        return "SELECT file FROM data WHERE " + " AND ".join( sql_parts )
+        return "SELECT file, svnrevision FROM data WHERE " + \
+               " AND ".join( sql_parts )
 
     def query(self, **kwargs):
         """
@@ -194,7 +195,8 @@ class CodDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
             self.cursor.execute( query_statement )
             self.db.commit()
             for row in self.cursor.fetchall():
-                results.append( str( row[0] ) )
+                results.append({ 'id'         : str(row[0]),
+                                 'svnrevision': str(row[1]) })
         finally:
             self._disconnect_db()
 
@@ -266,10 +268,16 @@ class CodSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
         if position < 0 | position >= len( self.results ):
             raise IndexError( "index out of bounds" )
         if position not in self.entries:
-            self.entries[position] = \
-                CodEntry( self.base_url + \
-                          self.results[position] + ".cif", \
-                          db_id = self.results[position] )
+            db_id       = self.results[position]['id']
+            svnrevision = self.results[position]['svnrevision']
+            url = self.base_url + db_id + ".cif"
+            if svnrevision is None:
+                self.entries[position] = \
+                    CodEntry( url, db_id = db_id )
+            else:
+                url = url + "@" + svnrevision
+                self.entries[position] = \
+                    CodEntry( url, db_id = db_id, db_version = svnrevision )
         return self.entries[position]
 
 class CodEntry(aiida.tools.dbimporters.baseclasses.DbEntry):
@@ -293,7 +301,7 @@ class CodEntry(aiida.tools.dbimporters.baseclasses.DbEntry):
         if 'db_id' in kwargs.keys():
             self.source['db_id'] = kwargs.pop('db_id')
         if 'db_version' in kwargs.keys():
-            self.source['db_version'] = kwargs.pop('source_db')
+            self.source['db_version'] = kwargs.pop('db_version')
 
     @property
     def cif(self):

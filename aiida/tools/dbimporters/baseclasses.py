@@ -98,7 +98,7 @@ class DbEntry(object):
     Represents an entry from the structure database (COD, ICSD, ...).
     """
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         """
         Sets the basic parameters for the database entry:
 

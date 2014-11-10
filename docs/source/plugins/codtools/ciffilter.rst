@@ -34,9 +34,9 @@ Supported codes
 
 Inputs
 ------
-* CifData
+* :py:class:`CifData <aiida.orm.data.cif.CifData>`
     A CIF file.
-* ParameterData (optional)
+* :py:class:`ParameterData <aiida.orm.data.parameter.ParameterData>` (optional)
     Contains the command line parameters, specified in key-value fashion.
     Leading dashes (single or double) must be stripped from the keys.
     Values can be arrays with multiple items. Keys without values should
@@ -69,9 +69,9 @@ Inputs
 
 Outputs
 -------
-* CifData
+* :py:class:`CifData <aiida.orm.data.cif.CifData>`
     A CIF file.
-* ParameterData (optional)
+* :py:class:`ParameterData <aiida.orm.data.parameter.ParameterData>` (optional)
     Contains lines of output messages and/or errors. For example::
 
         print ParameterData.get_subclass_from_pk(1).get_dict()
@@ -82,7 +82,8 @@ Outputs
 
 Errors
 ------
-Run-time errors are returned line-by-line in the ParameterData object.
+Run-time errors are returned line-by-line in the
+:py:class:`ParameterData <aiida.orm.data.parameter.ParameterData>` object.
 
 .. rubric:: Footnotes
 

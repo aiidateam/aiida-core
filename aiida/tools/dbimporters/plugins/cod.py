@@ -189,7 +189,8 @@ class CodDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         Performs a query on the COD database using ``keyword = value`` pairs,
         specified in ``kwargs``.
 
-        :return: an instance of CodSearchResults.
+        :return: an instance of
+            :py:class:`aiida.tools.dbimporters.plugins.cod.CodSearchResults`.
         """
         query_statement = self.query_sql( **kwargs )
         self._connect_db()
@@ -222,6 +223,8 @@ class CodDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
     def get_supported_keywords(self):
         """
         Returns the list of all supported query keywords.
+
+        :return: list of strings
         """
         return self.keywords.keys()
 
@@ -256,7 +259,10 @@ class CodSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
 
     def next(self):
         """
-        Returns next result as CodEntry.
+        Returns next result as
+        :py:class:`aiida.tools.dbimporters.plugins.cod.CodEntry`.
+
+        :raise StopIteration: when the end of result array is reached.
         """
         if len( self.results ) > self.position:
             self.position = self.position + 1
@@ -266,7 +272,12 @@ class CodSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
 
     def at(self, position):
         """
-        Returns ``position``-th result as CodEntry.
+        Returns ``position``-th result as
+        :py:class:`aiida.tools.dbimporters.plugins.cod.CodEntry`.
+
+        :param position: zero-based index of a result.
+
+        :raise IndexError: if ``position`` is out of bounds.
         """
         if position < 0 | position >= len( self.results ):
             raise IndexError( "index out of bounds" )
@@ -290,7 +301,9 @@ class CodEntry(aiida.tools.dbimporters.baseclasses.DbEntry):
 
     def __init__(self, url, **kwargs):
         """
-        Creates an instance of CodEntry, related to the supplied URL.
+        Creates an instance of
+        :py:class:`aiida.tools.dbimporters.plugins.cod.CodEntry`, related
+        to the supplied URL.
         """
         super(CodEntry, self).__init__(**kwargs)
         self.source = {

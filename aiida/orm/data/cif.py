@@ -25,8 +25,8 @@ class CifData(SinglefileData):
         """
         Return a list of all CIF files that match a given MD5 hash.
         
-        Note that the hash has to be stored in a _md5 attribute, otherwise
-        the CIF file will not be found.
+        :note: the hash has to be stored in a ``_md5`` attribute, otherwise
+            the CIF file will not be found.
         """
         queryset = cls.query(dbattributes__key='md5', dbattributes__tval=md5)
         return list(queryset)
@@ -95,6 +95,7 @@ class CifData(SinglefileData):
     def values(self):
         """
         :return: list of lists, representing a parsed CIF file.
+        :note: requires PyCifRW module.
         """
         if self._values is None:
             import CifFile
@@ -142,6 +143,8 @@ class CifData(SinglefileData):
     def source(self, source):
         """
         Set the file source descriptions.
+        :raises ValueError: if unknown data source attribute is found in
+            supplied dictionary.
         """
         for k in source.keys():
             if k in self._db_source_attrs:

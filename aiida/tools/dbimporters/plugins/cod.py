@@ -8,7 +8,7 @@ class CodDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
     Database importer for Crystallography Open Database.
     """
 
-    def int_clause(self, key, alias, values):
+    def _int_clause(self, key, alias, values):
         """
         Returns SQL query predicate for querying integer fields.
         """
@@ -19,7 +19,7 @@ class CodDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         return key + " IN (" + ", ".join( map( lambda i: str( int( i ) ),
                                                values ) ) + ")"
 
-    def str_exact_clause(self, key, alias, values):
+    def _str_exact_clause(self, key, alias, values):
         """
         Returns SQL query predicate for querying string fields.
         """
@@ -30,7 +30,7 @@ class CodDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         return key + \
                " IN (" + ", ".join( map( lambda f: "'" + str(f) + "'", \
                                          values ) ) + ")"
-    def formula_clause(self, key, alias, values):
+    def _formula_clause(self, key, alias, values):
         """
         Returns SQL query predicate for querying formula fields.
         """
@@ -38,12 +38,12 @@ class CodDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
             if not isinstance( e, str ):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only strings are accepted")
-        return self.str_exact_clause( key, \
-                                      alias, \
-                                      map( lambda f: "- " + str(f) + " -", \
-                                           values ) )
+        return self._str_exact_clause( key, \
+                                       alias, \
+                                       map( lambda f: "- " + str(f) + " -", \
+                                            values ) )
 
-    def str_fuzzy_clause(self, key, alias, values):
+    def _str_fuzzy_clause(self, key, alias, values):
         """
         Returns SQL query predicate for fuzzy querying of string fields.
         """
@@ -54,7 +54,7 @@ class CodDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         return " OR ".join( map( lambda s: key + \
                                            " LIKE '%" + str(s) + "%'", values ) )
 
-    def composition_clause(self, key, alias, values):
+    def _composition_clause(self, key, alias, values):
         """
         Returns SQL query predicate for querying elements in formula fields.
         """
@@ -66,7 +66,7 @@ class CodDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
                                             e + "[0-9 ]'", \
                                   values ) )
 
-    def double_clause(self, key, alias, values, precision):
+    def _double_clause(self, key, alias, values, precision):
         """
         Returns SQL query predicate for querying double-valued fields.
         """
@@ -86,67 +86,67 @@ class CodDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
     temperature_precision = 0.001
     pressure_precision    = 1
 
-    def length_clause(self, key, alias, values):
+    def _length_clause(self, key, alias, values):
         """
         Returns SQL query predicate for querying lattice vector lengths.
         """
-        return self.double_clause(key, alias, values, self.length_precision)
+        return self._double_clause(key, alias, values, self.length_precision)
 
-    def angle_clause(self, key, alias, values):
+    def _angle_clause(self, key, alias, values):
         """
         Returns SQL query predicate for querying lattice angles.
         """
-        return self.double_clause(key, alias, values, self.angle_precision)
+        return self._double_clause(key, alias, values, self.angle_precision)
 
-    def volume_clause(self, key, alias, values):
+    def _volume_clause(self, key, alias, values):
         """
         Returns SQL query predicate for querying unit cell volume.
         """
-        return self.double_clause(key, alias, values, self.volume_precision)
+        return self._double_clause(key, alias, values, self.volume_precision)
 
-    def temperature_clause(self, key, alias, values):
+    def _temperature_clause(self, key, alias, values):
         """
         Returns SQL query predicate for querying temperature.
         """
-        return self.double_clause(key, alias, values, self.temperature_precision)
+        return self._double_clause(key, alias, values, self.temperature_precision)
 
-    def pressure_clause(self, key, alias, values):
+    def _pressure_clause(self, key, alias, values):
         """
         Returns SQL query predicate for querying pressure.
         """
-        return self.double_clause(key, alias, values, self.pressure_precision)
+        return self._double_clause(key, alias, values, self.pressure_precision)
 
-    keywords = { 'id'                : [ 'file',          int_clause ],
-                 'element'           : [ 'element',       composition_clause ],
-                 'number_of_elements': [ 'nel',           int_clause ],
-                 'mineral_name'      : [ 'mineral',       str_fuzzy_clause ],
-                 'chemical_name'     : [ 'chemname',      str_fuzzy_clause ],
-                 'formula'           : [ 'formula',       formula_clause ],
-                 'volume'            : [ 'vol',           volume_clause ],
-                 'spacegroup'        : [ 'sg',            str_exact_clause ],
-                 'spacegroup_hall'   : [ 'sgHall',        str_exact_clause ],
-                 'a'                 : [ 'a',             length_clause ],
-                 'b'                 : [ 'b',             length_clause ],
-                 'c'                 : [ 'c',             length_clause ],
-                 'alpha'             : [ 'alpha',         angle_clause ],
-                 'beta'              : [ 'beta',          angle_clause ],
-                 'gamma'             : [ 'gamma',         angle_clause ],
-                 'z'                 : [ 'Z',             int_clause ],
-                 'measurement_temp'  : [ 'celltemp',      temperature_clause ],
-                 'diffraction_temp'  : [ 'diffrtemp',     temperature_clause ],
+    keywords = { 'id'                : [ 'file',          _int_clause ],
+                 'element'           : [ 'element',       _composition_clause ],
+                 'number_of_elements': [ 'nel',           _int_clause ],
+                 'mineral_name'      : [ 'mineral',       _str_fuzzy_clause ],
+                 'chemical_name'     : [ 'chemname',      _str_fuzzy_clause ],
+                 'formula'           : [ 'formula',       _formula_clause ],
+                 'volume'            : [ 'vol',           _volume_clause ],
+                 'spacegroup'        : [ 'sg',            _str_exact_clause ],
+                 'spacegroup_hall'   : [ 'sgHall',        _str_exact_clause ],
+                 'a'                 : [ 'a',             _length_clause ],
+                 'b'                 : [ 'b',             _length_clause ],
+                 'c'                 : [ 'c',             _length_clause ],
+                 'alpha'             : [ 'alpha',         _angle_clause ],
+                 'beta'              : [ 'beta',          _angle_clause ],
+                 'gamma'             : [ 'gamma',         _angle_clause ],
+                 'z'                 : [ 'Z',             _int_clause ],
+                 'measurement_temp'  : [ 'celltemp',      _temperature_clause ],
+                 'diffraction_temp'  : [ 'diffrtemp',     _temperature_clause ],
                  'measurement_pressure':
-                                       [ 'cellpressure',  pressure_clause ],
+                                       [ 'cellpressure',  _pressure_clause ],
                  'diffraction_pressure':
-                                       [ 'diffrpressure', pressure_clause ],
-                 'authors'           : [ 'authors',       str_fuzzy_clause ],
-                 'journal'           : [ 'journal',       str_fuzzy_clause ],
-                 'title'             : [ 'title',         str_fuzzy_clause ],
-                 'year'              : [ 'year',          int_clause ],
-                 'journal_volume'    : [ 'volume',        int_clause ],
-                 'journal_issue'     : [ 'issue',         str_exact_clause ],
-                 'first_page'        : [ 'firstpage',     str_exact_clause ],
-                 'last_page'         : [ 'lastpage',      str_exact_clause ],
-                 'doi'               : [ 'doi',           str_exact_clause ] }
+                                       [ 'diffrpressure', _pressure_clause ],
+                 'authors'           : [ 'authors',       _str_fuzzy_clause ],
+                 'journal'           : [ 'journal',       _str_fuzzy_clause ],
+                 'title'             : [ 'title',         _str_fuzzy_clause ],
+                 'year'              : [ 'year',          _int_clause ],
+                 'journal_volume'    : [ 'volume',        _int_clause ],
+                 'journal_issue'     : [ 'issue',         _str_exact_clause ],
+                 'first_page'        : [ 'firstpage',     _str_exact_clause ],
+                 'last_page'         : [ 'lastpage',      _str_exact_clause ],
+                 'doi'               : [ 'doi',           _str_exact_clause ] }
 
     def __init__(self, **kwargs):
         self.db         = None

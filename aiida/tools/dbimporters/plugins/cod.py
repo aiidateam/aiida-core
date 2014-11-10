@@ -160,8 +160,9 @@ class CodDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
     def query_sql(self, **kwargs):
         """
         Forms a SQL query for querying the COD database using
-        ``keyword = value`` pairs, specified in ``kwargs``. Returns a
-        string with SQL statement.
+        ``keyword = value`` pairs, specified in ``kwargs``.
+
+        :return: string containing a SQL statement.
         """
         sql_parts = [ "(status IS NULL OR status != 'retracted')" ]
         for key in self.keywords.keys():
@@ -186,7 +187,9 @@ class CodDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
     def query(self, **kwargs):
         """
         Performs a query on the COD database using ``keyword = value`` pairs,
-        specified in ``kwargs``. Returns an instance of CodSearchResults.
+        specified in ``kwargs``.
+
+        :return: an instance of CodSearchResults.
         """
         query_statement = self.query_sql( **kwargs )
         self._connect_db()

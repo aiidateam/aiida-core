@@ -329,6 +329,9 @@ class CodEntry(aiida.tools.dbimporters.baseclasses.DbEntry):
     def get_ase_structure(self):
         """
         Returns ASE representation of the CIF.
+
+        :note: to be removed, as it is duplicated in
+            :py:class:`aiida.orm.data.cif.CifData`.
         """
         import ase.io.cif
         import StringIO

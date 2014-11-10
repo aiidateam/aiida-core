@@ -10,4 +10,5 @@ Modules
    ../cmdline/dev
    ../execmanager/dev
    ../djsite/dev
+   ../tools/dev
    ../orm/dev

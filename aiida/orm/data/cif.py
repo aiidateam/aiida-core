@@ -94,7 +94,7 @@ class CifData(SinglefileData):
     @property
     def values(self):
         """
-        Returns parsed CIF file.
+        :return: list of lists, representing a parsed CIF file.
         """
         if self._values is None:
             import CifFile
@@ -131,7 +131,7 @@ class CifData(SinglefileData):
     @property
     def source(self):
         """
-        Get the file source descriptions.
+        A dictionary representing the source of a CIF.
         """
         source_dict = {}
         for k in self._db_source_attrs:

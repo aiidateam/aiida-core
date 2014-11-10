@@ -66,6 +66,11 @@ Upf
 .. automodule:: aiida.orm.data.upf
    :members:
 
+Cif
++++
+.. automodule:: aiida.orm.data.cif
+   :members:
+
 Parameter
 +++++++++
 .. automodule:: aiida.orm.data.parameter

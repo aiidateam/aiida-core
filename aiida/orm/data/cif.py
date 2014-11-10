@@ -75,16 +75,21 @@ class CifData(SinglefileData):
             else:        
                 return (cifs[0], False)
 
-    def _get_aiida_structure(self, converter='ase'):
+    def _get_aiida_structure(self, **kwargs):
+        converter = 'ase'
+        if 'converter' in kwargs.keys():
+            converter = kwargs.pop('converter')
         try:
-            getattr(self, '_get_aiida_structure_{}'.format(converter))
+            conv_f = getattr(self, '_get_aiida_structure_{}'.format(converter))
+            return conv_f(**kwargs)
         except AttributeError:
             raise ValueError("No such converter '{}' available".format(converter))
 
-    def _get_aiida_structure_ase(self):
+    def _get_aiida_structure_ase(self, **kwargs):
         from aiida.orm.data.structure import StructureData
         import ase.io.cif
-        return StructureData(ase=ase.io.cif.read_cif(self.get_file_abs_path()))
+        ase_structure = ase.io.cif.read_cif(self.get_file_abs_path(), **kwargs)
+        return StructureData(ase=ase_structure)
 
     @property
     def values(self):

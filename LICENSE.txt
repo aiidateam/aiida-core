@@ -21,7 +21,7 @@ TERMS AND CONDITIONS OF THE LICENSE
 Except for the above-mentioned acknowledgment, LICENSEE shall not use the PROGRAM title or the names or logos of LICENSOR, nor any adaptation thereof, nor the names of any of its employees or laboratories, in any advertising, promotional or sales material without prior written consent obtained from LICENSOR in each case.
 
 6. Ownership of all rights, including copyright in the PROGRAM and in any material associated therewith, shall at all times remain with LICENSOR and LICENSEE agrees to preserve same. LICENSEE agrees not to use any portion of the PROGRAM or of any IMPROVEMENTS in any machine-readable form outside the PROGRAM, nor to make any copies except for its internal use, without prior written consent of LICENSOR. LICENSEE agrees to place the following copyright notice on any such copies : 
-© All rights reserved. ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE, Switzerland, Laboratory of Theory and Simulation of Materials (THEOS), 2014. Authors: Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari. 
+© All rights reserved. ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE, Switzerland, Laboratory of Theory and Simulation of Materials (THEOS), 2014. Authors: Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini. 
 
 7. The LICENSE shall not be construed to confer any rights upon LICENSEE by implication or otherwise except as specifically set forth herein.
 

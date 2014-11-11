@@ -11,38 +11,44 @@ class DbImporter(object):
 
     def query(self, **kwargs):
         """
-        Method to query the database. The method should be able to process the
-        following keywords or throw **NotImplementedError** otherwise:
+        Method to query the database.
 
-        * id -- database-specific entry identificator
-        * element -- element name from periodic table of elements
-        * number_of_elements -- number of different elements
-        * mineral_name -- name of mineral
-        * chemical_name -- chemical name of substance
-        * formula -- chemical formula
-        * volume -- volume of the unit cell in cubic angstroms
-        * spacegroup -- symmetry space group symbol in Hermann-Mauguin notation
-        * spacegroup_hall -- symmetry space group symbol in Hall notation
-        * a, b, c -- length of lattice vectors in angstroms
-        * alpha, beta, gamma -- angles between lattice vectors in degrees
-        * z -- number of the formula units in the unit cell
-        * measurement_temp -- temperature in kelvins at which the unit-cell
-          parameters were measured
-        * measurement_pressure -- pressure in kPa at which the unit-cell
-          parameters were measured
-        * diffraction_temp -- mean temperature in kelvins at which the
-          intensities were measured
-        * diffraction_pressure -- mean pressure in kPa at which the
-          intensities were measured
-        * authors -- authors of the publication
-        * journal -- name of the journal
-        * title -- title of the publication
-        * year -- year of the publication
-        * journal_volume -- journal volume of the publication
-        * journal_issue -- journal issue of the publication
-        * first_page -- first page of the publication
-        * last_page -- last page of the publication
-        * doi -- digital object identifyer (DOI), refering to the pulication
+        :param id: database-specific entry identificator
+        :param element: element name from periodic table of elements
+        :param number_of_elements: number of different elements
+        :param mineral_name: name of mineral
+        :param chemical_name: chemical name of substance
+        :param formula: chemical formula
+        :param volume: volume of the unit cell in cubic angstroms
+        :param spacegroup: symmetry space group symbol in Hermann-Mauguin
+            notation
+        :param spacegroup_hall: symmetry space group symbol in Hall
+            notation
+        :param a, b, c: length of lattice vectors in angstroms
+        :param alpha, beta, gamma: angles between lattice vectors in
+            degrees
+        :param z: number of the formula units in the unit cell
+        :param measurement_temp: temperature in kelvins at which the
+            unit-cell parameters were measured
+        :param measurement_pressure: pressure in kPa at which the
+            unit-cell parameters were measured
+        :param diffraction_temp: mean temperature in kelvins at which
+            the intensities were measured
+        :param diffraction_pressure: mean pressure in kPa at which the
+            intensities were measured
+        :param authors: authors of the publication
+        :param journal: name of the journal
+        :param title: title of the publication
+        :param year: year of the publication
+        :param journal_volume: journal volume of the publication
+        :param journal_issue: journal issue of the publication
+        :param first_page: first page of the publication
+        :param last_page: last page of the publication
+        :param doi: digital object identifyer (DOI), refering to the
+            pulication
+
+        :raises NotImplementedError: if search using given keyword is not
+            implemented.
         """
         raise NotImplementedError("not implemented in base class")
 
@@ -56,6 +62,8 @@ class DbImporter(object):
     def get_supported_keywords(self):
         """
         Returns the list of all supported query keywords.
+
+        :return: list of strings
         """
         raise NotImplementedError("not implemented in base class")
 
@@ -66,13 +74,16 @@ class DbSearchResults(object):
 
     def __iter__(self):
         """
-        Instances of *DbSearchResults can be used as iterators.
+        Instances of
+        :py:class:`aiida.tools.dbimporters.baseclasses.DbSearchResults` can
+        be used as iterators.
         """
         return self
 
     def fetch_all(self):
         """
-        Returns all query results as an array of BaseDbEntry.
+        Returns all query results as an array of
+        :py:class:`aiida.tools.dbimporters.baseclasses.DbEntry`.
         """
         results = []
         for entry in self:
@@ -81,15 +92,21 @@ class DbSearchResults(object):
 
     def next(self):
         """
-        Returns the next result of the query (instance of BaseDbEntry),
-        throws **StopIteration** when called after the last result.
+        Returns the next result of the query (instance of
+        :py:class:`aiida.tools.dbimporters.baseclasses.DbEntry`).
+
+        :raise StopIteration: when the end of result array is reached.
         """
         raise NotImplementedError("not implemented in base class")
 
     def at(self, position):
         """
-        Returns ``position``-th result (instance of BaseDbEntry) from the
-        result array (zero-based).
+        Returns ``position``-th result as
+        :py:class:`aiida.tools.dbimporters.baseclasses.DbEntry`.
+
+        :param position: zero-based index of a result.
+
+        :raise IndexError: if ``position`` is out of bounds.
         """
         raise NotImplementedError("not implemented in base class")
 
@@ -102,13 +119,13 @@ class DbEntry(object):
         """
         Sets the basic parameters for the database entry:
 
-        * source -- identifying the location and version of the source
+        :param source: identifying the location and version of the source
           for the entry, containing:
-        ** db_source -- name of the source database
-        ** db_url -- URL of the source database
-        ** db_id -- structure identifyer in the database
-        ** db_version -- version of the database
-        ** url -- URL of the structure (should be permanent)
+        ** db_source: name of the source database
+        ** db_url: URL of the source database
+        ** db_id: structure identifyer in the database
+        ** db_version: version of the database
+        ** url: URL of the structure (should be permanent)
         """
         self.source = {
             'db_source' : None,
@@ -128,6 +145,8 @@ class DbEntry(object):
     def get_raw_cif(self):
         """
         Returns raw contents of a CIF file as string.
+
+        :return: contents of a file as string
         """
         return self.cif
 
@@ -139,7 +158,9 @@ class DbEntry(object):
 
     def get_cif_node(self):
         """
-        Returns CIF node, that can be used in AiiDA workflow.
+        Creates a CIF node, that can be used in AiiDA workflow.
+
+        :return: :py:class:`aiida.orm.data.cif.CifData` object
         """
         from aiida.orm.data.cif import CifData
         import tempfile
@@ -158,6 +179,8 @@ class DbEntry(object):
     def get_parsed_cif(self):
         """
         Returns data structure, representing the CIF file. Can be created
-        using **PyCIFRW** or any other open-source parser.
+        using PyCIFRW or any other open-source parser.
+
+        :return: list of lists
         """
         raise NotImplementedError("not implemented in base class")

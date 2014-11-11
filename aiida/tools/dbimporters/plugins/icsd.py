@@ -400,16 +400,16 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
         """
         Returns ``position``-th result as IcsdEntry.
         """
-        if position < 0 | position >= self.number_of_results:
+        if self.position < 0 or self.position >= self.number_of_results:
             raise IndexError( "index out of bounds" )
-        while position >= len(self.results):
+        while self.position >= len(self.results):
             self.page = self.page + 1
             self.query_page()
         if position not in self.entries:
-            self.entries[position] = IcsdEntry( self.db_parameters["server"]+ self.db_parameters["db"] + self.cif_url.format(self.results[position]), \
+            self.entries[self.position] = IcsdEntry( self.db_parameters["server"]+ self.db_parameters["db"] + self.cif_url.format(self.results[position]), \
                           source_db = self.db_name, \
-                          db_id = self.results[position] )
-        return self.entries[position]
+                          db_id = self.results[self.position] )
+        return self.entries[self.position]
 
 
 

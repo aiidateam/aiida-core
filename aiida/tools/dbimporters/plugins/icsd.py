@@ -125,8 +125,6 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
 
     # for the web query
 
-
-
     def parse_all(k,v):
         """
         Takes numbers, strings, list and returns a string.
@@ -275,7 +273,8 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
                                "user":   "dba",
                                "passwd": "",
                                "db":     "icsd",
-                               "port": "3306"
+                               "port": "3306",
+                               "full_access": True
                             }
         self.setup_db( **kwargs )
 
@@ -380,8 +379,10 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
         self.page = 1
         self.position = 0
         self.sql_select_query = "SELECT SQL_CALC_FOUND_ROWS icsd.IDNUM, icsd.COLL_CODE, icsd.STRUCT_FORM "
-        self.sql_from_query = "FROM icsd.icsd "
-        #self.sql_from_query = "FROM icsd.icsd "
+        if db_parameters["full_access"]:
+            self.sql_from_query = "FROM icsd.icsd "
+        else:
+            self.sql_from_query = "FROM icsdd.icsd "
 
         self.query_page()
 
@@ -389,14 +390,9 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
         """
         Returns next result as IcsdEntry.
         """
-        if len( self.results ) > self.position:
+        if len( self.results ) > self.position and self.number_of_results > self.position:
             self.position = self.position + 1
             return self.at( self.position - 1 )
-        elif self.number_of_results > self.position:
-            self.position = self.position + 1
-            self.page = self.page + 1
-            self.query_page()
-            return self.at (self.position - 1)
         else:
             raise StopIteration()
 
@@ -406,6 +402,9 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
         """
         if position < 0 | position >= self.number_of_results:
             raise IndexError( "index out of bounds" )
+        while position >= len(self.results):
+            self.page = self.page + 1
+            self.query_page()
         if position not in self.entries:
             self.entries[position] = IcsdEntry( self.db_parameters["server"]+ self.db_parameters["db"] + self.cif_url.format(self.results[position]), \
                           source_db = self.db_name, \
@@ -420,6 +419,7 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
             self._connect_db()
             query_statement = self.sql_select_query+ self.sql_from_query + self.query + " LIMIT " + str((self.page-1)*100) + ", " + str(self.page*100)
         #try:
+            print query_statement
 
             self.cursor.execute( query_statement )
             self.db.commit()
@@ -482,20 +482,24 @@ class IcsdEntry(aiida.tools.dbimporters.baseclasses.DbEntry):
         """
         Creates an instance of IcsdEntry, related to the supplied URL.
         """
-        self.url       = url
-        self.source_db = None
-        self.db_id     = None
-        self._cif      = None
-        if 'source_db' in kwargs.keys():
-            self.source_db = kwargs['source_db']
+        super(IcsdEntry, self).__init__(**kwargs)
+        self.source = {
+            'db_source' : 'Icsd',
+            'db_url'    : None, # Server ?
+            'db_id'     : None,
+            'db_version': None,
+            'url'       : url
+        }
+        if 'db_source' in kwargs.keys():
+            self.source["db_source"] = kwargs['db_source']
         if 'db_id' in kwargs.keys():
-            self.db_id = kwargs['db_id']
+            self.source["db_id"] = kwargs['db_id']
 
     @property
     def cif(self):
         if self._cif is None:
             import urllib2
-            self._cif = urllib2.urlopen( self.url ).read()
+            self._cif = urllib2.urlopen( self.source["url"] ).read()
         return self._cif
 
     def get_corrected_cif(self):

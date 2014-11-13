@@ -143,8 +143,8 @@ class TestCodDbImporter(AiidaTestCase):
         """
         Tests the creation of CodEntry from CodSearchResults.
         """
-        from aiida.tools.dbimporters.plugins.cod import CodEntry
-        from aiida.tools.dbimporters.plugins.cod import CodSearchResults
+        from aiida.tools.dbimporters.plugins.cod \
+            import CodEntry, CodSearchResults
 
         results = CodSearchResults( [ { 'id': '1000000', 'svnrevision': None },
                                       { 'id': '1000001', 'svnrevision': '1234' },
@@ -175,6 +175,25 @@ class TestCodDbImporter(AiidaTestCase):
             'db_version': None,
             'url': 'http://www.crystallography.net/cod/1000000.cif'
         })
+
+class TestTcodDbImporter(AiidaTestCase):
+    """
+    Test the TcodDbImporter class.
+    """
+    def test_dbentry_creation(self):
+        """
+        Tests the creation of TcodEntry from TcodSearchResults.
+        """
+        from aiida.tools.dbimporters.plugins.tcod \
+            import TcodEntry, TcodSearchResults
+
+        results = TcodSearchResults( [ { 'id': '10000000', 'svnrevision': None },
+                                       { 'id': '10000001', 'svnrevision': '1234' },
+                                       { 'id': '20000000', 'svnrevision': '1234' } ] )
+        self.assertEquals(results.at(1).source['url'], \
+                          "http://www.crystallography.net/tcod/10000001.cif@1234")
+        self.assertEquals(results.next().source['url'], \
+                          "http://www.crystallography.net/tcod/10000000.cif")
 
 class TestSinglefileData(AiidaTestCase):
     """

@@ -36,7 +36,7 @@ login from your user to the cluster. To do so type first (only if you do not
 already have some keys in your local ``~/.ssh directory`` - i.e. files like 
 ``id_rsa.pub``)::
 
-    ssh-keygen
+    ssh-keygen -t rsa
     
 Then copy your keys to the remote computer (in ~/.ssh/authorized_keys) with::
 
@@ -48,7 +48,7 @@ line before and after)::
 
   Host YOURCLUSTERADDRESS
     User YOURUSERNAME
-
+    HostKeyAlgorithms ssh-rsa
 
 Before proceeding to setup the computer, be sure that you are able to
 connect to your cluster using::
@@ -62,6 +62,21 @@ via ``sftp`` (needed to copy files). The following command::
 
 should show you a prompt without errors (possibly with a message saying
 ``Connected to YOURCLUSTERADDRESS``).
+
+.. Warning:: Due to a current limitation of the current ssh transport module, we 
+  do not support ECDSA, but only RSA or DSA keys. In the present guide we've 
+  shown RSA only for simplicity. The first time you connect to 
+  the cluster, you should see something like this::
+    
+    The authenticity of host 'YOURCLUSTERADDRESS (IP)' can't be established.
+    RSA key fingerprint is xx:xx:xx:xx:xx.
+    Are you sure you want to continue connecting (yes/no)?
+  
+  Make sure you see RSA written. If you already installed the keys in the past, 
+  and you don't know which keys you are using, you could remove the cluster
+  YOURCLUSTERADDRESS from the file ~/.ssh/known-hosts (backup it first!) and try
+  to ssh again. If you are not using a RSA or DSA key, you may see later on a 
+  submitted calculation going in the state SUBMISSIONFAILED. 
 
 .. note:: If the ``ssh`` command works, but the ``sftp`` command does not
   (e.g. it just prints ``Connection closed``), a possible reason can be

@@ -120,7 +120,14 @@ class TestCifData(AiidaTestCase):
             basename = os.path.split(filename)[1]
             f.write(file_content)
             f.flush()
-            a = CifData(file=filename)
+            a = CifData(file=filename,
+                        source={'db_version': '1234'})
+
+        a.source = {'db_source': 'COD',
+                    'db_id'    : '0000001'}
+
+        with self.assertRaises(ValueError):
+            a.source = {'db_kind': 'small molecule'}
 
         the_uuid = a.uuid
 
@@ -130,6 +137,14 @@ class TestCifData(AiidaTestCase):
             self.assertEquals(f.read(), file_content)
 
         a.store()
+
+        self.assertEquals(a.source,{
+            'db_source' : 'COD',
+            'db_url'    : '',
+            'db_id'     : '0000001',
+            'db_version': '1234',
+            'url'       : '',
+        })
 
         with open(a.get_abs_path(basename)) as f:
             self.assertEquals(f.read(), file_content)
@@ -232,9 +247,60 @@ class TestCifData(AiidaTestCase):
             f.flush()
             a = CifData(file=f.name)
 
+        with self.assertRaises(ValueError):
+            a._get_aiida_structure(converter='none')
+
         c = a._get_aiida_structure_ase()
 
         self.assertEquals(c.get_kind_names(), ['C','O'])
+
+    @unittest.skipIf(not has_ase(),"Unable to import ase")
+    def test_ase_primitive_and_conventional_cells(self):
+        """
+        Checking the number of atoms per primitive/conventional cell
+        returned by ASE ase.io.cif.read_cif() method. Test input is
+        adapted from http://www.crystallography.net/cod/9012064.cif@120115
+        """
+        import os
+        import tempfile
+        import ase
+
+        from aiida.orm.data.cif import CifData
+        from aiida.orm.data.structure import StructureData
+
+        with tempfile.NamedTemporaryFile() as f:
+            f.write('''
+                data_9012064
+                _space_group_IT_number           166
+                _symmetry_space_group_name_H-M   'R -3 m :H'
+                _cell_angle_alpha                90
+                _cell_angle_beta                 90
+                _cell_angle_gamma                120
+                _cell_length_a                   4.395
+                _cell_length_b                   4.395
+                _cell_length_c                   30.440
+                _cod_database_code               9012064
+                loop_
+                _atom_site_label
+                _atom_site_fract_x
+                _atom_site_fract_y
+                _atom_site_fract_z
+                _atom_site_U_iso_or_equiv
+                Bi 0.00000 0.00000 0.40046 0.02330
+                Te1 0.00000 0.00000 0.00000 0.01748
+                Te2 0.00000 0.00000 0.79030 0.01912
+            ''')
+            f.flush()
+            c = CifData(file=f.name)
+
+        ase = c._get_aiida_structure(primitive_cell = False).get_ase()
+        self.assertEquals(ase.get_number_of_atoms(),15)
+
+        ase = c._get_aiida_structure().get_ase()
+        self.assertEquals(ase.get_number_of_atoms(),15)
+
+        ase = c._get_aiida_structure(primitive_cell = True).get_ase()
+        self.assertEquals(ase.get_number_of_atoms(),5)
 
 class TestKindValidSymbols(AiidaTestCase):
     """

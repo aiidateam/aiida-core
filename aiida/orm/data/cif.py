@@ -25,8 +25,8 @@ class CifData(SinglefileData):
         """
         Return a list of all CIF files that match a given MD5 hash.
         
-        Note that the hash has to be stored in a _md5 attribute, otherwise
-        the CIF file will not be found.
+        :note: the hash has to be stored in a ``_md5`` attribute, otherwise
+            the CIF file will not be found.
         """
         queryset = cls.query(dbattributes__key='md5', dbattributes__tval=md5)
         return list(queryset)
@@ -75,21 +75,27 @@ class CifData(SinglefileData):
             else:        
                 return (cifs[0], False)
 
-    def _get_aiida_structure(self, converter='ase'):
+    def _get_aiida_structure(self, **kwargs):
+        converter = 'ase'
+        if 'converter' in kwargs.keys():
+            converter = kwargs.pop('converter')
         try:
-            getattr(self, '_get_aiida_structure_{}'.format(converter))
+            conv_f = getattr(self, '_get_aiida_structure_{}'.format(converter))
+            return conv_f(**kwargs)
         except AttributeError:
             raise ValueError("No such converter '{}' available".format(converter))
 
-    def _get_aiida_structure_ase(self):
+    def _get_aiida_structure_ase(self, **kwargs):
         from aiida.orm.data.structure import StructureData
         import ase.io.cif
-        return StructureData(ase=ase.io.cif.read_cif(self.get_file_abs_path()))
+        ase_structure = ase.io.cif.read_cif(self.get_file_abs_path(), **kwargs)
+        return StructureData(ase=ase_structure)
 
     @property
     def values(self):
         """
-        Returns parsed CIF file.
+        :return: list of lists, representing a parsed CIF file.
+        :note: requires PyCifRW module.
         """
         if self._values is None:
             import CifFile
@@ -100,6 +106,11 @@ class CifData(SinglefileData):
         """
         Initialises an instance of CifData.
         """
+        self._db_source_attrs = ['db_source',
+                                 'db_url',
+                                 'db_id',
+                                 'db_version',
+                                 'url']
         super(CifData,self).__init__(**kwargs)
         self._values = None
 
@@ -117,6 +128,39 @@ class CifData(SinglefileData):
         super(CifData,self).set_file(filename)
         self._set_attr('md5', self.generate_md5())
         self._values = None
+
+    @property
+    def source(self):
+        """
+        A dictionary representing the source of a CIF.
+        """
+        source_dict = {}
+        for k in self._db_source_attrs:
+            source_dict[k] = self.get_attr(k, "")
+        return source_dict
+
+    @source.setter
+    def source(self, source):
+        """
+        Set the file source descriptions.
+        :raises ValueError: if unknown data source attribute is found in
+            supplied dictionary.
+        """
+        for k in source.keys():
+            if k in self._db_source_attrs:
+                v = source.pop(k)
+                self._set_attr(k,v)
+        if len(source.keys())>0:
+            raise ValueError("Unknown data source attribute(s) " +
+                             ", ".join(source.keys()) +
+                             ": only " + ", ".join(self._db_source_attrs) +
+                             " are supported")
+
+    def set_source(self, source):
+        """
+        Set the file source descriptions.
+        """
+        self.source = source
 
     def generate_md5(self):
         """

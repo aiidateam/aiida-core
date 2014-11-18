@@ -302,7 +302,7 @@ class Group(object):
     
     @classmethod
     def query(cls, name=None, type_string="", uuid=None, nodes=None, user=None,
-              node_attributes=None):
+              node_attributes=None, past_days=None):
         """
         Query for groups. 
         :note:  By default, query for user-defined groups only (type_string=="").
@@ -318,6 +318,8 @@ class Group(object):
           only for user-defined groups (see note above).
         :param user: by default, query for groups of all users; if specified,
           must be a DbUser object, or a string for the user email.
+        :param past_days: by default, query for all groups; if specified, query
+          the groups created in the last past_days. Must be a datetime object.
         :param node_attributes: if not None, must be a dictionary with
           format {k: v}. It will filter and return only groups where there
           is at least a node with an attribute with key=k and value=v.
@@ -350,6 +352,9 @@ class Group(object):
 
         if uuid is not None:
             queryobject &= Q(uuid=uuid)
+        
+        if past_days is not None:
+            queryobject &= Q(time__gte=past_days)
         
         if nodes is not None:
             pk_list = []

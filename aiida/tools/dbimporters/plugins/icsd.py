@@ -80,6 +80,32 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
                                            str( d + precision ), \
                                  values ) )
 
+
+
+
+    def crystal_system_clause(self, key, alias, values):
+        """
+        Returns SQL query predicate for querying crystal_system.
+        """
+        valid_systems = {
+        "cubic": "CU",
+        "hexagonal": "HE",
+        "monoclinic": "MO",
+        "orthorhombic": "OR",
+        "tetragonal": "TE",
+        "trigonal": "TG",
+        "triclinic": "TC"
+        }
+
+        for e in values:
+            if not isinstance( e, int ) and not isinstance( e, str ):
+                raise ValueError("incorrect value for keyword '" + alias + \
+                                 "' -- only strings are accepted")
+        return key + \
+               " IN (" + ", ".join( map( lambda f: "'" + valid_systems[f.lower()] + "'", \
+                                         values ) ) + ")"
+
+
     length_precision      = 0.001
     angle_precision       = 0.001
     volume_precision      = 0.001
@@ -170,7 +196,6 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         elif k == "gamma":
             return "ga=" + v
 
-
     def parse_system(k,v):
         valid_systems = {
         "cubic": "CU",
@@ -181,39 +206,8 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         "trigonal": "TG",
         "triclinic": "TC"
         }
-        return valid_systems[v]
 
-    def parse_db_id(k,v):
-
-        query_string = "(COLL_CODE in ("
-        if type(v) is list:
-            query_string = query_string + ','.join(v)
-        elif type(v) is int:
-            query_string = query_string + str(v)
-        elif type(v) is str:
-            query_string = query_string + v
-        query_string = query_string + ")"
-
-        return query_string
-
-
-    def parse_db_element(k,v):
-        query_string = "(COLL_CODE in ("
-        if type(v) is list:
-            query_string = query_string + ','.join(v)
-        elif type(v) is int:
-            query_string = query_string + str(v)
-        elif type(v) is str:
-            query_string = query_string + v
-        query_string = query_string + ")"
-
-        return query_string
-
-    def parse_db_num_of_el(k,v):
-
-        return query_string
-
-
+        return valid_systems[v.lower()]
 
     keywords = { "id"                : ("authors", parse_all),
                  "authors"           : ("authors", parse_all),
@@ -233,7 +227,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
                  "journal"           : ("journal", parse_all),
                  "title"             : ("title", parse_all),
                  "year"              : ("year", parse_all),
-                 #"crystal_system"    : ("system", parse_system),
+                 "crystal_system"    : ("system", parse_system),
                  }
 
     keywords_db = {'id'             : [ 'COLL_CODE',          int_clause ],
@@ -258,15 +252,17 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
                  'authors'           : [ 'AUTHORS_TEXT',       str_fuzzy_clause ],
                  'journal'           : [ 'journal',       str_fuzzy_clause ],
                  'title'             : [ 'AU_TITLE',         str_fuzzy_clause ],
-                 'year'              : [ 'MPY',          int_clause ] }
+                 'year'              : [ 'MPY',          int_clause ],
+                 'crystal_system'    : ['CRYST_SYS_CODE', crystal_system_clause],
+                 }
 
 
     def __init__(self, **kwargs):
-        #import logging
-        #aiidalogger  =  logging.getLogger("aiida")
-        #self.logger  =  aiidalogger.getChild("ICSDImporter")
+        """
+        :param db: "icsd" for full database, "icsdd" for demo database
+        """
+
         self.db_parameters = { "server":   "",
-                               #"db":     "icsd",
                                "urladd": "index.php?",
                                "querydb": True,
                                "host":   "",
@@ -274,7 +270,6 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
                                "passwd": "",
                                "db":     "icsd",
                                "port": "3306",
-                               "full_access": True
                             }
         self.setup_db( **kwargs )
 
@@ -301,9 +296,11 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
                                                  k, \
                                                  v ) + \
                     ")" )
+        if "crystal_system" in kwargs.keys():
+            sql_query = "LEFT JOIN space_group ON space_group.sgr=icsd.sgr LEFT JOIN space_group_number ON space_group_number.sgr_num=space_group.sgr_num " +  "WHERE" + " AND ".join(sql_where_query)
+        else:
+            sql_query =  "WHERE" + " AND ".join(sql_where_query)
 
-
-        sql_query = "WHERE" + " AND ".join(sql_where_query)
         return IcsdSearchResults(query = sql_query, db_parameters= self.db_parameters)
 
 
@@ -379,10 +376,7 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
         self.page = 1
         self.position = 0
         self.sql_select_query = "SELECT SQL_CALC_FOUND_ROWS icsd.IDNUM, icsd.COLL_CODE, icsd.STRUCT_FORM "
-        if db_parameters["full_access"]:
-            self.sql_from_query = "FROM icsd.icsd "
-        else:
-            self.sql_from_query = "FROM icsdd.icsd "
+        self.sql_from_query = "FROM icsd "
 
         self.query_page()
 
@@ -462,7 +456,7 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
         self.db = MySQLdb.connect( host =   self.db_parameters['host'],
                                    user =   self.db_parameters['user'],
                                    passwd = self.db_parameters['passwd'],
-                                   #db =     self.db_parameters['db']
+                                   db =     self.db_parameters['db'],
                                    port = int(self.db_parameters['port'])
                                    )
         self.cursor = self.db.cursor()

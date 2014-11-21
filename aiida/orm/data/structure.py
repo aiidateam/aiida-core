@@ -375,6 +375,72 @@ def get_formula_compact1(symbol_list):
     
     return get_formula_from_symbol_list(new_symbol_list)
 
+def get_formula(symbol_list, mode='hill'):
+    """
+    Return a string with the chemical formula.
+    :param symbol_list: a list of symbols, e.g. ``['H','H','O']``
+    :param mode:
+        'hill' (default): use Hill notation, i.e. alphabetical order with C and H 
+            first if one or several C atom(s) is (are) present, e.g. 
+            ``['C','H','H','H','O','C','H','H','H']`` will return ``'C2H6O'`` 
+            ``['S','O','O','H','O','H','O']``  will return ``'H2O4S'``
+            From E. A. Hill, J. Am. Chem. Soc., 22 (8), pp 478–494 (1900)
+            
+        'compact1': will try to group as much as possible parts of the formula
+            e.g. 
+            ``['Ba', 'Ti', 'O', 'O', 'O', 'Ba', 'Ti', 'O', 'O', 'O',
+            'Ba', 'Ti', 'Ti', 'O', 'O', 'O']`` will return ``'(BaTiO3)2BaTi2O3'``
+        
+        'reduce': simply group repeated symbols e.g.
+            ``['Ba', 'Ti', 'O', 'O', 'O', 'Ba', 'Ti', 'O', 'O', 'O',
+            'Ba', 'Ti', 'Ti', 'O', 'O', 'O']`` will return ``'BaTiO3BaTiO3BaTi2O3'``
+        
+        'allreduce': same as hill without the re-ordering (take the 
+            order of the atomic sites), e.g.
+            ``['Ba', 'Ti', 'O', 'O', 'O']`` will return ``'BaTiO3'``
+        
+    :return: a string with the formula
+    
+    :note: in modes compact1, reduce and allreduce, the initial order in 
+        which the atoms were appended by the user is used to group symbols by
+        multiplicity
+    """
+        
+    if mode == 'compact1':
+        return get_formula_compact1(symbol_list)
+    
+    # for hill and allreduce cases, simply count the occurences of each 
+    # chemical symbol (with some re-ordering in hill) 
+    elif mode == 'hill':
+        symbol_set = set(symbol_list)
+        first_symbols = []
+        if 'C' in symbol_set:
+            # remove C (and H if present) from list and put them at the
+            # beginning
+            symbol_set.remove('C')
+            first_symbols.append('C')
+            if 'H' in symbol_set:
+                symbol_set.remove('H')
+                first_symbols.append('H')
+        ordered_symbol_set = first_symbols + list(sorted(symbol_set))
+        the_symbol_list=[[symbol_list.count(elem),elem]
+                     for elem in ordered_symbol_set]
+    
+    elif mode == 'allreduce':
+        ordered_symbol_indexes = sorted([symbol_list.index(elem) 
+                                         for elem in set(symbol_list)])
+        ordered_symbol_set = [symbol_list[i] for i in ordered_symbol_indexes]
+        the_symbol_list = [[symbol_list.count(elem),elem]
+                                for elem in ordered_symbol_set]
+        
+    elif mode == 'reduce':
+        the_symbol_list = group_symbols(symbol_list)
+        
+    else:
+        raise ValueError('Mode should be compact1, hill, reduce or allreduce')
+    
+    return get_formula_from_symbol_list(the_symbol_list)    
+            
 class StructureData(Data):
     """
     This class contains the information about a given structure, i.e. a
@@ -571,65 +637,34 @@ class StructureData(Data):
         :param mode:
             'hill' (default): Hill notation (alphabetical order, with C and H first if 
                 a C atom is present), e.g. 
-                'CHHHOCHHH' will return 'C2H6O' 
-                'SOOHOHO'  will return 'H2O4S'
+                ``['C','H','H','H','O','C','H','H','H']`` will return ``'C2H6O'`` 
+                ``['S','O','O','H','O','H','O']``  will return ``'H2O4S'``
                 From E. A. Hill, J. Am. Chem. Soc., 22 (8), pp 478–494 (1900)
                 
             'compact1': will try to group as much as possible parts of the formula
-            e.g. 
-            ``['Ba', 'Ti', 'O', 'O', 'O', 'Ba', 'Ti', 'O', 'O', 'O',
-            'Ba', 'Ti', 'Ti', 'O', 'O', 'O']`` will return ``'(BaTiO3)2BaTi2O3'``
+                e.g. 
+                ``['Ba', 'Ti', 'O', 'O', 'O', 'Ba', 'Ti', 'O', 'O', 'O',
+                'Ba', 'Ti', 'Ti', 'O', 'O', 'O']`` will return ``'(BaTiO3)2BaTi2O3'``
             
             'reduce': simply group repeated symbols e.g.
-            ``['Ba', 'Ti', 'O', 'O', 'O', 'Ba', 'Ti', 'O', 'O', 'O',
-            'Ba', 'Ti', 'Ti', 'O', 'O', 'O']`` will return ``'BaTiO3BaTiO3BaTi2O3'``
+                ``['Ba', 'Ti', 'O', 'O', 'O', 'Ba', 'Ti', 'O', 'O', 'O',
+                'Ba', 'Ti', 'Ti', 'O', 'O', 'O']`` will return ``'BaTiO3BaTiO3BaTi2O3'``
             
             'allreduce': same as hill without the re-ordering (take the 
-            order of the atomic sites), e.g.
-            ``['Ba', 'Ti', 'O', 'O', 'O']`` will return ``'BaTiO3'``
+                order of the atomic sites), e.g.
+                ``['Ba', 'Ti', 'O', 'O', 'O']`` will return ``'BaTiO3'``
             
+        :return: a string with the formula
+    
         :note: in modes compact1, reduce and allreduce, the initial order in 
-        which the atoms were appended by the user is used to group symbols by
-        multiplicity
+            which the atoms were appended by the user is used to group symbols by
+            multiplicity
         """
         
         symbol_list = [self.get_kind(s.kind_name).get_symbols_string()
                             for s in self.sites]
         
-        if mode == 'compact1':
-            return get_formula_compact1(symbol_list)
-        
-        # for hill and allreduce cases, simply count the occurences of each 
-        # chemical symbol (with some re-ordering in hill) 
-        elif mode == 'hill':
-            symbol_set = set(symbol_list)
-            first_symbols = []
-            if 'C' in symbol_set:
-                # remove C (and H if present) from list and put them at the
-                # beginning
-                symbol_set.remove('C')
-                first_symbols.append('C')
-                if 'H' in symbol_set:
-                    symbol_set.remove('H')
-                    first_symbols.append('H')
-            ordered_symbol_set = first_symbols + list(sorted(symbol_set))
-            the_symbol_list=[[symbol_list.count(elem),elem]
-                         for elem in ordered_symbol_set]
-        
-        elif mode == 'allreduce':
-            ordered_symbol_indexes = sorted([symbol_list.index(elem) 
-                                             for elem in set(symbol_list)])
-            ordered_symbol_set = [symbol_list[i] for i in ordered_symbol_indexes]
-            the_symbol_list = [[symbol_list.count(elem),elem]
-                                    for elem in ordered_symbol_set]
-            
-        elif mode == 'reduce':
-            the_symbol_list = group_symbols(symbol_list)
-            
-        else:
-            raise ValueError('Mode should be compact1, hill, reduce or allreduce')
-        
-        return get_formula_from_symbol_list(the_symbol_list)    
+        return get_formula(symbol_list, mode=mode)    
             
     def get_site_kindnames(self):
         """
@@ -1402,8 +1437,7 @@ class Kind(object):
         of this kind. If there is only one symbol (no alloy) with 100% 
         occupancy, just returns the symbol name. Otherwise, groups the full
         string in curly brackets, and try to write also the composition
-        (with few-digits precision only). 
-        :note: 2 digits precision only 
+        (with 2 precision only). 
         :note: If there is a vacancy (sum of weights<1), we indicate it with
         the X symbol followed by 1-sum(weights) (still with 2 digits precision,
         so it can be 0.00)

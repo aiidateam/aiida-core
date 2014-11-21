@@ -206,7 +206,7 @@ def is_ase_atoms(ase_atoms):
 def group_symbols(_list):
     """ 
     :param _list: a list of elements representing a chemical formula
-    :return : a list of length-2 lists of the form [ multiplicity , element ]
+    :return: a list of length-2 lists of the form [ multiplicity , element ]
     examples:
         ``['Ba','Ti','O','O','O','Ba']`` will return 
             ``[[1,'Ba'],[1,'Ti'],[3,'O'],[1,'Ba']]``
@@ -231,8 +231,8 @@ def group_symbols(_list):
 def get_formula_from_symbol_list(_list):
     """ 
     :param _list: a list of symbols and multiplicities as obtained from
-    the function group_symbols
-    :return : a string with the formula obtained from the list
+        the function group_symbols
+    :return: a string with the formula obtained from the list
     examples:
         ``[[1,'Ba'],[1,'Ti'],[3,'O']]`` will return ``'BaTiO3'``
         ``[[2, [ [1, 'Ba'], [1, 'Ti'] ] ]]`` will return ``'(BaTi)2'``
@@ -277,8 +277,8 @@ def get_formula_compact1(symbol_list):
         :param group_size: size of the groups
         :param offset: beginning grouping after offset elements
         :return : a list of lists made of groups of size group_size
-        obtained by grouping list elements together
-        The first elements (up to _list[offset-1]) are not grouped
+            obtained by grouping list elements together
+            The first elements (up to _list[offset-1]) are not grouped
         example:
             ``group_together(['O','Ba','Ti','Ba','Ti'],2,1) = 
                 ['O',['Ba','Ti'],['Ba','Ti']]``
@@ -303,7 +303,7 @@ def get_formula_compact1(symbol_list):
         """
         :param _list: a list of groups of symbols and multiplicities
         :return : a list where all groups with multiplicity 1 have
-        been reduced to minimum
+            been reduced to minimum
         example: ``[[1,[[1,'Ba']]]]`` will return ``[[1,'Ba']]``
         """
         the_list = []
@@ -1495,9 +1495,11 @@ class Kind(object):
         return not(1. - w_sum < _sum_threshold)
 
     def __repr__(self):
-        # TODO: change this to have it more 'unique'
-        return u"Kind with name '{}'".format(self.name)
-
+        return '<{}: {}>'.format(self.__class__.__name__, str(self))
+    
+    def __str__(self):
+        symbol = self.get_symbols_string()
+        return "name '{}', symbol '{}'".format(self.name,symbol)
 
 class Site(object):
     """
@@ -1678,6 +1680,9 @@ class Site(object):
         self._position = internal_pos
 
     def __repr__(self):
-        return u"'{}' site @ {},{},{}".format(self.kind_name, self.position[0],
+        return '<{}: {}>'.format(self.__class__.__name__, str(self))
+    
+    def __str__(self):
+        return "kind name '{}' @ {},{},{}".format(self.kind_name, self.position[0],
                                               self.position[1],
                                               self.position[2])

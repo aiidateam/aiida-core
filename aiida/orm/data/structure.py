@@ -540,6 +540,10 @@ class StructureData(Data):
     def _prepare_cif(self):
         """
         Write the given structure to a string of format CIF.
+
+        :alt: Warning: CIF files, produced by ASE, can not be parsed
+            correctly, as symmetry space group 'P 1' is NOT surrounded by
+            quotes.
         """
         import ase.io.cif
         import tempfile

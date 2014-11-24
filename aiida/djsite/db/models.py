@@ -548,7 +548,7 @@ class DbMultipleValueAttributeBaseClass(m.Model):
             new_entry.ival = None
             new_entry.fval = None
 
-        elif isinstance(value, list):
+        elif isinstance(value, (list, tuple)):
                             
             new_entry.datatype = 'list'
             new_entry.dval = None

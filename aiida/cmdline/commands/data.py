@@ -192,18 +192,30 @@ class _Structure(VerdiCommandWithSubcommands):
             description='List AiiDA structures.')
         parser.add_argument('-e','--element',nargs='+', type=str, default=None,
                             help="Print all structures containing desired elements")
-        parser.add_argument('-eo','--element-only', type=bool, default=False,
-                            help="If set, structures do not contain different elements")
+        parser.add_argument('-eo','--elementonly', action='store_true',
+                            help="If set, structures do not contain different "
+                                 "elements (to be used with -e option)")
+        parser.add_argument('-f', '--formulamode', type=str, default='hill', 
+                            help="Formula printing mode (hill, reduce, allreduce"
+                            " or compact1) (if None, does not print the formula)",
+                            action='store')
         parser.add_argument('-p', '--past-days', metavar='N', 
-                            help="add a filter to show only structures created in the past N days",
+                            help="Add a filter to show only structures created in the past N days",
                             type=int, action='store')
          
         load_dbenv()        
         import datetime
+        from collections import defaultdict
         from aiida.orm import DataFactory
         from django.db.models import Q
         from django.utils import timezone
         from aiida.djsite.utils import get_automatic_user
+        from aiida.common.utils import grouper
+        from aiida.orm.data.structure import (get_formula, get_symbols_string,
+                                              has_vacancies)
+        from aiida.djsite.db import models
+        
+        query_group_size = 100 # we group the attribute query in chunks of this size
         
         args = list(args)
         parsed_args = parser.parse_args(args)
@@ -217,17 +229,75 @@ class _Structure(VerdiCommandWithSubcommands):
             n_days_ago = now - datetime.timedelta(days=parsed_args.past_days)
             q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
         if parsed_args.element is not None:
-            print "Not implemented element search"
-            sys.exit(1)
+            q1 = models.DbAttribute.objects.filter(key__startswith='kinds.',
+                                                   key__contains='.symbols.',
+                                                   tval=parsed_args.element[0])
+            struc_list = StructureData.query(q_object,
+                            dbattributes__in=q1).distinct().order_by('ctime')
+            if parsed_args.elementonly:
+                print "Not implemented elementonly search"
+                sys.exit(1)
 
-        struc_list = StructureData.query(q_object).distinct().order_by('ctime')
+        else:
+            struc_list = StructureData.query(q_object).distinct().order_by('ctime')
         
-        if struc_list:
-            to_print = 'ID\n'
-            for struc in struc_list:
-                to_print += '{}\n'.format(struc.pk)
+        struc_list_data = struc_list.values_list('pk', 'label')
+        # Used later for efficiency reasons
+        struc_list_data_dict = dict(struc_list_data)
                 
-            print to_print
+        if struc_list:
+            print "ID\tformula\tlabel"
+ 
+            struc_list_pks_grouped = grouper(query_group_size,
+                [_[0] for _ in struc_list_data])
+            
+            for struc_list_pks_part in struc_list_pks_grouped:
+                to_print = []
+                # get attributes needed for formula from another query
+                attr_query = Q(key__startswith='kinds') | Q(key__startswith='sites')
+                #key__endswith='kind_name')
+                attrs = models.DbAttribute.objects.filter(attr_query,
+                            dbnode__in=struc_list_pks_part).values_list(
+                                'dbnode__pk', 'key', 'datatype', 'tval', 'fval',
+                                 'ival', 'bval', 'dval')                                   
+
+                results = defaultdict(dict)
+                for attr in attrs:
+                    results[attr[0]][attr[1]] = { 
+                        "datatype": attr[2], 
+                        "tval": attr[3],
+                        "fval": attr[4], 
+                        "ival": attr[5], 
+                        "bval": attr[6], 
+                        "dval": attr[7]}
+    
+                deser_data = {}
+                for k in results:
+                    deser_data[k] = models.deserialize_attributes(results[k],
+                        sep=models.DbAttribute._sep)
+    
+                for s_pk in struc_list_pks_part:
+                    symbol_dict = {}
+                    for k in deser_data[s_pk]['kinds']:
+                        symbols = k['symbols']
+                        weights = k['weights']
+                        symbol_dict[k['name']] = get_symbols_string(symbols,
+                                                                   weights)
+                    try:
+                        symbol_list = []
+                        for s in deser_data[s_pk]['sites']:
+                            symbol_list.append(symbol_dict[s['kind_name']])
+                        formula = get_formula(symbol_list, 
+                                              mode=parsed_args.formulamode)
+                    # If for some reason there is no kind with the name
+                    # referenced by the site
+                    except KeyError:
+                        formula = "<<UNKNOWN>>"
+                    to_print.append('{}\t{}\t{}\n'.format(s_pk,formula,
+                        # This is the label
+                        struc_list_data_dict[s_pk]))
+                                       
+                print "".join(to_print)
 
     def show(self, *args):
         """

@@ -440,6 +440,42 @@ def get_formula(symbol_list, mode='hill'):
         raise ValueError('Mode should be compact1, hill, reduce or allreduce')
     
     return get_formula_from_symbol_list(the_symbol_list)    
+
+def get_symbols_string(symbols,weights):
+    """
+    Return a string that tries to match as good as possible the symbols 
+    and weights. If there is only one symbol (no alloy) with 100% 
+    occupancy, just returns the symbol name. Otherwise, groups the full
+    string in curly brackets, and try to write also the composition
+    (with 2 precision only).
+    If (sum of weights<1), we indicate it with the X symbol followed 
+    by 1-sum(weights) (still with 2 digits precision, so it can be 0.00)
+
+    :param symbols: the symbols as obtained from <kind>._symbols
+    :param weights: the weights as obtained from <kind>._weights
+        
+    Note the difference with respect to the symbols and the symbol 
+    properties!
+    """
+    if len(symbols) == 1 and weights[0] == 1.:
+        return symbols[0]
+    else:
+        pieces = []
+        for s, w in zip(symbols, weights):
+            pieces.append("{}{:4.2f}".format(s,w))
+        if has_vacancies(weights):
+            pieces.append('X{:4.2f}'.format(1.-sum(weights)))
+        return "{{{}}}".format("".join(sorted(pieces)))    
+
+def has_vacancies(weights):
+    """
+    Returns True if the sum of the weights is less than one.
+    It uses the internal variable _sum_threshold as a threshold.
+    :param weights: the weights
+    :return: a boolean
+    """
+    w_sum = sum(weights)
+    return not(1. - w_sum < _sum_threshold)
             
 class StructureData(Data):
     """
@@ -1445,15 +1481,7 @@ class Kind(object):
         Note the difference with respect to the symbols and the symbol 
         properties!
         """
-        if len(self._symbols) == 1 and self._weights == (1.,):
-            return self._symbols[0]
-        else:
-            pieces = []
-            for s, w in zip(self._symbols, self._weights):
-                pieces.append("{}{:4.2f}".format(s,w))
-            if self.has_vacancies():
-                pieces.append('X{:4.2f}'.format(1.-sum(self._weights)))
-            return "{{{}}}".format("".join(sorted(pieces)))    
+        return get_symbols_string(self._symbols, self._weights)   
 
     @property
     def symbol(self):
@@ -1529,8 +1557,7 @@ class Kind(object):
         
         :return: a boolean
         """
-        w_sum = sum(self._weights)
-        return not(1. - w_sum < _sum_threshold)
+        return has_vacancies(self._weights)
 
     def __repr__(self):
         return '<{}: {}>'.format(self.__class__.__name__, str(self))

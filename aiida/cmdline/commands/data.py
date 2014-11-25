@@ -297,7 +297,7 @@ class _Structure(VerdiCommandWithSubcommands):
                         # This is the label
                         struc_list_data_dict[s_pk]))
                                        
-                print "".join(to_print)
+                sys.stdout.write("".join(to_print))
 
     def show(self, *args):
         """

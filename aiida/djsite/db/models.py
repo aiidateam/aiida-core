@@ -331,7 +331,7 @@ class DeserializationException(AiidaException):
 
 
 def _deserialize_attribute(mainitem, subitems, sep, original_class=None, 
-                           original_pk=None):
+                           original_pk=None,lesserrors=False):
     """
     Deserialize a single attribute. 
     
@@ -359,6 +359,11 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
       of DbMultipleValueAttributeBaseClass that has a dbnode associated to it,
       pass here the PK integer. This is used only in case the wrong number
       of elements is found in the raw data, to print a more meaningful message
+    :param lesserrors: If set to True, in some cases where the content of the
+      DB is not consistent but data is still recoverable,
+      it will just log the message rather than raising
+      an exception (e.g. if the number of elements of a dictionary is different
+      from the number declared in the ival field).
 
     :return: the deserialized value
     :raise DeserializationError: if an error occurs
@@ -430,7 +435,7 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
             else:
                 sourcestr = original_class.__name__
                 
-            raise DbContentError("Wrong list elements stored in {} for "
+            raise DeserializationException("Wrong list elements stored in {} for "
                                  "{}key='{}' ({} vs {})".format(
                                  sourcestr, 
                                  subspecifier_string,
@@ -448,11 +453,15 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
             else:
                 sourcestr = original_class.__name__
 
-            aiidalogger.error("Wrong list elements stored in {} for "
-                              "{}key='{}' ({} vs {})".format(
-                                sourcestr, 
-                                subspecifier_string,
-                                mainitem['key'], expected_set, received_set))
+            msg = ("Wrong list elements stored in {} for "
+                   "{}key='{}' ({} vs {})".format(
+                      sourcestr, 
+                      subspecifier_string,
+                      mainitem['key'], expected_set, received_set))
+            if lesserrors:
+                aiidalogger.error(msg)
+            else:
+                raise DeserializationException(msg)
         
         # I get the values in memory as a dictionary
         tempdict = {}
@@ -488,12 +497,16 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
             else:
                 sourcestr = original_class.__name__
 
-            aiidalogger.error("Wrong dict length stored in {} for "
+            msg = ("Wrong dict length stored in {} for "
                               "{}key='{}' ({} vs {})".format(
                                 sourcestr,
                                 subspecifier_string,
                                 mainitem['key'], len(firstlevelsubdict),
                                 mainitem['ival']))
+            if lesserrors:
+                aiidalogger.error(msg)
+            else:
+                raise DeserializationException(msg)
 
         # I get the values in memory as a dictionary
         tempdict = {}
@@ -915,56 +928,61 @@ class DbMultipleValueAttributeBaseClass(m.Model):
         """
         This can be called on a given row and will get the corresponding value,
         casting it correctly.
-        """   
-        if self.datatype == 'list' or self.datatype=='dict':
-            prefix = "{}{}".format(self.key, self._sep)
-            prefix_len = len(prefix)
-            dballsubvalues = self.__class__.objects.filter(
-                key__startswith=prefix,
-                **self.subspecifiers_dict).values_list('key', 
-                    'datatype', 'tval', 'fval',
-                    'ival', 'bval', 'dval')
-            # Strip the FULL prefix and replace it with the simple
-            # "attr" prefix
-            data = {"attr.{}".format(_[0][prefix_len:]): {
-                    "datatype": _[1], 
-                    "tval": _[2],
-                    "fval": _[3], 
-                    "ival": _[4], 
-                    "bval": _[5], 
-                    "dval": _[6],                     
-                     } for _ in dballsubvalues
-                    }
-                    #for _ in dballsubvalues}
-            # Append also the item itself
-            data["attr"] = {
-                # Replace the key (which may contain the separator) with the
-                # simple "attr" key. In any case I do not need to return it!
-                "key": "attr",
-                "datatype": self.datatype, 
-                "tval": self.tval,
-                "fval": self.fval, 
-                "ival": self.ival, 
-                "bval": self.bval, 
-                "dval": self.dval}
-            return deserialize_attributes(data, sep=self._sep,
-                original_class=self.__class__,
-                original_pk=self.subspecifier_pk)['attr']
-        else:
-            data = {"attr": {
-                # Replace the key (which may contain the separator) with the
-                # simple "attr" key. In any case I do not need to return it!
-                "key": "attr",
-                "datatype": self.datatype, 
-                "tval": self.tval,
-                "fval": self.fval, 
-                "ival": self.ival, 
-                "bval": self.bval, 
-                "dval": self.dval}}
-                
-            return deserialize_attributes(data, sep=self._sep,
-                original_class=self.__class__,
-                original_pk=self.subspecifier_pk)['attr']
+        """ 
+        try:  
+            if self.datatype == 'list' or self.datatype=='dict':
+                prefix = "{}{}".format(self.key, self._sep)
+                prefix_len = len(prefix)
+                dballsubvalues = self.__class__.objects.filter(
+                    key__startswith=prefix,
+                    **self.subspecifiers_dict).values_list('key', 
+                        'datatype', 'tval', 'fval',
+                        'ival', 'bval', 'dval')
+                # Strip the FULL prefix and replace it with the simple
+                # "attr" prefix
+                data = {"attr.{}".format(_[0][prefix_len:]): {
+                        "datatype": _[1], 
+                        "tval": _[2],
+                        "fval": _[3], 
+                        "ival": _[4], 
+                        "bval": _[5], 
+                        "dval": _[6],                     
+                         } for _ in dballsubvalues
+                        }
+                        #for _ in dballsubvalues}
+                # Append also the item itself
+                data["attr"] = {
+                    # Replace the key (which may contain the separator) with the
+                    # simple "attr" key. In any case I do not need to return it!
+                    "key": "attr",
+                    "datatype": self.datatype, 
+                    "tval": self.tval,
+                    "fval": self.fval, 
+                    "ival": self.ival, 
+                    "bval": self.bval, 
+                    "dval": self.dval}
+                return deserialize_attributes(data, sep=self._sep,
+                    original_class=self.__class__,
+                    original_pk=self.subspecifier_pk)['attr']
+            else:
+                data = {"attr": {
+                    # Replace the key (which may contain the separator) with the
+                    # simple "attr" key. In any case I do not need to return it!
+                    "key": "attr",
+                    "datatype": self.datatype, 
+                    "tval": self.tval,
+                    "fval": self.fval, 
+                    "ival": self.ival, 
+                    "bval": self.bval, 
+                    "dval": self.dval}}
+                    
+                return deserialize_attributes(data, sep=self._sep,
+                    original_class=self.__class__,
+                    original_pk=self.subspecifier_pk)['attr']
+        except DeserializationException as e:
+            exc = DbContentError(e.message)
+            exc.original_exception = e
+            raise exc
 
     @classmethod
     def del_value(cls, key, only_children=False, subspecifier_value=None):
@@ -1084,8 +1102,13 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
                 "dval": _[6],                     
                  } for _ in dballsubvalues
                 }
-        return deserialize_attributes(data, sep=cls._sep,
+        try:
+            return deserialize_attributes(data, sep=cls._sep,
                 original_class=cls,original_pk=dbnode.pk)
+        except DeserializationException as e:
+            exc = DbContentError(e.message)
+            exc.original_exception = e
+            raise exc
 
     @classmethod
     def reset_values_for_node(cls, dbnode, attributes, with_transaction=True,

@@ -458,7 +458,7 @@ class _Cif(VerdiCommandWithSubcommands):
             for cif in cif_list:
                 to_print += '{}\n'.format(cif.pk)
 
-            print to_print
+            sys.stdout.write(to_print)
 
     def show(self, *args):
         """

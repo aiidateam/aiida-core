@@ -76,6 +76,76 @@ def encode_textfield_ncr(content):
     content = re.sub('(?P<prefix>\n)(?P<chr>;)',match2ncr,content)
     return content
 
+def cif_from_ase(ase):
+    """
+    Construct a CIF datablock from the ASE structure. The code is taken
+    from
+    https://wiki.fysik.dtu.dk/ase/epydoc/ase.io.cif-pysrc.html#write_cif,
+    as the original ASE code contains a bug in printing the
+    Hermann-Mauguin symmetry space group symbol.
+
+    :param ase: ASE "images"
+    :return: array of CIF datablocks
+    """
+    from numpy import arccos, pi, dot
+    from numpy.linalg import norm
+
+    if not isinstance(ase, (list, tuple)):
+        ase = [ase]
+
+    datablocks = []
+    for i, atoms in enumerate(ase):
+        datablock = dict()
+
+        cell = atoms.cell
+        a = norm(cell[0])
+        b = norm(cell[1])
+        c = norm(cell[2])
+        alpha = arccos(dot(cell[1], cell[2])/(b*c))*180./pi
+        beta = arccos(dot(cell[0], cell[2])/(a*c))*180./pi
+        gamma = arccos(dot(cell[0], cell[1])/(a*b))*180./pi
+
+        datablock['_cell_length_a'] = str(a)
+        datablock['_cell_length_b'] = str(b)
+        datablock['_cell_length_c'] = str(c)
+        datablock['_cell_angle_alpha'] = str(alpha)
+        datablock['_cell_angle_beta'] = str(beta)
+        datablock['_cell_angle_gamma'] = str(gamma)
+
+        if atoms.pbc.all():
+            datablock['_symmetry_space_group_name_H-M'] = 'P 1'
+            datablock['_symmetry_int_tables_number'] = str(1)
+            datablock['_symmetry_equiv_pos_as_xyz'] = ['x, y, z']
+
+        datablock['_atom_site_label'] = []
+        datablock['_atom_site_occupancy'] = []
+        datablock['_atom_site_fract_x'] = []
+        datablock['_atom_site_fract_y'] = []
+        datablock['_atom_site_fract_z'] = []
+        datablock['_atom_site_thermal_displace_type'] = []
+        datablock['_atom_site_B_iso_or_equiv'] = []
+        datablock['_atom_site_type_symbol'] = []
+
+        scaled = atoms.get_scaled_positions()
+        no = {}
+        for i, atom in enumerate(atoms):
+            symbol = atom.symbol
+            if symbol in no:
+                no[symbol] += 1
+            else:
+                no[symbol] = 1
+            datablock['_atom_site_label'].append(symbol + str(no[symbol]))
+            datablock['_atom_site_occupancy'].append(str(1.0))
+            datablock['_atom_site_fract_x'].append(str(scaled[i][0]))
+            datablock['_atom_site_fract_y'].append(str(scaled[i][1]))
+            datablock['_atom_site_fract_z'].append(str(scaled[i][2]))
+            datablock['_atom_site_thermal_displace_type'].append('Biso')
+            datablock['_atom_site_B_iso_or_equiv'].append(str(1.0))
+            datablock['_atom_site_type_symbol'].append(symbol)
+
+        datablocks.append(datablock)
+    return datablocks
+
 class CifData(SinglefileData): 
     """
     Wrapper for Crystallographic Interchange File (CIF)

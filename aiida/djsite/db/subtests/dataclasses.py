@@ -302,6 +302,31 @@ class TestCifData(AiidaTestCase):
         ase = c._get_aiida_structure(primitive_cell = True).get_ase()
         self.assertEquals(ase.get_number_of_atoms(),5)
 
+    def test_contents_encoding(self):
+        """
+        Testing the logic of choosing the encoding and the process of
+        encoding contents.
+        """
+        from aiida.orm.data.cif import encode_textfield_quoted_printable, \
+                                       encode_textfield_base64
+
+        self.assertEquals(encode_textfield_quoted_printable(';\n'),
+                          '=3B\n')
+        self.assertEquals(encode_textfield_quoted_printable('line\n;line'),
+                          'line\n=3Bline')
+        self.assertEquals(encode_textfield_quoted_printable('tabbed\ttext'),
+                          'tabbed=09text')
+        self.assertEquals(encode_textfield_quoted_printable('angstrom Å'),
+                          'angstrom =C3=85')
+        # This one is particularly tricky: a long line is folded by the QP
+        # and the semicolon sign becomes the first character on a new line.
+        self.assertEquals(encode_textfield_quoted_printable(
+                            "Å{};a".format("".join("a" for i in range(0,69)))),
+                          '=C3=85aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+                          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaa=\n=3Ba')
+        self.assertEquals(encode_textfield_base64('angstrom ÅÅÅ'),
+                          'YW5nc3Ryb20gw4XDhcOF')
+
 class TestKindValidSymbols(AiidaTestCase):
     """
     Tests the symbol validation of the

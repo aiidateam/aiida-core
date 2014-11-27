@@ -15,6 +15,67 @@ def has_pycifrw():
         return False
     return True
 
+def encode_textfield_base64(content,foldwidth=76):
+    """
+    Encodes the contents for CIF textfield in Base64.
+
+    :param content: a string with contents
+    :param foldwidth: maximum width of line (default is 76)
+    :return: encoded string
+    """
+    import base64
+    content = base64.standard_b64encode(content)
+    content = "\n".join(list(content[i:i+foldwidth]
+                             for i in range(0,len(content),foldwidth)))
+    return content
+
+def encode_textfield_quoted_printable(content):
+    """
+    Encodes the contents for CIF textfield in quoted-printable encoding.
+
+    :param content: a string with contents
+    :return: encoded string
+    """
+    import re
+    import quopri
+    content = quopri.encodestring(content)
+    def match2qp(m):
+        prefix  = ''
+        postfix = ''
+        if 'prefix' in m.groupdict().keys():
+            prefix = m.group('prefix')
+        if 'postfix' in m.groupdict().keys():
+            postfix = m.group('postfix')
+        h = hex(ord(m.group('chr')))[2:].upper()
+        if len(h) == 1:
+            h = "0{}".format(h)
+        return "{}={}{}".format(prefix,h,postfix)
+    content = re.sub('^(?P<chr>;)',match2qp,content)
+    content = re.sub('(?P<chr>\t)',match2qp,content)
+    content = re.sub('(?P<prefix>\n)(?P<chr>;)',match2qp,content)
+    return content
+
+def encode_textfield_ncr(content):
+    """
+    Encodes the contents for CIF textfield in Numeric Character Reference.
+
+    :param content: a string with contents
+    :return: encoded string
+    """
+    import re
+    def match2ncr(m):
+        prefix = ''
+        postfix = ''
+        if 'prefix' in m.groupdict().keys():
+            prefix = m.group('prefix')
+        if 'postfix' in m.groupdict().keys():
+            postfix = m.group('postfix')
+        return prefix + '&#' + str(ord(m.group('chr'))) + ';' + postfix
+    content = re.sub('(?P<chr>[^\x09\x0A\x0D\x20-\x7E])',match2ncr,content)
+    content = re.sub('^(?P<chr>;)',match2ncr,content)
+    content = re.sub('(?P<prefix>\n)(?P<chr>;)',match2ncr,content)
+    return content
+
 class CifData(SinglefileData): 
     """
     Wrapper for Crystallographic Interchange File (CIF)

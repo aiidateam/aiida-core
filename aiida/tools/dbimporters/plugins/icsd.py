@@ -3,6 +3,12 @@
 import aiida.tools.dbimporters.baseclasses
 import MySQLdb
 
+class IcsdImporterExp(Exception):
+    pass
+
+class CifFileErrorExp(IcsdImporterExp):
+    pass
+
 class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
     """
     Database importer for ICSD.
@@ -269,6 +275,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
                                "user":   "dba",
                                "passwd": "",
                                "db":     "icsd",
+                               "dl_db": "icsd",
                                "port": "3306",
                             }
         self.setup_db( **kwargs )
@@ -372,6 +379,7 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
         self.query = query
         self.number_of_results = None
         self.results = []
+        self.icsd_numbers = []
         self.entries = {}
         self.page = 1
         self.position = 0
@@ -401,9 +409,8 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
             self.page = self.page + 1
             self.query_page()
         if position not in self.entries:
-            self.entries[position] = IcsdEntry( self.db_parameters["server"]+ self.db_parameters["db"] + self.cif_url.format(self.results[position]), \
-                          source_db = self.db_name, \
-                          db_id = self.results[position] )
+            self.entries[position] = IcsdEntry( self.db_parameters["server"]+ self.db_parameters["dl_db"] + self.cif_url.format(self.results[position]), \
+                          source_db = self.db_name, db_id = self.results[position], icsd_nr = self.icsd_numbers[position] )
         return self.entries[position]
 
 
@@ -421,6 +428,7 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
 
             for row in self.cursor.fetchall():
                 self.results.append( str( row[0] ) )
+                self.icsd_numbers.append( str(row[1])) #or should i save it as an int
 
 
             if self.number_of_results is None:
@@ -483,12 +491,17 @@ class IcsdEntry(aiida.tools.dbimporters.baseclasses.DbEntry):
             'db_url'    : None, # Server ?
             'db_id'     : None,
             'db_version': None,
-            'url'       : url
+            'url'       : url,
+            'icsd_nr'   : None
         }
         if 'db_source' in kwargs.keys():
             self.source["db_source"] = kwargs['db_source']
         if 'db_id' in kwargs.keys():
             self.source["db_id"] = kwargs['db_id']
+        if 'icsd_nr' in kwargs.keys():
+            self.source["icsd_nr"] = kwargs['icsd_nr']
+
+        self._cif = None
 
     @property
     def cif(self):
@@ -502,7 +515,7 @@ class IcsdEntry(aiida.tools.dbimporters.baseclasses.DbEntry):
         Adds quotes to the lines in the author loop if missing.
         :note: ase raises an AssertionError if the quotes in the author loop are missing.
         """
-        return correct_cif(self.cif())
+        return correct_cif(self.cif)
 
     def get_ase_structure(self):
         """
@@ -511,6 +524,14 @@ class IcsdEntry(aiida.tools.dbimporters.baseclasses.DbEntry):
         import ase.io.cif
         import StringIO
         return ase.io.cif.read_cif( StringIO.StringIO( self.get_corrected_cif() ) )
+
+
+
+    def get_aiida_structure(self):
+        from aiida.orm import DataFactory
+        S = DataFactory("structure")
+        aiida_structure = S(ase=self.get_ase_structure())
+        return aiida_structure
 
 
 
@@ -528,7 +549,7 @@ def correct_cif(cif):
     try:
         author_index = lines.index('_publ_author_name')
     except ValueError:
-        pass
+        raise CifFileErrorExp('_publ_author_name line missing in cif file')
     else:
         inc = 1
         while True:

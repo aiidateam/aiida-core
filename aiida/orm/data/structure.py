@@ -5,6 +5,7 @@ functions to operate on them.
 """
 
 from aiida.orm import Data
+from aiida.common.utils import classproperty
 import itertools
 import copy
 
@@ -202,6 +203,280 @@ def is_ase_atoms(ase_atoms):
     import ase
     return isinstance(ase_atoms, ase.Atoms)
 
+def group_symbols(_list):
+    """ 
+    :param _list: a list of elements representing a chemical formula
+    :return: a list of length-2 lists of the form [ multiplicity , element ]
+    examples:
+        ``['Ba','Ti','O','O','O','Ba']`` will return 
+            ``[[1,'Ba'],[1,'Ti'],[3,'O'],[1,'Ba']]``
+        
+        ``[ [ [1,'Ba'],[1,'Ti'] ],[ [1,'Ba'],[1,'Ti'] ] ]`` will return 
+            ``[[2, [ [1, 'Ba'], [1, 'Ti'] ] ]]``
+    """
+    
+    the_list = copy.deepcopy(_list)
+    the_list.reverse()
+    grouped_list = [[1,the_list.pop()]]
+    while the_list:
+        elem = the_list.pop()
+        if elem == grouped_list[-1][1]:
+            # same symbol is repeated
+            grouped_list[-1][0] += 1
+        else:
+            grouped_list.append([1,elem])
+
+    return grouped_list
+
+def get_formula_from_symbol_list(_list):
+    """ 
+    :param _list: a list of symbols and multiplicities as obtained from
+        the function group_symbols
+    :return: a string with the formula obtained from the list
+    examples:
+        ``[[1,'Ba'],[1,'Ti'],[3,'O']]`` will return ``'BaTiO3'``
+        ``[[2, [ [1, 'Ba'], [1, 'Ti'] ] ]]`` will return ``'(BaTi)2'``
+    """
+    
+    list_str = []
+    for elem in _list:
+        if elem[0]==1:
+            multiplicity_str = ''
+        else:
+            multiplicity_str = str(elem[0])
+        
+        if isinstance(elem[1],basestring):
+            list_str.append("{}{}".format(elem[1],multiplicity_str))
+        elif elem[0]>1:
+            list_str.append("({}){}".format(get_formula_from_symbol_list(elem[1]),multiplicity_str))
+        else:
+            list_str.append("{}{}".format(get_formula_from_symbol_list(elem[1]),multiplicity_str))
+
+    return "".join(list_str)
+
+def get_formula_compact1(symbol_list):
+    """
+    Return a string with the chemical formula from a list of chemical symbols.
+    The formula is written in a compact" way, i.e. trying to group as much as
+    possible parts of the formula.
+    :note: it works for instance very well if structure was obtained from an
+    ASE supercell.
+
+    Example of result:
+    ``['Ba', 'Ti', 'O', 'O', 'O', 'Ba', 'Ti', 'O', 'O', 'O',
+    'Ba', 'Ti', 'Ti', 'O', 'O', 'O']`` will return ``'(BaTiO3)2BaTi2O3'``.
+
+    :param symbol_list: list of symbols
+        (e.g. ['Ba','Ti','O','O','O'])
+    :returns: a string with the chemical formula for the given structure.
+    """
+            
+    def group_together(_list, group_size, offset):
+        """ 
+        :param _list: a list
+        :param group_size: size of the groups
+        :param offset: beginning grouping after offset elements
+        :return : a list of lists made of groups of size group_size
+            obtained by grouping list elements together
+            The first elements (up to _list[offset-1]) are not grouped
+        example:
+            ``group_together(['O','Ba','Ti','Ba','Ti'],2,1) = 
+                ['O',['Ba','Ti'],['Ba','Ti']]``
+        """
+
+        the_list = copy.deepcopy(_list)
+        the_list.reverse()
+        grouped_list = []
+        for i in range(offset):
+            grouped_list.append([the_list.pop()])
+        
+        while the_list:
+            l = []
+            for i in range(group_size):
+                if the_list:
+                    l.append(the_list.pop())
+            grouped_list.append(l)
+                
+        return grouped_list
+
+    def cleanout_symbol_list(_list):
+        """
+        :param _list: a list of groups of symbols and multiplicities
+        :return : a list where all groups with multiplicity 1 have
+            been reduced to minimum
+        example: ``[[1,[[1,'Ba']]]]`` will return ``[[1,'Ba']]``
+        """
+        the_list = []
+        for elem in _list:
+            if elem[0] == 1 and isinstance(elem[1],list):
+                the_list.extend(elem[1])
+            else:
+                the_list.append(elem)
+                
+        return the_list
+
+    def group_together_symbols(_list,group_size):
+        """
+        Successive application of group_together, group_symbols and 
+        cleanout_symbol_list, in order to group a symbol list, scanning all 
+        possible offsets, for a given group size
+        :param _list: the symbol list (see function group_symbols)
+        :param group_size: the size of the groups
+        :return the_symbol_list: the new grouped symbol list
+        :return has_grouped: True if we grouped something
+        """
+        the_symbol_list = copy.deepcopy(_list)
+        has_grouped = False
+        offset = 0
+        while (not has_grouped) and (offset < group_size):
+            grouped_list = group_together(the_symbol_list, group_size, offset)
+            new_symbol_list = group_symbols(grouped_list)
+            if (len(new_symbol_list) < len(grouped_list)):
+                the_symbol_list = copy.deepcopy(new_symbol_list)
+                the_symbol_list = cleanout_symbol_list(the_symbol_list)
+                has_grouped = True
+                #print get_formula_from_symbol_list(the_symbol_list)
+            offset += 1
+        
+        return the_symbol_list,has_grouped
+        
+    def group_all_together_symbols(_list):
+        """
+        Successive application of the function group_together_symbols, to group
+        a symbol list, scanning all possible offsets and group sizes
+        :param _list: the symbol list (see function group_symbols)
+        :return: the new grouped symbol list
+        """
+        has_finished = False
+        group_size = 2
+        n = len(_list)
+        the_symbol_list = copy.deepcopy(_list)
+        
+        while (not has_finished) and (group_size <= n/2):
+            # try to group as much as possible by groups of size group_size
+            the_symbol_list,has_grouped=group_together_symbols(the_symbol_list,
+                                                                group_size)
+            has_finished = has_grouped
+            group_size += 1
+            # stop as soon as we managed to group something
+            # or when the group_size is too big to get anything
+        
+        return the_symbol_list
+
+    # initial grouping of the chemical symbols        
+    old_symbol_list = [-1]
+    new_symbol_list = group_symbols(symbol_list)
+    
+    # successively apply the grouping procedure until the symbol list does not
+    # change anymore
+    while new_symbol_list != old_symbol_list:
+        old_symbol_list = copy.deepcopy(new_symbol_list)
+        new_symbol_list = group_all_together_symbols(old_symbol_list)
+    
+    return get_formula_from_symbol_list(new_symbol_list)
+
+def get_formula(symbol_list, mode='hill'):
+    """
+    Return a string with the chemical formula.
+    :param symbol_list: a list of symbols, e.g. ``['H','H','O']``
+    :param mode:
+        'hill' (default): use Hill notation, i.e. alphabetical order with C and H 
+            first if one or several C atom(s) is (are) present, e.g. 
+            ``['C','H','H','H','O','C','H','H','H']`` will return ``'C2H6O'`` 
+            ``['S','O','O','H','O','H','O']``  will return ``'H2O4S'``
+            From E. A. Hill, J. Am. Chem. Soc., 22 (8), pp 478–494 (1900)
+            
+        'compact1': will try to group as much as possible parts of the formula
+            e.g. 
+            ``['Ba', 'Ti', 'O', 'O', 'O', 'Ba', 'Ti', 'O', 'O', 'O',
+            'Ba', 'Ti', 'Ti', 'O', 'O', 'O']`` will return ``'(BaTiO3)2BaTi2O3'``
+        
+        'reduce': simply group repeated symbols e.g.
+            ``['Ba', 'Ti', 'O', 'O', 'O', 'Ba', 'Ti', 'O', 'O', 'O',
+            'Ba', 'Ti', 'Ti', 'O', 'O', 'O']`` will return ``'BaTiO3BaTiO3BaTi2O3'``
+        
+        'allreduce': same as hill without the re-ordering (take the 
+            order of the atomic sites), e.g.
+            ``['Ba', 'Ti', 'O', 'O', 'O']`` will return ``'BaTiO3'``
+        
+    :return: a string with the formula
+    
+    :note: in modes compact1, reduce and allreduce, the initial order in 
+        which the atoms were appended by the user is used to group symbols by
+        multiplicity
+    """
+        
+    if mode == 'compact1':
+        return get_formula_compact1(symbol_list)
+    
+    # for hill and allreduce cases, simply count the occurences of each 
+    # chemical symbol (with some re-ordering in hill) 
+    elif mode == 'hill':
+        symbol_set = set(symbol_list)
+        first_symbols = []
+        if 'C' in symbol_set:
+            # remove C (and H if present) from list and put them at the
+            # beginning
+            symbol_set.remove('C')
+            first_symbols.append('C')
+            if 'H' in symbol_set:
+                symbol_set.remove('H')
+                first_symbols.append('H')
+        ordered_symbol_set = first_symbols + list(sorted(symbol_set))
+        the_symbol_list=[[symbol_list.count(elem),elem]
+                     for elem in ordered_symbol_set]
+    
+    elif mode == 'allreduce':
+        ordered_symbol_indexes = sorted([symbol_list.index(elem) 
+                                         for elem in set(symbol_list)])
+        ordered_symbol_set = [symbol_list[i] for i in ordered_symbol_indexes]
+        the_symbol_list = [[symbol_list.count(elem),elem]
+                                for elem in ordered_symbol_set]
+        
+    elif mode == 'reduce':
+        the_symbol_list = group_symbols(symbol_list)
+        
+    else:
+        raise ValueError('Mode should be compact1, hill, reduce or allreduce')
+    
+    return get_formula_from_symbol_list(the_symbol_list)    
+
+def get_symbols_string(symbols,weights):
+    """
+    Return a string that tries to match as good as possible the symbols 
+    and weights. If there is only one symbol (no alloy) with 100% 
+    occupancy, just returns the symbol name. Otherwise, groups the full
+    string in curly brackets, and try to write also the composition
+    (with 2 precision only).
+    If (sum of weights<1), we indicate it with the X symbol followed 
+    by 1-sum(weights) (still with 2 digits precision, so it can be 0.00)
+
+    :param symbols: the symbols as obtained from <kind>._symbols
+    :param weights: the weights as obtained from <kind>._weights
+        
+    Note the difference with respect to the symbols and the symbol 
+    properties!
+    """
+    if len(symbols) == 1 and weights[0] == 1.:
+        return symbols[0]
+    else:
+        pieces = []
+        for s, w in zip(symbols, weights):
+            pieces.append("{}{:4.2f}".format(s,w))
+        if has_vacancies(weights):
+            pieces.append('X{:4.2f}'.format(1.-sum(weights)))
+        return "{{{}}}".format("".join(sorted(pieces)))    
+
+def has_vacancies(weights):
+    """
+    Returns True if the sum of the weights is less than one.
+    It uses the internal variable _sum_threshold as a threshold.
+    :param weights: the weights
+    :return: a boolean
+    """
+    w_sum = sum(weights)
+    return not(1. - w_sum < _sum_threshold)
+            
 class StructureData(Data):
     """
     This class contains the information about a given structure, i.e. a
@@ -367,6 +642,10 @@ class StructureData(Data):
     def _prepare_cif(self):
         """
         Write the given structure to a string of format CIF.
+
+        :alt: Warning: CIF files, produced by ASE, can not be parsed
+            correctly, as symmetry space group 'P 1' is NOT surrounded by
+            quotes.
         """
         import ase.io.cif
         import tempfile
@@ -388,22 +667,48 @@ class StructureData(Data):
         return set(itertools.chain.from_iterable(
                 kind.symbols for kind in self.kinds))
 
-#    def get_formula(self):
-#        """
-#        Return a string that 
-#        :returns: a string with the chemical formula for the given structure.
-#        """
-#        # TODO: implement it better! (like Si2 instead of SiSi, Si0.4Ge0.6 instead of SiGe, etc.)
-#        # TODO: use the list of chemical symbols (as in get_symbols_sets, but with the correct multiplicity)
-#        #       rather than the kind names?   
-#        return "".join(self.get_kind_names())
-
-
+    def get_formula(self, mode='hill'):
+        """
+        Return a string with the chemical formula.
+        :param mode:
+            'hill' (default): Hill notation (alphabetical order, with C and H first if 
+                a C atom is present), e.g. 
+                ``['C','H','H','H','O','C','H','H','H']`` will return ``'C2H6O'`` 
+                ``['S','O','O','H','O','H','O']``  will return ``'H2O4S'``
+                From E. A. Hill, J. Am. Chem. Soc., 22 (8), pp 478–494 (1900)
+                
+            'compact1': will try to group as much as possible parts of the formula
+                e.g. 
+                ``['Ba', 'Ti', 'O', 'O', 'O', 'Ba', 'Ti', 'O', 'O', 'O',
+                'Ba', 'Ti', 'Ti', 'O', 'O', 'O']`` will return ``'(BaTiO3)2BaTi2O3'``
+            
+            'reduce': simply group repeated symbols e.g.
+                ``['Ba', 'Ti', 'O', 'O', 'O', 'Ba', 'Ti', 'O', 'O', 'O',
+                'Ba', 'Ti', 'Ti', 'O', 'O', 'O']`` will return ``'BaTiO3BaTiO3BaTi2O3'``
+            
+            'allreduce': same as hill without the re-ordering (take the 
+                order of the atomic sites), e.g.
+                ``['Ba', 'Ti', 'O', 'O', 'O']`` will return ``'BaTiO3'``
+            
+        :return: a string with the formula
+    
+        :note: in modes compact1, reduce and allreduce, the initial order in 
+            which the atoms were appended by the user is used to group symbols by
+            multiplicity
+        """
         
+        symbol_list = [self.get_kind(s.kind_name).get_symbols_string()
+                            for s in self.sites]
+        
+        return get_formula(symbol_list, mode=mode)    
+            
     def get_site_kindnames(self):
         """
         Return a list with length equal to the number of sites of this structure,
         where each element of the list is the kind name of the corresponding site.
+        :note: this is NOT necessarily a list of chemical symbols ! Use
+        [ self.get_kind(s.kind_name).get_symbols_string() for s in self.sites]
+        for chemical symbols
         
         :return: a list of strings
         """
@@ -710,6 +1015,8 @@ class StructureData(Data):
         """
         Return a list of kind names (in the same order of the ``self.kinds``
         property, but return the names rather than Kind objects)
+        :note: this is NOT necessarily a list of chemical symbols ! Use
+        get_symbols_set for chemical symbols
         
         :return: a list of strings.
         """
@@ -1160,6 +1467,22 @@ class Kind(object):
 
         self._weights = weights_tuple
 
+    def get_symbols_string(self):
+        """
+        Return a string that tries to match as good as possible the symbols 
+        of this kind. If there is only one symbol (no alloy) with 100% 
+        occupancy, just returns the symbol name. Otherwise, groups the full
+        string in curly brackets, and try to write also the composition
+        (with 2 precision only). 
+        :note: If there is a vacancy (sum of weights<1), we indicate it with
+        the X symbol followed by 1-sum(weights) (still with 2 digits precision,
+        so it can be 0.00)
+        
+        Note the difference with respect to the symbols and the symbol 
+        properties!
+        """
+        return get_symbols_string(self._symbols, self._weights)   
+
     @property
     def symbol(self):
         """
@@ -1234,13 +1557,14 @@ class Kind(object):
         
         :return: a boolean
         """
-        w_sum = sum(self._weights)
-        return not(1. - w_sum < _sum_threshold)
+        return has_vacancies(self._weights)
 
     def __repr__(self):
-        # TODO: change this to have it more 'unique'
-        return u"Kind with name '{}'".format(self.name)
-
+        return '<{}: {}>'.format(self.__class__.__name__, str(self))
+    
+    def __str__(self):
+        symbol = self.get_symbols_string()
+        return "name '{}', symbol '{}'".format(self.name,symbol)
 
 class Site(object):
     """
@@ -1421,6 +1745,9 @@ class Site(object):
         self._position = internal_pos
 
     def __repr__(self):
-        return u"'{}' site @ {},{},{}".format(self.kind_name, self.position[0],
+        return '<{}: {}>'.format(self.__class__.__name__, str(self))
+    
+    def __str__(self):
+        return "kind name '{}' @ {},{},{}".format(self.kind_name, self.position[0],
                                               self.position[1],
                                               self.position[2])

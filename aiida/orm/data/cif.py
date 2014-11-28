@@ -15,6 +15,137 @@ def has_pycifrw():
         return False
     return True
 
+def encode_textfield_base64(content,foldwidth=76):
+    """
+    Encodes the contents for CIF textfield in Base64.
+
+    :param content: a string with contents
+    :param foldwidth: maximum width of line (default is 76)
+    :return: encoded string
+    """
+    import base64
+    content = base64.standard_b64encode(content)
+    content = "\n".join(list(content[i:i+foldwidth]
+                             for i in range(0,len(content),foldwidth)))
+    return content
+
+def encode_textfield_quoted_printable(content):
+    """
+    Encodes the contents for CIF textfield in quoted-printable encoding.
+
+    :param content: a string with contents
+    :return: encoded string
+    """
+    import re
+    import quopri
+    content = quopri.encodestring(content)
+    def match2qp(m):
+        prefix  = ''
+        postfix = ''
+        if 'prefix' in m.groupdict().keys():
+            prefix = m.group('prefix')
+        if 'postfix' in m.groupdict().keys():
+            postfix = m.group('postfix')
+        h = hex(ord(m.group('chr')))[2:].upper()
+        if len(h) == 1:
+            h = "0{}".format(h)
+        return "{}={}{}".format(prefix,h,postfix)
+    content = re.sub('^(?P<chr>;)',match2qp,content)
+    content = re.sub('(?P<chr>\t)',match2qp,content)
+    content = re.sub('(?P<prefix>\n)(?P<chr>;)',match2qp,content)
+    return content
+
+def encode_textfield_ncr(content):
+    """
+    Encodes the contents for CIF textfield in Numeric Character Reference.
+
+    :param content: a string with contents
+    :return: encoded string
+    """
+    import re
+    def match2ncr(m):
+        prefix = ''
+        postfix = ''
+        if 'prefix' in m.groupdict().keys():
+            prefix = m.group('prefix')
+        if 'postfix' in m.groupdict().keys():
+            postfix = m.group('postfix')
+        return prefix + '&#' + str(ord(m.group('chr'))) + ';' + postfix
+    content = re.sub('(?P<chr>[^\x09\x0A\x0D\x20-\x7E])',match2ncr,content)
+    content = re.sub('^(?P<chr>;)',match2ncr,content)
+    content = re.sub('(?P<prefix>\n)(?P<chr>;)',match2ncr,content)
+    return content
+
+def cif_from_ase(ase):
+    """
+    Construct a CIF datablock from the ASE structure. The code is taken
+    from
+    https://wiki.fysik.dtu.dk/ase/epydoc/ase.io.cif-pysrc.html#write_cif,
+    as the original ASE code contains a bug in printing the
+    Hermann-Mauguin symmetry space group symbol.
+
+    :param ase: ASE "images"
+    :return: array of CIF datablocks
+    """
+    from numpy import arccos, pi, dot
+    from numpy.linalg import norm
+
+    if not isinstance(ase, (list, tuple)):
+        ase = [ase]
+
+    datablocks = []
+    for i, atoms in enumerate(ase):
+        datablock = dict()
+
+        cell = atoms.cell
+        a = norm(cell[0])
+        b = norm(cell[1])
+        c = norm(cell[2])
+        alpha = arccos(dot(cell[1], cell[2])/(b*c))*180./pi
+        beta = arccos(dot(cell[0], cell[2])/(a*c))*180./pi
+        gamma = arccos(dot(cell[0], cell[1])/(a*b))*180./pi
+
+        datablock['_cell_length_a'] = str(a)
+        datablock['_cell_length_b'] = str(b)
+        datablock['_cell_length_c'] = str(c)
+        datablock['_cell_angle_alpha'] = str(alpha)
+        datablock['_cell_angle_beta'] = str(beta)
+        datablock['_cell_angle_gamma'] = str(gamma)
+
+        if atoms.pbc.all():
+            datablock['_symmetry_space_group_name_H-M'] = 'P 1'
+            datablock['_symmetry_int_tables_number'] = str(1)
+            datablock['_symmetry_equiv_pos_as_xyz'] = ['x, y, z']
+
+        datablock['_atom_site_label'] = []
+        datablock['_atom_site_occupancy'] = []
+        datablock['_atom_site_fract_x'] = []
+        datablock['_atom_site_fract_y'] = []
+        datablock['_atom_site_fract_z'] = []
+        datablock['_atom_site_thermal_displace_type'] = []
+        datablock['_atom_site_B_iso_or_equiv'] = []
+        datablock['_atom_site_type_symbol'] = []
+
+        scaled = atoms.get_scaled_positions()
+        no = {}
+        for i, atom in enumerate(atoms):
+            symbol = atom.symbol
+            if symbol in no:
+                no[symbol] += 1
+            else:
+                no[symbol] = 1
+            datablock['_atom_site_label'].append(symbol + str(no[symbol]))
+            datablock['_atom_site_occupancy'].append(str(1.0))
+            datablock['_atom_site_fract_x'].append(str(scaled[i][0]))
+            datablock['_atom_site_fract_y'].append(str(scaled[i][1]))
+            datablock['_atom_site_fract_z'].append(str(scaled[i][2]))
+            datablock['_atom_site_thermal_displace_type'].append('Biso')
+            datablock['_atom_site_B_iso_or_equiv'].append(str(1.0))
+            datablock['_atom_site_type_symbol'].append(symbol)
+
+        datablocks.append(datablock)
+    return datablocks
+
 class CifData(SinglefileData): 
     """
     Wrapper for Crystallographic Interchange File (CIF)

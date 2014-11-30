@@ -27,7 +27,37 @@ class RemoteData(Data):
         """
         from aiida.common.exceptions import ModificationNotAllowed
         raise ModificationNotAllowed("Cannot add files or directories to a RemoteData object")
+    
+    def is_empty(self):
+        """
+        Check if remote folder is empty
+        """
+        from aiida.execmanager import get_authinfo
+        
+        authinfo = get_authinfo(computer=self.get_computer(),
+                                aiidauser=self.get_user())
+        t = authinfo.get_transport()
 
+        with t:
+            t.chdir(self.get_remote_path())
+            return not t.listdir()
+
+    def _clean(self):
+        """
+        Remove all content of the remote folder on the remote computer
+        """
+        from aiida.execmanager import get_authinfo
+        
+        authinfo = get_authinfo(computer=self.get_computer(),
+                                aiidauser=self.get_user())
+        t = authinfo.get_transport()
+
+        with t:
+            t.chdir(self.get_remote_path())
+            files_to_delete = t.listdir()
+            for fil in files_to_delete:
+                t.rmtree(fil)
+            
     def _validate(self):
         from aiida.common.exceptions import ValidationError
 

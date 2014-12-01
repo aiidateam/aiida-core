@@ -26,6 +26,7 @@ class Data(VerdiCommandRouter):
             'upf': _Upf,
             'structure': _Structure,
             'cif': _Cif,
+            'trajectory': _Trajectory,
             }
 
 # Note: this class should not be exposed directly in the main module,
@@ -527,3 +528,57 @@ class _Cif(VerdiCommandWithSubcommands):
                 sys.exit(1)
             else:
                 raise
+
+class _Trajectory(VerdiCommandWithSubcommands):
+    """
+    View and manipulate TrajectoryData instances.
+    """
+
+    def __init__(self):
+        """
+        A dictionary with valid commands and functions to be called.
+        """
+        self.valid_subcommands = {
+            'list': (self.list, self.complete_none),
+            }
+
+    def list(self, *args):
+        """
+        List all TrajectoryData instances
+        """
+        import argparse
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='List TrajectoryData structures.')
+        parser.add_argument('-p', '--past-days', metavar='N',
+                            help="add a filter to show only structures created in the past N days",
+                            type=int, action='store')
+
+        load_dbenv()
+        import datetime
+        from aiida.orm import DataFactory
+        from django.db.models import Q
+        from django.utils import timezone
+        from aiida.djsite.utils import get_automatic_user
+
+        args = list(args)
+        parsed_args = parser.parse_args(args)
+
+        TrajectoryData = DataFactory('array.trajectory')
+        now = timezone.now()
+        q_object = Q(user=get_automatic_user())
+
+        if parsed_args.past_days is not None:
+            now = timezone.now()
+            n_days_ago = now - datetime.timedelta(days=parsed_args.past_days)
+            q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
+
+        trajectory_list = \
+            TrajectoryData.query(q_object).distinct().order_by('ctime')
+
+        if trajectory_list:
+            to_print = 'ID\n'
+            for trajectory in trajectory_list:
+                to_print += '{}\n'.format(trajectory.pk)
+
+            sys.stdout.write(to_print)

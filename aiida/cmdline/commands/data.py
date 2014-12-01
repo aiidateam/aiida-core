@@ -569,8 +569,13 @@ class _Trajectory(VerdiCommandWithSubcommands):
         A dictionary with valid commands and functions to be called.
         """
         self.valid_subcommands = {
+            'show': (self.show, self.complete_visualizers),
             'list': (self.list, self.complete_none),
             }
+
+    def complete_visualizers(self, subargs_idx, subargs):
+        plugin_names = self.get_show_plugins().keys()
+        return "\n".join(plugin_names)
 
     def list(self, *args):
         """
@@ -612,3 +617,82 @@ class _Trajectory(VerdiCommandWithSubcommands):
                 to_print += '{}\n'.format(trajectory.pk)
 
             sys.stdout.write(to_print)
+
+    def show(self, *args):
+        """
+        Show the trajectory with a visualisation program.
+        """
+        # DEVELOPER NOTE: to add a new plugin, just add a _plugin_xxx() method.
+        import argparse,os
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Visualize trajectory.')
+        parser.add_argument('exec_name', type=str, default=None,
+                    help="Name or path to the executable of the visualization program.")
+        parser.add_argument('trajectory_id', type=int, default=None,
+                            help="ID of the trajectory to be visualised.")
+        args = list(args)
+        parsed_args = parser.parse_args(args)
+
+        exec_name = parsed_args.exec_name
+        trajectory_id = parsed_args.trajectory_id
+
+        # I can give in input the whole path to executable
+        code_name = os.path.split(exec_name)[-1]
+
+        try:
+            func = self.get_show_plugins()[code_name]
+        except KeyError:
+            print "Not implemented; implemented plugins are:"
+            print "{}.".format(",".join(self.get_show_plugins()))
+            sys.exit(1)
+
+        load_dbenv()
+        from aiida.orm import DataFactory
+        TrajectoryData = DataFactory('array.trajectory')
+        td = TrajectoryData.get_subclass_from_pk(trajectory_id)
+
+        func(exec_name, td)
+
+    def get_show_plugins(self):
+        """
+        Get the list of all implemented plugins for visualizing the CIF structure.
+        """
+        prefix = '_plugin_'
+        method_names = dir(self) # get list of class methods names
+        valid_formats = [ i[len(prefix):] for i in method_names
+                         if i.startswith(prefix)] # filter them
+
+        return {k: getattr(self,prefix + k) for k in valid_formats}
+
+    def _plugin_jmol(self,exec_name,trajectory):
+        """
+        Plugin for jmol
+        """
+        import tempfile,subprocess
+        import CifFile
+        from aiida.orm.data.cif \
+            import atom_site_tags,cif_from_ase,pycifrw_from_cif
+
+        with tempfile.NamedTemporaryFile() as f:
+            for i in trajectory.get_steps():
+                structure = trajectory.step_to_structure(i-1)
+                ciffile = pycifrw_from_cif(cif_from_ase(structure.get_ase()),
+                                           { '_atom_site': atom_site_tags })
+                f.write(ciffile.WriteOut())
+            f.flush()
+
+            try:
+                subprocess.check_output([exec_name, f.name])
+            except subprocess.CalledProcessError:
+                # The program died: just print a message
+                print "Note: the call to {} ended with an error.".format(
+                    exec_name)
+            except OSError as e:
+                if e.errno == 2:
+                    print ("No executable '{}' found. Add to the path, "
+                           "or try with an absolute path.".format(
+                           exec_name))
+                    sys.exit(1)
+                else:
+                    raise

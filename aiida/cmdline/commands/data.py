@@ -396,6 +396,36 @@ class _Structure(VerdiCommandWithSubcommands):
                 else:
                     raise
 
+    def _plugin_jmol(self,exec_name,structure):
+        """
+        Plugin for jmol
+        """
+        import tempfile,subprocess
+        import CifFile
+        from aiida.orm.data.cif \
+            import atom_site_tags,cif_from_ase,pycifrw_from_cif
+
+        ciffile = pycifrw_from_cif(cif_from_ase(structure.get_ase()),
+                                   { '_atom_site': atom_site_tags })
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(ciffile.WriteOut())
+            f.flush()
+
+            try:
+                subprocess.check_output([exec_name, f.name])
+            except subprocess.CalledProcessError:
+                # The program died: just print a message
+                print "Note: the call to {} ended with an error.".format(
+                    exec_name)
+            except OSError as e:
+                if e.errno == 2:
+                    print ("No executable '{}' found. Add to the path, "
+                           "or try with an absolute path.".format(
+                           exec_name))
+                    sys.exit(1)
+                else:
+                    raise
+
 class _Cif(VerdiCommandWithSubcommands):
     """
     Visualize CIF structures

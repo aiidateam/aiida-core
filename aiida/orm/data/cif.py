@@ -5,6 +5,17 @@ __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausan
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
 __version__ = "0.2.1"
 
+atom_site_tags = [
+    '_atom_site_label',
+    '_atom_site_occupancy',
+    '_atom_site_fract_x',
+    '_atom_site_fract_y',
+    '_atom_site_fract_z',
+    '_atom_site_thermal_displace_type',
+    '_atom_site_B_iso_or_equiv',
+    '_atom_site_type_symbol',
+]
+
 def has_pycifrw():
     """
     :return: True if the PyCifRW module can be imported, False otherwise.

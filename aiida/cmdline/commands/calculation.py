@@ -34,6 +34,7 @@ class Calculation(VerdiCommandWithSubcommands):
             'outputcat': (self.calculation_outputcat, self.complete_none),
             'show': (self.calculation_show, self.complete_none),
             'plugins': (self.calculation_plugins, self.complete_plugins),
+            'cleanscratch': (self.calculation_cleanscratch, self.complete_none),
             }
     
     def complete_plugins(self, subargs_idx, subargs):
@@ -537,4 +538,145 @@ class Calculation(VerdiCommandWithSubcommands):
         print >> sys.stderr, "{} calculation{} killed.".format(counter,
             "" if counter==1 else "s")
 
-    
+
+    def calculation_cleanscratch(self, *args):
+        """
+        Clean all the content of all the output remote folders of calculations,
+        passed as a list of pks, or identified by modification time. 
+        
+        If a list of calculation PKs is not passed through -c option, one of 
+        the option -p or -u has to be specified (if both are given, a logical 
+        AND is done between the 2 - you clean out calculations modified AFTER 
+        [-p option] days from now but BEFORE [-o option] days from now).
+        If you also pass the -f option, no confirmation will be asked.
+        """
+        import argparse
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Clean scratch of AiiDA calculation remote folders.')
+        parser.add_argument('-k','--pk', metavar='PK', type=int, nargs='+',
+                            help="The principal key (PK) of the calculations to "
+                                 "clean the scratch of")
+        parser.add_argument('-f','--force', action='store_true',
+                            help="Force the cleaning (no prompt)")
+        parser.add_argument('-p', '--past-days', metavar='N', 
+                            help="Add a filter to clean scratch of calculations "
+                                 "modified during the past N days",
+                            type=int, action='store')
+        parser.add_argument('-u', '--until', metavar='N', 
+                            help="Add a filter to clean scratch of calculations "
+                                 "modified until N days ago",
+                            type=int, action='store')
+        parser.add_argument('-c', '--computers', metavar='label', nargs='+', 
+                            help="Add a filter to clean scratch of calculations "
+                                 "on this computer(s) only",
+                            type=str, action='store')
+        
+        load_dbenv()
+        import datetime
+        from django.db.models import Q
+        from django.utils import timezone
+        from aiida.cmdline import wait_for_confirmation
+        from aiida.orm.calculation import Calculation
+        from aiida.djsite.utils import get_automatic_user
+        from aiida.execmanager import get_authinfo
+        from aiida.djsite.db import models
+        from aiida.common.datastructures import calc_states
+
+        args = list(args)
+        parsed_args = parser.parse_args(args)
+        
+        # valid calculation states
+        valid_states = [calc_states.FINISHED, calc_states.RETRIEVALFAILED, 
+                        calc_states.PARSINGFAILED, calc_states.FAILED]
+        
+        user = get_automatic_user()
+        
+        q_object = Q(user=user)
+        q_state = models.DbAttribute.objects.filter(key='state',
+                                                   tval__in=valid_states)
+        # NOTE: IMPORTED state is not a dbattribute so won't be filtered out
+        # at this stage, but this case should be sorted out later when we try
+        # to access the remote_folder (if directory is not accessible, we skip)
+
+        if parsed_args.pk is not None:
+            # list of pks is passed
+            if ( (parsed_args.past_days is not None) or 
+                 (parsed_args.until is not None) ):
+                print  >> sys.stderr, ("You cannot specify both a list of "
+                                       "calculation pks and the -p or -o "
+                                       "options")
+                sys.exit(0)
+            calc_list = Calculation.query(q_object,
+                            pk__in=parsed_args.pk,
+                            dbattributes__in=q_state).distinct().order_by('mtime')
+        
+        else:
+            # calculations to be cleaned identified by modification time
+            now = timezone.now()
+            if ( (parsed_args.past_days is None) and 
+                 (parsed_args.until is None) ):
+                print  >> sys.stderr, ("Either a list of calculation pks or the "
+                                       "-p and/or -o options should be specified")
+                sys.exit(0)
+            
+            if parsed_args.past_days is not None:
+                n_days_after = now - datetime.timedelta(
+                                            days=parsed_args.past_days)
+                q_object.add(Q(mtime__gte=n_days_after), Q.AND)
+            if parsed_args.until is not None:
+                n_days_before = now - datetime.timedelta(
+                                            days=parsed_args.until)
+                q_object.add(Q(mtime__lte=n_days_before), Q.AND)
+            
+            # TODO: return directly a remote_folder list from the query
+            calc_list = Calculation.query(q_object,
+                            dbattributes__in=q_state).distinct().order_by('mtime')
+        
+        if not parsed_args.force:
+            sys.stderr.write("Are you sure you want to clean the scratch? [Y/N] ".format(
+                            len(calc_list), "" if len(calc_list)==1 else "s"))
+            if not wait_for_confirmation():
+                sys.exit(0)
+                
+        # we want to open one connection per computer,
+        # therefore first group the remotedatas per computer, then clean 
+        # TODO: search of dbauthinfo could be optimized in a single query?
+        
+        remotes = {}
+        for c in calc_list:
+            comp = c.computer
+            computer_name = comp.get_name()
+            if ( (parsed_args.computers is None) or 
+                 (computer_name in parsed_args.computers) ):
+                try:
+                    remotes[computer_name]['remotes'].append(c.out.remote_folder)
+                except AttributeError:
+                    # calculation does not have a remote_folder output -> skip it
+                    pass
+                except KeyError:
+                    remotes[computer_name] = {'remotes':[c.out.remote_folder],
+                                            'transport':get_authinfo(computer=comp,
+                                                                     aiidauser=user).get_transport()}
+
+        for computer,dic in remotes.iteritems():
+            print "Cleaning the scratch on computer {}.".format(computer)
+            counter = 0
+            t = dic['transport']
+            for remote in dic['remotes']:
+                with t:
+                    try:
+                        t.chdir(remote.get_remote_path())
+                        files_to_delete = t.listdir()
+                        if files_to_delete:
+                            for fil in files_to_delete:
+                                t.rmtree(fil)
+                            counter += 1
+
+                    except IOError:
+                        # directory does not exist, we don't do anything
+                        pass
+        
+            print >> sys.stderr, "{} remote folder{} cleaned.".format(counter,
+                                                "" if counter==1 else "s")
+        

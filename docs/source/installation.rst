@@ -42,6 +42,8 @@ Database
 As a first thing, :doc:`choose and setup the database that you want to
 use<database/index>`.
 
+.. _other_core_dependencies:
+
 Other core dependencies
 -----------------------
 
@@ -90,13 +92,18 @@ names may change in different releases)::
       sudo apt-get install libsqlite3-dev
       sudo apt-get install postgresql-server-dev-9.1
 
-.. note:: for the latter line, please use the same version (in the
+.. note:: For the latter line, please use the same version (in the
   example above is 9.1) of the
   postgresql server that you installed (in this case, to install the server of
   the same version, use the ``sudo apt-get install postgresql-9.1`` command).
   
   If you want to use postgreSQL, use a version greater than 9.1
   (the greatest that your distribution supports).
+
+For Mac OS X, you may either already have some of the dependencies above 
+(e.g., git), or you can download binary packages to install (e.g., for
+PostgreSQL you can download and install the binary package from the
+official website).
 
 Downloading the code
 ++++++++++++++++++++
@@ -133,6 +140,10 @@ Then, install the python dependencies is as simple as this::
 the packages as a normal user, without the need of using ``sudo`` or
 becoming root). Check that every package is installed correctly.
 
+.. note:: This step should work seamlessly, but there are a number of reasons
+  for which problems may occur. Often googling for the error message helps in
+  finding a solution. Some common pitfalls are described in the notes below.
+
 .. note:: if the ``pip install`` command gives you this kind of error message::
 
     OSError: [Errno 13] Permission denied: '/usr/local/bin/easy_install'
@@ -159,6 +170,42 @@ However, we need still a few steps to properly configure AiiDA for your user.
     apt-get install libqp-dev
     
   But under Ubuntu 12.04 this is not needed.
+
+.. note:: If the installation fails while installing the packages related
+  to the database, you may have not installed or set up the database
+  libraries as described in the section :ref:`other_core_dependencies`.
+
+  In particular, on Mac OS X, if you installed the binary package of
+  PostgreSQL, it is possible that the PATH environment variable is not
+  set correctly, and you get a "Error: pg_config executable not found." error.
+  In this case, discover where the binary is located, then add a line to
+  your ``~/.bashrc`` file similar to the following::
+
+    export PATH=/the/path/to/the/pg_config/file:${PATH}
+
+  and then open a new bash shell.
+  Some possible paths can be found at this
+  `Stackoverflow link`_ and a non-exhaustive list of possible
+  paths is the following (version number may change):
+
+  * ``/Applications/Postgres93.app/Contents/MacOS/bin``
+  * ``/Applications/Postgres.app/Contents/Versions/9.3/bin``
+  * ``/Library/PostgreSQL/9.3/bin/pg_config``
+
+  Similarly, if the package installs but then errors occur during the first
+  of AiiDA (with ``Symbol not found`` errors or similar), you may need to
+  point to the path where the dynamical libraries are. A way to do it is to
+  add a line similar to the following to the ``~/.bashrc`` and then open
+  a new shell::
+
+    export DYLD_LIBRARY_PATH=/usr/lib:/Library/PostgreSQL/9.3/lib:$DYLD_LIBRARY_PATH
+
+ You should adapt the path to the PostgreSQL libraries, and also remember
+ to put before the PostgreSQL path the default path of your system (in 
+ this example ``/usr/lib``), because some libraries (notably ``iconv``) 
+ have a different version in the system path and in the PostgreSQL path.
+
+.. _Stackoverflow link: http://stackoverflow.com/questions/21079820/how-to-find-pg-config-pathlink
 
 AiiDA configuration
 +++++++++++++++++++

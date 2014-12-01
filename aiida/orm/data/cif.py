@@ -146,6 +146,42 @@ def cif_from_ase(ase):
         datablocks.append(datablock)
     return datablocks
 
+def pycifrw_from_cif(datablocks,loops=dict()):
+    """
+    Constructs PyCifRW's CifFile from an array of CIF datablocks.
+
+    :param datablocks: an array of CIF datablocks
+    :param loops: optional list of lists of CIF tag loops.
+    :return: CifFile
+    """
+    import CifFile
+    cif = CifFile.CifFile()
+    nr = 0
+    for values in datablocks:
+        name = str(nr)
+        nr = nr + 1
+        cif.NewBlock(name)
+        datablock = cif[name]
+        for loopname in loops.keys():
+            loopdata = dict()
+            row_size = None
+            for tag in sorted(loops[loopname]):
+                if tag in values:
+                    loopdata[tag] = values.pop(tag)
+                    if row_size is None:
+                        row_size = len(loopdata[tag])
+                    elif row_size != len(loopdata[tag]):
+                        raise ValueError("Number of values for tag "
+                                         "'{}' is different from "
+                                         "the others in the same "
+                                         "loop".format(tag))
+            if row_size is not None and row_size > 0:
+                datablock.AddCifItem(([loopdata.keys()],
+                                      [loopdata.values()]))
+        for tag in sorted(values.keys()):
+            datablock[tag] = values[tag]
+    return cif
+
 class CifData(SinglefileData): 
     """
     Wrapper for Crystallographic Interchange File (CIF)

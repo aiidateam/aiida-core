@@ -21,7 +21,8 @@ Inputs
   
 * **qpoints**, class :py:class:`KpointsData <aiida.orm.data.array.kpoints.KpointsData>`
   Reciprocal space points on which to build the dynamical matrices. Can either be 
-  a mesh or a list of points. Note: up to QE 5.1 only list of 1 qpoint (1 point only) can be provided.
+  a mesh or a list of points. Note: up to QE 5.1 only either an explicit list
+  of 1 qpoint (1 point only) can be provided, or a mesh (containing gamma).
 
 * **parameters**, class :py:class:`ParameterData <aiida.orm.data.parameter.ParameterData>`
   Input parameters of ph.x, as a nested dictionary, mapping the input of QE.

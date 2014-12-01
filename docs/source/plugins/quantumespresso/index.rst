@@ -32,5 +32,8 @@ Plugins
    :maxdepth: 4
 
    pw
-
+   cp
+   ph
+   matdyn
+   q2r
 

@@ -91,6 +91,9 @@ PostgreSQL
 
     sudo apt-get install postgresql-9.1
     sudo apt-get install postgresql-client-9.1
+
+  On Mac OS X, you can download binary packages to install PostgreSQL 
+  from the official website. 
     
 To properly configure a new database for AiiDA with PostgreSQL, you need to
 create a new ``aiida`` user and a new ``aiidadb`` table.
@@ -118,6 +121,13 @@ where of course you have to change ``the_aiida_password`` with a valid password.
   you will need to store this password in clear text in your home folder
   for each user that wants to have direct access to the database, therefore
   choose a strong password, but different from any that you already use!
+
+.. note:: Did you just copy and paste the line above, therefore setting the 
+  password to ``the_aiida_password``? Then, let's change it! Choose a good
+  password this time, and then type the following command (this time replacing
+  the string ``new_aiida_password`` with the password you chose!)::
+    
+    ALTER USER aiida PASSWORD 'new_aiida_password';
 
 Then create a new ``aiidadb`` database for AiiDA:: 
 

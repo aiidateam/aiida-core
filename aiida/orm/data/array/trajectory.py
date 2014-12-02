@@ -27,6 +27,8 @@ class TrajectoryData(ArrayData):
             raise TypeError("TrajectoryData.cells must be a numpy array of floats")
         if not isinstance(symbols, numpy.ndarray):
             raise TypeError("TrajectoryData.symbols must be a numpy array")
+        if any([not isinstance(i,basestring) for i in symbols]):
+            raise TypeError("TrajectoryData.symbols must be a numpy array of strings")
         if not isinstance(positions, numpy.ndarray) or positions.dtype != float:
             raise TypeError("TrajectoryData.positions must be a numpy array of floats")
         if velocities is not None:

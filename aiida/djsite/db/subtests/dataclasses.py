@@ -1444,7 +1444,7 @@ class TestTrajectoryData(AiidaTestCase):
         
         # Create a node with two arrays
         n = TrajectoryData()
-
+        
         # I create sample data
         steps = numpy.array([60,70])
         times = steps * 0.01
@@ -1470,9 +1470,10 @@ class TestTrajectoryData(AiidaTestCase):
             [[0.5,0.5,0.5],
              [0.5,0.5,0.5],
              [-0.5,-0.5,-0.5]]])
-
+        
         # I set the node
-        n.set_trajectory(steps, times, cells, symbols, positions, velocities)
+        n.set_trajectory(steps=steps, cells=cells, symbols=symbols, 
+                         positions=positions, times=times, velocities=velocities)
 
         # Generic checks
         self.assertEqual(n.numsites, 3)
@@ -1500,8 +1501,37 @@ class TestTrajectoryData(AiidaTestCase):
             n.get_step_index(66)
         
         ########################################################
+        # I set the node, this time without times or velocities (the same node)
+        n.set_trajectory(steps=steps, cells=cells, symbols=symbols, 
+                         positions=positions)
+        # Generic checks
+        self.assertEqual(n.numsites, 3)
+        self.assertEqual(n.numsteps, 2)
+        self.assertAlmostEqual(abs(steps-n.get_steps()).sum(), 0.)
+        self.assertIsNone(n.get_times())
+        self.assertAlmostEqual(abs(cells-n.get_cells()).sum(), 0.)
+        self.assertEqual(symbols.tolist(), n.get_symbols().tolist())
+        self.assertAlmostEqual(abs(positions-n.get_positions()).sum(), 0.)
+        self.assertIsNone(n.get_velocities())
+        
+        # Same thing, but for a new node
+        n = TrajectoryData()
+        n.set_trajectory(steps=steps, cells=cells, symbols=symbols, 
+                         positions=positions)
+        # Generic checks
+        self.assertEqual(n.numsites, 3)
+        self.assertEqual(n.numsteps, 2)
+        self.assertAlmostEqual(abs(steps-n.get_steps()).sum(), 0.)
+        self.assertIsNone(n.get_times())
+        self.assertAlmostEqual(abs(cells-n.get_cells()).sum(), 0.)
+        self.assertEqual(symbols.tolist(), n.get_symbols().tolist())
+        self.assertAlmostEqual(abs(positions-n.get_positions()).sum(), 0.)
+        self.assertIsNone(n.get_velocities())
+        
+        ########################################################
         # I set the node, this time without velocities (the same node)
-        n.set_trajectory(steps, times, cells, symbols, positions)
+        n.set_trajectory(steps=steps, cells=cells, symbols=symbols, 
+                         positions=positions, times=times)
         # Generic checks
         self.assertEqual(n.numsites, 3)
         self.assertEqual(n.numsteps, 2)
@@ -1514,7 +1544,8 @@ class TestTrajectoryData(AiidaTestCase):
         
         # Same thing, but for a new node
         n = TrajectoryData()
-        n.set_trajectory(steps, times, cells, symbols, positions)
+        n.set_trajectory(steps=steps, cells=cells, symbols=symbols, 
+                         positions=positions, times=times)
         # Generic checks
         self.assertEqual(n.numsites, 3)
         self.assertEqual(n.numsteps, 2)
@@ -1523,7 +1554,7 @@ class TestTrajectoryData(AiidaTestCase):
         self.assertAlmostEqual(abs(cells-n.get_cells()).sum(), 0.)
         self.assertEqual(symbols.tolist(), n.get_symbols().tolist())
         self.assertAlmostEqual(abs(positions-n.get_positions()).sum(), 0.)
-        self.assertIsNone(n.get_velocities())
+        self.assertIsNone(n.get_velocities())        
         
         n.store()
         
@@ -1619,7 +1650,8 @@ class TestTrajectoryData(AiidaTestCase):
              [-0.5,-0.5,-0.5]]])
 
         # I set the node
-        n.set_trajectory(steps, times, cells, symbols, positions, velocities)
+        n.set_trajectory(steps=steps, cells=cells, symbols=symbols, 
+                         positions=positions, times=times, velocities=velocities)
 
         struc = n.step_to_structure(1)
         self.assertEqual(len(struc.sites), 3) # 3 sites

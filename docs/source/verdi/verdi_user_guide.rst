@@ -46,6 +46,12 @@ Following below, a list with the subcommands available.
     used code, all the input nodes and all the output nodes. 
   * **gotocomputer**: open a shell to the calc folder on the cluster
 
+.. note:: When using gotocomputer, be careful not to change any file that AiiDA created,
+  nor to modify the output files or resubmit the calculation, 
+  unless you **really** know what you are doing, 
+  otherwise AiiDA may get very confused!   
+
+
 ``verdi code``
 ++++++++++++++
 
@@ -149,19 +155,6 @@ and they might be subject to non back-compatible changes.
 
 Export data from the AiiDA database to a file. 
 See also ``verdi import`` to import this data on another database.
-
-``verdi gotocomputer``
-++++++++++++++++++++++
-
-Opens a new connection to the computer (either simply a bash shell
-or a ssh connection, depending on the transport) and directly
-change directory to the appropriate folder where the code is
-running.
-
-.. note:: Be careful not to change any file that AiiDA created,
-  nor to modify the output files or resubmit the calculation, 
-  unless you **really** know what you are doing, 
-  otherwise AiiDA may get very confused!   
 
 ``verdi group``
 +++++++++++++++

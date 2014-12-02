@@ -87,7 +87,7 @@ across different AiiDA instances.
    ``None`` if no check has been performed yet).
 
 
-The ``verdi gotocomputer`` command
+The ``verdi calculation gotocomputer`` command
 ++++++++++++++++++++++++++++++++++
 
 Sometimes, it may be useful to directly go to the folder on
@@ -96,7 +96,7 @@ output file has been created.
 
 In this case, it is possible to run::
 
-  verdi gotocomputer CALCULATIONPK
+  verdi calculation gotocomputer CALCULATIONPK
   
 where ``CALCULATIONPK`` is the PK of the calculation. This will
 open a new connection to the computer (either simply a bash shell

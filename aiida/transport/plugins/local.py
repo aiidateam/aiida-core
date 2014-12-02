@@ -398,7 +398,13 @@ class LocalTransport(aiida.transport.Transport):
         Args: path (str)
         """
         the_path = os.path.join(self.curdir,path)
-        shutil.rmtree(the_path)
+        try:
+            shutil.rmtree(the_path)
+        except OSError as e:
+            if e.errno==20:
+                os.remove(the_path)
+            else:
+                raise e
         
 
     def get(self,source,destination,dereference=False,overwrite=True,

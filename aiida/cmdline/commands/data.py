@@ -26,6 +26,7 @@ class Data(VerdiCommandRouter):
             'upf': _Upf,
             'structure': _Structure,
             'cif': _Cif,
+            'trajectory': _Trajectory,
             }
 
 # Note: this class should not be exposed directly in the main module,
@@ -395,6 +396,36 @@ class _Structure(VerdiCommandWithSubcommands):
                 else:
                     raise
 
+    def _plugin_jmol(self,exec_name,structure):
+        """
+        Plugin for jmol
+        """
+        import tempfile,subprocess
+        import CifFile
+        from aiida.orm.data.cif \
+            import ase_loops,cif_from_ase,pycifrw_from_cif
+
+        ciffile = pycifrw_from_cif(cif_from_ase(structure.get_ase()),
+                                   ase_loops)
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(ciffile.WriteOut())
+            f.flush()
+
+            try:
+                subprocess.check_output([exec_name, f.name])
+            except subprocess.CalledProcessError:
+                # The program died: just print a message
+                print "Note: the call to {} ended with an error.".format(
+                    exec_name)
+            except OSError as e:
+                if e.errno == 2:
+                    print ("No executable '{}' found. Add to the path, "
+                           "or try with an absolute path.".format(
+                           exec_name))
+                    sys.exit(1)
+                else:
+                    raise
+
 class _Cif(VerdiCommandWithSubcommands):
     """
     Visualize CIF structures
@@ -527,3 +558,141 @@ class _Cif(VerdiCommandWithSubcommands):
                 sys.exit(1)
             else:
                 raise
+
+class _Trajectory(VerdiCommandWithSubcommands):
+    """
+    View and manipulate TrajectoryData instances.
+    """
+
+    def __init__(self):
+        """
+        A dictionary with valid commands and functions to be called.
+        """
+        self.valid_subcommands = {
+            'show': (self.show, self.complete_visualizers),
+            'list': (self.list, self.complete_none),
+            }
+
+    def complete_visualizers(self, subargs_idx, subargs):
+        plugin_names = self.get_show_plugins().keys()
+        return "\n".join(plugin_names)
+
+    def list(self, *args):
+        """
+        List all TrajectoryData instances
+        """
+        import argparse
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='List TrajectoryData structures.')
+        parser.add_argument('-p', '--past-days', metavar='N',
+                            help="add a filter to show only structures created in the past N days",
+                            type=int, action='store')
+
+        load_dbenv()
+        import datetime
+        from aiida.orm import DataFactory
+        from django.db.models import Q
+        from django.utils import timezone
+        from aiida.djsite.utils import get_automatic_user
+
+        args = list(args)
+        parsed_args = parser.parse_args(args)
+
+        TrajectoryData = DataFactory('array.trajectory')
+        now = timezone.now()
+        q_object = Q(user=get_automatic_user())
+
+        if parsed_args.past_days is not None:
+            now = timezone.now()
+            n_days_ago = now - datetime.timedelta(days=parsed_args.past_days)
+            q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
+
+        trajectory_list = \
+            TrajectoryData.query(q_object).distinct().order_by('ctime')
+
+        if trajectory_list:
+            to_print = 'ID\n'
+            for trajectory in trajectory_list:
+                to_print += '{}\n'.format(trajectory.pk)
+
+            sys.stdout.write(to_print)
+
+    def show(self, *args):
+        """
+        Show the trajectory with a visualisation program.
+        """
+        # DEVELOPER NOTE: to add a new plugin, just add a _plugin_xxx() method.
+        import argparse,os
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Visualize trajectory.')
+        parser.add_argument('exec_name', type=str, default=None,
+                    help="Name or path to the executable of the visualization program.")
+        parser.add_argument('trajectory_id', type=int, default=None,
+                            help="ID of the trajectory to be visualised.")
+        args = list(args)
+        parsed_args = parser.parse_args(args)
+
+        exec_name = parsed_args.exec_name
+        trajectory_id = parsed_args.trajectory_id
+
+        # I can give in input the whole path to executable
+        code_name = os.path.split(exec_name)[-1]
+
+        try:
+            func = self.get_show_plugins()[code_name]
+        except KeyError:
+            print "Not implemented; implemented plugins are:"
+            print "{}.".format(",".join(self.get_show_plugins()))
+            sys.exit(1)
+
+        load_dbenv()
+        from aiida.orm import DataFactory
+        TrajectoryData = DataFactory('array.trajectory')
+        td = TrajectoryData.get_subclass_from_pk(trajectory_id)
+
+        func(exec_name, td)
+
+    def get_show_plugins(self):
+        """
+        Get the list of all implemented plugins for visualizing the CIF structure.
+        """
+        prefix = '_plugin_'
+        method_names = dir(self) # get list of class methods names
+        valid_formats = [ i[len(prefix):] for i in method_names
+                         if i.startswith(prefix)] # filter them
+
+        return {k: getattr(self,prefix + k) for k in valid_formats}
+
+    def _plugin_jmol(self,exec_name,trajectory):
+        """
+        Plugin for jmol
+        """
+        import tempfile,subprocess
+        import CifFile
+        from aiida.orm.data.cif \
+            import ase_loops,cif_from_ase,pycifrw_from_cif
+
+        with tempfile.NamedTemporaryFile() as f:
+            for i in trajectory.get_steps():
+                structure = trajectory.step_to_structure(i-1)
+                ciffile = pycifrw_from_cif(cif_from_ase(structure.get_ase()),
+                                           ase_loops)
+                f.write(ciffile.WriteOut())
+            f.flush()
+
+            try:
+                subprocess.check_output([exec_name, f.name])
+            except subprocess.CalledProcessError:
+                # The program died: just print a message
+                print "Note: the call to {} ended with an error.".format(
+                    exec_name)
+            except OSError as e:
+                if e.errno == 2:
+                    print ("No executable '{}' found. Add to the path, "
+                           "or try with an absolute path.".format(
+                           exec_name))
+                    sys.exit(1)
+                else:
+                    raise

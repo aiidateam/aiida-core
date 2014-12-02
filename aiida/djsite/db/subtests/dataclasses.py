@@ -327,6 +327,63 @@ class TestCifData(AiidaTestCase):
         self.assertEquals(encode_textfield_base64('angstrom ÅÅÅ'),
                           'YW5nc3Ryb20gw4XDhcOF')
 
+    @unittest.skipIf(not has_pycifrw(),"Unable to import PyCifRW")
+    def test_pycifrw_from_datablocks(self):
+        """
+        Tests CifData.pycifrw_from_cif()
+        """
+        from aiida.orm.data.cif import pycifrw_from_cif
+        import re
+
+        datablocks = [
+            {
+                '_atom_site_label': [ 'A', 'B', 'C' ],
+                '_atom_site_occupancy': [ 1.0, 0.5, 0.5 ],
+                '_publ_section_title': 'Test CIF'
+            }
+        ]
+        lines = pycifrw_from_cif(datablocks).WriteOut().split('\n')
+        non_comments = []
+        for line in lines:
+            if not re.search('^#', line):
+                non_comments.append(line)
+        self.assertEquals("\n".join(non_comments),
+'''
+data_0
+loop_
+  _atom_site_label
+   A
+   B
+   C
+ 
+loop_
+  _atom_site_occupancy
+   1.0
+   0.5
+   0.5
+ 
+_publ_section_title                     'Test CIF'
+''')
+
+        loops = { '_atom_site': [ '_atom_site_label', '_atom_site_occupancy' ] }
+        lines = pycifrw_from_cif(datablocks,loops).WriteOut().split('\n')
+        non_comments = []
+        for line in lines:
+            if not re.search('^#', line):
+                non_comments.append(line)
+        self.assertEquals("\n".join(non_comments),
+'''
+data_0
+loop_
+  _atom_site_occupancy
+  _atom_site_label
+   1.0  A
+   0.5  B
+   0.5  C
+ 
+_publ_section_title                     'Test CIF'
+''')
+
 class TestKindValidSymbols(AiidaTestCase):
     """
     Tests the symbol validation of the

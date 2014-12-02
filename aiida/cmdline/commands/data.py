@@ -403,10 +403,10 @@ class _Structure(VerdiCommandWithSubcommands):
         import tempfile,subprocess
         import CifFile
         from aiida.orm.data.cif \
-            import atom_site_tags,cif_from_ase,pycifrw_from_cif
+            import ase_loops,cif_from_ase,pycifrw_from_cif
 
         ciffile = pycifrw_from_cif(cif_from_ase(structure.get_ase()),
-                                   { '_atom_site': atom_site_tags })
+                                   ase_loops)
         with tempfile.NamedTemporaryFile() as f:
             f.write(ciffile.WriteOut())
             f.flush()
@@ -672,13 +672,13 @@ class _Trajectory(VerdiCommandWithSubcommands):
         import tempfile,subprocess
         import CifFile
         from aiida.orm.data.cif \
-            import atom_site_tags,cif_from_ase,pycifrw_from_cif
+            import ase_loops,cif_from_ase,pycifrw_from_cif
 
         with tempfile.NamedTemporaryFile() as f:
             for i in trajectory.get_steps():
                 structure = trajectory.step_to_structure(i-1)
                 ciffile = pycifrw_from_cif(cif_from_ase(structure.get_ase()),
-                                           { '_atom_site': atom_site_tags })
+                                           ase_loops)
                 f.write(ciffile.WriteOut())
             f.flush()
 

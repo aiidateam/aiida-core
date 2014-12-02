@@ -5,6 +5,19 @@ __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausan
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
 __version__ = "0.2.1"
 
+ase_loops = {
+    '_atom_site': [
+        '_atom_site_label',
+        '_atom_site_occupancy',
+        '_atom_site_fract_x',
+        '_atom_site_fract_y',
+        '_atom_site_fract_z',
+        '_atom_site_thermal_displace_type',
+        '_atom_site_B_iso_or_equiv',
+        '_atom_site_type_symbol',
+    ]
+}
+
 def has_pycifrw():
     """
     :return: True if the PyCifRW module can be imported, False otherwise.
@@ -145,6 +158,43 @@ def cif_from_ase(ase):
 
         datablocks.append(datablock)
     return datablocks
+
+def pycifrw_from_cif(datablocks,loops=dict()):
+    """
+    Constructs PyCifRW's CifFile from an array of CIF datablocks.
+
+    :param datablocks: an array of CIF datablocks
+    :param loops: optional list of lists of CIF tag loops.
+    :return: CifFile
+    """
+    import CifFile
+    cif = CifFile.CifFile()
+    nr = 0
+    for values in datablocks:
+        name = str(nr)
+        nr = nr + 1
+        cif.NewBlock(name)
+        datablock = cif[name]
+        for loopname in loops.keys():
+            loopdata = ([[]],[[]])
+            row_size = None
+            for tag in loops[loopname]:
+                if tag in values:
+                    tag_values = values.pop(tag)
+                    if row_size is None:
+                        row_size = len(tag_values)
+                    elif row_size != len(tag_values):
+                        raise ValueError("Number of values for tag "
+                                         "'{}' is different from "
+                                         "the others in the same "
+                                         "loop".format(tag))
+                    loopdata[0][0].append(tag)
+                    loopdata[1][0].append(tag_values)
+            if row_size is not None and row_size > 0:
+                datablock.AddCifItem(loopdata)
+        for tag in sorted(values.keys()):
+            datablock[tag] = values[tag]
+    return cif
 
 class CifData(SinglefileData): 
     """

@@ -17,7 +17,6 @@ list:
 * **data**:                setup and manage data specific types
 * **devel**:               AiiDA commands for developers
 * **export**:              export nodes and group of nodes
-* **gotocomputer**:        open a shell to the calc folder on the cluster
 * **group**:               setup and manage groups
 * **import**:              export nodes and group of nodes
 * **install**:             install/setup aiida for the current user
@@ -45,6 +44,7 @@ Following below, a list with the subcommands available.
   * **outputls**: shows the list of the output files of a calculation node.
   * **show**: shows the database information related to the calculation: 
     used code, all the input nodes and all the output nodes. 
+  * **gotocomputer**: open a shell to the calc folder on the cluster
 
 ``verdi code``
 ++++++++++++++

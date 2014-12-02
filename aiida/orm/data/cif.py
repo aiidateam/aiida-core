@@ -176,21 +176,22 @@ def pycifrw_from_cif(datablocks,loops=dict()):
         cif.NewBlock(name)
         datablock = cif[name]
         for loopname in loops.keys():
-            loopdata = dict()
+            loopdata = ([[]],[[]])
             row_size = None
-            for tag in sorted(loops[loopname]):
+            for tag in loops[loopname]:
                 if tag in values:
-                    loopdata[tag] = values.pop(tag)
+                    tag_values = values.pop(tag)
                     if row_size is None:
-                        row_size = len(loopdata[tag])
-                    elif row_size != len(loopdata[tag]):
+                        row_size = len(tag_values)
+                    elif row_size != len(tag_values):
                         raise ValueError("Number of values for tag "
                                          "'{}' is different from "
                                          "the others in the same "
                                          "loop".format(tag))
+                    loopdata[0][0].append(tag)
+                    loopdata[1][0].append(tag_values)
             if row_size is not None and row_size > 0:
-                datablock.AddCifItem(([loopdata.keys()],
-                                      [loopdata.values()]))
+                datablock.AddCifItem(loopdata)
         for tag in sorted(values.keys()):
             datablock[tag] = values[tag]
     return cif

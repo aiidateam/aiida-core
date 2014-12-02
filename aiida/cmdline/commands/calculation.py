@@ -34,7 +34,7 @@ class Calculation(VerdiCommandWithSubcommands):
             'outputcat': (self.calculation_outputcat, self.complete_none),
             'show': (self.calculation_show, self.complete_none),
             'plugins': (self.calculation_plugins, self.complete_plugins),
-            'cleanscratch': (self.calculation_cleanscratch, self.complete_none),
+            'cleanworkdir': (self.calculation_cleanworkdir, self.complete_none),
             }
     
     def complete_plugins(self, subargs_idx, subargs):
@@ -539,7 +539,7 @@ class Calculation(VerdiCommandWithSubcommands):
             "" if counter==1 else "s")
 
 
-    def calculation_cleanscratch(self, *args):
+    def calculation_cleanworkdir(self, *args):
         """
         Clean all the content of all the output remote folders of calculations,
         passed as a list of pks, or identified by modification time. 
@@ -553,22 +553,22 @@ class Calculation(VerdiCommandWithSubcommands):
         import argparse
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
-            description='Clean scratch of AiiDA calculation remote folders.')
+            description='Clean work directory (i.e. remote folder) of AiiDA calculations.')
         parser.add_argument('-k','--pk', metavar='PK', type=int, nargs='+',
                             help="The principal key (PK) of the calculations to "
-                                 "clean the scratch of")
+                                 "clean the workdir of")
         parser.add_argument('-f','--force', action='store_true',
                             help="Force the cleaning (no prompt)")
         parser.add_argument('-p', '--past-days', metavar='N', 
-                            help="Add a filter to clean scratch of calculations "
+                            help="Add a filter to clean workdir of calculations "
                                  "modified during the past N days",
                             type=int, action='store')
         parser.add_argument('-u', '--until', metavar='N', 
-                            help="Add a filter to clean scratch of calculations "
+                            help="Add a filter to clean workdir of calculations "
                                  "modified until N days ago",
                             type=int, action='store')
         parser.add_argument('-c', '--computers', metavar='label', nargs='+', 
-                            help="Add a filter to clean scratch of calculations "
+                            help="Add a filter to clean workdir of calculations "
                                  "on this computer(s) only",
                             type=str, action='store')
         
@@ -634,7 +634,7 @@ class Calculation(VerdiCommandWithSubcommands):
                             dbattributes__in=q_state).distinct().order_by('mtime')
         
         if not parsed_args.force:
-            sys.stderr.write("Are you sure you want to clean the scratch? [Y/N] ".format(
+            sys.stderr.write("Are you sure you want to clean the work directory? [Y/N] ".format(
                             len(calc_list), "" if len(calc_list)==1 else "s"))
             if not wait_for_confirmation():
                 sys.exit(0)
@@ -660,7 +660,7 @@ class Calculation(VerdiCommandWithSubcommands):
                                                                      aiidauser=user).get_transport()}
 
         for computer,dic in remotes.iteritems():
-            print "Cleaning the scratch on computer {}.".format(computer)
+            print "Cleaning the work directory on computer {}.".format(computer)
             counter = 0
             t = dic['transport']
             for remote in dic['remotes']:

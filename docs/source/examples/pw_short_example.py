@@ -9,7 +9,7 @@ KpointsData = DataFactory('array.kpoints')
 
 ###############################
 # Set your values here
-codename = 'pw_on_TheHive'
+codename = 'pw-5.1@TheHive'
 pseudo_family = 'lda_pslibrary'
 ###############################
 

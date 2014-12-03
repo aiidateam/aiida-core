@@ -88,7 +88,7 @@ across different AiiDA instances.
 
 
 The ``verdi calculation gotocomputer`` command
-++++++++++++++++++++++++++++++++++
+++++++++++++++++++++++++++++++++++++++++++++++
 
 Sometimes, it may be useful to directly go to the folder on
 which the calculation is running, for instance to check if the 

@@ -46,7 +46,8 @@ Following below, a list with the subcommands available.
     used code, all the input nodes and all the output nodes. 
   * **gotocomputer**: open a shell to the calc folder on the cluster
 
-.. note:: When using gotocomputer, be careful not to change any file that AiiDA created,
+.. note:: When using gotocomputer, be careful not to change any file
+  that AiiDA created,
   nor to modify the output files or resubmit the calculation, 
   unless you **really** know what you are doing, 
   otherwise AiiDA may get very confused!   
@@ -133,12 +134,18 @@ Manages database data objects.
     
     * **uploadfamily**: install a new family (group) of pseudopotentials
   
-  *  **structure**: handles the StructureData 
+  * **structure**: handles the StructureData (and similarly for **trajectory**,
+    handling TrajectoryData) 
   
     * **list**: list currently saved nodes of StructureData kind
     
     * **show**: use a third-party visualizer (like vmd or xcrysden) 
       to graphically show the StructureData
+
+  *  **parameter**: handles the ParameterData objects
+
+    * **show**: output the content of the python dictionary in different
+      formats. 
 
 
 ``verdi devel``

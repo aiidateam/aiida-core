@@ -134,14 +134,19 @@ class Devel(VerdiCommandWithSubcommands):
             sys.exit(1)
         
         for prop in sorted(_property_table.keys()):
+            if _property_table[prop][4] is None:
+                valid_vals_str = ""
+            else:
+                valid_vals_str = " Valid values: {}.".format(",".join(
+                    str(_) for _ in _property_table[prop][4]))
             if isinstance(_property_table[prop][3], _NoDefaultValue):
                 def_val_string = ""
             else:
                 def_val_string = " (default: {})".format(
                     _property_table[prop][3])
-            print "{} ({}): {}{}".format(prop, _property_table[prop][1],
+            print "* {} ({}): {}{}{}".format(prop, _property_table[prop][1],
                                        _property_table[prop][2],
-                                       def_val_string)
+                                       def_val_string,valid_vals_str)
 
     def calculation_getresults(self, *args):
         """

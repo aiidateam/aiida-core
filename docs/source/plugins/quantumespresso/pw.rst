@@ -80,11 +80,19 @@ All output nodes can be accessed with the ``calculation.out`` method.
   Contains the scalar properties. Example: energy (in eV), 
   total_force (modulus of the sum of forces in eV/Angstrom),
   warnings (possible error messages generated in the run).
-* output_trajectory_array :py:class:`ArrayData <aiida.orm.data.array.ArrayData>`
+* output_array :py:class:`ArrayData <aiida.orm.data.array.ArrayData>`
+  Produced in case of calculations which do not change the structure, otherwise, 
+  an ``output_trajectory`` is produced.
   Contains vectorial properties, too big to be put in the dictionary.
   Example: forces (eV/Angstrom), stresses, ionic positions.
   Quantities are parsed at every step of the ionic-relaxation / molecular-dynamics run.
-* output_band (non spin polarized calculations)) or output_band1 + output_band2 (spin polarized calculations) :py:class:`BandsData <aiida.orm.data.array.bands.BandsData>`
+* output_trajectory :py:class:`ArrayData <aiida.orm.data.array.ArrayData>`
+  Produced in case of calculations which change the structure, otherwise an
+  ``output_array`` is produced. Contains vectorial properties, too big to be put 
+  in the dictionary. Example: forces (eV/Angstrom), stresses, ionic positions.
+  Quantities are parsed at every step of the ionic-relaxation / molecular-dynamics run.
+* output_band (non spin polarized calculations)) or output_band1 + output_band2 
+  (spin polarized calculations) :py:class:`BandsData <aiida.orm.data.array.bands.BandsData>`
   Present only if parsing is activated with the **`ALDO_BANDS`** setting.
   Contains the list of electronic energies for every kpoint.
   If calculation is a molecular dynamics or a relaxation run, bands refer only to the last ionic configuration.

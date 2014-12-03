@@ -384,3 +384,16 @@ def grouper(n, iterable):
             return
         yield chunk
 
+def gzip_string(string):
+    """
+    Gzip string contents.
+
+    :param string: a string
+    :return: a gzipped string
+    """
+    import tempfile,gzip
+    with tempfile.NamedTemporaryFile() as f:
+        g = gzip.open(f.name,'wb')
+        g.write(string)
+        g.close()
+        return f.read()

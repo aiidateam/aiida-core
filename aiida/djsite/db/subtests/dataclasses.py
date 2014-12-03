@@ -310,6 +310,10 @@ class TestCifData(AiidaTestCase):
         from aiida.orm.data.cif import encode_textfield_quoted_printable, \
                                        encode_textfield_base64
 
+        self.assertEquals(encode_textfield_quoted_printable('.'),
+                          '=2E')
+        self.assertEquals(encode_textfield_quoted_printable('?'),
+                          '=3F')
         self.assertEquals(encode_textfield_quoted_printable(';\n'),
                           '=3B\n')
         self.assertEquals(encode_textfield_quoted_printable('line\n;line'),

@@ -200,10 +200,10 @@ class CpParser(Parser):
         
         traj = TrajectoryData()
         traj.set_trajectory(steps = raw_trajectory['steps'],
-                            times = raw_trajectory['times'],
                             cells = raw_trajectory['cells'],
                             symbols = raw_trajectory['symbols'],
                             positions = raw_trajectory['positions_ordered'],
+                            times = raw_trajectory['times'],
                             velocities = raw_trajectory['velocities_ordered'],
                             )
         

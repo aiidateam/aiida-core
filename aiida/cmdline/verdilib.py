@@ -316,74 +316,6 @@ class Shell(VerdiCommand):
         # disable further completion
         print ""
 
-class GoToComputer(VerdiCommand):
-    """
-    Open a shell to the calc folder on the cluster
-
-    This command runs the 'manage.py shell' command, that opens a
-    IPython shell with the Django environment loaded.
-    """
-    def run(self,*args):
-        from aiida.common.exceptions import NotExistent
-        from aiida.orm import Calculation
-        from aiida.orm import Node as AiidaOrmNode
-        from aiida import load_dbenv
-        
-        try:
-            calc_id = args[0]
-        except IndexError:
-            print >> sys.stderr, "Pass as further argument a calculation ID or UUID."
-            sys.exit(1)
-        try:
-            pk=int(calc_id)
-            is_pk=True
-        except ValueError:
-            uuid = calc_id
-            is_pk=False
-
-        print "Loading environment..."
-        load_dbenv()
-
-        try:
-            if is_pk:
-                calc = AiidaOrmNode.get_subclass_from_pk(pk)
-            else:
-                calc = AiidaOrmNode.get_subclass_from_pk(uuid)
-        except NotExistent:
-            print >> sys.stderr, "No node exists with ID={}.".format(calc_id)
-            sys.exit(1)
-
-        if not isinstance(calc,Calculation):
-            print >> sys.stderr, "Node with ID={} is not a calculation; it is a {}".format(
-                calc_id, calc.__class__.__name__)
-            sys.exit(1)
-
-        # get the transport
-        try:
-            t = calc._get_transport()
-        except NotExistent as e:
-            print >> sys.stderr, e.message
-            sys.exit(1)
-        # get the remote directory
-        remotedir = calc._get_remote_workdir()
-        if not remotedir:
-            print >> sys.stderr, "No remote work directory is set for this calculation!"
-            print >> sys.stderr, "(It is possible that the daemon did not submit the calculation yet)"
-            sys.exit(1)
-        
-        # get the command to run (does not require to open the connection!)
-        cmd_to_run = t.gotocomputer_command(remotedir)
-        # Connect (execute command)
-        print "Going the the remote folder..."
-        #print cmd_to_run
-        os.system(cmd_to_run)
-        
-    def complete(self, subargs_idx, subargs):
-        # disable further completion
-        print ""
-
-
-        
 class Runserver(VerdiCommand):
     """
     Run the AiiDA webserver on localhost
@@ -393,7 +325,6 @@ class Runserver(VerdiCommand):
     """
     def run(self,*args):
         pass_to_django_manage([execname, 'runserver'] + list(args))
-
 
 class Run(VerdiCommand):
     """
@@ -459,7 +390,7 @@ class Run(VerdiCommand):
         
         with open(parsed_args.scriptname) as f:
             exec(f)
-        
+
 ########################################################################
 # HERE ENDS THE COMMAND FUNCTION LIST
 ########################################################################
@@ -482,7 +413,6 @@ def get_listparams():
     return ("List of the most relevant available commands:" + os.linesep +
             os.linesep.join(["  * {} {}".format(name, desc) 
                              for name, desc in name_desc]))
-
 
 def get_command_suggestion(command):
     """

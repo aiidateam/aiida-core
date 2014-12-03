@@ -198,12 +198,9 @@ However, we need still a few steps to properly configure AiiDA for your user.
   add a line similar to the following to the ``~/.bashrc`` and then open
   a new shell::
 
-    export DYLD_LIBRARY_PATH=/usr/lib:/Library/PostgreSQL/9.3/lib:$DYLD_LIBRARY_PATH
+    export DYLD_FALLBACK_LIBRARY_PATH=/Library/PostgreSQL/9.3/lib:$DYLD_FALLBACK_LIBRARY_PATH
 
- You should adapt the path to the PostgreSQL libraries, and also remember
- to put before the PostgreSQL path the default path of your system (in 
- this example ``/usr/lib``), because some libraries (notably ``iconv``) 
- have a different version in the system path and in the PostgreSQL path.
+  (you should of course adapt the path to the PostgreSQL libraries).
 
 .. _Stackoverflow link: http://stackoverflow.com/questions/21079820/how-to-find-pg-config-pathlink
 

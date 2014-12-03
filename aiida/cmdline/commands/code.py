@@ -535,11 +535,11 @@ class Code(VerdiCommandWithSubcommands):
             }
 
     def complete_code_names(self, subargs_idx, subargs):
-        code_names = [c[1] for c in self.get_code_pks_and_labels()]
+        code_names = [c[1] for c in self.get_code_data()]
         return "\n".join(code_names)
 
     def complete_code_pks(self, subargs_idx, subargs):
-        code_pks = [str(c[0]) for c in self.get_code_pks_and_labels()]
+        code_pks = [str(c[0]) for c in self.get_code_data()]
         return "\n".join(code_pks)
 
     def complete_code_names_and_pks(self, subargs_idx, subargs):
@@ -550,29 +550,78 @@ class Code(VerdiCommandWithSubcommands):
         """
         List available codes
         """
-        if args:
-            print >> sys.stderr, "No arguments allowed to the 'list' command."
-            sys.exit(1)
+        import argparse
         
-        existing_codes = self.get_code_pks_and_labels()
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='List the computers in the database.')
+        # The default states are those that are shown if no option is given
+        parser.add_argument('-c', '--computer', 
+                            help="Filter only codes on a given computer",
+                            )
+        parser.add_argument('-p', '--plugin',
+                            help="Filter only calculation with a given plugin",
+                            )
+        parser.add_argument('-A', '--all-users', dest='all_users', 
+                            action='store_true',
+                            help="Show codes of all users",
+                            )
+        parser.add_argument('-o', '--show-owner', dest='show_owner', 
+                            action='store_true',
+                            help="Show also the owner of the code",
+                            )
+        parser.set_defaults(all_users=False)
+        parsed_args = parser.parse_args(args)
+        computer_filter = parsed_args.computer
+        plugin_filter = parsed_args.plugin
+        all_users = parsed_args.all_users
+        show_owner = parsed_args.show_owner
+
+        load_dbenv()
+        from django.db.models import Q
+        from aiida.djsite.utils import get_automatic_user
+
+        django_filter = Q()
+        if not all_users:
+            django_filter &= Q(user=get_automatic_user())
+        if computer_filter is not None:
+            django_filter &= Q(dbcomputer__name=computer_filter)
+        if plugin_filter is not None:
+            django_filter &= Q(dbattributes__key='input_plugin',
+                               dbattributes__datatype='txt',
+                               dbattributes__tval=plugin_filter)
+        existing_codes = self.get_code_data(django_filter)
         
         print "# List of configured codes:"
         print "# (use 'verdi code show CODEID' to see the details)"
         if existing_codes:
-            print "\n".join("* Id {}: '{}'".format(pk, label)
-                            for pk, label in existing_codes)
+            for pk, label, computername, useremail in existing_codes:
+                if show_owner:
+                    owner_string = " ({})".format(useremail)
+                else:
+                    owner_string = ""
+                print "* Id {}: {}@{}{}".format(
+                        pk, label, computername,owner_string)
         else:
-            print "# No codes configured yet. Use 'verdi code setup'"
+            print "# No codes found matching the specified criteria."
         
 
-    def get_code_pks_and_labels(self):
+    def get_code_data(self, django_filter=None):
         """
         Retrieve the list of codes in the DB.
-        """
-        from aiida.orm import Code as AiidaOrmCode
+        Return a tuple with (pk, label, computername, owneremail).
 
+        :param django_filter: a django query object (e.g. obtained
+          with Q()) to filter the results on the AiidaOrmCode class.
+        """
         load_dbenv()
-        return sorted([(c.pk, c.label) for c in AiidaOrmCode.query()])
+        from aiida.orm import Code as AiidaOrmCode
+        from django.db.models import Q
+
+        f = django_filter if django_filter is not None else Q()
+
+        return sorted(AiidaOrmCode.query(f).values_list(
+                'pk', 'label', 'dbcomputer__name', 'user__email'))
 
 
     def get_code(self, code_id):
@@ -590,37 +639,10 @@ class Code(VerdiCommandWithSubcommands):
         
         load_dbenv()
         try:
-            code_int = int(code_id)
-            try:
-                return AiidaOrmCode.get_subclass_from_pk(code_int)
-            except NotExistent:
-                raise ValueError() # Jump to the following section
-                                   # to check if a code with the given
-                                   # label exists.
-            except MultipleObjectsError:
-                print >> sys.stderr, (
-                    "More than one code in the DB with pk='{}'!"
-                    "".format(code_id))
-                sys.exit(1)
-        except ValueError:
-            # Before dying, try to see if the user passed a (unique) label.
-            codes = AiidaOrmCode.query(label=code_id)
-            if len(codes) == 0:
-                print >> sys.stderr, "'{}' is not a valid code ID or label.".format(code_id)
-                sys.exit(1)
-            if len(codes) > 1:
-                print >> sys.stderr, (
-                    "There are multiple codes with label '{}', having IDs:"
-                    "".format(code_id))
-                print >> sys.stderr, (
-                    ", ".join(sorted([str(c.pk) for c in codes])) + ".")
-                print >> sys.stderr, (
-                    "Relabel them (using their ID), or refer to them "
-                    "with their ID.")
-                sys.exit(1)
-            if len(codes) == 1:
-                return codes[0]
-
+            return AiidaOrmCode.get_from_string(code_id)
+        except (NotExistent, MultipleObjectsError) as e:
+            print >> sys.stderr, e.message
+            sys.exit(1)
 
     def code_show(self, *args):
         """

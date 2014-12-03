@@ -13,7 +13,7 @@ codename = 'pw_on_TheHive'
 pseudo_family = 'lda_pslibrary'
 ###############################
 
-code = Code.get(codename)
+code = Code.get_from_string(codename)
 
 # BaTiO3 cubic structure
 alat = 4. # angstrom

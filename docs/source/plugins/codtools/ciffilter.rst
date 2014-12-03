@@ -42,7 +42,7 @@ Inputs
     Values can be arrays with multiple items. Keys without values should
     point to boolean ``True`` value. In example::
 
-        calc = Code.get('cif_filter').new_calc()
+        calc = Code.get_from_string('cif_filter').new_calc()
         calc.use_parameters(ParameterData(dict={
                 's'                       : True,
                 'exclude-empty-tags'      : True,

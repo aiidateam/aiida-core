@@ -375,11 +375,11 @@ _publ_section_title                     'Test CIF'
 '''
 data_0
 loop_
-  _atom_site_occupancy
   _atom_site_label
-   1.0  A
-   0.5  B
-   0.5  C
+  _atom_site_occupancy
+   A  1.0
+   B  0.5
+   C  0.5
  
 _publ_section_title                     'Test CIF'
 ''')

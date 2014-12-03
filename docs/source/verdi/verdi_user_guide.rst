@@ -134,8 +134,7 @@ Manages database data objects.
     
     * **uploadfamily**: install a new family (group) of pseudopotentials
   
-  * **structure**: handles the StructureData (and similarly for **trajectory**,
-    handling TrajectoryData) 
+  * **structure**: handles the StructureData
   
     * **list**: list currently saved nodes of StructureData kind
     

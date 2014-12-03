@@ -66,6 +66,7 @@ def encode_textfield_quoted_printable(content):
     content = re.sub('^(?P<chr>;)',match2qp,content)
     content = re.sub('(?P<chr>\t)',match2qp,content)
     content = re.sub('(?P<prefix>\n)(?P<chr>;)',match2qp,content)
+    content = re.sub('^(?P<chr>[\.\?])$',match2qp,content)
     return content
 
 def encode_textfield_ncr(content):

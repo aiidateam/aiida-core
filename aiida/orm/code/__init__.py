@@ -94,15 +94,17 @@ class Code(Node):
     def get_from_string(cls, code_string):
         """
         Get a Computer object with given identifier string, that can either be
-        the numeric ID (pk), or the label (if unique).
+        the numeric ID (pk), or the label (if unique); the label can either
+        be simply the label, or in the format label@machinename. See the note
+        below for details on the string detection algorithm.
 
         .. note:: If a string that can be converted to an integer is given,
           the numeric ID is verified first (therefore, is a code A with a 
           label equal to the ID of another code B is present, code A cannot 
-          be referenced by label). Similarly, the '@' symbol is always used
-          to split code and computername. Therefore do not use '@' in the
-          code name if you want to use this function ('@' in the computer
-          name are instead valid).
+          be referenced by label). Similarly, the (leftmost) '@' symbol is
+          always used to split code and computername. Therefore do not use
+          '@' in the code name if you want to use this function
+          ('@' in the computer name are instead valid).
 
         :param code_string: the code string identifying the code to load
 

@@ -108,6 +108,21 @@ class Calculation(Node):
                },
             }
 
+    @property
+    def logger(self):
+        """
+        Get the logger of the Calculation object, so that it also logs to the
+        DB.
+        
+        :return: LoggerAdapter object, that works like a logger, but also has
+          the 'extra' embedded
+        """
+        import logging
+        from aiida.djsite.utils import get_dblogger_extra
+        
+        return logging.LoggerAdapter(logger=self._logger,
+                                     extra=get_dblogger_extra(self))
+
     def __dir__(self):
         """
         Allow to list all valid attributes, adding also the use_* methods
@@ -1459,11 +1474,8 @@ class Calculation(Node):
             actually being submitted at the same time in another thread.
         """
         #TODO: Check if we want to add a status "KILLED" or something similar.
-        from aiida.djsite.utils import get_dblogger_extra
         from aiida.common.exceptions import InvalidOperation, RemoteOperationError
-        
-        logger_extra = get_dblogger_extra(self)    
-        
+                
         old_state = self.get_state()
         
         if (old_state == calc_states.NEW or 
@@ -1471,7 +1483,7 @@ class Calculation(Node):
             self._set_state(calc_states.FAILED)
             self.logger.warning("Calculation {} killed by the user "
                                 "(it was in {} state)".format(
-                                self.pk, old_state), extra=logger_extra)
+                                self.pk, old_state))
             return
         
         if old_state != calc_states.WITHSCHEDULER:
@@ -1499,8 +1511,7 @@ class Calculation(Node):
             # Do not set the state, but let the parser do its job
             #self._set_state(calc_states.FAILED)
             self.logger.warning("Calculation {} killed by the user "
-                                "(it was WITHSCHEDULER)".format(self.pk),
-                                extra=logger_extra)
+                                "(it was WITHSCHEDULER)".format(self.pk))
             
         
     def _presubmit(self, folder, use_unstored_links=False):

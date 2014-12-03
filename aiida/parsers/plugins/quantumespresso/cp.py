@@ -42,10 +42,6 @@ class CpParser(Parser):
         from aiida.common.exceptions import InvalidOperation
         import os,copy
         import numpy # TrajectoryData also uses numpy arrays
-        from aiida.common import aiidalogger
-        from aiida.djsite.utils import get_dblogger_extra
-        parserlogger = aiidalogger.getChild('cpparser')
-        logger_extra = get_dblogger_extra(self._calc)
 
         successful = True
         
@@ -65,7 +61,7 @@ class CpParser(Parser):
         # select the folder object
         out_folder = self._calc.get_retrieved_node()
         if out_folder is None:
-            parserlogger.error("No retrieved folder found")
+            self.logger.error("No retrieved folder found")
             return False, ()
 
         # check what is inside the folder
@@ -74,7 +70,7 @@ class CpParser(Parser):
         if not self._calc._OUTPUT_FILE_NAME in list_of_files:
             successful = False
             new_nodes_tuple = ()
-            parserlogger.error("Standard output not found",extra=logger_extra)
+            self.logger.error("Standard output not found")
             return successful, new_nodes_tuple
 
         # if there is something more, I note it down, so to call the raw parser

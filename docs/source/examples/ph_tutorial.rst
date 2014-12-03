@@ -56,7 +56,7 @@ Again, you need to have compiled the code on the cluster and configured a new co
 Then we load the ``Code`` class-instance from the database::
 
     codename = 'my-ph.x'
-    code = Code.get(codename)
+    code = Code.get_from_string(codename)
 
 Parameter
 ---------
@@ -164,7 +164,7 @@ the code, and the proper scheduler info.
     codename = 'my-ph.x'
     #####################
 
-    code = Code.get(codename)
+    code = Code.get_from_string(codename)
 
     ParameterData = DataFactory('parameter')
     parameters = ParameterData(dict={

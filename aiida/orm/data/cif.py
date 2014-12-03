@@ -66,6 +66,7 @@ def encode_textfield_quoted_printable(content):
     content = re.sub('^(?P<chr>;)',match2qp,content)
     content = re.sub('(?P<chr>\t)',match2qp,content)
     content = re.sub('(?P<prefix>\n)(?P<chr>;)',match2qp,content)
+    content = re.sub('^(?P<chr>[\.\?])$',match2qp,content)
     return content
 
 def encode_textfield_ncr(content):
@@ -88,6 +89,16 @@ def encode_textfield_ncr(content):
     content = re.sub('^(?P<chr>;)',match2ncr,content)
     content = re.sub('(?P<prefix>\n)(?P<chr>;)',match2ncr,content)
     return content
+
+def encode_textfield_gzip_base64(content,**kwargs):
+    """
+    Gzips the given string and encodes it in Base64.
+
+    :param content: a string with contents
+    :return: encoded string
+    """
+    from aiida.common.utils import gzip_string
+    return encode_textfield_base64(gzip_string(content),**kwargs)
 
 def cif_from_ase(ase):
     """

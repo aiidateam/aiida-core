@@ -345,7 +345,7 @@ aside to the final optimal cell parameter value.
             max_wallclock_seconds  = params['max_wallclock_seconds']
             pseudo_family          = params['pseudo_family']
             
-            code = Code.get(pw_codename)
+            code = Code.get_from_string(pw_codename)
             computer = code.get_remote_computer()
             
             QECalc = CalculationFactory('quantumespresso.pw')
@@ -602,7 +602,7 @@ phonon vibrational frequncies for some XTiO3 materials, namely Ba, Sr and Pb.
             num_mpiprocs_per_machine   = params['num_mpiprocs_per_machine']
             max_wallclock_seconds  = params['max_wallclock_seconds']
             
-            code = Code.get(ph_codename)
+            code = Code.get_from_string(ph_codename)
             computer = code.get_remote_computer()
             
             QEPhCalc = CalculationFactory('quantumespresso.ph')

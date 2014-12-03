@@ -58,7 +58,10 @@ class Transport(object):
         """
         __init__ method of the Transport base class.
         """
-        self._logger = aiida.common.aiidalogger.getChild('transport')
+        self._logger = aiida.common.aiidalogger.getChild('transport').getChild(
+            self.__class__.__name__)
+
+        self._logger_extra = None
     
     def __enter__(self):
         """
@@ -92,6 +95,20 @@ class Transport(object):
     # redefine this in each subclass
     def __str__(self):
         return "[Transport class or subclass]"
+
+    def _set_logger_extra(self, logger_extra):
+        """
+        Pass the data tha should be passed automatically to self.logger
+        as 'extra' keyword. This is typically useful if you pass data
+        obtained using get_dblogger_extra in aiida.djsite.utils, to automatically
+        log also to the DbLog table.
+        
+        :param logger_extra: data that you want to pass as extra to the
+          self.logger. To write to DbLog, it should be created by the
+          aiida.djsite.utils.get_dblogger_extra function. Pass None if you
+          do not want to have extras passed.
+        """
+        self._logger_extra = logger_extra
 
     @classmethod
     def get_short_doc(self):
@@ -131,10 +148,20 @@ class Transport(object):
     @property
     def logger(self):
         """
-        Return the internal logger
+        Return the internal logger.
+        If you have set extra parameters using _set_logger_extra(), a
+        suitable LoggerAdapter instance is created, bringing with itself
+        also the extras.
         """
         try:
-            return self._logger
+            import logging
+            from aiida.djsite.utils import get_dblogger_extra
+            
+            if self._logger_extra is not None:
+                return logging.LoggerAdapter(logger=self._logger,
+                                             extra=self._logger_extra)
+            else:
+                return self._logger
         except AttributeError:
             raise InternalError("No self._logger configured for {}!")
 

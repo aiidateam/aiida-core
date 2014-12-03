@@ -27,7 +27,6 @@ class LocalTransport(aiida.transport.Transport):
 
     def __init__(self,**kwargs):
         super(LocalTransport,self).__init__()
-        self._logger = super(LocalTransport,self).logger.getChild('local')
 
         # _internal_dir will emulate the concept of working directory
         # The real current working directory is not to be changed
@@ -38,7 +37,7 @@ class LocalTransport(aiida.transport.Transport):
         self._machine = kwargs.pop('machine', None)
         if self._machine and self._machine != 'localhost':
             # TODO: check if we want a different logic
-            self.logger.warning('machine was passed, but it is not localhost')
+            self.logger.debug('machine was passed, but it is not localhost')
         if kwargs:
             raise ValueError("Input parameters to LocalTransport"
                              " are not recognized")

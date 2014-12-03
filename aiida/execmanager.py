@@ -77,6 +77,7 @@ def update_running_calcs_status(authinfo):
             for c in calcs_to_inquire:
                 try:
                     logger_extra = get_dblogger_extra(c)
+                    t._set_logger_extra(logger_extra)
                     
                     jobid = c.get_job_id()
                     if jobid is None:
@@ -345,6 +346,7 @@ def submit_jobs_with_authinfo(authinfo):
     """
     from aiida.orm import Calculation, Computer
     from aiida.scheduler.datastructures import JobInfo
+    from aiida.djsite.utils import get_dblogger_extra
 
     if not authinfo.enabled:
         return
@@ -369,6 +371,9 @@ def submit_jobs_with_authinfo(authinfo):
         try:
             with t:
                 for c in calcs_to_inquire:
+                    logger_extra = get_dblogger_extra(c)
+                    t._set_logger_extra(logger_extra)
+                    
                     try:
                         submit_calc(calc=c, authinfo=authinfo, transport=t)
                     except Exception as e:
@@ -438,6 +443,8 @@ def submit_calc(calc, authinfo, transport=None):
     else:
         t = transport
         must_open_t = False
+
+    t._set_logger_extra(logger_extra)
 
     if calc._has_cached_links():
         raise ValueError("Cannot submit calculation {} because it has "
@@ -685,6 +692,8 @@ def retrieve_computed_for_authinfo(authinfo):
         with authinfo.get_transport() as t:
             for calc in calcs_to_retrieve:
                 logger_extra = get_dblogger_extra(calc)
+                t._set_logger_extra(logger_extra)
+
                 try:
                     calc._set_state(calc_states.RETRIEVING)
                 except UniquenessError:

@@ -1735,6 +1735,7 @@ class Calculation(Node):
         from aiida.transport.plugins.local import LocalTransport
         from aiida.orm import Computer
         from aiida.common.folders import Folder
+        from aiida.common.exceptions import NotExistent
         
         if folder is None:
             folder = Folder(os.path.abspath('submit_test'))
@@ -1801,26 +1802,42 @@ class Calculation(Node):
 
             local_copy_list = calcinfo.local_copy_list
             remote_copy_list = calcinfo.remote_copy_list
+            remote_symlink_list = calcinfo.remote_symlink_list
 
             for src_abs_path, dest_rel_path in local_copy_list:
                 t.put(src_abs_path, dest_rel_path)
                 
-            for (remote_computer_uuid, remote_abs_path, 
-                  dest_rel_path) in remote_copy_list:
-                remote_computer = Computer(uuid=remote_computer_uuid)
-                localpath = os.path.join(
-                    subfolder.abspath, dest_rel_path)
-                # If it ends with a separator, it is a folder
-                if localpath.endswith(os.path.sep):
-                    localpath = os.path.join(localpath, 'PLACEHOLDER')
-                dirpart = os.path.split(localpath)[0]
-                if not(os.path.isdir(dirpart)):
-                    os.makedirs(dirpart)
-                with open(localpath,'w') as f:
-                    f.write("PLACEHOLDER FOR REMOTELY COPIED "
-                            "FILE FROM {} ({}):{}".format(remote_computer_uuid,
-                                                    remote_computer.name,
-                                                    remote_abs_path))
+            if remote_copy_list:
+                with open(os.path.join(subfolder.abspath,
+                                       '_aiida_remote_copy_list.txt'), 'w') as f:
+                    for (remote_computer_uuid, remote_abs_path, 
+                         dest_rel_path) in remote_copy_list:
+                        try:
+                            remote_computer = Computer(uuid=remote_computer_uuid)
+                        except NotExistent:
+                            remote_computer = "[unknown]"
+                        f.write("* I WOULD REMOTELY COPY "
+                                "FILES/DIRS FROM COMPUTER {} (UUID {}) "
+                                "FROM {} TO {}\n".format(remote_computer.name,
+                                                         remote_computer_uuid,
+                                                         remote_abs_path,
+                                                         dest_rel_path))
+
+            if remote_symlink_list:
+                with open(os.path.join(subfolder.abspath,
+                                    '_aiida_remote_symlink_list.txt'), 'w') as f:
+                    for (remote_computer_uuid, remote_abs_path, 
+                         dest_rel_path) in remote_symlink_list:
+                        try:
+                            remote_computer = Computer(uuid=remote_computer_uuid)
+                        except NotExistent:
+                            remote_computer = "[unknown]"
+                        f.write("* I WOULD PUT SYMBOLIC LINKS FOR "
+                                "FILES/DIRS FROM COMPUTER {} (UUID {}) "
+                                "FROM {} TO {}\n".format(remote_computer.name,
+                                                         remote_computer_uuid,
+                                                         remote_abs_path,
+                                                         dest_rel_path))
 
         return subfolder, script_filename
 

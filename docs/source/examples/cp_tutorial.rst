@@ -79,7 +79,7 @@ Everything works like the PW calculation: you need to get the code from
 the database::
 
   codename = 'my_cp'
-  code = Code.get(codename)
+  code = Code.get_from_string(codename)
 
 Then create the StructureData with the structure, and a ParameterData 
 node for the inputs. This time, of course, you have to specify the correct

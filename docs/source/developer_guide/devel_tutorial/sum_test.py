@@ -38,7 +38,7 @@ if __name__ == "__main__":
     
     #####
     
-    code = Code.get(codename)
+    code = Code.get_from_string(codename)
     
     parameters = ParameterData(dict={'x1': 2,'x2':2,})
     

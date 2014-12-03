@@ -80,7 +80,7 @@ If you setup the code ``pw_on_TheHive`` correctly, then it is sufficient to writ
 
   codename = 'pw_on_TheHive'
   from aiida.orm import Code
-  code = Code.get(codename)
+  code = Code.get_from_string(codename)
 
 Where in the last line we just load the database object representing the code.
 
@@ -444,7 +444,7 @@ Download: :download:`this example script <pw_short_example.py>`
   pseudo_family = 'lda_pslibrary'
   ###############################
   
-  code = Code.get(codename)
+  code = Code.get_from_string(codename)
   
   # BaTiO3 cubic structure
   alat = 4. # angstrom

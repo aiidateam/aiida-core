@@ -23,9 +23,24 @@ class Parser(object):
     def __init__(self,calc):
         """
         Init
-        """
+        """       
+        from aiida.common import aiidalogger
+        self._logger = aiidalogger.getChild('parser').getChild(
+            self.__class__.__name__)
+
         self._calc = calc
         
+    @property
+    def logger(self):
+        """
+        Return the logger, also with automatic extras of the associated
+        extras of the calculation
+        """
+        import logging
+        from aiida.djsite.utils import get_dblogger_extra
+
+        return logging.LoggerAdapter(logger=self._logger,
+                                     extra=get_dblogger_extra(self._calc))
         
     def parse_from_data(self,data):
         """

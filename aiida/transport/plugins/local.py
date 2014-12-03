@@ -18,9 +18,6 @@ __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausan
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
 __version__ = "0.2.1"
 
-execlogger = aiidalogger.getChild('transport')
-
-
 class LocalTransport(aiida.transport.Transport):
     """
     Support copy and command execution on the same host on which AiiDA is running via direct file copy and execution commands.

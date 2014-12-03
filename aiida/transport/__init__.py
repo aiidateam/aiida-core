@@ -50,22 +50,15 @@ class Transport(object):
     Abstract class for a generic transport (ssh, local, ...)
     Contains the set of minimal methods
     """
-    # #TODO: * decide if we want chdir and get_pwd (see discussion in the
-    #         docstring of chdir)
-    #       * exec_command: decide how 'low-level' we want this to be:
-    #         probably we want something higher-level, where we give the command
-    #         to run, and it automatically waits for the calculation to finish
-    #         and return stdout, stderr and retval (maybe with timeout?)
-    #         Possibly, we may want to have a counterpart for more low-level
-    #         interaction with the job.
-    #       * we probably need a command to copy files between two folders on
-    #         the same remote server. To understand how to do it.
-
-    _logger = aiida.common.aiidalogger.getChild('transport')
-    
     # To be defined in the subclass
     # See the ssh or local plugin to see the format 
     _valid_auth_params = None
+    
+    def __init__(self, *args, **kwargs):
+        """
+        __init__ method of the Transport base class.
+        """
+        self._logger = aiida.common.aiidalogger.getChild('transport')
     
     def __enter__(self):
         """

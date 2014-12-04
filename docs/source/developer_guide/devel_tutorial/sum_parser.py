@@ -24,7 +24,7 @@ class SumParser(Parser):
             raise OutputParsingError("Input must calc must be a SumCalculation")
         self._calc = calculation
             
-    def parse_from_calc(self):
+    def parse_with_retrieved(self, retrieved):
         """
         Parses the datafolder, stores results.
         This parser for this simple code does simply store in the DB a node
@@ -33,7 +33,12 @@ class SumParser(Parser):
       
         successful = True
         # select the folder object
-        out_folder = self._calc.get_retrieved_node()
+        # Check that the retrieved folder is there 
+        try:
+            out_folder = retrieved[self._calc._get_linkname_retrieved()]
+        except KeyError:
+            self.logger.error("No retrieved folder found")
+            return False, ()
         
         # check what is inside the folder
         list_of_files = out_folder.get_folder_list()

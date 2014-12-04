@@ -234,11 +234,10 @@ class Node(object):
             
             self._to_be_stored = True
             
-            # Note: the following steps take a lot of time, having to create
-            #       folders!
-            self._temp_folder = SandboxFolder() # This is also created
-            # Create the 'path' subfolder in the Sandbox
-            self._get_folder_pathsubfolder.create()
+
+            # As creating the temp folder may require some time on slow 
+            # filesystems, we defer its creation
+            self._temp_folder = None
             # Used only before the first save
             self._attrs_cache = {}
             # If this is changed, fix also the importer
@@ -1350,9 +1349,11 @@ class Node(object):
         
         :return: a SandboxFolder object mapping the node in the repository.
         """
+        # I create the temp folder only at is first usage
         if self._temp_folder is None:
-            raise InternalError("The temp_folder was asked for node {}, but "
-                                "it is not set!".format(self.uuid))
+            self._temp_folder = SandboxFolder() # This is also created
+            # Create the 'path' subfolder in the Sandbox
+            self._get_folder_pathsubfolder.create()
         return self._temp_folder
 
     def remove_path(self,path):

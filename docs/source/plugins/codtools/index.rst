@@ -57,6 +57,7 @@ from the package can be obtained by invoking commands with ``--help`` and
     any correctly formatted CIF files, one must do full CIF parsing
     using CIF grammar and tokenisation of the file.
 
+.. _codtools_installation:
 
 Installation
 ^^^^^^^^^^^^

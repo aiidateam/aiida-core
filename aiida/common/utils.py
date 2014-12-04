@@ -397,3 +397,17 @@ def gzip_string(string):
         g.write(string)
         g.close()
         return f.read()
+
+def gunzip_string(string):
+    """
+    Gunzip string contents.
+
+    :param string: a gzipped string
+    :return: a string
+    """
+    import tempfile,gzip
+    with tempfile.NamedTemporaryFile() as f:
+        f.write(string)
+        f.flush()
+        g = gzip.open(f.name,'rb')
+        return g.read()

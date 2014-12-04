@@ -33,6 +33,7 @@ class Calculation(VerdiCommandWithSubcommands):
             'outputls': (self.calculation_outputls, self.complete_none),
             'inputcat': (self.calculation_inputcat, self.complete_none),
             'outputcat': (self.calculation_outputcat, self.complete_none),
+            'res': (self.calculation_res, self.complete_none),
             'show': (self.calculation_show, self.complete_none),
             'plugins': (self.calculation_plugins, self.complete_plugins),
             'cleanworkdir': (self.calculation_cleanworkdir, self.complete_none),
@@ -172,6 +173,54 @@ class Calculation(VerdiCommandWithSubcommands):
                                      all_users=parsed_args.all_users,
                                      group=parsed_args.group,
                                      relative_ctime=parsed_args.relative_ctime) 
+    
+    def calculation_res(self, *args):
+        """
+        Print all or somoe data from the "res" output node.
+        """
+        from aiida.orm.calculation import Calculation as OrmCalculation
+        from aiida.common.exceptions import NotExistent
+        from aiida.cmdline import print_dictionary
+        
+        import argparse
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Show calculation results (from calc.res)')
+        parser.add_argument('PK', type=int, default=None,
+                            help="PK of the calculation object whose results "
+                                 "must be shown.")
+        parser.add_argument('-f', '--format', type=str, default='json+date',
+                    help="Format for the output.")
+        parser.add_argument('-k', '--keys', nargs='+', type=str,
+                    help="Show only the selected keys.")
+        args = list(args)
+        parsed_args = parser.parse_args(args)
+
+        load_dbenv()
+        
+        try:
+            calc = OrmCalculation.get_subclass_from_pk(int(parsed_args.PK))
+        except ValueError:
+            print >> sys.stderr, "*** {}: Not a valid PK".format(parsed_args.PK)
+            sys.exit(1)
+        except NotExistent:
+            print >> sys.stderr, "*** {}: Not a valid calculation".format(
+                parsed_args.PK)
+            sys.exit(1)
+
+        full_dict = calc.res._get_dict()
+        if parsed_args.keys:
+            try:
+                the_dict = {k: full_dict[k] for k in parsed_args.keys}
+            except KeyError as e:
+                print >> sys.stderr, ("The key '{}' was not found in the .res "
+                                      "dictionary".format(e.message))
+                sys.exit(1)
+        else:
+            # Return all elements
+            the_dict = full_dict
+
+        print_dictionary(the_dict, format=parsed_args.format)
     
     def calculation_show(self, *args):
         from aiida.common.exceptions import NotExistent

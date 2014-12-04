@@ -1957,6 +1957,12 @@ class CalculationResultManager(object):
         for k in calc_attributes:
             yield k
     
+    def _get_dict(self):
+        """
+        Return a dictionary of all results
+        """
+        return self._parser.get_result_dict()
+    
     def __getattr__(self,name):
         """
         interface to get to the parser results as an attribute.

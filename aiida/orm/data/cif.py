@@ -105,9 +105,11 @@ def encode_textfield_ncr(content):
         if 'postfix' in m.groupdict().keys():
             postfix = m.group('postfix')
         return prefix + '&#' + str(ord(m.group('chr'))) + ';' + postfix
+    content = re.sub('(?P<chr>[&\t])',match2ncr,content)
     content = re.sub('(?P<chr>[^\x09\x0A\x0D\x20-\x7E])',match2ncr,content)
     content = re.sub('^(?P<chr>;)',match2ncr,content)
     content = re.sub('(?P<prefix>\n)(?P<chr>;)',match2ncr,content)
+    content = re.sub('^(?P<chr>[\.\?])$',match2ncr,content)
     return content
 
 def decode_textfield_ncr(content):
@@ -117,7 +119,10 @@ def decode_textfield_ncr(content):
     :param content: a string with contents
     :return: decoded string
     """
-    raise NotImplementedError("not implemented yet")
+    import re
+    def match2str(m):
+        return chr(int(m.group(1)))
+    return re.sub('&#(\d+);',match2str,content)
 
 def encode_textfield_gzip_base64(content,**kwargs):
     """

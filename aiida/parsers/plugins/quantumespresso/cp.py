@@ -32,13 +32,11 @@ class CpParser(Parser):
 
         super(CpParser, self).__init__(calc)
             
-    def parse_from_calc(self):
+    def parse_with_retrieved(self,retrieved):
         """
-        Parses the datafolder, stores results.
-        Main functionality of the class.
-        
-        :return successful bool: to state if the calculation has Failed or not.
-        """
+        Receives in input a dictionary of retrieved nodes.
+        Does all the logic here.
+        """       
         from aiida.common.exceptions import InvalidOperation
         import os,copy
         import numpy # TrajectoryData also uses numpy arrays
@@ -58,9 +56,10 @@ class CpParser(Parser):
         # TODO: pass this input_dict to the parser. It might need it.            
         input_dict = self._calc.inp.parameters.get_dict()
         
-        # select the folder object
-        out_folder = self._calc.get_retrieved_node()
-        if out_folder is None:
+        # Check that the retrieved folder is there 
+        try:
+            out_folder = retrieved[self._calc._get_linkname_retrieved()]
+        except KeyError:
             self.logger.error("No retrieved folder found")
             return False, ()
 

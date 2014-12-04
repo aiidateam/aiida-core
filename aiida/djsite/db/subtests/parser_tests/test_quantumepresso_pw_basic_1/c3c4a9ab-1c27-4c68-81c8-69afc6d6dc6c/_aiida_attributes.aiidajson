@@ -1,0 +1,96 @@
+{
+  "kinds": [
+    {
+      "symbols": [
+        "SBa"
+      ], 
+      "weights": [
+        1.0
+      ], 
+      "mass": 137.33, 
+      "name": "SBa"
+    }, 
+    {
+      "symbols": [
+        "STi"
+      ], 
+      "weights": [
+        1.0
+      ], 
+      "mass": 47.88, 
+      "name": "STi"
+    }, 
+    {
+      "symbols": [
+        "SO"
+      ], 
+      "mass": 15.9994, 
+      "weights": [
+        1.0
+      ], 
+      "name": "SO"
+    }
+  ], 
+  "pbc3": true, 
+  "pbc2": true, 
+  "pbc1": true, 
+  "sites": [
+    {
+      "position": [
+        0.208860759493671, 
+        0.0, 
+        0.0
+      ], 
+      "kind_name": "SBa"
+    }, 
+    {
+      "position": [
+        2.20886075949367, 
+        2.0, 
+        2.0
+      ], 
+      "kind_name": "STi"
+    }, 
+    {
+      "position": [
+        2.20886075949367, 
+        2.0, 
+        0.0
+      ], 
+      "kind_name": "SO"
+    }, 
+    {
+      "position": [
+        2.20886075949367, 
+        0.0, 
+        2.0
+      ], 
+      "kind_name": "SO"
+    }, 
+    {
+      "position": [
+        0.208860759493671, 
+        2.0, 
+        2.0
+      ], 
+      "kind_name": "SO"
+    }
+  ], 
+  "cell": [
+    [
+      4.0, 
+      0.0, 
+      0.0
+    ], 
+    [
+      0.0, 
+      4.0, 
+      0.0
+    ], 
+    [
+      0.0, 
+      0.0, 
+      4.0
+    ]
+  ]
+}

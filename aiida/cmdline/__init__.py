@@ -71,7 +71,8 @@ def _print_dictionary_json_date(dictionary):
         raise TypeError(repr(data) + " is not JSON serializable")
 
     import json
-    print json.dumps(dictionary, indent=2, default=default_jsondump)
+    print json.dumps(dictionary, indent=2, sort_keys = True,
+                     default=default_jsondump)
 
 
 def print_dictionary(dictionary, format):

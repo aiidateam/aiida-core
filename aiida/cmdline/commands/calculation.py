@@ -311,57 +311,39 @@ class Calculation(VerdiCommandWithSubcommands):
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
             description='Output the content of a file in the repository folder.')
-        parser.add_argument('-p', '--pk', type=int, required=True, 
-                            help='The pk of the node')
-        parser.add_argument('-d', '--default', action='store_true', 
-                            help="Open the default output file, if specified "
-                            "by the Calculation plugin. If specified, do not "
-                            "pass any 'path'")
-        parser.add_argument('path', type=str, default=None, nargs='?',
-                            help='The relative path of the file you '
-                            'want to show. You must specify it if you do not '
-                            'pass the --default flag')
+        parser.add_argument('calc', metavar='PK', type=int, 
+                            help='The pk of the calculation')
+        parser.add_argument('-p','--path', type=str, default=None, nargs='?',
+                            help="The relative path of the file you "
+                                 "want to show. Take the default input file if "
+                                 "it is not specified")
         
         args = list(args)
         parsed_args = parser.parse_args(args)
-
-        if parsed_args.default and parsed_args.path:
-            sys.stderr.write(parser.format_usage())
-            sys.stderr.write("{}: error: If you pass --default, "
-                "you cannot pass also a path.\n".format(
-                    self.get_full_command_name()))
-            sys.exit(1)
-            
-        if not parsed_args.default and not parsed_args.path:
-            sys.stderr.write(parser.format_usage())
-            sys.stderr.write("{}: error: pass either --default "
-                "or a path.\n".format(
-                    self.get_full_command_name()))
-            sys.exit(1)
 
         load_dbenv()
         from aiida.orm import Calculation as OrmCalculation        
         from aiida.common.pluginloader import get_class_typestring
         
         try:
-            n = OrmCalculation.get_subclass_from_pk(parsed_args.pk)
+            calc = OrmCalculation.get_subclass_from_pk(parsed_args.calc)
         except NotExistent as e:
             print >> sys.stderr, e.message
             sys.exit(1)
 
         path = parsed_args.path
-        if parsed_args.default:
-            path = n._DEFAULT_INPUT_FILE
+        if path is None:
+            path = calc._DEFAULT_INPUT_FILE
             if path is None:
                 base_class, plugin_string, class_name = get_class_typestring(
-                    n._plugin_type_string)
+                    calc._plugin_type_string)
                 print >> sys.stderr, ("Calculation '{}' does not define a "
                     "default input file. Please specify a path "
                     "explicitly".format(plugin_string))
                 sys.exit(1)
         
         try:
-            cat_repo_files(n, os.path.join('raw_input', path))
+            cat_repo_files(calc, os.path.join('raw_input', path))
         except ValueError as e:
             print >> sys.stderr, e.message
             sys.exit(1)
@@ -485,56 +467,38 @@ class Calculation(VerdiCommandWithSubcommands):
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
             description='Output the content of a file in the repository folder.')
-        parser.add_argument('-p', '--pk', type=int, required=True, 
-                            help='The pk of the node')
-        parser.add_argument('-d', '--default', action='store_true', 
-                            help="Open the default output file, if specified "
-                            "by the Calculation plugin. If specified, do not "
-                            "pass any 'path'")
-        parser.add_argument('path', type=str, default=None, nargs='?',
-                            help='The relative path of the file you '
-                            'want to show. You must specify it if you do not '
-                            'pass the --default flag')
+        parser.add_argument('calc', metavar='PK', type=int,
+                            help='The pk of the calculation')
+        parser.add_argument('-p','--path', type=str, default=None, nargs='?',
+                            help="The relative path of the file you "
+                                 "want to show. Take the default output file if "
+                                 "it is not specified")
         args = list(args)
         parsed_args = parser.parse_args(args)
 
-        if parsed_args.default and parsed_args.path:
-            sys.stderr.write(parser.format_usage())
-            sys.stderr.write("{}: error: If you pass --default, "
-                "you cannot pass also a path.\n".format(
-                    self.get_full_command_name()))
-            sys.exit(1)
-            
-        if not parsed_args.default and not parsed_args.path:
-            sys.stderr.write(parser.format_usage())
-            sys.stderr.write("{}: error: pass either --default "
-                "or a path.\n".format(
-                    self.get_full_command_name()))
-            sys.exit(1)
-        
         load_dbenv()
         from aiida.orm import Calculation as OrmCalculation        
         from aiida.common.pluginloader import get_class_typestring
         
         try:
-            n = OrmCalculation.get_subclass_from_pk(parsed_args.pk)
+            calc = OrmCalculation.get_subclass_from_pk(parsed_args.calc)
         except NotExistent as e:
             print >> sys.stderr, e.message
             sys.exit(1)
 
         path = parsed_args.path
-        if parsed_args.default:
-            path = n._DEFAULT_OUTPUT_FILE
+        if path is None:
+            path = calc._DEFAULT_OUTPUT_FILE
             if path is None:
                 base_class, plugin_string, class_name = get_class_typestring(
-                    n._plugin_type_string)
+                    calc._plugin_type_string)
                 print >> sys.stderr, ("Calculation '{}' does not define a "
                     "default output file. Please specify a path "
                     "explicitly".format(plugin_string))
                 sys.exit(1)
 
         try:
-            parsed_node = n.out.retrieved
+            parsed_node = calc.out.retrieved
         except AttributeError:
             print >> sys.stderr, ("No 'retrieved' node found. Have the "
                 "calculation files already been retrieved?")

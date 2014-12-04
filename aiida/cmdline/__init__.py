@@ -23,7 +23,7 @@ def wait_for_confirmation(valid_positive=["Y", "y"], valid_negative=["N", "n"],
     :param catch_ctrl_c: If True, a CTRL+C command is catched and interpreted
         as a negative response. If False, CTRL+C is not catched.
     
-    :returns: True if the reply fas positive, False if it was negative.
+    :returns: True if the reply was positive, False if it was negative.
     """
     import sys
     
@@ -52,6 +52,41 @@ def wait_for_confirmation(valid_positive=["Y", "y"], valid_negative=["N", "n"],
             return False
         else:
             raise
+
+def _print_dictionary_json_date(dictionary):
+    """
+    Print a dictionary using the json format (with indent=2),
+    and converting dates to strings.
+    """
+    def default_jsondump(data):
+        """
+        Function needed to decode datetimes, that would otherwise
+        not be JSON-decodable
+        """
+        import datetime 
+
+        if isinstance(data, datetime.datetime):
+            return data.strftime('%Y-%m-%dT%H:%M:%S.%f%z')
+        
+        raise TypeError(repr(data) + " is not JSON serializable")
+
+    import json
+    print json.dumps(dictionary, indent=2, default=default_jsondump)
+
+
+def print_dictionary(dictionary, format):
+    import sys
+    valid_formats_table = {'json+date': _print_dictionary_json_date}
+    
+    try:
+        actual_printing_function = valid_formats_table[format]
+    except KeyError:
+        print >> sys.stderr, ("Unrecognised printing format. Valid formats "
+            "are: {}".format(",".join(valid_formats_table.keys())))
+        sys.exit(1)
+
+    actual_printing_function(dictionary)
+    
           
 def pass_to_django_manage(argv):
     """

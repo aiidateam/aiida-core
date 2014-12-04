@@ -66,6 +66,46 @@ class Parser(object):
         """
         return self._linkname_outparams
     
+    def get_result_dict(self):
+        """
+        Return a dictionary with all results (faster than doing multiple queries)
+
+        :note: the function returns an empty dictionary if no output params node
+          can be found (either because the parser did not create it, or because
+          the calculation has not been parsed yet).
+        """
+        from aiida.common.exceptions import NotExistent
+
+        try:
+            resnode = self.get_result_parameterdata_node()
+        except NotExistent:
+            return {}
+        
+        return resnode.get_dict()
+        
+    def get_result_parameterdata_node(self):
+        """
+        Return the parameterdata node.
+        
+        :raise UniquenessError: if the node is not unique
+        :raise NotExistent: if the node does not exist
+        """
+        from aiida.orm.data.parameter import ParameterData
+        from aiida.common.exceptions import NotExistent
+                
+        out_parameters = self._calc.get_outputs(type=ParameterData,also_labels=True)
+        out_parameterdata = [ i[1] for i in out_parameters if i[0]==self.get_linkname_outparams() ]
+        
+        if not out_parameterdata:
+            raise NotExistent("No output .res ParameterData node found")
+        elif len(out_parameterdata) > 1:
+            from aiida.common.exceptions import UniquenessError
+            raise UniquenessError("Output ParameterData should be found once, "
+                                  "found it instead {} times"
+                                  .format(len(out_parameterdata)) )
+        
+        return out_parameterdata[0]
+
 
     def get_result_keys(self):
         """
@@ -76,26 +116,17 @@ class Parser(object):
           can be found (either because the parser did not create it, or because
           the calculation has not been parsed yet).
         
-        :raise: UniquenessError if more than one output node with the name
+        :raise UniquenessError: if more than one output node with the name
           self._get_linkname_outparams() is found. 
         """
-        from aiida.orm.data.parameter import ParameterData
-                
-        out_parameters = self._calc.get_outputs(type=ParameterData,also_labels=True)
-        out_parameterdata = [ i[1] for i in out_parameters if i[0]==self.get_linkname_outparams() ]
-        
-        if not out_parameterdata:
+        from aiida.common.exceptions import NotExistent
+
+        try:
+            resnode = self.get_result_parameterdata_node()
+        except NotExistent:
             return iter([])
-                
-        if len(out_parameterdata) > 1:
-            from aiida.common.exceptions import UniquenessError
-            raise UniquenessError("Output ParameterData should be found once, "
-                                  "found it instead {} times"
-                                  .format(len(out_parameterdata)) )
-        
-        out_parameterdata = out_parameterdata[0]
-        
-        return out_parameterdata.keys
+
+        return resnode.keys()
 
     def get_result(self,key_name):
         """
@@ -103,25 +134,10 @@ class Parser(object):
         The following method will should work for a generic parser,
         provided it has to query only one ParameterData object.
         """
-        from aiida.orm.data.parameter import ParameterData
-        
-        out_parameters = self._calc.get_outputs(type=ParameterData,also_labels=True)
-        out_parameterdata = [ i[1] for i in out_parameters if i[0]==self.get_linkname_outparams() ]
-        
-        if not out_parameterdata:
-            from aiida.common.exceptions import NotExistent
-            raise NotExistent("No output ParameterData found")
-        
-        if len(out_parameterdata) > 1:
-            from aiida.common.exceptions import UniquenessError
-            raise UniquenessError("Output ParameterData should be found once, "
-                                  "found it instead {} times"
-                                  .format(len(out_parameterdata)) )
-        
-        out_parameterdata = out_parameterdata[0]
+        resnode = self.get_result_parameterdata_node()
         
         try:
-            value = out_parameterdata.get_attr(key_name)
+            value = resnode.get_attr(key_name)
         except KeyError:
             from aiida.common.exceptions import ContentNotExistent
             raise ContentNotExistent("Key energy not found in results")

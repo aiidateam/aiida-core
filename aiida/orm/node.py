@@ -1137,11 +1137,11 @@ class Node(object):
                     continue
                 yield (k,v)
         else:          
-            attrlist = DbAttribute.list_all_node_elements(self.dbnode)
-            for attr in attrlist:
-                if not also_updatable and attr.key in updatable_list:
+            all_attrs = DbAttribute.get_all_values_for_node(self.dbnode)
+            for attr in all_attrs:
+                if not also_updatable and attr in updatable_list:
                     continue
-                yield (attr.key, attr.getvalue())
+                yield (attr, all_attrs[attr])
 
     def attrs(self):
         """

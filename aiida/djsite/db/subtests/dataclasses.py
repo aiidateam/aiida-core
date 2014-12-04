@@ -46,7 +46,7 @@ class TestCalcStatus(AiidaTestCase):
         self.assertEquals(c.get_state(), calc_states.SUBMITTING)
         
         # Try to reset a state and check that the proper exception is raised
-        with self.assertRaises(UniquenessError):
+        with self.assertRaises(ModificationNotAllowed):
             c._set_state(calc_states.SUBMITTING)
         
         # Set a different state and check

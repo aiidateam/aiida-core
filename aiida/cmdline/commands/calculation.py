@@ -420,13 +420,14 @@ class Calculation(VerdiCommandWithSubcommands):
             prog=self.get_full_command_name(),
             description='List input files in the repository folder.')
 
+        parser.add_argument('calc', metavar='PK', type=int, 
+                            help='The pk of the calculation')
+        parser.add_argument('-p','--path', type=str, default='', nargs='?',
+                            help="The relative path of the file you "
+                                 "want to show. If not specified, show content"
+                                 " of all the 'raw_input' directory")
         parser.add_argument('-c','--color', action='store_true',
                             help="Color folders with a different color")
-        parser.add_argument('-p', '--pk', type=int, required=True, 
-                            help='The pk of the node')
-        parser.add_argument('path', type=str, default='.', nargs='?',
-                            help='The relative path of the file you '
-                            'want to show')
         
         args = list(args)
         parsed_args = parser.parse_args(args)
@@ -435,13 +436,13 @@ class Calculation(VerdiCommandWithSubcommands):
         from aiida.orm import Node as OrmNode        
         
         try:
-            n = OrmNode.get_subclass_from_pk(parsed_args.pk)
+            calc = OrmNode.get_subclass_from_pk(parsed_args.calc)
         except NotExistent as e:
             print >> sys.stderr, e.message
             sys.exit(1)
         
         try:
-            list_repo_files(n, os.path.join('raw_input', parsed_args.path),
+            list_repo_files(calc, os.path.join('raw_input', parsed_args.path),
                             parsed_args.color)
         except ValueError as e:
             print >> sys.stderr, e.message
@@ -464,13 +465,14 @@ class Calculation(VerdiCommandWithSubcommands):
             prog=self.get_full_command_name(),
             description='List ourput files in the repository folder.')
 
+        parser.add_argument('calc', metavar='PK', type=int, 
+                            help='The pk of the calculation')
+        parser.add_argument('-p','--path', type=str, default='', nargs='?',
+                            help="The relative path of the file you "
+                                 "want to show. If not specified, show content"
+                                 " of all the 'path' directory")
         parser.add_argument('-c','--color', action='store_true',
                             help="Color folders with a different color")
-        parser.add_argument('-p', '--pk', type=int, required=True, 
-                            help='The pk of the node')
-        parser.add_argument('path', type=str, default='.', nargs='?',
-                            help='The relative path of the file you '
-                            'want to show')
         
         args = list(args)
         parsed_args = parser.parse_args(args)
@@ -479,13 +481,13 @@ class Calculation(VerdiCommandWithSubcommands):
         from aiida.orm import Node as OrmNode        
         
         try:
-            n = OrmNode.get_subclass_from_pk(parsed_args.pk)
+            calc = OrmNode.get_subclass_from_pk(parsed_args.calc)
         except NotExistent as e:
             print >> sys.stderr, e.message
             sys.exit(1)
 
         try:
-            parsed_node = n.out.retrieved
+            parsed_node = calc.out.retrieved
         except AttributeError:
             print >> sys.stderr, ("No 'retrieved' node found. Have the "
                 "calculation files already been retrieved?")

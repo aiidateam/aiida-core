@@ -38,12 +38,6 @@ class CiffilterParser(Parser):
         from aiida.common.exceptions import InvalidOperation
         import os
 
-        # load the error logger
-        from aiida.common import aiidalogger
-        from aiida.djsite.utils import get_dblogger_extra
-        parserlogger = aiidalogger.getChild('pwparser')
-        logger_extra = get_dblogger_extra(self._calc)
-
         output_path = None
         error_path  = None
         try:
@@ -51,12 +45,11 @@ class CiffilterParser(Parser):
         except InvalidOperation:
             raise
         except IOError as e:
-            parserlogger.error(e.message)
+            self.logger.error(e.message)
             return False, ()
 
         if output_path is None and error_path is None:
-            parserlogger.error("No output files found",
-                               extra=logger_extra)
+            self.logger.error("No output files found")
             return False, ()
 
         return True, self._get_output_nodes(output_path, error_path)

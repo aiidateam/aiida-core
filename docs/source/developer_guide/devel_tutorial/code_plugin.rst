@@ -451,12 +451,6 @@ A kind of template for writing such parser for the calculation class
             Parses the calculation-output datafolder, and stores
             results.
             """           
-            # load the error logger
-            from aiida.common import aiidalogger
-            from aiida.djsite.utils import get_dblogger_extra
-            parserlogger = aiidalogger.getChild('newparser')
-            logger_extra = get_dblogger_extra(self._calc)
-
             # check the calc status, not to overwrite anything
             state = calc.get_state()
             if state != calc_states.PARSING:
@@ -471,8 +465,12 @@ A kind of template for writing such parser for the calculation class
             input_param_name = self._calc.get_linkname('parameters')
             params = [i[1] for i in calc_input_parameterdata if i[0]==input_param_name]
             if len(params) != 1:
-                parserlogger.error("Found {} input_params instead of one"
-                                      .format(params),extra=logger_extra)
+                # Use self.logger to log errors, warnings, ...
+                # This will also add an entry to the DbLog table associated
+                # to the calculation that we are trying to parse, that can
+                # be then seen using 'verdi calculation logshow'
+                self.logger.error("Found {} input_params instead of one"
+                                      .format(params))
                 successful = False
                 calc_input = params[0]
 

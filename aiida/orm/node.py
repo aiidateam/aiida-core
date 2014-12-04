@@ -592,8 +592,8 @@ class Node(object):
             pass
 
         # If both are stored, remove also from the DB
-        if not self._to_be_stored and not src._to_be_stored:
-            self._remove_dblink_from(src, label)
+        if not self._to_be_stored:
+            self._remove_dblink_from(label)
 
     def _replace_dblink_from(self,src,label):
         """
@@ -881,8 +881,6 @@ class Node(object):
         if self._to_be_stored:
             self.dbnode.dbcomputer = DbComputer.get_dbcomputer(computer)
         else:
-            self.logger.error("Trying to change the computer of an already "
-                              "saved node: {}".format(self.uuid))
             raise ModificationNotAllowed(
                 "Node with uuid={} was already stored".format(self.uuid))
             
@@ -1560,8 +1558,6 @@ class Node(object):
             # between stored nodes.
             self._store_input_links(store_parents=False, only_stored=True)
         else:
-            self.logger.error("Trying to store an already saved node: "
-                              "pk={}".format(self.pk))
             raise ModificationNotAllowed(
                 "Node with pk={} was already stored".format(self.pk))
         

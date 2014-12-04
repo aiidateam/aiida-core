@@ -108,6 +108,21 @@ class Calculation(Node):
                },
             }
 
+    @property
+    def logger(self):
+        """
+        Get the logger of the Calculation object, so that it also logs to the
+        DB.
+        
+        :return: LoggerAdapter object, that works like a logger, but also has
+          the 'extra' embedded
+        """
+        import logging
+        from aiida.djsite.utils import get_dblogger_extra
+        
+        return logging.LoggerAdapter(logger=self._logger,
+                                     extra=get_dblogger_extra(self))
+
     def __dir__(self):
         """
         Allow to list all valid attributes, adding also the use_* methods
@@ -743,12 +758,11 @@ class Calculation(Node):
         
         :param state: a string with the state. This must be a valid string,
           from ``aiida.common.datastructures.calc_states``.
-        :raise: UniquenessError if the given state was already set.
+        :raise: ModificationNotAllowed if the given state was already set.
         """
         from django.db import transaction, IntegrityError
 
         from aiida.djsite.db.models import DbCalcState
-        from aiida.common.exceptions import UniquenessError
         from aiida.common.datastructures import sort_states
         
         if self._to_be_stored:
@@ -777,8 +791,8 @@ class Calculation(Node):
             with transaction.commit_on_success():
                 new_state = DbCalcState(dbnode=self.dbnode, state=state).save()
         except IntegrityError:
-            raise UniquenessError("Calculation pk={} already transited through "
-                                  "the state {}".format(self.pk, state))
+            raise ModificationNotAllowed("Calculation pk={} already transited through "
+                                         "the state {}".format(self.pk, state))
 
         # For non-imported states, also set in the attribute (so that, if we
         # export, we can still see the original state the calculation had.
@@ -1459,11 +1473,8 @@ class Calculation(Node):
             actually being submitted at the same time in another thread.
         """
         #TODO: Check if we want to add a status "KILLED" or something similar.
-        from aiida.djsite.utils import get_dblogger_extra
         from aiida.common.exceptions import InvalidOperation, RemoteOperationError
-        
-        logger_extra = get_dblogger_extra(self)    
-        
+                
         old_state = self.get_state()
         
         if (old_state == calc_states.NEW or 
@@ -1471,7 +1482,7 @@ class Calculation(Node):
             self._set_state(calc_states.FAILED)
             self.logger.warning("Calculation {} killed by the user "
                                 "(it was in {} state)".format(
-                                self.pk, old_state), extra=logger_extra)
+                                self.pk, old_state))
             return
         
         if old_state != calc_states.WITHSCHEDULER:
@@ -1499,8 +1510,7 @@ class Calculation(Node):
             # Do not set the state, but let the parser do its job
             #self._set_state(calc_states.FAILED)
             self.logger.warning("Calculation {} killed by the user "
-                                "(it was WITHSCHEDULER)".format(self.pk),
-                                extra=logger_extra)
+                                "(it was WITHSCHEDULER)".format(self.pk))
             
         
     def _presubmit(self, folder, use_unstored_links=False):

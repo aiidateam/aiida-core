@@ -42,6 +42,16 @@ def encode_textfield_base64(content,foldwidth=76):
                              for i in range(0,len(content),foldwidth)))
     return content
 
+def decode_textfield_base64(content):
+    """
+    Decodes the contents for CIF textfield from Base64.
+
+    :param content: a string with contents
+    :return: decoded string
+    """
+    import base64
+    return base64.standard_b64decode(content)
+
 def encode_textfield_quoted_printable(content):
     """
     Encodes the contents for CIF textfield in quoted-printable encoding.
@@ -69,6 +79,16 @@ def encode_textfield_quoted_printable(content):
     content = re.sub('^(?P<chr>[\.\?])$',match2qp,content)
     return content
 
+def decode_textfield_quoted_printable(content):
+    """
+    Decodes the contents for CIF textfield from quoted-printable encoding.
+
+    :param content: a string with contents
+    :return: decoded string
+    """
+    import quopri
+    return quopri.decodestring(content)
+
 def encode_textfield_ncr(content):
     """
     Encodes the contents for CIF textfield in Numeric Character Reference.
@@ -90,6 +110,15 @@ def encode_textfield_ncr(content):
     content = re.sub('(?P<prefix>\n)(?P<chr>;)',match2ncr,content)
     return content
 
+def decode_textfield_ncr(content):
+    """
+    Decodes the contents for CIF textfield from Numeric Character Reference.
+
+    :param content: a string with contents
+    :return: decoded string
+    """
+    raise NotImplementedError("not implemented yet")
+
 def encode_textfield_gzip_base64(content,**kwargs):
     """
     Gzips the given string and encodes it in Base64.
@@ -99,6 +128,17 @@ def encode_textfield_gzip_base64(content,**kwargs):
     """
     from aiida.common.utils import gzip_string
     return encode_textfield_base64(gzip_string(content),**kwargs)
+
+def decode_textfield_gzip_base64(content):
+    """
+    Decodes the contents for CIF textfield from Base64 and decompresses
+    them with gzip.
+
+    :param content: a string with contents
+    :return: decoded string
+    """
+    from aiida.common.utils import gunzip_string
+    return gunzip_string(decode_textfield_base64(content))
 
 def cif_from_ase(ase):
     """

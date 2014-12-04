@@ -42,22 +42,28 @@ class Parser(object):
         return logging.LoggerAdapter(logger=self._logger,
                                      extra=get_dblogger_extra(self._calc))
         
-    def parse_from_data(self,data):
+    def parse_with_retrieved(self,retrieved):
         """
-        Receives in input a datanode.
-        To be implemented.
-        Will be used by the user for eventual re-parsing of out-data,
-        for example with another or updated version of the parser
-        """
-        raise NotImplementedError
-            
-    def parse_from_calc(self):
-        """
-        Parses the datafolder, stores results.
-        Used by the Execmanager.
+        Receives in input a dictionary of retrieved nodes.
+        Implement all the logic in this function of the subclass.
         """
         raise NotImplementedError
 
+    def parse_from_calc(self):
+        """
+        Parses the datafolder, stores results.
+        Main functionality of the class. If you only have one retrieved node,
+        you do not need to reimplement this. Implement only the 
+        parse_from_retrieved
+        """
+        # select the folder object
+        out_folder = self._calc.get_retrieved_node()
+        if out_folder is None:
+            self.logger.error("No retrieved folder found")
+            return False, ()
+        
+        return self.parse_with_retrieved(
+            {self._calc._get_linkname_retrieved(): out_folder})
         
     @classmethod
     def get_linkname_outparams(self):

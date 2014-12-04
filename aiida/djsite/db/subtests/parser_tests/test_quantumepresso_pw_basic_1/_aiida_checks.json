@@ -1,0 +1,15 @@
+{
+  "output_parameters": {
+    "energy": {
+	"comparison": "almostEqual",
+	"value": -3699.26590536037
+    },
+    "energy_units": {
+	"comparison": "Equal",
+	"value": "eV"
+    }
+  }, 
+  "output_kpoints": {
+  }
+}
+

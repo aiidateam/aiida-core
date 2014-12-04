@@ -462,7 +462,11 @@ database (the ``pk``, i.e. the principal key, and the ``uuid``).
 
    verdi code list
    
-  and then get the information of a specific code with::
+  The ``verdi code list`` accepts some flags to filter only codes on a 
+  given computer, only codes using a specific plugin, etc.; use the ``-h``
+  command line option to see the documentation of all possible options.
+
+  You can then get the information of a specific code with::
 
    verdi code show "ID"
    

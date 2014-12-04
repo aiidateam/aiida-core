@@ -681,6 +681,7 @@ class StructureData(Data):
     def get_formula(self, mode='hill'):
         """
         Return a string with the chemical formula.
+
         :param mode:
             'hill' (default): Hill notation (alphabetical order, with C and H first if 
                 a C atom is present), e.g. 

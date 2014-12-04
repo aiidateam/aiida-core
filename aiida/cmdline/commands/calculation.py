@@ -696,8 +696,8 @@ class Calculation(VerdiCommandWithSubcommands):
                             dbattributes__in=q_state).distinct().order_by('mtime')
         
         if not parsed_args.force:
-            sys.stderr.write("Are you sure you want to clean the work directory? [Y/N] ".format(
-                            len(calc_list), "" if len(calc_list)==1 else "s"))
+            sys.stderr.write("Are you sure you want to clean the work directory? "
+                             "[Y/N] ")
             if not wait_for_confirmation():
                 sys.exit(0)
                 

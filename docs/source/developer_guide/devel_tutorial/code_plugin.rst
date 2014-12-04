@@ -388,7 +388,7 @@ The parser than has just a couple of tasks:
 	  a task of the daemon: never use a ``.store()`` method!
 
 Basically, you just need to specify an ``__init__()`` method, and a
-function ``parse_from_calc(calc)__``, which does the actual work.
+function ``parse_with_retrieved(calc, retrieved)__``, which does the actual work.
 
 The difficult and long part is the point 3, which is the actual
 parsing stage, which convert text into python objects.
@@ -446,10 +446,14 @@ A kind of template for writing such parser for the calculation class
             
             super(NewParser, self).__init__(calc)
 
-        def parse_from_calc(self):
+        def parse_with_retrieved(self, retrieved):
             """
             Parses the calculation-output datafolder, and stores
             results.
+            
+            :param retrieved: a dictionary of retrieved nodes, where the keys
+                are the link names of retrieved nodes, and the values are the
+                nodes.
             """           
             # check the calc status, not to overwrite anything
             state = calc.get_state()
@@ -473,6 +477,13 @@ A kind of template for writing such parser for the calculation class
                                       .format(params))
                 successful = False
                 calc_input = params[0]
+
+                # Check that the retrieved folder is there 
+                try:
+                    out_folder = retrieved[self._calc._get_linkname_retrieved()]
+                except KeyError:
+                    self.logger.error("No retrieved folder found")
+                    return False, ()
 
                 # check what is inside the folder
                 list_of_files = out_folder.get_folder_list()

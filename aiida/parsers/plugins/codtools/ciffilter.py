@@ -30,18 +30,18 @@ class CiffilterParser(Parser):
         if not isinstance(calc,CiffilterCalculation):
             raise ParsingError("Input calc must be a CiffilterCalculation")
 
-    def parse_from_calc(self):
+    def parse_with_retrieved(self,retrieved):
         """
-        Parses the datafolder, stores results.
-        Main functionality of the class.
-        """
+        Receives in input a dictionary of retrieved nodes.
+        Does all the logic here.
+        """       
         from aiida.common.exceptions import InvalidOperation
         import os
 
         output_path = None
         error_path  = None
         try:
-            output_path, error_path = self._fetch_output_files()
+            output_path, error_path = self._fetch_output_files(retrieved)
         except InvalidOperation:
             raise
         except IOError as e:
@@ -54,10 +54,13 @@ class CiffilterParser(Parser):
 
         return True, self._get_output_nodes(output_path, error_path)
 
-    def _fetch_output_files(self):
+    def _fetch_output_files(self, retrieved):
         """
         Checks the output folder for standard output and standard error
         files, returns their absolute paths on success.
+        
+        :param retrieved: A dictionary of retrieved nodes, as obtained from the
+          parser.
         """
         from aiida.common.exceptions import InvalidOperation
         import os
@@ -68,10 +71,11 @@ class CiffilterParser(Parser):
             raise InvalidOperation("Calculation not in {} state"
                                    .format(calc_states.PARSING) )
 
-        # select the folder object
-        out_folder = self._calc.get_retrieved_node()
-        if out_folder is None:
-            raise IOError("No retrieved folder found")
+        # Check that the retrieved folder is there 
+        try:
+            out_folder = retrieved[self._calc._get_linkname_retrieved()]
+        except KeyError:
+            raise IOError("No retrieved folder found")        
 
         list_of_files = out_folder.get_folder_list()
 

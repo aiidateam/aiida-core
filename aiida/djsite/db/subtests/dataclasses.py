@@ -307,6 +307,14 @@ class TestCifData(AiidaTestCase):
         Testing the logic of choosing the encoding and the process of
         encoding contents.
         """
+        def test_ncr(self,inp,out):
+            from aiida.orm.data.cif import encode_textfield_ncr, \
+                                           decode_textfield_ncr
+            encoded = encode_textfield_ncr(inp)
+            decoded = decode_textfield_ncr(out)
+            self.assertEquals(encoded,out)
+            self.assertEquals(decoded,inp)
+
         def test_quoted_printable(self,inp,out):
             from aiida.orm.data.cif import encode_textfield_quoted_printable, \
                                            decode_textfield_quoted_printable
@@ -329,6 +337,15 @@ class TestCifData(AiidaTestCase):
             encoded = encode_textfield_gzip_base64(text)
             decoded = decode_textfield_gzip_base64(encoded)
             self.assertEquals(text,decoded)
+
+        test_ncr(self,'.','&#46;')
+        test_ncr(self,'?','&#63;')
+        test_ncr(self,';\n','&#59;\n')
+        test_ncr(self,'line\n;line','line\n&#59;line')
+        test_ncr(self,'tabbed\ttext','tabbed&#9;text')
+        test_ncr(self,'angstrom Å','angstrom &#195;&#133;')
+        test_ncr(self,'<html>&#195;&#133;</html>',
+                      '<html>&#38;#195;&#38;#133;</html>')
 
         test_quoted_printable(self,'.','=2E')
         test_quoted_printable(self,'?','=3F')

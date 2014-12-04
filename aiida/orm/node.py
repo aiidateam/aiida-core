@@ -592,8 +592,8 @@ class Node(object):
             pass
 
         # If both are stored, remove also from the DB
-        if not self._to_be_stored and not src._to_be_stored:
-            self._remove_dblink_from(src, label)
+        if not self._to_be_stored:
+            self._remove_dblink_from(label)
 
     def _replace_dblink_from(self,src,label):
         """

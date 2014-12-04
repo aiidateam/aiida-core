@@ -716,25 +716,12 @@ class _Parameter(VerdiCommandWithSubcommands):
         """
         Show the content of a ParameterData node.
         """
+        from aiida.cmdline import print_dictionary
 
-        def default_jsondump(data):
-            """
-            Function needed to decode datetimes, that would otherwise
-            not be JSON-decodable
-            """
-            import datetime 
-
-            if isinstance(data, datetime.datetime):
-                return data.strftime('%Y-%m-%dT%H:%M:%S.%f%z')
-            
-            raise TypeError(repr(data) + " is not JSON serializable")
-
-        # TODO: do not hardcode formats, but use 'plugins' as e.g. for showing 
-        # TrajectoryData with different formats
-        import argparse,os
+        import argparse
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
-            description='Visualize trajectory.')
+            description='Show the content of a ParameterData.')
         parser.add_argument('-f', '--format', type=str, default='json+date',
                     help="Format for the output.")
         parser.add_argument('ID', type=int, default=None,
@@ -748,10 +735,4 @@ class _Parameter(VerdiCommandWithSubcommands):
 
         the_dict = pd.get_dict()
 
-        if parsed_args.format == 'json+date':
-            import json
-            print json.dumps(the_dict, indent=2, default=default_jsondump)
-        else:
-            print >> sys.stderr, "Unrecognised format... (only JSON supported at the moment)"
-            sys.exit(1)
-
+        print_dictionary(the_dict, parsed_args.format)

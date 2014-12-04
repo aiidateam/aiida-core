@@ -27,7 +27,6 @@ class ParameterData(Data):
         """
         return dict(self.iterattrs())
     
-    @property
     def keys(self):
         """
         Iterator of valid keys stored in the ParameterData object

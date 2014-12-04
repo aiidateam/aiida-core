@@ -11,7 +11,7 @@ from aiida.scheduler.datastructures import job_states
 from aiida.common.exceptions import (
     AuthenticationError,
     ConfigurationError,
-    UniquenessError,
+    ModificationNotAllowed,
     )
 from aiida.common import aiidalogger
     
@@ -100,13 +100,13 @@ def update_running_calcs_status(authinfo):
                             computed.append(c)
                             try:
                                 c._set_state(calc_states.COMPUTED)
-                            except UniquenessError:
+                            except ModificationNotAllowed:
                                 # Someone already set it, just skip
                                 pass
                         elif jobinfo.job_state == job_states.UNDETERMINED:
                             #try:
                             #    c._set_state(calc_states.UNDETERMINED)
-                            #except UniquenessError:
+                            #except ModificationNotAllowed:
                             #    # Someone already set it, just skip
                             #    pass                            
                             #execlogger.error("There is an undetermined calc "
@@ -118,7 +118,7 @@ def update_running_calcs_status(authinfo):
                             ## valid WITHSCHEDULER STATE.
                             pass
                         ## Do not set the WITHSCHEDULER state multiple times, 
-                        ## this would raise a UniquenessError
+                        ## this would raise a ModificationNotAllowed
                         #else:
                         #    c._set_state(calc_states.WITHSCHEDULER)
     
@@ -177,7 +177,7 @@ def update_running_calcs_status(authinfo):
                     # poll for this state, if we want to.
                     try:
                         c._set_state(calc_states.COMPUTED)
-                    except UniquenessError:
+                    except ModificationNotAllowed:
                         # Someone already set it, just skip
                         pass
 
@@ -312,7 +312,7 @@ def submit_jobs():
                 for calc in calcs_to_inquire:
                     try:
                         calc._set_state(calc_states.SUBMISSIONFAILED)
-                    except UniquenessError:
+                    except ModificationNotAllowed:
                         # Someone already set it, just skip
                         pass
                     logger_extra = get_dblogger_extra(calc)
@@ -396,7 +396,7 @@ def submit_jobs_with_authinfo(authinfo):
                 logger_extra = get_dblogger_extra(calc)
                 try:
                     calc._set_state(calc_states.SUBMISSIONFAILED)
-                except UniquenessError:
+                except ModificationNotAllowed:
                 # Someone already set it, just skip
                     pass
     
@@ -466,7 +466,7 @@ def submit_calc(calc, authinfo, transport=None):
     # I start to submit the calculation: I set the state
     try:
         calc._set_state(calc_states.SUBMITTING)
-    except UniquenessError:
+    except ModificationNotAllowed:
         raise ValueError("The calculation has already been submitted by "
                          "someone else!")
              
@@ -631,7 +631,7 @@ def submit_calc(calc, authinfo, transport=None):
             calc._set_job_id(job_id)
             # This should always be possible, because we should be
             # the only ones submitting this calculations, 
-            # so I do not check the UniquenessError
+            # so I do not check the ModificationNotAllowed
             calc._set_state(calc_states.WITHSCHEDULER)
             ## I do not set the state to queued; in this way, if the
             ## daemon is down, the user sees '(unknown)' as last state
@@ -649,7 +649,7 @@ def submit_calc(calc, authinfo, transport=None):
         import traceback
         try:
             calc._set_state(calc_states.SUBMISSIONFAILED)
-        except UniquenessError:
+        except ModificationNotAllowed:
             # Someone already set it, just skip
             pass
 
@@ -696,7 +696,7 @@ def retrieve_computed_for_authinfo(authinfo):
 
                 try:
                     calc._set_state(calc_states.RETRIEVING)
-                except UniquenessError:
+                except ModificationNotAllowed:
                     # Someone else has already started to retrieve it,
                     # just log and continue
                     execlogger.debug("Attempting to retrieve more than once "
@@ -830,7 +830,7 @@ def retrieve_computed_for_authinfo(authinfo):
                     if successful:
                         try:
                             calc._set_state(calc_states.FINISHED)
-                        except UniquenessError:
+                        except ModificationNotAllowed:
                             # I should have been the only one to set it, but
                             # in order to avoid unuseful error messages, I 
                             # just ignore
@@ -838,7 +838,7 @@ def retrieve_computed_for_authinfo(authinfo):
                     else:
                         try:
                             calc._set_state(calc_states.FAILED)
-                        except UniquenessError:
+                        except ModificationNotAllowed:
                             # I should have been the only one to set it, but
                             # in order to avoid unuseful error messages, I 
                             # just ignore
@@ -861,7 +861,7 @@ def retrieve_computed_for_authinfo(authinfo):
                         # TODO: add a 'comment' to the calculation
                         try:
                             calc._set_state(calc_states.PARSINGFAILED)
-                        except UniquenessError:
+                        except ModificationNotAllowed:
                             pass
                     else:
                         execlogger.error("Error retrieving calc {}. "
@@ -869,7 +869,7 @@ def retrieve_computed_for_authinfo(authinfo):
                             extra=newextradict)
                         try:
                             calc._set_state(calc_states.RETRIEVALFAILED)
-                        except UniquenessError:
+                        except ModificationNotAllowed:
                             pass
                         raise
 

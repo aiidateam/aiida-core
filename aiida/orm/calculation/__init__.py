@@ -758,12 +758,11 @@ class Calculation(Node):
         
         :param state: a string with the state. This must be a valid string,
           from ``aiida.common.datastructures.calc_states``.
-        :raise: UniquenessError if the given state was already set.
+        :raise: ModificationNotAllowed if the given state was already set.
         """
         from django.db import transaction, IntegrityError
 
         from aiida.djsite.db.models import DbCalcState
-        from aiida.common.exceptions import UniquenessError
         from aiida.common.datastructures import sort_states
         
         if self._to_be_stored:
@@ -792,8 +791,8 @@ class Calculation(Node):
             with transaction.commit_on_success():
                 new_state = DbCalcState(dbnode=self.dbnode, state=state).save()
         except IntegrityError:
-            raise UniquenessError("Calculation pk={} already transited through "
-                                  "the state {}".format(self.pk, state))
+            raise ModificationNotAllowed("Calculation pk={} already transited through "
+                                         "the state {}".format(self.pk, state))
 
         # For non-imported states, also set in the attribute (so that, if we
         # export, we can still see the original state the calculation had.

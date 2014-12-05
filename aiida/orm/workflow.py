@@ -790,8 +790,8 @@ class Workflow(object):
                 is_wf_step = getattr(next_method,"is_wf_step", None)
             except AttributeError:
                 raise AiidaException("Cannot add as next call a method not decorated as Workflow method")
-        else:
-            print "Next is an end call of {0} in {1}".format(caller_method, self.uuid)
+#        else:
+#            print "Next is an end call of {0} in {1}".format(caller_method, self.uuid)
             
         # Retrieve the caller method
         method_step = self.dbworkflowinstance.steps.get(name=caller_method, user=get_automatic_user())

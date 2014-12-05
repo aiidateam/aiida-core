@@ -381,7 +381,8 @@ and you will be guided through a process to setup your code.
 You will be asked for:
 
 * **label**:  A label to refer to this code. Note: this label is not enforced
-  to be unique. However, if you try to keep it unique, you can use it later
+  to be unique. However, if you try to keep it unique, at least within
+  the same computer, you can use it later
   to refer and use to your code. Otherwise, you need to remember its ID or UUID.
 
 * **description**: A human-readable description of this code (for instance "Quantum
@@ -454,13 +455,18 @@ database (the ``pk``, i.e. the principal key, and the ``uuid``).
    verdi code relabel "ID"
    
   (Without the quotation marks!) "ID" can either be the numeric ID (PK) of
-  the code (preferentially), or possibly its label, if the label is unique.
+  the code (preferentially), or possibly its label (or label@computername), 
+  if this string uniquely identifies a code.
 
   You can also list all available codes (and their relative IDs) with::
 
    verdi code list
    
-  and then get the information of a specific code with::
+  The ``verdi code list`` accepts some flags to filter only codes on a 
+  given computer, only codes using a specific plugin, etc.; use the ``-h``
+  command line option to see the documentation of all possible options.
+
+  You can then get the information of a specific code with::
 
    verdi code show "ID"
    

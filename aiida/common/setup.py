@@ -459,12 +459,44 @@ class _NoDefaultValue(object):
 # 2. the type
 # 3. A human-readable description
 # 4. The default value, if no setting is found
+# 5. A list of valid values, or None if no such list makes sense
 _property_table = {
     "tests.use_sqlite": (
         "use_inmemory_sqlite_for_tests",
         "bool",
         "Whether to use an in-memory SQLite DB for tests",
-        True),
+        True,
+        None),
+    "logging.aiida_loglevel": (
+        "logging_aiida_log_level",
+        "string",
+        "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log "
+        "and to the DbLog table for the 'aiida' logger; for the DbLog, see "
+        "also the logging.db_loglevel variable to further filter messages going "
+        "to the database",
+        "WARNING",
+        ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"]),
+    "logging.paramiko_loglevel": (
+        "logging_paramiko_log_level",
+        "string",
+        "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log "
+        "for the 'paramiko' logger",
+        "WARNING",
+        ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"]),
+    "logging.celery_loglevel": (
+        "logging_celery_log_level",
+        "string",
+        "Minimum level to log to the file ~/.aiida/daemon/log/aiida_daemon.log "
+        "for the 'celery' logger",
+        "WARNING",
+        ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"]),
+   "logging.db_loglevel": (
+        "logging_db_log_level",
+        "string",
+        "Minimum level to log to the DbLog table",
+        "WARNING",
+        ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"])
+
     }
 
 def exists_property(name):
@@ -483,7 +515,7 @@ def exists_property(name):
     from aiida.common.exceptions import ConfigurationError
     
     try:
-        key, _, _, table_defval = _property_table[name]
+        key, _, _, table_defval, _ = _property_table[name]
     except KeyError:
         raise ValueError("{} is not a recognized property".format(name))
     
@@ -510,7 +542,7 @@ def get_property(name, default=_NoDefaultValue()):
     from aiida.common.exceptions import ConfigurationError
     
     try:
-        key, _, _, table_defval = _property_table[name]
+        key, _, _, table_defval, _ = _property_table[name]
     except KeyError:
         raise ValueError("{} is not a recognized property".format(name))
     
@@ -539,7 +571,7 @@ def del_property(name):
     from aiida.common.exceptions import ConfigurationError
     
     try:
-        key, _, _, _ = _property_table[name]
+        key, _, _, _, _ = _property_table[name]
     except KeyError:
         raise ValueError("{} is not a recognized property".format(name))
     
@@ -568,7 +600,7 @@ def set_property(name, value):
     from aiida.common.exceptions import ConfigurationError
 
     try:
-        key, type_string, _, _ = _property_table[name]
+        key, type_string, _, _, valid_values = _property_table[name]
     except KeyError:
         raise ValueError("'{}' is not a recognized property".format(name))
 
@@ -584,11 +616,18 @@ def set_property(name, value):
                 raise ValueError("Invalid bool value for property {}".format(name))
         else:
             actual_value = bool(value)
+    elif type_string == "string":
+        actual_value = unicode(value)
     else:
         # Implement here other data types
         raise NotImplementedError("Type string '{}' not implemented yet".format(
             type_string))
-        
+    
+    if valid_values is not None:
+        if actual_value not in valid_values:
+            raise ValueError("'{}' is not among the list of accepted values "
+                             "for proprety {}".format(actual_value, name)) 
+    
     try:
         config = get_config()
     except ConfigurationError:

@@ -291,7 +291,7 @@ class TestParsers(AiidaTestCase):
                                 "in '{}' in "
                                 "the test file".format(e.message,
                                                        attr_test, test_node_name))
-                        if comparison == "almostEqual":
+                        if comparison == "AlmostEqual":
                             self.assertAlmostEqual(dbdata,value,
                                 msg="Failed test for {}->{}".format(
                                     test_node_name, attr_test))

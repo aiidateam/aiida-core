@@ -27,6 +27,7 @@ class Data(VerdiCommandRouter):
             'structure': _Structure,
             'cif': _Cif,
             'trajectory': _Trajectory,
+            'parameter': _Parameter,
             }
 
 # Note: this class should not be exposed directly in the main module,
@@ -696,3 +697,42 @@ class _Trajectory(VerdiCommandWithSubcommands):
                     sys.exit(1)
                 else:
                     raise
+
+
+class _Parameter(VerdiCommandWithSubcommands):
+    """
+    View and manipulate Parameter data classes.
+    """
+
+    def __init__(self):
+        """
+        A dictionary with valid commands and functions to be called.
+        """
+        self.valid_subcommands = {
+            'show': (self.show, self.complete_none),
+            }
+
+    def show(self, *args):
+        """
+        Show the content of a ParameterData node.
+        """
+        from aiida.cmdline import print_dictionary
+
+        import argparse
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Show the content of a ParameterData.')
+        parser.add_argument('-f', '--format', type=str, default='json+date',
+                    help="Format for the output.")
+        parser.add_argument('ID', type=int, default=None,
+                            help="ID of the ParameterData object to be shown.")
+        args = list(args)
+        parsed_args = parser.parse_args(args)
+
+        load_dbenv()
+        from aiida.orm.data.parameter import ParameterData
+        pd = ParameterData.get_subclass_from_pk(parsed_args.ID)
+
+        the_dict = pd.get_dict()
+
+        print_dictionary(the_dict, parsed_args.format)

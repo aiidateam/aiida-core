@@ -198,12 +198,9 @@ However, we need still a few steps to properly configure AiiDA for your user.
   add a line similar to the following to the ``~/.bashrc`` and then open
   a new shell::
 
-    export DYLD_LIBRARY_PATH=/usr/lib:/Library/PostgreSQL/9.3/lib:$DYLD_LIBRARY_PATH
+    export DYLD_FALLBACK_LIBRARY_PATH=/Library/PostgreSQL/9.3/lib:$DYLD_FALLBACK_LIBRARY_PATH
 
- You should adapt the path to the PostgreSQL libraries, and also remember
- to put before the PostgreSQL path the default path of your system (in 
- this example ``/usr/lib``), because some libraries (notably ``iconv``) 
- have a different version in the system path and in the PostgreSQL path.
+  (you should of course adapt the path to the PostgreSQL libraries).
 
 .. _Stackoverflow link: http://stackoverflow.com/questions/21079820/how-to-find-pg-config-pathlink
 
@@ -440,6 +437,43 @@ on computational resource as a cluster or a supercomputer, on which you want
 to run your calculations) *and one code*. The documentation for these steps can
 be found :doc:`here<setup/computerandcodes>`.
 
+
+Optional dependencies
++++++++++++++++++++++
+
+CIF manipulation
+----------------
+
+For the manipulation of `Crystallographic Information Framework (CIF) files`_,
+following dependencies are required to be installed:
+
+* `PyCifRW`_
+* `jmol`_
+* `Atomic Simulation Environment (ASE)`_
+* :doc:`cod-tools<plugins/codtools/index>`
+
+First two can be installed from the default repositories::
+
+    sudo pip install pycifrw
+    sudo apt-get install jmol
+
+ASE has to be installed from source::
+
+    curl https://wiki.fysik.dtu.dk/ase-files/python-ase-3.8.1.3440.tar.gz > python-ase-3.8.1.3440.tar.gz
+    gunzip python-ase-3.8.1.3440.tar.gz
+    tar -xvf python-ase-3.8.1.3440.tar
+    cd python-ase-3.8.1.3440
+    setup.py build
+    setup.py install
+    export PYTHONPATH=$(pwd):$PYTHONPATH
+
+For the setting up of cod-tools please refer to
+:ref:`installation of cod-tools<codtools_installation>`.
+
+.. _Crystallographic Information Framework (CIF) files: http://www.iucr.org/resources/cif
+.. _Atomic Simulation Environment (ASE): https://wiki.fysik.dtu.dk/ase/
+.. _PyCifRW: https://pypi.python.org/pypi/PyCifRW/3.6.2
+.. _jmol: http://jmol.sourceforge.net
 
 Further comments and troubleshooting
 ++++++++++++++++++++++++++++++++++++

@@ -46,7 +46,8 @@ Following below, a list with the subcommands available.
     used code, all the input nodes and all the output nodes. 
   * **gotocomputer**: open a shell to the calc folder on the cluster
 
-.. note:: When using gotocomputer, be careful not to change any file that AiiDA created,
+.. note:: When using gotocomputer, be careful not to change any file
+  that AiiDA created,
   nor to modify the output files or resubmit the calculation, 
   unless you **really** know what you are doing, 
   otherwise AiiDA may get very confused!   
@@ -127,19 +128,37 @@ submission/retrieval of calculations.
 ++++++++++++++
 Manages database data objects.
 
-  *  **upf**: handles the Pseudopotential Datas
+  * **upf**: handles the Pseudopotential Datas
   
     * **listfamilies**: list presently stored families of pseudopotentials
     
     * **uploadfamily**: install a new family (group) of pseudopotentials
   
-  *  **structure**: handles the StructureData 
+  * **structure**: handles the StructureData
   
     * **list**: list currently saved nodes of StructureData kind
     
     * **show**: use a third-party visualizer (like vmd or xcrysden) 
       to graphically show the StructureData
 
+  * **parameter**: handles the ParameterData objects
+
+    * **show**: output the content of the python dictionary in different
+      formats. 
+
+  * **cif**: handles the CifData objects
+
+    * **list**: list currently saved nodes of CifData kind
+
+    * **show**: use third-party visualizer (like jmol) to graphically show
+      the CifData
+
+  * **trajectory**: handles the TrajectoryData objects
+
+    * **list**: list currently saved nodes of TrajectoryData kind
+
+    * **show**: use third-party visualizer (like jmol) to graphically show
+      the TrajectoryData
 
 ``verdi devel``
 +++++++++++++++

@@ -24,27 +24,28 @@ class SumParser(Parser):
             raise OutputParsingError("Input must calc must be a SumCalculation")
         self._calc = calculation
             
-    def parse_from_calc(self):
+    def parse_with_retrieved(self, retrieved):
         """
         Parses the datafolder, stores results.
         This parser for this simple code does simply store in the DB a node
         representing the file of forces in real space
         """
-        from aiida.common import aiidalogger
-        from aiida.djsite.utils import get_dblogger_extra
-        parserlogger = aiidalogger.getChild('sumparser')
-        logger_extra = get_dblogger_extra(self._calc)
-        
+      
         successful = True
         # select the folder object
-        out_folder = self._calc.get_retrieved_node()
+        # Check that the retrieved folder is there 
+        try:
+            out_folder = retrieved[self._calc._get_linkname_retrieved()]
+        except KeyError:
+            self.logger.error("No retrieved folder found")
+            return False, ()
         
         # check what is inside the folder
         list_of_files = out_folder.get_folder_list()
         # at least the stdout should exist
         if not self._calc._OUTPUT_FILE_NAME in list_of_files:
             successful = False
-            parserlogger.error("Output json not found",extra=logger_extra)
+            self.logger.error("Output json not found")
             return successful,()
         
         try:
@@ -52,7 +53,7 @@ class SumParser(Parser):
                 out_dict = json.load(f)
         except ValueError:
             successful=False
-            parserlogger.error("Error parsing the output json",extra=logger_extra)
+            self.logger.error("Error parsing the output json")
             return successful,()
         
         # save the arrays

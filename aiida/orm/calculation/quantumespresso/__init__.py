@@ -499,9 +499,6 @@ class BasePwCpInputGenerator(object):
         if symlink:
             if parent_calc_folder is not None:
                 # I put the symlink to the old parent ./out folder
-                import glob
-                if glob.has_magic(self._restart_copy_from):
-                    raise NotImplementedError("Implement the symlink with * patterns")
                 remote_symlink_list.append(
                         (parent_calc_folder.get_computer().uuid,
                          os.path.join(parent_calc_folder.get_remote_path(),

@@ -1,7 +1,7 @@
 {
   "output_parameters": {
     "energy": {
-	"comparison": "almostEqual",
+	"comparison": "AlmostEqual",
 	"value": -3699.26590536037
     },
     "energy_units": {

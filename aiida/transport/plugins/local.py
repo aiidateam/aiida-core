@@ -767,7 +767,7 @@ class LocalTransport(aiida.transport.Transport):
     def rename(self, src,dst):
         """
         Rename a file or folder from oldpath to newpath.
-
+        
         :param str oldpath: existing name of the file or folder
         :param str newpath: new name for the file or folder
 
@@ -790,14 +790,33 @@ class LocalTransport(aiida.transport.Transport):
         Create a symbolic link between the remote source and the remote 
         destination
         
-        :param remotesource: remote source
-        :param remotedestination:remote destination
+        :param (str) remotesource: remote source. Can contain a pattern.
+        :param (str) remotedestination: remote destination
         """
-        os.symlink(remotesource,remotedestination)
-    
+        remotesource = os.path.normpath(remotesource)
+        remotedestination = os.path.normpath(remotedestination)
+        
+        if self.has_magic(remotesource):
+            if self.has_magic(remotedestination):
+                # if there are patterns in dest, I don't know which name to assign
+                raise ValueError("Remotedestination cannot have patterns")
+            
+            # find all files matching pattern
+            for this_file in self.glob(remotesource):
+                # create the name of the link: take the last part of the path
+                this_remote_dest = os.path.split(this_file)[-1] 
+                
+                os.symlink( os.path.join(this_file),
+                            os.path.join(self.curdir,remotedestination,this_remote_dest) )
+        else:
+            try:
+                os.symlink( remotesource,
+                            os.path.join(self.curdir,remotedestination) )
+            except OSError:
+                raise OSError("!!: {}, {}, {}".format(remotesource,self.curdir,remotedestination))
+        
     def path_exists(self,path):
         """
         Check if path exists
         """
         return os.path.exists(os.path.join(self.curdir,path))
-        

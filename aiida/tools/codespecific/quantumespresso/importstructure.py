@@ -155,6 +155,8 @@ def import_qeinput(fname):
         else:
             raise Exception("ibrav [{0}] is not defined !".format(ibrav))
         
+        cell_angstrom = cellAlat * parameters[0] * bohr
+        return cell_angstrom
     
     def get_pos(pos, coord_type, alat, cell):
         
@@ -217,18 +219,18 @@ def import_qeinput(fname):
     atomic_masses_table = None
     
     #group(3)
-    nat_search    = re.compile(r'nat([\t ]+)?=([\t ]+)?([0-9]+)', re.IGNORECASE)
-    ntyp_search   = re.compile(r'ntyp([\t ]+)?=([\t ]+)?([0-9]+)', re.IGNORECASE)
-    ibrav_search  = re.compile(r'ibrav([\t ]+)?=([\t ]+)?(-?[0-9]+)', re.IGNORECASE)
+    nat_search    = re.compile(r'(?:^|[^A-Za-z0-9_])nat([\t ]+)?=([\t ]+)?([0-9]+)', re.IGNORECASE)
+    ntyp_search   = re.compile(r'(?:^|[^A-Za-z0-9_])ntyp([\t ]+)?=([\t ]+)?([0-9]+)', re.IGNORECASE)
+    ibrav_search  = re.compile(r'(?:^|[^A-Za-z0-9_])ibrav([\t ]+)?=([\t ]+)?(-?[0-9]+)', re.IGNORECASE)
     
-    celldm_search = re.compile(r'celldm([\t ]+)?\(([\t ]+)?([0-9]+)([\t ]+)?\)([\t ]+)?=([\t ]+)?([0-9\.DdeE-]*)', re.IGNORECASE)
+    celldm_search = re.compile(r'(?:^|[^A-Za-z0-9_])celldm([\t ]+)?\(([\t ]+)?([0-9]+)([\t ]+)?\)([\t ]+)?=([\t ]+)?([0-9\.DdeE-]*)', re.IGNORECASE)
     
-    a_search  = re.compile(r'a([\t ]+)?=([\t ]+)?(-?[0-9]+)', re.IGNORECASE)
-    b_search  = re.compile(r'b([\t ]+)?=([\t ]+)?(-?[0-9]+)', re.IGNORECASE)
-    c_search  = re.compile(r'c([\t ]+)?=([\t ]+)?(-?[0-9]+)', re.IGNORECASE)
-    cosab_search  = re.compile(r'cosab([\t ]+)?=([\t ]+)?(-?[0-9]+)', re.IGNORECASE)
-    cosac_search  = re.compile(r'cosac([\t ]+)?=([\t ]+)?(-?[0-9]+)', re.IGNORECASE)
-    cosbc_search  = re.compile(r'cosbc([\t ]+)?=([\t ]+)?(-?[0-9]+)', re.IGNORECASE)
+    a_search  = re.compile(r'(?:^|[^A-Za-z0-9_])a([\t ]+)?=([\t ]+)?(-?[0-9]+)', re.IGNORECASE)
+    b_search  = re.compile(r'(?:^|[^A-Za-z0-9_])b([\t ]+)?=([\t ]+)?(-?[0-9]+)', re.IGNORECASE)
+    c_search  = re.compile(r'(?:^|[^A-Za-z0-9_])c([\t ]+)?=([\t ]+)?(-?[0-9]+)', re.IGNORECASE)
+    cosab_search  = re.compile(r'(?:^|[^A-Za-z0-9_])cosab([\t ]+)?=([\t ]+)?(-?[0-9]+)', re.IGNORECASE)
+    cosac_search  = re.compile(r'(?:^|[^A-Za-z0-9_])cosac([\t ]+)?=([\t ]+)?(-?[0-9]+)', re.IGNORECASE)
+    cosbc_search  = re.compile(r'(?:^|[^A-Za-z0-9_])cosbc([\t ]+)?=([\t ]+)?(-?[0-9]+)', re.IGNORECASE)
     
     atomic_species  = re.compile(r'ATOMIC_SPECIES', re.IGNORECASE)
     atomic_position = re.compile(r'ATOMIC_POSITIONS', re.IGNORECASE)
@@ -263,7 +265,7 @@ def import_qeinput(fname):
         if cell_parameters.search(line) and nat>0 and ibrav==0 and cell is None:
             
             if celldm is not None and a is not None:
-                raise Exception("Cannot declare both celldm and A, B, C, cosAB, cosAC, cosBC")
+                raise Exception("Cannot declare both celldm and A, B, C, cosAB, cosAC, cosBC (a={}, celldm={})".format(a, celldm))
     
             if a is not None:
                 alat = a
@@ -334,7 +336,7 @@ def import_qeinput(fname):
     
     # Cell generation
     if celldm is not None and a is not None:
-        raise Exception("Cannot declare both celldm and A, B, C, cosAB, cosAC, cosBC")
+                raise Exception("Cannot declare both celldm and A, B, C, cosAB, cosAC, cosBC (a={}, celldm={})".format(a, celldm))
     
     if a is not None and \
        b is not None and \
@@ -353,7 +355,7 @@ def import_qeinput(fname):
     # Positions generation
     for i in range(len(atomic_pos)):
         atomic_pos[i] = get_pos(atomic_pos[i], pos_type, celldm[0], cell)
-       
+
     the_struc = struct.StructureData(cell=cell, pbc=True)
     for k in atomic_kinds:
         the_struc.append_kind(k)

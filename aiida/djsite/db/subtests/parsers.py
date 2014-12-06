@@ -156,6 +156,11 @@ def output_test(pk, outfolder):
     
     It is possible to simplify the file removing unwanted nodes. 
     
+    .. todo:: manage empty folders, that are not saved by GIT!
+       A temporary solution to find them and add a placeholder file::
+   
+        find . -type d -empty -print0 | xargs -0 -n1 -IXXX touch XXX/.placeholder
+
     One has then to create a suitable test file.
     """
     from aiida.orm import Calculation
@@ -185,8 +190,10 @@ def output_test(pk, outfolder):
 
     # Create an empty checks file
     with open(os.path.join(outfolder,'_aiida_checks.json'), 'w') as f:
-            json.dump({},f)
+        json.dump({},f)
 
+    import sys
+    print >> sys.stderr, "WARNING! Empty folders are not stored by GIT!! This needs to be fixed."
         
 def read_test(outfolder):
     """

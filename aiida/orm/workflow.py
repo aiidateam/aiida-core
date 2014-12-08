@@ -647,9 +647,9 @@ class Workflow(object):
         """
         
         if state is None:
-            return self.dbworkflowinstance.steps.all()#.values_list('name',flat=True)
+            return self.dbworkflowinstance.steps.all().order_by('time')#.values_list('name',flat=True)
         else:
-            return self.dbworkflowinstance.steps.filter(state=state)    
+            return self.dbworkflowinstance.steps.filter(state=state).order_by('time')
     
     def has_step(self,step_method):
         """

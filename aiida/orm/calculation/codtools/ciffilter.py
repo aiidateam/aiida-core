@@ -55,6 +55,7 @@ class CiffilterCalculation(Calculation):
         return retdict
 
     def _prepare_for_submission(self,tempfolder,inputdict):
+        from aiida.orm.calculation.codtools import commandline_params_from_dict
         try:
             cif = inputdict.pop(self.get_linkname('cif'))
         except KeyError:
@@ -72,23 +73,8 @@ class CiffilterCalculation(Calculation):
         shutil.copy( cif.get_file_abs_path(), input_filename )
 
         commandline_params = self._default_commandline_params
-        for k in parameters.get_dict().keys():
-            v = parameters.get_dict()[k]
-            if v is None:
-                continue
-            if not isinstance(v, list):
-                v = [ v ]
-            key = None
-            if len( k ) == 1:
-                key = "-{}".format( k )
-            else:
-                key = "--{}".format( k )
-            for val in v:
-                if isinstance(val, bool) and val == False:
-                    continue
-                commandline_params.append( key )
-                if not isinstance(val, bool):
-                    commandline_params.append( val )
+        commandline_params.extend(
+            commandline_params_from_dict( parameters.get_dict() ) )
 
         calcinfo = CalcInfo()
         calcinfo.uuid = self.uuid

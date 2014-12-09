@@ -43,13 +43,13 @@ class TestPort(AiidaTestCase):
 
         s = SandboxFolder()
         filename = os.path.join(s.abspath,"export.tar.gz")
-        export([calc.dbnode],outfile=filename)
+        export([calc.dbnode],outfile=filename,silent=True)
 
         self.tearDownClass()
         self.setUpClass()
         delete_computer(self.computer)
 
-        import_file(filename)
+        import_file(filename,silent=True)
         for i in range(1,3):
             node = Node.get_subclass_from_pk(i)
             for k in node.attrs():
@@ -69,7 +69,7 @@ class TestPort(AiidaTestCase):
 
         s = SandboxFolder()
         filename = os.path.join(s.abspath,"export.tar.gz")
-        export([sd.dbnode],outfile=filename)
+        export([sd.dbnode],outfile=filename,silent=True)
 
         unpack = SandboxFolder()
         with tarfile.open(filename, "r:gz", format=tarfile.PAX_FORMAT) as tar:
@@ -89,4 +89,4 @@ class TestPort(AiidaTestCase):
         delete_computer(self.computer)
 
         with self.assertRaises(ValueError):
-            import_file(filename)
+            import_file(filename,silent=True)

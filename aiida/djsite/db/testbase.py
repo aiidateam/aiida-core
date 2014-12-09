@@ -19,7 +19,8 @@ db_test_list = {
     'dataclasses': 'aiida.djsite.db.subtests.dataclasses',
     'qepw': 'aiida.djsite.db.subtests.quantumespressopw',
     'codtools': 'aiida.djsite.db.subtests.codtools',
-    'parsers': 'aiida.djsite.db.subtests.parsers' }
+    'parsers': 'aiida.djsite.db.subtests.parsers',
+    'port': 'aiida.djsite.db.subtests.port' }
 
 class AiidaTestCase(unittest.TestCase):
     """

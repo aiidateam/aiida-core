@@ -58,7 +58,6 @@ class TestPort(AiidaTestCase):
     def test_2(self):
         from aiida.cmdline.commands.exportfile import export
         from aiida.cmdline.commands.importfile import import_file
-        from aiida.orm.computer import delete_computer
         import json
         import tarfile
         from tarfile import TarInfo
@@ -86,7 +85,6 @@ class TestPort(AiidaTestCase):
 
         self.tearDownClass()
         self.setUpClass()
-        delete_computer(self.computer)
 
         with self.assertRaises(ValueError):
             import_file(filename,silent=True)

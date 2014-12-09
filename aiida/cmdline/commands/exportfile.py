@@ -203,7 +203,8 @@ def get_all_fields_info():
     return all_fields_info, unique_identifiers
 
 def export(what, also_parents = True, also_calc_outputs = True,
-           outfile = 'export_data.aiida.tar.gz', overwrite=False):     
+           outfile = 'export_data.aiida.tar.gz', overwrite=False,
+           silent=False):
     """
     Export the DB entries passed in the 'what' list on a file.
     
@@ -284,7 +285,8 @@ def export(what, also_parents = True, also_calc_outputs = True,
     ############################################################
     ##### Start automatic recursive export data generation #####
     ############################################################
-    print "STORING DATABASE ENTRIES..."
+    if not silent:
+        print "STORING DATABASE ENTRIES..."
     export_data = {}   
     while entries_to_add:
         new_entries_to_add = {}
@@ -340,16 +342,19 @@ def export(what, also_parents = True, also_calc_outputs = True,
     # I use .get because there may be no nodes to export
     all_nodes_pk = export_data.get(get_class_string(models.DbNode),{}).keys()
     if sum(len(model_data) for model_data in export_data.values()) == 0:
-        print "No nodes to store, exiting..."
+        if not silent:
+            print "No nodes to store, exiting..."
         return
     
-    print "Exporting a total of {} db entries, of which {} nodes.".format(
-        sum(len(model_data) for model_data in export_data.values()),
-        len(all_nodes_pk))
+    if not silent:
+        print "Exporting a total of {} db entries, of which {} nodes.".format(
+            sum(len(model_data) for model_data in export_data.values()),
+            len(all_nodes_pk))
     all_nodes_query = models.DbNode.objects.filter(pk__in=all_nodes_pk)
 
     ## ATTRIBUTES
-    print "STORING NODE ATTRIBUTES..."
+    if not silent:
+        print "STORING NODE ATTRIBUTES..."
     node_attributes = {}
     node_attributes_conversion = {}
     for n in all_nodes_query:
@@ -365,7 +370,8 @@ def export(what, also_parents = True, also_calc_outputs = True,
     #    'bval', 'tval', 'ival', 'fval', 'dval',
     #    'datatype', 'time', 'dbnode', 'key')
 
-    print "STORING NODE LINKS..."
+    if not silent:
+        print "STORING NODE LINKS..."
     ## All 'parent' links (in this way, I can automatically export a node 
     ## that will get automatically attached to a parent node in the end DB,
     ## if the parent node is already present in the DB)
@@ -379,11 +385,13 @@ def export(what, also_parents = True, also_calc_outputs = True,
          for l in linksquery.values(
               'input__uuid', 'output__uuid', 'label')]
 
-    print "STORING GROUP ELEMENTS..."
+    if not silent:
+        print "STORING GROUP ELEMENTS..."
     groups_uuid = {g.uuid: list(g.dbnodes.values_list('uuid', flat=True))
                    for g in groups_entries}
 
-    print groups_uuid
+    if not silent:
+        print groups_uuid
     
     ######################################
     # Now I store
@@ -393,7 +401,8 @@ def export(what, also_parents = True, also_calc_outputs = True,
         nodesubfolder = folder.get_subfolder('nodes',create=True,
                                              reset_limit=True)
     
-        print "STORING DATA..."
+        if not silent:
+            print "STORING DATA..."
         
         with open(folder.get_abs_path('data.json'), 'w') as f:
             json.dump({
@@ -414,7 +423,8 @@ def export(what, also_parents = True, also_calc_outputs = True,
         with open(folder.get_abs_path('metadata.json'), 'w') as f:
             json.dump(metadata, f)
     
-        print "STORING FILES..."
+        if not silent:
+            print "STORING FILES..."
     
         for pk in all_nodes_pk:
             # Maybe we do not need to get the subclass, if it is too slow?
@@ -433,7 +443,8 @@ def export(what, also_parents = True, also_calc_outputs = True,
             thisnodefolder.insert_path(src=node._repository_folder.abspath,
                                        dest_name='.')
     
-        print "COMPRESSING..."
+        if not silent:
+            print "COMPRESSING..."
     
         # PAX_FORMAT: virtually no limitations, better support for unicode
         #   characters
@@ -448,7 +459,8 @@ def export(what, also_parents = True, also_calc_outputs = True,
 #        import shutil
 #        shutil.make_archive(outfile, 'zip', folder.abspath)#, base_dir='aiida')
 
-    print "DONE."
+    if not silent:
+        print "DONE."
 
 
 class Export(VerdiCommand):

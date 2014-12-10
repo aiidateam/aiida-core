@@ -487,6 +487,58 @@ def has_vacancies(weights):
     """
     w_sum = sum(weights)
     return not(1. - w_sum < _sum_threshold)
+
+def symop_ortho_from_fract(cell):
+    """
+    Creates a matrix for conversion from orthogonal to fractional
+    coordinates.
+
+    Taken from
+    svn://www.crystallography.net/cod-tools/trunk/lib/perl5/Fractional.pm,
+    revision 850.
+
+    :param cell: array of cell parameters (three lengths and three angles)
+    """
+    import math
+    import numpy
+    a,b,c,alpha,beta,gamma = cell
+    alpha,beta,gamma = map(lambda x: math.pi * x / 180,
+                           alpha,beta,gamma)
+    ca,cb,cg = map(math.cos,[alpha,beta,gamma])
+    sg = math.sin(gamma)
+
+    return numpy.array([
+        [a, b*cg, c*cb],
+        [0, b*sg, c*(ca-cb*cg)/sg],
+        [0,    0, c*math.sqrt(sg*sg-ca*ca-cb*cb+2*ca*cb*cg)/sg]
+    ])
+
+def symop_fract_from_ortho(cell):
+    """
+    Creates a matrix for conversion from fractional to orthogonal
+    coordinates.
+
+    Taken from
+    svn://www.crystallography.net/cod-tools/trunk/lib/perl5/Fractional.pm,
+    revision 850.
+
+    :param cell: array of cell parameters (three lengths and three angles)
+    """
+    import math
+    import numpy
+    a,b,c,alpha,beta,gamma = cell
+    alpha,beta,gamma = map(lambda x: math.pi * x / 180,
+                           [alpha,beta,gamma])
+    ca,cb,cg = map(math.cos,[alpha,beta,gamma])
+    sg = math.sin(gamma)
+    ctg = cg/sg
+    D = math.sqrt(sg*sg - cb*cb - ca*ca + 2*ca*cb*cg)
+
+    return numpy.array([
+        [ 1.0/a, -(1.0/a)*ctg,  (ca*cg-cb)/(a*D)    ],
+        [     0,   1.0/(b*sg), -(ca-cb*cg)/(b*D*sg) ],
+        [     0,            0,          sg/(c*D)    ],
+    ])
             
 class StructureData(Data):
     """

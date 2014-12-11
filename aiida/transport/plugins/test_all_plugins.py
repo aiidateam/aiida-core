@@ -116,7 +116,7 @@ def run_for_all_plugins(actual_test_method):
 
 class TestDirectoryManipulation(unittest.TestCase):
     """
-    Test to check, create and delete folders.
+    Tests to check, create and delete folders.
     """
     @run_for_all_plugins
     def test_makedirs(self, custom_transport):
@@ -165,13 +165,13 @@ class TestDirectoryManipulation(unittest.TestCase):
     @run_for_all_plugins
     def test_rmtree(self, custom_transport):
         """
-        Verify the functioning of makedirs command
+        Verify the functioning of rmtree command
         """
         # Imports required later
         import random
         import string
         import os
-
+        
         with custom_transport as t:
             location = t.normalize(os.path.join('/','tmp'))
             directory = 'temp_dir_test'
@@ -193,6 +193,17 @@ class TestDirectoryManipulation(unittest.TestCase):
             t.rmtree('1')
             # verify the removal
             self.assertFalse( t.isdir('1') )
+                
+            # also tests that it works with a single file
+            # create file
+            local_file_name = 'file.txt'
+            text = 'Viva Verdi\n'
+            with open(os.path.join(t.getcwd(),local_file_name),'w') as f:
+                f.write(text)
+            # remove it
+            t.rmtree(local_file_name)
+            # verify the removal
+            self.assertFalse( t.isfile(local_file_name) )
                 
             t.chdir('..')
             t.rmdir(directory)

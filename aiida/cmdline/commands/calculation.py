@@ -25,6 +25,7 @@ class Calculation(VerdiCommandWithSubcommands):
         list.
         """
         self.valid_subcommands = {
+            'gotocomputer': (self.calculation_gotocomputer, self.complete_none),
             'list': (self.calculation_list, self.complete_none),
             'logshow': (self.calculation_logshow, self.complete_none),
             'kill': (self.calculation_kill, self.complete_none),
@@ -32,8 +33,10 @@ class Calculation(VerdiCommandWithSubcommands):
             'outputls': (self.calculation_outputls, self.complete_none),
             'inputcat': (self.calculation_inputcat, self.complete_none),
             'outputcat': (self.calculation_outputcat, self.complete_none),
+            'res': (self.calculation_res, self.complete_none),
             'show': (self.calculation_show, self.complete_none),
             'plugins': (self.calculation_plugins, self.complete_plugins),
+            'cleanworkdir': (self.calculation_cleanworkdir, self.complete_none),
             }
     
     def complete_plugins(self, subargs_idx, subargs):
@@ -47,7 +50,68 @@ class Calculation(VerdiCommandWithSubcommands):
         return_plugins = [_ for _ in plugins if _ not in other_subargs]
 #        print >> sys.stderr, "*", subargs
         return "\n".join(return_plugins)
+    
+    def calculation_gotocomputer(self,*args):
+        """
+        Open a shell to the calc folder on the cluster
+    
+        This command runs the 'manage.py shell' command, that opens a
+        IPython shell with the Django environment loaded.
+        """
+        from aiida.common.exceptions import NotExistent
+        from aiida.orm import Calculation
+        from aiida.orm import Node as AiidaOrmNode
+        from aiida import load_dbenv
+        
+        try:
+            calc_id = args[0]
+        except IndexError:
+            print >> sys.stderr, "Pass as further argument a calculation ID or UUID."
+            sys.exit(1)
+        try:
+            pk=int(calc_id)
+            is_pk=True
+        except ValueError:
+            uuid = calc_id
+            is_pk=False
 
+        print "Loading environment..."
+        load_dbenv()
+
+        try:
+            if is_pk:
+                calc = AiidaOrmNode.get_subclass_from_pk(pk)
+            else:
+                calc = AiidaOrmNode.get_subclass_from_pk(uuid)
+        except NotExistent:
+            print >> sys.stderr, "No node exists with ID={}.".format(calc_id)
+            sys.exit(1)
+
+        if not isinstance(calc,Calculation):
+            print >> sys.stderr, "Node with ID={} is not a calculation; it is a {}".format(
+                calc_id, calc.__class__.__name__)
+            sys.exit(1)
+
+        # get the transport
+        try:
+            t = calc._get_transport()
+        except NotExistent as e:
+            print >> sys.stderr, e.message
+            sys.exit(1)
+        # get the remote directory
+        remotedir = calc._get_remote_workdir()
+        if not remotedir:
+            print >> sys.stderr, "No remote work directory is set for this calculation!"
+            print >> sys.stderr, "(It is possible that the daemon did not submit the calculation yet)"
+            sys.exit(1)
+        
+        # get the command to run (does not require to open the connection!)
+        cmd_to_run = t.gotocomputer_command(remotedir)
+        # Connect (execute command)
+        print "Going the the remote folder..."
+        #print cmd_to_run
+        os.system(cmd_to_run)
+    
     def calculation_list(self, *args):
         """
         Return a list of calculations on screen. 
@@ -109,6 +173,54 @@ class Calculation(VerdiCommandWithSubcommands):
                                      all_users=parsed_args.all_users,
                                      group=parsed_args.group,
                                      relative_ctime=parsed_args.relative_ctime) 
+    
+    def calculation_res(self, *args):
+        """
+        Print all or somoe data from the "res" output node.
+        """
+        from aiida.orm.calculation import Calculation as OrmCalculation
+        from aiida.common.exceptions import NotExistent
+        from aiida.cmdline import print_dictionary
+        
+        import argparse
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Show calculation results (from calc.res)')
+        parser.add_argument('PK', type=int, default=None,
+                            help="PK of the calculation object whose results "
+                                 "must be shown.")
+        parser.add_argument('-f', '--format', type=str, default='json+date',
+                    help="Format for the output.")
+        parser.add_argument('-k', '--keys', nargs='+', type=str,
+                    help="Show only the selected keys.")
+        args = list(args)
+        parsed_args = parser.parse_args(args)
+
+        load_dbenv()
+        
+        try:
+            calc = OrmCalculation.get_subclass_from_pk(int(parsed_args.PK))
+        except ValueError:
+            print >> sys.stderr, "*** {}: Not a valid PK".format(parsed_args.PK)
+            sys.exit(1)
+        except NotExistent:
+            print >> sys.stderr, "*** {}: Not a valid calculation".format(
+                parsed_args.PK)
+            sys.exit(1)
+
+        full_dict = calc.res._get_dict()
+        if parsed_args.keys:
+            try:
+                the_dict = {k: full_dict[k] for k in parsed_args.keys}
+            except KeyError as e:
+                print >> sys.stderr, ("The key '{}' was not found in the .res "
+                                      "dictionary".format(e.message))
+                sys.exit(1)
+        else:
+            # Return all elements
+            the_dict = full_dict
+
+        print_dictionary(the_dict, format=parsed_args.format)
     
     def calculation_show(self, *args):
         from aiida.common.exceptions import NotExistent
@@ -248,57 +360,39 @@ class Calculation(VerdiCommandWithSubcommands):
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
             description='Output the content of a file in the repository folder.')
-        parser.add_argument('-p', '--pk', type=int, required=True, 
-                            help='The pk of the node')
-        parser.add_argument('-d', '--default', action='store_true', 
-                            help="Open the default output file, if specified "
-                            "by the Calculation plugin. If specified, do not "
-                            "pass any 'path'")
-        parser.add_argument('path', type=str, default=None, nargs='?',
-                            help='The relative path of the file you '
-                            'want to show. You must specify it if you do not '
-                            'pass the --default flag')
+        parser.add_argument('calc', metavar='PK', type=int, 
+                            help='The pk of the calculation')
+        parser.add_argument('-p','--path', type=str, default=None, nargs='?',
+                            help="The relative path of the file you "
+                                 "want to show. Take the default input file if "
+                                 "it is not specified")
         
         args = list(args)
         parsed_args = parser.parse_args(args)
-
-        if parsed_args.default and parsed_args.path:
-            sys.stderr.write(parser.format_usage())
-            sys.stderr.write("{}: error: If you pass --default, "
-                "you cannot pass also a path.\n".format(
-                    self.get_full_command_name()))
-            sys.exit(1)
-            
-        if not parsed_args.default and not parsed_args.path:
-            sys.stderr.write(parser.format_usage())
-            sys.stderr.write("{}: error: pass either --default "
-                "or a path.\n".format(
-                    self.get_full_command_name()))
-            sys.exit(1)
 
         load_dbenv()
         from aiida.orm import Calculation as OrmCalculation        
         from aiida.common.pluginloader import get_class_typestring
         
         try:
-            n = OrmCalculation.get_subclass_from_pk(parsed_args.pk)
+            calc = OrmCalculation.get_subclass_from_pk(parsed_args.calc)
         except NotExistent as e:
             print >> sys.stderr, e.message
             sys.exit(1)
 
         path = parsed_args.path
-        if parsed_args.default:
-            path = n._DEFAULT_INPUT_FILE
+        if path is None:
+            path = calc._DEFAULT_INPUT_FILE
             if path is None:
                 base_class, plugin_string, class_name = get_class_typestring(
-                    n._plugin_type_string)
+                    calc._plugin_type_string)
                 print >> sys.stderr, ("Calculation '{}' does not define a "
                     "default input file. Please specify a path "
                     "explicitly".format(plugin_string))
                 sys.exit(1)
         
         try:
-            cat_repo_files(n, os.path.join('raw_input', path))
+            cat_repo_files(calc, os.path.join('raw_input', path))
         except ValueError as e:
             print >> sys.stderr, e.message
             sys.exit(1)
@@ -326,13 +420,14 @@ class Calculation(VerdiCommandWithSubcommands):
             prog=self.get_full_command_name(),
             description='List input files in the repository folder.')
 
+        parser.add_argument('calc', metavar='PK', type=int, 
+                            help='The pk of the calculation')
+        parser.add_argument('-p','--path', type=str, default='', nargs='?',
+                            help="The relative path of the file you "
+                                 "want to show. If not specified, show content"
+                                 " of all the 'raw_input' directory")
         parser.add_argument('-c','--color', action='store_true',
                             help="Color folders with a different color")
-        parser.add_argument('-p', '--pk', type=int, required=True, 
-                            help='The pk of the node')
-        parser.add_argument('path', type=str, default='.', nargs='?',
-                            help='The relative path of the file you '
-                            'want to show')
         
         args = list(args)
         parsed_args = parser.parse_args(args)
@@ -341,13 +436,13 @@ class Calculation(VerdiCommandWithSubcommands):
         from aiida.orm import Node as OrmNode        
         
         try:
-            n = OrmNode.get_subclass_from_pk(parsed_args.pk)
+            calc = OrmNode.get_subclass_from_pk(parsed_args.calc)
         except NotExistent as e:
             print >> sys.stderr, e.message
             sys.exit(1)
         
         try:
-            list_repo_files(n, os.path.join('raw_input', parsed_args.path),
+            list_repo_files(calc, os.path.join('raw_input', parsed_args.path),
                             parsed_args.color)
         except ValueError as e:
             print >> sys.stderr, e.message
@@ -370,13 +465,14 @@ class Calculation(VerdiCommandWithSubcommands):
             prog=self.get_full_command_name(),
             description='List ourput files in the repository folder.')
 
+        parser.add_argument('calc', metavar='PK', type=int, 
+                            help='The pk of the calculation')
+        parser.add_argument('-p','--path', type=str, default='', nargs='?',
+                            help="The relative path of the file you "
+                                 "want to show. If not specified, show content"
+                                 " of all the 'path' directory")
         parser.add_argument('-c','--color', action='store_true',
                             help="Color folders with a different color")
-        parser.add_argument('-p', '--pk', type=int, required=True, 
-                            help='The pk of the node')
-        parser.add_argument('path', type=str, default='.', nargs='?',
-                            help='The relative path of the file you '
-                            'want to show')
         
         args = list(args)
         parsed_args = parser.parse_args(args)
@@ -385,13 +481,13 @@ class Calculation(VerdiCommandWithSubcommands):
         from aiida.orm import Node as OrmNode        
         
         try:
-            n = OrmNode.get_subclass_from_pk(parsed_args.pk)
+            calc = OrmNode.get_subclass_from_pk(parsed_args.calc)
         except NotExistent as e:
             print >> sys.stderr, e.message
             sys.exit(1)
 
         try:
-            parsed_node = n.out.retrieved
+            parsed_node = calc.out.retrieved
         except AttributeError:
             print >> sys.stderr, ("No 'retrieved' node found. Have the "
                 "calculation files already been retrieved?")
@@ -422,56 +518,38 @@ class Calculation(VerdiCommandWithSubcommands):
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
             description='Output the content of a file in the repository folder.')
-        parser.add_argument('-p', '--pk', type=int, required=True, 
-                            help='The pk of the node')
-        parser.add_argument('-d', '--default', action='store_true', 
-                            help="Open the default output file, if specified "
-                            "by the Calculation plugin. If specified, do not "
-                            "pass any 'path'")
-        parser.add_argument('path', type=str, default=None, nargs='?',
-                            help='The relative path of the file you '
-                            'want to show. You must specify it if you do not '
-                            'pass the --default flag')
+        parser.add_argument('calc', metavar='PK', type=int,
+                            help='The pk of the calculation')
+        parser.add_argument('-p','--path', type=str, default=None, nargs='?',
+                            help="The relative path of the file you "
+                                 "want to show. Take the default output file if "
+                                 "it is not specified")
         args = list(args)
         parsed_args = parser.parse_args(args)
 
-        if parsed_args.default and parsed_args.path:
-            sys.stderr.write(parser.format_usage())
-            sys.stderr.write("{}: error: If you pass --default, "
-                "you cannot pass also a path.\n".format(
-                    self.get_full_command_name()))
-            sys.exit(1)
-            
-        if not parsed_args.default and not parsed_args.path:
-            sys.stderr.write(parser.format_usage())
-            sys.stderr.write("{}: error: pass either --default "
-                "or a path.\n".format(
-                    self.get_full_command_name()))
-            sys.exit(1)
-        
         load_dbenv()
         from aiida.orm import Calculation as OrmCalculation        
         from aiida.common.pluginloader import get_class_typestring
         
         try:
-            n = OrmCalculation.get_subclass_from_pk(parsed_args.pk)
+            calc = OrmCalculation.get_subclass_from_pk(parsed_args.calc)
         except NotExistent as e:
             print >> sys.stderr, e.message
             sys.exit(1)
 
         path = parsed_args.path
-        if parsed_args.default:
-            path = n._DEFAULT_OUTPUT_FILE
+        if path is None:
+            path = calc._DEFAULT_OUTPUT_FILE
             if path is None:
                 base_class, plugin_string, class_name = get_class_typestring(
-                    n._plugin_type_string)
+                    calc._plugin_type_string)
                 print >> sys.stderr, ("Calculation '{}' does not define a "
                     "default output file. Please specify a path "
                     "explicitly".format(plugin_string))
                 sys.exit(1)
 
         try:
-            parsed_node = n.out.retrieved
+            parsed_node = calc.out.retrieved
         except AttributeError:
             print >> sys.stderr, ("No 'retrieved' node found. Have the "
                 "calculation files already been retrieved?")
@@ -537,4 +615,145 @@ class Calculation(VerdiCommandWithSubcommands):
         print >> sys.stderr, "{} calculation{} killed.".format(counter,
             "" if counter==1 else "s")
 
-    
+
+    def calculation_cleanworkdir(self, *args):
+        """
+        Clean all the content of all the output remote folders of calculations,
+        passed as a list of pks, or identified by modification time. 
+        
+        If a list of calculation PKs is not passed through -c option, one of 
+        the option -p or -u has to be specified (if both are given, a logical 
+        AND is done between the 2 - you clean out calculations modified AFTER 
+        [-p option] days from now but BEFORE [-o option] days from now).
+        If you also pass the -f option, no confirmation will be asked.
+        """
+        import argparse
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Clean work directory (i.e. remote folder) of AiiDA calculations.')
+        parser.add_argument('-k','--pk', metavar='PK', type=int, nargs='+',
+                            help="The principal key (PK) of the calculations to "
+                                 "clean the workdir of")
+        parser.add_argument('-f','--force', action='store_true',
+                            help="Force the cleaning (no prompt)")
+        parser.add_argument('-p', '--past-days', metavar='N', 
+                            help="Add a filter to clean workdir of calculations "
+                                 "modified during the past N days",
+                            type=int, action='store')
+        parser.add_argument('-u', '--until', metavar='N', 
+                            help="Add a filter to clean workdir of calculations "
+                                 "modified until N days ago",
+                            type=int, action='store')
+        parser.add_argument('-c', '--computers', metavar='label', nargs='+', 
+                            help="Add a filter to clean workdir of calculations "
+                                 "on this computer(s) only",
+                            type=str, action='store')
+        
+        load_dbenv()
+        import datetime
+        from django.db.models import Q
+        from django.utils import timezone
+        from aiida.cmdline import wait_for_confirmation
+        from aiida.orm.calculation import Calculation
+        from aiida.djsite.utils import get_automatic_user
+        from aiida.execmanager import get_authinfo
+        from aiida.djsite.db import models
+        from aiida.common.datastructures import calc_states
+
+        args = list(args)
+        parsed_args = parser.parse_args(args)
+        
+        # valid calculation states
+        valid_states = [calc_states.FINISHED, calc_states.RETRIEVALFAILED, 
+                        calc_states.PARSINGFAILED, calc_states.FAILED]
+        
+        user = get_automatic_user()
+        
+        q_object = Q(user=user)
+        q_state = models.DbAttribute.objects.filter(key='state',
+                                                   tval__in=valid_states)
+        # NOTE: IMPORTED state is not a dbattribute so won't be filtered out
+        # at this stage, but this case should be sorted out later when we try
+        # to access the remote_folder (if directory is not accessible, we skip)
+
+        if parsed_args.pk is not None:
+            # list of pks is passed
+            if ( (parsed_args.past_days is not None) or 
+                 (parsed_args.until is not None) ):
+                print  >> sys.stderr, ("You cannot specify both a list of "
+                                       "calculation pks and the -p or -o "
+                                       "options")
+                sys.exit(0)
+            calc_list = Calculation.query(q_object,
+                            pk__in=parsed_args.pk,
+                            dbattributes__in=q_state).distinct().order_by('mtime')
+        
+        else:
+            # calculations to be cleaned identified by modification time
+            now = timezone.now()
+            if ( (parsed_args.past_days is None) and 
+                 (parsed_args.until is None) ):
+                print  >> sys.stderr, ("Either a list of calculation pks or the "
+                                       "-p and/or -o options should be specified")
+                sys.exit(0)
+            
+            if parsed_args.past_days is not None:
+                n_days_after = now - datetime.timedelta(
+                                            days=parsed_args.past_days)
+                q_object.add(Q(mtime__gte=n_days_after), Q.AND)
+            if parsed_args.until is not None:
+                n_days_before = now - datetime.timedelta(
+                                            days=parsed_args.until)
+                q_object.add(Q(mtime__lte=n_days_before), Q.AND)
+            
+            # TODO: return directly a remote_folder list from the query
+            calc_list = Calculation.query(q_object,
+                            dbattributes__in=q_state).distinct().order_by('mtime')
+        
+        if not parsed_args.force:
+            sys.stderr.write("Are you sure you want to clean the work directory? "
+                             "[Y/N] ")
+            if not wait_for_confirmation():
+                sys.exit(0)
+                
+        # we want to open one connection per computer,
+        # therefore first group the remotedatas per computer, then clean 
+        # TODO: search of dbauthinfo could be optimized in a single query?
+        
+        remotes = {}
+        for c in calc_list:
+            comp = c.computer
+            computer_name = comp.get_name()
+            if ( (parsed_args.computers is None) or 
+                 (computer_name in parsed_args.computers) ):
+                try:
+                    remotes[computer_name]['remotes'].append(c.out.remote_folder)
+                except AttributeError:
+                    # calculation does not have a remote_folder output -> skip it
+                    pass
+                except KeyError:
+                    remotes[computer_name] = {'remotes':[c.out.remote_folder],
+                                            'transport':get_authinfo(computer=comp,
+                                                                     aiidauser=user).get_transport()}
+
+        for computer,dic in remotes.iteritems():
+            print "Cleaning the work directory on computer {}.".format(computer)
+            counter = 0
+            t = dic['transport']
+            for remote in dic['remotes']:
+                with t:
+                    try:
+                        t.chdir(remote.get_remote_path())
+                        files_to_delete = t.listdir()
+                        if files_to_delete:
+                            for fil in files_to_delete:
+                                t.rmtree(fil)
+                            counter += 1
+
+                    except IOError:
+                        # directory does not exist, we don't do anything
+                        pass
+        
+            print >> sys.stderr, "{} remote folder{} cleaned.".format(counter,
+                                                "" if counter==1 else "s")
+        

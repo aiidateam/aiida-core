@@ -61,7 +61,11 @@ We've got to prepare a script to submit a job to your local installation of AiiD
 This example will be a rather long script: in fact there is still nothing in your database, so that we will have to load everything, like the pseudopotential files and the structure.
 In a more practical situation, you might load data from the database and perform a small modification to re-use it.
 
-Let's say that through the ``verdi`` command you have already installed a cluster, say ``TheHive``, and that you also compiled Quantum Espresso on the cluster, and installed the code pw.x with ``verdi``, that we will call ``pw_on_TheHive``.
+Let's say that through the ``verdi`` command you have already installed
+a cluster, say ``TheHive``, and that you also compiled Quantum Espresso
+on the cluster, and installed the code pw.x with ``verdi`` with label ``pw-5.1``
+for instance, so that in the rest of this tutorial we will reference to the
+code as ``pw-5.1@TheHive``.
 
 Let's start writing the python script.
 First of all, we need to load the configuration concerning your
@@ -74,15 +78,36 @@ particular installation, in particular, the details of your database installatio
 Code
 ----
 
-Now we have to select the code. Note that in AiiDA the object 'code' in the database is meant to represent a specific compilation of a code. This means that if you install Quantum Espresso (QE) on two computers A and B, you will need to have two different 'codes' in the database (although the source of the code is the same, the binary file is different).
+Now we have to select the code. Note that in AiiDA the object 'code' in the
+database is meant to represent a specific executable, i.e. a given
+compiled version of a code.
+This means that if you install Quantum Espresso (QE) on two computers A and B,
+you will need to have two different 'codes' in the database
+(although the source of the code is the same, the binary file is different).
 
-If you setup the code ``pw_on_TheHive`` correctly, then it is sufficient to write::
+If you setup the code ``pw-5.1`` on machine ``TheHive`` correctly, then it is
+sufficient to write::
 
-  codename = 'pw_on_TheHive'
+  codename = 'pw-5.1@TheHive'
   from aiida.orm import Code
-  code = Code.get(codename)
+  code = Code.get_from_string(codename)
 
 Where in the last line we just load the database object representing the code.
+
+.. note:: the ``.get_from_string()`` method is just a helper method for user
+  convenience, but there are some weird cases that cannot be dealt in a
+  simple way (duplicated labels, code names
+  that are an integer number, code names containing the '@' symbol, ...: try
+  to not do this! This is not an error, but does not allow to use the
+  ``.get_from_string()`` method to get those calculations). 
+  In this case, you can use directly the ``.get()`` method, for instance::
+  
+    code = Code.get(label='pw-5.1', machinename='TheHive', 
+                    useremail='user@domain.com')
+
+  or even more generally get the code from its (integer) PK::
+    
+    code = Code.get_subclass_from_pk(PK)
 
 Structure
 ---------
@@ -440,11 +465,11 @@ Download: :download:`this example script <pw_short_example.py>`
   
   ###############################
   # Set your values here
-  codename = 'pw_on_TheHive'
+  codename = 'pw-5.1@TheHive'
   pseudo_family = 'lda_pslibrary'
   ###############################
   
-  code = Code.get(codename)
+  code = Code.get_from_string(codename)
   
   # BaTiO3 cubic structure
   alat = 4. # angstrom

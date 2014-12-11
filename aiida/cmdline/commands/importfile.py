@@ -72,7 +72,7 @@ def deserialize_field(k, v, fields_info, import_unique_ids_mappings,
             return ("{}_id".format(k), None)
             
 
-def import_file(infile):     
+def import_file(infile,silent=False):
     import json
     import os
     import tarfile
@@ -102,7 +102,8 @@ def import_file(infile):
     with SandboxFolder() as folder:
         try:
             with tarfile.open(infile, "r:gz", format=tarfile.PAX_FORMAT) as tar:        
-                print "READING DATA AND METADATA..."                
+                if not silent:
+                    print "READING DATA AND METADATA..."
                 tar.extract(path=folder.abspath,
                        member=tar.getmember('metadata.json'))
                 tar.extract(path=folder.abspath,
@@ -119,7 +120,8 @@ def import_file(infile):
                         "Unable to find the file {} in the import file".format(
                             e.filename))
 
-                print "EXTRACTING NODE DATA..."
+                if not silent:
+                    print "EXTRACTING NODE DATA..."
                 for member in tar.getmembers():
                     if member.isdev():
                         # safety: skip if character device, block device or FIFO
@@ -294,9 +296,10 @@ def import_file(infile):
                     unique_id = entry_data[unique_identifier]
                     existing_entry_id = foreign_ids_reverse_mappings[model_name][unique_id]                
                     # TODO COMPARE, AND COMPARE ATTRIBUTES
-                    print "existing %s: %s (%s->%s)" % (model_name, unique_id,
-                                                        import_entry_id,
-                                                        existing_entry_id)
+                    if not silent:
+                        print "existing %s: %s (%s->%s)" % (model_name, unique_id,
+                                                            import_entry_id,
+                                                            existing_entry_id)
                     #print "  `-> WARNING: NO DUPLICITY CHECK DONE!"
                     # CHECK ALSO FILES!
                 
@@ -319,7 +322,8 @@ def import_file(infile):
                 # Before storing entries in the DB, I store the files (if these
                 # are nodes). Note: only for new entries!
                 if model_name == get_class_string(models.DbNode):
-                    print "STORING NEW NODE FILES..."
+                    if not silent:
+                        print "STORING NEW NODE FILES..."
                     for o in objects_to_create:
                         
                         subfolder = folder.get_subfolder(os.path.join(
@@ -348,7 +352,8 @@ def import_file(infile):
 
                 imported_states = []
                 if model_name == get_class_string(models.DbNode):
-                    print "SETTING THE IMPORTED STATES FOR NEW NODES..."
+                    if not silent:
+                        print "SETTING THE IMPORTED STATES FOR NEW NODES..."
                     # I set for all nodes, even if I should set it only 
                     # for calculations
                     for unique_id, new_pk in just_saved.iteritems():
@@ -363,13 +368,15 @@ def import_file(infile):
                     import_entry_id = import_entry_ids[unique_id]
                     foreign_ids_reverse_mappings[model_name][unique_id] = new_pk
                                         
-                    print "NEW %s: %s (%s->%s)" % (model_name, unique_id, 
-                                                   import_entry_id,
-                                                   new_pk)
+                    if not silent:
+                        print "NEW %s: %s (%s->%s)" % (model_name, unique_id,
+                                                       import_entry_id,
+                                                       new_pk)
 
                 # For DbNodes, we also have to store Attributes!
                 if model_name == get_class_string(models.DbNode):
-                    print "STORING NEW NODE ATTRIBUTES..."
+                    if not silent:
+                        print "STORING NEW NODE ATTRIBUTES..."
                     for unique_id, new_pk in just_saved.iteritems():
                         import_entry_id = import_entry_ids[unique_id]
                         # Get attributes from import file
@@ -392,7 +399,8 @@ def import_file(infile):
                             attributes=deserialized_attributes,
                             with_transaction=False)
                         
-            print "STORING NODE LINKS..."
+            if not silent:
+                print "STORING NODE LINKS..."
             ## TODO: check that we are not creating input links of an already 
             ##       existing node...
             import_links = data['links_uuid']
@@ -436,13 +444,16 @@ def import_file(infile):
     
             # Store new links
             if links_to_store:                
-                print "   ({} new links...)".format(len(links_to_store))
+                if not silent:
+                    print "   ({} new links...)".format(len(links_to_store))
                                 
                 models.DbLink.objects.bulk_create(links_to_store)
             else:
-                print "   (0 new links...)"
+                if not silent:
+                    print "   (0 new links...)"
 
-            print "STORING GROUP ELEMENTS..."
+            if not silent:
+                print "STORING GROUP ELEMENTS..."
             import_groups = data['groups_uuid']
             for groupuuid, groupnodes in import_groups.iteritems():
                 # TODO: cache these to avoid too many queries
@@ -491,16 +502,17 @@ def import_file(infile):
                 group.add_nodes(models.DbNode.objects.filter(
                                 pk__in=pks_for_group))
                 
-                print "IMPORTED NODES GROUPED IN IMPORT GROUP NAMED '{}'".format(group.name)
+                if not silent:
+                    print "IMPORTED NODES GROUPED IN IMPORT GROUP NAMED '{}'".format(group.name)
             else:
-                print "NO DBNODES TO IMPORT, SO NO GROUP CREATED"
+                if not silent:
+                    print "NO DBNODES TO IMPORT, SO NO GROUP CREATED"
     
     
-    print "*** WARNING: MISSING EXISTING UUID CHECKS!!"
-    print "*** WARNING: TODO: UPDATE IMPORT_DATA WITH DEFAULT VALUES! (e.g. calc status, user pwd, ...)"
-
-
-    print "DONE."
+    if not silent:
+        print "*** WARNING: MISSING EXISTING UUID CHECKS!!"
+        print "*** WARNING: TODO: UPDATE IMPORT_DATA WITH DEFAULT VALUES! (e.g. calc status, user pwd, ...)"
+        print "DONE."
 
 import HTMLParser
 

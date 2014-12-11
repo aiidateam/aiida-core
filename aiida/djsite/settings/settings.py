@@ -2,8 +2,8 @@
 # Django settings for the AiiDA project.
 import sys, os
 from aiida.common.exceptions import ConfigurationError
-from aiida.common.setup import get_config, get_secret_key
-
+# get_property is used to read properties stored in the config json
+from aiida.common.setup import get_config, get_secret_key, get_property
 # Assumes that parent directory of aiida is root for
 # things like templates/, SQL/ etc.  If not, change what follows...
 
@@ -241,7 +241,12 @@ LOGGING = {
             'formatter': 'halfverbose',
         },
         'dblogger': {
-            'level': 'WARNING',
+            # get_property takes the property from the config json file
+            # The key used in the json, and the default value, are
+            # specified in the _property_table inside aiida.common.setup
+            # NOTE: To modify properties, use the 'verdi devel setproperty'
+            #   command and similar ones (getproperty, describeproperties, ...)
+            'level': get_property('logging.db_loglevel'),
             'class': 'aiida.djsite.utils.DBLogHandler',
         },
     },
@@ -253,17 +258,17 @@ LOGGING = {
         },
         'aiida': {
             'handlers': ['console', 'dblogger'],
-            'level': 'WARNING',
+            'level': get_property('logging.aiida_loglevel'),
             'propagate': False,
             },
         'celery': {
             'handlers': ['console'],
-            'level': 'WARNING',
+            'level': get_property('logging.celery_loglevel'),
             'propagate': False,
             },
         'paramiko': {
             'handlers': ['console'],
-            'level': 'WARNING',
+            'level': get_property('logging.paramiko_loglevel'),
             'propagate': False,
             },
         },

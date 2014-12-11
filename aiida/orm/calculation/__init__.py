@@ -108,6 +108,21 @@ class Calculation(Node):
                },
             }
 
+    @property
+    def logger(self):
+        """
+        Get the logger of the Calculation object, so that it also logs to the
+        DB.
+        
+        :return: LoggerAdapter object, that works like a logger, but also has
+          the 'extra' embedded
+        """
+        import logging
+        from aiida.djsite.utils import get_dblogger_extra
+        
+        return logging.LoggerAdapter(logger=self._logger,
+                                     extra=get_dblogger_extra(self))
+
     def __dir__(self):
         """
         Allow to list all valid attributes, adding also the use_* methods
@@ -743,12 +758,11 @@ class Calculation(Node):
         
         :param state: a string with the state. This must be a valid string,
           from ``aiida.common.datastructures.calc_states``.
-        :raise: UniquenessError if the given state was already set.
+        :raise: ModificationNotAllowed if the given state was already set.
         """
         from django.db import transaction, IntegrityError
 
         from aiida.djsite.db.models import DbCalcState
-        from aiida.common.exceptions import UniquenessError
         from aiida.common.datastructures import sort_states
         
         if self._to_be_stored:
@@ -777,8 +791,8 @@ class Calculation(Node):
             with transaction.commit_on_success():
                 new_state = DbCalcState(dbnode=self.dbnode, state=state).save()
         except IntegrityError:
-            raise UniquenessError("Calculation pk={} already transited through "
-                                  "the state {}".format(self.pk, state))
+            raise ModificationNotAllowed("Calculation pk={} already transited through "
+                                         "the state {}".format(self.pk, state))
 
         # For non-imported states, also set in the attribute (so that, if we
         # export, we can still see the original state the calculation had.
@@ -1459,11 +1473,8 @@ class Calculation(Node):
             actually being submitted at the same time in another thread.
         """
         #TODO: Check if we want to add a status "KILLED" or something similar.
-        from aiida.djsite.utils import get_dblogger_extra
         from aiida.common.exceptions import InvalidOperation, RemoteOperationError
-        
-        logger_extra = get_dblogger_extra(self)    
-        
+                
         old_state = self.get_state()
         
         if (old_state == calc_states.NEW or 
@@ -1471,7 +1482,7 @@ class Calculation(Node):
             self._set_state(calc_states.FAILED)
             self.logger.warning("Calculation {} killed by the user "
                                 "(it was in {} state)".format(
-                                self.pk, old_state), extra=logger_extra)
+                                self.pk, old_state))
             return
         
         if old_state != calc_states.WITHSCHEDULER:
@@ -1499,8 +1510,7 @@ class Calculation(Node):
             # Do not set the state, but let the parser do its job
             #self._set_state(calc_states.FAILED)
             self.logger.warning("Calculation {} killed by the user "
-                                "(it was WITHSCHEDULER)".format(self.pk),
-                                extra=logger_extra)
+                                "(it was WITHSCHEDULER)".format(self.pk))
             
         
     def _presubmit(self, folder, use_unstored_links=False):
@@ -1735,6 +1745,7 @@ class Calculation(Node):
         from aiida.transport.plugins.local import LocalTransport
         from aiida.orm import Computer
         from aiida.common.folders import Folder
+        from aiida.common.exceptions import NotExistent
         
         if folder is None:
             folder = Folder(os.path.abspath('submit_test'))
@@ -1801,26 +1812,42 @@ class Calculation(Node):
 
             local_copy_list = calcinfo.local_copy_list
             remote_copy_list = calcinfo.remote_copy_list
+            remote_symlink_list = calcinfo.remote_symlink_list
 
             for src_abs_path, dest_rel_path in local_copy_list:
                 t.put(src_abs_path, dest_rel_path)
                 
-            for (remote_computer_uuid, remote_abs_path, 
-                  dest_rel_path) in remote_copy_list:
-                remote_computer = Computer(uuid=remote_computer_uuid)
-                localpath = os.path.join(
-                    subfolder.abspath, dest_rel_path)
-                # If it ends with a separator, it is a folder
-                if localpath.endswith(os.path.sep):
-                    localpath = os.path.join(localpath, 'PLACEHOLDER')
-                dirpart = os.path.split(localpath)[0]
-                if not(os.path.isdir(dirpart)):
-                    os.makedirs(dirpart)
-                with open(localpath,'w') as f:
-                    f.write("PLACEHOLDER FOR REMOTELY COPIED "
-                            "FILE FROM {} ({}):{}".format(remote_computer_uuid,
-                                                    remote_computer.name,
-                                                    remote_abs_path))
+            if remote_copy_list:
+                with open(os.path.join(subfolder.abspath,
+                                       '_aiida_remote_copy_list.txt'), 'w') as f:
+                    for (remote_computer_uuid, remote_abs_path, 
+                         dest_rel_path) in remote_copy_list:
+                        try:
+                            remote_computer = Computer(uuid=remote_computer_uuid)
+                        except NotExistent:
+                            remote_computer = "[unknown]"
+                        f.write("* I WOULD REMOTELY COPY "
+                                "FILES/DIRS FROM COMPUTER {} (UUID {}) "
+                                "FROM {} TO {}\n".format(remote_computer.name,
+                                                         remote_computer_uuid,
+                                                         remote_abs_path,
+                                                         dest_rel_path))
+
+            if remote_symlink_list:
+                with open(os.path.join(subfolder.abspath,
+                                    '_aiida_remote_symlink_list.txt'), 'w') as f:
+                    for (remote_computer_uuid, remote_abs_path, 
+                         dest_rel_path) in remote_symlink_list:
+                        try:
+                            remote_computer = Computer(uuid=remote_computer_uuid)
+                        except NotExistent:
+                            remote_computer = "[unknown]"
+                        f.write("* I WOULD PUT SYMBOLIC LINKS FOR "
+                                "FILES/DIRS FROM COMPUTER {} (UUID {}) "
+                                "FROM {} TO {}\n".format(remote_computer.name,
+                                                         remote_computer_uuid,
+                                                         remote_abs_path,
+                                                         dest_rel_path))
 
         return subfolder, script_filename
 
@@ -1929,6 +1956,12 @@ class CalculationResultManager(object):
         
         for k in calc_attributes:
             yield k
+    
+    def _get_dict(self):
+        """
+        Return a dictionary of all results
+        """
+        return self._parser.get_result_dict()
     
     def __getattr__(self,name):
         """

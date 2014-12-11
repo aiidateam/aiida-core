@@ -46,7 +46,7 @@ class TestCalcStatus(AiidaTestCase):
         self.assertEquals(c.get_state(), calc_states.SUBMITTING)
         
         # Try to reset a state and check that the proper exception is raised
-        with self.assertRaises(UniquenessError):
+        with self.assertRaises(ModificationNotAllowed):
             c._set_state(calc_states.SUBMITTING)
         
         # Set a different state and check
@@ -441,25 +441,118 @@ class TestCifData(AiidaTestCase):
         Testing the logic of choosing the encoding and the process of
         encoding contents.
         """
-        from aiida.orm.data.cif import encode_textfield_quoted_printable, \
-                                       encode_textfield_base64
+        def test_ncr(self,inp,out):
+            from aiida.orm.data.cif import encode_textfield_ncr, \
+                                           decode_textfield_ncr
+            encoded = encode_textfield_ncr(inp)
+            decoded = decode_textfield_ncr(out)
+            self.assertEquals(encoded,out)
+            self.assertEquals(decoded,inp)
 
-        self.assertEquals(encode_textfield_quoted_printable(';\n'),
-                          '=3B\n')
-        self.assertEquals(encode_textfield_quoted_printable('line\n;line'),
-                          'line\n=3Bline')
-        self.assertEquals(encode_textfield_quoted_printable('tabbed\ttext'),
-                          'tabbed=09text')
-        self.assertEquals(encode_textfield_quoted_printable('angstrom Å'),
-                          'angstrom =C3=85')
+        def test_quoted_printable(self,inp,out):
+            from aiida.orm.data.cif import encode_textfield_quoted_printable, \
+                                           decode_textfield_quoted_printable
+            encoded = encode_textfield_quoted_printable(inp)
+            decoded = decode_textfield_quoted_printable(out)
+            self.assertEquals(encoded,out)
+            self.assertEquals(decoded,inp)
+
+        def test_base64(self,inp,out):
+            from aiida.orm.data.cif import encode_textfield_base64, \
+                                           decode_textfield_base64
+            encoded = encode_textfield_base64(inp)
+            decoded = decode_textfield_base64(out)
+            self.assertEquals(encoded,out)
+            self.assertEquals(decoded,inp)
+
+        def test_gzip_base64(self,text):
+            from aiida.orm.data.cif import encode_textfield_gzip_base64, \
+                                           decode_textfield_gzip_base64
+            encoded = encode_textfield_gzip_base64(text)
+            decoded = decode_textfield_gzip_base64(encoded)
+            self.assertEquals(text,decoded)
+
+        test_ncr(self,'.','&#46;')
+        test_ncr(self,'?','&#63;')
+        test_ncr(self,';\n','&#59;\n')
+        test_ncr(self,'line\n;line','line\n&#59;line')
+        test_ncr(self,'tabbed\ttext','tabbed&#9;text')
+        test_ncr(self,'angstrom Å','angstrom &#195;&#133;')
+        test_ncr(self,'<html>&#195;&#133;</html>',
+                      '<html>&#38;#195;&#38;#133;</html>')
+
+        test_quoted_printable(self,'.','=2E')
+        test_quoted_printable(self,'?','=3F')
+        test_quoted_printable(self,';\n','=3B\n')
+        test_quoted_printable(self,'line\n;line','line\n=3Bline')
+        test_quoted_printable(self,'tabbed\ttext','tabbed=09text')
+        test_quoted_printable(self,'angstrom Å','angstrom =C3=85')
         # This one is particularly tricky: a long line is folded by the QP
         # and the semicolon sign becomes the first character on a new line.
-        self.assertEquals(encode_textfield_quoted_printable(
-                            "Å{};a".format("".join("a" for i in range(0,69)))),
-                          '=C3=85aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
-                          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaa=\n=3Ba')
-        self.assertEquals(encode_textfield_base64('angstrom ÅÅÅ'),
-                          'YW5nc3Ryb20gw4XDhcOF')
+        test_quoted_printable(self,
+                              "Å{};a".format("".join("a" for i in range(0,69))),
+                              '=C3=85aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+                              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaa=\n=3Ba')
+
+        test_base64(self,'angstrom ÅÅÅ','YW5nc3Ryb20gw4XDhcOF')
+        test_gzip_base64(self,'angstrom ÅÅÅ')
+
+    @unittest.skipIf(not has_pycifrw(),"Unable to import PyCifRW")
+    def test_pycifrw_from_datablocks(self):
+        """
+        Tests CifData.pycifrw_from_cif()
+        """
+        from aiida.orm.data.cif import pycifrw_from_cif
+        import re
+
+        datablocks = [
+            {
+                '_atom_site_label': [ 'A', 'B', 'C' ],
+                '_atom_site_occupancy': [ 1.0, 0.5, 0.5 ],
+                '_publ_section_title': 'Test CIF'
+            }
+        ]
+        lines = pycifrw_from_cif(datablocks).WriteOut().split('\n')
+        non_comments = []
+        for line in lines:
+            if not re.search('^#', line):
+                non_comments.append(line)
+        self.assertEquals("\n".join(non_comments),
+'''
+data_0
+loop_
+  _atom_site_label
+   A
+   B
+   C
+ 
+loop_
+  _atom_site_occupancy
+   1.0
+   0.5
+   0.5
+ 
+_publ_section_title                     'Test CIF'
+''')
+
+        loops = { '_atom_site': [ '_atom_site_label', '_atom_site_occupancy' ] }
+        lines = pycifrw_from_cif(datablocks,loops).WriteOut().split('\n')
+        non_comments = []
+        for line in lines:
+            if not re.search('^#', line):
+                non_comments.append(line)
+        self.assertEquals("\n".join(non_comments),
+'''
+data_0
+loop_
+  _atom_site_label
+  _atom_site_occupancy
+   A  1.0
+   B  0.5
+   C  0.5
+ 
+_publ_section_title                     'Test CIF'
+''')
 
 class TestKindValidSymbols(AiidaTestCase):
     """
@@ -1521,7 +1614,7 @@ class TestTrajectoryData(AiidaTestCase):
         
         # Create a node with two arrays
         n = TrajectoryData()
-
+        
         # I create sample data
         steps = numpy.array([60,70])
         times = steps * 0.01
@@ -1547,9 +1640,10 @@ class TestTrajectoryData(AiidaTestCase):
             [[0.5,0.5,0.5],
              [0.5,0.5,0.5],
              [-0.5,-0.5,-0.5]]])
-
+        
         # I set the node
-        n.set_trajectory(steps, times, cells, symbols, positions, velocities)
+        n.set_trajectory(steps=steps, cells=cells, symbols=symbols, 
+                         positions=positions, times=times, velocities=velocities)
 
         # Generic checks
         self.assertEqual(n.numsites, 3)
@@ -1577,8 +1671,37 @@ class TestTrajectoryData(AiidaTestCase):
             n.get_step_index(66)
         
         ########################################################
+        # I set the node, this time without times or velocities (the same node)
+        n.set_trajectory(steps=steps, cells=cells, symbols=symbols, 
+                         positions=positions)
+        # Generic checks
+        self.assertEqual(n.numsites, 3)
+        self.assertEqual(n.numsteps, 2)
+        self.assertAlmostEqual(abs(steps-n.get_steps()).sum(), 0.)
+        self.assertIsNone(n.get_times())
+        self.assertAlmostEqual(abs(cells-n.get_cells()).sum(), 0.)
+        self.assertEqual(symbols.tolist(), n.get_symbols().tolist())
+        self.assertAlmostEqual(abs(positions-n.get_positions()).sum(), 0.)
+        self.assertIsNone(n.get_velocities())
+        
+        # Same thing, but for a new node
+        n = TrajectoryData()
+        n.set_trajectory(steps=steps, cells=cells, symbols=symbols, 
+                         positions=positions)
+        # Generic checks
+        self.assertEqual(n.numsites, 3)
+        self.assertEqual(n.numsteps, 2)
+        self.assertAlmostEqual(abs(steps-n.get_steps()).sum(), 0.)
+        self.assertIsNone(n.get_times())
+        self.assertAlmostEqual(abs(cells-n.get_cells()).sum(), 0.)
+        self.assertEqual(symbols.tolist(), n.get_symbols().tolist())
+        self.assertAlmostEqual(abs(positions-n.get_positions()).sum(), 0.)
+        self.assertIsNone(n.get_velocities())
+        
+        ########################################################
         # I set the node, this time without velocities (the same node)
-        n.set_trajectory(steps, times, cells, symbols, positions)
+        n.set_trajectory(steps=steps, cells=cells, symbols=symbols, 
+                         positions=positions, times=times)
         # Generic checks
         self.assertEqual(n.numsites, 3)
         self.assertEqual(n.numsteps, 2)
@@ -1591,7 +1714,8 @@ class TestTrajectoryData(AiidaTestCase):
         
         # Same thing, but for a new node
         n = TrajectoryData()
-        n.set_trajectory(steps, times, cells, symbols, positions)
+        n.set_trajectory(steps=steps, cells=cells, symbols=symbols, 
+                         positions=positions, times=times)
         # Generic checks
         self.assertEqual(n.numsites, 3)
         self.assertEqual(n.numsteps, 2)
@@ -1600,7 +1724,7 @@ class TestTrajectoryData(AiidaTestCase):
         self.assertAlmostEqual(abs(cells-n.get_cells()).sum(), 0.)
         self.assertEqual(symbols.tolist(), n.get_symbols().tolist())
         self.assertAlmostEqual(abs(positions-n.get_positions()).sum(), 0.)
-        self.assertIsNone(n.get_velocities())
+        self.assertIsNone(n.get_velocities())        
         
         n.store()
         
@@ -1696,7 +1820,8 @@ class TestTrajectoryData(AiidaTestCase):
              [-0.5,-0.5,-0.5]]])
 
         # I set the node
-        n.set_trajectory(steps, times, cells, symbols, positions, velocities)
+        n.set_trajectory(steps=steps, cells=cells, symbols=symbols, 
+                         positions=positions, times=times, velocities=velocities)
 
         struc = n.step_to_structure(1)
         self.assertEqual(len(struc.sites), 3) # 3 sites

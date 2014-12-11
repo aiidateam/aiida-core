@@ -56,7 +56,7 @@ if __name__ == '__main__':
     try:
         if codename is None:
             raise ValueError
-        code = Code.get(codename)
+        code = Code.get_from_string(codename)
         if code.get_input_plugin_name() != expected_code_type:
             raise ValueError
     except (NotExistent, ValueError):

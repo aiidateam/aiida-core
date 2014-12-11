@@ -234,11 +234,10 @@ class Node(object):
             
             self._to_be_stored = True
             
-            # Note: the following steps take a lot of time, having to create
-            #       folders!
-            self._temp_folder = SandboxFolder() # This is also created
-            # Create the 'path' subfolder in the Sandbox
-            self._get_folder_pathsubfolder.create()
+
+            # As creating the temp folder may require some time on slow 
+            # filesystems, we defer its creation
+            self._temp_folder = None
             # Used only before the first save
             self._attrs_cache = {}
             # If this is changed, fix also the importer
@@ -592,8 +591,8 @@ class Node(object):
             pass
 
         # If both are stored, remove also from the DB
-        if not self._to_be_stored and not src._to_be_stored:
-            self._remove_dblink_from(src, label)
+        if not self._to_be_stored:
+            self._remove_dblink_from(label)
 
     def _replace_dblink_from(self,src,label):
         """
@@ -881,8 +880,6 @@ class Node(object):
         if self._to_be_stored:
             self.dbnode.dbcomputer = DbComputer.get_dbcomputer(computer)
         else:
-            self.logger.error("Trying to change the computer of an already "
-                              "saved node: {}".format(self.uuid))
             raise ModificationNotAllowed(
                 "Node with uuid={} was already stored".format(self.uuid))
             
@@ -1139,11 +1136,11 @@ class Node(object):
                     continue
                 yield (k,v)
         else:          
-            attrlist = DbAttribute.list_all_node_elements(self.dbnode)
-            for attr in attrlist:
-                if not also_updatable and attr.key in updatable_list:
+            all_attrs = DbAttribute.get_all_values_for_node(self.dbnode)
+            for attr in all_attrs:
+                if not also_updatable and attr in updatable_list:
                     continue
-                yield (attr.key, attr.getvalue())
+                yield (attr, all_attrs[attr])
 
     def attrs(self):
         """
@@ -1352,9 +1349,11 @@ class Node(object):
         
         :return: a SandboxFolder object mapping the node in the repository.
         """
+        # I create the temp folder only at is first usage
         if self._temp_folder is None:
-            raise InternalError("The temp_folder was asked for node {}, but "
-                                "it is not set!".format(self.uuid))
+            self._temp_folder = SandboxFolder() # This is also created
+            # Create the 'path' subfolder in the Sandbox
+            self._get_folder_pathsubfolder.create()
         return self._temp_folder
 
     def remove_path(self,path):
@@ -1560,8 +1559,6 @@ class Node(object):
             # between stored nodes.
             self._store_input_links(store_parents=False, only_stored=True)
         else:
-            self.logger.error("Trying to store an already saved node: "
-                              "pk={}".format(self.pk))
             raise ModificationNotAllowed(
                 "Node with pk={} was already stored".format(self.pk))
         

@@ -16,7 +16,6 @@ def import_qeinput(fname):
     
     :param fname: the file name that should be read
     """
-    import ase
     import aiida.orm.data.structure as struct
     
     
@@ -156,6 +155,8 @@ def import_qeinput(fname):
         else:
             raise Exception("ibrav [{0}] is not defined !".format(ibrav))
         
+        cell_angstrom = cellAlat * parameters[0] * bohr
+        return cell_angstrom
     
     def get_pos(pos, coord_type, alat, cell):
         
@@ -166,13 +167,26 @@ def import_qeinput(fname):
         return pos
 
     def get_num_from_name(name):
+        """
+        Return the atomic number given a symbol string, or return zero if
+        the symbol is not recognized
+        """
+        from aiida.orm.data.structure import _atomic_numbers
+
+        return _atomic_numbers.get(name, 0)
+    
+    def get_name_from_num(num):
+        """
+        Return the atomic symbol given an atomic number (if num=0, return "X")
         
-        import ase.data
-        for i in range(len(ase.data.chemical_symbols)):
-            if ase.data.chemical_symbols[i].lower() == name.lower():
-                return i
-             
-        return -0
+        :raise ValueError: if the number is not valid
+        """
+        from aiida.common.constants import elements
+
+        try:
+            return elements[num]['symbol']
+        except (IndexError, TypeError):
+            raise ValueError("'{}' is not a valid atomic number".format(num))
     
     def sanitize(line_raw, sec=None):
         if sec is not None:
@@ -200,23 +214,23 @@ def import_qeinput(fname):
     
     atomic_raw_kinds    = None
     atomic_kinds        = None
-    atomic_nums         = None
+    atomic_kindnames    = None
     atomic_pos          = None
     atomic_masses_table = None
     
     #group(3)
-    nat_search    = re.compile(r'nat([\t ]+)?=([\t ]+)?([0-9]+)', re.IGNORECASE)
-    ntyp_search   = re.compile(r'ntyp([\t ]+)?=([\t ]+)?([0-9]+)', re.IGNORECASE)
-    ibrav_search  = re.compile(r'ibrav([\t ]+)?=([\t ]+)?(-?[0-9]+)', re.IGNORECASE)
+    nat_search    = re.compile(r'(?:^|[^A-Za-z0-9_])nat([\t ]+)?=([\t ]+)?([0-9]+)', re.IGNORECASE)
+    ntyp_search   = re.compile(r'(?:^|[^A-Za-z0-9_])ntyp([\t ]+)?=([\t ]+)?([0-9]+)', re.IGNORECASE)
+    ibrav_search  = re.compile(r'(?:^|[^A-Za-z0-9_])ibrav([\t ]+)?=([\t ]+)?(-?[0-9]+)', re.IGNORECASE)
     
-    celldm_search = re.compile(r'celldm([\t ]+)?\(([\t ]+)?([0-9]+)([\t ]+)?\)([\t ]+)?=([\t ]+)?([0-9\.DdeE-]*)', re.IGNORECASE)
+    celldm_search = re.compile(r'(?:^|[^A-Za-z0-9_])celldm([\t ]+)?\(([\t ]+)?([0-9]+)([\t ]+)?\)([\t ]+)?=([\t ]+)?([0-9\.DdeE-]*)', re.IGNORECASE)
     
-    a_search  = re.compile(r'a([\t ]+)?=([\t ]+)?(-?[0-9]+)', re.IGNORECASE)
-    b_search  = re.compile(r'b([\t ]+)?=([\t ]+)?(-?[0-9]+)', re.IGNORECASE)
-    c_search  = re.compile(r'c([\t ]+)?=([\t ]+)?(-?[0-9]+)', re.IGNORECASE)
-    cosab_search  = re.compile(r'cosab([\t ]+)?=([\t ]+)?(-?[0-9]+)', re.IGNORECASE)
-    cosac_search  = re.compile(r'cosac([\t ]+)?=([\t ]+)?(-?[0-9]+)', re.IGNORECASE)
-    cosbc_search  = re.compile(r'cosbc([\t ]+)?=([\t ]+)?(-?[0-9]+)', re.IGNORECASE)
+    a_search  = re.compile(r'(?:^|[^A-Za-z0-9_])a([\t ]+)?=([\t ]+)?(-?[0-9]+)', re.IGNORECASE)
+    b_search  = re.compile(r'(?:^|[^A-Za-z0-9_])b([\t ]+)?=([\t ]+)?(-?[0-9]+)', re.IGNORECASE)
+    c_search  = re.compile(r'(?:^|[^A-Za-z0-9_])c([\t ]+)?=([\t ]+)?(-?[0-9]+)', re.IGNORECASE)
+    cosab_search  = re.compile(r'(?:^|[^A-Za-z0-9_])cosab([\t ]+)?=([\t ]+)?(-?[0-9]+)', re.IGNORECASE)
+    cosac_search  = re.compile(r'(?:^|[^A-Za-z0-9_])cosac([\t ]+)?=([\t ]+)?(-?[0-9]+)', re.IGNORECASE)
+    cosbc_search  = re.compile(r'(?:^|[^A-Za-z0-9_])cosbc([\t ]+)?=([\t ]+)?(-?[0-9]+)', re.IGNORECASE)
     
     atomic_species  = re.compile(r'ATOMIC_SPECIES', re.IGNORECASE)
     atomic_position = re.compile(r'ATOMIC_POSITIONS', re.IGNORECASE)
@@ -251,7 +265,7 @@ def import_qeinput(fname):
         if cell_parameters.search(line) and nat>0 and ibrav==0 and cell is None:
             
             if celldm is not None and a is not None:
-                raise Exception("Cannot declare both celldm and A, B, C, cosAB, cosAC, cosBC")
+                raise Exception("Cannot declare both celldm and A, B, C, cosAB, cosAC, cosBC (a={}, celldm={})".format(a, celldm))
     
             if a is not None:
                 alat = a
@@ -303,8 +317,8 @@ def import_qeinput(fname):
             for pt in pos_types: 
                 if pt in line.lower(): pos_type = pt
             
-            atomic_pos   = [[0]*3]*nat
-            atomic_nums  = [0]*nat
+            atomic_pos = [[0]*3]*nat
+            atomic_kindnames = [0]*nat
             
             pos_count = 0
             while pos_count<nat:
@@ -313,7 +327,7 @@ def import_qeinput(fname):
                 while (line.strip()=="" or line.strip().startswith("!")): line = sanitize(f.readline(), sec="#")
                 
                 p = line.strip().split()
-                atomic_nums[pos_count] = get_num_from_name(p[0])
+                atomic_kindnames[pos_count] = p[0]
                 atomic_pos[pos_count] = [ff_float.read(p[i])[0] for i in range(1,4)]
 
                 pos_count+=1
@@ -322,7 +336,7 @@ def import_qeinput(fname):
     
     # Cell generation
     if celldm is not None and a is not None:
-        raise Exception("Cannot declare both celldm and A, B, C, cosAB, cosAC, cosBC")
+                raise Exception("Cannot declare both celldm and A, B, C, cosAB, cosAC, cosBC (a={}, celldm={})".format(a, celldm))
     
     if a is not None and \
        b is not None and \
@@ -337,38 +351,21 @@ def import_qeinput(fname):
         
     if celldm is not None and ibrav>0 and cell is None: 
         cell = generate_cell(ibrav, celldm)
-    
-    
+        
     # Positions generation
     for i in range(len(atomic_pos)):
         atomic_pos[i] = get_pos(atomic_pos[i], pos_type, celldm[0], cell)
 
-    # print "nat:", nat
-    # print "ntyp:", ntyp
-    # print "ibrav:", ibrav
-    # print "celldm:", celldm
-    # print "cell:", cell
-    # print "atomic_types:", atomic_types
-    # print "atomic_nums:", atomic_nums#, atomic_pos
-    # #print "atomic_pos:", atomic_pos#, atomic_pos
-    
-    atomic_masses = np.zeros(nat)
-    for i in range(len(atomic_nums)):
-        atomic_masses[i] = atomic_masses_table[atomic_nums[i]]
-    
-    
-#     s = struct.StructureData(cell=cell, pbc=True)
-#     for k in atomic_kinds:
-#         s.append_kind(Kind(k))
-#      
-#     sites = zip(atomic_nums, atomic_pos)
-#      
-#     for s in sites:
-#         s.append_site(Site())
+    the_struc = struct.StructureData(cell=cell, pbc=True)
+    for k in atomic_kinds:
+        the_struc.append_kind(k)
+     
+    sites = zip(atomic_kindnames, atomic_pos)
+     
+    for kindname, pos in sites:
+        the_struc.append_site(struct.Site(kind_name = kindname, position=pos))
 
-    s_ase = ase.Atoms(numbers=atomic_nums,positions=atomic_pos,cell=cell,pbc=True, masses=atomic_masses)
-    return struct.StructureData(ase = s_ase, raw_kinds = atomic_raw_kinds)
-
+    return the_struc
 
     
 

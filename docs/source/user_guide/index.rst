@@ -20,3 +20,4 @@ User's guide
    ../state/calculation_state
    ../database/dbusage
    ../workflow/index
+   ../dbimporters/index

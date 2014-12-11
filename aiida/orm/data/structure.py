@@ -205,14 +205,19 @@ def is_ase_atoms(ase_atoms):
 
 def group_symbols(_list):
     """ 
+    Group a list of symbols to a list containing the number of consecutive
+    identical symbols, and the symbol itself.
+    
+    Examples:
+    
+    * ``['Ba','Ti','O','O','O','Ba']`` will return 
+      ``[[1,'Ba'],[1,'Ti'],[3,'O'],[1,'Ba']]``
+        
+    * ``[ [ [1,'Ba'],[1,'Ti'] ],[ [1,'Ba'],[1,'Ti'] ] ]`` will return 
+      ``[[2, [ [1, 'Ba'], [1, 'Ti'] ] ]]``
+
     :param _list: a list of elements representing a chemical formula
     :return: a list of length-2 lists of the form [ multiplicity , element ]
-    examples:
-        ``['Ba','Ti','O','O','O','Ba']`` will return 
-            ``[[1,'Ba'],[1,'Ti'],[3,'O'],[1,'Ba']]``
-        
-        ``[ [ [1,'Ba'],[1,'Ti'] ],[ [1,'Ba'],[1,'Ti'] ] ]`` will return 
-            ``[[2, [ [1, 'Ba'], [1, 'Ti'] ] ]]``
     """
     
     the_list = copy.deepcopy(_list)
@@ -230,12 +235,15 @@ def group_symbols(_list):
 
 def get_formula_from_symbol_list(_list):
     """ 
+    Return a string with the formula obtained from the list of symbols.
+    Examples:
+    * ``[[1,'Ba'],[1,'Ti'],[3,'O']]`` will return ``'BaTiO3'``
+    * ``[[2, [ [1, 'Ba'], [1, 'Ti'] ] ]]`` will return ``'(BaTi)2'``
+
     :param _list: a list of symbols and multiplicities as obtained from
         the function group_symbols
-    :return: a string with the formula obtained from the list
-    examples:
-        ``[[1,'Ba'],[1,'Ti'],[3,'O']]`` will return ``'BaTiO3'``
-        ``[[2, [ [1, 'Ba'], [1, 'Ti'] ] ]]`` will return ``'(BaTi)2'``
+
+    :return: a string
     """
     
     list_str = []
@@ -378,26 +386,29 @@ def get_formula_compact1(symbol_list):
 def get_formula(symbol_list, mode='hill'):
     """
     Return a string with the chemical formula.
+    
     :param symbol_list: a list of symbols, e.g. ``['H','H','O']``
-    :param mode:
-        'hill' (default): use Hill notation, i.e. alphabetical order with C and H 
-            first if one or several C atom(s) is (are) present, e.g. 
-            ``['C','H','H','H','O','C','H','H','H']`` will return ``'C2H6O'`` 
-            ``['S','O','O','H','O','H','O']``  will return ``'H2O4S'``
-            From E. A. Hill, J. Am. Chem. Soc., 22 (8), pp 478–494 (1900)
+    :param mode: a string to specify how to generate the formula, can
+        assume one of the following values:
+        
+        * 'hill' (default): use Hill notation, i.e. alphabetical order with C and H 
+          first if one or several C atom(s) is (are) present, e.g. 
+          ``['C','H','H','H','O','C','H','H','H']`` will return ``'C2H6O'`` 
+          ``['S','O','O','H','O','H','O']``  will return ``'H2O4S'``
+          From E. A. Hill, J. Am. Chem. Soc., 22 (8), pp 478–494 (1900)
             
-        'compact1': will try to group as much as possible parts of the formula
-            e.g. 
-            ``['Ba', 'Ti', 'O', 'O', 'O', 'Ba', 'Ti', 'O', 'O', 'O',
-            'Ba', 'Ti', 'Ti', 'O', 'O', 'O']`` will return ``'(BaTiO3)2BaTi2O3'``
+        * 'compact1': will try to group as much as possible parts of the formula
+          e.g. 
+          ``['Ba', 'Ti', 'O', 'O', 'O', 'Ba', 'Ti', 'O', 'O', 'O',
+          'Ba', 'Ti', 'Ti', 'O', 'O', 'O']`` will return ``'(BaTiO3)2BaTi2O3'``
         
-        'reduce': simply group repeated symbols e.g.
-            ``['Ba', 'Ti', 'O', 'O', 'O', 'Ba', 'Ti', 'O', 'O', 'O',
-            'Ba', 'Ti', 'Ti', 'O', 'O', 'O']`` will return ``'BaTiO3BaTiO3BaTi2O3'``
+        * 'reduce': simply group repeated symbols e.g.
+          ``['Ba', 'Ti', 'O', 'O', 'O', 'Ba', 'Ti', 'O', 'O', 'O',
+          'Ba', 'Ti', 'Ti', 'O', 'O', 'O']`` will return ``'BaTiO3BaTiO3BaTi2O3'``
         
-        'allreduce': same as hill without the re-ordering (take the 
-            order of the atomic sites), e.g.
-            ``['Ba', 'Ti', 'O', 'O', 'O']`` will return ``'BaTiO3'``
+        * 'allreduce': same as hill without the re-ordering (take the 
+          order of the atomic sites), e.g.
+          ``['Ba', 'Ti', 'O', 'O', 'O']`` will return ``'BaTiO3'``
         
     :return: a string with the formula
     
@@ -476,6 +487,58 @@ def has_vacancies(weights):
     """
     w_sum = sum(weights)
     return not(1. - w_sum < _sum_threshold)
+
+def symop_ortho_from_fract(cell):
+    """
+    Creates a matrix for conversion from orthogonal to fractional
+    coordinates.
+
+    Taken from
+    svn://www.crystallography.net/cod-tools/trunk/lib/perl5/Fractional.pm,
+    revision 850.
+
+    :param cell: array of cell parameters (three lengths and three angles)
+    """
+    import math
+    import numpy
+    a,b,c,alpha,beta,gamma = cell
+    alpha,beta,gamma = map(lambda x: math.pi * x / 180,
+                           alpha,beta,gamma)
+    ca,cb,cg = map(math.cos,[alpha,beta,gamma])
+    sg = math.sin(gamma)
+
+    return numpy.array([
+        [a, b*cg, c*cb],
+        [0, b*sg, c*(ca-cb*cg)/sg],
+        [0,    0, c*math.sqrt(sg*sg-ca*ca-cb*cb+2*ca*cb*cg)/sg]
+    ])
+
+def symop_fract_from_ortho(cell):
+    """
+    Creates a matrix for conversion from fractional to orthogonal
+    coordinates.
+
+    Taken from
+    svn://www.crystallography.net/cod-tools/trunk/lib/perl5/Fractional.pm,
+    revision 850.
+
+    :param cell: array of cell parameters (three lengths and three angles)
+    """
+    import math
+    import numpy
+    a,b,c,alpha,beta,gamma = cell
+    alpha,beta,gamma = map(lambda x: math.pi * x / 180,
+                           [alpha,beta,gamma])
+    ca,cb,cg = map(math.cos,[alpha,beta,gamma])
+    sg = math.sin(gamma)
+    ctg = cg/sg
+    D = math.sqrt(sg*sg - cb*cb - ca*ca + 2*ca*cb*cg)
+
+    return numpy.array([
+        [ 1.0/a, -(1.0/a)*ctg,  (ca*cg-cb)/(a*D)    ],
+        [     0,   1.0/(b*sg), -(ca-cb*cg)/(b*D*sg) ],
+        [     0,            0,          sg/(c*D)    ],
+    ])
             
 class StructureData(Data):
     """
@@ -670,6 +733,7 @@ class StructureData(Data):
     def get_formula(self, mode='hill'):
         """
         Return a string with the chemical formula.
+
         :param mode:
             'hill' (default): Hill notation (alphabetical order, with C and H first if 
                 a C atom is present), e.g. 

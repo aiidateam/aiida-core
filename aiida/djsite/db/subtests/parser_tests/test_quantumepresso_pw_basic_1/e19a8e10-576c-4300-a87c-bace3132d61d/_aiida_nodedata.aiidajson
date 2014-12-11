@@ -1,0 +1,10 @@
+{
+  "description": "STest calculation with the Quantum ESPRESSO pw.x code", 
+  "uuid": "Se19a8e10-576c-4300-a87c-bace3132d61d", 
+  "label": "STest translation of BTO - delta=0.208860759494", 
+  "mtime": "D2014-06-05T15:19:13.161274+0000", 
+  "nodeversion": 20, 
+  "type": "Scalculation.quantumespresso.pw.PwCalculation.", 
+  "public": false, 
+  "ctime": "D2014-04-29T13:38:59.835919+0000"
+}

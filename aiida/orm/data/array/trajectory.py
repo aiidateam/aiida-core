@@ -11,7 +11,7 @@ class TrajectoryData(ArrayData):
     possibly with velocities).
     """
 
-    def _internal_validate(self, steps, times, cells, symbols, positions, velocities):
+    def _internal_validate(self, steps, cells, symbols, positions, times, velocities):
         """
         Internal function to validate the type and shape of the arrays. See
         the documentation of py:meth:`.set_trajectory` for a description of the
@@ -21,14 +21,17 @@ class TrajectoryData(ArrayData):
         
         if not isinstance(steps, numpy.ndarray) or steps.dtype != int:
             raise TypeError("TrajectoryData.steps must be a numpy array of integers")
-        if not isinstance(times, numpy.ndarray) or times.dtype != float:
-            raise TypeError("TrajectoryData.times must be a numpy array of floats")
         if not isinstance(cells, numpy.ndarray) or cells.dtype != float:
             raise TypeError("TrajectoryData.cells must be a numpy array of floats")
         if not isinstance(symbols, numpy.ndarray):
             raise TypeError("TrajectoryData.symbols must be a numpy array")
+        if any([not isinstance(i,basestring) for i in symbols]):
+            raise TypeError("TrajectoryData.symbols must be a numpy array of strings")
         if not isinstance(positions, numpy.ndarray) or positions.dtype != float:
             raise TypeError("TrajectoryData.positions must be a numpy array of floats")
+        if times is not None:
+            if not isinstance(times, numpy.ndarray) or times.dtype != float:
+                raise TypeError("TrajectoryData.times must be a numpy array of floats")
         if velocities is not None:
             if not isinstance(velocities, numpy.ndarray) or velocities.dtype != float:
                 raise TypeError("TrajectoryData.velocities must be a numpy array of floats, or None")
@@ -36,9 +39,6 @@ class TrajectoryData(ArrayData):
         numsteps = steps.size
         if steps.shape != (numsteps,):
             raise ValueError("TrajectoryData.steps must be a 1d array")
-        if times.shape != (numsteps,):
-            raise ValueError("TrajectoryData.times must have shape (s,), "
-                             "with s=number of steps")
         if cells.shape != (numsteps,3,3):
             raise ValueError("TrajectoryData.cells must have shape (s,3,3), "
                              "with s=number of steps")
@@ -48,15 +48,17 @@ class TrajectoryData(ArrayData):
         if positions.shape != (numsteps,numatoms,3):
             raise ValueError("TrajectoryData.positions must have shape (s,n,3), "
                              "with s=number of steps and n=number of symbols")
+        if times is not None:
+            if times.shape != (numsteps,):
+                raise ValueError("TrajectoryData.times must have shape (s,), "
+                                 "with s=number of steps")
         if velocities is not None:
             if velocities.shape != (numsteps,numatoms,3):
                 raise ValueError("TrajectoryData.velocities, if not None, must "
                                  "have shape (s,n,3), "
                                  "with s=number of steps and n=number of symbols")
 
-
-        
-    def set_trajectory(self, steps, times,  cells, symbols, positions, velocities=None):
+    def set_trajectory(self, steps, cells, symbols, positions, times=None, velocities=None):
         r"""
         Store the whole trajectory, after checking that types and dimensions
         are correct.
@@ -72,9 +74,6 @@ class TrajectoryData(ArrayData):
                       sorted in ascending order, without duplicate elements.
                       If your code does not provide an internal counter, just
                       provide for instance ``arange(s)``.
-        :param times: float array with dimension ``s``, where ``s`` is the
-                      length of the ``steps`` array. Contains the timestamp
-                      of each step in picoseconds (ps).
         :param cells: float array with dimension :math:`s \times 3 \times 3`,
                       where ``s`` is the
                       length of the ``steps`` array. Units are angstrom.
@@ -97,18 +96,28 @@ class TrajectoryData(ArrayData):
                       ``j``-th atom (or site) in the structure at the time step
                       with index ``i`` (identified
                       by step number ``step[i]`` and with timestamp ``times[i]``).
+        :param times: if specified, float array with dimension ``s``, where 
+                      ``s`` is the length of the ``steps`` array. Contains the 
+                      timestamp of each step in picoseconds (ps).
         :param velocities: if specified, must be a float array with the same
                       dimensions of the ``positions`` array.
                       The array contains the velocities in the atoms.
                       
         .. todo :: Choose suitable units for velocities
         """
-        self._internal_validate(steps,times,cells,symbols,positions,velocities)
+        self._internal_validate(steps,cells,symbols,positions,times,velocities)
         self.set_array('steps', steps)
-        self.set_array('times', times)
         self.set_array('cells', cells)
         self.set_array('symbols', symbols)
         self.set_array('positions', positions)
+        if times is not None:
+            self.set_array('times', times)
+        else:
+            # Delete times array, if it was present
+            try:
+                self.delete_array('times')
+            except KeyError:
+                pass
         if velocities is not None:
             self.set_array('velocities', velocities)
         else:
@@ -117,7 +126,6 @@ class TrajectoryData(ArrayData):
                 self.delete_array('velocities')
             except KeyError:
                 pass
-        
 
     def _validate(self):
         """
@@ -127,9 +135,10 @@ class TrajectoryData(ArrayData):
         #check dimensions, types 
         from aiida.common.exceptions import ValidationError
         try:
-            self._internal_validate(self.get_steps(),self.get_times(),
+            self._internal_validate(self.get_steps(),
                                     self.get_cells(),
                                     self.get_symbols(),self.get_positions(),
+                                    self.get_times(),
                                     self.get_velocities())
         # Should catch TypeErrors, ValueErrors, and KeyErrors for missing arrays
         except Exception as e:
@@ -171,7 +180,10 @@ class TrajectoryData(ArrayData):
         
         :raises: KeyError if the trajectory has not been set yet.
         """
-        return self.get_array('times')
+        try:
+            return self.get_array('times')
+        except (AttributeError, KeyError):
+            return None
 
     def get_cells(self):
         """
@@ -259,9 +271,11 @@ class TrajectoryData(ArrayData):
         vel = self.get_velocities()
         if vel is not None:
             vel = vel[index,:,:]
-        return (self.get_steps()[index], self.get_times()[index],
-                self.get_cells()[index,:,:], self.get_symbols(), 
-                self.get_positions()[index,:,:], vel)
+        time = self.get_times()
+        if time is not None:
+            time = time[index]
+        return (self.get_steps()[index], time, self.get_cells()[index,:,:], 
+                self.get_symbols(), self.get_positions()[index,:,:], vel)
 
     def step_to_structure(self, index, custom_kinds=None):   
         """

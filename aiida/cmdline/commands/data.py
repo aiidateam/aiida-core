@@ -726,7 +726,7 @@ class _Structure(VerdiCommandWithSubcommands,Visualizable,Exportable):
         """
         print node._exportstring('cif')
 
-class _Cif(VerdiCommandWithSubcommands,Listable,Visualizable):
+class _Cif(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
     """
     Visualize CIF structures
     """
@@ -740,6 +740,7 @@ class _Cif(VerdiCommandWithSubcommands,Listable,Visualizable):
         self.valid_subcommands = {
             'show': (self.show, self.complete_visualizers),
             'list': (self.list, self.complete_none),
+            'export': (self.export, self.complete_exporters),
             }
 
     def _plugin_jmol(self,exec_name,structure):
@@ -765,6 +766,12 @@ class _Cif(VerdiCommandWithSubcommands,Listable,Visualizable):
                     sys.exit(1)
                 else:
                     raise
+
+    def _export_cif(self,node):
+        """
+        Exporter to CIF.
+        """
+        print node._exportstring('cif')
 
 class _Trajectory(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
     """

@@ -33,20 +33,21 @@ def get_class_typestring(type_string):
         
 
 def _existing_plugins_with_module(base_class, plugins_module_path,
-                                  pkgname, basename, max_depth):
+                                  pkgname, basename, max_depth, suffix=None):
     """
         Recursive function to return the existing plugins within a given module.
         
-        Args:
-        base_class
-            Identify all subclasses of the base_class
-        plugins_module
-            a python module object (*not* a string) within which to look for a plugin.
-        max_depth
-            (default=5) Maximum depth (of nested modules) to be used when
+        :param base_class: Identify all subclasses of the base_class
+        :param plugins_module_path: The path to the folder with the plugins
+        :param pkgname: The name of the package in which you want to search
+        :param basename: The basename of the plugin (sub)class. See also documentation
+            of ``find_module``.
+        :param max_depth: Maximum depth (of nested modules) to be used when
             looking for plugins
-        Return:
-            a list of valid strings that can be used using a Factory or with
+        :param suffix: The suffix that is appended to the basename when looking
+            for the (sub)class name. If not provided (or None), use the base
+            class name.
+        :return: a list of valid strings that can be used using a Factory or with
             load_plugin.
     """
     import pkgutil
@@ -55,7 +56,7 @@ def _existing_plugins_with_module(base_class, plugins_module_path,
     if max_depth == 0:
         return []
     else:
-        retlist = _find_module(base_class, pkgname, basename) 
+        retlist = _find_module(base_class, pkgname, basename, suffix) 
         
         for _, name, ismod in pkgutil.walk_packages([plugins_module_path]):
             if ismod:
@@ -63,32 +64,40 @@ def _existing_plugins_with_module(base_class, plugins_module_path,
                      base_class, os.path.join(plugins_module_path,name),
                      "{}.{}".format(pkgname, name),
                      "{}.{}".format(basename, name) if basename else name,
-                     max_depth-1)
+                     max_depth-1, suffix=suffix)
 
             # This has to be done anyway, for classes in the __init__ file.
             this_pkgname = "{}.{}".format(pkgname, name)
             this_basename = "{}.{}".format(basename, name) if basename else name
 
-            retlist += _find_module(base_class, this_pkgname, this_basename)
+            retlist += _find_module(base_class, this_pkgname, this_basename, suffix)
 
                 
         return list(set(retlist))
 
-def _find_module(base_class, pkgname, this_basename):
+def _find_module(base_class, pkgname, this_basename, suffix=None):
     """
     Given a base class object, looks for its subclasses inside the package
     with name pkgname (must be importable), and prepends to the class name
     the string 'this_basename'.
-    
-    Return a list of valid strings, acceptable by the *Factory functions.
-    Does not return the class itself.
-    
+       
     If the name of the class complies with the syntax
     AaaBbb
     where Aaa is the capitalized name of the containing module (aaa), and
     Bbb is base_class.__name__, then only 'aaa' is returned instead of
     'aaa.AaaBbb', to have a shorter name that is anyway accepted by the *Factory
-    functions. 
+    functions. If suffix is provided, this is used for comparison (the 'Bbb'
+    string) rather than the base class name)
+
+    :param base_class: Identify all subclasses of the base_class
+    :param pkgname: The name of the package in which you want to search
+    :param basename: The basename of the plugin (sub)class. See also documentation
+        of ``find_module``.
+    :param suffix: The suffix that is appended to the basename when looking
+        for the (sub)class name. If not provided (or None), use the base
+        class name.
+    :return: a list of valid strings, acceptable by the *Factory functions.
+       Does not return the class itself.
     """
     import inspect
 
@@ -109,9 +118,14 @@ def _find_module(base_class, pkgname, this_basename):
             # Try to return the shorter name if the subclass name
             # has the correct pattern, as expected by the Factory
             # functions
+            if suffix is None:
+                actual_suffix = base_class.__name__
+            else:
+                actual_suffix = suffix
+
             if k == "{}{}".format(
               pkgname.rpartition('.')[2].capitalize(),
-              base_class.__name__):
+              suffix):
                 retlist.append(this_basename)
             else:
                 retlist.append(
@@ -120,22 +134,22 @@ def _find_module(base_class, pkgname, this_basename):
         #print ' '*(5-max_depth), ' ->', "{}.{}".format(this_basename, k)
     return retlist        
 
-def existing_plugins(base_class, plugins_module_name, max_depth=5):
+def existing_plugins(base_class, plugins_module_name, max_depth=5, suffix=None):
     """
     Return a list of strings of valid plugins.
     
-    Args:
-        base_class
-            Identify all subclasses of the base_class
-        plugins_module_name
-            a string with the full module name separated with dots
-            that points to the folder with plugins. It must be importable by python.
-        max_depth
-            (default=5) Maximum depth (of nested modules) to be used when
+
+    :param base_class: Identify all subclasses of the base_class
+    :param plugins_module_name: a string with the full module name separated
+        with dots that points to the folder with plugins.
+        It must be importable by python.
+    :param max_depth: Maximum depth (of nested modules) to be used when
             looking for plugins
-    
-    TODO: unify this function, the load_plugin function, and possibly think to
-        a caching/registering method for plugins.
+    :param suffix: The suffix that is appended to the basename when looking
+        for the (sub)class name. If not provided (or None), use the base
+        class name.
+    :return: a list of valid strings that can be used using a Factory or with
+        load_plugin.
     """
     try:
         pluginmod = importlib.import_module(plugins_module_name)
@@ -147,7 +161,7 @@ def existing_plugins(base_class, plugins_module_name, max_depth=5):
                                          pluginmod.__path__[0],
                                          plugins_module_name,
                                          "",
-                                         max_depth)
+                                         max_depth, suffix)
 
 def load_plugin(base_class, plugins_module, plugin_type):
     """

@@ -416,7 +416,8 @@ class CodeInputValidationClass(object):
             return
 
         if input_plugin not in existing_plugins(JobCalculation,
-                                                'aiida.orm.calculation.job'):
+                                                'aiida.orm.calculation.job',
+                                                suffix="Calculation"):
             raise ValidationError("Invalid value '{}' for the input_plugin "
                 "variable, it is not among the existing plugins".format(
                 str(input_plugin)))

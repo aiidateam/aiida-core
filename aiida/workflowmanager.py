@@ -30,7 +30,7 @@ def execute_steps():
     In the loop for each RUNNING workflow the method loops also in each of its RUNNING steps,
     testing if all the calculation and subworkflows attached to the step are FINISHED. In this
     case the step is set as FINISHED and the workflow is advanced to the step's next method present 
-    in the db with ``advance_workflow``, otherwise if any step's Calculation is found in NEW state 
+    in the db with ``advance_workflow``, otherwise if any step's JobCalculation is found in NEW state 
     the method will submit. If none of the previous conditions apply the step is flagged as 
     ERROR and cannot proceed anymore, blocking the future execution of the step and, connected, 
     the workflow. 
@@ -44,7 +44,7 @@ def execute_steps():
     from aiida.djsite.db.models import DbWorkflow
     from aiida.orm.workflow import Workflow
     from aiida.common.datastructures import calc_states, wf_states, wf_exit_call
-    from aiida.orm import Calculation
+    from aiida.orm import JobCalculation
     
     logger.info("Querying the worflow DB")
     
@@ -83,7 +83,7 @@ def execute_steps():
                     
                 for uuid in s_calcs_new:
                     
-                    obj_calc = Calculation.get_subclass_from_uuid(uuid=uuid)
+                    obj_calc = JobCalculation.get_subclass_from_uuid(uuid=uuid)
                     try:
                         obj_calc.submit()
                         logger.info("[{0}] Step: {1} launched calculation {2}".format(w.uuid,s.name, uuid))
@@ -128,7 +128,7 @@ def execute_steps():
 #             got_any_error = False
 #             for s_calc in s.get_calculations(calc_states.NEW):
 #                     
-#                 obj_calc = Calculation.get_subclass_from_uuid(uuid=s_calc.uuid)
+#                 obj_calc = JobCalculation.get_subclass_from_uuid(uuid=s_calc.uuid)
 #                 try:
 #                     logger.info("[{0}] Step: {1} launching calculation {2}".format(w.uuid(),s.name, s_calc.uuid))
 #                     obj_calc.submit()

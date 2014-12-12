@@ -4,7 +4,7 @@ Plugin to parse outputs from the scripts from cod-tools package.
 This plugin is in the development stage. Andrius Merkys, 2014-10-29
 """
 from aiida.parsers.parser import Parser
-from aiida.orm.calculation.codtools.ciffilter import CiffilterCalculation
+from aiida.orm.calculation.job.codtools.ciffilter import CiffilterCalculation
 from aiida.orm.data.cif import CifData
 from aiida.orm.data.parameter import ParameterData
 from aiida.common.datastructures import calc_states

@@ -390,7 +390,6 @@ class Computer(VerdiCommandWithSubcommands):
         from aiida.djsite.db.models import DbAuthInfo, DbUser
 
         import argparse
-        from aiida.orm.calculation import Calculation as C
         
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),

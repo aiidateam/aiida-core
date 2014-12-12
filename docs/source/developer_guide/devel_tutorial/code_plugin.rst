@@ -48,17 +48,23 @@ things.
 Create a new file, which has the same name as the class you are
 creating (in this way, it will be possible to load it with
 ``CalculationFactory``).
-Save it in a subfolder at the path ``aiida/orm/calculation``.
+Save it in a subfolder at the path ``aiida/orm/calculation/job``.
 
 Step 1: inheritance
 ^^^^^^^^^^^^^^^^^^^
 
 First define the class::
 
-  class SubclassCalculation(Calculation):   
+  class SubclassCalculation(JobCalculation):   
 
 (Substitute ``Subclass`` with the name of your plugin).
-Take care of inheriting the ``Calculation`` class, or the plugin will not work.
+Take care of inheriting the ``JobCalculation`` class, or the plugin will not work.
+
+.. note:: The base ``Calculation`` class should only be used as the abstract
+  base class. Any calculation that needs to run on a remote scheduler must
+  inherit from  :class:`~aiida.orm.calculation.job.JobCalculation`, that 
+  contains all the methods to run on a remote scheduler, get the calculation
+  state, copy files remotely and retrieve them, ...
 
 Now, you will likely need to define some variables that belong to 
 ``SubclassCalculation``.
@@ -111,14 +117,14 @@ An example is as follows::
 
     from aiida.common.utils import classproperty
   
-    class SubclassCalculation(Calculation):
+    class SubclassCalculation(JobCalculation):
     
     	def _init_internal_params(self):
       	    super(SubclassCalculation, self)._init_internal_params()
   
         @classproperty
         def _use_methods(cls):
-            retdict = Calculation._use_methods
+            retdict = JobCalculation._use_methods
             retdict.update({
                 "settings": {
                    'valid_types': ParameterData,
@@ -232,7 +238,7 @@ for submission without the need to store all nodes on the DB.
 
 For the sake of clarity, it's probably going to be easier looking at
 an implemented example. Take a look at the ``NamelistsCalculation`` located in 
-``aiida.orm.calculation.quantumespresso.namelists``.
+``aiida.orm.calculation.job.quantumespresso.namelists``.
 
 How does the method ``_prepare_for_submission`` work in practice?
 
@@ -539,11 +545,11 @@ The output produced is another JSON file.
 
 Therefore, we create an input plugin for a ``SumCalculation``, which can be done
 with few lines as done in this file 
-:download:`aiida/orm/calculation/sum.py <sum_input.py>`.
+:download:`aiida/orm/calculation/job/sum.py <sum_input.py>`.
 
 The test can now be run, but the calculation Node will only have a RemoteData 
 and a retrieved FolderData which are not querable. 
-So, we create a parser (:download:`aiida/orm/calculation/sum.py <sum_input.py>`)
+So, we create a parser (:download:`aiida/parsers/plugins/sum.py <sum_parser.py>`)
 which will read the output files and will create a ParameterData in output.
 
 As you can see, with few lines we can support a new simple code.

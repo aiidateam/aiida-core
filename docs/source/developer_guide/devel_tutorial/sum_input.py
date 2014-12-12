@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from aiida.orm import Calculation
+from aiida.orm import JobCalculation
 from aiida.orm.data.parameter import ParameterData 
 from aiida.common.utils import classproperty
 from aiida.common.exceptions import InputValidationError
@@ -11,7 +11,7 @@ __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausan
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
 __version__ = "0.2.1"
 
-class SumCalculation(Calculation):
+class SumCalculation(JobCalculation):
     """
     A generic plugin for calculations based on the ASE calculators.
     
@@ -30,7 +30,7 @@ class SumCalculation(Calculation):
         """
         Additional use_* methods for the namelists class.
         """
-        retdict = Calculation._use_methods
+        retdict = JobCalculation._use_methods
         retdict.update({
             "parameters": {
                'valid_types': ParameterData,

@@ -830,14 +830,14 @@ class Workflow(object):
         calculations will be launched until the ``next`` method gets called. For a step to be 
         completed all the calculations linked have to be in RETRIEVED state, after which the next 
         method gets called from the workflow manager.
-        :param next_method: a Calculation object
-        :raise: AiidaException: in case the input is not of Calculation type
+        :param calc: a JobCalculation object
+        :raise: AiidaException: in case the input is not of JobCalculation type
         """
-        from aiida.orm import Calculation
+        from aiida.orm import JobCalculation
         import inspect
 
-        if (not issubclass(calc.__class__,Calculation) and not isinstance(calc, Calculation)):
-            raise AiidaException("Cannot add a calculation not of type Calculation")
+        if (not issubclass(calc.__class__,JobCalculation) and not isinstance(calc, JobCalculation)):
+            raise AiidaException("Cannot add a calculation not of type JobCalculation")
 
         for node in calc.get_inputs():
             if node.pk == None:
@@ -880,7 +880,7 @@ class Workflow(object):
         is not existent it returns None, useful for simpler grammatic in the workflow definition.
         :param next_method: a Workflow step (decorated) method
         :param calc_state: a specific state to filter the calculations to retrieve
-        :return: a list of Calculations objects
+        :return: a list of JobCalculations objects
         """
        
         if not getattr(step_method,"is_wf_step"):

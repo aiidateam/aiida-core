@@ -26,7 +26,7 @@ def update_running_calcs_status(authinfo):
     Update the states of calculations in WITHSCHEDULER status belonging 
     to user and machine as defined in the 'dbauthinfo' table.
     """
-    from aiida.orm import Calculation, Computer
+    from aiida.orm import JobCalculation, Computer
     from aiida.scheduler.datastructures import JobInfo
     from aiida.djsite.utils import get_dblogger_extra
 
@@ -37,8 +37,8 @@ def update_running_calcs_status(authinfo):
                      "and machine {}".format(
         authinfo.aiidauser.email, authinfo.dbcomputer.name))
 
-    # This returns an iterator over aiida Calculation objects
-    calcs_to_inquire = Calculation._get_all_with_state(
+    # This returns an iterator over aiida JobCalculation objects
+    calcs_to_inquire = JobCalculation._get_all_with_state(
         state=calc_states.WITHSCHEDULER,
         computer=authinfo.dbcomputer,
         user=authinfo.aiidauser)
@@ -81,7 +81,7 @@ def update_running_calcs_status(authinfo):
                     
                     jobid = c.get_job_id()
                     if jobid is None:
-                        execlogger.error("Calculation {} is WITHSCHEDULER "
+                        execlogger.error("JobCalculation {} is WITHSCHEDULER "
                                          "but no job id was found!".format(
                             c.pk), extra=logger_extra)
                         continue
@@ -204,12 +204,12 @@ def get_authinfo(computer, aiidauser):
     return authinfo
 
 def retrieve_jobs():
-    from aiida.orm import Calculation, Computer
+    from aiida.orm import JobCalculation, Computer
     from aiida.djsite.db.models import DbComputer, DbUser
     
     # I create a unique set of pairs (computer, aiidauser)
     computers_users_to_check = set(
-        Calculation._get_all_with_state(
+        JobCalculation._get_all_with_state(
             state=calc_states.COMPUTED,
             only_computer_user_pairs = True)
         )
@@ -241,12 +241,12 @@ def update_jobs():
     """
     calls an update for each set of pairs (machine, aiidauser)
     """
-    from aiida.orm import Calculation, Computer
+    from aiida.orm import JobCalculation, Computer
     from aiida.djsite.db.models import DbComputer, DbUser
 
     # I create a unique set of pairs (computer, aiidauser)
     computers_users_to_check = set(
-        Calculation._get_all_with_state(
+        JobCalculation._get_all_with_state(
             state=calc_states.WITHSCHEDULER,
             only_computer_user_pairs = True)
         )
@@ -278,14 +278,14 @@ def submit_jobs():
     """
     Submit all jobs in the TOSUBMIT state.
     """
-    from aiida.orm import Calculation, Computer
+    from aiida.orm import JobCalculation, Computer
     from aiida.djsite.db.models import DbComputer, DbUser
     from aiida.djsite.utils import get_dblogger_extra
     
 
     # I create a unique set of pairs (computer, aiidauser)
     computers_users_to_check = set(
-        Calculation._get_all_with_state(
+        JobCalculation._get_all_with_state(
             state=calc_states.TOSUBMIT,
             only_computer_user_pairs = True)
         )
@@ -305,7 +305,7 @@ def submit_jobs():
             except AuthenticationError:
                 # Put each calculation in the SUBMISSIONFAILED state because
                 # I do not have AuthInfo to submit them
-                calcs_to_inquire = Calculation._get_all_with_state(
+                calcs_to_inquire = JobCalculation._get_all_with_state(
                     state=calc_states.TOSUBMIT,
                     computer=dbcomputer,
                     user=aiidauser)
@@ -344,7 +344,7 @@ def submit_jobs_with_authinfo(authinfo):
     Submit jobs in TOSUBMIT status belonging 
     to user and machine as defined in the 'dbauthinfo' table.
     """
-    from aiida.orm import Calculation, Computer
+    from aiida.orm import JobCalculation, Computer
     from aiida.scheduler.datastructures import JobInfo
     from aiida.djsite.utils import get_dblogger_extra
 
@@ -355,8 +355,8 @@ def submit_jobs_with_authinfo(authinfo):
                      "and machine {}".format(
         authinfo.aiidauser.email, authinfo.dbcomputer.name))
 
-    # This returns an iterator over aiida Calculation objects
-    calcs_to_inquire = Calculation._get_all_with_state(
+    # This returns an iterator over aiida JobCalculation objects
+    calcs_to_inquire = JobCalculation._get_all_with_state(
         state=calc_states.TOSUBMIT,
         computer=authinfo.dbcomputer,
         user=authinfo.aiidauser)
@@ -419,13 +419,13 @@ def submit_calc(calc, authinfo, transport=None):
         the computer defined by the authinfo.
     
     :param calc: the calculation to submit
-        (an instance of the aiida.orm.Calculation class)
+        (an instance of the aiida.orm.JobCalculation class)
     :param authinfo: the authinfo for this calculation.
     :param transport: if passed, must be an already opened transport. No checks
         are done on the consistency of the given transport with the transport
         of the computer defined in the authinfo.
     """
-    from aiida.orm import Calculation, Code, Computer
+    from aiida.orm import JobCalculation, Code, Computer
     from aiida.common.folders import SandboxFolder
     from aiida.common.exceptions import (
         FeatureDisabled, InputValidationError)
@@ -479,7 +479,7 @@ def submit_calc(calc, authinfo, transport=None):
 
         input_codes = calc.get_inputs(type=Code)
         if len(input_codes) != 1:
-            raise InputValidationError("Calculation {} must have "
+            raise InputValidationError("JobCalculation {} must have "
                 "one and only one input code".format(calc.pk))
         code = input_codes[0]
     
@@ -498,7 +498,7 @@ def submit_calc(calc, authinfo, transport=None):
             calc._store_raw_input_folder(folder.abspath)
 
             # NOTE: some logic is partially replicated in the 'test_submit'
-            # method of Calculation. If major logic changes are done
+            # method of JobCalculation. If major logic changes are done
             # here, make sure to update also the test_submit routine
             remote_user = t.whoami()
             computer = calc.get_computer()
@@ -665,7 +665,7 @@ def submit_calc(calc, authinfo, transport=None):
             t.close()
             
 def retrieve_computed_for_authinfo(authinfo):
-    from aiida.orm import Calculation
+    from aiida.orm import JobCalculation
     from aiida.common.folders import SandboxFolder
     from aiida.orm.data.folder import FolderData
     from aiida.djsite.utils import get_dblogger_extra
@@ -677,7 +677,7 @@ def retrieve_computed_for_authinfo(authinfo):
     if not authinfo.enabled:
         return
     
-    calcs_to_retrieve = Calculation._get_all_with_state(
+    calcs_to_retrieve = JobCalculation._get_all_with_state(
         state=calc_states.COMPUTED,
         computer=authinfo.dbcomputer,
         user=authinfo.aiidauser)

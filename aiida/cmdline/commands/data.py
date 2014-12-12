@@ -74,6 +74,13 @@ class Listable(object):
             sys.stdout.write(to_print)
 
     def query(self,args):
+        """
+        Perform the query and return information for the list.
+
+        :param args: a namespace with parsed command line parameters.
+        :return: table (list of lists) with information, describing nodes.
+            Each row describes a single hit.
+        """
         load_dbenv()
         import datetime
         from aiida.orm import DataFactory
@@ -97,11 +104,23 @@ class Listable(object):
         return entry_list
 
     def append_list_cmdline_arguments(self,parser):
+        """
+        Append additional command line parameters, that are later parsed and
+        used in the query construction.
+
+        :param parser: instance of argparse.ArgumentParser
+        """
         parser.add_argument('-p', '--past-days', metavar='N',
                             help="add a filter to show only objects created in the past N days",
                             type=int, action='store')
 
     def get_column_names(self):
+        """
+        Return the list with column names.
+
+        :note: neither the number nor correspondence of column names and
+            actual columns in the output from the query() are checked.
+        """
         return ["ID"]
 
 class Visualizable(object):
@@ -110,6 +129,10 @@ class Visualizable(object):
     """
 
     def complete_visualizers(self, subargs_idx, subargs):
+        """
+        Get a display-ready string, containing names of all possible
+        visualisers.
+        """
         plugin_names = self.get_show_plugins().keys()
         return "\n".join(plugin_names)
 
@@ -165,6 +188,10 @@ class Exportable(object):
     """
 
     def complete_exporters(self, subargs_idx, subargs):
+        """
+        Get a display-ready string, containing names of all possible
+        exporters.
+        """
         plugin_names = self.get_export_plugins().keys()
         return "\n".join(plugin_names)
 

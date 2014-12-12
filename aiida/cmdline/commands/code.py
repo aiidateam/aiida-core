@@ -609,7 +609,7 @@ class Code(VerdiCommandWithSubcommands):
                             action='store_true',
                             help="Show also the owner of the code",
                             )
-        parser.add_argument('-r', '--reveal-hidden', 
+        parser.add_argument('-a', '--all-codes', 
                             action='store_true',
                             help="Show also hidden codes",
                             )
@@ -619,7 +619,7 @@ class Code(VerdiCommandWithSubcommands):
         plugin_filter = parsed_args.plugin
         all_users = parsed_args.all_users
         show_owner = parsed_args.show_owner
-        reveal_filter = parsed_args.reveal_hidden
+        reveal_filter = parsed_args.all_codes
         load_dbenv()
         from django.db.models import Q
         from aiida.djsite.utils import get_automatic_user

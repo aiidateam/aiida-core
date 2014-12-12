@@ -44,7 +44,20 @@ class Listable(object):
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
             description='List data objects.')
+
         self.append_list_cmdline_arguments(parser)
+
+        parser.add_argument('--vseparator', default="\t",
+                            help="specify vertical separator for fields. "
+                                 "Default '\\t'.",
+                            type=str, action='store')
+        parser.add_argument('--header', default=True,
+                            help="print a header with column names. "
+                                 "Default option.",
+                            dest="header", action='store_true')
+        parser.add_argument('--no-header', '-H',
+                            help="do not print a header with column names.",
+                            dest="header", action='store_false')
 
         load_dbenv()
         import datetime
@@ -63,10 +76,13 @@ class Listable(object):
 
         object_list = self.dataclass.query(q_object).distinct().order_by('ctime')
 
+        vsep = parsed_args.vseparator
         if object_list:
-            to_print = "\t".join(self.get_column_names()) + "\n"
+            to_print = ""
+            if parsed_args.header:
+                to_print += vsep.join(self.get_column_names()) + "\n"
             for obj in object_list:
-                to_print += "\t".join(self.get_fields(obj)) + "\n"
+                to_print += vsep.join(self.get_fields(obj)) + "\n"
             sys.stdout.write(to_print)
 
     def append_list_cmdline_arguments(self,parser):

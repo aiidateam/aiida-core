@@ -570,7 +570,7 @@ class _Structure(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
         struc_list_data_dict = dict(struc_list_data)
 
         entry_list = []
-        if struc_list: 
+        if struc_list:
             struc_list_pks_grouped = grouper(query_group_size,
                 [_[0] for _ in struc_list_data])
             
@@ -627,11 +627,11 @@ class _Structure(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
         parser.add_argument('-eo','--elementonly', action='store_true',
                             help="If set, structures do not contain different "
                                  "elements (to be used with -e option)")
-        parser.add_argument('-f', '--formulamode', type=str, default='hill', 
+        parser.add_argument('-f', '--formulamode', type=str, default='hill',
                             help="Formula printing mode (hill, reduce, allreduce"
                             " or compact1) (if None, does not print the formula)",
                             action='store')
-        parser.add_argument('-p', '--past-days', metavar='N', 
+        parser.add_argument('-p', '--past-days', metavar='N',
                             help="Add a filter to show only structures created in the past N days",
                             type=int, action='store')
 

@@ -8,7 +8,7 @@ import tempfile
 from aiida.djsite.db.testbase import AiidaTestCase
 from aiida.common.folders import SandboxFolder
 from aiida.orm import DataFactory
-from aiida.orm.calculation import Calculation
+from aiida.orm.calculation.job import JobCalculation
 import aiida
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
@@ -27,7 +27,7 @@ class TestPort(AiidaTestCase):
         sd = StructureData()
         sd.store()
 
-        calc = Calculation()
+        calc = JobCalculation()
         calc.set_computer(self.computer)
         calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 1})
         calc.store()

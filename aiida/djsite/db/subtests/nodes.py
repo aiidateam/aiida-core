@@ -126,7 +126,7 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
     aiida.djsite.db.models.DbNode objects.
     """
     def test_with_subclasses(self):
-        from aiida.orm import Calculation, CalculationFactory, Data, DataFactory
+        from aiida.orm import JobCalculation, CalculationFactory, Data, DataFactory
         
         extra_name = self.__class__.__name__ + "/test_with_subclasses"
         calc_params = {
@@ -138,7 +138,7 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
         TemplateReplacerCalc = CalculationFactory('simpleplugins.templatereplacer')
         ParameterData = DataFactory('parameter')
         
-        a1 = Calculation(**calc_params).store()
+        a1 = JobCalculation(**calc_params).store()
         # To query only these nodes later
         a1.set_extra(extra_name, True)
         a2 = TemplateReplacerCalc(**calc_params).store()
@@ -152,14 +152,14 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
         a5.set_extra(extra_name, True)
         # I don't set the extras, just to be sure that the filtering works
         # The filtering is needed because other tests will put stuff int he DB
-        a6 = Calculation(**calc_params)
+        a6 = JobCalculation(**calc_params)
         a6.store()
         a7 = Node()
         a7.store()
 
         # Query by calculation
-        results = list(Calculation.query(dbextras__key=extra_name))
-        # a3, a4, a5 should not be found because they are not Calculations.
+        results = list(JobCalculation.query(dbextras__key=extra_name))
+        # a3, a4, a5 should not be found because they are not JobCalculations.
         # a6, a7 should not be found because they have not the attribute set.
         self.assertEquals(set([i.pk for i in results]),
                           set([a1.pk, a2.pk]))        
@@ -1228,15 +1228,15 @@ class TestSubNodesAndLinks(AiidaTestCase):
         
     
     def test_use_code(self):
-        from aiida.orm import Calculation, Code
+        from aiida.orm import JobCalculation, Code
 
         computer = self.computer
         
         code = Code(remote_computer_exec=(computer, '/bin/true'))#.store()
         
-        unstoredcalc = Calculation(computer=computer,
+        unstoredcalc = JobCalculation(computer=computer,
                                    resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1})
-        calc = Calculation(computer=computer,
+        calc = JobCalculation(computer=computer,
                            resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1}).store()
 
         # calc is not stored, and also code is not 
@@ -1376,7 +1376,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
     def test_valid_links(self):
         import tempfile
 
-        from aiida.orm import Calculation, Data, Code
+        from aiida.orm import JobCalculation, Data, Code
         from aiida.orm import Computer, DataFactory
         from aiida.common.datastructures import calc_states
 
@@ -1393,18 +1393,18 @@ class TestSubNodesAndLinks(AiidaTestCase):
 
         with self.assertRaises(ValueError):
             # I need to save the localhost entry first
-            _ = Calculation(computer=unsavedcomputer,
+            _ = JobCalculation(computer=unsavedcomputer,
                             resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1}).store()
 
         # I check both with a string or with an object
-        calc = Calculation(computer=self.computer,
+        calc = JobCalculation(computer=self.computer,
                            resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1}).store()
-        calc2 = Calculation(computer='localhost',
+        calc2 = JobCalculation(computer='localhost',
                             resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1}).store()
         with self.assertRaises(TypeError):
             # I don't want to call it with things that are neither
             # strings nor Computer instances
-            _ = Calculation(computer=1,
+            _ = JobCalculation(computer=1,
                             resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1}).store()
         
         calc._add_link_from(d1)
@@ -1431,9 +1431,9 @@ class TestSubNodesAndLinks(AiidaTestCase):
         with self.assertRaises(ValueError):
             calc._add_link_from(calc2)
 
-        calc_a = Calculation(computer=self.computer,
+        calc_a = JobCalculation(computer=self.computer,
                              resources={'num_machines':1,'num_mpiprocs_per_machine':1}).store()
-        calc_b = Calculation(computer=self.computer,
+        calc_b = JobCalculation(computer=self.computer,
                              resources={'num_machines':1,'num_mpiprocs_per_machine':1}).store()
 
         data_node = Data().store()
@@ -1474,14 +1474,14 @@ class TestSubNodesAndLinks(AiidaTestCase):
         """
         Each data node can only have one input calculation
         """
-        from aiida.orm import Calculation, Data
+        from aiida.orm import JobCalculation, Data
         from aiida.common.datastructures import calc_states
 
         d1 = Data().store()
         
-        calc = Calculation(computer=self.computer,
+        calc = JobCalculation(computer=self.computer,
                            resources={'num_machines':1,'num_mpiprocs_per_machine':1}).store()
-        calc2 = Calculation(computer=self.computer,
+        calc2 = JobCalculation(computer=self.computer,
                             resources={'num_machines':1,'num_mpiprocs_per_machine':1}).store()
 
         # I cannot, calc it is in state NEW

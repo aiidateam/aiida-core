@@ -59,6 +59,21 @@ class Listable(object):
                             help="do not print a header with column names.",
                             dest="header", action='store_false')
 
+        args = list(args)
+        parsed_args = parser.parse_args(args)
+
+        entry_list = self.query(parsed_args)
+
+        vsep = parsed_args.vseparator
+        if entry_list:
+            to_print = ""
+            if parsed_args.header:
+                to_print += vsep.join(self.get_column_names()) + "\n"
+            for entry in entry_list:
+                to_print += vsep.join(entry) + "\n"
+            sys.stdout.write(to_print)
+
+    def query(self,args):
         load_dbenv()
         import datetime
         from aiida.orm import DataFactory
@@ -66,44 +81,28 @@ class Listable(object):
         from django.utils import timezone
         from aiida.djsite.utils import get_automatic_user
 
-        args = list(args)
-        parsed_args = parser.parse_args(args)
-
         now = timezone.now()
         q_object = Q(user=get_automatic_user())
 
-        self.extend_list_query(q_object,parsed_args)
+        if args.past_days is not None:
+            now = timezone.now()
+            n_days_ago = now - datetime.timedelta(days=args.past_days)
+            q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
 
         object_list = self.dataclass.query(q_object).distinct().order_by('ctime')
 
-        vsep = parsed_args.vseparator
-        if object_list:
-            to_print = ""
-            if parsed_args.header:
-                to_print += vsep.join(self.get_column_names()) + "\n"
-            for obj in object_list:
-                to_print += vsep.join(self.get_fields(obj)) + "\n"
-            sys.stdout.write(to_print)
+        entry_list = []
+        for obj in object_list:
+            entry_list.append([str(obj.pk)])
+        return entry_list
 
     def append_list_cmdline_arguments(self,parser):
         parser.add_argument('-p', '--past-days', metavar='N',
                             help="add a filter to show only objects created in the past N days",
                             type=int, action='store')
 
-    def extend_list_query(self,q_object,args):
-        import datetime
-        from django.db.models import Q
-        from django.utils import timezone
-        if args.past_days is not None:
-            now = timezone.now()
-            n_days_ago = now - datetime.timedelta(days=args.past_days)
-            q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
-
     def get_column_names(self):
         return ["ID"]
-
-    def get_fields(self,obj):
-        return [str(obj.pk)]
 
 class Visualizable(object):
     """

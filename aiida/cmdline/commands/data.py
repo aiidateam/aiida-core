@@ -31,6 +31,64 @@ class Data(VerdiCommandRouter):
             'parameter': _Parameter,
             }
 
+class Listable(object):
+    """
+    Provides shell completion for listable data nodes.
+    """
+
+    def list(self, *args):
+        """
+        List all instances of given data class.
+        """
+        import argparse
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='List data objects.')
+        self.append_list_cmdline_arguments(parser)
+
+        load_dbenv()
+        import datetime
+        from aiida.orm import DataFactory
+        from django.db.models import Q
+        from django.utils import timezone
+        from aiida.djsite.utils import get_automatic_user
+
+        args = list(args)
+        parsed_args = parser.parse_args(args)
+
+        now = timezone.now()
+        q_object = Q(user=get_automatic_user())
+
+        self.extend_list_query(q_object,parsed_args)
+
+        object_list = self.dataclass.query(q_object).distinct().order_by('ctime')
+
+        if object_list:
+            to_print = "\t".join(self.get_column_names()) + "\n"
+            for obj in object_list:
+                to_print += "\t".join(self.get_fields(obj)) + "\n"
+            sys.stdout.write(to_print)
+
+    def append_list_cmdline_arguments(self,parser):
+        parser.add_argument('-p', '--past-days', metavar='N',
+                            help="add a filter to show only objects created in the past N days",
+                            type=int, action='store')
+
+    def extend_list_query(self,q_object,args):
+        import datetime
+        from django.db.models import Q
+        from django.utils import timezone
+        if args.past_days is not None:
+            now = timezone.now()
+            n_days_ago = now - datetime.timedelta(days=args.past_days)
+            q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
+
+    def get_column_names(self):
+        return ["ID"]
+
+    def get_fields(self,obj):
+        return [str(obj.pk)]
+
 class Visualizable(object):
     """
     Provides shell completion for visualizable data nodes.
@@ -652,7 +710,7 @@ class _Structure(VerdiCommandWithSubcommands,Visualizable,Exportable):
         """
         print node._exportstring('cif')
 
-class _Cif(VerdiCommandWithSubcommands,Visualizable):
+class _Cif(VerdiCommandWithSubcommands,Listable,Visualizable):
     """
     Visualize CIF structures
     """
@@ -661,57 +719,12 @@ class _Cif(VerdiCommandWithSubcommands,Visualizable):
         """
         A dictionary with valid commands and functions to be called.
         """
+        from aiida.orm.data.cif import CifData
+        self.dataclass = CifData
         self.valid_subcommands = {
             'show': (self.show, self.complete_visualizers),
             'list': (self.list, self.complete_none),
             }
-
-    def list(self, *args):
-        """
-        List all CIF structures
-        """
-        import argparse
-        parser = argparse.ArgumentParser(
-            prog=self.get_full_command_name(),
-            description='List CIF structures.')
-        parser.add_argument('-e','--element',nargs='+', type=str, default=None,
-                            help="Print all structures containing desired elements")
-        parser.add_argument('-eo','--element-only', type=bool, default=False,
-                            help="If set, structures do not contain different elements")
-        parser.add_argument('-p', '--past-days', metavar='N',
-                            help="add a filter to show only structures created in the past N days",
-                            type=int, action='store')
-
-        load_dbenv()
-        import datetime
-        from aiida.orm import DataFactory
-        from django.db.models import Q
-        from django.utils import timezone
-        from aiida.djsite.utils import get_automatic_user
-
-        args = list(args)
-        parsed_args = parser.parse_args(args)
-
-        CifData = DataFactory('cif')
-        now = timezone.now()
-        q_object = Q(user=get_automatic_user())
-
-        if parsed_args.past_days is not None:
-            now = timezone.now()
-            n_days_ago = now - datetime.timedelta(days=parsed_args.past_days)
-            q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
-        if parsed_args.element is not None:
-            print "Not implemented element search"
-            sys.exit(1)
-
-        cif_list = CifData.query(q_object).distinct().order_by('ctime')
-
-        if cif_list:
-            to_print = 'ID\n'
-            for cif in cif_list:
-                to_print += '{}\n'.format(cif.pk)
-
-            sys.stdout.write(to_print)
 
     def _plugin_jmol(self,exec_name,structure):
         """
@@ -737,7 +750,7 @@ class _Cif(VerdiCommandWithSubcommands,Visualizable):
                 else:
                     raise
 
-class _Trajectory(VerdiCommandWithSubcommands,Visualizable,Exportable):
+class _Trajectory(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
     """
     View and manipulate TrajectoryData instances.
     """
@@ -746,52 +759,13 @@ class _Trajectory(VerdiCommandWithSubcommands,Visualizable,Exportable):
         """
         A dictionary with valid commands and functions to be called.
         """
+        from aiida.orm.data.array.trajectory import TrajectoryData
+        self.dataclass = TrajectoryData
         self.valid_subcommands = {
             'show': (self.show, self.complete_visualizers),
             'list': (self.list, self.complete_none),
             'export': (self.export, self.complete_exporters),
             }
-
-    def list(self, *args):
-        """
-        List all TrajectoryData instances
-        """
-        import argparse
-        parser = argparse.ArgumentParser(
-            prog=self.get_full_command_name(),
-            description='List TrajectoryData structures.')
-        parser.add_argument('-p', '--past-days', metavar='N',
-                            help="add a filter to show only structures created in the past N days",
-                            type=int, action='store')
-
-        load_dbenv()
-        import datetime
-        from aiida.orm import DataFactory
-        from django.db.models import Q
-        from django.utils import timezone
-        from aiida.djsite.utils import get_automatic_user
-
-        args = list(args)
-        parsed_args = parser.parse_args(args)
-
-        TrajectoryData = DataFactory('array.trajectory')
-        now = timezone.now()
-        q_object = Q(user=get_automatic_user())
-
-        if parsed_args.past_days is not None:
-            now = timezone.now()
-            n_days_ago = now - datetime.timedelta(days=parsed_args.past_days)
-            q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
-
-        trajectory_list = \
-            TrajectoryData.query(q_object).distinct().order_by('ctime')
-
-        if trajectory_list:
-            to_print = 'ID\n'
-            for trajectory in trajectory_list:
-                to_print += '{}\n'.format(trajectory.pk)
-
-            sys.stdout.write(to_print)
 
     def _plugin_jmol(self,exec_name,trajectory):
         """

@@ -332,3 +332,18 @@ class TrajectoryData(ArrayData):
                 struc.append_atom(symbols=s, position=p)
                 
         return struc
+
+    def _prepare_cif(self):
+        """
+        Write the given trajectory to a string of format CIF.
+        """
+        import CifFile
+        from aiida.orm.data.cif \
+            import ase_loops,cif_from_ase,pycifrw_from_cif
+        cif = ""
+        for i in self.get_steps():
+            structure = self.step_to_structure(i-1)
+            ciffile = pycifrw_from_cif(cif_from_ase(structure.get_ase()),
+                                       ase_loops)
+            cif = cif + ciffile.WriteOut()
+        return cif

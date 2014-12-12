@@ -154,7 +154,7 @@ class Devel(VerdiCommandWithSubcommands):
         under development.
         """
         from aiida.common.exceptions import AiidaException
-        from aiida.orm import Calculation as OrmCalculation
+        from aiida.orm import JobCalculation as OrmCalculation
         
         load_dbenv()
         

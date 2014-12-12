@@ -6,7 +6,7 @@ This plugin is in the development stage. Andrius Merkys, 2014-10-29
 import os
 import shutil
 
-from aiida.orm import Calculation
+from aiida.orm.calculation.job import JobCalculation
 from aiida.orm.data.cif import CifData
 from aiida.orm.data.parameter import ParameterData
 from aiida.common.datastructures import CalcInfo
@@ -17,7 +17,7 @@ __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausan
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
 __version__ = "0.2.1"
 
-class CiffilterCalculation(Calculation):
+class CiffilterCalculation(JobCalculation):
     """
     Generic input plugin for scripts from cod-tools package.
     """
@@ -37,7 +37,7 @@ class CiffilterCalculation(Calculation):
 
     @classproperty
     def _use_methods(cls):
-        retdict = Calculation._use_methods
+        retdict = JobCalculation._use_methods
         retdict.update({
             "cif": {
                'valid_types': CifData,
@@ -55,7 +55,7 @@ class CiffilterCalculation(Calculation):
         return retdict
 
     def _prepare_for_submission(self,tempfolder,inputdict):
-        from aiida.orm.calculation.codtools import commandline_params_from_dict
+        from aiida.orm.calculation.job.codtools import commandline_params_from_dict
         try:
             cif = inputdict.pop(self.get_linkname('cif'))
         except KeyError:

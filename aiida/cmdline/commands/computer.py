@@ -58,12 +58,15 @@ class Computer(VerdiCommandWithSubcommands):
                             help="Show only the computer names, one per line, "
                                  "without any other information or string.",
                             )
-
-
+        parser.add_argument('-a', '--all', action='store_true', 
+                            help="Show also disabled or unconfigured computers",
+                            )
+        parser.set_defaults(also_disabled=False)
         parsed_args = parser.parse_args(args)
         use_colors = parsed_args.color
         only_usable = parsed_args.only_usable
         parsable = parsed_args.parsable
+        all_comps = parsed_args.all
         
         computer_names = self.get_computer_names()
         
@@ -88,15 +91,19 @@ class Computer(VerdiCommandWithSubcommands):
         if computer_names:
             for name in sorted(computer_names):
                 computer = AiiDAOrmComputer.get(name)
-
+                
                 # color_id = 90 # Dark gray
                 # color_id = 34 # Blue
-
+                
                 is_configured = computer.is_user_configured(get_automatic_user())
                 is_user_enabled = computer.is_user_enabled(get_automatic_user())
-
+                
                 is_usable = False # True if both enabled and configured
-
+                
+                if not all_comps:
+                    if not is_configured or not is_user_enabled or not computer.is_enabled():
+                        continue
+                
                 if computer.is_enabled():
                     if is_configured:
                         configured_str = ""

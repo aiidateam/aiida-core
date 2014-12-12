@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from aiida.orm.calculation.quantumespresso.cp import CpCalculation
+from aiida.orm.calculation.job.quantumespresso.cp import CpCalculation
 from aiida.parsers.plugins.quantumespresso.raw_parser_cp import (
                  QEOutputParsingError,parse_cp_traj_stanzas,parse_cp_raw_output)
 from aiida.parsers.plugins.quantumespresso.constants import (bohr_to_ang,

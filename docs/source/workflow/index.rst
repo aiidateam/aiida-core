@@ -72,7 +72,7 @@ us to understand the more sophisticated examples reported later.
   import aiida.common
   from aiida.common import aiidalogger
   from aiida.orm.workflow import Workflow
-  from aiida.orm import Calculation, Code, Computer
+  from aiida.orm import Code, Computer
 
   logger = aiidalogger.getChild('WorkflowDemo')
   
@@ -162,8 +162,8 @@ of the basic ones:
 * **line 36** ``self.get_parameters()``. With this method we can retrieve the parameters passed to the workflow
   when it was initialized. Parameters cannot be modified during an execution, while attributes can be added and removed.
 
-* **lines 39-40** ``self.attach_calculation(Calculation)``. This is a key point in the workflow, and
-  something possible only inside a step method. Calculations, generated in the methods or retrieved from other utility methods, are
+* **lines 39-40** ``self.attach_calculation(JobCalculation)``. This is a key point in the workflow, and
+  something possible only inside a step method. JobCalculations, generated in the methods or retrieved from other utility methods, are
   attached to the workflow's step, launched and executed completely by the daemon, without the need of user interaction. Failures,
   re-launching and queue management are all handled by the daemon, and thousands of calculations can be attached. The daemon will
   poll the servers until all the step calculations will be finished, and only after that it will pass to the next step. 
@@ -516,7 +516,7 @@ this case the support functions are reported first, under the ``Object generator
   
   ``get_pw_calculation`` is called in the workflow's steps, and it handles the entire Calculation object creation. First it extracts the
   parameters from the workflow initialization necessary for the execution (the machine, the code, and the number of core, pseudos, etc..) and
-  then it generates and stores the Calculation objets, returning it for later use.
+  then it generates and stores the JobCalculation objects, returning it for later use.
   
   ``get_kpoints`` genetates a k-point mesh suitable for the calculation, in this case a fixed MP mesh ``4x4x4``. In a real case scenario this
   needs much more sophisticated calculations to ensure a correct convergence, not necessary for the tutorial.

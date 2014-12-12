@@ -4,7 +4,7 @@
   "label": "STest translation of BTO - delta=0.208860759494", 
   "mtime": "D2014-06-05T15:19:13.161274+0000", 
   "nodeversion": 20, 
-  "type": "Scalculation.quantumespresso.pw.PwCalculation.", 
+  "type": "Scalculation.job.quantumespresso.pw.PwCalculation.", 
   "public": false, 
   "ctime": "D2014-04-29T13:38:59.835919+0000"
 }

@@ -18,7 +18,7 @@ class TestComputer(AiidaTestCase):
     """
     def test_deletion(self):
         from aiida.orm.computer import Computer, delete_computer
-        from aiida.orm import Calculation
+        from aiida.orm import JobCalculation
         from aiida.common.exceptions import InvalidOperation
     
         newcomputer = Computer(name="testdeletioncomputer", hostname='localhost',
@@ -35,7 +35,7 @@ class TestComputer(AiidaTestCase):
             'num_mpiprocs_per_machine': 1}
             }
     
-        _ = Calculation(**calc_params).store()
+        _ = JobCalculation(**calc_params).store()
         # This should fail, because there is at least a calculation
         # using this computer (the one created just above)
         with self.assertRaises(InvalidOperation):

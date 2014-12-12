@@ -832,16 +832,8 @@ class _Trajectory(VerdiCommandWithSubcommands):
         Plugin for jmol
         """
         import tempfile,subprocess
-        import CifFile
-        from aiida.orm.data.cif \
-            import ase_loops,cif_from_ase,pycifrw_from_cif
-
         with tempfile.NamedTemporaryFile() as f:
-            for i in trajectory.get_steps():
-                structure = trajectory.step_to_structure(i-1)
-                ciffile = pycifrw_from_cif(cif_from_ase(structure.get_ase()),
-                                           ase_loops)
-                f.write(ciffile.WriteOut())
+            f.write(trajectory._exportstring('cif'))
             f.flush()
 
             try:

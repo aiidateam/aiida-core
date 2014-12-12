@@ -86,6 +86,58 @@ class Visualizable(object):
 
         func(exec_name, n)
 
+class Exportable(object):
+    """
+    Provides shell completion for exportable data nodes.
+    """
+
+    def complete_exporters(self, subargs_idx, subargs):
+        plugin_names = self.get_export_plugins().keys()
+        return "\n".join(plugin_names)
+
+    def get_export_plugins(self):
+        """
+        Get the list of all implemented exporters for data class.
+        """
+        prefix = '_export_'
+        method_names = dir(self) # get list of class methods names
+        valid_formats = [ i[len(prefix):] for i in method_names
+                         if i.startswith(prefix)] # filter them
+
+        return {k: getattr(self,prefix + k) for k in valid_formats}
+
+    def export(self, *args):
+        """
+        Export the data node to a given format.
+        """
+        # DEVELOPER NOTE: to add a new plugin, just add a _export_xxx() method.
+        import argparse,os
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Export data object.')
+        parser.add_argument('format', type=str, default=None,
+                    help="Format of the exported file.")
+        parser.add_argument('data_id', type=int, default=None,
+                            help="ID of the data object to be visualised.")
+        args = list(args)
+        parsed_args = parser.parse_args(args)
+
+        format = parsed_args.format
+        data_id = parsed_args.data_id
+
+        try:
+            func = self.get_export_plugins()[format]
+        except KeyError:
+            print "Not implemented; implemented plugins are:"
+            print "{}.".format(",".join(self.get_export_plugins()))
+            sys.exit(1)
+
+        load_dbenv()
+        from aiida.orm.node import Node
+        n = Node.get_subclass_from_pk(data_id)
+
+        func(n)
+
 # Note: this class should not be exposed directly in the main module,
 # otherwise it becomes a command of 'verdi'. Instead, we want it to be a 
 # subcommand of verdi data.
@@ -384,7 +436,7 @@ class _Bands(VerdiCommandWithSubcommands):
                 sys.stdout.write("".join(to_print))
         
     
-class _Structure(VerdiCommandWithSubcommands,Visualizable):
+class _Structure(VerdiCommandWithSubcommands,Visualizable,Exportable):
     """
     Visualize AiIDA structures
     """
@@ -396,6 +448,7 @@ class _Structure(VerdiCommandWithSubcommands,Visualizable):
         self.valid_subcommands = {
             'show': (self.show, self.complete_visualizers),
             'list': (self.list, self.complete_none),
+            'export': (self.export, self.complete_exporters),
             }
         
     def list(self, *args):
@@ -587,6 +640,18 @@ class _Structure(VerdiCommandWithSubcommands,Visualizable):
                 else:
                     raise
 
+    def _export_xsf(self,node):
+        """
+        Exporter to XSF.
+        """
+        print node._exportstring('xsf')
+
+    def _export_cif(self,node):
+        """
+        Exporter to CIF.
+        """
+        print node._exportstring('cif')
+
 class _Cif(VerdiCommandWithSubcommands,Visualizable):
     """
     Visualize CIF structures
@@ -672,7 +737,7 @@ class _Cif(VerdiCommandWithSubcommands,Visualizable):
                 else:
                     raise
 
-class _Trajectory(VerdiCommandWithSubcommands,Visualizable):
+class _Trajectory(VerdiCommandWithSubcommands,Visualizable,Exportable):
     """
     View and manipulate TrajectoryData instances.
     """
@@ -684,6 +749,7 @@ class _Trajectory(VerdiCommandWithSubcommands,Visualizable):
         self.valid_subcommands = {
             'show': (self.show, self.complete_visualizers),
             'list': (self.list, self.complete_none),
+            'export': (self.export, self.complete_exporters),
             }
 
     def list(self, *args):
@@ -750,6 +816,12 @@ class _Trajectory(VerdiCommandWithSubcommands,Visualizable):
                     sys.exit(1)
                 else:
                     raise
+
+    def _export_cif(self,node):
+        """
+        Exporter to CIF.
+        """
+        print node._exportstring('cif')
 
 class _Parameter(VerdiCommandWithSubcommands):
     """

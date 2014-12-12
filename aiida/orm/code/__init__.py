@@ -21,10 +21,35 @@ class Code(Node):
     methods (e.g., the set_preexec_code() can be used to load specific modules required
     for the code to be run).
     """
-    _updatable_attributes = ('input_plugin','append_text', 'prepend_text') 
-
-    _set_incompatibilities = [('remote_computer_exec','local_executable')]
     
+    def _init_internal_params(self):
+        """
+        This function is called by the init method
+        """
+        self._updatable_attributes = ('input_plugin','append_text', 
+                                      'prepend_text', 'hidden') 
+
+        self._set_incompatibilities = [('remote_computer_exec','local_executable')]
+    
+    def _hide(self):
+        """
+        Hide the code (prevents from showing it in the verdi code list)
+        """
+        self._set_attr("hidden", True)
+    
+    def _reveal(self):
+        """
+        Reveal the code (allows to show it in the verdi code list)
+        By default, it is revealed
+        """
+        self._set_attr("hidden", False)
+    
+    def _is_hidden(self):
+        """
+        Determines whether the Code is hidden or not
+        """
+        return self.get_attr('hidden',False)
+        
     def set_files(self, files):
         """
         Given a list of filenames (or a single filename string),

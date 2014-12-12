@@ -46,4 +46,54 @@ class Data(Node):
 
         return super(Data, self)._can_link_as_output(dest)
     
-    
+    def _exportstring(self, fileformat):
+        """
+        Converts a Data object to other text format.
+
+        :param fileformat: a string (the extension) to describe the file format.
+        :returns: a string with the structure description.
+        """
+        exporters = self._get_exporters()
+
+        try:
+            func = exporters[fileformat]
+        except KeyError:
+            if len(exporters.keys()) > 0:
+                raise ValueError("The format is not accepted. "
+                                 "Currently implemented are: {}.".format(
+                                    ",".join(exporters.keys())) )
+            else:
+                raise ValueError("The format is not accepted. "
+                                 "No formats are implemented yed.")
+
+        return func()
+
+    def export(self,fname,fileformat=None):
+        """
+        Save a Data object to a file.
+
+        :param fname: string with file name. Can be an absolute or relative path.
+        :param fileformat: kind of format to use for the export. If not present,
+            it will try to use the extension of the file name.
+        """
+        if fileformat is None:
+            fileformat = fname.split('.')[-1]
+        filecontent = self._exportstring(fileformat)
+        with open(fname,'w') as f:  # writes in cwd, if fname is not absolute
+            f.write( filecontent )
+
+    def _get_exporters(self):
+        """
+        Get all implemented export formats.
+        The convention is to find all _prepare_... methods.
+        Returns a list of strings.
+        """
+        # NOTE: To add support for a new format, write a new function called as
+        #       _prepare_"" with the name of the new format
+        exporter_prefix = '_prepare_'
+        method_names = dir(self) # get list of class methods names
+        valid_format_names = [ i[len(exporter_prefix):] for i in method_names
+                         if i.startswith(exporter_prefix) ] # filter them
+        valid_formats = {k: getattr(self,exporter_prefix + k)
+                         for k in valid_format_names}
+        return valid_formats

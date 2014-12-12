@@ -22,6 +22,7 @@ default_modules_list = [
             #    ("aiida.djsite.db.models","DbNode","DbNode"),
                         ("aiida.orm","Node","Node"),
                         ("aiida.orm","Calculation","Calculation"),
+                        ("aiida.orm","JobCalculation","JobCalculation"),
                         ("aiida.orm","Code","Code"),
                         ("aiida.orm","Data","Data"),
                         ("aiida.orm","CalculationFactory","CalculationFactory"),

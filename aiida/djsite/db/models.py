@@ -26,7 +26,7 @@ __version__ = "0.2.1"
 # version and the DB schema version are the same. (The DB schema version
 # is stored in the DbSetting table and the check is done in the 
 # load_dbenv() function).
-SCHEMA_VERSION="1.0.0"
+SCHEMA_VERSION="1.0.1"
 
 class EmptyContextManager(object):
     def __enter__(self):
@@ -1752,8 +1752,8 @@ class DbWorkflow(m.Model):
             
     def get_calculations(self):
         
-        from aiida.orm import Calculation
-        return Calculation.query(workflow_step=self.steps)
+        from aiida.orm import JobCalculation
+        return JobCalculation.query(workflow_step=self.steps)
     
     def get_calculations_status(self):
 
@@ -1880,9 +1880,9 @@ class DbWorkflowStep(m.Model):
     
     def add_calculation(self, step_calculation):
         
-        from aiida.orm import Calculation
+        from aiida.orm import JobCalculation
 
-        if (not isinstance(step_calculation, Calculation)):
+        if (not isinstance(step_calculation, JobCalculation)):
             raise ValueError("Cannot add a non-Calculation object to a workflow step")          
 
         try:
@@ -1892,12 +1892,12 @@ class DbWorkflowStep(m.Model):
 
     def get_calculations(self, state=None):
         
-        from aiida.orm import Calculation
+        from aiida.orm import JobCalculation
         
         if (state==None):
-            return Calculation.query(workflow_step=self)#pk__in = step.calculations.values_list("pk", flat=True))
+            return JobCalculation.query(workflow_step=self)#pk__in = step.calculations.values_list("pk", flat=True))
         else:
-            return Calculation.query(workflow_step=self).filter(
+            return JobCalculation.query(workflow_step=self).filter(
                 dbattributes__key="state",dbattributes__tval=state)
 
     def get_calculations_status(self):

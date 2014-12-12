@@ -58,6 +58,8 @@ Following below, a list with the subcommands available.
 
   *  **show**: shows the information of the installed code.
   *  **list**: lists the installed codes
+  *  **hide**: hide codes from `verdi code list`
+  *  **reveal**: un-hide codes for `verdi code list`
   *  **setup**: setup a new code
   *  **relabel**: change the label (name) of a code. If you like to load codes 
      based on their labels and not on their UUID's or PK's, take care of using

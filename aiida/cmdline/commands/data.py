@@ -704,22 +704,25 @@ class _Cif(VerdiCommandWithSubcommands):
         """
         Plugin for jmol
         """
-        import subprocess
+        import tempfile,subprocess
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(structure._exportstring('cif'))
+            f.flush()
 
-        try:
-            subprocess.check_output([exec_name, structure.get_file_abs_path()])
-        except subprocess.CalledProcessError:
-            # The program died: just print a message
-            print "Note: the call to {} ended with an error.".format(
-                exec_name)
-        except OSError as e:
-            if e.errno == 2:
-                print ("No executable '{}' found. Add to the path, "
-                       "or try with an absolute path.".format(
-                       exec_name))
-                sys.exit(1)
-            else:
-                raise
+            try:
+                subprocess.check_output([exec_name, f.name])
+            except subprocess.CalledProcessError:
+                # The program died: just print a message
+                print "Note: the call to {} ended with an error.".format(
+                    exec_name)
+            except OSError as e:
+                if e.errno == 2:
+                    print ("No executable '{}' found. Add to the path, "
+                           "or try with an absolute path.".format(
+                           exec_name))
+                    sys.exit(1)
+                else:
+                    raise
 
 class _Trajectory(VerdiCommandWithSubcommands):
     """

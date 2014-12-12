@@ -409,15 +409,14 @@ class CodeInputValidationClass(object):
         plugins.
         """
         from aiida.common.exceptions import ValidationError
-        from aiida.orm import JobCalculation
+        from aiida.orm import Calculation
         from aiida.common.pluginloader import existing_plugins
 
         if input_plugin is None:
             return
 
-        if input_plugin not in existing_plugins(JobCalculation,
-                                                'aiida.orm.calculation.job',
-                                                suffix="Calculation"):
+        if input_plugin not in existing_plugins(Calculation,
+                                                'aiida.orm.calculation'):
             raise ValidationError("Invalid value '{}' for the input_plugin "
                 "variable, it is not among the existing plugins".format(
                 str(input_plugin)))
@@ -533,6 +532,8 @@ class Code(VerdiCommandWithSubcommands):
             'relabel': (self.code_relabel, self.complete_code_pks),
             'update': (self.code_update, self.complete_code_pks),
             'delete': (self.code_delete, self.complete_code_pks),
+            'hide': (self.code_hide, self.complete_code_pks),
+            'reveal': (self.code_reveal, self.complete_code_pks),
             }
 
     def complete_code_names(self, subargs_idx, subargs):
@@ -547,6 +548,43 @@ class Code(VerdiCommandWithSubcommands):
         return "\n".join([self.complete_code_names(subargs_idx, subargs),
                           self.complete_code_pks(subargs_idx, subargs)])
 
+    def code_hide(self, *args):
+        """
+        Hide one or more codes from the verdi show command
+        """
+        import argparse
+        from aiida.orm.code import Code
+        parser = argparse.ArgumentParser(prog=self.get_full_command_name(),
+            description='Hide codes from the verdi show command.')
+        # The default states are those that are shown if no option is given
+        parser.add_argument('pks', type=int, nargs='+',
+                            help="The pk of the codes to hide",
+                            )
+        parsed_args = parser.parse_args(args)
+        load_dbenv()
+        for pk in parsed_args.pks:
+            code = Code.get_subclass_from_pk(pk)
+            code._hide()
+
+    def code_reveal(self, *args):
+        """
+        Reveal (if it was hidden before) one or more codes from the verdi show command
+        """
+        import argparse
+        from aiida.orm.code import Code
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Reveal codes (if they were hidden before) from the verdi show command.')
+        # The default states are those that are shown if no option is given
+        parser.add_argument('pks', type=int, nargs='+',
+                            help="The pk of the codes to reveal",
+                            )
+        parsed_args = parser.parse_args(args)
+        load_dbenv()
+        for pk in parsed_args.pks:
+            code = Code.get_subclass_from_pk(pk)
+            code._reveal()
+    
     def code_list(self, *args):
         """
         List available codes
@@ -555,7 +593,7 @@ class Code(VerdiCommandWithSubcommands):
         
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
-            description='List the computers in the database.')
+            description='List the codes in the database.')
         # The default states are those that are shown if no option is given
         parser.add_argument('-c', '--computer', 
                             help="Filter only codes on a given computer",
@@ -571,13 +609,17 @@ class Code(VerdiCommandWithSubcommands):
                             action='store_true',
                             help="Show also the owner of the code",
                             )
-        parser.set_defaults(all_users=False)
+        parser.add_argument('-r', '--reveal-hidden', 
+                            action='store_true',
+                            help="Show also hidden codes",
+                            )
+        parser.set_defaults(all_users=False, hidden=False)
         parsed_args = parser.parse_args(args)
         computer_filter = parsed_args.computer
         plugin_filter = parsed_args.plugin
         all_users = parsed_args.all_users
         show_owner = parsed_args.show_owner
-
+        reveal_filter = parsed_args.reveal_hidden
         load_dbenv()
         from django.db.models import Q
         from aiida.djsite.utils import get_automatic_user
@@ -591,6 +633,13 @@ class Code(VerdiCommandWithSubcommands):
             django_filter &= Q(dbattributes__key='input_plugin',
                                dbattributes__datatype='txt',
                                dbattributes__tval=plugin_filter)
+        if not reveal_filter:  # by default show calculations that are not hidden
+                               # or that do not have a hidden method
+            django_filter &= (Q(dbattributes__key='hidden',
+                                dbattributes__datatype='bool',
+                                dbattributes__bval=False) |
+                              ~Q(dbattributes__key='hidden') )
+        
         existing_codes = self.get_code_data(django_filter)
         
         print "# List of configured codes:"
@@ -621,7 +670,7 @@ class Code(VerdiCommandWithSubcommands):
 
         f = django_filter if django_filter is not None else Q()
 
-        return sorted(AiidaOrmCode.query(f).values_list(
+        return sorted(AiidaOrmCode.query(f).distinct().values_list(
                 'pk', 'label', 'dbcomputer__name', 'user__email'))
 
 

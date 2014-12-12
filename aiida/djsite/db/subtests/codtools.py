@@ -260,7 +260,7 @@ class TestCodtools(AiidaTestCase):
                                 '4000008': 'C2 H10 F Mn N2 O9 V3'}})
 
     def test_cmdline_generation(self):
-        from aiida.orm.calculation.codtools import commandline_params_from_dict
+        from aiida.orm.calculation.job.codtools import commandline_params_from_dict
 
         dictionary = {
             'start-data-block-number': '1234567',

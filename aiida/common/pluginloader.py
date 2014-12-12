@@ -214,32 +214,43 @@ def load_plugin(base_class, plugins_module, plugin_type):
         raise MissingPluginError(err_msg)
 
 
-def BaseFactory(module, base_class, base_modname):
+def BaseFactory(module, base_class, base_modname, suffix=None):
     """
     Return a given subclass of Calculation, loading the correct plugin.
     
-    Args:
-        module: a string with the module of the plugin to load, e.g.
+    :example: If `module='quantumespresso.pw'`, `base_class=JobCalculation`,
+      `base_modname = 'aiida.orm.calculation.job'`, and `suffix='Calculation'`,
+      the code will first look for a pw subclass of JobCalculation
+      inside the quantumespresso module. Lacking such a class, it will try to look
+      for a 'PwCalculation' inside the quantumespresso.pw module.
+      In the latter case, the plugin class must have a specific name and be
+      located in a specific file:
+      if for instance plugin_name == 'ssh' and base_class.__name__ == 'Transport',
+      then there must be a class named 'SshTransport' which is a subclass of base_class
+      in a file 'ssh.py' in the plugins_module folder.
+      To create the class name to look for, the code will attach the string
+      passed in the base_modname (after the last dot) and the suffix parameter,
+      if passed, with the proper CamelCase capitalization. If suffix is not 
+      passed, the default suffix that is used is the base_class class name.
+
+    :param module: a string with the module of the plugin to load, e.g.
           'quantumespresso.pw'.
-        base_class: a base class from which the returned class should inherit.
-           e.g.: Calculation
-        base_modname: a basic module name, under which the module should be
-            found. E.g., 'aiida.orm.calculation'.
-        
-    In the above case, the code will first look for a pw subclass of Calculation
-    inside the quantumespresso module. Lacking such a class, it will try to look
-    for a 'PwCalculation' inside the quantumespresso.pw module.
-    In the latter case, the plugin class must have a specific name and be
-    located in a specific file:
-    if for instance plugin_name == 'ssh' and base_class.__name__ == 'Transport',
-    then there must be a class named 'SshTransport' which is a subclass of base_class
-    in a file 'ssh.py' in the plugins_module folder.
+    :param base_class: a base class from which the returned class should inherit.
+           e.g.: JobCalculation
+    :param base_modname: a basic module name, under which the module should be
+            found. E.g., 'aiida.orm.calculation.job'.
+    :param suffix: If specified, the suffix that the class name will have.
+      By default, use the name of the base_class.
     """   
     try:
         return load_plugin(base_class, base_modname, module)
     except MissingPluginError as e1:
         # Automatically add subclass name and try again
-        mname = module.rpartition('.')[2].capitalize() + base_class.__name__
+        if suffix is None:
+            actual_suffix = base_class.__name__
+        else:
+            actual_suffix = suffix
+        mname = module.rpartition('.')[2].capitalize() + actual_suffix
         new_module = module+ '.' +mname
         try:
             return load_plugin(base_class, base_modname, new_module)

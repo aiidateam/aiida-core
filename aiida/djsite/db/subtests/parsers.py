@@ -163,13 +163,13 @@ def output_test(pk, outfolder):
 
     One has then to create a suitable test file.
     """
-    from aiida.orm import Calculation
+    from aiida.orm import JobCalculation
     import os
     import json
     if os.path.exists(outfolder):
         raise ValueError("Out folder '{}' already exists".format(outfolder))
 
-    c = Calculation.get_subclass_from_pk(pk)
+    c = JobCalculation.get_subclass_from_pk(pk)
     inputs = c.get_inputs_dict()
     serialize_node(c, destfolder=os.path.join(outfolder,c.uuid))
     

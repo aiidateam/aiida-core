@@ -569,14 +569,8 @@ class _Structure(VerdiCommandWithSubcommands):
         Plugin for jmol
         """
         import tempfile,subprocess
-        import CifFile
-        from aiida.orm.data.cif \
-            import ase_loops,cif_from_ase,pycifrw_from_cif
-
-        ciffile = pycifrw_from_cif(cif_from_ase(structure.get_ase()),
-                                   ase_loops)
         with tempfile.NamedTemporaryFile() as f:
-            f.write(ciffile.WriteOut())
+            f.write(structure._exportstring('cif'))
             f.flush()
 
             try:

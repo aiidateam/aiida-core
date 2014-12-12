@@ -1,4 +1,4 @@
-from aiida.orm.calculation.sum import SumCalculation
+from aiida.orm.calculation.job.sum import SumCalculation
 from aiida.parsers.parser import Parser
 #from aiida.common.datastructures import calc_states
 from aiida.parsers.exceptions import OutputParsingError

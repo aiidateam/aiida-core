@@ -35,7 +35,7 @@ what is written in 'template' (see below).
 TODO: probably use Python's Template strings instead??
 TODO: catch exceptions
 """
-from aiida.orm import Calculation
+from aiida.orm.calculation.job import JobCalculation
 from aiida.common.exceptions import InputValidationError
 from aiida.common.datastructures import CalcInfo
 
@@ -46,7 +46,7 @@ __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausan
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
 __version__ = "0.2.1"
 
-class TemplatereplacerCalculation(Calculation):   
+class TemplatereplacerCalculation(JobCalculation):   
     """
     Simple stub of a plugin that can be used to replace some text in a given
     template. Can be used for many different codes, or as a starting point

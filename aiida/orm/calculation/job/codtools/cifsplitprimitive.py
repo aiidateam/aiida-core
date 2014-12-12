@@ -6,7 +6,7 @@ This plugin is in the development stage. Andrius Merkys, 2014-10-29
 import os
 import shutil
 
-from aiida.orm.calculation.codtools.ciffilter import CiffilterCalculation
+from aiida.orm.calculation.job.codtools.ciffilter import CiffilterCalculation
 from aiida.orm.data.cif import CifData
 from aiida.orm.data.parameter import ParameterData
 from aiida.common.datastructures import CalcInfo

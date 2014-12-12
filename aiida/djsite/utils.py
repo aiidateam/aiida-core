@@ -9,10 +9,21 @@ def load_dbenv():
     """
     Load the database environment (Django) and perform some checks
     """
-    import os
-    os.environ['DJANGO_SETTINGS_MODULE'] = 'aiida.djsite.settings.settings'
+    _load_dbenv_noschemacheck()
     # Check schema version and the existence of the needed tables
     check_schema_version()
+
+
+def _load_dbenv_noschemacheck():
+    """
+    Load the database environment (Django) WITHOUT CHECKING THE SCHEMA VERSION.
+    
+    This should ONLY be used internally, inside load_dbenv, and for schema 
+    migrations. DO NOT USE OTHERWISE!
+    """
+    import os
+    os.environ['DJANGO_SETTINGS_MODULE'] = 'aiida.djsite.settings.settings'
+    
 
 class DBLogHandler(logging.Handler):
     def emit(self, record):
@@ -241,8 +252,9 @@ def check_schema_version():
     
     if code_schema_version != db_schema_version:
         raise ConfigurationError("The code schema version is {}, but the "
-                                 "version stored in the database (DbSetting "
-                                 "table) is {}, I stop.".format(
+            "version stored in the database (DbSetting "
+            "table) is {}, I stop [migrate using tools in "
+            "aiida/djsite/aiida_migrations]".format(
                                     code_schema_version, db_schema_version))
     
     

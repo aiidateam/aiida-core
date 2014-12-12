@@ -32,7 +32,7 @@ completion and much more.
 Moreover, it will automatically execute the ``load_dbenv`` command, and
 automatically import the following modules/classes::
   
-  from aiida.orm import (Node, Calculation, Code, Data,
+  from aiida.orm import (Node, Calculation, JobCalculation, Code, Data,
       Computer, Group, DataFactory, CalculationFactory)
   from aiida.djsite.db import models
 

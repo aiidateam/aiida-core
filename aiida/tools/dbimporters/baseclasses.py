@@ -125,6 +125,7 @@ class DbEntry(object):
           * db_url: URL of the source database
           * db_id: structure identifyer in the database
           * db_version: version of the database
+          * extras: a dictionary with some extra parameters (e.g. database ID number)
           * url: URL of the structure (should be permanent)
         """
         self.source = {
@@ -132,6 +133,7 @@ class DbEntry(object):
             'db_url'    : None,
             'db_id'     : None,
             'db_version': None,
+            'extras'    : {},
             'url'       : None
         }
 

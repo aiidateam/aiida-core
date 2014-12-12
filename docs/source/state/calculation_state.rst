@@ -66,12 +66,12 @@ need to specify the ID of the calculation you are interested in::
   from aiida import load_dbenv
   load_dbenv()
 
-  from aiida.orm import Calculation
+  from aiida.orm import JobCalculation
 
   ## pk must be a valid integer pk
-  calc = Calculation.get_subclass_from_pk(pk)
+  calc = JobCalculation.get_subclass_from_pk(pk)
   ## Alternatively, with the UUID (uuid must be a valid UUID string)
-  # calc = Calculation.get_subclass_from_uuid(uuid)
+  # calc = JobCalculation.get_subclass_from_uuid(uuid)
   print "AiiDA state:", calc.get_state()  
   print "Last scheduler state seen by the AiiDA deamon:", calc.get_scheduler_state()
 

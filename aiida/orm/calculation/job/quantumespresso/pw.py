@@ -16,8 +16,8 @@ Plugin to create a Quantum Espresso pw.x file.
 # TODO: all a lot of logger.debug stuff
 import os
 
-from aiida.orm import Calculation
-from aiida.orm.calculation.quantumespresso import BasePwCpInputGenerator
+from aiida.orm.calculation.job import JobCalculation
+from aiida.orm.calculation.job.quantumespresso import BasePwCpInputGenerator
 from aiida.common.utils import classproperty
 from aiida.orm.data.array.kpoints import KpointsData
 
@@ -25,7 +25,7 @@ __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausan
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
 __version__ = "0.2.1"
 
-class PwCalculation(BasePwCpInputGenerator, Calculation):   
+class PwCalculation(BasePwCpInputGenerator, JobCalculation):   
     """
     Main DFT code (PWscf, pw.x) of the Quantum ESPRESSO distribution.
     For more information, refer to http://www.quantum-espresso.org/
@@ -76,7 +76,7 @@ class PwCalculation(BasePwCpInputGenerator, Calculation):
         """
         Extend the parent _use_methods with further keys.
         """
-        retdict = Calculation._use_methods
+        retdict = JobCalculation._use_methods
         retdict.update(BasePwCpInputGenerator._baseclass_use_methods)
         
         retdict['kpoints'] = {

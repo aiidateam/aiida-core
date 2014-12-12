@@ -17,12 +17,12 @@ class TestCalcStatus(AiidaTestCase):
     Test the functionality of calculation states.
     """
     def test_state(self):
-        from aiida.orm import Calculation
+        from aiida.orm import JobCalculation
         from aiida.common.datastructures import calc_states
         
         # Use the AiidaTestCase test computer
         
-        c = Calculation(computer=self.computer,
+        c = JobCalculation(computer=self.computer,
                         resources={
                             'num_machines': 1,
                             'num_mpiprocs_per_machine': 1}

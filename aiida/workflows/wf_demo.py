@@ -3,7 +3,7 @@
 import aiida.common
 from aiida.common import aiidalogger
 from aiida.orm.workflow import Workflow
-from aiida.orm import Calculation, Code, Computer
+from aiida.orm import Code, Computer
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"

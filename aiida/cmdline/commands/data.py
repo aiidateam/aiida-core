@@ -509,7 +509,7 @@ class _Bands(VerdiCommandWithSubcommands):
                 sys.stdout.write("".join(to_print))
         
     
-class _Structure(VerdiCommandWithSubcommands,Visualizable,Exportable):
+class _Structure(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
     """
     Visualize AiIDA structures
     """
@@ -518,33 +518,18 @@ class _Structure(VerdiCommandWithSubcommands,Visualizable,Exportable):
         """
         A dictionary with valid commands and functions to be called.
         """
+        from aiida.orm.data.structure import StructureData
+        self.dataclass = StructureData
         self.valid_subcommands = {
             'show': (self.show, self.complete_visualizers),
             'list': (self.list, self.complete_none),
             'export': (self.export, self.complete_exporters),
             }
         
-    def list(self, *args):
+    def query(self,args):
         """
-        List all AiiDA structures
+        Perform the query
         """
-        import argparse
-        parser = argparse.ArgumentParser(
-            prog=self.get_full_command_name(),
-            description='List AiiDA structures.')
-        parser.add_argument('-e','--element',nargs='+', type=str, default=None,
-                            help="Print all structures containing desired elements")
-        parser.add_argument('-eo','--elementonly', action='store_true',
-                            help="If set, structures do not contain different "
-                                 "elements (to be used with -e option)")
-        parser.add_argument('-f', '--formulamode', type=str, default='hill', 
-                            help="Formula printing mode (hill, reduce, allreduce"
-                            " or compact1) (if None, does not print the formula)",
-                            action='store')
-        parser.add_argument('-p', '--past-days', metavar='N', 
-                            help="Add a filter to show only structures created in the past N days",
-                            type=int, action='store')
-         
         load_dbenv()        
         import datetime
         from collections import defaultdict
@@ -559,24 +544,21 @@ class _Structure(VerdiCommandWithSubcommands,Visualizable,Exportable):
         
         query_group_size = 100 # we group the attribute query in chunks of this size
         
-        args = list(args)
-        parsed_args = parser.parse_args(args)
-        
         StructureData = DataFactory('structure')
         now = timezone.now()
         q_object = Q(user=get_automatic_user())
 
-        if parsed_args.past_days is not None:
+        if args.past_days is not None:
             now = timezone.now()
-            n_days_ago = now - datetime.timedelta(days=parsed_args.past_days)
+            n_days_ago = now - datetime.timedelta(days=args.past_days)
             q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
-        if parsed_args.element is not None:
+        if args.element is not None:
             q1 = models.DbAttribute.objects.filter(key__startswith='kinds.',
                                                    key__contains='.symbols.',
-                                                   tval=parsed_args.element[0])
+                                                   tval=args.element[0])
             struc_list = StructureData.query(q_object,
                             dbattributes__in=q1).distinct().order_by('ctime')
-            if parsed_args.elementonly:
+            if args.elementonly:
                 print "Not implemented elementonly search"
                 sys.exit(1)
 
@@ -586,10 +568,9 @@ class _Structure(VerdiCommandWithSubcommands,Visualizable,Exportable):
         struc_list_data = struc_list.values_list('pk', 'label')
         # Used later for efficiency reasons
         struc_list_data_dict = dict(struc_list_data)
-                
-        if struc_list:
-            print "ID\tformula\tlabel"
- 
+
+        entry_list = []
+        if struc_list: 
             struc_list_pks_grouped = grouper(query_group_size,
                 [_[0] for _ in struc_list_data])
             
@@ -630,16 +611,32 @@ class _Structure(VerdiCommandWithSubcommands,Visualizable,Exportable):
                         for s in deser_data[s_pk]['sites']:
                             symbol_list.append(symbol_dict[s['kind_name']])
                         formula = get_formula(symbol_list, 
-                                              mode=parsed_args.formulamode)
+                                              mode=args.formulamode)
                     # If for some reason there is no kind with the name
                     # referenced by the site
                     except KeyError:
                         formula = "<<UNKNOWN>>"
-                    to_print.append('{}\t{}\t{}\n'.format(s_pk,formula,
-                        # This is the label
-                        struc_list_data_dict[s_pk]))
-                                       
-                sys.stdout.write("".join(to_print))
+                    entry_list.append([str(s_pk),
+                                       str(formula),
+                                       struc_list_data_dict[s_pk]])
+        return entry_list
+
+    def append_list_cmdline_arguments(self,parser):
+        parser.add_argument('-e','--element',nargs='+', type=str, default=None,
+                            help="Print all structures containing desired elements")
+        parser.add_argument('-eo','--elementonly', action='store_true',
+                            help="If set, structures do not contain different "
+                                 "elements (to be used with -e option)")
+        parser.add_argument('-f', '--formulamode', type=str, default='hill', 
+                            help="Formula printing mode (hill, reduce, allreduce"
+                            " or compact1) (if None, does not print the formula)",
+                            action='store')
+        parser.add_argument('-p', '--past-days', metavar='N', 
+                            help="Add a filter to show only structures created in the past N days",
+                            type=int, action='store')
+
+    def get_column_names(self):
+        return ["ID","formula","label"]
     
     def _plugin_xcrysden(self,exec_name,structure):
         """

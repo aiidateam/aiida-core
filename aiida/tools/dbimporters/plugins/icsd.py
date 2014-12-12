@@ -410,7 +410,7 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
             self.query_page()
         if position not in self.entries:
             self.entries[position] = IcsdEntry( self.db_parameters["server"]+ self.db_parameters["dl_db"] + self.cif_url.format(self.results[position]), \
-                          source_db = self.db_name, db_id = self.results[position], icsd_nr = self.icsd_numbers[position] )
+                          source_db = self.db_name, db_id = self.results[position], extras = {'icsd_nr' : self.icsd_numbers[position]} )
         return self.entries[position]
 
 
@@ -492,14 +492,14 @@ class IcsdEntry(aiida.tools.dbimporters.baseclasses.DbEntry):
             'db_id'     : None,
             'db_version': None,
             'url'       : url,
-            'icsd_nr'   : None
+            'extras'     : {'icsd_nr'   : None},
         }
         if 'db_source' in kwargs.keys():
             self.source["db_source"] = kwargs['db_source']
         if 'db_id' in kwargs.keys():
             self.source["db_id"] = kwargs['db_id']
-        if 'icsd_nr' in kwargs.keys():
-            self.source["icsd_nr"] = kwargs['icsd_nr']
+        if 'extras' in kwargs.keys() and 'icsd_nr' in kwargs['extras']:
+            self.source['extras']["icsd_nr"] = kwargs['extras']['icsd_nr']
 
         self._cif = None
 
@@ -509,6 +509,19 @@ class IcsdEntry(aiida.tools.dbimporters.baseclasses.DbEntry):
             import urllib2
             self._cif = urllib2.urlopen( self.source["url"] ).read()
         return self._cif
+
+    def get_cif_node(self):
+        """
+        Creates a CIF node, that can be used in AiiDA workflow.
+
+        :return: :py:class:`aiida.orm.data.cif.CifData` object
+        """
+        from aiida.orm.data.cif import CifData
+        import tempfile
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(self.get_corrected_cif())
+            f.flush()
+            return CifData(file=f.name, source=self.source)
 
     def get_corrected_cif(self):
         """

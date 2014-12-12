@@ -705,19 +705,13 @@ class StructureData(Data):
     def _prepare_cif(self):
         """
         Write the given structure to a string of format CIF.
-
-        :alt: Warning: CIF files, produced by ASE, can not be parsed
-            correctly, as symmetry space group 'P 1' is NOT surrounded by
-            quotes.
         """
-        import ase.io.cif
-        import tempfile
-        cif_string = None
-        with tempfile.NamedTemporaryFile() as f:
-            ase.io.cif.write_cif(f.name, self.get_ase())
-            with open(f.name) as infile:
-                cif_string = infile.read()
-        return cif_string
+        import CifFile
+        from aiida.orm.data.cif \
+            import ase_loops,cif_from_ase,pycifrw_from_cif
+        ciffile = pycifrw_from_cif(cif_from_ase(self.get_ase()),
+                                   ase_loops)
+        return ciffile.WriteOut()
 
     def get_symbols_set(self):
         """

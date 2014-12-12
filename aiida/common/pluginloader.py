@@ -125,7 +125,7 @@ def _find_module(base_class, pkgname, this_basename, suffix=None):
 
             if k == "{}{}".format(
               pkgname.rpartition('.')[2].capitalize(),
-              suffix):
+              actual_suffix):
                 retlist.append(this_basename)
             else:
                 retlist.append(

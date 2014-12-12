@@ -43,7 +43,7 @@ class Listable(object):
         import argparse
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
-            description='List data objects.')
+            description='List {} objects.'.format(self.dataclass.__name__))
 
         self.append_list_cmdline_arguments(parser)
 

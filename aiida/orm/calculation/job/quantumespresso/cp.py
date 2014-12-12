@@ -17,15 +17,15 @@ TODO: all a lot of logger.debug stuff
 """
 import os
 
-from aiida.orm import Calculation
-from aiida.orm.calculation.quantumespresso import BasePwCpInputGenerator
+from aiida.orm.calculation.job import JobCalculation
+from aiida.orm.calculation.job.quantumespresso import BasePwCpInputGenerator
 from aiida.common.utils import classproperty
   
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
 __version__ = "0.2.1"
 
-class CpCalculation(BasePwCpInputGenerator, Calculation):   
+class CpCalculation(BasePwCpInputGenerator, JobCalculation):   
     """
     Car-Parrinello molecular dynamics code (cp.x) of the
     Quantum ESPRESSO distribution.
@@ -108,18 +108,11 @@ class CpCalculation(BasePwCpInputGenerator, Calculation):
         return 'print_counter.xml'
 
     @classproperty
-    def _FILE_XML_PRINT_COUNTER(cls):
-        return os.path.join(BasePwCpInputGenerator._OUTPUT_SUBFOLDER, 
-                            '{}_{}.save'.format(BasePwCpInputGenerator._PREFIX,
-                                                _cp_write_unit_number), 
-                            self._FILE_XML_PRINT_COUNTER_BASENAME)
-
-    @classproperty
     def _use_methods(cls):
         """
         Extend the parent _use_methods with further keys.
         """
-        retdict = Calculation._use_methods
+        retdict = JobCalculation._use_methods
         retdict.update(BasePwCpInputGenerator._baseclass_use_methods)
         
         return retdict

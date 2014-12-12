@@ -100,19 +100,23 @@ TrajectoryData
 
 
 
-ORM documentation: Calculation
-==============================
+ORM documentation: Calculation (and JobCalculation)
+===================================================
 
 .. automodule:: aiida.orm.calculation
    :members:
    :special-members: __init__
 
+.. automodule:: aiida.orm.calculation.job
+   :members:
+   :special-members: __init__
+
 Quantum Espresso - PW
 +++++++++++++++++++++
-.. automodule:: aiida.orm.calculation.quantumespresso.pw
+.. automodule:: aiida.orm.calculation.job.quantumespresso.pw
    :members:
 
 TemplateReplacer
 ++++++++++++++++
-.. automodule:: aiida.orm.calculation.simpleplugins.templatereplacer
+.. automodule:: aiida.orm.calculation.job.simpleplugins.templatereplacer
    :members:

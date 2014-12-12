@@ -31,6 +31,186 @@ class Data(VerdiCommandRouter):
             'parameter': _Parameter,
             }
 
+class Listable(object):
+    """
+    Provides shell completion for listable data nodes.
+    """
+
+    def list(self, *args):
+        """
+        List all instances of given data class.
+        """
+        import argparse
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='List {} objects.'.format(self.dataclass.__name__))
+
+        self.append_list_cmdline_arguments(parser)
+
+        parser.add_argument('--vseparator', default="\t",
+                            help="specify vertical separator for fields. "
+                                 "Default '\\t'.",
+                            type=str, action='store')
+        parser.add_argument('--header', default=True,
+                            help="print a header with column names. "
+                                 "Default option.",
+                            dest="header", action='store_true')
+        parser.add_argument('--no-header', '-H',
+                            help="do not print a header with column names.",
+                            dest="header", action='store_false')
+
+        args = list(args)
+        parsed_args = parser.parse_args(args)
+
+        entry_list = self.query(parsed_args)
+
+        vsep = parsed_args.vseparator
+        if entry_list:
+            to_print = ""
+            if parsed_args.header:
+                to_print += vsep.join(self.get_column_names()) + "\n"
+            for entry in entry_list:
+                to_print += vsep.join(entry) + "\n"
+            sys.stdout.write(to_print)
+
+    def query(self,args):
+        load_dbenv()
+        import datetime
+        from aiida.orm import DataFactory
+        from django.db.models import Q
+        from django.utils import timezone
+        from aiida.djsite.utils import get_automatic_user
+
+        now = timezone.now()
+        q_object = Q(user=get_automatic_user())
+
+        if args.past_days is not None:
+            now = timezone.now()
+            n_days_ago = now - datetime.timedelta(days=args.past_days)
+            q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
+
+        object_list = self.dataclass.query(q_object).distinct().order_by('ctime')
+
+        entry_list = []
+        for obj in object_list:
+            entry_list.append([str(obj.pk)])
+        return entry_list
+
+    def append_list_cmdline_arguments(self,parser):
+        parser.add_argument('-p', '--past-days', metavar='N',
+                            help="add a filter to show only objects created in the past N days",
+                            type=int, action='store')
+
+    def get_column_names(self):
+        return ["ID"]
+
+class Visualizable(object):
+    """
+    Provides shell completion for visualizable data nodes.
+    """
+
+    def complete_visualizers(self, subargs_idx, subargs):
+        plugin_names = self.get_show_plugins().keys()
+        return "\n".join(plugin_names)
+
+    def get_show_plugins(self):
+        """
+        Get the list of all implemented plugins for visualizing the structure.
+        """
+        prefix = '_plugin_'
+        method_names = dir(self) # get list of class methods names
+        valid_formats = [ i[len(prefix):] for i in method_names
+                         if i.startswith(prefix)] # filter them
+
+        return {k: getattr(self,prefix + k) for k in valid_formats}
+
+    def show(self, *args):
+        """
+        Show the data node with a visualisation program.
+        """
+        # DEVELOPER NOTE: to add a new plugin, just add a _plugin_xxx() method.
+        import argparse,os
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Visualize data object.')
+        parser.add_argument('exec_name', type=str, default=None,
+                    help="Name or path to the executable of the visualization program.")
+        parser.add_argument('data_id', type=int, default=None,
+                            help="ID of the data object to be visualised.")
+        args = list(args)
+        parsed_args = parser.parse_args(args)
+
+        exec_name = parsed_args.exec_name
+        data_id = parsed_args.data_id
+
+        # I can give in input the whole path to executable
+        code_name = os.path.split(exec_name)[-1]
+
+        try:
+            func = self.get_show_plugins()[code_name]
+        except KeyError:
+            print "Not implemented; implemented plugins are:"
+            print "{}.".format(",".join(self.get_show_plugins()))
+            sys.exit(1)
+
+        load_dbenv()
+        from aiida.orm.node import Node
+        n = Node.get_subclass_from_pk(data_id)
+
+        func(exec_name, n)
+
+class Exportable(object):
+    """
+    Provides shell completion for exportable data nodes.
+    """
+
+    def complete_exporters(self, subargs_idx, subargs):
+        plugin_names = self.get_export_plugins().keys()
+        return "\n".join(plugin_names)
+
+    def get_export_plugins(self):
+        """
+        Get the list of all implemented exporters for data class.
+        """
+        prefix = '_export_'
+        method_names = dir(self) # get list of class methods names
+        valid_formats = [ i[len(prefix):] for i in method_names
+                         if i.startswith(prefix)] # filter them
+
+        return {k: getattr(self,prefix + k) for k in valid_formats}
+
+    def export(self, *args):
+        """
+        Export the data node to a given format.
+        """
+        # DEVELOPER NOTE: to add a new plugin, just add a _export_xxx() method.
+        import argparse,os
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Export data object.')
+        parser.add_argument('format', type=str, default=None,
+                    help="Format of the exported file.")
+        parser.add_argument('data_id', type=int, default=None,
+                            help="ID of the data object to be visualised.")
+        args = list(args)
+        parsed_args = parser.parse_args(args)
+
+        format = parsed_args.format
+        data_id = parsed_args.data_id
+
+        try:
+            func = self.get_export_plugins()[format]
+        except KeyError:
+            print "Not implemented; implemented plugins are:"
+            print "{}.".format(",".join(self.get_export_plugins()))
+            sys.exit(1)
+
+        load_dbenv()
+        from aiida.orm.node import Node
+        n = Node.get_subclass_from_pk(data_id)
+
+        func(n)
+
 # Note: this class should not be exposed directly in the main module,
 # otherwise it becomes a command of 'verdi'. Instead, we want it to be a 
 # subcommand of verdi data.
@@ -329,7 +509,7 @@ class _Bands(VerdiCommandWithSubcommands):
                 sys.stdout.write("".join(to_print))
         
     
-class _Structure(VerdiCommandWithSubcommands):
+class _Structure(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
     """
     Visualize AiIDA structures
     """
@@ -338,40 +518,18 @@ class _Structure(VerdiCommandWithSubcommands):
         """
         A dictionary with valid commands and functions to be called.
         """
+        from aiida.orm.data.structure import StructureData
+        self.dataclass = StructureData
         self.valid_subcommands = {
             'show': (self.show, self.complete_visualizers),
             'list': (self.list, self.complete_none),
+            'export': (self.export, self.complete_exporters),
             }
-
-
-    def complete_visualizers(self, subargs_idx, subargs):
-        plugin_names = self.get_show_plugins().keys()
-        return "\n".join(plugin_names)
         
-    #
-    #
-    #
-    def list(self, *args):
+    def query(self,args):
         """
-        List all AiiDA structures
+        Perform the query
         """
-        import argparse
-        parser = argparse.ArgumentParser(
-            prog=self.get_full_command_name(),
-            description='List AiiDA structures.')
-        parser.add_argument('-e','--element',nargs='+', type=str, default=None,
-                            help="Print all structures containing desired elements")
-        parser.add_argument('-eo','--elementonly', action='store_true',
-                            help="If set, structures do not contain different "
-                                 "elements (to be used with -e option)")
-        parser.add_argument('-f', '--formulamode', type=str, default='hill', 
-                            help="Formula printing mode (hill, reduce, allreduce"
-                            " or compact1) (if None, does not print the formula)",
-                            action='store')
-        parser.add_argument('-p', '--past-days', metavar='N', 
-                            help="Add a filter to show only structures created in the past N days",
-                            type=int, action='store')
-         
         load_dbenv()        
         import datetime
         from collections import defaultdict
@@ -386,24 +544,21 @@ class _Structure(VerdiCommandWithSubcommands):
         
         query_group_size = 100 # we group the attribute query in chunks of this size
         
-        args = list(args)
-        parsed_args = parser.parse_args(args)
-        
         StructureData = DataFactory('structure')
         now = timezone.now()
         q_object = Q(user=get_automatic_user())
 
-        if parsed_args.past_days is not None:
+        if args.past_days is not None:
             now = timezone.now()
-            n_days_ago = now - datetime.timedelta(days=parsed_args.past_days)
+            n_days_ago = now - datetime.timedelta(days=args.past_days)
             q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
-        if parsed_args.element is not None:
+        if args.element is not None:
             q1 = models.DbAttribute.objects.filter(key__startswith='kinds.',
                                                    key__contains='.symbols.',
-                                                   tval=parsed_args.element[0])
+                                                   tval=args.element[0])
             struc_list = StructureData.query(q_object,
                             dbattributes__in=q1).distinct().order_by('ctime')
-            if parsed_args.elementonly:
+            if args.elementonly:
                 print "Not implemented elementonly search"
                 sys.exit(1)
 
@@ -413,10 +568,9 @@ class _Structure(VerdiCommandWithSubcommands):
         struc_list_data = struc_list.values_list('pk', 'label')
         # Used later for efficiency reasons
         struc_list_data_dict = dict(struc_list_data)
-                
+
+        entry_list = []
         if struc_list:
-            print "ID\tformula\tlabel"
- 
             struc_list_pks_grouped = grouper(query_group_size,
                 [_[0] for _ in struc_list_data])
             
@@ -457,63 +611,32 @@ class _Structure(VerdiCommandWithSubcommands):
                         for s in deser_data[s_pk]['sites']:
                             symbol_list.append(symbol_dict[s['kind_name']])
                         formula = get_formula(symbol_list, 
-                                              mode=parsed_args.formulamode)
+                                              mode=args.formulamode)
                     # If for some reason there is no kind with the name
                     # referenced by the site
                     except KeyError:
                         formula = "<<UNKNOWN>>"
-                    to_print.append('{}\t{}\t{}\n'.format(s_pk,formula,
-                        # This is the label
-                        struc_list_data_dict[s_pk]))
-                                       
-                sys.stdout.write("".join(to_print))
+                    entry_list.append([str(s_pk),
+                                       str(formula),
+                                       struc_list_data_dict[s_pk]])
+        return entry_list
 
-    def show(self, *args):
-        """
-        Show the AiiDA structure node with a visualisation program.
-        """
-        # DEVELOPER NOTE: to add a new plugin, just add a _plugin_xxx() method.
-        import argparse,os
-        parser = argparse.ArgumentParser(
-            prog=self.get_full_command_name(),
-            description='Visualize AiiDA structures.')
-        parser.add_argument('exec_name', type=str, default=None,
-                    help="Name or path to the executable of the visualization program.")
-        parser.add_argument('structure_id', type=int, default=None,
-                            help="ID of the structure to be plotted.")
-        args = list(args)
-        parsed_args = parser.parse_args(args)
-        
-        exec_name = parsed_args.exec_name
-        structure_id = parsed_args.structure_id
-        
-        # I can give in input the whole path to executable
-        code_name = os.path.split(exec_name)[-1]
-        
-        try:
-            func = self.get_show_plugins()[code_name]
-        except KeyError:
-            print "Not implemented; implemented plugins are:"
-            print "{}.".format(",".join(self.get_show_plugins()))
-            sys.exit(1)
-        
-        load_dbenv()
-        from aiida.orm import DataFactory
-        StructureData = DataFactory('structure')
-        st = StructureData.get_subclass_from_pk(structure_id)
-        
-        func(exec_name, st)
+    def append_list_cmdline_arguments(self,parser):
+        parser.add_argument('-e','--element',nargs='+', type=str, default=None,
+                            help="Print all structures containing desired elements")
+        parser.add_argument('-eo','--elementonly', action='store_true',
+                            help="If set, structures do not contain different "
+                                 "elements (to be used with -e option)")
+        parser.add_argument('-f', '--formulamode', type=str, default='hill',
+                            help="Formula printing mode (hill, reduce, allreduce"
+                            " or compact1) (if None, does not print the formula)",
+                            action='store')
+        parser.add_argument('-p', '--past-days', metavar='N',
+                            help="Add a filter to show only structures created in the past N days",
+                            type=int, action='store')
 
-    def get_show_plugins(self):
-        """
-        Get the list of all implemented plugins for visualizing the structure.
-        """
-        prefix = '_plugin_'
-        method_names = dir(self) # get list of class methods names
-        valid_formats = [ i[len(prefix):] for i in method_names 
-                         if i.startswith(prefix)] # filter them
-        
-        return {k: getattr(self,prefix + k) for k in valid_formats}
+    def get_column_names(self):
+        return ["ID","formula","label"]
     
     def _plugin_xcrysden(self,exec_name,structure):
         """
@@ -538,7 +661,6 @@ class _Structure(VerdiCommandWithSubcommands):
                     sys.exit(1)
                 else:
                     raise
-                
 
     def _plugin_vmd(self,exec_name,structure):
         """
@@ -569,14 +691,8 @@ class _Structure(VerdiCommandWithSubcommands):
         Plugin for jmol
         """
         import tempfile,subprocess
-        import CifFile
-        from aiida.orm.data.cif \
-            import ase_loops,cif_from_ase,pycifrw_from_cif
-
-        ciffile = pycifrw_from_cif(cif_from_ase(structure.get_ase()),
-                                   ase_loops)
         with tempfile.NamedTemporaryFile() as f:
-            f.write(ciffile.WriteOut())
+            f.write(structure._exportstring('cif'))
             f.flush()
 
             try:
@@ -594,7 +710,19 @@ class _Structure(VerdiCommandWithSubcommands):
                 else:
                     raise
 
-class _Cif(VerdiCommandWithSubcommands):
+    def _export_xsf(self,node):
+        """
+        Exporter to XSF.
+        """
+        print node._exportstring('xsf')
+
+    def _export_cif(self,node):
+        """
+        Exporter to CIF.
+        """
+        print node._exportstring('cif')
+
+class _Cif(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
     """
     Visualize CIF structures
     """
@@ -603,251 +731,21 @@ class _Cif(VerdiCommandWithSubcommands):
         """
         A dictionary with valid commands and functions to be called.
         """
+        from aiida.orm.data.cif import CifData
+        self.dataclass = CifData
         self.valid_subcommands = {
             'show': (self.show, self.complete_visualizers),
             'list': (self.list, self.complete_none),
+            'export': (self.export, self.complete_exporters),
             }
-
-    def complete_visualizers(self, subargs_idx, subargs):
-        plugin_names = self.get_show_plugins().keys()
-        return "\n".join(plugin_names)
-
-    def list(self, *args):
-        """
-        List all CIF structures
-        """
-        import argparse
-        parser = argparse.ArgumentParser(
-            prog=self.get_full_command_name(),
-            description='List CIF structures.')
-        parser.add_argument('-e','--element',nargs='+', type=str, default=None,
-                            help="Print all structures containing desired elements")
-        parser.add_argument('-eo','--element-only', type=bool, default=False,
-                            help="If set, structures do not contain different elements")
-        parser.add_argument('-p', '--past-days', metavar='N',
-                            help="add a filter to show only structures created in the past N days",
-                            type=int, action='store')
-
-        load_dbenv()
-        import datetime
-        from aiida.orm import DataFactory
-        from django.db.models import Q
-        from django.utils import timezone
-        from aiida.djsite.utils import get_automatic_user
-
-        args = list(args)
-        parsed_args = parser.parse_args(args)
-
-        CifData = DataFactory('cif')
-        now = timezone.now()
-        q_object = Q(user=get_automatic_user())
-
-        if parsed_args.past_days is not None:
-            now = timezone.now()
-            n_days_ago = now - datetime.timedelta(days=parsed_args.past_days)
-            q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
-        if parsed_args.element is not None:
-            print "Not implemented element search"
-            sys.exit(1)
-
-        cif_list = CifData.query(q_object).distinct().order_by('ctime')
-
-        if cif_list:
-            to_print = 'ID\n'
-            for cif in cif_list:
-                to_print += '{}\n'.format(cif.pk)
-
-            sys.stdout.write(to_print)
-
-    def show(self, *args):
-        """
-        Show the CIF structure node with a visualisation program.
-        """
-        # DEVELOPER NOTE: to add a new plugin, just add a _plugin_xxx() method.
-        import argparse,os
-        parser = argparse.ArgumentParser(
-            prog=self.get_full_command_name(),
-            description='Visualize CIF structures.')
-        parser.add_argument('exec_name', type=str, default=None,
-                    help="Name or path to the executable of the visualization program.")
-        parser.add_argument('structure_id', type=int, default=None,
-                            help="ID of the structure to be plotted.")
-        args = list(args)
-        parsed_args = parser.parse_args(args)
-
-        exec_name = parsed_args.exec_name
-        structure_id = parsed_args.structure_id
-
-        # I can give in input the whole path to executable
-        code_name = os.path.split(exec_name)[-1]
-
-        try:
-            func = self.get_show_plugins()[code_name]
-        except KeyError:
-            print "Not implemented; implemented plugins are:"
-            print "{}.".format(",".join(self.get_show_plugins()))
-            sys.exit(1)
-
-        load_dbenv()
-        from aiida.orm import DataFactory
-        CifData = DataFactory('cif')
-        st = CifData.get_subclass_from_pk(structure_id)
-
-        func(exec_name, st)
-
-    def get_show_plugins(self):
-        """
-        Get the list of all implemented plugins for visualizing the CIF structure.
-        """
-        prefix = '_plugin_'
-        method_names = dir(self) # get list of class methods names
-        valid_formats = [ i[len(prefix):] for i in method_names
-                         if i.startswith(prefix)] # filter them
-
-        return {k: getattr(self,prefix + k) for k in valid_formats}
 
     def _plugin_jmol(self,exec_name,structure):
         """
         Plugin for jmol
         """
-        import subprocess
-
-        try:
-            subprocess.check_output([exec_name, structure.get_file_abs_path()])
-        except subprocess.CalledProcessError:
-            # The program died: just print a message
-            print "Note: the call to {} ended with an error.".format(
-                exec_name)
-        except OSError as e:
-            if e.errno == 2:
-                print ("No executable '{}' found. Add to the path, "
-                       "or try with an absolute path.".format(
-                       exec_name))
-                sys.exit(1)
-            else:
-                raise
-
-class _Trajectory(VerdiCommandWithSubcommands):
-    """
-    View and manipulate TrajectoryData instances.
-    """
-
-    def __init__(self):
-        """
-        A dictionary with valid commands and functions to be called.
-        """
-        self.valid_subcommands = {
-            'show': (self.show, self.complete_visualizers),
-            'list': (self.list, self.complete_none),
-            }
-
-    def complete_visualizers(self, subargs_idx, subargs):
-        plugin_names = self.get_show_plugins().keys()
-        return "\n".join(plugin_names)
-
-    def list(self, *args):
-        """
-        List all TrajectoryData instances
-        """
-        import argparse
-        parser = argparse.ArgumentParser(
-            prog=self.get_full_command_name(),
-            description='List TrajectoryData structures.')
-        parser.add_argument('-p', '--past-days', metavar='N',
-                            help="add a filter to show only structures created in the past N days",
-                            type=int, action='store')
-
-        load_dbenv()
-        import datetime
-        from aiida.orm import DataFactory
-        from django.db.models import Q
-        from django.utils import timezone
-        from aiida.djsite.utils import get_automatic_user
-
-        args = list(args)
-        parsed_args = parser.parse_args(args)
-
-        TrajectoryData = DataFactory('array.trajectory')
-        now = timezone.now()
-        q_object = Q(user=get_automatic_user())
-
-        if parsed_args.past_days is not None:
-            now = timezone.now()
-            n_days_ago = now - datetime.timedelta(days=parsed_args.past_days)
-            q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
-
-        trajectory_list = \
-            TrajectoryData.query(q_object).distinct().order_by('ctime')
-
-        if trajectory_list:
-            to_print = 'ID\n'
-            for trajectory in trajectory_list:
-                to_print += '{}\n'.format(trajectory.pk)
-
-            sys.stdout.write(to_print)
-
-    def show(self, *args):
-        """
-        Show the trajectory with a visualisation program.
-        """
-        # DEVELOPER NOTE: to add a new plugin, just add a _plugin_xxx() method.
-        import argparse,os
-        parser = argparse.ArgumentParser(
-            prog=self.get_full_command_name(),
-            description='Visualize trajectory.')
-        parser.add_argument('exec_name', type=str, default=None,
-                    help="Name or path to the executable of the visualization program.")
-        parser.add_argument('trajectory_id', type=int, default=None,
-                            help="ID of the trajectory to be visualised.")
-        args = list(args)
-        parsed_args = parser.parse_args(args)
-
-        exec_name = parsed_args.exec_name
-        trajectory_id = parsed_args.trajectory_id
-
-        # I can give in input the whole path to executable
-        code_name = os.path.split(exec_name)[-1]
-
-        try:
-            func = self.get_show_plugins()[code_name]
-        except KeyError:
-            print "Not implemented; implemented plugins are:"
-            print "{}.".format(",".join(self.get_show_plugins()))
-            sys.exit(1)
-
-        load_dbenv()
-        from aiida.orm import DataFactory
-        TrajectoryData = DataFactory('array.trajectory')
-        td = TrajectoryData.get_subclass_from_pk(trajectory_id)
-
-        func(exec_name, td)
-
-    def get_show_plugins(self):
-        """
-        Get the list of all implemented plugins for visualizing the CIF structure.
-        """
-        prefix = '_plugin_'
-        method_names = dir(self) # get list of class methods names
-        valid_formats = [ i[len(prefix):] for i in method_names
-                         if i.startswith(prefix)] # filter them
-
-        return {k: getattr(self,prefix + k) for k in valid_formats}
-
-    def _plugin_jmol(self,exec_name,trajectory):
-        """
-        Plugin for jmol
-        """
         import tempfile,subprocess
-        import CifFile
-        from aiida.orm.data.cif \
-            import ase_loops,cif_from_ase,pycifrw_from_cif
-
         with tempfile.NamedTemporaryFile() as f:
-            for i in trajectory.get_steps():
-                structure = trajectory.step_to_structure(i-1)
-                ciffile = pycifrw_from_cif(cif_from_ase(structure.get_ase()),
-                                           ase_loops)
-                f.write(ciffile.WriteOut())
+            f.write(structure._exportstring('cif'))
             f.flush()
 
             try:
@@ -865,6 +763,58 @@ class _Trajectory(VerdiCommandWithSubcommands):
                 else:
                     raise
 
+    def _export_cif(self,node):
+        """
+        Exporter to CIF.
+        """
+        print node._exportstring('cif')
+
+class _Trajectory(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
+    """
+    View and manipulate TrajectoryData instances.
+    """
+
+    def __init__(self):
+        """
+        A dictionary with valid commands and functions to be called.
+        """
+        from aiida.orm.data.array.trajectory import TrajectoryData
+        self.dataclass = TrajectoryData
+        self.valid_subcommands = {
+            'show': (self.show, self.complete_visualizers),
+            'list': (self.list, self.complete_none),
+            'export': (self.export, self.complete_exporters),
+            }
+
+    def _plugin_jmol(self,exec_name,trajectory):
+        """
+        Plugin for jmol
+        """
+        import tempfile,subprocess
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(trajectory._exportstring('cif'))
+            f.flush()
+
+            try:
+                subprocess.check_output([exec_name, f.name])
+            except subprocess.CalledProcessError:
+                # The program died: just print a message
+                print "Note: the call to {} ended with an error.".format(
+                    exec_name)
+            except OSError as e:
+                if e.errno == 2:
+                    print ("No executable '{}' found. Add to the path, "
+                           "or try with an absolute path.".format(
+                           exec_name))
+                    sys.exit(1)
+                else:
+                    raise
+
+    def _export_cif(self,node):
+        """
+        Exporter to CIF.
+        """
+        print node._exportstring('cif')
 
 class _Parameter(VerdiCommandWithSubcommands):
     """

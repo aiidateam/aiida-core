@@ -404,6 +404,8 @@ class CifData(SinglefileData):
         Generate MD5 hash of the file's contents on-the-fly.
         """
         import aiida.common.utils
+        from aiida.common.exceptions import ValidationError
+        
         abspath = self.get_file_abs_path()
         if not abspath:
             raise ValidationError("No valid CIF was passed!")

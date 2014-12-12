@@ -409,6 +409,13 @@ class CifData(SinglefileData):
             raise ValidationError("No valid CIF was passed!")
 
         return aiida.common.utils.md5_file(abspath)
+
+    def _prepare_cif(self):
+        """
+        Write the given CIF file to a string of format CIF.
+        """
+        with open(self.get_file_abs_path()) as f:
+            return f.read()
         
     def _validate(self):
         """

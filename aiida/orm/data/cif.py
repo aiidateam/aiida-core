@@ -347,6 +347,7 @@ class CifData(SinglefileData):
                                  'db_url',
                                  'db_id',
                                  'db_version',
+                                 'extras',
                                  'url']
         super(CifData,self).__init__(**kwargs)
         self._values = None

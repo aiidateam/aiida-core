@@ -64,7 +64,7 @@ class Data(Node):
                                     ",".join(exporters.keys())) )
             else:
                 raise ValueError("The format is not accepted. "
-                                 "No formats are implemented yed.")
+                                 "No formats are implemented yet.")
 
         return func()
 

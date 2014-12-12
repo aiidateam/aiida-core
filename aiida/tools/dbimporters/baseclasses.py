@@ -121,11 +121,11 @@ class DbEntry(object):
 
         :param source: identifying the location and version of the source
           for the entry, containing:
-        ** db_source: name of the source database
-        ** db_url: URL of the source database
-        ** db_id: structure identifyer in the database
-        ** db_version: version of the database
-        ** url: URL of the structure (should be permanent)
+          * db_source: name of the source database
+          * db_url: URL of the source database
+          * db_id: structure identifyer in the database
+          * db_version: version of the database
+          * url: URL of the structure (should be permanent)
         """
         self.source = {
             'db_source' : None,

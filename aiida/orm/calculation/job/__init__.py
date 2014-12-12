@@ -976,8 +976,10 @@ class JobCalculation(Calculation):
                     raise
 
                 calc_module = from_type_to_pluginclassname(calcdata['type']).rsplit(".",1)[0]
-                if calc_module.startswith('calculation.'):
-                    calc_module = calc_module[12:].strip()
+                prefix = 'calculation.job.'
+                prefix_len = len(prefix)
+                if calc_module.startswith(prefix):
+                    calc_module = calc_module[prefix_len:].strip()
                 
                 if relative_ctime:
                     calc_ctime = str_timedelta(now-calcdata['ctime'],

@@ -31,6 +31,61 @@ class Data(VerdiCommandRouter):
             'parameter': _Parameter,
             }
 
+class Visualizable(object):
+    """
+    Provides shell completion for visualizable data nodes.
+    """
+
+    def complete_visualizers(self, subargs_idx, subargs):
+        plugin_names = self.get_show_plugins().keys()
+        return "\n".join(plugin_names)
+
+    def get_show_plugins(self):
+        """
+        Get the list of all implemented plugins for visualizing the structure.
+        """
+        prefix = '_plugin_'
+        method_names = dir(self) # get list of class methods names
+        valid_formats = [ i[len(prefix):] for i in method_names
+                         if i.startswith(prefix)] # filter them
+
+        return {k: getattr(self,prefix + k) for k in valid_formats}
+
+    def show(self, *args):
+        """
+        Show the data node with a visualisation program.
+        """
+        # DEVELOPER NOTE: to add a new plugin, just add a _plugin_xxx() method.
+        import argparse,os
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Visualize data object.')
+        parser.add_argument('exec_name', type=str, default=None,
+                    help="Name or path to the executable of the visualization program.")
+        parser.add_argument('data_id', type=int, default=None,
+                            help="ID of the data object to be visualised.")
+        args = list(args)
+        parsed_args = parser.parse_args(args)
+
+        exec_name = parsed_args.exec_name
+        data_id = parsed_args.data_id
+
+        # I can give in input the whole path to executable
+        code_name = os.path.split(exec_name)[-1]
+
+        try:
+            func = self.get_show_plugins()[code_name]
+        except KeyError:
+            print "Not implemented; implemented plugins are:"
+            print "{}.".format(",".join(self.get_show_plugins()))
+            sys.exit(1)
+
+        load_dbenv()
+        from aiida.orm.node import Node
+        n = Node.get_subclass_from_pk(data_id)
+
+        func(exec_name, n)
+
 # Note: this class should not be exposed directly in the main module,
 # otherwise it becomes a command of 'verdi'. Instead, we want it to be a 
 # subcommand of verdi data.
@@ -329,7 +384,7 @@ class _Bands(VerdiCommandWithSubcommands):
                 sys.stdout.write("".join(to_print))
         
     
-class _Structure(VerdiCommandWithSubcommands):
+class _Structure(VerdiCommandWithSubcommands,Visualizable):
     """
     Visualize AiIDA structures
     """
@@ -342,15 +397,7 @@ class _Structure(VerdiCommandWithSubcommands):
             'show': (self.show, self.complete_visualizers),
             'list': (self.list, self.complete_none),
             }
-
-
-    def complete_visualizers(self, subargs_idx, subargs):
-        plugin_names = self.get_show_plugins().keys()
-        return "\n".join(plugin_names)
         
-    #
-    #
-    #
     def list(self, *args):
         """
         List all AiiDA structures
@@ -467,53 +514,6 @@ class _Structure(VerdiCommandWithSubcommands):
                         struc_list_data_dict[s_pk]))
                                        
                 sys.stdout.write("".join(to_print))
-
-    def show(self, *args):
-        """
-        Show the AiiDA structure node with a visualisation program.
-        """
-        # DEVELOPER NOTE: to add a new plugin, just add a _plugin_xxx() method.
-        import argparse,os
-        parser = argparse.ArgumentParser(
-            prog=self.get_full_command_name(),
-            description='Visualize AiiDA structures.')
-        parser.add_argument('exec_name', type=str, default=None,
-                    help="Name or path to the executable of the visualization program.")
-        parser.add_argument('structure_id', type=int, default=None,
-                            help="ID of the structure to be plotted.")
-        args = list(args)
-        parsed_args = parser.parse_args(args)
-        
-        exec_name = parsed_args.exec_name
-        structure_id = parsed_args.structure_id
-        
-        # I can give in input the whole path to executable
-        code_name = os.path.split(exec_name)[-1]
-        
-        try:
-            func = self.get_show_plugins()[code_name]
-        except KeyError:
-            print "Not implemented; implemented plugins are:"
-            print "{}.".format(",".join(self.get_show_plugins()))
-            sys.exit(1)
-        
-        load_dbenv()
-        from aiida.orm import DataFactory
-        StructureData = DataFactory('structure')
-        st = StructureData.get_subclass_from_pk(structure_id)
-        
-        func(exec_name, st)
-
-    def get_show_plugins(self):
-        """
-        Get the list of all implemented plugins for visualizing the structure.
-        """
-        prefix = '_plugin_'
-        method_names = dir(self) # get list of class methods names
-        valid_formats = [ i[len(prefix):] for i in method_names 
-                         if i.startswith(prefix)] # filter them
-        
-        return {k: getattr(self,prefix + k) for k in valid_formats}
     
     def _plugin_xcrysden(self,exec_name,structure):
         """
@@ -538,7 +538,6 @@ class _Structure(VerdiCommandWithSubcommands):
                     sys.exit(1)
                 else:
                     raise
-                
 
     def _plugin_vmd(self,exec_name,structure):
         """
@@ -588,7 +587,7 @@ class _Structure(VerdiCommandWithSubcommands):
                 else:
                     raise
 
-class _Cif(VerdiCommandWithSubcommands):
+class _Cif(VerdiCommandWithSubcommands,Visualizable):
     """
     Visualize CIF structures
     """
@@ -601,10 +600,6 @@ class _Cif(VerdiCommandWithSubcommands):
             'show': (self.show, self.complete_visualizers),
             'list': (self.list, self.complete_none),
             }
-
-    def complete_visualizers(self, subargs_idx, subargs):
-        plugin_names = self.get_show_plugins().keys()
-        return "\n".join(plugin_names)
 
     def list(self, *args):
         """
@@ -653,53 +648,6 @@ class _Cif(VerdiCommandWithSubcommands):
 
             sys.stdout.write(to_print)
 
-    def show(self, *args):
-        """
-        Show the CIF structure node with a visualisation program.
-        """
-        # DEVELOPER NOTE: to add a new plugin, just add a _plugin_xxx() method.
-        import argparse,os
-        parser = argparse.ArgumentParser(
-            prog=self.get_full_command_name(),
-            description='Visualize CIF structures.')
-        parser.add_argument('exec_name', type=str, default=None,
-                    help="Name or path to the executable of the visualization program.")
-        parser.add_argument('structure_id', type=int, default=None,
-                            help="ID of the structure to be plotted.")
-        args = list(args)
-        parsed_args = parser.parse_args(args)
-
-        exec_name = parsed_args.exec_name
-        structure_id = parsed_args.structure_id
-
-        # I can give in input the whole path to executable
-        code_name = os.path.split(exec_name)[-1]
-
-        try:
-            func = self.get_show_plugins()[code_name]
-        except KeyError:
-            print "Not implemented; implemented plugins are:"
-            print "{}.".format(",".join(self.get_show_plugins()))
-            sys.exit(1)
-
-        load_dbenv()
-        from aiida.orm import DataFactory
-        CifData = DataFactory('cif')
-        st = CifData.get_subclass_from_pk(structure_id)
-
-        func(exec_name, st)
-
-    def get_show_plugins(self):
-        """
-        Get the list of all implemented plugins for visualizing the CIF structure.
-        """
-        prefix = '_plugin_'
-        method_names = dir(self) # get list of class methods names
-        valid_formats = [ i[len(prefix):] for i in method_names
-                         if i.startswith(prefix)] # filter them
-
-        return {k: getattr(self,prefix + k) for k in valid_formats}
-
     def _plugin_jmol(self,exec_name,structure):
         """
         Plugin for jmol
@@ -724,7 +672,7 @@ class _Cif(VerdiCommandWithSubcommands):
                 else:
                     raise
 
-class _Trajectory(VerdiCommandWithSubcommands):
+class _Trajectory(VerdiCommandWithSubcommands,Visualizable):
     """
     View and manipulate TrajectoryData instances.
     """
@@ -737,10 +685,6 @@ class _Trajectory(VerdiCommandWithSubcommands):
             'show': (self.show, self.complete_visualizers),
             'list': (self.list, self.complete_none),
             }
-
-    def complete_visualizers(self, subargs_idx, subargs):
-        plugin_names = self.get_show_plugins().keys()
-        return "\n".join(plugin_names)
 
     def list(self, *args):
         """
@@ -783,53 +727,6 @@ class _Trajectory(VerdiCommandWithSubcommands):
 
             sys.stdout.write(to_print)
 
-    def show(self, *args):
-        """
-        Show the trajectory with a visualisation program.
-        """
-        # DEVELOPER NOTE: to add a new plugin, just add a _plugin_xxx() method.
-        import argparse,os
-        parser = argparse.ArgumentParser(
-            prog=self.get_full_command_name(),
-            description='Visualize trajectory.')
-        parser.add_argument('exec_name', type=str, default=None,
-                    help="Name or path to the executable of the visualization program.")
-        parser.add_argument('trajectory_id', type=int, default=None,
-                            help="ID of the trajectory to be visualised.")
-        args = list(args)
-        parsed_args = parser.parse_args(args)
-
-        exec_name = parsed_args.exec_name
-        trajectory_id = parsed_args.trajectory_id
-
-        # I can give in input the whole path to executable
-        code_name = os.path.split(exec_name)[-1]
-
-        try:
-            func = self.get_show_plugins()[code_name]
-        except KeyError:
-            print "Not implemented; implemented plugins are:"
-            print "{}.".format(",".join(self.get_show_plugins()))
-            sys.exit(1)
-
-        load_dbenv()
-        from aiida.orm import DataFactory
-        TrajectoryData = DataFactory('array.trajectory')
-        td = TrajectoryData.get_subclass_from_pk(trajectory_id)
-
-        func(exec_name, td)
-
-    def get_show_plugins(self):
-        """
-        Get the list of all implemented plugins for visualizing the CIF structure.
-        """
-        prefix = '_plugin_'
-        method_names = dir(self) # get list of class methods names
-        valid_formats = [ i[len(prefix):] for i in method_names
-                         if i.startswith(prefix)] # filter them
-
-        return {k: getattr(self,prefix + k) for k in valid_formats}
-
     def _plugin_jmol(self,exec_name,trajectory):
         """
         Plugin for jmol
@@ -853,7 +750,6 @@ class _Trajectory(VerdiCommandWithSubcommands):
                     sys.exit(1)
                 else:
                     raise
-
 
 class _Parameter(VerdiCommandWithSubcommands):
     """

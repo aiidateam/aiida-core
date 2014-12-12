@@ -47,7 +47,8 @@ class Calculation(VerdiCommandWithSubcommands):
         from aiida.orm.calculation.job import JobCalculation
         
         plugins = sorted(existing_plugins(JobCalculation,
-                                          'aiida.orm.calculation.job'))
+                                          'aiida.orm.calculation.job',
+                                          suffix='Calculation'))
         # Do not return plugins that are already on the command line
         other_subargs = subargs[:subargs_idx] + subargs[subargs_idx + 1:]
         return_plugins = [_ for _ in plugins if _ not in other_subargs]
@@ -340,7 +341,8 @@ class Calculation(VerdiCommandWithSubcommands):
                     print "! {}: NOT FOUND!".format(arg)
         else:
             plugins = sorted(existing_plugins(JobCalculation,
-                                              'aiida.orm.calculation.job'))
+                                              'aiida.orm.calculation.job',
+                                              suffix='Calculation'))
             if plugins:                
                 print "## Pass as a further parameter one (or more) plugin names"
                 print "## to get more details on a given plugin."

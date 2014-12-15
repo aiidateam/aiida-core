@@ -173,6 +173,7 @@ class TestCodDbImporter(AiidaTestCase):
             'db_url': 'http://www.crystallography.net',
             'db_id': None,
             'db_version': None,
+            'extras': '',
             'url': 'http://www.crystallography.net/cod/1000000.cif'
         })
 
@@ -277,6 +278,7 @@ class TestCifData(AiidaTestCase):
             'db_url'    : '',
             'db_id'     : '0000001',
             'db_version': '1234',
+            'extras'    : '',
             'url'       : '',
         })
 

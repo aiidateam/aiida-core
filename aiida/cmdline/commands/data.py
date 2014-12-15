@@ -883,7 +883,7 @@ class _Trajectory(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
                                  "supplied, all steps are exported.",
                             type=int, action='store')
 
-class _Parameter(VerdiCommandWithSubcommands):
+class _Parameter(VerdiCommandWithSubcommands,Visualizable):
     """
     View and manipulate Parameter data classes.
     """
@@ -892,31 +892,17 @@ class _Parameter(VerdiCommandWithSubcommands):
         """
         A dictionary with valid commands and functions to be called.
         """
+        from aiida.orm.data.parameter import ParameterData
+        self.dataclass = ParameterData
         self.valid_subcommands = {
-            'show': (self.show, self.complete_none),
+            'show': (self.show, self.complete_visualizers),
             }
 
-    def show(self, *args):
+    def _show_json_date(self,exec_name,node):
         """
         Show the content of a ParameterData node.
         """
         from aiida.cmdline import print_dictionary
 
-        import argparse
-        parser = argparse.ArgumentParser(
-            prog=self.get_full_command_name(),
-            description='Show the content of a ParameterData.')
-        parser.add_argument('-f', '--format', type=str, default='json+date',
-                    help="Format for the output.")
-        parser.add_argument('ID', type=int, default=None,
-                            help="ID of the ParameterData object to be shown.")
-        args = list(args)
-        parsed_args = parser.parse_args(args)
-
-        load_dbenv()
-        from aiida.orm.data.parameter import ParameterData
-        pd = ParameterData.get_subclass_from_pk(parsed_args.ID)
-
-        the_dict = pd.get_dict()
-
-        print_dictionary(the_dict, parsed_args.format)
+        the_dict = node.get_dict()
+        print_dictionary(the_dict, 'json+date')

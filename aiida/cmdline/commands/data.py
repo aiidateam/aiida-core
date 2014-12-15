@@ -127,7 +127,7 @@ class Visualizable(object):
     """
     Provides shell completion for visualizable data nodes.
     """
-    show_prefix = '_plugin_'
+    show_prefix = '_show_'
     show_parameters_postfix = '_parameters'
 
     def complete_visualizers(self, subargs_idx, subargs):
@@ -153,7 +153,7 @@ class Visualizable(object):
         """
         Show the data node with a visualisation program.
         """
-        # DEVELOPER NOTE: to add a new plugin, just add a _plugin_xxx() method.
+        # DEVELOPER NOTE: to add a new plugin, just add a _show_xxx() method.
         import argparse,os
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -687,7 +687,7 @@ class _Structure(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
     def get_column_names(self):
         return ["ID","formula","label"]
     
-    def _plugin_xcrysden(self,exec_name,structure):
+    def _show_xcrysden(self,exec_name,structure):
         """
         Plugin for xcrysden
         """
@@ -711,7 +711,7 @@ class _Structure(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
                 else:
                     raise
 
-    def _plugin_vmd(self,exec_name,structure):
+    def _show_vmd(self,exec_name,structure):
         """
         Plugin for vmd
         """
@@ -735,7 +735,7 @@ class _Structure(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
                 else:
                     raise
 
-    def _plugin_jmol(self,exec_name,structure):
+    def _show_jmol(self,exec_name,structure):
         """
         Plugin for jmol
         """
@@ -788,7 +788,7 @@ class _Cif(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
             'export': (self.export, self.complete_exporters),
             }
 
-    def _plugin_jmol(self,exec_name,structure):
+    def _show_jmol(self,exec_name,structure):
         """
         Plugin for jmol
         """
@@ -835,7 +835,7 @@ class _Trajectory(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
             'export': (self.export, self.complete_exporters),
             }
 
-    def _plugin_jmol(self,exec_name,trajectory,**kwargs):
+    def _show_jmol(self,exec_name,trajectory,**kwargs):
         """
         Plugin for jmol
         """
@@ -859,7 +859,7 @@ class _Trajectory(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
                 else:
                     raise
 
-    def _plugin_jmol_parameters(self,parser):
+    def _show_jmol_parameters(self,parser):
         """
         Describe command line parameters.
         """

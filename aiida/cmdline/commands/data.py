@@ -127,6 +127,8 @@ class Visualizable(object):
     """
     Provides shell completion for visualizable data nodes.
     """
+    show_prefix = '_show_'
+    show_parameters_postfix = '_parameters'
 
     def complete_visualizers(self, subargs_idx, subargs):
         """
@@ -140,34 +142,61 @@ class Visualizable(object):
         """
         Get the list of all implemented plugins for visualizing the structure.
         """
-        prefix = '_plugin_'
         method_names = dir(self) # get list of class methods names
-        valid_formats = [ i[len(prefix):] for i in method_names
-                         if i.startswith(prefix)] # filter them
+        valid_formats = [ i[len(self.show_prefix):] for i in method_names
+                         if i.startswith(self.show_prefix) and \
+                            not i.endswith(self.show_parameters_postfix)] # filter
 
-        return {k: getattr(self,prefix + k) for k in valid_formats}
+        return {k: getattr(self,self.show_prefix + k) for k in valid_formats}
 
     def show(self, *args):
         """
         Show the data node with a visualisation program.
         """
-        # DEVELOPER NOTE: to add a new plugin, just add a _plugin_xxx() method.
+        # DEVELOPER NOTE: to add a new plugin, just add a _show_xxx() method.
         import argparse,os
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
             description='Visualize data object.')
-        parser.add_argument('exec_name', type=str, default=None,
-                    help="Name or path to the executable of the visualization program.")
         parser.add_argument('data_id', type=int, default=None,
                             help="ID of the data object to be visualised.")
-        args = list(args)
-        parsed_args = parser.parse_args(args)
 
-        exec_name = parsed_args.exec_name
-        data_id = parsed_args.data_id
+        default_format = None
+        try:
+            default_format = self._default_show_format
+        except AttributeError:
+            if len(self.get_show_plugins().keys()) == 1:
+                default_format = self.get_show_plugins().keys()[0]
+            else:
+                default_format = None
+
+        parser.add_argument('--format', type=str, default=default_format,
+                            help="Type of the visualisation format/tool.",
+                            choices=self.get_show_plugins().keys())
+
+        # Augmenting the command line parameters with ones, that are used by
+        # individual plugins
+        for cmd in dir(self):
+            if not cmd.startswith(self.show_prefix) or \
+               not cmd.endswith(self.show_parameters_postfix):
+                continue
+            getattr(self,cmd)(parser)
+
+        args = list(args)
+        parsed_args = vars(parser.parse_args(args))
+
+        data_id = parsed_args.pop('data_id')
+        format = parsed_args.pop('format')
+
+        if format is None:
+            print "Default format is not defined, please specify.\n" + \
+                  "Valid formats are:"
+            for i in self.get_show_plugins().keys():
+                print "  {}".format(i)
+            sys.exit(0)
 
         # I can give in input the whole path to executable
-        code_name = os.path.split(exec_name)[-1]
+        code_name = os.path.split(format)[-1]
 
         try:
             func = self.get_show_plugins()[code_name]
@@ -180,12 +209,14 @@ class Visualizable(object):
         from aiida.orm.node import Node
         n = Node.get_subclass_from_pk(data_id)
 
-        func(exec_name, n)
+        func(format, n, **parsed_args)
 
 class Exportable(object):
     """
     Provides shell completion for exportable data nodes.
     """
+    export_prefix = '_export_'
+    export_parameters_postfix = '_parameters'
 
     def complete_exporters(self, subargs_idx, subargs):
         """
@@ -199,12 +230,12 @@ class Exportable(object):
         """
         Get the list of all implemented exporters for data class.
         """
-        prefix = '_export_'
         method_names = dir(self) # get list of class methods names
-        valid_formats = [ i[len(prefix):] for i in method_names
-                         if i.startswith(prefix)] # filter them
+        valid_formats = [ i[len(self.export_prefix):] for i in method_names
+                         if i.startswith(self.export_prefix) and \
+                            not i.endswith(self.export_parameters_postfix)] # filter
 
-        return {k: getattr(self,prefix + k) for k in valid_formats}
+        return {k: getattr(self,self.export_prefix + k) for k in valid_formats}
 
     def export(self, *args):
         """
@@ -219,11 +250,20 @@ class Exportable(object):
                     help="Format of the exported file.")
         parser.add_argument('data_id', type=int, default=None,
                             help="ID of the data object to be visualised.")
-        args = list(args)
-        parsed_args = parser.parse_args(args)
 
-        format = parsed_args.format
-        data_id = parsed_args.data_id
+        # Augmenting the command line parameters with ones, that are used by
+        # individual plugins
+        for cmd in dir(self):
+            if not cmd.startswith(self.export_prefix) or \
+               not cmd.endswith(self.export_parameters_postfix):
+                continue
+            getattr(self,cmd)(parser)
+
+        args = list(args)
+        parsed_args = vars(parser.parse_args(args))
+
+        format = parsed_args.pop('format')
+        data_id = parsed_args.pop('data_id')
 
         try:
             func = self.get_export_plugins()[format]
@@ -236,7 +276,7 @@ class Exportable(object):
         from aiida.orm.node import Node
         n = Node.get_subclass_from_pk(data_id)
 
-        func(n)
+        func(n,**parsed_args)
 
 # Note: this class should not be exposed directly in the main module,
 # otherwise it becomes a command of 'verdi'. Instead, we want it to be a 
@@ -368,7 +408,7 @@ class _Upf(VerdiCommandWithSubcommands):
             print "No valid UPF pseudopotential family found."
          
          
-class _Bands(VerdiCommandWithSubcommands):
+class _Bands(VerdiCommandWithSubcommands,Listable):
     """
     Manipulation on the bands
     """
@@ -376,33 +416,20 @@ class _Bands(VerdiCommandWithSubcommands):
         """
         A dictionary with valid commands and functions to be called.
         """
+        from aiida.orm.data.array.bands import BandsData
+        self.dataclass = BandsData
         self.valid_subcommands = {
             'list': (self.list, self.complete_none),
             }
-        
-    def list(self, *args):
+
+    def query(self,args):
         """
-        List all AiiDA BandsData
+        Perform the query and return information for the list.
+
+        :param args: a namespace with parsed command line parameters.
+        :return: table (list of lists) with information, describing nodes.
+            Each row describes a single hit.
         """
-        import argparse
-        parser = argparse.ArgumentParser(
-            prog=self.get_full_command_name(),
-            description='List AiiDA BandsDatas. Note: the formula is taken '
-                        "from the closest structure found in the database graph")
-        parser.add_argument('-e','--element',nargs='+', type=str, default=None,
-                            help="Print all bandsdatas from structures "
-                            "containing desired elements")
-        parser.add_argument('-eo','--element-only',nargs='+', type=str, default=None,
-                            help="Print all bandsdatas from structures "
-                            "containing only the selected elements")        
-        parser.add_argument('-f', '--formulamode', type=str, default='hill', 
-                            help="Formula printing mode (hill, reduce, allreduce"
-                            " or compact1) (if None, does not print the formula)",
-                            action='store')
-        parser.add_argument('-p', '--past-days', metavar='N', 
-                            help="Add a filter to show only bandsdatas created in the past N days",
-                            type=int, action='store')
-         
         load_dbenv()        
         import datetime
         from collections import defaultdict
@@ -418,19 +445,16 @@ class _Bands(VerdiCommandWithSubcommands):
         from aiida.djsite.db.models import DbPath
 
         query_group_size = 100 # we group the attribute query in chunks of this size
-        
-        args = list(args)
-        parsed_args = parser.parse_args(args)
-        
+
         StructureData = DataFactory('structure')
         BandsData = DataFactory('array.bands')
         now = timezone.now()
         
         # First, I run a query to get all BandsData of the past N days
         q_object = Q(user=get_automatic_user())
-        if parsed_args.past_days is not None:
+        if args.past_days is not None:
             now = timezone.now()
-            n_days_ago = now - datetime.timedelta(days=parsed_args.past_days)
+            n_days_ago = now - datetime.timedelta(days=args.past_days)
             q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
         else:
             bands_list = BandsData.query(q_object).distinct().order_by('ctime')
@@ -441,7 +465,7 @@ class _Bands(VerdiCommandWithSubcommands):
         grouped_bands_list_data = grouper(query_group_size,
                                           [(_[0],_[1],_[2]) for _ in bands_list_data])
         
-        print "ID\tformula\tctime\tlabel"
+        entry_list = []
 
         for this_chunk in grouped_bands_list_data:
             # gather all banddata pks
@@ -491,16 +515,16 @@ class _Bands(VerdiCommandWithSubcommands):
             for ((band_pk,label,date),struc_pk) in zip(this_chunk,struc_pks):
                 if struc_pk is not None:
                     # Exclude structures by the elements
-                    if parsed_args.element is not None:
+                    if args.element is not None:
                         all_kinds = [k['symbols'] for k in deser_data[struc_pk]['kinds']]
                         all_symbols = [ item for sublist in all_kinds for item in sublist ]
-                        if not any( [s in parsed_args.element for s in all_symbols]
+                        if not any( [s in args.element for s in all_symbols]
                                     ):
                             continue
-                    if parsed_args.element_only is not None:
+                    if args.element_only is not None:
                         all_kinds = [k['symbols'] for k in deser_data[struc_pk]['kinds']]
                         all_symbols = [ item for sublist in all_kinds for item in sublist ]
-                        if not all( [s in all_symbols for s in parsed_args.element_only]
+                        if not all( [s in all_symbols for s in args.element_only]
                                    ):
                             continue
                     
@@ -512,29 +536,55 @@ class _Bands(VerdiCommandWithSubcommands):
                         symbol_list = [ symbol_dict[s['kind_name']] 
                                         for s in deser_data[struc_pk]['sites'] ]
                         formula = get_formula(symbol_list,
-                                              mode=parsed_args.formulamode)
+                                              mode=args.formulamode)
                     # If for some reason there is no kind with the name
                     # referenced by the site
                     except KeyError:
                         formula = "<<UNKNOWN>>"
                         # cycle if we imposed the filter on elements
-                        if parsed_args.element is not None or parsed_args.element_only is not None:
+                        if args.element is not None or args.element_only is not None:
                             continue
                 else:
                     formula = "<<UNKNOWN>>"
                     # cycle if we imposed the filter on elements
-                    if parsed_args.element is not None or parsed_args.element_only is not None:
+                    if args.element is not None or args.element_only is not None:
                         continue
                 
-                # print stuff in output
-                to_print = []
-                to_print.append('{}\t{}\t{}\t{}\n'.format(band_pk, 
-                                                          formula,
-                                                          date.strftime('%d %b %Y'),
-                                                          label,
-                                                      ))
-                sys.stdout.write("".join(to_print))
-        
+                entry_list.append([str(band_pk),
+                                   str(formula),
+                                   date.strftime('%d %b %Y'),
+                                   label])
+        return entry_list
+
+    def append_list_cmdline_arguments(self,parser):
+        """
+        Append additional command line parameters, that are later parsed and
+        used in the query construction.
+
+        :param parser: instance of argparse.ArgumentParser
+        """
+        parser.add_argument('-e','--element',nargs='+', type=str, default=None,
+                            help="Print all bandsdatas from structures "
+                            "containing desired elements")
+        parser.add_argument('-eo','--element-only',nargs='+', type=str, default=None,
+                            help="Print all bandsdatas from structures "
+                            "containing only the selected elements")
+        parser.add_argument('-f', '--formulamode', type=str, default='hill',
+                            help="Formula printing mode (hill, reduce, allreduce"
+                            " or compact1) (if None, does not print the formula)",
+                            action='store')
+        parser.add_argument('-p', '--past-days', metavar='N',
+                            help="Add a filter to show only bandsdatas created in the past N days",
+                            type=int, action='store')
+
+    def get_column_names(self):
+        """
+        Return the list with column names.
+
+        :note: neither the number nor correspondence of column names and
+            actual columns in the output from the query() are checked.
+        """
+        return ["ID","formula","ctime","label"]
     
 class _Structure(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
     """
@@ -665,7 +715,7 @@ class _Structure(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
     def get_column_names(self):
         return ["ID","formula","label"]
     
-    def _plugin_xcrysden(self,exec_name,structure):
+    def _show_xcrysden(self,exec_name,structure):
         """
         Plugin for xcrysden
         """
@@ -689,7 +739,7 @@ class _Structure(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
                 else:
                     raise
 
-    def _plugin_vmd(self,exec_name,structure):
+    def _show_vmd(self,exec_name,structure):
         """
         Plugin for vmd
         """
@@ -713,7 +763,7 @@ class _Structure(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
                 else:
                     raise
 
-    def _plugin_jmol(self,exec_name,structure):
+    def _show_jmol(self,exec_name,structure):
         """
         Plugin for jmol
         """
@@ -766,7 +816,7 @@ class _Cif(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
             'export': (self.export, self.complete_exporters),
             }
 
-    def _plugin_jmol(self,exec_name,structure):
+    def _show_jmol(self,exec_name,structure):
         """
         Plugin for jmol
         """
@@ -813,13 +863,13 @@ class _Trajectory(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
             'export': (self.export, self.complete_exporters),
             }
 
-    def _plugin_jmol(self,exec_name,trajectory):
+    def _show_jmol(self,exec_name,trajectory,**kwargs):
         """
         Plugin for jmol
         """
         import tempfile,subprocess
         with tempfile.NamedTemporaryFile() as f:
-            f.write(trajectory._exportstring('cif'))
+            f.write(trajectory._exportstring('cif',**kwargs))
             f.flush()
 
             try:
@@ -837,13 +887,31 @@ class _Trajectory(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
                 else:
                     raise
 
-    def _export_cif(self,node):
+    def _show_jmol_parameters(self,parser):
+        """
+        Describe command line parameters.
+        """
+        parser.add_argument('--step',
+                            help="ID of the trajectory step. If none is "
+                                 "supplied, all steps are exported.",
+                            type=int, action='store')
+
+    def _export_cif(self,node,**kwargs):
         """
         Exporter to CIF.
         """
-        print node._exportstring('cif')
+        print node._exportstring('cif',**kwargs)
 
-class _Parameter(VerdiCommandWithSubcommands):
+    def _export_cif_parameters(self,parser):
+        """
+        Describe command line parameters.
+        """
+        parser.add_argument('--step',
+                            help="ID of the trajectory step. If none is "
+                                 "supplied, all steps are exported.",
+                            type=int, action='store')
+
+class _Parameter(VerdiCommandWithSubcommands,Visualizable):
     """
     View and manipulate Parameter data classes.
     """
@@ -852,31 +920,17 @@ class _Parameter(VerdiCommandWithSubcommands):
         """
         A dictionary with valid commands and functions to be called.
         """
+        from aiida.orm.data.parameter import ParameterData
+        self.dataclass = ParameterData
         self.valid_subcommands = {
-            'show': (self.show, self.complete_none),
+            'show': (self.show, self.complete_visualizers),
             }
 
-    def show(self, *args):
+    def _show_json_date(self,exec_name,node):
         """
         Show the content of a ParameterData node.
         """
         from aiida.cmdline import print_dictionary
 
-        import argparse
-        parser = argparse.ArgumentParser(
-            prog=self.get_full_command_name(),
-            description='Show the content of a ParameterData.')
-        parser.add_argument('-f', '--format', type=str, default='json+date',
-                    help="Format for the output.")
-        parser.add_argument('ID', type=int, default=None,
-                            help="ID of the ParameterData object to be shown.")
-        args = list(args)
-        parsed_args = parser.parse_args(args)
-
-        load_dbenv()
-        from aiida.orm.data.parameter import ParameterData
-        pd = ParameterData.get_subclass_from_pk(parsed_args.ID)
-
-        the_dict = pd.get_dict()
-
-        print_dictionary(the_dict, parsed_args.format)
+        the_dict = node.get_dict()
+        print_dictionary(the_dict, 'json+date')

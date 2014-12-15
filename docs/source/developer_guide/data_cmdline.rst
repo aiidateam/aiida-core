@@ -33,7 +33,7 @@ Adding plugins for ``show``, ``export`` and like
 
 A plugin to show or export the data node can be added by inserting a method
 to ``_Datatype`` class. Each new method is automatically detected,
-provided it starts with ``_plugin_`` (for ``show``) and ``_export_`` (for
+provided it starts with ``_show_`` (for ``show``) and ``_export_`` (for
 ``export``). Node for each of such method is passed using a parameter.
 
 Implementing ``list``

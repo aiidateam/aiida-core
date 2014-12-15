@@ -158,10 +158,21 @@ class Visualizable(object):
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
             description='Visualize data object.')
-        parser.add_argument('exec_name', type=str, default=None,
-                    help="Name or path to the executable of the visualization program.")
         parser.add_argument('data_id', type=int, default=None,
                             help="ID of the data object to be visualised.")
+
+        default_format = None
+        try:
+            default_format = self._default_show_format
+        except AttributeError:
+            if len(self.get_show_plugins().keys()) == 1:
+                default_format = self.get_show_plugins().keys()[0]
+            else:
+                default_format = None
+
+        parser.add_argument('--format', type=str, default=default_format,
+                            help="Type of the visualisation format/tool.",
+                            choices=self.get_show_plugins().keys())
 
         # Augmenting the command line parameters with ones, that are used by
         # individual plugins
@@ -174,11 +185,18 @@ class Visualizable(object):
         args = list(args)
         parsed_args = vars(parser.parse_args(args))
 
-        exec_name = parsed_args.pop('exec_name')
         data_id = parsed_args.pop('data_id')
+        format = parsed_args.pop('format')
+
+        if format is None:
+            print "Default format is not defined, please specify.\n" + \
+                  "Valid formats are:"
+            for i in self.get_show_plugins().keys():
+                print "  {}".format(i)
+            sys.exit(0)
 
         # I can give in input the whole path to executable
-        code_name = os.path.split(exec_name)[-1]
+        code_name = os.path.split(format)[-1]
 
         try:
             func = self.get_show_plugins()[code_name]
@@ -191,7 +209,7 @@ class Visualizable(object):
         from aiida.orm.node import Node
         n = Node.get_subclass_from_pk(data_id)
 
-        func(exec_name, n, **parsed_args)
+        func(format, n, **parsed_args)
 
 class Exportable(object):
     """

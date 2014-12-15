@@ -34,6 +34,10 @@ class Data(VerdiCommandRouter):
 class Listable(object):
     """
     Provides shell completion for listable data nodes.
+
+    Classes, inheriting Listable, MUST define value for property
+    ``dataclass`` (preferably in __init__), which has to point to correct
+    *Data class.
     """
 
     def list(self, *args):
@@ -126,6 +130,13 @@ class Listable(object):
 class Visualizable(object):
     """
     Provides shell completion for visualizable data nodes.
+
+    Classes, inheriting Visualizable, MUST NOT contain attributes, starting
+    with ``_show_``, which are not plugins for visualisation.
+
+    In order to specify a default visualization format, one has to override
+    ``_default_show_format`` property (preferably in __init__), setting it
+    to the name of default visualization tool.
     """
     show_prefix = '_show_'
     show_parameters_postfix = '_parameters'
@@ -214,6 +225,9 @@ class Visualizable(object):
 class Exportable(object):
     """
     Provides shell completion for exportable data nodes.
+
+    Classes, inheriting Visualizable, MUST NOT contain attributes, starting
+    with ``_export_``, which are not plugins for exporting.
     """
     export_prefix = '_export_'
     export_parameters_postfix = '_parameters'

@@ -6,6 +6,12 @@ manipulating them. One of the means of use and integration of AiiDA with
 the variety of free and open-source software is the command line. In this
 chapter the ways to extend the AiiDA command line interface are described.
 
+Adding a ``verdi`` command
+++++++++++++++++++++++++++
+
+.. todo:: Describe here
+
+
 Framework for ``verdi data``
 ++++++++++++++++++++++++++++
 

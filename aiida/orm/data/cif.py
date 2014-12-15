@@ -384,13 +384,15 @@ class CifData(SinglefileData):
         :raises ValueError: if unknown data source attribute is found in
             supplied dictionary.
         """
+        unknown_keys = []
         for k in source.keys():
             if k in self._db_source_attrs:
-                v = source.pop(k)
-                self._set_attr(k,v)
-        if len(source.keys())>0:
+                self._set_attr(k,source[k])
+            else:
+                unknown_keys.append(k)
+        if unknown_keys:
             raise ValueError("Unknown data source attribute(s) " +
-                             ", ".join(source.keys()) +
+                             ", ".join(unknown_keys) +
                              ": only " + ", ".join(self._db_source_attrs) +
                              " are supported")
 

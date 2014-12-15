@@ -46,7 +46,7 @@ class Data(Node):
 
         return super(Data, self)._can_link_as_output(dest)
     
-    def _exportstring(self, fileformat):
+    def _exportstring(self, fileformat, **kwargs):
         """
         Converts a Data object to other text format.
 
@@ -66,7 +66,7 @@ class Data(Node):
                 raise ValueError("The format is not accepted. "
                                  "No formats are implemented yet.")
 
-        return func()
+        return func(**kwargs)
 
     def export(self,fname,fileformat=None):
         """

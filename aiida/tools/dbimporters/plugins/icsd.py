@@ -11,12 +11,18 @@ class CifFileErrorExp(IcsdImporterExp):
 
 class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
     """
-    Database importer for ICSD.
+    Importer for the Inorganic Crystal Structure Database, short ICSD, provided by
+    FIZ Karlsruhe. It allows to run queries and analyse all the results.
     """
-    # for mysql db
+
+    # for mysql db query
     def int_clause(self, key, alias, values):
         """
-        Returns SQL query predicate for querying integer fields.
+        Returns SQL query predicate for querying integer fields
+        :param key: Database keyword
+        :param alias: Query parameter name
+        :param values: Corresponding values from query
+        :return: SQL query predicate
         """
         for e in values:
             if not isinstance( e, int ) and not isinstance( e, str ):
@@ -101,7 +107,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         "tetragonal": "TE",
         "trigonal": "TG",
         "triclinic": "TC"
-        }
+        } #from icsd accepted crystal systems
 
         for e in values:
             if not isinstance( e, int ) and not isinstance( e, str ):
@@ -155,87 +161,8 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         """
         return self.double_clause(key, alias, values, self.pressure_precision)
 
-    # for the web query
 
-    def parse_all(k,v):
-        """
-        Takes numbers, strings, list and returns a string.
-        """
-        if type(v) is list:
-            retval = ' '.join(v)
-        elif type(v) is int:
-            retval = str(v)
-        elif type(v) is str:
-            retval = v
-        return retval
-
-    def parse_number(k,v):
-        """
-        int to string
-        """
-        if type(v) is int:
-            retval = str(v)
-        elif type (v) is str:
-            retval = v
-        return retval
-
-    def parse_mineral(k,v):
-        if k == "mineral_name":
-            retval = "M="+ v
-        elif k == "chemical_name":
-            retval = "C=" + v
-        return retval
-
-    def parse_volume(k,v):
-        if k == "volume":
-            return "v=" + v
-        elif k == "a":
-            return "a=" + v
-        elif k == "b":
-            return "b=" + v
-        elif k == "c":
-            return "c=" + v
-        elif k == "alpha":
-            return "al=" + v
-        elif k == "beta":
-            return "be=" + v
-        elif k == "gamma":
-            return "ga=" + v
-
-    def parse_system(k,v):
-        valid_systems = {
-        "cubic": "CU",
-        "hexagonal": "HE",
-        "monoclinic": "MO",
-        "orthorhombic": "OR",
-        "tetragonal": "TE",
-        "trigonal": "TG",
-        "triclinic": "TC"
-        }
-
-        return valid_systems[v.lower()]
-
-    keywords = { "id"                : ("authors", parse_all),
-                 "authors"           : ("authors", parse_all),
-                 "element"           : ("elements", parse_all),
-                 "number_of_elements": ("elementc", parse_all),
-                 "mineral_name"      : ("mineral", parse_mineral),
-                 "chemical_name"     : ("mineral", parse_mineral),
-                 "formula"           : ("formula", parse_all),
-                 "volume"            : ("volume", parse_volume),
-                 "a"                 : ("volume", parse_volume),
-                 "b"                 : ("volume", parse_volume),
-                 "c"                 : ("volume", parse_volume),
-                 "alpha"             : ("volume", parse_volume),
-                 "beta"              : ("volume", parse_volume),
-                 "gamma"             : ("volume", parse_volume),
-                 "spacegroup"        : ("spaceg", parse_all),
-                 "journal"           : ("journal", parse_all),
-                 "title"             : ("title", parse_all),
-                 "year"              : ("year", parse_all),
-                 "crystal_system"    : ("system", parse_system),
-                 }
-
+    # mysql database - query parameter (alias) : [mysql keyword (key), function to call]
     keywords_db = {'id'             : [ 'COLL_CODE',          int_clause ],
                  'element'           : [ 'STRUCT_FORM;',       composition_clause ],
                  'number_of_elements': [ 'EL_COUNT',           int_clause ],
@@ -262,26 +189,158 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
                  'crystal_system'    : ['CRYST_SYS_CODE', crystal_system_clause],
                  }
 
+    # for the web query
+    def parse_all(k,v):
+        """
+        Converts numbers, strings, lists into strings.
+        :param k: query parameter
+        :param v: corresponding values
+        :return retval: string
+        """
+        if type(v) is list:
+            retval = ' '.join(v)
+        elif type(v) is int:
+            retval = str(v)
+        elif type(v) is str:
+            retval = v
+        return retval
+
+    def parse_number(k,v):
+        """
+        Converts int into string.
+        :param k: query parameter
+        :param v: corresponding values
+        :return retval: string
+        """
+        if type(v) is int:
+            retval = str(v)
+        elif type (v) is str:
+            retval = v
+        return retval
+
+    def parse_mineral(k,v):
+        """
+        Converts mineral_name and chemical_name into right format.
+        :param k: query parameter
+        :param v: corresponding values
+        :return retval: string
+        """
+        if k == "mineral_name":
+            retval = "M="+ v
+        elif k == "chemical_name":
+            retval = "C=" + v
+        return retval
+
+    def parse_volume(k,v):
+        """
+        Converts volume, cell parameter and angle queries into right format.
+        :param k: query parameter
+        :param v: corresponding values
+        :return retval: string
+        """
+        if k == "volume":
+            return "v=" + v
+        elif k == "a":
+            return "a=" + v
+        elif k == "b":
+            return "b=" + v
+        elif k == "c":
+            return "c=" + v
+        elif k == "alpha":
+            return "al=" + v
+        elif k == "beta":
+            return "be=" + v
+        elif k == "gamma":
+            return "ga=" + v
+
+    def parse_system(k,v):
+        """
+        Returns crystal system in the right format.
+        :param k: query parameter
+        :param v: corresponding values
+        :return retval: string
+        """
+        valid_systems = {
+        "cubic": "CU",
+        "hexagonal": "HE",
+        "monoclinic": "MO",
+        "orthorhombic": "OR",
+        "tetragonal": "TE",
+        "trigonal": "TG",
+        "triclinic": "TC"
+        }
+
+        return valid_systems[v.lower()]
+
+    # keywords accepted for the web page query
+    keywords = { "id"                : ("authors", parse_all),
+                 "authors"           : ("authors", parse_all),
+                 "element"           : ("elements", parse_all),
+                 "number_of_elements": ("elementc", parse_all),
+                 "mineral_name"      : ("mineral", parse_mineral),
+                 "chemical_name"     : ("mineral", parse_mineral),
+                 "formula"           : ("formula", parse_all),
+                 "volume"            : ("volume", parse_volume),
+                 "a"                 : ("volume", parse_volume),
+                 "b"                 : ("volume", parse_volume),
+                 "c"                 : ("volume", parse_volume),
+                 "alpha"             : ("volume", parse_volume),
+                 "beta"              : ("volume", parse_volume),
+                 "gamma"             : ("volume", parse_volume),
+                 "spacegroup"        : ("spaceg", parse_all),
+                 "journal"           : ("journal", parse_all),
+                 "title"             : ("title", parse_all),
+                 "year"              : ("year", parse_all),
+                 "crystal_system"    : ("system", parse_system),
+                 }
+
+
 
     def __init__(self, **kwargs):
         """
-        :param db: "icsd" for full database, "icsdd" for demo database
+        Sets up the database importer.
+        :param server: Server URL, the web page of the database. It is
+            important to have access to the full data base.
+        :param urladd: part of URL which is added between query and and the server URL
+            (default: index.php?) only needed for web page query
+
+        :param querydb: True (default) means the mysql database is queried.
+            If False, the query results are provide by the web page query, which is
+            restricted to a maximum of 1000 results at once.
+
+        :param host: mysql database host, one way is to setup an ssh tunnel to the host
+            using:
+            ssh -L 3306:localhost:3306 username@hostname.com
+            and put "127.0.0.1" as host. Google for ssh -L for more information.
+        :param user: mysql database username (default: dba)
+        :param passwd: mysql database password (default: sql)
+        :param db: name of the database (default: icsd)
+        :param dl_db: icsd comes with a full (default: icsd) and a demo database (icsdd).
+            This parameter allows to switch to the demo database for testing purpose,
+            if the access rights to the full database are not granted.
+        :param port: Port to access the mysql database (default: 3306)
         """
 
         self.db_parameters = { "server":   "",
                                "urladd": "index.php?",
                                "querydb": True,
+                               "dl_db": "icsd",
+
                                "host":   "",
                                "user":   "dba",
-                               "passwd": "",
+                               "passwd": "sql",
                                "db":     "icsd",
-                               "dl_db": "icsd",
                                "port": "3306",
                             }
         self.setup_db( **kwargs )
 
     def query(self, **kwargs):
-        #query web or mysql db
+        """
+        Depending on the db_parameters, the mysql database or the web page are queried.
+        Valid parameters are found using IcsdDbImporter.get_supported_keywords().
+        :param **kwargs: A list of ``keyword = [values]`` pairs.
+        """
+
         if self.db_parameters["querydb"]:
             return self._query_sql_db(**kwargs)
         else:
@@ -289,10 +348,13 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
 
     def _query_sql_db(self, **kwargs):
         """
-        Performs a query on Icsd database.
+        Performs a query on Icsd mysql database using ``keyword = value`` pairs,
+        specified in ``kwargs``. Returns an instance of IcsdSearchResults.
+        :param **kwargs: A list of ``keyword = [values]`` pairs
+        :return: IcsdSearchResults
         """
 
-        sql_where_query = []
+        sql_where_query = [] #second part of sql query
 
         for k, v in kwargs.iteritems():
                 if not isinstance( v, list ):
@@ -303,7 +365,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
                                                  k, \
                                                  v ) + \
                     ")" )
-        if "crystal_system" in kwargs.keys():
+        if "crystal_system" in kwargs.keys(): # to query another table than the main one, add LEFT JOIN in front of WHERE
             sql_query = "LEFT JOIN space_group ON space_group.sgr=icsd.sgr LEFT JOIN space_group_number ON space_group_number.sgr_num=space_group.sgr_num " +  "WHERE" + " AND ".join(sql_where_query)
         else:
             sql_query =  "WHERE" + " AND ".join(sql_where_query)
@@ -315,7 +377,9 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         """
         Performs a query on the Icsd web database using ``keyword = value`` pairs,
         specified in ``kwargs``. Returns an instance of IcsdSearchResults.
-        Web search has a maximum result number fixed at 1000.
+        :note: Web search has a maximum result number fixed at 1000.
+        :param **kwargs: A list of ``keyword = [values]`` pairs
+        :return: IcsdSearchResults
         """
         import urllib
 
@@ -347,7 +411,9 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
 
     def setup_db(self, **kwargs):
         """
-        Changes the database connection details. At least the server has to be defined.
+        Changes the database connection details. At least the host server has to be defined.
+        :param **kwargs: db_parameters for the mysql database connection
+            (host, user, passwd, db, port)
         """
         for key in self.db_parameters.keys():
             if key in kwargs.keys():
@@ -355,7 +421,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
 
     def get_supported_keywords(self):
         """
-        Returns the list of all supported query keywords.
+        :return: List of all supported query keywords.
         """
         if db_parameters["querydb"]:
             return self.keywords_db.keys()
@@ -366,9 +432,13 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
 class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
     """
     Results of the search, performed on Icsd.
+    :param query: mysql query or webpage query
+    :param db_parameters: database parameter setup during the initialisation of the
+        IcsdDbImporter.
     """
 
-    cif_url = "/index.php?format=cif&action=Export&id%5B%5D={}"
+    # url add to download cif files, make to db_parameter (question)
+    cif_url = "index.php?format=cif&action=Export&id%5B%5D={}"
     db_name = "Icsd"
 
     def __init__(self, query, db_parameters):
@@ -416,6 +486,11 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
 
 
     def query_page(self):
+        """
+        Queries the mysql or web page database, depending on the db_parameters.
+        Stores the number_of_results, cif file number and the corresponding icsd number.
+        :note: Icsd uses its own number system, not the cif file numbers.
+        """
         if self.db_parameters["querydb"]:
 
             self._connect_db()
@@ -428,12 +503,11 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
 
             for row in self.cursor.fetchall():
                 self.results.append( str( row[0] ) )
-                self.icsd_numbers.append( str(row[1])) #or should i save it as an int
+                self.icsd_numbers.append( str(row[1]))
 
 
             if self.number_of_results is None:
                 self.cursor.execute( "SELECT FOUND_ROWS()")
-                #self.number_of_results = self.cursor.fetch()[0]
                 self.number_of_results =  int(self.cursor.fetchone()[0])
 
         #finally:
@@ -492,19 +566,23 @@ class IcsdEntry(aiida.tools.dbimporters.baseclasses.DbEntry):
             'db_id'     : None,
             'db_version': None,
             'url'       : url,
-            'icsd_nr'   : None
+
         }
+        self.icsd_nr = None
         if 'db_source' in kwargs.keys():
             self.source["db_source"] = kwargs['db_source']
         if 'db_id' in kwargs.keys():
             self.source["db_id"] = kwargs['db_id']
         if 'icsd_nr' in kwargs.keys():
-            self.source["icsd_nr"] = kwargs['icsd_nr']
+            self.icsd_nr  = kwargs['icsd_nr']
 
         self._cif = None
 
     @property
     def cif(self):
+        """
+        :return: cif file of Icsd entry.
+        """
         if self._cif is None:
             import urllib2
             self._cif = urllib2.urlopen( self.source["url"] ).read()
@@ -519,7 +597,7 @@ class IcsdEntry(aiida.tools.dbimporters.baseclasses.DbEntry):
 
     def get_ase_structure(self):
         """
-        Returns ASE representation of the CIF.
+        :return: ASE structure corresponding to the cif file.
         """
         import ase.io.cif
         import StringIO
@@ -528,6 +606,9 @@ class IcsdEntry(aiida.tools.dbimporters.baseclasses.DbEntry):
 
 
     def get_aiida_structure(self):
+        """
+        :return: Aiida structure corresponding to the cif file.
+        """
         from aiida.orm import DataFactory
         S = DataFactory("structure")
         aiida_structure = S(ase=self.get_ase_structure())
@@ -540,7 +621,6 @@ def correct_cif(cif):
     This function corrects the format of the cif files
 
     :note: the ase.read.io only works if the author names are quoted, if not an AssertionError is raised.
-
     :param cif: A string containing the content of the CIF file.
     """
     #Do more checks to be sure it's working in everycase -> no _publ_author_name, several lines, correct input

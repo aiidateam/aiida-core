@@ -138,6 +138,7 @@ class LowDimGroupFinder(object):
         self.supercell = self.structure.repeat(self.supercell_size)
 
         self._group_number = None
+        self._low_dim_index = 0
         self._found_unit_cell_atoms = set([])
 
         #6 independent variables, don't forget to add new one to the get_group_data method
@@ -265,7 +266,8 @@ class LowDimGroupFinder(object):
         self._connection_counter.append(counter)
         self._connected_positions.append(pos)
 
-        if self._connection_counter == 1 and self.supercell_size < self.params["max_supercell"] and self._group_number == 0:
+
+        if self._connection_counter == 1 and self.supercell_size < self.params["max_supercell"] and self._low_dim_index == 0:
 
             self.supercell_size = self.supercell_size + 1
             print "No connection found. Increasing supercell size to {}".format(self.supercell_size)
@@ -287,15 +289,15 @@ class LowDimGroupFinder(object):
 
 
         vectors = []
-        for i in self.connected_positions[self._group_number]:
-            if i is not self.connected_positions[self._group_number][0]:
-                vectors.append(i - self._connected_positions[self._group_number][0])
+        for i in self.connected_positions[self._low_dim_index]:
+            if i is not self.connected_positions[self._low_dim_index][0]:
+                vectors.append(i - self._connected_positions[self._low_dim_index][0])
         self._dimensionality.append(np.linalg.matrix_rank(vectors))
 
-        if self._dimensionality[self._group_number] == 0:
+        if self._dimensionality[self._low_dim_index] == 0:
             self._vectors.append([np.array([1,0,0]), np.array([0,1,0]), np.array([0,0,1])])
 
-        elif self._dimensionality[self._group_number] == 1:
+        elif self._dimensionality[self._low_dim_index] == 1:
             normal_vector1 = np.cross(vectors[0],[1,0,0])
             if np.linalg.norm(normal_vector1) < 0.000001:
                 normal_vector1 = np.cross(vectors[0],[0,1,0])
@@ -304,7 +306,7 @@ class LowDimGroupFinder(object):
             normal_vector2 = normal_vector2/np.linalg.norm(normal_vector2)
             self._vectors.append([normal_vector1,normal_vector2, vectors[0]])
 
-        elif self._dimensionality[self._group_number] == 2:
+        elif self._dimensionality[self._low_dim_index] == 2:
             idx = find_shortest_vector(vectors)
             vector1 = vectors.pop(idx)
             idx = find_shortest_vector(vectors)
@@ -320,7 +322,7 @@ class LowDimGroupFinder(object):
             vector3 = vector3/np.linalg.norm(vector3)
             self._vectors.append([vector1,vector2,vector3])
 
-        elif self._dimensionality[self._group_number] == 3:
+        elif self._dimensionality[self._low_dim_index] == 3:
             self._vectors.append(self.structure.cell)
 
 
@@ -344,12 +346,12 @@ class LowDimGroupFinder(object):
         positions = []
 
     # 3 Dimensional --> return first structuree
-        if self.dimensionality[self._group_number] == 3:
+        if self.dimensionality[self._low_dim_index] == 3:
             self._reduced_ase_structures.append(self.structure)
             return
-        elif self.dimensionality[self._group_number]  == 2:
+        elif self.dimensionality[self._low_dim_index]  == 2:
 
-            for i in self.unit_cell_groups[self._group_number] :
+            for i in self.unit_cell_groups[self._low_dim_index] :
                         #get positions from supercell?
                 positions.append([self.supercell.positions[i][0],self.supercell.positions[i][1],self.supercell.positions[i][2]])
                 symbols.append(self.supercell.get_chemical_symbols()[i])
@@ -363,13 +365,13 @@ class LowDimGroupFinder(object):
 
             positions[:,2] = positions[:,2] - min_z + self.params["vacuum_space"]/2
 
-            self._vectors[self._group_number][2] = self._vectors[self._group_number][2] * (self.params["vacuum_space"] + max_z-min_z)
+            self._vectors[self._low_dim_index][2] = self._vectors[self._low_dim_index][2] * (self.params["vacuum_space"] + max_z-min_z)
 
             pbc = [True, True, False]
 
 
-        elif self.dimensionality[self._group_number] == 1:
-            for i in self.unit_cell_groups[self._group_number]:
+        elif self.dimensionality[self._low_dim_index] == 1:
+            for i in self.unit_cell_groups[self._low_dim_index]:
                 positions.append([self.supercell.positions[i][0],self.supercell.positions[i][1],self.supercell.positions[i][2]])
                 symbols.append(self.supercell.get_chemical_symbols()[i])
 
@@ -387,18 +389,15 @@ class LowDimGroupFinder(object):
             positions[:,0] = positions[:,0] - min_x + self.params["vacuum_space"]/2
             positions[:,1] = positions[:,1] - min_y + self.params["vacuum_space"]/2
 
-            self._vectors[self._group_number][0] = self._vectors[self._group_number][0] * (self.params["vacuum_space"] + max_x-min_x)
-            self._vectors[self._group_number][1] = self._vectors[self._group_number][1] * (self.params["vacuum_space"] + max_y-min_y)
+            self._vectors[self._low_dim_index][0] = self._vectors[self._low_dim_index][0] * (self.params["vacuum_space"] + max_x-min_x)
+            self._vectors[self._low_dim_index][1] = self._vectors[self._low_dim_index][1] * (self.params["vacuum_space"] + max_y-min_y)
 
 
             pbc =[False, False, True]
 
-        elif self.dimensionality[self._group_number] == 0:
+        elif self.dimensionality[self._low_dim_index] == 0:
 
-            print "Dimensionality 0 - unitcell group, positions?"
-            print self._vectors[self._group_number]
-
-            for i in self.unit_cell_groups[self._group_number]:
+            for i in self.unit_cell_groups[self._low_dim_index]:
                 positions.append([self.supercell.positions[i][0],self.supercell.positions[i][1],self.supercell.positions[i][2]])
                 symbols.append(self.supercell.get_chemical_symbols()[i])
 
@@ -424,9 +423,9 @@ class LowDimGroupFinder(object):
             positions[:,1] = positions[:,1] - min_y + self.params["vacuum_space"]/2
             positions[:,2] = positions[:,2] - min_z + self.params["vacuum_space"]/2
 
-            self._vectors[self._group_number][0] = self._vectors[self._group_number][0] * (self.params["vacuum_space"] + max_x-min_x)
-            self._vectors[self._group_number][1] = self._vectors[self._group_number][1] * (self.params["vacuum_space"] + max_y-min_y)
-            self._vectors[self._group_number][2] = self._vectors[self._group_number][2] * (self.params["vacuum_space"] + max_z-min_z)
+            self._vectors[self._low_dim_index][0] = self._vectors[self._low_dim_index][0] * (self.params["vacuum_space"] + max_x-min_x)
+            self._vectors[self._low_dim_index][1] = self._vectors[self._low_dim_index][1] * (self.params["vacuum_space"] + max_y-min_y)
+            self._vectors[self._low_dim_index][2] = self._vectors[self._low_dim_index][2] * (self.params["vacuum_space"] + max_z-min_z)
 
 
         else:
@@ -437,7 +436,7 @@ class LowDimGroupFinder(object):
         if self.params["full_periodicity"] == True:
             pbc = [True,True,True]
 
-        reduced_ase_structure = Atoms(cell=self._vectors[self._group_number],pbc=pbc, symbols=symbols, positions=positions)
+        reduced_ase_structure = Atoms(cell=self._vectors[self._low_dim_index],pbc=pbc, symbols=symbols, positions=positions)
 
         #to wrap positions into the unit cell (?)
         reduced_ase_structure.set_positions(reduced_ase_structure.get_positions(wrap=True))
@@ -461,13 +460,17 @@ class LowDimGroupFinder(object):
 
             unit_cell_group = {i % self.n_unit for i in group}
 
-            print unit_cell_group, self._found_unit_cell_atoms
-
+            # if the atoms corresponding to the group are only a periodic replica of an existing low dimensionality
+            # group, they are skipped and the next group is analysed..
             if unit_cell_group.issubset(self._found_unit_cell_atoms):
 
                 continue
             else:
+                print unit_cell_group
                 self._define_reduced_ase_structure()
+                self._low_dim_index = self._low_dim_index + 1
+                print self._low_dim_index
+        self._low_dim_index = self._low_dim_index -1
 
 
 
@@ -504,7 +507,7 @@ class LowDimGroupFinder(object):
         """
         uses rank of vector matrix between connected positions to get the dimensionality
         """
-        if len(self._dimensionality) <= self._group_number:
+        if len(self._dimensionality) <= self._low_dim_index:
             self._define_dimensionality()
         return self._dimensionality
 
@@ -524,7 +527,7 @@ class LowDimGroupFinder(object):
 
     @property
     def unit_cell_groups(self):
-        if len(self._unit_cell_groups) <= self._group_number:
+        if len(self._unit_cell_groups) <= self._low_dim_index:
             self._define_unit_cell_group()
 
         return self._unit_cell_groups
@@ -532,13 +535,13 @@ class LowDimGroupFinder(object):
 
     @property
     def number_of_connections(self):
-        if len(self._connection_counter) <= self._group_number:
+        if len(self._connection_counter) <= self._low_dim_index:
             self._define_number_of_connections()
         return self._connection_counter
 
     @property
     def connected_positions(self):
-        if len(self._connection_counter) <= self._group_number:
+        if len(self._connection_counter) <= self._low_dim_index:
             self._define_number_of_connections()
         return self._connected_positions
 
@@ -561,6 +564,7 @@ class LowDimGroupFinder(object):
         return self.reduced_aiida_structures
 
     def get_group_data(self):
+        a = self.get_reduced_aiida_structures()
         return {#"groups": self.groups,
                 "biggest_group": self.biggest_group,
                 "unit_cell_group": self.unit_cell_groups,

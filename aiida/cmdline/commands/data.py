@@ -127,6 +127,8 @@ class Visualizable(object):
     """
     Provides shell completion for visualizable data nodes.
     """
+    show_prefix = '_plugin_'
+    show_parameters_postfix = '_parameters'
 
     def complete_visualizers(self, subargs_idx, subargs):
         """
@@ -140,12 +142,12 @@ class Visualizable(object):
         """
         Get the list of all implemented plugins for visualizing the structure.
         """
-        prefix = '_plugin_'
         method_names = dir(self) # get list of class methods names
-        valid_formats = [ i[len(prefix):] for i in method_names
-                         if i.startswith(prefix)] # filter them
+        valid_formats = [ i[len(self.show_prefix):] for i in method_names
+                         if i.startswith(self.show_prefix) and \
+                            not i.endswith(self.show_parameters_postfix)] # filter
 
-        return {k: getattr(self,prefix + k) for k in valid_formats}
+        return {k: getattr(self,self.show_prefix + k) for k in valid_formats}
 
     def show(self, *args):
         """
@@ -160,11 +162,20 @@ class Visualizable(object):
                     help="Name or path to the executable of the visualization program.")
         parser.add_argument('data_id', type=int, default=None,
                             help="ID of the data object to be visualised.")
-        args = list(args)
-        parsed_args = parser.parse_args(args)
 
-        exec_name = parsed_args.exec_name
-        data_id = parsed_args.data_id
+        # Augmenting the command line parameters with ones, that are used by
+        # individual plugins
+        for cmd in dir(self):
+            if not cmd.startswith(self.show_prefix) or \
+               not cmd.endswith(self.show_parameters_postfix):
+                continue
+            getattr(self,cmd)(parser)
+
+        args = list(args)
+        parsed_args = vars(parser.parse_args(args))
+
+        exec_name = parsed_args.pop('exec_name')
+        data_id = parsed_args.pop('data_id')
 
         # I can give in input the whole path to executable
         code_name = os.path.split(exec_name)[-1]
@@ -180,12 +191,14 @@ class Visualizable(object):
         from aiida.orm.node import Node
         n = Node.get_subclass_from_pk(data_id)
 
-        func(exec_name, n)
+        func(exec_name, n, **parsed_args)
 
 class Exportable(object):
     """
     Provides shell completion for exportable data nodes.
     """
+    export_prefix = '_export_'
+    export_parameters_postfix = '_parameters'
 
     def complete_exporters(self, subargs_idx, subargs):
         """
@@ -199,12 +212,12 @@ class Exportable(object):
         """
         Get the list of all implemented exporters for data class.
         """
-        prefix = '_export_'
         method_names = dir(self) # get list of class methods names
-        valid_formats = [ i[len(prefix):] for i in method_names
-                         if i.startswith(prefix)] # filter them
+        valid_formats = [ i[len(self.export_prefix):] for i in method_names
+                         if i.startswith(self.export_prefix) and \
+                            not i.endswith(self.export_parameters_postfix)] # filter
 
-        return {k: getattr(self,prefix + k) for k in valid_formats}
+        return {k: getattr(self,self.export_prefix + k) for k in valid_formats}
 
     def export(self, *args):
         """
@@ -219,11 +232,20 @@ class Exportable(object):
                     help="Format of the exported file.")
         parser.add_argument('data_id', type=int, default=None,
                             help="ID of the data object to be visualised.")
-        args = list(args)
-        parsed_args = parser.parse_args(args)
 
-        format = parsed_args.format
-        data_id = parsed_args.data_id
+        # Augmenting the command line parameters with ones, that are used by
+        # individual plugins
+        for cmd in dir(self):
+            if not cmd.startswith(self.export_prefix) or \
+               not cmd.endswith(self.export_parameters_postfix):
+                continue
+            getattr(self,cmd)(parser)
+
+        args = list(args)
+        parsed_args = vars(parser.parse_args(args))
+
+        format = parsed_args.pop('format')
+        data_id = parsed_args.pop('data_id')
 
         try:
             func = self.get_export_plugins()[format]
@@ -236,7 +258,7 @@ class Exportable(object):
         from aiida.orm.node import Node
         n = Node.get_subclass_from_pk(data_id)
 
-        func(n)
+        func(n,**parsed_args)
 
 # Note: this class should not be exposed directly in the main module,
 # otherwise it becomes a command of 'verdi'. Instead, we want it to be a 
@@ -813,13 +835,13 @@ class _Trajectory(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
             'export': (self.export, self.complete_exporters),
             }
 
-    def _plugin_jmol(self,exec_name,trajectory):
+    def _plugin_jmol(self,exec_name,trajectory,**kwargs):
         """
         Plugin for jmol
         """
         import tempfile,subprocess
         with tempfile.NamedTemporaryFile() as f:
-            f.write(trajectory._exportstring('cif'))
+            f.write(trajectory._exportstring('cif',**kwargs))
             f.flush()
 
             try:
@@ -837,11 +859,29 @@ class _Trajectory(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
                 else:
                     raise
 
-    def _export_cif(self,node):
+    def _plugin_jmol_parameters(self,parser):
+        """
+        Describe command line parameters.
+        """
+        parser.add_argument('--step',
+                            help="ID of the trajectory step. If none is "
+                                 "supplied, all steps are exported.",
+                            type=int, action='store')
+
+    def _export_cif(self,node,**kwargs):
         """
         Exporter to CIF.
         """
-        print node._exportstring('cif')
+        print node._exportstring('cif',**kwargs)
+
+    def _export_cif_parameters(self,parser):
+        """
+        Describe command line parameters.
+        """
+        parser.add_argument('--step',
+                            help="ID of the trajectory step. If none is "
+                                 "supplied, all steps are exported.",
+                            type=int, action='store')
 
 class _Parameter(VerdiCommandWithSubcommands):
     """

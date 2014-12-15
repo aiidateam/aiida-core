@@ -347,6 +347,7 @@ class CifData(SinglefileData):
                                  'db_url',
                                  'db_id',
                                  'db_version',
+                                 'extras',
                                  'url']
         super(CifData,self).__init__(**kwargs)
         self._values = None
@@ -383,13 +384,15 @@ class CifData(SinglefileData):
         :raises ValueError: if unknown data source attribute is found in
             supplied dictionary.
         """
+        unknown_keys = []
         for k in source.keys():
             if k in self._db_source_attrs:
-                v = source.pop(k)
-                self._set_attr(k,v)
-        if len(source.keys())>0:
+                self._set_attr(k,source[k])
+            else:
+                unknown_keys.append(k)
+        if unknown_keys:
             raise ValueError("Unknown data source attribute(s) " +
-                             ", ".join(source.keys()) +
+                             ", ".join(unknown_keys) +
                              ": only " + ", ".join(self._db_source_attrs) +
                              " are supported")
 
@@ -404,6 +407,8 @@ class CifData(SinglefileData):
         Generate MD5 hash of the file's contents on-the-fly.
         """
         import aiida.common.utils
+        from aiida.common.exceptions import ValidationError
+        
         abspath = self.get_file_abs_path()
         if not abspath:
             raise ValidationError("No valid CIF was passed!")

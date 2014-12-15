@@ -20,13 +20,14 @@ Standard actions, such as
 are implemented in corresponding classes:
 
 * ``Listable``
-* ``Visualisable``
+* ``Visualizable``
 * ``Exportable``,
 
 which are inherited by ``_Datatype`` classes (multiple inheritance is
 possible). Actions ``show`` and ``export`` can be extended simply by adding
-additional methods in ``_Datatype`` (these automatically detected). Action
-``list`` can be extended by overriding default methods of the ``Listable``.
+additional methods in ``_Datatype`` (these are automatically detected).
+Action ``list`` can be extended by overriding default methods of the
+``Listable``.
 
 Adding plugins for ``show``, ``export`` and like
 ------------------------------------------------
@@ -35,6 +36,33 @@ A plugin to show or export the data node can be added by inserting a method
 to ``_Datatype`` class. Each new method is automatically detected,
 provided it starts with ``_show_`` (for ``show``) and ``_export_`` (for
 ``export``). Node for each of such method is passed using a parameter.
+
+As the syntax of ``show`` command has been changed from
+``verdi data <datatype> <action> <plugin>`` to
+``verdi data <datatype> <action> [--format <plugin>]`` having the
+``--format`` option optional, the default plugin can be specified by setting
+the value for ``_default_show_plugin`` in the inheriting class::
+
+    class _Parameter(VerdiCommandWithSubcommands,Visualizable):
+        """
+        View and manipulate Parameter data classes.
+        """
+
+        def __init__(self):
+            """
+            A dictionary with valid commands and functions to be called.
+            """
+            from aiida.orm.data.parameter import ParameterData
+            self.dataclass = ParameterData
+            self._default_show_format = 'json_date'
+            self.valid_subcommands = {
+                'show': (self.show, self.complete_visualizers),
+                }
+
+        def _show_json_date(self,exec_name,node):
+            """
+            Show the content of a ParameterData node.
+            """
 
 Implementing ``list``
 ---------------------

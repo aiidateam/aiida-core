@@ -143,6 +143,7 @@ class TestCifData(AiidaTestCase):
             'db_url'    : '',
             'db_id'     : '0000001',
             'db_version': '1234',
+            'extras'    : '',
             'url'       : '',
         })
 

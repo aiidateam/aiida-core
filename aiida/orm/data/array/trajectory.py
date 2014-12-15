@@ -333,7 +333,7 @@ class TrajectoryData(ArrayData):
                 
         return struc
 
-    def _prepare_cif(self):
+    def _prepare_cif(self,step=None):
         """
         Write the given trajectory to a string of format CIF.
         """
@@ -341,7 +341,10 @@ class TrajectoryData(ArrayData):
         from aiida.orm.data.cif \
             import ase_loops,cif_from_ase,pycifrw_from_cif
         cif = ""
-        for i in self.get_steps():
+        steps = self.get_steps()
+        if step is not None:
+            steps = [step]
+        for i in steps:
             structure = self.step_to_structure(i-1)
             ciffile = pycifrw_from_cif(cif_from_ase(structure.get_ase()),
                                        ase_loops)

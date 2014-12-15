@@ -936,6 +936,7 @@ class _Parameter(VerdiCommandWithSubcommands,Visualizable):
         """
         from aiida.orm.data.parameter import ParameterData
         self.dataclass = ParameterData
+        self._default_show_format = 'json_date'
         self.valid_subcommands = {
             'show': (self.show, self.complete_visualizers),
             }

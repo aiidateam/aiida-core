@@ -9,7 +9,7 @@ from aiida.common.datastructures import wf_states, wf_exit_call, wf_default_call
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 
 logger = aiidalogger.getChild('workflowmanager')
 

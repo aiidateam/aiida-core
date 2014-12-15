@@ -8,7 +8,7 @@ from aiida import load_dbenv
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 
 class Data(VerdiCommandRouter):
     """
@@ -34,6 +34,10 @@ class Data(VerdiCommandRouter):
 class Listable(object):
     """
     Provides shell completion for listable data nodes.
+
+    Classes, inheriting Listable, MUST define value for property
+    ``dataclass`` (preferably in __init__), which has to point to correct
+    *Data class.
     """
 
     def list(self, *args):
@@ -126,6 +130,13 @@ class Listable(object):
 class Visualizable(object):
     """
     Provides shell completion for visualizable data nodes.
+
+    Classes, inheriting Visualizable, MUST NOT contain attributes, starting
+    with ``_show_``, which are not plugins for visualisation.
+
+    In order to specify a default visualization format, one has to override
+    ``_default_show_format`` property (preferably in __init__), setting it
+    to the name of default visualization tool.
     """
     show_prefix = '_show_'
     show_parameters_postfix = '_parameters'
@@ -214,6 +225,9 @@ class Visualizable(object):
 class Exportable(object):
     """
     Provides shell completion for exportable data nodes.
+
+    Classes, inheriting Visualizable, MUST NOT contain attributes, starting
+    with ``_export_``, which are not plugins for exporting.
     """
     export_prefix = '_export_'
     export_parameters_postfix = '_parameters'
@@ -922,6 +936,7 @@ class _Parameter(VerdiCommandWithSubcommands,Visualizable):
         """
         from aiida.orm.data.parameter import ParameterData
         self.dataclass = ParameterData
+        self._default_show_format = 'json_date'
         self.valid_subcommands = {
             'show': (self.show, self.complete_visualizers),
             }

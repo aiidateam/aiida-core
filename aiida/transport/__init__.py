@@ -7,7 +7,7 @@ import os,re,fnmatch,sys # for glob commands
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS) and 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014 Python Software Foundation. All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, and Python license, see LICENSE.txt file"
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 
 magic_check = re.compile('[*?[]')
 

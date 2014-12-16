@@ -1,8 +1,15 @@
+
 """
 Low dimensionality group finder, which analyses a bulk crystal and returns all different
-groups of atoms that are not covalently bonded together as separate structure.
+groups of atoms that are not bonded together as separate structures.
 """
+# -*- coding: utf-8 -*-
+__copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
+__license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
+__version__ = "0.3.0"
+
 #This is the dictionary that links the atomic number to the covalent bond length.
+
 atomic_number_covalent ={
 1:0.32,
 10:0.71,

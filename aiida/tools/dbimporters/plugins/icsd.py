@@ -438,7 +438,7 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
     """
 
     # url add to download cif files, make to db_parameter (question)
-    cif_url = "index.php?format=cif&action=Export&id%5B%5D={}"
+    cif_url = "/index.php?format=cif&action=Export&id%5B%5D={}"
     db_name = "Icsd"
 
     def __init__(self, query, db_parameters):
@@ -495,8 +495,6 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
 
             self._connect_db()
             query_statement = self.sql_select_query+ self.sql_from_query + self.query + " LIMIT " + str((self.page-1)*100) + ", " + str(self.page*100)
-        #try:
-            print query_statement
 
             self.cursor.execute( query_statement )
             self.db.commit()
@@ -510,7 +508,7 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
                 self.cursor.execute( "SELECT FOUND_ROWS()")
                 self.number_of_results =  int(self.cursor.fetchone()[0])
 
-        #finally:
+
             self._disconnect_db()
 
 

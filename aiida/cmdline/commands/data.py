@@ -220,6 +220,14 @@ class Visualizable(object):
         from aiida.orm.node import Node
         n = Node.get_subclass_from_pk(data_id)
 
+        try:
+            if not isinstance(n,self.dataclass):
+                print("Node {} is of class {} instead "
+                      "of {}".format(n,type(n),self.dataclass))
+                sys.exit(1)
+        except AttributeError:
+            pass
+
         func(format, n, **parsed_args)
 
 class Exportable(object):
@@ -289,6 +297,14 @@ class Exportable(object):
         load_dbenv()
         from aiida.orm.node import Node
         n = Node.get_subclass_from_pk(data_id)
+
+        try:
+            if not isinstance(n,self.dataclass):
+                print("Node {} is of class {} instead "
+                      "of {}".format(n,type(n),self.dataclass))
+                sys.exit(1)
+        except AttributeError:
+            pass
 
         func(n,**parsed_args)
 

@@ -58,7 +58,12 @@ class PwCalculation(BasePwCpInputGenerator, Calculation):
              ('CONTROL', 'outdir'),  # set later
              ('CONTROL', 'prefix'),  # set later
              ('SYSTEM', 'ibrav'),  # set later
-             ('SYSTEM', 'celldm'),
+             ('SYSTEM', 'celldm(1)'),
+             ('SYSTEM', 'celldm(2)'),
+             ('SYSTEM', 'celldm(3)'),
+             ('SYSTEM', 'celldm(4)'),
+             ('SYSTEM', 'celldm(5)'),
+             ('SYSTEM', 'celldm(6)'),
              ('SYSTEM', 'nat'),  # set later
              ('SYSTEM', 'ntyp'),  # set later
              ('SYSTEM', 'a'), ('SYSTEM', 'b'), ('SYSTEM', 'c'),

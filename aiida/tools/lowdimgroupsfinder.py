@@ -1,6 +1,8 @@
 """
+Low dimensionality group finder, which analyses a bulk crystal and returns all different
+groups of atoms that are not covalently bonded together as separate structure.
 """
-#This is the list...
+#This is the dictionary that links the atomic number to the covalent bond length.
 atomic_number_covalent ={
 1:0.32,
 10:0.71,
@@ -96,6 +98,7 @@ class LowDimGroupFinderExc(Exception):
 
 class WeirdStructureExc(LowDimGroupFinderExc):
     """
+    Raised when a weird structure, which the lowdimgroupfinder cannot handle, is found.
     """
     pass
 
@@ -110,21 +113,31 @@ class GroupOverTwoCellsNoConnectionsExc(LowDimGroupFinderExc):
 class LowDimGroupFinder(object):
     def __init__(self, aiida_structure, **kwargs):
         """
-        Takes an aiida_structure, analyses the structure and returns a lower dimensionality structure, if it can be found.
+        Takes an aiida_structure, analyses the structure and returns all bonded groups of atoms.
 
         :param cov_bond_margin: percentage which is added to the covalent
-          bond length, the criterium which defines if atoms are bound or not.
-        :param vacuum_space:
-        :param supercell:
-        :param target_dimensionality:
+          bond length, the criterium which defines if atoms are bonded or not.
+        :param vacuum_space: The space added around the atoms of the structures with reduced_aiida_structures
+            dimensionality. (default: 10 Angstrom)
+        :param min_supercell: size of the supercell at which the search for lower dimensionality groups
+            is started. (default: 2)
+        :param max_supercell: size at which the search for lower dimensionality groups is stopped. The search
+            always starts at a supercell size of 2. If the dimensionality of the largest group is 0,
+            the supercell size is increased by 1, to increase the chance to catch weird structured groups.
+            (default: 2)
+        :param full_periodicity: If True (default), it sets the periodic boundary conditions or the reduced
+            structures to [True, True, True], otherwise the pbc are set according the dimensionality.
+            0D: [False,False,False], 1D: [False,False,True], 2D: [True, True, False], 3D [True, True, True]
+        :param rotation: If True, it rotates the reduced 1D structures into the z-axis and 2D structures in
+            the x-y plane.
         """
         import ase
         import numpy as np
         self.params = { "cov_bond_margin" : 0.1,
-                        "vacuum_space" : 1,
+                        "vacuum_space" : 10,
                         "max_supercell" : 2,
                         "min_supercell" : 2,
-                        "full_periodicity": False,
+                        "full_periodicity": True,
                         "rotation": False,
                     }
         self.setup_builder(**kwargs)
@@ -134,15 +147,14 @@ class LowDimGroupFinder(object):
 
         self.aiida_structure = aiida_structure
         self.structure = self.aiida_structure.get_ase()
-        self.n_unit = len(self.structure)
+        self.n_unit = len(self.structure) #number of atoms in input structure
         self.supercell = self.structure.repeat(self.supercell_size)
 
-        self._group_number = None
-        self._low_dim_index = 0
-        self._found_unit_cell_atoms = set([])
+        self._group_number = None #index of group that is analysed
+        self._low_dim_index = 0 #index of reduced structure that is currently calculated
+        self._found_unit_cell_atoms = set([]) #set of all the input structure atoms that have been attributed to a group
 
-        #6 independent variables, don't forget to add new one to the get_group_data method
-
+        #7 independent variables, add those you want to have as output to get_group_data()
         self._groups = []
         self._unit_cell_groups = []
         self._atoms_in_one_cell = []
@@ -157,6 +169,7 @@ class LowDimGroupFinder(object):
     def setup_builder(self, **kwargs):
         """
         Changes the builder parameters.
+        :param **kwargs: list of ``keyword = value`` pairs
         """
         for k, v in kwargs.iteritems():
             if k in self.params.keys():
@@ -166,22 +179,29 @@ class LowDimGroupFinder(object):
 
     def _define_groups(self):
         """
-        This function takes as parameter a bonding table with True on the place ixj if atom i and j are covalently bond together.
-        It returns the different group found in the cell.
+        This function takes as parameter a bonding table with True on the place
+        ixj if atom i and j are bonded together using the covalent bond length.
+
+        It returns the different groups found in the cell.
         """
-        import time
-        start_time = time.time()
+        # question, output time in logger? How?
+        #import time
+        #start_time = time.time()
+
         import numpy as np
         n_sc = len(self.supercell)
         #get distances between all the atoms
         coords = self.supercell.get_positions()
-        dist = get_distances(coords, coords)
+        dist = get_distances(coords)
+
+        set_dict = {}
 
         cov_radius = []
-        #do this directly in the cov_matrix (?)
         for i in range(n_sc):
+            set_dict[i] = set([]) # initialise
             cov_radius.append(atomic_number_covalent[self.supercell.get_atomic_numbers()[i]])
-        #covalent radius matrix, ij contains the sum of covalent radius of atom i and j multiplied by 1+self.params["cov_bond_margin"]
+        #covalent radius matrix, ij contains the sum of covalent radius of atom i and j
+        #multiplied by 1+self.params["cov_bond_margin"]
         cov_matrix = np.zeros((n_sc,n_sc))
         for i in range(n_sc):
             for j in range(i,n_sc):
@@ -192,13 +212,13 @@ class LowDimGroupFinder(object):
         # True means that they are connected
         bond_table = dist - cov_matrix < 0
 
-        set_dict = {}
+
         # for each site a set of the neighbouring ids
         for i in range(n_sc):
-            set_dict[i] = set([])
-            for j in range(n_sc):
+            for j in range(i,n_sc):
                 if bond_table[i][j]:
                     set_dict[i].add(j)
+                    set_dict[j].add(i)
 
         #follow connections to make groups of connected atoms
         for k, v in set_dict.iteritems():
@@ -213,16 +233,18 @@ class LowDimGroupFinder(object):
                 visited = visited + list(v)
                 groups.append(sorted(list(v)))
 
-        print "supercell_size {}, n_atoms {}, --- {} seconds ---".format(self.supercell_size, n_sc, time.time() - start_time)
+        #print "supercell_size {}, n_atoms {}, --- {} seconds ---".format(self.supercell_size, n_sc, time.time() - start_time)
 
+        #Returns list of groups sorted by number of
         self._groups = sorted(groups, key=len, reverse=True)
 
 
     def _define_unit_cell_group(self):
         """
-        Analyses the largest group defines which atoms of the group define the unit cell.
+        Analyses a group and defines which atoms form the unit cell of the reduced group.
         unit_cell_sites are the corresponding periodic sites in the unit cell
-        unit_cell_group -> reduced_unit_cell_group
+        :note: the unit_cell_sites do not have to be equivalent, to the unit cell atoms of
+            the reduced group. The group can be dispersed over two or more cells
         """
         import math
 
@@ -246,12 +268,8 @@ class LowDimGroupFinder(object):
 
     def _define_number_of_connections(self):
         """
-        The connection of a periodic site with its images in the 7 other cells (2x2x2 supercell) is checked.
-        If there are no connection the function will return 1 and the structure is a molecule. 2 means an elongated structure.
-        3 groups in <111> direction. 4 groups in <110> or <100> direction. And >4 it's all over connected, polymer/bulk/no groups.
-        Could take the standard deviation of those sites, to make it even more accurate?
+        The connections of a periodic site with its images in the other N^3-1 cells are checked.
 
-        :param group: Normally the biggest group is taken, but it works also with other groups of atoms.
         """
         group = self.groups[self._group_number]
 
@@ -285,6 +303,15 @@ class LowDimGroupFinder(object):
             self._define_number_of_connections()
 
     def _define_dimensionality(self):
+        """
+        Vectors are defined between the connected periodic positions of the group. The rank
+        of the matrix made by all those vectors gives the dimensionality of the group.
+        0D: an array of three orthonormal vectors is created.
+        1D: The shortest vector between periodic sites is taken plus two orthonormal vectors
+            are created.
+        2D: Two shortest linear independent vectors taken plus an orthonormal vector created
+        3D: Takes vectors of input structure
+        """
         import numpy as np
 
 
@@ -298,7 +325,7 @@ class LowDimGroupFinder(object):
             self._vectors.append([np.array([1,0,0]), np.array([0,1,0]), np.array([0,0,1])])
 
         elif self._dimensionality[self._low_dim_index] == 1:
-            normal_vector1 = np.cross(vectors[0],[1,0,0])
+            normal_vector1 = np.cross(find_shortest_vector(vectors),[1,0,0])
             if np.linalg.norm(normal_vector1) < 0.000001:
                 normal_vector1 = np.cross(vectors[0],[0,1,0])
             normal_vector2 = np.cross(vectors[0], normal_vector1)
@@ -329,11 +356,13 @@ class LowDimGroupFinder(object):
 
 
     def _define_reduced_ase_structure(self):
+        """
+        Appends the reduced group of atoms correspondin to the currently analysed group
+        to the list of reduced ase structures.
+        """
         from ase import Atoms
         import numpy as np
 
-        # find out minimum and maximum value in z
-        # initialisation with first value ?
         min_z = None
         max_z = None
         min_x = None
@@ -345,17 +374,16 @@ class LowDimGroupFinder(object):
 
         positions = []
 
-    # 3 Dimensional --> return first structuree
+        # 3 Dimensional --> return input structure
         if self.dimensionality[self._low_dim_index] == 3:
             self._reduced_ase_structures.append(self.structure)
             return
         elif self.dimensionality[self._low_dim_index]  == 2:
-
+            # get positions and chemical symbols
             for i in self.unit_cell_groups[self._low_dim_index] :
-                        #get positions from supercell?
                 positions.append([self.supercell.positions[i][0],self.supercell.positions[i][1],self.supercell.positions[i][2]])
                 symbols.append(self.supercell.get_chemical_symbols()[i])
-
+                # min and max z
                 if min_z is None or min_z > positions[-1][2]:
                     min_z = positions[-1][2]
                 if max_z is None or max_z < positions[-1][2]:
@@ -363,6 +391,11 @@ class LowDimGroupFinder(object):
 
             positions = np.array(positions)
 
+            # logic error... how do we know that z is the non-periodic direction??
+            # first turn the cell into z-axis
+            # than adapt height
+            # turn it back if rotation=false
+            #put atoms in the middle of the cell, displaced by half of the vacuum cell
             positions[:,2] = positions[:,2] - min_z + self.params["vacuum_space"]/2
 
             self._vectors[self._low_dim_index][2] = self._vectors[self._low_dim_index][2] * (self.params["vacuum_space"] + max_z-min_z)
@@ -433,12 +466,11 @@ class LowDimGroupFinder(object):
 
 
 
-        if self.params["full_periodicity"] == True:
+        if self.params["full_periodicity"] is True:
             pbc = [True,True,True]
 
         reduced_ase_structure = Atoms(cell=self._vectors[self._low_dim_index],pbc=pbc, symbols=symbols, positions=positions)
 
-        #to wrap positions into the unit cell (?)
         reduced_ase_structure.set_positions(reduced_ase_structure.get_positions(wrap=True))
 
         if self.params["rotation"] == True:
@@ -448,20 +480,22 @@ class LowDimGroupFinder(object):
 
     def _define_reduced_ase_structures(self):
 
+        # all the atoms of the input structure, which have to be allocated to groups
         test = set(range(self.n_unit))
 
         for idx, group in enumerate(self.groups):
-            #checks if all atoms of the original unit cells have been allocated to a group
+            #break as soon as all atoms of the input structure are in a group
             if self._found_unit_cell_atoms == test:
                 break
             self._group_number = idx
 
             print idx
 
+            #set of the periodic sites of the input structure
             unit_cell_group = {i % self.n_unit for i in group}
 
             # if the atoms corresponding to the group are only a periodic replica of an existing low dimensionality
-            # group, they are skipped and the next group is analysed..
+            # group, the group is skipped and the next one is analysed..
             if unit_cell_group.issubset(self._found_unit_cell_atoms):
 
                 continue
@@ -480,6 +514,9 @@ class LowDimGroupFinder(object):
 
 
     def _define_reduced_aiida_structures(self):
+        """
+        Converts all ASE structures into aiida structures
+        """
         from aiida.orm import DataFactory
         if not self._reduced_ase_structures:
             self._define_reduced_ase_structures()
@@ -492,7 +529,10 @@ class LowDimGroupFinder(object):
 
     def _rotate_ase_structure(self,asestruc):
         """
-        Rotates the third vector in z-axis and the first vector in x-axis. Layer -> xy-plane, wire -> z-direction
+        Rotates the third vector in z-axis and the first vector in x-axis.
+        Layer (2D) into xy-plane, wire (1D) into z-direction
+        :param asestruc: ASE structure
+        :return: rotated ASE structure
         """
         import ase
         asestruc.rotate(v=asestruc.cell[2],a=[0,0,1],center='COP', rotate_cell = True)
@@ -501,11 +541,12 @@ class LowDimGroupFinder(object):
 
 
 
-
+    #question.. if description could be written in one line:
+    # use :return: or just Returns blablabla
     @property
     def dimensionality(self):
         """
-        uses rank of vector matrix between connected positions to get the dimensionality
+        Returns dimen
         """
         if len(self._dimensionality) <= self._low_dim_index:
             self._define_dimensionality()
@@ -514,12 +555,17 @@ class LowDimGroupFinder(object):
 
     @property
     def groups(self):
+        """
+
+        """
         if not self._groups:
             self._define_groups()
         return self._groups
 
     @property
     def biggest_group(self):
+        """
+        """
         if not self._groups:
             self._define_groups()
 
@@ -527,6 +573,8 @@ class LowDimGroupFinder(object):
 
     @property
     def unit_cell_groups(self):
+        """
+        """
         if len(self._unit_cell_groups) <= self._low_dim_index:
             self._define_unit_cell_group()
 
@@ -535,18 +583,24 @@ class LowDimGroupFinder(object):
 
     @property
     def number_of_connections(self):
+        """
+        """
         if len(self._connection_counter) <= self._low_dim_index:
             self._define_number_of_connections()
         return self._connection_counter
 
     @property
     def connected_positions(self):
+        """
+        """
         if len(self._connection_counter) <= self._low_dim_index:
             self._define_number_of_connections()
         return self._connected_positions
 
     @property
     def vectors(self):
+        """
+        """
         if not self._vectors:
             self._define_number_of_connections()
         return self._vectors
@@ -554,16 +608,24 @@ class LowDimGroupFinder(object):
 
 
     def _get_reduced_ase_structures(self):
+        """
+        """
         if not self._reduced_ase_structures:
             self._define_reduced_ase_structures()
         return self._reduced_ase_structures
 
     def get_reduced_aiida_structures(self):
+        """
+        """
         if not self.reduced_aiida_structures:
             self._define_reduced_aiida_structures()
         return self.reduced_aiida_structures
 
     def get_group_data(self):
+        """
+        Question: What are the most interesting properties to be returned?
+        Dimensionality, cell, positions, chemical symbols
+        """
         a = self.get_reduced_aiida_structures()
         return {#"groups": self.groups,
                 "biggest_group": self.biggest_group,
@@ -575,13 +637,24 @@ class LowDimGroupFinder(object):
 
 
 def find_shortest_vector(array):
+    """
+    Takes an array and finds the shortest vector.
+    :param array:
+    :return idx: the index of the shortest vector in the array
+    """
     import numpy as np
     idx = np.array([np.linalg.norm(vector) for vector in array]).argmin()
     return idx
 
 def update_set(set1, set2, k, set_dict, visited):
     """
-    Recursive function that puts the ids of all atoms that are somehow linked together into the same set.
+    Recursive function that puts the indexes of all atoms that are
+    somehow linked together into the same set.
+    :param set1:
+    :param set2: analysed set
+    :param k: key of set
+    :param set_dict: dictionary of all sets
+    :param visited:
     """
     for i in (set2 - set1):
         if i not in visited:
@@ -590,13 +663,28 @@ def update_set(set1, set2, k, set_dict, visited):
             set_dict[k].update(set_dict[i])
             update_set(set0,set_dict[k],k, set_dict,visited)
 
-def get_distances(ccoord1, ccoord2):
+def get_distances(coords):
     """
-    Get the distances between to lists of cartesian coordinates. Position ixj contains distance between atom i and atom j.
+    Get the distances between to lists of cartesian coordinates.
+    Position ixj contains distance between atom i and atom j.
+    :param coords: positions to compare
+    :return: matrix of all distances
+    """
     """
     import numpy as np
-    matrix_list = (ccoord1[:, None, :] - ccoord2[None, :, :]) ** 2
-    return np.sum(matrix_list, axis=-1) ** 0.5
+    from scipy.spatial.distance import pdist
+
+    distance_matrix = np.zeros([np.shape(coords)[0],np.shape(coords)[0]])
+
+    indup = np.triu_indices_from(distance_matrix,k=1) # upper triangular matrix idx
+
+    distance_matrix[indup] = pdist(coords) #
+
+    return distance_matrix
+    """
+    import numpy as np
+    matrix_list = (coords[:, None, :] - coords[None, :, :]) ** 2
+    return np.sum(matrix_list, axis=2) ** 0.5
 
 
 

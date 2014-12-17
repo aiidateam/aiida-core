@@ -486,8 +486,8 @@ class _Bands(VerdiCommandWithSubcommands,Listable):
             now = timezone.now()
             n_days_ago = now - datetime.timedelta(days=args.past_days)
             q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
-        else:
-            bands_list = BandsData.query(q_object).distinct().order_by('ctime')
+        
+        bands_list = BandsData.query(q_object).distinct().order_by('ctime')
         
         bands_list_data = bands_list.values_list('pk', 'label', 'ctime')
         

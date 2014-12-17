@@ -352,12 +352,12 @@ class CifData(SinglefileData):
         super(CifData,self).__init__(**kwargs)
         self._values = None
 
-    def store(self):
+    def store(self, *args, **kwargs):
         """
         Store the node.
         """
         self._set_attr('md5', self.generate_md5())
-        return super(CifData, self).store()
+        return super(CifData, self).store(*args, **kwargs)
 
     def set_file(self, filename):
         """

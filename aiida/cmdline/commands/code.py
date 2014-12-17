@@ -11,7 +11,7 @@ from aiida import load_dbenv
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 
 def cmdline_fill(attributes, store, print_header=True):
     import inspect
@@ -409,14 +409,15 @@ class CodeInputValidationClass(object):
         plugins.
         """
         from aiida.common.exceptions import ValidationError
-        from aiida.orm import Calculation
+        from aiida.orm import JobCalculation
         from aiida.common.pluginloader import existing_plugins
 
         if input_plugin is None:
             return
 
-        if input_plugin not in existing_plugins(Calculation,
-                                                'aiida.orm.calculation'):
+        if input_plugin not in existing_plugins(JobCalculation,
+                                                'aiida.orm.calculation.job',
+                                                suffix='Calculation'):
             raise ValidationError("Invalid value '{}' for the input_plugin "
                 "variable, it is not among the existing plugins".format(
                 str(input_plugin)))

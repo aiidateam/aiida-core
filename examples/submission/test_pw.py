@@ -4,7 +4,7 @@ from aiida import load_dbenv
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 
 load_dbenv()
 
@@ -58,7 +58,7 @@ if __name__ == "__main__":
         if code.get_input_plugin_name() != expected_code_type:
             raise ValueError
     except (NotExistent, ValueError):
-        valid_code_labels = [c.label for c in Code.query(
+        valid_code_labels = ["{}@{}".format(c.label,c.computer.name) for c in Code.query(
                 dbattributes__key="input_plugin",
                 dbattributes__tval=expected_code_type)]
         if valid_code_labels:
@@ -159,7 +159,7 @@ if __name__ == "__main__":
     ## Otherwise, to specify a given # of cpus per machine, uncomment the following:
     # calc.set_resources({"num_machines": 1, "num_mpiprocs_per_machine": 8})
 
-    #calc.set_prepend_text("#SBATCH --account=ch3")
+    #calc.set_custom_scheduler_commands("#SBATCH --account=ch3")
 
     if queue is not None:
         calc.set_queue_name(queue)

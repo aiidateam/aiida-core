@@ -21,3 +21,4 @@ User's guide
    ../database/dbusage
    ../workflow/index
    ../dbimporters/index
+   ../dbexporters/index

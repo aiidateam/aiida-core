@@ -140,13 +140,17 @@ class DbEntry(object):
             'extras'    : {},
             'url'       : None
         }
+        self._cif = None
 
     @property
     def cif(self):
         """
         Returns raw contents of a CIF file as string.
         """
-        raise NotImplementedError("not implemented in base class")
+        if self._cif is None:
+            import urllib2
+            self._cif = urllib2.urlopen( self.source['url'] ).read()
+        return self._cif
 
     def get_raw_cif(self):
         """

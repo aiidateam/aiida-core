@@ -310,13 +310,6 @@ class CodEntry(DbEntry):
         if 'db_version' in kwargs.keys():
             self.source['db_version'] = kwargs.pop('db_version')
 
-    @property
-    def cif(self):
-        if self._cif is None:
-            import urllib2
-            self._cif = urllib2.urlopen( self.source['url'] ).read()
-        return self._cif
-
     def get_ase_structure(self):
         """
         Returns ASE representation of the CIF.

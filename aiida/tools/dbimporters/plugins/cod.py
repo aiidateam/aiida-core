@@ -261,19 +261,6 @@ class CodSearchResults(DbSearchResults):
         self.entries = {}
         self.position = 0
 
-    def next(self):
-        """
-        Returns next result as
-        :py:class:`aiida.tools.dbimporters.plugins.cod.CodEntry`.
-
-        :raise StopIteration: when the end of result array is reached.
-        """
-        if len( self.results ) > self.position:
-            self.position = self.position + 1
-            return self.at( self.position - 1 )
-        else:
-            raise StopIteration()
-
     def at(self, position):
         """
         Returns ``position``-th result as

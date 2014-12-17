@@ -28,13 +28,6 @@ __version__ = "0.3.0"
 # load_dbenv() function).
 SCHEMA_VERSION="1.0.1"
 
-class EmptyContextManager(object):
-    def __enter__(self):
-        pass
-    
-    def __exit__(self, exc_type, exc_value, traceback):
-        pass
-
 class AiidaQuerySet(QuerySet):
     def iterator(self):
         for obj in super(AiidaQuerySet, self).iterator():

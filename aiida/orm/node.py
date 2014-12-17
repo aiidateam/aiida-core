@@ -247,6 +247,10 @@ class Node(object):
             # Automatically set all *other* attributes, if possible, otherwise
             # stop
             self._set_with_defaults(**kwargs)
+
+    @property
+    def _is_stored(self):
+        return not self._to_be_stored
     
     def __repr__(self):
         return '<{}: {}>'.format(self.__class__.__name__, str(self))
@@ -1420,24 +1424,87 @@ class Node(object):
         return self.folder.get_subfolder(section,
             reset_limit=True).get_abs_path(path,check_existence=True)
 
-    def store_all(self):
+    def store_all(self,with_transaction=True):
         """
         Store the node, together with all input links, if cached, and also the
         linked nodes, if they were not stored yet.
+        
+        :parameter with_transaction: if False, no transaction is used. This
+          is meant to be used ONLY if the outer calling function has already
+          a transaction open!
         """
-        self.store()
-        self._store_input_links(store_parents=True)
+        from django.db import transaction
+        from aiida.common.utils import EmptyContextManager
+        
+        if with_transaction:
+            context_man = transaction.commit_on_success()
+        else:
+            context_man = EmptyContextManager()
+
+        if not self._to_be_stored:
+            raise ModificationNotAllowed(
+                "Node with pk={} was already stored".format(self.pk))
+
+        # For each parent, check that all its inputs are stored
+        for link in self._inputlinks_cache:
+            try:
+                parent_node = self._inputlinks_cache[link]
+                parent_node._check_are_parents_stored()
+            except ModificationNotAllowed:
+                raise ModificationNotAllowed("Parent node (UUID={}) has "
+                    "unstored parents, cannot proceed (only direct parents "
+                    "can be unstored and will be stored by store_all, not "
+                    "grandparents or other ancestors".format(parent_node.uuid))
+        
+        with context_man:
+            # Always without transaction: either it is the context_man here,
+            # or it is managed outside
+            self._store_input_nodes()
+            self.store(with_transaction = False)
+            self._store_cached_input_links(with_transaction = False)
         
         return self
 
-    def _store_input_links(self, store_parents=True, only_stored=False):
+    def _store_input_nodes(self):
+        """
+        Find all input nodes, and store them, checking that they do not
+        have unstored inputs in turn.
+        
+        :note: this function stores all nodes without transactions; always
+          call it from within a transaction!
+        """
+        if not self._to_be_stored:
+            raise ModificationNotAllowed(
+                "_store_input_nodes can be called only if the node is "
+                "unstored (node {} is stored, instead)".format(self.pk))
+        
+        for link in self._inputlinks_cache:
+            if self._inputlinks_cache[link]._to_be_stored:
+                self._inputlinks_cache[link].store(with_transaction=False)
+            
+    def _check_are_parents_stored(self):
+        """
+        Check if all parents are already stored, otherwise raise.
+        
+        :raise ModificationNotAllowed: if one of the input nodes in not already
+          stored.
+        """
+        # Preliminary check to verify that inputs are stored already
+        for link in self._inputlinks_cache:
+            if self._inputlinks_cache[link]._to_be_stored:
+                raise ModificationNotAllowed(
+                    "Cannot store the input link '{}' because the "
+                    "source node is not stored. Either store it first, "
+                    "or call _store_input_links with the store_parents "
+                    "parameter set to True".format(link))
+        
+
+    def _store_cached_input_links(self, with_transaction=True):
         """
         Store all input links that are in the local cache, transferring them 
         to the DB.
         
-        :note: if store_parents is True, input nodes are stored one by one, 
-            and therefore if an error occurs only some nodes may be in the
-            stored state.
+        :note: This can be called only if all parents are already stored.
         
         :note: Links are stored only after the input nodes are stored. Moreover,
             link storage is done in a transaction, and if one of the links
@@ -1447,44 +1514,30 @@ class Node(object):
         :note: This function can be called only after the node is stored.
            After that, it can be called multiple times, and nothing will be
            executed if no links are still in the cache.
-        
-        :param store_parents: If True, it will also store nodes that are linked
-            in input that were not stored yet.
-        :param only_stored: will only store those input links where also the
-            source is already stored. This is normally False, and is called 
-            with True usually only within the .store() method.
+                
+        :parameter with_transaction: if False, no transaction is used. This
+          is meant to be used ONLY if the outer calling function has already
+          a transaction open!
         """
         from django.db import transaction
+        from aiida.common.utils import EmptyContextManager
 
+        if with_transaction:
+            context_man = transaction.commit_on_success()
+        else:
+            context_man = EmptyContextManager()
+            
         if self._to_be_stored:
             raise ModificationNotAllowed(
                 "Node with pk={} is not stored yet".format(self.pk))
-        
-        # Preliminary check, and storage
-        if not only_stored:
-            # I have to store all links, in this case
-            links_to_store = list(self._inputlinks_cache.keys())
-            if not store_parents:
-                for link in self._inputlinks_cache:
-                    if self._inputlinks_cache[link]._to_be_stored:
-                        raise ModificationNotAllowed(
-                            "Cannot store the input link '{}' because the "
-                            "source node is not stored. Either store it first, "
-                            "or call _store_input_links with the store_parents "
-                            "parameter set to True".format(link))
-            else:
-                for link in self._inputlinks_cache:
-                    if self._inputlinks_cache[link]._to_be_stored:
-                        self._inputlinks_cache[link].store()
-        else:
+
+        with context_man:  
+            # This raises if there is an unstored node.
+            self._check_are_parents_stored()
             # I have to store only those links where the source is already
             # stored
-            links_to_store = [link for link in self._inputlinks_cache.keys()
-                              if not self._inputlinks_cache[link]._to_be_stored]
+            links_to_store = list(self._inputlinks_cache.keys())
             
-        # If we are here, all input nodes should be stored, we can simply store
-        # the links
-        with transaction.commit_on_success():
             for link in links_to_store:
                 self._add_dblink_from(self._inputlinks_cache[link], link)
             # If everything went smoothly, clear the entries from the cache.
@@ -1495,7 +1548,7 @@ class Node(object):
             for link in links_to_store:
                 del self._inputlinks_cache[link]
 
-    def store(self):
+    def store(self,with_transaction=True):
         """
         Store a new node in the DB, also saving its repository directory
         and attributes.
@@ -1507,18 +1560,33 @@ class Node(object):
         :note: After successful storage, those links that are in the cache, and
             for which also the parent node is already stored, will be
             automatically stored. The others will remain unstored.
+            
+        :parameter with_transaction: if False, no transaction is used. This
+          is meant to be used ONLY if the outer calling function has already
+          a transaction open!
         """
         #TODO: This needs to be generalized, allowing for flexible methods
         # for storing data and its attributes.
         from django.db import transaction
+        from aiida.common.utils import EmptyContextManager
         from aiida.common.exceptions import ValidationError
         from aiida.djsite.db.models import DbAttribute
         import aiida.orm.autogroup
+
+        if with_transaction:
+            context_man = transaction.commit_on_success()
+        else:
+            context_man = EmptyContextManager()
 
         if self._to_be_stored:
 
             # As a first thing, I check if the data is valid
             self._validate()
+
+            # Verify that parents are already stored. Raises if this is not
+            # the case.
+            self._check_are_parents_stored()
+
             # I save the corresponding django entry
             # I set the folder
             # NOTE: I first store the files, then only if this is successful,
@@ -1532,7 +1600,7 @@ class Node(object):
             # I do the transaction only during storage on DB to avoid timeout
             # problems, especially with SQLite
             try:
-                with transaction.commit_on_success():
+                with context_man:
                     # Save the row
                     self._dbnode.save()
                     # Save its attributes 'manually' without incrementing
@@ -1543,6 +1611,14 @@ class Node(object):
                     # This should not be used anymore: I delete it to
                     # possibly free memory
                     del self._attrs_cache
+
+                    self._temp_folder = None            
+                    self._to_be_stored = False
+            
+                    # Here, I store those links that were in the cache and
+                    # that are between stored nodes.
+                    self._store_cached_input_links()
+                    
             # This is one of the few cases where it is ok to do a 'global'
             # except, also because I am re-raising the exception
             except:
@@ -1552,12 +1628,6 @@ class Node(object):
                     self._repository_folder.abspath, move=True, overwrite=True)                
                 raise
             
-            self._temp_folder = None            
-            self._to_be_stored = False
-            
-            # Here, I store those links that were in the cache and that are
-            # between stored nodes.
-            self._store_input_links(store_parents=False, only_stored=True)
         else:
             raise ModificationNotAllowed(
                 "Node with pk={} was already stored".format(self.pk))

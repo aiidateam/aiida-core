@@ -1201,19 +1201,22 @@ class TestSubNodesAndLinks(AiidaTestCase):
                               for i in endnode.get_inputs(also_labels=True)]), 
                          set([("N1", n1.uuid), ("N2", n2.uuid),
                               ("N3", n3.uuid), ("N4", n4.uuid)]))        
-    
-        endnode.store()
+
+        # Some parent nodes are not stored yet
+        with self.assertRaises(ModificationNotAllowed):
+            endnode.store()
+            
         self.assertEqual(set([(i[0], i[1].uuid)
                               for i in endnode.get_inputs(only_in_db=True,
                                                           also_labels=True)]), 
-                         set([("N3", n3.uuid), ("N4", n4.uuid)]))
+                         set())
         self.assertEqual(set([(i[0], i[1].uuid)
                               for i in endnode.get_inputs(also_labels=True)]), 
                          set([("N1", n1.uuid), ("N2", n2.uuid),
                               ("N3", n3.uuid), ("N4", n4.uuid)]))        
         
         # This will also store n1 and n2!
-        endnode._store_input_links()
+        endnode.store_all()
         
         self.assertEqual(set([(i[0], i[1].uuid)
                               for i in endnode.get_inputs(only_in_db=True,
@@ -1225,7 +1228,66 @@ class TestSubNodesAndLinks(AiidaTestCase):
                          set([("N1", n1.uuid), ("N2", n2.uuid),
                               ("N3", n3.uuid), ("N4", n4.uuid)]))        
         
+    
+    def test_store_with_unstored_parents(self):
+        """
+        I want to check that if parents are unstored I cannot store
+        """
+        n1 = Node()
+        n2 = Node().store()
+        endnode = Node()
         
+        endnode._add_link_from(n1, "N1")
+        endnode._add_link_from(n2, "N2")
+
+        self.assertEqual(endnode.get_inputs(only_in_db=True), [])
+        
+        # Some parent nodes are not stored yet
+        with self.assertRaises(ModificationNotAllowed):
+            endnode.store()
+
+        self.assertEqual(endnode.get_inputs(only_in_db=True), [])
+
+        n1.store()
+        # Now I can store
+        endnode.store()
+        
+        self.assertEqual(set([(i[0], i[1].uuid)
+                              for i in endnode.get_inputs(only_in_db=True,
+                                                          also_labels=True)]), 
+                         set([("N1", n1.uuid), ("N2", n2.uuid)]))        
+        self.assertEqual(set([(i[0], i[1].uuid)
+                              for i in endnode.get_inputs(also_labels=True)]), 
+                         set([("N1", n1.uuid), ("N2", n2.uuid)]))        
+
+            
+    
+    def test_storeall_with_unstored_grandparents(self):
+        """
+        I want to check that if grandparents are unstored I cannot store_all
+        """    
+        n1 = Node()
+        n2 = Node()
+        endnode = Node()
+        
+        n2._add_link_from(n1, "N1")
+        endnode._add_link_from(n2, "N2")
+
+        # Grandparents are unstored
+        with self.assertRaises(ModificationNotAllowed):
+            endnode.store_all()
+            
+        n1.store()
+        # Now it should work
+        endnode.store_all()
+        
+        # Check the parents...
+        self.assertEqual(set([(i[0], i[1].uuid)
+                              for i in n2.get_inputs(also_labels=True)]), 
+                         set([("N1", n1.uuid)]))        
+        self.assertEqual(set([(i[0], i[1].uuid)
+                              for i in endnode.get_inputs(also_labels=True)]), 
+                         set([("N2", n2.uuid)]))        
     
     def test_use_code(self):
         from aiida.orm import JobCalculation, Code

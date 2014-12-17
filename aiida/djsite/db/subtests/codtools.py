@@ -77,7 +77,7 @@ class TestCodtools(AiidaTestCase):
         with open("{}/{}".format(f.abspath,calc['stdin_name'])) as i:
             self.assertEquals(i.read(), file_content)
 
-        c.store()
+        c.store_all()
         c._set_state(calc_states.PARSING)
 
         fd = FolderData()
@@ -128,7 +128,7 @@ class TestCodtools(AiidaTestCase):
         c.use_cif(cif)
 
         calc = c._prepare_for_submission(f, c.get_inputdata_dict())
-        c.store()
+        c.store_all()
         c._set_state(calc_states.PARSING)
 
         fd = FolderData()
@@ -184,7 +184,7 @@ class TestCodtools(AiidaTestCase):
         c.use_cif(cif)
 
         calc = c._prepare_for_submission(f, c.get_inputdata_dict())
-        c.store()
+        c.store_all()
         c._set_state(calc_states.PARSING)
 
         fd = FolderData()

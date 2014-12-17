@@ -411,3 +411,11 @@ def gunzip_string(string):
         f.flush()
         g = gzip.open(f.name,'rb')
         return g.read()
+
+class EmptyContextManager(object):
+    def __enter__(self):
+        pass
+    
+    def __exit__(self, exc_type, exc_value, traceback):
+        pass
+

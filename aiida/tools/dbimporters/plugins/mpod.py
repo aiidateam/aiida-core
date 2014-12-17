@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 
-import aiida.tools.dbimporters.baseclasses
+from aiida.tools.dbimporters.baseclasses \
+    import DbImporter, DbSearchResults, DbEntry
 import MySQLdb
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
 __version__ = "0.3.0"
 
-class MpodDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
+class MpodDbImporter(DbImporter):
     """
     Database importer for Material Properties Open Database.
     """
@@ -116,7 +117,7 @@ class MpodDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         """
         return self.keywords.keys()
 
-class MpodSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
+class MpodSearchResults(DbSearchResults):
     """
     Results of the search, performed on MPOD.
     """
@@ -158,7 +159,7 @@ class MpodSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
             self.entries[position] = MpodEntry( url, db_id = db_id )
         return self.entries[position]
 
-class MpodEntry(aiida.tools.dbimporters.baseclasses.DbEntry):
+class MpodEntry(DbEntry):
     """
     Represents an entry from MPOD.
     """

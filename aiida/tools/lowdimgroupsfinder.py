@@ -398,7 +398,9 @@ class LowDimGroupFinder(object):
 
             positions = np.array(positions)
 
-            positions = positions - (min_z + self.params["vacuum_space"]/2) * self._vectors[self._low_dim_index][2]
+
+            positions = positions - (min_z - self.params["vacuum_space"]/2) * self._vectors[self._low_dim_index][2]
+
 
             self._vectors[self._low_dim_index][2] = self._vectors[self._low_dim_index][2] * (self.params["vacuum_space"] + max_z-min_z)
 
@@ -421,8 +423,8 @@ class LowDimGroupFinder(object):
 
             positions = np.array(positions)
 
-            positions = positions - (min_x + self.params["vacuum_space"]/2) * self._vectors[self._low_dim_index][0]
-            positions = positions - (min_y + self.params["vacuum_space"]/2) * self._vectors[self._low_dim_index][1]
+            positions = positions - (min_x - self.params["vacuum_space"]/2) * self._vectors[self._low_dim_index][0]
+            positions = positions - (min_y - self.params["vacuum_space"]/2) * self._vectors[self._low_dim_index][1]
 
             self._vectors[self._low_dim_index][0] = self._vectors[self._low_dim_index][0] * (self.params["vacuum_space"] + max_x-min_x)
             self._vectors[self._low_dim_index][1] = self._vectors[self._low_dim_index][1] * (self.params["vacuum_space"] + max_y-min_y)
@@ -535,8 +537,11 @@ class LowDimGroupFinder(object):
         :return: rotated ASE structure
         """
         import ase
-        asestruc.rotate(v=asestruc.cell[2],a=[0,0,1],center='COP', rotate_cell = True)
-        asestruc.rotate(v=asestruc.cell[0],a=[1,0,0],center='COP', rotate_cell = True)
+
+        asestruc.rotate(v=asestruc.cell[2],a=[0,0,1],center=(0,0,0), rotate_cell = True)
+        asestruc.rotate(v=asestruc.cell[0],a=[1,0,0],center=(0,0,0), rotate_cell = True)
+
+
         return asestruc
 
 

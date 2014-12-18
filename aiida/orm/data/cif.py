@@ -3,7 +3,7 @@ from aiida.orm.data.singlefile import SinglefileData
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 
 ase_loops = {
     '_atom_site': [
@@ -252,9 +252,14 @@ def pycifrw_from_cif(datablocks,loops=dict()):
             datablock[tag] = values[tag]
     return cif
 
-class CifData(SinglefileData): 
+class CifData(SinglefileData):
     """
     Wrapper for Crystallographic Interchange File (CIF)
+
+    :note: the file (physical) is held as the authoritative source of
+        information, so all conversions are done through the physical file:
+        when setting ``ase`` or ``values``, a physical CIF file is generated
+        first, the values are updated from the physical CIF file.
     """
 
     @classmethod
@@ -324,20 +329,64 @@ class CifData(SinglefileData):
 
     def _get_aiida_structure_ase(self, **kwargs):
         from aiida.orm.data.structure import StructureData
-        import ase.io.cif
-        ase_structure = ase.io.cif.read_cif(self.get_file_abs_path(), **kwargs)
-        return StructureData(ase=ase_structure)
+        return StructureData(ase=self.get_ase(**kwargs))
+
+    @property
+    def ase(self):
+        """
+        ASE object, representing the CIF.
+
+        :note: requires ASE module.
+        """
+        if self._ase is None:
+            self._ase = self.get_ase()
+        return self._ase
+
+    def get_ase(self, **kwargs):
+        """
+        Returns ASE object, representing the CIF. This function differs
+        from the property ``ase`` by the possibility to pass the keyworded
+        arguments (kwargs) to ase.io.cif.read_cif().
+
+        :note: requires ASE module.
+        """
+        if not kwargs and self._ase:
+            return self.ase()
+        else:
+            from ase.io.cif import read_cif
+            return read_cif(self.get_file_abs_path(),**kwargs)
+
+    def set_ase(self, aseatoms):
+        cif = cif_from_ase(aseatoms)
+        self.values = pycifrw_from_cif(cif,loops=ase_loops)
+
+    @ase.setter
+    def ase(self,aseatoms):
+        self.set_ase(aseatoms)
 
     @property
     def values(self):
         """
-        :return: list of lists, representing a parsed CIF file.
+        PyCifRW structure, representing the CIF datablocks.
+
         :note: requires PyCifRW module.
         """
         if self._values is None:
             import CifFile
             self._values = CifFile.ReadCif( self.get_file_abs_path() )
         return self._values
+
+    def set_values(self,values):
+        import CifFile
+        import tempfile
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(values.WriteOut())
+            f.flush()
+            self.set_file(f.name)
+
+    @values.setter
+    def values(self,values):
+        self.set_values(values)
 
     def __init__(self, **kwargs):
         """
@@ -351,13 +400,14 @@ class CifData(SinglefileData):
                                  'url']
         super(CifData,self).__init__(**kwargs)
         self._values = None
+        self._ase = None
 
-    def store(self):
+    def store(self, *args, **kwargs):
         """
         Store the node.
         """
         self._set_attr('md5', self.generate_md5())
-        return super(CifData, self).store()
+        return super(CifData, self).store(*args, **kwargs)
 
     def set_file(self, filename):
         """
@@ -366,6 +416,7 @@ class CifData(SinglefileData):
         super(CifData,self).set_file(filename)
         self._set_attr('md5', self.generate_md5())
         self._values = None
+        self._ase = None
 
     @property
     def source(self):

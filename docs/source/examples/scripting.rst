@@ -63,10 +63,18 @@ The ``verdi run`` command and the ``runaiida`` executable
 In order to simplify the procedure described above, it is possible to 
 execute a python file using ``verdi run``: this command will accept
 as parameter the name of a file, and will execute it after having
-loaded the modules described above. The command ``verdi run`` has
-the additional advantage of adding all stored nodes to a suitable
-group, for later usage. Some command line options allow the user
-to fine-tune this behavior; for more details, run ``verdi run -h``.
+loaded the modules described above.
+
+The command ``verdi run`` has
+the additional advantage of adding all stored nodes to suitable special
+groups, of type ``autogroup.run``, for later usage. 
+You can get the list of all these groups with the command::
+
+  verdi group list -t autogroup.run
+
+Some further command line options of ``verdi run`` allow the user
+to fine-tune the autogrouping behavior;
+for more details, refer to the output of ``verdi run -h``.
 Note also that further command line parameters to ``verdi run`` are
 passed to the script as ``sys.argv``.
 

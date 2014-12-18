@@ -9,7 +9,7 @@ from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 
 class Calculation(VerdiCommandWithSubcommands):
     """
@@ -646,9 +646,10 @@ class Calculation(VerdiCommandWithSubcommands):
                             help="Add a filter to clean workdir of calculations "
                                  "modified during the past N days",
                             type=int, action='store')
-        parser.add_argument('-u', '--until', metavar='N',
+        parser.add_argument('-o', '--older-than', metavar='N',
                             help="Add a filter to clean workdir of calculations "
-                                 "modified until N days ago",
+                                 "that have been modified on a date before "
+                                 "N days ago",
                             type=int, action='store')
         parser.add_argument('-c', '--computers', metavar='label', nargs='+',
                             help="Add a filter to clean workdir of calculations "
@@ -665,7 +666,8 @@ class Calculation(VerdiCommandWithSubcommands):
         from aiida.execmanager import get_authinfo
         from aiida.djsite.db import models
         from aiida.common.datastructures import calc_states
-
+        from aiida.orm import Computer
+        
         args = list(args)
         parsed_args = parser.parse_args(args)
         
@@ -685,20 +687,20 @@ class Calculation(VerdiCommandWithSubcommands):
         if parsed_args.pk is not None:
             # list of pks is passed
             if ((parsed_args.past_days is not None) or 
-                 (parsed_args.until is not None)):
+                 (parsed_args.older_than is not None)):
                 print >> sys.stderr, ("You cannot specify both a list of "
                                        "calculation pks and the -p or -o "
                                        "options")
                 sys.exit(0)
             calc_list = JobCalculation.query(q_object,
-                            pk__in=parsed_args.pk,
-                            dbattributes__in=q_state).distinct().order_by('mtime')
+                                             pk__in=parsed_args.pk,
+                                             dbattributes__in=q_state).distinct().order_by('mtime')
         
         else:
             # calculations to be cleaned identified by modification time
             now = timezone.now()
             if ((parsed_args.past_days is None) and 
-                 (parsed_args.until is None)):
+                 (parsed_args.older_than is None)):
                 print >> sys.stderr, ("Either a list of calculation pks or the "
                                        "-p and/or -o options should be specified")
                 sys.exit(0)
@@ -707,10 +709,13 @@ class Calculation(VerdiCommandWithSubcommands):
                 n_days_after = now - datetime.timedelta(
                                             days=parsed_args.past_days)
                 q_object.add(Q(mtime__gte=n_days_after), Q.AND)
-            if parsed_args.until is not None:
+            if parsed_args.older_than is not None:
                 n_days_before = now - datetime.timedelta(
-                                            days=parsed_args.until)
+                                            days=parsed_args.older_than)
                 q_object.add(Q(mtime__lte=n_days_before), Q.AND)
+            
+            if parsed_args.computers is not None:
+                q_object.add(Q(dbcomputer__name__in=parsed_args.computers), Q.AND)
             
             # TODO: return directly a remote_folder list from the query
             calc_list = JobCalculation.query(q_object,
@@ -721,45 +726,65 @@ class Calculation(VerdiCommandWithSubcommands):
                              "[Y/N] ")
             if not wait_for_confirmation():
                 sys.exit(0)
-                
-        # we want to open one connection per computer,
-        # therefore first group the remotedatas per computer, then clean 
-        # TODO: search of dbauthinfo could be optimized in a single query?
         
+        # get the uuids of all calculations matching the filters
+        calc_list_data = calc_list.values_list('pk','dbcomputer','uuid')
+        calc_pks = [ _[0] for _ in calc_list_data ]
+        dbcomp_pks = list(set([_[1] for _ in calc_list_data]))
+        # also, get the pks of dbcomputers and the pks of dbattributes
+        # (the remote_workdir path is in the dbattribute)
+        # dbattrs_and_dbcomp_pks = [ (_[1],_[2]) for _ in calc_list_data ]
+        
+        # get all computers associated to the calc uuids above, and load them
+        q_object = Q(user=user)
+        dbcomputers = list(models.DbComputer.objects.filter(pk__in=dbcomp_pks).distinct())
+        computers = [ Computer.get(_) for _ in dbcomputers ]
+        
+        # now build a dictionary with the info of folders to delete
         remotes = {}
-        for c in calc_list:
-            comp = c.computer
-            computer_name = comp.get_name()
-            if ((parsed_args.computers is None) or 
-                 (computer_name in parsed_args.computers)):
-                try:
-                    remotes[computer_name]['remotes'].append(c.out.remote_folder)
-                except AttributeError:
-                    # calculation does not have a remote_folder output -> skip it
-                    pass
-                except KeyError:
-                    remotes[computer_name] = {'remotes':[c.out.remote_folder],
-                                            'transport':get_authinfo(computer=comp,
-                                                                     aiidauser=user).get_transport()}
-
+        for computer in computers:
+            # initialize a key of info for a given computer
+            remotes[computer.name] = {'transport':get_authinfo(computer=computer,
+                                                         aiidauser=user).get_transport(),
+                                      'computer':computer,
+                                      }
+            # select the calc pks done on this computer
+            this_calc_pks = [ _[0] for _ in calc_list_data if _[1]==computer.pk ]
+            this_calc_uuids = [ _[2] for _ in calc_list_data if _[1]==computer.pk ]
+            
+            # now get the paths of remote folder
+            # look in the DbAttribute table,
+            # for Attribute which have a key called remote_workdir, 
+            # and the dbnode_id referring to the given calcs            
+            dbattrs = models.DbAttribute.objects.filter(dbnode_id__in=this_calc_pks,
+                                                        key='remote_workdir')
+            
+            remote_workdirs = [ _[0] for _ in dbattrs.values_list('tval') ]
+            remotes[computer.name]['remotes'] = remote_workdirs
+            remotes[computer.name]['uuids'] = this_calc_uuids
+            
+        # now proceed to cleaning
+        
         for computer, dic in remotes.iteritems():
             print "Cleaning the work directory on computer {}.".format(computer)
             counter = 0
             t = dic['transport']
-            for remote in dic['remotes']:
-                with t:
-                    try:
-                        t.chdir(remote.get_remote_path())
-                        files_to_delete = t.listdir()
-                        if files_to_delete:
-                            for fil in files_to_delete:
-                                t.rmtree(fil)
-                            counter += 1
-
-                    except IOError:
-                        # directory does not exist, we don't do anything
-                        pass
-        
+            with t:
+                remote_user = remote_user = t.whoami()
+                aiida_workdir = dic['computer'].get_workdir().format(username=remote_user)
+                t.chdir(aiida_workdir)
+                # Hardcoding the sharding equal to 3 parts!
+                existing_folders = t.glob('*/*/*')
+                folders_to_delete = [ i for i in existing_folders if 
+                                      i.replace("/","") in dic['uuids'] ]
+                
+                for folder in folders_to_delete:
+                    t.rmtree(folder)
+                    counter += 1
+                    if counter%20==0 and counter>0:
+                        print "Deleted work directories: {}".format(counter)
+                        
             print >> sys.stderr, "{} remote folder{} cleaned.".format(counter,
                                                 "" if counter == 1 else "s")
-        
+            
+            

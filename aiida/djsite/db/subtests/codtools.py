@@ -14,7 +14,7 @@ import aiida
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 
 class TestCodtools(AiidaTestCase):
 
@@ -77,7 +77,7 @@ class TestCodtools(AiidaTestCase):
         with open("{}/{}".format(f.abspath,calc['stdin_name'])) as i:
             self.assertEquals(i.read(), file_content)
 
-        c.store()
+        c.store_all()
         c._set_state(calc_states.PARSING)
 
         fd = FolderData()
@@ -128,7 +128,7 @@ class TestCodtools(AiidaTestCase):
         c.use_cif(cif)
 
         calc = c._prepare_for_submission(f, c.get_inputdata_dict())
-        c.store()
+        c.store_all()
         c._set_state(calc_states.PARSING)
 
         fd = FolderData()
@@ -184,7 +184,7 @@ class TestCodtools(AiidaTestCase):
         c.use_cif(cif)
 
         calc = c._prepare_for_submission(f, c.get_inputdata_dict())
-        c.store()
+        c.store_all()
         c._set_state(calc_states.PARSING)
 
         fd = FolderData()

@@ -81,10 +81,11 @@ def make_inline(func):
     while if you want to wrap it, so that an ``InlineCalculation`` is created, and
     everything is stored, you will run::
     
-      c, s_copy_dict = make_inline(f)(s)
+      c, s_copy_dict = make_inline(f)(s=s)
     
-    Note that, with the wrapper, the return value is different, i.e.
-    ``(c, s_copy_dict)`` instead of simply ``s_copy_dict``.
+    Note that, with the wrapper, all the parameters to ``f()`` have to be
+    passed as keyworded arguments. Moreover, the return value is different,
+    i.e. ``(c, s_copy_dict)`` instead of simply ``s_copy_dict``.
 
     .. note:: EXTREMELY IMPORTANT! The wrapped function MUST have
        the following requirements in order to be reproducible.

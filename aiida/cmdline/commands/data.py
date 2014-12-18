@@ -132,7 +132,7 @@ class Visualizable(object):
     Provides shell completion for visualizable data nodes.
 
     Classes, inheriting Visualizable, MUST NOT contain attributes, starting
-    with ``_show_``, which are not plugins for visualisation.
+    with ``_show_``, which are not plugins for visualization.
 
     In order to specify a default visualization format, one has to override
     ``_default_show_format`` property (preferably in __init__), setting it
@@ -144,7 +144,7 @@ class Visualizable(object):
     def complete_visualizers(self, subargs_idx, subargs):
         """
         Get a display-ready string, containing names of all possible
-        visualisers.
+        visualizers.
         """
         plugin_names = self.get_show_plugins().keys()
         return "\n".join(plugin_names)
@@ -162,7 +162,7 @@ class Visualizable(object):
 
     def show(self, *args):
         """
-        Show the data node with a visualisation program.
+        Show the data node with a visualization program.
         """
         # DEVELOPER NOTE: to add a new plugin, just add a _show_xxx() method.
         import argparse,os
@@ -170,7 +170,7 @@ class Visualizable(object):
             prog=self.get_full_command_name(),
             description='Visualize data object.')
         parser.add_argument('data_id', type=int, default=None,
-                            help="ID of the data object to be visualised.")
+                            help="ID of the data object to be visualized.")
 
         default_format = None
         try:
@@ -182,7 +182,7 @@ class Visualizable(object):
                 default_format = None
 
         parser.add_argument('--format', type=str, default=default_format,
-                            help="Type of the visualisation format/tool.",
+                            help="Type of the visualization format/tool.",
                             choices=self.get_show_plugins().keys())
 
         # Augmenting the command line parameters with ones, that are used by
@@ -271,7 +271,7 @@ class Exportable(object):
         parser.add_argument('format', type=str, default=None,
                     help="Format of the exported file.")
         parser.add_argument('data_id', type=int, default=None,
-                            help="ID of the data object to be visualised.")
+                            help="ID of the data object to be visualized.")
 
         # Augmenting the command line parameters with ones, that are used by
         # individual plugins
@@ -432,13 +432,13 @@ class _Upf(VerdiCommandWithSubcommands):
                            "setup with the uploadfamily function?")
 
                 else:
-                     print "* {} [{} pseudos]{}".format(g.name, num_pseudos,
+                    print "* {} [{} pseudos]{}".format(g.name, num_pseudos,
                                                         description_string)
         else:
             print "No valid UPF pseudopotential family found."
          
          
-class _Bands(VerdiCommandWithSubcommands,Listable):
+class _Bands(VerdiCommandWithSubcommands,Listable,Visualizable):
     """
     Manipulation on the bands
     """
@@ -449,6 +449,7 @@ class _Bands(VerdiCommandWithSubcommands,Listable):
         from aiida.orm.data.array.bands import BandsData
         self.dataclass = BandsData
         self.valid_subcommands = {
+            'show': (self.show, self.complete_visualizers),
             'list': (self.list, self.complete_none),
             }
 
@@ -615,7 +616,118 @@ class _Bands(VerdiCommandWithSubcommands,Listable):
             actual columns in the output from the query() are checked.
         """
         return ["ID","formula","ctime","label"]
-    
+        
+    def show(self, *args):
+        """
+        Show the data node with a visualization program.
+        """
+        # DEVELOPER NOTE: to add a new plugin, just add a _show_xxx() method.
+        import argparse,os
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Visualize data object.')
+        parser.add_argument('data_id', type=int, default=None, nargs='+',
+                            help="ID of the data object to be visualized.")
+
+        default_format = None
+        try:
+            default_format = self._default_show_format
+        except AttributeError:
+            if len(self.get_show_plugins().keys()) == 1:
+                default_format = self.get_show_plugins().keys()[0]
+            else:
+                default_format = None
+
+        parser.add_argument('--format', type=str, default=default_format,
+                            help="Type of the visualization format/tool.",
+                            choices=self.get_show_plugins().keys())
+
+        # Augmenting the command line parameters with ones, that are used by
+        # individual plugins
+        for cmd in dir(self):
+            if not cmd.startswith(self.show_prefix) or \
+               not cmd.endswith(self.show_parameters_postfix):
+                continue
+            getattr(self,cmd)(parser)
+
+        args = list(args)
+        parsed_args = vars(parser.parse_args(args))
+
+        data_id = parsed_args.pop('data_id')
+        format = parsed_args.pop('format')
+
+        if format is None:
+            print "Default format is not defined, please specify.\n" + \
+                  "Valid formats are:"
+            for i in self.get_show_plugins().keys():
+                print "  {}".format(i)
+            sys.exit(0)
+
+        # I can give in input the whole path to executable
+        code_name = os.path.split(format)[-1]
+
+        try:
+            func = self.get_show_plugins()[code_name]
+        except KeyError:
+            print "Not implemented; implemented plugins are:"
+            print "{}.".format(",".join(self.get_show_plugins()))
+            sys.exit(1)
+
+        load_dbenv()
+        from aiida.orm.node import Node
+        n_list = [Node.get_subclass_from_pk(id) for id in data_id]
+
+        for n in n_list:
+            try:
+                if not isinstance(n,self.dataclass):
+                    print("Node {} is of class {} instead "
+                          "of {}".format(n,type(n),self.dataclass))
+                    sys.exit(1)
+            except AttributeError:
+                pass
+
+        func(format, n_list, **parsed_args)
+
+    def _show_xmgrace(self,exec_name,list_bands):
+        """
+        Plugin for xmgrace
+        """
+        import tempfile,subprocess,numpy
+        from aiida.orm.data.array.bands import max_num_agr_colors
+
+        list_files = []
+        current_band_number = 0
+        for iband,bands in enumerate(list_bands):
+            # extract number of bands
+            nbnds = bands.get_bands().shape[1]
+            text = bands._exportstring('agr',setnumber_offset=current_band_number,
+                                       color_number=numpy.mod(iband+1,max_num_agr_colors))
+            # write a tempfile
+            f=tempfile.NamedTemporaryFile(suffix='.agr')
+            f.write(text)
+            f.flush()
+            list_files.append(f)
+            # update the number of bands already plotted
+            current_band_number += nbnds
+            
+        try:
+            subprocess.check_output([exec_name] + [f.name for f in list_files])
+            _ = [ f.close() for f in list_files ]
+        except subprocess.CalledProcessError:
+            # The program died: just print a message
+            print "Note: the call to {} ended with an error.".format(
+                exec_name)
+            _ = [ f.close() for f in list_files ]
+        except OSError as e:
+            _ = [ f.close() for f in list_files ]
+            if e.errno == 2:
+                print ("No executable '{}' found. Add to the path, "
+                       "or try with an absolute path.".format(
+                       exec_name))
+                sys.exit(1)
+            else:
+                raise
+
 class _Structure(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
     """
     Visualize AiIDA structures

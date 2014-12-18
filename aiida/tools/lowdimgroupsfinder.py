@@ -1,9 +1,9 @@
-
+# -*- coding: utf-8 -*-
 """
 Low dimensionality group finder, which analyses a bulk crystal and returns all different
 groups of atoms that are not bonded together as separate structures.
 """
-# -*- coding: utf-8 -*-
+
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
 __version__ = "0.3.0"
@@ -118,8 +118,7 @@ class GroupOverTwoCellsNoConnectionsExc(LowDimGroupFinderExc):
 
 
 class LowDimGroupFinder(object):
-    def __init__(self, aiida_structure, **kwargs):
-        """
+    """
         Takes an aiida_structure, analyses the structure and returns all bonded groups of atoms.
 
         :param cov_bond_margin: percentage which is added to the covalent
@@ -137,7 +136,9 @@ class LowDimGroupFinder(object):
             0D: [False,False,False], 1D: [False,False,True], 2D: [True, True, False], 3D [True, True, True]
         :param rotation: If True, it rotates the reduced 1D structures into the z-axis and 2D structures in
             the x-y plane.
-        """
+    """
+    def __init__(self, aiida_structure, **kwargs):
+
         import ase
         import numpy as np
         self.params = { "cov_bond_margin" : 0.1,
@@ -176,7 +177,7 @@ class LowDimGroupFinder(object):
     def setup_builder(self, **kwargs):
         """
         Changes the builder parameters.
-        :param **kwargs: list of ``keyword = value`` pairs
+        :param kwargs: list of ``keyword = value`` pairs
         """
         for k, v in kwargs.iteritems():
             if k in self.params.keys():
@@ -295,7 +296,6 @@ class LowDimGroupFinder(object):
         if self._connection_counter == 1 and self.supercell_size < self.params["max_supercell"] and self._low_dim_index == 0:
 
             self.supercell_size = self.supercell_size + 1
-            print "No connection found. Increasing supercell size to {}".format(self.supercell_size)
             #reset all the group data
             self._groups = []
             self._unit_cell_groups = []
@@ -391,19 +391,14 @@ class LowDimGroupFinder(object):
                 positions.append([self.supercell.positions[i][0],self.supercell.positions[i][1],self.supercell.positions[i][2]])
                 symbols.append(self.supercell.get_chemical_symbols()[i])
                 # min and max z
-                if min_z is None or min_z > positions[-1][2]:
-                    min_z = positions[-1][2]
-                if max_z is None or max_z < positions[-1][2]:
-                    max_z = positions[-1][2]
+                if min_z is None or min_z > np.dot(positions[-1],self._vectors[self._low_dim_index][2]):
+                    min_z = np.dot(positions[-1],self._vectors[self._low_dim_index][2])
+                if max_z is None or max_z < np.dot(positions[-1],self._vectors[self._low_dim_index][2]):
+                    max_z = np.dot(positions[-1],self._vectors[self._low_dim_index][2])
 
             positions = np.array(positions)
 
-            # logic error... how do we know that z is the non-periodic direction??
-            # first turn the cell into z-axis
-            # than adapt height
-            # turn it back if rotation=false
-            #put atoms in the middle of the cell, displaced by half of the vacuum cell
-            positions[:,2] = positions[:,2] - min_z + self.params["vacuum_space"]/2
+            positions = positions - (min_z + self.params["vacuum_space"]/2) * self._vectors[self._low_dim_index][2]
 
             self._vectors[self._low_dim_index][2] = self._vectors[self._low_dim_index][2] * (self.params["vacuum_space"] + max_z-min_z)
 
@@ -415,19 +410,19 @@ class LowDimGroupFinder(object):
                 positions.append([self.supercell.positions[i][0],self.supercell.positions[i][1],self.supercell.positions[i][2]])
                 symbols.append(self.supercell.get_chemical_symbols()[i])
 
-                if min_x is None or min_x > positions[-1][0]:
-                    min_x = positions[-1][0]
-                if max_x is None or max_x < positions[-1][0]:
-                    max_x = positions[-1][0]
-                if min_y is None or min_y > positions[-1][1]:
-                    min_y = positions[-1][1]
-                if max_y is None or max_y < positions[-1][1]:
-                    max_y = positions[-1][1]
+                if min_x is None or min_x > np.dot(positions[-1],self._vectors[self._low_dim_index][0]):
+                    min_x = np.dot(positions[-1],self._vectors[self._low_dim_index][0])
+                if max_x is None or max_x < np.dot(positions[-1],self._vectors[self._low_dim_index][0]):
+                    max_x = np.dot(positions[-1],self._vectors[self._low_dim_index][0])
+                if min_y is None or min_y > np.dot(positions[-1],self._vectors[self._low_dim_index][1]):
+                    min_y = np.dot(positions[-1],self._vectors[self._low_dim_index][1])
+                if max_y is None or max_y < np.dot(positions[-1],self._vectors[self._low_dim_index][1]):
+                    max_y = np.dot(positions[-1],self._vectors[self._low_dim_index][1])
 
             positions = np.array(positions)
 
-            positions[:,0] = positions[:,0] - min_x + self.params["vacuum_space"]/2
-            positions[:,1] = positions[:,1] - min_y + self.params["vacuum_space"]/2
+            positions = positions - (min_x + self.params["vacuum_space"]/2) * self._vectors[self._low_dim_index][0]
+            positions = positions - (min_y + self.params["vacuum_space"]/2) * self._vectors[self._low_dim_index][1]
 
             self._vectors[self._low_dim_index][0] = self._vectors[self._low_dim_index][0] * (self.params["vacuum_space"] + max_x-min_x)
             self._vectors[self._low_dim_index][1] = self._vectors[self._low_dim_index][1] * (self.params["vacuum_space"] + max_y-min_y)
@@ -442,26 +437,28 @@ class LowDimGroupFinder(object):
                 symbols.append(self.supercell.get_chemical_symbols()[i])
 
 
-                if min_z is None or min_z > positions[-1][2]:
-                    min_z = positions[-1][2]
-                if max_z is None or max_z < positions[-1][2]:
-                    max_z = positions[-1][2]
-                if min_x is None or min_x > positions[-1][0]:
-                    min_x = positions[-1][0]
-                if max_x is None or max_x < positions[-1][0]:
-                    max_x = positions[-1][0]
-                if min_y is None or min_y > positions[-1][1]:
-                    min_y = positions[-1][1]
-                if max_y is None or max_y < positions[-1][1]:
-                    max_y = positions[-1][1]
+                if min_x is None or min_x > np.dot(positions[-1],self._vectors[self._low_dim_index][0]):
+                    min_x = np.dot(positions[-1],self._vectors[self._low_dim_index][0])
+                if max_x is None or max_x < np.dot(positions[-1],self._vectors[self._low_dim_index][0]):
+                    max_x = np.dot(positions[-1],self._vectors[self._low_dim_index][0])
+                if min_y is None or min_y > np.dot(positions[-1],self._vectors[self._low_dim_index][1]):
+                    min_y = np.dot(positions[-1],self._vectors[self._low_dim_index][1])
+                if max_y is None or max_y < np.dot(positions[-1],self._vectors[self._low_dim_index][1]):
+                    max_y = np.dot(positions[-1],self._vectors[self._low_dim_index][1])
+                if min_z is None or min_z > np.dot(positions[-1],self._vectors[self._low_dim_index][2]):
+                    min_z = np.dot(positions[-1],self._vectors[self._low_dim_index][2])
+                if max_z is None or max_z < np.dot(positions[-1],self._vectors[self._low_dim_index][2]):
+                    max_z = np.dot(positions[-1],self._vectors[self._low_dim_index][2])
 
             positions = np.array(positions)
 
             pbc =[False, False, False]
 
-            positions[:,0] = positions[:,0] - min_x + self.params["vacuum_space"]/2
-            positions[:,1] = positions[:,1] - min_y + self.params["vacuum_space"]/2
-            positions[:,2] = positions[:,2] - min_z + self.params["vacuum_space"]/2
+
+            positions = positions - (min_x + self.params["vacuum_space"]/2) * self._vectors[self._low_dim_index][0]
+            positions = positions - (min_y + self.params["vacuum_space"]/2) * self._vectors[self._low_dim_index][1]
+            positions = positions - (min_z + self.params["vacuum_space"]/2) * self._vectors[self._low_dim_index][2]
+
 
             self._vectors[self._low_dim_index][0] = self._vectors[self._low_dim_index][0] * (self.params["vacuum_space"] + max_x-min_x)
             self._vectors[self._low_dim_index][1] = self._vectors[self._low_dim_index][1] * (self.params["vacuum_space"] + max_y-min_y)
@@ -496,8 +493,6 @@ class LowDimGroupFinder(object):
                 break
             self._group_number = idx
 
-            print idx
-
             #set of the periodic sites of the input structure
             unit_cell_group = {i % self.n_unit for i in group}
 
@@ -507,10 +502,8 @@ class LowDimGroupFinder(object):
 
                 continue
             else:
-                print unit_cell_group
                 self._define_reduced_ase_structure()
                 self._low_dim_index = self._low_dim_index + 1
-                print self._low_dim_index
         self._low_dim_index = self._low_dim_index -1
 
 
@@ -553,7 +546,7 @@ class LowDimGroupFinder(object):
     @property
     def dimensionality(self):
         """
-        Returns dimen
+
         """
         if len(self._dimensionality) <= self._low_dim_index:
             self._define_dimensionality()
@@ -563,7 +556,10 @@ class LowDimGroupFinder(object):
     @property
     def groups(self):
         """
+        Return all the groups of atoms that are separated by Van der Waals
+        forces
 
+        :return: groups of bonded atoms
         """
         if not self._groups:
             self._define_groups()
@@ -599,19 +595,11 @@ class LowDimGroupFinder(object):
     @property
     def connected_positions(self):
         """
+
         """
         if len(self._connection_counter) <= self._low_dim_index:
             self._define_number_of_connections()
         return self._connected_positions
-
-    @property
-    def vectors(self):
-        """
-        """
-        if not self._vectors:
-            self._define_number_of_connections()
-        return self._vectors
-
 
 
     def _get_reduced_ase_structures(self):
@@ -634,19 +622,18 @@ class LowDimGroupFinder(object):
         Dimensionality, cell, positions, chemical symbols
         """
         a = self.get_reduced_aiida_structures()
-        return {#"groups": self.groups,
-                "biggest_group": self.biggest_group,
+        return {
                 "unit_cell_group": self.unit_cell_groups,
-                "number_of_connections": self.number_of_connections,
-                #"connected_positions": self.connected_positions,
                 "dimensionality": self.dimensionality,
+
                 }
 
 
 def find_shortest_vector(array):
     """
-    Takes an array and finds the shortest vector.
-    :param array:
+    Takes an array of vectors and finds the shortest one.
+
+    :param array: array of vectors
     :return idx: the index of the shortest vector in the array
     """
     import numpy as np
@@ -657,11 +644,12 @@ def update_set(set1, set2, k, set_dict, visited):
     """
     Recursive function that puts the indexes of all atoms that are
     somehow linked together into the same set.
-    :param set1:
-    :param set2: analysed set
+
+    :param set1: First set to compare
+    :param set2: with the second set
     :param k: key of set
     :param set_dict: dictionary of all sets
-    :param visited:
+    :param visited: No set has to be visited more than once.
     """
     for i in (set2 - set1):
         if i not in visited:
@@ -674,7 +662,8 @@ def get_distances(coords):
     """
     Get the distances between to lists of cartesian coordinates.
     Position ixj contains distance between atom i and atom j.
-    :param coords: positions to compare
+
+    :param coords: list of positions to compare
     :return: matrix of all distances
     """
     """

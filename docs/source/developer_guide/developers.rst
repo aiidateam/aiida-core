@@ -29,6 +29,7 @@ We also provide a wrapper (that also works as a decorator of a function),
 to wrap suitably defined function, so that after their execution,
 a node representing their execution is stored in the DB, and suitable input
 and output nodes are also stored.
+
 .. note:: See the documentation of 
     this function for further documentation of how it should be used, and
     of the requirements for the wrapped function.

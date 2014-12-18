@@ -17,7 +17,7 @@ from aiida.djsite.utils import long_field_length
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 
 # This variable identifies the schema version of this file.
 # Every time you change the schema below in *ANY* way, REMEMBER TO CHANGE
@@ -27,13 +27,6 @@ __version__ = "0.2.1"
 # is stored in the DbSetting table and the check is done in the 
 # load_dbenv() function).
 SCHEMA_VERSION="1.0.1"
-
-class EmptyContextManager(object):
-    def __enter__(self):
-        pass
-    
-    def __exit__(self, exc_type, exc_value, traceback):
-        pass
 
 class AiidaQuerySet(QuerySet):
     def iterator(self):

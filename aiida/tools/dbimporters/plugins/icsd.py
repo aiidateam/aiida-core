@@ -17,10 +17,31 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
     """
     Importer for the Inorganic Crystal Structure Database, short ICSD, provided by
     FIZ Karlsruhe. It allows to run queries and analyse all the results.
+
+    :param server: Server URL, the web page of the database. It is
+        important to have access to the full data base.
+    :param urladd: part of URL which is added between query and and the server URL
+        (default: index.php?) only needed for web page query
+
+    :param querydb: True (default) means the mysql database is queried.
+        If False, the query results are provide by the web page query, which is
+        restricted to a maximum of 1000 results at once.
+    :param dl_db: icsd comes with a full (default: icsd) and a demo database (icsdd).
+        This parameter allows to switch to the demo database for testing purpose,
+        if the access rights to the full database are not granted.
+
+    :param host: mysql database host, one way is to setup an ssh tunnel to the host
+        using:
+        ssh -L 3306:localhost:3306 username@hostname.com
+        and put "127.0.0.1" as host. Google for ssh -L for more information.
+    :param user: mysql database username (default: dba)
+    :param passwd: mysql database password (default: sql)
+    :param db: name of the database (default: icsd)
+    :param port: Port to access the mysql database (default: 3306)
     """
 
     # for mysql db query
-    def int_clause(self, key, alias, values):
+    def _int_clause(self, key, alias, values):
         """
         Returns SQL query predicate for querying integer fields
         :param key: Database keyword
@@ -35,7 +56,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         return key + " IN (" + ", ".join( map( lambda i: str( int( i ) ),
                                                values ) ) + ")"
 
-    def str_exact_clause(self, key, alias, values):
+    def _str_exact_clause(self, key, alias, values):
         """
         Returns SQL query predicate for querying string fields.
         """
@@ -46,7 +67,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         return key + \
                " IN (" + ", ".join( map( lambda f: "'" + str(f) + "'", \
                                          values ) ) + ")"
-    def formula_clause(self, key, alias, values):
+    def _formula_clause(self, key, alias, values):
         """
         Returns SQL query predicate for querying formula fields.
         """
@@ -59,7 +80,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
                                       map( lambda f: "- " + str(f) + " -", \
                                            values ) )
 
-    def str_fuzzy_clause(self, key, alias, values):
+    def _str_fuzzy_clause(self, key, alias, values):
         """
         Returns SQL query predicate for fuzzy querying of string fields.
         """
@@ -70,7 +91,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         return " OR ".join( map( lambda s: key + \
                                            " LIKE '%" + str(s) + "%'", values ) )
 
-    def composition_clause(self, key, alias, values):
+    def _composition_clause(self, key, alias, values):
         """
         Returns SQL query predicate for querying elements in formula fields.
         """
@@ -82,7 +103,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
                                             e + "[0-9 ]'", \
                                   values ) )
 
-    def double_clause(self, key, alias, values, precision):
+    def _double_clause(self, key, alias, values, precision):
         """
         Returns SQL query predicate for querying double-valued fields.
         """
@@ -99,7 +120,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
 
 
 
-    def crystal_system_clause(self, key, alias, values):
+    def _crystal_system_clause(self, key, alias, values):
         """
         Returns SQL query predicate for querying crystal_system.
         """
@@ -129,37 +150,37 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
     density_precision     = 0.001
     pressure_precision    = 1
 
-    def length_clause(self, key, alias, values):
+    def _length_clause(self, key, alias, values):
         """
         Returns SQL query predicate for querying lattice vector lengths.
         """
         return self.double_clause(key, alias, values, self.length_precision)
 
-    def density_clause(self, key, alias, values):
+    def _density_clause(self, key, alias, values):
         """
         Returns SQL query predicate for querying density.
         """
         return self.double_clause(key, alias, values, self.density_precision)
 
-    def angle_clause(self, key, alias, values):
+    def _angle_clause(self, key, alias, values):
         """
         Returns SQL query predicate for querying lattice angles.
         """
         return self.double_clause(key, alias, values, self.angle_precision)
 
-    def volume_clause(self, key, alias, values):
+    def _volume_clause(self, key, alias, values):
         """
         Returns SQL query predicate for querying unit cell volume.
         """
         return self.double_clause(key, alias, values, self.volume_precision)
 
-    def temperature_clause(self, key, alias, values):
+    def _temperature_clause(self, key, alias, values):
         """
         Returns SQL query predicate for querying temperature.
         """
         return self.double_clause(key, alias, values, self.temperature_precision)
 
-    def pressure_clause(self, key, alias, values):
+    def _pressure_clause(self, key, alias, values):
         """
         Returns SQL query predicate for querying pressure.
         """
@@ -167,34 +188,34 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
 
 
     # mysql database - query parameter (alias) : [mysql keyword (key), function to call]
-    keywords_db = {'id'             : [ 'COLL_CODE',          int_clause ],
-                 'element'           : [ 'STRUCT_FORM;',       composition_clause ],
-                 'number_of_elements': [ 'EL_COUNT',           int_clause ],
-                 'chemical_name'     : [ 'CHEM_NAME',      str_fuzzy_clause ],
-                 'formula'           : [ 'SUM_FORM',       formula_clause ],
-                 'volume'            : [ 'C_VOL',           volume_clause ],
-                 'spacegroup'        : [ 'SGR',            str_exact_clause ],
-                 'a'                 : [ 'A_LEN',             length_clause ],
-                 'b'                 : [ 'B_LEN',             length_clause ],
-                 'c'                 : [ 'C_LEN',             length_clause ],
-                 'alpha'             : [ 'ALPHA',         angle_clause ],
-                 'beta'              : [ 'BETA',          angle_clause ],
-                 'gamma'             : [ 'GAMMA',         angle_clause ],
-                 'density'           : [ 'DENSITY_CALC',  density_clause],
-                 'wyckoff'           : ['WYCK', str_exact_clause],
-                 'molar_mass'        : ['MOL_MASS', density_clause],
-                 'pdf_num'           : ['PDF_NUM', str_exact_clause],
-                 'z'                 : [ 'Z',             int_clause ],
-                 'measurement_temp'  : [ 'TEMPERATURE',      temperature_clause ],
-                 'authors'           : [ 'AUTHORS_TEXT',       str_fuzzy_clause ],
-                 'journal'           : [ 'journal',       str_fuzzy_clause ],
-                 'title'             : [ 'AU_TITLE',         str_fuzzy_clause ],
-                 'year'              : [ 'MPY',          int_clause ],
-                 'crystal_system'    : ['CRYST_SYS_CODE', crystal_system_clause],
+    keywords_db = {'id'             : [ 'COLL_CODE',          _int_clause ],
+                 'element'           : [ 'STRUCT_FORM;',       _composition_clause ],
+                 'number_of_elements': [ 'EL_COUNT',           _int_clause ],
+                 'chemical_name'     : [ 'CHEM_NAME',      _str_fuzzy_clause ],
+                 'formula'           : [ 'SUM_FORM',       _formula_clause ],
+                 'volume'            : [ 'C_VOL',           _volume_clause ],
+                 'spacegroup'        : [ 'SGR',            _str_exact_clause ],
+                 'a'                 : [ 'A_LEN',             _length_clause ],
+                 'b'                 : [ 'B_LEN',             _length_clause ],
+                 'c'                 : [ 'C_LEN',             _length_clause ],
+                 'alpha'             : [ 'ALPHA',         _angle_clause ],
+                 'beta'              : [ 'BETA',          _angle_clause ],
+                 'gamma'             : [ 'GAMMA',         _angle_clause ],
+                 'density'           : [ 'DENSITY_CALC',  _density_clause],
+                 'wyckoff'           : ['WYCK', _str_exact_clause],
+                 'molar_mass'        : ['MOL_MASS', _density_clause],
+                 'pdf_num'           : ['PDF_NUM', _str_exact_clause],
+                 'z'                 : [ 'Z',             _int_clause ],
+                 'measurement_temp'  : [ 'TEMPERATURE',      _temperature_clause ],
+                 'authors'           : [ 'AUTHORS_TEXT',       _str_fuzzy_clause ],
+                 'journal'           : [ 'journal',       _str_fuzzy_clause ],
+                 'title'             : [ 'AU_TITLE',         _str_fuzzy_clause ],
+                 'year'              : [ 'MPY',          _int_clause ],
+                 'crystal_system'    : ['CRYST_SYS_CODE', _crystal_system_clause],
                  }
 
     # for the web query
-    def parse_all(k,v):
+    def _parse_all(k,v):
         """
         Converts numbers, strings, lists into strings.
         :param k: query parameter
@@ -209,7 +230,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
             retval = v
         return retval
 
-    def parse_number(k,v):
+    def _parse_number(k,v):
         """
         Converts int into string.
         :param k: query parameter
@@ -222,7 +243,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
             retval = v
         return retval
 
-    def parse_mineral(k,v):
+    def _parse_mineral(k,v):
         """
         Converts mineral_name and chemical_name into right format.
         :param k: query parameter
@@ -235,7 +256,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
             retval = "C=" + v
         return retval
 
-    def parse_volume(k,v):
+    def _parse_volume(k,v):
         """
         Converts volume, cell parameter and angle queries into right format.
         :param k: query parameter
@@ -257,7 +278,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         elif k == "gamma":
             return "ga=" + v
 
-    def parse_system(k,v):
+    def _parse_system(k,v):
         """
         Returns crystal system in the right format.
         :param k: query parameter
@@ -277,53 +298,31 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         return valid_systems[v.lower()]
 
     # keywords accepted for the web page query
-    keywords = { "id"                : ("authors", parse_all),
-                 "authors"           : ("authors", parse_all),
-                 "element"           : ("elements", parse_all),
-                 "number_of_elements": ("elementc", parse_all),
-                 "mineral_name"      : ("mineral", parse_mineral),
-                 "chemical_name"     : ("mineral", parse_mineral),
-                 "formula"           : ("formula", parse_all),
-                 "volume"            : ("volume", parse_volume),
-                 "a"                 : ("volume", parse_volume),
-                 "b"                 : ("volume", parse_volume),
-                 "c"                 : ("volume", parse_volume),
-                 "alpha"             : ("volume", parse_volume),
-                 "beta"              : ("volume", parse_volume),
-                 "gamma"             : ("volume", parse_volume),
-                 "spacegroup"        : ("spaceg", parse_all),
-                 "journal"           : ("journal", parse_all),
-                 "title"             : ("title", parse_all),
-                 "year"              : ("year", parse_all),
-                 "crystal_system"    : ("system", parse_system),
+    keywords = { "id"                : ("authors", _parse_all),
+                 "authors"           : ("authors", _parse_all),
+                 "element"           : ("elements", _parse_all),
+                 "number_of_elements": ("elementc", _parse_all),
+                 "mineral_name"      : ("mineral", _parse_mineral),
+                 "chemical_name"     : ("mineral", _parse_mineral),
+                 "formula"           : ("formula", _parse_all),
+                 "volume"            : ("volume", _parse_volume),
+                 "a"                 : ("volume", _parse_volume),
+                 "b"                 : ("volume", _parse_volume),
+                 "c"                 : ("volume", _parse_volume),
+                 "alpha"             : ("volume", _parse_volume),
+                 "beta"              : ("volume", _parse_volume),
+                 "gamma"             : ("volume", _parse_volume),
+                 "spacegroup"        : ("spaceg", _parse_all),
+                 "journal"           : ("journal", _parse_all),
+                 "title"             : ("title", _parse_all),
+                 "year"              : ("year", _parse_all),
+                 "crystal_system"    : ("system", _parse_system),
                  }
 
 
 
     def __init__(self, **kwargs):
-        """
-        Sets up the database importer.
-        :param server: Server URL, the web page of the database. It is
-            important to have access to the full data base.
-        :param urladd: part of URL which is added between query and and the server URL
-            (default: index.php?) only needed for web page query
 
-        :param querydb: True (default) means the mysql database is queried.
-            If False, the query results are provide by the web page query, which is
-            restricted to a maximum of 1000 results at once.
-
-        :param host: mysql database host, one way is to setup an ssh tunnel to the host
-            using:
-            ssh -L 3306:localhost:3306 username@hostname.com
-            and put "127.0.0.1" as host. Google for ssh -L for more information.
-        :param user: mysql database username (default: dba)
-        :param passwd: mysql database password (default: sql)
-        :param db: name of the database (default: icsd)
-        :param dl_db: icsd comes with a full (default: icsd) and a demo database (icsdd).
-            This parameter allows to switch to the demo database for testing purpose,
-            if the access rights to the full database are not granted.
-        :param port: Port to access the mysql database (default: 3306)
-        """
 
         self.db_parameters = { "server":   "",
                                "urladd": "index.php?",
@@ -342,7 +341,8 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         """
         Depending on the db_parameters, the mysql database or the web page are queried.
         Valid parameters are found using IcsdDbImporter.get_supported_keywords().
-        :param **kwargs: A list of ``keyword = [values]`` pairs.
+
+        :param kwargs: A list of ''keyword = [values]'' pairs.
         """
 
         if self.db_parameters["querydb"]:
@@ -416,8 +416,8 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
     def setup_db(self, **kwargs):
         """
         Changes the database connection details. At least the host server has to be defined.
-        :param **kwargs: db_parameters for the mysql database connection
-            (host, user, passwd, db, port)
+        :param kwargs: db_parameters for the mysql database connection
+        (host, user, passwd, db, port)
         """
         for key in self.db_parameters.keys():
             if key in kwargs.keys():
@@ -438,7 +438,7 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
     Results of the search, performed on Icsd.
     :param query: mysql query or webpage query
     :param db_parameters: database parameter setup during the initialisation of the
-        IcsdDbImporter.
+    IcsdDbImporter.
     """
 
     # url add to download cif files, make to db_parameter (question)

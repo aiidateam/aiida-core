@@ -9,7 +9,7 @@ from aiida.common.setup import get_config, get_secret_key, get_property
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 
 AIIDA_DIR = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR = os.path.split(AIIDA_DIR)[0]

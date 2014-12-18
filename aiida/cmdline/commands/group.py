@@ -6,7 +6,7 @@ from aiida import load_dbenv
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 
 def get_group_type_mapping():
     """
@@ -119,9 +119,9 @@ class Group(VerdiCommandWithSubcommands):
             users.append(group.user.email.strip())
         
         # get the max length
-        max_names_len = max([len(i) for i in names])
-        max_nodes_len = max([len(str(i)) for i in nodes])
-        max_users_len = max([len(i) for i in users])
+        max_names_len = max([len(i) for i in names]) if names else 4
+        max_nodes_len = max([len(str(i)) for i in nodes]) if nodes else 4
+        max_users_len = max([len(i) for i in users]) if users else 4
         
         tolerated_name_length = 80-8-max_nodes_len-max_users_len-1
 

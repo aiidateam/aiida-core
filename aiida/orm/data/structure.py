@@ -13,7 +13,7 @@ import copy
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 
 _mass_threshold = 1.e-3
 # Threshold to check if the sum is one or not
@@ -657,12 +657,9 @@ class StructureData(Data):
         """
         Write the given structure to a string of format CIF.
         """
-        import CifFile
-        from aiida.orm.data.cif \
-            import ase_loops,cif_from_ase,pycifrw_from_cif
-        ciffile = pycifrw_from_cif(cif_from_ase(self.get_ase()),
-                                   ase_loops)
-        return ciffile.WriteOut()
+        from aiida.orm.data.cif import CifData
+        cif = CifData(ase=self.get_ase())
+        return cif._prepare_cif()
 
     def get_symbols_set(self):
         """

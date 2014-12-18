@@ -4,7 +4,7 @@ from aiida.orm import Data
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 
 class RemoteData(Data):
     """
@@ -37,9 +37,13 @@ class RemoteData(Data):
         authinfo = get_authinfo(computer=self.get_computer(),
                                 aiidauser=self.get_user())
         t = authinfo.get_transport()
-
+        
         with t:
-            t.chdir(self.get_remote_path())
+            try:
+                t.chdir(self.get_remote_path())
+            except IOError as e:
+                if e.errno==2: # directory not existing
+                    return True # is indeed empty, i.e. unusable
             return not t.listdir()
 
     def _clean(self):
@@ -47,17 +51,23 @@ class RemoteData(Data):
         Remove all content of the remote folder on the remote computer
         """
         from aiida.execmanager import get_authinfo
+        import os
         
         authinfo = get_authinfo(computer=self.get_computer(),
                                 aiidauser=self.get_user())
         t = authinfo.get_transport()
-
+        
+        remote_dir = self.get_remote_path()
+        pre,post = os.path.split(remote_dir)
+        
         with t:
-            t.chdir(self.get_remote_path())
-            files_to_delete = t.listdir()
-            for fil in files_to_delete:
-                t.rmtree(fil)
-            
+            try:
+                t.chdir(pre)
+                t.rmtree(post)
+            except IOError as e:
+                if e.errno==2: # directory not existing
+                    pass
+        
     def _validate(self):
         from aiida.common.exceptions import ValidationError
 

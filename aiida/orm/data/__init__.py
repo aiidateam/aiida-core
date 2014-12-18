@@ -3,7 +3,7 @@ from aiida.orm import Node
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 
 '''
 Specifications of the Data class:
@@ -46,7 +46,7 @@ class Data(Node):
 
         return super(Data, self)._can_link_as_output(dest)
     
-    def _exportstring(self, fileformat):
+    def _exportstring(self, fileformat, **kwargs):
         """
         Converts a Data object to other text format.
 
@@ -66,7 +66,7 @@ class Data(Node):
                 raise ValueError("The format is not accepted. "
                                  "No formats are implemented yet.")
 
-        return func()
+        return func(**kwargs)
 
     def export(self,fname,fileformat=None):
         """

@@ -246,8 +246,14 @@ class _Info(VerdiCommand):
         parser.add_argument('--no-indent','--dont-indent', action='store_false',
                             dest='indent', default=False,
                             help="Do not indent the output. Default behaviour.")
-
-
+        parser.add_argument('--print-uuid', action='store_true',
+                            dest='print_uuid', default=False,
+                            help="Add UUID of children nodes to the output.")
+        parser.add_argument('--no-print-uuid','--dont-print-uuid',
+                            action='store_false', dest='print_uuid',
+                            default=False,
+                            help="Do not add UUID of children nodes to the "
+                                 "output. Default behaviour.")
         args = list(args)
         parsed_args = parser.parse_args(args)
 
@@ -261,28 +267,38 @@ class _Info(VerdiCommand):
         for pk in parsed_args.data_id:
             try:
                 n = Node.get_subclass_from_pk(pk)
-                self.print_node_info(n,depth=parsed_args.depth,indent=indent)
+                self.print_node_info(n,depth=parsed_args.depth,indent=indent,
+                                     print_uuid=parsed_args.print_uuid)
             except NotExistent as e:
                 print >> sys.stderr, e.message
                 sys.exit(1)
 
-    def print_node_info(self,node,level=0,depth=0,indent=""):
+    def print_node_info(self,node,level=0,depth=0,indent="",print_uuid=False):
         ind_this = "".join([indent for i in range(level)])
         ind_next = "{}{}".format(ind_this,indent)
         if level == 0:
-            print "pk: {}\nuuid: {}\nclass: {}".format(node.pk,node.uuid,node.__class__)
+            print "pk: {}\nuuid: {}\nclass: {}".format(node.pk,node.uuid,
+                                                       node.__class__)
         print "{}##### INPUTS:".format(ind_next)
         for k, v in node.get_inputdata_dict().iteritems():
-            print "{}{}".format(ind_next, k), v.pk, v.__class__.__name__
+            id = v.pk
+            if print_uuid:
+                id = "{} {}".format(v.pk,v.uuid)
+            print "{}{}".format(ind_next, k), id, v.__class__.__name__
             if depth:
-                self.print_node_info(v,level=level+1,depth=depth-1,indent=indent)
+                self.print_node_info(v,level=level+1,depth=depth-1,
+                                     indent=indent,print_uuid=print_uuid)
             elif level and (v.get_inputs() or v.get_outputs()):
                 print "{}{}...".format(ind_next,indent)
         print "{}##### OUTPUTS:".format(ind_next)
         for k, v in node.get_outputs(also_labels=True):
-            print "{}{}".format(ind_next, k), v.pk, v.__class__.__name__
+            id = v.pk
+            if print_uuid:
+                id = "{} {}".format(v.pk,v.uuid)
+            print "{}{}".format(ind_next, k), id, v.__class__.__name__
             if depth:
-                self.print_node_info(v,level=level+1,depth=depth-1,indent=indent)
+                self.print_node_info(v,level=level+1,depth=depth-1,
+                                     indent=indent,print_uuid=print_uuid)
             elif level and (v.get_inputs() or v.get_outputs()):
                 print "{}{}...".format(ind_next,indent)
            

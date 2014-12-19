@@ -169,7 +169,7 @@ class Visualizable(object):
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
             description='Visualize data object.')
-        parser.add_argument('data_id', type=int, default=None,
+        parser.add_argument('data_id', type=int, default=None, nargs="+",
                             help="ID of the data object to be visualized.")
 
         default_format = None
@@ -218,17 +218,18 @@ class Visualizable(object):
 
         load_dbenv()
         from aiida.orm.node import Node
-        n = Node.get_subclass_from_pk(data_id)
+        n_list = [Node.get_subclass_from_pk(id) for id in data_id]
 
-        try:
-            if not isinstance(n,self.dataclass):
-                print("Node {} is of class {} instead "
-                      "of {}".format(n,type(n),self.dataclass))
-                sys.exit(1)
-        except AttributeError:
-            pass
+        for n in n_list:
+            try:
+                if not isinstance(n,self.dataclass):
+                    print("Node {} is of class {} instead "
+                          "of {}".format(n,type(n),self.dataclass))
+                    sys.exit(1)
+            except AttributeError:
+                pass
 
-        func(format, n, **parsed_args)
+        func(format, n_list, **parsed_args)
 
 class Exportable(object):
     """
@@ -616,77 +617,6 @@ class _Bands(VerdiCommandWithSubcommands,Listable,Visualizable):
             actual columns in the output from the query() are checked.
         """
         return ["ID","formula","ctime","label"]
-        
-    def show(self, *args):
-        """
-        Show the data node with a visualization program.
-        """
-        # DEVELOPER NOTE: to add a new plugin, just add a _show_xxx() method.
-        import argparse,os
-        parser = argparse.ArgumentParser(
-            prog=self.get_full_command_name(),
-            description='Visualize data object.')
-        parser.add_argument('data_id', type=int, default=None, nargs='+',
-                            help="ID of the data object to be visualized.")
-
-        default_format = None
-        try:
-            default_format = self._default_show_format
-        except AttributeError:
-            if len(self.get_show_plugins().keys()) == 1:
-                default_format = self.get_show_plugins().keys()[0]
-            else:
-                default_format = None
-
-        parser.add_argument('--format', type=str, default=default_format,
-                            help="Type of the visualization format/tool.",
-                            choices=self.get_show_plugins().keys())
-
-        # Augmenting the command line parameters with ones, that are used by
-        # individual plugins
-        for cmd in dir(self):
-            if not cmd.startswith(self.show_prefix) or \
-               not cmd.endswith(self.show_parameters_postfix):
-                continue
-            getattr(self,cmd)(parser)
-
-        args = list(args)
-        parsed_args = vars(parser.parse_args(args))
-
-        data_id = parsed_args.pop('data_id')
-        format = parsed_args.pop('format')
-
-        if format is None:
-            print "Default format is not defined, please specify.\n" + \
-                  "Valid formats are:"
-            for i in self.get_show_plugins().keys():
-                print "  {}".format(i)
-            sys.exit(0)
-
-        # I can give in input the whole path to executable
-        code_name = os.path.split(format)[-1]
-
-        try:
-            func = self.get_show_plugins()[code_name]
-        except KeyError:
-            print "Not implemented; implemented plugins are:"
-            print "{}.".format(",".join(self.get_show_plugins()))
-            sys.exit(1)
-
-        load_dbenv()
-        from aiida.orm.node import Node
-        n_list = [Node.get_subclass_from_pk(id) for id in data_id]
-
-        for n in n_list:
-            try:
-                if not isinstance(n,self.dataclass):
-                    print("Node {} is of class {} instead "
-                          "of {}".format(n,type(n),self.dataclass))
-                    sys.exit(1)
-            except AttributeError:
-                pass
-
-        func(format, n_list, **parsed_args)
 
     def _show_xmgrace(self,exec_name,list_bands):
         """
@@ -857,11 +787,16 @@ class _Structure(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
     def get_column_names(self):
         return ["ID","formula","label"]
     
-    def _show_xcrysden(self,exec_name,structure):
+    def _show_xcrysden(self,exec_name,structure_list):
         """
         Plugin for xcrysden
         """
         import tempfile,subprocess
+        if len(structure_list) > 1:
+            raise NotImplementedError("Visualization of multiple objects "
+                                      "is not implemented")
+        structure = structure_list[0]
+
         with tempfile.NamedTemporaryFile(suffix='.xsf') as f:
             f.write(structure._exportstring('xsf'))
             f.flush()
@@ -881,11 +816,16 @@ class _Structure(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
                 else:
                     raise
 
-    def _show_vmd(self,exec_name,structure):
+    def _show_vmd(self,exec_name,structure_list):
         """
         Plugin for vmd
         """
         import tempfile,subprocess
+        if len(structure_list) > 1:
+            raise NotImplementedError("Visualization of multiple objects "
+                                      "is not implemented")
+        structure = structure_list[0]
+
         with tempfile.NamedTemporaryFile(suffix='.xsf') as f:
             f.write(structure._exportstring('xsf'))
             f.flush()
@@ -905,13 +845,14 @@ class _Structure(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
                 else:
                     raise
 
-    def _show_jmol(self,exec_name,structure):
+    def _show_jmol(self,exec_name,structure_list):
         """
         Plugin for jmol
         """
         import tempfile,subprocess
         with tempfile.NamedTemporaryFile() as f:
-            f.write(structure._exportstring('cif'))
+            for structure in structure_list:
+                f.write(structure._exportstring('cif'))
             f.flush()
 
             try:
@@ -958,13 +899,14 @@ class _Cif(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
             'export': (self.export, self.complete_exporters),
             }
 
-    def _show_jmol(self,exec_name,structure):
+    def _show_jmol(self,exec_name,structure_list):
         """
         Plugin for jmol
         """
         import tempfile,subprocess
         with tempfile.NamedTemporaryFile() as f:
-            f.write(structure._exportstring('cif'))
+            for structure in structure_list:
+                f.write(structure._exportstring('cif'))
             f.flush()
 
             try:
@@ -1005,13 +947,14 @@ class _Trajectory(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
             'export': (self.export, self.complete_exporters),
             }
 
-    def _show_jmol(self,exec_name,trajectory,**kwargs):
+    def _show_jmol(self,exec_name,trajectory_list,**kwargs):
         """
         Plugin for jmol
         """
         import tempfile,subprocess
         with tempfile.NamedTemporaryFile() as f:
-            f.write(trajectory._exportstring('cif',**kwargs))
+            for trajectory in trajectory_list:
+                f.write(trajectory._exportstring('cif',**kwargs))
             f.flush()
 
             try:
@@ -1069,11 +1012,12 @@ class _Parameter(VerdiCommandWithSubcommands,Visualizable):
             'show': (self.show, self.complete_visualizers),
             }
 
-    def _show_json_date(self,exec_name,node):
+    def _show_json_date(self,exec_name,node_list):
         """
-        Show the content of a ParameterData node.
+        Show contents of ParameterData nodes.
         """
         from aiida.cmdline import print_dictionary
 
-        the_dict = node.get_dict()
-        print_dictionary(the_dict, 'json+date')
+        for node in node_list:
+            the_dict = node.get_dict()
+            print_dictionary(the_dict, 'json+date')

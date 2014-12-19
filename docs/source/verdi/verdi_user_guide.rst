@@ -45,7 +45,9 @@ Following below, a list with the subcommands available.
   * **show**: shows the database information related to the calculation: 
     used code, all the input nodes and all the output nodes. 
   * **gotocomputer**: open a shell to the calc folder on the cluster
-
+  * **label**: view / set the label of a calculation
+  * **description**: view / set the description of a calculation
+  
 .. note:: When using gotocomputer, be careful not to change any file
   that AiiDA created,
   nor to modify the output files or resubmit the calculation, 
@@ -161,6 +163,9 @@ Manages database data objects.
 
     * **show**: use third-party visualizer (like jmol) to graphically show
       the TrajectoryData
+  * **label**: view / set the label of a data
+  * **description**: view / set the description of a data
+
 
 ``verdi devel``
 +++++++++++++++

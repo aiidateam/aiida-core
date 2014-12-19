@@ -256,12 +256,12 @@ class _Info(VerdiCommand):
             try:
                 n = Node.get_subclass_from_pk(pk)
                 print "pk: {}\nuuid: {}\nclass: {}".format(n.pk,n.uuid,n.__class__)
-                print "{}##### INPUTS:".format(indent) + \
-                    "".join(["\n{}{}".format(indent,inp)
-                                for inp in n.get_inputs()])
-                print "{}##### OUTPUTS:".format(indent) + \
-                    "".join(["\n{}{}".format(indent,out)
-                                for out in n.get_outputs()])
+                print "{}##### INPUTS:".format(indent)
+                for k, v in n.get_inputdata_dict().iteritems():
+                    print "{}{}".format(indent, k), v.pk, v.__class__.__name__
+                print "{}##### OUTPUTS:".format(indent)
+                for k, v in n.get_outputs(also_labels=True):
+                    print "{}{}".format(indent, k), v.pk, v.__class__.__name__
             except NotExistent as e:
                 print >> sys.stderr, e.message
                 sys.exit(1)

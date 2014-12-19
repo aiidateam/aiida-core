@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import sys
 from aiida.cmdline.baseclass import (
-    VerdiCommandRouter, VerdiCommandWithSubcommands)
+    VerdiCommand, VerdiCommandRouter, VerdiCommandWithSubcommands)
 from aiida import load_dbenv
 from aiida.cmdline.baseclass import VerdiCommand
 
@@ -116,6 +116,7 @@ class Node(VerdiCommandRouter):
         ## Add here the classes to be supported.
         self.routed_subcommands = {
             'repo': _Repo,
+            'info': _Info,
             }
 
 
@@ -217,7 +218,44 @@ class _Repo(VerdiCommandWithSubcommands):
                 pass
             else:
                 raise
-        
+ 
+
+class _Info(VerdiCommand):
+    """
+    Show node information (pk, uuid, class, inputs and outputs)
+    """
+    def run(self, *args):
+        """
+        Show node information.
+        """
+        import argparse
+        from aiida.common.exceptions import NotExistent
+
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Show information of a node.')
+
+        parser.add_argument('data_id', type=int, default=None, nargs="+",
+                            help="ID of the node.")
+
+        args = list(args)
+        parsed_args = parser.parse_args(args)
+
+        load_dbenv()
+        from aiida.orm import Node
+
+        for pk in parsed_args.data_id:
+            try:
+                n = Node.get_subclass_from_pk(pk)
+                print "pk: {}\nuuid: {}\nclass: {}".format(n.pk,n.uuid,n.__class__)
+                print "    Inputs:" + \
+                    "".join(["\n        {}".format(inp) for inp in n.get_inputs()])
+                print "    Outputs:" + \
+                    "".join(["\n        {}".format(out) for out in n.get_outputs()])
+            except NotExistent as e:
+                print >> sys.stderr, e.message
+                sys.exit(1)
+
            
 # the classes _Label and _Description are written here,
 # but in fact they are called by the verdi calculation or verdi data
@@ -449,4 +487,3 @@ class _Description(VerdiCommandWithSubcommands):
                 old_description = n.description
                 new_description = old_description + "\n" + new_description
                 n.description = new_description
-    

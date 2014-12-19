@@ -5,7 +5,7 @@ import subprocess
 from aiida import load_dbenv
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-
+from aiida.cmdline.commands.node import _Label, _Description
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
@@ -24,6 +24,9 @@ class Calculation(VerdiCommandWithSubcommands):
         A dictionary with valid commands and functions to be called:
         list.
         """
+        labeler = _Label('calculation')
+        descriptioner = _Description('calculation') 
+        
         self.valid_subcommands = {
             'gotocomputer': (self.calculation_gotocomputer, self.complete_none),
             'list': (self.calculation_list, self.complete_none),
@@ -37,6 +40,8 @@ class Calculation(VerdiCommandWithSubcommands):
             'show': (self.calculation_show, self.complete_none),
             'plugins': (self.calculation_plugins, self.complete_plugins),
             'cleanworkdir': (self.calculation_cleanworkdir, self.complete_none),
+            'label': (labeler.run, self.complete_none),
+            'description': (descriptioner.run, self.complete_none),
             }
     
     def complete_plugins(self, subargs_idx, subargs):

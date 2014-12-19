@@ -138,7 +138,8 @@ class DbEntry(object):
             'db_id'     : None,
             'db_version': None,
             'extras'    : {},
-            'url'       : None
+            'url'       : None,
+            'source_md5': None,
         }
         self._cif = None
 
@@ -172,11 +173,13 @@ class DbEntry(object):
 
         :return: :py:class:`aiida.orm.data.cif.CifData` object
         """
+        from aiida.common.utils import md5_file
         from aiida.orm.data.cif import CifData
         import tempfile
         with tempfile.NamedTemporaryFile() as f:
             f.write(self.cif)
             f.flush()
+            self.source['source_md5'] = md5_file(f.name)
             return CifData(file=f.name, source=self.source)
 
     def get_aiida_structure(self):

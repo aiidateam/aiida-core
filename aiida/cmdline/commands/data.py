@@ -929,6 +929,50 @@ class _Cif(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
                 else:
                     raise
 
+    def query(self,args):
+        """
+        Perform the query and return information for the list.
+
+        :param args: a namespace with parsed command line parameters.
+        :return: table (list of lists) with information, describing nodes.
+            Each row describes a single hit.
+        """
+        load_dbenv()
+        import datetime
+        from aiida.orm import DataFactory
+        from django.db.models import Q
+        from django.utils import timezone
+        from aiida.djsite.utils import get_automatic_user
+
+        now = timezone.now()
+        q_object = Q(user=get_automatic_user())
+
+        if args.past_days is not None:
+            now = timezone.now()
+            n_days_ago = now - datetime.timedelta(days=args.past_days)
+            q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
+
+        object_list = self.dataclass.query(q_object).distinct().order_by('ctime')
+
+        entry_list = []
+        for obj in object_list:
+            formulae = '?'
+            try:
+                formulae = ",".join(obj.get_attr('formulae'))
+            except AttributeError:
+                pass
+            entry_list.append([str(obj.pk),formulae])
+        return entry_list
+
+    def get_column_names(self):
+        """
+        Return the list with column names.
+
+        :note: neither the number nor correspondence of column names and
+            actual columns in the output from the query() are checked.
+        """
+        return ["ID","formulae"]
+
     def _export_cif(self,node):
         """
         Exporter to CIF.

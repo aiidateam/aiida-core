@@ -307,3 +307,17 @@ MySQL backup
 
 We do not have explicit instructions on how to back-up MySQL yet, but you
 can find plenty of information on Google.
+
+How to retrieve the database from a backup
+------------------------------------------
+
+PostgreSQL backup
+-----------------
+
+In order to retrieve the database from a backup, you have first to
+create a empty database following the instructions described above in
+"Setup instructions: PostgreSQL" except the ``verdi install``
+phase. Once that you have created your empty database with the same
+names of the backuped one, type the following command:: 
+
+    psql -h localhost -U aiida -d aiidadb -f aiidadb-backup.psql

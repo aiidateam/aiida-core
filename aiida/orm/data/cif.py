@@ -417,6 +417,7 @@ class CifData(SinglefileData):
         self._set_attr('md5', self.generate_md5())
         self._values = None
         self._ase = None
+        self._set_attr('formulae', self.get_formulae())
 
     @property
     def source(self):
@@ -452,6 +453,19 @@ class CifData(SinglefileData):
         Set the file source descriptions.
         """
         self.source = source
+
+    def get_formulae(self, mode='sum'):
+        """
+        Get the formula.
+        """
+        formula_tag = "_chemical_formula_{}".format(mode)
+        formulae = []
+        for datablock in self.values.keys():
+            formula = None
+            if formula_tag in self.values[datablock].keys():
+                formula = self.values[datablock][formula_tag]
+            formulae.append(formula)
+        return formulae
 
     def generate_md5(self):
         """

@@ -86,7 +86,7 @@ class TcodEntry(CodEntry):
         :py:class:`aiida.tools.dbimporters.plugins.tcod.TcodEntry`, related
         to the supplied URL.
         """
-        super(TcodEntry, self).__init__(url, **kwargs)
-        self.source['db_source'] = 'Theoretical Crystallography Open Database'
-        self.source['db_url']    = 'http://tcod.crystallography.net'
-        self.source['url']       = url
+        super(TcodEntry, self).__init__(db_source='Theoretical Crystallography Open Database',
+                                        db_url='http://tcod.crystallography.net',
+                                        url=url,
+                                        **kwargs)

@@ -332,10 +332,11 @@ class LowDimGroupFinder(object):
             self._vectors.append([np.array([1,0,0]), np.array([0,1,0]), np.array([0,0,1])])
 
         elif self._dimensionality[self._low_dim_index] == 1:
-            normal_vector1 = np.cross(find_shortest_vector(vectors),[1,0,0])
+            idx = find_shortest_vector(vectors)
+            normal_vector1 = np.cross(vectors[idx],[1,0,0])
             if np.linalg.norm(normal_vector1) < 0.000001:
-                normal_vector1 = np.cross(vectors[0],[0,1,0])
-            normal_vector2 = np.cross(vectors[0], normal_vector1)
+                normal_vector1 = np.cross(vectors[idx],[0,1,0])
+            normal_vector2 = np.cross(vectors[idx], normal_vector1)
             normal_vector1 = normal_vector1/np.linalg.norm(normal_vector1)
             normal_vector2 = normal_vector2/np.linalg.norm(normal_vector2)
             self._vectors.append([normal_vector1,normal_vector2, vectors[0]])

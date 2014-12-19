@@ -397,7 +397,8 @@ class CifData(SinglefileData):
                                  'db_id',
                                  'db_version',
                                  'extras',
-                                 'url']
+                                 'url',
+                                 'source_md5']
         super(CifData,self).__init__(**kwargs)
         self._values = None
         self._ase = None
@@ -411,10 +412,18 @@ class CifData(SinglefileData):
 
     def set_file(self, filename):
         """
-        Set the file.
+        Set the file. If the source is set and the MD5 checksum of new file
+        is different from the source, the source has to be deleted.
         """
         super(CifData,self).set_file(filename)
-        self._set_attr('md5', self.generate_md5())
+        md5sum = self.generate_md5()
+        if self.get_attr('source_md5','') != md5sum:
+            for key in self._db_source_attrs:
+                try:
+                    self._del_attr(key)
+                except AttributeError:
+                    pass
+        self._set_attr('md5', md5sum)
         self._values = None
         self._ase = None
         self._set_attr('formulae', self.get_formulae())

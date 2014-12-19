@@ -169,12 +169,13 @@ class TestCodDbImporter(AiidaTestCase):
         self.assertEquals(cif.get_attr('md5'),
                           '070711e8e99108aade31d20cd5c94c48')
         self.assertEquals(cif.source,{
-            'db_source': 'Crystallography Open Database',
-            'db_url': 'http://www.crystallography.net',
-            'db_id': None,
+            'db_source' : 'Crystallography Open Database',
+            'db_url'    : 'http://www.crystallography.net',
+            'db_id'     : None,
             'db_version': None,
-            'extras': '',
-            'url': 'http://www.crystallography.net/cod/1000000.cif'
+            'extras'    : '',
+            'source_md5': '070711e8e99108aade31d20cd5c94c48',
+            'url'       : 'http://www.crystallography.net/cod/1000000.cif'
         })
 
 class TestTcodDbImporter(AiidaTestCase):
@@ -280,6 +281,7 @@ class TestCifData(AiidaTestCase):
             'db_version': '1234',
             'extras'    : '',
             'url'       : '',
+            'source_md5': '',
         })
 
         with open(a.get_abs_path(basename)) as f:

@@ -417,7 +417,7 @@ class CifData(SinglefileData):
         """
         super(CifData,self).set_file(filename)
         md5sum = self.generate_md5()
-        if self.get_attr('source_md5','') != md5sum:
+        if self.get_attr('source_md5','') and self.get_attr('source_md5') != md5sum:
             for key in self._db_source_attrs:
                 try:
                     self._del_attr(key)

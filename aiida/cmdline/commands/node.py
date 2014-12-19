@@ -273,7 +273,8 @@ class _Info(VerdiCommand):
                 print >> sys.stderr, e.message
                 sys.exit(1)
 
-    def print_node_info(self,node,level=0,depth=0,indent="",print_uuid=False):
+    def print_node_info(self,node,level=0,depth=0,indent="",print_uuid=False,
+                        seen=[]):
         ind_this = "".join([indent for i in range(level)])
         ind_next = "{}{}".format(ind_this,indent)
         if level == 0:
@@ -285,22 +286,24 @@ class _Info(VerdiCommand):
             if print_uuid:
                 id = "{} {}".format(v.pk,v.uuid)
             print "{}{}".format(ind_next, k), id, v.__class__.__name__
-            if depth:
-                self.print_node_info(v,level=level+1,depth=depth-1,
-                                     indent=indent,print_uuid=print_uuid)
-            elif level and (v.get_inputs() or v.get_outputs()):
+            if v.pk in seen or (not depth and level and (v.get_inputs() or v.get_outputs())):
                 print "{}{}...".format(ind_next,indent)
+            else:
+                self.print_node_info(v,level=level+1,depth=depth-1,
+                                     indent=indent,print_uuid=print_uuid,
+                                     seen=seen + [node.pk])
         print "{}##### OUTPUTS:".format(ind_next)
         for k, v in node.get_outputs(also_labels=True):
             id = v.pk
             if print_uuid:
                 id = "{} {}".format(v.pk,v.uuid)
             print "{}{}".format(ind_next, k), id, v.__class__.__name__
-            if depth:
-                self.print_node_info(v,level=level+1,depth=depth-1,
-                                     indent=indent,print_uuid=print_uuid)
-            elif level and (v.get_inputs() or v.get_outputs()):
+            if v.pk in seen or (not depth and level and (v.get_inputs() or v.get_outputs())):
                 print "{}{}...".format(ind_next,indent)
+            elif depth:
+                self.print_node_info(v,level=level+1,depth=depth-1,
+                                     indent=indent,print_uuid=print_uuid,
+                                     seen=seen + [node.pk])
            
 # the classes _Label and _Description are written here,
 # but in fact they are called by the verdi calculation or verdi data

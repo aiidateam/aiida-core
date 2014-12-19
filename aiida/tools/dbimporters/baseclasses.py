@@ -72,13 +72,37 @@ class DbSearchResults(object):
     Base class for database results.
     """
 
+    class DbSearchResultsIterator(object):
+        """
+        Iterator for search results
+        """
+
+        def __init__(self,results,increment=1):
+            self.results = results
+            self.position = 0
+            self.increment = increment
+
+        def next(self):
+            pos = self.position + self.increment
+            if pos >= 0 and pos < len(self.results):
+                self.position = self.position + self.increment
+                return self.results[self.position - self.increment]
+            else:
+                raise StopIteration()
+
     def __iter__(self):
         """
         Instances of
         :py:class:`aiida.tools.dbimporters.baseclasses.DbSearchResults` can
         be used as iterators.
         """
-        return self
+        return self.DbSearchResultsIterator(self)
+
+    def __len__(self):
+        return len(self.results)
+
+    def __getitem__(self,key):
+        return self.at(key)
 
     def fetch_all(self):
         """

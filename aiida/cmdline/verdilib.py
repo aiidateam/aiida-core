@@ -15,6 +15,7 @@ short description, the following ones the long description.
 import sys
 import os
 import getpass
+import contextlib
 
 import aiida
 from aiida.common.exceptions import ConfigurationError
@@ -36,17 +37,48 @@ from aiida.cmdline.commands.node import Node
 from aiida.cmdline.commands.user import User
 from aiida.cmdline.commands.workflow import Workflow
 from aiida.cmdline.commands.comment import Comment
-
-
 from aiida.cmdline import execname
-
-########################################################################
-# HERE STARTS THE COMMAND FUNCTION LIST
-########################################################################
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
 __version__ = "0.3.0"
+
+@contextlib.contextmanager
+def update_environment(new_argv, new_name="__main__", new_file=None):
+    """
+    Used as a context manager, changes sys.argv with the
+    new_argv argument, and restores it upon exit.
+    It also changes some other global variables such as __name__ and
+    __file__
+    """
+    import sys
+    global __name__
+    global __file__
+    # backup original params
+    _argv = sys.argv[:]
+    _name = __name__
+    _file = __file__
+    # New parameters
+    sys.argv = new_argv[:]
+    __name__ = "__main__"
+    if new_file is None:
+        if not new_argv:
+            raise ValueError("Empty new_argv passed! It should at "
+                             "least have argv[0]")
+        __file__ = new_argv[0]
+    else:
+        __file__ = new_file
+    yield
+
+    #Restore old parameters when exiting from the context manager
+    sys.argv = _argv
+    __name__ = _name
+    __file__ = _file
+
+
+########################################################################
+# HERE STARTS THE COMMAND FUNCTION LIST
+########################################################################
 
 class CompletionCommand(VerdiCommand):
     """
@@ -338,12 +370,10 @@ class Run(VerdiCommand):
         from aiida.djsite.db.management.commands.customshell import default_modules_list
         import aiida.orm.autogroup
         from aiida.orm.autogroup import Autogroup
-        
+
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
             description='Execute an AiiDA script.')
-        parser.add_argument('scriptname', metavar='ScriptName', type=str,
-                            help='The name of the script you want to execute')
         parser.add_argument('-g','--group', type=bool, default=True, 
                             help='Enables the autogrouping, default = True')
         parser.add_argument('-n','--groupname', type=str, default=None, 
@@ -366,6 +396,11 @@ class Run(VerdiCommand):
                             help=('Autogroup only specific code classes.'
                                   " Select them by their module name.")
                             )
+        parser.add_argument('scriptname', metavar='ScriptName', type=str,
+                            help='The name of the script you want to execute')
+        parser.add_argument('new_args', metavar='ARGS',
+                            nargs=argparse.REMAINDER, type=str,
+                            help='Further parameters to pass to the script')
         parsed_args = parser.parse_args(args)
         
         # dynamically load modules (the same of verdi shell)
@@ -388,8 +423,33 @@ class Run(VerdiCommand):
             aiida_verdilib_autogroup.set_group_name(automatic_group_name)
             aiida.orm.autogroup.current_autogroup = aiida_verdilib_autogroup
         
-        with open(parsed_args.scriptname) as f:
-            exec(f)
+#        print "Starting..."
+
+        try:
+            f = open(parsed_args.scriptname)
+        except IOError:
+            print >> sys.stderr, "{}: Unable to load file '{}'".format(
+                self.get_full_command_name(), parsed_args.scriptname)
+            sys.exit(1)
+        else:
+            try:
+                # Must add also argv[0]
+                new_argv = [parsed_args.scriptname] + parsed_args.new_args
+                with update_environment(new_argv=new_argv):
+                    # print sys.argv
+                    exec(f)
+                # print sys.argv
+            except SystemExit as e:
+                ## Script called sys.exit()
+                # print sys.argv, "(sys.exit {})".format(e.message)
+
+                ## Note: remember to re-raise, the exception to have
+                ## the error code properly returned at the end!
+                raise
+            finally:
+                f.close()
+
+#        print "Done."
 
 ########################################################################
 # HERE ENDS THE COMMAND FUNCTION LIST

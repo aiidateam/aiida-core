@@ -556,6 +556,42 @@ loop_
 _publ_section_title                     'Test CIF'
 ''')
 
+    @unittest.skipIf(not has_ase() or not has_pycifrw(),
+                     "Unable to import ase or pycifrw")
+    def test_cif_roundtrip(self):
+        import tempfile
+        from aiida.orm.data.cif import CifData
+
+        with tempfile.NamedTemporaryFile() as f:
+            f.write('''
+                data_test
+                _cell_length_a    10
+                _cell_length_b    10
+                _cell_length_c    10
+                _cell_angle_alpha 90
+                _cell_angle_beta  90
+                _cell_angle_gamma 90
+                loop_
+                _atom_site_label
+                _atom_site_fract_x
+                _atom_site_fract_y
+                _atom_site_fract_z
+                C 0 0 0
+                O 0.5 0.5 0.5
+                _cod_database_code 0000001
+                _[local]_flags     ''
+            ''')
+            f.flush()
+            a = CifData(file=f.name)
+
+        b = CifData(values=a.values)
+        c = CifData(values=b.values)
+        self.assertEquals(b._prepare_cif(),c._prepare_cif())
+
+        b = CifData(ase=a.ase)
+        c = CifData(ase=b.ase)
+        self.assertEquals(b._prepare_cif(),c._prepare_cif())
+
 class TestKindValidSymbols(AiidaTestCase):
     """
     Tests the symbol validation of the

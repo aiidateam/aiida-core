@@ -100,10 +100,14 @@ TrajectoryData
 
 
 
-ORM documentation: Calculation (and JobCalculation)
-===================================================
+ORM documentation: Calculations
+===============================
 
 .. automodule:: aiida.orm.calculation
+   :members:
+   :special-members: __init__
+
+.. automodule:: aiida.orm.calculation.inline
    :members:
    :special-members: __init__
 

@@ -961,7 +961,12 @@ class _Cif(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
                 formulae = ",".join(obj.get_attr('formulae'))
             except AttributeError:
                 pass
-            entry_list.append([str(obj.pk),formulae])
+            source_url = '?'
+            try:
+                source_url = obj.get_attr('url')
+            except AttributeError:
+                pass
+            entry_list.append([str(obj.pk),formulae,source_url])
         return entry_list
 
     def get_column_names(self):
@@ -971,7 +976,7 @@ class _Cif(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
         :note: neither the number nor correspondence of column names and
             actual columns in the output from the query() are checked.
         """
-        return ["ID","formulae"]
+        return ["ID","formulae","source_url"]
 
     def _export_cif(self,node):
         """

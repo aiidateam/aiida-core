@@ -126,7 +126,6 @@ class MpodSearchResults(DbSearchResults):
     def __init__(self, results):
         self.results = results
         self.entries = {}
-        self.position = 0
 
     def at(self, position):
         """

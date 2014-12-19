@@ -236,6 +236,10 @@ class _Info(VerdiCommand):
             description='Show information of a node.')
         parser.add_argument('data_id', type=int, default=None, nargs="+",
                             help="ID of the node.")
+        parser.add_argument('-d','--depth', action='store', default=0,
+                            metavar="N", type=int,
+                            help="Add children of shown nodes up to Nth "
+                                 "level. Default 0")
         parser.add_argument('-i','--indent', action='store_true',
                             dest='indent', default=False,
                             help="Indent the output.")
@@ -243,11 +247,12 @@ class _Info(VerdiCommand):
                             dest='indent', default=False,
                             help="Do not indent the output. Default behaviour.")
 
+
         args = list(args)
         parsed_args = parser.parse_args(args)
 
         indent = ""
-        if parsed_args.indent:
+        if parsed_args.indent or parsed_args.depth:
             indent = "    "
 
         load_dbenv()
@@ -256,17 +261,30 @@ class _Info(VerdiCommand):
         for pk in parsed_args.data_id:
             try:
                 n = Node.get_subclass_from_pk(pk)
-                print "pk: {}\nuuid: {}\nclass: {}".format(n.pk,n.uuid,n.__class__)
-                print "{}##### INPUTS:".format(indent)
-                for k, v in n.get_inputdata_dict().iteritems():
-                    print "{}{}".format(indent, k), v.pk, v.__class__.__name__
-                print "{}##### OUTPUTS:".format(indent)
-                for k, v in n.get_outputs(also_labels=True):
-                    print "{}{}".format(indent, k), v.pk, v.__class__.__name__
+                self.print_node_info(n,depth=parsed_args.depth,indent=indent)
             except NotExistent as e:
                 print >> sys.stderr, e.message
                 sys.exit(1)
 
+    def print_node_info(self,node,level=0,depth=0,indent=""):
+        ind_this = "".join([indent for i in range(level)])
+        ind_next = "{}{}".format(ind_this,indent)
+        if level == 0:
+            print "pk: {}\nuuid: {}\nclass: {}".format(node.pk,node.uuid,node.__class__)
+        print "{}##### INPUTS:".format(ind_next)
+        for k, v in node.get_inputdata_dict().iteritems():
+            print "{}{}".format(ind_next, k), v.pk, v.__class__.__name__
+            if depth:
+                self.print_node_info(v,level=level+1,depth=depth-1,indent=indent)
+            elif level and (v.get_inputs() or v.get_outputs()):
+                print "{}{}...".format(ind_next,indent)
+        print "{}##### OUTPUTS:".format(ind_next)
+        for k, v in node.get_outputs(also_labels=True):
+            print "{}{}".format(ind_next, k), v.pk, v.__class__.__name__
+            if depth:
+                self.print_node_info(v,level=level+1,depth=depth-1,indent=indent)
+            elif level and (v.get_inputs() or v.get_outputs()):
+                print "{}{}...".format(ind_next,indent)
            
 # the classes _Label and _Description are written here,
 # but in fact they are called by the verdi calculation or verdi data

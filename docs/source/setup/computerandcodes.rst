@@ -49,6 +49,13 @@ line before and after)::
   Host YOURCLUSTERADDRESS
     User YOURUSERNAME
     HostKeyAlgorithms ssh-rsa
+    IdentityFile YOURRSAKEY
+
+replacing ``YOURRSAKEY`` by the path to the rsa private key you want to use 
+(it should look like ``~/.ssh/id_rsa``).
+
+.. note:: In principle you don't have to put the ``IdentityFile`` line if you have
+  only one rsa key in your ``~/.ssh`` folder.
 
 Before proceeding to setup the computer, be sure that you are able to
 connect to your cluster using::

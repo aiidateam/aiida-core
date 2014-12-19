@@ -122,7 +122,6 @@ class MpodSearchResults(DbSearchResults):
     Results of the search, performed on MPOD.
     """
     base_url = "http://mpod.cimav.edu.mx/datafiles/"
-    db_name = "MPOD"
 
     def __init__(self, results):
         self.results = results

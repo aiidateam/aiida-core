@@ -49,31 +49,10 @@ class TcodSearchResults(CodSearchResults):
     Results of the search, performed on TCOD.
     """
     base_url = "http://www.crystallography.net/tcod/"
-    db_name = "TCOD"
 
-    def at(self, position):
-        """
-        Returns ``position``-th result as
-        :py:class:`aiida.tools.dbimporters.plugins.tcod.TcodEntry`.
-
-        :param position: zero-based index of a result.
-
-        :raise IndexError: if ``position`` is out of bounds.
-        """
-        if position < 0 | position >= len( self.results ):
-            raise IndexError( "index out of bounds" )
-        if position not in self.entries:
-            db_id       = self.results[position]['id']
-            svnrevision = self.results[position]['svnrevision']
-            url = self.base_url + db_id + ".cif"
-            if svnrevision is None:
-                self.entries[position] = \
-                    TcodEntry( url, db_id = db_id )
-            else:
-                url = url + "@" + svnrevision
-                self.entries[position] = \
-                    TcodEntry( url, db_id = db_id, db_version = svnrevision )
-        return self.entries[position]
+    def __init__(self, results):
+        super(TcodSearchResults, self).__init__(results)
+        self.return_class = TcodEntry
 
 class TcodEntry(CodEntry):
     """

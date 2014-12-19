@@ -70,6 +70,10 @@ class DbImporter(object):
 class DbSearchResults(object):
     """
     Base class for database results.
+
+    All classes, inheriting this one and overriding ``at()``, are able to
+    benefit from having functions ``__iter__``, ``__len__`` and
+    ``__getitem__``.
     """
 
     class DbSearchResultsIterator(object):
@@ -83,10 +87,10 @@ class DbSearchResults(object):
             self.increment = increment
 
         def next(self):
-            pos = self.position + self.increment
+            pos = self.position
             if pos >= 0 and pos < len(self.results):
                 self.position = self.position + self.increment
-                return self.results[self.position - self.increment]
+                return self.results[pos]
             else:
                 raise StopIteration()
 
@@ -113,19 +117,6 @@ class DbSearchResults(object):
         for entry in self:
             results.append(entry)
         return results
-
-    def next(self):
-        """
-        Returns next result as
-        :py:class:`aiida.tools.dbimporters.baseclasses.DbEntry`.
-
-        :raise StopIteration: when the end of result array is reached.
-        """
-        if len( self.results ) > self.position:
-            self.position = self.position + 1
-            return self.at( self.position - 1 )
-        else:
-            raise StopIteration()
 
     def at(self, position):
         """

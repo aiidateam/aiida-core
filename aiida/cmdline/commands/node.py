@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 import sys
-
 from aiida.cmdline.baseclass import (
     VerdiCommand, VerdiCommandRouter, VerdiCommandWithSubcommands)
 from aiida import load_dbenv
-
+from aiida.cmdline.baseclass import VerdiCommand
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
@@ -120,6 +119,7 @@ class Node(VerdiCommandRouter):
             'info': _Info,
             }
 
+
 # Note: this class should not be exposed directly in the main module,
 # otherwise it becomes a command of 'verdi'. Instead, we want it to be a 
 # subcommand of verdi data.
@@ -218,7 +218,8 @@ class _Repo(VerdiCommandWithSubcommands):
                 pass
             else:
                 raise
-        
+ 
+
 class _Info(VerdiCommand):
     """
     Show node information (pk, uuid, class, inputs and outputs)
@@ -265,3 +266,235 @@ class _Info(VerdiCommand):
             except NotExistent as e:
                 print >> sys.stderr, e.message
                 sys.exit(1)
+
+           
+# the classes _Label and _Description are written here,
+# but in fact they are called by the verdi calculation or verdi data
+# in fact, I don't want to allow the possibility of changing labels or 
+# descriptions of codes, for that there is a separate command
+        
+class _Label(VerdiCommandWithSubcommands):
+    """
+    See or modify the label of one or more set of nodes
+    """
+    def __init__(self, node_subclass='data'):
+        self._node_subclass = node_subclass
+        if self._node_subclass not in ['calculation','data']:
+            raise ValueError("Class must be loaded with a valid node_subclass") 
+    
+    def _node_class_ok(self,n):
+        from aiida.orm import Calculation as OrmCalculation
+        from aiida.orm import Data as OrmData
+        if self._node_subclass=='calculation':
+            return isinstance(n,OrmCalculation)
+        elif self._node_subclass=='data':
+            return isinstance(n,OrmData)
+        else:
+            raise ValueError("node_subclass not recognized")
+
+    def run(self,*args):
+        load_dbenv()
+        import argparse
+        from aiida.orm import Node as OrmNode
+        from aiida.cmdline import wait_for_confirmation
+        
+        parser = argparse.ArgumentParser(prog=self.get_full_command_name(),
+                         description="See/modify the labels of Nodes.")
+        # display parameters
+        parser.add_argument('-r','--raw', action='store_true', default=False,
+                            help="Display only the labels, without the pk.")
+        # pks
+        parser.add_argument('pks', type=int, nargs='+',
+                            help="a list of nodes to show.")
+        # parameters for label modification
+        parser.add_argument('-s','--set', action='store_true', default=False,
+                            help="If present, set a new label, otherwise only "
+                            "show the labels.")
+        parser.add_argument('-f', '--force', action='store_true',
+                            default=False,
+                            help="Force the reset of the label.")
+        parser.add_argument('-l','--label', type=str, default=None,
+                            help="The new label to be set on the node. Note: "
+                            "pass it between quotes.")
+        
+        parsed_args = parser.parse_args(args)
+        raw = parsed_args.raw
+        pks = parsed_args.pks
+        
+        if not parsed_args.set:
+            for pk in pks:
+                n = OrmNode.get_subclass_from_pk(pk)
+                if not self._node_class_ok(n):
+                    print "Node {} is not a subclass of {}. Exiting...".format(pk,
+                                                                self._node_subclass)
+                    sys.exit(1)
+                if raw:
+                    print '"{}"'.format(n.label)
+                else:
+                    if not n.label:
+                        print 'Node {}, label: n.a.'.format(pk)
+                    else:
+                        print 'Node {}, label: "{}"'.format(pk,n.label)
+        else:
+            if len(pks)>1:
+                sys.stderr.write("More than one node found to set one label"
+                                 ". Exiting...\n")
+                sys.exit(1)
+            else:
+                pk = pks[0]
+
+            new_label = parsed_args.label
+            if new_label is None:
+                sys.stderr.write("A new label is required"
+                                 ". Exiting...\n")
+                sys.exit(1)
+                
+            n = OrmNode.get_subclass_from_pk(pk)
+            
+            if not self._node_class_ok(n):
+                print "Node {} is not a subclass of {}. Exiting...".format(pk,
+                                                            self._node_subclass)
+                sys.exit(1)
+    
+            old_label = n.label
+            if not parsed_args.force:
+                sys.stderr.write("Current label is: {}\n".format(old_label))
+                sys.stderr.write("New label is: {}\n".format(new_label))
+                sys.stderr.write("Are you sure you want to reset the label? "
+                                 "[Y/N] ")
+                if not wait_for_confirmation():
+                    sys.exit(0)
+            
+            n.label = new_label
+
+    
+class _Description(VerdiCommandWithSubcommands):
+    """
+    See or modify the label of one or more set of nodes
+    """
+    def __init__(self, node_subclass='data'):
+        self._node_subclass = node_subclass
+        if self._node_subclass not in ['calculation','data']:
+            raise ValueError("Class must be loaded with a valid node_subclass") 
+
+    def _node_class_ok(self,n):
+        from aiida.orm import Calculation as OrmCalculation
+        from aiida.orm import Data as OrmData
+        
+        if self._node_subclass=='calculation':
+            return isinstance(n,OrmCalculation)
+        elif self._node_subclass=='data':
+            return isinstance(n,OrmData)
+        else:
+            raise ValueError("node_subclass not recognized")
+
+    def run(self,*args):
+        load_dbenv()
+        import argparse
+        from aiida.orm import Node as OrmNode
+        from aiida.cmdline import wait_for_confirmation
+        
+        parser = argparse.ArgumentParser(prog=self.get_full_command_name(),
+                         description="See description of Nodes. If no node "
+                         "description or label is found, prints n.a.")
+        
+        # parameters for display
+        parser.add_argument('-n', '--no-labels', action='store_false', default=True,
+                            help="Don't show the labels.")
+        parser.add_argument('-r', '--raw', action='store_true', default=False,
+                            help="If set, prints only the description without "
+                            "pks or labels.")
+        # pks
+        parser.add_argument('pks', type=int, nargs='+',
+                            help="a list of node pks to show.")
+        # parameters for description modifications
+        parser.add_argument('-s','--set', action='store_true', default=False,
+                            help="If present, set a new label, otherwise only "
+                            "show the labels.")
+        parser.add_argument('-a','--add-to-description', action='store_true',
+                            default=False,
+                            help="If -s, the string passed in -d is appended "
+                            "to the current description.")
+        parser.add_argument('-f', '--force', action='store_true',
+                            default=False,
+                            help="Force the reset of the description.")
+        parser.add_argument('-d','--description', type=str,
+                            help="The new description to be set on the node. "
+                            "Note: pass it between quotes.")
+        
+        parsed_args = parser.parse_args(args)
+        
+        pks = parsed_args.pks
+
+        if not parsed_args.set:
+            also_labels = parsed_args.no_labels
+            for pk in pks:
+                n = OrmNode.get_subclass_from_pk(pk)
+                
+                if not self._node_class_ok(n):
+                    print "Node {} is not a subclass of {}. Exiting...".format(pk,
+                                                                self._node_subclass)
+                    sys.exit(1)
+    
+                label = n.label
+                description = n.description
+
+                if parsed_args.raw:
+                    print '"{}"'.format(n.description)
+                    print ""
+                
+                else:
+                    print "Node pk: {}".format(pk)
+                    if also_labels:
+                        if label:
+                            print 'Label: "{}"'.format(label)
+                        else:
+                            print 'Label: n.a.'
+                    if description:
+                        print 'Description: "{}"'.format(description)                        
+                    else:
+                        print 'Description: n.a.'
+                    print ""
+        else:
+            # check that only one pk is present
+            if len(pks)>1:
+                sys.stderr.write("More than one node found to set one description"
+                                 ". Exiting...\n")
+                sys.exit(1)
+            else:
+                pk = pks[0]
+            
+            new_description = parsed_args.description
+            if new_description is None:
+                sys.stderr.write("No description was found. Exiting...\n")
+                sys.exit(1)
+                
+                
+            if not parsed_args.add_to_description:
+                n = OrmNode.get_subclass_from_pk(pk)
+                if not self._node_class_ok(n):
+                    print "Node {} is not a subclass of {}. Exiting...".format(pk,
+                                                                self._node_subclass)
+                    sys.exit(1)
+        
+                old_description = n.description
+                if not parsed_args.force:
+                    sys.stderr.write("Current description is: {}\n".format(old_description))
+                    sys.stderr.write("New description is: {}\n".format(new_description))
+                    sys.stderr.write("Are you sure you want to reset the description? "
+                                     "[Y/N] ")
+                    if not wait_for_confirmation():
+                        sys.exit(0)
+                
+                n.description = new_description
+    
+            else:
+                n = OrmNode.get_subclass_from_pk(pk)
+                if not self._node_class_ok(n):
+                    print "Node {} is not a subclass of {}. Exiting...".format(pk,
+                                                                self._node_subclass)
+                    sys.exit(1)
+        
+                old_description = n.description
+                new_description = old_description + "\n" + new_description
+                n.description = new_description

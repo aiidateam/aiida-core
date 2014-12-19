@@ -149,10 +149,13 @@ class TestCodDbImporter(AiidaTestCase):
         results = CodSearchResults( [ { 'id': '1000000', 'svnrevision': None },
                                       { 'id': '1000001', 'svnrevision': '1234' },
                                       { 'id': '2000000', 'svnrevision': '1234' } ] )
+        self.assertEquals(len(results),3)
         self.assertEquals(results.at(1).source['url'], \
                           "http://www.crystallography.net/cod/1000001.cif@1234")
-        self.assertEquals(results.next().source['url'], \
-                          "http://www.crystallography.net/cod/1000000.cif")
+        self.assertEquals([x.source['url'] for x in results],
+                          ["http://www.crystallography.net/cod/1000000.cif",
+                           "http://www.crystallography.net/cod/1000001.cif@1234",
+                           "http://www.crystallography.net/cod/2000000.cif@1234"])
 
     def test_dbentry_to_cif_node(self):
         """
@@ -192,10 +195,13 @@ class TestTcodDbImporter(AiidaTestCase):
         results = TcodSearchResults( [ { 'id': '10000000', 'svnrevision': None },
                                        { 'id': '10000001', 'svnrevision': '1234' },
                                        { 'id': '20000000', 'svnrevision': '1234' } ] )
+        self.assertEquals(len(results),3)
         self.assertEquals(results.at(1).source['url'], \
                           "http://www.crystallography.net/tcod/10000001.cif@1234")
-        self.assertEquals(results.next().source['url'], \
-                          "http://www.crystallography.net/tcod/10000000.cif")
+        self.assertEquals([x.source['url'] for x in results],
+                          ["http://www.crystallography.net/tcod/10000000.cif",
+                           "http://www.crystallography.net/tcod/10000001.cif@1234",
+                           "http://www.crystallography.net/tcod/20000000.cif@1234"])
 
 class TestSinglefileData(AiidaTestCase):
     """

@@ -5,6 +5,7 @@ from aiida.cmdline.baseclass import (
     VerdiCommandRouter, VerdiCommandWithSubcommands)
 from aiida import load_dbenv
 from aiida.common.exceptions import MultipleObjectsError
+from aiida.cmdline.commands.node import _Label, _Description
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
@@ -20,7 +21,7 @@ class Data(VerdiCommandRouter):
     def __init__(self):
         """
         A dictionary with valid commands and functions to be called.
-        """        
+        """ 
         ## Add here the classes to be supported.
         self.routed_subcommands = {
             'upf': _Upf,
@@ -29,6 +30,8 @@ class Data(VerdiCommandRouter):
             'cif': _Cif,
             'trajectory': _Trajectory,
             'parameter': _Parameter,
+            'label': _Label,
+            'description': _Description,
             }
 
 class Listable(object):

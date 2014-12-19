@@ -254,12 +254,12 @@ class CodSearchResults(DbSearchResults):
     Results of the search, performed on COD.
     """
     base_url = "http://www.crystallography.net/cod/"
-    db_name = "COD"
 
     def __init__(self, results):
         self.results = results
         self.entries = {}
         self.position = 0
+        self.return_class = CodEntry
 
     def at(self, position):
         """
@@ -276,13 +276,11 @@ class CodSearchResults(DbSearchResults):
             db_id       = self.results[position]['id']
             svnrevision = self.results[position]['svnrevision']
             url = self.base_url + db_id + ".cif"
-            if svnrevision is None:
-                self.entries[position] = \
-                    CodEntry( url, db_id = db_id )
-            else:
-                url = url + "@" + svnrevision
-                self.entries[position] = \
-                    CodEntry( url, db_id = db_id, db_version = svnrevision )
+            source_dict = {'db_id': db_id}
+            if svnrevision is not None:
+                source_dict['db_version'] = svnrevision
+                url = "{}@{}".format(url,svnrevision)
+            self.entries[position] = self.return_class( url, **source_dict )
         return self.entries[position]
 
 class CodEntry(DbEntry):

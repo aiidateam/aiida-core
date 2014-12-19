@@ -233,12 +233,21 @@ class _Info(VerdiCommand):
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
             description='Show information of a node.')
-
         parser.add_argument('data_id', type=int, default=None, nargs="+",
                             help="ID of the node.")
+        parser.add_argument('-i','--indent', action='store_true',
+                            dest='indent', default=False,
+                            help="Indent the output.")
+        parser.add_argument('--no-indent','--dont-indent', action='store_false',
+                            dest='indent', default=False,
+                            help="Do not indent the output. Default behaviour.")
 
         args = list(args)
         parsed_args = parser.parse_args(args)
+
+        indent = ""
+        if parsed_args.indent:
+            indent = "    "
 
         load_dbenv()
         from aiida.orm import Node
@@ -247,10 +256,12 @@ class _Info(VerdiCommand):
             try:
                 n = Node.get_subclass_from_pk(pk)
                 print "pk: {}\nuuid: {}\nclass: {}".format(n.pk,n.uuid,n.__class__)
-                print "    Inputs:" + \
-                    "".join(["\n        {}".format(inp) for inp in n.get_inputs()])
-                print "    Outputs:" + \
-                    "".join(["\n        {}".format(out) for out in n.get_outputs()])
+                print "{}##### INPUTS:".format(indent) + \
+                    "".join(["\n{}{}".format(indent,inp)
+                                for inp in n.get_inputs()])
+                print "{}##### OUTPUTS:".format(indent) + \
+                    "".join(["\n{}{}".format(indent,out)
+                                for out in n.get_outputs()])
             except NotExistent as e:
                 print >> sys.stderr, e.message
                 sys.exit(1)

@@ -258,7 +258,6 @@ class CodSearchResults(DbSearchResults):
     def __init__(self, results):
         self.results = results
         self.entries = {}
-        self.position = 0
         self.return_class = CodEntry
 
     def at(self, position):

@@ -43,6 +43,9 @@ to ``_Datatype`` class. Each new method is automatically detected,
 provided it starts with ``_show_`` (for ``show``) and ``_export_`` (for
 ``export``). Node for each of such method is passed using a parameter.
 
+.. note:: plugins for ``show`` are passed a list of nodes, while plugins for
+    ``export`` are passed a single node.
+
 As the syntax of ``show`` command has been changed from
 ``verdi data <datatype> <action> <plugin>`` to
 ``verdi data <datatype> <action> [--format <plugin>]`` having the
@@ -65,9 +68,9 @@ the value for ``_default_show_plugin`` in the inheriting class::
                 'show': (self.show, self.complete_visualizers),
                 }
 
-        def _show_json_date(self,exec_name,node):
+        def _show_json_date(self,exec_name,node_list):
             """
-            Show the content of a ParameterData node.
+            Show contents of ParameterData nodes.
             """
 
 Implementing ``list``

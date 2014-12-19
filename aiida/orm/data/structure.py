@@ -657,12 +657,9 @@ class StructureData(Data):
         """
         Write the given structure to a string of format CIF.
         """
-        import CifFile
-        from aiida.orm.data.cif \
-            import ase_loops,cif_from_ase,pycifrw_from_cif
-        ciffile = pycifrw_from_cif(cif_from_ase(self.get_ase()),
-                                   ase_loops)
-        return ciffile.WriteOut()
+        from aiida.orm.data.cif import CifData
+        cif = CifData(ase=self.get_ase())
+        return cif._prepare_cif()
 
     def get_symbols_set(self):
         """

@@ -31,8 +31,10 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         if the access rights to the full database are not granted.
 
     :param host: mysql database host, one way is to setup an ssh tunnel to the host
-        using:
-        ssh -L 3306:localhost:3306 username@hostname.com
+        using::
+
+            ssh -L 3306:localhost:3306 username@hostname.com
+
         and put "127.0.0.1" as host. Google for ssh -L for more information.
     :param user: mysql database username (default: dba)
     :param passwd: mysql database password (default: sql)
@@ -484,7 +486,7 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
             self.query_page()
         if position not in self.entries:
             self.entries[position] = IcsdEntry( self.db_parameters["server"]+ self.db_parameters["dl_db"] + self.cif_url.format(self.results[position]), \
-                          source_db = self.db_name, db_id = self.results[position], extras = {'icsd_nr' : self.icsd_numbers[position]} )
+                          db_source = self.db_name, db_id = self.results[position], extras = {'icsd_nr' : self.icsd_numbers[position]} )
         return self.entries[position]
 
 

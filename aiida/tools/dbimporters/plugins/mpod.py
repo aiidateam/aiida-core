@@ -157,16 +157,7 @@ class MpodEntry(DbEntry):
         :py:class:`aiida.tools.dbimporters.plugins.mpod.MpodEntry`, related
         to the supplied URL.
         """
-        super(MpodEntry, self).__init__(**kwargs)
-        self.source = {
-            'db_source' : 'Material Properties Open Database',
-            'db_url'    : 'http://mpod.cimav.edu.mx/',
-            'db_id'     : None,
-            'db_version': None,
-            'url'       : url
-        }
-        self._cif      = None
-        if 'db_id' in kwargs.keys():
-            self.source['db_id'] = kwargs.pop('db_id')
-        if 'db_version' in kwargs.keys():
-            self.source['db_version'] = kwargs.pop('db_version')
+        super(MpodEntry, self).__init__(db_source='Material Properties Open Database',
+                                        db_url='http://mpod.cimav.edu.mx',
+                                        url=url,
+                                        **kwargs)

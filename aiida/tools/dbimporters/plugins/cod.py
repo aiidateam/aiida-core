@@ -290,25 +290,15 @@ class CodEntry(DbEntry):
     Represents an entry from COD.
     """
 
-    def __init__(self, url, **kwargs):
+    def __init__(self,url,db_source='Crystallography Open Database',
+                 db_url='http://www.crystallography.net',**kwargs):
         """
         Creates an instance of
         :py:class:`aiida.tools.dbimporters.plugins.cod.CodEntry`, related
         to the supplied URL.
         """
-        super(CodEntry, self).__init__(**kwargs)
-        self.source = {
-            'db_source' : 'Crystallography Open Database',
-            'db_url'    : 'http://www.crystallography.net',
-            'db_id'     : None,
-            'db_version': None,
-            'url'       : url
-        }
-        self._cif      = None
-        if 'db_id' in kwargs.keys():
-            self.source['db_id'] = kwargs.pop('db_id')
-        if 'db_version' in kwargs.keys():
-            self.source['db_version'] = kwargs.pop('db_version')
+        super(CodEntry, self).__init__(db_source=db_source,db_url=db_url,
+                                       url=url,**kwargs)
 
     def get_ase_structure(self):
         """

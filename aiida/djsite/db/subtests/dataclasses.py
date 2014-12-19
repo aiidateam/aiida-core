@@ -173,7 +173,7 @@ class TestCodDbImporter(AiidaTestCase):
             'db_url'    : 'http://www.crystallography.net',
             'db_id'     : None,
             'db_version': None,
-            'extras'    : '',
+            'extras'    : {},
             'source_md5': '070711e8e99108aade31d20cd5c94c48',
             'url'       : 'http://www.crystallography.net/cod/1000000.cif'
         })

@@ -4,7 +4,7 @@ import sys
 from aiida.cmdline.baseclass import (
     VerdiCommandRouter, VerdiCommandWithSubcommands)
 from aiida import load_dbenv
-
+from aiida.common.exceptions import MultipleObjectsError
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
@@ -229,7 +229,12 @@ class Visualizable(object):
             except AttributeError:
                 pass
 
-        func(format, n_list, **parsed_args)
+        try:
+            func(format, n_list, **parsed_args)
+        except MultipleObjectsError:
+            print("Visualization of multiple objects is not implemented "
+                  "for '{}'".format(format))
+            sys.exit(1)
 
 class Exportable(object):
     """
@@ -793,7 +798,7 @@ class _Structure(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
         """
         import tempfile,subprocess
         if len(structure_list) > 1:
-            raise NotImplementedError("Visualization of multiple objects "
+            raise MultipleObjectsError("Visualization of multiple objects "
                                       "is not implemented")
         structure = structure_list[0]
 
@@ -822,8 +827,8 @@ class _Structure(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
         """
         import tempfile,subprocess
         if len(structure_list) > 1:
-            raise NotImplementedError("Visualization of multiple objects "
-                                      "is not implemented")
+            raise MultipleObjectsError("Visualization of multiple objects "
+                                       "is not implemented")
         structure = structure_list[0]
 
         with tempfile.NamedTemporaryFile(suffix='.xsf') as f:

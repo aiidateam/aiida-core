@@ -197,7 +197,10 @@ to the new schema.
 ``verdi node``
 +++++++++++++++
 
-  *  **repo**: Show files and their contents in the local repository
+  * **info**: Show basic node information (PK, UUID, class, inputs and
+    outputs)
+
+  * **repo**: Show files and their contents in the local repository
 
 ``verdi run``
 +++++++++++++

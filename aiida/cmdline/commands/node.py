@@ -234,7 +234,7 @@ class _Show(VerdiCommand):
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
             description='Show information of a node.')
-        parser.add_argument('data_id', type=int, default=None, nargs="+",
+        parser.add_argument('pk', type=int, default=None, nargs="+",
                             help="ID of the node.")
         parser.add_argument('-d','--depth', action='store', default=0,
                             metavar="N", type=int,
@@ -264,7 +264,7 @@ class _Show(VerdiCommand):
         load_dbenv()
         from aiida.orm import Node
 
-        for pk in parsed_args.data_id:
+        for pk in parsed_args.pk:
             try:
                 n = Node.get_subclass_from_pk(pk)
                 self.print_node_info(n,depth=parsed_args.depth,indent=indent,

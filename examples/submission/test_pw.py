@@ -7,11 +7,12 @@ __version__ = "0.3.0"
 import sys
 import os
 
+from common_test_functions import test_and_get_code
+
 from aiida.common.exceptions import NotExistent
 
 ################################################################
 
-#if __name__ == "__main__":
 UpfData = DataFactory('upf')
 ParameterData = DataFactory('parameter')
 KpointsData = DataFactory('array.kpoints')
@@ -37,7 +38,6 @@ except IndexError:
 
 # If True, load the pseudos from the family specified below
 # Otherwise, use static files provided
-expected_code_type='quantumespresso.pw'
 auto_pseudos = False
 
 queue = None
@@ -45,25 +45,7 @@ queue = None
 settings = None
 #####
 
-try:
-    if codename is None:
-        raise ValueError
-    code = Code.get_from_string(codename)
-    if code.get_input_plugin_name() != expected_code_type:
-        raise ValueError
-except (NotExistent, ValueError):
-    valid_code_labels = ["{}@{}".format(c.label,c.computer.name) for c in Code.query(
-            dbattributes__key="input_plugin",
-            dbattributes__tval=expected_code_type)]
-    if valid_code_labels:
-        print >> sys.stderr, "Pass as further parameter a valid code label."
-        print >> sys.stderr, "Valid labels with a {} executable are:".format(expected_code_type)
-        for l in valid_code_labels:
-            print >> sys.stderr, "*", l
-    else:
-        print >> sys.stderr, "Code not valid, and no valid codes for {}. Configure at least one first using".format(expected_code_type)
-        print >> sys.stderr, "    verdi code setup"
-    sys.exit(1)
+code = test_and_get_code(codename, expected_code_type='quantumespresso.pw')
 
 alat = 4. # angstrom
 cell = [[alat, 0., 0.,],

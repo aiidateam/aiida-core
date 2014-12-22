@@ -44,36 +44,18 @@ __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.
 __version__ = "0.3.0"
 
 @contextlib.contextmanager
-def update_environment(new_argv, new_name="__main__", new_file=None):
+def update_environment(new_argv):
     """
     Used as a context manager, changes sys.argv with the
     new_argv argument, and restores it upon exit.
-    It also changes some other global variables such as __name__ and
-    __file__
     """
     import sys
-    global __name__
-    global __file__
-    # backup original params
     _argv = sys.argv[:]
-    _name = __name__
-    _file = __file__
-    # New parameters
     sys.argv = new_argv[:]
-    __name__ = "__main__"
-    if new_file is None:
-        if not new_argv:
-            raise ValueError("Empty new_argv passed! It should at "
-                             "least have argv[0]")
-        __file__ = new_argv[0]
-    else:
-        __file__ = new_file
     yield
 
     #Restore old parameters when exiting from the context manager
     sys.argv = _argv
-    __name__ = _name
-    __file__ = _file
 
 
 ########################################################################
@@ -402,10 +384,19 @@ class Run(VerdiCommand):
                             nargs=argparse.REMAINDER, type=str,
                             help='Further parameters to pass to the script')
         parsed_args = parser.parse_args(args)
+
+        # Prepare the environment for the script to be run
+        globals_dict = {
+            '__builtins__': globals()['__builtins__'],
+            '__name__': '__main__',
+            '__file__': parsed_args.scriptname,
+            '__doc__': None,
+            '__package__': None}
         
-        # dynamically load modules (the same of verdi shell)
+        ## dynamically load modules (the same of verdi shell) - but in
+        ## globals_dict, not in the current environment
         for app_mod, model_name, alias in default_modules_list:
-            locals()["{}".format(alias)] = getattr(
+            globals_dict["{}".format(alias)] = getattr(
                             __import__(app_mod, {}, {}, model_name), model_name)
         
         if parsed_args.group:
@@ -421,10 +412,10 @@ class Run(VerdiCommand):
             aiida_verdilib_autogroup.set_exclude_with_subclasses(parsed_args.excludesubclasses)
             aiida_verdilib_autogroup.set_include_with_subclasses(parsed_args.includesubclasses)
             aiida_verdilib_autogroup.set_group_name(automatic_group_name)
+            ## Note: this is also set in the exec environment!
+            ## This is the intended behavior
             aiida.orm.autogroup.current_autogroup = aiida_verdilib_autogroup
         
-#        print "Starting..."
-
         try:
             f = open(parsed_args.scriptname)
         except IOError:
@@ -436,8 +427,8 @@ class Run(VerdiCommand):
                 # Must add also argv[0]
                 new_argv = [parsed_args.scriptname] + parsed_args.new_args
                 with update_environment(new_argv=new_argv):
-                    # print sys.argv
-                    exec(f)
+                    # Pass only globals_dict
+                    exec(f,globals_dict)
                 # print sys.argv
             except SystemExit as e:
                 ## Script called sys.exit()

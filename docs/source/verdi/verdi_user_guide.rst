@@ -85,7 +85,7 @@ Manages the comments attached to a database node.
 ``verdi completioncommand``
 +++++++++++++++++++++++++++
 
-Prints the string to be copied and pasted to the bahrc in order to allow for
+Prints the string to be copied and pasted to the bashrc in order to allow for
 autocompletion of the verdi commands.
 
 ``verdi computer``

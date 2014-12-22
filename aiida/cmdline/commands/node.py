@@ -299,7 +299,7 @@ class _Show(VerdiCommand):
             print "{}{}".format(ind_next, k), id, v.__class__.__name__
             if v.pk in seen or (not depth and level and (v.get_inputs() or v.get_outputs())):
                 print "{}{}...".format(ind_next,indent)
-            else:
+            elif depth:
                 self.print_node_info(v,level=level+1,depth=depth-1,
                                      indent=indent,print_uuid=print_uuid,
                                      seen=seen + [node.pk])

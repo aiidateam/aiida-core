@@ -890,6 +890,12 @@ class _Structure(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
         """
         print node._exportstring('cif')
 
+    def _export_xyz(self,node):
+        """
+        Exporter to XYZ.
+        """
+        print node._exportstring('xyz')
+
 class _Cif(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
     """
     Visualize CIF structures

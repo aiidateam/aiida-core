@@ -116,7 +116,7 @@ class Node(VerdiCommandRouter):
         ## Add here the classes to be supported.
         self.routed_subcommands = {
             'repo': _Repo,
-            'info': _Info,
+            'show': _Show,
             }
 
 
@@ -220,7 +220,7 @@ class _Repo(VerdiCommandWithSubcommands):
                 raise
  
 
-class _Info(VerdiCommand):
+class _Show(VerdiCommand):
     """
     Show node information (pk, uuid, class, inputs and outputs)
     """

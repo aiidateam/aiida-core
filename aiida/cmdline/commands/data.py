@@ -317,10 +317,77 @@ class Exportable(object):
 
         func(n,**parsed_args)
 
+class Importable(object):
+    """
+    Provides shell completion for importable data nodes.
+
+    Classes, inheriting Importable, MUST NOT contain attributes, starting
+    with ``_import_``, which are not plugins for importing.
+    """
+    import_prefix = '_import_'
+    import_parameters_postfix = '_parameters'
+
+    def complete_importers(self, subargs_idx, subargs):
+        """
+        Get a display-ready string, containing names of all possible
+        importers.
+        """
+        plugin_names = self.get_import_plugins().keys()
+        return "\n".join(plugin_names)
+
+    def get_import_plugins(self):
+        """
+        Get the list of all implemented importers for data class.
+        """
+        method_names = dir(self) # get list of class methods names
+        valid_formats = [ i[len(self.import_prefix):] for i in method_names
+                         if i.startswith(self.import_prefix) and \
+                            not i.endswith(self.import_parameters_postfix)] # filter
+
+        return {k: getattr(self,self.import_prefix + k) for k in valid_formats}
+
+    def importfile(self, *args):
+        import argparse,os,sys
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Import data object.')
+        parser.add_argument('format', type=str, default=None,
+                    help="Format of the imported file.")
+        parser.add_argument('-f', '--file', type=str, default=None,
+                            dest='file',
+                            help="Path of the imported file")
+
+        # Augmenting the command line parameters with ones, that are used by
+        # individual plugins
+        for cmd in dir(self):
+            if not cmd.startswith(self.import_prefix) or \
+               not cmd.endswith(self.import_parameters_postfix):
+                continue
+            getattr(self,cmd)(parser)
+
+        args = list(args)
+        parsed_args = vars(parser.parse_args(args))
+
+        format = parsed_args.pop('format')
+        filename = parsed_args.pop('file')
+
+        if not filename:
+            filename = "/dev/stdin"
+
+        try:
+            func = self.get_import_plugins()[format]
+        except KeyError:
+            print "Not implemented; implemented plugins are:"
+            print "{}.".format(",".join(self.get_import_plugins()))
+            sys.exit(1)
+
+        load_dbenv()
+        func(filename,**parsed_args)
+
 # Note: this class should not be exposed directly in the main module,
 # otherwise it becomes a command of 'verdi'. Instead, we want it to be a 
 # subcommand of verdi data.
-class _Upf(VerdiCommandWithSubcommands):
+class _Upf(VerdiCommandWithSubcommands,Importable):
     """
     Setup and manage upf to be used
 
@@ -330,9 +397,12 @@ class _Upf(VerdiCommandWithSubcommands):
         """
         A dictionary with valid commands and functions to be called.
         """
+        from aiida.orm.data.upf import UpfData
+        self.dataclass = UpfData
         self.valid_subcommands = {
             'uploadfamily': (self.uploadfamily, self.complete_auto),
             'listfamilies': (self.listfamilies, self.complete_none),
+            'import': (self.importfile, self.complete_importers),
             }
     
     def uploadfamily(self, *args):
@@ -445,7 +515,16 @@ class _Upf(VerdiCommandWithSubcommands):
                                                         description_string)
         else:
             print "No valid UPF pseudopotential family found."
-         
+
+    def _import_upf(self,filename,**kwargs):
+        """
+        Importer from UPF.
+        """
+        try:
+            node,_ = self.dataclass.get_or_create(filename)
+            print node
+        except ValueError as e:
+            print e
          
 class _Bands(VerdiCommandWithSubcommands,Listable,Visualizable):
     """
@@ -896,7 +975,7 @@ class _Structure(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
         """
         print node._exportstring('xyz')
 
-class _Cif(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
+class _Cif(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable,Importable):
     """
     Visualize CIF structures
     """
@@ -911,6 +990,7 @@ class _Cif(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
             'show': (self.show, self.complete_visualizers),
             'list': (self.list, self.complete_none),
             'export': (self.export, self.complete_exporters),
+            'import': (self.importfile, self.complete_importers),
             }
 
     def _show_jmol(self,exec_name,structure_list):
@@ -992,6 +1072,16 @@ class _Cif(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
         Exporter to CIF.
         """
         print node._exportstring('cif')
+
+    def _import_cif(self,filename,**kwargs):
+        """
+        Importer from CIF.
+        """
+        try:
+            node,_ = self.dataclass.get_or_create(filename)
+            print node
+        except ValueError as e:
+            print e
 
 class _Trajectory(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
     """

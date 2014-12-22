@@ -137,6 +137,9 @@ Manages database data objects.
     * **listfamilies**: list presently stored families of pseudopotentials
     
     * **uploadfamily**: install a new family (group) of pseudopotentials
+
+    * **import**: create or return (if already present) a database node,
+      having the contents of a supplied file
   
   * **structure**: handles the StructureData
   
@@ -144,6 +147,8 @@ Manages database data objects.
     
     * **show**: use a third-party visualizer (like vmd or xcrysden) 
       to graphically show the StructureData
+
+    * **export**: export the node as a string of a specified format
 
   * **parameter**: handles the ParameterData objects
 
@@ -157,15 +162,23 @@ Manages database data objects.
     * **show**: use third-party visualizer (like jmol) to graphically show
       the CifData
 
+    * **import**: create or return (if already present) a database node,
+      having the contents of a supplied file
+
+    * **export**: export the node as a string of a specified format
+
   * **trajectory**: handles the TrajectoryData objects
 
     * **list**: list currently saved nodes of TrajectoryData kind
 
     * **show**: use third-party visualizer (like jmol) to graphically show
       the TrajectoryData
-  * **label**: view / set the label of a data
-  * **description**: view / set the description of a data
 
+    * **export**: export the node as a string of a specified format
+
+  * **label**: view / set the label of a data
+
+  * **description**: view / set the description of a data
 
 ``verdi devel``
 +++++++++++++++
@@ -202,10 +215,10 @@ to the new schema.
 ``verdi node``
 +++++++++++++++
 
-  * **info**: Show basic node information (PK, UUID, class, inputs and
-    outputs)
-
   * **repo**: Show files and their contents in the local repository
+
+  * **show**: Show basic node information (PK, UUID, class, inputs and
+    outputs)
 
 ``verdi run``
 +++++++++++++

@@ -14,3 +14,4 @@ To start testing the test_[cp,ph,pw].py:
 5. Run the test_*.py file passing as a parameter the code label you chose in
    the code setup process.
 
+Other tests work in a similar way.

@@ -280,6 +280,10 @@ class _Info(VerdiCommand):
         if level == 0:
             print "pk: {}\nuuid: {}\nclass: {}".format(node.pk,node.uuid,
                                                        node.__class__)
+        if len(node.get_inputs()) == 1 and not node.get_outputs():
+            # Not printing INPUTS and OUTPUTS for dead-end nodes (having
+            # no outputs and only the parent node as input)
+            return
         print "{}##### INPUTS:".format(ind_next)
         for k, v in node.get_inputdata_dict().iteritems():
             id = v.pk

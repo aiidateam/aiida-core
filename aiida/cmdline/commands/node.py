@@ -278,8 +278,15 @@ class _Info(VerdiCommand):
         ind_this = "".join([indent for i in range(level)])
         ind_next = "{}{}".format(ind_this,indent)
         if level == 0:
-            print "pk: {}\nuuid: {}\nclass: {}".format(node.pk,node.uuid,
-                                                       node.__class__)
+            print "root {} {}".format(node.pk,node.__class__.__name__)
+            print "uuid: {}".format(node.uuid)
+            print "label: {}".format(node.label)
+            print "description: {}".format(node.description)
+            print "ctime: {}".format(node.ctime)
+            print "mtime: {}".format(node.mtime)
+            if node.computer is not None:
+                print "computer: {} {}".format(node.computer.pk,
+                                               node.computer.name)
         if len(node.get_inputs()) == 1 and not node.get_outputs():
             # Not printing INPUTS and OUTPUTS for dead-end nodes (having
             # no outputs and only the parent node as input)

@@ -1050,6 +1050,8 @@ class _Cif(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable,Importab
                 formulae = ",".join(obj.get_attr('formulae'))
             except AttributeError:
                 pass
+            except TypeError:
+                pass
             source_url = '?'
             try:
                 source_url = obj.get_attr('url')

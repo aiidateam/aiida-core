@@ -661,6 +661,17 @@ class StructureData(Data):
         cif = CifData(ase=self.get_ase())
         return cif._prepare_cif()
 
+    def _prepare_xyz(self):
+        """
+        Write the given structure to a string of format XYZ.
+        """
+        from ase.io import write
+        import tempfile
+        with tempfile.NamedTemporaryFile() as f:
+            write(f.name,self.get_ase(),format="xyz")
+            f.flush()
+            return f.read()
+
     def get_symbols_set(self):
         """
         Return a set containing the names of all elements involved in

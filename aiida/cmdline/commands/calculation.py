@@ -342,6 +342,10 @@ class Calculation(VerdiCommandWithSubcommands):
                     docstring = docstring.strip()
                     print "\n".join(["    {}".format(_.strip())
                                      for _ in docstring.splitlines()])
+                    print "  Inputs:"
+                    for key,val in C._use_methods.iteritems():
+                        print "    {}: {}".format(key,
+                                                  val['valid_types'].__name__)
                 except MissingPluginError:
                     print "! {}: NOT FOUND!".format(arg)
         else:

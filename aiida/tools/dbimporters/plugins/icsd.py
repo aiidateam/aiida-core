@@ -8,9 +8,15 @@ __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.
 __version__ = "0.3.0"
 
 class IcsdImporterExp(Exception):
+    """
+
+    """
     pass
 
 class CifFileErrorExp(IcsdImporterExp):
+    """
+    Raised when the author loop is missing in a CIF file.
+    """
     pass
 
 class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
@@ -356,7 +362,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         """
         Performs a query on Icsd mysql database using ``keyword = value`` pairs,
         specified in ``kwargs``. Returns an instance of IcsdSearchResults.
-        :param **kwargs: A list of ``keyword = [values]`` pairs
+        :param kwargs: A list of ``keyword = [values]`` pairs
         :return: IcsdSearchResults
         """
 
@@ -384,7 +390,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         Performs a query on the Icsd web database using ``keyword = value`` pairs,
         specified in ``kwargs``. Returns an instance of IcsdSearchResults.
         :note: Web search has a maximum result number fixed at 1000.
-        :param **kwargs: A list of ``keyword = [values]`` pairs
+        :param kwargs: A list of ``keyword = [values]`` pairs
         :return: IcsdSearchResults
         """
         import urllib
@@ -442,8 +448,6 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
     :param db_parameters: database parameter setup during the initialisation of the
     IcsdDbImporter.
     """
-
-    # url add to download cif files, make to db_parameter (question)
     cif_url = "/index.php?format=cif&action=Export&id%5B%5D={}"
     db_name = "Icsd"
 
@@ -455,7 +459,7 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
         self.query = query
         self.number_of_results = None
         self.results = []
-        self.icsd_numbers = []
+        self.cif_numbers = []
         self.entries = {}
         self.page = 1
         self.position = 0
@@ -472,6 +476,7 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
             self.position = self.position + 1
             return self.at( self.position - 1 )
         else:
+            self.position = 0
             raise StopIteration()
 
     def at(self, position):
@@ -486,7 +491,7 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
             self.query_page()
         if position not in self.entries:
             self.entries[position] = IcsdEntry( self.db_parameters["server"]+ self.db_parameters["dl_db"] + self.cif_url.format(self.results[position]), \
-                          db_source = self.db_name, db_id = self.results[position], extras = {'icsd_nr' : self.icsd_numbers[position]} )
+                          db_source = self.db_name, db_id = self.results[position], extras = {'cif_nr' : self.cif_numbers[position]} )
         return self.entries[position]
 
 
@@ -495,6 +500,7 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
         """
         Queries the mysql or web page database, depending on the db_parameters.
         Stores the number_of_results, cif file number and the corresponding icsd number.
+
         :note: Icsd uses its own number system, not the cif file numbers.
         """
         if self.db_parameters["querydb"]:
@@ -507,7 +513,7 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
 
             for row in self.cursor.fetchall():
                 self.results.append( str( row[0] ) )
-                self.icsd_numbers.append( str(row[1]))
+                self.cif_numbers.append( str(row[1]))
 
 
             if self.number_of_results is None:
@@ -570,15 +576,15 @@ class IcsdEntry(aiida.tools.dbimporters.baseclasses.DbEntry):
             'db_id'     : None,
             'db_version': None,
             'url'       : url,
-            'extras'     : {'icsd_nr'   : None},
+            'extras'     : {'cif_nr'   : None},
         }
-        self.icsd_nr = None
+        self.cif_nr = None
         if 'db_source' in kwargs.keys():
             self.source["db_source"] = kwargs['db_source']
         if 'db_id' in kwargs.keys():
             self.source["db_id"] = kwargs['db_id']
-        if 'extras' in kwargs.keys() and 'icsd_nr' in kwargs['extras']:
-            self.source['extras']["icsd_nr"] = kwargs['extras']['icsd_nr']
+        if 'extras' in kwargs.keys() and 'cif_nr' in kwargs['extras']:
+            self.source['extras']["cif_nr"] = kwargs['extras']['cif_nr']
 
         self._cif = None
 

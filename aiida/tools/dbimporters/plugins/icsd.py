@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import aiida.tools.dbimporters.baseclasses
-import MySQLdb
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
@@ -25,23 +24,34 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
     FIZ Karlsruhe. It allows to run queries and analyse all the results.
 
     :param server: Server URL, the web page of the database. It is
-        important to have access to the full data base.
+        required in order to have access to the full database.
+        I t should contain both the protocol and the domain name
+        and end with a slash, as in::
+
+          server = "http://ICSDSERVER.com/"
+          
     :param urladd: part of URL which is added between query and and the server URL
-        (default: index.php?) only needed for web page query
+        (default: ``index.php?``). only needed for web page query
 
-    :param querydb: True (default) means the mysql database is queried.
-        If False, the query results are provide by the web page query, which is
-        restricted to a maximum of 1000 results at once.
-    :param dl_db: icsd comes with a full (default: icsd) and a demo database (icsdd).
-        This parameter allows to switch to the demo database for testing purpose,
-        if the access rights to the full database are not granted.
+    :param querydb: boolean, decides whether the mysql database is queried
+        (default: True).
+        If False, the query results are obtained through the web page
+        query, which is
+        restricted to a maximum of 1000 results per query.
+    :param dl_db: icsd comes with a full (default: ``icsd``) and a demo
+        database (``icsdd``).
+        This parameter allows the user to switch to the demo database
+        for testing purposes, if the access rights to the full database
+        are not granted.
 
-    :param host: mysql database host, one way is to setup an ssh tunnel to the host
-        using::
+    :param host: MySQL database host. If the MySQL database is hosted on
+        a different machine, use  "127.0.0.1" as host, and open
+        a SSH tunnel to the host using::
 
             ssh -L 3306:localhost:3306 username@hostname.com
 
-        and put "127.0.0.1" as host. Google for ssh -L for more information.
+        See the :ref:`DbImporter documentation and
+        tutorial page <ICSD_importer_guide>` for more information.
     :param user: mysql database username (default: dba)
     :param passwd: mysql database password (default: sql)
     :param db: name of the database (default: icsd)
@@ -423,9 +433,11 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
 
     def setup_db(self, **kwargs):
         """
-        Changes the database connection details. At least the host server has to be defined.
+        Changes the database connection details.
+        At least the host server has to be defined.
+        
         :param kwargs: db_parameters for the mysql database connection
-        (host, user, passwd, db, port)
+          (host, user, passwd, db, port)
         """
         for key in self.db_parameters.keys():
             if key in kwargs.keys():
@@ -443,10 +455,11 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
 
 class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
     """
-    Results of the search, performed on Icsd.
+    Result manager for the query performed on ICSD.
+    
     :param query: mysql query or webpage query
-    :param db_parameters: database parameter setup during the initialisation of the
-    IcsdDbImporter.
+    :param db_parameters: database parameter setup during the
+      initialisation of the IcsdDbImporter.
     """
     cif_url = "/index.php?format=cif&action=Export&id%5B%5D={}"
     db_name = "Icsd"
@@ -501,7 +514,8 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
         Queries the mysql or web page database, depending on the db_parameters.
         Stores the number_of_results, cif file number and the corresponding icsd number.
 
-        :note: Icsd uses its own number system, not the cif file numbers.
+        :note: Icsd uses its own number system, different from the CIF
+          file numbers.
         """
         if self.db_parameters["querydb"]:
 
@@ -545,6 +559,7 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
         """
         Connects to the MySQL database for performing searches.
         """
+        import MySQLdb
         self.db = MySQLdb.connect( host =   self.db_parameters['host'],
                                    user =   self.db_parameters['user'],
                                    passwd = self.db_parameters['passwd'],
@@ -614,7 +629,9 @@ class IcsdEntry(aiida.tools.dbimporters.baseclasses.DbEntry):
     def get_corrected_cif(self):
         """
         Adds quotes to the lines in the author loop if missing.
-        :note: ase raises an AssertionError if the quotes in the author loop are missing.
+        
+        :note: ase raises an AssertionError if the quotes in the
+          author loop are missing.
         """
         return correct_cif(self.cif)
 
@@ -630,7 +647,7 @@ class IcsdEntry(aiida.tools.dbimporters.baseclasses.DbEntry):
 
     def get_aiida_structure(self):
         """
-        :return: Aiida structure corresponding to the cif file.
+        :return: AiiDA structure corresponding to the CIF file.
         """
         from aiida.orm import DataFactory
         S = DataFactory("structure")
@@ -641,10 +658,13 @@ class IcsdEntry(aiida.tools.dbimporters.baseclasses.DbEntry):
 
 def correct_cif(cif):
     """
-    This function corrects the format of the cif files
-
-    :note: the ase.read.io only works if the author names are quoted, if not an AssertionError is raised.
+    This function corrects the format of the CIF files.
+    At the moment, it only fixes missing quotes in the authors field
+    (``ase.read.io`` only works if the author names are quoted,
+    if not an AssertionError is raised).
+    
     :param cif: A string containing the content of the CIF file.
+    :return: a string containing the corrected CIF file.
     """
     #Do more checks to be sure it's working in everycase -> no _publ_author_name, several lines, correct input
     lines = cif.split('\n')

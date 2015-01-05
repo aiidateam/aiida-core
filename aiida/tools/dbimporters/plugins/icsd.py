@@ -7,9 +7,6 @@ __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.
 __version__ = "0.3.0"
 
 class IcsdImporterExp(Exception):
-    """
-
-    """
     pass
 
 class CifFileErrorExp(IcsdImporterExp):
@@ -29,7 +26,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         and end with a slash, as in::
 
           server = "http://ICSDSERVER.com/"
-          
+
     :param urladd: part of URL which is added between query and and the server URL
         (default: ``index.php?``). only needed for web page query
 
@@ -61,7 +58,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
     # for mysql db query
     def _int_clause(self, key, alias, values):
         """
-        Returns SQL query predicate for querying integer fields
+        Return SQL query predicate for querying integer fields
         :param key: Database keyword
         :param alias: Query parameter name
         :param values: Corresponding values from query
@@ -76,7 +73,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
 
     def _str_exact_clause(self, key, alias, values):
         """
-        Returns SQL query predicate for querying string fields.
+        Return SQL query predicate for querying string fields.
         """
         for e in values:
             if not isinstance( e, int ) and not isinstance( e, str ):
@@ -87,7 +84,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
                                          values ) ) + ")"
     def _formula_clause(self, key, alias, values):
         """
-        Returns SQL query predicate for querying formula fields.
+        Return SQL query predicate for querying formula fields.
         """
         for e in values:
             if not isinstance( e, str ):
@@ -100,7 +97,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
 
     def _str_fuzzy_clause(self, key, alias, values):
         """
-        Returns SQL query predicate for fuzzy querying of string fields.
+        Return SQL query predicate for fuzzy querying of string fields.
         """
         for e in values:
             if not isinstance( e, int ) and not isinstance( e, str ):
@@ -111,7 +108,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
 
     def _composition_clause(self, key, alias, values):
         """
-        Returns SQL query predicate for querying elements in formula fields.
+        Return SQL query predicate for querying elements in formula fields.
         """
         for e in values:
             if not isinstance( e, str ):
@@ -123,7 +120,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
 
     def _double_clause(self, key, alias, values, precision):
         """
-        Returns SQL query predicate for querying double-valued fields.
+        Return SQL query predicate for querying double-valued fields.
         """
         for e in values:
             if not isinstance( e, int ) and not isinstance( e, float ):
@@ -140,7 +137,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
 
     def _crystal_system_clause(self, key, alias, values):
         """
-        Returns SQL query predicate for querying crystal_system.
+        Return SQL query predicate for querying crystal_system.
         """
         valid_systems = {
         "cubic": "CU",
@@ -170,37 +167,37 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
 
     def _length_clause(self, key, alias, values):
         """
-        Returns SQL query predicate for querying lattice vector lengths.
+        Return SQL query predicate for querying lattice vector lengths.
         """
         return self.double_clause(key, alias, values, self.length_precision)
 
     def _density_clause(self, key, alias, values):
         """
-        Returns SQL query predicate for querying density.
+        Return SQL query predicate for querying density.
         """
         return self.double_clause(key, alias, values, self.density_precision)
 
     def _angle_clause(self, key, alias, values):
         """
-        Returns SQL query predicate for querying lattice angles.
+        Return SQL query predicate for querying lattice angles.
         """
         return self.double_clause(key, alias, values, self.angle_precision)
 
     def _volume_clause(self, key, alias, values):
         """
-        Returns SQL query predicate for querying unit cell volume.
+        Return SQL query predicate for querying unit cell volume.
         """
         return self.double_clause(key, alias, values, self.volume_precision)
 
     def _temperature_clause(self, key, alias, values):
         """
-        Returns SQL query predicate for querying temperature.
+        Return SQL query predicate for querying temperature.
         """
         return self.double_clause(key, alias, values, self.temperature_precision)
 
     def _pressure_clause(self, key, alias, values):
         """
-        Returns SQL query predicate for querying pressure.
+        Return SQL query predicate for querying pressure.
         """
         return self.double_clause(key, alias, values, self.pressure_precision)
 
@@ -235,7 +232,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
     # for the web query
     def _parse_all(k,v):
         """
-        Converts numbers, strings, lists into strings.
+        Convert numbers, strings, lists into strings.
         :param k: query parameter
         :param v: corresponding values
         :return retval: string
@@ -250,7 +247,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
 
     def _parse_number(k,v):
         """
-        Converts int into string.
+        Convert int into string.
         :param k: query parameter
         :param v: corresponding values
         :return retval: string
@@ -263,7 +260,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
 
     def _parse_mineral(k,v):
         """
-        Converts mineral_name and chemical_name into right format.
+        Convert mineral_name and chemical_name into right format.
         :param k: query parameter
         :param v: corresponding values
         :return retval: string
@@ -276,7 +273,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
 
     def _parse_volume(k,v):
         """
-        Converts volume, cell parameter and angle queries into right format.
+        Convert volume, cell parameter and angle queries into right format.
         :param k: query parameter
         :param v: corresponding values
         :return retval: string
@@ -298,7 +295,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
 
     def _parse_system(k,v):
         """
-        Returns crystal system in the right format.
+        Return crystal system in the right format.
         :param k: query parameter
         :param v: corresponding values
         :return retval: string
@@ -370,7 +367,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
 
     def _query_sql_db(self, **kwargs):
         """
-        Performs a query on Icsd mysql database using ``keyword = value`` pairs,
+        Perform a query on Icsd mysql database using ``keyword = value`` pairs,
         specified in ``kwargs``. Returns an instance of IcsdSearchResults.
         :param kwargs: A list of ``keyword = [values]`` pairs
         :return: IcsdSearchResults
@@ -397,7 +394,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
 
     def _queryweb(self, **kwargs):
         """
-        Performs a query on the Icsd web database using ``keyword = value`` pairs,
+        Perform a query on the Icsd web database using ``keyword = value`` pairs,
         specified in ``kwargs``. Returns an instance of IcsdSearchResults.
         :note: Web search has a maximum result number fixed at 1000.
         :param kwargs: A list of ``keyword = [values]`` pairs
@@ -433,9 +430,9 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
 
     def setup_db(self, **kwargs):
         """
-        Changes the database connection details.
+        Change the database connection details.
         At least the host server has to be defined.
-        
+
         :param kwargs: db_parameters for the mysql database connection
           (host, user, passwd, db, port)
         """
@@ -456,7 +453,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
 class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
     """
     Result manager for the query performed on ICSD.
-    
+
     :param query: mysql query or webpage query
     :param db_parameters: database parameter setup during the
       initialisation of the IcsdDbImporter.
@@ -483,7 +480,7 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
 
     def next(self):
         """
-        Returns next result as IcsdEntry.
+        Return next result as IcsdEntry.
         """
         if len( self.results ) > self.position and self.number_of_results > self.position:
             self.position = self.position + 1
@@ -494,7 +491,7 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
 
     def at(self, position):
         """
-        Returns ``position``-th result as IcsdEntry.
+        Return ``position``-th result as IcsdEntry.
         """
 
         if position < 0 or position >= self.number_of_results:
@@ -511,8 +508,8 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
 
     def query_page(self):
         """
-        Queries the mysql or web page database, depending on the db_parameters.
-        Stores the number_of_results, cif file number and the corresponding icsd number.
+        Query the mysql or web page database, depending on the db_parameters.
+        Store the number_of_results, cif file number and the corresponding icsd number.
 
         :note: Icsd uses its own number system, different from the CIF
           file numbers.
@@ -557,7 +554,7 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
 
     def _connect_db(self):
         """
-        Connects to the MySQL database for performing searches.
+        Connect to the MySQL database for performing searches.
         """
         import MySQLdb
         self.db = MySQLdb.connect( host =   self.db_parameters['host'],
@@ -570,19 +567,19 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
 
     def _disconnect_db(self):
         """
-        Closes connection to the MySQL database.
+        Close connection to the MySQL database.
         """
         self.db.close()
 
 
 class IcsdEntry(aiida.tools.dbimporters.baseclasses.DbEntry):
     """
-    Represents an entry from Icsd.
+    Represent an entry from Icsd.
     """
 
     def __init__(self, url, **kwargs):
         """
-        Creates an instance of IcsdEntry, related to the supplied URL.
+        Create an instance of IcsdEntry, related to the supplied URL.
         """
         super(IcsdEntry, self).__init__(**kwargs)
         self.source = {
@@ -615,7 +612,7 @@ class IcsdEntry(aiida.tools.dbimporters.baseclasses.DbEntry):
 
     def get_cif_node(self):
         """
-        Creates a CIF node, that can be used in AiiDA workflow.
+        Create a CIF node, that can be used in AiiDA workflow.
 
         :return: :py:class:`aiida.orm.data.cif.CifData` object
         """
@@ -628,8 +625,8 @@ class IcsdEntry(aiida.tools.dbimporters.baseclasses.DbEntry):
 
     def get_corrected_cif(self):
         """
-        Adds quotes to the lines in the author loop if missing.
-        
+        Add quotes to the lines in the author loop if missing.
+
         :note: ase raises an AssertionError if the quotes in the
           author loop are missing.
         """
@@ -658,11 +655,11 @@ class IcsdEntry(aiida.tools.dbimporters.baseclasses.DbEntry):
 
 def correct_cif(cif):
     """
-    This function corrects the format of the CIF files.
+    Correct the format of the CIF files.
     At the moment, it only fixes missing quotes in the authors field
     (``ase.read.io`` only works if the author names are quoted,
     if not an AssertionError is raised).
-    
+
     :param cif: A string containing the content of the CIF file.
     :return: a string containing the corrected CIF file.
     """

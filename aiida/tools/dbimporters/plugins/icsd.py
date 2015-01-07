@@ -15,6 +15,12 @@ class CifFileErrorExp(IcsdImporterExp):
     """
     pass
 
+class NoResultsWebExp(IcsdImporterExp):
+    """
+    Raised when a webpage query returns no results.
+    """
+    pass
+
 class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
     """
     Importer for the Inorganic Crystal Structure Database, short ICSD, provided by
@@ -500,8 +506,12 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
             self.page = self.page + 1
             self.query_page()
         if position not in self.entries:
-            self.entries[position] = IcsdEntry( self.db_parameters["server"]+ self.db_parameters["dl_db"] + self.cif_url.format(self.results[position]), \
-                          db_source = self.db_name, db_id = self.results[position], extras = {'cif_nr' : self.cif_numbers[position]} )
+            if self.db_parameters["querydb"]:
+                self.entries[position] = IcsdEntry( self.db_parameters["server"]+ self.db_parameters["dl_db"] + self.cif_url.format(self.results[position]), \
+                              db_source = self.db_name, db_id = self.results[position], extras = {'cif_nr' : self.cif_numbers[position]} )
+            else:
+                 self.entries[position] = IcsdEntry( self.db_parameters["server"]+ self.db_parameters["dl_db"] + self.cif_url.format(self.results[position]), \
+                              db_source = self.db_name, db_id = self.results[position] )
         return self.entries[position]
 
 
@@ -540,16 +550,18 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
             from bs4 import BeautifulSoup
             import re
 
-            self.html = urllib2.urlopen(self.db_parameters["server"] + self.query.format(str(self.page))).read()
+            self.html = urllib2.urlopen(self.db_parameters["server"] + self.db_parameters["db"] +"/"+ self.query.format(str(self.page))).read()
 
             self.soup = BeautifulSoup(self.html)
 
-            if self.number_of_results is None:
-                #is there a better way to get this number?
-                number_of_results = int(re.findall(r'\d+', str(self.soup.find_all("i")[-1]))[0])
+            try:
+
+                if self.number_of_results is None:
+                    self.number_of_results = int(re.findall(r'\d+', str(self.soup.find_all("i")[-1]))[0])
+            except IndexError:
+                raise NoResultsWebExp
 
             for i in self.soup.find_all('input', type="checkbox"):
-                #x = SearchResult(server, cif_url, i['id'])
                 self.results.append(i['id'])
 
     def _connect_db(self):

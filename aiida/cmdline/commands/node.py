@@ -293,7 +293,7 @@ class _Show(VerdiCommand):
             # no outputs and only the parent node as input)
             return
         print "{}##### INPUTS:".format(ind_next)
-        for k, v in node.get_inputdata_dict().iteritems():
+        for k, v in node.get_inputs(also_labels=True):
             id = v.pk
             if print_uuid:
                 id = "{} {}".format(v.pk,v.uuid)

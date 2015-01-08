@@ -287,7 +287,8 @@ class _Show(VerdiCommand):
             if node.computer is not None:
                 print "computer: {} {}".format(node.computer.pk,
                                                node.computer.name)
-        if len(node.get_inputs()) == 1 and not node.get_outputs():
+        if level != 0 and len(node.get_inputs()) == 1 and \
+            not node.get_outputs():
             # Not printing INPUTS and OUTPUTS for dead-end nodes (having
             # no outputs and only the parent node as input)
             return

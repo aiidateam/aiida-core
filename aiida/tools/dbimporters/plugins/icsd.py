@@ -488,7 +488,7 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
         """
         Return next result as IcsdEntry.
         """
-        if len( self.results ) > self.position and self.number_of_results > self.position:
+        if self.number_of_results > self.position:
             self.position = self.position + 1
             return self.at( self.position - 1 )
         else:
@@ -502,9 +502,10 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
 
         if position < 0 or position >= self.number_of_results:
             raise IndexError( "index out of bounds" )
-        while position >= len(self.results):
+        while position + 1 >= len(self.results):
             self.page = self.page + 1
             self.query_page()
+
         if position not in self.entries:
             if self.db_parameters["querydb"]:
                 self.entries[position] = IcsdEntry( self.db_parameters["server"]+ self.db_parameters["dl_db"] + self.cif_url.format(self.results[position]), \
@@ -527,7 +528,7 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
         if self.db_parameters["querydb"]:
 
             self._connect_db()
-            query_statement = self.sql_select_query+ self.sql_from_query + self.query + " LIMIT " + str((self.page-1)*100) + ", " + str(self.page*100)
+            query_statement = self.sql_select_query+ self.sql_from_query + self.query + " LIMIT " + str((self.page-1)*100) + ", 100"
 
             self.cursor.execute( query_statement )
             self.db.commit()

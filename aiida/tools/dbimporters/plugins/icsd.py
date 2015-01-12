@@ -502,7 +502,7 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
 
         if position < 0 or position >= self.number_of_results:
             raise IndexError( "index out of bounds" )
-        while position + 1 >= len(self.results):
+        while position + 1 >= len(self.results) and len(self.results) < self.number_of_results:
             self.page = self.page + 1
             self.query_page()
 

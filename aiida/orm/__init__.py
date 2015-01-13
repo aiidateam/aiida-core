@@ -36,3 +36,33 @@ def DataFactory(module):
     
     return BaseFactory(module, Data, "aiida.orm.data")
 
+
+def load_node(node_id=None,pk=None,uuid=None):
+    """
+    Return an AiiDA node given PK or UUID.
+
+    :param node_id: PK (integer) or UUID (string) or a node
+    :param pk: PK of a node
+    :param uuid: UUID of a node
+    :return: an AiiDA node
+    :raises: ValueError if none or more than one of parameters is supplied
+        or type of node_id is neither string nor integer
+    """
+    if int(node_id is None) + int(pk is None) + int(uuid is None) == 3:
+        raise ValueError("one of the parameters 'node_id', 'pk' and 'uuid' "
+                         "has to be supplied")
+    if int(node_id is None) + int(pk is None) + int(uuid is None) < 2:
+        raise ValueError("only one of parameters 'node_id', 'pk' and 'uuid' "
+                         "has to be supplied")
+    if node_id is not None:
+        if isinstance(node_id,str) or isinstance(node_id,unicode):
+            return Node.get_subclass_from_uuid(node_id)
+        elif isinstance(node_id,int):
+            return Node.get_subclass_from_pk(node_id)
+        else:
+            raise ValueError("'node_id' has to be either string, unicode or "
+                             "integer, {} given".format(type(node_id)))
+    if pk is not None:
+        return Node.get_subclass_from_pk(pk)
+    else:
+        return Node.get_subclass_from_uuid(uuid)

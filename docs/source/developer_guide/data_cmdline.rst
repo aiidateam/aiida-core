@@ -6,6 +6,10 @@ manipulating them. One of the means of use and integration of AiiDA with
 the variety of free and open-source software is the command line. In this
 chapter the ways to extend the AiiDA command line interface are described.
 
+To make a class/function loaded automatically while issuing ``verdi shell``,
+one has to register it in ``default_modules_list`` in
+``aiida.djsite.db.management.commands.customshell.py``.
+
 Adding a ``verdi`` command
 ++++++++++++++++++++++++++
 

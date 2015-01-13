@@ -184,7 +184,7 @@ class Visualizable(object):
             else:
                 default_format = None
 
-        parser.add_argument('--format', type=str, default=default_format,
+        parser.add_argument('--format', '-f', type=str, default=default_format,
                             help="Type of the visualization format/tool.",
                             choices=self.get_show_plugins().keys())
 

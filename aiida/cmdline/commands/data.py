@@ -369,11 +369,22 @@ class Importable(object):
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
             description='Import data object.')
-        parser.add_argument('format', type=str, default=None,
-                    help="Format of the imported file.")
-        parser.add_argument('-f', '--file', type=str, default=None,
-                            dest='file',
-                            help="Path of the imported file")
+        parser.add_argument('--file', type=str, default=None,
+                            help="Path of the imported file. Reads from "
+                                 "standard input if not specified.")
+
+        default_format = None
+        try:
+            default_format = self._default_import_format
+        except AttributeError:
+            if len(self.get_import_plugins().keys()) == 1:
+                default_format = self.get_import_plugins().keys()[0]
+            else:
+                default_format = None
+
+        parser.add_argument('--format', '-f', type=str, default=default_format,
+                            help="Type of the imported file.",
+                            choices=self.get_import_plugins().keys())
 
         # Augmenting the command line parameters with ones, that are used by
         # individual plugins
@@ -388,6 +399,13 @@ class Importable(object):
 
         format = parsed_args.pop('format')
         filename = parsed_args.pop('file')
+
+        if format is None:
+            print "Default format is not defined, please specify.\n" + \
+                  "Valid formats are:"
+            for i in self.get_import_plugins().keys():
+                print "  {}".format(i)
+            sys.exit(0)
 
         if not filename:
             filename = "/dev/stdin"
@@ -420,7 +438,7 @@ class _Upf(VerdiCommandWithSubcommands,Importable):
         self.valid_subcommands = {
             'uploadfamily': (self.uploadfamily, self.complete_auto),
             'listfamilies': (self.listfamilies, self.complete_none),
-            'import': (self.importfile, self.complete_importers),
+            'import': (self.importfile, self.complete_none),
             }
     
     def uploadfamily(self, *args):
@@ -1008,7 +1026,7 @@ class _Cif(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable,Importab
             'show': (self.show, self.complete_none),
             'list': (self.list, self.complete_none),
             'export': (self.export, self.complete_none),
-            'import': (self.importfile, self.complete_importers),
+            'import': (self.importfile, self.complete_none),
             }
 
     def _show_jmol(self,exec_name,structure_list):

@@ -144,14 +144,6 @@ class Visualizable(object):
     show_prefix = '_show_'
     show_parameters_postfix = '_parameters'
 
-    def complete_visualizers(self, subargs_idx, subargs):
-        """
-        Get a display-ready string, containing names of all possible
-        visualizers.
-        """
-        plugin_names = self.get_show_plugins().keys()
-        return "\n".join(plugin_names)
-
     def get_show_plugins(self):
         """
         Get the list of all implemented plugins for visualizing the structure.
@@ -249,14 +241,6 @@ class Exportable(object):
     export_prefix = '_export_'
     export_parameters_postfix = '_parameters'
 
-    def complete_exporters(self, subargs_idx, subargs):
-        """
-        Get a display-ready string, containing names of all possible
-        exporters.
-        """
-        plugin_names = self.get_export_plugins().keys()
-        return "\n".join(plugin_names)
-
     def get_export_plugins(self):
         """
         Get the list of all implemented exporters for data class.
@@ -344,14 +328,6 @@ class Importable(object):
     """
     import_prefix = '_import_'
     import_parameters_postfix = '_parameters'
-
-    def complete_importers(self, subargs_idx, subargs):
-        """
-        Get a display-ready string, containing names of all possible
-        importers.
-        """
-        plugin_names = self.get_import_plugins().keys()
-        return "\n".join(plugin_names)
 
     def get_import_plugins(self):
         """

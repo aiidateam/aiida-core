@@ -537,7 +537,7 @@ class _Bands(VerdiCommandWithSubcommands,Listable,Visualizable):
         from aiida.orm.data.array.bands import BandsData
         self.dataclass = BandsData
         self.valid_subcommands = {
-            'show': (self.show, self.complete_visualizers),
+            'show': (self.show, self.complete_none),
             'list': (self.list, self.complete_none),
             }
 
@@ -757,7 +757,7 @@ class _Structure(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
         from aiida.orm.data.structure import StructureData
         self.dataclass = StructureData
         self.valid_subcommands = {
-            'show': (self.show, self.complete_visualizers),
+            'show': (self.show, self.complete_none),
             'list': (self.list, self.complete_none),
             'export': (self.export, self.complete_exporters),
             }
@@ -987,7 +987,7 @@ class _Cif(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable,Importab
         from aiida.orm.data.cif import CifData
         self.dataclass = CifData
         self.valid_subcommands = {
-            'show': (self.show, self.complete_visualizers),
+            'show': (self.show, self.complete_none),
             'list': (self.list, self.complete_none),
             'export': (self.export, self.complete_exporters),
             'import': (self.importfile, self.complete_importers),
@@ -1097,7 +1097,7 @@ class _Trajectory(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
         from aiida.orm.data.array.trajectory import TrajectoryData
         self.dataclass = TrajectoryData
         self.valid_subcommands = {
-            'show': (self.show, self.complete_visualizers),
+            'show': (self.show, self.complete_none),
             'list': (self.list, self.complete_none),
             'export': (self.export, self.complete_exporters),
             }
@@ -1164,7 +1164,7 @@ class _Parameter(VerdiCommandWithSubcommands,Visualizable):
         self.dataclass = ParameterData
         self._default_show_format = 'json_date'
         self.valid_subcommands = {
-            'show': (self.show, self.complete_visualizers),
+            'show': (self.show, self.complete_none),
             }
 
     def _show_json_date(self,exec_name,node_list):

@@ -277,10 +277,21 @@ class Exportable(object):
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
             description='Export data object.')
-        parser.add_argument('format', type=str, default=None,
-                    help="Format of the exported file.")
         parser.add_argument('data_id', type=int, default=None,
                             help="ID of the data object to be visualized.")
+
+        default_format = None
+        try:
+            default_format = self._default_export_format
+        except AttributeError:
+            if len(self.get_export_plugins().keys()) == 1:
+                default_format = self.get_export_plugins().keys()[0]
+            else:
+                default_format = None
+
+        parser.add_argument('--format', '-f', type=str, default=default_format,
+                            help="Type of the exported file.",
+                            choices=self.get_export_plugins().keys())
 
         # Augmenting the command line parameters with ones, that are used by
         # individual plugins
@@ -295,6 +306,13 @@ class Exportable(object):
 
         format = parsed_args.pop('format')
         data_id = parsed_args.pop('data_id')
+
+        if format is None:
+            print "Default format is not defined, please specify.\n" + \
+                  "Valid formats are:"
+            for i in self.get_export_plugins().keys():
+                print "  {}".format(i)
+            sys.exit(0)
 
         try:
             func = self.get_export_plugins()[format]
@@ -759,7 +777,7 @@ class _Structure(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
         self.valid_subcommands = {
             'show': (self.show, self.complete_none),
             'list': (self.list, self.complete_none),
-            'export': (self.export, self.complete_exporters),
+            'export': (self.export, self.complete_none),
             }
         
     def query(self,args):
@@ -989,7 +1007,7 @@ class _Cif(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable,Importab
         self.valid_subcommands = {
             'show': (self.show, self.complete_none),
             'list': (self.list, self.complete_none),
-            'export': (self.export, self.complete_exporters),
+            'export': (self.export, self.complete_none),
             'import': (self.importfile, self.complete_importers),
             }
 
@@ -1099,7 +1117,7 @@ class _Trajectory(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
         self.valid_subcommands = {
             'show': (self.show, self.complete_none),
             'list': (self.list, self.complete_none),
-            'export': (self.export, self.complete_exporters),
+            'export': (self.export, self.complete_none),
             }
 
     def _show_jmol(self,exec_name,trajectory_list,**kwargs):

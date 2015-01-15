@@ -8,7 +8,7 @@ __version__ = "0.3.0"
 import sys
 import os
 
-from common_test_functions import test_and_get_code
+from aiida.common.example_helpers import test_and_get_code
 
 ################################################################
 

@@ -10,7 +10,7 @@ import os
 
 from aiida.common.exceptions import NotExistent
 
-from common_test_functions import test_and_get_code
+from aiida.common.example_helpers import test_and_get_code
 
 ################################################################
 # Test for cif_filter script from cod-tools package.

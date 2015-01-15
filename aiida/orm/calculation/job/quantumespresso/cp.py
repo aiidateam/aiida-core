@@ -49,9 +49,9 @@ class CpCalculation(BasePwCpInputGenerator, JobCalculation):
                                                  _cp_write_unit_number), 
                              self._FILE_XML_PRINT_COUNTER_BASENAME)
     
-        # Default PW output parser provided by AiiDA
+        # Default output parser provided by AiiDA
         self._default_parser = 'quantumespresso.cp'
-        
+                
         self._automatic_namelists = {
             'scf':   ['CONTROL', 'SYSTEM', 'ELECTRONS'],
             'nscf':  ['CONTROL', 'SYSTEM', 'ELECTRONS'],
@@ -106,6 +106,11 @@ class CpCalculation(BasePwCpInputGenerator, JobCalculation):
     @classproperty
     def _FILE_XML_PRINT_COUNTER_BASENAME(cls):
         return 'print_counter.xml'
+
+    @classproperty
+    def _default_verbosity(cls):
+        return 'low'
+
 
     @classproperty
     def _use_methods(cls):

@@ -48,6 +48,9 @@ class BasePwCpInputGenerator(object):
     
     # in restarts, it will copy the previous folder in the following one 
     _restart_copy_to = _OUTPUT_SUBFOLDER
+
+    # Default verbosity; change in subclasses
+    _default_verbosity = 'high'
     
     # To be specified in the subclass:
 #    _automatic_namelists = {
@@ -250,7 +253,7 @@ class BasePwCpInputGenerator(object):
         input_params['CONTROL']['prefix'] = self._PREFIX
 
         input_params['CONTROL']['verbosity'] = input_params['CONTROL'].get(
-            'verbosity', 'high') # Set to high if not specified
+            'verbosity', self._default_verbosity) # Set to high if not specified
 
         # ============ I prepare the input site data =============
         # ------------ CELL_PARAMETERS -----------
@@ -702,12 +705,12 @@ class BasePwCpInputGenerator(object):
         
         c2 = self.copy()
         
-        if not 'Restart' in c2.label:
-            labelstring = c2.label + " Restart of {} {}.".format(
-                                        self.__class__.__name__,self.pk)
-        else:
-            labelstring = " Restart of {} {}.".format(self.__class__.__name__,self.pk)
-        c2.label = labelstring.lstrip()
+        #if not 'Restart' in c2.label:
+        #    labelstring = c2.label + " Restart of {} {}.".format(
+        #                                self.__class__.__name__,self.pk)
+        #else:
+        #    labelstring = " Restart of {} {}.".format(self.__class__.__name__,self.pk)
+        #c2.label = labelstring.lstrip()
         
         # set the new links
         c2.use_parameters(inp_dict)

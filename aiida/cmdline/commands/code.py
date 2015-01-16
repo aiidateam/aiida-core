@@ -835,20 +835,25 @@ class Code(VerdiCommandWithSubcommands):
                                       "code from local to remote.\n"
                                       "Modification cancelled.")
                 sys.exit(1)
-            print "WARNING: => computer, and"
-            print "         => remote absolute path,"
-            print "         will be ignored! It is not possible to replace them"
+            print "WARNING: => computer"
+            print "         will be ignored! It is not possible to replace it"
             print "         you have to create a new code for that."
-
-#            print set_params.computer
-#            code.computer = set_params.computer
-#            code.set_remote_computer_exec( (set_params.computer,set_params.remote_abs_path ) )
         
         code.label = set_params.label
         code.description = set_params.description
         code.set_input_plugin_name(set_params.input_plugin)
         code.set_prepend_text(set_params.prepend_text)    
         code.set_append_text(set_params.append_text)    
+        
+        if not was_local_before:
+            if set_params.remote_abs_path != code.get_remote_exec_path():
+                print "Are you sure about changing the path of the code?"
+                print "This operation may imply loss of provenance."
+                print "[Enter] to continue, [Ctrl + C] to exit" 
+                raw_input()
+                
+                from aiida.djsite.db.models import DbAttribute
+                DbAttribute.set_value_for_node(code.dbnode,'remote_exec_path',set_params.remote_abs_path)
         
         # store comment, to track history
         code.add_comment(comment,user=get_automatic_user())

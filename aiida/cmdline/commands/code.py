@@ -530,7 +530,7 @@ class Code(VerdiCommandWithSubcommands):
             'list': (self.code_list, self.complete_none),
             'show' : (self.code_show, self.complete_code_names_and_pks),
             'setup': (self.code_setup, self.complete_code_pks),
-            'relabel': (self.code_relabel, self.complete_code_pks),
+            'rename': (self.code_rename, self.complete_none),
             'update': (self.code_update, self.complete_code_pks),
             'delete': (self.code_delete, self.complete_code_pks),
             'hide': (self.code_hide, self.complete_code_pks),
@@ -734,30 +734,38 @@ class Code(VerdiCommandWithSubcommands):
         print "Code '{}' successfully stored in DB.".format(code.label)
         print "pk={}, uuid={}".format(code.pk, code.uuid)
       
-    def code_relabel(self, *args):
-        if len(args) != 1:
-            print >> sys.stderr, ("after 'code relabel' there should be one "
-                                  "argument only, being the code id.")
-            sys.exit(1)
-
-        code = self.get_code(args[0])
+    def code_rename(self, *args):
+        import argparse
+        from aiida.orm.code import Code
+        from aiida.common.exceptions import NotExistent
         
-        set_params = CodeInputValidationClass()
-        set_params.label = code.label
-        set_params.description = code.description
+        load_dbenv()
         
-        cmdline_fill(set_params._conf_attributes_relabel,
-                      store = set_params)
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Rename a code (change its label).')
+        # The default states are those that are shown if no option is given
+        parser.add_argument('old_name', help="The old name of the code")
+        parser.add_argument('new_name', help="The new name of the code")
         
-        code.label = set_params.label
-        code.description = set_params.description
-
+        parsed_args = parser.parse_args(args)
+        
+        new_name = parsed_args.new_name
+        old_name = parsed_args.old_name
+        
+        try:
+            code = Code.get(old_name)
+        except NotExistent:
+            print "A code with name {} could not be found".format(old_name)
+        
+        code.label = new_name
+        
     def code_update(self, *args):
         import os,datetime
         from aiida.djsite.utils import get_automatic_user
         from aiida.common.exceptions import ModificationNotAllowed
         if len(args) != 1:
-            print >> sys.stderr, ("after 'code relabel' there should be one "
+            print >> sys.stderr, ("after 'code update' there should be one "
                                   "argument only, being the code id.")
             sys.exit(1)
 

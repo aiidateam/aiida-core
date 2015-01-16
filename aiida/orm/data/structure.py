@@ -1022,11 +1022,21 @@ class StructureData(Data):
         
         :raise: ValueError if the kind_name is not present.
         """
-        kinds = self.kinds
-        kind_names = [k.name for k in kinds]
+        # Cache the kinds, if stored, for efficiency
+        if not self._to_be_stored:
+            try:
+                kinds_dict = self._kinds_cache
+            except AttributeError:
+                self._kinds_cache = {_.name: _ for _ in self.kinds}
+                kinds_dict = self._kinds_cache
+        else:
+            kinds_dict = {_.name: _ for _ in self.kinds}
         
         # Will raise ValueError if the kind is not present
-        return kinds[kind_names.index(kind_name)]
+        try:
+            return kinds_dict[kind_name]
+        except KeyError:
+            raise ValueError("Kind name '{}' unknown".format(kind_name))
             
     def get_kind_names(self):
         """

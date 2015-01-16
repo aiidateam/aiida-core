@@ -754,11 +754,26 @@ class Code(VerdiCommandWithSubcommands):
         old_name = parsed_args.old_name
         
         try:
-            code = Code.get(old_name)
+            code = Code.get_from_string(old_name)
         except NotExistent:
-            print "A code with name {} could not be found".format(old_name)
-        
+            print "ERROR! A code with name {} could not be found".format(old_name)
+            sys.exit(1)
+
+        suffix = '@{}'.format(code.computer.name)
+        if new_name.endswith(suffix):
+            new_name = new_name[:-len(suffix)]
+
+        if '@'in new_name:
+            print >> sys.stderr, "ERROR! Do not put '@' symbols in the code name"
+            sys.exit(1)
+
+        retrieved_old_name = '{}@{}'.format(code.label, code.computer.name)
+        # CHANGE HERE
         code.label = new_name
+        retrieved_new_name = '{}@{}'.format(code.label, code.computer.name)
+
+        print "Renamed code with ID={} from '{}' to '{}'".format(
+            code.pk, retrieved_old_name, retrieved_new_name)
         
     def code_update(self, *args):
         import os,datetime

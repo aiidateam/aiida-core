@@ -289,7 +289,7 @@ class JobCalculation(Calculation):
         """
         return self.get_attr('max_wallclock_seconds', None)
         
-    def set_resources(self, resources_dict):
+    def s(self, resources_dict):
         """
         Set the dictionary of resources to be used by the scheduler plugin,
         like the number of nodes, cpus, ...
@@ -1168,7 +1168,7 @@ class JobCalculation(Calculation):
         else:
             return None
 
-    def set_linkname_retrieved(self,linkname):
+    def _set_linkname_retrieved(self,linkname):
         """
         Set the linkname of the retrieved data folder object.
         

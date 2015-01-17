@@ -427,6 +427,8 @@ class Run(VerdiCommand):
                 # Must add also argv[0]
                 new_argv = [parsed_args.scriptname] + parsed_args.new_args
                 with update_environment(new_argv=new_argv):
+                    # Add local folder to sys.path
+                    sys.path.insert(0, os.path.abspath(os.curdir))
                     # Pass only globals_dict
                     exec(f,globals_dict)
                 # print sys.argv

@@ -71,7 +71,7 @@ class JobCalculation(Calculation):
         
         parent_dict.update({
             "parser_name": self._default_parser,
-            "linkname_retrieved": self._linkname_retrieved})
+            "_linkname_retrieved": self._linkname_retrieved})
 
         return parent_dict 
   

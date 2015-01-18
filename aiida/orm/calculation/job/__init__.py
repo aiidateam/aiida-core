@@ -289,7 +289,7 @@ class JobCalculation(Calculation):
         """
         return self.get_attr('max_wallclock_seconds', None)
         
-    def s(self, resources_dict):
+    def set_resources(self, resources_dict):
         """
         Set the dictionary of resources to be used by the scheduler plugin,
         like the number of nodes, cpus, ...

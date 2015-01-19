@@ -68,7 +68,7 @@ if isinstance(parentcalc,QEPwCalc):
     if ( (parentcalc.get_state()=='FAILED') and
         ('Maximum CPU time exceeded' in parentcalc.res.warnings) ):
     
-        calc = parentcalc.create_restart(restart_if_failed=True)
+        calc = parentcalc.create_restart(force_restart=True)
         #calc.label = "Test QE pw.x restart"
         calc.description = "Test restart calculation with the Quantum ESPRESSO pw.x code"
     

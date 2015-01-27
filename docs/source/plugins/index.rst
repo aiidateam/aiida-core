@@ -12,3 +12,5 @@ Available plugins
  
    quantumespresso/index
    codtools/index
+   ase/index
+   

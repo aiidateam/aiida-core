@@ -89,7 +89,7 @@ executable that is run using AiiDA. A simple example could be::
   import sys
 
   pk = int(sys.argv[1])
-  node = Node.get_subclass_from_pk(pk)
+  node = load_node(pk)
   print "Node {} is: {}".format(pk, repr(node))
 
   import aiida

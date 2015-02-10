@@ -1247,8 +1247,8 @@ class JobCalculation(Calculation):
             return
         
         if old_state != calc_states.WITHSCHEDULER:
-            raise InvalidOperation("Cannot kill a calculation not in {} state"
-                                   .format(calc_states.WITHSCHEDULER) )
+            raise InvalidOperation("Cannot kill a calculation in {} state"
+                                   .format(old_state) )
         
         # I get the scheduler plugin class and initialize it with the correct
         # transport

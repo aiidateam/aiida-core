@@ -239,10 +239,10 @@ single workflow.
   
   .. code-block:: python
   
-    + Workflow WorkflowDemo (pk=1) is RUNNING [0h:05m:04s]
+    + Workflow WorkflowDemo (pk: 1) is RUNNING [0h:05m:04s]
     |-* Step: start [->second_step] is RUNNING
-    | | Calculation (pk=1) is FINISHED
-    | | Calculation (pk=2) is FINISHED
+    | | Calculation (pk: 1) is FINISHED
+    | | Calculation (pk: 2) is FINISHED
   
   As you can see for each workflow is reported the ``pk`` number, a unique number identifying that specific execution of the workflow, something
   necessary to retrieve it in any other time in the future (as explained in the next point). The list method can also be invoked from the verdi

@@ -22,7 +22,9 @@ def _load_dbenv_noschemacheck():
     migrations. DO NOT USE OTHERWISE!
     """
     import os
+    import django
     os.environ['DJANGO_SETTINGS_MODULE'] = 'aiida.djsite.settings.settings'
+    django.setup()
     
 
 class DBLogHandler(logging.Handler):

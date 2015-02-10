@@ -9,7 +9,7 @@ Finding input and output nodes
 
 Let's start with a reference node that you loaded from the database, for example the node with PK 17::
 
-  n = Node.get_subclass_from_pk(17)
+  n = load_node(17)
 
 Now, we want to find the nodes which have a direct link to this node.
 There are several methods to extract this information (for developers see all 

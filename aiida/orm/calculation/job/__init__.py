@@ -559,7 +559,7 @@ class JobCalculation(Calculation):
             with transaction.commit_on_success():
                 new_state = DbCalcState(dbnode=self.dbnode, state=state).save()
         except IntegrityError:
-            raise ModificationNotAllowed("Calculation pk={} already transited through "
+            raise ModificationNotAllowed("Calculation pk= {} already transited through "
                                          "the state {}".format(self.pk, state))
 
         # For non-imported states, also set in the attribute (so that, if we
@@ -1207,14 +1207,14 @@ class JobCalculation(Calculation):
                     retrieved_node = node
                 else:
                     raise MultipleObjectsError("More than one output node "
-                        "with label '{}' for calc with pk={}".format(
+                        "with label '{}' for calc with pk= {}".format(
                             retrieved_linkname, self.pk))
         
         if retrieved_node is None:
             return None
         
         if not isinstance(retrieved_node, FolderData):
-            raise TypeError("The retrieved node of calc with pk={} is not of "
+            raise TypeError("The retrieved node of calc with pk= {} is not of "
                             "type FolderData".format(self.pk))
         
         return retrieved_node

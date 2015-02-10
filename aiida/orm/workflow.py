@@ -145,9 +145,9 @@ class Workflow(object):
                 
     def __str__(self):
         if self._to_be_stored:
-            return "uuid={} (unstored)".format(self.uuid)
+            return "uuid: {} (unstored)".format(self.uuid)
         else:
-            return "uuid={} (pk={})".format(self.uuid, self.pk)
+            return "uuid: {} (pk: {})".format(self.uuid, self.pk)
     
     ## --------------------------------------
     ##    DB Instance
@@ -388,9 +388,9 @@ class Workflow(object):
         """
         if not self._to_be_stored:
             self.logger.error("Trying to store an already saved workflow: "
-                              "pk={}".format(self.pk))
+                              "pk= {}".format(self.pk))
             raise ModificationNotAllowed(
-                "Workflow with pk={} was already stored".format(self.pk))
+                "Workflow with pk= {} was already stored".format(self.pk))
         
         self._dbworkflowinstance.save()
         
@@ -1043,7 +1043,7 @@ class Workflow(object):
             return cls.get_subclass_from_dbnode(dbworkflowinstance)
                   
         except ObjectDoesNotExist:
-            raise NotExistent("No entry with pk={} found".format(pk))
+            raise NotExistent("No entry with pk= {} found".format(pk))
                            
     @classmethod      
     def get_subclass_from_uuid(cls,uuid):
@@ -1114,7 +1114,7 @@ def kill_from_pk(pk):
     try:    
         Workflow.query(pk=pk)[0].kill()
     except IndexError:
-        raise NotExistent("No workflow with pk={} found.".format(pk))
+        raise NotExistent("No workflow with pk= {} found.".format(pk))
     
 def kill_from_uuid(uuid):
     """
@@ -1179,7 +1179,7 @@ def get_workflow_info(w, tab_size = 2, short = False, pre_string = ""):
         wf_labelstring = ""
     
     lines.append(pre_string) # put an empty line before any workflow
-    lines.append(pre_string + "+ Workflow {} ({}pk={}) is {} [{}]".format(
+    lines.append(pre_string + "+ Workflow {} ({}pk: {}) is {} [{}]".format(
                w.module_class, wf_labelstring, w.pk, w.state, str_timedelta(
                     now-w.ctime, negative_to_zero = True)))
 
@@ -1227,7 +1227,7 @@ def get_workflow_info(w, tab_size = 2, short = False, pre_string = ""):
                 else:
                     remote_state = ""
                 lines.append(pre_string + "|" + " "*(tab_size-1) +
-                             "| Calculation ({}pk={}) is {}{}".format(
+                             "| Calculation ({}pk: {}) is {}{}".format(
                                  labelstring, pk, calc_state, remote_state))
         ## SubWorkflows
         wflows = s.get_sub_workflows()     

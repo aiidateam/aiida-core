@@ -89,7 +89,7 @@ class Workflow(VerdiCommandWithSubcommands):
             print >> sys.stderr, "No workflow with PK={} found.".format(pk)
             sys.exit(1)
         
-        print "### WORKFLOW pk={} ###".format(pk)
+        print "### WORKFLOW pk: {} ###".format(pk)
         print "\n".join(w.get_report())
 
     

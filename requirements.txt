@@ -9,7 +9,7 @@
 # sudo pip install --upgrade setuptools
 
 # Django
-django>=1.5.5,<=1.5.8
+django==1.7.4
 
 ## For data/schema migrations
 ## Disabled for the time being.
@@ -22,10 +22,10 @@ django_extensions>=0.9
 pytz >= 2013b
 
 # For the daemon
-celery>=3.0
-django-celery >= 3.0
+celery==3.1.17
+django-celery == 3.1.16
 supervisor==3.0b1
-kombu==3.0.20
+kombu==3.0.24
 billiard
 amqp >= 1.4
 anyjson >= 0.3

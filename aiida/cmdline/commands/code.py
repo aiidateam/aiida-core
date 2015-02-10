@@ -732,7 +732,7 @@ class Code(VerdiCommandWithSubcommands):
             sys.exit(1)
                 
         print "Code '{}' successfully stored in DB.".format(code.label)
-        print "pk={}, uuid={}".format(code.pk, code.uuid)
+        print "pk: {}, uuid: {}".format(code.pk, code.uuid)
       
     def code_rename(self, *args):
         import argparse

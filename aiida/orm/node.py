@@ -138,9 +138,9 @@ class Node(object):
         try:
             node = DbNode.objects.get(pk=pk).get_aiida_class()
         except ObjectDoesNotExist:
-            raise NotExistent("No entry with pk={} found".format(pk))
+            raise NotExistent("No entry with pk= {} found".format(pk))
         if not isinstance(node, cls):
-            raise NotExistent("pk={} is not an instance of {}".format(
+            raise NotExistent("pk= {} is not an instance of {}".format(
                 pk,cls.__name__))        
         return node
     
@@ -257,9 +257,9 @@ class Node(object):
     
     def __str__(self):
         if self._to_be_stored:
-            return "uuid={} (unstored)".format(self.uuid)
+            return "uuid: {} (unstored)".format(self.uuid)
         else:
-            return "uuid={} (pk={})".format(self.uuid, self.pk)
+            return "uuid: {} (pk: {})".format(self.uuid, self.pk)
 
     def _init_internal_params(self):
         """
@@ -815,7 +815,7 @@ class Node(object):
                 if k in input_list_keys:
                     raise InternalError("There exist a link with the same name "
                         "'{}' both in the DB and in the internal "
-                        "cache for node pk={}!".format(k, self.pk))
+                        "cache for node pk= {}!".format(k, self.pk))
                 inputs_list.append((k, v))
         
         if type is None:
@@ -1443,7 +1443,7 @@ class Node(object):
 
         if not self._to_be_stored:
             raise ModificationNotAllowed(
-                "Node with pk={} was already stored".format(self.pk))
+                "Node with pk= {} was already stored".format(self.pk))
 
         # For each parent, check that all its inputs are stored
         for link in self._inputlinks_cache:
@@ -1529,7 +1529,7 @@ class Node(object):
             
         if self._to_be_stored:
             raise ModificationNotAllowed(
-                "Node with pk={} is not stored yet".format(self.pk))
+                "Node with pk= {} is not stored yet".format(self.pk))
 
         with context_man:  
             # This raises if there is an unstored node.
@@ -1630,7 +1630,7 @@ class Node(object):
             
         else:
             raise ModificationNotAllowed(
-                "Node with pk={} was already stored".format(self.pk))
+                "Node with pk= {} was already stored".format(self.pk))
         
         # Set up autogrouping used be verdi run
         autogroup = aiida.orm.autogroup.current_autogroup

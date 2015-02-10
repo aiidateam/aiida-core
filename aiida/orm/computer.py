@@ -972,8 +972,8 @@ class Computer(object):
     
     def __str__(self):
         if self.is_enabled():
-            return "{} ({}), pk={}".format(self.name, self.hostname,
+            return "{} ({}), pk: {}".format(self.name, self.hostname,
                                            self.pk)
         else:
-            return "{} ({}) [DISABLED], pk={}".format(self.name, self.hostname,
+            return "{} ({}) [DISABLED], pk: {}".format(self.name, self.hostname,
                                                       self.pk)

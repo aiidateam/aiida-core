@@ -75,7 +75,7 @@ class Code(Node):
             else:
                 computer_str = "[unknown]"
         
-        return "{} code '{}' on {}, pk={}, uuid={}".format(local_str, self.label,
+        return "{} code '{}' on {}, pk: {}, uuid: {}".format(local_str, self.label,
                                            computer_str, self.pk, self.uuid)
 
     @classmethod

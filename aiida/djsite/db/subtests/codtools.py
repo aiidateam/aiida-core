@@ -11,6 +11,7 @@ from aiida.orm import CalculationFactory
 from aiida.orm import DataFactory
 from aiida.parsers.plugins.codtools.ciffilter import CiffilterParser
 import aiida
+from django.utils import unittest
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
@@ -18,6 +19,9 @@ __version__ = "0.3.0"
 
 class TestCodtools(AiidaTestCase):
 
+    from aiida.orm.data.cif import has_pycifrw
+
+    @unittest.skipIf(not has_pycifrw(),"Unable to import PyCifRW")
     def test_1(self):
         from aiida.common.exceptions import InputValidationError
         from aiida.common.datastructures import calc_states
@@ -102,6 +106,7 @@ class TestCodtools(AiidaTestCase):
         self.assertEquals(nodes[1][0], 'messages')
         self.assertEquals(len(nodes[1][1].get_dict()['output_messages']), 0)
 
+    @unittest.skipIf(not has_pycifrw(),"Unable to import PyCifRW")
     def test_2(self):
         from aiida.common.exceptions import InputValidationError
         from aiida.common.datastructures import calc_states
@@ -158,6 +163,7 @@ class TestCodtools(AiidaTestCase):
         self.assertEquals(nodes[1][0], 'messages')
         self.assertEquals(isinstance(nodes[1][1], ParameterData), True)
 
+    @unittest.skipIf(not has_pycifrw(),"Unable to import PyCifRW")
     def test_3(self):
         from aiida.parsers.plugins.codtools.cifcodcheck import CifcodcheckParser
         from aiida.common.exceptions import InputValidationError
@@ -215,6 +221,7 @@ class TestCodtools(AiidaTestCase):
         self.assertEquals(nodes[0][1].get_dict()['output_messages'],
                           stdout_messages + stderr_messages)
 
+    @unittest.skipIf(not has_pycifrw(),"Unable to import PyCifRW")
     def test_4(self):
         from aiida.parsers.plugins.codtools.cifcellcontents import CifcellcontentsParser
 
@@ -259,6 +266,7 @@ class TestCodtools(AiidaTestCase):
                                 '4000009': 'C4 H18 Mn N4 O12 V4',
                                 '4000008': 'C2 H10 F Mn N2 O9 V3'}})
 
+    @unittest.skipIf(not has_pycifrw(),"Unable to import PyCifRW")
     def test_cmdline_generation(self):
         from aiida.orm.calculation.job.codtools import commandline_params_from_dict
 

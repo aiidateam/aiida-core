@@ -102,6 +102,7 @@ class DbUser(AbstractBaseUser, PermissionsMixin):
         return self.email
     
             
+@python_2_unicode_compatible
 class DbNode(m.Model):
     """
     Generic node: data or calculation or code.
@@ -234,7 +235,6 @@ class DbNode(m.Model):
         """
         return DbExtra.get_all_values_for_node(self)
 
-    @python_2_unicode_compatible
     def __str__(self):
         simplename = self.get_simple_name(invalid_result="Unknown")
         # node pk + type
@@ -243,6 +243,7 @@ class DbNode(m.Model):
         else:
             return "{} node [{}]".format(simplename, self.pk)
 
+@python_2_unicode_compatible
 class DbLink(m.Model):
     '''
     Direct connection between two dbnodes. The label is identifying the
@@ -273,7 +274,6 @@ class DbLink(m.Model):
                            ("output", "label"),
                            )
         
-    @python_2_unicode_compatible
     def __str__(self):
         return "{} ({}) --> {} ({})".format(
             self.input.get_simple_name(invalid_result="Unknown node"),
@@ -282,6 +282,7 @@ class DbLink(m.Model):
             self.output.pk,)
             
 
+@python_2_unicode_compatible
 class DbPath(m.Model):
     """
     Transitive closure table for all dbnode paths.
@@ -297,7 +298,6 @@ class DbPath(m.Model):
     direct_edge_id = m.IntegerField(null=True,editable=False)
     exit_edge_id = m.IntegerField(null=True,editable=False)
 
-    @python_2_unicode_compatible
     def __str__(self):
         return "{} ({}) ==[{}]==>> {} ({})".format(
             self.parent.get_simple_name(invalid_result="Unknown node"),
@@ -1018,6 +1018,7 @@ class DbMultipleValueAttributeBaseClass(m.Model):
             
         cls.objects.filter(query).delete()
 
+@python_2_unicode_compatible
 class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
     """
     Abstract base class for tables storing element-attribute-value data.
@@ -1198,7 +1199,6 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
         """
         return bool(cls.objects.filter(dbnode=dbnode, key=key))
     
-    @python_2_unicode_compatible
     def __str__(self):
         return "[{} ({})].{} ({})".format(
             self.dbnode.get_simple_name(invalid_result="Unknown node"),
@@ -1206,6 +1206,7 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
             self.key,
             self.datatype,)
 
+@python_2_unicode_compatible
 class DbSetting(DbMultipleValueAttributeBaseClass):
     """
     This will store generic settings that should be database-wide.
@@ -1215,7 +1216,6 @@ class DbSetting(DbMultipleValueAttributeBaseClass):
     # Modification time of this attribute
     time = m.DateTimeField(auto_now=True, editable=False)
     
-    @python_2_unicode_compatible
     def __str__(self):
         return "'{}'={}".format(self.key, self.getvalue())    
 
@@ -1257,6 +1257,7 @@ class DbCalcState(m.Model):
     class Meta:
         unique_together = (("dbnode", "state"))
 
+@python_2_unicode_compatible
 class DbGroup(m.Model):
     """
     A group of nodes.
@@ -1285,13 +1286,13 @@ class DbGroup(m.Model):
     class Meta:
         unique_together = (("name", "type"),)
 
-    @python_2_unicode_compatible
     def __str__(self):
         if self.type:
             return '<DbGroup [type: {}] "{}">'.format(self.type, self.name)
         else:
             return '<DbGroup [user-defined] "{}">'.format(self.name)
 
+@python_2_unicode_compatible
 class DbComputer(m.Model):
     """
     Table of computers or clusters.
@@ -1367,7 +1368,6 @@ class DbComputer(m.Model):
             raise TypeError("Pass either a computer name, a DbComputer django instance or a Computer object")
         return dbcomputer
 
-
     def get_workdir(self):
         import json
         try:
@@ -1383,8 +1383,6 @@ class DbComputer(m.Model):
             raise ConfigurationError('No workdir found for DbComputer {} '.format(
                 self.name))
 
-
-    @python_2_unicode_compatible
     def __str__(self):
         if self.enabled:
             return "{} ({})".format(self.name, self.hostname)
@@ -1400,6 +1398,7 @@ class DbComputer(m.Model):
 #    # Will store a json of the last JobInfo got from the scheduler
 #    last_jobinfo = m.TextField(default='{}')  
 
+@python_2_unicode_compatible
 class DbAuthInfo(m.Model):
     """
     Table that pairs aiida users and computers, with all required authentication
@@ -1469,7 +1468,6 @@ class DbAuthInfo(m.Model):
                       self.get_auth_params().items())
         return ThisTransport(machine=self.dbcomputer.hostname,**params)
 
-    @python_2_unicode_compatible
     def __str__(self):
         if self.enabled:
             return "Authorization info for {} on {}".format(self.aiidauser.email, self.dbcomputer.name)
@@ -1478,6 +1476,7 @@ class DbAuthInfo(m.Model):
 
 
 
+@python_2_unicode_compatible
 class DbComment(m.Model):
     uuid = UUIDField(auto=True,version=AIIDANODES_UUID_VERSION)
     # Delete comments if the node is removed
@@ -1488,12 +1487,12 @@ class DbComment(m.Model):
     user = m.ForeignKey(AUTH_USER_MODEL, on_delete=m.CASCADE)
     content = m.TextField(blank=True)
 
-    @python_2_unicode_compatible
     def __str__(self):
         return "DbComment for [{} {}] on {}".format(self.dbnode.get_simple_name(),
             self.dbnode.pk, timezone.localtime(self.ctime).strftime("%Y-%m-%d"))
 
 
+@python_2_unicode_compatible                                       
 class DbLog(m.Model):
     # Creation time
     time = m.DateTimeField(default=timezone.now, editable=False)
@@ -1508,7 +1507,6 @@ class DbLog(m.Model):
     message = m.TextField(blank=True)
     metadata = m.TextField(default="{}") # Will store a json
 
-    @python_2_unicode_compatible                                       
     def __str__(self):
         return "[Log: {} for {} {}] {}".format(self.levelname,
             self.objname, self.objpk, self.message)
@@ -1553,6 +1551,7 @@ class DbLock(m.Model):
 
         
         
+@python_2_unicode_compatible
 class DbWorkflow(m.Model):
     
     from aiida.common.datastructures import wf_states, wf_data_types
@@ -1775,7 +1774,6 @@ class DbWorkflow(m.Model):
     
         self.state = wf_states.FINISHED
 
-    @python_2_unicode_compatible
     def __str__(self):
         simplename = self.module_class
         # node pk + type
@@ -1785,6 +1783,7 @@ class DbWorkflow(m.Model):
             return "{} workflow [{}]".format(simplename, self.pk)
 
 
+@python_2_unicode_compatible
 class DbWorkflowData(m.Model):
     
     from aiida.common.datastructures import wf_data_types, wf_data_value_types
@@ -1841,12 +1840,12 @@ class DbWorkflowData(m.Model):
         else:
             raise ValueError("Cannot rebuild the parameter {}".format(self.name))
 
-    @python_2_unicode_compatible
     def __str__(self):
         return "Data for workflow {} [{}]: {}".format(
             self.parent.module_class, self.parent.pk, self.name)
 
-           
+
+@python_2_unicode_compatible
 class DbWorkflowStep(m.Model):
 
     from aiida.common.datastructures import wf_states, wf_exit_call, wf_default_call
@@ -1968,8 +1967,6 @@ class DbWorkflowStep(m.Model):
         from aiida.common.datastructures import calc_states, wf_states, wf_exit_call
         self.set_status(wf_states.FINISHED)
 
-
-    @python_2_unicode_compatible
     def __str__(self):
         return "Step {} for workflow {} [{}]".format(self.name,
             self.parent.module_class, self.parent.pk)

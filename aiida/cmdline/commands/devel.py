@@ -531,11 +531,8 @@ class Devel(VerdiCommandWithSubcommands):
             # Here. I set the correct signal to attach to when we want to
             # perform an operation after all tables are created (e.g., creation
             # of the triggers).
-            # By default, in djsite/settings/settings.py this is south->post_migrate,
-            # here we set it to django->post_syncdb because we have set
-            # SOUTH_TESTS_MIGRATE = False
-            # in the settings.
-            settings.AFTER_DATABASE_CREATION_SIGNAL = 'post_syncdb'
+            # Using django17 migrations
+            settings.AFTER_DATABASE_CREATION_SIGNAL = 'post_migrate'
             
             ##################################################################
             ## Only now I set the aiida_test_list variable so that tests can run

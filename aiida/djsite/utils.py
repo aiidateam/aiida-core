@@ -152,11 +152,8 @@ def get_after_database_creation_signal():
     
     This can be:
     
-    * ``south.signals.post_migrate`` if this is not a test (because normally,
-      tables are managed by South and are not created right after the 
-      syncdb, but rather after this signal).
-    * ``django.db.models.signals.post_syncdb`` if this is a test (because in 
-      tests, South is not used)
+    * ``django.db.models.signals.post_migrate``, since from django1.7, tables 
+      are managed by django itself
           
     :return: a tuple ``(signal, sender)``, where ``signal`` is the signal to attach
         to, and ``sender`` is the sender to filter by in the ``signal.connect()``
@@ -165,22 +162,11 @@ def get_after_database_creation_signal():
     from aiida.djsite.settings import settings
     from aiida.common.exceptions import ConfigurationError
     
-    if settings.AFTER_DATABASE_CREATION_SIGNAL == 'post_syncdb':
+    if settings.AFTER_DATABASE_CREATION_SIGNAL == 'post_migrate':
         from django.contrib.auth import models as auth_models
-        from django.db.models.signals import post_syncdb
+        from django.db.models.signals import post_migrate 
+        return post_migrate,  auth_models
 
-        if 'south'  in settings.INSTALLED_APPS:
-            raise ConfigurationError("AFTER_DATABASE_CREATION_SIGNAL is "
-                "post_syncdb, but south is in the INSTALLED_APPS")        
-
-        return post_syncdb,  auth_models
-    elif settings.AFTER_DATABASE_CREATION_SIGNAL == 'post_migrate':
-        if 'south' not in settings.INSTALLED_APPS:
-            raise ConfigurationError("AFTER_DATABASE_CREATION_SIGNAL is "
-                "post_migrate, but south is not in the INSTALLED_APPS")
-                    
-        from south.signals import post_migrate
-        return post_migrate, None # No sender is needed for this model
     else:
         raise ConfigurationError(
             "The settings.AFTER_DATABASE_CREATION_SIGNAL has an invalid value")

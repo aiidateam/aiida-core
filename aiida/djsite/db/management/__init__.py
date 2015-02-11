@@ -732,4 +732,4 @@ def install_tc(sender, **kwargs):
 ## utility function to get the proper signal
 signal, sender = get_after_database_creation_signal() 
 signal.connect(install_tc, sender=sender,
-    dispatch_uid="transitive_closure_post_syncdb")
+    dispatch_uid="transitive_closure_post_migrate")

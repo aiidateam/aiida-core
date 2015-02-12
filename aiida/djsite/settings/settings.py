@@ -276,8 +276,6 @@ LOGGING = {
         },
 }
 
-# Note: in django 1.7, the post_syncdb command as been moved to post_migrate
-# as migrations are now supported by django itself, south should not be necessary anymore 
 AFTER_DATABASE_CREATION_SIGNAL = 'post_migrate'
 
 # VERSION TO USE FOR DBNODES.

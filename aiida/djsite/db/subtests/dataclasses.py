@@ -222,7 +222,8 @@ class TestCifData(AiidaTestCase):
 
         self.assertEquals(a.values['test']['_cell_length_a'],'11(1)')
 
-    @unittest.skipIf(not has_ase(),"Unable to import ase")
+    @unittest.skipIf(not has_ase() or not has_pycifrw(),
+                     "Unable to import ase or pycifrw")
     def test_get_aiida_structure(self):
         import os
         import tempfile
@@ -256,7 +257,8 @@ class TestCifData(AiidaTestCase):
 
         self.assertEquals(c.get_kind_names(), ['C','O'])
 
-    @unittest.skipIf(not has_ase(),"Unable to import ase")
+    @unittest.skipIf(not has_ase() or not has_pycifrw(),
+                     "Unable to import ase or pycifrw")
     def test_ase_primitive_and_conventional_cells(self):
         """
         Checking the number of atoms per primitive/conventional cell

@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 from django.db import models as m
 
-from aiida.common.additions import CustomEmailValidator
+from django.core.validators import EmailValidator
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
 __version__ = "0.3.0"
 
-custom_validate_email = CustomEmailValidator()
+validate_email = EmailValidator()
 
 class CustomEmailField(m.EmailField):
     """
@@ -19,5 +19,5 @@ class CustomEmailField(m.EmailField):
     # I just replace the validator with the one taken from a more recent
     # Django release, that supports @localhost as domain. To remove
     # when we move to Django 1.7.
-    default_validators = [custom_validate_email]
+    default_validators = [validate_email]
 

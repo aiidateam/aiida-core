@@ -314,7 +314,7 @@ def create_configuration():
     from aiida.common.exceptions import ConfigurationError
     # BE CAREFUL: THIS IS THE DJANGO VALIDATIONERROR
     from django.core.exceptions import ValidationError as DjangoValidationError
-    from aiida.common.additions import CustomEmailValidator
+    from django.core.validators import EmailValidator
     
     aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
     
@@ -331,7 +331,7 @@ def create_configuration():
       
     try:
         valid_email = False
-        email_validator = CustomEmailValidator()
+        email_validator = EmailValidator()
         readline.set_startup_hook(lambda: readline.insert_text(
                 confs.get(DEFAULT_USER_CONFIG_FIELD, DEFAULT_AIIDA_USER)))
         while not valid_email:

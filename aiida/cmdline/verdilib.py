@@ -221,7 +221,7 @@ class Install(VerdiCommand):
     This command creates the ~/.aiida folder in the home directory 
     of the user, interactively asks for the database settings and
     the repository location, does a setup of the daemon and runs
-    a syncdb command to create/setup the database.
+    a migrate command to create/setup the database.
     """
     def run(self,*args):
         import readline
@@ -251,12 +251,10 @@ class Install(VerdiCommand):
             sys.exit(1)
 
         if only_user_config:
-            print "Only user configuration requested, skipping the syncdb command"
+            print "Only user configuration requested, skipping the migrate command"
         else:
-            print "Executing now a syncdb command..."
-            # --noinput so that it does not ask for input, and does not ask
-            # to create a default user (managed below, instead)
-            pass_to_django_manage([execname, 'syncdb', '--noinput'])
+            print "Executing now a migrate command..."
+            pass_to_django_manage([execname, 'migrate'])
 
         # I create here the default user
         print "Loading new environment..."
@@ -292,29 +290,6 @@ class Install(VerdiCommand):
         """
         print "" 
 
-    
-#class SyncDB(VerdiCommand):
-#    """
-#    Create new tables in the database
-#
-#    This command calls the Django 'manage.py syncdb' command to create
-#    new tables in the database, and possibly install triggers.
-#    Pass a --migrate option to automatically also migrate the tables
-#    managed using South migrations.
-#    """
-#
-#    def run(self,*args):
-#        pass_to_django_manage([execname, 'syncdb'] + list(args))
-
-#class Migrate(VerdiCommand):
-#    """
-#    Migrate tables and data using django-south
-#    
-#    This command calls the Django 'manage.py migrate' command to migrate
-#    tables managed by django-south to their most recent version.
-#    """
-#    def run(self,*args):
-#        pass_to_django_manage([execname, 'migrate'] + list(args))
 
 class Shell(VerdiCommand):
     """

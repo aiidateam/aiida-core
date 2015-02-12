@@ -213,7 +213,7 @@ def check_schema_version():
     
     :note: if the DbSetting table does not exist, this function does not
       fail. The reason is to avoid to have problems before running the first
-      syncdb call.
+      migrate call.
       
     :note: if no version is found, the version is set to the version of the
       code. This is useful to have the code automatically set the DB version

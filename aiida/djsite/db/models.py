@@ -12,7 +12,6 @@ from aiida.common.exceptions import (
     ConfigurationError, DbContentError, MissingPluginError, InternalError)
 from aiida.djsite.settings.settings import (
     AIIDANODES_UUID_VERSION, AUTH_USER_MODEL)
-from aiida.djsite.additions import CustomEmailField
 from aiida.djsite.utils import long_field_length
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
@@ -69,7 +68,7 @@ class DbUser(AbstractBaseUser, PermissionsMixin):
     This class replaces the default User class of Django
     """
     # Set unique email field
-    email = CustomEmailField(unique=True, db_index=True)
+    email = m.EmailField(unique=True, db_index=True)
     first_name = m.CharField(max_length=254, blank=True)
     last_name = m.CharField(max_length=254, blank=True)
     institution = m.CharField(max_length=254, blank=True)

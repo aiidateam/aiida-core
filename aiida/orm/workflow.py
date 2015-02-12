@@ -17,6 +17,37 @@ __version__ = "0.3.0"
 
 logger = aiidalogger.getChild('Workflow')
 
+# ------------------------------------------------------
+#         Additional exceptions for the kill method
+# ------------------------------------------------------
+
+class WorkflowKillError(AiidaException):
+    """
+    Raised when a workflow failed to be killed.
+    The error_message_list attribute contains the error messages from
+    all the subworkflows.
+    """
+    def __init__(self,*args,**kwargs):
+        
+        # Call the base class constructor with the parameters it needs
+        super(WorkflowKillError, self).__init__(*args)
+
+        self.error_message_list = kwargs.pop('error_message_list', [])
+        if kwargs:
+            raise ValueError("Unknown parameters passed to WorkflowKillError")
+
+        
+class WorkflowUnkillable(AiidaException):
+    """
+    Raised when a workflow cannot be killed because it is in the FINISHED or 
+    ERROR state.
+    """
+    pass
+
+# ------------------------------------------------------
+#         Workflow class
+# ------------------------------------------------------
+
 class Workflow(object):    
     """
     Base class to represent a workflow. This is the superclass of any workflow implementations,
@@ -60,8 +91,10 @@ class Workflow(object):
             """
             from aiida.djsite.db.models import DbWorkflow
             import hashlib
-            
+        
             self._to_be_stored = True
+
+            self._logger = logger.getChild(self.__class__.__name__)
             
             uuid = kwargs.pop('uuid', None)
             
@@ -369,7 +402,6 @@ class Workflow(object):
     ## --------------------------------------
     ##    Store and infos
     ## --------------------------------------
-
     
     @classmethod
     def query(cls,*args,**kwargs):
@@ -380,6 +412,30 @@ class Workflow(object):
         """
         from aiida.djsite.db.models import DbWorkflow
         return DbWorkflow.aiidaobjects.filter(*args,**kwargs)
+
+    #@property
+    #def logger(self):
+    #    """
+    #    Get the logger of the Workflow object.
+    #    
+    #   :return: Logger object
+    #    """
+    #    return self._logger
+    
+    @property
+    def logger(self):
+        """
+        Get the logger of the Workflow object, so that it also logs to the
+        DB.
+        
+        :return: LoggerAdapter object, that works like a logger, but also has
+          the 'extra' embedded
+        """
+        import logging
+        from aiida.djsite.utils import get_dblogger_extra
+        
+        return logging.LoggerAdapter(logger=self._logger,
+                                     extra=get_dblogger_extra(self))
          
     def store(self):
         
@@ -915,31 +971,83 @@ class Workflow(object):
         Calls the ``kill`` method for each Calculation linked to the step method passed as argument.
         :param step: a Workflow step (decorated) method
         """
+        from aiida.common.exceptions import InvalidOperation, RemoteOperationError
             
+        counter = 0
         for c in step.get_calculations():
             if c._is_new() or c._is_running():
-                c.kill()
+                try:
+                    c.kill()
+                except (InvalidOperation, RemoteOperationError) as e:
+                    counter += 1
+                    self.logger.error(e.message)
+
+        if counter:
+            raise InvalidOperation("{} step calculation{} could not be killed"
+                                   "".format(counter,"" if counter == 1 else "s"))
     
     # ----------------------------
     #         Support methods
     # ----------------------------
 
-    def kill(self):
+    def kill(self,verbose=False):
         """
         Stop the Workflow execution and change its state to FINISHED.
         
-        This method Calls the ``kill`` method for each Calculation and each subworkflow 
+        This method calls the ``kill`` method for each Calculation and each subworkflow 
         linked to each RUNNING step.
-        """
-        for s in self.get_steps(state=wf_states.RUNNING):
-            self.kill_step_calculations(s)
-            
-            for w in s.get_sub_workflows():
-                print "Killing {0}".format(w.uuid)
-                w.kill()
         
-        self.dbworkflowinstance.set_status(wf_states.FINISHED)
+        :param verbose: True to print the pk of each subworkflow killed
+        :raise InvalidOperation: if some calculations cannot be killed (the 
+        workflow will be also put to SLEEP so that it can be killed later on)
+        """
+        from aiida.common.exceptions import InvalidOperation
+        
+        if self.get_status() not in [wf_states.FINISHED, wf_states.ERROR]: 
+            
+            # put in SLEEP status first
+            self.dbworkflowinstance.set_status(wf_states.SLEEP)
+            
+            error_messages = [] 
+            for s in self.get_steps(state=wf_states.RUNNING):
     
+                try:
+                    self.kill_step_calculations(s)
+                except InvalidOperation as e:
+                    error_message = ("'{}' for workflow with pk= {}"
+                                     "".format(e.message,self.pk))
+                    error_messages.append(error_message)
+                
+                for w in s.get_sub_workflows():
+                    if verbose:
+                        print "Killing workflow with pk: {}".format(w.pk)
+                    
+                    try:
+                        w.kill(verbose=verbose)
+                    except WorkflowKillError as e:
+                        self.logger.error(e.message)
+                        error_messages.extend(e.error_message_list)
+                    except WorkflowUnkillable:
+                        # A subwf cannot be killed, skip
+                        pass
+            
+            if self.get_steps(state=wf_states.CREATED):
+                error_messages.append("Workflow with pk= {} cannot be killed "
+                                      "because some steps are in {} state"
+                                      "".format(self.pk,wf_states.CREATED))
+            
+            if error_messages:
+                raise WorkflowKillError("Workflow with pk= {} cannot be "
+                                        "killed".format(self.pk),
+                                        error_message_list=error_messages)
+            else:
+                self.dbworkflowinstance.set_status(wf_states.FINISHED)
+        else:
+            raise WorkflowUnkillable("Cannot kill a workflow in {} or {} state"
+                                     "".format(wf_states.FINISHED,wf_states.ERROR))
+        
+                   
+            
     def sleep(self):
         """
         Changes the workflow status to SLEEP, only possible to call from a Workflow step decorated method.
@@ -1103,16 +1211,17 @@ class Workflow(object):
 #         Module functions for monitor and control
 # ------------------------------------------------------
 
-def kill_from_pk(pk):
+def kill_from_pk(pk,verbose=False):
     """
     Kills a workflow without loading the class, useful when there was a problem
     and the workflow definition module was changed/deleted (and the workflow
     cannot be reloaded).
     
     :param pk: the principal key (id) of the workflow to kill
+    :param verbose: True to print the pk of each subworkflow killed
     """
     try:    
-        Workflow.query(pk=pk)[0].kill()
+        Workflow.query(pk=pk)[0].kill(verbose=verbose)
     except IndexError:
         raise NotExistent("No workflow with pk= {} found.".format(pk))
     
@@ -1234,7 +1343,7 @@ def get_workflow_info(w, tab_size = 2, short = False, pre_string = ""):
         for subwf in wflows:
             lines.append( get_workflow_info(subwf.dbworkflowinstance,
                short=short, tab_size = tab_size,
-               pre_string = pre_string + "|" + " "*(tab_size-1)) ) 
+               pre_string = pre_string + "|" + " "*(tab_size-1)) )
         
         if idx != (len(steps) - 1):
             lines.append(pre_string + "|")
@@ -1292,6 +1401,4 @@ def list_workflows(short = False, all_states = False, tab_size = 2,
         else:
             retstring = "# No running workflows found"
     return retstring
-        
-                
     

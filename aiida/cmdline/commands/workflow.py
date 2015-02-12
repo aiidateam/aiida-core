@@ -28,6 +28,7 @@ class Workflow(VerdiCommandWithSubcommands):
             'list': (self.workflow_list, self.complete_none),
             'kill': (self.workflow_kill, self.complete_none),
             'report': (self.print_report, self.complete_none),
+            'logshow': (self.print_logshow, self.complete_none),
             }
 
     
@@ -93,7 +94,6 @@ class Workflow(VerdiCommandWithSubcommands):
         print "\n".join(w.get_report())
 
     
-
     def workflow_kill(self, *args):
         """
         Kill a workflow. 
@@ -107,6 +107,7 @@ class Workflow(VerdiCommandWithSubcommands):
         from aiida.cmdline import wait_for_confirmation
         from aiida.orm.workflow import kill_from_pk
         from aiida.common.exceptions import NotExistent
+        from aiida.orm.workflow import WorkflowKillError
         
         force = False
         wfs = []
@@ -140,12 +141,60 @@ class Workflow(VerdiCommandWithSubcommands):
         counter = 0
         for wf_pk in wfs:
             try:
-                kill_from_pk(wf_pk)
+                kill_from_pk(wf_pk,verbose=True)
                 counter += 1
             except NotExistent:
                 print >> sys.stderr, ("WARNING: workflow {} "
                     "does not exist.".format(wf_pk))
+            except WorkflowKillError as e:
+                to_print = ""
+                for msg in e.error_message_list:
+                    to_print += msg + "\n"
+                to_print = e.message + "\n"
+                sys.stdout.write(to_print)
+                
         print >> sys.stderr, "{} workflow{} killed.".format(counter,
-            "" if counter==1 else "s")
+            "" if counter<=1 else "s")
+
+
+    def print_logshow(self, *args):
+        from aiida.common.exceptions import NotExistent
+        from aiida.orm.workflow import Workflow
+        from aiida.djsite.utils import get_log_messages
+        from aiida.common.datastructures import calc_states
+        from aiida import load_dbenv
+        
+        load_dbenv()
+        
+        for wf_pk in args:
+            try:
+                wf = Workflow.get_subclass_from_pk(int(wf_pk))
+            except ValueError:
+                print "*** {}: Not a valid PK".format(wf_pk)
+                continue
+            except NotExistent:
+                print "*** {}: Not a valid Workflow".format(wf_pk)
+                continue
+
+            log_messages = get_log_messages(wf)
+            label_string = " [{}]".format(wf.label) if wf.label else ""
+            state = wf.get_status()
+            print "*** {}{}: {}".format(wf_pk, label_string, state)
+
+            if wf.get_report():
+                print "Print the report with 'verdi workflow report {}'".format(wf_pk)
+            else:
+                print "*** Report is empty"
+                            
+            if log_messages:
+                print "*** {} LOG MESSAGES:".format(len(log_messages))
+            else:
+                print "*** 0 LOG MESSAGES"
+                
+            for log in log_messages:
+                print "+-> {} at {}".format(log['levelname'], log['time'])
+                # Print the message, with a few spaces in front of each line
+                print "\n".join(["|   {}".format(_)
+                                 for _ in log['message'].splitlines()])
 
     

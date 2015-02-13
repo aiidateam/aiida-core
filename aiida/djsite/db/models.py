@@ -1924,7 +1924,7 @@ class DbWorkflowStep(m.Model):
     def get_sub_workflows(self):
         
         from aiida.orm.workflow import Workflow
-        return Workflow.query(uuid__in=self.sub_workflows.values_list("uuid", flat=True))
+        return Workflow.query(pk__in=self.sub_workflows.values_list("pk", flat=True))
         #return self.sub_workflows.all()#pk__in = step.calculations.values_list("pk", flat=True))
  
     def get_sub_workflows_status(self):

@@ -7,6 +7,7 @@ from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                   NotExistent, ValidationError, AiidaException )
 from aiida.common.folders import RepositoryFolder, SandboxFolder
 from aiida.common.datastructures import wf_states, wf_exit_call
+from aiida.djsite.db.models import DbWorkflow,DbWorkflowStep
 
 from aiida.djsite.utils import get_automatic_user
 from aiida.common import aiidalogger
@@ -1038,7 +1039,8 @@ class Workflow(object):
             
             if error_messages:
                 raise WorkflowKillError("Workflow with pk= {} cannot be "
-                                        "killed".format(self.pk),
+                                        "killed and was put to {} state instead; "
+                                        "try again later".format(self.pk,wf_states.SLEEP),
                                         error_message_list=error_messages)
             else:
                 self.dbworkflowinstance.set_status(wf_states.FINISHED)
@@ -1294,7 +1296,7 @@ def get_workflow_info(w, tab_size = 2, short = False, pre_string = ""):
 
     # order all steps by time
     steps = w.steps.all().order_by('time')
-
+    
     for idx, s in enumerate(steps):
         lines.append(pre_string + "|"+'-'*(tab_size-1) +
                      "* Step: {0} [->{1}] is {2}".format(
@@ -1339,7 +1341,7 @@ def get_workflow_info(w, tab_size = 2, short = False, pre_string = ""):
                              "| Calculation ({}pk: {}) is {}{}".format(
                                  labelstring, pk, calc_state, remote_state))
         ## SubWorkflows
-        wflows = s.get_sub_workflows()     
+        wflows = s.get_sub_workflows().order_by('ctime')
         for subwf in wflows:
             lines.append( get_workflow_info(subwf.dbworkflowinstance,
                short=short, tab_size = tab_size,

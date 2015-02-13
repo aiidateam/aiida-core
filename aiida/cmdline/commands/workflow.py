@@ -107,7 +107,7 @@ class Workflow(VerdiCommandWithSubcommands):
         from aiida.cmdline import wait_for_confirmation
         from aiida.orm.workflow import kill_from_pk
         from aiida.common.exceptions import NotExistent
-        from aiida.orm.workflow import WorkflowKillError
+        from aiida.orm.workflow import WorkflowKillError,WorkflowUnkillable
         
         force = False
         wfs = []
@@ -150,8 +150,11 @@ class Workflow(VerdiCommandWithSubcommands):
                 to_print = ""
                 for msg in e.error_message_list:
                     to_print += msg + "\n"
-                to_print = e.message + "\n"
+                to_print += "{}: {}\n".format(e.__class__.__name__,e.message)
                 sys.stdout.write(to_print)
+            except WorkflowUnkillable as e:
+                sys.stdout.write("{}: {}\n".format(e.__class__.__name__,
+                                                   e.message))
                 
         print >> sys.stderr, "{} workflow{} killed.".format(counter,
             "" if counter<=1 else "s")

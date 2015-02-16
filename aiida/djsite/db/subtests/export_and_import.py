@@ -34,9 +34,11 @@ class TestPort(AiidaTestCase):
 
         calc._add_link_from(sd)
         
-        attrs = dict()
-        for i in range(1,3):
-            node = Node.get_subclass_from_pk(i)
+        pks = [sd.pk,calc.pk]
+        
+        attrs = {}
+        for pk in pks:
+            node = Node.get_subclass_from_pk(pk)
             attrs[node.uuid] = dict()
             for k in node.attrs():
                 attrs[node.uuid][k] = node.get_attr(k)

@@ -79,16 +79,20 @@ class Workflow(VerdiCommandWithSubcommands):
     
         wf_list = DbWorkflow.objects.filter(q_object).order_by('ctime')
         
+        # create dictionary of the form {pk: parent_workflow_pk}
+        parent_pks = dict(DbWorkflow.objects.filter(q_object).order_by(
+                    'ctime').values_list('pk','parent_workflow_step__parent'))
+                    
+        
         for w in wf_list:
-            if not w.is_subworkflow():
+            if parent_pks[w.pk] not in parent_pks.keys():
                 print "\n".join(get_workflow_info(w, tab_size=tab_size,
                                                          short=parsed_args.short))
-
         if not wf_list:
             if parsed_args.all_states:
-                retstring = "# No workflows found"
+                print "# No workflows found"
             else:
-                retstring = "# No running workflows found"
+                print "# No running workflows found"
 
 
     def print_report(self, *args):

@@ -7,7 +7,6 @@ from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                   NotExistent, ValidationError, AiidaException )
 from aiida.common.folders import RepositoryFolder, SandboxFolder
 from aiida.common.datastructures import wf_states, wf_exit_call
-from aiida.djsite.db.models import DbWorkflow,DbWorkflowStep
 
 from aiida.djsite.utils import get_automatic_user
 from aiida.common import aiidalogger
@@ -1026,7 +1025,7 @@ class Workflow(object):
                     try:
                         w.kill(verbose=verbose)
                     except WorkflowKillError as e:
-                        self.logger.error(e.message)
+                        #self.logger.error(e.message)
                         error_messages.extend(e.error_message_list)
                     except WorkflowUnkillable:
                         # A subwf cannot be killed, skip
@@ -1264,17 +1263,25 @@ def get_workflow_info(w, tab_size = 2, short = False, pre_string = ""):
     """
     Return a string with all the information regarding the given workflow and
     all its calculations and subworkflows.
+    This is a recursive function (to print all subworkflows info as well).
     
     :param w: a DbWorkflow instance
-    :param indent_level: the indentation level of this workflow
     :param tab_size: number of spaces to use for the indentation
     :param short: if True, provide a shorter output (only total number of
         calculations, rather than the status of each calculation)
+    :param pre_string: string appended at the beginning of each line
+    
+    :return lines: list of lines to be outputed
+    
+    :note: pre_string becomes larger at each call of get_workflow_info on the
+    subworkflows: pre_string -> pre_string + "|" + " "*(tab_size-1))
     """
     from django.utils import timezone
     
     from aiida.common.datastructures import calc_states
     from aiida.common.utils import str_timedelta
+    from aiida.djsite.db.models import DbWorkflow
+    from aiida.orm import JobCalculation
     
     if tab_size < 2:
         raise ValueError("tab_size must be > 2")
@@ -1283,7 +1290,6 @@ def get_workflow_info(w, tab_size = 2, short = False, pre_string = ""):
 
     lines = []
     
-
     if w.label:
         wf_labelstring = "'{}', ".format(w.label)
     else:
@@ -1294,26 +1300,59 @@ def get_workflow_info(w, tab_size = 2, short = False, pre_string = ""):
                w.module_class, wf_labelstring, w.pk, w.state, str_timedelta(
                     now-w.ctime, negative_to_zero = True)))
 
-    # order all steps by time
-    steps = w.steps.all().order_by('time')
+    # order all steps by time and  get all the needed values
+    steps_and_subwf_pks = w.steps.all().order_by('time','sub_workflows__ctime',
+                            'calculations__ctime').values_list('pk', 
+                            'sub_workflows__pk','calculations','name','nextcall','state')
+    # get the list of step pks (distinct), preserving the order
+    steps_pk = []
+    for item in steps_and_subwf_pks:
+        if item[0] not in steps_pk:
+            steps_pk.append(item[0])
     
-    for idx, s in enumerate(steps):
+    # build a dictionary with all the infos for each step pk
+    subwfs_of_steps = {}
+    for step_pk, subwf_pk, calc_pk, name, nextcall, state in steps_and_subwf_pks:
+        if step_pk not in subwfs_of_steps.keys():
+            subwfs_of_steps[step_pk] = {'name': name,
+                                        'nextcall': nextcall,
+                                        'state': state,
+                                        'subwf_pks': [],
+                                        'calc_pks': [],
+                                        }
+        if subwf_pk:
+            subwfs_of_steps[step_pk]['subwf_pks'].append(subwf_pk)
+        if calc_pk:
+            subwfs_of_steps[step_pk]['calc_pks'].append(calc_pk)
+        
+    
+    # get all subworkflows for all steps
+    wflows = DbWorkflow.objects.filter(parent_workflow_step__in=steps_pk) #.order_by('ctime')
+    # dictionary mapping pks into workflows
+    workflow_mapping = {_.pk: _ for _ in wflows}
+        
+    # get all calculations for all steps
+    calcs = JobCalculation.query(workflow_step__in=steps_pk) #.order_by('ctime')
+    # dictionary mapping pks into calculations
+    calc_mapping = {_.pk: _ for _ in calcs}
+        
+    for step_pk in steps_pk:
         lines.append(pre_string + "|"+'-'*(tab_size-1) +
                      "* Step: {0} [->{1}] is {2}".format(
-                         s.name,s.nextcall,s.state))
+                         subwfs_of_steps[step_pk]['name'],
+                         subwfs_of_steps[step_pk]['nextcall'],
+                         subwfs_of_steps[step_pk]['state']))
 
-        calcs  = s.get_calculations().order_by('ctime')
+        calc_pks  = subwfs_of_steps[step_pk]['calc_pks']
         
         # print calculations only if it is not short
         if short:
             lines.append(pre_string + "|" + " "*(tab_size-1) +
-                "| [{0} calculations]".format(len(calcs)))
+                "| [{0} calculations]".format(len(calc_pks)))
         else:    
-            for c in calcs:
-                uuid = c.uuid
-                pk = c.pk
+            for calc_pk in calc_pks:
+                c = calc_mapping[calc_pk]
                 calc_state = c.get_state()
-                time = c.ctime
                 if c.label:
                     labelstring = "'{}', ".format(c.label)
                 else:
@@ -1339,68 +1378,18 @@ def get_workflow_info(w, tab_size = 2, short = False, pre_string = ""):
                     remote_state = ""
                 lines.append(pre_string + "|" + " "*(tab_size-1) +
                              "| Calculation ({}pk: {}) is {}{}".format(
-                                 labelstring, pk, calc_state, remote_state))
-        ## SubWorkflows
-        wflows = s.get_sub_workflows().order_by('ctime')
-        for subwf in wflows:
-            lines.append( get_workflow_info(subwf.dbworkflowinstance,
-               short=short, tab_size = tab_size,
-               pre_string = pre_string + "|" + " "*(tab_size-1)) )
+                                 labelstring, calc_pk, calc_state, remote_state))
         
-        if idx != (len(steps) - 1):
-            lines.append(pre_string + "|")
-
-    return "\n".join(lines)
+        ## SubWorkflows
+        for subwf_pk in subwfs_of_steps[step_pk]['subwf_pks']:
+            subwf = workflow_mapping[subwf_pk]
+            lines.extend( get_workflow_info(subwf,
+                            short=short, tab_size = tab_size,
+                            pre_string = pre_string + "|" + " "*(tab_size-1)))
+        
+        lines.append(pre_string + "|")
     
-def list_workflows(short = False, all_states = False, tab_size = 2,
-                   past_days=None, pks=[]):
-    """
-    This function return a string with a description of the AiiDA workflows.
+    #lines.pop()
     
-    :param short: if True, provide a shorter output (see documentation of the
-        ``short`` parameter of the :py:func:`get_workflow_info` function)
-    :param all_states:  if True, print also workflows that have finished.
-        Otherwise, hide workflows in the FINISHED and ERROR states.
-    :param tab_size: how many spaces to use for indentation of subworkflows
-    :param past_days: If specified, show only workflows that were created in
-        the given number of past days.
-    :param pks: if specified, must be a list of integers, and only workflows
-        within that list are shown. Otherwise, all workflows are shown.
-        If specified, automatically sets all_states to True and ignores the 
-        value of the ``past_days`` option.")
-    """
-    from aiida.djsite.db.models import DbWorkflow
-    
-    from django.utils import timezone
-    import datetime
-    from django.db.models import Q
-    
-    
-    if pks:
-        q_object = Q(pk__in=pks)
-    else:
-        q_object = Q(user=get_automatic_user())
-        if not all_states:
-            q_object.add(~Q(state=wf_states.FINISHED), Q.AND)
-            q_object.add(~Q(state=wf_states.ERROR), Q.AND)
-        if past_days:
-            now = timezone.now()
-            n_days_ago = now - datetime.timedelta(days=past_days)
-            q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
-
-    wf_list = DbWorkflow.objects.filter(q_object).order_by('ctime')
-    
-    lines = []
-    for w in wf_list:
-        if not w.is_subworkflow():
-            lines.append(get_workflow_info(w, tab_size=tab_size, short=short))
-    
-    # empty line between workflows
-    retstring = "\n\n".join(lines)
-    if not retstring:
-        if all_states:
-            retstring = "# No workflows found"
-        else:
-            retstring = "# No running workflows found"
-    return retstring
+    return lines
     

@@ -1185,8 +1185,9 @@ class Node(object):
         """
         Return a sorted list of comment values, one for each comment associated
         to the node.
+        
         :param pk: integer or list of integers. If it is specified, returns the 
-                   comment values with desired pks. (pk refers to DbComment.pk) 
+            comment values with desired pks. (pk refers to DbComment.pk) 
         :return: the list of comments, sorted by pk; each element of the 
             list is a dictionary, containing (pk, email, ctime, mtime, content)
         """

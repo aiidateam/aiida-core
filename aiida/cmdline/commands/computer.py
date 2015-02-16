@@ -11,6 +11,7 @@ __version__ = "0.3.0"
 def prompt_for_computer_configuration(computer):
     import inspect, readline
     from aiida.orm.computer import Computer as Computer
+    from aiida.common.exceptions import ValidationError
     
     for internal_name, name, desc, multiline in (
       Computer._conf_attributes):

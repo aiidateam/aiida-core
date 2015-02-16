@@ -8,8 +8,8 @@ __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.
 __version__ = "0.3.0"
 
 if __name__ == "__main__":
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "aiida.djsite.settings.settings")
-
     from django.core.management import execute_from_command_line
-
+    
+    load_dbenv(profile_type='daemon')    
+    
     execute_from_command_line(sys.argv)

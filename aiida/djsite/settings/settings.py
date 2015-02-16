@@ -3,7 +3,8 @@
 import sys, os
 from aiida.common.exceptions import ConfigurationError
 # get_property is used to read properties stored in the config json
-from aiida.common.setup import get_config, get_secret_key, get_property
+from aiida.common.setup import (get_config, get_secret_key, get_property, 
+                                get_profile_config, get_default_profile)
 # Assumes that parent directory of aiida is root for
 # things like templates/, SQL/ etc.  If not, change what follows...
 
@@ -18,16 +19,23 @@ sys.path = [BASE_DIR] + sys.path
 try:
     confs = get_config()
 except ConfigurationError:
-    raise ConfigurationError("Please run the AiiDA Installation")
-          
+    raise ConfigurationError("Please run the AiiDA Installation, no config found")
+
+try:
+    AIIDADB_PROFILE
+except NameError:
+    process='verdi' # look also at djsite/utils.py
+    AIIDADB_PROFILE = get_default_profile(process)
+profile_conf = get_profile_config(AIIDADB_PROFILE)
+
 #put all database specific portions of settings here
-DBENGINE = confs.get('AIIDADB_ENGINE', '')
-DBNAME = confs.get('AIIDADB_NAME', '')
-DBUSER = confs.get('AIIDADB_USER', '')
-DBPASS = confs.get('AIIDADB_PASS', '')
-DBHOST = confs.get('AIIDADB_HOST', '')
-DBPORT = confs.get('AIIDADB_PORT', '')
-LOCAL_REPOSITORY = confs.get('AIIDADB_REPOSITORY', '')
+DBENGINE = profile_conf.get('AIIDADB_ENGINE', '')
+DBNAME = profile_conf.get('AIIDADB_NAME', '')
+DBUSER = profile_conf.get('AIIDADB_USER', '')
+DBPASS = profile_conf.get('AIIDADB_PASS', '')
+DBHOST = profile_conf.get('AIIDADB_HOST', '')
+DBPORT = profile_conf.get('AIIDADB_PORT', '')
+REPOSITORY_URI = profile_conf.get('AIIDADB_REPOSITORY_URI', '')
 
 DATABASES = {
     'default' : {
@@ -46,27 +54,36 @@ DATABASES = {
 if 'sqlite' in DBENGINE:
     DATABASES['default']['OPTIONS'] = {'timeout': 60}
 
-## Checks on the LOCAL_REPOSITORY
+## Checks on the REPOSITORY_* variables
 try:
-    LOCAL_REPOSITORY
+    REPOSITORY_URI
 except NameError:
     raise ConfigurationError(
-        "Please setup correctly the LOCAL_REPOSITORY variable to "
+        "Please setup correctly the REPOSITORY_URI variable to "
         "a suitable directory on which you have write permissions.")
-    
-# Normalize LOCAL_REPOSITORY to its absolute path
-LOCAL_REPOSITORY=os.path.abspath(LOCAL_REPOSITORY)
-if not os.path.isdir(LOCAL_REPOSITORY):
-    try:
-        # Try to create the local repository folders with needed parent
-        # folders
-        os.makedirs(LOCAL_REPOSITORY)
-    except OSError:
-        # Possibly here due to permission problems
-        raise ConfigurationError(
-            "Please setup correctly the LOCAL_REPOSITORY variable to "
-            "a suitable directory on which you have write permissions. "
-            "(I was not able to create the directory.)")
+
+def validate_repository_uri(repository_uri):
+    if not repository_uri.startswith('file://'):
+        raise ConfigurationError("The current AiiDA version supports only a "
+                                 "local repository")
+
+    REPOSITORY_PATH = repository_uri.split('file://')[1]
+    # Normalize REPOSITORY_PATH to its absolute path
+    REPOSITORY_PATH = os.path.abspath(REPOSITORY_PATH)
+    if not os.path.isdir(REPOSITORY_PATH):
+        try:
+            # Try to create the local repository folders with needed parent
+            # folders
+            os.makedirs(REPOSITORY_PATH)
+        except OSError:
+            # Possibly here due to permission problems
+            raise ConfigurationError(
+                "Please setup correctly the REPOSITORY_PATH variable to "
+                "a suitable directory on which you have write permissions. "
+                "(I was not able to create the directory.)")
+    return REPOSITORY_PATH
+# Note: this variable might disappear in the future
+REPOSITORY_PATH = validate_repository_uri(REPOSITORY_URI)
 
 # CUSTOM USER CLASS
 AUTH_USER_MODEL = 'db.DbUser'
@@ -93,7 +110,7 @@ MANAGERS = ADMINS
 # although not all choices may be available on all operating systems.
 # In a Windows environment this must be set to your system time zone.
 try:
-    TIME_ZONE = confs['TIMEZONE']
+    TIME_ZONE = profile_conf['TIMEZONE']
 except KeyError:
     raise ConfigurationError("You did not set your timezone during the "
                              "verdi install phase.")

@@ -22,7 +22,6 @@ def set_global_setting(key, value, description=None):
     DbSetting.set_value(key, value,
                         other_attribs = {"description": description})
     
-
 def del_global_setting(key):
     """
     Return the value of the given setting, or raise a KeyError if the

@@ -42,10 +42,9 @@ def migrate():
     Migrate the DB from v. 1.0.0 to v.1.0.1.
     """
     # Load the DB without performing the version check
-    from aiida.djsite.utils import (
-        _load_dbenv_noschemacheck,
-        get_db_schema_version, set_db_schema_version)
-    _load_dbenv_noschemacheck()
+    from aiida.djsite.utils import (_load_dbenv_noschemacheck,
+                                   get_db_schema_version, set_db_schema_version)
+    _load_dbenv_noschemacheck(profile_type=None)
 
     from django.db import transaction
     from aiida.djsite.db import models

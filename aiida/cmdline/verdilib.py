@@ -226,7 +226,8 @@ class Install(VerdiCommand):
     def run(self,*args):
         import readline
         from aiida import load_dbenv
-        from aiida.common.setup import create_base_dirs, create_configuration        
+        from aiida.common.setup import (create_base_dirs, create_configuration,
+                                        set_db_profile)        
 
         cmdline_args = list(args)
         
@@ -243,13 +244,20 @@ class Install(VerdiCommand):
             print >> sys.stderr, ", ".join(cmdline_args)
             sys.exit(1)
         
+        # create the directories to store the configuration files
         create_base_dirs()
+        
+        # ask and store the configuration of the DB
         try:
-            create_configuration()
+            create_configuration(profile='default')
         except ValueError as e:
             print >> sys.stderr, "Error during configuration: {}".format(e.message)
             sys.exit(1)
-
+        
+        # set default DB profiles
+        set_db_profile('verdi','default')
+        set_db_profile('daemon','default')
+        
         if only_user_config:
             print "Only user configuration requested, skipping the migrate command"
         else:
@@ -272,8 +280,7 @@ class Install(VerdiCommand):
                                                    password='',
                                                    first_name="AiiDA",
                                                    last_name="Daemon")
-
-        email = email=get_configured_user_email()
+        email = get_configured_user_email()
         print "Starting user configuration for {}...".format(email)
         if email == DEFAULT_AIIDA_USER:
             print "You set up AiiDA using the default Daemon email ({}),".format(email)

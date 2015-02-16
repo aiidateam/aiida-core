@@ -521,18 +521,14 @@ class Devel(VerdiCommandWithSubcommands):
             # The location is automatically created with the tempfile module
             # Typically, under linux this is created under /tmp
             # and is not deleted at the end of the run.
-            settings.LOCAL_REPOSITORY = tempfile.mkdtemp(prefix='aiida_repository_')
+            test_repo_path = tempfile.mkdtemp(prefix='aiida_repository_')
+            settings.REPOSITORY_URI = 'file://' + test_repo_path
             # I write the local repository on stderr, so that the user running
             # the tests knows where the files are being stored
             print >> sys.stderr, "########################################"
             print >> sys.stderr, "# LOCAL AiiDA REPOSITORY FOR TESTS:"
-            print >> sys.stderr, "# {}".format(settings.LOCAL_REPOSITORY)
+            print >> sys.stderr, "# {}".format(test_repo_path)
             print >> sys.stderr, "########################################"
-            # Here. I set the correct signal to attach to when we want to
-            # perform an operation after all tables are created (e.g., creation
-            # of the triggers).
-            # Using django17 migrations
-            settings.AFTER_DATABASE_CREATION_SIGNAL = 'post_migrate'
             
             ##################################################################
             ## Only now I set the aiida_test_list variable so that tests can run

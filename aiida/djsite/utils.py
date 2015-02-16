@@ -5,28 +5,33 @@ __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausan
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
 __version__ = "0.3.0"
 
-def load_dbenv():    
+def load_dbenv(profile_type=None):
     """
     Load the database environment (Django) and perform some checks
     """
-    _load_dbenv_noschemacheck()
+    _load_dbenv_noschemacheck(profile_type)
     # Check schema version and the existence of the needed tables
     check_schema_version()
 
 
-def _load_dbenv_noschemacheck():
+def _load_dbenv_noschemacheck(profile_type):
     """
     Load the database environment (Django) WITHOUT CHECKING THE SCHEMA VERSION.
+    
+    :param profile_type: ...
     
     This should ONLY be used internally, inside load_dbenv, and for schema 
     migrations. DO NOT USE OTHERWISE!
     """
     import os
     import django
+    from aiida.common.setup import get_default_profile
+    
+    real_type = profile_type if profile_type is not None else 'verdi'
+    os.environ['AIIDADB_PROFILE'] = get_default_profile(real_type)
     os.environ['DJANGO_SETTINGS_MODULE'] = 'aiida.djsite.settings.settings'
     django.setup()
     
-
 class DBLogHandler(logging.Handler):
     def emit(self, record):
         from django.core.exceptions import ImproperlyConfigured 
@@ -85,10 +90,12 @@ def get_configured_user_email():
     first verdi install.
     """
     from aiida.common.exceptions import ConfigurationError
-    from aiida.common.setup import get_config, DEFAULT_USER_CONFIG_FIELD
+    from aiida.common.setup import get_profile_config, DEFAULT_USER_CONFIG_FIELD
+    import os
     
     try:
-        email = get_config()[DEFAULT_USER_CONFIG_FIELD]
+        profile_conf = get_profile_config(os.environ['AIIDADB_PROFILE'])
+        email = profile_conf[DEFAULT_USER_CONFIG_FIELD]
     # I do not catch the error in case of missing configuration, because
     # it is already a ConfigurationError
     except KeyError:

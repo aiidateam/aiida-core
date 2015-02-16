@@ -39,9 +39,15 @@ class Workflow(VerdiCommandWithSubcommands):
         from aiida import load_dbenv
         load_dbenv()
 
-        import argparse
-        import aiida.orm.workflow as wfs
+        from aiida.orm.workflow import get_workflow_info
+        from aiida.djsite.db.models import DbWorkflow
+        from aiida.common.datastructures import wf_states
+        from aiida.djsite.utils import get_automatic_user
         
+        from django.db.models import Q
+        from django.utils import timezone
+        import datetime,argparse
+       
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
             description='List AiiDA workflows.')
@@ -54,14 +60,35 @@ class Workflow(VerdiCommandWithSubcommands):
         parser.add_argument('pks', type=int, nargs='*',
                             help="a list of workflows to show. If empty, all running workflows are shown. If non-empty, automatically sets --all and ignores the -p option.")
         
+        tab_size = 2 # how many spaces to use for indentation of subworkflows
         
         args = list(args)
         parsed_args = parser.parse_args(args)
+        
+        if parsed_args.pks:
+            q_object = Q(pk__in=parsed_args.pks)
+        else:
+            q_object = Q(user=get_automatic_user())
+            if not parsed_args.all_states:
+                q_object.add(~Q(state=wf_states.FINISHED), Q.AND)
+                q_object.add(~Q(state=wf_states.ERROR), Q.AND)
+            if parsed_args.past_days:
+                now = timezone.now()
+                n_days_ago = now - datetime.timedelta(days=parsed_args.past_days)
+                q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
+    
+        wf_list = DbWorkflow.objects.filter(q_object).order_by('ctime')
+        
+        for w in wf_list:
+            if not w.is_subworkflow():
+                print "\n".join(get_workflow_info(w, tab_size=tab_size,
+                                                         short=parsed_args.short))
 
-        print wfs.list_workflows(short=parsed_args.short,
-                                 all_states=parsed_args.all_states,
-                                 past_days=parsed_args.past_days, 
-                                 pks=parsed_args.pks) 
+        if not wf_list:
+            if parsed_args.all_states:
+                retstring = "# No workflows found"
+            else:
+                retstring = "# No running workflows found"
 
 
     def print_report(self, *args):

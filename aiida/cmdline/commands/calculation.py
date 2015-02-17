@@ -596,7 +596,7 @@ class Calculation(VerdiCommandWithSubcommands):
         
         from aiida.cmdline import wait_for_confirmation
         from aiida.orm.calculation.job import JobCalculation as Calc
-        from aiida.common.exceptions import NotExistent, InvalidOperation
+        from aiida.common.exceptions import NotExistent, InvalidOperation, RemoteOperationError
         
         import argparse
         parser = argparse.ArgumentParser(
@@ -624,9 +624,8 @@ class Calculation(VerdiCommandWithSubcommands):
             except NotExistent:
                 print >> sys.stderr, ("WARNING: calculation {} "
                     "does not exist.".format(calc_pk))
-            except InvalidOperation:
-                print >> sys.stderr, ("Calculation {} is not in WITHSCHEDULER "
-                    "state: cannot be killed.".format(calc_pk))
+            except (InvalidOperation, RemoteOperationError) as e:
+                print >> sys.stderr, (e.message)
         print >> sys.stderr, "{} calculation{} killed.".format(counter,
             "" if counter == 1 else "s")
 

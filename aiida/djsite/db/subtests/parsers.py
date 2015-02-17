@@ -57,6 +57,7 @@ def post_decoder(data):
             #import dateutil.parser
             #return dateutil.parser.parse(data[1:])
             
+            # New one lacks time zone, but it should be enough for the test
             import time
             return time.strptime(data[1:],"%Y-%m-%dT%H:%M:%S.%f+0000")
         else:

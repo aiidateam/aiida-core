@@ -40,8 +40,6 @@ def post_decoder(data):
     """
     Reverts the encoding done by the pre_encoder
     """
-    import dateutil.parser
-
     if isinstance(data, (list, tuple)):
         return [post_decoder(_) for _ in data]
     elif isinstance(data, dict):
@@ -52,7 +50,15 @@ def post_decoder(data):
             return data[1:]
         elif data.startswith("D"):
             # It is a date
-            return dateutil.parser.parse(data[1:])
+            
+            # OLD implementation: it also includes the check of the timezone
+            # but requires a new dependency of AiiDA on dateutil: 
+            # that would need to be added in the requirements.txt
+            #import dateutil.parser
+            #return dateutil.parser.parse(data[1:])
+            
+            import time
+            return time.strptime(data[1:],"%Y-%m-%dT%H:%M:%S.%f+0000")
         else:
             # Strange encoding char, error!
             raise ValueError("Unknown encode character! ({})".format(data[:1]))

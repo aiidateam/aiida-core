@@ -1271,7 +1271,7 @@ class JobCalculation(Calculation):
             # Do not set the state, but let the parser do its job
             #self._set_state(calc_states.FAILED)
             self.logger.warning("Calculation {} killed by the user "
-                                "(it was WITHSCHEDULER)".format(self.pk))
+                                "(it was {})".format(self.pk,calc_states.WITHSCHEDULER))
             
         
     def _presubmit(self, folder, use_unstored_links=False):

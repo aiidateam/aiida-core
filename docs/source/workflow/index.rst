@@ -37,7 +37,12 @@ The daemon works essentially as an infinite loop, iterating several simple opera
 
 This simplified process is the very heart of the workflow engine, and while the process loops a user can submit a new workflow 
 to be managed from the Verdi shell (or through a script loading the necessary Verdi environment). In the next chapter we'll 
-initialize the daemon and analyze a simple workflow, submitting it and retrieving the results.  
+initialize the daemon and analyze a simple workflow, submitting it and retrieving the results.
+
+.. note::
+  The workflow engine of AiiDA is now fully operational but will be undergo major 
+  improvements in a near future. Therefore, some of the methods or functionalities
+  described in the following might change.
 
 The AiiDA daemon
 ++++++++++++++++
@@ -220,22 +225,28 @@ WorkflowDemo presented before, located in the ``wf_demo.py`` file in the clean A
   >> wf = WorkflowDemo(params=params)
   >> wf.start()
   
-In these four lines we loaded the class, we created some fictitious parameter and we initialized the workflow. Finally we launched with the 
-``start()`` method, a lazy command that in the backgroud adds the workflow to the execution queue monitored by the verdi daemon. In the backgroud
-the daemon will handle all the workflow process, stepping each method, launching and retrieving calculations and monitoring possible errors and
-problems.
+In these four lines we loaded the class, we created some fictitious parameter and 
+we initialized the workflow. Finally we launched with the 
+``start()`` method, a lazy command that in the backgroud adds the workflow to 
+the execution queue monitored by the verdi daemon. In the backgroud
+the daemon will handle all the workflow process, stepping each method, launching
+and retrieving calculations and monitoring possible errors and problems.
 
-Since the workflow is now managed by the daemon, to interact with it we need special methods. There are basically two ways to see how the workflows
-are running, calling the verbose ``list_workflows`` method present in the ``aiida.orm.workflow`` package or reading the workflow report of each
-single workflow.   
+Since the workflow is now managed by the daemon, to interact with it we need 
+special methods. There are basically two ways to see how the workflows
+are running: by printing the workflow ``list`` or its ``report``.
 
-* **list_workflows** From the verdi shell we run::
- 
-  >> import aiida.orm.workflow as wfs
-  >> print wfs.list_workflows()
-  
-  This will list all the running workflow, showing the status of each step and calculation. An example output right after the
-  WorkflowDemo submission should be
+* **Workflow list**
+
+  From the command line we run::
+
+  >> verdi workflow list
+
+  This will list all the running workflows, showing the status of each step 
+  and each calculation (and, when present, each sub-workflow - see below). It
+  is the fastest way to have a snapshot of 
+  what your AiiDA workflow daemon is working on. An example output
+  right after the WorkflowDemo submission should be
   
   .. code-block:: python
   
@@ -244,27 +255,72 @@ single workflow.
     | | Calculation (pk: 1) is FINISHED
     | | Calculation (pk: 2) is FINISHED
   
-  As you can see for each workflow is reported the ``pk`` number, a unique number identifying that specific execution of the workflow, something
-  necessary to retrieve it in any other time in the future (as explained in the next point). The list method can also be invoked from the verdi
-  command line interface without accessing the shell and represents the fastest way to have a snapshot of what your AiiDA daemon is working on.
+  For each workflow is reported the ``pk`` number, a unique 
+  id identifying that specific execution of the workflow, something
+  necessary to retrieve it at any other time in the future (as explained in the
+  next point).
   
-* **get_report** As explained, each workflow is equipped with a reporting facility the user can use to log any important intermediary
-  information, useful to debug the status or show some details. Moreover the report is also used by AiiDA as a error reporting tools, in 
-  case of errors encountered during the execution the AiiDA daemon will copy the entire stack trace in the workflow report before
-  halting it's execution. To access the report we have to retrieve the specific workflow instance of interest and call the ``get_report()`` method.
-  Using the verdi shell we can do this with a simple line of code::
+  .. note::
+    You can also print the ``list`` of any individual workflow from the verdi
+    shell (here in the shell where you defined your workflow as ``wf``, see above)::
+  
+    >> import aiida.orm.workflow as wfs
+    >> print "\n".join(wfs.get_workflow_info(wf._dbworkflowinstance))
+  
+  
+* **Workflow report** 
+
+  As explained, each workflow is equipped with a reporting facility the user can
+  use to log any important intermediate information, useful to debug the status 
+  or show some details. Moreover the report is also used by AiiDA as an error 
+  reporting tools: in case of errors encountered during the execution the AiiDA 
+  daemon will copy the entire stack trace in the workflow report before
+  halting it's execution.
+  To access the report we need the specific ``pk`` of the workflow. From the 
+  command line we would run::
+  
+   >> verdi workflow report PK_NUMBER
+
+  while from the verdi shell the same operation requires to use the ``get_report()`` method::
   
   >> from aiida.orm.workflow import Workflow
-  >> Workflow.get_subclass_from_pk(1).get_report()
+  >> Workflow.get_subclass_from_pk(PK_NUMBER).get_report()
    
-  As you can see the specific ``pk`` is needed to retrieve the report, and some caution is needed. In fact, it's always recommended to get the report
-  from ``Workflow.get_subclass_from_pk`` without saving this object in a variable. The information generated in the report may change
-  and the user calling a ``get_report`` method of a class instantiated in the past will probably lose the most recent additions to the report.
+  In both variants, PK_NUMBER is the ``pk`` number of the workflow we want
+  the report of. In fact, it's always recommended to get the workflow instance
+  from ``Workflow.get_subclass_from_pk`` without saving this object in a variable. 
+  The information generated in the report may change and the user calling a 
+  ``get_report`` method of a class instantiated in the past will probably lose 
+  the most recent additions to the report.
   
-Once launched, the workflows will be handled by the daemon until the final step or until some error occurs. In the last case, the workflow gets
-halted and only the user can remove or kill the workflow through the interactive verdi shell. In the last chapter we'll see how to stop a workflow,
-remove a blocked workflow from the execution list and retrieve an already finished workflow with all its calculations.
-     
+Once launched, the workflows will be handled by the daemon until the final step 
+or until some error occurs. In the last case, the workflow gets halted and the report 
+can be checked to understand what happened.
+
+* **Killing a workflow** 
+
+A user can also kill a workflow while it's running. This can be done with 
+the following verdi command::
+
+>> verdi workflow kill PK_NUMBER_1 PK_NUMBER_2 PK_NUMBER_N
+  
+where several ``pk`` numbers can be given. A prompt will ask for a confirmation;
+this can be avoided by using the ``-f`` option.
+  
+An alternative way to kill an individual workflow is to use the ``kill`` method.
+In the verdi shell type:: 
+  
+>> from aiida.orm.workflow import Workflow
+>> Workflow.get_subclass_from_pk(PK_NUMBER).kill()
+  
+.. note::
+  Sometimes the ``kill`` operation might fail because one calculation cannot be 
+  killed (e.g. if it's running but not in the ``WITHSCHEDULER``, ``TOSUBMIT`` or 
+  ``NEW`` state), or because one workflow step is in the ``CREATED`` state. In that case the 
+  workflow is put to the ``SLEEP`` status, such that no more workflow step will be launched
+  by the daemon. One can then simply wait until the calculation or step changes state,
+  and try to kill it again.
+    
 A more sophisticated workflow
 +++++++++++++++++++++++++++++
 

@@ -166,7 +166,7 @@ def get_after_database_creation_signal():
         to, and ``sender`` is the sender to filter by in the ``signal.connect()``
         call.
     """
-    print "Is this creation signal executed?"
+    #print "Is this creation signal executed?"
     from aiida.djsite.settings import settings
     from aiida.common.exceptions import ConfigurationError
     

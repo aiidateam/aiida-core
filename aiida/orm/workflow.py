@@ -1259,7 +1259,8 @@ def kill_all():
         
 
 
-def get_workflow_info(w, tab_size = 2, short = False, pre_string = ""):
+def get_workflow_info(w, tab_size = 2, short = False, pre_string = "", 
+                        depth = 16):
     """
     Return a string with all the information regarding the given workflow and
     all its calculations and subworkflows.
@@ -1270,6 +1271,9 @@ def get_workflow_info(w, tab_size = 2, short = False, pre_string = ""):
     :param short: if True, provide a shorter output (only total number of
         calculations, rather than the status of each calculation)
     :param pre_string: string appended at the beginning of each line
+    :param depth: the maximum depth level the recursion on sub-workflows will
+    try to reach (0 means we stay at the step level and don't go into 
+    sub-workflows, 1 means we go down to one step level of the sub-workflows, etc.)
     
     :return lines: list of lines to be outputed
     
@@ -1300,96 +1304,100 @@ def get_workflow_info(w, tab_size = 2, short = False, pre_string = ""):
                w.module_class, wf_labelstring, w.pk, w.state, str_timedelta(
                     now-w.ctime, negative_to_zero = True)))
 
-    # order all steps by time and  get all the needed values
-    steps_and_subwf_pks = w.steps.all().order_by('time','sub_workflows__ctime',
-                            'calculations__ctime').values_list('pk', 
-                            'sub_workflows__pk','calculations','name','nextcall','state')
-    # get the list of step pks (distinct), preserving the order
-    steps_pk = []
-    for item in steps_and_subwf_pks:
-        if item[0] not in steps_pk:
-            steps_pk.append(item[0])
-    
-    # build a dictionary with all the infos for each step pk
-    subwfs_of_steps = {}
-    for step_pk, subwf_pk, calc_pk, name, nextcall, state in steps_and_subwf_pks:
-        if step_pk not in subwfs_of_steps.keys():
-            subwfs_of_steps[step_pk] = {'name': name,
-                                        'nextcall': nextcall,
-                                        'state': state,
-                                        'subwf_pks': [],
-                                        'calc_pks': [],
-                                        }
-        if subwf_pk:
-            subwfs_of_steps[step_pk]['subwf_pks'].append(subwf_pk)
-        if calc_pk:
-            subwfs_of_steps[step_pk]['calc_pks'].append(calc_pk)
-        
-    
-    # get all subworkflows for all steps
-    wflows = DbWorkflow.objects.filter(parent_workflow_step__in=steps_pk) #.order_by('ctime')
-    # dictionary mapping pks into workflows
-    workflow_mapping = {_.pk: _ for _ in wflows}
-        
-    # get all calculations for all steps
-    calcs = JobCalculation.query(workflow_step__in=steps_pk) #.order_by('ctime')
-    # dictionary mapping pks into calculations
-    calc_mapping = {_.pk: _ for _ in calcs}
-        
-    for step_pk in steps_pk:
-        lines.append(pre_string + "|"+'-'*(tab_size-1) +
-                     "* Step: {0} [->{1}] is {2}".format(
-                         subwfs_of_steps[step_pk]['name'],
-                         subwfs_of_steps[step_pk]['nextcall'],
-                         subwfs_of_steps[step_pk]['state']))
+    # print information on the steps only if depth is higher than 0
+    if depth>0:
 
-        calc_pks  = subwfs_of_steps[step_pk]['calc_pks']
+        # order all steps by time and  get all the needed values
+        steps_and_subwf_pks = w.steps.all().order_by('time','sub_workflows__ctime',
+                                'calculations__ctime').values_list('pk', 
+                                'sub_workflows__pk','calculations','name','nextcall','state')
+        # get the list of step pks (distinct), preserving the order
+        steps_pk = []
+        for item in steps_and_subwf_pks:
+            if item[0] not in steps_pk:
+                steps_pk.append(item[0])
         
-        # print calculations only if it is not short
-        if short:
-            lines.append(pre_string + "|" + " "*(tab_size-1) +
-                "| [{0} calculations]".format(len(calc_pks)))
-        else:    
-            for calc_pk in calc_pks:
-                c = calc_mapping[calc_pk]
-                calc_state = c.get_state()
-                if c.label:
-                    labelstring = "'{}', ".format(c.label)
-                else:
-                    labelstring = ""
-                 
-                if calc_state == calc_states.WITHSCHEDULER:
-                    sched_state = c.get_scheduler_state()
-                    if sched_state is None:
-                        remote_state = "(remote state still unknown)"
-                    else:
-                        last_check = c._get_scheduler_lastchecktime()
-                        if last_check is not None:
-                            when_string = " {}".format(
-                               str_timedelta(now-last_check, short=True,
-                                             negative_to_zero = True))
-                            verb_string = "was "
-                        else:
-                            when_string = ""
-                            verb_string = ""
-                        remote_state = " ({}{}{})".format(verb_string,
-                            sched_state, when_string)
-                else:
-                    remote_state = ""
-                lines.append(pre_string + "|" + " "*(tab_size-1) +
-                             "| Calculation ({}pk: {}) is {}{}".format(
-                                 labelstring, calc_pk, calc_state, remote_state))
+        # build a dictionary with all the infos for each step pk
+        subwfs_of_steps = {}
+        for step_pk, subwf_pk, calc_pk, name, nextcall, state in steps_and_subwf_pks:
+            if step_pk not in subwfs_of_steps.keys():
+                subwfs_of_steps[step_pk] = {'name': name,
+                                            'nextcall': nextcall,
+                                            'state': state,
+                                            'subwf_pks': [],
+                                            'calc_pks': [],
+                                            }
+            if subwf_pk:
+                subwfs_of_steps[step_pk]['subwf_pks'].append(subwf_pk)
+            if calc_pk:
+                subwfs_of_steps[step_pk]['calc_pks'].append(calc_pk)
+            
         
-        ## SubWorkflows
-        for subwf_pk in subwfs_of_steps[step_pk]['subwf_pks']:
-            subwf = workflow_mapping[subwf_pk]
-            lines.extend( get_workflow_info(subwf,
-                            short=short, tab_size = tab_size,
-                            pre_string = pre_string + "|" + " "*(tab_size-1)))
-        
-        lines.append(pre_string + "|")
+        # get all subworkflows for all steps
+        wflows = DbWorkflow.objects.filter(parent_workflow_step__in=steps_pk) #.order_by('ctime')
+        # dictionary mapping pks into workflows
+        workflow_mapping = {_.pk: _ for _ in wflows}
+            
+        # get all calculations for all steps
+        calcs = JobCalculation.query(workflow_step__in=steps_pk) #.order_by('ctime')
+        # dictionary mapping pks into calculations
+        calc_mapping = {_.pk: _ for _ in calcs}
+            
+        for step_pk in steps_pk:
+            lines.append(pre_string + "|"+'-'*(tab_size-1) +
+                         "* Step: {0} [->{1}] is {2}".format(
+                             subwfs_of_steps[step_pk]['name'],
+                             subwfs_of_steps[step_pk]['nextcall'],
+                             subwfs_of_steps[step_pk]['state']))
     
-    #lines.pop()
+            calc_pks  = subwfs_of_steps[step_pk]['calc_pks']
+            
+            # print calculations only if it is not short
+            if short:
+                lines.append(pre_string + "|" + " "*(tab_size-1) +
+                    "| [{0} calculations]".format(len(calc_pks)))
+            else:    
+                for calc_pk in calc_pks:
+                    c = calc_mapping[calc_pk]
+                    calc_state = c.get_state()
+                    if c.label:
+                        labelstring = "'{}', ".format(c.label)
+                    else:
+                        labelstring = ""
+                     
+                    if calc_state == calc_states.WITHSCHEDULER:
+                        sched_state = c.get_scheduler_state()
+                        if sched_state is None:
+                            remote_state = "(remote state still unknown)"
+                        else:
+                            last_check = c._get_scheduler_lastchecktime()
+                            if last_check is not None:
+                                when_string = " {}".format(
+                                   str_timedelta(now-last_check, short=True,
+                                                 negative_to_zero = True))
+                                verb_string = "was "
+                            else:
+                                when_string = ""
+                                verb_string = ""
+                            remote_state = " ({}{}{})".format(verb_string,
+                                sched_state, when_string)
+                    else:
+                        remote_state = ""
+                    lines.append(pre_string + "|" + " "*(tab_size-1) +
+                                 "| Calculation ({}pk: {}) is {}{}".format(
+                                     labelstring, calc_pk, calc_state, remote_state))
+            
+            ## SubWorkflows
+            for subwf_pk in subwfs_of_steps[step_pk]['subwf_pks']:
+                subwf = workflow_mapping[subwf_pk]
+                lines.extend( get_workflow_info(subwf,
+                                short=short, tab_size = tab_size,
+                                pre_string = pre_string + "|" + " "*(tab_size-1),
+                                depth = depth-1))
+        
+            lines.append(pre_string + "|")
+    
+        #lines.pop()
     
     return lines
     

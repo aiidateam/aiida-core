@@ -51,14 +51,24 @@ class Workflow(VerdiCommandWithSubcommands):
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
             description='List AiiDA workflows.')
-        parser.add_argument('-s', '--short', help="show shorter output (only subworkflows and steps, no calculations)",
+        parser.add_argument('-s', '--short', help="show shorter output "
+                            "(only subworkflows and steps, no calculations)",
                             action='store_true')
-        parser.add_argument('-a', '--all-states', help="show all existing AiiDA workflows, not only running ones",
+        parser.add_argument('-a', '--all-states', help="show all existing "
+                            "AiiDA workflows, not only running ones",
                             action='store_true')
-        parser.add_argument('-p', '--past-days', metavar='N', help="add a filter to show only workflows created in the past N days",
+        parser.add_argument('-d', '--depth', metavar='M', help="add a filter "
+                            "to show only steps down to a depth of M levels in "
+                            "subworkflows (0 means only the parent "
+                            "workflows are shown)",
+                            action='store', type=int, default=16)                            
+        parser.add_argument('-p', '--past-days', metavar='N', help="add a "
+                            "filter to show only workflows created in the past N days",
                             action='store', type=int)
         parser.add_argument('pks', type=int, nargs='*',
-                            help="a list of workflows to show. If empty, all running workflows are shown. If non-empty, automatically sets --all and ignores the -p option.")
+                            help="a list of workflows to show. If empty, "
+                            "all running workflows are shown. If non-empty, "
+                            "automatically sets --all and ignores the -p option.")
         
         tab_size = 2 # how many spaces to use for indentation of subworkflows
         
@@ -82,12 +92,12 @@ class Workflow(VerdiCommandWithSubcommands):
         # create dictionary of the form {pk: parent_workflow_pk}
         parent_pks = dict(DbWorkflow.objects.filter(q_object).order_by(
                     'ctime').values_list('pk','parent_workflow_step__parent'))
-                    
         
         for w in wf_list:
             if parent_pks[w.pk] not in parent_pks.keys():
                 print "\n".join(get_workflow_info(w, tab_size=tab_size,
-                                                         short=parsed_args.short))
+                                                short=parsed_args.short,
+                                                depth = parsed_args.depth))
         if not wf_list:
             if parsed_args.all_states:
                 print "# No workflows found"

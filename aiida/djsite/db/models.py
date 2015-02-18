@@ -285,14 +285,12 @@ class DbLink(m.Model):
 class DbPath(m.Model):
     """
     Transitive closure table for all dbnode paths.
-    
-    # TODO: if a link is updated, the TC should be updated accordingly
     """
     parent = m.ForeignKey('DbNode',related_name='child_paths',editable=False)
     child = m.ForeignKey('DbNode',related_name='parent_paths',editable=False)
     depth = m.IntegerField(editable=False)
 
-    # Used to delete
+    # Used to delete or to expand the path
     entry_edge_id = m.IntegerField(null=True,editable=False)
     direct_edge_id = m.IntegerField(null=True,editable=False)
     exit_edge_id = m.IntegerField(null=True,editable=False)
@@ -305,6 +303,28 @@ class DbPath(m.Model):
             self.depth,
             self.child.get_simple_name(invalid_result="Unknown node"),
             self.child.pk,)
+            
+    def expand(self):
+        """
+        Method to expand a DbPath (recursive function), i.e., to get a list
+        of all dbnodes that are traversed in the given path. 
+        
+        :return: list of DbNode objects representing the expanded DbPath
+        """
+        
+        if self.depth == 0:
+            return [self.parent,self.child]
+        else:
+            path_entry  = []
+            path_direct = DbPath.objects.get(id=self.direct_edge_id).expand()
+            path_exit   = []
+            # we prevent DbNode repetitions
+            if self.entry_edge_id != self.direct_edge_id:
+                path_entry = DbPath.objects.get(id=self.entry_edge_id).expand()[:-1]
+            if self.exit_edge_id != self.direct_edge_id:
+                path_exit  = DbPath.objects.get(id=self.exit_edge_id).expand()[1:]
+            
+            return path_entry + path_direct + path_exit
 
 
 attrdatatype_choice = (

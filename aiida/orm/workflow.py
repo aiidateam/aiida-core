@@ -17,6 +17,37 @@ __version__ = "0.3.0"
 
 logger = aiidalogger.getChild('Workflow')
 
+# ------------------------------------------------------
+#         Additional exceptions for the kill method
+# ------------------------------------------------------
+
+class WorkflowKillError(AiidaException):
+    """
+    Raised when a workflow failed to be killed.
+    The error_message_list attribute contains the error messages from
+    all the subworkflows.
+    """
+    def __init__(self,*args,**kwargs):
+        
+        # Call the base class constructor with the parameters it needs
+        super(WorkflowKillError, self).__init__(*args)
+
+        self.error_message_list = kwargs.pop('error_message_list', [])
+        if kwargs:
+            raise ValueError("Unknown parameters passed to WorkflowKillError")
+
+        
+class WorkflowUnkillable(AiidaException):
+    """
+    Raised when a workflow cannot be killed because it is in the FINISHED or 
+    ERROR state.
+    """
+    pass
+
+# ------------------------------------------------------
+#         Workflow class
+# ------------------------------------------------------
+
 class Workflow(object):    
     """
     Base class to represent a workflow. This is the superclass of any workflow implementations,
@@ -60,8 +91,10 @@ class Workflow(object):
             """
             from aiida.djsite.db.models import DbWorkflow
             import hashlib
-            
+        
             self._to_be_stored = True
+
+            self._logger = logger.getChild(self.__class__.__name__)
             
             uuid = kwargs.pop('uuid', None)
             
@@ -145,9 +178,9 @@ class Workflow(object):
                 
     def __str__(self):
         if self._to_be_stored:
-            return "uuid={} (unstored)".format(self.uuid)
+            return "uuid: {} (unstored)".format(self.uuid)
         else:
-            return "uuid={} (pk={})".format(self.uuid, self.pk)
+            return "uuid: {} (pk: {})".format(self.uuid, self.pk)
     
     ## --------------------------------------
     ##    DB Instance
@@ -369,7 +402,6 @@ class Workflow(object):
     ## --------------------------------------
     ##    Store and infos
     ## --------------------------------------
-
     
     @classmethod
     def query(cls,*args,**kwargs):
@@ -380,6 +412,30 @@ class Workflow(object):
         """
         from aiida.djsite.db.models import DbWorkflow
         return DbWorkflow.aiidaobjects.filter(*args,**kwargs)
+
+    #@property
+    #def logger(self):
+    #    """
+    #    Get the logger of the Workflow object.
+    #    
+    #   :return: Logger object
+    #    """
+    #    return self._logger
+    
+    @property
+    def logger(self):
+        """
+        Get the logger of the Workflow object, so that it also logs to the
+        DB.
+        
+        :return: LoggerAdapter object, that works like a logger, but also has
+          the 'extra' embedded
+        """
+        import logging
+        from aiida.djsite.utils import get_dblogger_extra
+        
+        return logging.LoggerAdapter(logger=self._logger,
+                                     extra=get_dblogger_extra(self))
          
     def store(self):
         
@@ -388,9 +444,9 @@ class Workflow(object):
         """
         if not self._to_be_stored:
             self.logger.error("Trying to store an already saved workflow: "
-                              "pk={}".format(self.pk))
+                              "pk= {}".format(self.pk))
             raise ModificationNotAllowed(
-                "Workflow with pk={} was already stored".format(self.pk))
+                "Workflow with pk= {} was already stored".format(self.pk))
         
         self._dbworkflowinstance.save()
         
@@ -915,31 +971,84 @@ class Workflow(object):
         Calls the ``kill`` method for each Calculation linked to the step method passed as argument.
         :param step: a Workflow step (decorated) method
         """
+        from aiida.common.exceptions import InvalidOperation, RemoteOperationError
             
+        counter = 0
         for c in step.get_calculations():
             if c._is_new() or c._is_running():
-                c.kill()
+                try:
+                    c.kill()
+                except (InvalidOperation, RemoteOperationError) as e:
+                    counter += 1
+                    self.logger.error(e.message)
+
+        if counter:
+            raise InvalidOperation("{} step calculation{} could not be killed"
+                                   "".format(counter,"" if counter == 1 else "s"))
     
     # ----------------------------
     #         Support methods
     # ----------------------------
 
-    def kill(self):
+    def kill(self,verbose=False):
         """
         Stop the Workflow execution and change its state to FINISHED.
         
-        This method Calls the ``kill`` method for each Calculation and each subworkflow 
+        This method calls the ``kill`` method for each Calculation and each subworkflow 
         linked to each RUNNING step.
-        """
-        for s in self.get_steps(state=wf_states.RUNNING):
-            self.kill_step_calculations(s)
-            
-            for w in s.get_sub_workflows():
-                print "Killing {0}".format(w.uuid)
-                w.kill()
         
-        self.dbworkflowinstance.set_status(wf_states.FINISHED)
+        :param verbose: True to print the pk of each subworkflow killed
+        :raise InvalidOperation: if some calculations cannot be killed (the 
+        workflow will be also put to SLEEP so that it can be killed later on)
+        """
+        from aiida.common.exceptions import InvalidOperation
+        
+        if self.get_status() not in [wf_states.FINISHED, wf_states.ERROR]: 
+            
+            # put in SLEEP status first
+            self.dbworkflowinstance.set_status(wf_states.SLEEP)
+            
+            error_messages = [] 
+            for s in self.get_steps(state=wf_states.RUNNING):
     
+                try:
+                    self.kill_step_calculations(s)
+                except InvalidOperation as e:
+                    error_message = ("'{}' for workflow with pk= {}"
+                                     "".format(e.message,self.pk))
+                    error_messages.append(error_message)
+                
+                for w in s.get_sub_workflows():
+                    if verbose:
+                        print "Killing workflow with pk: {}".format(w.pk)
+                    
+                    try:
+                        w.kill(verbose=verbose)
+                    except WorkflowKillError as e:
+                        #self.logger.error(e.message)
+                        error_messages.extend(e.error_message_list)
+                    except WorkflowUnkillable:
+                        # A subwf cannot be killed, skip
+                        pass
+            
+            if self.get_steps(state=wf_states.CREATED):
+                error_messages.append("Workflow with pk= {} cannot be killed "
+                                      "because some steps are in {} state"
+                                      "".format(self.pk,wf_states.CREATED))
+            
+            if error_messages:
+                raise WorkflowKillError("Workflow with pk= {} cannot be "
+                                        "killed and was put to {} state instead; "
+                                        "try again later".format(self.pk,wf_states.SLEEP),
+                                        error_message_list=error_messages)
+            else:
+                self.dbworkflowinstance.set_status(wf_states.FINISHED)
+        else:
+            raise WorkflowUnkillable("Cannot kill a workflow in {} or {} state"
+                                     "".format(wf_states.FINISHED,wf_states.ERROR))
+        
+                   
+            
     def sleep(self):
         """
         Changes the workflow status to SLEEP, only possible to call from a Workflow step decorated method.
@@ -1043,7 +1152,7 @@ class Workflow(object):
             return cls.get_subclass_from_dbnode(dbworkflowinstance)
                   
         except ObjectDoesNotExist:
-            raise NotExistent("No entry with pk={} found".format(pk))
+            raise NotExistent("No entry with pk= {} found".format(pk))
                            
     @classmethod      
     def get_subclass_from_uuid(cls,uuid):
@@ -1103,18 +1212,19 @@ class Workflow(object):
 #         Module functions for monitor and control
 # ------------------------------------------------------
 
-def kill_from_pk(pk):
+def kill_from_pk(pk,verbose=False):
     """
     Kills a workflow without loading the class, useful when there was a problem
     and the workflow definition module was changed/deleted (and the workflow
     cannot be reloaded).
     
     :param pk: the principal key (id) of the workflow to kill
+    :param verbose: True to print the pk of each subworkflow killed
     """
     try:    
-        Workflow.query(pk=pk)[0].kill()
+        Workflow.query(pk=pk)[0].kill(verbose=verbose)
     except IndexError:
-        raise NotExistent("No workflow with pk={} found.".format(pk))
+        raise NotExistent("No workflow with pk= {} found.".format(pk))
     
 def kill_from_uuid(uuid):
     """
@@ -1149,21 +1259,33 @@ def kill_all():
         
 
 
-def get_workflow_info(w, tab_size = 2, short = False, pre_string = ""):
+def get_workflow_info(w, tab_size = 2, short = False, pre_string = "", 
+                        depth = 16):
     """
     Return a string with all the information regarding the given workflow and
     all its calculations and subworkflows.
+    This is a recursive function (to print all subworkflows info as well).
     
     :param w: a DbWorkflow instance
-    :param indent_level: the indentation level of this workflow
     :param tab_size: number of spaces to use for the indentation
     :param short: if True, provide a shorter output (only total number of
         calculations, rather than the status of each calculation)
+    :param pre_string: string appended at the beginning of each line
+    :param depth: the maximum depth level the recursion on sub-workflows will
+    try to reach (0 means we stay at the step level and don't go into 
+    sub-workflows, 1 means we go down to one step level of the sub-workflows, etc.)
+    
+    :return lines: list of lines to be outputed
+    
+    :note: pre_string becomes larger at each call of get_workflow_info on the
+    subworkflows: pre_string -> pre_string + "|" + " "*(tab_size-1))
     """
     from django.utils import timezone
     
     from aiida.common.datastructures import calc_states
     from aiida.common.utils import str_timedelta
+    from aiida.djsite.db.models import DbWorkflow
+    from aiida.orm import JobCalculation
     
     if tab_size < 2:
         raise ValueError("tab_size must be > 2")
@@ -1172,126 +1294,110 @@ def get_workflow_info(w, tab_size = 2, short = False, pre_string = ""):
 
     lines = []
     
-
     if w.label:
         wf_labelstring = "'{}', ".format(w.label)
     else:
         wf_labelstring = ""
     
     lines.append(pre_string) # put an empty line before any workflow
-    lines.append(pre_string + "+ Workflow {} ({}pk={}) is {} [{}]".format(
+    lines.append(pre_string + "+ Workflow {} ({}pk: {}) is {} [{}]".format(
                w.module_class, wf_labelstring, w.pk, w.state, str_timedelta(
                     now-w.ctime, negative_to_zero = True)))
 
-    # order all steps by time
-    steps = w.steps.all().order_by('time')
+    # print information on the steps only if depth is higher than 0
+    if depth>0:
 
-    for idx, s in enumerate(steps):
-        lines.append(pre_string + "|"+'-'*(tab_size-1) +
-                     "* Step: {0} [->{1}] is {2}".format(
-                         s.name,s.nextcall,s.state))
-
-        calcs  = s.get_calculations().order_by('ctime')
+        # order all steps by time and  get all the needed values
+        steps_and_subwf_pks = w.steps.all().order_by('time','sub_workflows__ctime',
+                                'calculations__ctime').values_list('pk', 
+                                'sub_workflows__pk','calculations','name','nextcall','state')
+        # get the list of step pks (distinct), preserving the order
+        steps_pk = []
+        for item in steps_and_subwf_pks:
+            if item[0] not in steps_pk:
+                steps_pk.append(item[0])
         
-        # print calculations only if it is not short
-        if short:
-            lines.append(pre_string + "|" + " "*(tab_size-1) +
-                "| [{0} calculations]".format(len(calcs)))
-        else:    
-            for c in calcs:
-                uuid = c.uuid
-                pk = c.pk
-                calc_state = c.get_state()
-                time = c.ctime
-                if c.label:
-                    labelstring = "'{}', ".format(c.label)
-                else:
-                    labelstring = ""
-                 
-                if calc_state == calc_states.WITHSCHEDULER:
-                    sched_state = c.get_scheduler_state()
-                    if sched_state is None:
-                        remote_state = "(remote state still unknown)"
-                    else:
-                        last_check = c._get_scheduler_lastchecktime()
-                        if last_check is not None:
-                            when_string = " {}".format(
-                               str_timedelta(now-last_check, short=True,
-                                             negative_to_zero = True))
-                            verb_string = "was "
-                        else:
-                            when_string = ""
-                            verb_string = ""
-                        remote_state = " ({}{}{})".format(verb_string,
-                            sched_state, when_string)
-                else:
-                    remote_state = ""
+        # build a dictionary with all the infos for each step pk
+        subwfs_of_steps = {}
+        for step_pk, subwf_pk, calc_pk, name, nextcall, state in steps_and_subwf_pks:
+            if step_pk not in subwfs_of_steps.keys():
+                subwfs_of_steps[step_pk] = {'name': name,
+                                            'nextcall': nextcall,
+                                            'state': state,
+                                            'subwf_pks': [],
+                                            'calc_pks': [],
+                                            }
+            if subwf_pk:
+                subwfs_of_steps[step_pk]['subwf_pks'].append(subwf_pk)
+            if calc_pk:
+                subwfs_of_steps[step_pk]['calc_pks'].append(calc_pk)
+            
+        
+        # get all subworkflows for all steps
+        wflows = DbWorkflow.objects.filter(parent_workflow_step__in=steps_pk) #.order_by('ctime')
+        # dictionary mapping pks into workflows
+        workflow_mapping = {_.pk: _ for _ in wflows}
+            
+        # get all calculations for all steps
+        calcs = JobCalculation.query(workflow_step__in=steps_pk) #.order_by('ctime')
+        # dictionary mapping pks into calculations
+        calc_mapping = {_.pk: _ for _ in calcs}
+            
+        for step_pk in steps_pk:
+            lines.append(pre_string + "|"+'-'*(tab_size-1) +
+                         "* Step: {0} [->{1}] is {2}".format(
+                             subwfs_of_steps[step_pk]['name'],
+                             subwfs_of_steps[step_pk]['nextcall'],
+                             subwfs_of_steps[step_pk]['state']))
+    
+            calc_pks  = subwfs_of_steps[step_pk]['calc_pks']
+            
+            # print calculations only if it is not short
+            if short:
                 lines.append(pre_string + "|" + " "*(tab_size-1) +
-                             "| Calculation ({}pk={}) is {}{}".format(
-                                 labelstring, pk, calc_state, remote_state))
-        ## SubWorkflows
-        wflows = s.get_sub_workflows()     
-        for subwf in wflows:
-            lines.append( get_workflow_info(subwf.dbworkflowinstance,
-               short=short, tab_size = tab_size,
-               pre_string = pre_string + "|" + " "*(tab_size-1)) ) 
+                    "| [{0} calculations]".format(len(calc_pks)))
+            else:    
+                for calc_pk in calc_pks:
+                    c = calc_mapping[calc_pk]
+                    calc_state = c.get_state()
+                    if c.label:
+                        labelstring = "'{}', ".format(c.label)
+                    else:
+                        labelstring = ""
+                     
+                    if calc_state == calc_states.WITHSCHEDULER:
+                        sched_state = c.get_scheduler_state()
+                        if sched_state is None:
+                            remote_state = "(remote state still unknown)"
+                        else:
+                            last_check = c._get_scheduler_lastchecktime()
+                            if last_check is not None:
+                                when_string = " {}".format(
+                                   str_timedelta(now-last_check, short=True,
+                                                 negative_to_zero = True))
+                                verb_string = "was "
+                            else:
+                                when_string = ""
+                                verb_string = ""
+                            remote_state = " ({}{}{})".format(verb_string,
+                                sched_state, when_string)
+                    else:
+                        remote_state = ""
+                    lines.append(pre_string + "|" + " "*(tab_size-1) +
+                                 "| Calculation ({}pk: {}) is {}{}".format(
+                                     labelstring, calc_pk, calc_state, remote_state))
+            
+            ## SubWorkflows
+            for subwf_pk in subwfs_of_steps[step_pk]['subwf_pks']:
+                subwf = workflow_mapping[subwf_pk]
+                lines.extend( get_workflow_info(subwf,
+                                short=short, tab_size = tab_size,
+                                pre_string = pre_string + "|" + " "*(tab_size-1),
+                                depth = depth-1))
         
-        if idx != (len(steps) - 1):
             lines.append(pre_string + "|")
-
-    return "\n".join(lines)
     
-def list_workflows(short = False, all_states = False, tab_size = 2,
-                   past_days=None, pks=[]):
-    """
-    This function return a string with a description of the AiiDA workflows.
+        #lines.pop()
     
-    :param short: if True, provide a shorter output (see documentation of the
-        ``short`` parameter of the :py:func:`get_workflow_info` function)
-    :param all_states:  if True, print also workflows that have finished.
-        Otherwise, hide workflows in the FINISHED and ERROR states.
-    :param tab_size: how many spaces to use for indentation of subworkflows
-    :param past_days: If specified, show only workflows that were created in
-        the given number of past days.
-    :param pks: if specified, must be a list of integers, and only workflows
-        within that list are shown. Otherwise, all workflows are shown.
-        If specified, automatically sets all_states to True and ignores the 
-        value of the ``past_days`` option.")
-    """
-    from aiida.djsite.db.models import DbWorkflow
-    
-    from django.utils import timezone
-    import datetime
-    from django.db.models import Q
-    
-    
-    if pks:
-        q_object = Q(pk__in=pks)
-    else:
-        q_object = Q(user=get_automatic_user())
-        if not all_states:
-            q_object.add(~Q(state=wf_states.FINISHED), Q.AND)
-            q_object.add(~Q(state=wf_states.ERROR), Q.AND)
-        if past_days:
-            now = timezone.now()
-            n_days_ago = now - datetime.timedelta(days=past_days)
-            q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
-
-    wf_list = DbWorkflow.objects.filter(q_object).order_by('ctime')
-    
-    lines = []
-    for w in wf_list:
-        if not w.is_subworkflow():
-            lines.append(get_workflow_info(w, tab_size=tab_size, short=short))
-    
-    # empty line between workflows
-    retstring = "\n\n".join(lines)
-    if not retstring:
-        if all_states:
-            retstring = "# No workflows found"
-        else:
-            retstring = "# No running workflows found"
-    return retstring
-        
-                
+    return lines
     

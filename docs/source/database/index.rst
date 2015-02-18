@@ -283,16 +283,19 @@ password each time you use the script. It should look like (:download:`.pgpass<p
 where ``YOUR_DATABASE_PASSWORD`` is the password you set up for the database.
 
 .. note:: Do not forget to put this file in ~/ and to name it ``.pgpass``.
+   Remeber also to give it the right permissions (read and write): ``chmod u+rw .pgpass``.
 
 To dump the database in a file automatically everyday, you can add the following script 
 :download:`backup-aiidadb-USERNAME<backup-aiidadb-USERNAME>` in ``/etc/cron.daily/``, which will
 launch the previous script once per day::
 
-    #/bin/bash
+    #!/bin/bash
     su USERNAME -c "/home/USERNAME/.aiida/backup_postgresql.sh"
 
 where all instances of ``USERNAME`` are replaced by your actual user name. The ``su USERNAME``
 makes the dumped file be owned by you rather than by ``root``.
+Remember to give the script the right permissions::
+    sudo chmod +x /etc/cron.daily/backup-aiidadb-USERNAME
 
 Finally make sure your database folder (``/home/USERNAME/.aiida/``) containing this dump file
 and the ``repository`` directory, is properly backed up by 

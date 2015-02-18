@@ -344,7 +344,7 @@ class Computer(VerdiCommandWithSubcommands):
             sys.exit(1)
                 
         print "Computer '{}' successfully updated.".format(computer_name)
-        print "pk={}, uuid={}".format(computer.pk, computer.uuid)
+        print "pk: {}, uuid: {}".format(computer.pk, computer.uuid)
         print "(Note: machine_dependent transport parameters cannot be set via "
         print "the command-line interface at the moment)"
         
@@ -398,7 +398,7 @@ class Computer(VerdiCommandWithSubcommands):
             sys.exit(1)
         
         print "Computer '{}' successfully stored in DB.".format(computer_name)
-        print "pk={}, uuid={}".format(computer.pk, computer.uuid)
+        print "pk: {}, uuid: {}".format(computer.pk, computer.uuid)
         print "Note: before using it with AiiDA, configure it using the command"
         print "  verdi computer configure {}".format(computer_name)
         print "(Note: machine_dependent transport parameters cannot be set via "

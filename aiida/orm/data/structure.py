@@ -233,7 +233,7 @@ def group_symbols(_list):
 
     return grouped_list
 
-def get_formula_from_symbol_list(_list):
+def get_formula_from_symbol_list(_list,separator=""):
     """ 
     Return a string with the formula obtained from the list of symbols.
     Examples:
@@ -256,13 +256,17 @@ def get_formula_from_symbol_list(_list):
         if isinstance(elem[1],basestring):
             list_str.append("{}{}".format(elem[1],multiplicity_str))
         elif elem[0]>1:
-            list_str.append("({}){}".format(get_formula_from_symbol_list(elem[1]),multiplicity_str))
+            list_str.append("({}){}".format(get_formula_from_symbol_list(elem[1],
+                                                                         separator=separator),
+                                            multiplicity_str))
         else:
-            list_str.append("{}{}".format(get_formula_from_symbol_list(elem[1]),multiplicity_str))
+            list_str.append("{}{}".format(get_formula_from_symbol_list(elem[1],
+                                                                       separator=separator),
+                                          multiplicity_str))
 
-    return "".join(list_str)
+    return separator.join(list_str)
 
-def get_formula_compact1(symbol_list):
+def get_formula_compact1(symbol_list,separator=""):
     """
     Return a string with the chemical formula from a list of chemical symbols.
     The formula is written in a compact" way, i.e. trying to group as much as
@@ -381,9 +385,9 @@ def get_formula_compact1(symbol_list):
         old_symbol_list = copy.deepcopy(new_symbol_list)
         new_symbol_list = group_all_together_symbols(old_symbol_list)
     
-    return get_formula_from_symbol_list(new_symbol_list)
+    return get_formula_from_symbol_list(new_symbol_list,separator=separator)
 
-def get_formula(symbol_list, mode='hill'):
+def get_formula(symbol_list, mode='hill', separator=""):
     """
     Return a string with the chemical formula.
     
@@ -418,7 +422,7 @@ def get_formula(symbol_list, mode='hill'):
     """
         
     if mode == 'compact1':
-        return get_formula_compact1(symbol_list)
+        return get_formula_compact1(symbol_list,separator=separator)
     
     # for hill and allreduce cases, simply count the occurences of each 
     # chemical symbol (with some re-ordering in hill) 
@@ -450,7 +454,7 @@ def get_formula(symbol_list, mode='hill'):
     else:
         raise ValueError('Mode should be compact1, hill, reduce or allreduce')
     
-    return get_formula_from_symbol_list(the_symbol_list)    
+    return get_formula_from_symbol_list(the_symbol_list,separator=separator)
 
 def get_symbols_string(symbols,weights):
     """
@@ -683,7 +687,7 @@ class StructureData(Data):
         return set(itertools.chain.from_iterable(
                 kind.symbols for kind in self.kinds))
 
-    def get_formula(self, mode='hill'):
+    def get_formula(self, mode='hill', separator=""):
         """
         Return a string with the chemical formula.
 
@@ -717,7 +721,7 @@ class StructureData(Data):
         symbol_list = [self.get_kind(s.kind_name).get_symbols_string()
                             for s in self.sites]
         
-        return get_formula(symbol_list, mode=mode)    
+        return get_formula(symbol_list, mode=mode, separator=separator)
             
     def get_site_kindnames(self):
         """

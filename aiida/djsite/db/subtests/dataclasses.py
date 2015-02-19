@@ -1097,7 +1097,37 @@ class TestStructureData(AiidaTestCase):
         a.append_atom(position=(0.,0.,0.),symbols=['O', 'H'], weights=[0.9,0.1], mass=15.)
 
         self.assertEquals(a.get_symbols_set(), set(['Ba', 'Ti', 'O', 'H']))
-        
+
+    def test_get_formula(self):
+        """
+        Tests the generation of formula
+        """
+        from aiida.orm.data.structure import get_formula
+
+        self.assertEquals(get_formula(['Ba', 'Ti'] + ['O'] * 3),
+                          'BaO3Ti')
+        self.assertEquals(get_formula(['Ba', 'Ti', 'C'] + ['O'] * 3,
+                                      separator=" "),
+                          'C Ba O3 Ti')
+        self.assertEquals(get_formula(['H'] * 6 + ['C'] * 6),
+                          'C6H6')
+        self.assertEquals(get_formula((['Ba', 'Ti'] + ['O'] * 3) * 2 + \
+                                      ['Ba'] + ['Ti'] * 2 + ['O'] * 3,
+                                      mode="compact1"),
+                          '(BaTiO3)2BaTi2O3')
+        self.assertEquals(get_formula((['Ba', 'Ti'] + ['O'] * 3) * 2 + \
+                                      ['Ba'] + ['Ti'] * 2 + ['O'] * 3,
+                                      mode="compact1", separator=" "),
+                          '(Ba Ti O3)2 Ba Ti2 O3')
+        self.assertEquals(get_formula((['Ba', 'Ti'] + ['O'] * 3) * 2 + \
+                                      ['Ba'] + ['Ti'] * 2 + ['O'] * 3,
+                                      mode="reduce"),
+                          'BaTiO3BaTiO3BaTi2O3')
+        self.assertEquals(get_formula((['Ba', 'Ti'] + ['O'] * 3) * 2 + \
+                                      ['Ba'] + ['Ti'] * 2 + ['O'] * 3,
+                                      mode="reduce", separator=", "),
+                          'Ba, Ti, O3, Ba, Ti, O3, Ba, Ti2, O3')
+
 
 class TestStructureDataLock(AiidaTestCase):
     """

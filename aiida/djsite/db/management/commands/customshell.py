@@ -31,6 +31,7 @@ default_modules_list = [
                         ("aiida.orm","Group","Group"),
                         ("aiida.orm","load_node","load_node"),
                         ("aiida.orm.workflow","Workflow","Workflow"),
+                        ("aiida.orm","load_workflow","load_workflow"),
                         ("aiida.djsite.db","models","models"),
                         ]
 

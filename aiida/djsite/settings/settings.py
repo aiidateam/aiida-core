@@ -25,14 +25,8 @@ except ConfigurationError:
     raise ConfigurationError("Please run the AiiDA Installation, no config found")
 
 if settings_profile.AIIDADB_PROFILE is None:
-    print "~ new: {}, process: {}".format(settings_profile.AIIDADB_PROFILE,settings_profile.CURRENT_AIIDADB_PROCESS)
-    raise ConfigurationError("stiamo bloccando")
-else:
-#    process = aiida.common.setup.DEFAULT_PROCESS
-#    AIIDADB_PROFILE = get_default_profile(process)
-#    CURRENT_PROCESS = process
-    print "~ existing: {}, process: {}".format(settings_profile.AIIDADB_PROFILE,settings_profile.CURRENT_AIIDADB_PROCESS)
-
+    raise ConfigurationError("AIIDADB_PROFILE not defined, did you load django"
+                             "through the AiiDA load_dbenv()?")
 
 profile_conf = get_profile_config(settings_profile.AIIDADB_PROFILE,conf_dict = confs)
 

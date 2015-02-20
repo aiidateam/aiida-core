@@ -5,16 +5,17 @@ __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausan
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
 __version__ = "0.3.0"
 
-def load_dbenv(process=None):
+def load_dbenv(process=None,profile=None):
     """
     Load the database environment (Django) and perform some checks
     """
-    _load_dbenv_noschemacheck(process)
+    print "PROFILE:", profile, "PROCESS:", process
+    _load_dbenv_noschemacheck(process,profile)
     # Check schema version and the existence of the needed tables
     check_schema_version()
 
 
-def _load_dbenv_noschemacheck(process):
+def _load_dbenv_noschemacheck(process,profile=None):
     """
     Load the database environment (Django) WITHOUT CHECKING THE SCHEMA VERSION.
     
@@ -28,9 +29,17 @@ def _load_dbenv_noschemacheck(process):
     from aiida.common.setup import get_default_profile,DEFAULT_PROCESS
     from aiida.djsite.settings import settings_profile
     
-    actual_process = process if process is not None else DEFAULT_PROCESS
-    settings_profile.AIIDADB_PROFILE = get_default_profile(actual_process)
-    settings_profile.CURRENT_AIIDADB_PROCESS = actual_process
+    if profile is not None and process is not None:
+        raise TypeError("You have to pass either process or profile to "
+                         "load_dbenv_noschemacheck")
+    if profile is not None:
+        settings_profile.AIIDADB_PROFILE = profile
+        settings_profile.CURRENT_AIIDADB_PROCESS = None
+    else:
+        actual_process = process if process is not None else DEFAULT_PROCESS
+        settings_profile.AIIDADB_PROFILE = get_default_profile(actual_process)
+        settings_profile.CURRENT_AIIDADB_PROCESS = actual_process
+        
     os.environ['DJANGO_SETTINGS_MODULE'] = 'aiida.djsite.settings.settings'
     django.setup()
     
@@ -158,7 +167,12 @@ def long_field_length():
     Return the length of "long" fields.
     This is used, for instance, for the 'key' field of attributes.
     This returns 1024 typically, but it returns 255 if the backend is mysql.
+    
+    :note: Call this function only AFTER having called load_dbenv!
     """
+    # One should not load directly settings because there are checks inside 
+    # for the current profile. However, this function is going to be called
+    # only after having loaded load_dbenv, so there should be no problem
     from aiida.djsite.settings import settings
     if 'mysql' in settings.DATABASES['default']['ENGINE']:
         return 255

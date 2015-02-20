@@ -679,8 +679,10 @@ class BasePwCpInputGenerator(object):
         :param bool restart_if_failed: restart if parent is failed.
         """
         from aiida.common.datastructures import calc_states
-        
-        if self.get_state() != calc_states.FINISHED:
+
+        # Check the calculation's state using ``from_attribute=True`` to
+        # correctly handle IMPORTED calculations.
+        if self.get_state(from_attribute=True) != calc_states.FINISHED:
             if restart_if_failed:
                 pass
             else:

@@ -11,6 +11,7 @@ User's guide
    ../examples/scripting
    ../examples/structure_tutorial
    ../examples/pw_tutorial
+   ../examples/pwimmigrant_tutorial
    ../examples/ph_tutorial
    ../examples/cp_tutorial
    ../parsers/resultmanager

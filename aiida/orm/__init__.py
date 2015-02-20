@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from aiida.orm.node import Node
+from aiida.orm.workflow import Workflow
 from aiida.orm.calculation import Calculation
 from aiida.orm.calculation.job import JobCalculation
 from aiida.orm.data import Data
@@ -66,3 +67,34 @@ def load_node(node_id=None,pk=None,uuid=None):
         return Node.get_subclass_from_pk(pk)
     else:
         return Node.get_subclass_from_uuid(uuid)
+
+
+def load_workflow(wf_id=None,pk=None,uuid=None):
+    """
+    Return an AiiDA workflow given PK or UUID.
+
+    :param wf_id: PK (integer) or UUID (string) or a workflow
+    :param pk: PK of a workflow
+    :param uuid: UUID of a workflow
+    :return: an AiiDA workflow
+    :raises: ValueError if none or more than one of parameters is supplied
+        or type of wf_id is neither string nor integer
+    """
+    if int(wf_id is None) + int(pk is None) + int(uuid is None) == 3:
+        raise ValueError("one of the parameters 'wf_id', 'pk' and 'uuid' "
+                         "has to be supplied")
+    if int(wf_id is None) + int(pk is None) + int(uuid is None) < 2:
+        raise ValueError("only one of parameters 'wf_id', 'pk' and 'uuid' "
+                         "has to be supplied")
+    if wf_id is not None:
+        if isinstance(wf_id,str) or isinstance(wf_id,unicode):
+            return Workflow.get_subclass_from_uuid(wf_id)
+        elif isinstance(wf_id,int):
+            return Workflow.get_subclass_from_pk(wf_id)
+        else:
+            raise ValueError("'wf_id' has to be either string, unicode or "
+                             "integer, {} given".format(type(wf_id)))
+    if pk is not None:
+        return Workflow.get_subclass_from_pk(pk)
+    else:
+        return Workflow.get_subclass_from_uuid(uuid)

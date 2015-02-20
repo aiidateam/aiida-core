@@ -283,15 +283,19 @@ are running: by printing the workflow ``list`` or its ``report``.
 
   while from the verdi shell the same operation requires to use the ``get_report()`` method::
   
-  >> from aiida.orm.workflow import Workflow
-  >> Workflow.get_subclass_from_pk(PK_NUMBER).get_report()
+  >> load_workflow(PK_NUMBER).get_report()
    
   In both variants, PK_NUMBER is the ``pk`` number of the workflow we want
-  the report of. In fact, it's always recommended to get the workflow instance
-  from ``Workflow.get_subclass_from_pk`` without saving this object in a variable. 
-  The information generated in the report may change and the user calling a 
-  ``get_report`` method of a class instantiated in the past will probably lose 
-  the most recent additions to the report.
+  the report of. The ``load_workflow`` function loads a Workflow instance from
+  its ``pk`` number, or from its ``uuid`` (given as a string).
+  
+  .. note::
+	It's always recommended to get the workflow instance
+	from ``load_workflow`` (or from the ``Workflow.get_subclass_from_pk`` method) 
+	without saving this object in a variable. 
+	The information generated in the report may change and the user calling a 
+	``get_report`` method of a class instantiated in the past will probably lose 
+	the most recent additions to the report.
   
 Once launched, the workflows will be handled by the daemon until the final step 
 or until some error occurs. In the last case, the workflow gets halted and the report 
@@ -309,8 +313,11 @@ this can be avoided by using the ``-f`` option.
   
 An alternative way to kill an individual workflow is to use the ``kill`` method.
 In the verdi shell type:: 
-  
->> from aiida.orm.workflow import Workflow
+
+>> load_workflow(PK_NUMBER).kill()
+
+or, equivalently::
+
 >> Workflow.get_subclass_from_pk(PK_NUMBER).kill()
   
 .. note::

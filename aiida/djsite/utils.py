@@ -26,9 +26,11 @@ def _load_dbenv_noschemacheck(process):
     import os
     import django
     from aiida.common.setup import get_default_profile,DEFAULT_PROCESS
+    from aiida.djsite.settings import settings_profile
     
     actual_process = process if process is not None else DEFAULT_PROCESS
-    os.environ['AIIDADB_PROFILE'] = get_default_profile(actual_process)
+    settings_profile.AIIDADB_PROFILE = get_default_profile(actual_process)
+    settings_profile.CURRENT_AIIDADB_PROCESS = actual_process
     os.environ['DJANGO_SETTINGS_MODULE'] = 'aiida.djsite.settings.settings'
     django.setup()
     
@@ -91,10 +93,10 @@ def get_configured_user_email():
     """
     from aiida.common.exceptions import ConfigurationError
     from aiida.common.setup import get_profile_config, DEFAULT_USER_CONFIG_FIELD
-    import os
+    from aiida.djsite.settings import settings_profile 
     
     try:
-        profile_conf = get_profile_config(os.environ['AIIDADB_PROFILE'])
+        profile_conf = get_profile_config(settings_profile.AIIDADB_PROFILE)
         email = profile_conf[DEFAULT_USER_CONFIG_FIELD]
     # I do not catch the error in case of missing configuration, because
     # it is already a ConfigurationError

@@ -37,14 +37,14 @@ version_to = "1.0.1"
 # Print a message every XX calculations to have the user aware of what's
 # going on
 print_every = 100
-def migrate():
+def migrate(process):
     """
     Migrate the DB from v. 1.0.0 to v.1.0.1.
     """
     # Load the DB without performing the version check
     from aiida.djsite.utils import (_load_dbenv_noschemacheck,
                                    get_db_schema_version, set_db_schema_version)
-    _load_dbenv_noschemacheck(profile_type=None)
+    _load_dbenv_noschemacheck(process=process)
 
     from django.db import transaction
     from aiida.djsite.db import models
@@ -74,4 +74,12 @@ def migrate():
     print "New DB version: {}".format(version_to)
 
 if __name__ == "__main__":
-    migrate()
+    import sys
+    try:
+        process = sys.argv[1]
+    except IndexError:
+        process = None
+    
+    migrate(process=process)
+    
+    

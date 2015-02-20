@@ -102,7 +102,7 @@ class Daemon(VerdiCommandWithSubcommands):
         Start the daemon
         """
         from aiida import load_dbenv
-        load_dbenv(profile_type='daemon')
+        load_dbenv(process='daemon')
 
         if args:
             print >> sys.stderr, (
@@ -226,7 +226,7 @@ class Daemon(VerdiCommandWithSubcommands):
         Print the status of the daemon
         """
         from aiida import load_dbenv
-        load_dbenv(profile_type='daemon')
+        load_dbenv(process='daemon')
         
         if args:
             print >> sys.stderr, (
@@ -321,7 +321,7 @@ class Daemon(VerdiCommandWithSubcommands):
         shut down.
         """
         from aiida import load_dbenv
-        load_dbenv(profile_type='daemon')
+        load_dbenv(process='daemon')
 
         if args:
             print >> sys.stderr, (
@@ -360,7 +360,7 @@ class Daemon(VerdiCommandWithSubcommands):
         Configure the user that can run the daemon.
         """
         from aiida import load_dbenv
-        load_dbenv(profile_type='daemon')
+        load_dbenv(process='daemon')
         
         if args:
             print >> sys.stderr, (

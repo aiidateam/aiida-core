@@ -23,6 +23,9 @@ DAEMON_CONF_FILE = "aiida_daemon.conf"
 # The key inside the configuration file
 DEFAULT_USER_CONFIG_FIELD = 'default_user_email'
 
+# This is the default process used by load_dbenv when no process is specified
+DEFAULT_PROCESS = 'verdi'
+
 def backup_config(): 
     """
     Backup the previous configuration file.
@@ -304,7 +307,7 @@ def create_base_dirs():
     
     create_htaccess_file()
 
-def set_db_profile(process,profile):
+def set_default_profile(process,profile):
     """
     Set a default db profile to be used by a process (default for verdi, 
     default for daemon, ...)
@@ -313,7 +316,6 @@ def set_db_profile(process,profile):
     if profile not in get_profiles_list():
         raise ConfigurationError('Profile {} has not been configured'.format(profile))
     confs = get_config()
-    backup_config()
     
     try:
         confs['default_profiles']
@@ -321,11 +323,15 @@ def set_db_profile(process,profile):
         confs['default_profiles'] = {}
     
     confs['default_profiles'][process] = profile
+    backup_config()
     store_config(confs)
     
 def get_default_profile(process):
     """
-    Returns the profile name to be used by process
+    Return the profile name to be used by process
+    
+    :return: None if no default profile is found, otherwise the name of the 
+      default profile for the given process 
     """
     confs = get_config()
     try:
@@ -345,12 +351,15 @@ def get_profiles_list():
     except KeyError:
         return ConfigurationError("Please run the setup")
     
-def get_profile_config(profile):
+def get_profile_config(profile,conf_dict=None):
     """
     Return the profile specific configurations
     """
     from aiida.common.exceptions import ConfigurationError
-    confs = get_config()
+    if conf_dict is None:
+        confs = get_config()
+    else:
+        confs = conf_dict
     try:
         return confs['profiles'][profile]
     except KeyError:
@@ -372,7 +381,6 @@ def create_configuration(profile='default'):
     
     try:
         confs = get_config()
-        backup_config()
     except ConfigurationError:
         # No configuration file found
         confs = {}  
@@ -495,15 +503,21 @@ def create_configuration(profile='default'):
         # remote repository. Atm, I act as only a local repo is possible
         existing_repo = this_existing_confs.get('AIIDADB_REPOSITORY_URI',
                           os.path.join(aiida_dir,"repository/"))
-        if existing_repo.startswith('file://'):
-            existing_repo = existing_repo.split('file://')[1]
+        default_protocol = 'file://'
+        if existing_repo.startswith(default_protocol):
+            existing_repo = existing_repo[len(default_protocol):]
         readline.set_startup_hook(lambda: readline.insert_text(existing_repo))
         new_repo_path = raw_input('AiiDA repository directory: ')
+        new_repo_path = os.path.expanduser(new_repo_path)
+        if not os.path.isabs(new_repo_path):
+            raise ValueError("You must specify an absolute path")
         if (not os.path.isdir(new_repo_path)):
             os.makedirs(new_repo_path)
         this_new_confs['AIIDADB_REPOSITORY_URI'] = 'file://' + new_repo_path
         
         confs['profiles'][profile] = this_new_confs
+        
+        backup_config()        
         store_config(confs)
     finally:
         readline.set_startup_hook(lambda: readline.insert_text(""))
@@ -710,3 +724,27 @@ def set_property(name, value):
     
     store_config(config)
     
+def parse_repository_uri(repository_uri):
+    """
+    This function validates the REPOSITORY_URI, that should be in the
+    format protocol://address
+    
+    :note: At the moment, only the file protocol is supported. 
+    
+    :return: a tuple (protocol, address). 
+    """
+    
+    protocol, _, address = repository_uri.partition('://')
+    
+    if protocol != 'file':
+        raise ConfigurationError("The current AiiDA version supports only a "
+                                 "local repository")
+
+    if protocol == 'file':
+        if not os.path.isabs(address):
+            raise ConfigurationError("The current repository is specified with a "
+                                     "file protocol but with a relative path")
+        address = os.path.expanduser(address)
+    
+    # Normalize address to its absolute path
+    return (protocol,address)

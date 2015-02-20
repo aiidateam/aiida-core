@@ -227,7 +227,7 @@ class Install(VerdiCommand):
         import readline
         from aiida import load_dbenv
         from aiida.common.setup import (create_base_dirs, create_configuration,
-                                        set_db_profile)        
+                                        set_default_profile)        
 
         cmdline_args = list(args)
         
@@ -255,14 +255,16 @@ class Install(VerdiCommand):
             sys.exit(1)
         
         # set default DB profiles
-        set_db_profile('verdi','default')
-        set_db_profile('daemon','default')
+        set_default_profile('verdi','default')
+        set_default_profile('daemon','default')
         
         if only_user_config:
             print "Only user configuration requested, skipping the migrate command"
         else:
             print "Executing now a migrate command..."
-            pass_to_django_manage([execname, 'migrate'])
+            # For the moment, the verdi install works only for the default 
+            # profile, so we don't chose it, but in the future one should
+            pass_to_django_manage([execname, 'migrate'],process=None)
 
         # I create here the default user
         print "Loading new environment..."

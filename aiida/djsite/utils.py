@@ -5,30 +5,30 @@ __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausan
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
 __version__ = "0.3.0"
 
-def load_dbenv(profile_type=None):
+def load_dbenv(process=None):
     """
     Load the database environment (Django) and perform some checks
     """
-    _load_dbenv_noschemacheck(profile_type)
+    _load_dbenv_noschemacheck(process)
     # Check schema version and the existence of the needed tables
     check_schema_version()
 
 
-def _load_dbenv_noschemacheck(profile_type):
+def _load_dbenv_noschemacheck(process):
     """
     Load the database environment (Django) WITHOUT CHECKING THE SCHEMA VERSION.
     
-    :param profile_type: ...
+    :param process: ...
     
     This should ONLY be used internally, inside load_dbenv, and for schema 
     migrations. DO NOT USE OTHERWISE!
     """
     import os
     import django
-    from aiida.common.setup import get_default_profile
+    from aiida.common.setup import get_default_profile,DEFAULT_PROCESS
     
-    real_type = profile_type if profile_type is not None else 'verdi'
-    os.environ['AIIDADB_PROFILE'] = get_default_profile(real_type)
+    actual_process = process if process is not None else DEFAULT_PROCESS
+    os.environ['AIIDADB_PROFILE'] = get_default_profile(actual_process)
     os.environ['DJANGO_SETTINGS_MODULE'] = 'aiida.djsite.settings.settings'
     django.setup()
     
@@ -150,33 +150,6 @@ def get_automatic_user():
     except ObjectDoesNotExist:
         raise ConfigurationError("No aiida user with email {}".format(
                 email))
-
-def get_after_database_creation_signal():
-    """
-    Return the correct signal to attach to (and the sender),
-    to be used when we want to perform operations
-    after the AiiDA tables are created (e.g., trigger installation).
-    
-    This can be:
-    
-    * ``django.db.models.signals.post_migrate``, since from django1.7, tables 
-      are managed by django itself
-          
-    :return: a tuple ``(signal, sender)``, where ``signal`` is the signal to attach
-        to, and ``sender`` is the sender to filter by in the ``signal.connect()``
-        call.
-    """
-    #print "Is this creation signal executed?"
-    from aiida.djsite.settings import settings
-    from aiida.common.exceptions import ConfigurationError
-    
-    if settings.AFTER_DATABASE_CREATION_SIGNAL == 'post_migrate':
-        from django.db.models.signals import post_migrate 
-        return post_migrate, None # No sender is needed for this model
-
-    else:
-        raise ConfigurationError(
-            "The settings.AFTER_DATABASE_CREATION_SIGNAL has an invalid value")
 
 def long_field_length():
     """

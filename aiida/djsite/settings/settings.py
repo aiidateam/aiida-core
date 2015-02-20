@@ -4,7 +4,8 @@ import sys, os
 from aiida.common.exceptions import ConfigurationError
 # get_property is used to read properties stored in the config json
 from aiida.common.setup import (get_config, get_secret_key, get_property, 
-                                get_profile_config, get_default_profile)
+                                get_profile_config, get_default_profile,
+                                parse_repository_uri,DEFAULT_PROCESS)
 # Assumes that parent directory of aiida is root for
 # things like templates/, SQL/ etc.  If not, change what follows...
 
@@ -24,9 +25,9 @@ except ConfigurationError:
 try:
     AIIDADB_PROFILE
 except NameError:
-    process='verdi' # look also at djsite/utils.py
+    process = DEFAULT_PROCESS
     AIIDADB_PROFILE = get_default_profile(process)
-profile_conf = get_profile_config(AIIDADB_PROFILE)
+profile_conf = get_profile_config(AIIDADB_PROFILE,conf_dict = confs)
 
 #put all database specific portions of settings here
 DBENGINE = profile_conf.get('AIIDADB_ENGINE', '')
@@ -62,14 +63,10 @@ except NameError:
         "Please setup correctly the REPOSITORY_URI variable to "
         "a suitable directory on which you have write permissions.")
 
-def validate_repository_uri(repository_uri):
-    if not repository_uri.startswith('file://'):
-        raise ConfigurationError("The current AiiDA version supports only a "
-                                 "local repository")
+# Note: this variable might disappear in the future
+REPOSITORY_PROTOCOL, REPOSITORY_PATH = parse_repository_uri(REPOSITORY_URI)
 
-    REPOSITORY_PATH = repository_uri.split('file://')[1]
-    # Normalize REPOSITORY_PATH to its absolute path
-    REPOSITORY_PATH = os.path.abspath(REPOSITORY_PATH)
+if REPOSITORY_PROTOCOL == 'file':
     if not os.path.isdir(REPOSITORY_PATH):
         try:
             # Try to create the local repository folders with needed parent
@@ -78,12 +75,11 @@ def validate_repository_uri(repository_uri):
         except OSError:
             # Possibly here due to permission problems
             raise ConfigurationError(
-                "Please setup correctly the REPOSITORY_PATH variable to "
+                "Please setup correctly the address variable to "
                 "a suitable directory on which you have write permissions. "
                 "(I was not able to create the directory.)")
-    return REPOSITORY_PATH
-# Note: this variable might disappear in the future
-REPOSITORY_PATH = validate_repository_uri(REPOSITORY_URI)
+else:
+    raise ConfigurationError("Only file protocol supported")
 
 # CUSTOM USER CLASS
 AUTH_USER_MODEL = 'db.DbUser'
@@ -290,8 +286,6 @@ LOGGING = {
             },
         },
 }
-
-AFTER_DATABASE_CREATION_SIGNAL = 'post_migrate'
 
 # VERSION TO USE FOR DBNODES.
 AIIDANODES_UUID_VERSION=4

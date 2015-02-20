@@ -10,6 +10,6 @@ __version__ = "0.3.0"
 if __name__ == "__main__":
     from django.core.management import execute_from_command_line
     from aiida.djsite.utils import load_dbenv
-    load_dbenv(profile_type='daemon')    
+    load_dbenv(process='daemon')
     
     execute_from_command_line(sys.argv)

@@ -283,7 +283,7 @@ password each time you use the script. It should look like (:download:`.pgpass<p
 where ``YOUR_DATABASE_PASSWORD`` is the password you set up for the database.
 
 .. note:: Do not forget to put this file in ~/ and to name it ``.pgpass``.
-   Remeber also to give it the right permissions (read and write): ``chmod u+rw .pgpass``.
+   Remember also to give it the right permissions (read and write): ``chmod u+rw .pgpass``.
 
 To dump the database in a file automatically everyday, you can add the following script 
 :download:`backup-aiidadb-USERNAME<backup-aiidadb-USERNAME>` in ``/etc/cron.daily/``, which will

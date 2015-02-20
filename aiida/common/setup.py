@@ -93,7 +93,7 @@ serverurl=unix:///{daemon_dir}/supervisord.sock
 ; Main AiiDA Daemon
 ;=======================================
 [program:aiida-daemon]
-command=python "{aiida_module_dir}/djsite/manage.py" celeryd --loglevel=INFO
+command=python "{aiida_module_dir}/djsite/manage.py" --aiida-process=daemon celeryd --loglevel=INFO
 directory={daemon_dir}
 user={local_user}
 numprocs=1
@@ -109,7 +109,7 @@ process_name=%(process_num)s
 ; AiiDA Deamon BEAT - for scheduled tasks
 ; ==========================================
 [program:aiida-daemon-beat]
-command=python "{aiida_module_dir}/djsite/manage.py" celerybeat
+command=python "{aiida_module_dir}/djsite/manage.py" --aiida-process=daemon celerybeat
 directory={daemon_dir}
 user={local_user}
 numprocs=1
@@ -355,17 +355,66 @@ def get_profile_config(profile,conf_dict=None):
     """
     Return the profile specific configurations
     """
+    import sys
+    import tempfile
+    
     from aiida.common.exceptions import ConfigurationError
     if conf_dict is None:
         confs = get_config()
     else:
         confs = conf_dict
+    
+    test_string = ""
+    is_test = False
+    use_sqlite_for_tests = False
+    
+    test_prefix = "test_"
+    sqlitetest_prefix = "testsqlite_"
+    if profile.startswith(test_prefix):
+        # Use the same profile
+        profile = profile[len(test_prefix):]
+        is_test = True
+        test_string = "(test) "
+    elif profile.startswith(sqlitetest_prefix):
+        # Use the same profile
+        profile = profile[len(sqlitetest_prefix):]
+        is_test = True
+        use_sqlite_for_tests = True
+        test_string = "(sqlite-test) "
+    
     try:
-        return confs['profiles'][profile]
+        profile_info = confs['profiles'][profile]
     except KeyError:
-        raise ConfigurationError("No profile configuration found for {}, "
-                                 "allowed values are: {}.".format(profile,
+        raise ConfigurationError("No {}profile configuration found for {}, "
+                                 "allowed values are: {}.".format(test_string,
+                                                                  profile,
                                                 ", ".join(get_profiles_list())))
+        
+    if is_test:
+        # Change the repository and print a message
+        ###################################################################
+        # IMPORTANT! Choose a different repository location, otherwise 
+        # real data will be destroyed during tests!!
+        # The location is automatically created with the tempfile module
+        # Typically, under linux this is created under /tmp
+        # and is not deleted at the end of the run.
+        test_repo_path = tempfile.mkdtemp(prefix='aiida_repository_')
+        if 'AIIDADB_REPOSITORY_URI' not in profile_info:
+            raise ConfigurationError("Config file has not been found, run "
+                                     "verdi install first")
+        profile_info['AIIDADB_REPOSITORY_URI'] = 'file://' + test_repo_path
+        # I write the local repository on stderr, so that the user running
+        # the tests knows where the files are being stored
+        print >> sys.stderr, "########################################"
+        print >> sys.stderr, "# LOCAL AiiDA REPOSITORY FOR TESTS:"
+        print >> sys.stderr, "# {}".format(test_repo_path)
+        print >> sys.stderr, "########################################"
+        
+        if use_sqlite_for_tests:
+            profile_info['AIIDADB_ENGINE'] = 'sqlite3'
+            profile_info['AIIDADB_NAME'] = ":memory:"
+
+    return profile_info
 
 def create_configuration(profile='default'):
     """

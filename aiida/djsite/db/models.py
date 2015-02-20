@@ -12,7 +12,6 @@ from aiida.common.exceptions import (
     ConfigurationError, DbContentError, MissingPluginError, InternalError)
 from aiida.djsite.settings.settings import (
     AIIDANODES_UUID_VERSION, AUTH_USER_MODEL)
-from aiida.djsite.utils import long_field_length
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
@@ -609,6 +608,7 @@ class DbMultipleValueAttributeBaseClass(m.Model):
     Abstract base class for tables storing attribute + value data, of
     different data types (without any association to a Node).
     """
+    from aiida.djsite.utils import long_field_length
     key = m.CharField(max_length=long_field_length(),db_index=True,blank=False)
     datatype = m.CharField(max_length=10, 
                            default='none', 

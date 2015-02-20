@@ -620,6 +620,8 @@ END;
 #====================================
 
 def install_tc(sender, **kwargs):
+    #print '~', sender, kwargs, type(sender)
+    
     from django.db import connection, transaction
     cursor = connection.cursor()
 
@@ -750,4 +752,7 @@ def install_tc(sender, **kwargs):
 ## dispatch_uid used to avoid to install twice the signal if this
 ## module is loaded twice (it happens e.g. when tests are run)
 from django.db.models.signals import post_migrate 
-post_migrate.connect(install_tc, dispatch_uid="transitive_closure_post_migrate")
+from django.apps import apps
+post_migrate.connect(install_tc, 
+#                     sender=apps.get_app_config('db'),
+                     dispatch_uid="transitive_closure_post_migrate")

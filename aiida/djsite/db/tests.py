@@ -12,14 +12,14 @@ import importlib
 
 from django.utils import unittest
 from aiida.common.exceptions import InternalError
-from aiida.djsite.settings import settings
+from aiida.djsite.settings import settings_profile
 from aiida.djsite.db.testbase import db_test_list
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
 __version__ = "0.3.0"
 
-tests_to_run = settings.__dict__.get('aiida_test_list', None)
+tests_to_run = settings_profile.__dict__.get('aiida_test_list', None)
 if tests_to_run is None:
     # This is intended as a safety mechanism. This should help to ensure that tests are
     # run only after setting the flag in the djsite.settings.settings module, and

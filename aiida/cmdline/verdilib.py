@@ -264,7 +264,7 @@ class Install(VerdiCommand):
             print "Executing now a migrate command..."
             # For the moment, the verdi install works only for the default 
             # profile, so we don't chose it, but in the future one should
-            pass_to_django_manage([execname, 'migrate'],process=None)
+            pass_to_django_manage([execname, 'migrate'])
 
         # I create here the default user
         print "Loading new environment..."
@@ -302,10 +302,9 @@ class Install(VerdiCommand):
 
 class Shell(VerdiCommand):
     """
-    Run the interactive shell with the Django environment
+    Run the interactive shell with the AiiDA environment loaded.
 
-    This command runs the 'manage.py shell' command, that opens a
-    IPython shell with the Django environment loaded.
+    This command opens an ipython shell with the AiiDA environment loaded.
     """
     def run(self,*args):
         pass_to_django_manage([execname, 'customshell'] + list(args))

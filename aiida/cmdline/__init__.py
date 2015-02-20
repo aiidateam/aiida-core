@@ -89,13 +89,13 @@ def print_dictionary(dictionary, format):
     actual_printing_function(dictionary)
     
           
-def pass_to_django_manage(argv,profile_type='daemon'):
+def pass_to_django_manage(argv,process=None):
     """
     Call the corresponding django manage.py command
     """
     from aiida import load_dbenv
     import django.core.management
     
-    load_dbenv(profile_type)
+    load_dbenv(process)
     django.core.management.execute_from_command_line(argv)
       

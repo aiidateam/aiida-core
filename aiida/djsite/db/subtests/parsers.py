@@ -21,7 +21,7 @@ def pre_encoder(data):
     that when decoding and finding a string, one can understand if it is a 
     date or a string by reading the first character.
     """
-    import datetime
+    import datetime,pytz
 
     if isinstance(data, (list, tuple)):
         return [pre_encoder(_) for _ in data]
@@ -32,7 +32,7 @@ def pre_encoder(data):
     elif isinstance(data, unicode):
         return u"S{}".format(data)
     elif isinstance(data, datetime.datetime):
-        return data.strftime('D%Y-%m-%dT%H:%M:%S.%f%z')
+        return data.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%S.%f+0000')
     else:
         return data
 

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-This file was copied and edited from Django 1.8.4, and modified to allow to define default loads in ipython.
+This file was copied and edited from Django 1.7.4, and modified to allow to define default loads in ipython.
 
 .. note: Only ipython and bpython do the auto import, not the plain shell and _ipython_pre_100.
 

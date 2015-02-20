@@ -103,7 +103,6 @@ class Daemon(VerdiCommandWithSubcommands):
         """
         from aiida import load_dbenv
         load_dbenv(process='daemon')
-
         if args:
             print >> sys.stderr, (
                 "No arguments allowed for the '{}' command.".format(

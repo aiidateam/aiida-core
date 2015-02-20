@@ -5,7 +5,9 @@ from aiida.common.exceptions import ConfigurationError
 # get_property is used to read properties stored in the config json
 from aiida.common.setup import (get_config, get_secret_key, get_property, 
                                 get_profile_config, get_default_profile,
-                                parse_repository_uri,DEFAULT_PROCESS)
+                                parse_repository_uri)
+import aiida.common.setup
+from aiida.djsite.settings import settings_profile
 # Assumes that parent directory of aiida is root for
 # things like templates/, SQL/ etc.  If not, change what follows...
 
@@ -22,12 +24,17 @@ try:
 except ConfigurationError:
     raise ConfigurationError("Please run the AiiDA Installation, no config found")
 
-try:
-    AIIDADB_PROFILE
-except NameError:
-    process = DEFAULT_PROCESS
-    AIIDADB_PROFILE = get_default_profile(process)
-profile_conf = get_profile_config(AIIDADB_PROFILE,conf_dict = confs)
+if settings_profile.AIIDADB_PROFILE is None:
+    print "~ new: {}, process: {}".format(settings_profile.AIIDADB_PROFILE,settings_profile.CURRENT_AIIDADB_PROCESS)
+    raise ConfigurationError("stiamo bloccando")
+else:
+#    process = aiida.common.setup.DEFAULT_PROCESS
+#    AIIDADB_PROFILE = get_default_profile(process)
+#    CURRENT_PROCESS = process
+    print "~ existing: {}, process: {}".format(settings_profile.AIIDADB_PROFILE,settings_profile.CURRENT_AIIDADB_PROCESS)
+
+
+profile_conf = get_profile_config(settings_profile.AIIDADB_PROFILE,conf_dict = confs)
 
 #put all database specific portions of settings here
 DBENGINE = profile_conf.get('AIIDADB_ENGINE', '')
@@ -75,7 +82,7 @@ if REPOSITORY_PROTOCOL == 'file':
         except OSError:
             # Possibly here due to permission problems
             raise ConfigurationError(
-                "Please setup correctly the address variable to "
+                "Please setup correctly the REPOSITORY_PATH variable to "
                 "a suitable directory on which you have write permissions. "
                 "(I was not able to create the directory.)")
 else:
@@ -345,3 +352,4 @@ CELERYBEAT_SCHEDULE = {
         'schedule': timedelta(seconds=5),
         },
 }
+

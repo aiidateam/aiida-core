@@ -32,7 +32,7 @@ def pre_encoder(data):
     elif isinstance(data, unicode):
         return u"S{}".format(data)
     elif isinstance(data, datetime.datetime):
-        return data.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%S.%f+0000')
+        return data.astimezone(pytz.utc).strftime('D%Y-%m-%dT%H:%M:%S.%f+0000')
     else:
         return data
 

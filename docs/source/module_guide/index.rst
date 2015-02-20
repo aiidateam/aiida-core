@@ -11,3 +11,4 @@ Modules
    ../execmanager/dev
    ../djsite/dev
    ../orm/dev
+   ../tools/dev

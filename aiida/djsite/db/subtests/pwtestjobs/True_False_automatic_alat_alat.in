@@ -1,0 +1,41 @@
+&control
+   calculation = 'scf'
+   restart_mode='from_scratch',
+   prefix='True_False_automatic_alat_alat',
+   pseudo_dir = '/Users/ehontz/bin/espresso/pseudo/',
+   outdir='./tmp'
+
+/
+
+&system
+    ibrav           = 0, A = 2.456001612223375207832987143774516880512237548828125000000000000000000000000
+    
+    nat             = 4, ntyp= 1, occupations   ='fixed'
+
+    smearing        = 'methfessel-paxton'
+    degauss         = 0.02
+
+    ecutwfc         = 30.0
+    ecutrho         = 180.0
+    
+/
+
+&electrons
+    conv_thr        = 1.0d-5
+/
+
+ATOMIC_SPECIES
+C   12.00   C.pbe-rrkjus.UPF
+
+ATOMIC_POSITIONS alat
+C  0.0000000  0.0000000  0.0000000
+C  0.0000000  0.5773503  0.0000000
+C  0.0000000  0.0000000  1.3632000
+C  0.5000000  0.2886751  1.3632000
+    
+CELL_PARAMETERS  alat
+ 1.0000000  0.0000000  0.0000000
+-0.5000000  0.8660250  0.0000000
+ 0.0000000  0.0000000  2.7264000  
+K_POINTS automatic
+5 5 6 1 1 0

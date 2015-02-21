@@ -3,7 +3,7 @@ from aiida.orm import Node
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 
 class Code(Node):
     """
@@ -21,10 +21,35 @@ class Code(Node):
     methods (e.g., the set_preexec_code() can be used to load specific modules required
     for the code to be run).
     """
-    _updatable_attributes = ('input_plugin','append_text', 'prepend_text') 
-
-    _set_incompatibilities = [('remote_computer_exec','local_executable')]
     
+    def _init_internal_params(self):
+        """
+        This function is called by the init method
+        """
+        self._updatable_attributes = ('input_plugin','append_text', 
+                                      'prepend_text', 'hidden') 
+
+        self._set_incompatibilities = [('remote_computer_exec','local_executable')]
+    
+    def _hide(self):
+        """
+        Hide the code (prevents from showing it in the verdi code list)
+        """
+        self._set_attr("hidden", True)
+    
+    def _reveal(self):
+        """
+        Reveal the code (allows to show it in the verdi code list)
+        By default, it is revealed
+        """
+        self._set_attr("hidden", False)
+    
+    def _is_hidden(self):
+        """
+        Determines whether the Code is hidden or not
+        """
+        return self.get_attr('hidden',False)
+        
     def set_files(self, files):
         """
         Given a list of filenames (or a single filename string),
@@ -42,28 +67,117 @@ class Code(Node):
 
     def __str__(self):
         local_str = "Local" if self.is_local() else "Remote"
-        computer_str = "repository" if self.is_local() else self.computer.name
+        if self.is_local():
+            computer_str = "repository"
+        else:   
+            if self.computer is not None:
+                computer_str = self.computer.name
+            else:
+                computer_str = "[unknown]"
         
-        return "{} code '{}' on {}, pk={}, uuid={}".format(local_str, self.label,
+        return "{} code '{}' on {}, pk: {}, uuid: {}".format(local_str, self.label,
                                            computer_str, self.pk, self.uuid)
 
     @classmethod
-    def get(cls,label):
+    def get(cls,label,computername=None,useremail=None):
         """
-        Get a code from its label. Raises NotExistent or MultipleObjectsError in
-        case of zero or multiple matches.
+        Get a code from its label. 
+
+        :param label: the code label
+        :param computername: filter only codes on computers with this name
+        :param useremail: filter only codes belonging to a user with this 
+          email
+
+        :raise NotExistent: if no matches are found
+        :raise MultipleObjectsError: if multiple matches are found. In this case
+          you may want to pass the additional parameters to filter the codes,
+          or relabel the codes.
         """
         from aiida.common.exceptions import NotExistent, MultipleObjectsError
+        from django.db.models import Q
         
-        valid_codes = list(cls.query(label=label))
-        if len(valid_codes) == 0:
-            raise NotExistent("No code in the DB with name '{}'".format(label))
-        elif len(valid_codes) > 1:
-            raise MultipleObjectsError("More than one code in the DB with name "
-                                       "'{}', please rename at least one of "
-                                       "them".format(label))
-        else:
+        q_obj = Q(label=label)
+        if computername is not None:
+            q_obj &= Q(dbcomputer__name=computername)
+        if useremail is not None:
+            q_obj &= Q(user__email=useremail)
+        queryresults = cls.query(q_obj)
+
+        valid_codes = list(queryresults)
+        if len(valid_codes) == 1:
             return valid_codes[0]
+        else:
+            otherstr = ""
+            if computername is not None:
+                otherstr += " on computer '{}'".format(computername)
+            if useremail is not None:
+                otherstr += " of user '{}'".format(useremail)
+            if len(valid_codes) == 0:
+                errstr = "No code in the DB with name '{}'{}".format(label,otherstr)
+                raise NotExistent(errstr)
+            elif len(valid_codes) > 1:
+                errstr = ("More than one code in the DB with name "
+                          "'{}'{}, please rename at least one of "
+                          "them".format(label,otherstr))
+                raise MultipleObjectsError
+
+    @classmethod
+    def get_from_string(cls, code_string):
+        """
+        Get a Computer object with given identifier string, that can either be
+        the numeric ID (pk), or the label (if unique); the label can either
+        be simply the label, or in the format label@machinename. See the note
+        below for details on the string detection algorithm.
+
+        .. note:: If a string that can be converted to an integer is given,
+          the numeric ID is verified first (therefore, is a code A with a 
+          label equal to the ID of another code B is present, code A cannot 
+          be referenced by label). Similarly, the (leftmost) '@' symbol is
+          always used to split code and computername. Therefore do not use
+          '@' in the code name if you want to use this function
+          ('@' in the computer name are instead valid).
+
+        :param code_string: the code string identifying the code to load
+
+        :raise NotExistent: if no code identified by the given string is found
+        :raise MultipleObjectsError: if the string cannot identify uniquely
+            a code
+        """
+        from aiida.common.exceptions import NotExistent, MultipleObjectsError
+
+        try:
+            code_int = int(code_string)
+            try:
+                return cls.get_subclass_from_pk(code_int)
+            except NotExistent:
+                raise ValueError() # Jump to the following section
+                                   # to check if a code with the given
+                                   # label exists.                              
+            except MultipleObjectsError:
+                raise MultipleObjectsError("More than one code in the DB "
+                                           "with pk='{}'!".format(code_string))
+        except ValueError:
+            # Before dying, try to see if the user passed a (unique) label.
+            # split with the leftmost '@' symbol (i.e. code names cannot
+            # contain '@' symbols, computer names can)
+            codename, sep, computername = code_string.partition('@')
+            if sep:
+                codes = cls.query(label=codename, dbcomputer__name=computername)
+            else:
+                codes = cls.query(label=codename)
+
+            if len(codes) == 0:
+                raise NotExistent("'{}' is not a valid code "
+                                  "ID or label.".format(code_string))
+            elif len(codes) > 1:
+                retstr = ("There are multiple codes with label '{}', having IDs: "
+                    "".format(code_string))
+                retstr += ", ".join(sorted([str(c.pk) for c in codes])) + ".\n"
+                retstr += ("Relabel them (using their ID), or refer to them "
+                           "with their ID.")
+                raise MultipleObjectsError(retstr)
+            else:
+                return codes[0]
 
     @classmethod
     def list_for_plugin(cls,plugin,labels=True):

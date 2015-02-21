@@ -27,7 +27,7 @@ Except for the above-mentioned acknowledgment, LICENSEE shall not use the PROGRA
 
 8. This Agreement shall be governed by the material laws of Switzerland and any dispute arising out of this Agreement or use of the PROGRAM shall be brought before the courts of Lausanne, Switzerland. 
 
-9. This Agreement and the LICENSE shall be for a term of 5 years except that upon any breach of this Agreement by LICENSEE, LICENSOR shall have the right to terminate the LICENSE immediately upon notice to LICENSEE.
+9. This Agreement and the LICENSE shall remain effective until expiration of the copyrights of the PROGRAM except that upon any breach of this Agreement by LICENSEE, LICENSOR shall have the right to terminate the LICENSE immediately upon notice to LICENSEE.
 
 
 ----

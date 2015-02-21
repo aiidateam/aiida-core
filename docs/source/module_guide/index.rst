@@ -12,3 +12,5 @@ Modules
    ../djsite/dev
    ../orm/dev
    ../tools/dev
+   ../dbimporters/dev
+

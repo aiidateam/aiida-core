@@ -11,7 +11,7 @@ from django.utils import unittest
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 
 db_test_list = {
     'generic': 'aiida.djsite.db.subtests.generic',
@@ -21,6 +21,9 @@ db_test_list = {
     'codtools': 'aiida.djsite.db.subtests.codtools',
     'qepwinputparser': 'aiida.djsite.db.subtests.pwinputparser',
     'qepwimmigrant': 'aiida.djsite.db.subtests.quantumespressopwimmigrant'
+    'parsers': 'aiida.djsite.db.subtests.parsers',
+    'port': 'aiida.djsite.db.subtests.port',
+    'workflows': 'aiida.djsite.db.subtests.workflows',
     }
 
 class AiidaTestCase(unittest.TestCase):

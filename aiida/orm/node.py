@@ -12,7 +12,7 @@ from aiida.common.utils import classproperty
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 
 def from_type_to_pluginclassname(typestr):
     """
@@ -138,9 +138,9 @@ class Node(object):
         try:
             node = DbNode.objects.get(pk=pk).get_aiida_class()
         except ObjectDoesNotExist:
-            raise NotExistent("No entry with pk={} found".format(pk))
+            raise NotExistent("No entry with pk= {} found".format(pk))
         if not isinstance(node, cls):
-            raise NotExistent("pk={} is not an instance of {}".format(
+            raise NotExistent("pk= {} is not an instance of {}".format(
                 pk,cls.__name__))        
         return node
     
@@ -234,11 +234,10 @@ class Node(object):
             
             self._to_be_stored = True
             
-            # Note: the following steps take a lot of time, having to create
-            #       folders!
-            self._temp_folder = SandboxFolder() # This is also created
-            # Create the 'path' subfolder in the Sandbox
-            self._get_folder_pathsubfolder.create()
+
+            # As creating the temp folder may require some time on slow 
+            # filesystems, we defer its creation
+            self._temp_folder = None
             # Used only before the first save
             self._attrs_cache = {}
             # If this is changed, fix also the importer
@@ -248,15 +247,19 @@ class Node(object):
             # Automatically set all *other* attributes, if possible, otherwise
             # stop
             self._set_with_defaults(**kwargs)
+
+    @property
+    def _is_stored(self):
+        return not self._to_be_stored
     
     def __repr__(self):
         return '<{}: {}>'.format(self.__class__.__name__, str(self))
     
     def __str__(self):
         if self._to_be_stored:
-            return "uuid={} (unstored)".format(self.uuid)
+            return "uuid: {} (unstored)".format(self.uuid)
         else:
-            return "uuid={} (pk={})".format(self.uuid, self.pk)
+            return "uuid: {} (pk: {})".format(self.uuid, self.pk)
 
     def _init_internal_params(self):
         """
@@ -592,8 +595,8 @@ class Node(object):
             pass
 
         # If both are stored, remove also from the DB
-        if not self._to_be_stored and not src._to_be_stored:
-            self._remove_dblink_from(src, label)
+        if not self._to_be_stored:
+            self._remove_dblink_from(label)
 
     def _replace_dblink_from(self,src,label):
         """
@@ -812,7 +815,7 @@ class Node(object):
                 if k in input_list_keys:
                     raise InternalError("There exist a link with the same name "
                         "'{}' both in the DB and in the internal "
-                        "cache for node pk={}!".format(k, self.pk))
+                        "cache for node pk= {}!".format(k, self.pk))
                 inputs_list.append((k, v))
         
         if type is None:
@@ -881,8 +884,6 @@ class Node(object):
         if self._to_be_stored:
             self.dbnode.dbcomputer = DbComputer.get_dbcomputer(computer)
         else:
-            self.logger.error("Trying to change the computer of an already "
-                              "saved node: {}".format(self.uuid))
             raise ModificationNotAllowed(
                 "Node with uuid={} was already stored".format(self.uuid))
             
@@ -1139,11 +1140,11 @@ class Node(object):
                     continue
                 yield (k,v)
         else:          
-            attrlist = DbAttribute.list_all_node_elements(self.dbnode)
-            for attr in attrlist:
-                if not also_updatable and attr.key in updatable_list:
+            all_attrs = DbAttribute.get_all_values_for_node(self.dbnode)
+            for attr in all_attrs:
+                if not also_updatable and attr in updatable_list:
                     continue
-                yield (attr.key, attr.getvalue())
+                yield (attr, all_attrs[attr])
 
     def attrs(self):
         """
@@ -1180,53 +1181,79 @@ class Node(object):
                                  user=user,
                                  content=content)
 
-    def get_comments_tuple(self):
+    def get_comments(self,pk=None):
         """
-        Return a sorted list of tuples, one for each comment associated to
-        the node.
-        
-        :return: the list of comments, sorted by date; each element of the 
-            list is a tuple in the format
-            (email, ctime, mtime, content)
+        Return a sorted list of comment values, one for each comment associated
+        to the node.
+        :param pk: integer or list of integers. If it is specified, returns the 
+                   comment values with desired pks. (pk refers to DbComment.pk) 
+        :return: the list of comments, sorted by pk; each element of the 
+            list is a dictionary, containing (pk, email, ctime, mtime, content)
         """
         from aiida.djsite.db.models import DbComment
-
-        return list(DbComment.objects.filter(dbnode=self._dbnode).order_by(
-            'ctime').values_list(
-            'user__email', 'ctime', 'mtime', 'content'))
         
-    def _update_comment(self,new_field,index,user):
+        if pk is not None:
+            try:
+                correct = all([isinstance(_,int) for _ in pk])
+                if not correct:
+                    raise ValueError('pk must be an integer or a list of integers')
+            except TypeError:
+                if not isinstance(pk,int):
+                    raise ValueError('pk must be an integer or a list of integers')
+            return list(DbComment.objects.filter(dbnode=self._dbnode,pk=pk
+                        ).order_by('pk').values('pk','user__email',
+                                                   'ctime','mtime','content'))
+            
+        return list(DbComment.objects.filter(dbnode=self._dbnode).order_by(
+             'pk').values('pk','user__email','ctime','mtime','content'))
+        
+    def _get_dbcomments(self,pk=None):
+        """
+        Return a sorted list of DbComment associated with the Node.
+        :param pk: integer or list of integers. If it is specified, returns the 
+                   comment values with desired pks. (pk refers to DbComment.pk) 
+        :return: the list of DbComment, sorted by pk.
+        """
+        from aiida.djsite.db.models import DbComment
+        
+        if pk is not None:
+            try:
+                correct = all([isinstance(_,int) for _ in pk])
+                if not correct:
+                    raise ValueError('pk must be an integer or a list of integers')
+                return list(DbComment.objects.filter(dbnode=self._dbnode,pk__in=pk).order_by('pk'))
+            except TypeError:
+                if not isinstance(pk,int):
+                    raise ValueError('pk must be an integer or a list of integers')
+                return list(DbComment.objects.filter(dbnode=self._dbnode,pk=pk).order_by('pk'))
+            
+        return list(DbComment.objects.filter(dbnode=self._dbnode).order_by('pk'))
+        
+    def _update_comment(self,new_field,comment_pk,user):
         """
         Function called by verdi comment update
         """
         from aiida.djsite.db.models import DbComment
         
-        comment = DbComment.objects.filter(dbnode=self._dbnode
-                                           ).order_by('ctime')[index]
+        comment = list(DbComment.objects.filter(dbnode=self._dbnode,
+                                                pk=comment_pk, user=user))[0]
         
-        if not isinstance(new_field,str):
+        if not isinstance(new_field,basestring):
             raise ValueError("Non string comments are not accepted")
         
-        if str(user) != str(comment.user.email):
-            raise ModificationNotAllowed(
-               "Only user {} can modify the comment".format(comment.user.email))
+        if not comment:
+            raise NotExistent("Found no comment for user {} and pk {}".format(
+                                                               user,comment_pk))
         
         comment.content = new_field
         comment.save()
     
-    def _remove_comment(self,index,user):
+    def _remove_comment(self,comment_pk,user):
         """
         Function called by verdi comment remove
         """
         from aiida.djsite.db.models import DbComment
-        
-        comment = DbComment.objects.filter(dbnode=self._dbnode
-                                           ).order_by('ctime')[index]
-        
-        if str(user) != str(comment.user.email):
-            raise ModificationNotAllowed(
-               "Only user {} can modify the comment".format(comment.user.email))
-        
+        comment = DbComment.objects.filter(dbnode=self._dbnode,pk=comment_pk)[0]
         comment.delete()
         
     def _increment_version_number_db(self):
@@ -1352,9 +1379,11 @@ class Node(object):
         
         :return: a SandboxFolder object mapping the node in the repository.
         """
+        # I create the temp folder only at is first usage
         if self._temp_folder is None:
-            raise InternalError("The temp_folder was asked for node {}, but "
-                                "it is not set!".format(self.uuid))
+            self._temp_folder = SandboxFolder() # This is also created
+            # Create the 'path' subfolder in the Sandbox
+            self._get_folder_pathsubfolder.create()
         return self._temp_folder
 
     def remove_path(self,path):
@@ -1421,24 +1450,87 @@ class Node(object):
         return self.folder.get_subfolder(section,
             reset_limit=True).get_abs_path(path,check_existence=True)
 
-    def store_all(self):
+    def store_all(self,with_transaction=True):
         """
         Store the node, together with all input links, if cached, and also the
         linked nodes, if they were not stored yet.
+        
+        :parameter with_transaction: if False, no transaction is used. This
+          is meant to be used ONLY if the outer calling function has already
+          a transaction open!
         """
-        self.store()
-        self._store_input_links(store_parents=True)
+        from django.db import transaction
+        from aiida.common.utils import EmptyContextManager
+        
+        if with_transaction:
+            context_man = transaction.commit_on_success()
+        else:
+            context_man = EmptyContextManager()
+
+        if not self._to_be_stored:
+            raise ModificationNotAllowed(
+                "Node with pk= {} was already stored".format(self.pk))
+
+        # For each parent, check that all its inputs are stored
+        for link in self._inputlinks_cache:
+            try:
+                parent_node = self._inputlinks_cache[link]
+                parent_node._check_are_parents_stored()
+            except ModificationNotAllowed:
+                raise ModificationNotAllowed("Parent node (UUID={}) has "
+                    "unstored parents, cannot proceed (only direct parents "
+                    "can be unstored and will be stored by store_all, not "
+                    "grandparents or other ancestors".format(parent_node.uuid))
+        
+        with context_man:
+            # Always without transaction: either it is the context_man here,
+            # or it is managed outside
+            self._store_input_nodes()
+            self.store(with_transaction = False)
+            self._store_cached_input_links(with_transaction = False)
         
         return self
 
-    def _store_input_links(self, store_parents=True, only_stored=False):
+    def _store_input_nodes(self):
+        """
+        Find all input nodes, and store them, checking that they do not
+        have unstored inputs in turn.
+        
+        :note: this function stores all nodes without transactions; always
+          call it from within a transaction!
+        """
+        if not self._to_be_stored:
+            raise ModificationNotAllowed(
+                "_store_input_nodes can be called only if the node is "
+                "unstored (node {} is stored, instead)".format(self.pk))
+        
+        for link in self._inputlinks_cache:
+            if self._inputlinks_cache[link]._to_be_stored:
+                self._inputlinks_cache[link].store(with_transaction=False)
+            
+    def _check_are_parents_stored(self):
+        """
+        Check if all parents are already stored, otherwise raise.
+        
+        :raise ModificationNotAllowed: if one of the input nodes in not already
+          stored.
+        """
+        # Preliminary check to verify that inputs are stored already
+        for link in self._inputlinks_cache:
+            if self._inputlinks_cache[link]._to_be_stored:
+                raise ModificationNotAllowed(
+                    "Cannot store the input link '{}' because the "
+                    "source node is not stored. Either store it first, "
+                    "or call _store_input_links with the store_parents "
+                    "parameter set to True".format(link))
+        
+
+    def _store_cached_input_links(self, with_transaction=True):
         """
         Store all input links that are in the local cache, transferring them 
         to the DB.
         
-        :note: if store_parents is True, input nodes are stored one by one, 
-            and therefore if an error occurs only some nodes may be in the
-            stored state.
+        :note: This can be called only if all parents are already stored.
         
         :note: Links are stored only after the input nodes are stored. Moreover,
             link storage is done in a transaction, and if one of the links
@@ -1448,44 +1540,30 @@ class Node(object):
         :note: This function can be called only after the node is stored.
            After that, it can be called multiple times, and nothing will be
            executed if no links are still in the cache.
-        
-        :param store_parents: If True, it will also store nodes that are linked
-            in input that were not stored yet.
-        :param only_stored: will only store those input links where also the
-            source is already stored. This is normally False, and is called 
-            with True usually only within the .store() method.
+                
+        :parameter with_transaction: if False, no transaction is used. This
+          is meant to be used ONLY if the outer calling function has already
+          a transaction open!
         """
         from django.db import transaction
+        from aiida.common.utils import EmptyContextManager
 
+        if with_transaction:
+            context_man = transaction.commit_on_success()
+        else:
+            context_man = EmptyContextManager()
+            
         if self._to_be_stored:
             raise ModificationNotAllowed(
-                "Node with pk={} is not stored yet".format(self.pk))
-        
-        # Preliminary check, and storage
-        if not only_stored:
-            # I have to store all links, in this case
-            links_to_store = list(self._inputlinks_cache.keys())
-            if not store_parents:
-                for link in self._inputlinks_cache:
-                    if self._inputlinks_cache[link]._to_be_stored:
-                        raise ModificationNotAllowed(
-                            "Cannot store the input link '{}' because the "
-                            "source node is not stored. Either store it first, "
-                            "or call _store_input_links with the store_parents "
-                            "parameter set to True".format(link))
-            else:
-                for link in self._inputlinks_cache:
-                    if self._inputlinks_cache[link]._to_be_stored:
-                        self._inputlinks_cache[link].store()
-        else:
+                "Node with pk= {} is not stored yet".format(self.pk))
+
+        with context_man:  
+            # This raises if there is an unstored node.
+            self._check_are_parents_stored()
             # I have to store only those links where the source is already
             # stored
-            links_to_store = [link for link in self._inputlinks_cache.keys()
-                              if not self._inputlinks_cache[link]._to_be_stored]
+            links_to_store = list(self._inputlinks_cache.keys())
             
-        # If we are here, all input nodes should be stored, we can simply store
-        # the links
-        with transaction.commit_on_success():
             for link in links_to_store:
                 self._add_dblink_from(self._inputlinks_cache[link], link)
             # If everything went smoothly, clear the entries from the cache.
@@ -1496,7 +1574,7 @@ class Node(object):
             for link in links_to_store:
                 del self._inputlinks_cache[link]
 
-    def store(self):
+    def store(self,with_transaction=True):
         """
         Store a new node in the DB, also saving its repository directory
         and attributes.
@@ -1508,18 +1586,33 @@ class Node(object):
         :note: After successful storage, those links that are in the cache, and
             for which also the parent node is already stored, will be
             automatically stored. The others will remain unstored.
+            
+        :parameter with_transaction: if False, no transaction is used. This
+          is meant to be used ONLY if the outer calling function has already
+          a transaction open!
         """
         #TODO: This needs to be generalized, allowing for flexible methods
         # for storing data and its attributes.
         from django.db import transaction
+        from aiida.common.utils import EmptyContextManager
         from aiida.common.exceptions import ValidationError
         from aiida.djsite.db.models import DbAttribute
         import aiida.orm.autogroup
+
+        if with_transaction:
+            context_man = transaction.commit_on_success()
+        else:
+            context_man = EmptyContextManager()
 
         if self._to_be_stored:
 
             # As a first thing, I check if the data is valid
             self._validate()
+
+            # Verify that parents are already stored. Raises if this is not
+            # the case.
+            self._check_are_parents_stored()
+
             # I save the corresponding django entry
             # I set the folder
             # NOTE: I first store the files, then only if this is successful,
@@ -1533,7 +1626,7 @@ class Node(object):
             # I do the transaction only during storage on DB to avoid timeout
             # problems, especially with SQLite
             try:
-                with transaction.commit_on_success():
+                with context_man:
                     # Save the row
                     self._dbnode.save()
                     # Save its attributes 'manually' without incrementing
@@ -1544,6 +1637,14 @@ class Node(object):
                     # This should not be used anymore: I delete it to
                     # possibly free memory
                     del self._attrs_cache
+
+                    self._temp_folder = None            
+                    self._to_be_stored = False
+            
+                    # Here, I store those links that were in the cache and
+                    # that are between stored nodes.
+                    self._store_cached_input_links()
+                    
             # This is one of the few cases where it is ok to do a 'global'
             # except, also because I am re-raising the exception
             except:
@@ -1553,17 +1654,9 @@ class Node(object):
                     self._repository_folder.abspath, move=True, overwrite=True)                
                 raise
             
-            self._temp_folder = None            
-            self._to_be_stored = False
-            
-            # Here, I store those links that were in the cache and that are
-            # between stored nodes.
-            self._store_input_links(store_parents=False, only_stored=True)
         else:
-            self.logger.error("Trying to store an already saved node: "
-                              "pk={}".format(self.pk))
             raise ModificationNotAllowed(
-                "Node with pk={} was already stored".format(self.pk))
+                "Node with pk= {} was already stored".format(self.pk))
         
         # Set up autogrouping used be verdi run
         autogroup = aiida.orm.autogroup.current_autogroup

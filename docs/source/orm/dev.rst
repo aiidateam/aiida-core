@@ -100,16 +100,24 @@ TrajectoryData
 
 
 
-ORM documentation: Calculation
-==============================
+ORM documentation: Calculations
+===============================
 
 .. automodule:: aiida.orm.calculation
    :members:
    :special-members: __init__
 
+.. automodule:: aiida.orm.calculation.inline
+   :members:
+   :special-members: __init__
+
+.. automodule:: aiida.orm.calculation.job
+   :members:
+   :special-members: __init__
+
 Quantum Espresso - PW
 +++++++++++++++++++++
-.. automodule:: aiida.orm.calculation.quantumespresso.pw
+.. automodule:: aiida.orm.calculation.job.quantumespresso.pw
    :members:
 
 Quantum Espresso - PW immigrant
@@ -120,5 +128,5 @@ Quantum Espresso - PW immigrant
 
 TemplateReplacer
 ++++++++++++++++
-.. automodule:: aiida.orm.calculation.simpleplugins.templatereplacer
+.. automodule:: aiida.orm.calculation.job.simpleplugins.templatereplacer
    :members:

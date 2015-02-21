@@ -3,7 +3,7 @@ from aiida.orm import Data
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 
 class ArrayData(Data):
     """
@@ -38,7 +38,7 @@ class ArrayData(Data):
 
         fname = '{}.npy'.format(name)
         if fname not in self.get_folder_list():
-            raise KeyError("Array with name '{}' not found in node pk={}".format(
+            raise KeyError("Array with name '{}' not found in node pk= {}".format(
                 name, self.pk))
         
         # remove both file and attribute
@@ -103,7 +103,7 @@ class ArrayData(Data):
             fname = '{}.npy'.format(name)
             if fname not in self.get_folder_list():
                 raise KeyError(
-                    "Array with name '{}' not found in node pk={}".format(
+                    "Array with name '{}' not found in node pk= {}".format(
                     name, self.pk))
         
             array = numpy.load(self.get_abs_path(fname))
@@ -180,6 +180,6 @@ class ArrayData(Data):
         
         if set(files) != set(properties):
             raise ValidationError("Mismatch of files and properties for ArrayData"
-                                  " node (pk={}): {} vs. {}".format(self.pk,
+                                  " node (pk= {}): {} vs. {}".format(self.pk,
                                         files, properties))
         super(ArrayData,self)._validate()

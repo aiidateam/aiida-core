@@ -11,6 +11,22 @@ Interesting online resources
 * `Atlassian forking-workflow guide <https://www.atlassian.com/git/tutorials/comparing-workflows/forking-workflow>`_
 * `Gitflow model <http://nvie.com/posts/a-successful-git-branching-model/>`_
 
+Set the push default behavior to push only the current branch
+-------------------------------------------------------------
+The default push behavior may not be what you expect: if a branch you
+are not working on changes, you may not be able to push your own
+branch, because git tries to check them all. To avoid this, use::
+
+  git config push.default upstream
+  
+to set the default push.default behaviour to push the current
+branch to its upstream branch. Note the actual string to set depends on
+the version of git; newer versions allow to use::
+
+  git config push.default simple
+  
+which is better; see also discussion on `this stackoverflow page <http://stackoverflow.com/questions/948354/default-behavior-of-git-push-without-a-branch-specified>`_.
+
 View commits that would be pushed
 ---------------------------------
 If you want to see which commits would be sent to the remote repository upon a

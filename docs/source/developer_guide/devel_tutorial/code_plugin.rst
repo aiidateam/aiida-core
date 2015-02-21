@@ -4,7 +4,8 @@ Developer code plugin tutorial
 .. toctree::
    :maxdepth: 2
 
-In this chapter we will give you a brief guide that will teach you how to write a plugin to support a new code.
+In this chapter we will give you a brief guide that will teach you how to write 
+a plugin to support a new code.
 
 Generally speaking, we expect that each code will have its own
 peculiarity, so that sometimes a new strategy for code plugin might be
@@ -47,17 +48,23 @@ things.
 Create a new file, which has the same name as the class you are
 creating (in this way, it will be possible to load it with
 ``CalculationFactory``).
-Save it in a subfolder at the path ``aiida/orm/calculation``.
+Save it in a subfolder at the path ``aiida/orm/calculation/job``.
 
 Step 1: inheritance
 ^^^^^^^^^^^^^^^^^^^
 
 First define the class::
 
-  class SubclassCalculation(Calculation):   
+  class SubclassCalculation(JobCalculation):   
 
 (Substitute ``Subclass`` with the name of your plugin).
-Take care of inheriting the ``Calculation`` class, or the plugin will not work.
+Take care of inheriting the ``JobCalculation`` class, or the plugin will not work.
+
+.. note:: The base ``Calculation`` class should only be used as the abstract
+  base class. Any calculation that needs to run on a remote scheduler must
+  inherit from  :class:`~aiida.orm.calculation.job.JobCalculation`, that 
+  contains all the methods to run on a remote scheduler, get the calculation
+  state, copy files remotely and retrieve them, ...
 
 Now, you will likely need to define some variables that belong to 
 ``SubclassCalculation``.
@@ -110,14 +117,14 @@ An example is as follows::
 
     from aiida.common.utils import classproperty
   
-    class SubclassCalculation(Calculation):
+    class SubclassCalculation(JobCalculation):
     
     	def _init_internal_params(self):
       	    super(SubclassCalculation, self)._init_internal_params()
   
         @classproperty
         def _use_methods(cls):
-            retdict = Calculation._use_methods
+            retdict = JobCalculation._use_methods
             retdict.update({
                 "settings": {
                    'valid_types': ParameterData,
@@ -230,13 +237,15 @@ for submission without the need to store all nodes on the DB.
 
 
 For the sake of clarity, it's probably going to be easier looking at
-an implemented example. Take a look at the ``NamelistsCalculation`` located in ``aiida.orm.calculation.quantumespresso.namelists``.
+an implemented example. Take a look at the ``NamelistsCalculation`` located in 
+``aiida.orm.calculation.job.quantumespresso.namelists``.
 
 How does the method ``_prepare_for_submission`` work in practice?
 
 1. You should start by checking if the input nodes passed in ``inputdict``
    are logically sufficient to run an actual calculation. 
-   Remember to raise an exception (for example ``InputValidationError``) if something is missing or if something
+   Remember to raise an exception (for example ``InputValidationError``) if 
+   something is missing or if something
    unexpected is found. Ideally, it is better
    to discover now if something is missing, rather than waiting the queue
    on the cluster and see that your job has crashed.
@@ -253,8 +262,8 @@ How does the method ``_prepare_for_submission`` work in practice?
         # file
 
    Note that here it all depends on how you decided the ParameterData to
-   be written. In the namelists plugin we decided the convention that a ParameterData of
-   the format::
+   be written. In the namelists plugin we decided the convention that a 
+   ParameterData of the format::
 
      ParameterData(dict={"INPUT":{'smearing':2,
                                   'cutoff':30}
@@ -267,8 +276,8 @@ How does the method ``_prepare_for_submission`` work in practice?
          cutoff=30,
      /
 
-   Of course, it's up to you to decide a convention which defines how to convert the
-   dictionary to the input file.
+   Of course, it's up to you to decide a convention which defines how to convert
+   the dictionary to the input file.
    You can also impose some default values for simplicity. For example,
    the location of the scratch directory, if needed, should be imposed by
    the plugin and not by the user, and similarly you can/should decide the
@@ -321,7 +330,9 @@ How does the method ``_prepare_for_submission`` work in practice?
    4. retrieve_list: a list of relative file pathnames, that will be copied
       from the cluster to the aiida server, after the calculation has run on
       cluster.
-      Note that all the file names you need to modify are not absolute path names (you don't know the name of the folder where it will be created) but rather the path relative to the scratch folder.
+      Note that all the file names you need to modify are not absolute path 
+      names (you don't know the name of the folder where it will be created) but 
+      rather the path relative to the scratch folder.
 
    5. local_copy_list: a list of length-two-tuples: (localabspath,
       relativedestpath). Files to be copied from the aiida server to the cluster.
@@ -355,7 +366,8 @@ OutputPlugin
 Well done! You were able to have a successful input plugin.
 Now we are going to see what you need to do for an output plugin.
 First of all let's create a new folder:
-``$path_to_aiida/aiida/parsers/plugins/the_name_of_new_code``, and put there an empty ``__init__.py`` file.
+``$path_to_aiida/aiida/parsers/plugins/the_name_of_new_code``, and put there an 
+empty ``__init__.py`` file.
 Here you will write in a new python file the output parser class.
 It is actually a rather simple class, performing only a few (but tedious) tasks.
 
@@ -382,7 +394,7 @@ The parser than has just a couple of tasks:
 	  a task of the daemon: never use a ``.store()`` method!
 
 Basically, you just need to specify an ``__init__()`` method, and a
-function ``parse_from_calc(calc)__``, which does the actual work.
+function ``parse_with_retrieved(calc, retrieved)__``, which does the actual work.
 
 The difficult and long part is the point 3, which is the actual
 parsing stage, which convert text into python objects.
@@ -412,9 +424,9 @@ The most useful classes to store the information back into the DB are:
    strongly encourage you to use this class.
    At variance with ParameterData, the values are not stored in the
    DB, but are written to a file (mapped back in the DB). If instead
-   you store large arrays of numbers in the DB with ParameterData, you might soon realize
-   that: a) the DB grows large really rapidly; b) the time it takes to
-   save an object in the DB gets very large.
+   you store large arrays of numbers in the DB with ParameterData, you might 
+   soon realize that: a) the DB grows large really rapidly; b) the time it takes 
+   to save an object in the DB gets very large.
 
 3. ``StructureData``:
    If your code relaxes an input structure, you can end up with an output structure.
@@ -440,17 +452,15 @@ A kind of template for writing such parser for the calculation class
             
             super(NewParser, self).__init__(calc)
 
-        def parse_from_calc(self):
+        def parse_with_retrieved(self, retrieved):
             """
             Parses the calculation-output datafolder, and stores
             results.
+            
+            :param retrieved: a dictionary of retrieved nodes, where the keys
+                are the link names of retrieved nodes, and the values are the
+                nodes.
             """           
-            # load the error logger
-            from aiida.common import aiidalogger
-            from aiida.djsite.utils import get_dblogger_extra
-            parserlogger = aiidalogger.getChild('newparser')
-            logger_extra = get_dblogger_extra(self._calc)
-
             # check the calc status, not to overwrite anything
             state = calc.get_state()
             if state != calc_states.PARSING:
@@ -465,10 +475,21 @@ A kind of template for writing such parser for the calculation class
             input_param_name = self._calc.get_linkname('parameters')
             params = [i[1] for i in calc_input_parameterdata if i[0]==input_param_name]
             if len(params) != 1:
-                parserlogger.error("Found {} input_params instead of one"
-                                      .format(params),extra=logger_extra)
+                # Use self.logger to log errors, warnings, ...
+                # This will also add an entry to the DbLog table associated
+                # to the calculation that we are trying to parse, that can
+                # be then seen using 'verdi calculation logshow'
+                self.logger.error("Found {} input_params instead of one"
+                                      .format(params))
                 successful = False
                 calc_input = params[0]
+
+                # Check that the retrieved folder is there 
+                try:
+                    out_folder = retrieved[self._calc._get_linkname_retrieved()]
+                except KeyError:
+                    self.logger.error("No retrieved folder found")
+                    return False, ()
 
                 # check what is inside the folder
                 list_of_files = out_folder.get_folder_list()
@@ -503,6 +524,77 @@ A kind of template for writing such parser for the calculation class
             # The calculation state will be set to failed if successful=False,
             # to finished otherwise
             return successful, new_nodes_list
+
+
+Example
+-------
+
+In this example, we are supporting a code that performs a summation of two 
+integers. 
+
+We try to imagine to create a calculation plugin that supports the code, 
+and that can be run using a script like :download:`this one <sum_test.py>`.
+
+First, we need to create an executable on the remote machine (might be as well 
+your localhost if you installed a scheduler).
+Therefore, put :download:`this script <sum_executable.py>` on your remote 
+computer and install it as a code in AiiDA.
+Such script take an input file as input on the command line, reads a JSON file 
+input and sums two keys that it finds in the JSON. 
+The output produced is another JSON file.
+
+Therefore, we create an input plugin for a ``SumCalculation``, which can be done
+with few lines as done in this file 
+:download:`aiida/orm/calculation/job/sum.py <sum_input.py>`.
+
+The test can now be run, but the calculation Node will only have a RemoteData 
+and a retrieved FolderData which are not querable. 
+So, we create a parser (:download:`aiida/parsers/plugins/sum.py <sum_parser.py>`)
+which will read the output files and will create a ParameterData in output.
+
+As you can see, with few lines we can support a new simple code.
+The most time consuming part in the development of a plugin is hidden for 
+simplicity in this example.
+For the input plugin, this consists in converting the input Nodes into some 
+files which are used by the calculation.
+For the parsers, the problem is opposite, and is to convert a text file produced 
+by the executable into AiiDA objects.
+Here we only have a dictionary in input and output, so that its conversion to a 
+from a JSON file can be done in one line, but in general, the difficulty of 
+these operations depend on the details of the code you want to support.
+
+Remember also that you can introduce new Data types to support new features or 
+just to have a simpler and more intuitive interface.
+For example, the code above is not optimal if you want to pass the result of two
+SumCalculation to a third one and sum their results (the name of the keys of the
+output dictionary differs from the input).
+A relatively simple exercise you can do before jumping to develop the support 
+for a serious code, try to create a new FloatData,
+which saves in the DB the value of a number::
+
+  class FloatData(Data):
+
+      @property
+      def value(self):
+          """
+          The value of the Float
+          """
+          return self.get_attr('number')
+        
+      @value.setter
+      def value(self,value):
+          """
+          Set the value of the Float
+          """
+          self._set_attr('number',value)
+
+Try to adapt the previous SumCalculation to acceps two FloatDatas as input and
+to produce an FloatData in output.
+Note that you can do this without changing the executable (a rather useless note
+in this example, but more interesting if you want to support a real code!). 
+
+
+
 
 
 

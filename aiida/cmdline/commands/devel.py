@@ -9,7 +9,7 @@ from aiida.cmdline import pass_to_django_manage, execname
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 
 def applyfunct_len(value):
     """
@@ -94,6 +94,7 @@ class Devel(VerdiCommandWithSubcommands):
             'delproperty': (self.run_delproperty, self.complete_properties),
             'describeproperties': (self.run_describeproperties, self.complete_none),
             'listproperties': (self.run_listproperties, self.complete_none),
+            'listislands': (self.run_listislands, self.complete_none),
             'play': (self.run_play, self.complete_none),
             'getresults': (self.calculation_getresults, self.complete_none),
             }
@@ -134,14 +135,19 @@ class Devel(VerdiCommandWithSubcommands):
             sys.exit(1)
         
         for prop in sorted(_property_table.keys()):
+            if _property_table[prop][4] is None:
+                valid_vals_str = ""
+            else:
+                valid_vals_str = " Valid values: {}.".format(",".join(
+                    str(_) for _ in _property_table[prop][4]))
             if isinstance(_property_table[prop][3], _NoDefaultValue):
                 def_val_string = ""
             else:
                 def_val_string = " (default: {})".format(
                     _property_table[prop][3])
-            print "{} ({}): {}{}".format(prop, _property_table[prop][1],
+            print "* {} ({}): {}{}{}".format(prop, _property_table[prop][1],
                                        _property_table[prop][2],
-                                       def_val_string)
+                                       def_val_string,valid_vals_str)
 
     def calculation_getresults(self, *args):
         """
@@ -149,7 +155,7 @@ class Devel(VerdiCommandWithSubcommands):
         under development.
         """
         from aiida.common.exceptions import AiidaException
-        from aiida.orm import Calculation as OrmCalculation
+        from aiida.orm import JobCalculation as OrmCalculation
         
         load_dbenv()
         
@@ -361,6 +367,24 @@ class Devel(VerdiCommandWithSubcommands):
                     print "{} = {}".format(prop, val)
             except KeyError:
                 pass
+
+    def run_listislands(self, *args):
+        """
+        List all AiiDA nodes, that have no parents and children.
+        """
+        load_dbenv()
+        from django.db.models import Q
+        from aiida.orm.node import Node
+        from aiida.djsite.utils import get_automatic_user
+
+        q_object = Q(user=get_automatic_user())
+        q_object.add(Q(parents__isnull=True), Q.AND)
+        q_object.add(Q(children__isnull=True), Q.AND)
+
+        node_list = Node.query(q_object).distinct().order_by('ctime')
+        print "ID\tclass"
+        for node in node_list:
+            print "{}\t{}".format(node.pk,node.__class__.__name__)
 
     def run_getproperty(self, *args):
         """

@@ -2,7 +2,7 @@
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 
 class DbImporter(object):
     """
@@ -121,17 +121,19 @@ class DbEntry(object):
 
         :param source: identifying the location and version of the source
           for the entry, containing:
-        ** db_source: name of the source database
-        ** db_url: URL of the source database
-        ** db_id: structure identifyer in the database
-        ** db_version: version of the database
-        ** url: URL of the structure (should be permanent)
+          * db_source: name of the source database
+          * db_url: URL of the source database
+          * db_id: structure identifyer in the database
+          * db_version: version of the database
+          * extras: a dictionary with some extra parameters (e.g. database ID number)
+          * url: URL of the structure (should be permanent)
         """
         self.source = {
             'db_source' : None,
             'db_url'    : None,
             'db_id'     : None,
             'db_version': None,
+            'extras'    : {},
             'url'       : None
         }
 

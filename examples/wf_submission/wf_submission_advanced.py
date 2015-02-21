@@ -5,18 +5,14 @@ import os
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 
 def launch_ws():
 
     """
-    To control the wf_stauts use the procedure 
+    To control the wf status use the command line 
     
-    wf.list_workflows() 
-    
-    and to force the retrival of some calculation you can use the function
-    
-    wf.retrieve_by_uuid(uuid_wf).kill_step_calculations(methohd_wf)
+    verdi workflow list pk
     
     """
             

@@ -11,13 +11,13 @@ from aiida.scheduler.datastructures import job_states
 from aiida.common.exceptions import (
     AuthenticationError,
     ConfigurationError,
-    UniquenessError,
+    ModificationNotAllowed,
     )
 from aiida.common import aiidalogger
     
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 
 execlogger = aiidalogger.getChild('execmanager')
 
@@ -26,7 +26,7 @@ def update_running_calcs_status(authinfo):
     Update the states of calculations in WITHSCHEDULER status belonging 
     to user and machine as defined in the 'dbauthinfo' table.
     """
-    from aiida.orm import Calculation, Computer
+    from aiida.orm import JobCalculation, Computer
     from aiida.scheduler.datastructures import JobInfo
     from aiida.djsite.utils import get_dblogger_extra
 
@@ -37,8 +37,8 @@ def update_running_calcs_status(authinfo):
                      "and machine {}".format(
         authinfo.aiidauser.email, authinfo.dbcomputer.name))
 
-    # This returns an iterator over aiida Calculation objects
-    calcs_to_inquire = Calculation._get_all_with_state(
+    # This returns an iterator over aiida JobCalculation objects
+    calcs_to_inquire = JobCalculation._get_all_with_state(
         state=calc_states.WITHSCHEDULER,
         computer=authinfo.dbcomputer,
         user=authinfo.aiidauser)
@@ -77,10 +77,11 @@ def update_running_calcs_status(authinfo):
             for c in calcs_to_inquire:
                 try:
                     logger_extra = get_dblogger_extra(c)
+                    t._set_logger_extra(logger_extra)
                     
                     jobid = c.get_job_id()
                     if jobid is None:
-                        execlogger.error("Calculation {} is WITHSCHEDULER "
+                        execlogger.error("JobCalculation {} is WITHSCHEDULER "
                                          "but no job id was found!".format(
                             c.pk), extra=logger_extra)
                         continue
@@ -99,13 +100,13 @@ def update_running_calcs_status(authinfo):
                             computed.append(c)
                             try:
                                 c._set_state(calc_states.COMPUTED)
-                            except UniquenessError:
+                            except ModificationNotAllowed:
                                 # Someone already set it, just skip
                                 pass
                         elif jobinfo.job_state == job_states.UNDETERMINED:
                             #try:
                             #    c._set_state(calc_states.UNDETERMINED)
-                            #except UniquenessError:
+                            #except ModificationNotAllowed:
                             #    # Someone already set it, just skip
                             #    pass                            
                             #execlogger.error("There is an undetermined calc "
@@ -117,7 +118,7 @@ def update_running_calcs_status(authinfo):
                             ## valid WITHSCHEDULER STATE.
                             pass
                         ## Do not set the WITHSCHEDULER state multiple times, 
-                        ## this would raise a UniquenessError
+                        ## this would raise a ModificationNotAllowed
                         #else:
                         #    c._set_state(calc_states.WITHSCHEDULER)
     
@@ -176,7 +177,7 @@ def update_running_calcs_status(authinfo):
                     # poll for this state, if we want to.
                     try:
                         c._set_state(calc_states.COMPUTED)
-                    except UniquenessError:
+                    except ModificationNotAllowed:
                         # Someone already set it, just skip
                         pass
 
@@ -203,12 +204,12 @@ def get_authinfo(computer, aiidauser):
     return authinfo
 
 def retrieve_jobs():
-    from aiida.orm import Calculation, Computer
+    from aiida.orm import JobCalculation, Computer
     from aiida.djsite.db.models import DbComputer, DbUser
     
     # I create a unique set of pairs (computer, aiidauser)
     computers_users_to_check = set(
-        Calculation._get_all_with_state(
+        JobCalculation._get_all_with_state(
             state=calc_states.COMPUTED,
             only_computer_user_pairs = True)
         )
@@ -240,12 +241,12 @@ def update_jobs():
     """
     calls an update for each set of pairs (machine, aiidauser)
     """
-    from aiida.orm import Calculation, Computer
+    from aiida.orm import JobCalculation, Computer
     from aiida.djsite.db.models import DbComputer, DbUser
 
     # I create a unique set of pairs (computer, aiidauser)
     computers_users_to_check = set(
-        Calculation._get_all_with_state(
+        JobCalculation._get_all_with_state(
             state=calc_states.WITHSCHEDULER,
             only_computer_user_pairs = True)
         )
@@ -277,14 +278,14 @@ def submit_jobs():
     """
     Submit all jobs in the TOSUBMIT state.
     """
-    from aiida.orm import Calculation, Computer
+    from aiida.orm import JobCalculation, Computer
     from aiida.djsite.db.models import DbComputer, DbUser
     from aiida.djsite.utils import get_dblogger_extra
     
 
     # I create a unique set of pairs (computer, aiidauser)
     computers_users_to_check = set(
-        Calculation._get_all_with_state(
+        JobCalculation._get_all_with_state(
             state=calc_states.TOSUBMIT,
             only_computer_user_pairs = True)
         )
@@ -304,19 +305,19 @@ def submit_jobs():
             except AuthenticationError:
                 # Put each calculation in the SUBMISSIONFAILED state because
                 # I do not have AuthInfo to submit them
-                calcs_to_inquire = Calculation._get_all_with_state(
+                calcs_to_inquire = JobCalculation._get_all_with_state(
                     state=calc_states.TOSUBMIT,
                     computer=dbcomputer,
                     user=aiidauser)
                 for calc in calcs_to_inquire:
                     try:
                         calc._set_state(calc_states.SUBMISSIONFAILED)
-                    except UniquenessError:
+                    except ModificationNotAllowed:
                         # Someone already set it, just skip
                         pass
                     logger_extra = get_dblogger_extra(calc)
                     execlogger.error("Submission of calc {} failed, "
-                                     "computer pk={} ({}) is not configured "
+                                     "computer pk= {} ({}) is not configured "
                                      "for aiidauser {}".format(
                                          calc.pk, dbcomputer.pk,
                                          dbcomputer.name, aiidauser.email), 
@@ -343,8 +344,9 @@ def submit_jobs_with_authinfo(authinfo):
     Submit jobs in TOSUBMIT status belonging 
     to user and machine as defined in the 'dbauthinfo' table.
     """
-    from aiida.orm import Calculation, Computer
+    from aiida.orm import JobCalculation, Computer
     from aiida.scheduler.datastructures import JobInfo
+    from aiida.djsite.utils import get_dblogger_extra
 
     if not authinfo.enabled:
         return
@@ -353,8 +355,8 @@ def submit_jobs_with_authinfo(authinfo):
                      "and machine {}".format(
         authinfo.aiidauser.email, authinfo.dbcomputer.name))
 
-    # This returns an iterator over aiida Calculation objects
-    calcs_to_inquire = Calculation._get_all_with_state(
+    # This returns an iterator over aiida JobCalculation objects
+    calcs_to_inquire = JobCalculation._get_all_with_state(
         state=calc_states.TOSUBMIT,
         computer=authinfo.dbcomputer,
         user=authinfo.aiidauser)
@@ -369,6 +371,9 @@ def submit_jobs_with_authinfo(authinfo):
         try:
             with t:
                 for c in calcs_to_inquire:
+                    logger_extra = get_dblogger_extra(c)
+                    t._set_logger_extra(logger_extra)
+                    
                     try:
                         submit_calc(calc=c, authinfo=authinfo, transport=t)
                     except Exception as e:
@@ -391,7 +396,7 @@ def submit_jobs_with_authinfo(authinfo):
                 logger_extra = get_dblogger_extra(calc)
                 try:
                     calc._set_state(calc_states.SUBMISSIONFAILED)
-                except UniquenessError:
+                except ModificationNotAllowed:
                 # Someone already set it, just skip
                     pass
     
@@ -414,13 +419,13 @@ def submit_calc(calc, authinfo, transport=None):
         the computer defined by the authinfo.
     
     :param calc: the calculation to submit
-        (an instance of the aiida.orm.Calculation class)
+        (an instance of the aiida.orm.JobCalculation class)
     :param authinfo: the authinfo for this calculation.
     :param transport: if passed, must be an already opened transport. No checks
         are done on the consistency of the given transport with the transport
         of the computer defined in the authinfo.
     """
-    from aiida.orm import Calculation, Code, Computer
+    from aiida.orm import JobCalculation, Code, Computer
     from aiida.common.folders import SandboxFolder
     from aiida.common.exceptions import (
         FeatureDisabled, InputValidationError)
@@ -438,6 +443,8 @@ def submit_calc(calc, authinfo, transport=None):
     else:
         t = transport
         must_open_t = False
+
+    t._set_logger_extra(logger_extra)
 
     if calc._has_cached_links():
         raise ValueError("Cannot submit calculation {} because it has "
@@ -459,7 +466,7 @@ def submit_calc(calc, authinfo, transport=None):
     # I start to submit the calculation: I set the state
     try:
         calc._set_state(calc_states.SUBMITTING)
-    except UniquenessError:
+    except ModificationNotAllowed:
         raise ValueError("The calculation has already been submitted by "
                          "someone else!")
              
@@ -472,7 +479,7 @@ def submit_calc(calc, authinfo, transport=None):
 
         input_codes = calc.get_inputs(type=Code)
         if len(input_codes) != 1:
-            raise InputValidationError("Calculation {} must have "
+            raise InputValidationError("JobCalculation {} must have "
                 "one and only one input code".format(calc.pk))
         code = input_codes[0]
     
@@ -491,7 +498,7 @@ def submit_calc(calc, authinfo, transport=None):
             calc._store_raw_input_folder(folder.abspath)
 
             # NOTE: some logic is partially replicated in the 'test_submit'
-            # method of Calculation. If major logic changes are done
+            # method of JobCalculation. If major logic changes are done
             # here, make sure to update also the test_submit routine
             remote_user = t.whoami()
             computer = calc.get_computer()
@@ -624,7 +631,7 @@ def submit_calc(calc, authinfo, transport=None):
             calc._set_job_id(job_id)
             # This should always be possible, because we should be
             # the only ones submitting this calculations, 
-            # so I do not check the UniquenessError
+            # so I do not check the ModificationNotAllowed
             calc._set_state(calc_states.WITHSCHEDULER)
             ## I do not set the state to queued; in this way, if the
             ## daemon is down, the user sees '(unknown)' as last state
@@ -642,7 +649,7 @@ def submit_calc(calc, authinfo, transport=None):
         import traceback
         try:
             calc._set_state(calc_states.SUBMISSIONFAILED)
-        except UniquenessError:
+        except ModificationNotAllowed:
             # Someone already set it, just skip
             pass
 
@@ -658,7 +665,7 @@ def submit_calc(calc, authinfo, transport=None):
             t.close()
             
 def retrieve_computed_for_authinfo(authinfo):
-    from aiida.orm import Calculation
+    from aiida.orm import JobCalculation
     from aiida.common.folders import SandboxFolder
     from aiida.orm.data.folder import FolderData
     from aiida.djsite.utils import get_dblogger_extra
@@ -670,7 +677,7 @@ def retrieve_computed_for_authinfo(authinfo):
     if not authinfo.enabled:
         return
     
-    calcs_to_retrieve = Calculation._get_all_with_state(
+    calcs_to_retrieve = JobCalculation._get_all_with_state(
         state=calc_states.COMPUTED,
         computer=authinfo.dbcomputer,
         user=authinfo.aiidauser)
@@ -685,9 +692,11 @@ def retrieve_computed_for_authinfo(authinfo):
         with authinfo.get_transport() as t:
             for calc in calcs_to_retrieve:
                 logger_extra = get_dblogger_extra(calc)
+                t._set_logger_extra(logger_extra)
+
                 try:
                     calc._set_state(calc_states.RETRIEVING)
-                except UniquenessError:
+                except ModificationNotAllowed:
                     # Someone else has already started to retrieve it,
                     # just log and continue
                     execlogger.debug("Attempting to retrieve more than once "
@@ -821,7 +830,7 @@ def retrieve_computed_for_authinfo(authinfo):
                     if successful:
                         try:
                             calc._set_state(calc_states.FINISHED)
-                        except UniquenessError:
+                        except ModificationNotAllowed:
                             # I should have been the only one to set it, but
                             # in order to avoid unuseful error messages, I 
                             # just ignore
@@ -829,7 +838,7 @@ def retrieve_computed_for_authinfo(authinfo):
                     else:
                         try:
                             calc._set_state(calc_states.FAILED)
-                        except UniquenessError:
+                        except ModificationNotAllowed:
                             # I should have been the only one to set it, but
                             # in order to avoid unuseful error messages, I 
                             # just ignore
@@ -852,7 +861,7 @@ def retrieve_computed_for_authinfo(authinfo):
                         # TODO: add a 'comment' to the calculation
                         try:
                             calc._set_state(calc_states.PARSINGFAILED)
-                        except UniquenessError:
+                        except ModificationNotAllowed:
                             pass
                     else:
                         execlogger.error("Error retrieving calc {}. "
@@ -860,7 +869,7 @@ def retrieve_computed_for_authinfo(authinfo):
                             extra=newextradict)
                         try:
                             calc._set_state(calc_states.RETRIEVALFAILED)
-                        except UniquenessError:
+                        except ModificationNotAllowed:
                             pass
                         raise
 

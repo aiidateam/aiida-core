@@ -6,7 +6,7 @@ from aiida.common.exceptions import ConfigurationError
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 
 def load_django():
     import warnings
@@ -230,6 +230,30 @@ def md5_file(filename, block_size_factor=128):
             md5.update(chunk)
     return md5.hexdigest()
 
+def sha1_file(filename, block_size_factor=128):
+    """
+    Open a file and return its sha1sum (hexdigested).
+
+    :param filename: the filename of the file for which we want the sha1sum
+    :param block_size_factor: the file is read at chunks of size
+        ``block_size_factor * sha1.block_size``,
+        where ``sha1.block_size`` is the block_size used internally by the
+        hashlib module.
+
+    :returns: a string with the hexdigest sha1.
+
+    :raises: No checks are done on the file, so if it doesn't exists it may
+        raise IOError.
+    """
+    import hashlib
+    sha1 = hashlib.sha1()
+    with open(filename,'rb') as f:
+        # I read 128 bytes at a time until it returns the empty string b''
+        for chunk in iter(
+            lambda: f.read(block_size_factor*sha1.block_size), b''):
+            sha1.update(chunk)
+    return sha1.hexdigest()
+
 def str_timedelta(dt, max_num_fields=3, short=False, negative_to_zero = False):
     """
     Given a dt in seconds, return it in a HH:MM:SS format.
@@ -359,4 +383,39 @@ def grouper(n, iterable):
         if not chunk:
             return
         yield chunk
+
+def gzip_string(string):
+    """
+    Gzip string contents.
+
+    :param string: a string
+    :return: a gzipped string
+    """
+    import tempfile,gzip
+    with tempfile.NamedTemporaryFile() as f:
+        g = gzip.open(f.name,'wb')
+        g.write(string)
+        g.close()
+        return f.read()
+
+def gunzip_string(string):
+    """
+    Gunzip string contents.
+
+    :param string: a gzipped string
+    :return: a string
+    """
+    import tempfile,gzip
+    with tempfile.NamedTemporaryFile() as f:
+        f.write(string)
+        f.flush()
+        g = gzip.open(f.name,'rb')
+        return g.read()
+
+class EmptyContextManager(object):
+    def __enter__(self):
+        pass
+    
+    def __exit__(self, exc_type, exc_value, traceback):
+        pass
 

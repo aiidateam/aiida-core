@@ -79,10 +79,10 @@ that returns the total number of MPI processes requested.
     from aiida.scheduler.datastructures import NodeNumberJobResource
     
   However, in general, you will pass the fields to set directly to the 
-  :py:meth:`set_resources() <aiida.orm.calculation.Calculation.set_resources()>` method
-  of a :py:meth:`Calculation <aiida.orm.calculation.Calculation>` object. For instance::
+  :py:meth:`set_resources() <aiida.orm.calculation.job.JobCalculation.set_resources()>` method
+  of a :py:meth:`JobCalculation <aiida.orm.calculation.job.JobCalculation>` object. For instance::
   
-     calc = Calculation(computer=...) # select here a given computer configured
+     calc = JobCalculation(computer=...) # select here a given computer configured
                                       # in AiiDA
      
      # This assumes that the computer is configured to use a scheduler with
@@ -123,8 +123,8 @@ The same can be achieved passing the fields directly to the constructor::
 
     res = NodeNumberJobResource(num_machines=4, num_mpiprocs_per_machine=16)
 
-or, even better, directly calling the :py:meth:`set_resources() <aiida.orm.calculation.Calculation.set_resources()>`
-method of the :py:meth:`Calculation <aiida.orm.calculation.Calculation>` class
+or, even better, directly calling the :py:meth:`set_resources() <aiida.orm.calculation.job.JobCalculation.set_resources()>`
+method of the :py:meth:`JobCalculation <aiida.orm.calculation.job.JobCalculation>` class
 (assuming here that ``calc`` is your calculation object)::
 
     calc.set_resources({"num_machines": 4, "num_mpiprocs_per_machine": 16})
@@ -183,8 +183,8 @@ Some examples:
 
    res = ParEnvJobResource(parallel_env='mpi', tot_num_mpiprocs=64)
 
-* even better, directly calling the :py:meth:`set_resources() <aiida.orm.calculation.Calculation.set_resources()>`
-  method of the :py:meth:`Calculation <aiida.orm.calculation.Calculation>` class
+* even better, directly calling the :py:meth:`set_resources() <aiida.orm.calculation.job.JobCalculation.set_resources()>`
+  method of the :py:meth:`JobCalculation <aiida.orm.calculation.job.JobCalculation>` class
   (assuming here that ``calc`` is your calculation object)::
 
     calc.set_resources({"parallel_env": 'mpi', "tot_num_mpiprocs": 64})

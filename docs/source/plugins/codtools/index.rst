@@ -21,6 +21,9 @@ from the package can be obtained by invoking commands with ``--help`` and
     requirements and IUCr data validation criteria (Version: 2000.06.09,
     ftp://ftp.iucr.ac.uk/pub/dvntests or ftp://ftp.iucr.org/pub/dvntests)
 
+* cif_cod_numbers
+    Find COD numbers for the .cif files in given directories of file lists.
+
 * cif_correct_tags
     Correct misspelled tags in a CIF file.
 
@@ -57,6 +60,7 @@ from the package can be obtained by invoking commands with ``--help`` and
     any correctly formatted CIF files, one must do full CIF parsing
     using CIF grammar and tokenisation of the file.
 
+.. _codtools_installation:
 
 Installation
 ^^^^^^^^^^^^
@@ -107,6 +111,47 @@ follow these steps:
 
 Examples
 ^^^^^^^^
+
+* Fix a syntactically incorrect structure:
+
+  Some simple common CIF syntax errors can be fixed automatically using
+  cif_filter with ``--fix-syntax`` option. In example, such structure::
+
+        data_broken
+        _publ_section_title "Runaway quote
+        loop_
+        _atom_site_label
+        _atom_site_fract_x
+        _atom_site_fract_y
+        _atom_site_fract_z
+        C 0 0 0
+
+  can be fixed (provided it's stored in ``test.cif``)::
+
+        cif_filter --fix test.cif
+
+  Obtained structure::
+
+        data_broken
+        _publ_section_title              'Runaway quote'
+        loop_
+        _atom_site_label
+        _atom_site_fract_x
+        _atom_site_fract_y
+        _atom_site_fract_z
+        C 0 0 0
+
+  A warning message tells what was done::
+
+        cif_filter: test.cif(2) data_broken: warning, double-quoted string is missing a closing quote -- fixed
+
+  where:
+    * ``cif_filter`` is the name of the used script;
+    * ``test.cif`` is the name of the CIF file;
+    * ``2`` is the number of a line in the file;
+    * ``data_broken`` is the CIF datablock name;
+    * ``warning`` is the level of severity;
+    * rest is the message text.
 
 * Fetch a structure from Web, filter and fix it, restore the crystal
   contents and calculate summary formulae per each compound in a crystal::
@@ -182,4 +227,5 @@ Plugins
    ciffilter
    cifcellcontents
    cifcodcheck
+   cifcodnumbers
    cifsplitprimitive

@@ -15,6 +15,7 @@ short description, the following ones the long description.
 import sys
 import os
 import getpass
+import contextlib
 
 import aiida
 from aiida.common.exceptions import ConfigurationError
@@ -36,17 +37,30 @@ from aiida.cmdline.commands.node import Node
 from aiida.cmdline.commands.user import User
 from aiida.cmdline.commands.workflow import Workflow
 from aiida.cmdline.commands.comment import Comment
-
-
 from aiida.cmdline import execname
+
+__copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
+__license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
+__version__ = "0.3.0"
+
+@contextlib.contextmanager
+def update_environment(new_argv):
+    """
+    Used as a context manager, changes sys.argv with the
+    new_argv argument, and restores it upon exit.
+    """
+    import sys
+    _argv = sys.argv[:]
+    sys.argv = new_argv[:]
+    yield
+
+    #Restore old parameters when exiting from the context manager
+    sys.argv = _argv
+
 
 ########################################################################
 # HERE STARTS THE COMMAND FUNCTION LIST
 ########################################################################
-
-__copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
-__license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.2.1"
 
 class CompletionCommand(VerdiCommand):
     """
@@ -316,74 +330,6 @@ class Shell(VerdiCommand):
         # disable further completion
         print ""
 
-class GoToComputer(VerdiCommand):
-    """
-    Open a shell to the calc folder on the cluster
-
-    This command runs the 'manage.py shell' command, that opens a
-    IPython shell with the Django environment loaded.
-    """
-    def run(self,*args):
-        from aiida.common.exceptions import NotExistent
-        from aiida.orm import Calculation
-        from aiida.orm import Node as AiidaOrmNode
-        from aiida import load_dbenv
-        
-        try:
-            calc_id = args[0]
-        except IndexError:
-            print >> sys.stderr, "Pass as further argument a calculation ID or UUID."
-            sys.exit(1)
-        try:
-            pk=int(calc_id)
-            is_pk=True
-        except ValueError:
-            uuid = calc_id
-            is_pk=False
-
-        print "Loading environment..."
-        load_dbenv()
-
-        try:
-            if is_pk:
-                calc = AiidaOrmNode.get_subclass_from_pk(pk)
-            else:
-                calc = AiidaOrmNode.get_subclass_from_pk(uuid)
-        except NotExistent:
-            print >> sys.stderr, "No node exists with ID={}.".format(calc_id)
-            sys.exit(1)
-
-        if not isinstance(calc,Calculation):
-            print >> sys.stderr, "Node with ID={} is not a calculation; it is a {}".format(
-                calc_id, calc.__class__.__name__)
-            sys.exit(1)
-
-        # get the transport
-        try:
-            t = calc._get_transport()
-        except NotExistent as e:
-            print >> sys.stderr, e.message
-            sys.exit(1)
-        # get the remote directory
-        remotedir = calc._get_remote_workdir()
-        if not remotedir:
-            print >> sys.stderr, "No remote work directory is set for this calculation!"
-            print >> sys.stderr, "(It is possible that the daemon did not submit the calculation yet)"
-            sys.exit(1)
-        
-        # get the command to run (does not require to open the connection!)
-        cmd_to_run = t.gotocomputer_command(remotedir)
-        # Connect (execute command)
-        print "Going the the remote folder..."
-        #print cmd_to_run
-        os.system(cmd_to_run)
-        
-    def complete(self, subargs_idx, subargs):
-        # disable further completion
-        print ""
-
-
-        
 class Runserver(VerdiCommand):
     """
     Run the AiiDA webserver on localhost
@@ -393,7 +339,6 @@ class Runserver(VerdiCommand):
     """
     def run(self,*args):
         pass_to_django_manage([execname, 'runserver'] + list(args))
-
 
 class Run(VerdiCommand):
     """
@@ -407,12 +352,10 @@ class Run(VerdiCommand):
         from aiida.djsite.db.management.commands.customshell import default_modules_list
         import aiida.orm.autogroup
         from aiida.orm.autogroup import Autogroup
-        
+
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
             description='Execute an AiiDA script.')
-        parser.add_argument('scriptname', metavar='ScriptName', type=str,
-                            help='The name of the script you want to execute')
         parser.add_argument('-g','--group', type=bool, default=True, 
                             help='Enables the autogrouping, default = True')
         parser.add_argument('-n','--groupname', type=str, default=None, 
@@ -435,11 +378,25 @@ class Run(VerdiCommand):
                             help=('Autogroup only specific code classes.'
                                   " Select them by their module name.")
                             )
+        parser.add_argument('scriptname', metavar='ScriptName', type=str,
+                            help='The name of the script you want to execute')
+        parser.add_argument('new_args', metavar='ARGS',
+                            nargs=argparse.REMAINDER, type=str,
+                            help='Further parameters to pass to the script')
         parsed_args = parser.parse_args(args)
+
+        # Prepare the environment for the script to be run
+        globals_dict = {
+            '__builtins__': globals()['__builtins__'],
+            '__name__': '__main__',
+            '__file__': parsed_args.scriptname,
+            '__doc__': None,
+            '__package__': None}
         
-        # dynamically load modules (the same of verdi shell)
+        ## dynamically load modules (the same of verdi shell) - but in
+        ## globals_dict, not in the current environment
         for app_mod, model_name, alias in default_modules_list:
-            locals()["{}".format(alias)] = getattr(
+            globals_dict["{}".format(alias)] = getattr(
                             __import__(app_mod, {}, {}, model_name), model_name)
         
         if parsed_args.group:
@@ -455,11 +412,38 @@ class Run(VerdiCommand):
             aiida_verdilib_autogroup.set_exclude_with_subclasses(parsed_args.excludesubclasses)
             aiida_verdilib_autogroup.set_include_with_subclasses(parsed_args.includesubclasses)
             aiida_verdilib_autogroup.set_group_name(automatic_group_name)
+            ## Note: this is also set in the exec environment!
+            ## This is the intended behavior
             aiida.orm.autogroup.current_autogroup = aiida_verdilib_autogroup
         
-        with open(parsed_args.scriptname) as f:
-            exec(f)
-        
+        try:
+            f = open(parsed_args.scriptname)
+        except IOError:
+            print >> sys.stderr, "{}: Unable to load file '{}'".format(
+                self.get_full_command_name(), parsed_args.scriptname)
+            sys.exit(1)
+        else:
+            try:
+                # Must add also argv[0]
+                new_argv = [parsed_args.scriptname] + parsed_args.new_args
+                with update_environment(new_argv=new_argv):
+                    # Add local folder to sys.path
+                    sys.path.insert(0, os.path.abspath(os.curdir))
+                    # Pass only globals_dict
+                    exec(f,globals_dict)
+                # print sys.argv
+            except SystemExit as e:
+                ## Script called sys.exit()
+                # print sys.argv, "(sys.exit {})".format(e.message)
+
+                ## Note: remember to re-raise, the exception to have
+                ## the error code properly returned at the end!
+                raise
+            finally:
+                f.close()
+
+#        print "Done."
+
 ########################################################################
 # HERE ENDS THE COMMAND FUNCTION LIST
 ########################################################################
@@ -482,7 +466,6 @@ def get_listparams():
     return ("List of the most relevant available commands:" + os.linesep +
             os.linesep.join(["  * {} {}".format(name, desc) 
                              for name, desc in name_desc]))
-
 
 def get_command_suggestion(command):
     """

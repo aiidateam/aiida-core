@@ -36,7 +36,7 @@ login from your user to the cluster. To do so type first (only if you do not
 already have some keys in your local ``~/.ssh directory`` - i.e. files like 
 ``id_rsa.pub``)::
 
-    ssh-keygen
+    ssh-keygen -t rsa
     
 Then copy your keys to the remote computer (in ~/.ssh/authorized_keys) with::
 
@@ -48,7 +48,14 @@ line before and after)::
 
   Host YOURCLUSTERADDRESS
     User YOURUSERNAME
+    HostKeyAlgorithms ssh-rsa
+    IdentityFile YOURRSAKEY
 
+replacing ``YOURRSAKEY`` by the path to the rsa private key you want to use 
+(it should look like ``~/.ssh/id_rsa``).
+
+.. note:: In principle you don't have to put the ``IdentityFile`` line if you have
+  only one rsa key in your ``~/.ssh`` folder.
 
 Before proceeding to setup the computer, be sure that you are able to
 connect to your cluster using::
@@ -62,6 +69,21 @@ via ``sftp`` (needed to copy files). The following command::
 
 should show you a prompt without errors (possibly with a message saying
 ``Connected to YOURCLUSTERADDRESS``).
+
+.. Warning:: Due to a current limitation of the current ssh transport module, we 
+  do not support ECDSA, but only RSA or DSA keys. In the present guide we've 
+  shown RSA only for simplicity. The first time you connect to 
+  the cluster, you should see something like this::
+    
+    The authenticity of host 'YOURCLUSTERADDRESS (IP)' can't be established.
+    RSA key fingerprint is xx:xx:xx:xx:xx.
+    Are you sure you want to continue connecting (yes/no)?
+  
+  Make sure you see RSA written. If you already installed the keys in the past, 
+  and you don't know which keys you are using, you could remove the cluster
+  YOURCLUSTERADDRESS from the file ~/.ssh/known-hosts (backup it first!) and try
+  to ssh again. If you are not using a RSA or DSA key, you may see later on a 
+  submitted calculation going in the state SUBMISSIONFAILED. 
 
 .. note:: If the ``ssh`` command works, but the ``sftp`` command does not
   (e.g. it just prints ``Connection closed``), a possible reason can be
@@ -366,7 +388,8 @@ and you will be guided through a process to setup your code.
 You will be asked for:
 
 * **label**:  A label to refer to this code. Note: this label is not enforced
-  to be unique. However, if you try to keep it unique, you can use it later
+  to be unique. However, if you try to keep it unique, at least within
+  the same computer, you can use it later
   to refer and use to your code. Otherwise, you need to remember its ID or UUID.
 
 * **description**: A human-readable description of this code (for instance "Quantum
@@ -439,13 +462,18 @@ database (the ``pk``, i.e. the principal key, and the ``uuid``).
    verdi code relabel "ID"
    
   (Without the quotation marks!) "ID" can either be the numeric ID (PK) of
-  the code (preferentially), or possibly its label, if the label is unique.
+  the code (preferentially), or possibly its label (or label@computername), 
+  if this string uniquely identifies a code.
 
   You can also list all available codes (and their relative IDs) with::
 
    verdi code list
    
-  and then get the information of a specific code with::
+  The ``verdi code list`` accepts some flags to filter only codes on a 
+  given computer, only codes using a specific plugin, etc.; use the ``-h``
+  command line option to see the documentation of all possible options.
+
+  You can then get the information of a specific code with::
 
    verdi code show "ID"
    

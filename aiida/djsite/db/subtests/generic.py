@@ -10,7 +10,7 @@ from aiida.djsite.db.testbase import AiidaTestCase
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 
 class TestComputer(AiidaTestCase):
     """
@@ -18,7 +18,7 @@ class TestComputer(AiidaTestCase):
     """
     def test_deletion(self):
         from aiida.orm.computer import Computer, delete_computer
-        from aiida.orm import Calculation
+        from aiida.orm import JobCalculation
         from aiida.common.exceptions import InvalidOperation
     
         newcomputer = Computer(name="testdeletioncomputer", hostname='localhost',
@@ -35,7 +35,7 @@ class TestComputer(AiidaTestCase):
             'num_mpiprocs_per_machine': 1}
             }
     
-        _ = Calculation(**calc_params).store()
+        _ = JobCalculation(**calc_params).store()
         # This should fail, because there is at least a calculation
         # using this computer (the one created just above)
         with self.assertRaises(InvalidOperation):

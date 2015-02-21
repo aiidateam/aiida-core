@@ -91,6 +91,9 @@ PostgreSQL
 
     sudo apt-get install postgresql-9.1
     sudo apt-get install postgresql-client-9.1
+
+  On Mac OS X, you can download binary packages to install PostgreSQL 
+  from the official website. 
     
 To properly configure a new database for AiiDA with PostgreSQL, you need to
 create a new ``aiida`` user and a new ``aiidadb`` table.
@@ -118,6 +121,13 @@ where of course you have to change ``the_aiida_password`` with a valid password.
   you will need to store this password in clear text in your home folder
   for each user that wants to have direct access to the database, therefore
   choose a strong password, but different from any that you already use!
+
+.. note:: Did you just copy and paste the line above, therefore setting the 
+  password to ``the_aiida_password``? Then, let's change it! Choose a good
+  password this time, and then type the following command (this time replacing
+  the string ``new_aiida_password`` with the password you chose!)::
+    
+    ALTER USER aiida PASSWORD 'new_aiida_password';
 
 Then create a new ``aiidadb`` database for AiiDA:: 
 
@@ -273,16 +283,19 @@ password each time you use the script. It should look like (:download:`.pgpass<p
 where ``YOUR_DATABASE_PASSWORD`` is the password you set up for the database.
 
 .. note:: Do not forget to put this file in ~/ and to name it ``.pgpass``.
+   Remember also to give it the right permissions (read and write): ``chmod u+rw .pgpass``.
 
 To dump the database in a file automatically everyday, you can add the following script 
 :download:`backup-aiidadb-USERNAME<backup-aiidadb-USERNAME>` in ``/etc/cron.daily/``, which will
 launch the previous script once per day::
 
-    #/bin/bash
+    #!/bin/bash
     su USERNAME -c "/home/USERNAME/.aiida/backup_postgresql.sh"
 
 where all instances of ``USERNAME`` are replaced by your actual user name. The ``su USERNAME``
 makes the dumped file be owned by you rather than by ``root``.
+Remember to give the script the right permissions::
+    sudo chmod +x /etc/cron.daily/backup-aiidadb-USERNAME
 
 Finally make sure your database folder (``/home/USERNAME/.aiida/``) containing this dump file
 and the ``repository`` directory, is properly backed up by 
@@ -297,3 +310,17 @@ MySQL backup
 
 We do not have explicit instructions on how to back-up MySQL yet, but you
 can find plenty of information on Google.
+
+How to retrieve the database from a backup
+------------------------------------------
+
+PostgreSQL backup
+-----------------
+
+In order to retrieve the database from a backup, you have first to
+create a empty database following the instructions described above in
+"Setup instructions: PostgreSQL" except the ``verdi install``
+phase. Once that you have created your empty database with the same
+names of the backuped one, type the following command:: 
+
+    psql -h localhost -U aiida -d aiidadb -f aiidadb-backup.psql

@@ -134,7 +134,7 @@ class PwimmigrantCalculation(PwCalculation):
             parsing the input file.
         :raises IOError: if there are issues reading the input file.
         """
-
+        import re
         # Make sure the remote workdir and input + output file names were
         # provided either before or during the call to this method. If they
         # were just provided during this method call, store the values.
@@ -265,8 +265,13 @@ class PwimmigrantCalculation(PwCalculation):
             # units, that will be taken care of by the input parsing tools, and
             # we are safe to fake that they were never there in the first place.
             parameters_dict = deepcopy(pwinputfile.namelists)
-            for nmlst, key in self._blocked_keywords:
-                parameters_dict[nmlst].pop(key, None)
+            for namelist,blocked_key in self._blocked_keywords:
+                keys = parameters_dict[namelist].keys()
+                for this_key in parameters_dict[namelist].keys():
+                    # take into account that celldm and celldm(*) must be blocked
+                    if re.sub("[(0-9)]","",this_key) == blocked_key:
+                        parameters_dict[namelist].pop(this_key,None) 
+            
             parameters = ParameterData(dict=parameters_dict)
             self.use_parameters(parameters)
 

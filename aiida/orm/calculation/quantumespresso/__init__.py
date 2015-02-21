@@ -137,7 +137,8 @@ class BasePwCpInputGenerator(object):
                 be returned by get_inputdata_dict (without the Code!)
         """
         from aiida.common.utils import get_unique_filename, get_suggestion
-
+        import re
+        
         local_copy_list = []
         remote_copy_list = []
         remote_symlink_list = []
@@ -232,7 +233,11 @@ class BasePwCpInputGenerator(object):
             if len(blocked) >= 3:
                 defaultvalue = blocked[2]
             if nl in input_params:
-                if flag in input_params[nl]:
+                # The following lines is meant to avoid putting in input the 
+                # parameters like celldm(*)
+                stripped_inparams = [ re.sub("[(0-9)]","",_) 
+                                      for _ in input_params[nl].keys() ]
+                if flag in stripped_inparams:
                     raise InputValidationError(
                         "You cannot specify explicitly the '{}' flag in the '{}' "
                         "namelist or card.".format(flag, nl))

@@ -17,7 +17,7 @@ from aiida.djsite.utils import long_field_length
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 
 # This variable identifies the schema version of this file.
 # Every time you change the schema below in *ANY* way, REMEMBER TO CHANGE
@@ -26,14 +26,7 @@ __version__ = "0.2.1"
 # version and the DB schema version are the same. (The DB schema version
 # is stored in the DbSetting table and the check is done in the 
 # load_dbenv() function).
-SCHEMA_VERSION="1.0.0"
-
-class EmptyContextManager(object):
-    def __enter__(self):
-        pass
-    
-    def __exit__(self, exc_type, exc_value, traceback):
-        pass
+SCHEMA_VERSION="1.0.1"
 
 class AiidaQuerySet(QuerySet):
     def iterator(self):
@@ -194,13 +187,13 @@ class DbNode(m.Model):
         try:
             pluginclassname = from_type_to_pluginclassname(self.type)
         except DbContentError:
-            raise DbContentError("The type name of node with pk={} is "
+            raise DbContentError("The type name of node with pk= {} is "
                                 "not valid: '{}'".format(self.pk, self.type))
 
         try:
             PluginClass = load_plugin(Node, 'aiida.orm', pluginclassname)
         except MissingPluginError:
-            aiidalogger.error("Unable to find plugin for type '{}' (node={}), "
+            aiidalogger.error("Unable to find plugin for type '{}' (node= {}), "
                 "will use base Node class".format(self.type,self.pk))
             PluginClass = Node
 
@@ -292,15 +285,12 @@ class DbLink(m.Model):
 class DbPath(m.Model):
     """
     Transitive closure table for all dbnode paths.
-    
-    # TODO: implement Transitive closure with MySql!
-    # TODO: if a link is updated, the TC should be updated accordingly
     """
     parent = m.ForeignKey('DbNode',related_name='child_paths',editable=False)
     child = m.ForeignKey('DbNode',related_name='parent_paths',editable=False)
     depth = m.IntegerField(editable=False)
 
-    # Used to delete
+    # Used to delete or to expand the path
     entry_edge_id = m.IntegerField(null=True,editable=False)
     direct_edge_id = m.IntegerField(null=True,editable=False)
     exit_edge_id = m.IntegerField(null=True,editable=False)
@@ -313,6 +303,28 @@ class DbPath(m.Model):
             self.depth,
             self.child.get_simple_name(invalid_result="Unknown node"),
             self.child.pk,)
+            
+    def expand(self):
+        """
+        Method to expand a DbPath (recursive function), i.e., to get a list
+        of all dbnodes that are traversed in the given path. 
+        
+        :return: list of DbNode objects representing the expanded DbPath
+        """
+        
+        if self.depth == 0:
+            return [self.parent,self.child]
+        else:
+            path_entry  = []
+            path_direct = DbPath.objects.get(id=self.direct_edge_id).expand()
+            path_exit   = []
+            # we prevent DbNode repetitions
+            if self.entry_edge_id != self.direct_edge_id:
+                path_entry = DbPath.objects.get(id=self.entry_edge_id).expand()[:-1]
+            if self.exit_edge_id != self.direct_edge_id:
+                path_exit  = DbPath.objects.get(id=self.exit_edge_id).expand()[1:]
+            
+            return path_entry + path_direct + path_exit
 
 
 attrdatatype_choice = (
@@ -325,6 +337,273 @@ attrdatatype_choice = (
     ('dict', 'dict'),
     ('list', 'list'),
     ('none', 'none'))
+
+from aiida.common.exceptions import AiidaException
+class DeserializationException(AiidaException):
+    pass
+
+
+def _deserialize_attribute(mainitem, subitems, sep, original_class=None, 
+                           original_pk=None,lesserrors=False):
+    """
+    Deserialize a single attribute. 
+    
+    :param mainitem: the main item (either the attribute itself for base
+      types (None, string, ...) or the main item for lists and dicts. 
+      Must contain the 'key' key and also the following keys:
+      datatype, tval, fval, ival, bval, dval.
+      NOTE that a type check is not performed! tval is expected to be a string,
+      dval a date, etc.
+    :param subitems: must be a dictionary of dictionaries. In the top-level dictionary,
+      the key must be the key of the attribute, stripped of all prefixes 
+      (i.e., if the mainitem has key 'a.b' and we pass subitems
+        'a.b.0', 'a.b.1', 'a.b.1.c', their keys must be '0', '1', '1.c').
+        It must be None if the value is not iterable (int, str,
+        float, ...).
+        It is an empty dictionary if there are no subitems.
+    :param sep: a string, the separator between subfields (to separate the
+      name of a dictionary from the keys it contains, for instance)
+    :param original_class: if these elements come from a specific subclass
+      of DbMultipleValueAttributeBaseClass, pass here the class (note: the class,
+      not the instance!). This is used only in case the wrong number of elements
+      is found in the raw data, to print a more meaningful message (if the class
+      has a dbnode associated to it)
+    :param original_pk: if the elements come from a specific subclass
+      of DbMultipleValueAttributeBaseClass that has a dbnode associated to it,
+      pass here the PK integer. This is used only in case the wrong number
+      of elements is found in the raw data, to print a more meaningful message
+    :param lesserrors: If set to True, in some cases where the content of the
+      DB is not consistent but data is still recoverable,
+      it will just log the message rather than raising
+      an exception (e.g. if the number of elements of a dictionary is different
+      from the number declared in the ival field).
+
+    :return: the deserialized value
+    :raise DeserializationError: if an error occurs
+    """
+    from django.utils.timezone import (
+        is_naive, make_aware, get_current_timezone)
+    import json
+
+    from aiida.common import aiidalogger
+
+    if mainitem['datatype'] == 'none':
+        if subitems:
+            raise DeserializationException("'{}' is of a base type, "
+                "but has subitems!".format(mainitem.key))
+        return None
+    elif mainitem['datatype'] == 'bool':
+        if subitems:
+            raise DeserializationException("'{}' is of a base type, "
+                "but has subitems!".format(mainitem.key))
+        return mainitem['bval']
+    elif mainitem['datatype'] == 'int':
+        if subitems:
+            raise DeserializationException("'{}' is of a base type, "
+                "but has subitems!".format(mainitem.key))
+        return mainitem['ival']
+    elif mainitem['datatype'] == 'float':
+        if subitems:
+            raise DeserializationException("'{}' is of a base type, "
+                "but has subitems!".format(mainitem.key))
+        return mainitem['fval']
+    elif mainitem['datatype'] == 'txt':
+        if subitems:
+            raise DeserializationException("'{}' is of a base type, "
+                "but has subitems!".format(mainitem.key))
+        return mainitem['tval']
+    elif mainitem['datatype'] == 'date':
+        if subitems:
+            raise DeserializationException("'{}' is of a base type, "
+                "but has subitems!".format(mainitem.key))
+        if is_naive(mainitem['dval']):
+            return make_aware(mainitem['dval'],get_current_timezone())
+        else:
+            return mainitem['dval']
+        return mainitem['dval']
+    elif mainitem['datatype'] == 'list':
+        # subitems contains all subitems, here I store only those of
+        # deepness 1, i.e. if I have subitems '0', '1' and '1.c' I 
+        # store only '0' and '1'
+        firstlevelsubdict = {k: v for k, v in subitems.iteritems()
+                               if sep not in k}
+
+        # For checking, I verify the expected values
+        expected_set = set(["{:d}".format(i)
+               for i in range(mainitem['ival'])])
+        received_set = set(firstlevelsubdict.keys())
+        # If there are more entries than expected, but all expected
+        # ones are there, I just issue an error but I do not stop.
+
+        if not expected_set.issubset(received_set):
+            if (original_class is not None
+                and original_class._subspecifier_field_name is not None):
+                subspecifier_string = "{}={} and ".format(
+                    original_class._subspecifier_field_name,
+                    original_pk)
+            else:
+                subspecifier_string = ""
+            if original_class is None:
+                sourcestr = "the data passed"
+            else:
+                sourcestr = original_class.__name__
+                
+            raise DeserializationException("Wrong list elements stored in {} for "
+                                 "{}key='{}' ({} vs {})".format(
+                                 sourcestr, 
+                                 subspecifier_string,
+                                 mainitem['key'], expected_set, received_set))
+        if expected_set != received_set:
+            if (original_class is not None and
+                original_class._subspecifier_field_name is not None):
+                subspecifier_string = "{}={} and ".format(
+                    original_class._subspecifier_field_name,
+                    original_pk)
+            else:
+                subspecifier_string = ""
+            if original_class is None:
+                sourcestr = "the data passed"
+            else:
+                sourcestr = original_class.__name__
+
+            msg = ("Wrong list elements stored in {} for "
+                   "{}key='{}' ({} vs {})".format(
+                      sourcestr, 
+                      subspecifier_string,
+                      mainitem['key'], expected_set, received_set))
+            if lesserrors:
+                aiidalogger.error(msg)
+            else:
+                raise DeserializationException(msg)
+        
+        # I get the values in memory as a dictionary
+        tempdict = {}
+        for firstsubk, firstsubv in firstlevelsubdict.iteritems():
+            # I call recursively the same function to get subitems
+            newsubitems={k[len(firstsubk)+len(sep):]: v 
+                         for k, v in subitems.iteritems()
+                         if k.startswith(firstsubk+sep)}
+            tempdict[firstsubk] = _deserialize_attribute(mainitem=firstsubv,
+                subitems=newsubitems, sep=sep, original_class=original_class,
+                original_pk=original_pk)
+                
+        # And then I put them in a list
+        retlist = [tempdict["{:d}".format(i)] for i in range(mainitem['ival'])]
+        return retlist
+    elif mainitem['datatype'] == 'dict':
+        # subitems contains all subitems, here I store only those of
+        # deepness 1, i.e. if I have subitems '0', '1' and '1.c' I 
+        # store only '0' and '1'
+        firstlevelsubdict = {k: v for k, v in subitems.iteritems()
+                               if sep not in k}
+
+        if len(firstlevelsubdict) != mainitem['ival']:
+            if (original_class is not None and
+                original_class._subspecifier_field_name is not None):
+                subspecifier_string = "{}={} and ".format(
+                    original_class._subspecifier_field_name,
+                    original_pk)
+            else:
+                subspecifier_string = ""
+            if original_class is None:
+                sourcestr = "the data passed"
+            else:
+                sourcestr = original_class.__name__
+
+            msg = ("Wrong dict length stored in {} for "
+                              "{}key='{}' ({} vs {})".format(
+                                sourcestr,
+                                subspecifier_string,
+                                mainitem['key'], len(firstlevelsubdict),
+                                mainitem['ival']))
+            if lesserrors:
+                aiidalogger.error(msg)
+            else:
+                raise DeserializationException(msg)
+
+        # I get the values in memory as a dictionary
+        tempdict = {}
+        for firstsubk, firstsubv in firstlevelsubdict.iteritems():
+            # I call recursively the same function to get subitems
+            newsubitems={k[len(firstsubk)+len(sep):]: v 
+                         for k, v in subitems.iteritems()
+                         if k.startswith(firstsubk+sep)}
+            tempdict[firstsubk] = _deserialize_attribute(mainitem=firstsubv,
+                subitems=newsubitems, sep=sep, original_class=original_class,
+                original_pk=original_pk)
+            
+        return tempdict
+    elif mainitem['datatype'] == 'json':
+        try:
+            return json.loads(mainitem['tval'])
+        except ValueError:
+            raise DeserializationException("Error in the content of the json field")
+    else:
+        raise DeserializationException("The type field '{}' is not recognized".format(
+                mainitem['datatype']))        
+
+def deserialize_attributes(data, sep, original_class=None, original_pk=None):
+    """
+    Deserialize the attributes from the format internally stored in the DB
+    to the actual format (dictionaries, lists, integers, ...
+    
+    :param data: must be a dictionary of dictionaries. In the top-level dictionary,
+      the key must be the key of the attribute. The value must be a dictionary 
+      with the following keys: datatype, tval, fval, ival, bval, dval. Other
+      keys are ignored.
+      NOTE that a type check is not performed! tval is expected to be a string,
+      dval a date, etc.
+    :param sep: a string, the separator between subfields (to separate the
+      name of a dictionary from the keys it contains, for instance)
+    :param original_class: if these elements come from a specific subclass
+      of DbMultipleValueAttributeBaseClass, pass here the class (note: the class,
+      not the instance!). This is used only in case the wrong number of elements
+      is found in the raw data, to print a more meaningful message (if the class
+      has a dbnode associated to it)
+    :param original_pk: if the elements come from a specific subclass
+      of DbMultipleValueAttributeBaseClass that has a dbnode associated to it,
+      pass here the PK integer. This is used only in case the wrong number
+      of elements is found in the raw data, to print a more meaningful message
+    
+    :return: a dictionary, where for each entry the corresponding value is 
+      returned, deserialized back to lists, dictionaries, etc.
+      Example: if ``data = {'a': {'datatype': "list", "ival": 2, ...}, 
+      'a.0': {'datatype': "int", "ival": 2, ...}, 
+      'a.1': {'datatype': "txt", "tval":  "yy"}]``,
+      it will return ``{"a": [2, "yy"]}``
+    """
+    from collections import defaultdict
+    
+    # I group results by zero-level entity
+    found_mainitems = {}
+    found_subitems = defaultdict(dict)
+    for mainkey, descriptiondict in data.iteritems():
+        prefix, thissep, postfix = mainkey.partition(sep)
+        if thissep:
+            found_subitems[prefix][postfix] = {k: v for k, v
+                in descriptiondict.iteritems() if k != "key"}
+        else:
+            mainitem = descriptiondict.copy()
+            mainitem['key'] = prefix
+            found_mainitems[prefix] = mainitem
+    
+    # There can be mainitems without subitems, but there should not be subitems
+    # without mainitmes.
+    lone_subitems = set(found_subitems.keys()) - set(found_mainitems.keys())
+    if lone_subitems:
+        raise DeserializationException("Missing base keys for the following "
+            "items: {}".format(",".join(lone_subitems)))
+        
+    # For each zero-level entity, I call the _deserialize_attribute function
+    retval = {}
+    for k, v in found_mainitems.iteritems():
+        # Note: found_subitems[k] will return an empty dictionary it the
+        # key does not exist, as it is a defaultdict
+        retval[k] = _deserialize_attribute(mainitem=v,
+           subitems=found_subitems[k], sep=sep, original_class=original_class,
+           original_pk=original_pk) 
+    
+    return retval    
 
 class DbMultipleValueAttributeBaseClass(m.Model):
     """
@@ -548,7 +827,7 @@ class DbMultipleValueAttributeBaseClass(m.Model):
             new_entry.ival = None
             new_entry.fval = None
 
-        elif isinstance(value, list):
+        elif isinstance(value, (list, tuple)):
                             
             new_entry.datatype = 'list'
             new_entry.dval = None
@@ -662,175 +941,61 @@ class DbMultipleValueAttributeBaseClass(m.Model):
         """
         This can be called on a given row and will get the corresponding value,
         casting it correctly.
-        """
-        return self._getvalue_internal(subitems=None)
-
-    def _getvalue_internal(self,subitems=None):
-        """
-        This function returns the value of the given item, casting it
-        correctly.
-        
-        This function should be used only internally, because it uses the
-        optional parameter subitems to call itself recursively for items that
-        were expanded in their items (lists and dicts) in a faster way,
-        avoiding to perform too many queries.
-
-        :param subitems: a dictionary of subitems at all deepness level,
-            where the values are DbAttribute instances, and the keys are
-            the key values in the DbAttribute table, but already stripped
-            from the initial part belonging to 'self' (that is, if we 
-            are item 'a.b' and we pass subitems 'a.b.0', 'a.b.1', 'a.b.1.c',
-            the keys must be '0', '1', '1.c').
-            It must be None if the value is not iterable (int, str,
-            float, ...) or if we still have to perform a query.
-            It is an empty dictionary if there are no subitems.
-        """
-        import json
-        import re
-    
-        from django.utils.timezone import (
-            is_naive, make_aware, get_current_timezone)
-
-        from aiida.common import aiidalogger
-
-        if self.datatype == 'none':
-            return None
-        elif self.datatype == 'bool':
-            return self.bval
-        elif self.datatype == 'int':
-            return self.ival
-        elif self.datatype == 'float':
-            return self.fval
-        elif self.datatype == 'txt':
-            return self.tval
-        elif self.datatype == 'date':
-            if is_naive(self.dval):
-                return make_aware(self.dval,get_current_timezone())
-            else:
-                return self.dval
-            return self.dval
-        elif self.datatype == 'list':
-            if subitems is None:
-                # This function was called for the first time: 
-                # perform the query for *all* subitems at any 
-                # deepness level
+        """ 
+        try:  
+            if self.datatype == 'list' or self.datatype=='dict':
                 prefix = "{}{}".format(self.key, self._sep)
+                prefix_len = len(prefix)
                 dballsubvalues = self.__class__.objects.filter(
                     key__startswith=prefix,
-                    **self.subspecifiers_dict)
-                # Strip the prefix and store in a dictionary
-                dbsubdict = {_.key[len(prefix):]: _ for _ in dballsubvalues}
+                    **self.subspecifiers_dict).values_list('key', 
+                        'datatype', 'tval', 'fval',
+                        'ival', 'bval', 'dval')
+                # Strip the FULL prefix and replace it with the simple
+                # "attr" prefix
+                data = {"attr.{}".format(_[0][prefix_len:]): {
+                        "datatype": _[1], 
+                        "tval": _[2],
+                        "fval": _[3], 
+                        "ival": _[4], 
+                        "bval": _[5], 
+                        "dval": _[6],                     
+                         } for _ in dballsubvalues
+                        }
+                        #for _ in dballsubvalues}
+                # Append also the item itself
+                data["attr"] = {
+                    # Replace the key (which may contain the separator) with the
+                    # simple "attr" key. In any case I do not need to return it!
+                    "key": "attr",
+                    "datatype": self.datatype, 
+                    "tval": self.tval,
+                    "fval": self.fval, 
+                    "ival": self.ival, 
+                    "bval": self.bval, 
+                    "dval": self.dval}
+                return deserialize_attributes(data, sep=self._sep,
+                    original_class=self.__class__,
+                    original_pk=self.subspecifier_pk)['attr']
             else:
-                # The subitems are passed as a parameter for a recursive call
-                dbsubdict = subitems
-
-            # dbsubdict contains all subitems, here I store only those of
-            # deepness 1, i.e. if I have subitems '0', '1' and '1.c' I 
-            # store only '0' and '1'
-            firstleveldbsubdict = {k: v for k, v in dbsubdict.iteritems()
-                                   if self._sep not in k}
-
-            # For checking, I verify the expected values
-            expected_set = set(["{:d}".format(i)
-                   for i in range(self.ival)])
-            db_set = set(firstleveldbsubdict.keys())
-            # If there are more entries than expected, but all expected
-            # ones are there, I just issue an error but I do not stop.
-
-            if not expected_set.issubset(db_set):
-                if self._subspecifier_field_name is not None:
-                    subspecifier_string = "{}={} and ".format(
-                        self._subspecifier_field_name,
-                        self._subspecifier_pk)
-                else:
-                    subspecifier_string = ""
-
-                raise DbContentError("Wrong list elements stored in {} for "
-                                     "{}key='{}' ({} vs {})".format(
-                                     self.__class__.__name__, 
-                                     subspecifier_string,
-                                     self.key, expected_set, db_set))
-            if expected_set != db_set:
-                if self._subspecifier_field_name is not None:
-                    subspecifier_string = "{}={} and ".format(
-                        self._subspecifier_field_name,
-                        self._subspecifier_pk)
-                else:
-                    subspecifier_string = ""
-
-                aiidalogger.error("Wrong list elements stored in {} for "
-                                  "{}key='{}' ({} vs {})".format(
-                                    self.__class__.__name__, 
-                                    subspecifier_string,
-                                    self.key, expected_set, db_set))
-            
-            # I get the values in memory as a dictionary
-            tempdict = {}
-            for firstsubk, firstsubv in firstleveldbsubdict.iteritems():
-                # I call recursively the same function to get subitems
-                newsubitems={k[len(firstsubk)+len(self._sep):]: v 
-                             for k, v in dbsubdict.iteritems()
-                             if k.startswith(firstsubk+self._sep)}
-                tempdict[firstsubk] = firstsubv._getvalue_internal(
-                    subitems=newsubitems)
+                data = {"attr": {
+                    # Replace the key (which may contain the separator) with the
+                    # simple "attr" key. In any case I do not need to return it!
+                    "key": "attr",
+                    "datatype": self.datatype, 
+                    "tval": self.tval,
+                    "fval": self.fval, 
+                    "ival": self.ival, 
+                    "bval": self.bval, 
+                    "dval": self.dval}}
                     
-            # And then I put them in a list
-            retlist = [tempdict["{:d}".format(i)] for i in range(self.ival)]
-            return retlist
-        elif self.datatype == 'dict':
-            if subitems is None:
-                # This function was called for the first time: 
-                # perform the query for *all* subitems at any 
-                # deepness level
-                prefix = "{}{}".format(self.key, self._sep)
-                dballsubvalues = self.__class__.objects.filter(
-                    key__startswith=prefix, **self.subspecifiers_dict)
-                # Strip the prefix and store in a dictionary
-                dbsubdict = {_.key[len(prefix):]: _ for _ in dballsubvalues}
-            else:
-                # The subitems are passed as a parameter for a recursive call
-                dbsubdict = subitems
-
-            # dbsubdict contains all subitems, here I store only those of
-            # deepness 1, i.e. if I have subitems '0', '1' and '1.c' I 
-            # store only '0' and '1'
-            firstleveldbsubdict = {k: v for k, v in dbsubdict.iteritems()
-                                   if self._sep not in k}
-
-            if len(firstleveldbsubdict) != self.ival:
-                if self._subspecifier_field_name is not None:
-                    subspecifier_string = "{}={} and ".format(
-                        self._subspecifier_field_name,
-                        self._subspecifier_pk)
-                else:
-                    subspecifier_string = ""
-
-                aiidalogger.error("Wrong dict length stored in {} for "
-                                  "{}key='{}' ({} vs {})".format(
-                                    self.__class__.__name__,
-                                    subspecifier_string,
-                                    self.key, len(firstleveldbsubdict),
-                                    self.ival))
-
-            # I get the values in memory as a dictionary
-            tempdict = {}
-            for firstsubk, firstsubv in firstleveldbsubdict.iteritems():
-                # I call recursively the same function to get subitems
-                newsubitems={k[len(firstsubk)+len(self._sep):]: v 
-                             for k, v in dbsubdict.iteritems()
-                             if k.startswith(firstsubk+self._sep)}
-                tempdict[firstsubk] = firstsubv._getvalue_internal(
-                    subitems=newsubitems)
-                
-            return tempdict
-        elif self.datatype == 'json':
-            try:
-                return json.loads(self.tval)
-            except ValueError:
-                raise DbContentError("Error in the content of the json field")
-        else:
-            raise DbContentError("The type field '{}' is not recognized".format(
-                    self.datatype))        
+                return deserialize_attributes(data, sep=self._sep,
+                    original_class=self.__class__,
+                    original_pk=self.subspecifier_pk)['attr']
+        except DeserializationException as e:
+            exc = DbContentError(e.message)
+            exc.original_exception = e
+            raise exc
 
     @classmethod
     def del_value(cls, key, only_children=False, subspecifier_value=None):
@@ -937,25 +1102,26 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
             stored in the Db table, correctly converted 
             to the right type.
         """  
-        # Speedup: I put some logic here so that I need to perform
-        # only one query per dbnode (similar to the one in _getvalue_internal
-        # for the case of dictionaries)
-        all_attributes = {_.key: _ for _ in
-                          cls.objects.filter(dbnode=dbnode)}
-
-        firstleveldbsubdict = {k: v for k, v in all_attributes.iteritems()
-                               if cls._sep not in k}
-
-        tempdict = {}
-        for firstsubk, firstsubv in firstleveldbsubdict.iteritems():
-            # I call recursively the same function to get subitems
-            newsubitems={k[len(firstsubk)+len(cls._sep):]: v 
-                         for k, v in all_attributes.iteritems()
-                         if k.startswith(firstsubk+cls._sep)}
-            tempdict[firstsubk] = firstsubv._getvalue_internal(
-                subitems=newsubitems)
-            
-        return tempdict
+        dballsubvalues = cls.objects.filter(dbnode=dbnode).values_list('key', 
+                'datatype', 'tval', 'fval',
+                'ival', 'bval', 'dval')
+        
+        data = {_[0]: {
+                "datatype": _[1], 
+                "tval": _[2],
+                "fval": _[3], 
+                "ival": _[4], 
+                "bval": _[5], 
+                "dval": _[6],                     
+                 } for _ in dballsubvalues
+                }
+        try:
+            return deserialize_attributes(data, sep=cls._sep,
+                original_class=cls,original_pk=dbnode.pk)
+        except DeserializationException as e:
+            exc = DbContentError(e.message)
+            exc.original_exception = e
+            raise exc
 
     @classmethod
     def reset_values_for_node(cls, dbnode, attributes, with_transaction=True,
@@ -1599,8 +1765,8 @@ class DbWorkflow(m.Model):
             
     def get_calculations(self):
         
-        from aiida.orm import Calculation
-        return Calculation.query(workflow_step=self.steps)
+        from aiida.orm import JobCalculation
+        return JobCalculation.query(workflow_step=self.steps)
     
     def get_calculations_status(self):
 
@@ -1727,9 +1893,9 @@ class DbWorkflowStep(m.Model):
     
     def add_calculation(self, step_calculation):
         
-        from aiida.orm import Calculation
+        from aiida.orm import JobCalculation
 
-        if (not isinstance(step_calculation, Calculation)):
+        if (not isinstance(step_calculation, JobCalculation)):
             raise ValueError("Cannot add a non-Calculation object to a workflow step")          
 
         try:
@@ -1739,12 +1905,12 @@ class DbWorkflowStep(m.Model):
 
     def get_calculations(self, state=None):
         
-        from aiida.orm import Calculation
+        from aiida.orm import JobCalculation
         
         if (state==None):
-            return Calculation.query(workflow_step=self)#pk__in = step.calculations.values_list("pk", flat=True))
+            return JobCalculation.query(workflow_step=self)#pk__in = step.calculations.values_list("pk", flat=True))
         else:
-            return Calculation.query(workflow_step=self).filter(
+            return JobCalculation.query(workflow_step=self).filter(
                 dbattributes__key="state",dbattributes__tval=state)
 
     def get_calculations_status(self):
@@ -1778,7 +1944,7 @@ class DbWorkflowStep(m.Model):
     def get_sub_workflows(self):
         
         from aiida.orm.workflow import Workflow
-        return Workflow.query(uuid__in=self.sub_workflows.values_list("uuid", flat=True))
+        return Workflow.query(pk__in=self.sub_workflows.values_list("pk", flat=True))
         #return self.sub_workflows.all()#pk__in = step.calculations.values_list("pk", flat=True))
  
     def get_sub_workflows_status(self):

@@ -10,19 +10,19 @@ from aiida.djsite.db.testbase import AiidaTestCase
         
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 
 class TestCalcStatus(AiidaTestCase):        
     """
     Test the functionality of calculation states.
     """
     def test_state(self):
-        from aiida.orm import Calculation
+        from aiida.orm import JobCalculation
         from aiida.common.datastructures import calc_states
         
         # Use the AiidaTestCase test computer
         
-        c = Calculation(computer=self.computer,
+        c = JobCalculation(computer=self.computer,
                         resources={
                             'num_machines': 1,
                             'num_mpiprocs_per_machine': 1}
@@ -46,7 +46,7 @@ class TestCalcStatus(AiidaTestCase):
         self.assertEquals(c.get_state(), calc_states.SUBMITTING)
         
         # Try to reset a state and check that the proper exception is raised
-        with self.assertRaises(UniquenessError):
+        with self.assertRaises(ModificationNotAllowed):
             c._set_state(calc_states.SUBMITTING)
         
         # Set a different state and check
@@ -108,6 +108,7 @@ class TestCifData(AiidaTestCase):
     from aiida.orm.data.cif import has_pycifrw
     from aiida.orm.data.structure import has_ase
 
+    @unittest.skipIf(not has_pycifrw(),"Unable to import PyCifRW")
     def test_reload_cifdata(self):
         import os
         import tempfile
@@ -143,6 +144,7 @@ class TestCifData(AiidaTestCase):
             'db_url'    : '',
             'db_id'     : '0000001',
             'db_version': '1234',
+            'extras'    : '',
             'url'       : '',
         })
 
@@ -220,7 +222,8 @@ class TestCifData(AiidaTestCase):
 
         self.assertEquals(a.values['test']['_cell_length_a'],'11(1)')
 
-    @unittest.skipIf(not has_ase(),"Unable to import ase")
+    @unittest.skipIf(not has_ase() or not has_pycifrw(),
+                     "Unable to import ase or pycifrw")
     def test_get_aiida_structure(self):
         import os
         import tempfile
@@ -250,11 +253,12 @@ class TestCifData(AiidaTestCase):
         with self.assertRaises(ValueError):
             a._get_aiida_structure(converter='none')
 
-        c = a._get_aiida_structure_ase()
+        c = a._get_aiida_structure_ase_inline()['structure']
 
         self.assertEquals(c.get_kind_names(), ['C','O'])
 
-    @unittest.skipIf(not has_ase(),"Unable to import ase")
+    @unittest.skipIf(not has_ase() or not has_pycifrw(),
+                     "Unable to import ase or pycifrw")
     def test_ase_primitive_and_conventional_cells(self):
         """
         Checking the number of atoms per primitive/conventional cell
@@ -301,6 +305,160 @@ class TestCifData(AiidaTestCase):
 
         ase = c._get_aiida_structure(primitive_cell = True).get_ase()
         self.assertEquals(ase.get_number_of_atoms(),5)
+
+    def test_contents_encoding(self):
+        """
+        Testing the logic of choosing the encoding and the process of
+        encoding contents.
+        """
+        def test_ncr(self,inp,out):
+            from aiida.orm.data.cif import encode_textfield_ncr, \
+                                           decode_textfield_ncr
+            encoded = encode_textfield_ncr(inp)
+            decoded = decode_textfield_ncr(out)
+            self.assertEquals(encoded,out)
+            self.assertEquals(decoded,inp)
+
+        def test_quoted_printable(self,inp,out):
+            from aiida.orm.data.cif import encode_textfield_quoted_printable, \
+                                           decode_textfield_quoted_printable
+            encoded = encode_textfield_quoted_printable(inp)
+            decoded = decode_textfield_quoted_printable(out)
+            self.assertEquals(encoded,out)
+            self.assertEquals(decoded,inp)
+
+        def test_base64(self,inp,out):
+            from aiida.orm.data.cif import encode_textfield_base64, \
+                                           decode_textfield_base64
+            encoded = encode_textfield_base64(inp)
+            decoded = decode_textfield_base64(out)
+            self.assertEquals(encoded,out)
+            self.assertEquals(decoded,inp)
+
+        def test_gzip_base64(self,text):
+            from aiida.orm.data.cif import encode_textfield_gzip_base64, \
+                                           decode_textfield_gzip_base64
+            encoded = encode_textfield_gzip_base64(text)
+            decoded = decode_textfield_gzip_base64(encoded)
+            self.assertEquals(text,decoded)
+
+        test_ncr(self,'.','&#46;')
+        test_ncr(self,'?','&#63;')
+        test_ncr(self,';\n','&#59;\n')
+        test_ncr(self,'line\n;line','line\n&#59;line')
+        test_ncr(self,'tabbed\ttext','tabbed&#9;text')
+        test_ncr(self,'angstrom Å','angstrom &#195;&#133;')
+        test_ncr(self,'<html>&#195;&#133;</html>',
+                      '<html>&#38;#195;&#38;#133;</html>')
+
+        test_quoted_printable(self,'.','=2E')
+        test_quoted_printable(self,'?','=3F')
+        test_quoted_printable(self,';\n','=3B\n')
+        test_quoted_printable(self,'line\n;line','line\n=3Bline')
+        test_quoted_printable(self,'tabbed\ttext','tabbed=09text')
+        test_quoted_printable(self,'angstrom Å','angstrom =C3=85')
+        # This one is particularly tricky: a long line is folded by the QP
+        # and the semicolon sign becomes the first character on a new line.
+        test_quoted_printable(self,
+                              "Å{};a".format("".join("a" for i in range(0,69))),
+                              '=C3=85aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+                              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaa=\n=3Ba')
+
+        test_base64(self,'angstrom ÅÅÅ','YW5nc3Ryb20gw4XDhcOF')
+        test_gzip_base64(self,'angstrom ÅÅÅ')
+
+    @unittest.skipIf(not has_pycifrw(),"Unable to import PyCifRW")
+    def test_pycifrw_from_datablocks(self):
+        """
+        Tests CifData.pycifrw_from_cif()
+        """
+        from aiida.orm.data.cif import pycifrw_from_cif
+        import re
+
+        datablocks = [
+            {
+                '_atom_site_label': [ 'A', 'B', 'C' ],
+                '_atom_site_occupancy': [ 1.0, 0.5, 0.5 ],
+                '_publ_section_title': 'Test CIF'
+            }
+        ]
+        lines = pycifrw_from_cif(datablocks).WriteOut().split('\n')
+        non_comments = []
+        for line in lines:
+            if not re.search('^#', line):
+                non_comments.append(line)
+        self.assertEquals("\n".join(non_comments),
+'''
+data_0
+loop_
+  _atom_site_label
+   A
+   B
+   C
+ 
+loop_
+  _atom_site_occupancy
+   1.0
+   0.5
+   0.5
+ 
+_publ_section_title                     'Test CIF'
+''')
+
+        loops = { '_atom_site': [ '_atom_site_label', '_atom_site_occupancy' ] }
+        lines = pycifrw_from_cif(datablocks,loops).WriteOut().split('\n')
+        non_comments = []
+        for line in lines:
+            if not re.search('^#', line):
+                non_comments.append(line)
+        self.assertEquals("\n".join(non_comments),
+'''
+data_0
+loop_
+  _atom_site_label
+  _atom_site_occupancy
+   A  1.0
+   B  0.5
+   C  0.5
+ 
+_publ_section_title                     'Test CIF'
+''')
+
+    @unittest.skipIf(not has_ase() or not has_pycifrw(),
+                     "Unable to import ase or pycifrw")
+    def test_cif_roundtrip(self):
+        import tempfile
+        from aiida.orm.data.cif import CifData
+
+        with tempfile.NamedTemporaryFile() as f:
+            f.write('''
+                data_test
+                _cell_length_a    10
+                _cell_length_b    10
+                _cell_length_c    10
+                _cell_angle_alpha 90
+                _cell_angle_beta  90
+                _cell_angle_gamma 90
+                loop_
+                _atom_site_label
+                _atom_site_fract_x
+                _atom_site_fract_y
+                _atom_site_fract_z
+                C 0 0 0
+                O 0.5 0.5 0.5
+                _cod_database_code 0000001
+                _[local]_flags     ''
+            ''')
+            f.flush()
+            a = CifData(file=f.name)
+
+        b = CifData(values=a.values)
+        c = CifData(values=b.values)
+        self.assertEquals(b._prepare_cif(),c._prepare_cif())
+
+        b = CifData(ase=a.ase)
+        c = CifData(ase=b.ase)
+        self.assertEquals(b._prepare_cif(),c._prepare_cif())
 
 class TestKindValidSymbols(AiidaTestCase):
     """
@@ -939,7 +1097,37 @@ class TestStructureData(AiidaTestCase):
         a.append_atom(position=(0.,0.,0.),symbols=['O', 'H'], weights=[0.9,0.1], mass=15.)
 
         self.assertEquals(a.get_symbols_set(), set(['Ba', 'Ti', 'O', 'H']))
-        
+
+    def test_get_formula(self):
+        """
+        Tests the generation of formula
+        """
+        from aiida.orm.data.structure import get_formula
+
+        self.assertEquals(get_formula(['Ba', 'Ti'] + ['O'] * 3),
+                          'BaO3Ti')
+        self.assertEquals(get_formula(['Ba', 'Ti', 'C'] + ['O'] * 3,
+                                      separator=" "),
+                          'C Ba O3 Ti')
+        self.assertEquals(get_formula(['H'] * 6 + ['C'] * 6),
+                          'C6H6')
+        self.assertEquals(get_formula((['Ba', 'Ti'] + ['O'] * 3) * 2 + \
+                                      ['Ba'] + ['Ti'] * 2 + ['O'] * 3,
+                                      mode="compact1"),
+                          '(BaTiO3)2BaTi2O3')
+        self.assertEquals(get_formula((['Ba', 'Ti'] + ['O'] * 3) * 2 + \
+                                      ['Ba'] + ['Ti'] * 2 + ['O'] * 3,
+                                      mode="compact1", separator=" "),
+                          '(Ba Ti O3)2 Ba Ti2 O3')
+        self.assertEquals(get_formula((['Ba', 'Ti'] + ['O'] * 3) * 2 + \
+                                      ['Ba'] + ['Ti'] * 2 + ['O'] * 3,
+                                      mode="reduce"),
+                          'BaTiO3BaTiO3BaTi2O3')
+        self.assertEquals(get_formula((['Ba', 'Ti'] + ['O'] * 3) * 2 + \
+                                      ['Ba'] + ['Ti'] * 2 + ['O'] * 3,
+                                      mode="reduce", separator=", "),
+                          'Ba, Ti, O3, Ba, Ti, O3, Ba, Ti2, O3')
+
 
 class TestStructureDataLock(AiidaTestCase):
     """
@@ -1362,7 +1550,7 @@ class TestTrajectoryData(AiidaTestCase):
         
         # Create a node with two arrays
         n = TrajectoryData()
-
+        
         # I create sample data
         steps = numpy.array([60,70])
         times = steps * 0.01
@@ -1388,9 +1576,10 @@ class TestTrajectoryData(AiidaTestCase):
             [[0.5,0.5,0.5],
              [0.5,0.5,0.5],
              [-0.5,-0.5,-0.5]]])
-
+        
         # I set the node
-        n.set_trajectory(steps, times, cells, symbols, positions, velocities)
+        n.set_trajectory(steps=steps, cells=cells, symbols=symbols, 
+                         positions=positions, times=times, velocities=velocities)
 
         # Generic checks
         self.assertEqual(n.numsites, 3)
@@ -1418,8 +1607,37 @@ class TestTrajectoryData(AiidaTestCase):
             n.get_step_index(66)
         
         ########################################################
+        # I set the node, this time without times or velocities (the same node)
+        n.set_trajectory(steps=steps, cells=cells, symbols=symbols, 
+                         positions=positions)
+        # Generic checks
+        self.assertEqual(n.numsites, 3)
+        self.assertEqual(n.numsteps, 2)
+        self.assertAlmostEqual(abs(steps-n.get_steps()).sum(), 0.)
+        self.assertIsNone(n.get_times())
+        self.assertAlmostEqual(abs(cells-n.get_cells()).sum(), 0.)
+        self.assertEqual(symbols.tolist(), n.get_symbols().tolist())
+        self.assertAlmostEqual(abs(positions-n.get_positions()).sum(), 0.)
+        self.assertIsNone(n.get_velocities())
+        
+        # Same thing, but for a new node
+        n = TrajectoryData()
+        n.set_trajectory(steps=steps, cells=cells, symbols=symbols, 
+                         positions=positions)
+        # Generic checks
+        self.assertEqual(n.numsites, 3)
+        self.assertEqual(n.numsteps, 2)
+        self.assertAlmostEqual(abs(steps-n.get_steps()).sum(), 0.)
+        self.assertIsNone(n.get_times())
+        self.assertAlmostEqual(abs(cells-n.get_cells()).sum(), 0.)
+        self.assertEqual(symbols.tolist(), n.get_symbols().tolist())
+        self.assertAlmostEqual(abs(positions-n.get_positions()).sum(), 0.)
+        self.assertIsNone(n.get_velocities())
+        
+        ########################################################
         # I set the node, this time without velocities (the same node)
-        n.set_trajectory(steps, times, cells, symbols, positions)
+        n.set_trajectory(steps=steps, cells=cells, symbols=symbols, 
+                         positions=positions, times=times)
         # Generic checks
         self.assertEqual(n.numsites, 3)
         self.assertEqual(n.numsteps, 2)
@@ -1432,7 +1650,8 @@ class TestTrajectoryData(AiidaTestCase):
         
         # Same thing, but for a new node
         n = TrajectoryData()
-        n.set_trajectory(steps, times, cells, symbols, positions)
+        n.set_trajectory(steps=steps, cells=cells, symbols=symbols, 
+                         positions=positions, times=times)
         # Generic checks
         self.assertEqual(n.numsites, 3)
         self.assertEqual(n.numsteps, 2)
@@ -1441,7 +1660,7 @@ class TestTrajectoryData(AiidaTestCase):
         self.assertAlmostEqual(abs(cells-n.get_cells()).sum(), 0.)
         self.assertEqual(symbols.tolist(), n.get_symbols().tolist())
         self.assertAlmostEqual(abs(positions-n.get_positions()).sum(), 0.)
-        self.assertIsNone(n.get_velocities())
+        self.assertIsNone(n.get_velocities())        
         
         n.store()
         
@@ -1537,7 +1756,8 @@ class TestTrajectoryData(AiidaTestCase):
              [-0.5,-0.5,-0.5]]])
 
         # I set the node
-        n.set_trajectory(steps, times, cells, symbols, positions, velocities)
+        n.set_trajectory(steps=steps, cells=cells, symbols=symbols, 
+                         positions=positions, times=times, velocities=velocities)
 
         struc = n.step_to_structure(1)
         self.assertEqual(len(struc.sites), 3) # 3 sites
@@ -1586,4 +1806,235 @@ class TestTrajectoryData(AiidaTestCase):
         self.assertEqual(newatomtypes, ['He', 'Os','Cu'])
         # Check the mass of the kind of the second atom ('O' _> symbol Os, mass 100)
         self.assertAlmostEqual(struc.get_kind(struc.sites[1].kind_name).mass,100.)
+        
+
+class TestKpointsData(AiidaTestCase):
+    """
+    Tests the TrajectoryData objects.
+    """
+    # TODO: I should find a way to check the special points, case by case
+    
+    def test_mesh(self):
+        """
+        Check the methods to set and retrieve a mesh.
+        """
+        from aiida.orm.data.array.kpoints import KpointsData
+        import numpy
+        
+        # Create a node with two arrays
+        k = KpointsData()
+        
+        # check whether the mesh can be set properly
+        input_mesh = [4,4,4]
+        k.set_kpoints_mesh(input_mesh)
+        mesh, offset = k.get_kpoints_mesh()
+        self.assertEqual(mesh, tuple(input_mesh))
+        self.assertEqual(offset, (0.,0.,0.)) # must be a tuple of three 0 by default
+        
+        # a too long list should fail
+        with self.assertRaises(ValueError):
+            k.set_kpoints_mesh([4,4,4,4])
+        
+        # now try to put explicitely an offset
+        input_offset = [0.5, 0.5, 0.5]
+        k.set_kpoints_mesh(input_mesh, input_offset)
+        mesh,offset = k.get_kpoints_mesh()
+        self.assertEqual(mesh, tuple(input_mesh))
+        self.assertEqual(offset, tuple(input_offset))
+        
+        # verify the same but after storing
+        k.store()
+        self.assertEqual(mesh, tuple(input_mesh))
+        self.assertEqual(offset, tuple(input_offset))        
+        
+        # cannot modify it after storage
+        with self.assertRaises(ModificationNotAllowed):
+            k.set_kpoints_mesh(input_mesh)
+
+    def test_list(self):
+        """
+        Test the method to set and retrieve a kpoint list.
+        """
+        from aiida.orm.data.array.kpoints import KpointsData
+        import numpy
+        
+        k = KpointsData()
+        
+        input_klist = numpy.array([(0.0, 0.0, 0.0),
+                                  (0.2, 0.0, 0.0),
+                                  (0.0, 0.2, 0.0),
+                                  (0.0, 0.0, 0.2),
+                                  ])
+        
+        # set kpoints list
+        k.set_kpoints(input_klist)
+        klist = k.get_kpoints()
+        
+        # try to get the same
+        self.assertTrue( numpy.array_equal(input_klist, klist) )
+        
+        # if no cell is set, cannot convert into cartesian
+        with self.assertRaises(AttributeError):
+            _ = k.get_kpoints(cartesian=True)
+        
+        # try to set also weights
+        # should fail if the weights length do not match kpoints 
+        input_weights = numpy.ones(6)
+        with self.assertRaises(ValueError):
+            k.set_kpoints(input_klist, weights=input_weights)
+        
+        # try a right one
+        input_weights = numpy.ones(4)
+        k.set_kpoints(input_klist, weights=input_weights)
+        klist,weights = k.get_kpoints(also_weights=True)
+        self.assertTrue( numpy.array_equal(weights, input_weights) )
+        self.assertTrue( numpy.array_equal(klist, input_klist) )
+        
+        # verify the same, but after storing
+        k.store()
+        klist,weights = k.get_kpoints(also_weights=True)
+        self.assertTrue( numpy.array_equal(weights,input_weights) )
+        self.assertTrue( numpy.array_equal(klist, input_klist) )
+        
+        # cannot modify it after storage
+        with self.assertRaises(ModificationNotAllowed):
+            k.set_kpoints(input_klist)
+        
+    def test_kpoints_to_cartesian(self):
+        """
+        Test how the list of kpoints is converted to cartesian coordinates
+        """
+        from aiida.orm.data.array.kpoints import KpointsData
+        import numpy
+        
+        k = KpointsData()
+        
+        input_klist = numpy.array([(0.0, 0.0, 0.0),
+                                  (0.2, 0.0, 0.0),
+                                  (0.0, 0.2, 0.0),
+                                  (0.0, 0.0, 0.2),
+                                  ])
+        
+        # define a cell
+        alat = 4.
+        cell = numpy.array([[alat, 0., 0.],
+                            [0., alat, 0.],
+                            [0., 0., alat],
+                            ])
+        
+        k.set_cell(cell)
+        
+        # set kpoints list
+        k.set_kpoints(input_klist)
+        
+        # verify that it is not the same of the input 
+        # (at least I check that there something has been done)
+        klist = k.get_kpoints(cartesian=True)
+        self.assertFalse( numpy.array_equal(klist, input_klist)  )
+        
+        # put the kpoints in cartesian and get them back, they should be equal
+        # internally it is doing two matrix transforms
+        k.set_kpoints(input_klist,cartesian=True)
+        klist = k.get_kpoints(cartesian=True)
+        self.assertTrue( numpy.allclose(klist,input_klist,atol=1e-16) )
+        
+    def test_path(self):
+        """
+        Test the methods to generate automatically a list of kpoints
+        """
+        from aiida.orm.data.array.kpoints import KpointsData
+        import numpy
+        
+        k = KpointsData()
+        
+        # shouldn't get anything wiothout having set the cell
+        with self.assertRaises(ValueError):
+            k.set_kpoints_path()
+        
+        # define a cell
+        alat = 4.
+        cell = numpy.array([[alat, 0., 0.],
+                            [0., alat, 0.],
+                            [0., 0., alat],
+                            ])
+        
+        k.set_cell(cell)
+        k.set_kpoints_path()
+        # something should be retrieved
+        klist = k.get_kpoints()
+        
+        # test the various formats for specifying the path
+        k.set_kpoints_path([('G','M'),
+                            ])
+        k.set_kpoints_path([('G','M',30),
+                            ])
+        k.set_kpoints_path([('G',(0.,0.,0.),'M',(1.,1.,1.)),
+                            ])
+        k.set_kpoints_path([('G',(0.,0.,0.),'M',(1.,1.,1.),30),
+                            ])
+
+        # at least 2 points per segment
+        with self.assertRaises(ValueError):
+            k.set_kpoints_path([('G','M',1),
+                                ])
+        with self.assertRaises(ValueError):
+            k.set_kpoints_path([('G',(0.,0.,0.),'M',(1.,1.,1.),1),
+                                ])
+        
+        # try to set points with a spacing
+        k.set_kpoints_path(kpoint_distance=0.1)
+        
+        # try to modify after storage
+        k.store()
+        with self.assertRaises(ModificationNotAllowed):
+            k.set_kpoints_path()
+            
+class TestBandsData(AiidaTestCase):
+    """
+    Tests the BandsData objects.
+    """
+    
+    def test_band(self):
+        """
+        Check the methods to set and retrieve a mesh.
+        """
+        from aiida.orm.data.array.bands import BandsData
+        from aiida.orm.data.array.kpoints import KpointsData
+        import numpy
+        
+        # define a cell
+        alat = 4.
+        cell = numpy.array([[alat, 0., 0.],
+                            [0., alat, 0.],
+                            [0., 0., alat],
+                            ])
+        
+        k = KpointsData()
+        k.set_cell(cell)
+        k.set_kpoints_path()
+        
+        b = BandsData()
+        b.set_kpointsdata(k)
+        self.assertTrue( numpy.array_equal(b.cell,k.cell) )
+        
+        input_bands = numpy.array([numpy.ones(4) for i in range(k.get_kpoints().shape[0]) ]) 
+        input_occupations = input_bands
+        
+        b.set_bands(input_bands, occupations=input_occupations, units='ev')
+        b.set_bands(input_bands, units='ev')
+        b.set_bands(input_bands, occupations=input_occupations)
+        with self.assertRaises(TypeError):
+            b.set_bands(occupations=input_occupations, units='ev')
+        
+        b.set_bands(input_bands, occupations=input_occupations, units='ev')
+        bands,occupations = b.get_bands(also_occupations=True)
+        
+        self.assertTrue( numpy.array_equal(bands,input_bands) )
+        self.assertTrue( numpy.array_equal(occupations,input_occupations) )
+        self.assertTrue( b.units=='ev' )
+        
+        b.store()
+        with self.assertRaises(ModificationNotAllowed):
+            b.set_bands(bands)
+        
         

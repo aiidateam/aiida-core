@@ -16,10 +16,7 @@ from aiida.common import aiidalogger
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.2.1"
-
-execlogger = aiidalogger.getChild('transport')
-
+__version__ = "0.3.0"
 
 class LocalTransport(aiida.transport.Transport):
     """
@@ -30,7 +27,6 @@ class LocalTransport(aiida.transport.Transport):
 
     def __init__(self,**kwargs):
         super(LocalTransport,self).__init__()
-        self._logger = super(LocalTransport,self).logger.getChild('local')
 
         # _internal_dir will emulate the concept of working directory
         # The real current working directory is not to be changed
@@ -41,11 +37,10 @@ class LocalTransport(aiida.transport.Transport):
         self._machine = kwargs.pop('machine', None)
         if self._machine and self._machine != 'localhost':
             # TODO: check if we want a different logic
-            self.logger.warning('machine was passed, but it is not localhost')
+            self.logger.debug('machine was passed, but it is not localhost')
         if kwargs:
             raise ValueError("Input parameters to LocalTransport"
                              " are not recognized")
-        
     
     def open(self):
         """
@@ -61,7 +56,6 @@ class LocalTransport(aiida.transport.Transport):
         self._internal_dir = os.path.expanduser("~")
         self._is_open = True
         return self
-    
     
     def close(self):
         """
@@ -96,14 +90,11 @@ class LocalTransport(aiida.transport.Transport):
                 "Error, local method called for LocalTransport "
                 "without opening the channel first")
 
-
     def chdir(self, path):
         """
         Changes directory to path, emulated internally.
-        Args:
-            path (str) - path to cd into
-        Raises
-            OSError if the directory does not have read attributes.
+        :param (str) path: path to cd into
+        :raise OSError: if the directory does not have read attributes.
         """
         new_path = os.path.join( self.curdir,path )
         if os.access(new_path, os.R_OK):
@@ -111,22 +102,18 @@ class LocalTransport(aiida.transport.Transport):
         else:
             raise IOError('Not having read permissions')
 
-
     def normalize(self, path):
         """
         Normalizes path, eliminating double slashes, etc..
-        Args:
-            path (str) : path to normalize
+        :param (str) path: path to normalize
         """
         return os.path.realpath( os.path.join(self.curdir,path) )
-
     
     def getcwd(self):
         """
         Returns the current working directory, emulated by the transport
         """
         return self.curdir
-
 
     def _os_path_split_asunder(self, path):
         """
@@ -146,20 +133,17 @@ class LocalTransport(aiida.transport.Transport):
         parts.reverse()
         return parts
 
-
     def makedirs(self,path,ignore_existing=False):
         """
         Super-mkdir; create a leaf directory and all intermediate ones.
         Works like mkdir, except that any intermediate path segment (not
         just the rightmost) will be created if it does not exist.
 
-        Args:
-            path (str) - directory to create
-            ignore_existing (bool) - if set to true, it doesn't give any error
-            if the leaf directory does already exist
+        :param (str) path: directory to create
+        :param (bool) ignore_existing: if set to true, it doesn't give any error
+                     if the leaf directory does already exist
 
-        Raises:
-            If the directory already exists, OSError is raised.
+        :raise OSError: If the directory already exists and is not ignore_existing
         """
         # check to avoid creation of empty dirs
         path = os.path.normpath(path)
@@ -176,53 +160,45 @@ class LocalTransport(aiida.transport.Transport):
             if not os.path.exists(this_dir):
                 os.mkdir(this_dir)
     
-    
     def mkdir(self,path,ignore_existing=False):
         """
         Create a folder (directory) named path.
 
-        Args:
-            path (str) - name of the folder to create
-            ignore_existing: if True, does not give any error if the directory
-                already exists
+        :param (str) path: name of the folder to create
+        :param (bool) ignore_existing: if True, does not give any error if the 
+                directory already exists
 
-        Raises:
-            If the directory already exists, OSError is raised.
+        :raise OSError: If the directory already exists.
         """
         if ignore_existing and self.isdir(path):
             return
 
         os.mkdir( os.path.join( self.curdir,path ) )
 
-
     def rmdir(self, path):
         """
         Removes a folder at location path.
-        Args:
-            path (str) - path to remove
+        :param (str) path: path to remove
         """
         os.rmdir( os.path.join( self.curdir,path ) )
-
 
     def isdir(self,path):
         """
         Checks if 'path' is a directory.
-        Returns a bool
+        :return: a boolean
         """
         if not path:
             return False
         else:
             return os.path.isdir( os.path.join( self.curdir,path ) )
 
-
     def chmod(self,path,mode):
         """
         Changes permission bits of object at path
-        Args
-            path (str) - path to modify
-            mode (int) - permission bits
+        :param (str) path: path to modify
+        :param (int) mode: permission bits
 
-        Raises IOError if path does not exist.
+        :raise IOError: if path does not exist.
         """
         if not path:
             raise IOError("Directory not given in input")
@@ -231,25 +207,22 @@ class LocalTransport(aiida.transport.Transport):
             raise IOError("Directory not given in input")
         else:
             os.chmod( real_path , mode )
-            
-    
+        
     def put(self,source,destination,dereference=False,overwrite=True,
             ignore_nonexisting=False):
         """
         Copies a file or a folder from source to destination.
         Automatically redirects to putfile or puttree.
 
-        Args:
-            source (str)       - absolute path to local file
-            destination (str)  - path to remote file
-            dereference (bool) - if True follows symbolic links
-                                 default = False
-            overwrite (bool)   - if True overwrites destination
-                                 default = False
+        :param (str) source: absolute path to local file
+        :param (str) destination: path to remote file
+        :param (bool) dereference: if True follows symbolic links.
+                                 Default = False
+        :param (bool) overwrite: if True overwrites destination.
+                                 Default = False
 
-        Raises:
-            IOError if destination is not valid
-            ValueError if source is not valid
+        :raise IOError: if destination is not valid
+        :raise ValueError: if source is not valid
         """
         if not destination:
             raise IOError("Input destination to put function "
@@ -309,23 +282,20 @@ class LocalTransport(aiida.transport.Transport):
                 else:
                     raise OSError("The local path {} does not exist"
                                   .format(source))
-                    
-
+    
     def putfile(self,source,destination,overwrite=True):
         """
         Copies a file from source to destination.
         Automatically redirects to putfile or puttree.
 
-        Args:
-            source (str) - absolute path to local file
-            destination (Str) - path to remote file
-            overwrite (bool) - if True overwrites destination
-                               default = False
+        :param (str) source: absolute path to local file
+        :param (str) destination: path to remote file
+        :param (bool) overwrite: if True overwrites destination
+                                 Default = False
 
-        Raises:
-            IOError if destination is not valid
-            ValueError if source is not valid
-            OSError if source does not exist
+        :raise IOError: if destination is not valid
+        :raise ValueError: if source is not valid
+        :raise OSError: if source does not exist
         """
         if not destination:
             raise IOError("Input destination to putfile "
@@ -345,25 +315,22 @@ class LocalTransport(aiida.transport.Transport):
             raise OSError('Destination already exists: not overwriting it')
             
         shutil.copyfile( source, the_destination )
-        
-        
+    
     def puttree(self,source,destination,dereference=False,overwrite=True):
         """
         Copies a folder recursively from source to destination.
         Automatically redirects to putfile or puttree.
 
-        Args:
-            source (str) - absolute path to local file
-            destination (Str) - path to remote file
-            dereference (bool) - follow symbolic links
-                                 default = False
-            overwrite (bool) - if True overwrites destination
-                               default = False
+        :param (str) source: absolute path to local file
+        :param (str) destination: path to remote file
+        :param (bool) dereference: follow symbolic links.
+                                 Default = False
+        :param (bool) overwrite: if True overwrites destination.
+                               Default = False
 
-        Raises:
-            IOError if destination is not valid
-            ValueError if source is not valid
-            OSError if source does not exist
+        :raise IOError: if destination is not valid
+        :raise ValueError: if source is not valid
+        :raise OSError: if source does not exist
         """
         if not destination:
             raise IOError("Input destination to putfile "
@@ -390,17 +357,21 @@ class LocalTransport(aiida.transport.Transport):
 
         shutil.copytree( source,the_destination,symlinks=dereference )
 
-
     def rmtree(self,path):
         """
         Remove tree as rm -r would do
         
-        Args: path (str)
+        :param (str) path: a string to path
         """
         the_path = os.path.join(self.curdir,path)
-        shutil.rmtree(the_path)
-        
-
+        try:
+            shutil.rmtree(the_path)
+        except OSError as e:
+            if e.errno==20:
+                os.remove(the_path)
+            else:
+                raise e
+    
     def get(self,source,destination,dereference=False,overwrite=True,
             ignore_nonexisting=False):
         """
@@ -408,17 +379,15 @@ class LocalTransport(aiida.transport.Transport):
         'local' destination.
         Automatically redirects to getfile or gettree.
 
-        Args:
-            source (str) - path to local file
-            destination (Str) - absolute path to remote file
-            dereference (bool) - follow symbolic links
+        :param (str) source: path to local file
+        :param (str) destination: absolute path to remote file
+        :param (bool) dereference: follow symbolic links
                                  default = False
-            overwrite (bool) - if True overwrites destination
+        :param (bool) overwrite: if True overwrites destination
                                default = False
 
-        Raises:
-            IOError if 'remote' source is not valid
-            ValueError if 'local' destination is not valid
+        :raise IOError: if 'remote' source is not valid
+        :raise ValueError: if 'local' destination is not valid
         """
         if not destination:
             raise ValueError("Input destination to get function "
@@ -474,22 +443,19 @@ class LocalTransport(aiida.transport.Transport):
                     raise IOError("The local path {} does not exist"
                                   .format(destination))
 
-
     def getfile(self,source,destination,overwrite=True):
         """
         Copies a file recursively from 'remote' source to
         'local' destination.
 
-        Args:
-            source (str) - path to local file
-            destination (Str) - absolute path to remote file
-            overwrite (bool) - if True overwrites destination
-                               default = False
+        :param (str) source: path to local file
+        :param (str) destination: absolute path to remote file
+        :param (bool) overwrite: if True overwrites destination.
+                               Default = False
 
-        Raises:
-            IOError if 'remote' source is not valid or not found
-            ValueError if 'local' destination is not valid
-            OSError if unintentionally overwriting
+        :raise IOError if 'remote' source is not valid or not found
+        :raise ValueError: if 'local' destination is not valid
+        :raise OSError: if unintentionally overwriting
         """
         if not destination:
             raise ValueError("Input destination to get function "
@@ -506,25 +472,20 @@ class LocalTransport(aiida.transport.Transport):
             raise OSError('Destination already exists: not overwriting it')
 
         shutil.copyfile( the_source, destination )
-        
-
+    
     def gettree(self,source,destination,dereference=False,overwrite=True):
         """
         Copies a folder recursively from 'remote' source to
         'local' destination.
 
-        Args:
-            source (str) - path to local file
-            destination (Str) - absolute path to remote file
-            dereference (bool) - follow symbolic links
-                                 default = False
-            overwrite (bool) - if True overwrites destination
-                               default = False
+        :param (str) source: path to local file
+        :param (str) destination: absolute path to remote file
+        :param (bool) dereference: follow symbolic links. Default = False
+        :param (bool) overwrite: if True overwrites destination. Default = False
 
-        Raises:
-            IOError if 'remote' source is not valid
-            ValueError if 'local' destination is not valid
-            OSError if unintentionally overwriting
+        :raise IOError: if 'remote' source is not valid
+        :raise ValueError: if 'local' destination is not valid
+        :raise OSError: if unintentionally overwriting
         """
         if not source:
             raise IOError("Remotepath must be a non empty string")
@@ -547,23 +508,18 @@ class LocalTransport(aiida.transport.Transport):
 
         the_source = os.path.join(self.curdir,source)
         shutil.copytree( the_source, destination, symlinks=dereference )
-        
-
+      
     def copy(self,source,destination,dereference=False):
         """
-        Copies a file or a folder from 'remote' source to
-        'remote' destination.
+        Copies a file or a folder from 'remote' source to 'remote' destination.
         Automatically redirects to copyfile or copytree.
 
-        Args:
-            source (str)       - path to local file
-            destination (Str)  - path to remote file
-            dereference (bool) - follow symbolic links
-                                 default = False
+        :param (str) source: path to local file
+        :param (str) destination: path to remote file
+        :param (bool) dereference: follow symbolic links. Default = False
 
-        Raises:
-            ValueError if 'remote' source or destination is not valid
-            OSError if source does not exist
+        :raise ValueError: if 'remote' source or destination is not valid
+        :raise OSError: if source does not exist
         """
         if not source:
             raise ValueError("Input source to copy "
@@ -616,19 +572,15 @@ class LocalTransport(aiida.transport.Transport):
                 # With self.copytree, the (possible) relative path is OK
                 self.copytree(source,destination)
 
-
     def copyfile(self,source,destination):
         """
         Copies a file from 'remote' source to
         'remote' destination.
 
-        Args:
-            source (str) - path to local file
-            destination (Str) - path to remote file
-
-        Raises:
-            ValueError if 'remote' source or destination is not valid
-            OSError if source does not exist
+        :param (str) source: path to local file
+        :param (str) destination: path to remote file
+        :raise ValueError: if 'remote' source or destination is not valid
+        :raise OSError: if source does not exist
 
         """
         if not source:
@@ -644,21 +596,17 @@ class LocalTransport(aiida.transport.Transport):
 
         shutil.copyfile( the_source, the_destination )
 
-
     def copytree(self,source,destination,dereference=False):
         """
         Copies a folder from 'remote' source to
         'remote' destination.
 
-        Args:
-            source (str) - path to local file
-            destination (Str) - path to remote file
-            dereference (bool) - follow symbolic links
-                                 default = False
-
-        Raises:
-            ValueError if 'remote' source or destination is not valid
-            OSError if source does not exist
+        :param (str) source: path to local file
+        :param (str) destination: path to remote file
+        :param (bool) dereference: follow symbolic links. Default = False
+        
+        :raise ValueError: if 'remote' source or destination is not valid
+        :raise OSError: if source does not exist
         """
         if not source:
             raise ValueError("Input source to copytree "
@@ -677,13 +625,12 @@ class LocalTransport(aiida.transport.Transport):
                                            os.path.split(source)[1])
 
         shutil.copytree( the_source, the_destination, symlinks = dereference )
-            
-    
+        
     def get_attribute(self,path):
         """
         Returns an object FileAttribute,
         as specified in aiida.transport.
-        Receives in input the path of a given file.
+        :param path: the path of the given file.
         """
         os_attr = os.lstat( os.path.join(self.curdir,path) )
         aiida_attr = FileAttribute()
@@ -692,7 +639,6 @@ class LocalTransport(aiida.transport.Transport):
         for key in aiida_attr._valid_fields:
             aiida_attr[key] = getattr(os_attr,key)
         return aiida_attr
-
 
     def _local_listdir(self,path,pattern=None):
         # acts on the local folder, for the rest, same as listdir
@@ -710,13 +656,12 @@ class LocalTransport(aiida.transport.Transport):
                 base_dir+=os.sep
             return [ re.sub(base_dir,'',i) for i in filtered_list ]
         
-
     def listdir(self,path='.',pattern=None):
         """
-        Returns a list containing the names of the entries in the directory.
-        Args = path (str) - default ='.'
-               filter (str) - returns the list of files matching pattern.
-                              Unix only. (Use to emulate ls * for example)
+        :return: a list containing the names of the entries in the directory.
+        :param (str) path: default ='.'
+        :param (str) filter: if set, returns the list of files matching pattern.
+                     Unix only. (Use to emulate ls * for example)
         """
         the_path = os.path.join(self.curdir,path).strip()
         if not pattern:
@@ -728,14 +673,12 @@ class LocalTransport(aiida.transport.Transport):
                 the_path+='/'
             return [ re.sub(the_path,'',i) for i in filtered_list ]
 
-
     def remove(self,path):
         """
         Removes a file at position path.
         """
         os.remove( os.path.join( self.curdir,path ) )
 
-    
     def isfile(self,path):
         """
         Checks if object at path is a file.
@@ -746,7 +689,6 @@ class LocalTransport(aiida.transport.Transport):
         else:
             return os.path.isfile( os.path.join( self.curdir,path ) )
 
-    
     def _exec_command_internal(self,command):
         """
         Executes the specified command, first changing directory to the
@@ -757,11 +699,9 @@ class LocalTransport(aiida.transport.Transport):
         job to finish, use exec_command_wait.
         Otherwise, to end the process, use the proc.wait() method.
 
-        Args:
-            command: the command to execute
-
-        Returns:
-            a tuple with (stdin, stdout, stderr, proc),
+        :param (str) command: the command to execute
+        
+        :return: a tuple with (stdin, stdout, stderr, proc),
             where stdin, stdout and stderr behave as file-like objects,
             proc is the process object as returned by the
             subprocess.Popen() class.
@@ -771,17 +711,14 @@ class LocalTransport(aiida.transport.Transport):
                                  cwd=self.getcwd() )
         return proc.stdin, proc.stdout, proc.stderr, proc
 
-    
     def exec_command_wait(self,command,stdin=None):
         """
         Executes the specified command and waits for it to finish.
         
-        Args:
-            command: the command to execute
+        :param command: the command to execute
 
-        Returns:
-            a tuple with (return_value, stdout, stderr) where stdout and stderr
-            are strings.
+        :return: a tuple with (return_value, stdout, stderr) where stdout and 
+                 stderr are strings.
         """
         local_stdin, local_stdout, local_stderr, local_proc = self._exec_command_internal(
                                                                    command)
@@ -810,7 +747,6 @@ class LocalTransport(aiida.transport.Transport):
 
         return retval, output_text, stderr_text
 
-
     def gotocomputer_command(self, remotedir):
         """
         Return a string to be run using os.system in order to connect
@@ -819,7 +755,6 @@ class LocalTransport(aiida.transport.Transport):
         Expected behaviors:
 
         * A new bash session is opened
-
         * A reasonable error message is produced if the folder does not exist
 
         :param str remotedir: the full path of the remote directory
@@ -832,7 +767,7 @@ class LocalTransport(aiida.transport.Transport):
     def rename(self, src,dst):
         """
         Rename a file or folder from oldpath to newpath.
-
+        
         :param str oldpath: existing name of the file or folder
         :param str newpath: new name for the file or folder
 
@@ -855,15 +790,33 @@ class LocalTransport(aiida.transport.Transport):
         Create a symbolic link between the remote source and the remote 
         destination
         
-        :param remotesource: remote source
-        :param remotedestination:remote destination
+        :param (str) remotesource: remote source. Can contain a pattern.
+        :param (str) remotedestination: remote destination
         """
+        remotesource = os.path.normpath(remotesource)
+        remotedestination = os.path.normpath(remotedestination)
         
-        os.symlink(remotesource,remotedestination)
-    
+        if self.has_magic(remotesource):
+            if self.has_magic(remotedestination):
+                # if there are patterns in dest, I don't know which name to assign
+                raise ValueError("Remotedestination cannot have patterns")
+            
+            # find all files matching pattern
+            for this_file in self.glob(remotesource):
+                # create the name of the link: take the last part of the path
+                this_remote_dest = os.path.split(this_file)[-1] 
+                
+                os.symlink( os.path.join(this_file),
+                            os.path.join(self.curdir,remotedestination,this_remote_dest) )
+        else:
+            try:
+                os.symlink( remotesource,
+                            os.path.join(self.curdir,remotedestination) )
+            except OSError:
+                raise OSError("!!: {}, {}, {}".format(remotesource,self.curdir,remotedestination))
+        
     def path_exists(self,path):
         """
         Check if path exists
         """
         return os.path.exists(os.path.join(self.curdir,path))
-        

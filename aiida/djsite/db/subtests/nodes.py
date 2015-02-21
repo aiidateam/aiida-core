@@ -10,7 +10,7 @@ from aiida.djsite.db.testbase import AiidaTestCase
         
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 
 class TestTransitiveNoLoops(AiidaTestCase):
     """
@@ -126,7 +126,7 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
     aiida.djsite.db.models.DbNode objects.
     """
     def test_with_subclasses(self):
-        from aiida.orm import Calculation, CalculationFactory, Data, DataFactory
+        from aiida.orm import JobCalculation, CalculationFactory, Data, DataFactory
         
         extra_name = self.__class__.__name__ + "/test_with_subclasses"
         calc_params = {
@@ -138,7 +138,7 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
         TemplateReplacerCalc = CalculationFactory('simpleplugins.templatereplacer')
         ParameterData = DataFactory('parameter')
         
-        a1 = Calculation(**calc_params).store()
+        a1 = JobCalculation(**calc_params).store()
         # To query only these nodes later
         a1.set_extra(extra_name, True)
         a2 = TemplateReplacerCalc(**calc_params).store()
@@ -152,14 +152,14 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
         a5.set_extra(extra_name, True)
         # I don't set the extras, just to be sure that the filtering works
         # The filtering is needed because other tests will put stuff int he DB
-        a6 = Calculation(**calc_params)
+        a6 = JobCalculation(**calc_params)
         a6.store()
         a7 = Node()
         a7.store()
 
         # Query by calculation
-        results = list(Calculation.query(dbextras__key=extra_name))
-        # a3, a4, a5 should not be found because they are not Calculations.
+        results = list(JobCalculation.query(dbextras__key=extra_name))
+        # a3, a4, a5 should not be found because they are not JobCalculations.
         # a6, a7 should not be found because they have not the attribute set.
         self.assertEquals(set([i.pk for i in results]),
                           set([a1.pk, a2.pk]))        
@@ -1147,7 +1147,7 @@ class TestNodeBasic(AiidaTestCase):
         a = Node()
         with self.assertRaises(ModificationNotAllowed):
             a.add_comment('text',user=get_automatic_user())
-        self.assertEquals(a.get_comments_tuple(),[])
+        self.assertEquals(a.get_comments(),[])
         a.store()
         before = timezone.now()
         time.sleep(1) # I wait 1 second because MySql time precision is 1 sec
@@ -1156,17 +1156,43 @@ class TestNodeBasic(AiidaTestCase):
         time.sleep(1)
         after = timezone.now()
 
-        comments = a.get_comments_tuple()
+        comments = a.get_comments()
         
-        times = [i[2] for i in comments]
+        times = [i['mtime'] for i in comments]
         for time in times:
             self.assertTrue(time > before)
             self.assertTrue(time < after )
 
-        self.assertEquals([(i[0], i[3]) for i in comments],
+        self.assertEquals([(i['user__email'], i['content']) for i in comments],
                           [(self.user.email, 'text'),
                            (self.user.email, 'text2'),])
-        
+
+
+    def test_load_nodes(self):
+        """
+        Test for load_node() function.
+        """
+        from aiida.orm import load_node
+        from aiida.common.exceptions import NotExistent
+        a = Node()
+        a.store()
+
+        self.assertEquals(a.pk,load_node(node_id=a.pk).pk)
+        self.assertEquals(a.pk,load_node(node_id=a.uuid).pk)
+        self.assertEquals(a.pk,load_node(pk=a.pk).pk)
+        self.assertEquals(a.pk,load_node(uuid=a.uuid).pk)
+
+        with self.assertRaises(ValueError):
+            load_node(node_id=a.pk,pk=a.pk)
+        with self.assertRaises(ValueError):
+            load_node(pk=a.pk,uuid=a.uuid)
+        with self.assertRaises(ValueError):
+            load_node(pk=a.uuid)
+        with self.assertRaises(NotExistent):
+            load_node(uuid=a.pk)
+        with self.assertRaises(ValueError):
+            load_node()
+
         
 class TestSubNodesAndLinks(AiidaTestCase):
 
@@ -1201,19 +1227,22 @@ class TestSubNodesAndLinks(AiidaTestCase):
                               for i in endnode.get_inputs(also_labels=True)]), 
                          set([("N1", n1.uuid), ("N2", n2.uuid),
                               ("N3", n3.uuid), ("N4", n4.uuid)]))        
-    
-        endnode.store()
+
+        # Some parent nodes are not stored yet
+        with self.assertRaises(ModificationNotAllowed):
+            endnode.store()
+            
         self.assertEqual(set([(i[0], i[1].uuid)
                               for i in endnode.get_inputs(only_in_db=True,
                                                           also_labels=True)]), 
-                         set([("N3", n3.uuid), ("N4", n4.uuid)]))
+                         set())
         self.assertEqual(set([(i[0], i[1].uuid)
                               for i in endnode.get_inputs(also_labels=True)]), 
                          set([("N1", n1.uuid), ("N2", n2.uuid),
                               ("N3", n3.uuid), ("N4", n4.uuid)]))        
         
         # This will also store n1 and n2!
-        endnode._store_input_links()
+        endnode.store_all()
         
         self.assertEqual(set([(i[0], i[1].uuid)
                               for i in endnode.get_inputs(only_in_db=True,
@@ -1225,18 +1254,77 @@ class TestSubNodesAndLinks(AiidaTestCase):
                          set([("N1", n1.uuid), ("N2", n2.uuid),
                               ("N3", n3.uuid), ("N4", n4.uuid)]))        
         
+    
+    def test_store_with_unstored_parents(self):
+        """
+        I want to check that if parents are unstored I cannot store
+        """
+        n1 = Node()
+        n2 = Node().store()
+        endnode = Node()
         
+        endnode._add_link_from(n1, "N1")
+        endnode._add_link_from(n2, "N2")
+
+        self.assertEqual(endnode.get_inputs(only_in_db=True), [])
+        
+        # Some parent nodes are not stored yet
+        with self.assertRaises(ModificationNotAllowed):
+            endnode.store()
+
+        self.assertEqual(endnode.get_inputs(only_in_db=True), [])
+
+        n1.store()
+        # Now I can store
+        endnode.store()
+        
+        self.assertEqual(set([(i[0], i[1].uuid)
+                              for i in endnode.get_inputs(only_in_db=True,
+                                                          also_labels=True)]), 
+                         set([("N1", n1.uuid), ("N2", n2.uuid)]))        
+        self.assertEqual(set([(i[0], i[1].uuid)
+                              for i in endnode.get_inputs(also_labels=True)]), 
+                         set([("N1", n1.uuid), ("N2", n2.uuid)]))        
+
+            
+    
+    def test_storeall_with_unstored_grandparents(self):
+        """
+        I want to check that if grandparents are unstored I cannot store_all
+        """    
+        n1 = Node()
+        n2 = Node()
+        endnode = Node()
+        
+        n2._add_link_from(n1, "N1")
+        endnode._add_link_from(n2, "N2")
+
+        # Grandparents are unstored
+        with self.assertRaises(ModificationNotAllowed):
+            endnode.store_all()
+            
+        n1.store()
+        # Now it should work
+        endnode.store_all()
+        
+        # Check the parents...
+        self.assertEqual(set([(i[0], i[1].uuid)
+                              for i in n2.get_inputs(also_labels=True)]), 
+                         set([("N1", n1.uuid)]))        
+        self.assertEqual(set([(i[0], i[1].uuid)
+                              for i in endnode.get_inputs(also_labels=True)]), 
+                         set([("N2", n2.uuid)]))        
     
     def test_use_code(self):
-        from aiida.orm import Calculation, Code
+        from aiida.orm import JobCalculation, Code
 
         computer = self.computer
         
         code = Code(remote_computer_exec=(computer, '/bin/true'))#.store()
         
-        unstoredcalc = Calculation(computer=computer,
+        unstoredcalc = JobCalculation(computer=computer,
                                    resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1})
-        calc = Calculation(computer=computer,
+        calc = JobCalculation(computer=computer,
                            resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1}).store()
 
         # calc is not stored, and also code is not 
@@ -1376,7 +1464,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
     def test_valid_links(self):
         import tempfile
 
-        from aiida.orm import Calculation, Data, Code
+        from aiida.orm import JobCalculation, Data, Code
         from aiida.orm import Computer, DataFactory
         from aiida.common.datastructures import calc_states
 
@@ -1393,18 +1481,18 @@ class TestSubNodesAndLinks(AiidaTestCase):
 
         with self.assertRaises(ValueError):
             # I need to save the localhost entry first
-            _ = Calculation(computer=unsavedcomputer,
+            _ = JobCalculation(computer=unsavedcomputer,
                             resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1}).store()
 
         # I check both with a string or with an object
-        calc = Calculation(computer=self.computer,
+        calc = JobCalculation(computer=self.computer,
                            resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1}).store()
-        calc2 = Calculation(computer='localhost',
+        calc2 = JobCalculation(computer='localhost',
                             resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1}).store()
         with self.assertRaises(TypeError):
             # I don't want to call it with things that are neither
             # strings nor Computer instances
-            _ = Calculation(computer=1,
+            _ = JobCalculation(computer=1,
                             resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1}).store()
         
         calc._add_link_from(d1)
@@ -1431,9 +1519,9 @@ class TestSubNodesAndLinks(AiidaTestCase):
         with self.assertRaises(ValueError):
             calc._add_link_from(calc2)
 
-        calc_a = Calculation(computer=self.computer,
+        calc_a = JobCalculation(computer=self.computer,
                              resources={'num_machines':1,'num_mpiprocs_per_machine':1}).store()
-        calc_b = Calculation(computer=self.computer,
+        calc_b = JobCalculation(computer=self.computer,
                              resources={'num_machines':1,'num_mpiprocs_per_machine':1}).store()
 
         data_node = Data().store()
@@ -1474,14 +1562,14 @@ class TestSubNodesAndLinks(AiidaTestCase):
         """
         Each data node can only have one input calculation
         """
-        from aiida.orm import Calculation, Data
+        from aiida.orm import JobCalculation, Data
         from aiida.common.datastructures import calc_states
 
         d1 = Data().store()
         
-        calc = Calculation(computer=self.computer,
+        calc = JobCalculation(computer=self.computer,
                            resources={'num_machines':1,'num_mpiprocs_per_machine':1}).store()
-        calc2 = Calculation(computer=self.computer,
+        calc2 = JobCalculation(computer=self.computer,
                             resources={'num_machines':1,'num_mpiprocs_per_machine':1}).store()
 
         # I cannot, calc it is in state NEW

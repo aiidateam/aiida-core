@@ -16,19 +16,22 @@ from optparse import make_option
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 
 default_modules_list = [
             #    ("aiida.djsite.db.models","DbNode","DbNode"),
                         ("aiida.orm","Node","Node"),
                         ("aiida.orm","Calculation","Calculation"),
+                        ("aiida.orm","JobCalculation","JobCalculation"),
                         ("aiida.orm","Code","Code"),
                         ("aiida.orm","Data","Data"),
                         ("aiida.orm","CalculationFactory","CalculationFactory"),
                         ("aiida.orm","DataFactory","DataFactory"),
                         ("aiida.orm","Computer","Computer"),
                         ("aiida.orm","Group","Group"),
+                        ("aiida.orm","load_node","load_node"),
                         ("aiida.orm.workflow","Workflow","Workflow"),
+                        ("aiida.orm","load_workflow","load_workflow"),
                         ("aiida.djsite.db","models","models"),
                         ]
 

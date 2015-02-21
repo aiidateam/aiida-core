@@ -6,7 +6,7 @@ from aiida.common.utils import classproperty
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 
 def delete_computer(computer):
     """
@@ -972,8 +972,8 @@ class Computer(object):
     
     def __str__(self):
         if self.is_enabled():
-            return "{} ({}), pk={}".format(self.name, self.hostname,
+            return "{} ({}), pk: {}".format(self.name, self.hostname,
                                            self.pk)
         else:
-            return "{} ({}) [DISABLED], pk={}".format(self.name, self.hostname,
+            return "{} ({}) [DISABLED], pk: {}".format(self.name, self.hostname,
                                                       self.pk)

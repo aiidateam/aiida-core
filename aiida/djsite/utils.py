@@ -9,7 +9,6 @@ def load_dbenv(process=None,profile=None):
     """
     Load the database environment (Django) and perform some checks
     """
-    print "PROFILE:", profile, "PROCESS:", process
     _load_dbenv_noschemacheck(process,profile)
     # Check schema version and the existence of the needed tables
     check_schema_version()

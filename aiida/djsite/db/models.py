@@ -1940,20 +1940,14 @@ class DbWorkflowStep(m.Model):
             raise ValueError("Error adding calculation to step")                      
  
     def get_sub_workflows(self):
-        
-        from aiida.orm.workflow import Workflow
-        return Workflow.query(pk__in=self.sub_workflows.values_list("pk", flat=True))
-        #return self.sub_workflows.all()#pk__in = step.calculations.values_list("pk", flat=True))
+        return self.sub_workflows(manager='aiidaobjects').all()
  
     def get_sub_workflows_status(self):
-        
         from aiida.common.datastructures import wf_states
-        
         wf_status = self.sub_workflows.all().values_list("uuid", "status")
         return set([l[1] for l in wf_status])
     
     def remove_sub_workflows(self):
-        
         self.sub_workflows.all().delete()
     
     # ---------------------------------

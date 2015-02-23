@@ -692,60 +692,66 @@ def install_tc(sender, **kwargs):
         from django.db.backends.sqlite3.base import Database as DjDatabase
         sqlite_version = DjDatabase.sqlite_version_info
         sqlite_version_string = DjDatabase.sqlite_version
-        # This is the first version that supports recursive triggers
-        if sqlite_version < (3, 6, 18):
-            new_sql_trigger = False
-            print r'   ||  NOTE: using old version of SQLite triggers  ||'
-            print r'   ||  because your sqlite version is too old:     ||'
-            print r'   \\  {} //'.format(
-                (sqlite_version_string + ' (< 3.6.18)').ljust(43))
-        else:
-            new_sql_trigger = True
-            print r'   ||  NOTE: using new version of SQLite triggers  ||'
-            print r'   ||  because your sqlite version is sufficiently ||'
-            print r'   \\  recent: {} //'.format(
-                (sqlite_version_string + ' (> 3.6.18)').ljust(35))
+        
+        # Note: there are some problems with the new version of the triggers
+        # This problem is not shown when the tests db.nodes are run
+        # However, the execution of the test on the database (copy/paste in 
+        # the shell) does not work. The old version does not show this problem.
+        # I comment the new one until it's fixed.
+        
+#         # This is the first version that supports recursive triggers
+#         if sqlite_version < (3, 6, 18):
+#             new_sql_trigger = False
+#             print r'   ||  NOTE: using old version of SQLite triggers  ||'
+#             print r'   ||  because your sqlite version is too old:     ||'
+#             print r'   \\  {} //'.format(
+#                 (sqlite_version_string + ' (< 3.6.18)').ljust(43))
+#         else:
+#             new_sql_trigger = True
+#             print r'   ||  NOTE: using new version of SQLite triggers  ||'
+#             print r'   ||  because your sqlite version is sufficiently ||'
+#             print r'   \\  recent: {} //'.format(
+#                 (sqlite_version_string + ' (> 3.6.18)').ljust(35))
         
         cursor.execute("DROP TRIGGER IF EXISTS update_tc;")
         cursor.execute(get_sqlite_tc_create_trigger_update(links_table_name, links_table_input_field, links_table_output_field, 
                                                            closure_table_name, closure_table_parent_field, closure_table_child_field))
-
-        if new_sql_trigger:
-            # the 'new' triggers work only if recursive triggers are active
-            # This is required for sqlite >= 3.6.18; it is the default
-            # from sqlite >=3.7
-            # NOTE: The default maximum trigger recursion depth is 1000.
-            # Hopefully, it is ok...
-            # To change, set the SQLITE_MAX_TRIGGER_DEPTH variable.
-            cursor.execute("PRAGMA RECURSIVE_TRIGGERS=true;")
-            
-            cursor.execute("DROP TABLE IF EXISTS purge_list;")
-                        
-            cursor.execute("DROP TRIGGER IF EXISTS deleted_from;")
-            cursor.execute(get_sqlite_tc_create_trigger_delete_NEW(links_table_name, links_table_input_field, links_table_output_field, 
-                                                                   closure_table_name, closure_table_parent_field, closure_table_child_field))
-
-            cursor.execute("DROP TRIGGER IF EXISTS purge_list.update_purgelist;")
-            cursor.execute("DROP TRIGGER IF EXISTS path_delete_recursive;")
-            cursor.execute(get_sqlite_tc_create_trigger_loop_NEW(links_table_name, links_table_input_field, links_table_output_field, 
-                                                                 closure_table_name, closure_table_parent_field, closure_table_child_field))
-            
-            transaction.commit_unless_managed()
-        else:
-            cursor.execute("DROP TABLE IF EXISTS purge_list;")
-            cursor.execute(get_sqlite_tc_create_purgelist(links_table_name, links_table_input_field, links_table_output_field, 
-                                                          closure_table_name, closure_table_parent_field, closure_table_child_field))
-                  
-            cursor.execute("DROP TRIGGER IF EXISTS deleted_from;")
-            cursor.execute(get_sqlite_tc_create_trigger_delete(links_table_name, links_table_input_field, links_table_output_field, 
-                                                               closure_table_name, closure_table_parent_field, closure_table_child_field))
-      
-            cursor.execute("DROP TRIGGER IF EXISTS purge_list.update_purgelist;")
-            cursor.execute("DROP TRIGGER IF EXISTS path_delete_recursive;")
-            cursor.execute(get_sqlite_tc_create_trigger_loop(links_table_name, links_table_input_field, links_table_output_field, 
-                                                             closure_table_name, closure_table_parent_field, closure_table_child_field))
-      
-            transaction.commit_unless_managed()
+#         if new_sql_trigger:
+#             # the 'new' triggers work only if recursive triggers are active
+#             # This is required for sqlite >= 3.6.18; it is the default
+#             # from sqlite >=3.7
+#             # NOTE: The default maximum trigger recursion depth is 1000.
+#             # Hopefully, it is ok...
+#             # To change, set the SQLITE_MAX_TRIGGER_DEPTH variable.
+#             cursor.execute("PRAGMA RECURSIVE_TRIGGERS=true;")
+#             
+#             cursor.execute("DROP TABLE IF EXISTS purge_list;")
+#                         
+#             cursor.execute("DROP TRIGGER IF EXISTS deleted_from;")
+#             cursor.execute(get_sqlite_tc_create_trigger_delete_NEW(links_table_name, links_table_input_field, links_table_output_field, 
+#                                                                    closure_table_name, closure_table_parent_field, closure_table_child_field))
+# 
+#             cursor.execute("DROP TRIGGER IF EXISTS purge_list.update_purgelist;")
+#             cursor.execute("DROP TRIGGER IF EXISTS path_delete_recursive;")
+#             cursor.execute(get_sqlite_tc_create_trigger_loop_NEW(links_table_name, links_table_input_field, links_table_output_field, 
+#                                                                  closure_table_name, closure_table_parent_field, closure_table_child_field))
+#             
+#             transaction.commit_unless_managed()
+#         else:
+        cursor.execute("DROP TABLE IF EXISTS purge_list;")
+        cursor.execute(get_sqlite_tc_create_purgelist(links_table_name, links_table_input_field, links_table_output_field, 
+                                                      closure_table_name, closure_table_parent_field, closure_table_child_field))
+              
+        cursor.execute("DROP TRIGGER IF EXISTS deleted_from;")
+        cursor.execute(get_sqlite_tc_create_trigger_delete(links_table_name, links_table_input_field, links_table_output_field, 
+                                                           closure_table_name, closure_table_parent_field, closure_table_child_field))
+  
+        cursor.execute("DROP TRIGGER IF EXISTS purge_list.update_purgelist;")
+        cursor.execute("DROP TRIGGER IF EXISTS path_delete_recursive;")
+        cursor.execute(get_sqlite_tc_create_trigger_loop(links_table_name, links_table_input_field, links_table_output_field, 
+                                                         closure_table_name, closure_table_parent_field, closure_table_child_field))
+  
+        transaction.commit_unless_managed()
     else:
         print '== No transitive closure installed =='
 
@@ -754,5 +760,5 @@ def install_tc(sender, **kwargs):
 from django.db.models.signals import post_migrate 
 from django.apps import apps
 post_migrate.connect(install_tc, 
-#                     sender=apps.get_app_config('db'),
+                     sender=apps.get_app_config('db'),
                      dispatch_uid="transitive_closure_post_migrate")

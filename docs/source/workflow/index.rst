@@ -26,7 +26,7 @@ managed by a daemon process.
 
 Before starting to analyze our first workflow we should summarize very shortly the main working logic of a typical workflow
 execution, starting with the definition of the management daemon. The AiiDA daemon handles all the operations of a workflow, 
-script loading, error handling and reporting, status monitoring and user interaction with the execution queue.
+script loading, error handling and reporting, state monitoring and user interaction with the execution queue.
 
 The daemon works essentially as an infinite loop, iterating several simple operations:
 
@@ -56,7 +56,7 @@ This command will launch a background job (a daemon in fact) that will continuou
 to the asynchronous structure of AiiDA if the daemon gets interrupted (or the computer running the daemon restarted for example), 
 once it will be restarted all the workflow will proceed automatically without any problem. The only thing you need to do to restart the
 workflow it's exactly the same command above. To stop the daemon instead we use the same command with the ``stop`` directive, and to
-have a very fast check about the execution we can use the ``status`` directive to obtain more information.
+have a very fast check about the execution we can use the ``state`` directive to obtain more information.
 
 A workflow demo
 +++++++++++++++
@@ -154,7 +154,7 @@ for back-compatibility with python 2.7 also the explicit initialization of line 
 
 **lines 14-28** Once the class is defined a user can add as many methods as he wishes, to generate calculations or to download structures 
 or to compute new ones starting form a query in previous AiiDA calculations present in the DB. In the script above the method ``generate_calc`` 
-will simply prepare a dummy calculation, setting it's status to finished and returning the object after having it stored in the repository. 
+will simply prepare a dummy calculation, setting it's state to finished and returning the object after having it stored in the repository. 
 This utility function will allow the dummy workflow run without the need of any code or machine except for localhost configured. In real 
 case, as we'll see, a calculation will be set-up with parameters and structures defined in more sophisticated ways, but the logic underneath 
 is identical as far as the workflow inner working is concerned.
@@ -191,7 +191,7 @@ of the basic ones:
     from one step to another.
   
 **lines 53-67** When the workflow will be launched through the ``start`` method, the AiiDA daemon will load the workflow, execute the step, 
-launch all the calculations and monitor their status. Once all the calculations in ``start`` will be finished the daemon will then load and 
+launch all the calculations and monitor their state. Once all the calculations in ``start`` will be finished the daemon will then load and 
 execute the next step, in this case the one called ``second_step``. In this step new features are shown:
 
 * **line 57** ``self.get_step_calculations(Workflow.step)``. Anywhere after the first step we may need to retrieve and analyze calculations 
@@ -242,7 +242,7 @@ are running: by printing the workflow ``list`` or its ``report``.
 
   >> verdi workflow list
 
-  This will list all the running workflows, showing the status of each step 
+  This will list all the running workflows, showing the state of each step 
   and each calculation (and, when present, each sub-workflow - see below). It
   is the fastest way to have a snapshot of 
   what your AiiDA workflow daemon is working on. An example output
@@ -271,7 +271,7 @@ are running: by printing the workflow ``list`` or its ``report``.
 * **Workflow report** 
 
   As explained, each workflow is equipped with a reporting facility the user can
-  use to log any important intermediate information, useful to debug the status 
+  use to log any important intermediate information, useful to debug the state 
   or show some details. Moreover the report is also used by AiiDA as an error 
   reporting tools: in case of errors encountered during the execution the AiiDA 
   daemon will copy the entire stack trace in the workflow report before
@@ -317,7 +317,7 @@ In the verdi shell type::
   Sometimes the ``kill`` operation might fail because one calculation cannot be 
   killed (e.g. if it's running but not in the ``WITHSCHEDULER``, ``TOSUBMIT`` or 
   ``NEW`` state), or because one workflow step is in the ``CREATED`` state. In that case the 
-  workflow is put to the ``SLEEP`` status, such that no more workflow step will be launched
+  workflow is put to the ``SLEEP`` state, such that no more workflow step will be launched
   by the daemon. One can then simply wait until the calculation or step changes state,
   and try to kill it again.
     

@@ -1626,28 +1626,14 @@ class DbWorkflow(m.Model):
     # ------------------------------------------------
         
     def add_data(self, dict, d_type):
-        
-        from django.db import transaction
-        from aiida.common.datastructures import wf_states, wf_data_types
-        
-#         sid = transaction.savepoint()
         try:
-
             for k in dict.keys():
                 p, create = self.data.get_or_create(name = k, data_type=d_type)
                 p.set_value(dict[k])
-                
-#             transaction.savepoint_commit(sid)
-            
         except Exception as e:
             raise
-#             transaction.savepoint_rollback(sid)
-            #raise ValueError("Error adding parameters")
     
     def get_data(self, d_type):
-        
-        from aiida.common.datastructures import wf_states, wf_data_types
-        
         try:
             dict = {}
             for p in self.data.filter(parent=self, data_type=d_type):
@@ -1655,15 +1641,12 @@ class DbWorkflow(m.Model):
             return dict
         except Exception as e:
             raise
-            #raise ValueError("Error retrieving parameters")
-    
         
     # ------------------------------------------------
     #     Parameters, attributes, results
     # ------------------------------------------------
 
     def add_parameters(self, dict, force=False):
-        
         from aiida.common.datastructures import wf_states, wf_data_types
         
         if not self.state == wf_states.INITIALIZED and not force:
@@ -1672,17 +1655,13 @@ class DbWorkflow(m.Model):
         self.add_data(dict, wf_data_types.PARAMETER)
         
     def add_parameter(self, name, value):
-        
         self.add_parameters({name:value})
         
-        
     def get_parameters(self):
-        
-        from aiida.common.datastructures import wf_states, wf_data_types
+        from aiida.common.datastructures import wf_data_types
         return self.get_data(wf_data_types.PARAMETER)
     
     def get_parameter(self, name):
-        
         res = self.get_parameters()
         if name in res:
             return res[name]
@@ -1692,22 +1671,17 @@ class DbWorkflow(m.Model):
     # ------------------------------------------------
     
     def add_results(self, dict):
-        
-        from aiida.common.datastructures import wf_states, wf_data_types
+        from aiida.common.datastructures import wf_data_types
         self.add_data(dict, wf_data_types.RESULT)
         
-    def add_result(self, name, value):
-        
+    def add_result(self, name, value):        
         self.add_results({name:value})
         
-        
     def get_results(self):
-        
-        from aiida.common.datastructures import wf_states, wf_data_types
+        from aiida.common.datastructures import wf_data_types
         return self.get_data(wf_data_types.RESULT)
     
     def get_result(self, name):
-        
         res = self.get_results()
         if name in res:
             return res[name]
@@ -1717,22 +1691,17 @@ class DbWorkflow(m.Model):
     # ------------------------------------------------
     
     def add_attributes(self, dict):
-        
-        from aiida.common.datastructures import wf_states, wf_data_types
+        from aiida.common.datastructures import wf_data_types
         self.add_data(dict, wf_data_types.ATTRIBUTE)
         
     def add_attribute(self, name, value):
-        
         self.add_attributes({name:value})
         
-        
     def get_attributes(self):
-        
-        from aiida.common.datastructures import wf_states, wf_data_types
+        from aiida.common.datastructures import wf_data_types
         return self.get_data(wf_data_types.ATTRIBUTE)
     
     def get_attribute(self, name):
-        
         res = self.get_attributes()
         if name in res:
             return res[name]
@@ -1743,13 +1712,11 @@ class DbWorkflow(m.Model):
     #     Reporting
     # ------------------------------------------------
 
-    def clear_report(self):
-        
+    def clear_report(self):        
         self.report = None
         self.save()
     
     def append_to_report(self, _text):
-        
         from django.utils.timezone import utc
         import datetime
         
@@ -1762,18 +1729,9 @@ class DbWorkflow(m.Model):
     # ------------------------------------------------
             
     def get_calculations(self):
-        
         from aiida.orm import JobCalculation
         return JobCalculation.query(workflow_step=self.steps)
     
-    def get_calculations_status(self):
-
-        from aiida.common.datastructures import calc_states, wf_states, wf_exit_call
-
-        calc_status = self.get_calculations().filter(
-            dbattributes__key="state").values_list("uuid", "dbattributes__tval")
-        return set([l[1] for l in calc_status])
-
     # ------------------------------------------------
     #     Subworkflows
     # ------------------------------------------------
@@ -1790,7 +1748,6 @@ class DbWorkflow(m.Model):
         
     def finish(self):
         from aiida.common.datastructures import wf_states
-    
         self.state = wf_states.FINISHED
 
     def __str__(self):
@@ -1804,7 +1761,6 @@ class DbWorkflow(m.Model):
 
 @python_2_unicode_compatible
 class DbWorkflowData(m.Model):
-    
     from aiida.common.datastructures import wf_data_types, wf_data_value_types
     
     parent       = m.ForeignKey(DbWorkflow, related_name='data')
@@ -1812,7 +1768,6 @@ class DbWorkflowData(m.Model):
     time         = m.DateTimeField(default=timezone.now, editable=False)
     data_type    = m.CharField(max_length=255,
                                blank=False, default=wf_data_types.PARAMETER)
-    
     value_type   = m.CharField(max_length=255,blank=False,
                                default=wf_data_value_types.NONE)
     json_value   = m.TextField(blank=True)
@@ -1822,14 +1777,12 @@ class DbWorkflowData(m.Model):
         unique_together = (("parent", "name", "data_type"))
         
     def set_value(self, arg):
-        
         import inspect
         from aiida.orm.node import Node
-        from aiida.common.datastructures import wf_data_types, wf_data_value_types
+        from aiida.common.datastructures import wf_data_value_types
         import json
         
         try:
-            
             if isinstance(arg, Node) or issubclass(arg.__class__, Node):
                 if arg.pk is None:
                     raise ValueError("Cannot add an unstored node as an attribute of a Workflow!")
@@ -1837,18 +1790,15 @@ class DbWorkflowData(m.Model):
                 self.value_type = wf_data_value_types.AIIDA
                 self.save()
             else:
-                
                 self.json_value = json.dumps(arg)
                 self.value_type = wf_data_value_types.JSON
-                self.save()
-                
+                self.save() 
         except:
             raise ValueError("Cannot set the parameter {}".format(self.name))
         
     def get_value(self):
-        
         import json
-        from aiida.common.datastructures import wf_data_types, wf_data_value_types
+        from aiida.common.datastructures import wf_data_value_types
         
         if self.value_type==wf_data_value_types.JSON:
             return json.loads(self.json_value)
@@ -1866,31 +1816,30 @@ class DbWorkflowData(m.Model):
 
 @python_2_unicode_compatible
 class DbWorkflowStep(m.Model):
-
-    from aiida.common.datastructures import wf_states, wf_exit_call, wf_default_call
+    from aiida.common.datastructures import wf_states, wf_default_call
     
     parent        = m.ForeignKey(DbWorkflow, related_name='steps')
     name          = m.CharField(max_length=255, blank=False)
     user          = m.ForeignKey(AUTH_USER_MODEL, on_delete=m.PROTECT)
     time          = m.DateTimeField(default=timezone.now, editable=False)
-    nextcall      = m.CharField(max_length=255, blank=False, default=wf_default_call)
+    nextcall      = m.CharField(max_length=255, blank=False, 
+                                default=wf_default_call)
+    calculations  = m.ManyToManyField(DbNode, symmetrical=False, 
+                                      related_name="workflow_step")
+    sub_workflows = m.ManyToManyField(DbWorkflow, symmetrical=False, 
+                                      related_name="parent_workflow_step")
+    state        = m.CharField(max_length=255, 
+                               choices=zip(list(wf_states), list(wf_states)), 
+                               default=wf_states.CREATED)
     
-    calculations  = m.ManyToManyField(DbNode, symmetrical=False, related_name="workflow_step")
-    sub_workflows = m.ManyToManyField(DbWorkflow, symmetrical=False, related_name="parent_workflow_step")
-    
-    
-    state        = m.CharField(max_length=255, choices=zip(list(wf_states), list(wf_states)), default=wf_states.CREATED)
-
     class Meta:
         unique_together = (("parent", "name"))
-
-
+        
     # ---------------------------------
     #    Calculations
     # ---------------------------------
     
     def add_calculation(self, step_calculation):
-        
         from aiida.orm import JobCalculation
 
         if (not isinstance(step_calculation, JobCalculation)):
@@ -1902,25 +1851,14 @@ class DbWorkflowStep(m.Model):
             raise ValueError("Error adding calculation to step")                      
 
     def get_calculations(self, state=None):
-        
         from aiida.orm import JobCalculation
-        
         if (state==None):
-            return JobCalculation.query(workflow_step=self)#pk__in = step.calculations.values_list("pk", flat=True))
+            return JobCalculation.query(workflow_step=self)
         else:
             return JobCalculation.query(workflow_step=self).filter(
                 dbattributes__key="state",dbattributes__tval=state)
-
-    def get_calculations_status(self):
-
-        from aiida.common.datastructures import calc_states, wf_states, wf_exit_call
-
-        calc_status = self.calculations.filter(
-            dbattributes__key="state").values_list("uuid", "dbattributes__tval")
-        return set([l[1] for l in calc_status])
     
     def remove_calculations(self):
-        
         self.calculations.all().delete()
         
     # ---------------------------------
@@ -1928,12 +1866,9 @@ class DbWorkflowStep(m.Model):
     # ---------------------------------
 
     def add_sub_workflow(self, sub_wf):
-        
         from aiida.orm.workflow import Workflow
-        
         if (not issubclass(sub_wf.__class__,Workflow) and not isinstance(sub_wf, Workflow)):
             raise ValueError("Cannot add a workflow not of type Workflow")                        
-
         try:
             self.sub_workflows.add(sub_wf.dbworkflowinstance)
         except:
@@ -1941,12 +1876,7 @@ class DbWorkflowStep(m.Model):
  
     def get_sub_workflows(self):
         return self.sub_workflows(manager='aiidaobjects').all()
- 
-    def get_sub_workflows_status(self):
-        from aiida.common.datastructures import wf_states
-        wf_status = self.sub_workflows.all().values_list("uuid", "status")
-        return set([l[1] for l in wf_status])
-    
+        
     def remove_sub_workflows(self):
         self.sub_workflows.all().delete()
     
@@ -1955,29 +1885,23 @@ class DbWorkflowStep(m.Model):
     # ---------------------------------
 
     def is_finished(self):
-        
-        from aiida.common.datastructures import calc_states, wf_states, wf_exit_call
-        
+        from aiida.common.datastructures import wf_states
         return self.state==wf_states.FINISHED
         
     def set_nextcall(self, _nextcall):
-        
-        self.nextcall = _nextcall;
+        self.nextcall = _nextcall
         self.save()
         
     def set_status(self, _status):
-        
         self.state = _status;
         self.save()
         
     def reinitialize(self):
-        
-        from aiida.common.datastructures import calc_states, wf_states, wf_exit_call
+        from aiida.common.datastructures import wf_states
         self.set_status(wf_states.INITIALIZED)
 
     def finish(self):
-        
-        from aiida.common.datastructures import calc_states, wf_states, wf_exit_call
+        from aiida.common.datastructures import wf_states
         self.set_status(wf_states.FINISHED)
 
     def __str__(self):

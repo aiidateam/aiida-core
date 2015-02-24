@@ -78,6 +78,7 @@ class Workflow(object):
                                  the given uuid.
             """
             from aiida.djsite.db.models import DbWorkflow
+            from aiida.common.utils import md5_file
             import hashlib
         
             self._to_be_stored = True
@@ -146,13 +147,14 @@ class Workflow(object):
                     if type(params) is dict:
                         self.set_params(params)
 
-                # This stores the MD5 as well, to test in case the workflow has been modified after the launch 
+                # This stores the MD5 as well, to test in case the workflow has 
+                # been modified after the launch
                 self._dbworkflowinstance = DbWorkflow(user=get_automatic_user(),
                     module = self.caller_module,
                     module_class = self.caller_module_class,
                     script_path = self.caller_file,
-                    script_md5 = hashlib.md5(self.caller_file).hexdigest())
-                
+                    script_md5 = md5_file(self.caller_file))
+                    
             self.attach_calc_lazy_storage  = {}
             self.attach_subwf_lazy_storage = {}
 
@@ -181,6 +183,9 @@ class Workflow(object):
             self._dbworkflowinstance = DbWorkflow.objects.get(pk=self._dbworkflowinstance.pk)
             return self._dbworkflowinstance
     
+    def _get_dbworkflowinstance(self):
+        return self.dbworkflowinstance
+
     @property
     def label(self):
         """
@@ -723,7 +728,7 @@ class Workflow(object):
                 cls.append_to_report("full traceback: {0}".format(traceback.format_exc()))
                 method_step.set_state(wf_states.ERROR)
             return None 
-        
+        out = wrapper
         wrapper.is_wf_step = True
         wrapper.wf_step_name = fun.__name__
         
@@ -746,12 +751,20 @@ class Workflow(object):
         :return: the wrapped methods, decorated with the correct step name
         """
         import inspect
-        import hashlib
-        md5          = self.dbworkflowinstance.script_md5
-        script_path  = self.dbworkflowinstance.script_path
+        from aiida.common.utils import md5_file
+        md5 = self.dbworkflowinstance.script_md5
+        script_path = self.dbworkflowinstance.script_path
         
-        if not md5==hashlib.md5(script_path).hexdigest():
-            raise ValidationError("Unable to load the original workflow module from {}, MD5 has changed".format(script_path))
+        # TODO: in principles, the file containing the workflow description 
+        # should be copied in a repository, and, on that file, the workflow 
+        # should check to be sure of loading the same description of the 
+        # workflow. At the moment, this is not done and is checking the source
+        # in aiida/workflows/... resulting essentially in the impossibility of
+        # developing a workflow without rendering most of the trial run 
+        # unaccessible. I comment these lines for this moment.
+        
+        #if md5 != md5_file(script_path):
+        #    raise ValidationError("Unable to load the original workflow module from {}, MD5 has changed".format(script_path))
  
         # ATTENTION: Do not move this code outside or encapsulate it in a function
         curframe      = inspect.currentframe()
@@ -815,8 +828,8 @@ class Workflow(object):
                 raise AiidaException("Cannot add a calculation with "
                                      "unstored inputs")
         
-        if calc.pk is None:
-            raise AiiDAException("Cannot add an unstored calculation")
+#        if calc.pk is None:
+#            raise AiiDAException("Cannot add an unstored calculation")
         
         curframe = inspect.currentframe()
         calframe = inspect.getouterframes(curframe, 2)
@@ -1064,14 +1077,14 @@ class Workflow(object):
     
 #     def revive(self):
 #         
-#         import hashlib
-#         md5          = self.dbworkflowinstance.script_md5
-#         script_path  = self.dbworkflowinstance.script_path
+#         from aiida.common.utils import md5_file
+#         md5 = self.dbworkflowinstance.script_md5
+#         script_path = self.dbworkflowinstance.script_path
 #         
-#         md5_check    = hashlib.md5(script_path).hexdigest()
+#         md5_check = md5_file(script_path)
 #         
 #         # MD5 Check before revive
-#         if not md5==md5_check:
+#         if md5 != md5_check:
 #             logger.info("The script has changed, MD5 is now updated")
 #             self.dbworkflowinstance.set_script_md5(md5_check)
 #         

@@ -1494,7 +1494,6 @@ class DbAuthInfo(m.Model):
             return "Authorization info for {} on {} [DISABLED]".format(self.aiidauser.email, self.dbcomputer.name)
 
 
-
 @python_2_unicode_compatible
 class DbComment(m.Model):
     uuid = UUIDField(auto=True,version=AIIDANODES_UUID_VERSION)
@@ -1553,9 +1552,6 @@ class DbLog(m.Model):
                         metadata=json.dumps(record.__dict__))
         new_entry.save()
         
-#-------------------------------------
-#         Lock
-#-------------------------------------
 
 class DbLock(m.Model):
     
@@ -1563,34 +1559,23 @@ class DbLock(m.Model):
     creation   = m.DateTimeField(default=timezone.now, editable=False)
     timeout    = m.IntegerField(editable=False)
     owner      = m.CharField(max_length=255, blank=False)
-            
-#-------------------------------------
-#         Workflows
-#-------------------------------------
-
-        
-        
+    
+    
 @python_2_unicode_compatible
 class DbWorkflow(m.Model):
-    
     from aiida.common.datastructures import wf_states, wf_data_types
-    
     uuid         = UUIDField(auto=True,version=AIIDANODES_UUID_VERSION)
     ctime        = m.DateTimeField(default=timezone.now, editable=False)
     mtime        = m.DateTimeField(auto_now=True, editable=False)    
     user         = m.ForeignKey(AUTH_USER_MODEL, on_delete=m.PROTECT)
-
     label = m.CharField(max_length=255, db_index=True, blank=True)
     description = m.TextField(blank=True)
-
     # still to implement, similarly to the DbNode class
     nodeversion = m.IntegerField(default=1,editable=False)
     # to be implemented similarly to the DbNode class
     lastsyncedversion = m.IntegerField(default=0,editable=False)
-
     state        = m.CharField(max_length=255, choices=zip(list(wf_states), list(wf_states)), default=wf_states.INITIALIZED)
     report       = m.TextField(blank=True)
-
     # File variables, script is the complete dump of the workflow python script
     module       = m.TextField(blank=False)
     module_class = m.TextField(blank=False)
@@ -1602,28 +1587,20 @@ class DbWorkflow(m.Model):
     aiidaobjects = AiidaObjectManager()
     
     def get_aiida_class(self):
-        
         """
         Return the corresponding aiida instance of class aiida.worflow
         """
         from aiida.orm.workflow import Workflow
         return Workflow.get_subclass_from_uuid(self.uuid)
     
-    #  ------------------------------------------------
-    
-    def set_status(self, _status):
-        
-        self.state = _status;
+    def set_state(self, _state):
+        self.state = _state;
         self.save()
     
     def set_script_md5(self, _md5):
         
         self.script_md5 = _md5
         self.save()
-        
-    # ------------------------------------------------
-    #     Get data
-    # ------------------------------------------------
         
     def add_data(self, dict, d_type):
         try:
@@ -1641,11 +1618,7 @@ class DbWorkflow(m.Model):
             return dict
         except Exception as e:
             raise
-        
-    # ------------------------------------------------
-    #     Parameters, attributes, results
-    # ------------------------------------------------
-
+    
     def add_parameters(self, dict, force=False):
         from aiida.common.datastructures import wf_states, wf_data_types
         
@@ -1668,8 +1641,6 @@ class DbWorkflow(m.Model):
         else:
             raise ValueError("Error retrieving results: {0}".format(name))
         
-    # ------------------------------------------------
-    
     def add_results(self, dict):
         from aiida.common.datastructures import wf_data_types
         self.add_data(dict, wf_data_types.RESULT)
@@ -1688,8 +1659,6 @@ class DbWorkflow(m.Model):
         else:
             raise ValueError("Error retrieving results: {0}".format(name))
     
-    # ------------------------------------------------
-    
     def add_attributes(self, dict):
         from aiida.common.datastructures import wf_data_types
         self.add_data(dict, wf_data_types.ATTRIBUTE)
@@ -1707,11 +1676,7 @@ class DbWorkflow(m.Model):
             return res[name]
         else:
             raise ValueError("Error retrieving results: {0}".format(name))
-          
-    # ------------------------------------------------
-    #     Reporting
-    # ------------------------------------------------
-
+    
     def clear_report(self):        
         self.report = None
         self.save()
@@ -1723,18 +1688,10 @@ class DbWorkflow(m.Model):
         now = datetime.datetime.utcnow().replace(tzinfo=utc)
         self.report += str(now)+"] "+_text+"\n";
         self.save()
-
-    # ------------------------------------------------
-    #     Calculations
-    # ------------------------------------------------
             
     def get_calculations(self):
         from aiida.orm import JobCalculation
         return JobCalculation.query(workflow_step=self.steps)
-    
-    # ------------------------------------------------
-    #     Subworkflows
-    # ------------------------------------------------
     
     def get_sub_workflows(self):
         return DbWorkflow.objects.filter(parent_workflow_step=self.steps.all())
@@ -1834,10 +1791,6 @@ class DbWorkflowStep(m.Model):
     
     class Meta:
         unique_together = (("parent", "name"))
-        
-    # ---------------------------------
-    #    Calculations
-    # ---------------------------------
     
     def add_calculation(self, step_calculation):
         from aiida.orm import JobCalculation
@@ -1860,11 +1813,7 @@ class DbWorkflowStep(m.Model):
     
     def remove_calculations(self):
         self.calculations.all().delete()
-        
-    # ---------------------------------
-    #    Subworkflows
-    # ---------------------------------
-
+    
     def add_sub_workflow(self, sub_wf):
         from aiida.orm.workflow import Workflow
         if (not issubclass(sub_wf.__class__,Workflow) and not isinstance(sub_wf, Workflow)):
@@ -1880,10 +1829,6 @@ class DbWorkflowStep(m.Model):
     def remove_sub_workflows(self):
         self.sub_workflows.all().delete()
     
-    # ---------------------------------
-    #    Management
-    # ---------------------------------
-
     def is_finished(self):
         from aiida.common.datastructures import wf_states
         return self.state==wf_states.FINISHED
@@ -1892,17 +1837,17 @@ class DbWorkflowStep(m.Model):
         self.nextcall = _nextcall
         self.save()
         
-    def set_status(self, _status):
-        self.state = _status;
+    def set_state(self, _state):
+        self.state = _state;
         self.save()
         
     def reinitialize(self):
         from aiida.common.datastructures import wf_states
-        self.set_status(wf_states.INITIALIZED)
+        self.set_state(wf_states.INITIALIZED)
 
     def finish(self):
         from aiida.common.datastructures import wf_states
-        self.set_status(wf_states.FINISHED)
+        self.set_state(wf_states.FINISHED)
 
     def __str__(self):
         return "Step {} for workflow {} [{}]".format(self.name,

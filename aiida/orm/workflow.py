@@ -563,41 +563,41 @@ class Workflow(object):
         """
         self.dbworkflowinstance.add_result(_name, _value)
     
-    def get_status(self):
+    def get_state(self):
         """
-        Get the Workflow's status
+        Get the Workflow's state
         :return: a state from wf_states in aiida.common.datastructures 
         """
         return self.dbworkflowinstance.state
     
-    def set_status(self, status):
+    def set_state(self, state):
         """
-        Set the Workflow's status
+        Set the Workflow's state
         :param name: a state from wf_states in aiida.common.datastructures 
         """
-        self.dbworkflowinstance.set_status(status)
+        self.dbworkflowinstance.set_state(state)
     
     def is_new(self):
         """
-        Returns True is the Workflow's status is CREATED
+        Returns True is the Workflow's state is CREATED
         """
         return self.dbworkflowinstance.state == wf_states.CREATED
     
     def is_running(self):
         """
-        Returns True is the Workflow's status is RUNNING
+        Returns True is the Workflow's state is RUNNING
         """
         return self.dbworkflowinstance.state == wf_states.RUNNING
     
     def has_finished_ok(self):
         """
-        Returns True is the Workflow's status is FINISHED
+        Returns True is the Workflow's state is FINISHED
         """
         return self.dbworkflowinstance.state in [wf_states.FINISHED,wf_states.SLEEP] 
     
     def has_failed(self):
         """
-        Returns True is the Workflow's status is ERROR
+        Returns True is the Workflow's state is ERROR
         """
         return self.dbworkflowinstance.state == wf_states.ERROR
     
@@ -657,12 +657,12 @@ class Workflow(object):
     def step(cls, fun):
         """
         This method is used as a decorator for workflow steps, and handles the method's execution, 
-        the status updates and the eventual errors.
+        the state updates and the eventual errors.
         
         The decorator generates a wrapper around the input function to execute, adding with the correct 
         step name and a utility variable to make it distinguishable from non-step methods. 
         
-        When a step is launched, the wrapper tries to run the function in case of error the status of 
+        When a step is launched, the wrapper tries to run the function in case of error the state of 
         the workflow is moved to ERROR and the traceback is stored in the report. In general the input 
         method is a step obtained from the Workflow object, and the decorator simply handles a controlled 
         execution of the step allowing the code not to break in case of error in the step's source code.
@@ -671,7 +671,7 @@ class Workflow(object):
         case all the calculations and subworkflows of the step are killed and a new execution is allowed.
         
         :param fun: a methods to wrap, making it a Workflow step
-        :raise: AiidaException: in case the workflow status doesn't allow the execution 
+        :raise: AiidaException: in case the workflow state doesn't allow the execution 
         :return: the wrapped methods, 
         """
         from aiida.common.datastructures import wf_default_call
@@ -721,7 +721,7 @@ class Workflow(object):
                 exc_type, exc_value, exc_traceback = sys.exc_info()                
                 cls.append_to_report("ERROR ! This workflow got an error in the {0} method, we report down the stack trace".format(wrapped_method))
                 cls.append_to_report("full traceback: {0}".format(traceback.format_exc()))
-                method_step.set_status(wf_states.ERROR)
+                method_step.set_state(wf_states.ERROR)
             return None 
         
         wrapper.is_wf_step = True
@@ -792,8 +792,8 @@ class Workflow(object):
         #logger.info("Adding step {0} after {1} in {2}".format(next_method_name, caller_method, self.uuid))
         method_step.set_nextcall(next_method_name)
         # 
-        self.dbworkflowinstance.set_status(wf_states.RUNNING)
-        method_step.set_status(wf_states.RUNNING)
+        self.dbworkflowinstance.set_state(wf_states.RUNNING)
+        method_step.set_state(wf_states.RUNNING)
         
     def attach_calculation(self, calc):
         """
@@ -910,10 +910,10 @@ class Workflow(object):
         """
         from aiida.common.exceptions import InvalidOperation
         
-        if self.get_status() not in [wf_states.FINISHED, wf_states.ERROR]: 
+        if self.get_state() not in [wf_states.FINISHED, wf_states.ERROR]: 
             
-            # put in SLEEP status first
-            self.dbworkflowinstance.set_status(wf_states.SLEEP)
+            # put in SLEEP state first
+            self.dbworkflowinstance.set_state(wf_states.SLEEP)
             
             error_messages = [] 
             for s in self.get_steps(state=wf_states.RUNNING):
@@ -949,14 +949,14 @@ class Workflow(object):
                                         "try again later".format(self.pk,wf_states.SLEEP),
                                         error_message_list=error_messages)
             else:
-                self.dbworkflowinstance.set_status(wf_states.FINISHED)
+                self.dbworkflowinstance.set_state(wf_states.FINISHED)
         else:
             raise WorkflowUnkillable("Cannot kill a workflow in {} or {} state"
                                      "".format(wf_states.FINISHED,wf_states.ERROR))
             
     def sleep(self):
         """
-        Changes the workflow status to SLEEP, only possible to call from a Workflow step decorated method.
+        Changes the workflow state to SLEEP, only possible to call from a Workflow step decorated method.
         """
         import inspect
         # ATTENTION: Do not move this code outside or encapsulate it in a function
@@ -967,7 +967,7 @@ class Workflow(object):
         if not self.has_step(caller_method):
             raise AiidaException("The caller method is either not a step or has not been registered as one")
  
-        self.get_step(caller_method).set_status(wf_states.SLEEP)
+        self.get_step(caller_method).set_state(wf_states.SLEEP)
         
     def get_report(self):
         """
@@ -1085,9 +1085,9 @@ class Workflow(object):
 #             for c in s.get_calculations(): c.kill()
 #             s.remove_calculations()
 #             
-#             s.set_status(wf_states.INITIALIZED)
+#             s.set_state(wf_states.INITIALIZED)
 #             
-#         self.set_status(wf_states.RUNNING)
+#         self.set_state(wf_states.RUNNING)
 
 
 def kill_from_pk(pk,verbose=False):
@@ -1148,7 +1148,7 @@ def get_workflow_info(w, tab_size = 2, short = False, pre_string = "",
     :param w: a DbWorkflow instance
     :param tab_size: number of spaces to use for the indentation
     :param short: if True, provide a shorter output (only total number of
-        calculations, rather than the status of each calculation)
+        calculations, rather than the state of each calculation)
     :param pre_string: string appended at the beginning of each line
     :param depth: the maximum depth level the recursion on sub-workflows will
     try to reach (0 means we stay at the step level and don't go into 

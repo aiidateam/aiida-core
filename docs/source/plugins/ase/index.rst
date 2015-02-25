@@ -17,6 +17,8 @@ many others.
 In AiiDA, we have developed a plugin which currently supports the use of ASE 
 calculators for total energy calculations and structure optimizations.
 
+.. _here: http://wiki.fysik.dtu.dk/ase/
+
 Plugins
 ^^^^^^^
 

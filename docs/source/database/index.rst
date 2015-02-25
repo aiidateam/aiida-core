@@ -295,7 +295,8 @@ launch the previous script once per day::
 where all instances of ``USERNAME`` are replaced by your actual user name. The ``su USERNAME``
 makes the dumped file be owned by you rather than by ``root``.
 Remember to give the script the right permissions::
-    sudo chmod +x /etc/cron.daily/backup-aiidadb-USERNAME
+
+  sudo chmod +x /etc/cron.daily/backup-aiidadb-USERNAME
 
 Finally make sure your database folder (``/home/USERNAME/.aiida/``) containing this dump file
 and the ``repository`` directory, is properly backed up by 

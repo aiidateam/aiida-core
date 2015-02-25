@@ -914,12 +914,13 @@ class Workflow(object):
         """
         Stop the Workflow execution and change its state to FINISHED.
         
-        This method calls the ``kill`` method for each Calculation and each subworkflow 
-        linked to each RUNNING step.
+        This method calls the ``kill`` method for each Calculation and each 
+        subworkflow linked to each RUNNING step.
         
         :param verbose: True to print the pk of each subworkflow killed
         :raise InvalidOperation: if some calculations cannot be killed (the 
-        workflow will be also put to SLEEP so that it can be killed later on)
+                                 workflow will be also put to SLEEP so that it
+                                 can be killed later on)
         """
         from aiida.common.exceptions import InvalidOperation
         
@@ -1164,14 +1165,15 @@ def get_workflow_info(w, tab_size = 2, short = False, pre_string = "",
         calculations, rather than the state of each calculation)
     :param pre_string: string appended at the beginning of each line
     :param depth: the maximum depth level the recursion on sub-workflows will
-    try to reach (0 means we stay at the step level and don't go into 
-    sub-workflows, 1 means we go down to one step level of the sub-workflows, etc.)
+                  try to reach (0 means we stay at the step level and don't go
+                  into sub-workflows, 1 means we go down to one step level of 
+                  the sub-workflows, etc.)
     
     :return lines: list of lines to be outputed
-    
-    :note: pre_string becomes larger at each call of get_workflow_info on the
-    subworkflows: pre_string -> pre_string + "|" + " "*(tab_size-1))
     """
+    # Note: pre_string becomes larger at each call of get_workflow_info on the
+    #       subworkflows: pre_string -> pre_string + "|" + " "*(tab_size-1))
+
     from django.utils import timezone
     
     from aiida.common.datastructures import calc_states

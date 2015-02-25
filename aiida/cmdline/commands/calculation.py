@@ -5,7 +5,7 @@ import subprocess
 from aiida import load_dbenv
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
-
+from aiida.cmdline.commands.node import _Label, _Description
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
@@ -24,6 +24,9 @@ class Calculation(VerdiCommandWithSubcommands):
         A dictionary with valid commands and functions to be called:
         list.
         """
+        labeler = _Label('calculation')
+        descriptioner = _Description('calculation') 
+        
         self.valid_subcommands = {
             'gotocomputer': (self.calculation_gotocomputer, self.complete_none),
             'list': (self.calculation_list, self.complete_none),
@@ -37,6 +40,8 @@ class Calculation(VerdiCommandWithSubcommands):
             'show': (self.calculation_show, self.complete_none),
             'plugins': (self.calculation_plugins, self.complete_plugins),
             'cleanworkdir': (self.calculation_cleanworkdir, self.complete_none),
+            'label': (labeler.run, self.complete_none),
+            'description': (descriptioner.run, self.complete_none),
             }
     
     def complete_plugins(self, subargs_idx, subargs):
@@ -58,9 +63,9 @@ class Calculation(VerdiCommandWithSubcommands):
     def calculation_gotocomputer(self, *args):
         """
         Open a shell to the calc folder on the cluster
-    
-        This command runs the 'manage.py shell' command, that opens a
-        IPython shell with the Django environment loaded.
+        
+        This command opens a ssh connection to the scratch folder on the remote
+        computer on which the calculation is being/has been executed.
         """
         from aiida.common.exceptions import NotExistent
         from aiida.orm import JobCalculation
@@ -337,6 +342,10 @@ class Calculation(VerdiCommandWithSubcommands):
                     docstring = docstring.strip()
                     print "\n".join(["    {}".format(_.strip())
                                      for _ in docstring.splitlines()])
+                    print "  Inputs:"
+                    for key,val in C._use_methods.iteritems():
+                        print "    {}: {}".format(key,
+                                                  val['valid_types'].__name__)
                 except MissingPluginError:
                     print "! {}: NOT FOUND!".format(arg)
         else:
@@ -587,7 +596,7 @@ class Calculation(VerdiCommandWithSubcommands):
         
         from aiida.cmdline import wait_for_confirmation
         from aiida.orm.calculation.job import JobCalculation as Calc
-        from aiida.common.exceptions import NotExistent, InvalidOperation
+        from aiida.common.exceptions import NotExistent, InvalidOperation, RemoteOperationError
         
         import argparse
         parser = argparse.ArgumentParser(
@@ -615,9 +624,8 @@ class Calculation(VerdiCommandWithSubcommands):
             except NotExistent:
                 print >> sys.stderr, ("WARNING: calculation {} "
                     "does not exist.".format(calc_pk))
-            except InvalidOperation:
-                print >> sys.stderr, ("Calculation {} is not in WITHSCHEDULER "
-                    "state: cannot be killed.".format(calc_pk))
+            except (InvalidOperation, RemoteOperationError) as e:
+                print >> sys.stderr, (e.message)
         print >> sys.stderr, "{} calculation{} killed.".format(counter,
             "" if counter == 1 else "s")
 

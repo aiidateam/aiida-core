@@ -1,18 +1,17 @@
 # -*- coding: utf-8 -*-
 """
-This file was copied and edited from Django 1.5.1, and modified to allow to define default loads in ipython.
+This file was copied and edited from Django 1.7.4, and modified to allow to define default loads in ipython.
 
-.. note: Only ipython and bpython do the auto import, not the plain shell.
+.. note: Only ipython and bpython do the auto import, not the plain shell and _ipython_pre_100.
 
 .. note: This command should be updated when we upgrade to a more recent version of django.
 
 .. todo: Move the list of commands to import from here (method get_start_namespace) to
     the settings.py module, probably.
 """
+from optparse import make_option
 import os
 from django.core.management.base import NoArgsCommand
-from optparse import make_option
-
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
@@ -29,9 +28,12 @@ default_modules_list = [
                         ("aiida.orm","DataFactory","DataFactory"),
                         ("aiida.orm","Computer","Computer"),
                         ("aiida.orm","Group","Group"),
+                        ("aiida.orm","load_node","load_node"),
                         ("aiida.orm.workflow","Workflow","Workflow"),
+                        ("aiida.orm","load_workflow","load_workflow"),
                         ("aiida.djsite.db","models","models"),
                         ]
+
 
 class Command(NoArgsCommand):
     shells = ['ipython', 'bpython']
@@ -39,13 +41,15 @@ class Command(NoArgsCommand):
     option_list = NoArgsCommand.option_list + (
         make_option('--plain', action='store_true', dest='plain',
             help='Tells Django to use plain Python, not IPython or bpython.'),
+        make_option('--no-startup', action='store_true', dest='no_startup',
+            help='When using plain Python, ignore the PYTHONSTARTUP environment variable and ~/.pythonrc.py script.'),
         make_option('-i', '--interface', action='store', type='choice', choices=shells,
                     dest='interface',
             help='Specify an interactive interpreter interface. Available options: "ipython" and "bpython"'),
 
     )
     help = "Runs a Python interactive interpreter. Tries to use IPython or bpython, if one of them is available."
-    requires_model_validation = False
+    requires_system_checks = False
 
     def get_start_namespace(self):
         user_ns = {}
@@ -54,39 +58,51 @@ class Command(NoArgsCommand):
         
         return user_ns
 
+    def _ipython_pre_011(self):
+        """Start IPython pre-0.11"""
+        from IPython.Shell import IPShell
+        user_ns = self.get_start_namespace()
+        if user_ns:
+            shell = IPShell(argv=[],user_ns=user_ns)
+        else:
+            shell = IPShell(argv=[])
+        shell.mainloop()
+
+    def _ipython_pre_100(self):
+        """Start IPython pre-1.0.0"""
+        from IPython.frontend.terminal.ipapp import TerminalIPythonApp
+        app = TerminalIPythonApp.instance()
+        app.initialize(argv=[])
+        app.start()
+
+    def _ipython(self):
+        """Start IPython >= 1.0"""
+        from IPython import start_ipython
+        user_ns = self.get_start_namespace()
+        if user_ns:
+            start_ipython(argv=[],user_ns=user_ns)
+        else:
+            start_ipython(argv=[])
 
     def ipython(self):
-        user_ns = self.get_start_namespace()
-        try:
-            from IPython import embed
-            if user_ns:
-                embed(user_ns=user_ns)
-            else:
-                embed()
-        except ImportError:
-            # IPython < 0.11
-            # Explicitly pass an empty list as arguments, because otherwise
-            # IPython would use sys.argv from this script.
+        """Start any version of IPython"""
+        for ip in (self._ipython, self._ipython_pre_100, self._ipython_pre_011):
             try:
-                from IPython.Shell import IPShell
-                if user_ns:
-                    shell = IPShell(argv=[],user_ns=user_ns)
-                else:
-                    shell = IPShell(argv=[])
-                shell.mainloop()
+                ip()
             except ImportError:
-                # IPython not found at all, raise ImportError
-                raise
+                pass
+            else:
+                return
+        # no IPython, raise ImportError
+        raise ImportError("No IPython")
 
     def bpython(self):
         import bpython
-
         user_ns = self.get_start_namespace()
         if user_ns:
             bpython.embed(user_ns)
         else:
             bpython.embed()
-
 
     def run_shell(self, shell=None):
         available_shells = [shell] if shell else self.shells
@@ -99,12 +115,8 @@ class Command(NoArgsCommand):
         raise ImportError
 
     def handle_noargs(self, **options):
-        # XXX: (Temporary) workaround for ticket #1796: force early loading of all
-        # models from installed apps.
-        from django.db.models.loading import get_models
-        get_models()
-
         use_plain = options.get('plain', False)
+        no_startup = options.get('no_startup', False)
         interface = options.get('interface', None)
 
         try:
@@ -132,13 +144,16 @@ class Command(NoArgsCommand):
 
             # We want to honor both $PYTHONSTARTUP and .pythonrc.py, so follow system
             # conventions and get $PYTHONSTARTUP first then .pythonrc.py.
-            if not use_plain:
-                for pythonrc in (os.environ.get("PYTHONSTARTUP"),
-                                 os.path.expanduser('~/.pythonrc.py')):
-                    if pythonrc and os.path.isfile(pythonrc):
-                        try:
-                            with open(pythonrc) as handle:
-                                exec(compile(handle.read(), pythonrc, 'exec'))
-                        except NameError:
-                            pass
+            if not no_startup:
+                for pythonrc in (os.environ.get("PYTHONSTARTUP"), '~/.pythonrc.py'):
+                    if not pythonrc:
+                        continue
+                    pythonrc = os.path.expanduser(pythonrc)
+                    if not os.path.isfile(pythonrc):
+                        continue
+                    try:
+                        with open(pythonrc) as handle:
+                            exec(compile(handle.read(), pythonrc, 'exec'), imported_objects)
+                    except NameError:
+                        pass
             code.interact(local=imported_objects)

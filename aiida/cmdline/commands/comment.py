@@ -21,9 +21,9 @@ class Comment(VerdiCommandWithSubcommands):
         """
         self.valid_subcommands = {
             'add': (self.comment_add, self.complete_none),
+            'remove' : (self.comment_remove, self.complete_none),
             'show' : (self.comment_show, self.complete_none),
             'update' : (self.comment_update, self.complete_none),
-            'remove' : (self.comment_remove, self.complete_none),
             }
     
     def comment_add(self, *args):
@@ -82,30 +82,38 @@ class Comment(VerdiCommandWithSubcommands):
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
             description='Show the comments of a node in the database.')
-        parser.add_argument('pk', metavar='PK', type=int,
-                            help='The pk (an integer) of the node.')
         parser.add_argument('-u','--user', type=str, default=None, 
                             help='Show only the comments of a given user (optional).')
+        parser.add_argument('pk', metavar='PK', type=int,
+                            help='The pk (an integer) of the node.')
+        parser.add_argument('id', metavar='ID', type=int,default=None,nargs='?',
+                            help='The id (an integer) of the comment.')
+        # Note that this is a false description, I'm using the DBComment.pk
         parsed_args = parser.parse_args(args)
         
         node = AiidaOrmNode.get_subclass_from_pk(parsed_args.pk)
-        all_comments = node.get_comments_tuple()
+        all_comments = node.get_comments(pk=parsed_args.id)
         
         if parsed_args.user is not None:
-            to_print = [ i for i in all_comments if i[0]==parsed_args.user ]
+            to_print = [ i for i in all_comments if i['user__email']==parsed_args.user ]
             if not to_print:
-                print "Nothing found for user '{}'."
-                print "Valid users are {}.".format( 
-                        ", ".join(set(["'"+i[0]+"'" for i in all_comments])))
+                print "Nothing found for user '{}'.".format(parsed_args.user)
+                print "Valid users found for Node {} are: {}.".format(parsed_args.pk, 
+                        ", ".join(set(["'"+i['user__email']+"'" for i in all_comments])))
         else:
-            to_print = all_comments 
+            to_print = all_comments
 
+        if parsed_args.id is not None:
+            to_print = [ i for i in to_print if i['pk']==parsed_args.id ]
+        
         for i in to_print:
             print "***********************************************************"
-            print "Comment of user '{}' on {}".format(i[0],i[1].strftime("%Y-%m-%d %H:%M:%S"))
-            print "Comment last modified on {}".format(i[2].strftime("%Y-%m-%d %H:%M:%S"))
+            print "Comment of '{}' on {}".format(i['user__email'],
+                                          i['ctime'].strftime("%Y-%m-%d %H:%M"))
+            print "ID: {}. Last modified on {}".format(i['pk'],
+                                          i['mtime'].strftime("%Y-%m-%d %H:%M"))
             print ""
-            print "{}".format(i[3])
+            print "{}".format(i['content'])
             print ""
         
     def comment_remove(self, *args):
@@ -119,35 +127,28 @@ class Comment(VerdiCommandWithSubcommands):
         from aiida.common.exceptions import ModificationNotAllowed
         load_dbenv()
         user = get_automatic_user()
+        from aiida.djsite.db.models import DbComment
         
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
             description='Remove comments of a node.')
         parser.add_argument('pk', metavar='PK', type=int,
                             help='The pk (an integer) of the node')
-        parser.add_argument('-i','--index', type=int,default=None,
-                            help='To remove comment at position #index of the list of all comments')
-        parser.add_argument('-a','--all', action='store_true', default=False, 
+        parser.add_argument('id',metavar='ID',type=int,default=None,nargs='?',
+                            help='#ID of the comment to be removed from node #PK')
+        parser.add_argument('-a', '--all', action='store_true', default=False, 
                             help='If used, deletes all the comments of the active user attached to the node')
         parsed_args = parser.parse_args(args)
         
+        if parsed_args.id is None and not parsed_args.all:
+            print "One argument between -a and ID must be provided"
+            sys.exit(1)
+        if parsed_args.id is not None and parsed_args.all:
+            print "Only one between -a and ID should be provided"
+            sys.exit(1)
+        
         node = AiidaOrmNode.get_subclass_from_pk(parsed_args.pk)
-        all_comments = node.get_comments_tuple()
-
-        if parsed_args.index is None and not parsed_args.all:
-            print "Only one between -a and index arguments should be provided"
-            sys.exit(1)
-            
-        if parsed_args.index is not None and parsed_args.all:
-            print "Only one between -a and index arguments should be provided"
-            sys.exit(1)
-
-        if parsed_args.index is not None:
-            try:
-                all_comments[parsed_args.index]
-            except IndexError:
-                print "Index exceeding the maximum allowed ({})".format(len(all_comments)-1)
-                sys.exit(1)
+        all_comments = node.get_comments(parsed_args.id) # Filter those with desired id, if present
         
         allowed_trues = ['1','t','true','y','yes']
         
@@ -157,31 +158,28 @@ class Comment(VerdiCommandWithSubcommands):
             do_I_delete = True if inpread.strip().lower() in allowed_trues else False
             
             if not do_I_delete:
-                print "Not deleting comment"
+                print "Not deleting comment. Aborting."
                 sys.exit(1)
             else:
-                one_found = False
-                for i,_ in enumerate(all_comments):
-                    try:
-                        node._remove_comment(i,user)
-                        one_found = True
-                    except ModificationNotAllowed:
-                        pass
-                if not one_found:
-                    print "No comments of user {} found".format(user)
+                comments = DbComment.objects.filter(dbnode=node, user=user)
+                for comment in comments:
+                    comment.delete()
+
         else:
             sys.stdout.write("Delete comment? ")
             inpread = sys.stdin.readline()
             do_I_delete = True if inpread.strip().lower() in allowed_trues else False
             
             if not do_I_delete:
-                print "Not deleting comment"
+                print "Not deleting comment. Aborting."
                 sys.exit(1)
             else:
-                try:
-                    node._remove_comment(parsed_args.index,user)
-                except ModificationNotAllowed:
-                    print "User is not proprietary of the comment, cannot delete it"
+                comments = DbComment.objects.filter(dbnode=node, 
+                                                    pk=parsed_args.id,user=user)
+                if not list(comments):
+                    print "No deletable comment found."
+                for comment in comments:
+                    comment.delete()
         
     def comment_update(self, *args):
         """
@@ -198,8 +196,8 @@ class Comment(VerdiCommandWithSubcommands):
             description='Add a comment to a node in the database.')
         parser.add_argument('pk', metavar='PK', type=int,
                             help='The pk (an integer) of the node')
-        parser.add_argument('index', type=int, 
-                            help='To update comment at position #index of the list of all comments')
+        parser.add_argument('id', metavar='ID', type=int, 
+                            help='Identify the comment to update by ID')
         parser.add_argument('-c','--comment', type=str, default=None, 
                             help='The comment (a string) to be added to the node')
         parsed_args = parser.parse_args(args)
@@ -225,16 +223,8 @@ class Comment(VerdiCommandWithSubcommands):
             the_comment = "\n".join(newlines)
         else:
             the_comment = parsed_args.comment
-
         
         node = AiidaOrmNode.get_subclass_from_pk(parsed_args.pk)
-
-        try:        
-            node._update_comment(the_comment,
-                                 parsed_args.index,
-                                 user)
-        except IndexError:
-            print "Index {} exceeding the length of comments (max allowed: {})".format(
-                             parsed_args.index,len(node.get_comments_tuple())-1)
-            sys.exit(1)
+        node._update_comment(the_comment, parsed_args.id, user)
+        
         

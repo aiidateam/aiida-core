@@ -71,7 +71,7 @@ class JobCalculation(Calculation):
         
         parent_dict.update({
             "parser_name": self._default_parser,
-            "linkname_retrieved": self._linkname_retrieved})
+            "_linkname_retrieved": self._linkname_retrieved})
 
         return parent_dict 
   
@@ -559,7 +559,7 @@ class JobCalculation(Calculation):
             with transaction.commit_on_success():
                 new_state = DbCalcState(dbnode=self.dbnode, state=state).save()
         except IntegrityError:
-            raise ModificationNotAllowed("Calculation pk={} already transited through "
+            raise ModificationNotAllowed("Calculation pk= {} already transited through "
                                          "the state {}".format(self.pk, state))
 
         # For non-imported states, also set in the attribute (so that, if we
@@ -1168,7 +1168,7 @@ class JobCalculation(Calculation):
         else:
             return None
 
-    def set_linkname_retrieved(self,linkname):
+    def _set_linkname_retrieved(self,linkname):
         """
         Set the linkname of the retrieved data folder object.
         
@@ -1207,14 +1207,14 @@ class JobCalculation(Calculation):
                     retrieved_node = node
                 else:
                     raise MultipleObjectsError("More than one output node "
-                        "with label '{}' for calc with pk={}".format(
+                        "with label '{}' for calc with pk= {}".format(
                             retrieved_linkname, self.pk))
         
         if retrieved_node is None:
             return None
         
         if not isinstance(retrieved_node, FolderData):
-            raise TypeError("The retrieved node of calc with pk={} is not of "
+            raise TypeError("The retrieved node of calc with pk= {} is not of "
                             "type FolderData".format(self.pk))
         
         return retrieved_node
@@ -1247,8 +1247,8 @@ class JobCalculation(Calculation):
             return
         
         if old_state != calc_states.WITHSCHEDULER:
-            raise InvalidOperation("Cannot kill a calculation not in {} state"
-                                   .format(calc_states.WITHSCHEDULER) )
+            raise InvalidOperation("Cannot kill a calculation in {} state"
+                                   .format(old_state) )
         
         # I get the scheduler plugin class and initialize it with the correct
         # transport
@@ -1271,7 +1271,7 @@ class JobCalculation(Calculation):
             # Do not set the state, but let the parser do its job
             #self._set_state(calc_states.FAILED)
             self.logger.warning("Calculation {} killed by the user "
-                                "(it was WITHSCHEDULER)".format(self.pk))
+                                "(it was {})".format(self.pk,calc_states.WITHSCHEDULER))
             
         
     def _presubmit(self, folder, use_unstored_links=False):

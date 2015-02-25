@@ -76,7 +76,7 @@ def execute_steps():
                 
                 logger.info("[{0}] Step: {1} ready to move".format(w.uuid,s.name))
                 
-                s.set_status(wf_states.FINISHED)
+                s.set_state(wf_states.FINISHED)
                 advance_workflow(w, s)
             
             elif len(s_calcs_new)>0:
@@ -92,7 +92,7 @@ def execute_steps():
             
             ## DO NOT STOP ANYMORE IF A CALCULATION FAILS
             #elif s_calcs_failed:
-                #s.set_status(wf_states.ERROR)
+                #s.set_state(wf_states.ERROR)
         
         
         initialized_steps    = w.get_steps(state=wf_states.INITIALIZED)
@@ -111,12 +111,12 @@ def execute_steps():
                 w.append_to_report("ERROR ! This workflow got an error in the {0} method, we report down the stack trace".format(s.name))
                 w.append_to_report("full traceback: {0}".format(exc_traceback.format_exc()))
                 
-                s.set_status(wf_states.ERROR)
-                w.set_status(wf_states.ERROR)
+                s.set_state(wf_states.ERROR)
+                w.set_state(wf_states.ERROR)
 
     for w in w_list:
         if w.get_steps(state=wf_states.ERROR):
-            w.set_status(wf_states.ERROR)
+            w.set_state(wf_states.ERROR)
             
 #         # Launch INITIALIZED Workflows with all calculations and subworkflows
 #         #
@@ -137,16 +137,16 @@ def execute_steps():
 #                     got_any_error = True
 #             
 #             if not got_any_error:
-#                 s.set_status(wf_states.RUNNING)
+#                 s.set_state(wf_states.RUNNING)
 #             else:
-#                 s.set_status(wf_states.ERROR)        
+#                 s.set_state(wf_states.ERROR)        
         
         
 #         if len(w.get_steps(state=wf_states.RUNNING))==0 and \
 #            len(w.get_steps(state=wf_states.INITIALIZED))==0 and \
 #            len(w.get_steps(state=wf_states.ERROR))==0 and \
-#            w.get_status()==wf_states.RUNNING:
-#               w.set_status(wf_states.FINISHED)
+#            w.get_state()==wf_states.RUNNING:
+#               w.set_state(wf_states.FINISHED)
               
         
 def advance_workflow(w_superclass, step):
@@ -179,13 +179,13 @@ def advance_workflow(w_superclass, step):
         logger.info("[{0}] Step: {1} has an exit call".format(w_superclass.uuid,step.name))
         if len(w_superclass.get_steps(wf_states.RUNNING))==0 and len(w_superclass.get_steps(wf_states.ERROR))==0:
             logger.info("[{0}] Step: {1} is really finished, going out".format(w_superclass.uuid,step.name))
-            w_superclass.set_status(wf_states.FINISHED)
+            w_superclass.set_state(wf_states.FINISHED)
             return True
         else:
             logger.error("[{0}] Step: {1} is NOT finished, stopping workflow with error".format(w_superclass.uuid,step.name))
             w_superclass.append_to_report("""Step: {1} is NOT finished, some calculations or workflows 
             are still running and there is a next call, stopping workflow with error""".format(step.name))
-            w_superclass.set_status(wf_states.ERROR)
+            w_superclass.set_state(wf_states.ERROR)
             
             return False
     elif step.nextcall==wf_default_call:
@@ -208,15 +208,15 @@ def advance_workflow(w_superclass, step):
             w.append_to_report("ERROR ! This workflow got an error in the {0} method, we report down the stack trace".format(step.nextcall))
             w.append_to_report("full traceback: {0}".format(traceback.format_exc()))
             
-            w.get_step(step.nextcall).set_status(wf_states.ERROR)
-            w.set_status(wf_states.ERROR)
+            w.get_step(step.nextcall).set_state(wf_states.ERROR)
+            w.set_state(wf_states.ERROR)
             
             return False
     else:
         
         logger.error("Step: {0} ERROR, no nextcall".format(step.name))
         w.append_to_report("Step: {0} ERROR, no nextcall".format(step.name))
-        w.set_status(wf_states.ERROR)
+        w.set_state(wf_states.ERROR)
 
         return False
 

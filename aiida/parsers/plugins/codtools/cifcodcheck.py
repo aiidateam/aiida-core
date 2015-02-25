@@ -13,7 +13,7 @@ __version__ = "0.3.0"
 
 class CifcodcheckParser(CiffilterParser):
     """
-    Specific parser for the output of cif_cod_tools script.
+    Specific parser for the output of cif_cod_check script.
     """
     def _check_calc_compatibility(self,calc):
         from aiida.common.exceptions import ParsingError

@@ -317,7 +317,7 @@ def submit_jobs():
                         pass
                     logger_extra = get_dblogger_extra(calc)
                     execlogger.error("Submission of calc {} failed, "
-                                     "computer pk={} ({}) is not configured "
+                                     "computer pk= {} ({}) is not configured "
                                      "for aiidauser {}".format(
                                          calc.pk, dbcomputer.pk,
                                          dbcomputer.name, aiidauser.email), 

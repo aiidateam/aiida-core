@@ -21,6 +21,9 @@ from the package can be obtained by invoking commands with ``--help`` and
     requirements and IUCr data validation criteria (Version: 2000.06.09,
     ftp://ftp.iucr.ac.uk/pub/dvntests or ftp://ftp.iucr.org/pub/dvntests)
 
+* cif_cod_numbers
+    Find COD numbers for the .cif files in given directories of file lists.
+
 * cif_correct_tags
     Correct misspelled tags in a CIF file.
 
@@ -224,4 +227,5 @@ Plugins
    ciffilter
    cifcellcontents
    cifcodcheck
+   cifcodnumbers
    cifsplitprimitive

@@ -1147,7 +1147,7 @@ class TestNodeBasic(AiidaTestCase):
         a = Node()
         with self.assertRaises(ModificationNotAllowed):
             a.add_comment('text',user=get_automatic_user())
-        self.assertEquals(a.get_comments_tuple(),[])
+        self.assertEquals(a.get_comments(),[])
         a.store()
         before = timezone.now()
         time.sleep(1) # I wait 1 second because MySql time precision is 1 sec
@@ -1156,17 +1156,43 @@ class TestNodeBasic(AiidaTestCase):
         time.sleep(1)
         after = timezone.now()
 
-        comments = a.get_comments_tuple()
+        comments = a.get_comments()
         
-        times = [i[2] for i in comments]
+        times = [i['mtime'] for i in comments]
         for time in times:
             self.assertTrue(time > before)
             self.assertTrue(time < after )
 
-        self.assertEquals([(i[0], i[3]) for i in comments],
+        self.assertEquals([(i['user__email'], i['content']) for i in comments],
                           [(self.user.email, 'text'),
                            (self.user.email, 'text2'),])
-        
+
+
+    def test_load_nodes(self):
+        """
+        Test for load_node() function.
+        """
+        from aiida.orm import load_node
+        from aiida.common.exceptions import NotExistent
+        a = Node()
+        a.store()
+
+        self.assertEquals(a.pk,load_node(node_id=a.pk).pk)
+        self.assertEquals(a.pk,load_node(node_id=a.uuid).pk)
+        self.assertEquals(a.pk,load_node(pk=a.pk).pk)
+        self.assertEquals(a.pk,load_node(uuid=a.uuid).pk)
+
+        with self.assertRaises(ValueError):
+            load_node(node_id=a.pk,pk=a.pk)
+        with self.assertRaises(ValueError):
+            load_node(pk=a.pk,uuid=a.uuid)
+        with self.assertRaises(ValueError):
+            load_node(pk=a.uuid)
+        with self.assertRaises(NotExistent):
+            load_node(uuid=a.pk)
+        with self.assertRaises(ValueError):
+            load_node()
+
         
 class TestSubNodesAndLinks(AiidaTestCase):
 

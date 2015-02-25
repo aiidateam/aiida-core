@@ -138,9 +138,9 @@ class Node(object):
         try:
             node = DbNode.objects.get(pk=pk).get_aiida_class()
         except ObjectDoesNotExist:
-            raise NotExistent("No entry with pk={} found".format(pk))
+            raise NotExistent("No entry with pk= {} found".format(pk))
         if not isinstance(node, cls):
-            raise NotExistent("pk={} is not an instance of {}".format(
+            raise NotExistent("pk= {} is not an instance of {}".format(
                 pk,cls.__name__))        
         return node
     
@@ -257,9 +257,9 @@ class Node(object):
     
     def __str__(self):
         if self._to_be_stored:
-            return "uuid={} (unstored)".format(self.uuid)
+            return "uuid: {} (unstored)".format(self.uuid)
         else:
-            return "uuid={} (pk={})".format(self.uuid, self.pk)
+            return "uuid: {} (pk: {})".format(self.uuid, self.pk)
 
     def _init_internal_params(self):
         """
@@ -815,7 +815,7 @@ class Node(object):
                 if k in input_list_keys:
                     raise InternalError("There exist a link with the same name "
                         "'{}' both in the DB and in the internal "
-                        "cache for node pk={}!".format(k, self.pk))
+                        "cache for node pk= {}!".format(k, self.pk))
                 inputs_list.append((k, v))
         
         if type is None:
@@ -1181,53 +1181,80 @@ class Node(object):
                                  user=user,
                                  content=content)
 
-    def get_comments_tuple(self):
+    def get_comments(self,pk=None):
         """
-        Return a sorted list of tuples, one for each comment associated to
-        the node.
+        Return a sorted list of comment values, one for each comment associated
+        to the node.
         
-        :return: the list of comments, sorted by date; each element of the 
-            list is a tuple in the format
-            (email, ctime, mtime, content)
+        :param pk: integer or list of integers. If it is specified, returns the 
+            comment values with desired pks. (pk refers to DbComment.pk) 
+        :return: the list of comments, sorted by pk; each element of the 
+            list is a dictionary, containing (pk, email, ctime, mtime, content)
         """
         from aiida.djsite.db.models import DbComment
-
-        return list(DbComment.objects.filter(dbnode=self._dbnode).order_by(
-            'ctime').values_list(
-            'user__email', 'ctime', 'mtime', 'content'))
         
-    def _update_comment(self,new_field,index,user):
+        if pk is not None:
+            try:
+                correct = all([isinstance(_,int) for _ in pk])
+                if not correct:
+                    raise ValueError('pk must be an integer or a list of integers')
+            except TypeError:
+                if not isinstance(pk,int):
+                    raise ValueError('pk must be an integer or a list of integers')
+            return list(DbComment.objects.filter(dbnode=self._dbnode,pk=pk
+                        ).order_by('pk').values('pk','user__email',
+                                                   'ctime','mtime','content'))
+            
+        return list(DbComment.objects.filter(dbnode=self._dbnode).order_by(
+             'pk').values('pk','user__email','ctime','mtime','content'))
+        
+    def _get_dbcomments(self,pk=None):
+        """
+        Return a sorted list of DbComment associated with the Node.
+        :param pk: integer or list of integers. If it is specified, returns the 
+                   comment values with desired pks. (pk refers to DbComment.pk) 
+        :return: the list of DbComment, sorted by pk.
+        """
+        from aiida.djsite.db.models import DbComment
+        
+        if pk is not None:
+            try:
+                correct = all([isinstance(_,int) for _ in pk])
+                if not correct:
+                    raise ValueError('pk must be an integer or a list of integers')
+                return list(DbComment.objects.filter(dbnode=self._dbnode,pk__in=pk).order_by('pk'))
+            except TypeError:
+                if not isinstance(pk,int):
+                    raise ValueError('pk must be an integer or a list of integers')
+                return list(DbComment.objects.filter(dbnode=self._dbnode,pk=pk).order_by('pk'))
+            
+        return list(DbComment.objects.filter(dbnode=self._dbnode).order_by('pk'))
+        
+    def _update_comment(self,new_field,comment_pk,user):
         """
         Function called by verdi comment update
         """
         from aiida.djsite.db.models import DbComment
         
-        comment = DbComment.objects.filter(dbnode=self._dbnode
-                                           ).order_by('ctime')[index]
+        comment = list(DbComment.objects.filter(dbnode=self._dbnode,
+                                                pk=comment_pk, user=user))[0]
         
-        if not isinstance(new_field,str):
+        if not isinstance(new_field,basestring):
             raise ValueError("Non string comments are not accepted")
         
-        if str(user) != str(comment.user.email):
-            raise ModificationNotAllowed(
-               "Only user {} can modify the comment".format(comment.user.email))
+        if not comment:
+            raise NotExistent("Found no comment for user {} and pk {}".format(
+                                                               user,comment_pk))
         
         comment.content = new_field
         comment.save()
     
-    def _remove_comment(self,index,user):
+    def _remove_comment(self,comment_pk,user):
         """
         Function called by verdi comment remove
         """
         from aiida.djsite.db.models import DbComment
-        
-        comment = DbComment.objects.filter(dbnode=self._dbnode
-                                           ).order_by('ctime')[index]
-        
-        if str(user) != str(comment.user.email):
-            raise ModificationNotAllowed(
-               "Only user {} can modify the comment".format(comment.user.email))
-        
+        comment = DbComment.objects.filter(dbnode=self._dbnode,pk=comment_pk)[0]
         comment.delete()
         
     def _increment_version_number_db(self):
@@ -1443,7 +1470,7 @@ class Node(object):
 
         if not self._to_be_stored:
             raise ModificationNotAllowed(
-                "Node with pk={} was already stored".format(self.pk))
+                "Node with pk= {} was already stored".format(self.pk))
 
         # For each parent, check that all its inputs are stored
         for link in self._inputlinks_cache:
@@ -1529,7 +1556,7 @@ class Node(object):
             
         if self._to_be_stored:
             raise ModificationNotAllowed(
-                "Node with pk={} is not stored yet".format(self.pk))
+                "Node with pk= {} is not stored yet".format(self.pk))
 
         with context_man:  
             # This raises if there is an unstored node.
@@ -1630,7 +1657,7 @@ class Node(object):
             
         else:
             raise ModificationNotAllowed(
-                "Node with pk={} was already stored".format(self.pk))
+                "Node with pk= {} was already stored".format(self.pk))
         
         # Set up autogrouping used be verdi run
         autogroup = aiida.orm.autogroup.current_autogroup

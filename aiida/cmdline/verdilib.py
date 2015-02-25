@@ -221,12 +221,13 @@ class Install(VerdiCommand):
     This command creates the ~/.aiida folder in the home directory 
     of the user, interactively asks for the database settings and
     the repository location, does a setup of the daemon and runs
-    a syncdb command to create/setup the database.
+    a migrate command to create/setup the database.
     """
     def run(self,*args):
         import readline
         from aiida import load_dbenv
-        from aiida.common.setup import create_base_dirs, create_configuration        
+        from aiida.common.setup import (create_base_dirs, create_configuration,
+                                        set_default_profile)        
 
         cmdline_args = list(args)
         
@@ -243,20 +244,27 @@ class Install(VerdiCommand):
             print >> sys.stderr, ", ".join(cmdline_args)
             sys.exit(1)
         
+        # create the directories to store the configuration files
         create_base_dirs()
+        
+        # ask and store the configuration of the DB
         try:
-            create_configuration()
+            create_configuration(profile='default')
         except ValueError as e:
             print >> sys.stderr, "Error during configuration: {}".format(e.message)
             sys.exit(1)
-
+        
+        # set default DB profiles
+        set_default_profile('verdi','default')
+        set_default_profile('daemon','default')
+        
         if only_user_config:
-            print "Only user configuration requested, skipping the syncdb command"
+            print "Only user configuration requested, skipping the migrate command"
         else:
-            print "Executing now a syncdb command..."
-            # --noinput so that it does not ask for input, and does not ask
-            # to create a default user (managed below, instead)
-            pass_to_django_manage([execname, 'syncdb', '--noinput'])
+            print "Executing now a migrate command..."
+            # For the moment, the verdi install works only for the default 
+            # profile, so we don't chose it, but in the future one should
+            pass_to_django_manage([execname, 'migrate'])
 
         # I create here the default user
         print "Loading new environment..."
@@ -274,8 +282,7 @@ class Install(VerdiCommand):
                                                    password='',
                                                    first_name="AiiDA",
                                                    last_name="Daemon")
-
-        email = email=get_configured_user_email()
+        email = get_configured_user_email()
         print "Starting user configuration for {}...".format(email)
         if email == DEFAULT_AIIDA_USER:
             print "You set up AiiDA using the default Daemon email ({}),".format(email)
@@ -292,36 +299,12 @@ class Install(VerdiCommand):
         """
         print "" 
 
-    
-#class SyncDB(VerdiCommand):
-#    """
-#    Create new tables in the database
-#
-#    This command calls the Django 'manage.py syncdb' command to create
-#    new tables in the database, and possibly install triggers.
-#    Pass a --migrate option to automatically also migrate the tables
-#    managed using South migrations.
-#    """
-#
-#    def run(self,*args):
-#        pass_to_django_manage([execname, 'syncdb'] + list(args))
-
-#class Migrate(VerdiCommand):
-#    """
-#    Migrate tables and data using django-south
-#    
-#    This command calls the Django 'manage.py migrate' command to migrate
-#    tables managed by django-south to their most recent version.
-#    """
-#    def run(self,*args):
-#        pass_to_django_manage([execname, 'migrate'] + list(args))
 
 class Shell(VerdiCommand):
     """
-    Run the interactive shell with the Django environment
+    Run the interactive shell with the AiiDA environment loaded.
 
-    This command runs the 'manage.py shell' command, that opens a
-    IPython shell with the Django environment loaded.
+    This command opens an ipython shell with the AiiDA environment loaded.
     """
     def run(self,*args):
         pass_to_django_manage([execname, 'customshell'] + list(args))

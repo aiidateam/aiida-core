@@ -63,9 +63,9 @@ class Calculation(VerdiCommandWithSubcommands):
     def calculation_gotocomputer(self, *args):
         """
         Open a shell to the calc folder on the cluster
-    
-        This command runs the 'manage.py shell' command, that opens a
-        IPython shell with the Django environment loaded.
+        
+        This command opens a ssh connection to the scratch folder on the remote
+        computer on which the calculation is being/has been executed.
         """
         from aiida.common.exceptions import NotExistent
         from aiida.orm import JobCalculation

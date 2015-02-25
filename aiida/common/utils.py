@@ -8,15 +8,6 @@ __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausan
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
 __version__ = "0.3.0"
 
-def load_django():
-    import warnings
-    from aiida.djsite.utils import load_dbenv
-    
-    warnings.warn("The load_django function has been "
-        "replaced by the aiida.load_dbenv() function.", DeprecationWarning)
-    
-    load_dbenv()
-
 class classproperty(object):
     """
     A class that, when used as a decorator, works as if the 
@@ -57,18 +48,18 @@ def get_repository_folder(subfolder=None):
     Return the top folder of the local repository.
     """
     try:
-        from aiida.djsite.settings.settings import LOCAL_REPOSITORY
-        if not os.path.isdir(LOCAL_REPOSITORY):
+        from aiida.djsite.settings.settings import REPOSITORY_PATH
+        if not os.path.isdir(REPOSITORY_PATH):
             raise ImportError
     except ImportError:
         raise ConfigurationError(
-            "The LOCAL_REPOSITORY variable is not set correctly.")
+            "The REPOSITORY_PATH variable is not set correctly.")
     if subfolder is None:
-        return os.path.abspath(LOCAL_REPOSITORY)
+        return os.path.abspath(REPOSITORY_PATH)
     elif subfolder == "sandbox":
-        return os.path.abspath(os.path.join(LOCAL_REPOSITORY,'sandbox'))
+        return os.path.abspath(os.path.join(REPOSITORY_PATH,'sandbox'))
     elif subfolder == "repository":
-        return os.path.abspath(os.path.join(LOCAL_REPOSITORY,'repository'))
+        return os.path.abspath(os.path.join(REPOSITORY_PATH,'repository'))
     else:
         raise ValueError("Invalid 'subfolder' passed to "
                          "get_repository_folder: {}".format(subfolder))

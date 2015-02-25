@@ -20,7 +20,7 @@ db_test_list = {
     'qepw': 'aiida.djsite.db.subtests.quantumespressopw',
     'codtools': 'aiida.djsite.db.subtests.codtools',
     'parsers': 'aiida.djsite.db.subtests.parsers',
-    'port': 'aiida.djsite.db.subtests.port',
+    'export_and_import': 'aiida.djsite.db.subtests.export_and_import' }
     'workflows': 'aiida.djsite.db.subtests.workflows',
     }
 

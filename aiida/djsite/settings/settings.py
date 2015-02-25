@@ -3,7 +3,11 @@
 import sys, os
 from aiida.common.exceptions import ConfigurationError
 # get_property is used to read properties stored in the config json
-from aiida.common.setup import get_config, get_secret_key, get_property
+from aiida.common.setup import (get_config, get_secret_key, get_property, 
+                                get_profile_config, get_default_profile,
+                                parse_repository_uri)
+import aiida.common.setup
+from aiida.djsite.settings import settings_profile
 # Assumes that parent directory of aiida is root for
 # things like templates/, SQL/ etc.  If not, change what follows...
 
@@ -18,16 +22,22 @@ sys.path = [BASE_DIR] + sys.path
 try:
     confs = get_config()
 except ConfigurationError:
-    raise ConfigurationError("Please run the AiiDA Installation")
-          
+    raise ConfigurationError("Please run the AiiDA Installation, no config found")
+
+if settings_profile.AIIDADB_PROFILE is None:
+    raise ConfigurationError("AIIDADB_PROFILE not defined, did you load django"
+                             "through the AiiDA load_dbenv()?")
+
+profile_conf = get_profile_config(settings_profile.AIIDADB_PROFILE,conf_dict = confs)
+
 #put all database specific portions of settings here
-DBENGINE = confs.get('AIIDADB_ENGINE', '')
-DBNAME = confs.get('AIIDADB_NAME', '')
-DBUSER = confs.get('AIIDADB_USER', '')
-DBPASS = confs.get('AIIDADB_PASS', '')
-DBHOST = confs.get('AIIDADB_HOST', '')
-DBPORT = confs.get('AIIDADB_PORT', '')
-LOCAL_REPOSITORY = confs.get('AIIDADB_REPOSITORY', '')
+DBENGINE = profile_conf.get('AIIDADB_ENGINE', '')
+DBNAME = profile_conf.get('AIIDADB_NAME', '')
+DBUSER = profile_conf.get('AIIDADB_USER', '')
+DBPASS = profile_conf.get('AIIDADB_PASS', '')
+DBHOST = profile_conf.get('AIIDADB_HOST', '')
+DBPORT = profile_conf.get('AIIDADB_PORT', '')
+REPOSITORY_URI = profile_conf.get('AIIDADB_REPOSITORY_URI', '')
 
 DATABASES = {
     'default' : {
@@ -46,27 +56,31 @@ DATABASES = {
 if 'sqlite' in DBENGINE:
     DATABASES['default']['OPTIONS'] = {'timeout': 60}
 
-## Checks on the LOCAL_REPOSITORY
+## Checks on the REPOSITORY_* variables
 try:
-    LOCAL_REPOSITORY
+    REPOSITORY_URI
 except NameError:
     raise ConfigurationError(
-        "Please setup correctly the LOCAL_REPOSITORY variable to "
+        "Please setup correctly the REPOSITORY_URI variable to "
         "a suitable directory on which you have write permissions.")
-    
-# Normalize LOCAL_REPOSITORY to its absolute path
-LOCAL_REPOSITORY=os.path.abspath(LOCAL_REPOSITORY)
-if not os.path.isdir(LOCAL_REPOSITORY):
-    try:
-        # Try to create the local repository folders with needed parent
-        # folders
-        os.makedirs(LOCAL_REPOSITORY)
-    except OSError:
-        # Possibly here due to permission problems
-        raise ConfigurationError(
-            "Please setup correctly the LOCAL_REPOSITORY variable to "
-            "a suitable directory on which you have write permissions. "
-            "(I was not able to create the directory.)")
+
+# Note: this variable might disappear in the future
+REPOSITORY_PROTOCOL, REPOSITORY_PATH = parse_repository_uri(REPOSITORY_URI)
+
+if REPOSITORY_PROTOCOL == 'file':
+    if not os.path.isdir(REPOSITORY_PATH):
+        try:
+            # Try to create the local repository folders with needed parent
+            # folders
+            os.makedirs(REPOSITORY_PATH)
+        except OSError:
+            # Possibly here due to permission problems
+            raise ConfigurationError(
+                "Please setup correctly the REPOSITORY_PATH variable to "
+                "a suitable directory on which you have write permissions. "
+                "(I was not able to create the directory.)")
+else:
+    raise ConfigurationError("Only file protocol supported")
 
 # CUSTOM USER CLASS
 AUTH_USER_MODEL = 'db.DbUser'
@@ -77,7 +91,9 @@ SECRET_KEY = get_secret_key()
         
 # Usual Django settings starts here.............
 
-DEBUG = True
+# Keep it to False! Otherwise every query is stored 
+# in memory and looks like a memory leak with celery
+DEBUG = False
 TEMPLATE_DEBUG = DEBUG
 
 ADMINS = (
@@ -91,7 +107,7 @@ MANAGERS = ADMINS
 # although not all choices may be available on all operating systems.
 # In a Windows environment this must be set to your system time zone.
 try:
-    TIME_ZONE = confs['TIMEZONE']
+    TIME_ZONE = profile_conf['TIMEZONE']
 except KeyError:
     raise ConfigurationError("You did not set your timezone during the "
                              "verdi install phase.")
@@ -128,7 +144,7 @@ MEDIA_URL = ''
 # Don't put anything in this directory yourself; store your static files
 # in apps' "static/" subdirectories and in STATICFILES_DIRS.
 # Example: "/home/media/media.lawrence.com/static/"
-STATIC_ROOT = ''
+STATIC_ROOT = None
 
 # URL prefix for static files.
 # Example: "http://media.lawrence.com/static/"
@@ -158,10 +174,7 @@ TEMPLATE_LOADERS = (
 
 MIDDLEWARE_CLASSES = (
     'django.middleware.common.CommonMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
     # Uncomment the next line for simple clickjacking protection:
     # 'django.middleware.clickjacking.XFrameOptionsMiddleware',
 )
@@ -188,6 +201,8 @@ TEMPLATE_CONTEXT_PROCESSORS = (
     "django.core.context_processors.request",
 )
 
+TEST_RUNNER = 'django.test.runner.DiscoverRunner'
+
 INSTALLED_APPS = (
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -197,7 +212,6 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     # Uncomment the next line to enable the admin:
     'django.contrib.admin',
-#    'south',
     # Uncomment the next line to enable admin documentation:
     # 'django.contrib.admindocs',
     'aiida.djsite.db',
@@ -274,21 +288,6 @@ LOGGING = {
         },
 }
 
-# We don't need to run the South migrations every time we want to run the
-# test suite. This leads to massive speedup.
-# However, we have to remember to attach operations that expect the tables
-# to be created (as the creation of the triggers) either to:
-# - south->post_migrate if this is not a test
-# - django->post_syncdb if this is a test (this is set in
-#     cmdline.commands.verdilib.DeveloperTest.run)
-SOUTH_TESTS_MIGRATE = False
-# This is only a string: call
-# aiida.djsite.utils.get_after_database_creation_signal
-# to get the proper signal
-# Uncomment next line if using south
-#AFTER_DATABASE_CREATION_SIGNAL = 'post_migrate'
-AFTER_DATABASE_CREATION_SIGNAL = 'post_syncdb'
-
 # VERSION TO USE FOR DBNODES.
 AIIDANODES_UUID_VERSION=4
 
@@ -347,3 +346,4 @@ CELERYBEAT_SCHEDULE = {
         'schedule': timedelta(seconds=5),
         },
 }
+

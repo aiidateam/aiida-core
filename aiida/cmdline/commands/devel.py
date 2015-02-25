@@ -94,6 +94,7 @@ class Devel(VerdiCommandWithSubcommands):
             'delproperty': (self.run_delproperty, self.complete_properties),
             'describeproperties': (self.run_describeproperties, self.complete_none),
             'listproperties': (self.run_listproperties, self.complete_none),
+            'listislands': (self.run_listislands, self.complete_none),
             'play': (self.run_play, self.complete_none),
             'getresults': (self.calculation_getresults, self.complete_none),
             }
@@ -367,6 +368,24 @@ class Devel(VerdiCommandWithSubcommands):
             except KeyError:
                 pass
 
+    def run_listislands(self, *args):
+        """
+        List all AiiDA nodes, that have no parents and children.
+        """
+        load_dbenv()
+        from django.db.models import Q
+        from aiida.orm.node import Node
+        from aiida.djsite.utils import get_automatic_user
+
+        q_object = Q(user=get_automatic_user())
+        q_object.add(Q(parents__isnull=True), Q.AND)
+        q_object.add(Q(children__isnull=True), Q.AND)
+
+        node_list = Node.query(q_object).distinct().order_by('ctime')
+        print "ID\tclass"
+        for node in node_list:
+            print "{}\t{}".format(node.pk,node.__class__.__name__)
+
     def run_getproperty(self, *args):
         """
         Get a global AiiDA property from the config file in .aiida.
@@ -435,8 +454,8 @@ class Devel(VerdiCommandWithSubcommands):
     def run_tests(self,*args):
         import unittest
         import tempfile
-        from aiida.djsite.settings import settings
         from aiida.common.setup import get_property
+        from aiida.djsite.settings import settings_profile
 
         db_test_list = []
         test_folders = []
@@ -493,40 +512,20 @@ class Devel(VerdiCommandWithSubcommands):
 
             # TODO: allow the use of this flag
             if get_property('tests.use_sqlite'):
-                settings.DATABASES['default'] = {'ENGINE':
-                                                 'django.db.backends.sqlite3',
-                                                 'NAME': ":memory:"}
-            ###################################################################
-            # IMPORTANT! Choose a different repository location, otherwise 
-            # real data will be destroyed during tests!!
-            # The location is automatically created with the tempfile module
-            # Typically, under linux this is created under /tmp
-            # and is not deleted at the end of the run.
-            settings.LOCAL_REPOSITORY = tempfile.mkdtemp(prefix='aiida_repository_')
-            # I write the local repository on stderr, so that the user running
-            # the tests knows where the files are being stored
-            print >> sys.stderr, "########################################"
-            print >> sys.stderr, "# LOCAL AiiDA REPOSITORY FOR TESTS:"
-            print >> sys.stderr, "# {}".format(settings.LOCAL_REPOSITORY)
-            print >> sys.stderr, "########################################"
-            # Here. I set the correct signal to attach to when we want to
-            # perform an operation after all tables are created (e.g., creation
-            # of the triggers).
-            # By default, in djsite/settings/settings.py this is south->post_migrate,
-            # here we set it to django->post_syncdb because we have set
-            # SOUTH_TESTS_MIGRATE = False
-            # in the settings.
-            settings.AFTER_DATABASE_CREATION_SIGNAL = 'post_syncdb'
-            
-            ##################################################################
-            ## Only now I set the aiida_test_list variable so that tests can run
-            settings.aiida_test_list = db_test_list
+                profile_prefix = 'testsqlite_'
+            else:
+                profile_prefix = 'testsqlite_'
+
+            profile = "{}{}".format(profile_prefix,
+                                    settings_profile.AIIDADB_PROFILE if 
+                                    settings_profile.AIIDADB_PROFILE is not None else 'default')
+            settings_profile.aiida_test_list = db_test_list
             
             print "v"*75
             print (">>> Tests for django db application   "
                    "                                  <<<")
             print "^"*75            
-            pass_to_django_manage([execname, 'test', 'db'])
+            pass_to_django_manage([execname, 'test', 'db'], profile=profile)
 
     def complete_tests(self, subargs_idx, subargs):
         """

@@ -48,6 +48,9 @@ class BasePwCpInputGenerator(object):
     
     # in restarts, it will copy the previous folder in the following one 
     _restart_copy_to = _OUTPUT_SUBFOLDER
+
+    # Default verbosity; change in subclasses
+    _default_verbosity = 'high'
     
     # To be specified in the subclass:
 #    _automatic_namelists = {
@@ -250,7 +253,7 @@ class BasePwCpInputGenerator(object):
         input_params['CONTROL']['prefix'] = self._PREFIX
 
         input_params['CONTROL']['verbosity'] = input_params['CONTROL'].get(
-            'verbosity', 'high') # Set to high if not specified
+            'verbosity', self._default_verbosity) # Set to high if not specified
 
         # ============ I prepare the input site data =============
         # ------------ CELL_PARAMETERS -----------
@@ -663,7 +666,7 @@ class BasePwCpInputGenerator(object):
 
         self.use_parent_folder(remotedata)
 
-    def create_restart(self,restart_if_failed=False,
+    def create_restart(self,force_restart=False,
                 parent_folder_symlink=None):
         """
         Function to restart a calculation that was not completed before 
@@ -673,16 +676,18 @@ class BasePwCpInputGenerator(object):
         c2.store_all()
         c2.submit()
         
-        :param bool restart_if_failed: restart if parent is failed.
+        :param bool force_restart: restart also if parent is not in FINISHED 
+        state (e.g. FAILED, IMPORTED, etc.). Default=False.
         """
         from aiida.common.datastructures import calc_states
         
         if self.get_state() != calc_states.FINISHED:
-            if restart_if_failed:
+            if force_restart:
                 pass
             else:
                 raise InputValidationError("Calculation to be restarted must be "
-                            "in the {} state".format(calc_states.FINISHED) )
+                            "in the {} state. Otherwise, use the force_restart "
+                            "flag".format(calc_states.FINISHED) )
         
         if parent_folder_symlink is None:
             parent_folder_symlink = self._default_symlink_usage
@@ -702,12 +707,12 @@ class BasePwCpInputGenerator(object):
         
         c2 = self.copy()
         
-        if not 'Restart' in c2.label:
-            labelstring = c2.label + " Restart of {} {}.".format(
-                                        self.__class__.__name__,self.pk)
-        else:
-            labelstring = " Restart of {} {}.".format(self.__class__.__name__,self.pk)
-        c2.label = labelstring.lstrip()
+        #if not 'Restart' in c2.label:
+        #    labelstring = c2.label + " Restart of {} {}.".format(
+        #                                self.__class__.__name__,self.pk)
+        #else:
+        #    labelstring = " Restart of {} {}.".format(self.__class__.__name__,self.pk)
+        #c2.label = labelstring.lstrip()
         
         # set the new links
         c2.use_parameters(inp_dict)

@@ -8,6 +8,115 @@ __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausan
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
 __version__ = "0.3.0"
 
+def prompt_for_computer_configuration(computer):
+    import inspect, readline
+    from aiida.orm.computer import Computer as Computer
+    from aiida.common.exceptions import ValidationError
+    
+    for internal_name, name, desc, multiline in (
+      Computer._conf_attributes):
+        # Check if I should skip this entry
+        shouldcall_name = '_shouldcall_{}'.format(internal_name)
+        try:
+            shouldcallfunc = dict(inspect.getmembers(
+               computer))[shouldcall_name]
+            shouldcall = shouldcallfunc()
+        except KeyError:
+            shouldcall = True
+        if not shouldcall:
+            # Call cleanup code, if present
+            cleanup_name = '_cleanup_{}'.format(internal_name)
+            try:
+                cleanup = dict(inspect.getmembers(
+                    computer))[cleanup_name]
+                cleanup()
+            except KeyError:
+                # No cleanup function: this is not a problem, simply
+                # no cleanup is needed
+                pass
+            
+            # Skip this question
+            continue
+
+        getter_name = '_get_{}_string'.format(internal_name)
+        try:
+            getter = dict(inspect.getmembers(
+               computer))[getter_name]
+        except KeyError:
+            print >> sys.stderr, ("Internal error! "
+                "No {} getter defined in Computer".format(getter_name))
+            sys.exit(1)
+        previous_value = getter()
+            
+        setter_name = '_set_{}_string'.format(internal_name)
+        try:
+            setter = dict(inspect.getmembers(
+               computer))[setter_name]
+        except KeyError:
+            print >> sys.stderr, ("Internal error! "
+                "No {} setter defined in Computer".format(setter_name))
+            sys.exit(1)
+        
+        valid_input = False
+        while not valid_input:
+            if multiline:
+                newlines = []
+                print "=> {}: ".format(name)
+                print "   # This is a multiline input, press CTRL+D on a"
+                print "   # empty line when you finish"
+
+                try:
+                    for l in previous_value.splitlines():                        
+                        while True: 
+                            readline.set_startup_hook(lambda:
+                                readline.insert_text(l))
+                            input_txt = raw_input()
+                            if input_txt.strip() == '?':
+                                print ["  > {}".format(descl) for descl
+                                       in "HELP: {}".format(desc).split('\n')]
+                                continue
+                            else:
+                                newlines.append(input_txt)
+                                break
+                    
+                    # Reset the hook (no default text printed)
+                    readline.set_startup_hook()
+                    
+                    print "   # ------------------------------------------"
+                    print "   # End of old input. You can keep adding     "
+                    print "   # lines, or press CTRL+D to store this value"
+                    print "   # ------------------------------------------"
+                    
+                    while True: 
+                        input_txt = raw_input()
+                        if input_txt.strip() == '?':
+                            print "\n".join(["  > {}".format(descl) for descl
+                                   in "HELP: {}".format(desc).split('\n')])
+                            continue
+                        else:
+                            newlines.append(input_txt)
+                except EOFError:
+                    #Ctrl+D pressed: end of input.
+                    pass
+                
+                input_txt = "\n".join(newlines)
+                
+            else: # No multiline
+                readline.set_startup_hook(lambda: readline.insert_text(
+                    previous_value))
+                input_txt = raw_input("=> {}: ".format(name))
+                if input_txt.strip() == '?':
+                    print "HELP:", desc
+                    continue
+
+            try:
+                setter(input_txt)
+                valid_input = True
+            except ValidationError as e:
+                print >> sys.stderr, "Invalid input: {}".format(e.message)
+                print >> sys.stderr, "Enter '?' for help".format(e.message)
+
+
 class Computer(VerdiCommandWithSubcommands):
     """
     Setup and manage computers to be used
@@ -21,7 +130,8 @@ class Computer(VerdiCommandWithSubcommands):
         self.valid_subcommands = {
             'list': (self.computer_list, self.complete_none),
             'show' : (self.computer_show, self.complete_computers),
-            'setup': (self.computer_setup, self.complete_computers),
+            'setup': (self.computer_setup, self.complete_none),
+            'update': (self.computer_update, self.complete_computers),
             'enable': (self.computer_enable, self.complete_computers),
             'disable': (self.computer_disable, self.complete_computers),
             'rename': (self.computer_rename, self.complete_computers),
@@ -179,6 +289,68 @@ class Computer(VerdiCommandWithSubcommands):
             sys.exit(1)    
         print computer.full_text_info
         
+    def computer_update(self, *args):
+        """
+        Update an existing computer
+        """
+        import argparse
+        from aiida.common.exceptions import NotExistent
+        from aiida.orm.computer import Computer
+        load_dbenv()
+        from aiida.djsite.db.models import DbNode
+        
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Update a computer')
+        # The default states are those that are shown if no option is given
+        parser.add_argument('computer_name', help="The name of the computer")
+        parsed_args = parser.parse_args(args)
+        computer_name = parsed_args.computer_name
+        
+        try:
+            computer = Computer.get(computer_name)
+        except NotExistent:
+            print "No computer {} was found".format(computer_name)
+            sys.exit(1)
+        
+        calculation_on_computer = DbNode.objects.filter(dbcomputer__name=computer_name,
+                                                        type__startswith='calculation')
+        if calculation_on_computer:
+            # Note: this is an artificial comment.
+            # If you comment the following lines, you will be able to overwrite
+            # the old computer anyway, at your own risk.
+            print "You cannot modify a computer, after you run some calculations on it."
+            print "Disable this computer and set up a new one."
+            sys.exit(1)
+        
+        print "*"*75
+        print "WARNING! Modifying existing computer with name '{}'".format(computer_name)
+        print "Are you sure you want to continue? The UUID will remain the same!"
+        print "Continue only if you know what you are doing."
+        print "If you just want to rename a computer, use the 'verdi computer rename'"
+        print "command. In most cases, it is better to create a new computer."
+        print "Moreover, if you change the transport, you must also reconfigure"
+        print "each computer for each user!"
+        print "*"*75
+        print "Press [Enter] to continue, or [Ctrl]+C to exit."
+        raw_input()
+        
+        prompt_for_computer_configuration(computer)
+        
+        try:
+            computer.store()
+        except ValidationError as e:
+            print "Unable to store the computer: {}. Exiting...".format(e.message)
+            sys.exit(1)
+                
+        print "Computer '{}' successfully updated.".format(computer_name)
+        print "pk: {}, uuid: {}".format(computer.pk, computer.uuid)
+        print "(Note: machine_dependent transport parameters cannot be set via "
+        print "the command-line interface at the moment)"
+        
+        print "OK"
+        pass
+    
     def computer_setup(self, *args):
         """
         Setup a new or existing computer
@@ -208,132 +380,25 @@ class Computer(VerdiCommandWithSubcommands):
         
         try:
             computer = self.get_computer(name=computer_name)
-            print "*"*75
-            print "WARNING! Modifying existing computer with name '{}'".format(computer_name)
-            print "Are you sure you want to continue? The UUID will remain the same!"
-            print "Continue only if you know what you are doing."
-            print "If you just want to rename a computer, use the 'verdi computer rename'"
-            print "command. In most cases, it is better to create a new computer."
-            print "Moreover, if you change the transport, you must also reconfigure"
-            print "each computer for each user!"
-            print "*"*75
-            print "Press [Enter] to continue, or [Ctrl]+C to exit."
-            raw_input()
+            print "A computer called {} already exists.".format(computer_name)
+            print "Use 'verdi computer update' to update it, and be careful if"
+            print "you really want to modify a database entry!"
+            print "Now exiting..."
+            sys.exit(1)
         except NotExistent:
             computer = AiidaOrmComputer(name=computer_name)    
             print "Creating new computer with name '{}'".format(computer_name)
-                                                 
-        for internal_name, name, desc, multiline in (
-          AiidaOrmComputer._conf_attributes):
-            # Check if I should skip this entry
-            shouldcall_name = '_shouldcall_{}'.format(internal_name)
-            try:
-                shouldcallfunc = dict(inspect.getmembers(
-                   computer))[shouldcall_name]
-                shouldcall = shouldcallfunc()
-            except KeyError:
-                shouldcall = True
-            if not shouldcall:
-                # Call cleanup code, if present
-                cleanup_name = '_cleanup_{}'.format(internal_name)
-                try:
-                    cleanup = dict(inspect.getmembers(
-                        computer))[cleanup_name]
-                    cleanup()
-                except KeyError:
-                    # No cleanup function: this is not a problem, simply
-                    # no cleanup is needed
-                    pass
-                
-                # Skip this question
-                continue
-
-            getter_name = '_get_{}_string'.format(internal_name)
-            try:
-                getter = dict(inspect.getmembers(
-                   computer))[getter_name]
-            except KeyError:
-                print >> sys.stderr, ("Internal error! "
-                    "No {} getter defined in Computer".format(getter_name))
-                sys.exit(1)
-            previous_value = getter()
-                
-            setter_name = '_set_{}_string'.format(internal_name)
-            try:
-                setter = dict(inspect.getmembers(
-                   computer))[setter_name]
-            except KeyError:
-                print >> sys.stderr, ("Internal error! "
-                    "No {} setter defined in Computer".format(setter_name))
-                sys.exit(1)
-            
-            valid_input = False
-            while not valid_input:
-                if multiline:
-                    newlines = []
-                    print "=> {}: ".format(name)
-                    print "   # This is a multiline input, press CTRL+D on a"
-                    print "   # empty line when you finish"
-
-                    try:
-                        for l in previous_value.splitlines():                        
-                            while True: 
-                                readline.set_startup_hook(lambda:
-                                    readline.insert_text(l))
-                                input_txt = raw_input()
-                                if input_txt.strip() == '?':
-                                    print ["  > {}".format(descl) for descl
-                                           in "HELP: {}".format(desc).split('\n')]
-                                    continue
-                                else:
-                                    newlines.append(input_txt)
-                                    break
-                        
-                        # Reset the hook (no default text printed)
-                        readline.set_startup_hook()
-                        
-                        print "   # ------------------------------------------"
-                        print "   # End of old input. You can keep adding     "
-                        print "   # lines, or press CTRL+D to store this value"
-                        print "   # ------------------------------------------"
-                        
-                        while True: 
-                            input_txt = raw_input()
-                            if input_txt.strip() == '?':
-                                print "\n".join(["  > {}".format(descl) for descl
-                                       in "HELP: {}".format(desc).split('\n')])
-                                continue
-                            else:
-                                newlines.append(input_txt)
-                    except EOFError:
-                        #Ctrl+D pressed: end of input.
-                        pass
-                    
-                    input_txt = "\n".join(newlines)
-                    
-                else: # No multiline
-                    readline.set_startup_hook(lambda: readline.insert_text(
-                        previous_value))
-                    input_txt = raw_input("=> {}: ".format(name))
-                    if input_txt.strip() == '?':
-                        print "HELP:", desc
-                        continue
-
-                try:
-                    setter(input_txt)
-                    valid_input = True
-                except ValidationError as e:
-                    print >> sys.stderr, "Invalid input: {}".format(e.message)
-                    print >> sys.stderr, "Enter '?' for help".format(e.message)
+        
+        prompt_for_computer_configuration(computer)
         
         try:
             computer.store()
         except ValidationError as e:
             print "Unable to store the computer: {}. Exiting...".format(e.message)
             sys.exit(1)
-                
+        
         print "Computer '{}' successfully stored in DB.".format(computer_name)
-        print "pk={}, uuid={}".format(computer.pk, computer.uuid)
+        print "pk: {}, uuid: {}".format(computer.pk, computer.uuid)
         print "Note: before using it with AiiDA, configure it using the command"
         print "  verdi computer configure {}".format(computer_name)
         print "(Note: machine_dependent transport parameters cannot be set via "

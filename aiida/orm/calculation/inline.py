@@ -19,7 +19,7 @@ class InlineCalculation(Calculation):
 def make_inline(func):
     """
     This make_inline wrapper/decorator takes a function with specific
-    requirements, runs it and stores the result as a InlineCalculation node.
+    requirements, runs it and stores the result as an InlineCalculation node.
     It will also store all other nodes, including any possibly unstored
     input node! The return value of the wrapped calculation will also be
     slightly changed, see below.
@@ -28,16 +28,16 @@ def make_inline(func):
     
     * checks that the function name ends with the string ``'_inline'``
     * checks that each input parameter is a valid Data node
-      (can be stored on unstored)
+      (can be stored or unstored)
     * runs the actual function
     * gets the result values
     * checks that the result value is a dictionary, where the
       key are all strings and the values are all **unstored** 
       data nodes
-    * Creates an InlineCalculation node, links all the kwargs
+    * creates an InlineCalculation node, links all the kwargs
       as inputs and the returned nodes as outputs, using the
       keys as link labels
-    * Stores all the nodes (including, possibly, unstored input
+    * stores all the nodes (including, possibly, unstored input
       nodes given as kwargs)
     * returns a length-two tuple, where the first element is
       the InlineCalculation node, and the second is the dictionary
@@ -53,7 +53,7 @@ def make_inline(func):
     In this way, every time you call copy_inline, the wrapped version
     is actually called, and the return value will be a tuple with
     the InlineCalculation instance, and the returned dictionary. 
-    For instance, is ``s`` is a valid ``Data`` node, with the following
+    For instance, if ``s`` is a valid ``Data`` node, with the following
     lines::
     
         c, s_copy_dict = copy_inline(source=s)
@@ -74,7 +74,7 @@ def make_inline(func):
        def copy_inline(source):
           return {copy: source.copy()}   
     
-    This is a normal function, so call it you will normally do::
+    This is a normal function, so to call it you will normally do::
     
       s_copy_dict = copy_inline(s)
     
@@ -108,7 +108,7 @@ def make_inline(func):
          could change over time).
        * The function MUST NOT have side effects (creating
          files on the disk, adding entries to an external database,
-         ...)
+         ...).
 
     .. note:: The function will also store:
         

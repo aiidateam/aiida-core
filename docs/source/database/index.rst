@@ -283,16 +283,19 @@ password each time you use the script. It should look like (:download:`.pgpass<p
 where ``YOUR_DATABASE_PASSWORD`` is the password you set up for the database.
 
 .. note:: Do not forget to put this file in ~/ and to name it ``.pgpass``.
+   Remember also to give it the right permissions (read and write): ``chmod u+rw .pgpass``.
 
 To dump the database in a file automatically everyday, you can add the following script 
 :download:`backup-aiidadb-USERNAME<backup-aiidadb-USERNAME>` in ``/etc/cron.daily/``, which will
 launch the previous script once per day::
 
-    #/bin/bash
+    #!/bin/bash
     su USERNAME -c "/home/USERNAME/.aiida/backup_postgresql.sh"
 
 where all instances of ``USERNAME`` are replaced by your actual user name. The ``su USERNAME``
 makes the dumped file be owned by you rather than by ``root``.
+Remember to give the script the right permissions::
+    sudo chmod +x /etc/cron.daily/backup-aiidadb-USERNAME
 
 Finally make sure your database folder (``/home/USERNAME/.aiida/``) containing this dump file
 and the ``repository`` directory, is properly backed up by 
@@ -307,3 +310,17 @@ MySQL backup
 
 We do not have explicit instructions on how to back-up MySQL yet, but you
 can find plenty of information on Google.
+
+How to retrieve the database from a backup
+------------------------------------------
+
+PostgreSQL backup
+-----------------
+
+In order to retrieve the database from a backup, you have first to
+create a empty database following the instructions described above in
+"Setup instructions: PostgreSQL" except the ``verdi install``
+phase. Once that you have created your empty database with the same
+names of the backuped one, type the following command:: 
+
+    psql -h localhost -U aiida -d aiidadb -f aiidadb-backup.psql

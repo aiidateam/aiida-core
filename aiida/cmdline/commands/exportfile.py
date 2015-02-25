@@ -553,7 +553,7 @@ class Export(VerdiCommand):
             models.DbNode.objects.filter(pk__in=node_pk_list))
         missing_nodes = node_pk_list.difference(_.pk for _ in node_list)
         for pk in missing_nodes:
-            print >> sys.stderr, ("WARNING! Node with pk={} "
+            print >> sys.stderr, ("WARNING! Node with pk= {} "
                                   "not found, skipping.".format(pk))
         if parsed_args.computers is not None:
             computer_list = list(models.DbComputer.objects.filter(
@@ -561,7 +561,7 @@ class Export(VerdiCommand):
             missing_computers = set(parsed_args.computers).difference(
                 _.pk for _ in computer_list)
             for pk in missing_computers:
-                print >> sys.stderr, ("WARNING! Computer with pk={} "
+                print >> sys.stderr, ("WARNING! Computer with pk= {} "
                                       "not found, skipping.".format(pk))
         else:
             computer_list = []

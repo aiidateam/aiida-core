@@ -5,6 +5,7 @@ from aiida.cmdline.baseclass import (
     VerdiCommandRouter, VerdiCommandWithSubcommands)
 from aiida import load_dbenv
 from aiida.common.exceptions import MultipleObjectsError
+from aiida.cmdline.commands.node import _Label, _Description
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
@@ -20,7 +21,7 @@ class Data(VerdiCommandRouter):
     def __init__(self):
         """
         A dictionary with valid commands and functions to be called.
-        """        
+        """ 
         ## Add here the classes to be supported.
         self.routed_subcommands = {
             'upf': _Upf,
@@ -29,6 +30,8 @@ class Data(VerdiCommandRouter):
             'cif': _Cif,
             'trajectory': _Trajectory,
             'parameter': _Parameter,
+            'label': _Label,
+            'description': _Description,
             }
 
 class Listable(object):
@@ -141,14 +144,6 @@ class Visualizable(object):
     show_prefix = '_show_'
     show_parameters_postfix = '_parameters'
 
-    def complete_visualizers(self, subargs_idx, subargs):
-        """
-        Get a display-ready string, containing names of all possible
-        visualizers.
-        """
-        plugin_names = self.get_show_plugins().keys()
-        return "\n".join(plugin_names)
-
     def get_show_plugins(self):
         """
         Get the list of all implemented plugins for visualizing the structure.
@@ -181,7 +176,7 @@ class Visualizable(object):
             else:
                 default_format = None
 
-        parser.add_argument('--format', type=str, default=default_format,
+        parser.add_argument('--format', '-f', type=str, default=default_format,
                             help="Type of the visualization format/tool.",
                             choices=self.get_show_plugins().keys())
 
@@ -246,14 +241,6 @@ class Exportable(object):
     export_prefix = '_export_'
     export_parameters_postfix = '_parameters'
 
-    def complete_exporters(self, subargs_idx, subargs):
-        """
-        Get a display-ready string, containing names of all possible
-        exporters.
-        """
-        plugin_names = self.get_export_plugins().keys()
-        return "\n".join(plugin_names)
-
     def get_export_plugins(self):
         """
         Get the list of all implemented exporters for data class.
@@ -274,10 +261,21 @@ class Exportable(object):
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
             description='Export data object.')
-        parser.add_argument('format', type=str, default=None,
-                    help="Format of the exported file.")
         parser.add_argument('data_id', type=int, default=None,
                             help="ID of the data object to be visualized.")
+
+        default_format = None
+        try:
+            default_format = self._default_export_format
+        except AttributeError:
+            if len(self.get_export_plugins().keys()) == 1:
+                default_format = self.get_export_plugins().keys()[0]
+            else:
+                default_format = None
+
+        parser.add_argument('--format', '-f', type=str, default=default_format,
+                            help="Type of the exported file.",
+                            choices=self.get_export_plugins().keys())
 
         # Augmenting the command line parameters with ones, that are used by
         # individual plugins
@@ -292,6 +290,13 @@ class Exportable(object):
 
         format = parsed_args.pop('format')
         data_id = parsed_args.pop('data_id')
+
+        if format is None:
+            print "Default format is not defined, please specify.\n" + \
+                  "Valid formats are:"
+            for i in self.get_export_plugins().keys():
+                print "  {}".format(i)
+            sys.exit(0)
 
         try:
             func = self.get_export_plugins()[format]
@@ -314,10 +319,87 @@ class Exportable(object):
 
         func(n,**parsed_args)
 
+class Importable(object):
+    """
+    Provides shell completion for importable data nodes.
+
+    Classes, inheriting Importable, MUST NOT contain attributes, starting
+    with ``_import_``, which are not plugins for importing.
+    """
+    import_prefix = '_import_'
+    import_parameters_postfix = '_parameters'
+
+    def get_import_plugins(self):
+        """
+        Get the list of all implemented importers for data class.
+        """
+        method_names = dir(self) # get list of class methods names
+        valid_formats = [ i[len(self.import_prefix):] for i in method_names
+                         if i.startswith(self.import_prefix) and \
+                            not i.endswith(self.import_parameters_postfix)] # filter
+
+        return {k: getattr(self,self.import_prefix + k) for k in valid_formats}
+
+    def importfile(self, *args):
+        import argparse,os,sys
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Import data object.')
+        parser.add_argument('--file', type=str, default=None,
+                            help="Path of the imported file. Reads from "
+                                 "standard input if not specified.")
+
+        default_format = None
+        try:
+            default_format = self._default_import_format
+        except AttributeError:
+            if len(self.get_import_plugins().keys()) == 1:
+                default_format = self.get_import_plugins().keys()[0]
+            else:
+                default_format = None
+
+        parser.add_argument('--format', '-f', type=str, default=default_format,
+                            help="Type of the imported file.",
+                            choices=self.get_import_plugins().keys())
+
+        # Augmenting the command line parameters with ones, that are used by
+        # individual plugins
+        for cmd in dir(self):
+            if not cmd.startswith(self.import_prefix) or \
+               not cmd.endswith(self.import_parameters_postfix):
+                continue
+            getattr(self,cmd)(parser)
+
+        args = list(args)
+        parsed_args = vars(parser.parse_args(args))
+
+        format = parsed_args.pop('format')
+        filename = parsed_args.pop('file')
+
+        if format is None:
+            print "Default format is not defined, please specify.\n" + \
+                  "Valid formats are:"
+            for i in self.get_import_plugins().keys():
+                print "  {}".format(i)
+            sys.exit(0)
+
+        if not filename:
+            filename = "/dev/stdin"
+
+        try:
+            func = self.get_import_plugins()[format]
+        except KeyError:
+            print "Not implemented; implemented plugins are:"
+            print "{}.".format(",".join(self.get_import_plugins()))
+            sys.exit(1)
+
+        load_dbenv()
+        func(filename,**parsed_args)
+
 # Note: this class should not be exposed directly in the main module,
 # otherwise it becomes a command of 'verdi'. Instead, we want it to be a 
 # subcommand of verdi data.
-class _Upf(VerdiCommandWithSubcommands):
+class _Upf(VerdiCommandWithSubcommands,Importable):
     """
     Setup and manage upf to be used
 
@@ -327,9 +409,12 @@ class _Upf(VerdiCommandWithSubcommands):
         """
         A dictionary with valid commands and functions to be called.
         """
+        from aiida.orm.data.upf import UpfData
+        self.dataclass = UpfData
         self.valid_subcommands = {
             'uploadfamily': (self.uploadfamily, self.complete_auto),
             'listfamilies': (self.listfamilies, self.complete_none),
+            'import': (self.importfile, self.complete_none),
             }
     
     def uploadfamily(self, *args):
@@ -442,7 +527,16 @@ class _Upf(VerdiCommandWithSubcommands):
                                                         description_string)
         else:
             print "No valid UPF pseudopotential family found."
-         
+
+    def _import_upf(self,filename,**kwargs):
+        """
+        Importer from UPF.
+        """
+        try:
+            node,_ = self.dataclass.get_or_create(filename)
+            print node
+        except ValueError as e:
+            print e
          
 class _Bands(VerdiCommandWithSubcommands,Listable,Visualizable):
     """
@@ -455,7 +549,7 @@ class _Bands(VerdiCommandWithSubcommands,Listable,Visualizable):
         from aiida.orm.data.array.bands import BandsData
         self.dataclass = BandsData
         self.valid_subcommands = {
-            'show': (self.show, self.complete_visualizers),
+            'show': (self.show, self.complete_none),
             'list': (self.list, self.complete_none),
             }
 
@@ -675,9 +769,9 @@ class _Structure(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
         from aiida.orm.data.structure import StructureData
         self.dataclass = StructureData
         self.valid_subcommands = {
-            'show': (self.show, self.complete_visualizers),
+            'show': (self.show, self.complete_none),
             'list': (self.list, self.complete_none),
-            'export': (self.export, self.complete_exporters),
+            'export': (self.export, self.complete_none),
             }
         
     def query(self,args):
@@ -887,7 +981,13 @@ class _Structure(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
         """
         print node._exportstring('cif')
 
-class _Cif(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
+    def _export_xyz(self,node):
+        """
+        Exporter to XYZ.
+        """
+        print node._exportstring('xyz')
+
+class _Cif(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable,Importable):
     """
     Visualize CIF structures
     """
@@ -899,9 +999,10 @@ class _Cif(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
         from aiida.orm.data.cif import CifData
         self.dataclass = CifData
         self.valid_subcommands = {
-            'show': (self.show, self.complete_visualizers),
+            'show': (self.show, self.complete_none),
             'list': (self.list, self.complete_none),
-            'export': (self.export, self.complete_exporters),
+            'export': (self.export, self.complete_none),
+            'import': (self.importfile, self.complete_none),
             }
 
     def _show_jmol(self,exec_name,structure_list):
@@ -961,6 +1062,8 @@ class _Cif(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
                 formulae = ",".join(obj.get_attr('formulae'))
             except AttributeError:
                 pass
+            except TypeError:
+                pass
             source_url = '?'
             try:
                 source_url = obj.get_attr('url')
@@ -984,6 +1087,16 @@ class _Cif(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
         """
         print node._exportstring('cif')
 
+    def _import_cif(self,filename,**kwargs):
+        """
+        Importer from CIF.
+        """
+        try:
+            node,_ = self.dataclass.get_or_create(filename)
+            print node
+        except ValueError as e:
+            print e
+
 class _Trajectory(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
     """
     View and manipulate TrajectoryData instances.
@@ -996,9 +1109,9 @@ class _Trajectory(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
         from aiida.orm.data.array.trajectory import TrajectoryData
         self.dataclass = TrajectoryData
         self.valid_subcommands = {
-            'show': (self.show, self.complete_visualizers),
+            'show': (self.show, self.complete_none),
             'list': (self.list, self.complete_none),
-            'export': (self.export, self.complete_exporters),
+            'export': (self.export, self.complete_none),
             }
 
     def _show_jmol(self,exec_name,trajectory_list,**kwargs):
@@ -1063,7 +1176,7 @@ class _Parameter(VerdiCommandWithSubcommands,Visualizable):
         self.dataclass = ParameterData
         self._default_show_format = 'json_date'
         self.valid_subcommands = {
-            'show': (self.show, self.complete_visualizers),
+            'show': (self.show, self.complete_none),
             }
 
     def _show_json_date(self,exec_name,node_list):

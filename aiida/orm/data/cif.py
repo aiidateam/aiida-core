@@ -12,8 +12,12 @@ ase_loops = {
         '_atom_site_fract_x',
         '_atom_site_fract_y',
         '_atom_site_fract_z',
+        '_atom_site_adp_type',
         '_atom_site_thermal_displace_type',
         '_atom_site_B_iso_or_equiv',
+        '_atom_site_U_iso_or_equiv',
+        '_atom_site_B_equiv_geom_mean',
+        '_atom_site_U_equiv_geom_mean',
         '_atom_site_type_symbol',
     ]
 }
@@ -145,7 +149,7 @@ def decode_textfield_gzip_base64(content):
     from aiida.common.utils import gunzip_string
     return gunzip_string(decode_textfield_base64(content))
 
-def cif_from_ase(ase):
+def cif_from_ase(ase,full_occupancies=False,add_fake_biso=False):
     """
     Construct a CIF datablock from the ASE structure. The code is taken
     from
@@ -187,13 +191,16 @@ def cif_from_ase(ase):
             datablock['_symmetry_equiv_pos_as_xyz'] = ['x, y, z']
 
         datablock['_atom_site_label'] = []
-        datablock['_atom_site_occupancy'] = []
         datablock['_atom_site_fract_x'] = []
         datablock['_atom_site_fract_y'] = []
         datablock['_atom_site_fract_z'] = []
-        datablock['_atom_site_thermal_displace_type'] = []
-        datablock['_atom_site_B_iso_or_equiv'] = []
         datablock['_atom_site_type_symbol'] = []
+
+        if full_occupancies:
+            datablock['_atom_site_occupancy'] = []
+        if add_fake_biso:
+            datablock['_atom_site_thermal_displace_type'] = []
+            datablock['_atom_site_B_iso_or_equiv'] = []
 
         scaled = atoms.get_scaled_positions()
         no = {}
@@ -204,13 +211,16 @@ def cif_from_ase(ase):
             else:
                 no[symbol] = 1
             datablock['_atom_site_label'].append(symbol + str(no[symbol]))
-            datablock['_atom_site_occupancy'].append(str(1.0))
             datablock['_atom_site_fract_x'].append(str(scaled[i][0]))
             datablock['_atom_site_fract_y'].append(str(scaled[i][1]))
             datablock['_atom_site_fract_z'].append(str(scaled[i][2]))
-            datablock['_atom_site_thermal_displace_type'].append('Biso')
-            datablock['_atom_site_B_iso_or_equiv'].append(str(1.0))
             datablock['_atom_site_type_symbol'].append(symbol)
+
+            if full_occupancies:
+                datablock['_atom_site_occupancy'].append(str(1.0))
+            if add_fake_biso:
+                datablock['_atom_site_thermal_displace_type'].append('Biso')
+                datablock['_atom_site_B_iso_or_equiv'].append(str(1.0))
 
         datablocks.append(datablock)
     return datablocks
@@ -317,19 +327,41 @@ class CifData(SinglefileData):
             else:        
                 return (cifs[0], False)
 
-    def _get_aiida_structure(self, **kwargs):
-        converter = 'ase'
-        if 'converter' in kwargs.keys():
-            converter = kwargs.pop('converter')
+    def _get_aiida_structure(self,converter='ase',store=False,**kwargs):
+        """
+        Creates :py:class:`aiida.orm.data.structure.StructureData`.
+
+        :param converter: specify the converter. Default 'ase'.
+        :param store: If True, intermediate calculation gets stored in the
+            AiiDA database for record. Default False.
+        :return: :py:class:`aiida.orm.data.structure.StructureData` node.
+        """
+        from aiida.orm.data.parameter import ParameterData
+        param = ParameterData(dict=kwargs)
         try:
-            conv_f = getattr(self, '_get_aiida_structure_{}'.format(converter))
-            return conv_f(**kwargs)
+            conv_f = getattr(self,
+                             '_get_aiida_structure_{}_inline'.format(converter))
+            ret_dict = None
+            if store:
+                from aiida.orm.calculation.inline import make_inline
+                _,ret_dict = make_inline(conv_f)(parameters=param)
+            else:
+                ret_dict = conv_f(parameters=param)
+            return ret_dict['structure']
         except AttributeError:
             raise ValueError("No such converter '{}' available".format(converter))
 
-    def _get_aiida_structure_ase(self, **kwargs):
+    def _get_aiida_structure_ase_inline(self,parameters=None):
+        """
+        Creates :py:class:`aiida.orm.data.structure.StructureData` using ASE.
+
+        :note: requires ASE module.
+        """
         from aiida.orm.data.structure import StructureData
-        return StructureData(ase=self.get_ase(**kwargs))
+        kwargs = {}
+        if parameters is not None:
+            kwargs = parameters.get_dict()
+        return {'structure': StructureData(ase=self.get_ase(**kwargs))}
 
     @property
     def ase(self):
@@ -356,7 +388,7 @@ class CifData(SinglefileData):
             from ase.io.cif import read_cif
             return read_cif(self.get_file_abs_path(),**kwargs)
 
-    def set_ase(self, aseatoms):
+    def set_ase(self,aseatoms):
         cif = cif_from_ase(aseatoms)
         self.values = pycifrw_from_cif(cif,loops=ase_loops)
 

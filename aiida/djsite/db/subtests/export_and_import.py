@@ -22,7 +22,7 @@ class TestPort(AiidaTestCase):
         from aiida.cmdline.commands.importfile import import_file
         from aiida.orm.computer import delete_computer
         from aiida.orm.node import Node
-
+        
         StructureData = DataFactory('structure')
         sd = StructureData()
         sd.store()
@@ -33,27 +33,32 @@ class TestPort(AiidaTestCase):
         calc.store()
 
         calc._add_link_from(sd)
-
-        attrs = dict()
-        for i in range(1,3):
-            node = Node.get_subclass_from_pk(i)
-            attrs[i] = dict()
+        
+        pks = [sd.pk,calc.pk]
+        
+        attrs = {}
+        for pk in pks:
+            node = Node.get_subclass_from_pk(pk)
+            attrs[node.uuid] = dict()
             for k in node.attrs():
-                attrs[i][k] = node.get_attr(k)
-
+                attrs[node.uuid][k] = node.get_attr(k)
+                
         s = SandboxFolder()
         filename = os.path.join(s.abspath,"export.tar.gz")
         export([calc.dbnode],outfile=filename,silent=True)
-
+        
         self.tearDownClass()
         self.setUpClass()
         delete_computer(self.computer)
-
+        
+        # NOTE: it is better to load new nodes by uuid, rather than assuming 
+        # that they will have the first 3 pks. In fact, a recommended policy in 
+        # databases is that pk always increment, even if you've deleted elements
         import_file(filename,silent=True)
-        for i in range(1,3):
-            node = Node.get_subclass_from_pk(i)
+        for uuid in attrs.keys():
+            node = Node.get_subclass_from_uuid(uuid)
             for k in node.attrs():
-                self.assertEquals(attrs[i][k],node.get_attr(k))
+                self.assertEquals(attrs[uuid][k],node.get_attr(k))
 
     def test_2(self):
         from aiida.cmdline.commands.exportfile import export

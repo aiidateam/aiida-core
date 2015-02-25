@@ -6,6 +6,10 @@ manipulating them. One of the means of use and integration of AiiDA with
 the variety of free and open-source software is the command line. In this
 chapter the ways to extend the AiiDA command line interface are described.
 
+To make a class/function loaded automatically while issuing ``verdi shell``,
+one has to register it in ``default_modules_list`` in
+``aiida.djsite.db.management.commands.customshell.py``.
+
 Adding a ``verdi`` command
 ++++++++++++++++++++++++++
 
@@ -15,42 +19,43 @@ Adding a ``verdi`` command
 Framework for ``verdi data``
 ++++++++++++++++++++++++++++
 
-Code for each of the ``verdi data <datatype> <action> <plugin>`` commands
-is placed in ``_Datatype`` class inside ``aiida.cmdline.commands.data.py``.
-Standard actions, such as
+Code for each of the ``verdi data <datatype> <action> [--format <plugin>]``
+commands is placed in ``_<Datatype>`` class inside
+``aiida.cmdline.commands.data.py``. Standard actions, such as
 
 * ``list``
 * ``show``
+* ``import``
 * ``export``
 
 are implemented in corresponding classes:
 
 * ``Listable``
 * ``Visualizable``
+* ``Importable``
 * ``Exportable``,
 
-which are inherited by ``_Datatype`` classes (multiple inheritance is
-possible). Actions ``show`` and ``export`` can be extended simply by adding
-additional methods in ``_Datatype`` (these are automatically detected).
-Action ``list`` can be extended by overriding default methods of the
-``Listable``.
+which are inherited by ``_<Datatype>`` classes (multiple inheritance is
+possible). Actions ``show``, ``import`` and ``export`` can be extended with
+new format plugins simply by adding additional methods in ``_<Datatype>``
+(these are automatically detected). Action ``list`` can be extended by
+overriding default methods of the ``Listable``.
 
-Adding plugins for ``show``, ``export`` and like
-------------------------------------------------
+Adding plugins for ``show``, ``import``, ``export`` and like
+------------------------------------------------------------
 
-A plugin to show or export the data node can be added by inserting a method
-to ``_Datatype`` class. Each new method is automatically detected,
-provided it starts with ``_show_`` (for ``show``) and ``_export_`` (for
-``export``). Node for each of such method is passed using a parameter.
+A plugin to show, import or export the data node can be added by inserting
+a method to ``_<Datatype>`` class. Each new method is automatically detected,
+provided it starts with ``_<action>_`` (that means ``_show_`` for ``show``,
+``_import_`` for ``import`` and ``_export_`` for ``export``). Node for each
+of such method is passed using a parameter.
 
 .. note:: plugins for ``show`` are passed a list of nodes, while plugins for
-    ``export`` are passed a single node.
+    ``import`` and ``export`` are passed a single node.
 
-As the syntax of ``show`` command has been changed from
-``verdi data <datatype> <action> <plugin>`` to
-``verdi data <datatype> <action> [--format <plugin>]`` having the
-``--format`` option optional, the default plugin can be specified by setting
-the value for ``_default_show_plugin`` in the inheriting class::
+As the ``--format`` option is optional, the default plugin can be specified
+by setting the value for ``_default_<action>_plugin`` in the inheriting class,
+for example::
 
     class _Parameter(VerdiCommandWithSubcommands,Visualizable):
         """
@@ -72,6 +77,10 @@ the value for ``_default_show_plugin`` in the inheriting class::
             """
             Show contents of ParameterData nodes.
             """
+
+If the default plugin is not defined and there are more than one plugin,
+an exception will be raised upon issuing ``verdi data <datatype> <action>``
+to be caught and explained for the user.
 
 Implementing ``list``
 ---------------------

@@ -44,36 +44,18 @@ __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.
 __version__ = "0.3.0"
 
 @contextlib.contextmanager
-def update_environment(new_argv, new_name="__main__", new_file=None):
+def update_environment(new_argv):
     """
     Used as a context manager, changes sys.argv with the
     new_argv argument, and restores it upon exit.
-    It also changes some other global variables such as __name__ and
-    __file__
     """
     import sys
-    global __name__
-    global __file__
-    # backup original params
     _argv = sys.argv[:]
-    _name = __name__
-    _file = __file__
-    # New parameters
     sys.argv = new_argv[:]
-    __name__ = "__main__"
-    if new_file is None:
-        if not new_argv:
-            raise ValueError("Empty new_argv passed! It should at "
-                             "least have argv[0]")
-        __file__ = new_argv[0]
-    else:
-        __file__ = new_file
     yield
 
     #Restore old parameters when exiting from the context manager
     sys.argv = _argv
-    __name__ = _name
-    __file__ = _file
 
 
 ########################################################################
@@ -239,12 +221,13 @@ class Install(VerdiCommand):
     This command creates the ~/.aiida folder in the home directory 
     of the user, interactively asks for the database settings and
     the repository location, does a setup of the daemon and runs
-    a syncdb command to create/setup the database.
+    a migrate command to create/setup the database.
     """
     def run(self,*args):
         import readline
         from aiida import load_dbenv
-        from aiida.common.setup import create_base_dirs, create_configuration        
+        from aiida.common.setup import (create_base_dirs, create_configuration,
+                                        set_default_profile)        
 
         cmdline_args = list(args)
         
@@ -261,20 +244,27 @@ class Install(VerdiCommand):
             print >> sys.stderr, ", ".join(cmdline_args)
             sys.exit(1)
         
+        # create the directories to store the configuration files
         create_base_dirs()
+        
+        # ask and store the configuration of the DB
         try:
-            create_configuration()
+            create_configuration(profile='default')
         except ValueError as e:
             print >> sys.stderr, "Error during configuration: {}".format(e.message)
             sys.exit(1)
-
+        
+        # set default DB profiles
+        set_default_profile('verdi','default')
+        set_default_profile('daemon','default')
+        
         if only_user_config:
-            print "Only user configuration requested, skipping the syncdb command"
+            print "Only user configuration requested, skipping the migrate command"
         else:
-            print "Executing now a syncdb command..."
-            # --noinput so that it does not ask for input, and does not ask
-            # to create a default user (managed below, instead)
-            pass_to_django_manage([execname, 'syncdb', '--noinput'])
+            print "Executing now a migrate command..."
+            # For the moment, the verdi install works only for the default 
+            # profile, so we don't chose it, but in the future one should
+            pass_to_django_manage([execname, 'migrate'])
 
         # I create here the default user
         print "Loading new environment..."
@@ -292,8 +282,7 @@ class Install(VerdiCommand):
                                                    password='',
                                                    first_name="AiiDA",
                                                    last_name="Daemon")
-
-        email = email=get_configured_user_email()
+        email = get_configured_user_email()
         print "Starting user configuration for {}...".format(email)
         if email == DEFAULT_AIIDA_USER:
             print "You set up AiiDA using the default Daemon email ({}),".format(email)
@@ -310,36 +299,12 @@ class Install(VerdiCommand):
         """
         print "" 
 
-    
-#class SyncDB(VerdiCommand):
-#    """
-#    Create new tables in the database
-#
-#    This command calls the Django 'manage.py syncdb' command to create
-#    new tables in the database, and possibly install triggers.
-#    Pass a --migrate option to automatically also migrate the tables
-#    managed using South migrations.
-#    """
-#
-#    def run(self,*args):
-#        pass_to_django_manage([execname, 'syncdb'] + list(args))
-
-#class Migrate(VerdiCommand):
-#    """
-#    Migrate tables and data using django-south
-#    
-#    This command calls the Django 'manage.py migrate' command to migrate
-#    tables managed by django-south to their most recent version.
-#    """
-#    def run(self,*args):
-#        pass_to_django_manage([execname, 'migrate'] + list(args))
 
 class Shell(VerdiCommand):
     """
-    Run the interactive shell with the Django environment
+    Run the interactive shell with the AiiDA environment loaded.
 
-    This command runs the 'manage.py shell' command, that opens a
-    IPython shell with the Django environment loaded.
+    This command opens an ipython shell with the AiiDA environment loaded.
     """
     def run(self,*args):
         pass_to_django_manage([execname, 'customshell'] + list(args))
@@ -402,10 +367,19 @@ class Run(VerdiCommand):
                             nargs=argparse.REMAINDER, type=str,
                             help='Further parameters to pass to the script')
         parsed_args = parser.parse_args(args)
+
+        # Prepare the environment for the script to be run
+        globals_dict = {
+            '__builtins__': globals()['__builtins__'],
+            '__name__': '__main__',
+            '__file__': parsed_args.scriptname,
+            '__doc__': None,
+            '__package__': None}
         
-        # dynamically load modules (the same of verdi shell)
+        ## dynamically load modules (the same of verdi shell) - but in
+        ## globals_dict, not in the current environment
         for app_mod, model_name, alias in default_modules_list:
-            locals()["{}".format(alias)] = getattr(
+            globals_dict["{}".format(alias)] = getattr(
                             __import__(app_mod, {}, {}, model_name), model_name)
         
         if parsed_args.group:
@@ -421,10 +395,10 @@ class Run(VerdiCommand):
             aiida_verdilib_autogroup.set_exclude_with_subclasses(parsed_args.excludesubclasses)
             aiida_verdilib_autogroup.set_include_with_subclasses(parsed_args.includesubclasses)
             aiida_verdilib_autogroup.set_group_name(automatic_group_name)
+            ## Note: this is also set in the exec environment!
+            ## This is the intended behavior
             aiida.orm.autogroup.current_autogroup = aiida_verdilib_autogroup
         
-#        print "Starting..."
-
         try:
             f = open(parsed_args.scriptname)
         except IOError:
@@ -436,8 +410,10 @@ class Run(VerdiCommand):
                 # Must add also argv[0]
                 new_argv = [parsed_args.scriptname] + parsed_args.new_args
                 with update_environment(new_argv=new_argv):
-                    # print sys.argv
-                    exec(f)
+                    # Add local folder to sys.path
+                    sys.path.insert(0, os.path.abspath(os.curdir))
+                    # Pass only globals_dict
+                    exec(f,globals_dict)
                 # print sys.argv
             except SystemExit as e:
                 ## Script called sys.exit()

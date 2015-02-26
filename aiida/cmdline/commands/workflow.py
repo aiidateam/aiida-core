@@ -222,7 +222,7 @@ class Workflow(VerdiCommandWithSubcommands):
 
             log_messages = get_log_messages(wf)
             label_string = " [{}]".format(wf.label) if wf.label else ""
-            state = wf.get_status()
+            state = wf.get_state()
             print "*** {}{}: {}".format(wf_pk, label_string, state)
 
             if wf.get_report():

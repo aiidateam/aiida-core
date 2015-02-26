@@ -21,7 +21,7 @@ def pre_encoder(data):
     that when decoding and finding a string, one can understand if it is a 
     date or a string by reading the first character.
     """
-    import datetime
+    import datetime,pytz
 
     if isinstance(data, (list, tuple)):
         return [pre_encoder(_) for _ in data]
@@ -32,7 +32,7 @@ def pre_encoder(data):
     elif isinstance(data, unicode):
         return u"S{}".format(data)
     elif isinstance(data, datetime.datetime):
-        return data.strftime('D%Y-%m-%dT%H:%M:%S.%f%z')
+        return data.astimezone(pytz.utc).strftime('D%Y-%m-%dT%H:%M:%S.%f+0000')
     else:
         return data
 
@@ -40,8 +40,6 @@ def post_decoder(data):
     """
     Reverts the encoding done by the pre_encoder
     """
-    import dateutil.parser
-
     if isinstance(data, (list, tuple)):
         return [post_decoder(_) for _ in data]
     elif isinstance(data, dict):
@@ -52,7 +50,16 @@ def post_decoder(data):
             return data[1:]
         elif data.startswith("D"):
             # It is a date
-            return dateutil.parser.parse(data[1:])
+            
+            # OLD implementation: it also includes the check of the timezone
+            # but requires a new dependency of AiiDA on dateutil: 
+            # that would need to be added in the requirements.txt
+            #import dateutil.parser
+            #return dateutil.parser.parse(data[1:])
+            
+            # New one lacks time zone, but it should be enough for the test
+            import time
+            return time.strptime(data[1:],"%Y-%m-%dT%H:%M:%S.%f+0000")
         else:
             # Strange encoding char, error!
             raise ValueError("Unknown encode character! ({})".format(data[:1]))

@@ -397,7 +397,7 @@ class CodeInputValidationClass(object):
         """
         input_plugin = string.strip()
         
-        if input_plugin.lower() == "none":
+        if input_plugin.lower == "none":
             input_plugin = None
         
         self._input_plugin_validator(input_plugin)        

@@ -240,4 +240,3 @@ def check_schema_version():
             "aiida/djsite/aiida_migrations]".format(
                                     code_schema_version, db_schema_version))
     
-    

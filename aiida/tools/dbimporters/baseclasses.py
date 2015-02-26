@@ -118,6 +118,15 @@ class DbSearchResults(object):
             results.append(entry)
         return results
 
+    def next(self):
+        """
+        Returns the next result of the query (instance of
+        :py:class:`aiida.tools.dbimporters.baseclasses.DbEntry`).
+
+        :raise StopIteration: when the end of result array is reached.
+        """
+        raise NotImplementedError("not implemented in base class")
+
     def at(self, position):
         """
         Returns ``position``-th result as

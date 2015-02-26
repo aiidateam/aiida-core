@@ -140,7 +140,8 @@ class BasePwCpInputGenerator(object):
                 be returned by get_inputdata_dict (without the Code!)
         """
         from aiida.common.utils import get_unique_filename, get_suggestion
-
+        import re
+        
         local_copy_list = []
         remote_copy_list = []
         remote_symlink_list = []
@@ -235,7 +236,11 @@ class BasePwCpInputGenerator(object):
             if len(blocked) >= 3:
                 defaultvalue = blocked[2]
             if nl in input_params:
-                if flag in input_params[nl]:
+                # The following lines is meant to avoid putting in input the 
+                # parameters like celldm(*)
+                stripped_inparams = [ re.sub("[(0-9)]","",_) 
+                                      for _ in input_params[nl].keys() ]
+                if flag in stripped_inparams:
                     raise InputValidationError(
                         "You cannot specify explicitly the '{}' flag in the '{}' "
                         "namelist or card.".format(flag, nl))
@@ -681,7 +686,10 @@ class BasePwCpInputGenerator(object):
         """
         from aiida.common.datastructures import calc_states
         
-        if self.get_state() != calc_states.FINISHED:
+        # Check the calculation's state using ``from_attribute=True`` to
+        # correctly handle IMPORTED calculations.
+        if self.get_state(from_attribute=True) != calc_states.FINISHED:
+        #if self.get_state() != calc_states.FINISHED:
             if force_restart:
                 pass
             else:

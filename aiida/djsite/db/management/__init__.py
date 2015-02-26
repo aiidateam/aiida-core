@@ -620,8 +620,6 @@ END;
 #====================================
 
 def install_tc(sender, **kwargs):
-    #print '~', sender, kwargs, type(sender)
-    
     from django.db import connection, transaction
     cursor = connection.cursor()
 

@@ -126,7 +126,7 @@ class Workflow(object):
                 # print "caller_module_class", caller_module_class
                 # print "caller_file", caller_file
                 # print "caller_funct", caller_funct
-                  
+                
                 # Accept only the aiida.workflows packages
                 if caller_module == None or not caller_module.__name__.startswith("aiida.workflows"):
                         raise SystemError("The superclass can't be called directly")

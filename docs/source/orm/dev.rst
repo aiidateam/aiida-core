@@ -120,6 +120,12 @@ Quantum Espresso - PW
 .. automodule:: aiida.orm.calculation.job.quantumespresso.pw
    :members:
 
+Quantum Espresso - PW immigrant
++++++++++++++++++++++++++++++++
+.. automodule:: aiida.orm.calculation.quantumespresso.pwimmigrant
+   :members:
+   :special-members: __init__
+
 TemplateReplacer
 ++++++++++++++++
 .. automodule:: aiida.orm.calculation.job.simpleplugins.templatereplacer

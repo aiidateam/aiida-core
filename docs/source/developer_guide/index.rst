@@ -9,4 +9,3 @@ Developer's guide
    
    data_cmdline
    git_cheatsheet
-   old

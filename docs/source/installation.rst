@@ -296,7 +296,11 @@ Run the following command::
     
 to configure AiiDA. The command will guide you through a process to configure
 the database, the repository location, and it will finally (automatically) run 
+<<<<<<< HEAD
+a django ``migrate`` command, if needed, that creates the required tables
+=======
 a django ``syncdb`` command, if needed, that creates the required tables
+>>>>>>> 5bdba659b4b8732bd54ced1951fcaba5a0dd14d1
 in the database and installs the database triggers.
 
 The first thing that will be asked to you is the timezone, extremely important
@@ -479,7 +483,7 @@ Further comments and troubleshooting
 ++++++++++++++++++++++++++++++++++++
 
 * For some reasons, on some machines (notably often on Mac OS X) there is no
-  default locale defined, and when you run ``verdi syncdb`` for the first
+  default locale defined, and when you run ``verdi install`` for the first
   time it fails (see also `this issue`_ of django).  To solve the problem, first
   remove the sqlite database that was created. 
   
@@ -489,7 +493,7 @@ Further comments and troubleshooting
      export LANG="en_US.UTF-8"
      export LC_ALL="en_US.UTF-8"
 
-  and then run ``verdi syncdb`` again.
+  and then run ``verdi install`` again.
 
 .. _this issue: https://code.djangoproject.com/ticket/16017
 

@@ -70,7 +70,29 @@ class DbImporter(object):
 class DbSearchResults(object):
     """
     Base class for database results.
+
+    All classes, inheriting this one and overriding ``at()``, are able to
+    benefit from having functions ``__iter__``, ``__len__`` and
+    ``__getitem__``.
     """
+
+    class DbSearchResultsIterator(object):
+        """
+        Iterator for search results
+        """
+
+        def __init__(self,results,increment=1):
+            self.results = results
+            self.position = 0
+            self.increment = increment
+
+        def next(self):
+            pos = self.position
+            if pos >= 0 and pos < len(self.results):
+                self.position = self.position + self.increment
+                return self.results[pos]
+            else:
+                raise StopIteration()
 
     def __iter__(self):
         """
@@ -78,7 +100,13 @@ class DbSearchResults(object):
         :py:class:`aiida.tools.dbimporters.baseclasses.DbSearchResults` can
         be used as iterators.
         """
-        return self
+        return self.DbSearchResultsIterator(self)
+
+    def __len__(self):
+        return len(self.results)
+
+    def __getitem__(self,key):
+        return self.at(key)
 
     def fetch_all(self):
         """
@@ -115,34 +143,39 @@ class DbEntry(object):
     Represents an entry from the structure database (COD, ICSD, ...).
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self,db_source=None,db_url=None,db_id=None,db_version=None,
+                 extras={},url=None):
         """
         Sets the basic parameters for the database entry:
 
-        :param source: identifying the location and version of the source
-          for the entry, containing:
-          * db_source: name of the source database
-          * db_url: URL of the source database
-          * db_id: structure identifyer in the database
-          * db_version: version of the database
-          * extras: a dictionary with some extra parameters (e.g. database ID number)
-          * url: URL of the structure (should be permanent)
+        :param db_source: name of the source database
+        :param db_url: URL of the source database
+        :param db_id: structure identifyer in the database
+        :param db_version: version of the database
+        :param extras: a dictionary with some extra parameters
+            (e.g. database ID number)
+        :param url: URL of the structure (should be permanent)
         """
         self.source = {
-            'db_source' : None,
-            'db_url'    : None,
-            'db_id'     : None,
-            'db_version': None,
-            'extras'    : {},
-            'url'       : None
+            'db_source' : db_source,
+            'db_url'    : db_url,
+            'db_id'     : db_id,
+            'db_version': db_version,
+            'extras'    : extras,
+            'url'       : url,
+            'source_md5': None,
         }
+        self._cif = None
 
     @property
     def cif(self):
         """
         Returns raw contents of a CIF file as string.
         """
-        raise NotImplementedError("not implemented in base class")
+        if self._cif is None:
+            import urllib2
+            self._cif = urllib2.urlopen( self.source['url'] ).read()
+        return self._cif
 
     def get_raw_cif(self):
         """
@@ -164,11 +197,13 @@ class DbEntry(object):
 
         :return: :py:class:`aiida.orm.data.cif.CifData` object
         """
+        from aiida.common.utils import md5_file
         from aiida.orm.data.cif import CifData
         import tempfile
         with tempfile.NamedTemporaryFile() as f:
             f.write(self.cif)
             f.flush()
+            self.source['source_md5'] = md5_file(f.name)
             return CifData(file=f.name, source=self.source)
 
     def get_aiida_structure(self):

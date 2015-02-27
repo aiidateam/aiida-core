@@ -14,8 +14,6 @@ __version__ = "0.3.0"
 
 ############# INPUT #############
 
-pseudo_family = 'pslib_pbesol_2'
-pw_codename = 'pw-5.1@dora'
 element = 'Ba'     # cation in XTiO3
 starting_alat = 4. # central point of the Murnaghan curve
 
@@ -66,7 +64,7 @@ except NotExistent:
 
 ParameterData = DataFactory('parameter')
 
-params_dict = {'pw_codename':pw_codename,
+params_dict = {'pw_codename':codename,
                'num_machines':1,
                'max_wallclock_seconds':60*20,
                'pseudo_family':pseudo_family,

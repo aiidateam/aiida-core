@@ -122,7 +122,7 @@ Quantum Espresso - PW
 
 Quantum Espresso - PW immigrant
 +++++++++++++++++++++++++++++++
-.. automodule:: aiida.orm.calculation.quantumespresso.pwimmigrant
+.. automodule:: aiida.orm.calculation.job.quantumespresso.pwimmigrant
    :members:
    :special-members: __init__
 

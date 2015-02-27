@@ -41,7 +41,7 @@ class PwCalculation(BasePwCpInputGenerator, JobCalculation):
                                BasePwCpInputGenerator._DATAFILE_XML_BASENAME)
     
         # Default PW output parser provided by AiiDA
-        self._default_parser = 'quantumespresso.pw'
+        self._default_parser = 'quantumespresso.basicpw'
             
         self._automatic_namelists = {
             'scf':   ['CONTROL', 'SYSTEM', 'ELECTRONS'],

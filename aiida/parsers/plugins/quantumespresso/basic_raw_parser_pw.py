@@ -65,7 +65,7 @@ def parse_raw_output(out_file, input_dict, parser_opts=None, xml_file=None, dir_
     parser_version = '0.1'
     parser_info = {}
     parser_info['parser_warnings'] = []
-    parser_info['parser_info'] = 'AiiDA QE Parser v{}'.format(parser_version)
+    parser_info['parser_info'] = 'AiiDA QE Basic Parser v{}'.format(parser_version)
 
     # if xml_file is not given in input, skip its parsing
     if xml_file is not None:

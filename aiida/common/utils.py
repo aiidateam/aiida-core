@@ -4,9 +4,10 @@ import string
 
 from aiida.common.exceptions import ConfigurationError
 
-__copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
-__license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.3.0"
+__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
+__version__ = "0.4.0"
+__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi"
 
 class classproperty(object):
     """
@@ -26,7 +27,7 @@ def get_new_uuid():
     Return a new UUID (typically to be used for new nodes).
     It uses the version of </
     """
-    from aiida.djsite.settings.settings import (
+    from aiida.djsite.settings.settings_profile import (
         AIIDANODES_UUID_VERSION)
     import uuid
 

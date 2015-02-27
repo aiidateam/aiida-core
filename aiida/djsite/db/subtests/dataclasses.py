@@ -8,9 +8,10 @@ from aiida.orm import Node
 from aiida.common.exceptions import ModificationNotAllowed, UniquenessError
 from aiida.djsite.db.testbase import AiidaTestCase
         
-__copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
-__license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.3.0"
+__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
+__version__ = "0.4.0"
+__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi"
 
 class TestCalcStatus(AiidaTestCase):        
     """
@@ -62,7 +63,9 @@ class TestCalcStatus(AiidaTestCase):
 class TestCodDbImporter(AiidaTestCase):
     """
     Test the CodDbImporter class.
-    """
+    """    
+    from aiida.orm.data.cif import has_pycifrw
+    
     def test_query_construction_1(self):
         from aiida.tools.dbimporters.plugins.cod import CodDbImporter
 
@@ -157,6 +160,7 @@ class TestCodDbImporter(AiidaTestCase):
                            "http://www.crystallography.net/cod/1000001.cif@1234",
                            "http://www.crystallography.net/cod/2000000.cif@1234"])
 
+    @unittest.skipIf(not has_pycifrw(),"Unable to import PyCifRW")
     def test_dbentry_to_cif_node(self):
         """
         Tests the creation of CifData node from CodEntry.
@@ -2080,104 +2084,4 @@ class TestKpointsData(AiidaTestCase):
         k.set_kpoints(input_klist,cartesian=True)
         klist = k.get_kpoints(cartesian=True)
         self.assertTrue( numpy.allclose(klist,input_klist,atol=1e-16) )
-        
-    def test_path(self):
-        """
-        Test the methods to generate automatically a list of kpoints
-        """
-        from aiida.orm.data.array.kpoints import KpointsData
-        import numpy
-        
-        k = KpointsData()
-        
-        # shouldn't get anything wiothout having set the cell
-        with self.assertRaises(ValueError):
-            k.set_kpoints_path()
-        
-        # define a cell
-        alat = 4.
-        cell = numpy.array([[alat, 0., 0.],
-                            [0., alat, 0.],
-                            [0., 0., alat],
-                            ])
-        
-        k.set_cell(cell)
-        k.set_kpoints_path()
-        # something should be retrieved
-        klist = k.get_kpoints()
-        
-        # test the various formats for specifying the path
-        k.set_kpoints_path([('G','M'),
-                            ])
-        k.set_kpoints_path([('G','M',30),
-                            ])
-        k.set_kpoints_path([('G',(0.,0.,0.),'M',(1.,1.,1.)),
-                            ])
-        k.set_kpoints_path([('G',(0.,0.,0.),'M',(1.,1.,1.),30),
-                            ])
-
-        # at least 2 points per segment
-        with self.assertRaises(ValueError):
-            k.set_kpoints_path([('G','M',1),
-                                ])
-        with self.assertRaises(ValueError):
-            k.set_kpoints_path([('G',(0.,0.,0.),'M',(1.,1.,1.),1),
-                                ])
-        
-        # try to set points with a spacing
-        k.set_kpoints_path(kpoint_distance=0.1)
-        
-        # try to modify after storage
-        k.store()
-        with self.assertRaises(ModificationNotAllowed):
-            k.set_kpoints_path()
-            
-class TestBandsData(AiidaTestCase):
-    """
-    Tests the BandsData objects.
-    """
-    
-    def test_band(self):
-        """
-        Check the methods to set and retrieve a mesh.
-        """
-        from aiida.orm.data.array.bands import BandsData
-        from aiida.orm.data.array.kpoints import KpointsData
-        import numpy
-        
-        # define a cell
-        alat = 4.
-        cell = numpy.array([[alat, 0., 0.],
-                            [0., alat, 0.],
-                            [0., 0., alat],
-                            ])
-        
-        k = KpointsData()
-        k.set_cell(cell)
-        k.set_kpoints_path()
-        
-        b = BandsData()
-        b.set_kpointsdata(k)
-        self.assertTrue( numpy.array_equal(b.cell,k.cell) )
-        
-        input_bands = numpy.array([numpy.ones(4) for i in range(k.get_kpoints().shape[0]) ]) 
-        input_occupations = input_bands
-        
-        b.set_bands(input_bands, occupations=input_occupations, units='ev')
-        b.set_bands(input_bands, units='ev')
-        b.set_bands(input_bands, occupations=input_occupations)
-        with self.assertRaises(TypeError):
-            b.set_bands(occupations=input_occupations, units='ev')
-        
-        b.set_bands(input_bands, occupations=input_occupations, units='ev')
-        bands,occupations = b.get_bands(also_occupations=True)
-        
-        self.assertTrue( numpy.array_equal(bands,input_bands) )
-        self.assertTrue( numpy.array_equal(occupations,input_occupations) )
-        self.assertTrue( b.units=='ev' )
-        
-        b.store()
-        with self.assertRaises(ModificationNotAllowed):
-            b.set_bands(bands)
-        
         

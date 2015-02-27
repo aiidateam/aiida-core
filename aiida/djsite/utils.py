@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 import logging
 
-__copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
-__license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.3.0"
+__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
+__version__ = "0.4.0"
+__contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
 
 def load_dbenv(process=None,profile=None):
     """
@@ -172,7 +173,7 @@ def long_field_length():
     # One should not load directly settings because there are checks inside 
     # for the current profile. However, this function is going to be called
     # only after having loaded load_dbenv, so there should be no problem
-    from aiida.djsite.settings import settings
+    from django.conf import settings
     if 'mysql' in settings.DATABASES['default']['ENGINE']:
         return 255
     else:

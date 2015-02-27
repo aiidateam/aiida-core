@@ -84,7 +84,7 @@ need to specify the ID of the calculation you are interested in::
   from aiida.orm import JobCalculation
 
   ## pk must be a valid integer pk
-  calc = JobCalculation.get_subclass_from_pk(pk)
+  calc = load_node(pk)
   ## Alternatively, with the UUID (uuid must be a valid UUID string)
   # calc = JobCalculation.get_subclass_from_uuid(uuid)
   print "AiiDA state:", calc.get_state()  

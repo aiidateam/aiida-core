@@ -12,7 +12,6 @@ from aiida.orm.data.parameter import ParameterData
 from aiida.orm.data.upf import UpfData
 from aiida.common.folders import SandboxFolder
 from aiida.common.datastructures import calc_states
-from aiida.transport.plugins.ssh import SshTransport
 from aiida.common.exceptions import (FeatureNotAvailable, InvalidOperation,
                                      InputValidationError)
 from aiida.tools.codespecific.quantumespresso import pwinputparser

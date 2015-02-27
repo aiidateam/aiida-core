@@ -22,7 +22,7 @@ class TestComputer(AiidaTestCase):
         from aiida.common.exceptions import InvalidOperation
     
         newcomputer = Computer(name="testdeletioncomputer", hostname='localhost',
-                              transport_type='ssh',
+                              transport_type='local',
                               scheduler_type='pbspro',
                               workdir='/tmp/aiida').store()
 
@@ -111,7 +111,7 @@ class TestCode(AiidaTestCase):
         self.assertTrue(code.can_run_on(self.computer))         
         othercomputer = Computer(name='another_localhost',
                                  hostname='localhost',
-                                 transport_type='ssh',
+                                 transport_type='local',
                                  scheduler_type='pbspro',
                                  workdir='/tmp/aiida').store()
         self.assertFalse(code.can_run_on(othercomputer))

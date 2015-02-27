@@ -129,9 +129,9 @@ where of course you have to change ``the_aiida_password`` with a valid password.
     
     ALTER USER aiida PASSWORD 'new_aiida_password';
 
-Then create a new ``aiidadb`` database for AiiDA:: 
+Then create a new ``aiidadb`` database for AiiDA, and give ownership to user ``aiida`` created above:: 
 
-  CREATE DATABASE aiidadb;
+  CREATE DATABASE aiidadb OWNER aiida;
 
 and grant all privileges on this DB to the previously-created ``aiida`` user:: 
 

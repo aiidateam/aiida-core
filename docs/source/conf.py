@@ -212,6 +212,25 @@ latex_documents = [
 # If false, no module index is generated.
 #latex_domain_indices = True
 
+
+# on_rtd is whether we are on readthedocs.org, this line of code grabbed
+# from docs.readthedocs.org
+# NOTE: it is needed to have these lines before load_dbenv()
+on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
+
+if not on_rtd:  # only import and set the theme if we're building docs locally
+    try:
+        import sphinx_rtd_theme
+        html_theme = 'sphinx_rtd_theme'
+        html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
+    except ImportError:
+        # No sphinx_rtd_theme installed
+        pass
+if on_rtd:
+    sys.path.append( os.path.join( os.path.split(__file__)[0],
+                                   os.pardir,os.pardir) )
+
+
 # Note by Andrea Cepellotti:
 # Sphinx tries to load every module that is trying to document
 # some of them requires the DJANGO_SETTINGS_MODULE variable to be set
@@ -294,22 +313,6 @@ epub_copyright = copyright
 
 # Allow duplicate toc entries.
 #epub_tocdup = True
-
-# on_rtd is whether we are on readthedocs.org, this line of code grabbed
-# from docs.readthedocs.org
-on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
-
-if not on_rtd:  # only import and set the theme if we're building docs locally
-    try:
-        import sphinx_rtd_theme
-        html_theme = 'sphinx_rtd_theme'
-        html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
-    except ImportError:
-        # No sphinx_rtd_theme installed
-        pass
-if on_rtd:
-    sys.path.append( os.path.join( os.path.split(__file__)[0],
-                                   os.pardir,os.pardir) )
 
 # otherwise, readthedocs.org uses their theme by default, so no need
 # to specify it

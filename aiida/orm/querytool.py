@@ -1,10 +1,6 @@
 # -*- coding: utf-8 -*-
 import sys,os
-from aiida import load_dbenv
-
-load_dbenv()
 from aiida.orm import Code, DataFactory, Group, Calculation
-from aiida.djsite.db import models
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"

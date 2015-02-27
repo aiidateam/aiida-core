@@ -87,10 +87,19 @@ class QueryTool(object):
             raise NotImplementedError("Still to implement passing a real group rather than its name")
     
     def limit_pks(self, pk_list):
+        """
+        Limit the query to a given list of pks.
+
+        :param pk_list: the list of pks you want to limit your query to.
+        """
         from django.db.models import Q
         self._pks_in = [int(_) for _ in pk_list]
 
     def _get_query_object(self):
+        """
+        Internal method that returns the Django query object that 
+        has been generated.
+        """
         from aiida.djsite.db import models
 
         if self._class_string is None:
@@ -146,6 +155,9 @@ class QueryTool(object):
         return self._queryobject
 
     def get_attributes(self):
+        """
+        Get the raw values of all the attributes of the queried nodes.
+        """
         from aiida.djsite.db import models
         res = self._get_query_object()
         attrs = models.DbAttribute.objects.filter(
@@ -155,6 +167,10 @@ class QueryTool(object):
         return attrs
 
     def _get_extras_raw(self):
+        """
+        Internal method to get the raw values of all the extras
+        of the queried nodes.
+        """
         from aiida.djsite.db import models
         res = self._get_query_object()
         extras = models.DbExtra.objects.filter(
@@ -164,6 +180,10 @@ class QueryTool(object):
         return extras
 
     def _get_attrs_raw(self):
+        """
+        Internal method to get the raw values of all the attributes
+        of the queried nodes.
+        """
         from aiida.djsite.db import models
         res = self._get_query_object()
         attrs = models.DbAttribute.objects.filter(
@@ -173,6 +193,10 @@ class QueryTool(object):
         return attrs
     
     def run_query(self, with_data=False):
+        """
+        Run the query using the filters that have been pre-set on this
+        class, and return a generator of the obtained Node (sub)classes.
+        """
         if with_data:
             attrs = self.create_attrs_dict()
             extras = self.create_extras_dict()
@@ -195,6 +219,10 @@ class QueryTool(object):
         #return res.distinct()
 
     def create_extras_dict(self):
+        """
+        Return a dictionary of the raw data from the 
+        extras associated to the queried nodes.
+        """
         from collections import defaultdict
 
         # TODO: implement lists and dicts
@@ -214,6 +242,10 @@ class QueryTool(object):
         return dict(extrasdict)
 
     def create_attrs_dict(self):
+        """
+        Return a dictionary of the raw data from the 
+        attributes associated to the queried nodes.
+        """
         from collections import defaultdict
  
         # TODO: implement lists and dicts
@@ -232,7 +264,33 @@ class QueryTool(object):
 
         return dict(attrsdict)
 
-    def add_attr_filter(self, key, filtername, value, negate=False, relnode=None, relnodeclass=None):
+    def add_attr_filter(self, key, filtername, value,
+                        negate=False, relnode=None, relnodeclass=None):
+        """
+        Add a new filter on the value of attributes of the nodes you
+        want to query.
+
+        :param key: the value of the key
+        :param filtername: the type of filter to apply. Multiple
+          filters are supported (depending on the type of value),
+          like '<=', '<', '>', '>=', '=', 'contains', 'iexact',
+          'startswith', 'endswith', 'istartswith', 'iendswith', ...
+          (the prefix 'i' means "case-insensitive", in the 
+          case of strings).
+        :param value: the value of the attribute
+        :param negate: if True, add the negation of the current filter
+        :param relnode: if specified, asks to apply the filter not on 
+          the node that is currently being queried, but rather
+          on a node linked to it.
+          Can be "res" for output results, "inp.LINKNAME" for input nodes
+          with a given link name, "out.LINKNAME" for output nodes
+          with a given link name.
+        :param relnodeclass: if relnode is specified, you can here add
+          a further filter on the type of linked node for which you are
+          executing the query (e.g., if you want to filter for outputs
+          whose 'energy' value is lower than zero, but only if 'energy'
+          is in a ParameterData node).
+        """
         from aiida.djsite.db import models
 
         return self._add_filter(key, filtername, value,
@@ -243,6 +301,31 @@ class QueryTool(object):
                                 relnode=relnode,relnodeclass=relnodeclass)
 
     def add_extra_filter(self, key, filtername, value, negate=False, relnode=None, relnodeclass=None):
+        """
+        Add a new filter on the value of extras of the nodes you
+        want to query.
+
+        :param key: the value of the key
+        :param filtername: the type of filter to apply. Multiple
+          filters are supported (depending on the type of value),
+          like '<=', '<', '>', '>=', '=', 'contains', 'iexact',
+          'startswith', 'endswith', 'istartswith', 'iendswith', ...
+          (the prefix 'i' means "case-insensitive", in the 
+          case of strings).
+        :param value: the value of the extra
+        :param negate: if True, add the negation of the current filter
+        :param relnode: if specified, asks to apply the filter not on 
+          the node that is currently being queried, but rather
+          on a node linked to it.
+          Can be "res" for output results, "inp.LINKNAME" for input nodes
+          with a given link name, "out.LINKNAME" for output nodes
+          with a given link name.
+        :param relnodeclass: if relnode is specified, you can here add
+          a further filter on the type of linked node for which you are
+          executing the query (e.g., if you want to filter for outputs
+          whose 'energy' value is lower than zero, but only if 'energy'
+          is in a ParameterData node).
+        """
         from aiida.djsite.db import models
 
         return self._add_filter(key, filtername, value,
@@ -254,6 +337,10 @@ class QueryTool(object):
 
     def _add_filter(self, key, filtername, value, negate,
                     dbtable, querieslist, attrdict, relnode,relnodeclass):
+        """
+        Internal method to apply a filter either on Extras or Attributes,
+        to avoid to repeat the same code in a DRY spirit.
+        """
         from django.utils.timezone import is_naive, make_aware, get_current_timezone
         from django.db.models import Q
         from aiida.orm import Node

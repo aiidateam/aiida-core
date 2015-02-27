@@ -6,9 +6,9 @@ Quantum Espresso PWscf immigration user-tutorial
 .. toctree::
    :maxdepth: 2
 
-If you are a new AiiDa user, it's likely you already have a large number of calculations that you ran before installing AiiDa. This tutorial will show you how to immigrate any of these PWscf (``pw.x``) calculations into your AiiDa database. They will then exist there as if you had actually run them using AiiDa (with the exception of the times and dates the calculations were run).
+If you are a new AiiDA user, it's likely you already have a large number of calculations that you ran before installing AiiDA. This tutorial will show you how to immigrate any of these PWscf (``pw.x``) calculations into your AiiDA database. They will then exist there as if you had actually run them using AiiDA (with the exception of the times and dates the calculations were run).
 
-It is assumed that you have already performed the installation, that you already setup a computer (with ``verdi``), and that you have installed Quantum Espresso on the cluster and ``pw.x`` as a code in AiiDA. You should also be familiar with using AiiDa to run a PWscf calculation and the various input and output nodes of a PwCalculation. Please go through :ref:`my-ref-to-pw-tutorial` before proceeding.
+It is assumed that you have already performed the installation, that you already setup a computer (with ``verdi``), and that you have installed Quantum Espresso on the cluster and ``pw.x`` as a code in AiiDA. You should also be familiar with using AiiDA to run a PWscf calculation and the various input and output nodes of a PwCalculation. Please go through :ref:`my-ref-to-pw-tutorial` before proceeding.
 
 .. admonition:: Example details
     :class: admonition note
@@ -94,7 +94,7 @@ Now, we are ready to initialize the immigrated calculation objects from the ``Pw
     calc1.use_code(code)
     calc2.use_code(code)
 
-The user may have noticed the additional initialization keywords/parameters--``remote_wordir``, ``input_file_name``, and ``output_file_name``--passed here. These are necessary in order to tell AiiDa which files to use to automatically generate the calculation`s input nodes in the next step.
+The user may have noticed the additional initialization keywords/parameters--``remote_wordir``, ``input_file_name``, and ``output_file_name``--passed here. These are necessary in order to tell AiiDA which files to use to automatically generate the calculation`s input nodes in the next step.
 
 
 
@@ -102,7 +102,7 @@ The user may have noticed the additional initialization keywords/parameters--``r
 The immigration
 ---------------
 
-Now that AiiDa knows where to look for the input files of the calculations we are immigrating, all we need to do in order to generate all the input nodes is call the ``create_input_nodes`` method. This method is the most helpful method of the ``PwimmigrantCalculation`` class. It parses the job's input file and creates and links the follow types of input nodes:
+Now that AiiDA knows where to look for the input files of the calculations we are immigrating, all we need to do in order to generate all the input nodes is call the ``create_input_nodes`` method. This method is the most helpful method of the ``PwimmigrantCalculation`` class. It parses the job's input file and creates and links the follow types of input nodes:
 
 * ParameterData -- based on the namelists and their variable-value pairs
 * KpointsData -- based on the ``K_POINTS`` card
@@ -110,7 +110,7 @@ Now that AiiDa knows where to look for the input files of the calculations we ar
 * UpfData -- one for each of the atomic species, based on the pseudopotential files specified in the ``ATOMIC_SPECIES`` card
 * settings ParameterData --  if there are any fixed coordinates, or if the gamma kpoint is used
 
-All units conversion and/or coordinate transformations are handled automatically, and the input nodes are generated in the correct units and coordinates required by AiiDa.
+All units conversion and/or coordinate transformations are handled automatically, and the input nodes are generated in the correct units and coordinates required by AiiDA.
 
 .. note:: Any existing UpfData nodes are simply linked without recreation; no duplicates are generated during this method call.
 

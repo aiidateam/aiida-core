@@ -307,6 +307,9 @@ if not on_rtd:  # only import and set the theme if we're building docs locally
     except ImportError:
         # No sphinx_rtd_theme installed
         pass
+if on_rtd:
+    sys.path.append( os.path.join( os.path.split(__file__)[0],
+                                   os.pardir,os.pardir) )
 
 # otherwise, readthedocs.org uses their theme by default, so no need
 # to specify it

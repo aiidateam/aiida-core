@@ -2,6 +2,8 @@
 Setup of computers and codes
 ############################
 
+.. note:: The Ssh transport plugin referenced below is available in the EPFL version.
+
 Before being able to run the first calculation, you need to setup at least one
 computer and one code, as described below.
 

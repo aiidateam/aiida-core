@@ -22,7 +22,7 @@ The CalculationResultManager
   and parsed Quantum ESPRESSO pw.x calculation. You can load such a calculation
   for instance with the command::
 
-    calc = JobCalculation.get_subclass_from_pk(YOURPK)
+    calc = load_node(YOURPK)
 
   either in ``verdi shell``, or in a python script
   (see :doc:`here <../examples/scripting>` for more information

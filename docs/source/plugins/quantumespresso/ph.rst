@@ -1,6 +1,8 @@
 PH
 ++
 
+.. note:: The PH plugin referenced below is available in the EPFL version.
+
 Description
 -----------
 Plugin for the Quantum Espresso ph.x executable.

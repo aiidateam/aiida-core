@@ -1,5 +1,7 @@
 ASE
-----------------
+---
+
+.. note:: The ASE plugin referenced below is available in the EPFL version.
 
 Description
 ^^^^^^^^^^^

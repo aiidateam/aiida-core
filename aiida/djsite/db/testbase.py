@@ -9,9 +9,10 @@ from django.utils import unittest
 # can be run using 'verdi test db.generic')
 # The value must be the module name containing the subclasses of unittest.TestCase
 
-__copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
-__license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.3.0"
+__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
+__version__ = "0.4.0"
+__contributors__ = "Andrea Cepellotti, Andrius Merkys, Eric Hontz, Giovanni Pizzi, Nicolas Mounet"
 
 db_test_list = {
     'generic': 'aiida.djsite.db.subtests.generic',
@@ -20,7 +21,7 @@ db_test_list = {
     'qepw': 'aiida.djsite.db.subtests.quantumespressopw',
     'codtools': 'aiida.djsite.db.subtests.codtools',
     'export_and_import': 'aiida.djsite.db.subtests.export_and_import',
-    'parsers': 'aiida.djsite.db.subtests.parsers',
+#    'parsers': 'aiida.djsite.db.subtests.parsers',
     'qepwinputparser': 'aiida.djsite.db.subtests.pwinputparser',
     'qepwimmigrant': 'aiida.djsite.db.subtests.quantumespressopwimmigrant',
     'workflows': 'aiida.djsite.db.subtests.workflows',
@@ -52,7 +53,7 @@ class AiidaTestCase(unittest.TestCase):
                                                   'fakepwd')
         cls.computer = Computer(name='localhost',
                                 hostname='localhost',
-                                transport_type='ssh',
+                                transport_type='local',
                                 scheduler_type='pbspro',
                                 workdir='/tmp/aiida')
         cls.computer.store()

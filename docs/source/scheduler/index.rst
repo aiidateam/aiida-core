@@ -23,7 +23,9 @@ The JobResource class to be used when setting the job resources is the
 
 SLURM
 -----
+
 .. note:: The Slurm plugin referenced below is available in the EPFL version.
+
 The `SLURM`_ scheduler is supported (and it has been tested with version 2.5.4).
 
 All the main features are supported with this scheduler.
@@ -35,7 +37,9 @@ The JobResource class to be used when setting the job resources is the
 
 SGE
 ---
+
 .. note:: The SGE plugin referenced below is available in the EPFL version.
+
 The `SGE`_ scheduler (Sun Grid Engine, now called Oracle Grid Engine)
 is supported (and it has been tested with version GE 6.2u3),
 together with some of the main variants/forks.
@@ -49,7 +53,7 @@ The JobResource class to be used when setting the job resources is the
 
 
 PBS/Torque & Loadleveler
-----------
+------------------------
 PBS/Torque and Loadleveler are not fully supported yet, even if their support is one of our
 top priorities. For the moment, you can try the PBSPro plugin instead of PBS/Torque, that *may*
 also work for PBS/Torque (even if there will probably be some small issues).

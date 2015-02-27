@@ -27,7 +27,7 @@ def get_new_uuid():
     Return a new UUID (typically to be used for new nodes).
     It uses the version of </
     """
-    from aiida.djsite.settings.settings import (
+    from aiida.djsite.settings.settings_profile import (
         AIIDANODES_UUID_VERSION)
     import uuid
 

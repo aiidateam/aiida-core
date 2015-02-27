@@ -10,7 +10,7 @@ from django.utils import timezone
 
 from aiida.common.exceptions import (
     ConfigurationError, DbContentError, MissingPluginError, InternalError)
-from aiida.djsite.settings.settings import (
+from aiida.djsite.settings.settings_profile import (
     AIIDANODES_UUID_VERSION, AUTH_USER_MODEL)
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."

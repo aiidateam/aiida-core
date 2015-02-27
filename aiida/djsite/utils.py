@@ -173,7 +173,7 @@ def long_field_length():
     # One should not load directly settings because there are checks inside 
     # for the current profile. However, this function is going to be called
     # only after having loaded load_dbenv, so there should be no problem
-    from aiida.djsite.settings import settings
+    from django.conf import settings
     if 'mysql' in settings.DATABASES['default']['ENGINE']:
         return 255
     else:

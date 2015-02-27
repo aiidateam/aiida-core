@@ -218,6 +218,15 @@ latex_documents = [
 # NOTE: it is needed to have these lines before load_dbenv()
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 
+# Following 3 lines avoid the need of importing load_dbenv() for compiling the
+# documentation -> works also without verdi install
+sys.path.append( os.path.join( os.path.split(__file__)[0],
+                                   os.pardir,os.pardir) )
+os.path.join( os.path.split(__file__)[0],
+                                   os.pardir)
+os.environ['DJANGO_SETTINGS_MODULE'] = 'rtd_settings'
+
+
 if not on_rtd:  # only import and set the theme if we're building docs locally
     try:
         import sphinx_rtd_theme
@@ -226,16 +235,12 @@ if not on_rtd:  # only import and set the theme if we're building docs locally
     except ImportError:
         # No sphinx_rtd_theme installed
         pass
-if on_rtd:
-    sys.path.append( os.path.join( os.path.split(__file__)[0],
-                                   os.pardir,os.pardir) )
-
 
 # Note by Andrea Cepellotti:
 # Sphinx tries to load every module that is trying to document
 # some of them requires the DJANGO_SETTINGS_MODULE variable to be set
-from aiida import load_dbenv
-load_dbenv()
+#from aiida import load_dbenv
+#load_dbenv()
 
 
 # -- Options for manual page output --------------------------------------------

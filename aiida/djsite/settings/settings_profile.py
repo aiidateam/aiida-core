@@ -7,3 +7,8 @@ __contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
 
 AIIDADB_PROFILE = None
 CURRENT_AIIDADB_PROCESS = None
+
+# CUSTOM USER CLASS
+AUTH_USER_MODEL = 'db.DbUser'
+# VERSION TO USE FOR DBNODES.
+AIIDANODES_UUID_VERSION=4

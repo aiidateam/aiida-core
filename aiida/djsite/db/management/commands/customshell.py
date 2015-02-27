@@ -2,7 +2,7 @@
 """
 This file was copied and edited from Django 1.7.4, and modified to allow to define default loads in ipython.
 
-.. note: Only ipython and bpython do the auto import, not the plain shell and _ipython_pre_100.
+.. note: Only ipython and bpython do the auto import, not the plain shell.
 
 .. note: This command should be updated when we upgrade to a more recent version of django.
 
@@ -73,6 +73,9 @@ class Command(NoArgsCommand):
         from IPython.frontend.terminal.ipapp import TerminalIPythonApp
         app = TerminalIPythonApp.instance()
         app.initialize(argv=[])
+        user_ns = self.get_start_namespace() 
+        if user_ns:
+            app.shell.user_ns.update(user_ns) 
         app.start()
 
     def _ipython(self):

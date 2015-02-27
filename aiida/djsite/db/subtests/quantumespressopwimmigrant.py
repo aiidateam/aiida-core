@@ -37,9 +37,9 @@ from aiida.orm.code import Code
 from aiida.djsite.db.models import DbAuthInfo
 from aiida.tools.codespecific.quantumespresso.pwinputparser import str2val
 
-__copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS) and 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014 Python Software Foundation. All rights reserved."
-__license__ = "Non-Commercial, End-User Software License Agreement, and Python license, see LICENSE.txt file"
-__version__ = "0.2.1"
+__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
+__version__ = "0.4.0"
 
 
 # Define the path to the directory containing the test PW runs.

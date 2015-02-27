@@ -9,8 +9,7 @@ from aiida.parsers.plugins.quantumespresso import convert_qe2aiida_structure
 from aiida.common.datastructures import calc_states
 from aiida.common.exceptions import UniquenessError
 from aiida.orm.data.array import ArrayData
-from aiida.orm.data.array.bands import BandsData
-from aiida.orm.data.array.bands import KpointsData
+from aiida.orm.data.array.kpoints import KpointsData
 
 #TODO: I don't like the generic class always returning a name for the link to the output structure
 

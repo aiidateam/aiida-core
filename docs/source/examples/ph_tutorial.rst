@@ -3,6 +3,8 @@
 Quantum Espresso Phonon user-tutorial
 =====================================
 
+.. note:: The Phonon plugin referenced below is available in the EPFL version.
+
 .. toctree::
    :maxdepth: 2
    

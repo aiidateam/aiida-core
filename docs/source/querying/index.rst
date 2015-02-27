@@ -68,7 +68,7 @@ use the
 
   q.add_attr_filter("energy", "<=", 0., relnode="res")
 
-At this point, the query ``q`` described a query you still have to run, which
+At this point, the query ``q`` describes a query you still have to run, which
 will return each calculation ``calc``
 for which the result node ``calc.res.energy`` is less or equal to 0. 
 
@@ -84,12 +84,12 @@ use the same syntax also on data you stored in the ``DbExtra`` table
 using :py:meth:`~aiida.orm.querytool.QueryTool.add_extra_filter`.
 
 .. note:: We remind here that while attributes are properties that describe
-  a node,are used internally by AiiDA and cannot be changed
+  a node, are used internally by AiiDA and cannot be changed
   after the node is stored --
   for instance, the coordinates of atoms in a crystal structure, the input
   parameters for a calculation, ... -- extras (stored in ``DbExtra``) have
-  the same format are are at full disposal of the user for adding metadata
-  to each node, tagging, and later quick querying).
+  the same format and are at full disposal of the user for adding metadata
+  to each node, tagging, and later quick querying.
 
 Finally, to run the query and get the results, you can use the 
 :py:meth:`~aiida.orm.querytool.QueryTool.run_query` method, that will
@@ -110,7 +110,7 @@ the following command::
 The transitive closure table
 ++++++++++++++++++++++++++++
 Another type of query that is very common is the discovery of whether
-two nodes are linked through a path in the AiiDA graph database, irregardless
+two nodes are linked through a path in the AiiDA graph database, regardless
 of how many nodes are in between. 
 
 This is particularly important because, for instance, you may be interested 

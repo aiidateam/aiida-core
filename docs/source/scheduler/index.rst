@@ -24,6 +24,8 @@ The JobResource class to be used when setting the job resources is the
 SLURM
 -----
 
+.. note:: The Slurm plugin referenced below is available in the EPFL version.
+
 The `SLURM`_ scheduler is supported (and it has been tested with version 2.5.4).
 
 All the main features are supported with this scheduler.
@@ -35,6 +37,9 @@ The JobResource class to be used when setting the job resources is the
 
 SGE
 ---
+
+.. note:: The SGE plugin referenced below is available in the EPFL version.
+
 The `SGE`_ scheduler (Sun Grid Engine, now called Oracle Grid Engine)
 is supported (and it has been tested with version GE 6.2u3),
 together with some of the main variants/forks.
@@ -47,11 +52,11 @@ The JobResource class to be used when setting the job resources is the
 .. _SGE: http://www.oracle.com/us/products/tools/oracle-grid-engine-075549.html
 
 
-PBS/Torque
-----------
-PBS/Torque is not fully supported yet, even if its support is one of our
-top priorities. For the moment, you can try the PBSPro plugin, that *may*
-also work PBS/Torque (even if there will probably be some small issues).
+PBS/Torque & Loadleveler
+------------------------
+PBS/Torque and Loadleveler are not fully supported yet, even if their support is one of our
+top priorities. For the moment, you can try the PBSPro plugin instead of PBS/Torque, that *may*
+also work for PBS/Torque (even if there will probably be some small issues).
 
 Job resources
 +++++++++++++
@@ -79,10 +84,10 @@ that returns the total number of MPI processes requested.
     from aiida.scheduler.datastructures import NodeNumberJobResource
     
   However, in general, you will pass the fields to set directly to the 
-  :py:meth:`set_resources() <aiida.orm.calculation.Calculation.set_resources()>` method
-  of a :py:meth:`Calculation <aiida.orm.calculation.Calculation>` object. For instance::
+  :py:meth:`set_resources() <aiida.orm.calculation.job.JobCalculation.set_resources()>` method
+  of a :py:meth:`JobCalculation <aiida.orm.calculation.job.JobCalculation>` object. For instance::
   
-     calc = Calculation(computer=...) # select here a given computer configured
+     calc = JobCalculation(computer=...) # select here a given computer configured
                                       # in AiiDA
      
      # This assumes that the computer is configured to use a scheduler with
@@ -123,8 +128,8 @@ The same can be achieved passing the fields directly to the constructor::
 
     res = NodeNumberJobResource(num_machines=4, num_mpiprocs_per_machine=16)
 
-or, even better, directly calling the :py:meth:`set_resources() <aiida.orm.calculation.Calculation.set_resources()>`
-method of the :py:meth:`Calculation <aiida.orm.calculation.Calculation>` class
+or, even better, directly calling the :py:meth:`set_resources() <aiida.orm.calculation.job.JobCalculation.set_resources()>`
+method of the :py:meth:`JobCalculation <aiida.orm.calculation.job.JobCalculation>` class
 (assuming here that ``calc`` is your calculation object)::
 
     calc.set_resources({"num_machines": 4, "num_mpiprocs_per_machine": 16})
@@ -183,8 +188,8 @@ Some examples:
 
    res = ParEnvJobResource(parallel_env='mpi', tot_num_mpiprocs=64)
 
-* even better, directly calling the :py:meth:`set_resources() <aiida.orm.calculation.Calculation.set_resources()>`
-  method of the :py:meth:`Calculation <aiida.orm.calculation.Calculation>` class
+* even better, directly calling the :py:meth:`set_resources() <aiida.orm.calculation.job.JobCalculation.set_resources()>`
+  method of the :py:meth:`JobCalculation <aiida.orm.calculation.job.JobCalculation>` class
   (assuming here that ``calc`` is your calculation object)::
 
     calc.set_resources({"parallel_env": 'mpi', "tot_num_mpiprocs": 64})

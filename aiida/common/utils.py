@@ -4,18 +4,10 @@ import string
 
 from aiida.common.exceptions import ConfigurationError
 
-__copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
-__license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.2.1"
-
-def load_django():
-    import warnings
-    from aiida.djsite.utils import load_dbenv
-    
-    warnings.warn("The load_django function has been "
-        "replaced by the aiida.load_dbenv() function.", DeprecationWarning)
-    
-    load_dbenv()
+__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
+__version__ = "0.4.0"
+__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi"
 
 class classproperty(object):
     """
@@ -35,7 +27,7 @@ def get_new_uuid():
     Return a new UUID (typically to be used for new nodes).
     It uses the version of </
     """
-    from aiida.djsite.settings.settings import (
+    from aiida.djsite.settings.settings_profile import (
         AIIDANODES_UUID_VERSION)
     import uuid
 
@@ -57,18 +49,18 @@ def get_repository_folder(subfolder=None):
     Return the top folder of the local repository.
     """
     try:
-        from aiida.djsite.settings.settings import LOCAL_REPOSITORY
-        if not os.path.isdir(LOCAL_REPOSITORY):
+        from aiida.djsite.settings.settings import REPOSITORY_PATH
+        if not os.path.isdir(REPOSITORY_PATH):
             raise ImportError
     except ImportError:
         raise ConfigurationError(
-            "The LOCAL_REPOSITORY variable is not set correctly.")
+            "The REPOSITORY_PATH variable is not set correctly.")
     if subfolder is None:
-        return os.path.abspath(LOCAL_REPOSITORY)
+        return os.path.abspath(REPOSITORY_PATH)
     elif subfolder == "sandbox":
-        return os.path.abspath(os.path.join(LOCAL_REPOSITORY,'sandbox'))
+        return os.path.abspath(os.path.join(REPOSITORY_PATH,'sandbox'))
     elif subfolder == "repository":
-        return os.path.abspath(os.path.join(LOCAL_REPOSITORY,'repository'))
+        return os.path.abspath(os.path.join(REPOSITORY_PATH,'repository'))
     else:
         raise ValueError("Invalid 'subfolder' passed to "
                          "get_repository_folder: {}".format(subfolder))
@@ -230,6 +222,30 @@ def md5_file(filename, block_size_factor=128):
             md5.update(chunk)
     return md5.hexdigest()
 
+def sha1_file(filename, block_size_factor=128):
+    """
+    Open a file and return its sha1sum (hexdigested).
+
+    :param filename: the filename of the file for which we want the sha1sum
+    :param block_size_factor: the file is read at chunks of size
+        ``block_size_factor * sha1.block_size``,
+        where ``sha1.block_size`` is the block_size used internally by the
+        hashlib module.
+
+    :returns: a string with the hexdigest sha1.
+
+    :raises: No checks are done on the file, so if it doesn't exists it may
+        raise IOError.
+    """
+    import hashlib
+    sha1 = hashlib.sha1()
+    with open(filename,'rb') as f:
+        # I read 128 bytes at a time until it returns the empty string b''
+        for chunk in iter(
+            lambda: f.read(block_size_factor*sha1.block_size), b''):
+            sha1.update(chunk)
+    return sha1.hexdigest()
+
 def str_timedelta(dt, max_num_fields=3, short=False, negative_to_zero = False):
     """
     Given a dt in seconds, return it in a HH:MM:SS format.
@@ -359,4 +375,39 @@ def grouper(n, iterable):
         if not chunk:
             return
         yield chunk
+
+def gzip_string(string):
+    """
+    Gzip string contents.
+
+    :param string: a string
+    :return: a gzipped string
+    """
+    import tempfile,gzip
+    with tempfile.NamedTemporaryFile() as f:
+        g = gzip.open(f.name,'wb')
+        g.write(string)
+        g.close()
+        return f.read()
+
+def gunzip_string(string):
+    """
+    Gunzip string contents.
+
+    :param string: a gzipped string
+    :return: a string
+    """
+    import tempfile,gzip
+    with tempfile.NamedTemporaryFile() as f:
+        f.write(string)
+        f.flush()
+        g = gzip.open(f.name,'rb')
+        return g.read()
+
+class EmptyContextManager(object):
+    def __enter__(self):
+        pass
+    
+    def __exit__(self, exc_type, exc_value, traceback):
+        pass
 

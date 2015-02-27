@@ -17,11 +17,11 @@ list:
 * **data**:                setup and manage data specific types
 * **devel**:               AiiDA commands for developers
 * **export**:              export nodes and group of nodes
-* **gotocomputer**:        open a shell to the calc folder on the cluster
 * **group**:               setup and manage groups
 * **import**:              export nodes and group of nodes
 * **install**:             install/setup aiida for the current user
 * **node**:                manage operations on AiiDA nodes
+* **run**:                  execute an AiiDA script
 * **runserver**:           run the AiiDA webserver on localhost
 * **shell**:               run the interactive shell with the Django environment
 * **user**:                list and configure new AiiDA users.
@@ -44,12 +44,24 @@ Following below, a list with the subcommands available.
   * **outputls**: shows the list of the output files of a calculation node.
   * **show**: shows the database information related to the calculation: 
     used code, all the input nodes and all the output nodes. 
+  * **gotocomputer**: open a shell to the calc folder on the cluster
+  * **label**: view / set the label of a calculation
+  * **description**: view / set the description of a calculation
+  
+.. note:: When using gotocomputer, be careful not to change any file
+  that AiiDA created,
+  nor to modify the output files or resubmit the calculation, 
+  unless you **really** know what you are doing, 
+  otherwise AiiDA may get very confused!   
+
 
 ``verdi code``
 ++++++++++++++
 
   *  **show**: shows the information of the installed code.
   *  **list**: lists the installed codes
+  *  **hide**: hide codes from `verdi code list`
+  *  **reveal**: un-hide codes for `verdi code list`
   *  **setup**: setup a new code
   *  **relabel**: change the label (name) of a code. If you like to load codes 
      based on their labels and not on their UUID's or PK's, take care of using
@@ -73,7 +85,7 @@ Manages the comments attached to a database node.
 ``verdi completioncommand``
 +++++++++++++++++++++++++++
 
-Prints the string to be copied and pasted to the bahrc in order to allow for
+Prints the string to be copied and pasted to the bashrc in order to allow for
 autocompletion of the verdi commands.
 
 ``verdi computer``
@@ -120,19 +132,53 @@ submission/retrieval of calculations.
 ++++++++++++++
 Manages database data objects.
 
-  *  **upf**: handles the Pseudopotential Datas
+  * **upf**: handles the Pseudopotential Datas
   
     * **listfamilies**: list presently stored families of pseudopotentials
     
     * **uploadfamily**: install a new family (group) of pseudopotentials
+
+    * **import**: create or return (if already present) a database node,
+      having the contents of a supplied file
   
-  *  **structure**: handles the StructureData 
+  * **structure**: handles the StructureData
   
     * **list**: list currently saved nodes of StructureData kind
     
     * **show**: use a third-party visualizer (like vmd or xcrysden) 
       to graphically show the StructureData
 
+    * **export**: export the node as a string of a specified format
+
+  * **parameter**: handles the ParameterData objects
+
+    * **show**: output the content of the python dictionary in different
+      formats. 
+
+  * **cif**: handles the CifData objects
+
+    * **list**: list currently saved nodes of CifData kind
+
+    * **show**: use third-party visualizer (like jmol) to graphically show
+      the CifData
+
+    * **import**: create or return (if already present) a database node,
+      having the contents of a supplied file
+
+    * **export**: export the node as a string of a specified format
+
+  * **trajectory**: handles the TrajectoryData objects
+
+    * **list**: list currently saved nodes of TrajectoryData kind
+
+    * **show**: use third-party visualizer (like jmol) to graphically show
+      the TrajectoryData
+
+    * **export**: export the node as a string of a specified format
+
+  * **label**: view / set the label of a data
+
+  * **description**: view / set the description of a data
 
 ``verdi devel``
 +++++++++++++++
@@ -148,19 +194,6 @@ and they might be subject to non back-compatible changes.
 
 Export data from the AiiDA database to a file. 
 See also ``verdi import`` to import this data on another database.
-
-``verdi gotocomputer``
-++++++++++++++++++++++
-
-Opens a new connection to the computer (either simply a bash shell
-or a ssh connection, depending on the transport) and directly
-change directory to the appropriate folder where the code is
-running.
-
-.. note:: Be careful not to change any file that AiiDA created,
-  nor to modify the output files or resubmit the calculation, 
-  unless you **really** know what you are doing, 
-  otherwise AiiDA may get very confused!   
 
 ``verdi group``
 +++++++++++++++
@@ -182,7 +215,17 @@ to the new schema.
 ``verdi node``
 +++++++++++++++
 
-  *  **repo**: Show files and their contents in the local repository
+  * **repo**: Show files and their contents in the local repository
+
+  * **show**: Show basic node information (PK, UUID, class, inputs and
+    outputs)
+
+``verdi run``
++++++++++++++
+
+Run a python script for AiiDA. This is the command line equivalent of the verdi
+shell. Has also features of autogroupin: by default, every node created in one
+a call of verdi run will be grouped together.
 
 ``verdi runserver``
 +++++++++++++++++++

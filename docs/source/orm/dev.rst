@@ -66,6 +66,11 @@ Upf
 .. automodule:: aiida.orm.data.upf
    :members:
 
+Cif
++++
+.. automodule:: aiida.orm.data.cif
+   :members:
+
 Parameter
 +++++++++
 .. automodule:: aiida.orm.data.parameter
@@ -95,19 +100,33 @@ TrajectoryData
 
 
 
-ORM documentation: Calculation
-==============================
+ORM documentation: Calculations
+===============================
 
 .. automodule:: aiida.orm.calculation
    :members:
    :special-members: __init__
 
+.. automodule:: aiida.orm.calculation.inline
+   :members:
+   :special-members: __init__
+
+.. automodule:: aiida.orm.calculation.job
+   :members:
+   :special-members: __init__
+
 Quantum Espresso - PW
 +++++++++++++++++++++
-.. automodule:: aiida.orm.calculation.quantumespresso.pw
+.. automodule:: aiida.orm.calculation.job.quantumespresso.pw
    :members:
+
+Quantum Espresso - PW immigrant
++++++++++++++++++++++++++++++++
+.. automodule:: aiida.orm.calculation.job.quantumespresso.pwimmigrant
+   :members:
+   :special-members: __init__
 
 TemplateReplacer
 ++++++++++++++++
-.. automodule:: aiida.orm.calculation.simpleplugins.templatereplacer
+.. automodule:: aiida.orm.calculation.job.simpleplugins.templatereplacer
    :members:

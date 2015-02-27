@@ -6,7 +6,7 @@ While many common functionalities are provided by either command-line tools
 it is useful to directly access the python objects and call their methods.
 
 This is possible in two ways, either via an interactive shell, or writing and 
-running a standard python script. Both methods are described below.
+running a script. Both methods are described below.
 
 ``verdi shell``
 ---------------
@@ -53,6 +53,48 @@ shell, you can also add (below the ``load_dbenv`` call) the following lines::
   from aiida.djsite.db import models
   
 or simply import the only modules that you will need in the script.
+
+While this method will work, we strongly suggest to use instead the
+``verdi run`` command, described here below.
+
+The ``verdi run`` command and the ``runaiida`` executable
+.........................................................
+
+In order to simplify the procedure described above, it is possible to 
+execute a python file using ``verdi run``: this command will accept
+as parameter the name of a file, and will execute it after having
+loaded the modules described above.
+
+The command ``verdi run`` has
+the additional advantage of adding all stored nodes to suitable special
+groups, of type ``autogroup.run``, for later usage. 
+You can get the list of all these groups with the command::
+
+  verdi group list -t autogroup.run
+
+Some further command line options of ``verdi run`` allow the user
+to fine-tune the autogrouping behavior;
+for more details, refer to the output of ``verdi run -h``.
+Note also that further command line parameters to ``verdi run`` are
+passed to the script as ``sys.argv``.
+
+Finally, we also defined a ``runaiida`` command, that simply will 
+pass all its parameters to ``verdi run``. The reason for this is that
+one can define a new script to be run with ``verdi run``, add as the
+first line the shebang command ``#!/usr/bin/env runaiida``, and give
+to the file execution permissions, and the file will become an
+executable that is run using AiiDA. A simple example could be::
+
+  #!/usr/bin/env runaiida
+  import sys
+
+  pk = int(sys.argv[1])
+  node = load_node(pk)
+  print "Node {} is: {}".format(pk, repr(node))
+
+  import aiida
+  print "AiiDA version is: {}".format(aiida.get_version())
+
 
 
  

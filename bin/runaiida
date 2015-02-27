@@ -1,0 +1,14 @@
+#!/bin/bash
+# Pass all parameters to 'verdi run'
+# This is useful to use in a shebang line: i.e., you can put 
+# the following line as the first line in a file:
+
+#!/usr/bin/env runaiida
+
+# and the script will be run with 'verdi run' upon execution
+# (if it has the correct execution bits set, i.e. using
+# chmod +x ...)
+
+# With "$@", each parameter is correctly escaped
+verdi run "$@"
+

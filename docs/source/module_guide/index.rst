@@ -11,3 +11,7 @@ Modules
    ../execmanager/dev
    ../djsite/dev
    ../orm/dev
+   ../querying/dev
+   ../dbimporters/dev
+   ../tools/dev
+

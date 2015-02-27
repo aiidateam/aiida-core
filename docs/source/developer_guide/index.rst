@@ -7,5 +7,5 @@ Developer's guide
    developers
    devel_tutorial/code_plugin    
    
+   data_cmdline
    git_cheatsheet
-   old

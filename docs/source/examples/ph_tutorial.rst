@@ -3,6 +3,8 @@
 Quantum Espresso Phonon user-tutorial
 =====================================
 
+.. note:: The Phonon plugin referenced below is available in the EPFL version.
+
 .. toctree::
    :maxdepth: 2
    
@@ -56,7 +58,7 @@ Again, you need to have compiled the code on the cluster and configured a new co
 Then we load the ``Code`` class-instance from the database::
 
     codename = 'my-ph.x'
-    code = Code.get(codename)
+    code = Code.get_from_string(codename)
 
 Parameter
 ---------
@@ -118,7 +120,7 @@ and load the object that represent *the* QE-PWscf calculation with ID #6::
     from aiida.orm import CalculationFactory
     PwCalculation = CalculationFactory('quantumespresso.pw')
     parent_id = 6
-    parentcalc = PwCalculation.get_subclass_from_pk(parent_id)
+    parentcalc = load_node(parent_id)
 
 Now that we loaded the parent calculation, we can set the phonon calc to
 inherit the right information from it::
@@ -164,7 +166,7 @@ the code, and the proper scheduler info.
     codename = 'my-ph.x'
     #####################
 
-    code = Code.get(codename)
+    code = Code.get_from_string(codename)
 
     ParameterData = DataFactory('parameter')
     parameters = ParameterData(dict={
@@ -178,7 +180,7 @@ the code, and the proper scheduler info.
 		    }})
 
     QEPwCalc = CalculationFactory('quantumespresso.pw')
-    parentcalc = QEPwCalc.get_subclass_from_pk(parent_id)
+    parentcalc = load_node(parent_id)
 
     calc = code.new_calc()
     calc.set_max_wallclock_seconds(30*60) # 30 min

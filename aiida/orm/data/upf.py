@@ -6,9 +6,10 @@ from aiida.orm.data.singlefile import SinglefileData
 from aiida.common.utils import classproperty
 import re
 
-__copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
-__license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.2.1"
+__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
+__version__ = "0.4.0"
+__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Riccardo Sabatini"
 
 UPFGROUP_TYPE = 'data.upf.family'
 
@@ -330,7 +331,7 @@ class UpfData(SinglefileData):
     def upffamily_type_string(cls):
         return UPFGROUP_TYPE
 
-    def store(self):
+    def store(self, *args, **kwargs):
         """
         Store the node, reparsing the file so that the md5 and the element 
         are correctly reset.
@@ -354,7 +355,7 @@ class UpfData(SinglefileData):
         self._set_attr('element', str(element))
         self._set_attr('md5', md5sum)
 
-        return super(UpfData, self).store()
+        return super(UpfData, self).store(*args, **kwargs)
 
 
     @classmethod

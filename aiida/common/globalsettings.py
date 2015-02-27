@@ -4,9 +4,10 @@ Functions to manage the global settings stored in the DB (in the DbSettings
 table.
 """
 
-__copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
-__license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.2.1"
+__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
+__version__ = "0.4.0"
+__contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
 
 def set_global_setting(key, value, description=None):
     """
@@ -22,7 +23,6 @@ def set_global_setting(key, value, description=None):
     DbSetting.set_value(key, value,
                         other_attribs = {"description": description})
     
-
 def del_global_setting(key):
     """
     Return the value of the given setting, or raise a KeyError if the

@@ -5,9 +5,10 @@ import subprocess
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 
-__copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
-__license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.2.1"
+__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
+__version__ = "0.4.0"
+__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Riccardo Sabatini"
 
 def is_daemon_user():
     """
@@ -102,8 +103,7 @@ class Daemon(VerdiCommandWithSubcommands):
         Start the daemon
         """
         from aiida import load_dbenv
-        load_dbenv()
-
+        load_dbenv(process='daemon')
         if args:
             print >> sys.stderr, (
                 "No arguments allowed for the '{}' command.".format(
@@ -226,7 +226,7 @@ class Daemon(VerdiCommandWithSubcommands):
         Print the status of the daemon
         """
         from aiida import load_dbenv
-        load_dbenv()
+        load_dbenv(process='daemon')
         
         if args:
             print >> sys.stderr, (
@@ -321,7 +321,7 @@ class Daemon(VerdiCommandWithSubcommands):
         shut down.
         """
         from aiida import load_dbenv
-        load_dbenv()
+        load_dbenv(process='daemon')
 
         if args:
             print >> sys.stderr, (
@@ -360,7 +360,7 @@ class Daemon(VerdiCommandWithSubcommands):
         Configure the user that can run the daemon.
         """
         from aiida import load_dbenv
-        load_dbenv()
+        load_dbenv(process='daemon')
         
         if args:
             print >> sys.stderr, (

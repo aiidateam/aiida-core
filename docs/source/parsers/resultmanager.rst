@@ -12,7 +12,7 @@ These results are stored in new nodes, and connected as output of the
 calculation. Of course, it is possible for a given calculation to check
 output nodes and get their content. However, AiiDA provides a way to directly
 access the results, using the
-:py:class:`aiida.orm.calculation.CalculationResultManager` class,
+:py:class:`aiida.orm.calculation.job.CalculationResultManager` class,
 described in the next section.
 
 The CalculationResultManager
@@ -22,7 +22,7 @@ The CalculationResultManager
   and parsed Quantum ESPRESSO pw.x calculation. You can load such a calculation
   for instance with the command::
 
-    calc = Calculation.get_subclass_from_pk(YOURPK)
+    calc = load_node(YOURPK)
 
   either in ``verdi shell``, or in a python script
   (see :doc:`here <../examples/scripting>` for more information
@@ -30,7 +30,8 @@ The CalculationResultManager
   and where ``YOURPK`` is substituted by a valid calculation PK in your database.
 
 
-Each calculation has a ``res`` attribute that is a CalculationResultManager object and
+Each JobCalculation has a ``res`` attribute that is a 
+``CalculationResultManager`` object and
 gives direct access to parsed data.
 
 To use it, you can just use then::
@@ -66,7 +67,7 @@ provides a parser.
 
 .. note:: the ``CalculationResultManager`` is also integrated with
    iPython/verdi shell completion mechanism: if ``calc`` is a valid
-   calculation, you can type::
+   JobCalculation, you can type::
 
       calc.res.
 

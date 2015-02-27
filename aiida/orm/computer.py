@@ -4,9 +4,10 @@ from aiida.common.exceptions import (
     MissingPluginError)
 from aiida.common.utils import classproperty
 
-__copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
-__license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.2.1"
+__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
+__version__ = "0.4.0"
+__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Marco Dorigo, Nicolas Mounet"
 
 def delete_computer(computer):
     """
@@ -972,8 +973,8 @@ class Computer(object):
     
     def __str__(self):
         if self.is_enabled():
-            return "{} ({}), pk={}".format(self.name, self.hostname,
+            return "{} ({}), pk: {}".format(self.name, self.hostname,
                                            self.pk)
         else:
-            return "{} ({}) [DISABLED], pk={}".format(self.name, self.hostname,
+            return "{} ({}) [DISABLED], pk: {}".format(self.name, self.hostname,
                                                       self.pk)

@@ -7,9 +7,10 @@ from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida import load_dbenv
 from aiida.cmdline import pass_to_django_manage, execname
 
-__copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
-__license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.2.1"
+__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
+__version__ = "0.4.0"
+__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi"
 
 def applyfunct_len(value):
     """
@@ -94,6 +95,7 @@ class Devel(VerdiCommandWithSubcommands):
             'delproperty': (self.run_delproperty, self.complete_properties),
             'describeproperties': (self.run_describeproperties, self.complete_none),
             'listproperties': (self.run_listproperties, self.complete_none),
+            'listislands': (self.run_listislands, self.complete_none),
             'play': (self.run_play, self.complete_none),
             'getresults': (self.calculation_getresults, self.complete_none),
             }
@@ -134,14 +136,19 @@ class Devel(VerdiCommandWithSubcommands):
             sys.exit(1)
         
         for prop in sorted(_property_table.keys()):
+            if _property_table[prop][4] is None:
+                valid_vals_str = ""
+            else:
+                valid_vals_str = " Valid values: {}.".format(",".join(
+                    str(_) for _ in _property_table[prop][4]))
             if isinstance(_property_table[prop][3], _NoDefaultValue):
                 def_val_string = ""
             else:
                 def_val_string = " (default: {})".format(
                     _property_table[prop][3])
-            print "{} ({}): {}{}".format(prop, _property_table[prop][1],
+            print "* {} ({}): {}{}{}".format(prop, _property_table[prop][1],
                                        _property_table[prop][2],
-                                       def_val_string)
+                                       def_val_string,valid_vals_str)
 
     def calculation_getresults(self, *args):
         """
@@ -149,7 +156,7 @@ class Devel(VerdiCommandWithSubcommands):
         under development.
         """
         from aiida.common.exceptions import AiidaException
-        from aiida.orm import Calculation as OrmCalculation
+        from aiida.orm import JobCalculation as OrmCalculation
         
         load_dbenv()
         
@@ -362,6 +369,24 @@ class Devel(VerdiCommandWithSubcommands):
             except KeyError:
                 pass
 
+    def run_listislands(self, *args):
+        """
+        List all AiiDA nodes, that have no parents and children.
+        """
+        load_dbenv()
+        from django.db.models import Q
+        from aiida.orm.node import Node
+        from aiida.djsite.utils import get_automatic_user
+
+        q_object = Q(user=get_automatic_user())
+        q_object.add(Q(parents__isnull=True), Q.AND)
+        q_object.add(Q(children__isnull=True), Q.AND)
+
+        node_list = Node.query(q_object).distinct().order_by('ctime')
+        print "ID\tclass"
+        for node in node_list:
+            print "{}\t{}".format(node.pk,node.__class__.__name__)
+
     def run_getproperty(self, *args):
         """
         Get a global AiiDA property from the config file in .aiida.
@@ -430,8 +455,8 @@ class Devel(VerdiCommandWithSubcommands):
     def run_tests(self,*args):
         import unittest
         import tempfile
-        from aiida.djsite.settings import settings
         from aiida.common.setup import get_property
+        from aiida.djsite.settings import settings_profile
 
         db_test_list = []
         test_folders = []
@@ -488,40 +513,20 @@ class Devel(VerdiCommandWithSubcommands):
 
             # TODO: allow the use of this flag
             if get_property('tests.use_sqlite'):
-                settings.DATABASES['default'] = {'ENGINE':
-                                                 'django.db.backends.sqlite3',
-                                                 'NAME': ":memory:"}
-            ###################################################################
-            # IMPORTANT! Choose a different repository location, otherwise 
-            # real data will be destroyed during tests!!
-            # The location is automatically created with the tempfile module
-            # Typically, under linux this is created under /tmp
-            # and is not deleted at the end of the run.
-            settings.LOCAL_REPOSITORY = tempfile.mkdtemp(prefix='aiida_repository_')
-            # I write the local repository on stderr, so that the user running
-            # the tests knows where the files are being stored
-            print >> sys.stderr, "########################################"
-            print >> sys.stderr, "# LOCAL AiiDA REPOSITORY FOR TESTS:"
-            print >> sys.stderr, "# {}".format(settings.LOCAL_REPOSITORY)
-            print >> sys.stderr, "########################################"
-            # Here. I set the correct signal to attach to when we want to
-            # perform an operation after all tables are created (e.g., creation
-            # of the triggers).
-            # By default, in djsite/settings/settings.py this is south->post_migrate,
-            # here we set it to django->post_syncdb because we have set
-            # SOUTH_TESTS_MIGRATE = False
-            # in the settings.
-            settings.AFTER_DATABASE_CREATION_SIGNAL = 'post_syncdb'
-            
-            ##################################################################
-            ## Only now I set the aiida_test_list variable so that tests can run
-            settings.aiida_test_list = db_test_list
+                profile_prefix = 'testsqlite_'
+            else:
+                profile_prefix = 'testsqlite_'
+
+            profile = "{}{}".format(profile_prefix,
+                                    settings_profile.AIIDADB_PROFILE if 
+                                    settings_profile.AIIDADB_PROFILE is not None else 'default')
+            settings_profile.aiida_test_list = db_test_list
             
             print "v"*75
             print (">>> Tests for django db application   "
                    "                                  <<<")
             print "^"*75            
-            pass_to_django_manage([execname, 'test', 'db'])
+            pass_to_django_manage([execname, 'test', 'db'], profile=profile)
 
     def complete_tests(self, subargs_idx, subargs):
         """

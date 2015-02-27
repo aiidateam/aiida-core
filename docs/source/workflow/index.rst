@@ -26,7 +26,7 @@ managed by a daemon process.
 
 Before starting to analyze our first workflow we should summarize very shortly the main working logic of a typical workflow
 execution, starting with the definition of the management daemon. The AiiDA daemon handles all the operations of a workflow, 
-script loading, error handling and reporting, status monitoring and user interaction with the execution queue.
+script loading, error handling and reporting, state monitoring and user interaction with the execution queue.
 
 The daemon works essentially as an infinite loop, iterating several simple operations:
 
@@ -37,7 +37,12 @@ The daemon works essentially as an infinite loop, iterating several simple opera
 
 This simplified process is the very heart of the workflow engine, and while the process loops a user can submit a new workflow 
 to be managed from the Verdi shell (or through a script loading the necessary Verdi environment). In the next chapter we'll 
-initialize the daemon and analyze a simple workflow, submitting it and retrieving the results.  
+initialize the daemon and analyze a simple workflow, submitting it and retrieving the results.
+
+.. note::
+  The workflow engine of AiiDA is now fully operational but will be undergo major 
+  improvements in a near future. Therefore, some of the methods or functionalities
+  described in the following might change.
 
 The AiiDA daemon
 ++++++++++++++++
@@ -51,7 +56,7 @@ This command will launch a background job (a daemon in fact) that will continuou
 to the asynchronous structure of AiiDA if the daemon gets interrupted (or the computer running the daemon restarted for example), 
 once it will be restarted all the workflow will proceed automatically without any problem. The only thing you need to do to restart the
 workflow it's exactly the same command above. To stop the daemon instead we use the same command with the ``stop`` directive, and to
-have a very fast check about the execution we can use the ``status`` directive to obtain more information.
+have a very fast check about the execution we can use the ``state`` directive to obtain more information.
 
 A workflow demo
 +++++++++++++++
@@ -72,7 +77,7 @@ us to understand the more sophisticated examples reported later.
   import aiida.common
   from aiida.common import aiidalogger
   from aiida.orm.workflow import Workflow
-  from aiida.orm import Calculation, Code, Computer
+  from aiida.orm import Code, Computer
 
   logger = aiidalogger.getChild('WorkflowDemo')
   
@@ -149,7 +154,7 @@ for back-compatibility with python 2.7 also the explicit initialization of line 
 
 **lines 14-28** Once the class is defined a user can add as many methods as he wishes, to generate calculations or to download structures 
 or to compute new ones starting form a query in previous AiiDA calculations present in the DB. In the script above the method ``generate_calc`` 
-will simply prepare a dummy calculation, setting it's status to finished and returning the object after having it stored in the repository. 
+will simply prepare a dummy calculation, setting it's state to finished and returning the object after having it stored in the repository. 
 This utility function will allow the dummy workflow run without the need of any code or machine except for localhost configured. In real 
 case, as we'll see, a calculation will be set-up with parameters and structures defined in more sophisticated ways, but the logic underneath 
 is identical as far as the workflow inner working is concerned.
@@ -162,8 +167,8 @@ of the basic ones:
 * **line 36** ``self.get_parameters()``. With this method we can retrieve the parameters passed to the workflow
   when it was initialized. Parameters cannot be modified during an execution, while attributes can be added and removed.
 
-* **lines 39-40** ``self.attach_calculation(Calculation)``. This is a key point in the workflow, and
-  something possible only inside a step method. Calculations, generated in the methods or retrieved from other utility methods, are
+* **lines 39-40** ``self.attach_calculation(JobCalculation)``. This is a key point in the workflow, and
+  something possible only inside a step method. JobCalculations, generated in the methods or retrieved from other utility methods, are
   attached to the workflow's step, launched and executed completely by the daemon, without the need of user interaction. Failures,
   re-launching and queue management are all handled by the daemon, and thousands of calculations can be attached. The daemon will
   poll the servers until all the step calculations will be finished, and only after that it will pass to the next step. 
@@ -181,9 +186,12 @@ of the basic ones:
   about what to do after all the calculations in the steps (on possible sub-workflows, as we'll see later) are terminated. The argument of
   this function has to be a ``Workflow.step`` decorated method of the same workflow class, or in case this is the last step to be executed you can
   use the common method ``self.exit``, always present in each Workflow subclass.
+
+  .. note:: make sure to ``store()`` all input nodes for the attached calculations, as unstored nodes will be lost during the transition
+    from one step to another.
   
 **lines 53-67** When the workflow will be launched through the ``start`` method, the AiiDA daemon will load the workflow, execute the step, 
-launch all the calculations and monitor their status. Once all the calculations in ``start`` will be finished the daemon will then load and 
+launch all the calculations and monitor their state. Once all the calculations in ``start`` will be finished the daemon will then load and 
 execute the next step, in this case the one called ``second_step``. In this step new features are shown:
 
 * **line 57** ``self.get_step_calculations(Workflow.step)``. Anywhere after the first step we may need to retrieve and analyze calculations 
@@ -217,51 +225,109 @@ WorkflowDemo presented before, located in the ``wf_demo.py`` file in the clean A
   >> wf = WorkflowDemo(params=params)
   >> wf.start()
   
-In these four lines we loaded the class, we created some fictitious parameter and we initialized the workflow. Finally we launched with the 
-``start()`` method, a lazy command that in the backgroud adds the workflow to the execution queue monitored by the verdi daemon. In the backgroud
-the daemon will handle all the workflow process, stepping each method, launching and retrieving calculations and monitoring possible errors and
-problems.
+In these four lines we loaded the class, we created some fictitious parameter and 
+we initialized the workflow. Finally we launched with the 
+``start()`` method, a lazy command that in the backgroud adds the workflow to 
+the execution queue monitored by the verdi daemon. In the backgroud
+the daemon will handle all the workflow process, stepping each method, launching
+and retrieving calculations and monitoring possible errors and problems.
 
-Since the workflow is now managed by the daemon, to interact with it we need special methods. There are basically two ways to see how the workflows
-are running, calling the verbose ``list_workflows`` method present in the ``aiida.orm.workflow`` package or reading the workflow report of each
-single workflow.   
+Since the workflow is now managed by the daemon, to interact with it we need 
+special methods. There are basically two ways to see how the workflows
+are running: by printing the workflow ``list`` or its ``report``.
 
-* **list_workflows** From the verdi shell we run::
- 
-  >> import aiida.orm.workflow as wfs
-  >> print wfs.list_workflows()
-  
-  This will list all the running workflow, showing the status of each step and calculation. An example output right after the
-  WorkflowDemo submission should be
+* **Workflow list**
+
+  From the command line we run::
+
+  >> verdi workflow list
+
+  This will list all the running workflows, showing the state of each step 
+  and each calculation (and, when present, each sub-workflow - see below). It
+  is the fastest way to have a snapshot of 
+  what your AiiDA workflow daemon is working on. An example output
+  right after the WorkflowDemo submission should be
   
   .. code-block:: python
   
-    + Workflow WorkflowDemo (pk=1) is RUNNING [0h:05m:04s]
+    + Workflow WorkflowDemo (pk: 1) is RUNNING [0h:05m:04s]
     |-* Step: start [->second_step] is RUNNING
-    | | Calculation (pk=1) is FINISHED
-    | | Calculation (pk=2) is FINISHED
+    | | Calculation (pk: 1) is FINISHED
+    | | Calculation (pk: 2) is FINISHED
   
-  As you can see for each workflow is reported the ``pk`` number, a unique number identifying that specific execution of the workflow, something
-  necessary to retrieve it in any other time in the future (as explained in the next point). The list method can also be invoked from the verdi
-  command line interface without accessing the shell and represents the fastest way to have a snapshot of what your AiiDA daemon is working on.
+  For each workflow is reported the ``pk`` number, a unique 
+  id identifying that specific execution of the workflow, something
+  necessary to retrieve it at any other time in the future (as explained in the
+  next point).
   
-* **get_report** As explained, each workflow is equipped with a reporting facility the user can use to log any important intermediary
-  information, useful to debug the status or show some details. Moreover the report is also used by AiiDA as a error reporting tools, in 
-  case of errors encountered during the execution the AiiDA daemon will copy the entire stack trace in the workflow report before
-  halting it's execution. To access the report we have to retrieve the specific workflow instance of interest and call the ``get_report()`` method.
-  Using the verdi shell we can do this with a simple line of code::
+  .. note::
+    You can also print the ``list`` of any individual workflow from the verdi
+    shell (here in the shell where you defined your workflow as ``wf``, see above)::
   
-  >> from aiida.orm.workflow import Workflow
-  >> Workflow.get_subclass_from_pk(1).get_report()
+    >> import aiida.orm.workflow as wfs
+    >> print "\n".join(wfs.get_workflow_info(wf._dbworkflowinstance))
+  
+  
+* **Workflow report** 
+
+  As explained, each workflow is equipped with a reporting facility the user can
+  use to log any important intermediate information, useful to debug the state 
+  or show some details. Moreover the report is also used by AiiDA as an error 
+  reporting tools: in case of errors encountered during the execution the AiiDA 
+  daemon will copy the entire stack trace in the workflow report before
+  halting it's execution.
+  To access the report we need the specific ``pk`` of the workflow. From the 
+  command line we would run::
+  
+   >> verdi workflow report PK_NUMBER
+
+  while from the verdi shell the same operation requires to use the ``get_report()`` method::
+  
+  >> load_workflow(PK_NUMBER).get_report()
    
-  As you can see the specific ``pk`` is needed to retrieve the report, and some caution is needed. In fact, it's always recommended to get the report
-  from ``Workflow.get_subclass_from_pk`` without saving this object in a variable. The information generated in the report may change
-  and the user calling a ``get_report`` method of a class instantiated in the past will probably lose the most recent additions to the report.
+  In both variants, PK_NUMBER is the ``pk`` number of the workflow we want
+  the report of. The ``load_workflow`` function loads a Workflow instance from
+  its ``pk`` number, or from its ``uuid`` (given as a string).
   
-Once launched, the workflows will be handled by the daemon until the final step or until some error occurs. In the last case, the workflow gets
-halted and only the user can remove or kill the workflow through the interactive verdi shell. In the last chapter we'll see how to stop a workflow,
-remove a blocked workflow from the execution list and retrieve an already finished workflow with all its calculations.
-     
+  .. note::
+	It's always recommended to get the workflow instance
+	from ``load_workflow`` (or from the ``Workflow.get_subclass_from_pk`` method) 
+	without saving this object in a variable. 
+	The information generated in the report may change and the user calling a 
+	``get_report`` method of a class instantiated in the past will probably lose 
+	the most recent additions to the report.
+  
+Once launched, the workflows will be handled by the daemon until the final step 
+or until some error occurs. In the last case, the workflow gets halted and the report 
+can be checked to understand what happened.
+
+* **Killing a workflow** 
+
+A user can also kill a workflow while it's running. This can be done with 
+the following verdi command::
+
+>> verdi workflow kill PK_NUMBER_1 PK_NUMBER_2 PK_NUMBER_N
+  
+where several ``pk`` numbers can be given. A prompt will ask for a confirmation;
+this can be avoided by using the ``-f`` option.
+  
+An alternative way to kill an individual workflow is to use the ``kill`` method.
+In the verdi shell type:: 
+
+>> load_workflow(PK_NUMBER).kill()
+
+or, equivalently::
+
+>> Workflow.get_subclass_from_pk(PK_NUMBER).kill()
+  
+.. note::
+  Sometimes the ``kill`` operation might fail because one calculation cannot be 
+  killed (e.g. if it's running but not in the ``WITHSCHEDULER``, ``TOSUBMIT`` or 
+  ``NEW`` state), or because one workflow step is in the ``CREATED`` state. In that case the 
+  workflow is put to the ``SLEEP`` state, such that no more workflow step will be launched
+  by the daemon. One can then simply wait until the calculation or step changes state,
+  and try to kill it again.
+    
 A more sophisticated workflow
 +++++++++++++++++++++++++++++
 
@@ -342,7 +408,7 @@ aside to the final optimal cell parameter value.
             max_wallclock_seconds  = params['max_wallclock_seconds']
             pseudo_family          = params['pseudo_family']
             
-            code = Code.get(pw_codename)
+            code = Code.get_from_string(pw_codename)
             computer = code.get_remote_computer()
             
             QECalc = CalculationFactory('quantumespresso.pw')
@@ -513,7 +579,7 @@ this case the support functions are reported first, under the ``Object generator
   
   ``get_pw_calculation`` is called in the workflow's steps, and it handles the entire Calculation object creation. First it extracts the
   parameters from the workflow initialization necessary for the execution (the machine, the code, and the number of core, pseudos, etc..) and
-  then it generates and stores the Calculation objets, returning it for later use.
+  then it generates and stores the JobCalculation objects, returning it for later use.
   
   ``get_kpoints`` genetates a k-point mesh suitable for the calculation, in this case a fixed MP mesh ``4x4x4``. In a real case scenario this
   needs much more sophisticated calculations to ensure a correct convergence, not necessary for the tutorial.
@@ -599,7 +665,7 @@ phonon vibrational frequncies for some XTiO3 materials, namely Ba, Sr and Pb.
             num_mpiprocs_per_machine   = params['num_mpiprocs_per_machine']
             max_wallclock_seconds  = params['max_wallclock_seconds']
             
-            code = Code.get(ph_codename)
+            code = Code.get_from_string(ph_codename)
             computer = code.get_remote_computer()
             
             QEPhCalc = CalculationFactory('quantumespresso.ph')

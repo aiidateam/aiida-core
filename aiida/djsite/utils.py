@@ -1,19 +1,48 @@
 # -*- coding: utf-8 -*-
 import logging
 
-__copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
-__license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.2.1"
+__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
+__version__ = "0.4.0"
+__contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
 
-def load_dbenv():    
+def load_dbenv(process=None,profile=None):
     """
     Load the database environment (Django) and perform some checks
     """
-    import os
-    os.environ['DJANGO_SETTINGS_MODULE'] = 'aiida.djsite.settings.settings'
+    _load_dbenv_noschemacheck(process,profile)
     # Check schema version and the existence of the needed tables
     check_schema_version()
 
+
+def _load_dbenv_noschemacheck(process,profile=None):
+    """
+    Load the database environment (Django) WITHOUT CHECKING THE SCHEMA VERSION.
+    
+    :param process: ...
+    
+    This should ONLY be used internally, inside load_dbenv, and for schema 
+    migrations. DO NOT USE OTHERWISE!
+    """
+    import os
+    import django
+    from aiida.common.setup import get_default_profile,DEFAULT_PROCESS
+    from aiida.djsite.settings import settings_profile
+    
+    if profile is not None and process is not None:
+        raise TypeError("You have to pass either process or profile to "
+                         "load_dbenv_noschemacheck")
+    if profile is not None:
+        settings_profile.AIIDADB_PROFILE = profile
+        settings_profile.CURRENT_AIIDADB_PROCESS = None
+    else:
+        actual_process = process if process is not None else DEFAULT_PROCESS
+        settings_profile.AIIDADB_PROFILE = get_default_profile(actual_process)
+        settings_profile.CURRENT_AIIDADB_PROCESS = actual_process
+        
+    os.environ['DJANGO_SETTINGS_MODULE'] = 'aiida.djsite.settings.settings'
+    django.setup()
+    
 class DBLogHandler(logging.Handler):
     def emit(self, record):
         from django.core.exceptions import ImproperlyConfigured 
@@ -72,10 +101,12 @@ def get_configured_user_email():
     first verdi install.
     """
     from aiida.common.exceptions import ConfigurationError
-    from aiida.common.setup import get_config, DEFAULT_USER_CONFIG_FIELD
+    from aiida.common.setup import get_profile_config, DEFAULT_USER_CONFIG_FIELD
+    from aiida.djsite.settings import settings_profile 
     
     try:
-        email = get_config()[DEFAULT_USER_CONFIG_FIELD]
+        profile_conf = get_profile_config(settings_profile.AIIDADB_PROFILE)
+        email = profile_conf[DEFAULT_USER_CONFIG_FIELD]
     # I do not catch the error in case of missing configuration, because
     # it is already a ConfigurationError
     except KeyError:
@@ -131,54 +162,18 @@ def get_automatic_user():
         raise ConfigurationError("No aiida user with email {}".format(
                 email))
 
-def get_after_database_creation_signal():
-    """
-    Return the correct signal to attach to (and the sender),
-    to be used when we want to perform operations
-    after the AiiDA tables are created (e.g., trigger installation).
-    
-    This can be:
-    
-    * ``south.signals.post_migrate`` if this is not a test (because normally,
-      tables are managed by South and are not created right after the 
-      syncdb, but rather after this signal).
-    * ``django.db.models.signals.post_syncdb`` if this is a test (because in 
-      tests, South is not used)
-          
-    :return: a tuple ``(signal, sender)``, where ``signal`` is the signal to attach
-        to, and ``sender`` is the sender to filter by in the ``signal.connect()``
-        call.
-    """
-    from aiida.djsite.settings import settings
-    from aiida.common.exceptions import ConfigurationError
-    
-    if settings.AFTER_DATABASE_CREATION_SIGNAL == 'post_syncdb':
-        from django.contrib.auth import models as auth_models
-        from django.db.models.signals import post_syncdb
-
-        if 'south'  in settings.INSTALLED_APPS:
-            raise ConfigurationError("AFTER_DATABASE_CREATION_SIGNAL is "
-                "post_syncdb, but south is in the INSTALLED_APPS")        
-
-        return post_syncdb,  auth_models
-    elif settings.AFTER_DATABASE_CREATION_SIGNAL == 'post_migrate':
-        if 'south' not in settings.INSTALLED_APPS:
-            raise ConfigurationError("AFTER_DATABASE_CREATION_SIGNAL is "
-                "post_migrate, but south is not in the INSTALLED_APPS")
-                    
-        from south.signals import post_migrate
-        return post_migrate, None # No sender is needed for this model
-    else:
-        raise ConfigurationError(
-            "The settings.AFTER_DATABASE_CREATION_SIGNAL has an invalid value")
-
 def long_field_length():
     """
     Return the length of "long" fields.
     This is used, for instance, for the 'key' field of attributes.
     This returns 1024 typically, but it returns 255 if the backend is mysql.
+    
+    :note: Call this function only AFTER having called load_dbenv!
     """
-    from aiida.djsite.settings import settings
+    # One should not load directly settings because there are checks inside 
+    # for the current profile. However, this function is going to be called
+    # only after having loaded load_dbenv, so there should be no problem
+    from django.conf import settings
     if 'mysql' in settings.DATABASES['default']['ENGINE']:
         return 255
     else:
@@ -214,7 +209,7 @@ def check_schema_version():
     
     :note: if the DbSetting table does not exist, this function does not
       fail. The reason is to avoid to have problems before running the first
-      syncdb call.
+      migrate call.
       
     :note: if no version is found, the version is set to the version of the
       code. This is useful to have the code automatically set the DB version
@@ -241,8 +236,8 @@ def check_schema_version():
     
     if code_schema_version != db_schema_version:
         raise ConfigurationError("The code schema version is {}, but the "
-                                 "version stored in the database (DbSetting "
-                                 "table) is {}, I stop.".format(
+            "version stored in the database (DbSetting "
+            "table) is {}, I stop [migrate using tools in "
+            "aiida/djsite/aiida_migrations]".format(
                                     code_schema_version, db_schema_version))
-    
     

@@ -611,6 +611,7 @@ class TestTcodDbExporter(AiidaTestCase):
     Tests for TcodDbExporter class.
     """
     from aiida.orm.data.structure import has_ase
+    from aiida.orm.data.cif import has_pycifrw
 
     def test_contents_encoding(self):
         """
@@ -866,6 +867,38 @@ class TestTcodDbExporter(AiidaTestCase):
         res = PT._translate_quantumespresso_cp_cpcalculation(pd)
         self.assertEquals(res,{'_dft_cell_valence_electrons': 10})
 
+    @unittest.skipIf(not has_ase() or not has_pycifrw(),
+                     "Unable to import ase or pycifrw")
+    def test_inline_export(self):
+        from aiida.orm.data.cif import CifData
+        from aiida.tools.dbexporters.tcod import export_values
+        import tempfile
+
+        with tempfile.NamedTemporaryFile() as f:
+            f.write('''
+                data_test
+                _cell_length_a    10
+                _cell_length_b    10
+                _cell_length_c    10
+                _cell_angle_alpha 90
+                _cell_angle_beta  90
+                _cell_angle_gamma 90
+                loop_
+                _atom_site_label
+                _atom_site_fract_x
+                _atom_site_fract_y
+                _atom_site_fract_z
+                C 0 0 0
+                O 0.5 0.5 0.5
+            ''')
+            f.flush()
+            a = CifData(file=f.name)
+
+        s = a._get_aiida_structure(store=True)
+        val = export_values(s)
+        script = val.first_block()['_tcod_file_contents'][1]
+        self.assertEquals(script.find('_get_aiida_structure_ase_inline') != -1,
+                          True)
 
 class TestKindValidSymbols(AiidaTestCase):
     """

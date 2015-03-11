@@ -194,6 +194,7 @@ def make_inline(func):
         c._set_attr("source_code", "".join(source_code))
         c._set_attr("first_line_source_code", first_line)
         c._set_attr("source_file", source)
+        c._set_attr("source_function", function_name)
 
         # Run the wrapped function
         retval = func(**kwargs)

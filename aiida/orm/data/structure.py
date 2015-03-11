@@ -91,6 +91,15 @@ def has_ase():
         return False
     return True
 
+def has_pyspglib():
+    """
+    :return: True if the pyspglib module can be imported, False otherwise.
+    """
+    try:
+        import pyspglib
+    except ImportError:
+        return False
+    return True
 
 def calc_cell_volume(cell):
     """
@@ -544,6 +553,28 @@ def symop_fract_from_ortho(cell):
         [     0,   1.0/(b*sg), -(ca-cb*cg)/(b*D*sg) ],
         [     0,            0,          sg/(c*D)    ],
     ])
+
+def ase_refine_cell(aseatoms,**kwargs):
+    """
+    Detect the symmetry of the structure, remove symmetric atoms and
+    refine unit cell.
+
+    :param aseatoms: an ase.atoms.Atoms instance
+    :param symprec: symmetry precision, used by pyspglib
+    :return newase: refined cell with reduced set of atoms
+    :return symmetry: a dictionary describing the symmetry space group
+    """
+    from pyspglib.spglib import refine_cell,get_symmetry_dataset
+    from ase.lattice.spacegroup import crystal
+    cell,positions,numbers = refine_cell(aseatoms,**kwargs)
+    sym_dataset = get_symmetry_dataset(aseatoms,**kwargs)
+
+    newase = crystal(numbers,positions,spacegroup=sym_dataset['number'],
+                     cell=cell)
+
+    return newase,{'hm'    : sym_dataset['international'],
+                   'hall'  : sym_dataset['hall'],
+                   'tables': sym_dataset['number']}
             
 class StructureData(Data):
     """
@@ -665,6 +696,13 @@ class StructureData(Data):
         from aiida.orm.data.cif import CifData
         cif = CifData(ase=self.get_ase())
         return cif._prepare_cif()
+
+    def _prepare_tcod(self,**kwargs):
+        """
+        Write the given structure to a string of format TCOD CIF.
+        """
+        from aiida.tools.dbexporters.tcod import export_cif
+        return export_cif(self,**kwargs)
 
     def _prepare_xyz(self):
         """

@@ -23,11 +23,10 @@ class TestCalcStatus(AiidaTestCase):
         
         # Use the AiidaTestCase test computer
         
-        c = JobCalculation(computer=self.computer,
-                        resources={
-                            'num_machines': 1,
-                            'num_mpiprocs_per_machine': 1}
-                        )        
+        c = JobCalculation(computer=self.computer)
+        c.set_resources( {'num_machines': 1,
+                          'num_mpiprocs_per_machine': 1} )
+
         # Should be in the NEW state before storing
         self.assertEquals(c.get_state(), calc_states.NEW)
         
@@ -119,19 +118,19 @@ class TestCodDbImporter(AiidaTestCase):
                      "incorrect value for keyword 'test' -- " + \
                      "only integers and floats are accepted",
                      "invalid literal for int() with base 10: 'text'" ]
-        values = [ 10, 'text', '10', 1.0 / 3, [ 1, 2, 3 ] ]
+        values = [ 10, 'text', u'text', '10', 1.0 / 3, [ 1, 2, 3 ] ]
         methods = [ codi._int_clause,
                     codi._str_exact_clause,
                     codi._formula_clause,
                     codi._str_fuzzy_clause,
                     codi._composition_clause,
                     codi._volume_clause ]
-        results = [ [ 0, 4, 0, 1, 1 ],
-                    [ 0, 0, 0, 1, 1 ],
-                    [ 2, 0, 0, 2, 2 ],
-                    [ 0, 0, 0, 1, 1 ],
-                    [ 2, 0, 0, 2, 2 ],
-                    [ 0, 3, 3, 0, 3 ] ]
+        results = [ [ 0, 4, 1, 0, 1, 1 ],
+                    [ 0, 0, 1, 0, 1, 1 ],
+                    [ 2, 0, 2, 0, 2, 2 ],
+                    [ 0, 0, 1, 0, 1, 1 ],
+                    [ 2, 0, 2, 0, 2, 2 ],
+                    [ 0, 3, 3, 3, 0, 3 ] ]
 
         for i in range( 0, len( methods ) ):
             for j in range( 0, len( values ) ):
@@ -607,6 +606,267 @@ _publ_section_title                     'Test CIF'
         c = CifData(ase=b.ase)
         self.assertEquals(b._prepare_cif(),c._prepare_cif())
 
+class TestTcodDbExporter(AiidaTestCase):
+    """
+    Tests for TcodDbExporter class.
+    """
+    from aiida.orm.data.structure import has_ase
+
+    def test_contents_encoding(self):
+        """
+        Testing the logic of choosing the encoding and the process of
+        encoding contents.
+        """
+        from aiida.tools.dbexporters.tcod import cif_encode_contents
+        self.assertEquals(cif_encode_contents('simple line')[1],
+                          None)
+        self.assertEquals(cif_encode_contents(' ;\n ;')[1],
+                          None)
+        self.assertEquals(cif_encode_contents(';\n'),
+                          ('=3B\n', 'quoted-printable'))
+        self.assertEquals(cif_encode_contents('line\n;line'),
+                          ('line\n=3Bline', 'quoted-printable'))
+        self.assertEquals(cif_encode_contents('tabbed\ttext'),
+                          ('tabbed=09text', 'quoted-printable'))
+        self.assertEquals(cif_encode_contents('angstrom Å'),
+                          ('angstrom =C3=85', 'quoted-printable'))
+        self.assertEquals(cif_encode_contents('.'),
+                          ('=2E', 'quoted-printable'))
+        self.assertEquals(cif_encode_contents('?'),
+                          ('=3F', 'quoted-printable'))
+        self.assertEquals(cif_encode_contents('.?'), ('.?', None))
+        # This one is particularly tricky: a long line is folded by the QP
+        # and the semicolon sign becomes the first character on a new line.
+        self.assertEquals(cif_encode_contents(
+            "Å{};a".format("".join("a" for i in range(0,69)))),
+                         ('=C3=85aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+                          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaa=\n=3Ba',
+                          'quoted-printable'))
+        self.assertEquals(cif_encode_contents('angstrom ÅÅÅ'),
+                          ('YW5nc3Ryb20gw4XDhcOF', 'base64'))
+        self.assertEquals(cif_encode_contents(
+            "".join("a" for i in range(0,2048)))[1],
+            None)
+        self.assertEquals(cif_encode_contents(
+            "".join("a" for i in range(0,2049)))[1],
+            'quoted-printable')
+
+    def test_collect_files(self):
+        """
+        Testing the collection of files from file tree.
+        """
+        from aiida.tools.dbexporters.tcod import _collect_files
+        from aiida.common.folders import SandboxFolder
+        import StringIO
+
+        sf = SandboxFolder()
+        sf.get_subfolder('out',create=True)
+        sf.get_subfolder('pseudo',create=True)
+        sf.get_subfolder('save',create=True)
+        sf.get_subfolder('save/1',create=True)
+        sf.get_subfolder('save/2',create=True)
+
+        f = StringIO.StringIO("test")
+        sf.create_file_from_filelike(f,'aiida.in')
+        f = StringIO.StringIO("test")
+        sf.create_file_from_filelike(f,'aiida.out')
+        f = StringIO.StringIO("test")
+        sf.create_file_from_filelike(f,'_aiidasubmit.sh')
+        f = StringIO.StringIO("test")
+        sf.create_file_from_filelike(f,'_.out')
+        f = StringIO.StringIO("test")
+        sf.create_file_from_filelike(f,'out/out')
+        f = StringIO.StringIO("test")
+        sf.create_file_from_filelike(f,'save/1/log.log')
+
+        md5  = '098f6bcd4621d373cade4e832627b4f6'
+        sha1 = 'a94a8fe5ccb19ba61c4c0873d391e987982fbbd3'
+        self.assertEquals(
+            _collect_files(sf.abspath),
+            [{'name': 'aiida.in', 'contents': 'test', 'md5': md5,
+                      'sha1': sha1, 'type': 'file'},
+             {'name': 'save/', 'type': 'folder'},
+             {'name': 'save/1/', 'type': 'folder'},
+             {'name': 'save/1/log.log', 'contents': 'test', 'md5': md5,
+                      'sha1': sha1, 'type': 'file'},
+             {'name': 'save/2/', 'type': 'folder'},
+             {'name': '_.out', 'contents': 'test', 'md5': md5,
+                      'sha1': sha1, 'type': 'file'},
+             {'name': 'out/', 'type': 'folder'},
+             {'name': 'out/out', 'contents': 'test', 'md5': md5,
+                      'sha1': sha1, 'type': 'file'},
+             {'name': 'pseudo/', 'type': 'folder'},
+             {'name': '_aiidasubmit.sh', 'contents': 'test', 'md5': md5,
+                      'sha1': sha1, 'type': 'file'},
+             {'name': 'aiida.out', 'contents': 'test', 'md5': md5,
+                      'sha1': sha1, 'type': 'file'}])
+
+    @unittest.skipIf(not has_ase(),"Unable to import ase")
+    def test_cif_structure_roundtrip(self):
+        from aiida.tools.dbexporters.tcod import export_cif,export_values
+        from aiida.orm import Code
+        from aiida.orm import JobCalculation
+        from aiida.orm.data.cif import CifData
+        from aiida.orm.data.parameter import ParameterData
+        from aiida.orm.data.upf import UpfData
+        from aiida.orm.data.folder import FolderData
+        from aiida.common.folders import SandboxFolder
+        from aiida.common.datastructures import calc_states
+        import os
+        import tempfile
+
+        with tempfile.NamedTemporaryFile() as f:
+            f.write('''
+                data_test
+                _cell_length_a    10
+                _cell_length_b    10
+                _cell_length_c    10
+                _cell_angle_alpha 90
+                _cell_angle_beta  90
+                _cell_angle_gamma 90
+                loop_
+                _atom_site_label
+                _atom_site_fract_x
+                _atom_site_fract_y
+                _atom_site_fract_z
+                C 0 0 0
+                O 0.5 0.5 0.5
+            ''')
+            f.flush()
+            a = CifData(file=f.name)
+
+        c = a._get_aiida_structure()
+        c.store()
+        pd = ParameterData()
+
+        code = Code(local_executable='test.sh')
+        with tempfile.NamedTemporaryFile() as f:
+            f.write("#/bin/bash\n\necho test run\n")
+            f.flush()
+            code.add_path(f.name, 'test.sh')
+
+        code.store()
+
+        calc = JobCalculation(computer=self.computer)
+        calc.set_resources( {'num_machines': 1,
+                          'num_mpiprocs_per_machine': 1} )
+        calc._add_link_from(code, "code")
+        calc.set_environment_variables({'PATH': '/dev/null', 'USER': 'unknown'})
+
+        with tempfile.NamedTemporaryFile(prefix="Fe") as f:
+            f.write("<UPF version=\"2.0.1\">\nelement=\"Fe\"\n")
+            f.flush()
+            upf = UpfData(file=f.name)
+            upf.store()
+            calc._add_link_from(upf, "upf")
+
+        with tempfile.NamedTemporaryFile() as f:
+            f.write("data_test")
+            f.flush()
+            cif = CifData(file=f.name)
+            cif.store()
+            calc._add_link_from(cif, "cif")
+
+        calc.store()
+        calc._set_state(calc_states.SUBMITTING)
+        with SandboxFolder() as f:
+            calc._store_raw_input_folder(f.abspath)
+
+        fd = FolderData()
+        with open(fd._get_folder_pathsubfolder.get_abs_path(
+                    calc._SCHED_OUTPUT_FILE), 'w') as f:
+            f.write("standard output")
+            f.flush()
+
+        with open(fd._get_folder_pathsubfolder.get_abs_path(
+                    calc._SCHED_ERROR_FILE), 'w') as f:
+            f.write("standard error")
+            f.flush()
+
+        fd.store()
+        fd._add_link_from(calc, calc._get_linkname_retrieved())
+
+        pd._add_link_from(calc,"calc")
+        pd.store()
+
+        with self.assertRaises(ValueError):
+            export_cif(c,parameters=pd)
+
+        c._add_link_from(calc,"calc")
+        export_cif(c,parameters=pd)
+
+        values = export_values(c,parameters=pd)
+        values = values['0']
+
+        self.assertEquals(values['_tcod_computation_environment'],
+                          ['PATH=/dev/null\nUSER=unknown'])
+        self.assertEquals(values['_tcod_computation_command'],
+                          ['cd 0; ./_aiidasubmit.sh'])
+
+    def test_pw_translation(self):
+        from aiida.tools.dbexporters.tcod import ParameterTranslator as PT
+        from aiida.orm.data.parameter import ParameterData
+
+        pd = ParameterData(dict={})
+        res = PT._translate_quantumespresso_pw_pwcalculation(pd)
+        self.assertEquals(res,None)
+
+        pd = ParameterData(dict={'number_of_electrons': 10})
+        res = PT._translate_quantumespresso_pw_pwcalculation(pd)
+        self.assertEquals(res,None)
+
+        pd = ParameterData(dict={'creator_name': 'pwscf'})
+        res = PT._translate_quantumespresso_pw_pwcalculation(pd)
+        self.assertEquals(res,{})
+
+        pd = ParameterData(dict={'creator_name'       : 'pwscf',
+                                 'number_of_electrons': 10})
+        res = PT._translate_quantumespresso_pw_pwcalculation(pd)
+        self.assertEquals(res,{'_dft_cell_valence_electrons': 10})
+
+        pd = ParameterData(dict={'creator_name': 'pwscf',
+                                 'energy_xc'   : 5})
+        with self.assertRaises(ValueError):
+            PT._translate_quantumespresso_pw_pwcalculation(pd)
+
+        pd = ParameterData(dict={'creator_name'   : 'pwscf',
+                                 'energy_xc'      : 5,
+                                 'energy_xc_units': 'meV'})
+        with self.assertRaises(ValueError):
+            PT._translate_quantumespresso_pw_pwcalculation(pd)
+
+        energies = {
+            'energy'             : -3701.7004199449257,
+            'energy_one_electron': -984.0078459766,
+            'energy_xc'          : -706.6986753641559,
+            'energy_ewald'       : -2822.6335103043157,
+            'energy_hartree'     : 811.6396117001462,
+            'fermi_energy'       : 10.25208617898623,
+        }
+        dct = energies
+        dct['creator_name'] = 'pwscf'
+        for key in energies.keys():
+            dct["{}_units".format(key)] = 'eV'
+        pd = ParameterData(dict=dct)
+        res = PT._translate_quantumespresso_pw_pwcalculation(pd)
+        self.assertEquals(res,{
+            '_tcod_total_energy'     : energies['energy'],
+            '_dft_1e_energy'         : energies['energy_one_electron'],
+            '_dft_correlation_energy': energies['energy_xc'],
+            '_dft_ewald_energy'      : energies['energy_ewald'],
+            '_dft_hartree_energy'    : energies['energy_hartree'],
+            '_dft_fermi_energy'      : energies['fermi_energy'],
+        })
+        dct = energies
+        dct['creator_name'] = 'cp'
+        dct['number_of_electrons'] = 10
+        for key in energies.keys():
+            dct["{}_units".format(key)] = 'eV'
+        pd = ParameterData(dict=dct)
+        res = PT._translate_quantumespresso_cp_cpcalculation(pd)
+        self.assertEquals(res,{'_dft_cell_valence_electrons': 10})
+
+
 class TestKindValidSymbols(AiidaTestCase):
     """
     Tests the symbol validation of the
@@ -975,7 +1235,7 @@ class TestStructureData(AiidaTestCase):
     """
     Tests the creation of StructureData objects (cell and pbc).
     """
-    from aiida.orm.data.structure import has_ase
+    from aiida.orm.data.structure import has_ase,has_pyspglib
 
     def test_cell_ok_and_atoms(self):
         """
@@ -1244,6 +1504,61 @@ class TestStructureData(AiidaTestCase):
         a.append_atom(position=(0.,0.,0.),symbols=['O', 'H'], weights=[0.9,0.1], mass=15.)
 
         self.assertEquals(a.get_symbols_set(), set(['Ba', 'Ti', 'O', 'H']))
+
+    @unittest.skipIf(not has_ase() or not has_pyspglib(),
+                     "Unable to import ase or pyspglib")
+    def test_kind_8(self):
+        """
+        Test the ase_refine_cell() function
+        """
+        from aiida.orm.data.structure import ase_refine_cell
+        import ase
+        import math
+        import numpy
+
+        a = ase.Atoms(cell=[10,10,10])
+        a.append(ase.Atom('C',[0,0,0]))
+        a.append(ase.Atom('C',[5,0,0]))
+        b,sym = ase_refine_cell(a)
+        self.assertEquals(b.get_chemical_symbols(),['C'])
+        self.assertEquals(b.cell.tolist(),[[10,0,0],[0,10,0],[0,0,5]])
+        self.assertEquals(sym,{'hall': '-P 4 2', 'hm': 'P4/mmm', 'tables': 123})
+
+        a = ase.Atoms(cell=[10,2*math.sqrt(75),10])
+        a.append(ase.Atom('C',[0,0,0]))
+        a.append(ase.Atom('C',[5,math.sqrt(75),0]))
+        b,sym = ase_refine_cell(a)
+        self.assertEquals(b.get_chemical_symbols(),['C'])
+        self.assertEquals(numpy.round(b.cell,2).tolist(),
+                          [[10,0,0],[-5,8.66,0],[0,0,10]])
+        self.assertEquals(sym,{'hall': '-P 6 2', 'hm': 'P6/mmm', 'tables': 191})
+
+        a = ase.Atoms(cell=[[10,0,0],[-10,10,0],[0,0,10]])
+        a.append(ase.Atom('C',[5,5,5]))
+        a.append(ase.Atom('F',[0,0,0]))
+        b,sym = ase_refine_cell(a)
+        self.assertEquals(b.get_chemical_symbols(),['C','F'])
+        self.assertEquals(b.cell.tolist(),[[10,0,0],[0,10,0],[0,0,10]])
+        self.assertEquals(b.get_scaled_positions().tolist(),
+                          [[0.5,0.5,0.5],[0,0,0]])
+        self.assertEquals(sym,{'hall': '-P 4 2 3', 'hm': 'Pm-3m', 'tables': 221})
+
+        a = ase.Atoms(cell=[[10,0,0],[-10,10,0],[0,0,10]])
+        a.append(ase.Atom('C',[0,0,0]))
+        a.append(ase.Atom('F',[5,5,5]))
+        b,sym = ase_refine_cell(a)
+        self.assertEquals(b.get_chemical_symbols(),['C','F'])
+        self.assertEquals(b.cell.tolist(),[[10,0,0],[0,10,0],[0,0,10]])
+        self.assertEquals(b.get_scaled_positions().tolist(),
+                          [[0,0,0],[0.5,0.5,0.5]])
+        self.assertEquals(sym,{'hall': '-P 4 2 3', 'hm': 'Pm-3m', 'tables': 221})
+
+        a = ase.Atoms(cell=[[12.132,0,0],[0,6.0606,0],[0,0,8.0956]])
+        a.append(ase.Atom('Ba',[1.5334848,1.3999986,2.00042276]))
+        b,sym = ase_refine_cell(a)
+        self.assertEquals(b.cell.tolist(),[[12.132,0,0],[0,6.0606,0],[0,0,8.0956]])
+        self.assertEquals(b.get_scaled_positions().tolist(),
+                          [[0,0,0]])
 
     def test_get_formula(self):
         """
@@ -2084,4 +2399,3 @@ class TestKpointsData(AiidaTestCase):
         k.set_kpoints(input_klist,cartesian=True)
         klist = k.get_kpoints(cartesian=True)
         self.assertTrue( numpy.allclose(klist,input_klist,atol=1e-16) )
-        

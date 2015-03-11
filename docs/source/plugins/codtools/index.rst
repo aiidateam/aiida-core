@@ -21,6 +21,9 @@ from the package can be obtained by invoking commands with ``--help`` and
     requirements and IUCr data validation criteria (Version: 2000.06.09,
     ftp://ftp.iucr.ac.uk/pub/dvntests or ftp://ftp.iucr.org/pub/dvntests)
 
+* cif_cod_deposit
+    Deposit CIFs into COD database using CGI deposition interface.
+
 * cif_cod_numbers
     Find COD numbers for the .cif files in given directories of file lists.
 
@@ -50,6 +53,15 @@ from the package can be obtained by invoking commands with ``--help`` and
 
 * cif_molecule
     Restores molecules from a CIF file.
+
+* cif_select
+    Read CIFs and print out selected tags with their values.
+
+* cif_split
+    Split CIF files into separate files with one data\_ section each.
+
+    This script parses given CIF files to separate the datablocks, so is
+    capable of splitting non-correctly formatted and nested CIF files.
 
 * cif_split_primitive
     Split CIF files into separate files with one data\_ section each.
@@ -227,5 +239,6 @@ Plugins
    ciffilter
    cifcellcontents
    cifcodcheck
+   cifcoddeposit
    cifcodnumbers
    cifsplitprimitive

@@ -384,7 +384,7 @@ class CifData(SinglefileData):
         :note: requires ASE module.
         """
         if not kwargs and self._ase:
-            return self.ase()
+            return self.ase
         else:
             from ase.io.cif import read_cif
             return read_cif(self.get_file_abs_path(),**kwargs)
@@ -528,6 +528,13 @@ class CifData(SinglefileData):
         """
         with open(self.get_file_abs_path()) as f:
             return f.read()
+
+    def _prepare_tcod(self,**kwargs):
+        """
+        Write the given CIF to a string of format TCOD CIF.
+        """
+        from aiida.tools.dbexporters.tcod import export_cif
+        return export_cif(self,**kwargs)
         
     def _validate(self):
         """

@@ -72,8 +72,146 @@ def deserialize_field(k, v, fields_info, import_unique_ids_mappings,
         else:
             return ("{}_id".format(k), None)
             
+def extract_tar(infile,folder,nodes_export_subfolder="nodes",silent=False):
+    """
+    Extract the nodes to be imported from a gzipped tar file.
 
-def import_file(infile,silent=False):
+    :param infile: file path
+    :param folder: a SandboxFolder, used to extract the file tree
+    :param nodes_export_subfolder: name of the subfolder for AiiDA nodes
+    :param silent: suppress debug print
+    """
+    import os
+    import tarfile
+
+    if not silent:
+        print "READING DATA AND METADATA..."
+
+    try:
+        with tarfile.open(infile, "r:gz", format=tarfile.PAX_FORMAT) as tar:
+
+            tar.extract(path=folder.abspath,
+                   member=tar.getmember('metadata.json'))
+            tar.extract(path=folder.abspath,
+                   member=tar.getmember('data.json'))
+
+            if not silent:
+                print "EXTRACTING NODE DATA..."
+
+            for member in tar.getmembers():
+                if member.isdev():
+                    # safety: skip if character device, block device or FIFO
+                    print >> sys.stderr, ("WARNING, device found inside the "
+                        "import file: {}".format(member.name))
+                    continue
+                if member.issym() or member.islnk():
+                    # safety: in export, I set dereference=True therefore
+                    # there should be no symbolic or hard links.
+                    print >> sys.stderr, ("WARNING, link found inside the "
+                        "import file: {}".format(member.name))
+                    continue
+                # Check that we are only exporting nodes within
+                # the subfolder!
+                # TODO: better check such that there are no .. in the
+                # path; use probably the folder limit checks
+                if not member.name.startswith(nodes_export_subfolder+os.sep):
+                    continue
+                tar.extract(path=folder.abspath,
+                            member=member)
+    except tarfile.ReadError:
+        raise ValueError("The input file format for import is not valid (1)")
+
+def extract_cif(infile,folder,nodes_export_subfolder="nodes",
+                aiida_export_subfolder="aiida",silent=False):
+    """
+    Extract the nodes to be imported from a TCOD CIF file.
+
+    :param infile: file path
+    :param folder: a SandboxFolder, used to extract the file tree
+    :param nodes_export_subfolder: name of the subfolder for AiiDA nodes
+    :param aiida_export_subfolder: name of the subfolder for AiiDA data
+        inside the TCOD CIF internal file tree
+    :param silent: suppress debug print
+    """
+    import os
+    import urllib2
+    import CifFile
+    from aiida.common.exceptions import ValidationError
+    from aiida.common.utils import md5_file,sha1_file
+    from aiida.tools.dbexporters.tcod import cif_decode_contents
+
+    values = CifFile.ReadCif(infile)
+    values = values[values.keys()[0]] # taking the first datablock in CIF
+
+    for i in range(0,len(values['_tcod_file_id'])-1):
+        name = values['_tcod_file_name'][i]
+        if not name.startswith(aiida_export_subfolder+os.sep):
+            continue
+        dest_path = os.path.relpath(name,aiida_export_subfolder)
+        if name.endswith(os.sep):
+            if not os.path.exists(folder.get_abs_path(dest_path)):
+                folder.get_subfolder(folder.get_abs_path(dest_path),create=True)
+            continue
+        contents = values['_tcod_file_contents'][i]
+        if contents == '?' or contents == '.':
+            uri = values['_tcod_file_uri'][i]
+            if uri is not None and uri != '?' and uri != '.':
+                contents = urllib2.urlopen(uri).read()
+        encoding = values['_tcod_file_content_encoding'][i]
+        if encoding == '.':
+            encoding = None
+        contents = cif_decode_contents(contents,encoding)
+        if os.path.dirname(dest_path) != '':
+            folder.get_subfolder(os.path.dirname(dest_path)+os.sep,create=True)
+        with open(folder.get_abs_path(dest_path),'w') as f:
+            f.write(contents)
+            f.flush()
+        md5  = values['_tcod_file_md5sum'][i]
+        if md5 is not None:
+            if md5_file(folder.get_abs_path(dest_path)) != md5:
+                raise ValidationError("MD5 sum for extracted file '{}' is "
+                                      "different from given in the CIF "
+                                      "file".format(dest_path))
+        sha1 = values['_tcod_file_sha1sum'][i]
+        if sha1 is not None:
+            if sha1_file(folder.get_abs_path(dest_path)) != sha1:
+                raise ValidationError("SHA1 sum for extracted file '{}' is "
+                                      "different from given in the CIF "
+                                      "file".format(dest_path))
+
+def extract_tree(infile,folder,silent=False):
+    """
+    Prepare to import nodes from plain file system tree.
+
+    :param infile: path
+    :param folder: a SandboxFolder, used to extract the file tree
+    :param silent: suppress debug print
+    """
+    import os
+
+    def add_files(args,path,files):
+        folder = args['folder']
+        root = args['root']
+        for f in files:
+            fullpath = os.path.join(path,f)
+            if os.path.isfile(fullpath) == False:
+                continue
+            relpath = os.path.relpath(fullpath,root)
+            if os.path.dirname(relpath) != '':
+                folder.get_subfolder(os.path.dirname(relpath)+os.sep,create=True)
+            folder.insert_path(os.path.abspath(fullpath),relpath)
+
+    os.path.walk(infile,add_files,{'folder': folder,'root': infile})
+
+def import_file(infile,format='tar',silent=False):
+    """
+    Import exported AiiDA environment to the AiiDA database.
+
+    :param infile: an importable file with packed AiiDA environment
+    :param format: format of carrier file. Currently supported formats are:
+      * tar - a gzipped tar archive
+      * cif - TCOD CIF file
+    """
     import json
     import os
     import tarfile
@@ -101,53 +239,27 @@ def import_file(infile,silent=False):
     ################
     # The sandbox has to remain open until the end
     with SandboxFolder() as folder:
+        if format == 'tar':
+            extract_tar(infile,folder,silent=silent,
+                        nodes_export_subfolder=nodes_export_subfolder)
+        elif format == 'cif':
+            extract_cif(infile,folder,silent=silent,
+                        nodes_export_subfolder=nodes_export_subfolder)
+        elif format == 'tree':
+            extract_tree(infile,folder,silent=silent)
+        else:
+            raise ValueError("Unable to import file of format '{}' into "
+                             "AiiDA".format(format))
+
         try:
-            with tarfile.open(infile, "r:gz", format=tarfile.PAX_FORMAT) as tar:        
-                if not silent:
-                    print "READING DATA AND METADATA..."
-                tar.extract(path=folder.abspath,
-                       member=tar.getmember('metadata.json'))
-                tar.extract(path=folder.abspath,
-                       member=tar.getmember('data.json'))
-                
-                try:
-                    with open(folder.get_abs_path('metadata.json')) as f:
-                        metadata = json.load(f)
+            with open(folder.get_abs_path('metadata.json')) as f:
+                metadata = json.load(f)
 
-                    with open(folder.get_abs_path('data.json')) as f:
-                        data = json.load(f)
-                except IOError as e:
-                    raise ValueError(
-                        "Unable to find the file {} in the import file".format(
-                            e.filename))
-
-                if not silent:
-                    print "EXTRACTING NODE DATA..."
-                for member in tar.getmembers():
-                    if member.isdev():
-                        # safety: skip if character device, block device or FIFO
-                        print >> sys.stderr, ("WARNING, device found inside the "
-                            "import file: {}".format(member.name))
-                        continue
-                    if member.issym() or member.islnk():
-                        # safety: in export, I set dereference=True therefore
-                        # there should be no symbolic or hard links.
-                        print >> sys.stderr, ("WARNING, link found inside the "
-                            "import file: {}".format(member.name))
-                        continue
-                    # Check that we are only exporting nodes within
-                    # the subfolder!
-                    # TODO: better check such that there are no .. in the 
-                    # path; use probably the folder limit checks
-                    if not member.name.startswith(nodes_export_subfolder+os.sep):
-                        continue
-                    tar.extract(path=folder.abspath,
-                                member=member)
-
-                #print os.listdir(folder.abspath)
-                #print os.listdir(folder.abspath + "/nodes")
-        except tarfile.ReadError:
-            raise ValueError("The input file format for import is not valid (1)")
+            with open(folder.get_abs_path('data.json')) as f:
+                data = json.load(f)
+        except IOError as e:
+            raise ValueError("Unable to find the file {} in the import "
+                             "file".format(e.filename))
     
         ######################
         # PRELIMINARY CHECKS #
@@ -565,10 +677,10 @@ def get_valid_import_links(url):
 
 class Import(VerdiCommand):
     """
-    Export nodes and group of nodes
+    Import nodes and group of nodes
 
-    This command allows to export to file nodes and group of nodes, for backup
-    purposes or to share data with collaborators.
+    This command allows to import nodes from file, for backup purposes or
+    to share data with collaborators.
     """
     def run(self,*args):                    
         load_dbenv()
@@ -582,6 +694,10 @@ class Import(VerdiCommand):
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
             description='Import data in the DB.')
+        parser.add_argument('-f', '--format', type=str, default='tar',
+                            help="Type of the imported file. Currently "
+                                 "accepted types are 'tar', 'cif' and "
+                                 "'tree', 'tar' is the default value")
         parser.add_argument('-w', '--webpage', nargs='+', type=str,
                             dest='webpages', metavar='URL',
                             help="Download all URLs in the given HTTP web "
@@ -630,7 +746,7 @@ class Import(VerdiCommand):
         for filename in files:
             try:
                 print "**** Importing file {}".format(filename)
-                import_file(filename)
+                import_file(filename,format=parsed_args.format)
             except Exception:
                 traceback.print_exc()
                 

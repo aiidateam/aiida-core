@@ -181,7 +181,7 @@ for key,value in {}(
     value.store()
 END
 """.format(calc.get_attr('source_file').encode('utf-8'),
-           calc.get_attr('source_function','f'),
+           calc.get_attr('function_name','f'),
            args_string)
 
 def _collect_calculation_data(calc):

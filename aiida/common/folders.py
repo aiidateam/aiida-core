@@ -157,6 +157,9 @@ class Folder(object):
         else:
             filename = unicode(dest_name)
 
+        if not isinstance(src,unicode):
+            src = unicode(src)
+
         # I get the full path of the filename, checking also that I don't
         # go beyond the folder limits
         dest_abs_path = self.get_abs_path(filename)

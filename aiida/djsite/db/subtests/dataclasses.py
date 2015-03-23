@@ -805,36 +805,30 @@ class TestTcodDbExporter(AiidaTestCase):
                           ['cd 0; ./_aiidasubmit.sh'])
 
     def test_pw_translation(self):
-        from aiida.tools.dbexporters.tcod import ParameterTranslator as PT
+        from aiida.tools.dbexporters.tcod \
+             import translate_calculation_specific_values
+        from aiida.tools.dbexporters.tcod_plugins.pw \
+             import PwTcodtranslator as PWT
+        from aiida.tools.dbexporters.tcod_plugins.cp \
+             import CpTcodtranslator as CPT
         from aiida.orm.data.parameter import ParameterData
 
         pd = ParameterData(dict={})
-        res = PT._translate_quantumespresso_pw_pwcalculation(pd)
-        self.assertEquals(res,None)
-
-        pd = ParameterData(dict={'number_of_electrons': 10})
-        res = PT._translate_quantumespresso_pw_pwcalculation(pd)
-        self.assertEquals(res,None)
-
-        pd = ParameterData(dict={'creator_name': 'pwscf'})
-        res = PT._translate_quantumespresso_pw_pwcalculation(pd)
+        res = translate_calculation_specific_values(pd,PWT)
         self.assertEquals(res,{})
 
-        pd = ParameterData(dict={'creator_name'       : 'pwscf',
-                                 'number_of_electrons': 10})
-        res = PT._translate_quantumespresso_pw_pwcalculation(pd)
+        pd = ParameterData(dict={'number_of_electrons': 10})
+        res = translate_calculation_specific_values(pd,PWT)
         self.assertEquals(res,{'_dft_cell_valence_electrons': 10})
 
-        pd = ParameterData(dict={'creator_name': 'pwscf',
-                                 'energy_xc'   : 5})
+        pd = ParameterData(dict={'energy_xc': 5})
         with self.assertRaises(ValueError):
-            PT._translate_quantumespresso_pw_pwcalculation(pd)
+            translate_calculation_specific_values(pd,PWT)
 
-        pd = ParameterData(dict={'creator_name'   : 'pwscf',
-                                 'energy_xc'      : 5,
+        pd = ParameterData(dict={'energy_xc'      : 5,
                                  'energy_xc_units': 'meV'})
         with self.assertRaises(ValueError):
-            PT._translate_quantumespresso_pw_pwcalculation(pd)
+            translate_calculation_specific_values(pd,PWT)
 
         energies = {
             'energy'             : -3701.7004199449257,
@@ -845,11 +839,10 @@ class TestTcodDbExporter(AiidaTestCase):
             'fermi_energy'       : 10.25208617898623,
         }
         dct = energies
-        dct['creator_name'] = 'pwscf'
         for key in energies.keys():
             dct["{}_units".format(key)] = 'eV'
         pd = ParameterData(dict=dct)
-        res = PT._translate_quantumespresso_pw_pwcalculation(pd)
+        res = translate_calculation_specific_values(pd,PWT)
         self.assertEquals(res,{
             '_tcod_total_energy'     : energies['energy'],
             '_dft_1e_energy'         : energies['energy_one_electron'],
@@ -859,12 +852,11 @@ class TestTcodDbExporter(AiidaTestCase):
             '_dft_fermi_energy'      : energies['fermi_energy'],
         })
         dct = energies
-        dct['creator_name'] = 'cp'
         dct['number_of_electrons'] = 10
         for key in energies.keys():
             dct["{}_units".format(key)] = 'eV'
         pd = ParameterData(dict=dct)
-        res = PT._translate_quantumespresso_cp_cpcalculation(pd)
+        res = translate_calculation_specific_values(pd,CPT)
         self.assertEquals(res,{'_dft_cell_valence_electrons': 10})
 
     @unittest.skipIf(not has_ase() or not has_pycifrw(),

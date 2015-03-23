@@ -15,7 +15,14 @@ class InlineCalculation(Calculation):
     This is used to automatically create a calculation node
     for a simple calculation
     """
-    pass
+    def get_function_name(self):
+        """
+        Get the function name.
+        
+        :return: a string
+        """
+        return self.get_attr('function_name', None)
+        
 
 def make_inline(func):
     """
@@ -153,7 +160,7 @@ def make_inline(func):
     from aiida.orm import Data
     from aiida.common.exceptions import ModificationNotAllowed
     
-    def wrapped_function(**kwargs):
+    def wrapped_function(*args,**kwargs):
         """
         This wrapper function is the actual function that is called.
         """
@@ -168,6 +175,10 @@ def make_inline(func):
             raise ValueError("The function name that is wrapped must end "
                              "with '_inline', while its name is '{}'".format(
                                 function_name))
+        
+        if args:
+            raise ValueError("Arguments of inline function should be "
+                              "passed as key=value")
         
         # Check the input values
         for k, v in kwargs.iteritems():
@@ -194,6 +205,7 @@ def make_inline(func):
         c._set_attr("source_code", "".join(source_code))
         c._set_attr("first_line_source_code", first_line)
         c._set_attr("source_file", source)
+        c._set_attr("function_name", function_name)
 
         # Run the wrapped function
         retval = func(**kwargs)

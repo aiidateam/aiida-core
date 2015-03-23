@@ -504,10 +504,29 @@ def _collect_tags(node,calc,parameters=None,
 
     # Collecting code-specific data
 
+    from aiida.common.pluginloader import BaseFactory, existing_plugins
+    from aiida.tools.dbexporters.tcod_plugins import BaseTcodtranslator
+
+    plugin_path = "aiida.tools.dbexporters.tcod_plugins"
+    plugins = list()
+
     if calc is not None and parameters is not None:
-        par_tags = ParameterTranslator.translate(calc,parameters)
-        if par_tags:
-            tags.update(par_tags)
+        for plugin in existing_plugins(BaseTcodtranslator,plugin_path):
+            cls = BaseFactory(plugin,BaseTcodtranslator,plugin_path)
+            if calc._plugin_type_string.endswith(cls._plugin_type_string + '.'):
+                plugins.append(cls)
+
+    from aiida.common.exceptions import MultipleObjectsError
+
+    if len(plugins) > 1:
+        raise MultipleObjectsError("more than one plugin found for "
+                                   "{}".calc._plugin_type_string)
+
+    if len(plugins) == 1:
+        plugin = plugins[0]
+        translated_tags = translate_calculation_specific_values(parameters,
+                                                                plugin)
+        tags.update(translated_tags)
 
     return tags
 
@@ -868,118 +887,34 @@ def deposition_cmdline_parameters(parser,expclass="Data"):
     parser.add_argument('--url', type=str,
                         help="URL of the deposition API.")
 
-class ParameterTranslator(object):
+def translate_calculation_specific_values(parameters,translator,**kwargs):
     """
-    Calculation-specific converter from ParameterData to TCOD CIF
-    dictionaries.
-
-    Converters for each calculation type are detected automatically. To
-    add a new translator, one has to add a new classmethod, starting with
-    ``_translate_`` and ending with as specific as needed class path string
-    (dots are transliterated to '_').
-
-    For example, a parser for Quantumespresso's PW
-    (:py:class:`aiida.orm.calculation.job.quantumespresso.pw.pwcalculation`)
-    can be named as either of these:
-
-    * ``_translate_quantumespresso_pw_pwcalculation()``
-    * ``_translate_pw_pwcalculation()``
-    * ``_translate_pwcalculation()``
+    Translates calculation-specific values from ParameterData object to
+    appropriate TCOD CIF tags.
     """
+    from aiida.tools.dbexporters.tcod_plugins import BaseTcodtranslator
+    if not issubclass(translator,BaseTcodtranslator):
+        raise ValueError("supplied translator is of class {}, while it "
+                         "must be derived from {} class".format(translator.__class__,
+                                                                BaseTcodtranslator.__class__))
+    translation_map = {
+        '_tcod_total_energy'              : 'get_total_energy',
+        '_dft_1e_energy'                  : 'get_one_electron_energy',
+        '_dft_correlation_energy'         : 'get_exchange_correlation_energy',
+        '_dft_ewald_energy'               : 'get_ewald_energy',
+        '_dft_hartree_energy'             : 'get_hartree_energy',
+        '_dft_fermi_energy'               : 'get_fermi_energy',
+        '_dft_cell_valence_electrons'     : 'get_number_of_electrons',
+        '_tcod_computation_wallclock_time': 'get_computation_wallclock_time',
+    }
+    tags = dict()
+    for tag,function in translation_map.iteritems():
+        value = None
+        try:
+            value = getattr(translator,function)(parameters,**kwargs)
+        except NotImplementedError as e:
+            pass
+        if value is not None:
+            tags[tag] = value
 
-    @classmethod
-    def translate(cls,parameters,calc):
-        """
-        Main method for translation of
-        :py:class:`aiida.orm.data.parameter.ParameterData` values into
-        appropriate CIF tags.
-
-        :param parameters: instance of
-            :py:class:`aiida.orm.data.parameter.ParameterData`
-        :param calc: instance of :py:class:`aiida.orm.calculation.Calculation`
-        :returns: a dictionary of CIF tags and values
-        """
-        class_path  = calc.__class__.__module__.split(".") + \
-                     [calc.__class__.__name__.lower()]
-        prefix = "_translate"
-        for i in range(len(class_path)):
-            fname = "_".join([prefix] + class_path[i:])
-            if fname in dir(cls):
-                return getattr(cls,fname)(parameters)
-
-    @classmethod
-    def _translate_quantumespresso_pw_pwcalculation(cls,par):
-        """
-        Translate :py:class:`aiida.orm.data.parameter.ParameterData` of
-        :py:class:`aiida.orm.calculation.job.quantumespresso.pw.PwCalculation`
-        to appropriate CIF tags, required for TCOD.
-
-        :param par: instance of
-            :py:class:`aiida.orm.data.parameter.ParameterData`
-        :returns: a dictionary of CIF tags and values
-        """
-        pwscf_energy_tags = {
-            'energy'             : '_tcod_total_energy',
-            'energy_one_electron': '_dft_1e_energy',
-            'energy_xc'          : '_dft_correlation_energy',
-            'energy_ewald'       : '_dft_ewald_energy',
-            'energy_hartree'     : '_dft_hartree_energy',
-            'fermi_energy'       : '_dft_fermi_energy',
-        }
-
-        if par.get_attr('creator_name',None) != 'pwscf':
-            return None
-
-        tags = dict()
-        for pwscf_tag,tcod_tag in pwscf_energy_tags.iteritems():
-            if pwscf_tag in par.attrs():
-                # Checking the units
-                if pwscf_tag + '_units' in par.attrs():
-                    if par.get_attr(pwscf_tag + '_units') != 'eV':
-                        raise ValueError("energy units for {} are {} "
-                                         "instead of eV -- unit "
-                                         "conversion is not possible "
-                                         "yet".format(pwscf_tag,
-                                                      par.get_attr(pwscf_tag + '_units')))
-                else:
-                    raise ValueError("energy units for {} are "
-                                     "unknown".format(pwscf_tag))
-                tags[tcod_tag] = par.get_attr(pwscf_tag)
-
-        pwscf_other_tags = {
-            'number_of_electrons': '_dft_cell_valence_electrons',
-            'wall_time_seconds'  : '_tcod_computation_wallclock_time',
-        }
-
-        for pwscf_tag,tcod_tag in pwscf_other_tags.iteritems():
-            if pwscf_tag in par.attrs():
-                tags[tcod_tag] = par.get_attr(pwscf_tag)
-
-        return tags
-
-    @classmethod
-    def _translate_quantumespresso_cp_cpcalculation(cls,par):
-        """
-        Translate :py:class:`aiida.orm.data.parameter.ParameterData` of
-        :py:class:`aiida.orm.calculation.job.quantumespresso.cp.CpCalculation`
-        to appropriate CIF tags, required for TCOD.
-
-        :param par: instance of
-            :py:class:`aiida.orm.data.parameter.ParameterData`
-        :returns: a dictionary of CIF tags and values
-        """
-        if par.get_attr('creator_name',None) != 'cp':
-            return None
-
-        tags = dict()
-
-        cp_tags = {
-            'number_of_electrons': '_dft_cell_valence_electrons',
-            'wall_time_seconds'  : '_tcod_computation_wallclock_time',
-        }
-
-        for cp_tag,tcod_tag in cp_tags.iteritems():
-            if cp_tag in par.attrs():
-                tags[tcod_tag] = par.get_attr(cp_tag)
-
-        return tags
+    return tags

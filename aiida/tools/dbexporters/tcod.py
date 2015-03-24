@@ -651,8 +651,6 @@ def add_metadata_inline(what,node=None,parameters=None,args=None):
                 raise ValueError("Tag '{}' does not seem to start with "
                                  "an underscode ('_'): all CIF tags must "
                                  "start with underscores".format(k))
-            if not isinstance(v,list):
-                v = [v]
             datablock[k] = v
 
     values = pycifrw_from_cif(datablocks,loops)

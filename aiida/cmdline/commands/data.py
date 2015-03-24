@@ -66,6 +66,9 @@ class Listable(object):
         parser.add_argument('--no-header', '-H',
                             help="do not print a header with column names.",
                             dest="header", action='store_false')
+        parser.add_argument('--all-users',
+                            help="list objects created by all users.",
+                            dest="all_users", action='store_true')
 
         args = list(args)
         parsed_args = parser.parse_args(args)
@@ -97,7 +100,11 @@ class Listable(object):
         from aiida.djsite.utils import get_automatic_user
 
         now = timezone.now()
-        q_object = Q(user=get_automatic_user())
+        q_object = None
+        if args.all_users:
+            q_object = Q()
+        else:
+            q_object = Q(user=get_automatic_user())
 
         if args.past_days is not None:
             now = timezone.now()
@@ -121,6 +128,7 @@ class Listable(object):
         parser.add_argument('-p', '--past-days', metavar='N',
                             help="add a filter to show only objects created in the past N days",
                             type=int, action='store')
+
 
     def get_column_names(self):
         """
@@ -672,7 +680,11 @@ class _Bands(VerdiCommandWithSubcommands,Listable,Visualizable):
         now = timezone.now()
         
         # First, I run a query to get all BandsData of the past N days
-        q_object = Q(user=get_automatic_user())
+        q_object = None
+        if args.all_users:
+            q_object = Q()
+        else:
+            q_object = Q(user=get_automatic_user())
         if args.past_days is not None:
             now = timezone.now()
             n_days_ago = now - datetime.timedelta(days=args.past_days)
@@ -694,7 +706,8 @@ class _Bands(VerdiCommandWithSubcommands,Listable,Visualizable):
             
             # get all the StructureData that are parents of the selected bandsdatas
             q_object = Q(child__in=pks)
-            q_object.add(Q(child__user=get_automatic_user()), Q.AND)
+            if not args.all_users:
+                q_object.add(Q(child__user=get_automatic_user()), Q.AND)
             q_object.add(Q(parent__type='data.structure.StructureData.'), Q.AND)
             structure_list = DbPath.objects.filter(q_object).distinct()
             structure_list_data = structure_list.values_list('parent_id','child_id','depth')
@@ -886,7 +899,11 @@ class _Structure(VerdiCommandWithSubcommands,
         
         StructureData = DataFactory('structure')
         now = timezone.now()
-        q_object = Q(user=get_automatic_user())
+        q_object = None
+        if args.all_users:
+            q_object = Q()
+        else:
+            q_object = Q(user=get_automatic_user())
 
         if args.past_days is not None:
             now = timezone.now()
@@ -1179,7 +1196,11 @@ class _Cif(VerdiCommandWithSubcommands,
         from aiida.djsite.utils import get_automatic_user
 
         now = timezone.now()
-        q_object = Q(user=get_automatic_user())
+        q_object = None
+        if args.all_users:
+            q_object = Q()
+        else:
+            q_object = Q(user=get_automatic_user())
 
         if args.past_days is not None:
             now = timezone.now()

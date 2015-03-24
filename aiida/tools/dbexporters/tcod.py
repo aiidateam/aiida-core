@@ -786,7 +786,7 @@ def export_cifnode(what,parameters=None,trajectory_index=None,store=False,
 
 def deposit(what,type,author_name=None,author_email=None,url=None,
             title=None,username=None,password=None,user_email=None,
-            code_label='cif_cod_deposit',**kwargs):
+            code_label='cif_cod_deposit',computer_name=None,**kwargs):
     """
     Launches a JobCalculation to deposit data node to \*COD-type database.
     """
@@ -826,11 +826,15 @@ def deposit(what,type,author_name=None,author_email=None,url=None,
     cif = export_cifnode(what,store=True,**kwargs)
 
     from aiida.orm.code import Code
+    from aiida.orm.computer import Computer
     from aiida.orm.data.parameter import ParameterData
     from aiida.common.exceptions import NotExistent
 
     code = Code.get_from_string(code_label)
-    calc = code.new_calc()
+    computer = None
+    if computer_name:
+        computer = Computer.get(computer_name)
+    calc = code.new_calc(computer=computer)
     calc.set_resources({'num_machines': 1, 'num_mpiprocs_per_machine': 1})
 
     parameters = {
@@ -888,6 +892,10 @@ def deposition_cmdline_parameters(parser,expclass="Data"):
                         default='cif_cod_deposit',
                         help="Label of the code to be used for the "
                              "deposition. Default: cif_cod_deposit.")
+    parser.add_argument('--computer', type=str, dest='computer_name',
+                        help="Name of the computer to be used for "
+                             "deposition. Default computer is used if "
+                             "not specified.")
 
 def translate_calculation_specific_values(parameters,translator,**kwargs):
     """

@@ -77,7 +77,7 @@ class Listable(object):
             to_print = ""
             if parsed_args.header:
                 to_print += vsep.join(self.get_column_names()) + "\n"
-            for entry in entry_list:
+            for entry in sorted(entry_list, key = lambda x: int(x[0])):
                 to_print += vsep.join(entry) + "\n"
             sys.stdout.write(to_print)
 

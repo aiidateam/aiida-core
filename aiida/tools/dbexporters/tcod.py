@@ -786,7 +786,7 @@ def export_cifnode(what,parameters=None,trajectory_index=None,store=False,
 
 def deposit(what,type,author_name=None,author_email=None,url=None,
             title=None,username=None,password=None,user_email=None,
-            **kwargs):
+            code_label='cif_cod_deposit',**kwargs):
     """
     Launches a JobCalculation to deposit data node to \*COD-type database.
     """
@@ -829,7 +829,7 @@ def deposit(what,type,author_name=None,author_email=None,url=None,
     from aiida.orm.data.parameter import ParameterData
     from aiida.common.exceptions import NotExistent
 
-    code = Code.get_from_string('cif_cod_deposit') #TODO allow to be changed
+    code = Code.get_from_string(code_label)
     calc = code.new_calc()
     calc.set_resources({'num_machines': 1, 'num_mpiprocs_per_machine': 1})
 
@@ -884,6 +884,10 @@ def deposition_cmdline_parameters(parser,expclass="Data"):
                         help="E-mail address of the publication author.")
     parser.add_argument('--url', type=str,
                         help="URL of the deposition API.")
+    parser.add_argument('--code', type=str, dest='code_label',
+                        default='cif_cod_deposit',
+                        help="Label of the code to be used for the "
+                             "deposition. Default: cif_cod_deposit.")
 
 def translate_calculation_specific_values(parameters,translator,**kwargs):
     """

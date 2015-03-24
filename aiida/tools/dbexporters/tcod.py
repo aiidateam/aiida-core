@@ -789,7 +789,7 @@ def export_cifnode(what,parameters=None,trajectory_index=None,store=False,
     return node
 
 def deposit(what,type,author_name=None,author_email=None,url=None,
-            title=None,username=None,password=None,user_email=None,
+            title=None,username=None,password=False,user_email=None,
             code_label='cif_cod_deposit',computer_name=None,**kwargs):
     """
     Launches a JobCalculation to deposit data node to \*COD-type database.
@@ -844,9 +844,11 @@ def deposit(what,type,author_name=None,author_email=None,url=None,
     parameters = {
         'deposition-type': type,
         'username'       : username,
-        'password'       : password,
         'user_email'     : user_email,
     }
+    if password:
+        import getpass
+        parameters['password'] = getpass.getpass("Password: ")
     if author_name:
         parameters['author_name'] = author_name
     if author_email:
@@ -879,7 +881,7 @@ def deposition_cmdline_parameters(parser,expclass="Data"):
     parser.add_argument('-u', '--username', type=str, default=None,
                         dest='username',
                         help="Depositor's username.")
-    parser.add_argument('-p', '--password', type=str, default=None,
+    parser.add_argument('-p', '--password', action='store_true',
                         dest='password',
                         help="Depositor's password.")
     parser.add_argument('--user-email', type=str, default=None,

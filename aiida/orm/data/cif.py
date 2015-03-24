@@ -248,6 +248,8 @@ def pycifrw_from_cif(datablocks,loops=dict()):
             for tag in loops[loopname]:
                 if tag in values:
                     tag_values = values.pop(tag)
+                    if not isinstance(tag_values,list):
+                        tag_values = [tag_values]
                     if row_size is None:
                         row_size = len(tag_values)
                     elif row_size != len(tag_values):

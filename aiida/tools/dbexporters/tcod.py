@@ -593,9 +593,13 @@ def convert_and_refine_inline(node):
         if i in node.values.keys():
             index = node.values.keys().index(i)
             ref_datablock = node.values.items()[index][1]
-        if '_chemical_formula_sum' in ref_datablock.keys():
-            cif.values[i]['_chemical_formula_sum'] = \
-                ref_datablock['_chemical_formula_sum']
+        if len(node.get_ase()) == len(aseatoms):
+            if '_chemical_formula_sum' in ref_datablock.keys():
+                cif.values[i]['_chemical_formula_sum'] = \
+                    ref_datablock['_chemical_formula_sum']
+            if '_cell_formula_units_Z' in ref_datablock.keys():
+                cif.values[i]['_cell_formula_units_Z'] = \
+                    ref_datablock['_cell_formula_units_Z']
     return {'cif': cif}
 
 def add_metadata_inline(what,node=None,parameters=None,args=None):

@@ -641,7 +641,6 @@ class _Bands(VerdiCommandWithSubcommands,Listable,Visualizable):
         self.valid_subcommands = {
             'show': (self.show, self.complete_none),
             'list': (self.list, self.complete_none),
-            'export': (self.export, self.complete_exporters),
             }
 
     def query(self,args):

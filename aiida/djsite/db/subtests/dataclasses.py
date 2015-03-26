@@ -892,6 +892,49 @@ class TestTcodDbExporter(AiidaTestCase):
         function = '_get_aiida_structure_ase_inline'
         self.assertNotEqual(script.find(function),script.rfind(function))
 
+    @unittest.skipIf(not has_ase() or not has_pycifrw(),
+                     "Unable to import ase or pycifrw")
+    def test_many_datablock_refine(self):
+        from aiida.orm.data.cif import CifData
+        from aiida.tools.dbexporters.tcod import convert_and_refine_inline
+        import tempfile
+
+        with tempfile.NamedTemporaryFile() as f:
+            f.write('''
+                data_test
+                _cell_length_a    10
+                _cell_length_b    10
+                _cell_length_c    10
+                _cell_angle_alpha 90
+                _cell_angle_beta  90
+                _cell_angle_gamma 90
+                loop_
+                _atom_site_label
+                _atom_site_fract_x
+                _atom_site_fract_y
+                _atom_site_fract_z
+                C 0 0 0
+                O 0.5 0.5 0.5
+            ''')
+            f.flush()
+            a = CifData(file=f.name)
+
+        ret_dict = convert_and_refine_inline(a)
+        b = ret_dict['cif']
+        self.assertEqual(b.values.keys(),['test'])
+        self.assertEqual(b.values['test']['_chemical_formula_sum'],'C O')
+
+        with tempfile.NamedTemporaryFile() as f:
+            f.write('''
+                data_a
+                data_b
+            ''')
+            f.flush()
+            c = CifData(file=f.name)
+
+        with self.assertRaises(ValueError):
+            ret_dict = convert_and_refine_inline(c)
+
 class TestKindValidSymbols(AiidaTestCase):
     """
     Tests the symbol validation of the

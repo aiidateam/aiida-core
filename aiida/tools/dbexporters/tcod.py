@@ -583,23 +583,45 @@ def convert_and_refine_inline(node):
     """
     from aiida.orm.data.structure import ase_refine_cell
     CifData = DataFactory('cif')
-    aseatoms,symmetry = ase_refine_cell(node.get_ase())
-    cif = CifData(ase=aseatoms)
-    for i in cif.values.keys():
-        cif.values[i]['_symmetry_space_group_name_H-M']  = symmetry['hm']
-        cif.values[i]['_symmetry_space_group_name_Hall'] = symmetry['hall']
-        cif.values[i]['_symmetry_Int_Tables_number']     = symmetry['tables']
-        ref_datablock = node.values.first_block()
-        if i in node.values.keys():
-            index = node.values.keys().index(i)
-            ref_datablock = node.values.items()[index][1]
-        if len(node.get_ase()) == len(aseatoms):
-            if '_chemical_formula_sum' in ref_datablock.keys():
-                cif.values[i]['_chemical_formula_sum'] = \
-                    ref_datablock['_chemical_formula_sum']
-            if '_cell_formula_units_Z' in ref_datablock.keys():
-                cif.values[i]['_cell_formula_units_Z'] = \
-                    ref_datablock['_cell_formula_units_Z']
+    StructureData = DataFactory('structure')
+
+    if len(node.values.keys()) > 1:
+        raise ValueError("CifData seems to contain more than one data "
+                         "block -- multiblock CIF files are not "
+                         "supported yet")
+
+    name = node.values.keys()[0]
+
+    original_atoms = node.get_ase(index=None)
+    if len(original_atoms) > 1:
+        raise ValueError("CifData seems to contain more than one crystal "
+                         "structure -- such refinement is not supported "
+                         "yet")
+
+    original_atoms = original_atoms[0]
+
+    refined_atoms,symmetry = ase_refine_cell(original_atoms)
+
+    if len(original_atoms) != len(refined_atoms):
+        raise ValueError("at least one crystal seems to be lost during "
+                         "the symmetry reduction process")
+
+    cif = CifData(ase=refined_atoms)
+    cif.values.dictionary[name] = cif.values.dictionary.pop(str(0))
+
+    cif.values[name]['_symmetry_space_group_name_H-M']  = symmetry['hm']
+    cif.values[name]['_symmetry_space_group_name_Hall'] = symmetry['hall']
+    cif.values[name]['_symmetry_Int_Tables_number']     = symmetry['tables']
+    cif.values[name]['_chemical_formula_sum'] = \
+        StructureData(ase=refined_atoms).get_formula(mode='hill',separator=' ')
+    new_Z = None
+    if '_cell_formula_units_Z' in node.values[name].keys():
+        old_Z = node.values[name]['_cell_formula_units_Z']
+    if len(original_atoms) % len(refined_atoms):
+        new_Z = old_z * len(original_atoms) / len(refined_atoms)
+    if new_Z:
+        cif.values[name]['_cell_formula_units_Z'] = new_Z
+
     return {'cif': cif}
 
 def add_metadata_inline(what,node=None,parameters=None,args=None):

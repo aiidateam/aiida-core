@@ -24,6 +24,7 @@ db_test_list = {
 #    'parsers': 'aiida.djsite.db.subtests.parsers',
     'qepwinputparser': 'aiida.djsite.db.subtests.pwinputparser',
     'qepwimmigrant': 'aiida.djsite.db.subtests.quantumespressopwimmigrant',
+    'tcodexporter': 'aiida.djsite.db.subtests.tcodexporter',
     'workflows': 'aiida.djsite.db.subtests.workflows',
     }
 

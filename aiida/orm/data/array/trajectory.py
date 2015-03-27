@@ -363,17 +363,14 @@ class TrajectoryData(ArrayData):
         """
         from aiida.orm.data.parameter import ParameterData
         param = ParameterData(dict=kwargs)
-        try:
-            conv_f = getattr(self,'_get_aiida_structure_inline')
-            ret_dict = None
-            if store:
-                from aiida.orm.calculation.inline import make_inline
-                _,ret_dict = make_inline(conv_f)(parameters=param)
-            else:
-                ret_dict = conv_f(parameters=param)
-            return ret_dict['structure']
-        except AttributeError:
-            raise ValueError("No such converter '{}' available".format(converter))
+        conv_f = getattr(self,'_get_aiida_structure_inline')
+        ret_dict = None
+        if store:
+            from aiida.orm.calculation.inline import make_inline
+            _,ret_dict = make_inline(conv_f)(parameters=param)
+        else:
+            ret_dict = conv_f(parameters=param)
+        return ret_dict['structure']
 
     def _get_aiida_structure_inline(self,parameters=None):
         """
@@ -386,3 +383,11 @@ class TrajectoryData(ArrayData):
         if parameters is not None:
             kwargs = parameters.get_dict()
         return {'structure': self.step_to_structure(**kwargs)}
+
+    def _get_cif(self,index=None,**kwargs):
+        """
+        Creates :py:class:`aiida.orm.data.cif.CifData`
+        """
+        struct = self._get_aiida_structure(index=index,**kwargs)
+        cif    = struct._get_cif(**kwargs)
+        return cif

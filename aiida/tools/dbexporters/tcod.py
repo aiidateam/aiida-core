@@ -614,7 +614,7 @@ def convert_and_refine_inline(node):
     if '_cell_formula_units_Z' in node.values[name].keys():
         old_Z = node.values[name]['_cell_formula_units_Z']
         if len(original_atoms) % len(refined_atoms):
-            new_Z = old_z * len(original_atoms) / len(refined_atoms)
+            new_Z = old_Z * len(original_atoms) / len(refined_atoms)
             cif.values[name]['_cell_formula_units_Z'] = new_Z
 
     return {'cif': cif}

@@ -565,16 +565,29 @@ def ase_refine_cell(aseatoms,**kwargs):
     :return symmetry: a dictionary describing the symmetry space group
     """
     from pyspglib.spglib import refine_cell,get_symmetry_dataset
+    from ase.atoms import Atoms
     from ase.lattice.spacegroup import crystal
     cell,positions,numbers = refine_cell(aseatoms,**kwargs)
-    sym_dataset = get_symmetry_dataset(aseatoms,**kwargs)
 
-    newase = crystal(numbers,positions,spacegroup=sym_dataset['number'],
-                     cell=cell)
+    refined_atoms = Atoms(numbers,positions,cell=cell)
 
-    return newase,{'hm'    : sym_dataset['international'],
-                   'hall'  : sym_dataset['hall'],
-                   'tables': sym_dataset['number']}
+    sym_dataset = get_symmetry_dataset(refined_atoms,**kwargs)
+
+    unique_numbers = []
+    unique_positions = []
+    seen_positions = {}
+
+    for i,position in enumerate(sym_dataset['equivalent_atoms']):
+        if position not in seen_positions:
+            unique_numbers.append(refined_atoms.numbers[i])
+            unique_positions.append(refined_atoms.positions[i])
+            seen_positions[position] = 1
+
+    unique_atoms = crystal(unique_numbers,unique_positions,cell=cell)
+
+    return unique_atoms,{'hm'    : sym_dataset['international'],
+                         'hall'  : sym_dataset['hall'],
+                         'tables': sym_dataset['number']}
             
 class StructureData(Data):
     """

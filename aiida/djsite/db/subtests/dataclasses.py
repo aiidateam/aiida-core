@@ -1280,7 +1280,7 @@ class TestStructureData(AiidaTestCase):
         self.assertEquals(b.cell.tolist(),[[10,0,0],[0,10,0],[0,0,10]])
         self.assertEquals(b.get_scaled_positions().tolist(),
                           [[0.5,0.5,0.5],[0,0,0]])
-        self.assertEquals(sym,{'hall': '-P 4 2 3', 'hm': 'Pm-3m', 'tables': 221})
+        self.assertEquals(sym,{'hall': 'P 3* -2', 'hm': 'R3m', 'tables': 160})
 
         a = ase.Atoms(cell=[[10,0,0],[-10,10,0],[0,0,10]])
         a.append(ase.Atom('C',[0,0,0]))
@@ -1290,7 +1290,7 @@ class TestStructureData(AiidaTestCase):
         self.assertEquals(b.cell.tolist(),[[10,0,0],[0,10,0],[0,0,10]])
         self.assertEquals(b.get_scaled_positions().tolist(),
                           [[0,0,0],[0.5,0.5,0.5]])
-        self.assertEquals(sym,{'hall': '-P 4 2 3', 'hm': 'Pm-3m', 'tables': 221})
+        self.assertEquals(sym,{'hall': 'P 3* -2', 'hm': 'R3m', 'tables': 160})
 
         a = ase.Atoms(cell=[[12.132,0,0],[0,6.0606,0],[0,0,8.0956]])
         a.append(ase.Atom('Ba',[1.5334848,1.3999986,2.00042276]))

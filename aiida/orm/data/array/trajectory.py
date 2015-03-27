@@ -12,6 +12,19 @@ class TrajectoryData(ArrayData):
     possibly with velocities).
     """
 
+    @classmethod
+    def _to_aiida_structure_inline(cls,trajectory=None,parameters=None):
+        """
+        Creates :py:class:`aiida.orm.data.structure.StructureData` using ASE.
+
+        :note: requires ASE module.
+        """
+        from aiida.orm.data.structure import StructureData
+        kwargs = {}
+        if parameters is not None:
+            kwargs = parameters.get_dict()
+        return {'structure': trajectory.step_to_structure(**kwargs)}
+
     def _internal_validate(self, steps, cells, symbols, positions, times, velocities):
         """
         Internal function to validate the type and shape of the arrays. See
@@ -370,26 +383,19 @@ class TrajectoryData(ArrayData):
         """
         from aiida.orm.data.parameter import ParameterData
         param = ParameterData(dict=kwargs)
-        try:
-            conv_f = getattr(self,'_get_aiida_structure_inline')
-            ret_dict = None
-            if store:
-                from aiida.orm.calculation.inline import make_inline
-                _,ret_dict = make_inline(conv_f)(parameters=param)
-            else:
-                ret_dict = conv_f(parameters=param)
-            return ret_dict['structure']
-        except AttributeError:
-            raise ValueError("No such converter '{}' available".format(converter))
+        conv_f = getattr(self.__class__,'_to_aiida_structure_inline')
+        ret_dict = None
+        if store:
+            from aiida.orm.calculation.inline import make_inline
+            _,ret_dict = make_inline(conv_f)(trajectory=self,parameters=param)
+        else:
+            ret_dict = conv_f(trajectory=self,parameters=param)
+        return ret_dict['structure']
 
-    def _get_aiida_structure_inline(self,parameters=None):
+    def _get_cif(self,index=None,**kwargs):
         """
-        Creates :py:class:`aiida.orm.data.structure.StructureData` using ASE.
-
-        :note: requires ASE module.
+        Creates :py:class:`aiida.orm.data.cif.CifData`
         """
-        from aiida.orm.data.structure import StructureData
-        kwargs = {}
-        if parameters is not None:
-            kwargs = parameters.get_dict()
-        return {'structure': self.step_to_structure(**kwargs)}
+        struct = self._get_aiida_structure(index=index,**kwargs)
+        cif    = struct._get_cif(**kwargs)
+        return cif

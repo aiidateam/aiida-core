@@ -715,11 +715,12 @@ def export_cifnode(what,parameters=None,trajectory_index=None,store=False,
 
     # Convert node to CifData (if required)
 
-    if isinstance(node,TrajectoryData):
-        node = node._get_aiida_structure(index=trajectory_index,store=store)
-
-    if isinstance(node,StructureData):
-        node = node._get_cif(store=store)
+    if not isinstance(node,CifData):
+        if getattr(node,'_get_cif'):
+            function_args = { 'store': store }
+            if trajectory_index is not None:
+                function_args['index'] = trajectory_index
+            node = node._get_cif(**function_args)
 
     if not isinstance(node,CifData):
         raise NotImplementedError("Exporter does not know how to "

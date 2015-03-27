@@ -1299,6 +1299,14 @@ class TestStructureData(AiidaTestCase):
         self.assertEquals(b.get_scaled_positions().tolist(),
                           [[0,0,0]])
 
+        a = ase.Atoms(cell=[10,10,10])
+        a.append(ase.Atom('C',[5,5,5]))
+        a.append(ase.Atom('O',[2.5,5,5]))
+        a.append(ase.Atom('O',[7.5,5,5]))
+        b,sym = ase_refine_cell(a)
+        self.assertEquals(b.get_chemical_symbols(),['C','O'])
+        self.assertEquals(sym,{'hall': '-P 4 2', 'hm': 'P4/mmm', 'tables': 123})
+
     def test_get_formula(self):
         """
         Tests the generation of formula

@@ -602,10 +602,6 @@ def convert_and_refine_inline(node):
 
     refined_atoms,symmetry = ase_refine_cell(original_atoms)
 
-    if len(original_atoms) != len(refined_atoms):
-        raise ValueError("at least one crystal seems to be lost during "
-                         "the symmetry reduction process")
-
     cif = CifData(ase=refined_atoms)
     cif.values.dictionary[name] = cif.values.dictionary.pop(str(0))
 
@@ -614,13 +610,12 @@ def convert_and_refine_inline(node):
     cif.values[name]['_symmetry_Int_Tables_number']     = symmetry['tables']
     cif.values[name]['_chemical_formula_sum'] = \
         StructureData(ase=refined_atoms).get_formula(mode='hill',separator=' ')
-    new_Z = None
+
     if '_cell_formula_units_Z' in node.values[name].keys():
         old_Z = node.values[name]['_cell_formula_units_Z']
-    if len(original_atoms) % len(refined_atoms):
-        new_Z = old_z * len(original_atoms) / len(refined_atoms)
-    if new_Z:
-        cif.values[name]['_cell_formula_units_Z'] = new_Z
+        if len(original_atoms) % len(refined_atoms):
+            new_Z = old_z * len(original_atoms) / len(refined_atoms)
+            cif.values[name]['_cell_formula_units_Z'] = new_Z
 
     return {'cif': cif}
 

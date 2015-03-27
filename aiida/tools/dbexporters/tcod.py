@@ -530,25 +530,6 @@ def _collect_tags(node,calc,parameters=None,
 
     return tags
 
-def trajectory_to_structure_inline(node,parameters):
-    """
-    Convert :py:class:`aiida.orm.data.array.trajectory.TrajectoryData`
-    instance to :py:class:`aiida.orm.data.structure.StructureData`.
-
-    :param node: a
-        :py:class:`aiida.orm.data.array.trajectory.TrajectoryData` instance
-    :param parameters: a
-        :py:class:`aiida.orm.data.parameter.ParameterData` instance, having
-        a single field ``step`` defined, which indicates which trajectory
-        step has to be extracted and converted.
-    :return: dict with :py:class:`aiida.orm.data.structure.StructureData`.
-
-    :note: can be used as inline calculation.
-    """
-    step = parameters.get_attr('step')
-    structure = node.step_to_structure(step)
-    return {'structure': structure}
-
 def convert_and_refine_inline(node):
     """
     Refine (reduce) the cell of :py:class:`aiida.orm.data.cif.CifData`,
@@ -735,14 +716,7 @@ def export_cifnode(what,parameters=None,trajectory_index=None,store=False,
     # Convert node to CifData (if required)
 
     if isinstance(node,TrajectoryData):
-        conv = None
-        param = ParameterData(dict={'step': trajectory_index})
-        if store:
-            _,conv = make_inline(trajectory_to_structure_inline)(node=node,
-                                                                 param=param)
-        else:
-            conv = trajectory_to_structure_inline(node,param)
-        node = conv['structure']
+        node = node._get_aiida_structure(index=trajectory_index,store=store)
 
     if isinstance(node,StructureData):
         node = node._get_cif(store=store)

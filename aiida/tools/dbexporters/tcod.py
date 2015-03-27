@@ -549,28 +549,6 @@ def trajectory_to_structure_inline(node,parameters):
     structure = node.step_to_structure(step)
     return {'structure': structure}
 
-def structure_to_cif_inline(node):
-    """
-    Convert :py:class:`aiida.orm.data.structure.StructureData` instance to
-    :py:class:`aiida.orm.data.cif.CifData`.
-
-    :param node: a :py:class:`aiida.orm.data.structure.StructureData`
-        instance.
-    :return: dict with :py:class:`aiida.orm.data.cif.CifData`
-
-    :note: can be used as inline calculation.
-    """
-    CifData = DataFactory('cif')
-    cif = CifData(ase=node.get_ase())
-    formula = node.get_formula(mode='hill',separator=' ')
-    for i in cif.values.keys():
-        cif.values[i]['_symmetry_space_group_name_H-M']  = 'P 1'
-        cif.values[i]['_symmetry_space_group_name_Hall'] = 'P 1'
-        cif.values[i]['_symmetry_Int_Tables_number']     = 1
-        cif.values[i]['_cell_formula_units_Z']           = 1
-        cif.values[i]['_chemical_formula_sum']           = formula
-    return {'cif': cif}
-
 def convert_and_refine_inline(node):
     """
     Refine (reduce) the cell of :py:class:`aiida.orm.data.cif.CifData`,
@@ -767,12 +745,7 @@ def export_cifnode(what,parameters=None,trajectory_index=None,store=False,
         node = conv['structure']
 
     if isinstance(node,StructureData):
-        conv = None
-        if store:
-            _,conv = make_inline(structure_to_cif_inline)(node=node)
-        else:
-            conv = structure_to_cif_inline(node)
-        node = conv['cif']
+        node = node._get_cif(store=store)
 
     if not isinstance(node,CifData):
         raise NotImplementedError("Exporter does not know how to "

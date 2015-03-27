@@ -265,6 +265,52 @@ def pycifrw_from_cif(datablocks,loops=dict()):
             datablock[tag] = values[tag]
     return cif
 
+def refine_inline(node):
+    """
+    Refine (reduce) the cell of :py:class:`aiida.orm.data.cif.CifData`,
+    find and remove symmetrically equivalent atoms.
+
+    :param node: a :py:class:`aiida.orm.data.cif.CifData` instance.
+    :return: dict with :py:class:`aiida.orm.data.cif.CifData`
+
+    :note: can be used as inline calculation.
+    """
+    from aiida.orm.data.structure import StructureData,ase_refine_cell
+
+    if len(node.values.keys()) > 1:
+        raise ValueError("CifData seems to contain more than one data "
+                         "block -- multiblock CIF files are not "
+                         "supported yet")
+
+    name = node.values.keys()[0]
+
+    original_atoms = node.get_ase(index=None)
+    if len(original_atoms) > 1:
+        raise ValueError("CifData seems to contain more than one crystal "
+                         "structure -- such refinement is not supported "
+                         "yet")
+
+    original_atoms = original_atoms[0]
+
+    refined_atoms,symmetry = ase_refine_cell(original_atoms)
+
+    cif = CifData(ase=refined_atoms)
+    cif.values.dictionary[name] = cif.values.dictionary.pop(str(0))
+
+    cif.values[name]['_symmetry_space_group_name_H-M']  = symmetry['hm']
+    cif.values[name]['_symmetry_space_group_name_Hall'] = symmetry['hall']
+    cif.values[name]['_symmetry_Int_Tables_number']     = symmetry['tables']
+    cif.values[name]['_chemical_formula_sum'] = \
+        StructureData(ase=refined_atoms).get_formula(mode='hill',separator=' ')
+
+    if '_cell_formula_units_Z' in node.values[name].keys():
+        old_Z = node.values[name]['_cell_formula_units_Z']
+        if len(original_atoms) % len(refined_atoms):
+            new_Z = old_Z * len(original_atoms) / len(refined_atoms)
+            cif.values[name]['_cell_formula_units_Z'] = new_Z
+
+    return {'cif': cif}
+
 class CifData(SinglefileData):
     """
     Wrapper for Crystallographic Interchange File (CIF)

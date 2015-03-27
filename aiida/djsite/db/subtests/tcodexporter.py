@@ -300,8 +300,7 @@ class TestTcodDbExporter(AiidaTestCase):
     @unittest.skipIf(not has_ase() or not has_pycifrw(),
                      "Unable to import ase or pycifrw")
     def test_many_datablock_refine(self):
-        from aiida.orm.data.cif import CifData
-        from aiida.tools.dbexporters.tcod import convert_and_refine_inline
+        from aiida.orm.data.cif import CifData,refine_inline
         import tempfile
 
         with tempfile.NamedTemporaryFile() as f:
@@ -324,7 +323,7 @@ class TestTcodDbExporter(AiidaTestCase):
             f.flush()
             a = CifData(file=f.name)
 
-        ret_dict = convert_and_refine_inline(a)
+        ret_dict = refine_inline(a)
         b = ret_dict['cif']
         self.assertEqual(b.values.keys(),['test'])
         self.assertEqual(b.values['test']['_chemical_formula_sum'],'C O')
@@ -338,4 +337,4 @@ class TestTcodDbExporter(AiidaTestCase):
             c = CifData(file=f.name)
 
         with self.assertRaises(ValueError):
-            ret_dict = convert_and_refine_inline(c)
+            ret_dict = refine_inline(c)

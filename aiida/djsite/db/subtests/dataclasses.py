@@ -627,8 +627,9 @@ _publ_section_title                     'Test CIF'
                 _atom_site_fract_x
                 _atom_site_fract_y
                 _atom_site_fract_z
-                C 0 0 0
-                O 0.5 0.5 0.5
+                C 0.5 0.5 0.5
+                O 0.25 0.5 0.5
+                O 0.75 0.5 0.5
             ''')
             f.flush()
             a = CifData(file=f.name)

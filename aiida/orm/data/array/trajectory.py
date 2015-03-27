@@ -358,3 +358,38 @@ class TrajectoryData(ArrayData):
         """
         from aiida.tools.dbexporters.tcod import export_cif
         return export_cif(self,trajectory_index=step,**kwargs)
+
+    def _get_aiida_structure(self,store=False,**kwargs):
+        """
+        Creates :py:class:`aiida.orm.data.structure.StructureData`.
+
+        :param converter: specify the converter. Default 'ase'.
+        :param store: If True, intermediate calculation gets stored in the
+            AiiDA database for record. Default False.
+        :return: :py:class:`aiida.orm.data.structure.StructureData` node.
+        """
+        from aiida.orm.data.parameter import ParameterData
+        param = ParameterData(dict=kwargs)
+        try:
+            conv_f = getattr(self,'_get_aiida_structure_inline')
+            ret_dict = None
+            if store:
+                from aiida.orm.calculation.inline import make_inline
+                _,ret_dict = make_inline(conv_f)(parameters=param)
+            else:
+                ret_dict = conv_f(parameters=param)
+            return ret_dict['structure']
+        except AttributeError:
+            raise ValueError("No such converter '{}' available".format(converter))
+
+    def _get_aiida_structure_inline(self,parameters=None):
+        """
+        Creates :py:class:`aiida.orm.data.structure.StructureData` using ASE.
+
+        :note: requires ASE module.
+        """
+        from aiida.orm.data.structure import StructureData
+        kwargs = {}
+        if parameters is not None:
+            kwargs = parameters.get_dict()
+        return {'structure': self.step_to_structure(**kwargs)}

@@ -1960,53 +1960,56 @@ class TestTrajectoryData(AiidaTestCase):
         n.set_trajectory(steps=steps, cells=cells, symbols=symbols, 
                          positions=positions, times=times, velocities=velocities)
 
-        struc = n.step_to_structure(1)
-        self.assertEqual(len(struc.sites), 3) # 3 sites
-        self.assertAlmostEqual(abs(numpy.array(struc.cell)-cells[1]).sum(), 0)
-        newpos = numpy.array([s.position for s in struc.sites])
-        self.assertAlmostEqual(abs(newpos-positions[1]).sum(), 0)
-        newkinds = [s.kind_name for s in struc.sites]
-        self.assertEqual(newkinds, symbols.tolist())
-        
-        # Weird assignments (nobody should ever do this, but it is possible in 
-        # principle and we want to check
-        k1 = Kind(name='C', symbols='Cu')
-        k2 = Kind(name='H', symbols='He')
-        k3 = Kind(name='O', symbols='Os', mass=100.)
-        k4 = Kind(name='Ge', symbols='Ge')
-        
-        with self.assertRaises(ValueError):
-            # Not enough kinds
-            struc = n.step_to_structure(1, custom_kinds=[k1,k2])
-        
-        with self.assertRaises(ValueError):
-            # Too many kinds
-            struc = n.step_to_structure(1, custom_kinds=[k1,k2, k3, k4])
-        
-        with self.assertRaises(ValueError):
-            # Wrong kinds
-            struc = n.step_to_structure(1, custom_kinds=[k1,k2, k4])
-        
-        with self.assertRaises(ValueError):
-            # Two kinds with the same name
-            struc = n.step_to_structure(1, custom_kinds=[k1,k2, k3, k3])
+        from_step = n.step_to_structure(1)
+        from_get_aiida_structure = n._get_aiida_structure(index=1)
 
-        # Correct kinds
-        struc = n.step_to_structure(1, custom_kinds=[k1,k2, k3])
-        
-        # Checks
-        self.assertEqual(len(struc.sites), 3) # 3 sites
-        self.assertAlmostEqual(abs(numpy.array(struc.cell)-cells[1]).sum(), 0)
-        newpos = numpy.array([s.position for s in struc.sites])
-        self.assertAlmostEqual(abs(newpos-positions[1]).sum(), 0)
-        newkinds = [s.kind_name for s in struc.sites]
-        # Kinds are in the same order as given in the custm_kinds list
-        self.assertEqual(newkinds, symbols.tolist())
-        newatomtypes = [struc.get_kind(s.kind_name).symbols[0] for s in struc.sites]
-        # Atoms remain in the same order as given in the positions list
-        self.assertEqual(newatomtypes, ['He', 'Os','Cu'])
-        # Check the mass of the kind of the second atom ('O' _> symbol Os, mass 100)
-        self.assertAlmostEqual(struc.get_kind(struc.sites[1].kind_name).mass,100.)
+        for struc in [from_step,from_get_aiida_structure]:
+            self.assertEqual(len(struc.sites), 3) # 3 sites
+            self.assertAlmostEqual(abs(numpy.array(struc.cell)-cells[1]).sum(), 0)
+            newpos = numpy.array([s.position for s in struc.sites])
+            self.assertAlmostEqual(abs(newpos-positions[1]).sum(), 0)
+            newkinds = [s.kind_name for s in struc.sites]
+            self.assertEqual(newkinds, symbols.tolist())
+            
+            # Weird assignments (nobody should ever do this, but it is possible in 
+            # principle and we want to check
+            k1 = Kind(name='C', symbols='Cu')
+            k2 = Kind(name='H', symbols='He')
+            k3 = Kind(name='O', symbols='Os', mass=100.)
+            k4 = Kind(name='Ge', symbols='Ge')
+            
+            with self.assertRaises(ValueError):
+                # Not enough kinds
+                struc = n.step_to_structure(1, custom_kinds=[k1,k2])
+            
+            with self.assertRaises(ValueError):
+                # Too many kinds
+                struc = n.step_to_structure(1, custom_kinds=[k1,k2, k3, k4])
+            
+            with self.assertRaises(ValueError):
+                # Wrong kinds
+                struc = n.step_to_structure(1, custom_kinds=[k1,k2, k4])
+            
+            with self.assertRaises(ValueError):
+                # Two kinds with the same name
+                struc = n.step_to_structure(1, custom_kinds=[k1,k2, k3, k3])
+
+            # Correct kinds
+            struc = n.step_to_structure(1, custom_kinds=[k1,k2, k3])
+            
+            # Checks
+            self.assertEqual(len(struc.sites), 3) # 3 sites
+            self.assertAlmostEqual(abs(numpy.array(struc.cell)-cells[1]).sum(), 0)
+            newpos = numpy.array([s.position for s in struc.sites])
+            self.assertAlmostEqual(abs(newpos-positions[1]).sum(), 0)
+            newkinds = [s.kind_name for s in struc.sites]
+            # Kinds are in the same order as given in the custm_kinds list
+            self.assertEqual(newkinds, symbols.tolist())
+            newatomtypes = [struc.get_kind(s.kind_name).symbols[0] for s in struc.sites]
+            # Atoms remain in the same order as given in the positions list
+            self.assertEqual(newatomtypes, ['He', 'Os','Cu'])
+            # Check the mass of the kind of the second atom ('O' _> symbol Os, mass 100)
+            self.assertAlmostEqual(struc.get_kind(struc.sites[1].kind_name).mass,100.)
         
 
 class TestKpointsData(AiidaTestCase):

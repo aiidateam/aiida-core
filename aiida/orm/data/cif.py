@@ -330,6 +330,19 @@ class CifData(SinglefileData):
             else:        
                 return (cifs[0], False)
 
+    @classmethod
+    def _to_aiida_structure_ase_inline(cls,cif=None,parameters=None):
+        """
+        Creates :py:class:`aiida.orm.data.structure.StructureData` using ASE.
+
+        :note: requires ASE module.
+        """
+        from aiida.orm.data.structure import StructureData
+        kwargs = {}
+        if parameters is not None:
+            kwargs = parameters.get_dict()
+        return {'structure': StructureData(ase=cif.get_ase(**kwargs))}
+
     def _get_aiida_structure(self,converter='ase',store=False,**kwargs):
         """
         Creates :py:class:`aiida.orm.data.structure.StructureData`.
@@ -342,29 +355,29 @@ class CifData(SinglefileData):
         from aiida.orm.data.parameter import ParameterData
         param = ParameterData(dict=kwargs)
         try:
-            conv_f = getattr(self,
-                             '_get_aiida_structure_{}_inline'.format(converter))
+            conv_f = getattr(self.__class__,
+                             '_to_aiida_structure_{}_inline'.format(converter))
             ret_dict = None
             if store:
                 from aiida.orm.calculation.inline import make_inline
-                _,ret_dict = make_inline(conv_f)(parameters=param)
+                _,ret_dict = make_inline(conv_f)(cif=self,parameters=param)
             else:
-                ret_dict = conv_f(parameters=param)
+                ret_dict = conv_f(cif=self,parameters=param)
             return ret_dict['structure']
         except AttributeError:
             raise ValueError("No such converter '{}' available".format(converter))
 
-    def _get_aiida_structure_ase_inline(self,parameters=None):
+    def _get_aiida_structure_ase_inline(self,**kwargs):
         """
         Creates :py:class:`aiida.orm.data.structure.StructureData` using ASE.
 
-        :note: requires ASE module.
+        :note: this function is deprecated, CifData._to_aiida_structure_ase_inline
+            should be used instead.
         """
-        from aiida.orm.data.structure import StructureData
-        kwargs = {}
-        if parameters is not None:
-            kwargs = parameters.get_dict()
-        return {'structure': StructureData(ase=self.get_ase(**kwargs))}
+        from aiida.orm.calculation.inline import make_inline
+        conv_f = getattr(self.__class__,'_to_aiida_structure_ase_inline')
+        _,ret_dict = make_inline(conv_f)(cif=self,**kwargs)
+        return ret_dict
 
     @property
     def ase(self):

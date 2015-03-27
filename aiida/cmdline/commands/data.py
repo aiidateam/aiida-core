@@ -1291,7 +1291,8 @@ class _Cif(VerdiCommandWithSubcommands,
         deposition_cmdline_parameters(parser,self.dataclass.__name__)
         extend_with_cmdline_parameters(parser,self.dataclass.__name__)
 
-class _Trajectory(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
+class _Trajectory(VerdiCommandWithSubcommands,
+                  Listable,Visualizable,Exportable,Depositable):
     """
     View and manipulate TrajectoryData instances.
     """
@@ -1306,6 +1307,7 @@ class _Trajectory(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
             'show': (self.show, self.complete_none),
             'list': (self.list, self.complete_none),
             'export': (self.export, self.complete_none),
+            'deposit': (self.deposit, self.complete_none),
             }
 
     def _show_jmol(self,exec_name,trajectory_list,**kwargs):
@@ -1372,10 +1374,32 @@ class _Trajectory(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable):
         """
         Describe command line parameters.
         """
-        parser.add_argument('--step',
+        parser.add_argument('--step', dest='trajectory_index',
                             help="ID of the trajectory step. If none is "
                                  "supplied, all steps are exported.",
                             type=int, action='store')
+
+    def _deposit_tcod(self,node,parameter_data=None,**kwargs):
+        """
+        Deposition plugin for TCOD.
+        """
+        from aiida.tools.dbexporters.tcod import deposit
+        parameters = None
+        if parameter_data is not None:
+            from aiida.orm import DataFactory
+            ParameterData = DataFactory('parameter')
+            parameters = ParameterData.get_subclass_from_pk(parameter_data)
+        return deposit(node,parameters=parameters,**kwargs)
+
+    def _deposit_tcod_parameters(self,parser,**kwargs):
+        """
+        Command line parameters deposition plugin for TCOD.
+        """
+        from aiida.tools.dbexporters.tcod import (deposition_cmdline_parameters,
+                                                  extend_with_cmdline_parameters)
+        deposition_cmdline_parameters(parser,self.dataclass.__name__)
+        extend_with_cmdline_parameters(parser,self.dataclass.__name__)
+        self._export_cif_parameters(parser)
 
 class _Parameter(VerdiCommandWithSubcommands,Visualizable):
     """

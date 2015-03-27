@@ -575,13 +575,10 @@ def ase_refine_cell(aseatoms,**kwargs):
 
     unique_numbers = []
     unique_positions = []
-    seen_positions = {}
 
-    for i,position in enumerate(sym_dataset['equivalent_atoms']):
-        if position not in seen_positions:
-            unique_numbers.append(refined_atoms.numbers[i])
-            unique_positions.append(refined_atoms.positions[i])
-            seen_positions[position] = 1
+    for i in set(sym_dataset['equivalent_atoms']):
+        unique_numbers.append(refined_atoms.numbers[i])
+        unique_positions.append(refined_atoms.positions[i])
 
     unique_atoms = crystal(unique_numbers,unique_positions,cell=cell)
 

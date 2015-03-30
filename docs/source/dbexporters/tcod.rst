@@ -8,24 +8,26 @@ which can be converted to them) to the
 `Theoretical Crystallography Open Database`_ (TCOD) can be divided into
 following workflow steps:
 
-=== =============================== ============= ============= ======= ============
-No. Description                     Input         Output        Type    Implemented?
-=== =============================== ============= ============= ======= ============
-0   Conversion of the StructureData StructureData CifData       Instant \+
+=== =============================== ================================================================== ================================================================== ====== ============
+No. Description                     Input                                                              Output                                                             Type   Implemented?
+=== =============================== ================================================================== ================================================================== ====== ============
+0   Conversion of the StructureData :py:class:`StructureData <aiida.orm.data.structure.StructureData>` :py:class:`CifData <aiida.orm.data.cif.CifData>`                   Inline \+
     to CifData
-1   Detection of the symmetry and   CifData       CifData       Instant \+
+1   Detection of the symmetry and   :py:class:`CifData <aiida.orm.data.cif.CifData>`                   :py:class:`CifData <aiida.orm.data.cif.CifData>`                   Inline \+
     reduction to the unit cell
-2   Niggli reduction of the unit    CifData       CifData       Instant ---
+2   Niggli reduction of the unit    :py:class:`CifData <aiida.orm.data.cif.CifData>`                   :py:class:`CifData <aiida.orm.data.cif.CifData>`                   Inline ---
     cell
-3   Addition of structure           CifData,      CifData       Instant PW and CP
-    properties (total energy,       ParameterData
+3   Addition of structure           :py:class:`CifData <aiida.orm.data.cif.CifData>`,                  :py:class:`CifData <aiida.orm.data.cif.CifData>`                   Inline PW and CP
+    properties (total energy,       :py:class:`ParameterData <aiida.orm.data.parameter.ParameterData>`
     residual forces)
-4   Addition of the metadata for    CifData       CifData       Instant ~
+4   Addition of the metadata for    :py:class:`CifData <aiida.orm.data.cif.CifData>`                   :py:class:`CifData <aiida.orm.data.cif.CifData>`                   Inline ~
     reproduction of the results
-5   Depostition to the TCOD         CifData       ParameterData Job     \+
-=== =============================== ============= ============= ======= ============
+5   Depostition to the TCOD         :py:class:`CifData <aiida.orm.data.cif.CifData>`                   :py:class:`ParameterData <aiida.orm.data.parameter.ParameterData>` Job    \+
+=== =============================== ================================================================== ================================================================== ====== ============
 
-Type of each step's calculation (InstantCalculation of JobCalculation) is
+Type of each step's calculation
+(:py:class:`InlineCalculation <aiida.orm.calculation.inline.InlineCalculation>`
+or :py:class:`JobCalculation <aiida.orm.calculation.job.JobCalculation>`)
 defined in column *Type*. Each step is described in more detail below:
 
 * Conversion of the StructureData to CifData
@@ -44,12 +46,15 @@ defined in column *Type*. Each step is described in more detail below:
     The structure properties from the calculations, such as total energy
     and residual forces can be extracted from
     :py:class:`ParameterData <aiida.orm.data.parameter.ParameterData>`
-    nodes and put into related `TCOD CIF dictionaries`_ tags.
+    nodes and put into related `TCOD CIF dictionaries`_ tags using
+    calculation-specific parameter translator, derived from
+    :py:class:`BaseTcodtranslator <aiida.tools.dbexporters.tcod_plugins.BaseTcodtranslator>`.
 * Addition of the metadata for reproduction of the results
     Current metadata, added for reproducibility, includes scripts for
     re-running of calculations, outputs from the calculations and exported
     subset of AiiDA database. It's not quite clear what/how to record the
-    metadata for calculations of type InstantCalculation.
+    metadata for calculations of type
+    :py:class:`InlineCalculation <aiida.orm.calculation.inline.InlineCalculation>`.
 * Depostition to the TCOD
     Deposition of the final
     :py:class:`CifData <aiida.orm.data.cif.CifData>` to the TCOD is

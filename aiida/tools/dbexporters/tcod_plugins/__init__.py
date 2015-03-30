@@ -5,6 +5,10 @@ __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.
 __version__ = "0.2.1"
 
 class BaseTcodtranslator(object):
+    """
+    Base translator from calculation-specific output parameters to TCOD CIF
+    dictionary tags.
+    """
     _plugin_type_string = None
 
     @classmethod

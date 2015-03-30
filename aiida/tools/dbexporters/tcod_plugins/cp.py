@@ -7,6 +7,10 @@ __version__ = "0.2.1"
 from aiida.tools.dbexporters.tcod_plugins import BaseTcodtranslator
 
 class CpTcodtranslator(BaseTcodtranslator):
+    """
+    Quantum ESPRESSO's CP-specific output parameter translator to TCOD
+    CIF dictionary tags.
+    """
     _plugin_type_string = "quantumespresso.cp.CpCalculation"
 
     @classmethod

@@ -998,6 +998,32 @@ class Node(object):
         DbExtra.set_value_for_node(self.dbnode, key,value)
         self._increment_version_number_db()
             
+    def set_extra_exclusive(self,key,value):
+        """
+        Immediately sets an extra of a calculation, in the DB!
+        No .store() to be called.
+        Can be used *only* after saving.
+        Moreover, it raises an UniquenessError if an Extra with the
+        same name already exists in the DB (useful e.g. to "lock" a
+        node and avoid to run multiple times the same computation on it).
+
+        :param string key: key name
+        :param value: key value
+        :raise UniquenessError: if the extra already exists.
+        """
+        from aiida.djsite.db.models import DbExtra
+
+        DbExtra.validate_key(key)
+        
+        if self._to_be_stored:
+            raise ModificationNotAllowed(
+                "The extras of a node can be set only after "
+                "storing the node")
+        DbExtra.set_value_for_node(self.dbnode, key, value,
+            stop_if_existing=True)
+        self._increment_version_number_db()
+
+    
     def set_extras(self, the_dict):
         """
         Immediately sets several extras of a calculation, in the DB!

@@ -41,7 +41,7 @@ tcod_loops = {
 
 def cif_encode_contents(content,gzip=False,gzip_threshold=1024):
     """
-    Encodes data for usage in CIF text field in a ``best possible`` way:
+    Encodes data for usage in CIF text field in a *best possible* way:
     binary data is encoded using Base64 encoding; text with non-ASCII
     symbols, too long lines or lines starting with semicolons (';')
     is encoded using Quoted-printable encoding.
@@ -49,7 +49,7 @@ def cif_encode_contents(content,gzip=False,gzip_threshold=1024):
     :param content: the content to be encoded
     :return content: encoded content
     :return encoding: a string specifying used encoding (None, 'base64',
-        'ncr', 'quoted-printable')
+        'ncr', 'quoted-printable', 'gzip+base64')
     """
     import re
     method = None
@@ -710,7 +710,9 @@ def deposit(what,type,author_name=None,author_email=None,url=None,
             title=None,username=None,password=False,user_email=None,
             code_label='cif_cod_deposit',computer_name=None,**kwargs):
     """
-    Launches a JobCalculation to deposit data node to \*COD-type database.
+    Launches a
+    :py:class:`aiida.orm.calculation.job.JobCalculation`
+    to deposit data node to \*COD-type database.
     """
     if not what:
         raise ValueError("Node to be deposited is not supplied")
@@ -823,7 +825,8 @@ def deposition_cmdline_parameters(parser,expclass="Data"):
 
 def translate_calculation_specific_values(parameters,translator,**kwargs):
     """
-    Translates calculation-specific values from ParameterData object to
+    Translates calculation-specific values from
+    :py:class:`aiida.orm.data.parameter.ParameterData` object to
     appropriate TCOD CIF tags.
     """
     from aiida.tools.dbexporters.tcod_plugins import BaseTcodtranslator

@@ -271,7 +271,7 @@ class Folder(object):
 
         if check_existence:
             if not os.path.exists(dest_abs_path):
-                raise OSError("{} is does not exist within the folder {}".format(
+                raise OSError("{} does not exist within the folder {}".format(
                     relpath, self.abspath))
         
         return dest_abs_path

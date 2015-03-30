@@ -553,6 +553,27 @@ class StructureData(Data):
     related useful information.
     """
     _set_incompatibilities = [("ase","cell"),("ase","pbc")]
+
+    @classmethod
+    def _to_cif_ase_inline(cls,struct=None,parameters=None):
+        """
+        Creates :py:class:`aiida.orm.data.cif.CifData` using ASE.
+
+        :note: requires ASE module.
+        """
+        from aiida.orm.data.cif import CifData
+        kwargs = {}
+        if parameters is not None:
+            kwargs = parameters.get_dict()
+        cif = CifData(ase=struct.get_ase(**kwargs))
+        formula = struct.get_formula(mode='hill',separator=' ')
+        for i in cif.values.keys():
+            cif.values[i]['_symmetry_space_group_name_H-M']  = 'P 1'
+            cif.values[i]['_symmetry_space_group_name_Hall'] = 'P 1'
+            cif.values[i]['_symmetry_Int_Tables_number']     = 1
+            cif.values[i]['_cell_formula_units_Z']           = 1
+            cif.values[i]['_chemical_formula_sum']           = formula
+        return {'cif': cif}
     
     @property
     def _set_defaults(self):
@@ -1198,6 +1219,30 @@ class StructureData(Data):
         :return: a float.
         """
         return calc_cell_volume(self.cell)
+
+    def _get_cif(self,converter='ase',store=False,**kwargs):
+        """
+        Creates :py:class:`aiida.orm.data.cif.CifData`.
+
+        :param converter: specify the converter. Default 'ase'.
+        :param store: If True, intermediate calculation gets stored in the
+            AiiDA database for record. Default False.
+        :return: :py:class:`aiida.orm.data.cif.CifData` node.
+        """
+        from aiida.orm.data.parameter import ParameterData
+        param = ParameterData(dict=kwargs)
+        try:
+            conv_f = getattr(self.__class__,
+                             '_to_cif_{}_inline'.format(converter))
+            ret_dict = None
+            if store:
+                from aiida.orm.calculation.inline import make_inline
+                _,ret_dict = make_inline(conv_f)(struct=self,parameters=param)
+            else:
+                ret_dict = conv_f(struct=self,parameters=param)
+            return ret_dict['cif']
+        except AttributeError:
+            raise ValueError("No such converter '{}' available".format(converter))
 
 class Kind(object):
     """

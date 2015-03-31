@@ -348,15 +348,15 @@ def _collect_tags(node,calc,parameters=None,
     """
     from aiida.cmdline.commands.exportfile import serialize_dict
     import os,json
-    tags = dict()
-
-    tags['_audit_creation_method']   = "AiiDA version {}".format(__version__)
-    tags['_audit_conform_dict_name'] = [ "cif_tcod.dic", "cif_dft.dic" ]
-    tags['_audit_conform_dict_version'] = [ "0.004", "0.004" ]
-    tags['_audit_conform_dict_location'] = [
-        "http://www.crystallography.net/tcod/cif/dictionaries/cif_tcod.dic",
-        "http://www.crystallography.net/tcod/cif/dictionaries/cif_dft.dic"
-    ]
+    tags = {
+        '_audit_creation_method'      : "AiiDA version {}".format(__version__),
+        '_audit_conform_dict_name'    : [ "cif_tcod.dic", "cif_dft.dic" ],
+        '_audit_conform_dict_version' : [ "0.004", "0.004" ],
+        '_audit_conform_dict_location': [
+            "http://www.crystallography.net/tcod/cif/dictionaries/cif_tcod.dic",
+            "http://www.crystallography.net/tcod/cif/dictionaries/cif_dft.dic"
+        ]
+    }
 
     # Collecting metadata from input files:
 
@@ -669,12 +669,11 @@ def export_cifnode(what,parameters=None,trajectory_index=None,store=False,
 
     # Convert node to CifData (if required)
 
-    if not isinstance(node,CifData):
-        if getattr(node,'_get_cif'):
-            function_args = { 'store': store }
-            if trajectory_index is not None:
-                function_args['index'] = trajectory_index
-            node = node._get_cif(**function_args)
+    if not isinstance(node,CifData) and getattr(node,'_get_cif'):
+        function_args = { 'store': store }
+        if trajectory_index is not None:
+            function_args['index'] = trajectory_index
+        node = node._get_cif(**function_args)
 
     if not isinstance(node,CifData):
         raise NotImplementedError("Exporter does not know how to "

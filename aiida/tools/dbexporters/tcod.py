@@ -5,6 +5,7 @@ __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.
 __version__ = "0.2.1"
 
 from aiida.orm import DataFactory
+from aiida.orm.calculation.inline import optional_inline
 
 aiida_executable_name = '_aiidasubmit.sh'
 
@@ -530,6 +531,7 @@ def _collect_tags(node,calc,parameters=None,
 
     return tags
 
+@optional_inline
 def add_metadata_inline(what,node=None,parameters=None,args=None):
     """
     Add metadata of original exported node to the produced TCOD CIF.
@@ -687,20 +689,15 @@ def export_cifnode(what,parameters=None,trajectory_index=None,store=False,
 
     # Addition of the metadata
 
-    conv = None
     args = ParameterData(dict=kwargs)
-    if store:
-        function_args = { 'what': what, 'args': args }
-        if node != what:
-            function_args['node'] = node
-        if parameters is not None:
-            function_args['parameters'] = parameters
-        _,conv = make_inline(add_metadata_inline)(**function_args)
-    else:
-        conv = add_metadata_inline(what,node,parameters,args)
-    node = conv['cif']
+    function_args = { 'what': what, 'args': args, 'store': store }
+    if node != what:
+        function_args['node'] = node
+    if parameters is not None:
+        function_args['parameters'] = parameters
+    ret_dict = add_metadata_inline(**function_args)
 
-    return node
+    return ret_dict['cif']
 
 def deposit(what,type,author_name=None,author_email=None,url=None,
             title=None,username=None,password=False,user_email=None,

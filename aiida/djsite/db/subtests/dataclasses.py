@@ -399,7 +399,7 @@ class TestCifData(AiidaTestCase):
         with self.assertRaises(ValueError):
             a._get_aiida_structure(converter='none')
 
-        c = a._get_aiida_structure_ase_inline()['structure']
+        c = a._get_aiida_structure()
 
         self.assertEquals(c.get_kind_names(), ['C','O'])
 

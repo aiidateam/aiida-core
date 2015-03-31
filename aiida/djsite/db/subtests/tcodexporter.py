@@ -294,5 +294,5 @@ class TestTcodDbExporter(AiidaTestCase):
         s = a._get_aiida_structure(store=True)
         val = export_values(s)
         script = val.first_block()['_tcod_file_contents'][1]
-        function = '_to_aiida_structure_ase_inline'
+        function = '_get_aiida_structure_ase_inline'
         self.assertNotEqual(script.find(function),script.rfind(function))

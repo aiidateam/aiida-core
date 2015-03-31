@@ -296,3 +296,25 @@ class TestTcodDbExporter(AiidaTestCase):
         script = val.first_block()['_tcod_file_contents'][1]
         function = '_get_aiida_structure_ase_inline'
         self.assertNotEqual(script.find(function),script.rfind(function))
+
+    @unittest.skipIf(not has_ase(),"Unable to import ase")
+    def test_symmetry_reduction(self):
+        from aiida.orm.data.structure import StructureData
+        from aiida.tools.dbexporters.tcod import export_values
+        from ase import Atoms
+
+        a = Atoms('BaTiO3',cell=(4.,4.,4.))
+        a.set_scaled_positions(
+            ((0.0,0.0,0.0),
+             (0.5,0.5,0.5),
+             (0.5,0.5,0.0),
+             (0.5,0.0,0.5),
+             (0.0,0.5,0.5),
+             )
+            )
+
+        a.set_chemical_symbols(['Ba','Ti','O','O','O'])
+        val = export_values(StructureData(ase=a),reduce_symmetry=True,store=True)['0']
+        self.assertEqual(val['_atom_site_label'],['Ba1','Ti1','O1'])
+        self.assertEqual(val['_symmetry_space_group_name_H-M'],'R3m')
+        self.assertEqual(val['_symmetry_space_group_name_Hall'],'P 3* -2')

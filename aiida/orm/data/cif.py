@@ -36,7 +36,8 @@ def has_pycifrw():
 
 def encode_textfield_base64(content,foldwidth=76):
     """
-    Encodes the contents for CIF textfield in Base64.
+    Encodes the contents for CIF textfield in Base64 using standard Python
+    implementation (``base64.standard_b64encode()``).
 
     :param content: a string with contents
     :param foldwidth: maximum width of line (default is 76)
@@ -50,7 +51,8 @@ def encode_textfield_base64(content,foldwidth=76):
 
 def decode_textfield_base64(content):
     """
-    Decodes the contents for CIF textfield from Base64.
+    Decodes the contents for CIF textfield from Base64 using standard
+    Python implementation (``base64.standard_b64decode()``)
 
     :param content: a string with contents
     :return: decoded string
@@ -61,6 +63,12 @@ def decode_textfield_base64(content):
 def encode_textfield_quoted_printable(content):
     """
     Encodes the contents for CIF textfield in quoted-printable encoding.
+    In addition to non-ASCII characters, that are encoded by Python
+    function ``quopri.encodestring()``, following characters are encoded:
+
+        * '``;``', if encountered on the beginning of the line;
+        * '``\\t``'
+        * '``.``' and '``?``', if comprise the entire textfield.
 
     :param content: a string with contents
     :return: encoded string
@@ -98,6 +106,12 @@ def decode_textfield_quoted_printable(content):
 def encode_textfield_ncr(content):
     """
     Encodes the contents for CIF textfield in Numeric Character Reference.
+    Encoded characters:
+
+        * ``\\x09``, ``\\x0A``, ``\\x0D``, ``\\x20``--``\\x7E``;
+        * '``;``', if encountered on the beginning of the line;
+        * '``\\t``'
+        * '``.``' and '``?``', if comprise the entire textfield.
 
     :param content: a string with contents
     :return: encoded string

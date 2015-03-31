@@ -101,7 +101,8 @@ def cif_decode_contents(content,method):
     Decodes contents of encoded CIF text field.
 
     :param content: the content to be decoded
-    :param method: method, which was used for encoding the contents
+    :param method: method, which was used for encoding the contents (None, 'base64',
+        'ncr', 'quoted-printable', 'gzip+base64')
     :return: decoded content
     :raises ValueError: if the encoding method is unknown
     """
@@ -605,16 +606,8 @@ def export_cifnode(what,parameters=None,trajectory_index=None,store=False,
     """
     The main exporter function. Exports given coordinate-containing \*Data
     node to :py:class:`aiida.orm.data.cif.CifData` node, ready to be
-    exported to TCOD.
-
-    Currently supported data types:
-
-    * :py:class:`aiida.orm.data.cif.CifData`
-    * :py:class:`aiida.orm.data.structure.StructureData` (converted to
-      :py:class:`aiida.orm.data.cif.CifData` beforehand)
-    * :py:class:`aiida.orm.data.array.trajectory.TrajectoryData`
-      (converted to :py:class:`aiida.orm.data.cif.CifData` via
-      :py:class:`aiida.orm.data.structure.StructureData`)
+    exported to TCOD. All \*Data types, having method ``_get_cif()``, are
+    supported in addition to :py:class:`aiida.orm.data.cif.CifData`.
 
     :param what: data node to be exported.
     :param parameters: a :py:class:`aiida.orm.data.parameter.ParameterData`
@@ -820,6 +813,12 @@ def translate_calculation_specific_values(parameters,translator,**kwargs):
     Translates calculation-specific values from
     :py:class:`aiida.orm.data.parameter.ParameterData` object to
     appropriate TCOD CIF tags.
+
+    :param parameters: a :py:class:`aiida.orm.data.parameter.ParameterData`
+        instance
+    :param translator: class, derived from
+        :py:class:`aiida.tools.dbexporters.tcod_plugins.BaseTcodtranslator`.
+    :raises ValueError: if **translator** is not derived from proper class.
     """
     from aiida.tools.dbexporters.tcod_plugins import BaseTcodtranslator
     if not issubclass(translator,BaseTcodtranslator):

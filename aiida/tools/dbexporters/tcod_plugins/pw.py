@@ -48,7 +48,7 @@ class PwTcodtranslator(BaseTcodtranslator):
     @classmethod
     def get_exchange_correlation_energy(cls,parameters,**kwargs):
         """
-        Returns one exchange correlation (XC) energy in eV.
+        Returns exchange correlation (XC) energy in eV.
         """
         return cls._get_pw_energy_value(parameters,'energy_xc')
 

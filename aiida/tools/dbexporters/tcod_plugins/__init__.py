@@ -28,7 +28,7 @@ class BaseTcodtranslator(object):
     @classmethod
     def get_exchange_correlation_energy(cls,parameters,**kwargs):
         """
-        Returns one exchange correlation (XC) energy in eV.
+        Returns exchange correlation (XC) energy in eV.
         """
         raise NotImplementedError("not implemented in base class")
 

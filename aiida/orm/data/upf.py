@@ -77,16 +77,15 @@ def upload_upf_family(folder, group_name, group_description,
     """
     Upload a set of UPF files in a given group.
     
-    Args:
-        folder: a path containing all UPF files to be added.
-            Only files ending in .UPF (case-insensitive) are considered. 
-        group_name: the name of the group to create. If it exists and is
-            non-empty, a UniquenessError is raised.
-        group_description: a string to be set as the group description.
-            Overwrites previous descriptions, if the group was existing.
-        stop_if_existing: if True, check for the md5 of the files and, if the
-            file already exists in the DB, raises a MultipleObjectsError.
-            If False, simply adds the existing UPFData node to the group.
+    :param folder: a path containing all UPF files to be added.
+        Only files ending in .UPF (case-insensitive) are considered.
+    :param group_name: the name of the group to create. If it exists and is
+        non-empty, a UniquenessError is raised.
+    :param group_description: a string to be set as the group description.
+        Overwrites previous descriptions, if the group was existing.
+    :param stop_if_existing: if True, check for the md5 of the files and,
+        if the file already exists in the DB, raises a MultipleObjectsError.
+        If False, simply adds the existing UPFData node to the group.
     """
     import os
     

@@ -1,29 +1,30 @@
 # -*- coding: utf-8 -*-
 from aiida.orm.data.array import ArrayData
+from aiida.orm.calculation.inline import optional_inline
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.0"
 __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi"
 
+@optional_inline
+def _get_aiida_structure_inline(trajectory=None,parameters=None):
+    """
+    Creates :py:class:`aiida.orm.data.structure.StructureData` using ASE.
+
+    :note: requires ASE module.
+    """
+    from aiida.orm.data.structure import StructureData
+    kwargs = {}
+    if parameters is not None:
+        kwargs = parameters.get_dict()
+    return {'structure': trajectory.step_to_structure(**kwargs)}
+
 class TrajectoryData(ArrayData):
     """
     Stores a trajectory (a sequence of crystal structures with timestamps, and
     possibly with velocities).
     """
-
-    @classmethod
-    def _to_aiida_structure_inline(cls,trajectory=None,parameters=None):
-        """
-        Creates :py:class:`aiida.orm.data.structure.StructureData` using ASE.
-
-        :note: requires ASE module.
-        """
-        from aiida.orm.data.structure import StructureData
-        kwargs = {}
-        if parameters is not None:
-            kwargs = parameters.get_dict()
-        return {'structure': trajectory.step_to_structure(**kwargs)}
 
     def _internal_validate(self, steps, cells, symbols, positions, times, velocities):
         """
@@ -375,14 +376,11 @@ class TrajectoryData(ArrayData):
         :return: :py:class:`aiida.orm.data.structure.StructureData` node.
         """
         from aiida.orm.data.parameter import ParameterData
+        import trajectory # This same module
+
         param = ParameterData(dict=kwargs)
-        conv_f = getattr(self.__class__,'_to_aiida_structure_inline')
-        ret_dict = None
-        if store:
-            from aiida.orm.calculation.inline import make_inline
-            _,ret_dict = make_inline(conv_f)(trajectory=self,parameters=param)
-        else:
-            ret_dict = conv_f(trajectory=self,parameters=param)
+        conv_f = getattr(trajectory,'_get_aiida_structure_inline')
+        ret_dict = conv_f(trajectory=self,parameters=param,store=store)
         return ret_dict['structure']
 
     def _get_cif(self,index=None,**kwargs):

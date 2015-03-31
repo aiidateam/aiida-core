@@ -680,14 +680,10 @@ def export_cifnode(what,parameters=None,trajectory_index=None,store=False,
 
     # Reduction of the symmetry
 
-    from aiida.orm.data.cif import refine_inline
     if reduce_symmetry:
-        conv = None
-        if store:
-            _,conv = make_inline(refine_inline)(node=node)
-        else:
-            conv = refine_inline(node)
-        node = conv['cif']
+        from aiida.orm.data.cif import refine_inline
+        ret_dict = refine_inline(node=node,store=store)
+        node = ret_dict['cif']
 
     # Addition of the metadata
 

@@ -279,6 +279,7 @@ def pycifrw_from_cif(datablocks,loops=dict()):
             datablock[tag] = values[tag]
     return cif
 
+@optional_inline
 def refine_inline(node):
     """
     Refine (reduce) the cell of :py:class:`aiida.orm.data.cif.CifData`,

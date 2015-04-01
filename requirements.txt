@@ -72,3 +72,6 @@ python-mimeparse==0.1.4
 
 ## Support for the AiiDA CifData class
 #PyCifRW==3.6.2
+
+# Support for NWChem I/O
+pymatgen

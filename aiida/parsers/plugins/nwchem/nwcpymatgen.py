@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from aiida.parsers.parser import Parser
-from aiida.orm.calculation.job.nwchem.basic import BasicCalculation
+from aiida.orm.calculation.job.nwchem.nwcpymatgen import NwcpymatgenCalculation
 from aiida.orm.data.parameter import ParameterData
 from aiida.common.datastructures import calc_states
 
@@ -9,22 +9,22 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.0"
 __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi"
 
-class BasicParser(Parser):
+class NwcpymatgenParser(Parser):
     """
-    Parser for the output of nwchem.
+    Parser for the output of NWChem, using pymatgen.
     """
     def __init__(self,calc):
         """
-        Initialize the instance of BasicParser
+        Initialize the instance of NwcpymatgenParser
         """
         # check for valid input
         self._check_calc_compatibility(calc)
-        super(BasicParser, self).__init__(calc)
+        super(NwcpymatgenParser, self).__init__(calc)
 
     def _check_calc_compatibility(self,calc):
         from aiida.common.exceptions import ParsingError
-        if not isinstance(calc,BasicCalculation):
-            raise ParsingError("Input calc must be a BasicCalculation")
+        if not isinstance(calc,NwcpymatgenCalculation):
+            raise ParsingError("Input calc must be a NwcpymatgenCalculation")
 
     def parse_with_retrieved(self,retrieved):
         """
@@ -92,45 +92,14 @@ class BasicParser(Parser):
         Extracts output nodes from the standard output and standard error
         files.
         """
-        from aiida.orm.data.array.trajectory import TrajectoryData
-        import re
+        from pymatgen.io.nwchemio import NwOutput
 
-        state = None
-        step = None
-        scale = None
-        with open(output_path) as f:
-            lines = [x.strip('\n') for x in f.readlines()]
-
-        result_dict = dict()
-        trajectory = None
-        for line in lines:
-            if state is None and re.match('^\s*NWChem SCF Module\s*$',line):
-                state = 'nwchem-scf-module'
-                continue
-            if state is None and re.match('^\s*NWChem Geometry Optimization\s*$',line):
-                state = 'nwchem-geometry-optimisation'
-                trajectory = TrajectoryData()
-                continue
-            if state == 'nwchem-scf-module' and re.match('^\s*Final RHF \s*results\s*$',line):
-                state = 'final-rhf-results'
-                continue
-            if re.match('^\s*\-*\s*$',line):
-                continue
-            if state == 'final-rhf-results':
-                result = re.match('^\s*([^=]+?)\s*=\s*([\-\d\.]+)$',line)
-                if result:
-                    key = re.sub('[^a-zA-Z0-9]+', '_', result.group(1).lower())
-                    result_dict[key] = result.group(2)
-                else:
-                    state = 'nwchem-scf-module'
-            if state == 'nwchem-geometry-optimisation' and re.match('^\s*Step\s+\d+\s*$',line):
-                result = re.match('^\s*Step\s+(\d+)\s*$',line)
-                step = result.group(1)
-                continue
-            if state == 'nwchem-geometry-optimisation' and \
-                re.match('^\s*Output coordinates in a.u.',line):
-                state = 'nwchem-geometry-optimisation-coordinates'
-                result = re.match('scale by \s(*[\-\d\.]+)',line)
-                scale = result.group(1)
-                continue
-        return [('parameters', ParameterData(dict=result_dict))]
+        ret_dict = []
+        nwo = NwOutput(output_path)
+        for out in nwo.data:
+            out.pop('molecules') # TODO: implement extraction of
+                                 # Structure- and TrajectoryData
+            ret_dict.append(('output',ParameterData(dict=out)))
+        ret_dict.append(('job_info',ParameterData(dict=nwo.job_info)))
+        
+        return ret_dict

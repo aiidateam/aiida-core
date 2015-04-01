@@ -27,6 +27,7 @@ default_modules_list = [
                         ("aiida.orm","Data","Data"),
                         ("aiida.orm","CalculationFactory","CalculationFactory"),
                         ("aiida.orm","DataFactory","DataFactory"),
+                        ("aiida.orm","WorkflowFactory","WorkflowFactory"),
                         ("aiida.orm","Computer","Computer"),
                         ("aiida.orm","Group","Group"),
                         ("aiida.orm","load_node","load_node"),

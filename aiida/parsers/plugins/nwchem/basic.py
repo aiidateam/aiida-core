@@ -92,16 +92,24 @@ class BasicParser(Parser):
         Extracts output nodes from the standard output and standard error
         files.
         """
+        from aiida.orm.data.array.trajectory import TrajectoryData
         import re
 
         state = None
+        step = None
+        scale = None
         with open(output_path) as f:
             lines = [x.strip('\n') for x in f.readlines()]
 
         result_dict = dict()
+        trajectory = None
         for line in lines:
             if state is None and re.match('^\s*NWChem SCF Module\s*$',line):
                 state = 'nwchem-scf-module'
+                continue
+            if state is None and re.match('^\s*NWChem Geometry Optimization\s*$',line):
+                state = 'nwchem-geometry-optimisation'
+                trajectory = TrajectoryData()
                 continue
             if state == 'nwchem-scf-module' and re.match('^\s*Final RHF \s*results\s*$',line):
                 state = 'final-rhf-results'
@@ -115,4 +123,14 @@ class BasicParser(Parser):
                     result_dict[key] = result.group(2)
                 else:
                     state = 'nwchem-scf-module'
+            if state == 'nwchem-geometry-optimisation' and re.match('^\s*Step\s+\d+\s*$',line):
+                result = re.match('^\s*Step\s+(\d+)\s*$',line)
+                step = result.group(1)
+                continue
+            if state == 'nwchem-geometry-optimisation' and
+                re.match('^\s*Output coordinates in a.u.',line):
+                state = 'nwchem-geometry-optimisation-coordinates'
+                result = re.match('scale by \s(*[\-\d\.]+)',line)
+                scale = result.group(1)
+                continue
         return [('parameters', ParameterData(dict=result_dict))]

@@ -222,8 +222,8 @@ on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 # documentation -> works also without verdi install
 sys.path.append( os.path.join( os.path.split(__file__)[0],
                                    os.pardir,os.pardir) )
-os.path.join( os.path.split(__file__)[0],
-                                   os.pardir)
+sys.path.append( os.path.join( os.path.split(__file__)[0],
+                                   os.pardir))
 os.environ['DJANGO_SETTINGS_MODULE'] = 'rtd_settings'
 
 

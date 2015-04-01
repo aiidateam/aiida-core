@@ -6,6 +6,7 @@ functions to operate on them.
 
 from aiida.orm import Data
 from aiida.common.utils import classproperty
+from aiida.orm.calculation.inline import optional_inline
 import itertools
 import copy
 
@@ -544,6 +545,27 @@ def symop_fract_from_ortho(cell):
         [     0,   1.0/(b*sg), -(ca-cb*cg)/(b*D*sg) ],
         [     0,            0,          sg/(c*D)    ],
     ])
+
+@optional_inline
+def _get_cif_ase_inline(struct=None,parameters=None):
+    """
+    Creates :py:class:`aiida.orm.data.cif.CifData` using ASE.
+
+    :note: requires ASE module.
+    """
+    from aiida.orm.data.cif import CifData
+    kwargs = {}
+    if parameters is not None:
+        kwargs = parameters.get_dict()
+    cif = CifData(ase=struct.get_ase(**kwargs))
+    formula = struct.get_formula(mode='hill',separator=' ')
+    for i in cif.values.keys():
+        cif.values[i]['_symmetry_space_group_name_H-M']  = 'P 1'
+        cif.values[i]['_symmetry_space_group_name_Hall'] = 'P 1'
+        cif.values[i]['_symmetry_Int_Tables_number']     = 1
+        cif.values[i]['_cell_formula_units_Z']           = 1
+        cif.values[i]['_chemical_formula_sum']           = formula
+    return {'cif': cif}
             
 class StructureData(Data):
     """
@@ -553,7 +575,7 @@ class StructureData(Data):
     related useful information.
     """
     _set_incompatibilities = [("ase","cell"),("ase","pbc")]
-    
+
     @property
     def _set_defaults(self):
         parent_dict = super(StructureData, self)._set_defaults
@@ -1198,6 +1220,25 @@ class StructureData(Data):
         :return: a float.
         """
         return calc_cell_volume(self.cell)
+
+    def _get_cif(self,converter='ase',store=False,**kwargs):
+        """
+        Creates :py:class:`aiida.orm.data.cif.CifData`.
+
+        :param converter: specify the converter. Default 'ase'.
+        :param store: If True, intermediate calculation gets stored in the
+            AiiDA database for record. Default False.
+        :return: :py:class:`aiida.orm.data.cif.CifData` node.
+        """
+        from aiida.orm.data.parameter import ParameterData
+        import structure # This same module
+        param = ParameterData(dict=kwargs)
+        try:
+            conv_f = getattr(structure,'_get_cif_{}_inline'.format(converter))
+            ret_dict = conv_f(struct=self,parameters=param,store=store)
+            return ret_dict['cif']
+        except AttributeError:
+            raise ValueError("No such converter '{}' available".format(converter))
 
 class Kind(object):
     """

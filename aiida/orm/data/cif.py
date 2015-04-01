@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from aiida.orm.data.singlefile import SinglefileData
+from aiida.orm.calculation.inline import optional_inline
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -149,6 +150,19 @@ def decode_textfield_gzip_base64(content):
     """
     from aiida.common.utils import gunzip_string
     return gunzip_string(decode_textfield_base64(content))
+
+@optional_inline
+def _get_aiida_structure_ase_inline(cif=None,parameters=None):
+    """
+    Creates :py:class:`aiida.orm.data.structure.StructureData` using ASE.
+
+    :note: requires ASE module.
+    """
+    from aiida.orm.data.structure import StructureData
+    kwargs = {}
+    if parameters is not None:
+        kwargs = parameters.get_dict()
+    return {'structure': StructureData(ase=cif.get_ase(**kwargs))}
 
 def cif_from_ase(ase,full_occupancies=False,add_fake_biso=False):
     """
@@ -340,31 +354,15 @@ class CifData(SinglefileData):
         :return: :py:class:`aiida.orm.data.structure.StructureData` node.
         """
         from aiida.orm.data.parameter import ParameterData
+        import cif # This same module
+
         param = ParameterData(dict=kwargs)
         try:
-            conv_f = getattr(self,
-                             '_get_aiida_structure_{}_inline'.format(converter))
-            ret_dict = None
-            if store:
-                from aiida.orm.calculation.inline import make_inline
-                _,ret_dict = make_inline(conv_f)(parameters=param)
-            else:
-                ret_dict = conv_f(parameters=param)
+            conv_f = getattr(cif,'_get_aiida_structure_{}_inline'.format(converter))
+            ret_dict = conv_f(cif=self,parameters=param,store=store)
             return ret_dict['structure']
         except AttributeError:
             raise ValueError("No such converter '{}' available".format(converter))
-
-    def _get_aiida_structure_ase_inline(self,parameters=None):
-        """
-        Creates :py:class:`aiida.orm.data.structure.StructureData` using ASE.
-
-        :note: requires ASE module.
-        """
-        from aiida.orm.data.structure import StructureData
-        kwargs = {}
-        if parameters is not None:
-            kwargs = parameters.get_dict()
-        return {'structure': StructureData(ase=self.get_ase(**kwargs))}
 
     @property
     def ase(self):
@@ -528,6 +526,8 @@ class CifData(SinglefileData):
         """
         Write the given CIF file to a string of format CIF.
         """
+        if self._values: # if values have been changed
+            self.values = self._values
         with open(self.get_file_abs_path()) as f:
             return f.read()
         

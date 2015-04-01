@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 This is a mock of a django settings to make the documentation compile without the call to load_dbenv()
 
@@ -10,6 +11,11 @@ https://docs.djangoproject.com/en/1.7/ref/settings/
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
+
+__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
+__version__ = "0.4.1"
+
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
 

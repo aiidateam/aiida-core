@@ -38,6 +38,13 @@ def DataFactory(module):
     
     return BaseFactory(module, Data, "aiida.orm.data")
 
+def WorkflowFactory(module):
+    """
+    Return a suitable Workflow subclass.
+    """
+    from aiida.common.pluginloader import BaseFactory
+    
+    return BaseFactory(module, Workflow, "aiida.workflows")
 
 def load_node(node_id=None,pk=None,uuid=None):
     """
@@ -68,7 +75,6 @@ def load_node(node_id=None,pk=None,uuid=None):
         return Node.get_subclass_from_pk(pk)
     else:
         return Node.get_subclass_from_uuid(uuid)
-
 
 def load_workflow(wf_id=None,pk=None,uuid=None):
     """

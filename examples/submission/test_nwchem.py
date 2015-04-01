@@ -69,6 +69,7 @@ if queue is not None:
     calc.set_queue_name(queue)
 
 calc.use_structure(s)
+calc.use_parameters(ParameterData(dict={'add_cell': False}))
 
 if submit_test:
     subfolder, script_filename = calc.submit_test()

@@ -52,6 +52,7 @@ class BasicCalculation(JobCalculation):
         return retdict
 
     def _prepare_for_submission(self,tempfolder,inputdict):
+        import numpy as np
         try:
             struct = inputdict.pop(self.get_linkname('structure'))
         except KeyError:
@@ -60,6 +61,18 @@ class BasicCalculation(JobCalculation):
             raise InputValidationError("struct is not of type StructureData")
 
         atoms = struct.get_ase()
+
+        lat_lengths = [
+            (atoms.cell[0]**2).sum()**0.5,
+            (atoms.cell[1]**2).sum()**0.5,
+            (atoms.cell[2]**2).sum()**0.5,
+        ]
+
+        lat_angles = np.arccos([
+            np.vdot(atoms.cell[1],atoms.cell[2])/lat_lengths[1]/lat_lengths[2],
+            np.vdot(atoms.cell[0],atoms.cell[2])/lat_lengths[0]/lat_lengths[2],
+            np.vdot(atoms.cell[0],atoms.cell[1])/lat_lengths[0]/lat_lengths[1],
+        ])/np.pi*180
 
         parameters = inputdict.pop(self.get_linkname('parameters'), None)
         if parameters is None:
@@ -72,6 +85,7 @@ class BasicCalculation(JobCalculation):
         title = par.pop('title','AiiDA NWChem calculation')
         basis = par.pop('basis',None)
         task = par.pop('task','scf')
+        add_cell = par.pop('add_cell',True)
 
         if basis is None:
             basis = dict()
@@ -82,6 +96,11 @@ class BasicCalculation(JobCalculation):
         with open(input_filename,'w') as f:
             f.write('start {}\ntitle "{}"\n\n'.format(abbreviation,title))
             f.write('geometry units au\n')
+            if add_cell:
+                f.write('  system crystal\n')
+                f.write('    lat_a {}\n    lat_b {}\n    lat_c {}\n'.format(*lat_lengths))
+                f.write('    alpha {}\n    beta  {}\n    gamma {}\n'.format(*lat_angles))
+                f.write('  end\n')
             for i,atom_type in enumerate(atoms.get_chemical_symbols()):
                 f.write('    {} {} {} {}\n'.format(atom_type,
                                                atoms.get_positions()[i][0],

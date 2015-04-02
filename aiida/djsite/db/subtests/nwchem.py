@@ -6,16 +6,10 @@ import os
 import tempfile
 
 from aiida.djsite.db.testbase import AiidaTestCase
-from aiida.common.folders import SandboxFolder
-from aiida.orm import CalculationFactory
-from aiida.orm import DataFactory
-from aiida.parsers.plugins.codtools.ciffilter import CiffilterParser
-import aiida
-from django.utils import unittest
-
 from aiida.orm.calculation.job.nwchem.nwcpymatgen import _prepare_pymatgen_dict
 from aiida.orm.data.structure import has_ase
 from aiida.orm.data.cif import has_pycifrw
+from django.utils import unittest
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"

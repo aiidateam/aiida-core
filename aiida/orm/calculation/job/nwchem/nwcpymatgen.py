@@ -15,7 +15,7 @@ __version__ = "0.4.0"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Andrius Merkys"
 
 def _prepare_pymatgen_dict(par,atoms=None):
-    from pymatgen.io.nwchemio import NwTask,NwInput
+    from pymatgen.io.nwchemio import NwInput
 
     add_cell = par.pop('add_cell',False)
     if atoms:
@@ -96,7 +96,6 @@ class NwcpymatgenCalculation(JobCalculation):
         return retdict
 
     def _prepare_for_submission(self,tempfolder,inputdict):
-        from pymatgen.io.nwchemio import NwTask,NwInput
         try:
             parameters = inputdict.pop(self.get_linkname('parameters'))
         except KeyError:

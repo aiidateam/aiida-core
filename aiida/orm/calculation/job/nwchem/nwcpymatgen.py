@@ -14,9 +14,11 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.0"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Andrius Merkys"
 
-def _prepare_pymatgen_dict(par,atoms=None):
+def _prepare_pymatgen_dict(parameters,atoms=None):
     from pymatgen.io.nwchemio import NwInput
+    import copy
 
+    par = copy.deepcopy(parameters)
     add_cell = par.pop('add_cell',False)
     if atoms:
         if add_cell:

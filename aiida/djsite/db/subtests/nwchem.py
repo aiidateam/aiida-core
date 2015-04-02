@@ -100,3 +100,46 @@ nwpw
 end
 task pspw optimize
 ''')
+
+        par['add_cell'] = True
+
+        self.assertEquals(_prepare_pymatgen_dict(par,a),
+'''set nwpw:minimizer 2
+set nwpw:psi_nolattice .true.
+set includestress .true.
+geometry units au center noautosym noautoz print 
+  system crystal
+    lat_a 8.277
+    lat_b 8.277
+    lat_c 8.277
+    alpha 90.0
+    beta  90.0
+    gamma 90.0
+  end
+ Si -0.5 -0.5 -0.5
+ Si 0.0 0.0 -0.5
+ Si 0.0 -0.5 0.0
+ Si -0.5 0.0 0.0
+ C -0.25 -0.25 -0.25
+ C 0.25 0.25 -0.25
+ C 0.25 -0.25 0.25
+ C -0.25 0.25 0.25
+end
+
+title "pspw optimize"
+charge 0
+basis
+
+end
+driver
+ clear 
+ maxiter 40
+end
+nwpw
+ ewald_ncut 8
+ simulation_cell 
+  ngrid 16 16 16
+ end
+end
+task pspw optimize
+''')

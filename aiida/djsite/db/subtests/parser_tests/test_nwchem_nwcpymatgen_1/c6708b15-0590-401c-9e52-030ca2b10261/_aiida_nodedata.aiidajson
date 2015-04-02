@@ -1,0 +1,10 @@
+{
+  "description": "STest calculation with the NWChem SCF code", 
+  "uuid": "Sc6708b15-0590-401c-9e52-030ca2b10261", 
+  "label": "STest NWChem", 
+  "mtime": "D2015-04-02T07:30:51.000000+0000", 
+  "nodeversion": 16, 
+  "type": "Scalculation.job.nwchem.nwcpymatgen.NwcpymatgenCalculation.", 
+  "public": false, 
+  "ctime": "D2015-04-02T07:29:44.000000+0000"
+}

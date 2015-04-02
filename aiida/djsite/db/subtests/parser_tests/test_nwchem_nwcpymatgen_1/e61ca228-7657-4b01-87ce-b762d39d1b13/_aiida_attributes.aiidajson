@@ -1,0 +1,7 @@
+{
+  "is_local": false, 
+  "append_text": "S", 
+  "remote_exec_path": "S/usr/bin/nwchem", 
+  "prepend_text": "S", 
+  "input_plugin": "Snwchem.nwcpymatgen"
+}

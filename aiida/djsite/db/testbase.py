@@ -21,7 +21,7 @@ db_test_list = {
     'qepw': 'aiida.djsite.db.subtests.quantumespressopw',
     'codtools': 'aiida.djsite.db.subtests.codtools',
     'export_and_import': 'aiida.djsite.db.subtests.export_and_import',
-#    'parsers': 'aiida.djsite.db.subtests.parsers',
+    'parsers': 'aiida.djsite.db.subtests.parsers',
     'qepwinputparser': 'aiida.djsite.db.subtests.pwinputparser',
     'qepwimmigrant': 'aiida.djsite.db.subtests.quantumespressopwimmigrant',
     'workflows': 'aiida.djsite.db.subtests.workflows',

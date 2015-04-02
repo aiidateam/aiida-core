@@ -1,0 +1,22 @@
+{
+  "retrieve_list": [
+    "Saiida.out", 
+    "Saiida.err", 
+    "S_scheduler-stdout.txt", 
+    "S_scheduler-stderr.txt"
+  ], 
+  "last_jobinfo": "S{\"job_state\": \"DONE\", \"detailedJobinfo\": \"Detailed jobinfo obtained with command 'tracejob -v '34.localhost''\\nReturn Code: 0\\n-------------------------------------------------------------\\nstdout:\\n\\nJob: 34.localhost\\n\\n04/02/2015 09:29:50  S    enqueuing into batch, state 1 hop 1\\n04/02/2015 09:29:50  S    Job Queued at request of merkys@localhost, owner = merkys@localhost, job name = aiida-27369, queue = batch\\n04/02/2015 09:29:50  S    Job Modified at request of Scheduler@localhost\\n04/02/2015 09:29:50  L    Job Run\\n04/02/2015 09:29:50  S    Job Run at request of Scheduler@localhost\\n04/02/2015 09:29:50  S    Not sending email: job requested no e-mail\\n04/02/2015 09:29:50  A    queue=batch\\n04/02/2015 09:29:50  A    user=merkys group=merkys jobname=aiida-27369 queue=batch ctime=1427959790 qtime=1427959790 etime=1427959790 start=1427959790 owner=merkys@localhost exec_host=theospc11.epfl.ch/0 Resource_List.neednodes=1 Resource_List.nodect=1 Resource_List.nodes=1 Resource_List.select=1:mpiprocs=6 Resource_List.walltime=00:30:00 \\n04/02/2015 09:29:53  S    Not sending email: job requested no e-mail\\n04/02/2015 09:29:53  S    Exit_status=0 resources_used.cput=00:00:05 resources_used.mem=0kb resources_used.vmem=0kb resources_used.walltime=00:00:03\\n04/02/2015 09:29:53  M    scan_for_terminated: job 34.localhost task 1 terminated, sid=4772\\n04/02/2015 09:29:53  M    job was terminated\\n04/02/2015 09:29:53  M    obit sent to server\\n04/02/2015 09:29:53  A    user=merkys group=merkys jobname=aiida-27369 queue=batch ctime=1427959790 qtime=1427959790 etime=1427959790 start=1427959790 owner=merkys@localhost exec_host=theospc11.epfl.ch/0 Resource_List.neednodes=1 Resource_List.nodect=1 Resource_List.nodes=1 Resource_List.select=1:mpiprocs=6 Resource_List.walltime=00:30:00 session=4772 end=1427959793 Exit_status=0 resources_used.cput=00:00:05 resources_used.mem=0kb resources_used.vmem=0kb resources_used.walltime=00:00:03\\n04/02/2015 09:30:01  S    Post job file processing error\\n04/02/2015 09:30:01  S    dequeuing from batch, state COMPLETE\\n\\nstderr:\\n/var/spool/torque/server_priv/accounting/20150402: Successfully located matching job records\\n/var/spool/torque/server_logs/20150402: Successfully located matching job records\\n/var/spool/torque/mom_logs/20150402: Successfully located matching job records\\n/var/spool/torque/sched_logs/20150402: Successfully located matching job records\\n\\n\", \"job_id\": \"34.localhost\"}", 
+  "job_id": "S34.localhost", 
+  "scheduler_state": "SDONE", 
+  "parser": "Snwchem.nwcpymatgen", 
+  "linkname_retrieved": "Sretrieved", 
+  "jobresource_params": {
+    "num_machines": 1, 
+    "default_mpiprocs_per_machine": 6
+  }, 
+  "remote_workdir": "S/scratch/merkys/aiida_run/c6/70/8b15-0590-401c-9e52-030ca2b10261", 
+  "state": "SFINISHED", 
+  "max_wallclock_seconds": 1800, 
+  "retrieve_singlefile_list": [], 
+  "scheduler_lastchecktime": "D2015-04-02T07:30:20.000000+0000"
+}

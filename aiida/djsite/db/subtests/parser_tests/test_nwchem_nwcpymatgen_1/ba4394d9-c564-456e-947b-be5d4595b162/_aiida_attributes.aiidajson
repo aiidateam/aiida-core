@@ -1,0 +1,67 @@
+{
+  "memory_options": [], 
+  "tasks": [
+    {
+      "theory": "Sscf", 
+      "title": null, 
+      "alternate_directives": {}, 
+      "charge": 0, 
+      "theory_directives": [], 
+      "spin_multiplicity": null, 
+      "operation": "S", 
+      "basis_set": {
+        "H": "S6-31g", 
+        "O": "S6-31g"
+      }
+    }
+  ], 
+  "directives": [], 
+  "mol": {
+    "sites": [
+      {
+        "xyz": [
+          0, 
+          0, 
+          0
+        ], 
+        "species": [
+          {
+            "occu": 1, 
+            "element": "SO"
+          }
+        ]
+      }, 
+      {
+        "xyz": [
+          0, 
+          1.43042809, 
+          -1.10715266
+        ], 
+        "species": [
+          {
+            "occu": 1, 
+            "element": "SH"
+          }
+        ]
+      }, 
+      {
+        "xyz": [
+          0, 
+          -1.43042809, 
+          -1.10715266
+        ], 
+        "species": [
+          {
+            "occu": 1, 
+            "element": "SH"
+          }
+        ]
+      }
+    ]
+  }, 
+  "symmetry_options": [], 
+  "geometry_options": [
+    "Sunits", 
+    "Sangstroms"
+  ]
+}

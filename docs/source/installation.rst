@@ -454,7 +454,7 @@ following dependencies are required to be installed:
 
 First two can be installed from the default repositories::
 
-    sudo pip install pycifrw==3.6.2
+    sudo pip install pycifrw==3.6.2.1
     sudo apt-get install jmol
 
 ASE has to be installed from source::

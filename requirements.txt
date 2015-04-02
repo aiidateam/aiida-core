@@ -71,7 +71,7 @@ python-mimeparse==0.1.4
 #PyMySQL>=0.6.1
 
 ## Support for the AiiDA CifData class
-#PyCifRW==3.6.2
+#PyCifRW==3.6.2.1
 
 # Support for NWChem I/O
 pymatgen

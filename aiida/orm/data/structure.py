@@ -1245,6 +1245,47 @@ class StructureData(Data):
         self._set_attr('pbc2',the_pbc[1])
         self._set_attr('pbc3',the_pbc[2])
 
+    @property
+    def cell_lengths(self):
+        """
+        Get the lengths of cell lattice vectors in angstroms.
+        """
+        import numpy
+        cell = self.cell
+        return [
+                 float((numpy.array(cell[0])**2).sum()**0.5),
+                 float((numpy.array(cell[1])**2).sum()**0.5),
+                 float((numpy.array(cell[2])**2).sum()**0.5),
+               ]
+
+    @cell_lengths.setter
+    def cell_lengths(self,value):
+        self.set_cell_lengths(value)
+
+    def set_cell_lengths(self,value):
+        raise NotImplementedError("Modification is not implemented yet")
+
+    @property
+    def cell_angles(self):
+        """
+        Get the angles between the cell lattice vectors in degrees.
+        """
+        import numpy
+        cell = self.cell
+        lengths = self.cell_lengths
+        return [float(numpy.arccos(x)/numpy.pi*180) for x in [
+                 numpy.vdot(cell[1],cell[2])/lengths[1]/lengths[2],
+                 numpy.vdot(cell[0],cell[2])/lengths[0]/lengths[2],
+                 numpy.vdot(cell[0],cell[1])/lengths[0]/lengths[1],
+               ]]
+
+    @cell_angles.setter
+    def cell_angles(self,value):
+        self.set_cell_angles(value)
+
+    def set_cell_angles(self,value):
+        raise NotImplementedError("Modification is not implemented yet")
+
     def is_alloy(self):
         """
         To understand if there are alloys in the structure.

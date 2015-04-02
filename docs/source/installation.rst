@@ -455,7 +455,7 @@ following dependencies are required to be installed:
 
 First three can be installed from the default repositories::
 
-    sudo pip install pycifrw==3.6.2
+    sudo pip install pycifrw==3.6.2.1
     sudo pip install pyspglib
     sudo apt-get install jmol
 

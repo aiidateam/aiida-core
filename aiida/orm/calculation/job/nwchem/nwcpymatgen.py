@@ -14,39 +14,26 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.0"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Andrius Merkys"
 
-def _prepare_pymatgen_dict(parameters,atoms=None):
+def _prepare_pymatgen_dict(parameters,struct=None):
     from pymatgen.io.nwchemio import NwInput
     import copy
 
     par = copy.deepcopy(parameters)
     add_cell = par.pop('add_cell',False)
-    if atoms:
+    if struct:
         if add_cell:
-            import numpy as np
-
-            lat_lengths = [
-                (atoms.cell[0]**2).sum()**0.5,
-                (atoms.cell[1]**2).sum()**0.5,
-                (atoms.cell[2]**2).sum()**0.5,
-            ]
-
-            lat_angles = list(np.arccos([
-                np.vdot(atoms.cell[1],atoms.cell[2])/lat_lengths[1]/lat_lengths[2],
-                np.vdot(atoms.cell[0],atoms.cell[2])/lat_lengths[0]/lat_lengths[2],
-                np.vdot(atoms.cell[0],atoms.cell[1])/lat_lengths[0]/lat_lengths[1],
-            ])/np.pi*180)
-
             par['geometry_options'].append(
                 '\n  system crystal\n'
                 '    lat_a {}\n    lat_b {}\n    lat_c {}\n'
                 '    alpha {}\n    beta  {}\n    gamma {}\n'
-                '  end'.format(*(lat_lengths+lat_angles)))
+                '  end'.format(*(struct.cell_lengths+struct.cell_angles)))
 
         if 'mol' not in par:
             par['mol'] = {}
         if 'sites' not in par['mol']:
             par['mol']['sites'] = []
 
+        atoms = struct.get_ase()
         for i,atom_type in enumerate(atoms.get_chemical_symbols()):
             xyz = []
             if add_cell:
@@ -105,16 +92,15 @@ class NwcpymatgenCalculation(JobCalculation):
         if not isinstance(parameters, ParameterData):
             raise InputValidationError("parameters is not of type ParameterData")
 
-        atoms = None
+        struct = None
         if 'structure' in inputdict:
             struct = inputdict.pop(self.get_linkname('structure'))
             if not isinstance(struct, StructureData):
                 raise InputValidationError("structure is not of type StructureData")
-            atoms = struct.get_ase()
 
         input_filename = tempfolder.get_abs_path(self._DEFAULT_INPUT_FILE)
         with open(input_filename,'w') as f:
-            f.write(_prepare_pymatgen_dict(parameters.get_dict(),atoms))
+            f.write(_prepare_pymatgen_dict(parameters.get_dict(),struct))
             f.flush()
 
         commandline_params = self._default_commandline_params

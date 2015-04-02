@@ -7,7 +7,7 @@ import tempfile
 
 from aiida.djsite.db.testbase import AiidaTestCase
 from aiida.orm.calculation.job.nwchem.nwcpymatgen import _prepare_pymatgen_dict
-from aiida.orm.data.structure import has_ase
+from aiida.orm.data.structure import has_ase,StructureData
 from aiida.orm.data.cif import has_pycifrw
 from django.utils import unittest
 
@@ -67,8 +67,9 @@ class TestNwchem(AiidaTestCase):
             (0.25, -0.25, 0.25),
             (-0.25 ,0.25 ,0.25),
         ])
+        s = StructureData(ase=a)
 
-        self.assertEquals(_prepare_pymatgen_dict(par,a),
+        self.assertEquals(_prepare_pymatgen_dict(par,s),
 '''set nwpw:minimizer 2
 set nwpw:psi_nolattice .true.
 set includestress .true.
@@ -103,7 +104,7 @@ task pspw optimize
 
         par['add_cell'] = True
 
-        self.assertEquals(_prepare_pymatgen_dict(par,a),
+        self.assertEquals(_prepare_pymatgen_dict(par,s),
 '''set nwpw:minimizer 2
 set nwpw:psi_nolattice .true.
 set includestress .true.

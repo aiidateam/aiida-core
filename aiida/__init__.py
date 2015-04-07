@@ -3,9 +3,9 @@ from aiida.djsite.utils import load_dbenv
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
-__paper__ = "G. Pizzi, A. Cepellotti, R. Sabatini, N. Marzari and B. Kozinsky, to be submitted"
+__paper__ = """G. Pizzi, A. Cepellotti, R. Sabatini, N. Marzari and B. Kozinsky, "AiiDA: Automated Interactive Infrastructure and Database for Computational Science", arXiv:1504.01163."""
 
 def get_version():
     """

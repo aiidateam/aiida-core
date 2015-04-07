@@ -2,6 +2,9 @@
 
 Quantum Espresso PWscf user-tutorial
 ====================================
+
+.. toctree::
+   :maxdepth: 2
    
 This chapter will show how to launch a single PWscf (``pw.x``) calculation. It is assumed that you have already performed the installation, and that you already setup a computer (with ``verdi``), installed Quantum Espresso on the cluster and in AiiDA. Although the code could be quite readable, a basic knowledge of Python and object programming is useful.
 

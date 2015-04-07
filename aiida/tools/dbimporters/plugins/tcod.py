@@ -5,7 +5,7 @@ from aiida.tools.dbimporters.plugins.cod \
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi"
 
 class TcodDbImporter(CodDbImporter):
@@ -15,10 +15,10 @@ class TcodDbImporter(CodDbImporter):
 
     def __init__(self, **kwargs):
         super(TcodDbImporter,self).__init__(**kwargs)
-        self.db_parameters = { 'host':   'www.crystallography.net',
-                               'user':   'cod_reader',
-                               'passwd': '',
-                               'db':     'tcod' }
+        self._db_parameters = { 'host':   'www.crystallography.net',
+                                'user':   'cod_reader',
+                                'passwd': '',
+                                'db':     'tcod' }
         self.setup_db( **kwargs )
 
     def query(self, **kwargs):
@@ -33,9 +33,9 @@ class TcodDbImporter(CodDbImporter):
         self._connect_db()
         results = []
         try:
-            self.cursor.execute( query_statement )
-            self.db.commit()
-            for row in self.cursor.fetchall():
+            self._cursor.execute( query_statement )
+            self._db.commit()
+            for row in self._cursor.fetchall():
                 results.append({ 'id'         : str(row[0]),
                                  'svnrevision': str(row[1]) })
         finally:
@@ -48,11 +48,11 @@ class TcodSearchResults(CodSearchResults):
     """
     Results of the search, performed on TCOD.
     """
-    base_url = "http://www.crystallography.net/tcod/"
+    _base_url = "http://www.crystallography.net/tcod/"
 
     def __init__(self, results):
         super(TcodSearchResults, self).__init__(results)
-        self.return_class = TcodEntry
+        self._return_class = TcodEntry
 
 class TcodEntry(CodEntry):
     """

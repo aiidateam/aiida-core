@@ -2,7 +2,7 @@
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Nicolas Mounet"
 
 class DbImporter(object):
@@ -46,7 +46,7 @@ class DbImporter(object):
         :param first_page: first page of the publication
         :param last_page: last page of the publication
         :param doi: digital object identifyer (DOI), refering to the
-            pulication
+            publication
 
         :raises NotImplementedError: if search using given keyword is not
             implemented.
@@ -83,15 +83,15 @@ class DbSearchResults(object):
         """
 
         def __init__(self,results,increment=1):
-            self.results = results
-            self.position = 0
-            self.increment = increment
+            self._results = results
+            self._position = 0
+            self._increment = increment
 
         def next(self):
-            pos = self.position
-            if pos >= 0 and pos < len(self.results):
-                self.position = self.position + self.increment
-                return self.results[pos]
+            pos = self._position
+            if pos >= 0 and pos < len(self._results):
+                self._position = self._position + self._increment
+                return self._results[pos]
             else:
                 raise StopIteration()
 

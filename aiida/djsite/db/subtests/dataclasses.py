@@ -10,7 +10,7 @@ from aiida.djsite.db.testbase import AiidaTestCase
         
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi"
 
 class TestCalcStatus(AiidaTestCase):        
@@ -119,19 +119,19 @@ class TestCodDbImporter(AiidaTestCase):
                      "incorrect value for keyword 'test' -- " + \
                      "only integers and floats are accepted",
                      "invalid literal for int() with base 10: 'text'" ]
-        values = [ 10, 'text', '10', 1.0 / 3, [ 1, 2, 3 ] ]
+        values = [ 10, 'text', u'text', '10', 1.0 / 3, [ 1, 2, 3 ] ]
         methods = [ codi._int_clause,
                     codi._str_exact_clause,
                     codi._formula_clause,
                     codi._str_fuzzy_clause,
                     codi._composition_clause,
                     codi._volume_clause ]
-        results = [ [ 0, 4, 0, 1, 1 ],
-                    [ 0, 0, 0, 1, 1 ],
-                    [ 2, 0, 0, 2, 2 ],
-                    [ 0, 0, 0, 1, 1 ],
-                    [ 2, 0, 0, 2, 2 ],
-                    [ 0, 3, 3, 0, 3 ] ]
+        results = [ [ 0, 4, 4, 0, 1, 1 ],
+                    [ 0, 0, 0, 0, 1, 1 ],
+                    [ 2, 0, 2, 0, 2, 2 ],
+                    [ 0, 0, 0, 0, 1, 1 ],
+                    [ 2, 0, 0, 0, 2, 2 ],
+                    [ 0, 3, 3, 3, 0, 3 ] ]
 
         for i in range( 0, len( methods ) ):
             for j in range( 0, len( values ) ):
@@ -400,7 +400,7 @@ class TestCifData(AiidaTestCase):
         with self.assertRaises(ValueError):
             a._get_aiida_structure(converter='none')
 
-        c = a._get_aiida_structure_ase_inline()['structure']
+        c = a._get_aiida_structure()
 
         self.assertEquals(c.get_kind_names(), ['C','O'])
 
@@ -504,6 +504,7 @@ class TestCifData(AiidaTestCase):
         test_quoted_printable(self,'line\n;line','line\n=3Bline')
         test_quoted_printable(self,'tabbed\ttext','tabbed=09text')
         test_quoted_printable(self,'angstrom Å','angstrom =C3=85')
+        test_quoted_printable(self,'line\rline\x00','line\rline=00')
         # This one is particularly tricky: a long line is folded by the QP
         # and the semicolon sign becomes the first character on a new line.
         test_quoted_printable(self,

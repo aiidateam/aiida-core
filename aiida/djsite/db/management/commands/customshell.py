@@ -15,7 +15,7 @@ from django.core.management.base import NoArgsCommand
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA and Django Software Foundation and individual contributors. All rights reserved."
 __license__ = "MIT license, and Django license, see LICENSE.txt file"
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Nicolas Mounet"
 
 default_modules_list = [
@@ -27,6 +27,7 @@ default_modules_list = [
                         ("aiida.orm","Data","Data"),
                         ("aiida.orm","CalculationFactory","CalculationFactory"),
                         ("aiida.orm","DataFactory","DataFactory"),
+                        ("aiida.orm","WorkflowFactory","WorkflowFactory"),
                         ("aiida.orm","Computer","Computer"),
                         ("aiida.orm","Group","Group"),
                         ("aiida.orm","load_node","load_node"),

@@ -8,7 +8,7 @@
     :align: center
     :height: 100px
 
-    Automated Interactive Infrastructure and Database for Atomistic simulations
+    Automated Interactive Infrastructure and Database for Computational Science
 
 Welcome to AiiDA's documentation!
 =================================

@@ -1,7 +1,7 @@
 =====
 AiiDA
 =====
-**Automated Interactive Infrastructure and Database for Atomistic simulations**
+**Automated Interactive Infrastructure and Database for Computational Science**
 
 AiiDA is a sophisticated framework designed from scratch to be a flexible
 and scalable infrastructure for atomistic simulations. Being able to store

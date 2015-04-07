@@ -1092,7 +1092,7 @@ class _Cif(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable,Importab
         """
         Importer from CIF.
         """
-        import os
+        import os.path
         try:
             node,_ = self.dataclass.get_or_create(os.path.abspath(filename))
             print node

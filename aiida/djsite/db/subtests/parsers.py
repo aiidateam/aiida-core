@@ -168,29 +168,16 @@ def output_test(pk, outfolder):
         for empty folders (.gitignore with comments)
     """
     from aiida.orm import JobCalculation
+    from aiida.common.folders import Folder
+    from aiida.cmdline.commands.exportfile import export_tree
     import os
     import json
     if os.path.exists(outfolder):
         raise ValueError("Out folder '{}' already exists".format(outfolder))
 
     c = JobCalculation.get_subclass_from_pk(pk)
-    inputs = c.get_inputs_dict()
-    serialize_node(c, destfolder=os.path.join(outfolder,c.uuid))
-    
-    for n in inputs.itervalues():
-        serialize_node(n, destfolder=os.path.join(outfolder,n.uuid))
-    
-    linkname = c._get_linkname_retrieved()
-    # Should instead get all retrieved nodes, see the calcinfo!
-    retrieved = c.get_outputs_dict()[linkname]
-    serialize_node(retrieved, destfolder=os.path.join(outfolder,retrieved.uuid))
-
-    links = {'calc': c.uuid,
-         'inputs': {k: v.uuid for k, v in inputs.iteritems()},
-         'retrieved': {'uuid': retrieved.uuid, 'linkname': linkname}}
-
-    with open(os.path.join(outfolder,'_aiida_linkdata.json'), 'w') as f:
-        json.dump(links,f,indent=2)
+    folder = Folder(outfolder)
+    export_tree([c.dbnode],folder=folder)
 
     # Create an empty checks file
     with open(os.path.join(outfolder,'_aiida_checks.json'), 'w') as f:
@@ -209,21 +196,21 @@ def read_test(outfolder):
     """
     import os
     import json
-    
-    with open(os.path.join(outfolder,'_aiida_linkdata.json')) as f:
-        linkdata = json.load(f)
 
-    calc = deserialize_node(os.path.join(outfolder,linkdata['calc']))
-    inputs = {}
-    for k, v in linkdata['inputs'].iteritems():
-        inputs[k] = deserialize_node(os.path.join(outfolder, v))
-    retrieved = deserialize_node(os.path.join(outfolder,
-        linkdata['retrieved']['uuid']))
+    from aiida.orm import JobCalculation,load_node
+    from aiida.cmdline.commands.importfile import import_file
 
-    retrieved._add_link_from(calc, label=linkdata['retrieved']['linkname'])
-    for inputname, inputnode in inputs.iteritems():
-        calc._add_link_from(inputnode, label=inputname)
-    
+    imported = import_file(outfolder,format='tree',silent=True)
+
+    calc = None
+    for _,pk in imported['nodes']['new']:
+        c = load_node(pk)
+        if issubclass(c.__class__,JobCalculation):
+            calc = c
+            break
+
+    retrieved = calc.out.retrieved
+
     try:
         with open(os.path.join(outfolder,'_aiida_checks.json')) as f:
             tests = json.load(f)
@@ -233,7 +220,7 @@ def read_test(outfolder):
         raise ValueError("This test does provide a check file, but it cannot "
                          "be JSON-decoded!")
     
-    return calc, {linkdata['retrieved']['linkname']: retrieved}, tests
+    return calc, {'retrieved': retrieved}, tests
 
 def is_valid_folder_name(name):
     """

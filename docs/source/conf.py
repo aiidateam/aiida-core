@@ -263,7 +263,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
   ('index', 'aiida', u'AiiDA documentation',
-   author, 'aiida', 'Automated Interactive Infrastructure and Database for Atomistic simulations',
+   author, 'aiida', 'Automated Interactive Infrastructure and Database for Computational Science',
    'Miscellaneous'),
 ]
 

@@ -132,7 +132,7 @@ class TestCodDbImporter(AiidaTestCase):
                     [ 0, 0, 0, 0, 1, 1 ],
                     [ 2, 0, 0, 0, 2, 2 ],
                     [ 0, 3, 3, 3, 0, 3 ] ]
- 
+
         for i in range( 0, len( methods ) ):
             for j in range( 0, len( values ) ):
                 message = messages[0]

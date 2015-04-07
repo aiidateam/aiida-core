@@ -10,7 +10,7 @@ from aiida.orm.group import Group
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Nicolas Mounet"
 
 def CalculationFactory(module, from_abstract=False):
@@ -38,6 +38,13 @@ def DataFactory(module):
     
     return BaseFactory(module, Data, "aiida.orm.data")
 
+def WorkflowFactory(module):
+    """
+    Return a suitable Workflow subclass.
+    """
+    from aiida.common.pluginloader import BaseFactory
+    
+    return BaseFactory(module, Workflow, "aiida.workflows")
 
 def load_node(node_id=None,pk=None,uuid=None):
     """
@@ -68,7 +75,6 @@ def load_node(node_id=None,pk=None,uuid=None):
         return Node.get_subclass_from_pk(pk)
     else:
         return Node.get_subclass_from_uuid(uuid)
-
 
 def load_workflow(wf_id=None,pk=None,uuid=None):
     """

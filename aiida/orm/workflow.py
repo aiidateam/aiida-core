@@ -13,7 +13,7 @@ from aiida.common import aiidalogger
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Nicolas Mounet, Riccardo Sabatini"
 
 logger = aiidalogger.getChild('Workflow')
@@ -461,7 +461,7 @@ class Workflow(object):
         """
         def par_validate(params):
             the_params = {}
-            for k,v in params.itervalues():
+            for k,v in params.iteritems():
                 if any( [isinstance(v,int),
                          isinstance(v,bool),
                          isinstance(v,float),

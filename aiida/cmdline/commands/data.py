@@ -9,7 +9,7 @@ from aiida.cmdline.commands.node import _Label, _Description
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Nicolas Mounet"
 
 class Data(VerdiCommandRouter):
@@ -77,7 +77,7 @@ class Listable(object):
             to_print = ""
             if parsed_args.header:
                 to_print += vsep.join(self.get_column_names()) + "\n"
-            for entry in entry_list:
+            for entry in sorted(entry_list, key = lambda x: int(x[0])):
                 to_print += vsep.join(entry) + "\n"
             sys.stdout.write(to_print)
 
@@ -616,7 +616,7 @@ class _Bands(VerdiCommandWithSubcommands,Listable,Visualizable):
             for band_pk in pks:
                 try:
                     struc_pks.append(min( [_ for _ in structure_list_data if _[1]==band_pk], 
-                                          key=lambda x:x[1] 
+                                          key=lambda x:x[-1]
                                           )[0]
                                      )
                 except ValueError: # no structure in input
@@ -1092,8 +1092,9 @@ class _Cif(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable,Importab
         """
         Importer from CIF.
         """
+        import os.path
         try:
-            node,_ = self.dataclass.get_or_create(filename)
+            node,_ = self.dataclass.get_or_create(os.path.abspath(filename))
             print node
         except ValueError as e:
             print e

@@ -15,7 +15,7 @@ from aiida.djsite.settings.settings_profile import (
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Nicolas Mounet, Riccardo Sabatini"
 
 # This variable identifies the schema version of this file.
@@ -677,7 +677,8 @@ class DbMultipleValueAttributeBaseClass(m.Model):
 
     @classmethod
     def set_value(cls,key, value, with_transaction=True,
-                      subspecifier_value=None, other_attribs={}):
+                      subspecifier_value=None, other_attribs={},
+                      stop_if_existing=False):
         """
         Set a new value in the DB, possibly associated to the given subspecifier.
         
@@ -697,6 +698,15 @@ class DbMultipleValueAttributeBaseClass(m.Model):
           transactions)
         :param other_attribs: a dictionary of other parameters, to store
           only on the level-zero attribute (e.g. for description in DbSetting).
+        :param stop_if_existing: if True, it will stop with an
+           UniquenessError exception if the new entry would violate an 
+           uniqueness constraint in the DB (same key, or same key+node,
+           depending on the specific subclass). Otherwise, it will 
+           first delete the old value, if existent. The use with True is 
+           useful if you want to use a given attribute as a "locking" value,
+           e.g. to avoid to perform an action twice on the same node.
+           Note that, if you are using transactions, you may get the error
+           only when the transaction is committed.          
         """
         from django.db import transaction
         
@@ -712,14 +722,39 @@ class DbMultipleValueAttributeBaseClass(m.Model):
                     other_attribs=other_attribs)
             
             if to_store:
-                cls.del_value(key, subspecifier_value=subspecifier_value)
+                if not stop_if_existing:
+                    # Delete the olf values if stop_if_existing is False,
+                    # otherwise don't delete them and hope they don't
+                    # exist. If they exist, I'll get an UniquenessError
+                    
+                    ## NOTE! Be careful in case the extra/attribute to
+                    ## store is not a simple attribute but a list or dict:
+                    ## like this, it should be ok because if we are 
+                    ## overwriting an entry it will stop anyway to avoid
+                    ## to overwrite the main entry, but otherwise 
+                    ## there is the risk that trailing pieces remain
+                    ## so in general it is good to recursively clean 
+                    ## all sub-items.
+                    cls.del_value(key,
+                        subspecifier_value=subspecifier_value)
                 cls.objects.bulk_create(to_store)
             
             if with_transaction:
                 transaction.savepoint_commit(sid)
-        except:
+        except BaseException as e: # All exceptions including CTRL+C, ...
+            from django.db.utils import IntegrityError
+            from aiida.common.exceptions import UniquenessError
+            
             if with_transaction:
                 transaction.savepoint_rollback(sid)
+            if isinstance(e, IntegrityError) and stop_if_existing:
+                raise UniquenessError("Impossible to create the required "
+                    "entry "
+                    "in table '{}', "
+                    "another entry already exists and the creation would "
+                    "violate an uniqueness constraint.\nFurther details: "
+                    "{}".format(
+                        cls.__name__, e.message))
             raise
 
     @classmethod
@@ -1167,7 +1202,8 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
     
     
     @classmethod
-    def set_value_for_node(cls, dbnode, key, value, with_transaction=True):
+    def set_value_for_node(cls, dbnode, key, value, with_transaction=True,
+        stop_if_existing=False):
         """
         This is the raw-level method that accesses the DB. No checks are done
         to prevent the user from (re)setting a valid key. 
@@ -1186,6 +1222,14 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
            so that nothing gets stored if a subitem cannot be created.
            Otherwise, if this parameter is False, no transaction management
            is performed.
+        :param stop_if_existing: if True, it will stop with an
+           UniquenessError exception if the key already exists
+           for the given node. Otherwise, it will 
+           first delete the old value, if existent. The use with True is 
+           useful if you want to use a given attribute as a "locking" value,
+           e.g. to avoid to perform an action twice on the same node.
+           Note that, if you are using transactions, you may get the error
+           only when the transaction is committed.
         
         :raise ValueError: if the key contains the separator symbol used 
             internally to unpack dictionaries and lists (defined in cls._sep).
@@ -1196,7 +1240,8 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
             dbnode_node = dbnode
 
         cls.set_value(key, value, with_transaction=with_transaction,
-                           subspecifier_value=dbnode_node)
+                           subspecifier_value=dbnode_node,
+                           stop_if_existing=stop_if_existing)
             
     @classmethod
     def del_value_for_node(cls, dbnode, key):

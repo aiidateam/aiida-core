@@ -12,7 +12,7 @@ from aiida.common.utils import get_repository_folder
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
 
 group_writable = True
@@ -157,6 +157,9 @@ class Folder(object):
         else:
             filename = unicode(dest_name)
 
+        if not isinstance(src,unicode):
+            src = unicode(src)
+
         # I get the full path of the filename, checking also that I don't
         # go beyond the folder limits
         dest_abs_path = self.get_abs_path(filename)
@@ -268,7 +271,7 @@ class Folder(object):
 
         if check_existence:
             if not os.path.exists(dest_abs_path):
-                raise OSError("{} is does not exist within the folder {}".format(
+                raise OSError("{} does not exist within the folder {}".format(
                     relpath, self.abspath))
         
         return dest_abs_path

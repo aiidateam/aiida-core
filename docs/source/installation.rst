@@ -296,11 +296,7 @@ Run the following command::
     
 to configure AiiDA. The command will guide you through a process to configure
 the database, the repository location, and it will finally (automatically) run 
-<<<<<<< HEAD
 a django ``migrate`` command, if needed, that creates the required tables
-=======
-a django ``syncdb`` command, if needed, that creates the required tables
->>>>>>> 5bdba659b4b8732bd54ced1951fcaba5a0dd14d1
 in the database and installs the database triggers.
 
 The first thing that will be asked to you is the timezone, extremely important
@@ -458,7 +454,7 @@ following dependencies are required to be installed:
 
 First two can be installed from the default repositories::
 
-    sudo pip install pycifrw==3.6.2
+    sudo pip install pycifrw==3.6.2.1
     sudo apt-get install jmol
 
 ASE has to be installed from source::

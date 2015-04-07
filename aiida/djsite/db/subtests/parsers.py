@@ -10,7 +10,7 @@ from aiida.djsite.db.testbase import AiidaTestCase
         
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
 
 def pre_encoder(data):
@@ -164,12 +164,8 @@ def output_test(pk, outfolder):
     
     It is possible to simplify the file removing unwanted nodes. 
     
-    .. todo:: manage empty folders, that are not saved by GIT!
-       A temporary solution to find them and add a placeholder file::
-   
-        find . -type d -empty -print0 | xargs -0 -n1 -IXXX touch XXX/.placeholder
-
-    One has then to create a suitable test file.
+    .. todo:: create a test case to test the generation of GIT placeholders
+        for empty folders (.gitignore with comments)
     """
     from aiida.orm import JobCalculation
     import os
@@ -200,8 +196,12 @@ def output_test(pk, outfolder):
     with open(os.path.join(outfolder,'_aiida_checks.json'), 'w') as f:
         json.dump({},f)
 
-    import sys
-    print >> sys.stderr, "WARNING! Empty folders are not stored by GIT!! This needs to be fixed."
+    for path,dirlist,filelist in os.walk(outfolder):
+        if len(dirlist) == 0 and len(filelist) == 0:
+            with open("{}/.gitignore".format(path), 'w') as f:
+                f.write("# This is a placeholder file, used to make git "
+                        "store an empty folder")
+                f.flush()
         
 def read_test(outfolder):
     """

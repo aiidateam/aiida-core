@@ -6,6 +6,7 @@ functions to operate on them.
 
 from aiida.orm import Data
 from aiida.common.utils import classproperty
+from aiida.orm.calculation.inline import optional_inline
 import itertools
 import copy
 
@@ -13,7 +14,7 @@ import copy
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Nicolas Mounet, Riccardo Sabatini"
 
 _mass_threshold = 1.e-3
@@ -544,6 +545,27 @@ def symop_fract_from_ortho(cell):
         [     0,   1.0/(b*sg), -(ca-cb*cg)/(b*D*sg) ],
         [     0,            0,          sg/(c*D)    ],
     ])
+
+@optional_inline
+def _get_cif_ase_inline(struct=None,parameters=None):
+    """
+    Creates :py:class:`aiida.orm.data.cif.CifData` using ASE.
+
+    :note: requires ASE module.
+    """
+    from aiida.orm.data.cif import CifData
+    kwargs = {}
+    if parameters is not None:
+        kwargs = parameters.get_dict()
+    cif = CifData(ase=struct.get_ase(**kwargs))
+    formula = struct.get_formula(mode='hill',separator=' ')
+    for i in cif.values.keys():
+        cif.values[i]['_symmetry_space_group_name_H-M']  = 'P 1'
+        cif.values[i]['_symmetry_space_group_name_Hall'] = 'P 1'
+        cif.values[i]['_symmetry_Int_Tables_number']     = 1
+        cif.values[i]['_cell_formula_units_Z']           = 1
+        cif.values[i]['_chemical_formula_sum']           = formula
+    return {'cif': cif}
             
 class StructureData(Data):
     """
@@ -553,7 +575,7 @@ class StructureData(Data):
     related useful information.
     """
     _set_incompatibilities = [("ase","cell"),("ase","pbc")]
-    
+
     @property
     def _set_defaults(self):
         parent_dict = super(StructureData, self)._set_defaults
@@ -1175,6 +1197,47 @@ class StructureData(Data):
         self._set_attr('pbc2',the_pbc[1])
         self._set_attr('pbc3',the_pbc[2])
 
+    @property
+    def cell_lengths(self):
+        """
+        Get the lengths of cell lattice vectors in angstroms.
+        """
+        import numpy
+        cell = self.cell
+        return [
+                 numpy.linalg.norm(cell[0]),
+                 numpy.linalg.norm(cell[1]),
+                 numpy.linalg.norm(cell[2]),
+               ]
+
+    @cell_lengths.setter
+    def cell_lengths(self,value):
+        self.set_cell_lengths(value)
+
+    def set_cell_lengths(self,value):
+        raise NotImplementedError("Modification is not implemented yet")
+
+    @property
+    def cell_angles(self):
+        """
+        Get the angles between the cell lattice vectors in degrees.
+        """
+        import numpy
+        cell = self.cell
+        lengths = self.cell_lengths
+        return [float(numpy.arccos(x)/numpy.pi*180) for x in [
+                 numpy.vdot(cell[1],cell[2])/lengths[1]/lengths[2],
+                 numpy.vdot(cell[0],cell[2])/lengths[0]/lengths[2],
+                 numpy.vdot(cell[0],cell[1])/lengths[0]/lengths[1],
+               ]]
+
+    @cell_angles.setter
+    def cell_angles(self,value):
+        self.set_cell_angles(value)
+
+    def set_cell_angles(self,value):
+        raise NotImplementedError("Modification is not implemented yet")
+
     def is_alloy(self):
         """
         To understand if there are alloys in the structure.
@@ -1198,6 +1261,25 @@ class StructureData(Data):
         :return: a float.
         """
         return calc_cell_volume(self.cell)
+
+    def _get_cif(self,converter='ase',store=False,**kwargs):
+        """
+        Creates :py:class:`aiida.orm.data.cif.CifData`.
+
+        :param converter: specify the converter. Default 'ase'.
+        :param store: If True, intermediate calculation gets stored in the
+            AiiDA database for record. Default False.
+        :return: :py:class:`aiida.orm.data.cif.CifData` node.
+        """
+        from aiida.orm.data.parameter import ParameterData
+        import structure # This same module
+        param = ParameterData(dict=kwargs)
+        try:
+            conv_f = getattr(structure,'_get_cif_{}_inline'.format(converter))
+            ret_dict = conv_f(struct=self,parameters=param,store=store)
+            return ret_dict['cif']
+        except AttributeError:
+            raise ValueError("No such converter '{}' available".format(converter))
 
 class Kind(object):
     """

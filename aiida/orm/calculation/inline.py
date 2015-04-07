@@ -4,7 +4,7 @@ from aiida.orm import Calculation
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Nicolas Mounet"
 
 class InlineCalculation(Calculation):
@@ -15,7 +15,14 @@ class InlineCalculation(Calculation):
     This is used to automatically create a calculation node
     for a simple calculation
     """
-    pass
+    def get_function_name(self):
+        """
+        Get the function name.
+        
+        :return: a string
+        """
+        return self.get_attr('function_name', None)
+        
 
 def make_inline(func):
     """
@@ -153,7 +160,7 @@ def make_inline(func):
     from aiida.orm import Data
     from aiida.common.exceptions import ModificationNotAllowed
     
-    def wrapped_function(**kwargs):
+    def wrapped_function(*args,**kwargs):
         """
         This wrapper function is the actual function that is called.
         """
@@ -168,6 +175,11 @@ def make_inline(func):
             raise ValueError("The function name that is wrapped must end "
                              "with '_inline', while its name is '{}'".format(
                                 function_name))
+        
+        if args:
+            print args
+            raise ValueError("Arguments of inline function should be "
+                              "passed as key=value")
         
         # Check the input values
         for k, v in kwargs.iteritems():
@@ -194,6 +206,7 @@ def make_inline(func):
         c._set_attr("source_code", "".join(source_code))
         c._set_attr("first_line_source_code", first_line)
         c._set_attr("source_file", source)
+        c._set_attr("function_name", function_name)
 
         # Run the wrapped function
         retval = func(**kwargs)
@@ -234,4 +247,45 @@ def make_inline(func):
         # Return the calculation and the return values
         return (c, retval)
     
+    return wrapped_function
+
+def optional_inline(func):
+    """
+    optional_inline wrapper/decorator takes a function, which can be called
+    either as wrapped in InlineCalculation or a simple function, depending
+    on 'store' keyworded argument (True stands for InlineCalculation, False
+    for simple function). The wrapped function has to adhere to the
+    requirements by make_inline wrapper/decorator.
+
+    Usage example::
+
+        @optional_inline
+        def copy_inline(source=None):
+          return {'copy': source.copy()}
+
+    Function ``copy_inline`` will be wrapped in InlineCalculation when
+    invoked in following way::
+
+        copy_inline(source=node,store=True)
+
+    while it will be called as a simple function when invoked::
+
+        copy_inline(source=node)
+
+    In any way the ``copy_inline`` will return the same results.
+    """
+
+    def wrapped_function(*args, **kwargs):
+        """
+        This wrapper function is the actual function that is called.
+        """
+        store = kwargs.pop('store', False)
+
+        if store:
+            return make_inline(func)(*args,**kwargs)[1]
+        else:
+            return func(*args,**kwargs)
+
+        return func(*args,**kwargs)
+
     return wrapped_function

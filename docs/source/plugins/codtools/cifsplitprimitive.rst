@@ -3,11 +3,12 @@ codtools.cifsplitprimitive
 
 Description
 -----------
-This plugin is used by ``cif_split_primitive`` code from the **cod-tools**
-package.
+This plugin is used by ``cif_split`` and ``cif_split_primitive`` codes from
+the **cod-tools** package.
 
 Supported codes
 ---------------
+* cif_split [#]_
 * cif_split_primitive
 
 Inputs
@@ -30,3 +31,6 @@ Errors
 ------
 Run-time errors are returned line-by-line in the
 :py:class:`ParameterData <aiida.orm.data.parameter.ParameterData>` object.
+
+.. [#] Incompatible with ``--output-prefixed`` and ``--output-tar`` command
+  line options.

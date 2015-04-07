@@ -168,13 +168,18 @@ def import_file(infile,format='tar',silent=False):
     from aiida.djsite.db import models
     from aiida.common.utils import get_class_string, get_object_from_string
     from aiida.common.datastructures import calc_states
-    
 
     # This is the export version expected by this function
     expected_export_version = '0.1'
 
     # The name of the subfolder in which the node files are stored
     nodes_export_subfolder = 'nodes'
+
+    # The returned dictionary with new and existing nodes and links
+    ret_dict = {
+        'nodes': { 'new': [], 'existing': [] },
+        'links': { 'new': [] },
+    }
 
     ################
     # EXTRACT DATA #
@@ -348,6 +353,8 @@ def import_file(infile,format='tar',silent=False):
                     unique_id = entry_data[unique_identifier]
                     existing_entry_id = foreign_ids_reverse_mappings[model_name][unique_id]                
                     # TODO COMPARE, AND COMPARE ATTRIBUTES
+                    ret_dict['nodes']['existing'].append((import_entry_id,
+                                                          existing_entry_id))
                     if not silent:
                         print "existing %s: %s (%s->%s)" % (model_name, unique_id,
                                                             import_entry_id,
@@ -419,7 +426,8 @@ def import_file(infile,format='tar',silent=False):
                 for unique_id, new_pk in just_saved.iteritems():
                     import_entry_id = import_entry_ids[unique_id]
                     foreign_ids_reverse_mappings[model_name][unique_id] = new_pk
-                                        
+                    ret_dict['nodes']['new'].append((import_entry_id,
+                                                     new_pk))
                     if not silent:
                         print "NEW %s: %s (%s->%s)" % (model_name, unique_id,
                                                        import_entry_id,
@@ -493,6 +501,7 @@ def import_file(infile,format='tar',silent=False):
                         # New link    
                         links_to_store.append(models.DbLink(
                             input_id=in_id, output_id=out_id, label=link['label']))
+                        ret_dict['links']['new'].append((in_id,out_id))
     
             # Store new links
             if links_to_store:                
@@ -565,6 +574,8 @@ def import_file(infile,format='tar',silent=False):
         print "*** WARNING: MISSING EXISTING UUID CHECKS!!"
         print "*** WARNING: TODO: UPDATE IMPORT_DATA WITH DEFAULT VALUES! (e.g. calc status, user pwd, ...)"
         print "DONE."
+
+    return ret_dict
 
 import HTMLParser
 

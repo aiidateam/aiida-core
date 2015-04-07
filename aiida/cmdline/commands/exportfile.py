@@ -203,28 +203,23 @@ def get_all_fields_info():
 
     return all_fields_info, unique_identifiers
 
-def export(what, also_parents = True, also_calc_outputs = True,
-           outfile = 'export_data.aiida.tar.gz', overwrite=False,
-           silent=False):
+def export_tree(what, folder = None, also_parents = True,
+                also_calc_outputs = True, silent = False):
     """
-    Export the DB entries passed in the 'what' list on a file.
+    Export the DB entries passed in the 'what' list to a file tree.
     
     :todo: limit the export to finished or failed calculations.
     
     :param what: a list of Django database entries; they can belong to different
       models.
+    :param folder: a :py:class:`Folder <aiida.common.folders.Folder>` object
     :param also_parents: if True, also all the parents are stored (from th
       DbPath transitive closure table)
     :param also_calc_outputs: if True, any output of a calculation is also exported
-    :param outfile: the filename of the file on which to export
-    :param overwrite: if True, overwrite the output file without asking.
-        if False, raise an IOError in this case.
-    
-    :raise IOError: if overwrite==False and the filename already exists.
+    :param silent: suppress debug prints
     """
     import json
     import os
-    import tarfile
     import operator
     from collections import defaultdict
     
@@ -236,10 +231,6 @@ def export(what, also_parents = True, also_calc_outputs = True,
     from aiida.common.folders import SandboxFolder
 
     EXPORT_VERSION = '0.1'
-    
-    if not overwrite and os.path.exists(outfile):
-        raise IOError("The output file '{}' already "
-                      "exists".format(outfile))
     
     all_fields_info, unique_identifiers = get_all_fields_info()
         
@@ -397,72 +388,100 @@ def export(what, also_parents = True, also_calc_outputs = True,
     ######################################
     # Now I store
     ######################################    
-    with SandboxFolder() as folder:
-        # subfolder inside the export package
-        nodesubfolder = folder.get_subfolder('nodes',create=True,
-                                             reset_limit=True)
-    
-        if not silent:
-            print "STORING DATA..."
-        
-        with open(folder.get_abs_path('data.json'), 'w') as f:
-            json.dump({
-                    'node_attributes': node_attributes,
-                    'node_attributes_conversion': node_attributes_conversion,
-                    'export_data': export_data,
-                    'links_uuid': links_uuid,
-                    'groups_uuid': groups_uuid,
-                    }, f)
-    
-        metadata = {
-            'aiida_version': aiida.get_version(),
-            'export_version': EXPORT_VERSION,
-            'all_fields_info': all_fields_info,
-            'unique_identifiers': unique_identifiers,
-            }
+    # subfolder inside the export package
+    nodesubfolder = folder.get_subfolder('nodes',create=True,
+                                         reset_limit=True)
 
-        with open(folder.get_abs_path('metadata.json'), 'w') as f:
-            json.dump(metadata, f)
+    if not silent:
+        print "STORING DATA..."
     
-        if not silent:
-            print "STORING FILES..."
+    with open(folder.get_abs_path('data.json'), 'w') as f:
+        json.dump({
+                'node_attributes': node_attributes,
+                'node_attributes_conversion': node_attributes_conversion,
+                'export_data': export_data,
+                'links_uuid': links_uuid,
+                'groups_uuid': groups_uuid,
+                }, f)
+
+    metadata = {
+        'aiida_version': aiida.get_version(),
+        'export_version': EXPORT_VERSION,
+        'all_fields_info': all_fields_info,
+        'unique_identifiers': unique_identifiers,
+        }
+
+    with open(folder.get_abs_path('metadata.json'), 'w') as f:
+        json.dump(metadata, f)
+
+    if silent is not True:
+        print "STORING FILES..."
+
+    for pk in all_nodes_pk:
+        # Maybe we do not need to get the subclass, if it is too slow?
+        node = Node.get_subclass_from_pk(pk)
+
+        sharded_uuid = export_shard_uuid(node.uuid)
+
+        # Important to set create=False, otherwise creates
+        # twice a subfolder. Maybe this is a bug of insert_path??
+
+        thisnodefolder = nodesubfolder.get_subfolder(
+            sharded_uuid, create=False,
+            reset_limit=True)
+        # In this way, I copy the content of the folder, and not the folder
+        # itself
+        thisnodefolder.insert_path(src=node._repository_folder.abspath,
+                                   dest_name='.')
+
+def export(what, outfile = 'export_data.aiida.tar.gz', overwrite = False,
+           silent = False, **kwargs):
+    """
+    Export the DB entries passed in the 'what' list on a file.
     
-        for pk in all_nodes_pk:
-            # Maybe we do not need to get the subclass, if it is too slow?
-            node = Node.get_subclass_from_pk(pk)
-            
-            sharded_uuid = export_shard_uuid(node.uuid)
+    :todo: limit the export to finished or failed calculations.
     
-            # Important to set create=False, otherwise creates
-            # twice a subfolder. Maybe this is a bug of insert_path??
+    :param what: a list of Django database entries; they can belong to different
+      models.
+    :param also_parents: if True, also all the parents are stored (from th
+      DbPath transitive closure table)
+    :param also_calc_outputs: if True, any output of a calculation is also exported
+    :param outfile: the filename of the file on which to export
+    :param overwrite: if True, overwrite the output file without asking.
+        if False, raise an IOError in this case.
+    :param silent: suppress debug print
     
-            thisnodefolder = nodesubfolder.get_subfolder(
-                sharded_uuid, create=False,
-                reset_limit=True)
-            # In this way, I copy the content of the folder, and not the folder
-            # itself
-            thisnodefolder.insert_path(src=node._repository_folder.abspath,
-                                       dest_name='.')
-    
-        if not silent:
-            print "COMPRESSING..."
-    
-        # PAX_FORMAT: virtually no limitations, better support for unicode
-        #   characters
-        # dereference=True: at the moment, we should not have any symlink or
-        #   hardlink in the AiiDA repository; therefore, do not store symlinks
-        #   or hardlinks, but store the actual destinations.
-        #   This also simplifies the checks on import.
-        with tarfile.open(outfile, "w:gz", format=tarfile.PAX_FORMAT,
-                          dereference=True) as tar:
-            tar.add(folder.abspath, arcname="")
+    :raise IOError: if overwrite==False and the filename already exists.
+    """
+    import os
+    import tarfile
+    from aiida.common.folders import SandboxFolder
+
+    if not overwrite and os.path.exists(outfile):
+        raise IOError("The output file '{}' already "
+                      "exists".format(outfile))
+
+    folder = SandboxFolder()
+    export_tree(what, folder=folder, silent=silent, **kwargs)
+
+    if not silent:
+        print "COMPRESSING..."
+
+    # PAX_FORMAT: virtually no limitations, better support for unicode
+    #   characters
+    # dereference=True: at the moment, we should not have any symlink or
+    #   hardlink in the AiiDA repository; therefore, do not store symlinks
+    #   or hardlinks, but store the actual destinations.
+    #   This also simplifies the checks on import.
+    with tarfile.open(outfile, "w:gz", format=tarfile.PAX_FORMAT,
+                      dereference=True) as tar:
+        tar.add(folder.abspath, arcname="")
 
 #        import shutil
 #        shutil.make_archive(outfile, 'zip', folder.abspath)#, base_dir='aiida')
 
     if not silent:
         print "DONE."
-
 
 class Export(VerdiCommand):
     """

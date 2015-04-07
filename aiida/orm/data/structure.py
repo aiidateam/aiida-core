@@ -1205,9 +1205,9 @@ class StructureData(Data):
         import numpy
         cell = self.cell
         return [
-                 float((numpy.array(cell[0])**2).sum()**0.5),
-                 float((numpy.array(cell[1])**2).sum()**0.5),
-                 float((numpy.array(cell[2])**2).sum()**0.5),
+                 numpy.linalg.norm(cell[0]),
+                 numpy.linalg.norm(cell[1]),
+                 numpy.linalg.norm(cell[2]),
                ]
 
     @cell_lengths.setter

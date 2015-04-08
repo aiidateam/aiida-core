@@ -616,7 +616,7 @@ class _Bands(VerdiCommandWithSubcommands,Listable,Visualizable):
             for band_pk in pks:
                 try:
                     struc_pks.append(min( [_ for _ in structure_list_data if _[1]==band_pk], 
-                                          key=lambda x:x[1] 
+                                          key=lambda x:x[-1]
                                           )[0]
                                      )
                 except ValueError: # no structure in input
@@ -1092,8 +1092,9 @@ class _Cif(VerdiCommandWithSubcommands,Listable,Visualizable,Exportable,Importab
         """
         Importer from CIF.
         """
+        import os.path
         try:
-            node,_ = self.dataclass.get_or_create(filename)
+            node,_ = self.dataclass.get_or_create(os.path.abspath(filename))
             print node
         except ValueError as e:
             print e

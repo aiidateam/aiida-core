@@ -150,9 +150,18 @@ class TestParsers(AiidaTestCase):
                                 "the test file".format(e.message,
                                                        attr_test, test_node_name))
                         if comparison == "AlmostEqual":
-                            self.assertAlmostEqual(dbdata,value,
-                                msg="Failed test for {}->{}".format(
-                                    test_node_name, attr_test))
+                            if isinstance(dbdata,list) and isinstance(value,list):
+                                self.assertEqual(len(dbdata),len(value),
+                                    msg="Failed test for {}->{}".format(
+                                            test_node_name, attr_test))
+                                for i in range(0,len(dbdata)):
+                                    self.assertAlmostEqual(dbdata[i],value[i],
+                                        msg="Failed test for {}->{}".format(
+                                            test_node_name, attr_test))
+                            else:
+                                self.assertAlmostEqual(dbdata,value,
+                                    msg="Failed test for {}->{}".format(
+                                        test_node_name, attr_test))
                         elif comparison == "Equal":
                             self.assertEqual(dbdata,value,
                                 msg="Failed test for {}->{}".format(

@@ -19,8 +19,8 @@ How to cite AiiDA
 If you use AiiDA in your research, please consider citing the following work:
 
   Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari,
-  Boris Kozinsky, *AiiDA: Automated Interactive Infrastructure and Database 
-  for Computational Science*, arXiv:1504.01163.
+  and Boris Kozinsky, *AiiDA: Automated Interactive Infrastructure and Database 
+  for Computational Science*, arXiv:1504.01163 (2015); http://www.aiida.net.
 
 License
 -------

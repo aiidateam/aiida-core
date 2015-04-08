@@ -17,19 +17,19 @@ class MpodDbImporter(DbImporter):
         """
         Returns part of HTTP GET query for querying string fields.
         """
-        if not isinstance( values, str ) and not isinstance( values, int ):
+        if not isinstance( values, basestring ) and not isinstance( values, int ):
             raise ValueError("incorrect value for keyword '" + alias + \
                              "' -- only strings and integers are accepted")
         return "{}={}".format(key, values)
 
-    keywords = { 'phase_name': [ 'phase_name',  _str_clause ],
-                 'formula'   : [ 'formula',     _str_clause ],
-                 'element'   : [ 'element',     None ],
-                 'cod_id'    : [ 'cod_code',    _str_clause ],
-                 'authors'   : [ 'publ_author', _str_clause ] }
+    _keywords = { 'phase_name': [ 'phase_name',  _str_clause ],
+                  'formula'   : [ 'formula',     _str_clause ],
+                  'element'   : [ 'element',     None ],
+                  'cod_id'    : [ 'cod_code',    _str_clause ],
+                  'authors'   : [ 'publ_author', _str_clause ] }
 
     def __init__(self, **kwargs):
-        self.query_url = "http://mpod.cimav.edu.mx/data/search/"
+        self._query_url = "http://mpod.cimav.edu.mx/data/search/"
         self.setup_db( **kwargs )
 
     def query_get(self, **kwargs):
@@ -50,14 +50,14 @@ class MpodDbImporter(DbImporter):
             elements = [elements]
 
         get_parts = []
-        for key in self.keywords.keys():
+        for key in self._keywords.keys():
             if key in kwargs.keys():
                 values = kwargs.pop(key)
                 get_parts.append(
-                    self.keywords[key][1](self,
-                                          self.keywords[key][0],
-                                          key,
-                                          values))
+                    self._keywords[key][1](self,
+                                           self._keywords[key][0],
+                                           key,
+                                           values))
 
         if kwargs.keys():
             raise NotImplementedError("search keyword(s) '"
@@ -66,11 +66,11 @@ class MpodDbImporter(DbImporter):
 
         queries = []
         for e in elements:
-            queries.append(self.query_url + '?' +
+            queries.append(self._query_url + '?' +
                            "&".join(get_parts +
                                     [self._str_clause('formula','element',e)]))
         if not queries:
-            queries.append(self.query_url + '?' + "&".join(get_parts))
+            queries.append(self._query_url + '?' + "&".join(get_parts))
 
         return queries
 
@@ -101,7 +101,7 @@ class MpodDbImporter(DbImporter):
         Changes the database connection details.
         """
         if query_url:
-            self.query_url = query_url
+            self._query_url = query_url
 
         if kwargs.keys():
             raise NotImplementedError( \
@@ -115,17 +115,20 @@ class MpodDbImporter(DbImporter):
 
         :return: list of strings
         """
-        return self.keywords.keys()
+        return self._keywords.keys()
 
 class MpodSearchResults(DbSearchResults):
     """
     Results of the search, performed on MPOD.
     """
-    base_url = "http://mpod.cimav.edu.mx/datafiles/"
+    _base_url = "http://mpod.cimav.edu.mx/datafiles/"
 
     def __init__(self, results):
-        self.results = results
-        self.entries = {}
+        self._results = results
+        self._entries = {}
+
+    def __len__(self):
+        return len(self._results)
 
     def at(self, position):
         """
@@ -136,13 +139,13 @@ class MpodSearchResults(DbSearchResults):
 
         :raise IndexError: if ``position`` is out of bounds.
         """
-        if position < 0 | position >= len( self.results ):
+        if position < 0 | position >= len( self._results ):
             raise IndexError( "index out of bounds" )
-        if position not in self.entries:
-            db_id       = self.results[position]
-            url = self.base_url + db_id + ".mpod"
-            self.entries[position] = MpodEntry( url, db_id = db_id )
-        return self.entries[position]
+        if position not in self._entries:
+            db_id       = self._results[position]
+            url = self._base_url + db_id + ".mpod"
+            self._entries[position] = MpodEntry( url, db_id = db_id )
+        return self._entries[position]
 
 class MpodEntry(DbEntry):
     """

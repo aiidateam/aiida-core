@@ -35,8 +35,8 @@ class NwcpymatgenParser(BasenwcParser):
         ret_dict = []
         nwo = NwOutput(output_path)
         for out in nwo.data:
-            out.pop('molecules') # TODO: implement extraction of
-                                 # Structure- and TrajectoryData
+            out.pop('molecules',None)  # TODO: implement extraction of
+            out.pop('structures',None) # Structure- and TrajectoryData
             ret_dict.append(('output',ParameterData(dict=out)))
         ret_dict.append(('job_info',ParameterData(dict=nwo.job_info)))
         

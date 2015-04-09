@@ -31,12 +31,21 @@ class NwcpymatgenParser(BasenwcParser):
         files.
         """
         from pymatgen.io.nwchemio import NwOutput
+        from aiida.orm.data.structure import StructureData
+        from aiida.orm.data.array.trajectory import TrajectoryData
 
         ret_dict = []
         nwo = NwOutput(output_path)
         for out in nwo.data:
-            out.pop('molecules',None)  # TODO: implement extraction of
-            out.pop('structures',None) # Structure- and TrajectoryData
+            # molecules are discarded, as they can not be converted to
+            # StructureData due to lack of lattice parameters
+            out.pop('molecules',None)
+            structures = out.pop('structures',None)
+            if structures:
+                structlist = [StructureData(pymatgen_structure=s)
+                              for s in structures]
+                ret_dict.append(('trajectory',
+                                 TrajectoryData(structurelist=structlist)))
             ret_dict.append(('output',ParameterData(dict=out)))
         ret_dict.append(('job_info',ParameterData(dict=nwo.job_info)))
         

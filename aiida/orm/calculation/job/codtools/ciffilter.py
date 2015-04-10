@@ -1,10 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-Plugin to create input for scripts from cod-tools package.
-This plugin is in the development stage. Andrius Merkys, 2014-10-29
-"""
-import os
-import shutil
 
 from aiida.orm.calculation.job import JobCalculation
 from aiida.orm.data.cif import CifData
@@ -16,7 +10,7 @@ from aiida.common.utils import classproperty
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
+__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Andrius Merkys"
 
 class CiffilterCalculation(JobCalculation):
     """
@@ -57,6 +51,7 @@ class CiffilterCalculation(JobCalculation):
 
     def _prepare_for_submission(self,tempfolder,inputdict):
         from aiida.orm.calculation.job.codtools import commandline_params_from_dict
+        import shutil
         try:
             cif = inputdict.pop(self.get_linkname('cif'))
         except KeyError:

@@ -222,7 +222,6 @@ class TestCodtools(AiidaTestCase):
         self.assertEquals(nodes[0][1].get_dict()['output_messages'],
                           stdout_messages + stderr_messages)
 
-    @unittest.skipIf(not has_pycifrw(),"Unable to import PyCifRW")
     def test_4(self):
         from aiida.parsers.plugins.codtools.cifcellcontents import CifcellcontentsParser
 
@@ -300,7 +299,6 @@ class TestCodtools(AiidaTestCase):
         with self.assertRaises(PluginInternalError):
             parser._get_output_nodes(stdout_file,stderr_2_file)
 
-    @unittest.skipIf(not has_pycifrw(),"Unable to import PyCifRW")
     def test_cmdline_generation(self):
         from aiida.orm.calculation.job.codtools import commandline_params_from_dict
 

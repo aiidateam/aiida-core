@@ -125,11 +125,11 @@ class TestCodDbImporter(AiidaTestCase):
                     codi._str_fuzzy_clause,
                     codi._composition_clause,
                     codi._volume_clause ]
-        results = [ [ 0, 4, 1, 0, 1, 1 ],
-                    [ 0, 0, 1, 0, 1, 1 ],
+        results = [ [ 0, 4, 4, 0, 1, 1 ],
+                    [ 0, 0, 0, 0, 1, 1 ],
                     [ 2, 0, 2, 0, 2, 2 ],
-                    [ 0, 0, 1, 0, 1, 1 ],
-                    [ 2, 0, 2, 0, 2, 2 ],
+                    [ 0, 0, 0, 0, 1, 1 ],
+                    [ 2, 0, 0, 0, 2, 2 ],
                     [ 0, 3, 3, 3, 0, 3 ] ]
 
         for i in range( 0, len( methods ) ):

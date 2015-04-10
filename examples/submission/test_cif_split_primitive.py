@@ -62,7 +62,8 @@ calc = code.new_calc()
 calc.label = "Test cod-tools cif_split_primitive"
 calc.description = "Test calculation with the cod-tools cif_split_primitive"
 calc.set_max_wallclock_seconds(30*60) # 30 min
-calc.set_resources({"num_machines": 1})
+calc.set_resources({"num_machines": 1,
+                    "num_mpiprocs_per_machine": 1})
 calc.set_computer(computer)
 
 calc.use_cif(cif)

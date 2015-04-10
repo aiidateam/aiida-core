@@ -105,8 +105,29 @@ follow these steps:
 * Prepare the environment:
     As the layout of the scripts and libraries is somewhat non-standard,
     more than a single path has to be added to ``${PATH}`` and
-    ``${PERL5LIB}``. Attached below is a `modulefile`_, setting environment
-    for **cod-tools** as of source revision 2930::
+    ``${PERL5LIB}``. Described below are two methods of setting the
+    environment for **cod-tools** as of source revision 2930:
+
+    * Using Bash::
+
+        CODTOOLS_SRC=~/src/cod-tools
+
+        export PATH=${CODTOOLS_SRC}/perl-scripts:${PATH}
+        export PERL5LIB=${CODTOOLS_SRC}:${PERL5LIB}
+        export PERL5LIB=${CODTOOLS_SRC}/CCIFParser:${PERL5LIB}
+        export PERL5LIB=${CODTOOLS_SRC}/CIFData:${PERL5LIB}
+        export PERL5LIB=${CODTOOLS_SRC}/CIFParser:${PERL5LIB}
+        export PERL5LIB=${CODTOOLS_SRC}/CIFTags:${PERL5LIB}
+        export PERL5LIB=${CODTOOLS_SRC}/Spacegroups:${PERL5LIB}
+        export PERL5LIB=${CODTOOLS_SRC}/lib/perl5:${PERL5LIB}
+
+      These commands can be pasted to ``~/.bashrc`` file, which is sourced
+      automatically by the AiiDA before each calculation.
+
+      .. note:: Be sure to restart the AiiDA daemon after modifying the
+        ``~/.bashrc``.
+
+    * Using `modulefile`_::
 
         #%Module1.0#####################################################################
         module-whatis    loads the cod-tools environment

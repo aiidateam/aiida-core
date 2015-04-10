@@ -203,6 +203,11 @@ class Visualizable(object):
         data_id = parsed_args.pop('data_id')
         format = parsed_args.pop('format')
 
+        # Removing the keys, whose values are None
+        for key in parsed_args.keys():
+            if parsed_args[key] is None:
+                parsed_args.pop(key)
+
         if format is None:
             print "Default format is not defined, please specify.\n" + \
                   "Valid formats are:"
@@ -299,6 +304,11 @@ class Exportable(object):
 
         format = parsed_args.pop('format')
         data_id = parsed_args.pop('data_id')
+
+        # Removing the keys, whose values are None
+        for key in parsed_args.keys():
+            if parsed_args[key] is None:
+                parsed_args.pop(key)
 
         if format is None:
             print "Default format is not defined, please specify.\n" + \
@@ -718,7 +728,7 @@ class _Bands(VerdiCommandWithSubcommands,Listable,Visualizable):
             for band_pk in pks:
                 try:
                     struc_pks.append(min( [_ for _ in structure_list_data if _[1]==band_pk], 
-                                          key=lambda x:x[1] 
+                                          key=lambda x:x[-1]
                                           )[0]
                                      )
                 except ValueError: # no structure in input

@@ -641,7 +641,18 @@ class StructureData(Data):
                 self.append_atom(ase=atom)
         else:
             raise TypeError("The value is not an ase.Atoms object")
-        
+
+    def set_pymatgen_structure(self, struct):
+        """
+        Load the structure from a pymatgen Structure object
+        """
+        self.cell = struct.lattice.matrix.tolist()
+        self.pbc  = [True,True,True] # setting defaults, not sure if this
+                                     # is a correct way to do so
+        self.clear_kinds()
+        for site in struct.sites:
+            self.append_atom(symbols=site.species_string,
+                             position=site.coords.tolist())
 
     def _validate(self):
         """
@@ -1253,9 +1264,9 @@ class StructureData(Data):
         import numpy
         cell = self.cell
         return [
-                 float((numpy.array(cell[0])**2).sum()**0.5),
-                 float((numpy.array(cell[1])**2).sum()**0.5),
-                 float((numpy.array(cell[2])**2).sum()**0.5),
+                 numpy.linalg.norm(cell[0]),
+                 numpy.linalg.norm(cell[1]),
+                 numpy.linalg.norm(cell[2]),
                ]
 
     @cell_lengths.setter

@@ -46,7 +46,7 @@ class DbImporter(object):
         :param first_page: first page of the publication
         :param last_page: last page of the publication
         :param doi: digital object identifyer (DOI), refering to the
-            pulication
+            publication
 
         :raises NotImplementedError: if search using given keyword is not
             implemented.
@@ -83,15 +83,15 @@ class DbSearchResults(object):
         """
 
         def __init__(self,results,increment=1):
-            self.results = results
-            self.position = 0
-            self.increment = increment
+            self._results = results
+            self._position = 0
+            self._increment = increment
 
         def next(self):
-            pos = self.position
-            if pos >= 0 and pos < len(self.results):
-                self.position = self.position + self.increment
-                return self.results[pos]
+            pos = self._position
+            if pos >= 0 and pos < len(self._results):
+                self._position = self._position + self._increment
+                return self._results[pos]
             else:
                 raise StopIteration()
 

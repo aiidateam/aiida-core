@@ -31,55 +31,13 @@ class CifsplitprimitiveCalculation(CiffilterCalculation):
         self._SPLIT_DIR = 'split'
 
     def _prepare_for_submission(self,tempfolder,inputdict):
-        try:
-            cif = inputdict.pop(self.get_linkname('cif'))
-        except KeyError:
-            raise InputValidationError("no CIF file is specified for this calculation")
-        if not isinstance(cif, CifData):
-            raise InputValidationError("cif is not of type CifData")
-
-        parameters = inputdict.pop(self.get_linkname('parameters'), None)
-        if parameters is None:
-            parameters = ParameterData(dict={})
-        if not isinstance(parameters, ParameterData):
-            raise InputValidationError("parameters is not of type ParameterData")
-
-        input_filename = tempfolder.get_abs_path(self._DEFAULT_INPUT_FILE)
-        shutil.copy( cif.get_file_abs_path(), input_filename )
+        calcinfo = super(CifsplitprimitiveCalculation,
+                         self)._prepare_for_submission(tempfolder,inputdict)
 
         split_dir = tempfolder.get_abs_path(self._SPLIT_DIR)
         os.mkdir(split_dir)
 
-        commandline_params = [ '--output-dir', self._SPLIT_DIR ]
-        for k in parameters.get_dict().keys():
-            v = parameters.get_dict()[k]
-            if v is None:
-                continue
-            if not isinstance(v, list):
-                v = [ v ]
-            key = None
-            if len( k ) == 1:
-                key = "-{}".format( k )
-            else:
-                key = "--{}".format( k )
-            for val in v:
-                if isinstance(val, bool) and val == False:
-                    continue
-                commandline_params.append( key )
-                if not isinstance(val, bool):
-                    commandline_params.append( val )
-
-        calcinfo = CalcInfo()
-        calcinfo.uuid = self.uuid
-        calcinfo.cmdline_params = commandline_params
-        calcinfo.local_copy_list = []
-        calcinfo.remote_copy_list = []
-        calcinfo.stdin_name  = self._DEFAULT_INPUT_FILE
-        calcinfo.stdout_name = self._DEFAULT_OUTPUT_FILE
-        calcinfo.stderr_name = self._DEFAULT_ERROR_FILE
-        calcinfo.retrieve_list = [self._DEFAULT_OUTPUT_FILE,
-                                  self._DEFAULT_ERROR_FILE,
-                                  self._SPLIT_DIR]
-        calcinfo.retrieve_singlefile_list = []
+        calcinfo.cmdline_params.extend([ '--output-dir', self._SPLIT_DIR ])
+        calcinfo.retrieve_list.append(self._SPLIT_DIR)
 
         return calcinfo

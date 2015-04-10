@@ -267,6 +267,39 @@ class TestCodtools(AiidaTestCase):
                                 '4000009': 'C4 H18 Mn N4 O12 V4',
                                 '4000008': 'C2 H10 F Mn N2 O9 V3'}})
 
+    def test_perl_error_detection(self):
+        from aiida.parsers.plugins.codtools.cifcellcontents import CifcellcontentsParser
+        from aiida.common.exceptions import PluginInternalError
+
+        CifcellcontentsCalculation = CalculationFactory('codtools.cifcellcontents')
+
+        stdout = "4000000	C26 H26 Fe\n"
+
+        stderr_1 = "Can't locate CIFSymmetryGenerator.pm in @INC (@INC contains: .) at cif_molecule line 61."
+        stderr_2 = "BEGIN failed--compilation aborted at cif_molecule line 61."
+
+        f = SandboxFolder()
+
+        stdout_file   = "{}/{}".format(f.abspath,"aiida.out")
+        stderr_1_file = "{}/{}".format(f.abspath,"aiida_1.err")
+        stderr_2_file = "{}/{}".format(f.abspath,"aiida_2.err")
+
+        with open(stdout_file, 'w') as of:
+            of.write(stdout)
+            of.flush()
+        with open(stderr_1_file, 'w') as ef:
+            ef.write(stderr_1)
+            ef.flush()
+        with open(stderr_2_file, 'w') as ef:
+            ef.write(stderr_2)
+            ef.flush()
+
+        parser = CifcellcontentsParser(CifcellcontentsCalculation())
+        with self.assertRaises(PluginInternalError):
+            parser._get_output_nodes(stdout_file,stderr_1_file)
+        with self.assertRaises(PluginInternalError):
+            parser._get_output_nodes(stdout_file,stderr_2_file)
+
     @unittest.skipIf(not has_pycifrw(),"Unable to import PyCifRW")
     def test_cmdline_generation(self):
         from aiida.orm.calculation.job.codtools import commandline_params_from_dict

@@ -54,13 +54,21 @@ def read_test(outfolder):
     import json
 
     from aiida.orm import JobCalculation,load_node
+    from aiida.common.exceptions import NotExistent
     from aiida.cmdline.commands.importfile import import_file
 
     imported = import_file(outfolder,format='tree',silent=True)
 
     calc = None
     for _,pk in imported['nodes']['new']:
-        c = load_node(pk)
+        # TODO: For some reason, some entries, present in
+        # imported['nodes']['new'] (observed to be DbComputers sometimes)
+        # tend to be missing after the import. This requires further
+        # investigation, but for this time and for this purpose I skip them.
+        try:
+            c = load_node(pk)
+        except NotExistent:
+            continue
         if issubclass(c.__class__,JobCalculation):
             calc = c
             break

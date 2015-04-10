@@ -36,6 +36,7 @@ class CifsplitprimitiveParser(BaseCodtoolsParser):
             with open(error_path) as f:
                 content = f.readlines()
             content = [x.strip('\n') for x in content]
+            self._check_failed(content)
             for filename in content:
                 path = os.path.join( out_folder.get_abs_path('.'), filename )
                 output_nodes.append(('cif', CifData(file=path)))

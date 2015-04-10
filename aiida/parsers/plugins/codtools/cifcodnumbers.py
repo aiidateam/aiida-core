@@ -52,6 +52,7 @@ class CifcodnumbersParser(BaseCodtoolsParser):
             with open(error_path) as f:
                 content = f.readlines()
             lines = [x.strip('\n') for x in content]
+            self._check_failed(lines)
             errors.extend(lines)
 
         output_nodes = []

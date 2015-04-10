@@ -40,6 +40,7 @@ class CifcellcontentsParser(BaseCodtoolsParser):
             with open(error_path) as f:
                 content = f.readlines()
             messages = [x.strip('\n') for x in content]
+            self._check_failed(messages)
 
         output_nodes = []
         output_nodes.append(('formulae',

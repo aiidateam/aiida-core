@@ -42,6 +42,7 @@ class CifcodcheckParser(BaseCodtoolsParser):
                 content = f.readlines()
             lines = [x.strip('\n') for x in content]
             messages.extend(lines)
+            self._check_failed(messages)
 
         output_nodes = []
         output_nodes.append(('messages',

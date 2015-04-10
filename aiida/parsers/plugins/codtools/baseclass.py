@@ -2,6 +2,7 @@
 
 from aiida.parsers.parser import Parser
 from aiida.common.datastructures import calc_states
+from aiida.common.exceptions import PluginInternalError
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -48,7 +49,13 @@ class BaseCodtoolsParser(Parser):
             self.logger.error("No output files found")
             return False, ()
 
-        return True, self._get_output_nodes(output_path, error_path)
+        try:
+            output_nodes = self._get_output_nodes(output_path, error_path)
+        except PluginInternalError as e:
+            self.logger.error("Internal plugin error: {}".format(e.message))
+            return False, ()
+
+        return True, output_nodes
 
     def _fetch_output_files(self, retrieved):
         """
@@ -106,6 +113,7 @@ class BaseCodtoolsParser(Parser):
             with open(error_path) as f:
                 content = f.readlines()
             messages = [x.strip('\n') for x in content]
+            self._check_failed(messages)
 
         output_nodes = []
         if cif is not None:
@@ -114,3 +122,16 @@ class BaseCodtoolsParser(Parser):
                              ParameterData(dict={'output_messages':
                                                  messages})))
         return output_nodes
+
+    def _check_failed(self, messages):
+        """
+        Check the STDERR for traces of typical Perl misconfiguration
+        errors.
+
+        :raises PluginInternalError: if such traces are found.
+        """
+        import re
+
+        for msg in messages:
+            if re.search('^(Can\'t locate|BEGIN failed)',msg):
+                raise PluginInternalError(" ".join(messages))

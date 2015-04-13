@@ -397,23 +397,21 @@ def _collect_tags(node,calc,parameters=None,
                 "\n".join(["%s=%s" % (key,step['env'][key]) for key in step['env']]))
         else:
             tags['_tcod_computation_environment'].append('')
-        if 'stdout' in step and \
-           cif_encode_contents(step['stdout'])[1] is not None:
-            raise ValueError("Standard output of computation step {} "
-                             "can not be stored in a CIF file: "
-                             "encoding is required, but not currently "
-                             "supported".format(sn))
-        if 'stderr' in step and \
-           cif_encode_contents(step['stderr'])[1] is not None:
-            raise ValueError("Standard error of computation step {} "
-                             "can not be stored in a CIF file: "
-                             "encoding is required, but not currently "
-                             "supported".format(sn))
-        if 'stdout' in step:
+        if 'stdout' in step and step['stdout'] is not None:
+            if cif_encode_contents(step['stdout'])[1] is not None:
+                raise ValueError("Standard output of computation step {} "
+                                 "can not be stored in a CIF file: "
+                                 "encoding is required, but not currently "
+                                 "supported".format(sn))
             tags['_tcod_computation_stdout'].append(step['stdout'])
         else:
             tags['_tcod_computation_stdout'].append('')
-        if 'stderr' in step:
+        if 'stderr' in step and step['stderr'] is not None:
+            if cif_encode_contents(step['stderr'])[1] is not None:
+                raise ValueError("Standard error of computation step {} "
+                                 "can not be stored in a CIF file: "
+                                 "encoding is required, but not currently "
+                                 "supported".format(sn))
             tags['_tcod_computation_stderr'].append(step['stderr'])
         else:
             tags['_tcod_computation_stderr'].append('')

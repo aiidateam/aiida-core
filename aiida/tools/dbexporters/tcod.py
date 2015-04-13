@@ -140,18 +140,20 @@ def _get_calculation(node):
     :param node: an instance of subclass of :py:class:`aiida.orm.node.Node`
     :return: an instance of subclass of
         :py:class:`aiida.orm.calculation.Calculation`
-    :raises ValueError: if the node has more than one calculation attached.
+    :raises MultipleObjectsError: if the node has more than one calculation
+        attached.
     """
+    from aiida.common.exceptions import MultipleObjectsError
     from aiida.orm.calculation import Calculation
     if len(node.get_inputs(type=Calculation)) == 1:
         return node.get_inputs(type=Calculation)[0]
     elif len(node.get_inputs(type=Calculation)) == 0:
         return None
     else:
-        raise ValueError("Node {} seems to have more than one "
-                         "parent (immediate) calculation -- exporter "
-                         "does not know which one of them produced the "
-                         "node".format(node))
+        raise MultipleObjectsError("Node {} seems to have more than one "
+                                   "parent (immediate) calculation -- "
+                                   "exporter does not know which one of "
+                                   "them produced the node".format(node))
 
 def _assert_same_parents(a,b):
     """
@@ -646,6 +648,7 @@ def export_cifnode(what,parameters=None,trajectory_index=None,store=False,
         Default 1024.
     :return: a :py:class:`aiida.orm.data.cif.CifData` node.
     """
+    from aiida.common.exceptions import MultipleObjectsError
     from aiida.orm.calculation.inline import make_inline
     CifData        = DataFactory('cif')
     StructureData  = DataFactory('structure')
@@ -663,11 +666,11 @@ def export_cifnode(what,parameters=None,trajectory_index=None,store=False,
         if len(params) == 1:
             parameters = params[0]
         elif len(params) > 0:
-            raise ValueError("Calculation {} has more than "
-                             "one ParameterData output, please "
-                             "specify which one to use with "
-                             "an option parameters='' when "
-                             "calling export_cif()".format(calc))
+            raise MultipleObjectsError("Calculation {} has more than "
+                                       "one ParameterData output, please "
+                                       "specify which one to use with "
+                                       "an option parameters='' when "
+                                       "calling export_cif()".format(calc))
 
     if parameters is not None:
         _assert_same_parents(what,parameters)

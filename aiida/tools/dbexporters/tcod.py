@@ -40,6 +40,15 @@ tcod_loops = {
     ]
 }
 
+default_options = {
+    'code': 'cif_cod_deposit',
+    'dump_aiida_database': True,
+    'exclude_external_contents': False,
+    'gzip': False,
+    'gzip_threshold': 1024,
+    'reduce_symmetry': False,
+}
+
 def cif_encode_contents(content,gzip=False,gzip_threshold=1024):
     """
     Encodes data for usage in CIF text field in a *best possible* way:
@@ -287,6 +296,7 @@ def extend_with_cmdline_parameters(parser,expclass="Data"):
     """
     import argparse
     parser.add_argument('--reduce-symmetry', action='store_true',
+                        default=None,
                         dest='reduce_symmetry',
                         help='Perform symmetry reduction.')
     parser.add_argument('--no-reduce-symmetry',
@@ -307,17 +317,19 @@ def extend_with_cmdline_parameters(parser,expclass="Data"):
                              "single instance of "
                              "ParameterData.".format(expclass,expclass))
     parser.add_argument('--dump-aiida-database', action='store_true',
-                        default=True,
+                        default=None,
                         dest='dump_aiida_database',
                         help="Export AiiDA database to the CIF file. " +
                              "Default option.")
     parser.add_argument('--no-dump-aiida-database',
                         '--dont-dump-aiida-database',
+                        default=None,
                         action='store_false',
                         dest='dump_aiida_database',
                         help="Do not export AiiDA database to the CIF " +
                              "file.")
     parser.add_argument('--exclude-external-contents', action='store_true',
+                        default=None,
                         dest='exclude_external_contents',
                         help="Do not save contents for external " +
                              "resources if URIs are provided. " +
@@ -329,20 +341,21 @@ def extend_with_cmdline_parameters(parser,expclass="Data"):
                         help="Save contents for external resources " +
                              "even if URIs are provided.")
     parser.add_argument('--gzip', action='store_true', dest='gzip',
+                        default=None,
                         help="Gzip large files.")
     parser.add_argument('--no-gzip', '--dont-gzip', action='store_false',
                         dest='gzip',
                         help="Do not gzip any files. Default option.")
-    parser.add_argument('--gzip-threshold', type=int, default=1024,
+    parser.add_argument('--gzip-threshold', type=int, default=None,
                         help="Specify the minimum size of exported " +
                              "file which should be gzipped. " +
-                             "Default 1024.")
+                             "Default {}.".format(default_options['gzip_threshold']))
 
 def _collect_tags(node,calc,parameters=None,
-                  dump_aiida_database=True,
-                  exclude_external_contents=False,
-                  gzip=False,
-                  gzip_threshold=1024):
+                  dump_aiida_database=default_options['dump_aiida_database'],
+                  exclude_external_contents=default_options['exclude_external_contents'],
+                  gzip=default_options['gzip'],
+                  gzip_threshold=default_options['gzip_threshold']):
     """
     Retrieve metadata from attached calculation and pseudopotentials
     and prepare it to be saved in TCOD CIF.
@@ -602,7 +615,8 @@ def export_values(what,**kwargs):
     return cif.values
 
 def export_cifnode(what,parameters=None,trajectory_index=None,store=False,
-                   reduce_symmetry=False,**kwargs):
+                   reduce_symmetry=default_options['reduce_symmetry'],
+                   **kwargs):
     """
     The main exporter function. Exports given coordinate-containing \*Data
     node to :py:class:`aiida.orm.data.cif.CifData` node, ready to be
@@ -693,7 +707,8 @@ def export_cifnode(what,parameters=None,trajectory_index=None,store=False,
 
 def deposit(what,type,author_name=None,author_email=None,url=None,
             title=None,username=None,password=False,user_email=None,
-            code_label='cif_cod_deposit',computer_name=None,**kwargs):
+            code_label=default_options['code'],computer_name=None,
+            **kwargs):
     """
     Launches a
     :py:class:`aiida.orm.calculation.job.JobCalculation`

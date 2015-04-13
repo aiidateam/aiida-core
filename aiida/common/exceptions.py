@@ -23,7 +23,7 @@ class NotExistent(AiidaException):
 class MultipleObjectsError(AiidaException):
     """
     Raised when more than one entity is found in the DB, but only one was
-    excepted.
+    expected.
     """
     pass
     

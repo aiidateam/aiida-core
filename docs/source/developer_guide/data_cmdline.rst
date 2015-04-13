@@ -82,6 +82,31 @@ If the default plugin is not defined and there are more than one plugin,
 an exception will be raised upon issuing ``verdi data <datatype> <action>``
 to be caught and explained for the user.
 
+Plugin-specific command line options
+====================================
+
+Plugin-specific command line options can be appended in plugin-specific
+methods ``_<action>_<plugin>_parameters(self,parser)``. All these methods
+are called before parsing command line arguments, and are passed an
+``argparse.ArgumentParser`` instance, to which command line argument
+descriptions can be appended using ``parser.add_argument()``. For example::
+
+    def _show_jmol_parameters(self,parser):
+        """
+        Describe command line parameters.
+        """
+        parser.add_argument('--step',
+                            help="ID of the trajectory step. If none is "
+                                 "supplied, all steps are exported.",
+                            type=int, action='store')
+
+.. note:: as all ``_<action>_<plugin>_parameters(self,parser)`` methods are
+    called, it requires some attention in order not to make conflicting
+    command line argument names!
+.. note:: it's a good practice to set ``default=None`` for all command line
+    arguments, since ``None``-valued arguments are excluded before passing
+    the parsed argument dictionary to a desired plugin.
+
 Implementing ``list``
 ---------------------
 

@@ -168,6 +168,13 @@ class DbEntry(object):
         }
         self._cif = None
 
+    def __repr__(self):
+        return "{}({})".format(self.__class__.__name__,
+                               ",".join(["{}={}".format(k,'"{}"'.format(v)
+                                         if issubclass(v.__class__,basestring)
+                                         else v)
+                                        for k,v in self.source.iteritems()]))
+
     @property
     def cif(self):
         """

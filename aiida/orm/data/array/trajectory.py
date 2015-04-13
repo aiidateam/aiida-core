@@ -18,6 +18,8 @@ def _get_aiida_structure_inline(trajectory=None,parameters=None):
     kwargs = {}
     if parameters is not None:
         kwargs = parameters.get_dict()
+    if 'index' not in kwargs.keys() or kwargs['index'] is None:
+        raise ValueError("Step index is not supplied for TrajectoryData")
     return {'structure': trajectory.step_to_structure(**kwargs)}
 
 class TrajectoryData(ArrayData):

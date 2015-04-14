@@ -5,6 +5,27 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Nicolas Mounet"
 
+from aiida.orm.calculation.inline import optional_inline
+
+@optional_inline
+def _get_cif_inline(parameters=None):
+    """
+    Wraps CIF file in CifData instance.
+    """
+    from aiida.common.utils import md5_file
+    from aiida.orm.data.cif import CifData
+    import tempfile
+
+    cif = parameters.get_dict().pop('cif')
+    source = parameters.get_dict().pop('source',{})
+
+    with tempfile.NamedTemporaryFile() as f:
+        f.write(cif)
+        f.flush()
+        if 'source_md5' not in source.keys() or source['source_md5'] is None:
+            source['source_md5'] = md5_file(f.name)
+        return {'cif': CifData(file=f.name, source=source)}
+
 class DbImporter(object):
     """
     Base class for database importers.
@@ -168,6 +189,13 @@ class DbEntry(object):
         }
         self._cif = None
 
+    def __repr__(self):
+        return "{}({})".format(self.__class__.__name__,
+                               ",".join(["{}={}".format(k,'"{}"'.format(v)
+                                         if issubclass(v.__class__,basestring)
+                                         else v)
+                                        for k,v in self.source.iteritems()]))
+
     @property
     def cif(self):
         """
@@ -192,20 +220,17 @@ class DbEntry(object):
         """
         raise NotImplementedError("not implemented in base class")
 
-    def get_cif_node(self):
+    def get_cif_node(self,store=False):
         """
         Creates a CIF node, that can be used in AiiDA workflow.
 
         :return: :py:class:`aiida.orm.data.cif.CifData` object
         """
-        from aiida.common.utils import md5_file
-        from aiida.orm.data.cif import CifData
-        import tempfile
-        with tempfile.NamedTemporaryFile() as f:
-            f.write(self.cif)
-            f.flush()
-            self.source['source_md5'] = md5_file(f.name)
-            return CifData(file=f.name, source=self.source)
+        from aiida.orm.data.parameter import ParameterData
+        import baseclasses # This same module
+        pd = ParameterData(dict={'cif': self.cif, 'source': self.source})
+        ret_dict = _get_cif_inline(parameters=pd,store=store)
+        return ret_dict['cif']
 
     def get_aiida_structure(self):
         """

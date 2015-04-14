@@ -195,6 +195,11 @@ class Visualizable(object):
         data_id = parsed_args.pop('data_id')
         format = parsed_args.pop('format')
 
+        # Removing the keys, whose values are None
+        for key in parsed_args.keys():
+            if parsed_args[key] is None:
+                parsed_args.pop(key)
+
         if format is None:
             print "Default format is not defined, please specify.\n" + \
                   "Valid formats are:"
@@ -291,6 +296,11 @@ class Exportable(object):
 
         format = parsed_args.pop('format')
         data_id = parsed_args.pop('data_id')
+
+        # Removing the keys, whose values are None
+        for key in parsed_args.keys():
+            if parsed_args[key] is None:
+                parsed_args.pop(key)
 
         if format is None:
             print "Default format is not defined, please specify.\n" + \

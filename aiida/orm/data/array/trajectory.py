@@ -18,6 +18,8 @@ def _get_aiida_structure_inline(trajectory=None,parameters=None):
     kwargs = {}
     if parameters is not None:
         kwargs = parameters.get_dict()
+    if 'index' not in kwargs.keys() or kwargs['index'] is None:
+        raise ValueError("Step index is not supplied for TrajectoryData")
     return {'structure': trajectory.step_to_structure(**kwargs)}
 
 class TrajectoryData(ArrayData):
@@ -141,6 +143,17 @@ class TrajectoryData(ArrayData):
                 self.delete_array('velocities')
             except KeyError:
                 pass
+
+    def set_structurelist(self,structurelist):
+        """
+        Create trajectory from the list of StructureData objects.
+        """
+        import numpy
+        steps = numpy.array(range(0,len(structurelist)))
+        cells = numpy.array([x.cell for x in structurelist])
+        symbols = numpy.array([str(s.kind_name) for s in structurelist[0].sites])
+        positions = numpy.array([[list(s.position) for s in x.sites] for x in structurelist])
+        self.set_trajectory(steps,cells,symbols,positions)
 
     def _validate(self):
         """

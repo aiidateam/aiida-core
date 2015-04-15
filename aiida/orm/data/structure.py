@@ -56,7 +56,7 @@ def get_valid_pbc(inputpbc):
     Return a list of three booleans for the periodic boundary conditions,
     in a valid format from a generic input.
 
-    Raise ValueError if the format is not valid.
+    :raise ValueError: if the format is not valid.
     """
     if isinstance(inputpbc,bool):
         the_pbc = (inputpbc,inputpbc,inputpbc)
@@ -244,6 +244,7 @@ def get_formula_from_symbol_list(_list,separator=""):
 
     :param _list: a list of symbols and multiplicities as obtained from
         the function group_symbols
+    :param separator: a string used to concatenate symbols. Default empty.
 
     :return: a string
     """
@@ -273,8 +274,9 @@ def get_formula_compact1(symbol_list,separator=""):
     Return a string with the chemical formula from a list of chemical symbols.
     The formula is written in a compact" way, i.e. trying to group as much as
     possible parts of the formula.
-    :note: it works for instance very well if structure was obtained from an
-    ASE supercell.
+
+    .. note:: it works for instance very well if structure was obtained
+        from an ASE supercell.
 
     Example of result:
     ``['Ba', 'Ti', 'O', 'O', 'O', 'Ba', 'Ti', 'O', 'O', 'O',
@@ -282,6 +284,7 @@ def get_formula_compact1(symbol_list,separator=""):
 
     :param symbol_list: list of symbols
         (e.g. ['Ba','Ti','O','O','O'])
+    :param separator: a string used to concatenate symbols. Default empty.
     :returns: a string with the chemical formula for the given structure.
     """
             
@@ -415,10 +418,12 @@ def get_formula(symbol_list, mode='hill', separator=""):
         * 'allreduce': same as hill without the re-ordering (take the 
           order of the atomic sites), e.g.
           ``['Ba', 'Ti', 'O', 'O', 'O']`` will return ``'BaTiO3'``
+
+    :param separator: a string used to concatenate symbols. Default empty.
         
     :return: a string with the formula
     
-    :note: in modes compact1, reduce and allreduce, the initial order in 
+    .. note:: in modes compact1, reduce and allreduce, the initial order in
         which the atoms were appended by the user is used to group symbols by
         multiplicity
     """
@@ -471,8 +476,8 @@ def get_symbols_string(symbols,weights):
     :param symbols: the symbols as obtained from <kind>._symbols
     :param weights: the weights as obtained from <kind>._weights
         
-    Note the difference with respect to the symbols and the symbol 
-    properties!
+    .. note:: Note the difference with respect to the symbols and the
+        symbol properties!
     """
     if len(symbols) == 1 and weights[0] == 1.:
         return symbols[0]
@@ -604,6 +609,8 @@ class StructureData(Data):
     def set_pymatgen_structure(self, struct):
         """
         Load the structure from a pymatgen Structure object
+
+        .. note:: Requires the pymatgen module.
         """
         self.cell = struct.lattice.matrix.tolist()
         self.pbc  = [True,True,True] # setting defaults, not sure if this
@@ -747,7 +754,7 @@ class StructureData(Data):
             
         :return: a string with the formula
     
-        :note: in modes compact1, reduce and allreduce, the initial order in 
+        .. note:: in modes compact1, reduce and allreduce, the initial order in
             which the atoms were appended by the user is used to group symbols by
             multiplicity
         """
@@ -761,9 +768,10 @@ class StructureData(Data):
         """
         Return a list with length equal to the number of sites of this structure,
         where each element of the list is the kind name of the corresponding site.
-        :note: this is NOT necessarily a list of chemical symbols ! Use
-        [ self.get_kind(s.kind_name).get_symbols_string() for s in self.sites]
-        for chemical symbols
+
+        .. note:: This is NOT necessarily a list of chemical symbols! Use
+            ``[ self.get_kind(s.kind_name).get_symbols_string() for s in self.sites]``
+            for chemical symbols
         
         :return: a list of strings
         """
@@ -777,8 +785,8 @@ class StructureData(Data):
 
         :return: an ASE object corresponding to this StructureData object. 
 
-        Note: If any site is an alloy or has vacancies, a ValueError is raised
-        (from the site.get_ase() routine).
+        .. note:: If any site is an alloy or has vacancies, a ValueError
+            is raised (from the site.get_ase() routine).
         """
         import ase
         asecell = ase.Atoms(cell=self.cell, pbc=self.pbc)
@@ -1002,7 +1010,7 @@ class StructureData(Data):
         """
         Removes all kinds for the StructureData object.
         
-        Note: Also clear all sites!
+        .. note:: Also clear all sites!
         """
         from aiida.common.exceptions import ModificationNotAllowed
 
@@ -1080,8 +1088,9 @@ class StructureData(Data):
         """
         Return a list of kind names (in the same order of the ``self.kinds``
         property, but return the names rather than Kind objects)
-        :note: this is NOT necessarily a list of chemical symbols ! Use
-        get_symbols_set for chemical symbols
+
+        .. note:: This is NOT necessarily a list of chemical symbols! Use
+            get_symbols_set for chemical symbols
         
         :return: a list of strings.
         """
@@ -1139,9 +1148,9 @@ class StructureData(Data):
         :raises ModificationNotAllowed: if object is stored already
         :raises ValueError: if positions are invalid
         
-        NOTE: it is assumed that the order of the new_positions is given in the same 
-              order of the one it's substituting, i.e. the kind of the site
-              will not be checked.
+        .. note:: it is assumed that the order of the new_positions is
+            given in the same order of the one it's substituting, i.e. the
+            kind of the site will not be checked.
         """
         from aiida.common.exceptions import ModificationNotAllowed
 
@@ -1506,13 +1515,13 @@ class Kind(object):
         """
         Compare with another Kind object to check if they are different.
         
-        Note! This does NOT check the 'type' attribute. Instead, it compares
-        (with reasonable thresholds, where applicable): the mass, and the list
-        of symbols and of weights. Moreover, it compares the
-        ``_internal_tag``, if defined (at the moment, defined automatically
-        only when importing the Kind from ASE, if the atom has a non-zero tag).
-        Note that the _internal_tag is only used while the class is loaded,
-        but is not persisted on the database.
+        .. note:: This does NOT check the 'type' attribute. Instead, it compares
+            (with reasonable thresholds, where applicable): the mass, and the list
+            of symbols and of weights. Moreover, it compares the
+            ``_internal_tag``, if defined (at the moment, defined automatically
+            only when importing the Kind from ASE, if the atom has a non-zero tag).
+            Note that the _internal_tag is only used while the class is loaded,
+            but is not persisted on the database.
 
         :return: A tuple with two elements. The first one is True if the two sites
             are 'equivalent' (same mass, symbols and weights), False otherwise.
@@ -1598,13 +1607,14 @@ class Kind(object):
         of this kind. If there is only one symbol (no alloy) with 100% 
         occupancy, just returns the symbol name. Otherwise, groups the full
         string in curly brackets, and try to write also the composition
-        (with 2 precision only). 
-        :note: If there is a vacancy (sum of weights<1), we indicate it with
-        the X symbol followed by 1-sum(weights) (still with 2 digits precision,
-        so it can be 0.00)
+        (with 2 precision only).
+
+        .. note:: If there is a vacancy (sum of weights<1), we indicate it
+            with the X symbol followed by 1-sum(weights) (still with 2
+            digits precision, so it can be 0.00)
         
-        Note the difference with respect to the symbols and the symbol 
-        properties!
+        .. note:: Note the difference with respect to the symbols and the
+            symbol properties!
         """
         return get_symbols_string(self._symbols, self._weights)   
 
@@ -1628,8 +1638,8 @@ class Kind(object):
         pass a list of one element only, or simply the string for that atom.
         For alloys, a list of elements.
         
-        Note that if you change the list of symbols, the kind name remains
-        unchanged.
+        .. note:: Note that if you change the list of symbols, the kind
+            name remains unchanged.
         """
         return copy.deepcopy(self._symbols)
     
@@ -1655,7 +1665,7 @@ class Kind(object):
         """
         Set the chemical symbols and the weights for the site.
 
-        Note that the kind name remains unchanged.
+        .. note:: Note that the kind name remains unchanged.
         """
         symbols_tuple = _create_symbols_tuple(symbols)
         weights_tuple = _create_weights_tuple(weights)
@@ -1762,8 +1772,8 @@ class Site(object):
         
         :param kinds: the list of kinds from the StructureData object.
 
-        Note: If any site is an alloy or has vacancies, a ValueError is raised
-            (from the site.get_ase() routine).
+        .. note:: If any site is an alloy or has vacancies, a ValueError
+            is raised (from the site.get_ase() routine).
         """
         from collections import defaultdict
         import ase

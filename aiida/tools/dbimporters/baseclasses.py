@@ -10,7 +10,7 @@ from aiida.orm.calculation.inline import optional_inline
 @optional_inline
 def _get_cif_inline(parameters=None):
     """
-    Wraps CIF file in CifData instance.
+    Wraps CIF file in :py:class:`aiida.orm.data.cif.CifData` instance.
     """
     from aiida.common.utils import md5_file
     from aiida.orm.data.cif import CifData
@@ -46,9 +46,12 @@ class DbImporter(object):
             notation
         :param spacegroup_hall: symmetry space group symbol in Hall
             notation
-        :param a, b, c: length of lattice vectors in angstroms
-        :param alpha, beta, gamma: angles between lattice vectors in
-            degrees
+        :param a: length of lattice vector in angstroms
+        :param b: length of lattice vector in angstroms
+        :param c: length of lattice vector in angstroms
+        :param alpha: angles between lattice vectors in degrees
+        :param beta: angles between lattice vectors in degrees
+        :param gamma: angles between lattice vectors in degrees
         :param z: number of the formula units in the unit cell
         :param measurement_temp: temperature in kelvins at which the
             unit-cell parameters were measured
@@ -217,6 +220,9 @@ class DbEntry(object):
     def get_ase_structure(self):
         """
         Returns ASE representation of the CIF.
+
+        .. note:: To be removed, as it is duplicated in
+            :py:class:`aiida.orm.data.cif.CifData`.
         """
         raise NotImplementedError("not implemented in base class")
 

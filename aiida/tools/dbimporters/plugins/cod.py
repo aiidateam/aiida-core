@@ -312,7 +312,7 @@ class CodEntry(DbEntry):
         """
         Returns ASE representation of the CIF.
 
-        :note: to be removed, as it is duplicated in
+        .. note:: To be removed, as it is duplicated in
             :py:class:`aiida.orm.data.cif.CifData`.
         """
         import ase.io.cif

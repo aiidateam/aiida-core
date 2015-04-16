@@ -224,7 +224,9 @@ class DbEntry(object):
         .. note:: To be removed, as it is duplicated in
             :py:class:`aiida.orm.data.cif.CifData`.
         """
-        raise NotImplementedError("not implemented in base class")
+        import ase.io.cif
+        import StringIO
+        return ase.io.cif.read_cif( StringIO.StringIO( self.cif ) )
 
     def get_cif_node(self,store=False):
         """
@@ -242,14 +244,8 @@ class DbEntry(object):
         """
         Returns AiiDA-compatible structure, representing the crystal
         structure from the CIF file.
-
-        .. note:: To be removed, as it is duplicated in
-            :py:class:`aiida.orm.data.cif.CifData`.
         """
-        import ase.io.cif
-        import StringIO
-        return ase.io.cif.read_cif( StringIO.StringIO( self.cif ) )
-
+        raise NotImplementedError("not implemented in base class")
     def get_parsed_cif(self):
         """
         Returns data structure, representing the CIF file. Can be created

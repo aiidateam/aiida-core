@@ -1,10 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-Plugin to create input for scripts from cod-tools package.
-This plugin is in the development stage. Andrius Merkys, 2014-10-29
-"""
-import os
-import shutil
 
 from aiida.orm.calculation.job import JobCalculation
 from aiida.orm.calculation.job.codtools.ciffilter import CiffilterCalculation
@@ -40,27 +34,9 @@ class CifcoddepositCalculation(CiffilterCalculation):
                               'user_email', 'author_name', 'author_email',
                               'hold_period' ]
 
-    @classproperty
-    def _use_methods(cls):
-        retdict = JobCalculation._use_methods
-        retdict.update({
-            "cif": {
-               'valid_types': CifData,
-               'additional_parameter': None,
-               'linkname': 'cif',
-               'docstring': "A CIF file to be deposited",
-               },
-            "parameters": {
-               'valid_types': ParameterData,
-               'additional_parameter': None,
-               'linkname': 'parameters',
-               'docstring': "Deposition parameters",
-               },
-            })
-        return retdict
-
     def _prepare_for_submission(self,tempfolder,inputdict):
         from aiida.orm.calculation.job.codtools import commandline_params_from_dict
+        import shutil
         try:
             cif = inputdict.pop(self.get_linkname('cif'))
         except KeyError:

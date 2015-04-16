@@ -40,6 +40,19 @@ tcod_loops = {
     ]
 }
 
+conforming_dictionaries = [
+    {
+        'name': 'cif_tcod.dic',
+        'version': '0.004',
+        'url': 'http://www.crystallography.net/tcod/cif/dictionaries/cif_tcod.dic'
+    },
+    {
+        'name': 'cif_dft.dic',
+        'version': '0.004',
+        'url': 'http://www.crystallography.net/tcod/cif/dictionaries/cif_dft.dic'
+    }
+]
+
 default_options = {
     'code': 'cif_cod_deposit',
     'dump_aiida_database': True,
@@ -338,15 +351,20 @@ def _collect_tags(node,calc,parameters=None,
     and prepare it to be saved in TCOD CIF.
     """
     import os,json
-    tags = {
-        '_audit_creation_method'      : "AiiDA version {}".format(__version__),
-        '_audit_conform_dict_name'    : [ "cif_tcod.dic", "cif_dft.dic" ],
-        '_audit_conform_dict_version' : [ "0.004", "0.004" ],
-        '_audit_conform_dict_location': [
-            "http://www.crystallography.net/tcod/cif/dictionaries/cif_tcod.dic",
-            "http://www.crystallography.net/tcod/cif/dictionaries/cif_dft.dic"
-        ]
-    }
+    tags = { '_audit_creation_method': "AiiDA version {}".format(__version__) }
+
+    # Recording the dictionaries (if any)
+
+    if len(conforming_dictionaries):
+        for postfix in ['name','version','location']:
+            key = '_audit_conform_dict_{}'.format(postfix)
+            if key not in tags:
+                tags[key] = []
+
+    for dictionary in conforming_dictionaries:
+        tags['_audit_conform_dict_name'].append(dictionary['name'])
+        tags['_audit_conform_dict_version'].append(dictionary['version'])
+        tags['_audit_conform_dict_location'].append(dictionary['url'])
 
     # Collecting metadata from input files:
 

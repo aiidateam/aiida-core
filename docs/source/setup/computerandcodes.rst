@@ -110,6 +110,26 @@ It should print a snapshot of the queue status, without any errors.
 
   Or, alternatively, find the path to the executables (like using ``which qsub``)
 
+.. note:: If you need your remote .bashrc to be sourced before you execute the code
+  (for instance to change the PATH), make sure the .bashrc file **does not** contain
+  lines like::
+
+     [ -z "$PS1" ] && return
+    
+  or::
+
+     case $- in
+         *i*) ;;
+         *) return;;
+     esac
+    
+  in the beginning (these would prevent the bashrc to be executed when you ssh
+  to the remote computer). You can check that e.g. the PATH variable is correctly
+  set upon ssh, by typing (in your local computer)::
+
+     ssh YOURCLUSTERADDRESS 'echo $PATH'
+
+
 .. note:: If you need to ssh to a computer A first, from which you can then
      connect to computer B you wanted to connect to, you can use the
      ``proxy_command`` feature of ssh, that we also support in
@@ -461,7 +481,7 @@ database (the ``pk``, i.e. the principal key, and the ``uuid``).
 
 .. note:: You can change the label of a code by using the following command::
 
-   verdi code relabel "ID"
+   verdi code rename "ID"
    
   (Without the quotation marks!) "ID" can either be the numeric ID (PK) of
   the code (preferentially), or possibly its label (or label@computername), 

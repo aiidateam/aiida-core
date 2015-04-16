@@ -175,7 +175,7 @@ class TestPcodDbImporter(AiidaTestCase):
     """
     def test_dbentry_creation(self):
         """
-        Tests the creation of PcodEntry from TcodSearchResults.
+        Tests the creation of PcodEntry from PcodSearchResults.
         """
         from aiida.tools.dbimporters.plugins.pcod import PcodSearchResults
 
@@ -189,3 +189,24 @@ class TestPcodDbImporter(AiidaTestCase):
                           'source_md5=None)')
         self.assertEquals([x.source['url'] for x in results],
                           ["http://www.crystallography.net/pcod/cif/1/123/12345678.cif"])
+
+class TestMpodDbImporter(AiidaTestCase):
+    """
+    Test the MpodDbImporter class.
+    """
+    def test_dbentry_creation(self):
+        """
+        Tests the creation of MpodEntry from MpodSearchResults.
+        """
+        from aiida.tools.dbimporters.plugins.mpod import MpodSearchResults
+
+        results = MpodSearchResults( [ { 'id': '1234567' } ] )
+        self.assertEquals(len(results),1)
+        self.assertEquals(str(results.at(0)),
+                          'MpodEntry(db_version=None,db_id="1234567",'
+                          'url="http://mpod.cimav.edu.mx/datafiles/1234567.mpod",'
+                          'db_url="http://mpod.cimav.edu.mx",extras={},'
+                          'db_source="Material Properties Open Database",'
+                          'source_md5=None)')
+        self.assertEquals([x.source['url'] for x in results],
+                          ["http://mpod.cimav.edu.mx/datafiles/1234567.mpod"])

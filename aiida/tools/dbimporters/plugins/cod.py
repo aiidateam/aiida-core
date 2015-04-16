@@ -264,8 +264,7 @@ class CodSearchResults(DbSearchResults):
     _base_url = "http://www.crystallography.net/cod/"
 
     def __init__(self, results):
-        self._results = results
-        self._entries = {}
+        super(CodSearchResults, self).__init__(results)
         self._return_class = CodEntry
 
     def __len__(self):

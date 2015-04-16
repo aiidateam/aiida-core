@@ -101,6 +101,10 @@ class DbSearchResults(object):
     ``__getitem__``.
     """
 
+    def __init__(self,results):
+        self._results = results
+        self._entries = {}
+
     class DbSearchResultsIterator(object):
         """
         Iterator for search results
@@ -168,8 +172,8 @@ class DbEntry(object):
     Represents an entry from the structure database (COD, ICSD, ...).
     """
 
-    def __init__(self,db_source=None,db_url=None,db_id=None,db_version=None,
-                 extras={},url=None):
+    def __init__(self,db_source=None,db_url=None,db_id=None,
+                 db_version=None,extras={},url=None):
         """
         Sets the basic parameters for the database entry:
 
@@ -246,6 +250,7 @@ class DbEntry(object):
         structure from the CIF file.
         """
         raise NotImplementedError("not implemented in base class")
+
     def get_parsed_cif(self):
         """
         Returns data structure, representing the CIF file. Can be created

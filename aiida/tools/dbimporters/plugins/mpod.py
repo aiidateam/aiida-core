@@ -124,8 +124,8 @@ class MpodSearchResults(DbSearchResults):
     _base_url = "http://mpod.cimav.edu.mx/datafiles/"
 
     def __init__(self, results):
-        self._results = results
-        self._entries = {}
+        super(MpodSearchResults, self).__init__(results)
+        self._return_class = MpodEntry
 
     def __len__(self):
         return len(self._results)

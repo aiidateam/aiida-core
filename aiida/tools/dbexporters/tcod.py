@@ -335,7 +335,6 @@ def _collect_tags(node,calc,parameters=None,
     Retrieve metadata from attached calculation and pseudopotentials
     and prepare it to be saved in TCOD CIF.
     """
-    from aiida.cmdline.commands.exportfile import serialize_dict
     import os,json
     tags = {
         '_audit_creation_method'      : "AiiDA version {}".format(__version__),
@@ -776,7 +775,7 @@ def deposition_cmdline_parameters(parser,expclass="Data"):
                         dest='username',
                         help="Depositor's username.")
     parser.add_argument('-p', '--password', action='store_true',
-                        dest='password',
+                        dest='password', default=None,
                         help="Depositor's password.")
     parser.add_argument('--user-email', type=str, default=None,
                         help="Depositor's e-mail address.")
@@ -789,7 +788,7 @@ def deposition_cmdline_parameters(parser,expclass="Data"):
     parser.add_argument('--url', type=str,
                         help="URL of the deposition API.")
     parser.add_argument('--code', type=str, dest='code_label',
-                        default='cif_cod_deposit',
+                        default=None,
                         help="Label of the code to be used for the "
                              "deposition. Default: cif_cod_deposit.")
     parser.add_argument('--computer', type=str, dest='computer_name',

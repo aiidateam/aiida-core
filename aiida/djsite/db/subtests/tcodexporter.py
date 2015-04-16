@@ -318,3 +318,33 @@ class TestTcodDbExporter(AiidaTestCase):
         self.assertEqual(val['_atom_site_label'],['Ba1','Ti1','O1'])
         self.assertEqual(val['_symmetry_space_group_name_H-M'],'R3m')
         self.assertEqual(val['_symmetry_space_group_name_Hall'],'P 3* -2')
+
+    def test_cmdline_parameters(self):
+        """
+        Ensuring that neither extend_with_cmdline_parameters() nor
+        deposition_cmdline_parameters() set default parameters.
+        """
+        from aiida.tools.dbexporters.tcod \
+            import extend_with_cmdline_parameters, \
+                   deposition_cmdline_parameters
+        import argparse
+
+        parser = argparse.ArgumentParser()
+        extend_with_cmdline_parameters(parser)
+        options = vars(parser.parse_args(args=[]))
+
+        for key in options.keys():
+            if options[key] is None:
+                options.pop(key)
+
+        self.assertEqual(options,{})
+
+        parser = argparse.ArgumentParser()
+        deposition_cmdline_parameters(parser)
+        options = vars(parser.parse_args(args=[]))
+
+        for key in options.keys():
+            if options[key] is None:
+                options.pop(key)
+
+        self.assertEqual(options,{})

@@ -307,14 +307,3 @@ class CodEntry(DbEntry):
         """
         super(CodEntry, self).__init__(db_source=db_source,db_url=db_url,
                                        url=url,**kwargs)
-
-    def get_ase_structure(self):
-        """
-        Returns ASE representation of the CIF.
-
-        .. note:: To be removed, as it is duplicated in
-            :py:class:`aiida.orm.data.cif.CifData`.
-        """
-        import ase.io.cif
-        import StringIO
-        return ase.io.cif.read_cif( StringIO.StringIO( self.cif ) )

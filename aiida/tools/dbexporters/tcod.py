@@ -268,8 +268,10 @@ def extend_with_cmdline_parameters(parser,expclass="Data"):
     :param parser: an argparse.Parser instance
     :param expclass: name of the exported class to be shown in help string
         for the command line options
+
+    .. note:: This method must not set any default values for command line
+        options in order not to clash with any other data export plugins.
     """
-    import argparse
     parser.add_argument('--reduce-symmetry', action='store_true',
                         default=None,
                         dest='reduce_symmetry',
@@ -535,7 +537,7 @@ def add_metadata_inline(what,node=None,parameters=None,args=None):
     :raises ValueError: if tags present in
         ``args.get_dict()['additional_tags']`` are not valid CIF tags.
 
-    :note: can be used as inline calculation.
+    .. note:: can be used as inline calculation.
     """
     from aiida.orm.data.cif import pycifrw_from_cif
     CifData = DataFactory('cif')
@@ -579,10 +581,24 @@ def add_metadata_inline(what,node=None,parameters=None,args=None):
     return {'cif': cif}
 
 def export_cif(what,**kwargs):
+    """
+    Exports given coordinate-containing \*Data node to string of CIF
+    format.
+
+    :return: string with contents of CIF file.
+    """
     cif = export_cifnode(what,**kwargs)
     return cif._exportstring('cif')
 
 def export_values(what,**kwargs):
+    """
+    Exports given coordinate-containing \*Data node to PyCIFRW CIF data
+    structure.
+
+    :return: CIF data structure.
+
+    .. note:: Requires PyCIFRW.
+    """
     cif = export_cifnode(what,**kwargs)
     return cif.values
 
@@ -686,6 +702,10 @@ def deposit(what,type,author_name=None,author_email=None,url=None,
     Launches a
     :py:class:`aiida.orm.calculation.job.JobCalculation`
     to deposit data node to \*COD-type database.
+
+    :return: launched :py:class:`aiida.orm.calculation.job.JobCalculation`
+        instance.
+    :raises ValueError: if any of the required parameters are not given.
     """
     if not what:
         raise ValueError("Node to be deposited is not supplied")
@@ -766,8 +786,10 @@ def deposition_cmdline_parameters(parser,expclass="Data"):
     :param parser: an argparse.Parser instance
     :param expclass: name of the exported class to be shown in help string
         for the command line options
+
+    .. note:: This method must not set any default values for command line
+        options in order not to clash with any other data deposition plugins.
     """
-    import argparse
     parser.add_argument('--type', '--deposition-type', type=str,
                         choices=['published','prepublication','personal'],
                         help="Type of the deposition.")

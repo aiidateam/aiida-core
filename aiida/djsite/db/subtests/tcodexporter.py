@@ -386,8 +386,65 @@ class TestTcodDbExporter(AiidaTestCase):
             # Trajectory index is not specified
             v = export_values(td)
 
-        with self.assertRaises(IOError):
-            # Node is not stored, can not export and read 'data.json'
-            v = export_values(td,trajectory_index=1)
+        v = export_values(td,trajectory_index=1)
+        self.assertEqual(sorted(v['0'].keys()),[
+            '_atom_site_fract_x',
+            '_atom_site_fract_y',
+            '_atom_site_fract_z',
+            '_atom_site_label',
+            '_atom_site_type_symbol',
+            '_audit_conform_dict_location',
+            '_audit_conform_dict_name',
+            '_audit_conform_dict_version',
+            '_audit_creation_method',
+            '_cell_angle_alpha',
+            '_cell_angle_beta',
+            '_cell_angle_gamma',
+            '_cell_formula_units_Z',
+            '_cell_length_a',
+            '_cell_length_b',
+            '_cell_length_c',
+            '_chemical_formula_sum',
+            '_symmetry_Int_Tables_number',
+            '_symmetry_equiv_pos_as_xyz',
+            '_symmetry_space_group_name_H-M',
+            '_symmetry_space_group_name_Hall'
+        ])
+
+        self.maxDiff = None
 
         v = export_values(td,trajectory_index=1,store=True)
+        self.assertEqual(sorted(v['0'].keys()),[
+            '_atom_site_fract_x',
+            '_atom_site_fract_y',
+            '_atom_site_fract_z',
+            '_atom_site_label',
+            '_atom_site_type_symbol',
+            '_audit_conform_dict_location',
+            '_audit_conform_dict_name',
+            '_audit_conform_dict_version',
+            '_audit_creation_method',
+            '_cell_angle_alpha',
+            '_cell_angle_beta',
+            '_cell_angle_gamma',
+            '_cell_formula_units_Z',
+            '_cell_length_a',
+            '_cell_length_b',
+            '_cell_length_c',
+            '_chemical_formula_sum',
+            '_symmetry_Int_Tables_number',
+            '_symmetry_equiv_pos_as_xyz',
+            '_symmetry_space_group_name_H-M',
+            '_symmetry_space_group_name_Hall',
+            '_tcod_content_encoding_id',
+            '_tcod_content_encoding_layer_id',
+            '_tcod_content_encoding_layer_type',
+            '_tcod_file_URI',
+            '_tcod_file_content_encoding',
+            '_tcod_file_contents',
+            '_tcod_file_id',
+            '_tcod_file_md5sum',
+            '_tcod_file_name',
+            '_tcod_file_role',
+            '_tcod_file_sha1sum'
+        ])

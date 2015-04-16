@@ -106,6 +106,12 @@ class TestCodDbImporter(AiidaTestCase):
                                       { 'id': '1000001', 'svnrevision': '1234' },
                                       { 'id': '2000000', 'svnrevision': '1234' } ] )
         self.assertEquals(len(results),3)
+        self.assertEquals(str(results.at(1)),
+                          'CodEntry(db_version="1234",db_id="1000001",'
+                          'url="http://www.crystallography.net/cod/1000001.cif@1234",'
+                          'db_url="http://www.crystallography.net",extras={},'
+                          'db_source="Crystallography Open Database",'
+                          'source_md5=None)')
         self.assertEquals(results.at(1).source['url'], \
                           "http://www.crystallography.net/cod/1000001.cif@1234")
         self.assertEquals([x.source['url'] for x in results],
@@ -153,6 +159,12 @@ class TestTcodDbImporter(AiidaTestCase):
                                        { 'id': '10000001', 'svnrevision': '1234' },
                                        { 'id': '20000000', 'svnrevision': '1234' } ] )
         self.assertEquals(len(results),3)
+        self.assertEquals(str(results.at(1)),
+                          'TcodEntry(db_version="1234",db_id="10000001",'
+                          'url="http://www.crystallography.net/tcod/10000001.cif@1234",'
+                          'db_url="http://www.crystallography.net/tcod",extras={},'
+                          'db_source="Theoretical Crystallography Open Database",'
+                          'source_md5=None)')
         self.assertEquals(results.at(1).source['url'], \
                           "http://www.crystallography.net/tcod/10000001.cif@1234")
         self.assertEquals([x.source['url'] for x in results],
@@ -172,5 +184,11 @@ class TestPcodDbImporter(AiidaTestCase):
 
         results = PcodSearchResults( [ { 'id': '12345678' } ] )
         self.assertEquals(len(results),1)
+        self.assertEquals(str(results.at(0)),
+                          'PcodEntry(db_version=None,db_id="12345678",'
+                          'url="http://www.crystallography.net/pcod/cif/1/123/12345678.cif",'
+                          'db_url="http://www.crystallography.net/pcod",extras={},'
+                          'db_source="Predicted Crystallography Open Database",'
+                          'source_md5=None)')
         self.assertEquals([x.source['url'] for x in results],
                           ["http://www.crystallography.net/pcod/cif/1/123/12345678.cif"])

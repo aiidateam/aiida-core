@@ -1864,7 +1864,54 @@ class TestTrajectoryData(AiidaTestCase):
             self.assertEqual(newatomtypes, ['He', 'Os','Cu'])
             # Check the mass of the kind of the second atom ('O' _> symbol Os, mass 100)
             self.assertAlmostEqual(struc.get_kind(struc.sites[1].kind_name).mass,100.)
-        
+
+    def test_conversion_from_structurelist(self):
+        """
+        Check the method to create a TrajectoryData from list of AiiDA
+        structures.
+        """
+        from aiida.orm.data.structure import StructureData
+        from aiida.orm.data.array.trajectory import TrajectoryData
+
+        cells = [
+            [[2.,0.,0.,],
+             [0.,2.,0.,],
+             [0.,0.,2.,]],
+            [[3.,0.,0.,],
+             [0.,3.,0.,],
+             [0.,0.,3.,]]
+        ]
+        symbols = [['H', 'O', 'C'], ['H', 'O', 'C']]
+        positions = [
+            [[0.,0.,0.],
+             [0.5,0.5,0.5],
+             [1.5,1.5,1.5]],
+            [[0.,0.,0.],
+             [0.75,0.75,0.75],
+             [1.25,1.25,1.25]]
+        ]
+        structurelist = []
+        for i in range(0,2):
+            struct = StructureData(cell=cells[i])
+            for j,symbol in enumerate(symbols[i]):
+                struct.append_atom(symbols=symbol,position=positions[i][j])
+            structurelist.append(struct)
+
+        td = TrajectoryData(structurelist=structurelist)
+        self.assertEqual(td.get_cells().tolist(),cells)
+        self.assertEqual(td.get_symbols().tolist(),symbols[0])
+        self.assertEqual(td.get_positions().tolist(),positions)
+
+        symbols = [['H', 'O', 'C'], ['H', 'O', 'P']]
+        structurelist = []
+        for i in range(0,2):
+            struct = StructureData(cell=cells[i])
+            for j,symbol in enumerate(symbols[i]):
+                struct.append_atom(symbols=symbol,position=positions[i][j])
+            structurelist.append(struct)
+
+        with self.assertRaises(ValueError):
+            td = TrajectoryData(structurelist=structurelist)
 
 class TestKpointsData(AiidaTestCase):
     """

@@ -155,7 +155,13 @@ class TrajectoryData(ArrayData):
         import numpy
         steps = numpy.array(range(0,len(structurelist)))
         cells = numpy.array([x.cell for x in structurelist])
-        symbols = numpy.array([str(s.kind_name) for s in structurelist[0].sites])
+        symbols_first = [str(s.kind_name) for s in structurelist[0].sites]
+        for symbols_now in [[str(s.kind_name) for s in structurelist[i].sites]
+                            for i in steps]:
+            if symbols_first != symbols_now:
+                raise ValueError("Symbol lists have to be the same for "
+                                 "all of the supplied structures")
+        symbols = numpy.array(symbols_first)
         positions = numpy.array([[list(s.position) for s in x.sites] for x in structurelist])
         self.set_trajectory(steps,cells,symbols,positions)
 

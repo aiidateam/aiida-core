@@ -312,34 +312,46 @@ class TestCifData(AiidaTestCase):
         """
         def test_ncr(self,inp,out):
             from aiida.orm.data.cif import encode_textfield_ncr, \
-                                           decode_textfield_ncr
+                                           decode_textfield_ncr, \
+                                           decode_textfield
             encoded = encode_textfield_ncr(inp)
             decoded = decode_textfield_ncr(out)
+            decoded_universal = decode_textfield(out,'ncr')
             self.assertEquals(encoded,out)
             self.assertEquals(decoded,inp)
+            self.assertEquals(decoded_universal,inp)
 
         def test_quoted_printable(self,inp,out):
             from aiida.orm.data.cif import encode_textfield_quoted_printable, \
-                                           decode_textfield_quoted_printable
+                                           decode_textfield_quoted_printable, \
+                                           decode_textfield
             encoded = encode_textfield_quoted_printable(inp)
             decoded = decode_textfield_quoted_printable(out)
+            decoded_universal = decode_textfield(out,'quoted-printable')
             self.assertEquals(encoded,out)
             self.assertEquals(decoded,inp)
+            self.assertEquals(decoded_universal,inp)
 
         def test_base64(self,inp,out):
             from aiida.orm.data.cif import encode_textfield_base64, \
-                                           decode_textfield_base64
+                                           decode_textfield_base64, \
+                                           decode_textfield
             encoded = encode_textfield_base64(inp)
             decoded = decode_textfield_base64(out)
+            decoded_universal = decode_textfield(out,'base64')
             self.assertEquals(encoded,out)
             self.assertEquals(decoded,inp)
+            self.assertEquals(decoded_universal,inp)
 
         def test_gzip_base64(self,text):
             from aiida.orm.data.cif import encode_textfield_gzip_base64, \
-                                           decode_textfield_gzip_base64
+                                           decode_textfield_gzip_base64, \
+                                           decode_textfield
             encoded = encode_textfield_gzip_base64(text)
             decoded = decode_textfield_gzip_base64(encoded)
+            decoded_universal = decode_textfield(encoded,'gzip+base64')
             self.assertEquals(text,decoded)
+            self.assertEquals(text,decoded_universal)
 
         test_ncr(self,'.','&#46;')
         test_ncr(self,'?','&#63;')

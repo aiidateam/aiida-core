@@ -117,24 +117,16 @@ class PcodSearchResults(CodSearchResults):
         super(PcodSearchResults, self).__init__(results)
         self._return_class = PcodEntry
 
-    def at(self, position):
+    def _get_url(self, result_dict):
         """
-        Returns ``position``-th result as
-        :py:class:`aiida.tools.dbimporters.plugins.pcod.PcodEntry`.
+        Returns an URL of an entry CIF file.
 
-        :param position: zero-based index of a result.
-
-        :raise IndexError: if ``position`` is out of bounds.
+        :param result_dict: dictionary, describing an entry in the results.
         """
-        if position < 0 | position >= len( self._results ):
-            raise IndexError( "index out of bounds" )
-        if position not in self._entries:
-            db_id       = self._results[position]['id']
-            url = self._base_url + db_id[0] + "/" + db_id[0:3] + "/" + \
-                  db_id + ".cif"
-            source_dict = {'db_id': db_id}
-            self._entries[position] = self._return_class( url, **source_dict )
-        return self._entries[position]
+        return self._base_url + \
+               result_dict['id'][0] + "/" + \
+               result_dict['id'][0:3] + "/" + \
+               result_dict['id'] + ".cif"
 
 class PcodEntry(CodEntry):
     """

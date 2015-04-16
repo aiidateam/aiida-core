@@ -270,27 +270,31 @@ class CodSearchResults(DbSearchResults):
     def __len__(self):
         return len(self._results)
 
-    def at(self, position):
+    def _get_source_dict(self, result_dict):
         """
-        Returns ``position``-th result as
-        :py:class:`aiida.tools.dbimporters.plugins.cod.CodEntry`.
+        Returns a dictionary, which is passed as kwargs to the created
+        DbEntry instance, describing the source of the entry.
 
-        :param position: zero-based index of a result.
-
-        :raise IndexError: if ``position`` is out of bounds.
+        :param result_dict: dictionary, describing an entry in the results.
         """
-        if position < 0 | position >= len( self._results ):
-            raise IndexError( "index out of bounds" )
-        if position not in self._entries:
-            db_id       = self._results[position]['id']
-            svnrevision = self._results[position]['svnrevision']
-            url = self._base_url + db_id + ".cif"
-            source_dict = {'db_id': db_id}
-            if svnrevision is not None:
-                source_dict['db_version'] = svnrevision
-                url = "{}@{}".format(url,svnrevision)
-            self._entries[position] = self._return_class( url, **source_dict )
-        return self._entries[position]
+        source_dict = {'db_id': result_dict['id']}
+        if 'svnrevision' in result_dict and \
+           result_dict['svnrevision'] is not None:
+            source_dict['db_version'] = result_dict['svnrevision']
+        return source_dict
+
+    def _get_url(self, result_dict):
+        """
+        Returns an URL of an entry CIF file.
+
+        :param result_dict: dictionary, describing an entry in the results.
+        """
+        url = self._base_url + result_dict['id'] + ".cif"
+        if 'svnrevision' in result_dict and \
+           result_dict['svnrevision'] is not None:
+            return "{}@{}".format(url,result_dict['svnrevision'])
+        else:
+            return url
 
 class CodEntry(DbEntry):
     """

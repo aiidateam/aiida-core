@@ -165,6 +165,29 @@ class DbSearchResults(object):
 
         :raise IndexError: if ``position`` is out of bounds.
         """
+        if position < 0 | position >= len( self._results ):
+            raise IndexError( "index out of bounds" )
+        if position not in self._entries:
+            source_dict = self._get_source_dict(self._results[position])
+            url         = self._get_url(self._results[position])
+            self._entries[position] = self._return_class(url,**source_dict)
+        return self._entries[position]
+
+    def _get_source_dict(self, result_dict):
+        """
+        Returns a dictionary, which is passed as kwargs to the created
+        DbEntry instance, describing the source of the entry.
+
+        :param result_dict: dictionary, describing an entry in the results.
+        """
+        raise NotImplementedError("not implemented in base class")
+
+    def _get_url(self, result_dict):
+        """
+        Returns an URL of an entry CIF file.
+
+        :param result_dict: dictionary, describing an entry in the results.
+        """
         raise NotImplementedError("not implemented in base class")
 
 class DbEntry(object):

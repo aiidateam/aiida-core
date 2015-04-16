@@ -105,33 +105,6 @@ def cif_encode_contents(content,gzip=False,gzip_threshold=1024):
 
     return content,method
 
-def cif_decode_contents(content,method):
-    """
-    Decodes contents of encoded CIF text field.
-
-    :param content: the content to be decoded
-    :param method: method, which was used for encoding the contents (None, 'base64',
-        'ncr', 'quoted-printable', 'gzip+base64')
-    :return: decoded content
-    :raises ValueError: if the encoding method is unknown
-    """
-    if method == 'base64':
-        from aiida.orm.data.cif import decode_textfield_base64
-        content = decode_textfield_base64(content)
-    elif method == 'quoted-printable':
-        from aiida.orm.data.cif import decode_textfield_quoted_printable
-        content = decode_textfield_quoted_printable(content)
-    elif method == 'ncr':
-        from aiida.orm.data.cif import decode_textfield_ncr
-        content = decode_textfield_ncr(content)
-    elif method == 'gzip+base64':
-        from aiida.orm.data.cif import decode_textfield_gzip_base64
-        content = decode_textfield_gzip_base64(content)
-    elif method is not None:
-        raise ValueError("Unknown content encoding: '{}'".format(method))
-
-    return content
-
 def _get_calculation(node):
     """
     Gets the parent (immediate) calculation, attached as the input of

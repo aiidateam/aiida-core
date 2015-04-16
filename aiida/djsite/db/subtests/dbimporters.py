@@ -4,8 +4,6 @@ Tests for subclasses of DbImporter, DbSearchResults and DbEntry
 """
 from django.utils import unittest
 
-from aiida.orm import Node
-from aiida.common.exceptions import ModificationNotAllowed, UniquenessError
 from aiida.djsite.db.testbase import AiidaTestCase
         
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
@@ -152,8 +150,7 @@ class TestTcodDbImporter(AiidaTestCase):
         """
         Tests the creation of TcodEntry from TcodSearchResults.
         """
-        from aiida.tools.dbimporters.plugins.tcod \
-            import TcodEntry, TcodSearchResults
+        from aiida.tools.dbimporters.plugins.tcod import TcodSearchResults
 
         results = TcodSearchResults( [ { 'id': '10000000', 'svnrevision': None },
                                        { 'id': '10000001', 'svnrevision': '1234' },

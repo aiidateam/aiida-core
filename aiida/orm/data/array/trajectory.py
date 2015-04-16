@@ -151,6 +151,9 @@ class TrajectoryData(ArrayData):
 
         :param structurelist: a list of
             :py:class:`aiida.orm.data.structure.StructureData` instances.
+
+        :raises ValueError: if symbol lists of supplied structures are
+            different
         """
         import numpy
         steps = numpy.array(range(0,len(structurelist)))

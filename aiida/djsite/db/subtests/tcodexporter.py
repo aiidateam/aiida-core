@@ -348,3 +348,46 @@ class TestTcodDbExporter(AiidaTestCase):
                 options.pop(key)
 
         self.assertEqual(options,{})
+
+    @unittest.skipIf(not has_ase() or not has_pycifrw(),
+                     "Unable to import ase or pycifrw")
+    def test_export_trajectory(self):
+        from aiida.orm.data.structure import StructureData
+        from aiida.orm.data.array.trajectory import TrajectoryData
+        from aiida.tools.dbexporters.tcod import export_values
+
+        cells = [
+            [[2.,0.,0.,],
+             [0.,2.,0.,],
+             [0.,0.,2.,]],
+            [[3.,0.,0.,],
+             [0.,3.,0.,],
+             [0.,0.,3.,]]
+        ]
+        symbols = [['H', 'O', 'C'], ['H', 'O', 'C']]
+        positions = [
+            [[0.,0.,0.],
+             [0.5,0.5,0.5],
+             [1.5,1.5,1.5]],
+            [[0.,0.,0.],
+             [0.75,0.75,0.75],
+             [1.25,1.25,1.25]]
+        ]
+        structurelist = []
+        for i in range(0,2):
+            struct = StructureData(cell=cells[i])
+            for j,symbol in enumerate(symbols[i]):
+                struct.append_atom(symbols=symbol,position=positions[i][j])
+            structurelist.append(struct)
+
+        td = TrajectoryData(structurelist=structurelist)
+
+        with self.assertRaises(ValueError):
+            # Trajectory index is not specified
+            v = export_values(td)
+
+        with self.assertRaises(IOError):
+            # Node is not stored, can not export and read 'data.json'
+            v = export_values(td,trajectory_index=1)
+
+        v = export_values(td,trajectory_index=1,store=True)

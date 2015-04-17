@@ -1,12 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from aiida.orm.calculation.job import JobCalculation
 from aiida.orm.calculation.job.codtools.ciffilter import CiffilterCalculation
-from aiida.orm.data.cif import CifData
-from aiida.orm.data.parameter import ParameterData
 from aiida.common.datastructures import CalcInfo
 from aiida.common.exceptions import InputValidationError
-from aiida.common.utils import classproperty
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -36,6 +32,8 @@ class CifcoddepositCalculation(CiffilterCalculation):
                               'hold_period' ]
 
     def _prepare_for_submission(self,tempfolder,inputdict):
+        from aiida.orm.data.cif import CifData
+        from aiida.orm.data.parameter import ParameterData
         from aiida.orm.calculation.job.codtools import commandline_params_from_dict
         import shutil
         try:

@@ -1,11 +1,7 @@
 # -*- coding: utf-8 -*-
-"""
-Plugin to parse outputs from the scripts from cod-tools package.
-This plugin is in the development stage. Andrius Merkys, 2014-10-29
-"""
+
 from aiida.parsers.plugins.codtools.ciffilter import CiffilterParser
 from aiida.orm.calculation.job.codtools.cifcoddeposit import CifcoddepositCalculation
-from aiida.orm.data.parameter import ParameterData
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
 __license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
@@ -15,16 +11,19 @@ class CifcoddepositParser(CiffilterParser):
     """
     Specific parser for the output of cif_cod_deposit script.
     """
-    def _check_calc_compatibility(self,calc):
-        from aiida.common.exceptions import ParsingError
-        if not isinstance(calc,CifcoddepositCalculation):
-            raise ParsingError("Input calc must be a CifcoddepositCalculation")
+    def __init__(self,calc):
+        """
+        Initialize the instance of CiffilterParser
+        """
+        self._supported_calculation_class = CifcoddepositCalculation
+        super(CifcoddepositParser, self).__init__(calc)
 
     def _get_output_nodes(self, output_path, error_path):
         """
         Extracts output nodes from the standard output and standard error
         files.
         """
+        from aiida.orm.data.parameter import ParameterData
 
         status = 'unknown'
         messages = []

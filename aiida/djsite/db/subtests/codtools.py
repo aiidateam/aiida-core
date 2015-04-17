@@ -286,7 +286,7 @@ class TestCodtools(AiidaTestCase):
 </html>
 """
         status,message = CifcoddepositParser._deposit_result(content)
-        self.assertEquals(status,'error')
+        self.assertEquals(status,'INPUTERROR')
         self.assertEquals(message,'password \'password\' value from the '
                                   'upload form contains unallowed '
                                   'characters (not in \'(.{4,64})\')<br />')
@@ -298,7 +298,7 @@ Will not deposit the structure(s) once more.
 """
 
         status,message = CifcoddepositParser._deposit_result(content)
-        self.assertEquals(status,'duplicate')
+        self.assertEquals(status,'DUPLICATE')
         self.assertEquals(message,'The following structures seem to be '
                                   'already in COD')
 
@@ -307,7 +307,7 @@ Will not deposit the structure(s) once more.
 """
 
         status,message = CifcoddepositParser._deposit_result(content)
-        self.assertEquals(status,'error')
+        self.assertEquals(status,'INPUTERROR')
         self.assertEquals(message,'upload from variable \'username\' '
                                   'value \'\' contains unallowed characters '
                                   '(not in \'[a-zA-Z0-9 ,.-\'_()\\x{0080}-\\x{7FFFFFFF}]+\')')
@@ -319,7 +319,7 @@ cif_cod_check: - data_4000001: _publ_section_title is undefined
 """
 
         status,message = CifcoddepositParser._deposit_result(content)
-        self.assertEquals(status,'error')
+        self.assertEquals(status,'INPUTERROR')
         self.assertEquals(message,'cif_cod_check: - data_4000000: '
                                   '_publ_section_title is undefined\n'
                                   'cif_cod_check: - data_4000000: '
@@ -333,7 +333,7 @@ cif_cod_check: - data_4000001: _publ_section_title is undefined
 """
 
         status,message = CifcoddepositParser._deposit_result(content)
-        self.assertEquals(status,'success')
+        self.assertEquals(status,'SUCCESS')
         self.assertEquals(message,'structures 4300539 were successfully '
                                   'deposited into COD')
 

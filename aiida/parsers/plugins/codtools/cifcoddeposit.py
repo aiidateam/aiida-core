@@ -2,10 +2,24 @@
 
 from aiida.parsers.plugins.codtools.ciffilter import CiffilterParser
 from aiida.orm.calculation.job.codtools.cifcoddeposit import CifcoddepositCalculation
+from aiida.common.extendeddicts import Enumerate
 
-__copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
-__license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
+__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
+__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi"
+
+class CoddepositionState(Enumerate):
+    pass
+
+cod_deposition_states = CoddepositionState((
+        'SUCCESS',     # Structures are deposited/updated successfully
+        'DUPLICATE',   # Structures are found to be already in the database
+        'UNCHANGED',   # Structures are not updated (nothing to update)
+        'INPUTERROR',  # Other error caused by user's input
+        'SERVERERROR', # Internal server error
+        'UNKNOWN'      # Unknown state
+    ))
 
 class CifcoddepositParser(CiffilterParser):
     """
@@ -25,7 +39,7 @@ class CifcoddepositParser(CiffilterParser):
         """
         from aiida.orm.data.parameter import ParameterData
 
-        status = 'unknown'
+        status = cod_deposition_states.UNKNOWN
         messages = []
 
         if output_path is not None:
@@ -51,7 +65,7 @@ class CifcoddepositParser(CiffilterParser):
     @classmethod
     def _deposit_result(cls,output):
         import re
-        status  = 'unknown'
+        status  = cod_deposition_states.UNKNOWN
         message = ''
 
         output = re.sub('^[^:]*cif-deposit\.pl:\s+','',output)
@@ -67,19 +81,19 @@ class CifcoddepositParser(CiffilterParser):
                         output, re.IGNORECASE)
 
         if   dep is not None:
-            status  = 'success'
+            status  = cod_deposition_states.SUCCESS
             message = dep.group(1)
         elif dup is not None:
-            status = 'duplicate'
+            status = cod_deposition_states.DUPLICATE
             message = dup.group(1)
         elif red is not None:
-            status = 'unchanged'
+            status = cod_deposition_states.UNCHANGED
             message = dup.group(1)
         elif lgn is not None:
-            status = 'error'
+            status = cod_deposition_states.INPUTERROR
             message = lgn.group(1)
         else:
-            status = 'error'
+            status = cod_deposition_states.INPUTERROR
             message = output
 
         return status,message

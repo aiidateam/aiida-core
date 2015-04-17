@@ -222,7 +222,6 @@ class TestCodtools(AiidaTestCase):
         self.assertEquals(nodes[0][1].get_dict()['output_messages'],
                           stdout_messages + stderr_messages)
 
-    @unittest.skipIf(not has_pycifrw(),"Unable to import PyCifRW")
     def test_4(self):
         from aiida.parsers.plugins.codtools.cifcellcontents import CifcellcontentsParser
 
@@ -267,7 +266,110 @@ class TestCodtools(AiidaTestCase):
                                 '4000009': 'C4 H18 Mn N4 O12 V4',
                                 '4000008': 'C2 H10 F Mn N2 O9 V3'}})
 
-    @unittest.skipIf(not has_pycifrw(),"Unable to import PyCifRW")
+    def test_5(self):
+        from aiida.parsers.plugins.codtools.cifcoddeposit import CifcoddepositParser
+
+        content = \
+"""<!DOCTYPE html
+	PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+	 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-US" xml:lang="en-US">
+<head>
+<title>COD data deposition ERROR</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+</head>
+<body>
+<p class="ERROR" style="color: red;font-size:large">cif-deposit.pl: password 'password' value from the upload form contains unallowed characters (not in '(.{4,64})')<br />
+</p>
+
+</body>
+</html>
+"""
+        status,message = CifcoddepositParser._deposit_result(content)
+        self.assertEquals(status,'INPUTERROR')
+        self.assertEquals(message,'password \'password\' value from the '
+                                  'upload form contains unallowed '
+                                  'characters (not in \'(.{4,64})\')<br />')
+
+        content = \
+"""cif-deposit.pl: The following structures seem to be already in COD:
+Structure from 1000000.cif (_chemical_formula_sum 'C5 H17 Al N2 O8 P2') is found in COD entry 2000041
+Will not deposit the structure(s) once more.
+"""
+
+        status,message = CifcoddepositParser._deposit_result(content)
+        self.assertEquals(status,'DUPLICATE')
+        self.assertEquals(message,'The following structures seem to be '
+                                  'already in COD')
+
+        content = \
+"""cif-deposit.pl: upload from variable 'username' value '' contains unallowed characters (not in '[a-zA-Z0-9 ,.-'_()\\x{0080}-\\x{7FFFFFFF}]+')
+"""
+
+        status,message = CifcoddepositParser._deposit_result(content)
+        self.assertEquals(status,'INPUTERROR')
+        self.assertEquals(message,'upload from variable \'username\' '
+                                  'value \'\' contains unallowed characters '
+                                  '(not in \'[a-zA-Z0-9 ,.-\'_()\\x{0080}-\\x{7FFFFFFF}]+\')')
+
+        content = \
+"""cif-deposit.pl: cif_cod_check: - data_4000000: _publ_section_title is undefined
+cif_cod_check: - data_4000000: neither _journal_page_first nor _journal_article_reference is defined
+cif_cod_check: - data_4000001: _publ_section_title is undefined
+"""
+
+        status,message = CifcoddepositParser._deposit_result(content)
+        self.assertEquals(status,'INPUTERROR')
+        self.assertEquals(message,'cif_cod_check: - data_4000000: '
+                                  '_publ_section_title is undefined\n'
+                                  'cif_cod_check: - data_4000000: '
+                                  'neither _journal_page_first nor '
+                                  '_journal_article_reference is defined\n'
+                                  'cif_cod_check: - data_4000001: '
+                                  '_publ_section_title is undefined')
+
+        content = \
+"""cif-deposit.pl: structures 4300539 were successfully deposited into COD
+"""
+
+        status,message = CifcoddepositParser._deposit_result(content)
+        self.assertEquals(status,'SUCCESS')
+        self.assertEquals(message,'structures 4300539 were successfully '
+                                  'deposited into COD')
+
+    def test_perl_error_detection(self):
+        from aiida.parsers.plugins.codtools.cifcellcontents import CifcellcontentsParser
+        from aiida.common.exceptions import PluginInternalError
+
+        CifcellcontentsCalculation = CalculationFactory('codtools.cifcellcontents')
+
+        stdout = "4000000	C26 H26 Fe\n"
+
+        stderr_1 = "Can't locate CIFSymmetryGenerator.pm in @INC (@INC contains: .) at cif_molecule line 61."
+        stderr_2 = "BEGIN failed--compilation aborted at cif_molecule line 61."
+
+        f = SandboxFolder()
+
+        stdout_file   = "{}/{}".format(f.abspath,"aiida.out")
+        stderr_1_file = "{}/{}".format(f.abspath,"aiida_1.err")
+        stderr_2_file = "{}/{}".format(f.abspath,"aiida_2.err")
+
+        with open(stdout_file, 'w') as of:
+            of.write(stdout)
+            of.flush()
+        with open(stderr_1_file, 'w') as ef:
+            ef.write(stderr_1)
+            ef.flush()
+        with open(stderr_2_file, 'w') as ef:
+            ef.write(stderr_2)
+            ef.flush()
+
+        parser = CifcellcontentsParser(CifcellcontentsCalculation())
+        with self.assertRaises(PluginInternalError):
+            parser._get_output_nodes(stdout_file,stderr_1_file)
+        with self.assertRaises(PluginInternalError):
+            parser._get_output_nodes(stdout_file,stderr_2_file)
+
     def test_cmdline_generation(self):
         from aiida.orm.calculation.job.codtools import commandline_params_from_dict
 

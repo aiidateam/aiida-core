@@ -7,7 +7,7 @@ __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Riccardo Sabatini"
 
 class AiidaException(Exception):
     """
-    Base class for all aiida exceptions.
+    Base class for all AiiDA exceptions.
     
     Each module will have its own subclass, inherited from this
     (e.g. ExecManagerException, TransportException, ...)
@@ -23,7 +23,7 @@ class NotExistent(AiidaException):
 class MultipleObjectsError(AiidaException):
     """
     Raised when more than one entity is found in the DB, but only one was
-    excepted.
+    expected.
     """
     pass
     
@@ -90,7 +90,7 @@ class InternalError(AiidaException):
 class PluginInternalError(InternalError):
     """
     Error raised when there is an internal error which is due to a plugin
-    and not to the aiida infrastructure.
+    and not to the AiiDA infrastructure.
     """
     pass
 

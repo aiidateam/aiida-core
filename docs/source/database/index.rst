@@ -366,7 +366,7 @@ Typically you should get something like ``/var/lib/postgresql/9.1/main``.
 Then exit the shell with ``\q``, go in this directory and copy all the 
 files to the new directory::
 
-  cp -R SOURCE_DIRECTORY DESTINATION_DIRECTORY
+  cp -a SOURCE_DIRECTORY DESTINATION_DIRECTORY
 
 where SOURCE_DIRECTORY is the directory you got from the 
 ``SHOW data_directory;`` command, and DESTINATION_DIRECTORY the new directory

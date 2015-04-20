@@ -386,3 +386,24 @@ cif_cod_check: - data_4000001: _publ_section_title is undefined
                '--extra-tag-list', 'tcod.lst',
                '-s', '--reformat-spacegroup',
                '--start-data-block-number', '1234567'])
+
+    def test_resource_validation(self):
+        from aiida.orm.calculation.job.codtools.ciffilter \
+            import CiffilterCalculation
+        from aiida.orm.data.cif import CifData
+        from aiida.common.exceptions import FeatureNotAvailable
+
+        calc = CiffilterCalculation()
+        calc.use_cif(CifData())
+
+        for key in ['num_machines','num_mpiprocs_per_machine',
+                    'tot_num_mpiprocs']:
+            with self.assertRaises(FeatureNotAvailable):
+                calc.set_resources({key: 2})
+
+            # Inner modification of resource parameters:
+            calc._set_attr('jobresource_params',{key: 2})
+            with self.assertRaises(FeatureNotAvailable):
+                calc.submit_test()
+
+            calc.set_resources({key: 1})

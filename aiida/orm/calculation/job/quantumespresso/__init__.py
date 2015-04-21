@@ -741,9 +741,10 @@ class BasePwCpInputGenerator(object):
             c2.use_settings(settings)
             
         c2._set_parent_remotedata( remote_folder )
-        
-        for pseudo in self.get_inputs(type=UpfData):
-            c2.use_pseudo(pseudo, kind=pseudo.element)
+        # set links for pseudos
+        for linkname,input_node in self.get_inputs_dict().iteritems():
+            if isinstance(input_node,UpfData):
+                c2._add_link_from(input_node,label=linkname)
         
         return c2
 

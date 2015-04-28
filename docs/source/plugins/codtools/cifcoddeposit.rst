@@ -54,14 +54,17 @@ Outputs
     :ref:`outputs for codtools.ciffilter plugin<codtools_ciffilter_outputs>`.
   * ``status``: a string, one of the following:
 
-    * ``success``: a deposition is successful, newly assigned \*COD
+    * ``SUCCESS``: a deposition is successful, newly assigned \*COD
       number(s) is/are present in ``output_messages`` field;
-    * ``duplicate``: submitted data is already in the \*COD database
+    * ``DUPLICATE``: submitted data is already in the \*COD database
       thus is not deposited once more;
-    * ``unchanged``: the redeposition of the data is unnecessary, as
+    * ``UNCHANGED``: the redeposition of the data is unnecessary, as
       nothing was changed in the contents of file to be replaced;
-    * ``error``: an error has occurred, detailed reason may be present
-      in ``output_messages`` field.
+    * ``INPUTERROR``: an error, related to the input, has occurred,
+      detailed reason may be present in ``output_messages`` field;
+    * ``SERVERERROR``: an internal server error has occurred, detailed
+      reason may be present in ``output_messages`` field;
+    * ``UNKNOWN``: the result of the deposition is unknown.
 
 Errors
 ------

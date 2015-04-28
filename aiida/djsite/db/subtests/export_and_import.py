@@ -138,3 +138,5 @@ class TestPort(AiidaTestCase):
 
         with self.assertRaises(ValueError):
             import_file(filename,silent=True)
+
+        import_file(filename,ignore_unknown_nodes=True,silent=True)

@@ -73,7 +73,7 @@ def deserialize_field(k, v, fields_info, import_unique_ids_mappings,
             return ("{}_id".format(k), None)
             
 
-def import_file(infile,silent=False):
+def import_file(infile,ignore_unknown_nodes=False,silent=False):
     import json
     import os
     import tarfile
@@ -180,7 +180,7 @@ def import_file(infile,silent=False):
         unknown_nodes = linked_nodes.union(group_nodes) - db_nodes_uuid.union(
             import_nodes_uuid)
         
-        if unknown_nodes:
+        if unknown_nodes and not ignore_unknown_nodes:
             raise ValueError(
                 "The import file refers to {} nodes with unknown UUID, therefore "
                 "it cannot be imported. Either first import the unknown nodes, "
@@ -416,8 +416,18 @@ def import_file(infile,silent=False):
             dbnode_reverse_mappings = foreign_ids_reverse_mappings[
                 get_class_string(models.DbNode)]
             for link in import_links:
-                in_id = dbnode_reverse_mappings[link['input']]
-                out_id = dbnode_reverse_mappings[link['output']]
+                try:
+                    in_id = dbnode_reverse_mappings[link['input']]
+                    out_id = dbnode_reverse_mappings[link['output']]
+                except KeyError:
+                    if ignore_unknown_nodes:
+                        continue
+                    else:
+                        raise ValueError("Trying to create a link with one "
+                                         "or both unknown nodes, stopping "
+                                         "(in_uuid={}, out_uuid={}, "
+                                         "label={})".format(link['input'],
+                                              link['output'], link['label']))
                 
                 
                 try:

@@ -389,6 +389,15 @@ class UpfData(SinglefileData):
         self._set_attr('element', str(element))
         self._set_attr('md5', md5sum)
         
+    def get_upf_family_names(self):
+        """
+        Get the list of all upf family names to which the pseudo belongs
+        """
+        from aiida.orm import Group
+        
+        return [_.name for _ in Group.query(nodes=self,
+                                            type_string=self.upffamily_type_string)]
+    
     @property
     def element(self):
         return self.get_attr('element', None)

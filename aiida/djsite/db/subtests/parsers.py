@@ -57,7 +57,8 @@ def read_test(outfolder):
     from aiida.common.exceptions import NotExistent
     from aiida.cmdline.commands.importfile import import_file
 
-    imported = import_file(outfolder,format='tree',silent=True)
+    imported = import_file(outfolder,format='tree',
+                           ignore_unknown_nodes=True,silent=True)
 
     calc = None
     for _,pk in imported['nodes']['new']:

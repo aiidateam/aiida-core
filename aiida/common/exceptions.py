@@ -146,8 +146,8 @@ class FeatureNotAvailable(AiidaException):
 
 class FeatureDisabled(AiidaException):
     """
-    Raised when a feature is requested, but the used chose to disabled it
-    (e.g., for submissions on disabled computers).
+    Raised when a feature is requested, but the user has chosen to disable
+    it (e.g., for submissions on disabled computers).
     """
     pass
 

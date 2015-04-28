@@ -63,7 +63,7 @@ Following below, a list with the subcommands available.
   *  **hide**: hide codes from `verdi code list`
   *  **reveal**: un-hide codes for `verdi code list`
   *  **setup**: setup a new code
-  *  **relabel**: change the label (name) of a code. If you like to load codes 
+  *  **rename**: change the label (name) of a code. If you like to load codes 
      based on their labels and not on their UUID's or PK's, take care of using
      unique labels!
   *  **update**: change (some of) the installation description of the code given

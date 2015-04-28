@@ -27,6 +27,11 @@ TCOD database importer
 .. automodule:: aiida.tools.dbimporters.plugins.tcod
    :members:
 
+PCOD database importer
+----------------------
+.. automodule:: aiida.tools.dbimporters.plugins.pcod
+   :members:
+
 MPOD database importer
 ----------------------
 .. automodule:: aiida.tools.dbimporters.plugins.mpod

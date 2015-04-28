@@ -12,7 +12,7 @@ def _get_aiida_structure_inline(trajectory=None,parameters=None):
     """
     Creates :py:class:`aiida.orm.data.structure.StructureData` using ASE.
 
-    :note: requires ASE module.
+    .. note:: requires ASE module.
     """
     from aiida.orm.data.structure import StructureData
     kwargs = {}
@@ -146,12 +146,25 @@ class TrajectoryData(ArrayData):
 
     def set_structurelist(self,structurelist):
         """
-        Create trajectory from the list of StructureData objects.
+        Create trajectory from the list of
+        :py:class:`aiida.orm.data.structure.StructureData` instances.
+
+        :param structurelist: a list of
+            :py:class:`aiida.orm.data.structure.StructureData` instances.
+
+        :raises ValueError: if symbol lists of supplied structures are
+            different
         """
         import numpy
         steps = numpy.array(range(0,len(structurelist)))
         cells = numpy.array([x.cell for x in structurelist])
-        symbols = numpy.array([str(s.kind_name) for s in structurelist[0].sites])
+        symbols_first = [str(s.kind_name) for s in structurelist[0].sites]
+        for symbols_now in [[str(s.kind_name) for s in structurelist[i].sites]
+                            for i in steps]:
+            if symbols_first != symbols_now:
+                raise ValueError("Symbol lists have to be the same for "
+                                 "all of the supplied structures")
+        symbols = numpy.array(symbols_first)
         positions = numpy.array([[list(s.position) for s in x.sites] for x in structurelist])
         self.set_trajectory(steps,cells,symbols,positions)
 
@@ -198,7 +211,7 @@ class TrajectoryData(ArrayData):
         """
         Return the array of steps, if it has already been set.
         
-        :raises: KeyError if the trajectory has not been set yet.
+        :raises KeyError: if the trajectory has not been set yet.
         """
         return self.get_array('steps')
     
@@ -206,7 +219,7 @@ class TrajectoryData(ArrayData):
         """
         Return the array of times (in ps), if it has already been set.
         
-        :raises: KeyError if the trajectory has not been set yet.
+        :raises KeyError: if the trajectory has not been set yet.
         """
         try:
             return self.get_array('times')
@@ -217,7 +230,7 @@ class TrajectoryData(ArrayData):
         """
         Return the array of cells, if it has already been set.
         
-        :raises: KeyError if the trajectory has not been set yet.
+        :raises KeyError: if the trajectory has not been set yet.
         """
         return self.get_array('cells')
 
@@ -225,7 +238,7 @@ class TrajectoryData(ArrayData):
         """
         Return the array of symbols, if it has already been set.
         
-        :raises: KeyError if the trajectory has not been set yet.
+        :raises KeyError: if the trajectory has not been set yet.
         """
         return self.get_array('symbols')
 
@@ -233,7 +246,7 @@ class TrajectoryData(ArrayData):
         """
         Return the array of positions, if it has already been set.
         
-        :raises: KeyError if the trajectory has not been set yet.
+        :raises KeyError: if the trajectory has not been set yet.
         """
         return self.get_array('positions')
 
@@ -258,11 +271,11 @@ class TrajectoryData(ArrayData):
         methods such as :py:meth:`.get_step_data` or
         :py:meth:`.step_to_structure`.
 
-        Note that this function returns the first index found (i.e. if multiple
-        steps are present with the same value,
-        only the index of the first one is returned).
+        .. note:: Note that this function returns the first index found
+            (i.e. if multiple steps are present with the same value,
+            only the index of the first one is returned).
         
-        :raise: ValueError if no step with the given value is found.
+        :raises ValueError: if no step with the given value is found.
         """
         import numpy
         
@@ -289,8 +302,8 @@ class TrajectoryData(ArrayData):
         
         :param index: The index of the step that you want to retrieve, from 
            0 to ``self.numsteps - 1``.
-        :raise: IndexError if you require an index beyond the limits.
-        :raise: KeyError if you did not store the trajectory yet.
+        :raises IndexError: if you require an index beyond the limits.
+        :raises KeyError: if you did not store the trajectory yet.
         """
         if index >= self.numsteps:
             raise IndexError("You have only {} steps, but you are looking beyond"

@@ -581,7 +581,7 @@ def _get_cif_ase_inline(struct=None,parameters=None):
         cif.values[i]['_cell_formula_units_Z']           = 1
         cif.values[i]['_chemical_formula_sum']           = formula
     return {'cif': cif}
-            
+
 class StructureData(Data):
     """
     This class contains the information about a given structure, i.e. a

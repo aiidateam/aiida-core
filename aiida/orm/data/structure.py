@@ -92,6 +92,16 @@ def has_ase():
         return False
     return True
 
+def has_pymatgen():
+    """
+    :return: True if the pymatgen module can be imported, False otherwise.
+    """
+    try:
+        import pymatgen
+    except ImportError:
+        return False
+    return True
+
 
 def calc_cell_volume(cell):
     """
@@ -608,7 +618,7 @@ class StructureData(Data):
 
     def set_pymatgen_structure(self, struct):
         """
-        Load the structure from a pymatgen Structure object
+        Load the structure from a pymatgen Structure object.
 
         .. note:: Requires the pymatgen module.
         """
@@ -617,7 +627,8 @@ class StructureData(Data):
                                      # is a correct way to do so
         self.clear_kinds()
         for site in struct.sites:
-            self.append_atom(symbols=site.species_string,
+            self.append_atom(symbols=[x[0].symbol for x in site.items()],
+                             weights=[x[1] for x in site.items()],
                              position=site.coords.tolist())
 
     def _validate(self):

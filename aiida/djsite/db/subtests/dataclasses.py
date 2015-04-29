@@ -1547,6 +1547,22 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
                           [(1.0,), (0.33333, 0.66667)])
 
 
+        # Testing pymatgen Structure -> StructureData -> pymatgen Structure
+        # roundtrip.
+
+        pymatgen_struct_roundtrip = struct.get_pymatgen_structure()
+        dict1 = pymatgen_struct.to_dict
+        dict2 = pymatgen_struct_roundtrip.to_dict
+
+        # Removing site coordinates in order to prevent rounding errors
+        # from causing test failures.
+        for i in dict1['sites']:
+            i.pop('abc')
+        for i in dict2['sites']:
+            i.pop('abc')
+        self.assertEquals(dict1, dict2)
+
+
 class TestArrayData(AiidaTestCase):
     """
     Tests the ArrayData objects.

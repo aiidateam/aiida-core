@@ -224,7 +224,7 @@ class Node(object):
 
         # NO VALIDATION ON __init__ BY DEFAULT, IT IS TOO SLOW SINCE IT OFTEN
         # REQUIRES MULTIPLE DB HITS
-        #            try:
+        # try:
         #                # Note: the validation often requires to load at least one
         #                # attribute, and therefore it will take a lot of time
         #                # because it has to cache every attribute.
@@ -585,7 +585,7 @@ class Node(object):
 
             self._inputlinks_cache[label] = src
 
-    def _remove_link_from(self, src, label):
+    def _remove_link_from(self, label):
         """
         Remove from the DB the input link with the given label.
         :note: In subclasses, change only this. Moreover, remember to call
@@ -593,7 +593,6 @@ class Node(object):
         
         :note: No error is raised if the link does not exist.
         
-        :param src: the source object
         :param str label: the name of the label to set the link from src.
         """
         # Try to remove from the local cache, no problem if none is present
@@ -887,7 +886,7 @@ class Node(object):
         
         :param computer: the computer object
         """
-        #TODO: probably this method should be in the base class, and
+        # TODO: probably this method should be in the base class, and
         #      check for the type
         from aiida.djsite.db.models import DbComputer
 
@@ -1166,7 +1165,7 @@ class Node(object):
             attributes that are updatable
         """
         from aiida.djsite.db.models import DbAttribute
-        #        TODO: check what happens if someone stores the object while
+        # TODO: check what happens if someone stores the object while
         #        the iterator is being used!
         updatable_list = [attr for attr in self._updatable_attributes]
 
@@ -1364,7 +1363,7 @@ class Node(object):
         :return: the corresponding Django DbNode object.
         """
         # I also update the internal _dbnode variable, if it was saved
-        #        from aiida.djsite.db.models import DbNode
+        # from aiida.djsite.db.models import DbNode
         #        if not self._to_be_stored:
         #            self._dbnode = DbNode.objects.get(pk=self._dbnode.pk)
         return self._dbnode
@@ -1481,7 +1480,7 @@ class Node(object):
             return self.folder.abspath
         if section is None:
             section = self._path_subfolder_name
-        #TODO: For the moment works only for one kind of files,
+        # TODO: For the moment works only for one kind of files,
         #      'path' (internal files)
         if os.path.isabs(path):
             raise ValueError("The path in get_abs_path must be relative")
@@ -1629,7 +1628,7 @@ class Node(object):
           is meant to be used ONLY if the outer calling function has already
           a transaction open!
         """
-        #TODO: This needs to be generalized, allowing for flexible methods
+        # TODO: This needs to be generalized, allowing for flexible methods
         # for storing data and its attributes.
         from django.db import transaction
         from aiida.common.utils import EmptyContextManager

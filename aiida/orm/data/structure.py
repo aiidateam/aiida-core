@@ -221,7 +221,7 @@ def is_ase_atoms(ase_atoms):
     Requires the ability to import ase, by doing 'import ase'.
     """
     # TODO: Check if we want to try to import ase and do something
-    #      reasonable depending on whether ase is there or not.
+    # reasonable depending on whether ase is there or not.
     import ase
 
     return isinstance(ase_atoms, ase.Atoms)
@@ -836,6 +836,23 @@ class StructureData(Data):
             asecell.append(site.get_ase(kinds=_kinds))
         return asecell
 
+    def get_pymatgen_structure(self):
+        """
+        Get the pymatgen Structure object.
+        Requires to be able to import pymatgen.
+
+        :return: a pymatgen object corresponding to this StructureData object.
+        """
+        from pymatgen.core.structure import Structure
+
+        species = [{self.get_kind(x.kind_name).symbols[i]:
+                        self.get_kind(x.kind_name).weights[i]
+                    for i in range(0, len(self.get_kind(x.kind_name).symbols))}
+                   for x in self.sites]
+        positions = [list(x.position) for x in self.sites]
+        return Structure(self.cell, species, positions,
+                         coords_are_cartesian=True)
+
     def append_kind(self, kind):
         """
         Append a kind to the StructureData. It makes a copy of the kind.
@@ -981,7 +998,7 @@ class StructureData(Data):
 
         # def _set_site_type(self, new_site, reset_type_if_needed):
 
-    #         """
+    # """
     #         Check if the site can be added (i.e., if no other sites with the same type exist, or if
     #         they exist, then they are equal) and possibly sets its type.
     #
@@ -1484,7 +1501,7 @@ class Kind(object):
 
         # def get_ase(self):
 
-    #         """
+    # """
     #         Return a ase.Atom object for this kind, setting the position to
     #         the origin.
     #

@@ -9,10 +9,12 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi"
 
+
 class CifcoddepositCalculation(CiffilterCalculation):
     """
     Specific input plugin for cif_cod_deposit from cod-tools package.
     """
+
     def _init_internal_params(self):
         super(CifcoddepositCalculation, self)._init_internal_params()
 
@@ -20,22 +22,23 @@ class CifcoddepositCalculation(CiffilterCalculation):
         self._CONFIG_FILE = 'config.conf'
         default_url = \
             'http://test.crystallography.net/cgi-bin/cif-deposit.pl'
-        self._default_commandline_params = [ '--use-rm',
-                                             '--read-stdin',
-                                             '--output-mode', 'stdout',
-                                             '--no-print-timestamps',
-                                             '--url', default_url,
-                                             '--config', self._CONFIG_FILE ]
+        self._default_commandline_params = ['--use-rm',
+                                            '--read-stdin',
+                                            '--output-mode', 'stdout',
+                                            '--no-print-timestamps',
+                                            '--url', default_url,
+                                            '--config', self._CONFIG_FILE]
 
-        self._config_keys = [ 'username', 'password', 'journal',
-                              'user_email', 'author_name', 'author_email',
-                              'hold_period' ]
+        self._config_keys = ['username', 'password', 'journal',
+                             'user_email', 'author_name', 'author_email',
+                             'hold_period']
 
-    def _prepare_for_submission(self,tempfolder,inputdict):
+    def _prepare_for_submission(self, tempfolder, inputdict):
         from aiida.orm.data.cif import CifData
         from aiida.orm.data.parameter import ParameterData
         from aiida.orm.calculation.job.codtools import commandline_params_from_dict
         import shutil
+
         try:
             cif = inputdict.pop(self.get_linkname('cif'))
         except KeyError:
@@ -53,23 +56,23 @@ class CifcoddepositCalculation(CiffilterCalculation):
 
         deposit_file_rel = "deposit.cif"
         deposit_file_abs = tempfolder.get_abs_path(deposit_file_rel)
-        shutil.copy( cif.get_file_abs_path(), deposit_file_abs)
+        shutil.copy(cif.get_file_abs_path(), deposit_file_abs)
 
         input_filename = tempfolder.get_abs_path(self._DEFAULT_INPUT_FILE)
-        with open(input_filename,'w') as f:
+        with open(input_filename, 'w') as f:
             f.write("{}\n".format(deposit_file_rel))
             f.flush()
 
         config_file_abs = tempfolder.get_abs_path(self._CONFIG_FILE)
-        with open(config_file_abs,'w') as f:
+        with open(config_file_abs, 'w') as f:
             for k in self._config_keys:
                 if k in parameters_dict.keys():
-                    f.write("{}={}\n".format(k,parameters_dict.pop(k)))
+                    f.write("{}={}\n".format(k, parameters_dict.pop(k)))
             f.flush()
 
         commandline_params = self._default_commandline_params
         commandline_params.extend(
-            commandline_params_from_dict( parameters_dict ) )
+            commandline_params_from_dict(parameters_dict))
 
         calcinfo = CalcInfo()
         calcinfo.uuid = self.uuid
@@ -77,7 +80,7 @@ class CifcoddepositCalculation(CiffilterCalculation):
         calcinfo.cmdline_params = commandline_params
         calcinfo.local_copy_list = []
         calcinfo.remote_copy_list = []
-        calcinfo.stdin_name  = self._DEFAULT_INPUT_FILE
+        calcinfo.stdin_name = self._DEFAULT_INPUT_FILE
         calcinfo.stdout_name = self._DEFAULT_OUTPUT_FILE
         calcinfo.stderr_name = self._DEFAULT_ERROR_FILE
         calcinfo.retrieve_list = [self._DEFAULT_OUTPUT_FILE,

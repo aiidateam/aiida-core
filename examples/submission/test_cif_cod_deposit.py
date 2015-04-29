@@ -27,7 +27,7 @@ if __name__ == "__main__":
     ParameterData = DataFactory('parameter')
     submit_test = None
     codename = None
-    options = {"deposition-type":"published"}
+    options = {"deposition-type": "published"}
     files = []
 
     sys.argv.pop(0)
@@ -49,9 +49,9 @@ if __name__ == "__main__":
                 argval = True
             if argkey not in options.keys():
                 options[argkey] = []
-            options[argkey].append( argval )
+            options[argkey].append(argval)
         else:
-            files.append( arg )
+            files.append(arg)
 
     expected_code_type = "codtools.cifcoddeposit"
 
@@ -63,15 +63,16 @@ if __name__ == "__main__":
             raise ValueError
     except (NotExistent, ValueError):
         valid_code_labels = [c.label for c in Code.query(
-                dbattributes__key="input_plugin",
-                dbattributes__tval=expected_code_type)]
+            dbattributes__key="input_plugin",
+            dbattributes__tval=expected_code_type)]
         if valid_code_labels:
             print >> sys.stderr, "Pass as further parameter a valid code label."
             print >> sys.stderr, "Valid labels with a {} executable are:".format(expected_code_type)
             for l in valid_code_labels:
                 print >> sys.stderr, "*", l
         else:
-            print >> sys.stderr, "Code not valid, and no valid codes for {}. Configure at least one first using".format(expected_code_type)
+            print >> sys.stderr, "Code not valid, and no valid codes for {}. Configure at least one first using".format(
+                expected_code_type)
             print >> sys.stderr, "    verdi code setup"
         sys.exit(1)
 
@@ -82,12 +83,12 @@ if __name__ == "__main__":
         raise ValueError("Please specify a single CIF file")
 
     parameters = ParameterData(dict=options)
-    computer = Computer.get( Computer.list_names()[0] )
+    computer = Computer.get(Computer.list_names()[0])
 
     calc = code.new_calc()
     calc.label = "Test cod-tools cif_cod_deposit"
     calc.description = "Test deposition with the cod-tools cif_cod_deposit"
-    calc.set_max_wallclock_seconds(30*60) # 30 min
+    calc.set_max_wallclock_seconds(30 * 60)  # 30 min
     calc.set_resources({"num_machines": 1,
                         "num_mpiprocs_per_machine": 1})
     calc.set_computer(computer)
@@ -102,11 +103,11 @@ if __name__ == "__main__":
         print "Submit file in {}".format(os.path.join(
             os.path.relpath(subfolder.abspath),
             script_filename
-            ))
+        ))
     else:
         calc.store_all()
         print "created calculation; calc=Calculation(uuid='{}') # ID={}".format(
-            calc.uuid,calc.dbnode.pk)
+            calc.uuid, calc.dbnode.pk)
         calc.submit()
         print "submitted calculation; calc=Calculation(uuid='{}') # ID={}".format(
-            calc.uuid,calc.dbnode.pk)
+            calc.uuid, calc.dbnode.pk)

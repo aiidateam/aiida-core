@@ -265,13 +265,13 @@ class PwimmigrantCalculation(PwCalculation):
             # units, that will be taken care of by the input parsing tools, and
             # we are safe to fake that they were never there in the first place.
             parameters_dict = deepcopy(pwinputfile.namelists)
-            for namelist,blocked_key in self._blocked_keywords:
+            for namelist, blocked_key in self._blocked_keywords:
                 keys = parameters_dict[namelist].keys()
                 for this_key in parameters_dict[namelist].keys():
                     # take into account that celldm and celldm(*) must be blocked
-                    if re.sub("[(0-9)]","",this_key) == blocked_key:
-                        parameters_dict[namelist].pop(this_key,None) 
-            
+                    if re.sub("[(0-9)]", "", this_key) == blocked_key:
+                        parameters_dict[namelist].pop(this_key, None)
+
             parameters = ParameterData(dict=parameters_dict)
             self.use_parameters(parameters)
 
@@ -339,7 +339,7 @@ class PwimmigrantCalculation(PwCalculation):
         # the parser will extract the results from. This would normally be
         # performed in self._prepare_for_submission prior to submission.
         self._set_attr('retrieve_list',
-                      [self._OUTPUT_FILE_NAME, self._DATAFILE_XML])
+                       [self._OUTPUT_FILE_NAME, self._DATAFILE_XML])
         self._set_attr('retrieve_singlefile_list', [])
 
         # Make sure the calculation and input links are stored.

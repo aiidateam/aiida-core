@@ -11,6 +11,7 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Nicolas Mounet"
 
+
 def serialize_field(data, track_conversion=False):
     """
     Serialize a single field.
@@ -43,7 +44,7 @@ def serialize_field(data, track_conversion=False):
                 ret_conversion.append(this_conversion)
         else:
             ret_data = [serialize_field(
-                        data=value, track_conversion=track_conversion)
+                data=value, track_conversion=track_conversion)
                         for value in data]
     elif isinstance(data, datetime.datetime):
         # Note: requires timezone-aware objects!
@@ -53,14 +54,15 @@ def serialize_field(data, track_conversion=False):
     else:
         ret_data = data
         ret_conversion = None
-        
+
     if track_conversion:
         return (ret_data, ret_conversion)
     else:
         return ret_data
 
+
 def serialize_dict(datadict, remove_fields=[], rename_fields={},
-                     track_conversion=False):
+                   track_conversion=False):
     """
     Serialize the dict using the serialize_field function to serialize
     each field.
@@ -85,25 +87,26 @@ def serialize_dict(datadict, remove_fields=[], rename_fields={},
       dictionary with the information on the serialized fields.
     """
     ret_dict = {}
-    
+
     conversions = {}
-    
+
     for k, v in datadict.iteritems():
         if k not in remove_fields:
             # rename_fields.get(k,k): use the replacement if found in rename_fields,
             # otherwise use 'k' as the default value.
             if track_conversion:
-                (ret_dict[rename_fields.get(k,k)],
-                 conversions[rename_fields.get(k,k)]) = serialize_field(
+                (ret_dict[rename_fields.get(k, k)],
+                 conversions[rename_fields.get(k, k)]) = serialize_field(
                     data=v, track_conversion=track_conversion)
             else:
-                ret_dict[rename_fields.get(k,k)] = serialize_field(
+                ret_dict[rename_fields.get(k, k)] = serialize_field(
                     data=v, track_conversion=track_conversion)
 
     if track_conversion:
-        return (ret_dict, conversions) 
+        return (ret_dict, conversions)
     else:
         return ret_dict
+
 
 def get_all_fields_info():
     """
@@ -117,35 +120,35 @@ def get_all_fields_info():
     import importlib
 
     import django.db.models.fields as djf
-    import django_extensions    
-    
+    import django_extensions
+
     from aiida.djsite.db import models
-    
+
     all_fields_info = {}
-    
+
     user_model_string = get_class_string(models.DbUser)
-    
+
     # TODO: These will probably need to have a default value in the IMPORT!
     # TODO: maybe define this inside the Model!
     all_exclude_fields = {
-        user_model_string: ['password', 'is_staff', 
+        user_model_string: ['password', 'is_staff',
                             'is_superuser', 'is_active',
                             'last_login', 'date_joined'],
-        }
-    
+    }
+
     # I start only with DbNode
-    export_models = set([get_class_string(Model) for Model in 
+    export_models = set([get_class_string(Model) for Model in
                          [models.DbNode, models.DbAttribute,
                           models.DbLink, models.DbGroup]])
-    
+
     while True:
         missing_models = export_models - set(all_fields_info.keys())
         if not missing_models:
             break
-        
+
         for model_name in missing_models:
             Model = get_object_from_string(model_name)
-            
+
             thisinfo = {}
             exclude_fields = all_exclude_fields.get(model_name, [])
             for field in Model._meta.fields:
@@ -156,12 +159,12 @@ def get_all_fields_info():
                     pass
                 elif isinstance(field, (djf.CharField, djf.TextField,
                                         djf.IntegerField, djf.FloatField,
-                                        djf.BooleanField,djf.NullBooleanField,
+                                        djf.BooleanField, djf.NullBooleanField,
                                         django_extensions.db.fields.UUIDField)):
                     thisinfo[field.name] = {}
                 elif isinstance(field, djf.DateTimeField):
                     # This information is needed on importing
-                    thisinfo[field.name] = {'convert_type': 'date'} 
+                    thisinfo[field.name] = {'convert_type': 'date'}
                 elif isinstance(field, django_extensions.db.fields.UUIDField):
                     thisinfo[field.name] = {}
                 elif isinstance(field, djf.related.ForeignKey):
@@ -172,13 +175,13 @@ def get_all_fields_info():
                         # so no custom serializer is required
                         'requires': rel_model_name,
                         'related_name': related_name,
-                        }
+                    }
                     export_models.add(rel_model_name)
-                else: 
+                else:
                     raise NotImplementedError(
                         "Export not implemented for field of type {}.{}".format(
                             get_class_string(field)))
-                all_fields_info[model_name] = thisinfo  
+                all_fields_info[model_name] = thisinfo
 
     unique_identifiers = {}
     for k in all_fields_info:
@@ -192,9 +195,9 @@ def get_all_fields_info():
                  get_class_string(models.DbExtra)]:
             unique_identifiers[k] = None
             continue
-        
+
         m = get_object_from_string(k)
-        field_names = [f.name for f in m._meta.fields] 
+        field_names = [f.name for f in m._meta.fields]
         if 'uuid' in field_names:
             unique_identifiers[k] = 'uuid'
         else:
@@ -203,8 +206,9 @@ def get_all_fields_info():
 
     return all_fields_info, unique_identifiers
 
-def export(what, also_parents = True, also_calc_outputs = True,
-           outfile = 'export_data.aiida.tar.gz', overwrite=False,
+
+def export(what, also_parents=True, also_calc_outputs=True,
+           outfile='export_data.aiida.tar.gz', overwrite=False,
            silent=False):
     """
     Export the DB entries passed in the 'what' list on a file.
@@ -227,7 +231,7 @@ def export(what, also_parents = True, also_calc_outputs = True,
     import tarfile
     import operator
     from collections import defaultdict
-    
+
     from django.db.models import Q
 
     import aiida
@@ -236,13 +240,13 @@ def export(what, also_parents = True, also_calc_outputs = True,
     from aiida.common.folders import SandboxFolder
 
     EXPORT_VERSION = '0.1'
-    
+
     if not overwrite and os.path.exists(outfile):
         raise IOError("The output file '{}' already "
                       "exists".format(outfile))
-    
+
     all_fields_info, unique_identifiers = get_all_fields_info()
-        
+
     entries_ids_to_add = defaultdict(list)
     # I store a list of the actual dbnodes
     groups_entries = []
@@ -252,43 +256,43 @@ def export(what, also_parents = True, also_calc_outputs = True,
         entries_ids_to_add[class_string].append(entry.pk)
         if class_string == group_class_string:
             groups_entries.append(entry)
-    
+
     if also_parents:
         # It is a defaultdict, it will provide an empty list
         given_nodes = entries_ids_to_add[get_class_string(models.DbNode)]
-        
+
         if given_nodes:
             # Alsof add the parents (to any level) to the query
-            given_nodes = list(set(given_nodes + 
-                list(models.DbNode.objects.filter(
-                    children__in=given_nodes).values_list('pk', flat=True))))
+            given_nodes = list(set(given_nodes +
+                                   list(models.DbNode.objects.filter(
+                                       children__in=given_nodes).values_list('pk', flat=True))))
             entries_ids_to_add[get_class_string(models.DbNode)] = given_nodes
 
     if also_calc_outputs:
         given_nodes = entries_ids_to_add[get_class_string(models.DbNode)]
-        
+
         if given_nodes:
             # Add all (direct) outputs of a calculation object that was already
             # selected
-            given_nodes = list(set(given_nodes + 
-                list(models.DbNode.objects.filter(
-                    inputs__pk__in=given_nodes,
-                    inputs__type__startswith=Calculation._query_type_string
-                    ).values_list('pk', flat=True)
-                    )))
+            given_nodes = list(set(given_nodes +
+                                   list(models.DbNode.objects.filter(
+                                       inputs__pk__in=given_nodes,
+                                       inputs__type__startswith=Calculation._query_type_string
+                                   ).values_list('pk', flat=True)
+                                   )))
             entries_ids_to_add[get_class_string(models.DbNode)] = given_nodes
 
     # Initial query to fire the generation of the export data
     entries_to_add = {k: [Q(id__in=v)] for k, v
                       in entries_ids_to_add.iteritems()}
-    
+
 
     ############################################################
     ##### Start automatic recursive export data generation #####
     ############################################################
     if not silent:
         print "STORING DATABASE ENTRIES..."
-    export_data = {}   
+    export_data = {}
     while entries_to_add:
         new_entries_to_add = {}
         for model_name, querysets in entries_to_add.iteritems():
@@ -302,31 +306,31 @@ def export(what, also_parents = True, also_calc_outputs = True,
                 reduce(operator.or_, querysets)).distinct()
             entryvalues = dbentries.values(
                 'id', *all_fields_info[model_name].keys()
-                )
-    
+            )
+
             # Only serialize new nodes (also to avoid infinite loops)
             if model_name in export_data:
                 serialized = {
                     str(v['id']): serialize_dict(v, remove_fields=['id'])
                     for v in entryvalues
                     if v['id'] not in export_data[model_name]
-                    }
+                }
             else:
                 serialized = {
                     str(v['id']): serialize_dict(v, remove_fields=['id'])
                     for v in entryvalues
-                    }            
-    
+                }
+
             try:
                 export_data[model_name].update(serialized)
             except KeyError:
                 export_data[model_name] = serialized
-    
+
             if serialized:
                 foreign_fields = {k: v for k, v in
                                   all_fields_info[model_name].iteritems()
                                   if 'requires' in v}
-    
+
                 for k, v in foreign_fields.iteritems():
                     related_queryobj = Q(**{'{}__in'.format(v['related_name']):
                                                 serialized.keys()})
@@ -334,19 +338,19 @@ def export(what, also_parents = True, also_calc_outputs = True,
                         new_entries_to_add[v['requires']].append(related_queryobj)
                     except KeyError:
                         new_entries_to_add[v['requires']] = [related_queryobj]
-            
+
         entries_to_add = new_entries_to_add
 
     ######################################
     # Manually manage links and attributes
     ######################################
     # I use .get because there may be no nodes to export
-    all_nodes_pk = export_data.get(get_class_string(models.DbNode),{}).keys()
+    all_nodes_pk = export_data.get(get_class_string(models.DbNode), {}).keys()
     if sum(len(model_data) for model_data in export_data.values()) == 0:
         if not silent:
             print "No nodes to store, exiting..."
         return
-    
+
     if not silent:
         print "Exporting a total of {} db entries, of which {} nodes.".format(
             sum(len(model_data) for model_data in export_data.values()),
@@ -365,7 +369,7 @@ def export(what, also_parents = True, also_calc_outputs = True,
     ## If I want to store them 'raw'; it is faster, but more error prone and
     ## less version-independent, I think. Better to optimize the n.attributes 
     ## call.
-    #all_nodes_query = models.DbNode.objects.filter(pk__in=all_nodes_pk)
+    # all_nodes_query = models.DbNode.objects.filter(pk__in=all_nodes_pk)
     #node_attributes_raw = list(models.DbAttribute.objects.filter(
     #    dbnode__in=all_nodes_pk).distinct().values(
     #    'bval', 'tval', 'ival', 'fval', 'dval',
@@ -380,11 +384,11 @@ def export(what, also_parents = True, also_calc_outputs = True,
         output__in=all_nodes_query).distinct()
 
     links_uuid = [
-        serialize_dict(l, rename_fields= {
+        serialize_dict(l, rename_fields={
             'input__uuid': 'input',
             'output__uuid': 'output'})
-         for l in linksquery.values(
-              'input__uuid', 'output__uuid', 'label')]
+        for l in linksquery.values(
+            'input__uuid', 'output__uuid', 'label')]
 
     if not silent:
         print "STORING GROUP ELEMENTS..."
@@ -393,49 +397,49 @@ def export(what, also_parents = True, also_calc_outputs = True,
 
     if not silent:
         print groups_uuid
-    
+
     ######################################
     # Now I store
     ######################################    
     with SandboxFolder() as folder:
         # subfolder inside the export package
-        nodesubfolder = folder.get_subfolder('nodes',create=True,
+        nodesubfolder = folder.get_subfolder('nodes', create=True,
                                              reset_limit=True)
-    
+
         if not silent:
             print "STORING DATA..."
-        
+
         with open(folder.get_abs_path('data.json'), 'w') as f:
             json.dump({
-                    'node_attributes': node_attributes,
-                    'node_attributes_conversion': node_attributes_conversion,
-                    'export_data': export_data,
-                    'links_uuid': links_uuid,
-                    'groups_uuid': groups_uuid,
-                    }, f)
-    
+                          'node_attributes': node_attributes,
+                          'node_attributes_conversion': node_attributes_conversion,
+                          'export_data': export_data,
+                          'links_uuid': links_uuid,
+                          'groups_uuid': groups_uuid,
+                      }, f)
+
         metadata = {
             'aiida_version': aiida.get_version(),
             'export_version': EXPORT_VERSION,
             'all_fields_info': all_fields_info,
             'unique_identifiers': unique_identifiers,
-            }
+        }
 
         with open(folder.get_abs_path('metadata.json'), 'w') as f:
             json.dump(metadata, f)
-    
+
         if not silent:
             print "STORING FILES..."
-    
+
         for pk in all_nodes_pk:
             # Maybe we do not need to get the subclass, if it is too slow?
             node = Node.get_subclass_from_pk(pk)
-            
+
             sharded_uuid = export_shard_uuid(node.uuid)
-    
+
             # Important to set create=False, otherwise creates
             # twice a subfolder. Maybe this is a bug of insert_path??
-    
+
             thisnodefolder = nodesubfolder.get_subfolder(
                 sharded_uuid, create=False,
                 reset_limit=True)
@@ -443,10 +447,10 @@ def export(what, also_parents = True, also_calc_outputs = True,
             # itself
             thisnodefolder.insert_path(src=node._repository_folder.abspath,
                                        dest_name='.')
-    
+
         if not silent:
             print "COMPRESSING..."
-    
+
         # PAX_FORMAT: virtually no limitations, better support for unicode
         #   characters
         # dereference=True: at the moment, we should not have any symlink or
@@ -457,8 +461,8 @@ def export(what, also_parents = True, also_calc_outputs = True,
                           dereference=True) as tar:
             tar.add(folder.abspath, arcname="")
 
-#        import shutil
-#        shutil.make_archive(outfile, 'zip', folder.abspath)#, base_dir='aiida')
+        #        import shutil
+        #        shutil.make_archive(outfile, 'zip', folder.abspath)#, base_dir='aiida')
 
     if not silent:
         print "DONE."
@@ -472,7 +476,8 @@ class Export(VerdiCommand):
     purposes or to share data with collaborators.
     Call this command with the '-h' option for some documentation of its usage.
     """
-    def run(self,*args):                    
+
+    def run(self, *args):
         load_dbenv()
 
         import argparse
@@ -481,7 +486,7 @@ class Export(VerdiCommand):
         from aiida.common.exceptions import NotExistent
         from aiida.djsite.db import models
         from aiida.cmdline.commands.group import get_group_type_mapping
-        
+
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
             description='Export data from the DB.')
@@ -493,29 +498,29 @@ class Export(VerdiCommand):
                             help="Export all nodes in the given user-defined groups",
                             type=str)
         parser.add_argument('-P', '--no-parents',
-                            dest='no_parents',action='store_true',
-                            help="Store only the nodes that are explicitly given, without exporting the parents")        
+                            dest='no_parents', action='store_true',
+                            help="Store only the nodes that are explicitly given, without exporting the parents")
         parser.set_defaults(no_parents=False)
         parser.add_argument('-O', '--no-calc-outputs',
-                            dest='no_calc_outputs',action='store_true',
+                            dest='no_calc_outputs', action='store_true',
                             help="If a calculation is included in the list of nodes to export, do not export its outputs")
         parser.set_defaults(no_calc_outputs=False)
         parser.add_argument('-y', '--overwrite',
-                            dest='overwrite',action='store_true',
-                            help="Overwrite the output file, if it exists")       
+                            dest='overwrite', action='store_true',
+                            help="Overwrite the output file, if it exists")
         parser.set_defaults(overwrite=False)
-        parser.add_argument('output_file', type=str, 
+        parser.add_argument('output_file', type=str,
                             help='The output file name for the export file')
-        
+
         parsed_args = parser.parse_args(args)
-        
+
         if parsed_args.nodes is None:
             node_pk_list = []
         else:
             node_pk_list = parsed_args.nodes
-        
+
         groups_list = []
-        
+
         if parsed_args.groups is not None:
             for group_name in parsed_args.groups:
                 name, sep, typestr = group_name.rpartition(':')
@@ -528,11 +533,11 @@ class Export(VerdiCommand):
                     except KeyError:
                         print >> sys.stderr, "Invalid group type '{}'. Valid group types are:".format(typestr)
                         print >> sys.stderr, ",".join(sorted(
-                                get_group_type_mapping().keys()))
+                            get_group_type_mapping().keys()))
                         sys.exit(1)
                 else:
-                    internal_type_string=""
-                
+                    internal_type_string = ""
+
                 try:
                     group = Group.get(name=name,
                                       type_string=internal_type_string)
@@ -546,10 +551,10 @@ class Export(VerdiCommand):
                             "No user-defined group with name '{}' "
                             "found. Stopping.".format(name))
                     sys.exit(1)
-                node_pk_list += group.dbgroup.dbnodes.values_list('pk',flat=True)
+                node_pk_list += group.dbgroup.dbnodes.values_list('pk', flat=True)
                 groups_list.append(group.dbgroup)
         node_pk_list = set(node_pk_list)
-        
+
         node_list = list(
             models.DbNode.objects.filter(pk__in=node_pk_list))
         missing_nodes = node_pk_list.difference(_.pk for _ in node_list)
@@ -571,22 +576,22 @@ class Export(VerdiCommand):
         what_list = node_list + computer_list + groups_list
 
         try:
-            export(what = what_list, 
-                   also_parents = not parsed_args.no_parents,
-                   also_calc_outputs = not parsed_args.no_calc_outputs,
+            export(what=what_list,
+                   also_parents=not parsed_args.no_parents,
+                   also_calc_outputs=not parsed_args.no_calc_outputs,
                    outfile=parsed_args.output_file,
                    overwrite=parsed_args.overwrite)
         except IOError as e:
             print >> sys.stderr, e.message
             sys.exit(1)
 
-    def complete(self,subargs_idx, subargs):
+    def complete(self, subargs_idx, subargs):
         return ""
 
 # Following code: to serialize the date directly when dumping into JSON.
 # In our case, it is better to have a finer control on how to parse fields.
 
-#def default_jsondump(data):
+# def default_jsondump(data):
 #    import datetime 
 #
 #    if isinstance(data, datetime.datetime):

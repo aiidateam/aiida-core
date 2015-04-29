@@ -13,6 +13,7 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Nicolas Mounet"
 
+
 def CalculationFactory(module, from_abstract=False):
     """
     Return a suitable JobCalculation subclass.
@@ -23,30 +24,33 @@ def CalculationFactory(module, from_abstract=False):
       If True, check for valid strings for plugins of the Calculation base class.
     """
     from aiida.common.pluginloader import BaseFactory
-    
+
     if from_abstract:
         return BaseFactory(module, Calculation, "aiida.orm.calculation")
     else:
         return BaseFactory(module, JobCalculation, "aiida.orm.calculation.job",
                            suffix="Calculation")
 
+
 def DataFactory(module):
     """
     Return a suitable Data subclass.
     """
     from aiida.common.pluginloader import BaseFactory
-    
+
     return BaseFactory(module, Data, "aiida.orm.data")
+
 
 def WorkflowFactory(module):
     """
     Return a suitable Workflow subclass.
     """
     from aiida.common.pluginloader import BaseFactory
-    
+
     return BaseFactory(module, Workflow, "aiida.workflows")
 
-def load_node(node_id=None,pk=None,uuid=None):
+
+def load_node(node_id=None, pk=None, uuid=None):
     """
     Return an AiiDA node given PK or UUID.
 
@@ -64,9 +68,9 @@ def load_node(node_id=None,pk=None,uuid=None):
         raise ValueError("only one of parameters 'node_id', 'pk' and 'uuid' "
                          "has to be supplied")
     if node_id is not None:
-        if isinstance(node_id,str) or isinstance(node_id,unicode):
+        if isinstance(node_id, str) or isinstance(node_id, unicode):
             return Node.get_subclass_from_uuid(node_id)
-        elif isinstance(node_id,int):
+        elif isinstance(node_id, int):
             return Node.get_subclass_from_pk(node_id)
         else:
             raise ValueError("'node_id' has to be either string, unicode or "
@@ -76,7 +80,8 @@ def load_node(node_id=None,pk=None,uuid=None):
     else:
         return Node.get_subclass_from_uuid(uuid)
 
-def load_workflow(wf_id=None,pk=None,uuid=None):
+
+def load_workflow(wf_id=None, pk=None, uuid=None):
     """
     Return an AiiDA workflow given PK or UUID.
 
@@ -94,9 +99,9 @@ def load_workflow(wf_id=None,pk=None,uuid=None):
         raise ValueError("only one of parameters 'wf_id', 'pk' and 'uuid' "
                          "has to be supplied")
     if wf_id is not None:
-        if isinstance(wf_id,str) or isinstance(wf_id,unicode):
+        if isinstance(wf_id, str) or isinstance(wf_id, unicode):
             return Workflow.get_subclass_from_uuid(wf_id)
-        elif isinstance(wf_id,int):
+        elif isinstance(wf_id, int):
             return Workflow.get_subclass_from_pk(wf_id)
         else:
             raise ValueError("'wf_id' has to be either string, unicode or "

@@ -19,22 +19,22 @@ __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Nicolas Mounet"
 
 default_modules_list = [
-            #    ("aiida.djsite.db.models","DbNode","DbNode"),
-                        ("aiida.orm","Node","Node"),
-                        ("aiida.orm","Calculation","Calculation"),
-                        ("aiida.orm","JobCalculation","JobCalculation"),
-                        ("aiida.orm","Code","Code"),
-                        ("aiida.orm","Data","Data"),
-                        ("aiida.orm","CalculationFactory","CalculationFactory"),
-                        ("aiida.orm","DataFactory","DataFactory"),
-                        ("aiida.orm","WorkflowFactory","WorkflowFactory"),
-                        ("aiida.orm","Computer","Computer"),
-                        ("aiida.orm","Group","Group"),
-                        ("aiida.orm","load_node","load_node"),
-                        ("aiida.orm.workflow","Workflow","Workflow"),
-                        ("aiida.orm","load_workflow","load_workflow"),
-                        ("aiida.djsite.db","models","models"),
-                        ]
+    # ("aiida.djsite.db.models","DbNode","DbNode"),
+    ("aiida.orm", "Node", "Node"),
+    ("aiida.orm", "Calculation", "Calculation"),
+    ("aiida.orm", "JobCalculation", "JobCalculation"),
+    ("aiida.orm", "Code", "Code"),
+    ("aiida.orm", "Data", "Data"),
+    ("aiida.orm", "CalculationFactory", "CalculationFactory"),
+    ("aiida.orm", "DataFactory", "DataFactory"),
+    ("aiida.orm", "WorkflowFactory", "WorkflowFactory"),
+    ("aiida.orm", "Computer", "Computer"),
+    ("aiida.orm", "Group", "Group"),
+    ("aiida.orm", "load_node", "load_node"),
+    ("aiida.orm.workflow", "Workflow", "Workflow"),
+    ("aiida.orm", "load_workflow", "load_workflow"),
+    ("aiida.djsite.db", "models", "models"),
+]
 
 
 class Command(NoArgsCommand):
@@ -42,12 +42,12 @@ class Command(NoArgsCommand):
 
     option_list = NoArgsCommand.option_list + (
         make_option('--plain', action='store_true', dest='plain',
-            help='Tells Django to use plain Python, not IPython or bpython.'),
+                    help='Tells Django to use plain Python, not IPython or bpython.'),
         make_option('--no-startup', action='store_true', dest='no_startup',
-            help='When using plain Python, ignore the PYTHONSTARTUP environment variable and ~/.pythonrc.py script.'),
+                    help='When using plain Python, ignore the PYTHONSTARTUP environment variable and ~/.pythonrc.py script.'),
         make_option('-i', '--interface', action='store', type='choice', choices=shells,
                     dest='interface',
-            help='Specify an interactive interpreter interface. Available options: "ipython" and "bpython"'),
+                    help='Specify an interactive interpreter interface. Available options: "ipython" and "bpython"'),
 
     )
     help = "Runs a Python interactive interpreter. Tries to use IPython or bpython, if one of them is available."
@@ -57,15 +57,16 @@ class Command(NoArgsCommand):
         user_ns = {}
         for app_mod, model_name, alias in default_modules_list:
             user_ns[alias] = getattr(__import__(app_mod, {}, {}, model_name), model_name)
-        
+
         return user_ns
 
     def _ipython_pre_011(self):
         """Start IPython pre-0.11"""
         from IPython.Shell import IPShell
+
         user_ns = self.get_start_namespace()
         if user_ns:
-            shell = IPShell(argv=[],user_ns=user_ns)
+            shell = IPShell(argv=[], user_ns=user_ns)
         else:
             shell = IPShell(argv=[])
         shell.mainloop()
@@ -73,19 +74,21 @@ class Command(NoArgsCommand):
     def _ipython_pre_100(self):
         """Start IPython pre-1.0.0"""
         from IPython.frontend.terminal.ipapp import TerminalIPythonApp
+
         app = TerminalIPythonApp.instance()
         app.initialize(argv=[])
-        user_ns = self.get_start_namespace() 
+        user_ns = self.get_start_namespace()
         if user_ns:
-            app.shell.user_ns.update(user_ns) 
+            app.shell.user_ns.update(user_ns)
         app.start()
 
     def _ipython(self):
         """Start IPython >= 1.0"""
         from IPython import start_ipython
+
         user_ns = self.get_start_namespace()
         if user_ns:
-            start_ipython(argv=[],user_ns=user_ns)
+            start_ipython(argv=[], user_ns=user_ns)
         else:
             start_ipython(argv=[])
 
@@ -103,6 +106,7 @@ class Command(NoArgsCommand):
 
     def bpython(self):
         import bpython
+
         user_ns = self.get_start_namespace()
         if user_ns:
             bpython.embed(user_ns)
@@ -144,6 +148,7 @@ class Command(NoArgsCommand):
                 # We don't have to wrap the following import in a 'try', because
                 # we already know 'readline' was imported successfully.
                 import rlcompleter
+
                 readline.set_completer(rlcompleter.Completer(imported_objects).complete)
                 readline.parse_and_bind("tab:complete")
 
@@ -158,7 +163,7 @@ class Command(NoArgsCommand):
                         continue
                     try:
                         with open(pythonrc) as handle:
-                            exec(compile(handle.read(), pythonrc, 'exec'), imported_objects)
+                            exec (compile(handle.read(), pythonrc, 'exec'), imported_objects)
                     except NameError:
                         pass
             code.interact(local=imported_objects)

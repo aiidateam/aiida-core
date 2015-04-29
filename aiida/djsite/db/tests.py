@@ -35,7 +35,7 @@ for test in set(tests_to_run):
     except KeyError:
         print >> sys.stderr, "Unknown DB test {}... skipping".format(test)
         continue
-    
+
     module = importlib.import_module(modulename)
     for objname, obj in module.__dict__.iteritems():
         if inspect.isclass(obj) and issubclass(obj, unittest.TestCase):
@@ -44,17 +44,17 @@ for test in set(tests_to_run):
             testmethods = [
                 m for m in inspect.getmembers(obj, predicate=inspect.ismethod)
                 if m[0].startswith("test_")]
-            if testmethods: # at least a method starting with test_
+            if testmethods:  # at least a method starting with test_
                 if objname in locals():
                     raise InternalError(
                         "Test class {} defined more than once".format(objname))
                 locals()[objname] = obj
                 num_tests_expected += len(testmethods)
-                #for debug
+                # for debug
                 #print "{} ==> {} ({})".format(modulename, objname, len(testmethods))
     actually_run_tests.append(test)
 
-obj = None # To avoid double runnings of the last test
+obj = None  # To avoid double runnings of the last test
 
 print >> sys.stderr, "DB tests that will be run: {} (expecting {} tests)".format(
     ",".join(actually_run_tests), num_tests_expected)

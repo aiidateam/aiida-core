@@ -19,6 +19,7 @@ group_writable = True
 
 _valid_sections = ['node', 'workflow']
 
+
 class Folder(object):
     """
     A class to manage generic folders, avoiding to get out of
@@ -30,6 +31,7 @@ class Folder(object):
         (or if we want to use os.path.relpath and check for a string starting
         with os.pardir?)
     """
+
     def __init__(self, abspath, folder_limit=None):
         abspath = os.path.abspath(abspath)
         if folder_limit is None:
@@ -37,7 +39,7 @@ class Folder(object):
         folder_limit = os.path.abspath(folder_limit)
 
         # check that it is a subfolder
-        if not os.path.commonprefix([abspath,folder_limit]) == folder_limit:
+        if not os.path.commonprefix([abspath, folder_limit]) == folder_limit:
             raise ValueError("The absolute path for this folder is not within the folder_limit. "
                              "abspath={}, folder_limit={}.".format(abspath, folder_limit))
 
@@ -45,7 +47,7 @@ class Folder(object):
         self._folder_limit = folder_limit
 
     @property
-    def mode_dir(self):        
+    def mode_dir(self):
         """
         Return the mode with which the folders should be created
         """
@@ -53,9 +55,9 @@ class Folder(object):
             return 0o770
         else:
             return 0o700
-        
+
     @property
-    def mode_file(self):        
+    def mode_file(self):
         """
         Return the mode with which the files should be created
         """
@@ -63,7 +65,7 @@ class Folder(object):
             return 0o660
         else:
             return 0o600
-    
+
     def get_subfolder(self, subfolder, create=False, reset_limit=False):
         """
         Return a Folder object pointing to a subfolder.
@@ -80,9 +82,8 @@ class Folder(object):
         :Returns: a Folder object pointing to the subfolder.
         """
         dest_abs_dir = os.path.abspath(os.path.join(
-                self.abspath,unicode(subfolder)))
+            self.abspath, unicode(subfolder)))
 
-        
         if reset_limit:
             # Create a new Folder object, with a limit to itself (cannot go
             # back to this folder)
@@ -91,15 +92,15 @@ class Folder(object):
             # Create a new Folder object, with the same limit of the parent
             folder_limit = self.folder_limit
 
-        new_folder = Folder(abspath=dest_abs_dir, 
-                            folder_limit = folder_limit)
-        
+        new_folder = Folder(abspath=dest_abs_dir,
+                            folder_limit=folder_limit)
+
         if create:
             new_folder.create()
-            
+
         return new_folder
-    
-    def get_content_list(self,pattern='*',only_paths = True):
+
+    def get_content_list(self, pattern='*', only_paths=True):
         """
         Return a list of files (and subfolders) in the folder,
         matching a given pattern.
@@ -119,12 +120,12 @@ class Folder(object):
             directory.
         """
         file_list = [fname for fname in os.listdir(self.abspath)
-                if fnmatch.fnmatch(fname, pattern)]
+                     if fnmatch.fnmatch(fname, pattern)]
 
         if only_paths:
             return file_list
         else:
-            return [(fname,not os.path.isdir(os.path.join(self.abspath, fname))) 
+            return [(fname, not os.path.isdir(os.path.join(self.abspath, fname)))
                     for fname in file_list]
 
     def create_symlink(self, src, name):
@@ -138,11 +139,11 @@ class Folder(object):
         :param name: the filename of the symlink to be created.
         """
         dest_abs_path = self.get_abs_path(name)
-        os.symlink(src,dest_abs_path)
-        
+        os.symlink(src, dest_abs_path)
+
         # For symlinks, permissions should not be set
 
-    def insert_path(self,src,dest_name=None,overwrite=True):
+    def insert_path(self, src, dest_name=None, overwrite=True):
         """
         Copy a file to the folder.
         
@@ -157,7 +158,7 @@ class Folder(object):
         else:
             filename = unicode(dest_name)
 
-        if not isinstance(src,unicode):
+        if not isinstance(src, unicode):
             src = unicode(src)
 
         # I get the full path of the filename, checking also that I don't
@@ -170,7 +171,7 @@ class Folder(object):
         # In this way, the destination is always correct (i.e., if I copy to a
         # folder, I point to the correct location inside it)
         if os.path.isdir(dest_abs_path):
-            dest_abs_path = os.path.join(dest_abs_path,os.path.basename(src))
+            dest_abs_path = os.path.join(dest_abs_path, os.path.basename(src))
 
         if os.path.isfile(src):
             if os.path.exists(dest_abs_path):
@@ -180,12 +181,12 @@ class Folder(object):
                     else:
                         os.remove(dest_abs_path)
                     # This automatically overwrites files
-                    shutil.copyfile(src,dest_abs_path)
+                    shutil.copyfile(src, dest_abs_path)
                 else:
                     raise IOError("destination already exists: {}".format(
                         os.path.join(dest_abs_path)))
             else:
-                shutil.copyfile(src,dest_abs_path)
+                shutil.copyfile(src, dest_abs_path)
         elif os.path.isdir(src):
             if os.path.exists(dest_abs_path):
                 if overwrite:
@@ -194,18 +195,18 @@ class Folder(object):
                     else:
                         os.remove(dest_abs_path)
                     # This automatically overwrites files
-                    shutil.copytree(src,dest_abs_path)
+                    shutil.copytree(src, dest_abs_path)
                 else:
                     raise IOError("destination already exists: {}".format(
                         os.path.join(dest_abs_path)))
             else:
-                shutil.copytree(src,dest_abs_path)
+                shutil.copytree(src, dest_abs_path)
         else:
             raise ValueError("insert_path can only insert files or paths, not symlinks or the like")
 
         return dest_abs_path
 
-    def create_file_from_filelike(self,src_filelike,dest_name):
+    def create_file_from_filelike(self, src_filelike, dest_name):
         """
         Create a file from a file-like object.
 
@@ -223,7 +224,7 @@ class Folder(object):
         # go beyond the folder limits
         dest_abs_path = self.get_abs_path(filename)
 
-        with open(dest_abs_path,'w') as f:
+        with open(dest_abs_path, 'w') as f:
             shutil.copyfileobj(src_filelike, f)
 
         # Set the mode
@@ -231,7 +232,7 @@ class Folder(object):
 
         return dest_abs_path
 
-    def remove_path(self,filename):
+    def remove_path(self, filename):
         """
         Remove a file or folder from the folder.
         
@@ -239,7 +240,7 @@ class Folder(object):
         """
         # I get the full path of the filename, checking also that I don't
         # go beyond the folder limits
-        dest_abs_path = self.get_abs_path(filename,check_existence=True)
+        dest_abs_path = self.get_abs_path(filename, check_existence=True)
 
         if os.path.isdir(dest_abs_path):
             shutil.rmtree(dest_abs_path)
@@ -247,8 +248,7 @@ class Folder(object):
             os.remove(dest_abs_path)
 
 
-
-    def get_abs_path(self,relpath,check_existence=False):
+    def get_abs_path(self, relpath, check_existence=False):
         """
         Return an absolute path for a file or folder in this folder.
         
@@ -263,9 +263,9 @@ class Folder(object):
         """
         if os.path.isabs(relpath):
             raise ValueError("relpath must be a relative path")
-        dest_abs_path = os.path.join(self.abspath,relpath)
-        
-        if not os.path.commonprefix([dest_abs_path,self.folder_limit]) == self.folder_limit:
+        dest_abs_path = os.path.join(self.abspath, relpath)
+
+        if not os.path.commonprefix([dest_abs_path, self.folder_limit]) == self.folder_limit:
             errstr = "You didn't specify a valid filename: {}".format(relpath)
             raise ValueError(errstr)
 
@@ -273,7 +273,7 @@ class Folder(object):
             if not os.path.exists(dest_abs_path):
                 raise OSError("{} does not exist within the folder {}".format(
                     relpath, self.abspath))
-        
+
         return dest_abs_path
 
 
@@ -314,7 +314,7 @@ class Folder(object):
         """
         return os.path.isdir(os.path.join(self.abspath, relpath))
 
-    def erase(self,create_empty_folder=False):
+    def erase(self, create_empty_folder=False):
         """
         Erases the folder. Should be called only in very specific cases,
         in general folder should not be erased!
@@ -341,7 +341,7 @@ class Folder(object):
         """
         if not self.exists():
             os.makedirs(self.abspath, mode=self.mode_dir)
-        
+
 
     def replace_with_folder(self, srcdir, move=False, overwrite=False):
         """
@@ -377,10 +377,10 @@ class Folder(object):
             os.makedirs(pardir, mode=self.mode_dir)
 
         if move:
-            shutil.move(srcdir,self.abspath)
+            shutil.move(srcdir, self.abspath)
         else:
-            shutil.copytree(srcdir,self.abspath)
-        
+            shutil.copytree(srcdir, self.abspath)
+
         # Set the mode also for the current dir, recursively
         for dirpath, dirnames, filenames in os.walk(self.abspath,
                                                     followlinks=False):
@@ -394,8 +394,7 @@ class Folder(object):
                 full_file_path = os.path.join(dirpath, f)
                 if not os.path.islink(full_file_path):
                     os.chmod(full_file_path, self.mode_file)
-        
-        
+
 
 class SandboxFolder(Folder):
     """
@@ -411,6 +410,7 @@ class SandboxFolder(Folder):
 
     .. todo:: Implement check of whether the folder has been removed.
     """
+
     def __init__(self):
         """
         Initializes the object by creating a new temporary folder in the 
@@ -423,7 +423,7 @@ class SandboxFolder(Folder):
 
         abspath = tempfile.mkdtemp(dir=sandbox)
         super(SandboxFolder, self).__init__(abspath=abspath)
-       
+
     def __enter__(self):
         """
         Called when entering in the with statement
@@ -435,18 +435,19 @@ class SandboxFolder(Folder):
         In exit, I remove the sandbox folder from disk, if it still exists
         """
         self.erase()
- 
+
 
 class RepositoryFolder(Folder):
     """
     A class to manage the local AiiDA repository folders.
     """
+
     def __init__(self, section, uuid, subfolder=os.curdir):
         """
         Initializes the object by pointing it to a folder in the repository.
 
         Pass the uuid as a string.
-        """    
+        """
         if section not in _valid_sections:
             retstr = ("Repository section '{}' not allowed. "
                       "Valid sections are: {}".format(section, ",".join(_valid_sections)))
@@ -461,13 +462,13 @@ class RepositoryFolder(Folder):
         # Note that a similar sharding should probably has to be done
         # independently for calculations sent to remote computers in the
         # execmanager.
-        entity_dir=os.path.abspath(os.path.join(
-            get_repository_folder('repository'), unicode(section), 
+        entity_dir = os.path.abspath(os.path.join(
+            get_repository_folder('repository'), unicode(section),
             unicode(uuid)[:2], unicode(uuid)[2:4], unicode(uuid)[4:]))
-        dest = os.path.abspath(os.path.join(entity_dir,unicode(subfolder)))
+        dest = os.path.abspath(os.path.join(entity_dir, unicode(subfolder)))
 
         # Internal variable of this class 
-        self._subfolder=subfolder
+        self._subfolder = subfolder
 
         # This will also do checks on the folder limits
         super(RepositoryFolder, self).__init__(abspath=dest, folder_limit=entity_dir)
@@ -497,10 +498,11 @@ class RepositoryFolder(Folder):
         """
         Returns the top directory, i.e., the section/uuid folder object.
         """
-        return RepositoryFolder(self.section,self.uuid)
+        return RepositoryFolder(self.section, self.uuid)
 
 
-    # NOTE! The get_subfolder method will return a Folder object, and not a RepositoryFolder object
+        # NOTE! The get_subfolder method will return a Folder object, and not a RepositoryFolder object
+
 
 if __name__ == "__main__":
     # .. todo:: implement tests here

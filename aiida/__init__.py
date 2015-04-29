@@ -7,11 +7,13 @@ __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
 __paper__ = """G. Pizzi, A. Cepellotti, R. Sabatini, N. Marzari, and B. Kozinsky, "AiiDA: Automated Interactive Infrastructure and Database for Computational Science", arXiv:1504.01163 (2015); http://www.aiida.net."""
 
+
 def get_version():
     """
     Very simple function to get a string with the version number.
     """
     return __version__
+
 
 def get_file_header():
     """
@@ -21,4 +23,4 @@ def get_file_header():
 #  
 # If you use AiiDA for publication purposes, please cite:
 # {} 
-""".format(__version__,__paper__)
+""".format(__version__, __paper__)

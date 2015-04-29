@@ -8,11 +8,13 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi"
 
+
 class CifcellcontentsParser(BaseCodtoolsParser):
     """
     Specific parser for the output of cif_cell_contents script.
     """
-    def __init__(self,calc):
+
+    def __init__(self, calc):
         """
         Initialize the instance of CiffilterParser
         """
@@ -26,13 +28,14 @@ class CifcellcontentsParser(BaseCodtoolsParser):
         """
         from aiida.orm.data.parameter import ParameterData
         import re
+
         formulae = {}
         if output_path is not None:
             with open(output_path) as f:
                 content = f.readlines()
             content = [x.strip('\n') for x in content]
             for line in content:
-                datablock,formula = re.split('\s+',line,1)
+                datablock, formula = re.split('\s+', line, 1)
                 formulae[datablock] = formula
 
         messages = []
@@ -45,8 +48,8 @@ class CifcellcontentsParser(BaseCodtoolsParser):
         output_nodes = []
         output_nodes.append(('formulae',
                              ParameterData(dict={'formulae':
-                                                 formulae})))
+                                                     formulae})))
         output_nodes.append(('messages',
                              ParameterData(dict={'output_messages':
-                                                 messages})))
+                                                     messages})))
         return output_nodes

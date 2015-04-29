@@ -7,11 +7,12 @@ from django.utils import unittest
 from aiida.orm import Node
 from aiida.common.exceptions import ModificationNotAllowed, UniquenessError
 from aiida.djsite.db.testbase import AiidaTestCase
-        
+
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
+
 
 def pre_encoder(data):
     """
@@ -22,7 +23,7 @@ def pre_encoder(data):
     that when decoding and finding a string, one can understand if it is a 
     date or a string by reading the first character.
     """
-    import datetime,pytz
+    import datetime, pytz
 
     if isinstance(data, (list, tuple)):
         return [pre_encoder(_) for _ in data]
@@ -36,6 +37,7 @@ def pre_encoder(data):
         return data.astimezone(pytz.utc).strftime('D%Y-%m-%dT%H:%M:%S.%f+0000')
     else:
         return data
+
 
 def post_decoder(data):
     """
@@ -51,21 +53,23 @@ def post_decoder(data):
             return data[1:]
         elif data.startswith("D"):
             # It is a date
-            
+
             # OLD implementation: it also includes the check of the timezone
             # but requires a new dependency of AiiDA on dateutil: 
             # that would need to be added in the requirements.txt
-            #import dateutil.parser
+            # import dateutil.parser
             #return dateutil.parser.parse(data[1:])
-            
+
             # New one lacks time zone, but it should be enough for the test
             import time
-            return time.strptime(data[1:],"%Y-%m-%dT%H:%M:%S.%f+0000")
+
+            return time.strptime(data[1:], "%Y-%m-%dT%H:%M:%S.%f+0000")
         else:
             # Strange encoding char, error!
             raise ValueError("Unknown encode character! ({})".format(data[:1]))
     else:
         return data
+
 
 def serialize_dict(dictionary, f):
     """
@@ -73,7 +77,9 @@ def serialize_dict(dictionary, f):
     pre_encoder
     """
     import json
+
     return json.dump(pre_encoder(dictionary), f, indent=2)
+
 
 def deserialize_dict(f):
     """
@@ -81,7 +87,9 @@ def deserialize_dict(f):
     post_decoder before returning.
     """
     import json
+
     return post_decoder(json.load(f))
+
 
 def serialize_node(node, destfolder):
     """
@@ -92,25 +100,26 @@ def serialize_node(node, destfolder):
 
     if os.path.exists(destfolder):
         raise ValueError("Destination folder '{}' "
-            "already exists.".format(destfolder))
+                         "already exists.".format(destfolder))
 
     try:
         os.makedirs(destfolder)
     except OSError:
-        pass # Directory already exists (should actually check for errno=17)
+        pass  # Directory already exists (should actually check for errno=17)
 
     shutil.copytree(node.folder.abspath, os.path.join(destfolder, 'data'))
-    
+
     attributes = dict(node.iterattrs())
-    with open(os.path.join(destfolder,'_aiida_attributes.aiidajson'), 'w') as f:
-        serialize_dict(attributes,f)
-        
+    with open(os.path.join(destfolder, '_aiida_attributes.aiidajson'), 'w') as f:
+        serialize_dict(attributes, f)
+
     nodedata = {f.name: getattr(node.dbnode, f.name)
                 for f in node.dbnode._meta.fields
                 if not isinstance(getattr(node.dbnode, f.name), models.Model)
                 and f.name != 'id'}
-    with open(os.path.join(destfolder,'_aiida_nodedata.aiidajson'), 'w') as f:
-        serialize_dict(nodedata,f)
+    with open(os.path.join(destfolder, '_aiida_nodedata.aiidajson'), 'w') as f:
+        serialize_dict(nodedata, f)
+
 
 def deserialize_node(folder):
     """
@@ -121,10 +130,10 @@ def deserialize_node(folder):
     from aiida.common.pluginloader import load_plugin
     from aiida.common.exceptions import DbContentError, MissingPluginError
 
-    with open(os.path.join(folder,'_aiida_attributes.aiidajson')) as f:
+    with open(os.path.join(folder, '_aiida_attributes.aiidajson')) as f:
         attributes = deserialize_dict(f)
 
-    with open(os.path.join(folder,'_aiida_nodedata.aiidajson')) as f:
+    with open(os.path.join(folder, '_aiida_nodedata.aiidajson')) as f:
         nodedata = deserialize_dict(f)
 
     try:
@@ -138,24 +147,25 @@ def deserialize_node(folder):
     except MissingPluginError:
         raise DbContentError("Unable to find plugin for type '{}' (uuid={}), "
                              "will use base Node class".format(
-                            nodedata['type'], nodedata['uuid']))
+            nodedata['type'], nodedata['uuid']))
         PluginClass = Node
-        
+
     n = PluginClass()
 
     for k, v in nodedata.iteritems():
         if k != 'type':
             setattr(n._dbnode, k, v)
-        
+
     for k, v in attributes.iteritems():
         n._set_attr(k, v)
-                
+
     # Fully replace the directory
     shutil.rmtree(n.folder.abspath)
     src = os.path.abspath(os.path.join(folder, 'data'))
     shutil.copytree(src, n.folder.abspath)
 
     return n
+
 
 def output_test(pk, outfolder):
     """
@@ -170,70 +180,73 @@ def output_test(pk, outfolder):
     from aiida.orm import JobCalculation
     import os
     import json
+
     if os.path.exists(outfolder):
         raise ValueError("Out folder '{}' already exists".format(outfolder))
 
     c = JobCalculation.get_subclass_from_pk(pk)
     inputs = c.get_inputs_dict()
-    serialize_node(c, destfolder=os.path.join(outfolder,c.uuid))
-    
+    serialize_node(c, destfolder=os.path.join(outfolder, c.uuid))
+
     for n in inputs.itervalues():
-        serialize_node(n, destfolder=os.path.join(outfolder,n.uuid))
-    
+        serialize_node(n, destfolder=os.path.join(outfolder, n.uuid))
+
     linkname = c._get_linkname_retrieved()
     # Should instead get all retrieved nodes, see the calcinfo!
     retrieved = c.get_outputs_dict()[linkname]
-    serialize_node(retrieved, destfolder=os.path.join(outfolder,retrieved.uuid))
+    serialize_node(retrieved, destfolder=os.path.join(outfolder, retrieved.uuid))
 
     links = {'calc': c.uuid,
-         'inputs': {k: v.uuid for k, v in inputs.iteritems()},
-         'retrieved': {'uuid': retrieved.uuid, 'linkname': linkname}}
+             'inputs': {k: v.uuid for k, v in inputs.iteritems()},
+             'retrieved': {'uuid': retrieved.uuid, 'linkname': linkname}}
 
-    with open(os.path.join(outfolder,'_aiida_linkdata.json'), 'w') as f:
-        json.dump(links,f,indent=2)
+    with open(os.path.join(outfolder, '_aiida_linkdata.json'), 'w') as f:
+        json.dump(links, f, indent=2)
 
     # Create an empty checks file
-    with open(os.path.join(outfolder,'_aiida_checks.json'), 'w') as f:
-        json.dump({},f)
+    with open(os.path.join(outfolder, '_aiida_checks.json'), 'w') as f:
+        json.dump({}, f)
 
-    for path,dirlist,filelist in os.walk(outfolder):
+    for path, dirlist, filelist in os.walk(outfolder):
         if len(dirlist) == 0 and len(filelist) == 0:
             with open("{}/.gitignore".format(path), 'w') as f:
                 f.write("# This is a placeholder file, used to make git "
                         "store an empty folder")
                 f.flush()
-        
+
+
 def read_test(outfolder):
     """
     Read a test folder created by output_test
     """
     import os
     import json
-    
-    with open(os.path.join(outfolder,'_aiida_linkdata.json')) as f:
+
+    with open(os.path.join(outfolder, '_aiida_linkdata.json')) as f:
         linkdata = json.load(f)
 
-    calc = deserialize_node(os.path.join(outfolder,linkdata['calc']))
+    calc = deserialize_node(os.path.join(outfolder, linkdata['calc']))
     inputs = {}
     for k, v in linkdata['inputs'].iteritems():
         inputs[k] = deserialize_node(os.path.join(outfolder, v))
     retrieved = deserialize_node(os.path.join(outfolder,
-        linkdata['retrieved']['uuid']))
+                                              linkdata['retrieved']['uuid']))
 
     retrieved._add_link_from(calc, label=linkdata['retrieved']['linkname'])
     for inputname, inputnode in inputs.iteritems():
         calc._add_link_from(inputnode, label=inputname)
-    
+
     try:
-        with open(os.path.join(outfolder,'_aiida_checks.json')) as f:
+        with open(os.path.join(outfolder, '_aiida_checks.json')) as f:
             tests = json.load(f)
     except IOError:
         raise ValueError("This test does not provide a check file!")
     except ValueError:
         raise ValueError("This test does provide a check file, but it cannot "
                          "be JSON-decoded!")
-    
+
     return calc, {linkdata['retrieved']['linkname']: retrieved}, tests
+
 
 def is_valid_folder_name(name):
     """
@@ -242,16 +255,17 @@ def is_valid_folder_name(name):
     contain only letters, digits or underscores.
     """
     import string
-    
+
     if not name.startswith('test_'):
         return False
-    
+
     # Remove valid characters, see if anything remains
     bad_characters = name.translate(None, string.letters + string.digits + '_')
     if bad_characters:
-        return False    
-    
+        return False
+
     return True
+
 
 class TestParsers(AiidaTestCase):
     """
@@ -261,10 +275,10 @@ class TestParsers(AiidaTestCase):
     # To have both the "default" error message from assertXXX, and the 
     # msg specified by us
     longMessage = True
-    
+
     @classmethod
     def return_base_test(cls, folder):
-                
+
         def base_test(self):
             calc, retrieved_nodes, tests = read_test(folder)
             Parser = calc.get_parserclass()
@@ -275,15 +289,15 @@ class TestParsers(AiidaTestCase):
                 successful, new_nodes_tuple = parser.parse_with_retrieved(retrieved_nodes)
                 self.assertTrue(successful, msg="The parser did not succeed")
                 parsed_output_nodes = dict(new_nodes_tuple)
-                
+
                 # All main keys: name of nodes that should be present
                 for test_node_name in tests:
                     try:
                         test_node = parsed_output_nodes[test_node_name]
                     except KeyError:
                         raise AssertionError("Output node '{}' expected but "
-                            "not found".format(test_node_name))
-                    
+                                             "not found".format(test_node_name))
+
                     # Each subkey: attribute to check
                     # attr_test is the name of the attribute
                     for attr_test in tests[test_node_name]:
@@ -291,8 +305,8 @@ class TestParsers(AiidaTestCase):
                             dbdata = test_node.get_attr(attr_test)
                         except AttributeError:
                             raise AssertionError("Attribute '{}' not found in "
-                                "parsed node '{}'".format(attr_test,
-                                                          test_node_name))
+                                                 "parsed node '{}'".format(attr_test,
+                                                                           test_node_name))
                         # Test data from the JSON
                         attr_test_data = tests[test_node_name][attr_test]
                         try:
@@ -300,44 +314,45 @@ class TestParsers(AiidaTestCase):
                             value = attr_test_data['value']
                         except TypeError:
                             raise ValueError("Malformed '{}' field in '{}' in "
-                                "the test file".format(attr_test, test_node_name))
+                                             "the test file".format(attr_test, test_node_name))
                         except KeyError as e:
                             raise ValueError("Missing '{}' in the '{}' field "
-                                "in '{}' in "
-                                "the test file".format(e.message,
-                                                       attr_test, test_node_name))
+                                             "in '{}' in "
+                                             "the test file".format(e.message,
+                                                                    attr_test, test_node_name))
                         if comparison == "AlmostEqual":
-                            if isinstance(dbdata,list) and isinstance(value,list):
-                                self.assertEqual(len(dbdata),len(value),
-                                    msg="Failed test for {}->{}".format(
-                                            test_node_name, attr_test))
-                                for i in range(0,len(dbdata)):
-                                    self.assertAlmostEqual(dbdata[i],value[i],
-                                        msg="Failed test for {}->{}".format(
-                                            test_node_name, attr_test))
+                            if isinstance(dbdata, list) and isinstance(value, list):
+                                self.assertEqual(len(dbdata), len(value),
+                                                 msg="Failed test for {}->{}".format(
+                                                     test_node_name, attr_test))
+                                for i in range(0, len(dbdata)):
+                                    self.assertAlmostEqual(dbdata[i], value[i],
+                                                           msg="Failed test for {}->{}".format(
+                                                               test_node_name, attr_test))
                             else:
-                                self.assertAlmostEqual(dbdata,value,
-                                    msg="Failed test for {}->{}".format(
-                                        test_node_name, attr_test))
+                                self.assertAlmostEqual(dbdata, value,
+                                                       msg="Failed test for {}->{}".format(
+                                                           test_node_name, attr_test))
                         elif comparison == "Equal":
-                            self.assertEqual(dbdata,value,
-                                msg="Failed test for {}->{}".format(
-                                    test_node_name, attr_test))
-                        else: 
+                            self.assertEqual(dbdata, value,
+                                             msg="Failed test for {}->{}".format(
+                                                 test_node_name, attr_test))
+                        else:
                             raise ValueError("Unsupported'{}' comparison in "
                                              "the '{}' field in '{}' in "
-                                "the test file".format(comparison,
-                                    attr_test, test_node_name))
-                
+                                             "the test file".format(comparison,
+                                                                    attr_test, test_node_name))
+
         return base_test
-            
+
     class __metaclass__(type):
         """
         Some python black magic to dynamically create tests
         """
+
         def __new__(cls, name, bases, attrs):
             import os
-            
+
             newcls = type.__new__(cls, name, bases, attrs)
 
             file_folder = os.path.split(__file__)[0]
@@ -345,10 +360,9 @@ class TestParsers(AiidaTestCase):
             for f in os.listdir(parser_test_folder):
                 absf = os.path.abspath(os.path.join(parser_test_folder, f))
                 if is_valid_folder_name(f) and os.path.isdir(absf):
-                    function_name = f                    
+                    function_name = f
                     setattr(newcls, function_name,
                             newcls.return_base_test(absf))
-
 
             return newcls
         

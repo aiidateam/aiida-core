@@ -13,7 +13,7 @@ from aiida.scheduler.datastructures import (
 # This maps PbsPro status letters to our own status list
 
 ## List of states from the man page of qstat
-#B  Array job has at least one subjob running.
+# B  Array job has at least one subjob running.
 #E  Job is exiting after having run.
 #F  Job is finished.
 #H  Job is held.
@@ -33,37 +33,39 @@ __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Riccardo Sabatini"
 
 _map_status_pbspro = {
     'B': job_states.RUNNING,
-    'E': job_states.RUNNING, # If exiting, for our purposes it is still running
+    'E': job_states.RUNNING,  # If exiting, for our purposes it is still running
     'F': job_states.DONE,
     'H': job_states.QUEUED_HELD,
-    'M': job_states.UNDETERMINED, # TODO: check if this is ok?
+    'M': job_states.UNDETERMINED,  # TODO: check if this is ok?
     'Q': job_states.QUEUED,
     'R': job_states.RUNNING,
     'S': job_states.SUSPENDED,
-#    'T': job_states., # TODO: what to do here?
+    #    'T': job_states., # TODO: what to do here?
     'U': job_states.SUSPENDED,
     'W': job_states.QUEUED,
     'X': job_states.DONE,
-    }
+}
+
 
 class PbsproJobResource(NodeNumberJobResource):
     pass
+
 
 class PbsproScheduler(aiida.scheduler.Scheduler):
     """
     Support for the PBSPro scheduler (http://www.pbsworks.com/). Should work also with PBS and Torque (http://www.adaptivecomputing.com/products/open-source/torque/).
     """
     _logger = aiida.scheduler.Scheduler._logger.getChild('pbspro')
-    
+
     # Query only by list of jobs and not by user
     _features = {
         'can_query_by_user': False,
-        }
+    }
 
     # The class to be used for the job resource.
     _job_resource_class = PbsproJobResource
 
-    def _get_joblist_command(self,jobs=None,user=None): 
+    def _get_joblist_command(self, jobs=None, user=None):
         """
         The command to report full information on existing jobs.
 
@@ -74,7 +76,7 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
 
         if user:
             raise FeatureNotAvailable("Cannot query by user in SLURM")
-        
+
         command = 'qstat -f'
         if jobs:
             if isinstance(jobs, basestring):
@@ -85,11 +87,11 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
                 except TypeError:
                     raise TypeError(
                         "If provided, the 'jobs' variable must be a string or a list of strings")
-            
+
         self.logger.debug("qstat command: {}".format(command))
         return command
 
-    def _get_detailed_jobinfo_command(self,jobid):
+    def _get_detailed_jobinfo_command(self, jobid):
         """
         Return the command to run to get the detailed information on a job,
         even after the job has finished.
@@ -108,11 +110,11 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
 
         TODO: truncate the title if too long
         """
-        import re 
+        import re
         import string
 
         empty_line = ""
-        
+
         lines = []
         if job_tmpl.submit_as_hold:
             lines.append("#PBS -h")
@@ -126,7 +128,7 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
             # If not specified, but email events are set, PBSPro
             # sends the mail to the job owner by default
             lines.append('#PBS -M {}'.format(job_tmpl.email))
-            
+
         email_events = ""
         if job_tmpl.email_on_started:
             email_events += "b"
@@ -141,7 +143,7 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
                     "the job owner as set in the scheduler")
         else:
             lines.append("#PBS -m n")
-            
+
         if job_tmpl.job_name:
             # From qsub man page:
             # string, up to 15 characters in length.  It must
@@ -158,18 +160,18 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
             # prepend a 'j' (for 'job') before the string if the string
             # is now empty or does not start with a valid charachter
             if not job_title or (
-                job_title[0] not in string.letters + string.digits):
+                        job_title[0] not in string.letters + string.digits):
                 job_title = 'j' + job_title
-            
+
             # Truncate to the first 15 characters 
             # Nothing is done if the string is shorter.
             job_title = job_title[:15]
-            
+
             lines.append("#PBS -N {}".format(job_title))
-            
+
         if job_tmpl.import_sys_environment:
             lines.append("#PBS -V")
-            
+
         if job_tmpl.sched_output_path:
             lines.append("#PBS -o {}".format(job_tmpl.sched_output_path))
 
@@ -191,7 +193,7 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
 
         if job_tmpl.queue_name:
             lines.append("#PBS -q {}".format(job_tmpl.queue_name))
-            
+
         if job_tmpl.priority:
             # Priority of the job.  Format: host-dependent integer.  Default:
             # zero.   Range:  [-1024,  +1023] inclusive.  Sets job's Priority
@@ -203,7 +205,7 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
         if not job_tmpl.job_resource:
             raise ValueError("Job resources (as the num_machines) are required "
                              "for the PBSPro scheduler plugin")
-                    
+
         select_string = "select={}".format(job_tmpl.job_resource.num_machines)
         if job_tmpl.job_resource.num_mpiprocs_per_machine:
             select_string += ":mpiprocs={}".format(job_tmpl.job_resource.num_mpiprocs_per_machine)
@@ -236,7 +238,7 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
                     "a positive integer (in kB)! It is instead '{}'"
                     "".format((job_tmpl.MaxMemoryKb)))
             select_string += ":mem={}kb".format(virtualMemoryKb)
-                
+
         lines.append("#PBS -l {}".format(select_string))
 
         if job_tmpl.custom_scheduler_commands:
@@ -247,7 +249,7 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
         # moreover, I am having issues making it work.
         # Therefore, I assume that this is bash and export variables by
         # and.
-        
+
         if job_tmpl.job_environment:
             lines.append(empty_line)
             lines.append("# ENVIRONMENT VARIABLES BEGIN ###")
@@ -256,8 +258,8 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
                                  "a dictionary")
             for k, v in job_tmpl.job_environment.iteritems():
                 lines.append("export {}={}".format(
-                        k.strip(),
-                        escape_for_bash(v)))
+                    k.strip(),
+                    escape_for_bash(v)))
             lines.append("# ENVIRONMENT VARIABLES  END  ###")
             lines.append(empty_line)
 
@@ -282,7 +284,7 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
         self.logger.info("submitting with: " + submit_command)
 
         return submit_command
-      
+
     def _parse_joblist_output(self, retval, stdout, stderr):
         """
         Parse the queue output string, as returned by executing the
@@ -302,8 +304,8 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
 
         # retval should be zero
         #if retval != 0:
-            #self.logger.warning("Error in _parse_joblist_output: retval={}; "
-            #    "stdout={}; stderr={}".format(retval, stdout, stderr))
+        #self.logger.warning("Error in _parse_joblist_output: retval={}; "
+        #    "stdout={}; stderr={}".format(retval, stdout, stderr))
 
 
         # issue a warning if there is any stderr output
@@ -313,23 +315,24 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
         # I also strip for "Job has finished" because this happens for
         # those schedulers configured to leave the job in the output
         # of qstat for some time after job completion.
-        filtered_stderr = '\n'.join(l for l in stderr.split('\n') if "Unknown Job Id" not in l and "Job has finished" not in l)
+        filtered_stderr = '\n'.join(
+            l for l in stderr.split('\n') if "Unknown Job Id" not in l and "Job has finished" not in l)
         if filtered_stderr.strip():
             self.logger.warning("Warning in _parse_joblist_output, non-empty "
-                "(filtered) stderr='{}'".format(filtered_stderr))
+                                "(filtered) stderr='{}'".format(filtered_stderr))
             if retval != 0:
                 raise SchedulerError(
                     "Error during qstat parsing (_parse_joblist_output function)")
 
-        jobdata_raw = [] # will contain raw data parsed from qstat output
+        jobdata_raw = []  # will contain raw data parsed from qstat output
         # Get raw data and split in lines
-        for line_num, l in enumerate(stdout.split('\n'),start=1):
+        for line_num, l in enumerate(stdout.split('\n'), start=1):
             # Each new job stanza starts with the string 'Job Id:': I 
             # create a new item in the jobdata_raw list
             if l.startswith('Job Id:'):
                 jobdata_raw.append(
-                    {'id': l.split(':',1)[1].strip(),
-                    'lines': []})
+                    {'id': l.split(':', 1)[1].strip(),
+                     'lines': []})
             else:
                 if l.strip():
                     # This is a non-empty line, therefore it is an attribute
@@ -352,8 +355,8 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
                             # stripping the TAB
                             if not jobdata_raw[-1]['lines']:
                                 raise SchedulerParsingError(
-                            "Line {} is the first line of the job, but it "
-                            "starts with a TAB! ({})".format(line_num, l))
+                                    "Line {} is the first line of the job, but it "
+                                    "starts with a TAB! ({})".format(line_num, l))
                             jobdata_raw[-1]['lines'][-1] += l[1:]
                         else:
                             raise SchedulerParsingError(
@@ -367,30 +370,30 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
             this_job.job_id = job['id']
 
             lines_without_equals_sign = [i for i in job['lines']
-                if '=' not in i]
+                                         if '=' not in i]
 
             # There are lines without equals sign: this is bad
             if lines_without_equals_sign:
                 # Should I only warn?
                 self.logger.error("There are lines without equals sign! {}"
-                    "".format(lines_without_equals_sign))
-                raise(SchedulerParsingError("There are lines without equals "
-                                            "sign."))
+                                  "".format(lines_without_equals_sign))
+                raise (SchedulerParsingError("There are lines without equals "
+                                             "sign."))
 
-            raw_data = {i.split('=',1)[0].strip().lower(): 
-                i.split('=',1)[1].lstrip()
-                for i in job['lines'] if '=' in i}
+            raw_data = {i.split('=', 1)[0].strip().lower():
+                            i.split('=', 1)[1].lstrip()
+                        for i in job['lines'] if '=' in i}
 
             # I believe that exit_status and terminating_signal cannot be
             # retrieved from the qstat -f output.
-            
+
             # I wrap calls in try-except clauses to avoid errors if a field
             # is missing
             try:
                 this_job.title = raw_data['job_name']
             except KeyError:
                 self.logger.debug("No 'job_name' field for job id "
-                    "{}".format(this_job.job_id))
+                                  "{}".format(this_job.job_id))
 
             try:
                 this_job.annotation = raw_data['comment']
@@ -399,7 +402,7 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
                 pass
                 #self.logger.debug("No 'comment' field for job id {}".format(
                 #    this_job.job_id))
-            
+
             try:
                 job_state_string = raw_data['job_state']
                 try:
@@ -455,7 +458,7 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
                     self.logger.debug("Problem parsing the node names, I "
                                       "got Exception {} with message {}; "
                                       "exec_hosts was {}".format(
-                            str(type(e)), e.message, exec_hosts))
+                        str(type(e)), e.message, exec_hosts))
 
             try:
                 # I strip the part after the @: is this always ok?
@@ -470,12 +473,12 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
                 #       multithreaded (OpenMP) jobs.
             except KeyError:
                 self.logger.debug("No 'resource_list.ncpus' field for job id "
-                    "{}".format(this_job.job_id))
+                                  "{}".format(this_job.job_id))
             except ValueError:
                 self.logger.warning("'resource_list.ncpus' is not an integer "
                                     "({}) for job id {}!".format(
-                        raw_data['resource_list.ncpus'],
-                        this_job.job_id))
+                    raw_data['resource_list.ncpus'],
+                    this_job.job_id))
 
             try:
                 this_job.num_mpiprocs = int(raw_data['resource_list.mpiprocs'])
@@ -483,27 +486,27 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
                 #       multithreaded (OpenMP) jobs.
             except KeyError:
                 self.logger.debug("No 'resource_list.mpiprocs' field for job id "
-                    "{}".format(this_job.job_id))
+                                  "{}".format(this_job.job_id))
             except ValueError:
                 self.logger.warning("'resource_list.mpiprocs' is not an integer "
                                     "({}) for job id {}!".format(
-                        raw_data['resource_list.mpiprocs'],
-                        this_job.job_id))
+                    raw_data['resource_list.mpiprocs'],
+                    this_job.job_id))
 
             try:
                 this_job.num_machines = int(raw_data['resource_list.nodect'])
             except KeyError:
                 self.logger.debug("No 'resource_list.nodect' field for job id "
-                    "{}".format(this_job.job_id))
+                                  "{}".format(this_job.job_id))
             except ValueError:
                 self.logger.warning("'resource_list.nodect' is not an integer "
                                     "({}) for job id {}!".format(
-                        raw_data['resource_list.nodect'],
-                        this_job.job_id))
+                    raw_data['resource_list.nodect'],
+                    this_job.job_id))
 
             # Double check of redundant info
-            if (this_job.allocated_machines is not None and 
-                this_job.num_machines is not None):
+            if (this_job.allocated_machines is not None and
+                        this_job.num_machines is not None):
                 if len(this_job.allocated_machines) != this_job.num_machines:
                     self.logger.error("The length of the list of allocated "
                                       "nodes ({}) is different from the "
@@ -514,17 +517,17 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
                 this_job.queue_name = raw_data['queue']
             except KeyError:
                 self.logger.debug("No 'queue' field for job id "
-                    "{}".format(this_job.job_id))
+                                  "{}".format(this_job.job_id))
 
             try:
                 this_job.RequestedWallclockTime = (self._convert_time(
                     raw_data['resource_list.walltime']))
             except KeyError:
                 self.logger.debug("No 'resource_list.walltime' field for "
-                    "job id {}".format(this_job.job_id))
+                                  "job id {}".format(this_job.job_id))
             except ValueError:
                 self.logger.warning("Error parsing 'resource_list.walltime' "
-                    "for job id {}".format(this_job.job_id))
+                                    "for job id {}".format(this_job.job_id))
 
             try:
                 this_job.wallclock_time_seconds = (self._convert_time(
@@ -534,7 +537,7 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
                 pass
             except ValueError:
                 self.logger.warning("Error parsing 'resources_used.walltime' "
-                    "for job id {}".format(this_job.job_id))
+                                    "for job id {}".format(this_job.job_id))
 
             try:
                 this_job.cpu_time = (self._convert_time(
@@ -544,7 +547,7 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
                 pass
             except ValueError:
                 self.logger.warning("Error parsing 'resources_used.cput' "
-                    "for job id {}".format(this_job.job_id))
+                                    "for job id {}".format(this_job.job_id))
 
             #
             # ctime: The time that the job was created
@@ -560,10 +563,10 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
                     raw_data['ctime'])
             except KeyError:
                 self.logger.debug("No 'ctime' field for job id "
-                    "{}".format(this_job.job_id))
+                                  "{}".format(this_job.job_id))
             except ValueError:
                 self.logger.warning("Error parsing 'ctime' for job id "
-                    "{}".format(this_job.job_id))
+                                    "{}".format(this_job.job_id))
 
             try:
                 this_job.dispatch_time = self._parse_time_string(
@@ -573,8 +576,8 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
                 pass
             except ValueError:
                 self.logger.warning("Error parsing 'stime' for job id "
-                    "{}".format(this_job.job_id))
-            
+                                    "{}".format(this_job.job_id))
+
             # TODO: see if we want to set also finish_time for finished jobs,
             # if there are any
 
@@ -586,16 +589,16 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
 
         return job_list
 
-    def _convert_time(self,string):
+    def _convert_time(self, string):
         """
         Convert a string in the format HH:MM:SS to a number of seconds.
         """
         pieces = string.split(':')
         if len(pieces) != 3:
             self.logger.warning("Wrong number of pieces (expected 3) for "
-                "time string {}".format(string))
+                                "time string {}".format(string))
             raise ValueError("Wrong number of pieces for time string.")
-        
+
         try:
             hours = int(pieces[0])
             if hours < 0:
@@ -622,11 +625,11 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
             self.logger.warning("Not a valid number of seconds: {}".format(
                 pieces[2]))
             raise ValueError("Not a valid number of seconds.")
-        
+
         return hours * 3600 + mins * 60 + secs
 
 
-    def _parse_time_string(self,string,fmt='%a %b %d %H:%M:%S %Y'):
+    def _parse_time_string(self, string, fmt='%a %b %d %H:%M:%S %Y'):
         """
         Parse a time string in the format returned from qstat -f and
         returns a datetime object.
@@ -634,10 +637,10 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
         import time, datetime
 
         try:
-            time_struct = time.strptime(string,fmt)
+            time_struct = time.strptime(string, fmt)
         except Exception as e:
             self.logger.debug("Unable to parse time string {}, the message "
-                "was {}".format(string, e.message))
+                              "was {}".format(string, e.message))
             raise ValueError("Problem parsing the time string.")
 
         # I convert from a time_struct to a datetime object going through
@@ -656,16 +659,16 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
         """
         if retval != 0:
             self.logger.error("Error in _parse_submit_output: retval={}; "
-                "stdout={}; stderr={}".format(retval, stdout, stderr))
+                              "stdout={}; stderr={}".format(retval, stdout, stderr))
             raise SchedulerError("Error during submission, retval={}\n"
                                  "stdout={}\nstderr={}".format(
                 retval, stdout, stderr))
 
         if stderr.strip():
             self.logger.warning("in _parse_submit_output for {}: "
-                "there was some text in stderr: {}".format(
-                    str(self.transport),stderr))
-        
+                                "there was some text in stderr: {}".format(
+                str(self.transport), stderr))
+
         return stdout.strip()
 
     def _get_kill_command(self, jobid):
@@ -689,17 +692,17 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
         """
         if retval != 0:
             self.logger.error("Error in _parse_kill_output: retval={}; "
-                "stdout={}; stderr={}".format(retval, stdout, stderr))
+                              "stdout={}; stderr={}".format(retval, stdout, stderr))
             return False
 
         if stderr.strip():
             self.logger.warning("in _parse_kill_output for {}: "
-                "there was some text in stderr: {}".format(
-                    str(self.transport),stderr))
+                                "there was some text in stderr: {}".format(
+                str(self.transport), stderr))
 
         if stdout.strip():
             self.logger.warning("in _parse_kill_output for {}: "
-                "there was some text in stdout: {}".format(
-                    str(self.transport),stdout))
+                                "there was some text in stdout: {}".format(
+                str(self.transport), stdout))
 
         return True

@@ -578,7 +578,7 @@ class Node(object):
             
             self._inputlinks_cache[label] = src
 
-    def _remove_link_from(self, src, label):
+    def _remove_link_from(self, label):
         """
         Remove from the DB the input link with the given label.
         :note: In subclasses, change only this. Moreover, remember to call
@@ -586,7 +586,6 @@ class Node(object):
         
         :note: No error is raised if the link does not exist.
         
-        :param src: the source object
         :param str label: the name of the label to set the link from src.
         """
         # Try to remove from the local cache, no problem if none is present

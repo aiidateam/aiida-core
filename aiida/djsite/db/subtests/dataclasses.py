@@ -1462,6 +1462,74 @@ class TestStructureDataFromAse(AiidaTestCase):
                                                      'Cu', 'Cu'])
         self.assertEquals(list(b.get_tags()), [0, 1, 0, 2, 3, 4, 5, 6])
 
+class TestStructureDataFromPymatgen(AiidaTestCase):
+    """
+    Tests the creation of StructureData from a pymatgen Structure object.
+    """
+    from aiida.orm.data.structure import has_pymatgen
+
+    @unittest.skipIf(not has_pymatgen(),"Unable to import pymatgen")
+    def test_1(self):
+        """
+        Test's imput is derived from COD entry 9011963, processed with
+        cif_mark_disorder (from cod-tools) and abbreviated.
+        """
+        from aiida.orm.data.structure import StructureData
+        from pymatgen.io.smartio import read_structure
+
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(suffix=".cif") as f:
+            f.write("""data_9011963
+                _space_group_IT_number           166
+                _symmetry_space_group_name_Hall  '-R 3 2"'
+                _symmetry_space_group_name_H-M   'R -3 m :H'
+                _cell_angle_alpha                90
+                _cell_angle_beta                 90
+                _cell_angle_gamma                120
+                _cell_length_a                   4.298
+                _cell_length_b                   4.298
+                _cell_length_c                   29.774
+                loop_
+                _atom_site_label
+                _atom_site_fract_x
+                _atom_site_fract_y
+                _atom_site_fract_z
+                _atom_site_occupancy
+                _atom_site_U_iso_or_equiv
+                _atom_site_disorder_assembly
+                _atom_site_disorder_group
+                Bi 0.00000 0.00000 0.39580 1.00000 0.02343 . .
+                Te1 0.00000 0.00000 0.00000 0.66667 0.02343 A 1
+                Se1 0.00000 0.00000 0.00000 0.33333 0.02343 A 2
+                Te2 0.00000 0.00000 0.21180 0.66667 0.02343 B 1
+                Se2 0.00000 0.00000 0.21180 0.33333 0.02343 B 2
+                """)
+            f.flush()
+            pymatgen_struct = read_structure(f.name)
+
+        struct = StructureData(pymatgen_structure=pymatgen_struct)
+        self.assertEquals(struct.get_site_kindnames(),
+                          ['Bi','Bi','SeTe','SeTe','SeTe'])
+        self.assertEquals([x.symbols for x in struct.kinds],
+                          [('Bi',),('Se','Te')])
+        self.assertEquals([x.weights for x in struct.kinds],
+                          [(1.0,),(0.33333,0.66667)])
+
+        # Testing pymatgen Structure -> StructureData -> pymatgen Structure
+        # roundtrip.
+
+        pymatgen_struct_roundtrip = struct.get_pymatgen_structure()
+        dict1 = pymatgen_struct.to_dict
+        dict2 = pymatgen_struct_roundtrip.to_dict
+
+        # Removing site coordinates in order to prevent rounding errors
+        # from causing test failures.
+        for i in dict1['sites']:
+            i.pop('abc')
+        for i in dict2['sites']:
+            i.pop('abc')
+        self.assertEquals(dict1,dict2)
 
 class TestArrayData(AiidaTestCase):
     """

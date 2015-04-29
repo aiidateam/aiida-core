@@ -807,6 +807,22 @@ class StructureData(Data):
             asecell.append(site.get_ase(kinds=_kinds))
         return asecell
 
+    def get_pymatgen_structure(self):
+        """
+        Get the pymatgen Structure object.
+        Requires to be able to import pymatgen.
+
+        :return: a pymatgen object corresponding to this StructureData object.
+        """
+        from pymatgen.core.structure import Structure
+        species = [{self.get_kind(x.kind_name).symbols[i]:
+                    self.get_kind(x.kind_name).weights[i]
+                    for i in range(0,len(self.get_kind(x.kind_name).symbols))}
+                    for x in self.sites]
+        positions = [list(x.position) for x in self.sites]
+        return Structure(self.cell,species,positions,
+                         coords_are_cartesian=True)
+
     def append_kind(self,kind):
         """
         Append a kind to the StructureData. It makes a copy of the kind.

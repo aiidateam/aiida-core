@@ -193,13 +193,31 @@ def _get_aiida_structure_ase_inline(cif=None,parameters=None):
     """
     Creates :py:class:`aiida.orm.data.structure.StructureData` using ASE.
 
-    :note: requires ASE module.
+    .. note:: unable to correctly import structures of alloys.
+    .. note:: requires ASE module.
     """
     from aiida.orm.data.structure import StructureData
     kwargs = {}
     if parameters is not None:
         kwargs = parameters.get_dict()
     return {'structure': StructureData(ase=cif.get_ase(**kwargs))}
+
+@optional_inline
+def _get_aiida_structure_pymatgen_inline(cif=None,parameters=None):
+    """
+    Creates :py:class:`aiida.orm.data.structure.StructureData` using
+    pymatgen.
+
+    .. note:: requires pymatgen module.
+    """
+    from pymatgen.io.cifio import CifParser
+    from aiida.orm.data.structure import StructureData
+    kwargs = {}
+    if parameters is not None:
+        kwargs = parameters.get_dict()
+    parser = CifParser(cif.get_file_abs_path())
+    struct = parser.get_structures(**kwargs)[0]
+    return {'structure': StructureData(pymatgen_structure=struct)}
 
 def cif_from_ase(ase,full_occupancies=False,add_fake_biso=False):
     """

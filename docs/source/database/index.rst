@@ -334,23 +334,23 @@ How to move the physical location of a database
 +++++++++++++++++++++++++++++++++++++++++++++++
 
 It might happen that you need to move the physical location of the database
-files on your hard-drive (for instance due to a lack of space in the partition 
-where it is located). Below we explain how to do it.
+files on your hard-drive (for instance, due to the lack of space in the
+partition where it is located). Below we explain how to do it.
 
 .. _move_postgresql:
 
 PostgreSQL move
 ---------------
 
-First, make sure you have a backup of the full database (see instructions :ref:`here<backup_postgresql>`),
-and that the AiiDA daemon is not running.
+First, make sure you have a backup of the full database (see instructions
+:ref:`here<backup_postgresql>`), and that the AiiDA daemon is not running.
 Then, become the UNIX ``postgres`` user, typing as root::
 
   su - postgres
   
-(or equivalently type ``sudo su - postgres``, depending on your distribution).
+(or, equivalently, type ``sudo su - postgres``, depending on your distribution).
 
-Stop the postgres database::
+Stop the postgres database daemon::
 
   service postgresql stop
   
@@ -358,28 +358,28 @@ Then enter the postgres shell::
 
   psql
 
-and look for the current location of the data::
+and look for the current location of the data directory::
 
   SHOW data_directory;
 
 Typically you should get something like ``/var/lib/postgresql/9.1/main``.
-Then exit the shell with ``\q``, go in this directory and copy all the 
+Then exit the shell with ``\q``, go to this directory and copy all the
 files to the new directory::
 
   cp -a SOURCE_DIRECTORY DESTINATION_DIRECTORY
 
-where SOURCE_DIRECTORY is the directory you got from the 
-``SHOW data_directory;`` command, and DESTINATION_DIRECTORY the new directory
-for the database files.
+where ``SOURCE_DIRECTORY`` is the directory you got from the
+``SHOW data_directory;`` command, and ``DESTINATION_DIRECTORY`` is the new
+directory for the database files.
 
 Make sure the permissions, owner and group are the same in the old and new directory
-(including one level above DESTINATION_DIRECTORY). The owner and group 
+(including all levels above the ``DESTINATION_DIRECTORY``). The owner and group
 should be both ``postgres``, at the notable exception of some symbolic links in
 ``server.crt`` and ``server.key``.
 
 .. note :: If the permissions of these links need to be changed, use the ``-h``
-  option of ``chown`` to avoid changing the permissions of the destination of the 
-  links. In case you changed the permission of the links destination by 
+  option of ``chown`` to avoid changing the permissions of the destination of the
+  links. In case you have changed the permission of the links destination by
   mistake, they should typically be (beware that this might depend on your 
   actual distribution!)::
 
@@ -396,11 +396,11 @@ Make a backup version of this file, then look for the line defining
 
    data_directory = 'NEW_DATA_DIRECTORY'
 
-Then start again the database::
+Then start again the database daemon::
 
   service postgresql start
 
-You can check the data directory has indeed changed::
+You can check that the data directory has indeed changed::
 
   psql
   SHOW data_directory;
@@ -409,4 +409,4 @@ You can check the data directory has indeed changed::
 Before removing definitely the previous location of the database files, 
 first rename it and test AiiDA with the new database location (e.g. do simple
 queries like ``verdi code list`` or create a node and store it). If 
-everything went one find you can delete the old database location.
+everything went fine, you can delete the old database location.

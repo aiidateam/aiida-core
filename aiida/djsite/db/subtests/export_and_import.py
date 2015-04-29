@@ -62,6 +62,9 @@ class TestPort(AiidaTestCase):
                 self.assertEquals(attrs[uuid][k],node.get_attr(k))
 
     def test_2(self):
+        """
+        Test the check for the export format version.
+        """
         from aiida.cmdline.commands.exportfile import export
         from aiida.cmdline.commands.importfile import import_file
         import json
@@ -94,3 +97,46 @@ class TestPort(AiidaTestCase):
 
         with self.assertRaises(ValueError):
             import_file(filename,silent=True)
+
+    def test_3(self):
+        """
+        Test importing of nodes, that have links to unknown nodes.
+        """
+        from aiida.cmdline.commands.exportfile import export
+        from aiida.cmdline.commands.importfile import import_file
+        import json
+        import tarfile
+        from tarfile import TarInfo
+
+        StructureData = DataFactory('structure')
+        sd = StructureData()
+        sd.store()
+
+        s = SandboxFolder()
+        filename = os.path.join(s.abspath,"export.tar.gz")
+        export([sd.dbnode],outfile=filename,silent=True)
+
+        unpack = SandboxFolder()
+        with tarfile.open(filename, "r:gz", format=tarfile.PAX_FORMAT) as tar:
+            tar.extractall(unpack.abspath)
+
+        with open(unpack.get_abs_path('data.json'),'r') as f:
+            metadata = json.load(f)
+        metadata['links_uuid'].append({
+            'output': sd.uuid,
+            'input': 'non-existing-uuid',
+            'label': 'parent'
+        })
+        with open(unpack.get_abs_path('data.json'),'w') as f:
+            json.dump(metadata,f)
+
+        with tarfile.open(filename, "w:gz", format=tarfile.PAX_FORMAT) as tar:
+            tar.add(unpack.abspath,arcname="")
+
+        self.tearDownClass()
+        self.setUpClass()
+
+        with self.assertRaises(ValueError):
+            import_file(filename,silent=True)
+
+        import_file(filename,ignore_unknown_nodes=True,silent=True)

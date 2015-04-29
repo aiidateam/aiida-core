@@ -203,7 +203,8 @@ def extract_tree(infile,folder,silent=False):
 
     os.path.walk(infile,add_files,{'folder': folder,'root': infile})
 
-def import_file(infile,format='tar',silent=False):
+def import_file(infile,format='tar',ignore_unknown_nodes=False,
+                silent=False):
     """
     Import exported AiiDA environment to the AiiDA database.
 
@@ -298,7 +299,7 @@ def import_file(infile,format='tar',silent=False):
         unknown_nodes = linked_nodes.union(group_nodes) - db_nodes_uuid.union(
             import_nodes_uuid)
         
-        if unknown_nodes:
+        if unknown_nodes and not ignore_unknown_nodes:
             raise ValueError(
                 "The import file refers to {} nodes with unknown UUID, therefore "
                 "it cannot be imported. Either first import the unknown nodes, "
@@ -537,8 +538,18 @@ def import_file(infile,format='tar',silent=False):
             dbnode_reverse_mappings = foreign_ids_reverse_mappings[
                 get_class_string(models.DbNode)]
             for link in import_links:
-                in_id = dbnode_reverse_mappings[link['input']]
-                out_id = dbnode_reverse_mappings[link['output']]
+                try:
+                    in_id = dbnode_reverse_mappings[link['input']]
+                    out_id = dbnode_reverse_mappings[link['output']]
+                except KeyError:
+                    if ignore_unknown_nodes:
+                        continue
+                    else:
+                        raise ValueError("Trying to create a link with one "
+                                         "or both unknown nodes, stopping "
+                                         "(in_uuid={}, out_uuid={}, "
+                                         "label={})".format(link['input'],
+                                              link['output'], link['label']))
                 
                 
                 try:

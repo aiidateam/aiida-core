@@ -873,14 +873,7 @@ class StructureData(Data):
         .. note:: If any site is an alloy or has vacancies, a ValueError
             is raised (from the site.get_ase() routine).
         """
-        import ase
-
-        asecell = ase.Atoms(cell=self.cell, pbc=self.pbc)
-        _kinds = self.kinds
-
-        for site in self.sites:
-            asecell.append(site.get_ase(kinds=_kinds))
-        return asecell
+        return self._get_object_ase()
 
     def get_pymatgen_structure(self):
         """
@@ -1407,6 +1400,34 @@ class StructureData(Data):
             return ret_dict['cif']
         except AttributeError:
             raise ValueError("No such converter '{}' available".format(converter))
+
+    def _get_object_phonopyatoms(self):
+        """
+        Converts StructureData() in PhonopyAtoms()
+        :return: a PhonopyAtoms object
+        """
+        from phonopy.structure.atoms import Atoms as PhonopyAtoms
+        
+        atoms = PhonopyAtoms(symbols=[_.kind_name for _ in self.sites])
+        # Phonopy internally uses scaled positions, so you must store cell first!
+        atoms.set_cell(self.cell)
+        atoms.set_positions([_.position for _ in self.sites])
+        
+        return atoms
+        
+    def _get_object_ase(self):
+        """
+        Converts StructureData() in PhonopyAtoms()
+        :return: a PhonopyAtoms object
+        """
+        import ase
+
+        asecell = ase.Atoms(cell=self.cell, pbc=self.pbc)
+        _kinds = self.kinds
+
+        for site in self.sites:
+            asecell.append(site.get_ase(kinds=_kinds))
+        return asecell
 
 
 class Kind(object):

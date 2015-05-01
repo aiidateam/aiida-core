@@ -99,3 +99,45 @@ class Data(Node):
         valid_formats = {k: getattr(self, exporter_prefix + k)
                          for k in valid_format_names}
         return valid_formats
+
+    def convert(self, object_format=None, *args):
+        """
+        Convert the AiiDA StructureData into another python object
+        
+        :param objectformat: Specify the output format
+        """
+        if object_format is None:
+            raise ValueError("object_format must be provided")
+        if not isinstance(object_format, basestring):
+            raise ValueError('object_format should be a string')
+        
+        converters = self._get_converters()
+        
+        try:
+            func = converters[object_format]
+        except KeyError:
+            if len(exporters.keys()) > 0:
+                raise ValueError("The format is not accepted. "
+                                 "Currently implemented are: {}.".format(
+                    ",".join(exporters.keys())))
+            else:
+                raise ValueError("The format is not accepted. "
+                                 "No formats are implemented yet.")
+
+        return func(*args)
+        
+    def _get_converters(self):
+        """
+        Get all implemented converter formats.
+        The convention is to find all _get_object_... methods.
+        Returns a list of strings.
+        """
+        # NOTE: To add support for a new format, write a new function called as
+        # _prepare_"" with the name of the new format
+        exporter_prefix = '_get_object_'
+        method_names = dir(self)  # get list of class methods names
+        valid_format_names = [i[len(exporter_prefix):] for i in method_names
+                              if i.startswith(exporter_prefix)]  # filter them
+        valid_formats = {k: getattr(self, exporter_prefix + k)
+                         for k in valid_format_names}
+        return valid_formats

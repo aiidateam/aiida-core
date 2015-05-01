@@ -27,16 +27,18 @@ db_test_list = {
     'qepwimmigrant': 'aiida.djsite.db.subtests.quantumespressopwimmigrant',
     'tcodexporter': 'aiida.djsite.db.subtests.tcodexporter',
     'workflows': 'aiida.djsite.db.subtests.workflows',
-    }
+}
+
 
 class AiidaTestCase(unittest.TestCase):
     """
     Automatically takes care of the setUpClass and TearDownClass, when needed.
     """
+
     @classmethod
     def setUpClass(cls):
         import getpass
-        
+
         from django.core.exceptions import ObjectDoesNotExist
 
         from aiida.djsite.db.models import DbUser
@@ -69,27 +71,31 @@ class AiidaTestCase(unittest.TestCase):
 
         # I first delete the workflows
         from aiida.djsite.db.models import DbWorkflow
+
         DbWorkflow.objects.all().delete()
 
         # Delete groups
         from aiida.djsite.db.models import DbGroup
+
         DbGroup.objects.all().delete()
 
         # I first need to delete the links, because in principle I could
         # not delete input nodes, only outputs. For simplicity, since
         # I am deleting everything, I delete the links first
         from aiida.djsite.db.models import DbLink
+
         DbLink.objects.all().delete()
-        
+
         # Then I delete the nodes, otherwise I cannot
         # delete computers and users
         from aiida.djsite.db.models import DbNode
+
         DbNode.objects.all().delete()
 
         ## I do not delete it, see discussion in setUpClass
-        #try:
+        # try:
         #    DbUser.objects.get(email=get_configured_user_email()).delete()
         #except ObjectDoesNotExist:
         #    pass
-        
+
         DbComputer.objects.all().delete()

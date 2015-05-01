@@ -5,6 +5,7 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
 
+
 def test_and_get_code(codename, expected_code_type, use_exceptions=False):
     """
     Pass a code name and an expected code (plugin) type. Check that the
@@ -29,14 +30,14 @@ def test_and_get_code(codename, expected_code_type, use_exceptions=False):
         if code.get_input_plugin_name() != expected_code_type:
             raise ValueError
     except (NotExistent, ValueError):
-        valid_code_labels = ["{}@{}".format(c.label,c.computer.name) for c in Code.query(
-                dbattributes__key="input_plugin",
-                dbattributes__tval=expected_code_type)]
+        valid_code_labels = ["{}@{}".format(c.label, c.computer.name) for c in Code.query(
+            dbattributes__key="input_plugin",
+            dbattributes__tval=expected_code_type)]
         if valid_code_labels:
             msg = ("Pass as further parameter a valid code label.\n"
                    "Valid labels with a {} executable are:\n".format(
-                        expected_code_type))
-            msg+= "\n".join("* {}".format(l) for l in valid_code_labels)
+                expected_code_type))
+            msg += "\n".join("* {}".format(l) for l in valid_code_labels)
 
             if use_exceptions:
                 raise ValueError(msg)
@@ -47,11 +48,11 @@ def test_and_get_code(codename, expected_code_type, use_exceptions=False):
             msg = ("Code not valid, and no valid codes for {}.\n"
                    "Configure at least one first using\n"
                    "    verdi code setup".format(
-                        expected_code_type))
+                expected_code_type))
             if use_exceptions:
                 raise ValueError(msg)
             else:
-                print >> sys.stderr, msg 
+                print >> sys.stderr, msg
                 sys.exit(1)
-    
+
     return code

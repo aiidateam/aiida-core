@@ -12,8 +12,8 @@ __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE 
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 
-class Migration(migrations.Migration):
 
+class Migration(migrations.Migration):
     dependencies = [
         ('auth', '0001_initial'),
     ]
@@ -25,16 +25,26 @@ class Migration(migrations.Migration):
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('password', models.CharField(max_length=128, verbose_name='password')),
                 ('last_login', models.DateTimeField(default=django.utils.timezone.now, verbose_name='last login')),
-                ('is_superuser', models.BooleanField(default=False, help_text='Designates that this user has all permissions without explicitly assigning them.', verbose_name='superuser status')),
+                ('is_superuser', models.BooleanField(default=False,
+                                                     help_text='Designates that this user has all permissions without explicitly assigning them.',
+                                                     verbose_name='superuser status')),
                 ('email', models.EmailField(unique=True, max_length=75, db_index=True)),
                 ('first_name', models.CharField(max_length=254, blank=True)),
                 ('last_name', models.CharField(max_length=254, blank=True)),
                 ('institution', models.CharField(max_length=254, blank=True)),
-                ('is_staff', models.BooleanField(default=False, help_text=b'Designates whether the user can log into this admin site.')),
-                ('is_active', models.BooleanField(default=True, help_text=b'Designates whether this user should be treated as active. Unselect this instead of deleting accounts.')),
+                ('is_staff', models.BooleanField(default=False,
+                                                 help_text=b'Designates whether the user can log into this admin site.')),
+                ('is_active', models.BooleanField(default=True,
+                                                  help_text=b'Designates whether this user should be treated as active. Unselect this instead of deleting accounts.')),
                 ('date_joined', models.DateTimeField(default=django.utils.timezone.now)),
-                ('groups', models.ManyToManyField(related_query_name='user', related_name='user_set', to='auth.Group', blank=True, help_text='The groups this user belongs to. A user will get all permissions granted to each of his/her group.', verbose_name='groups')),
-                ('user_permissions', models.ManyToManyField(related_query_name='user', related_name='user_set', to='auth.Permission', blank=True, help_text='Specific permissions for this user.', verbose_name='user permissions')),
+                ('groups',
+                 models.ManyToManyField(related_query_name='user', related_name='user_set', to='auth.Group', blank=True,
+                                        help_text='The groups this user belongs to. A user will get all permissions granted to each of his/her group.',
+                                        verbose_name='groups')),
+                ('user_permissions',
+                 models.ManyToManyField(related_query_name='user', related_name='user_set', to='auth.Permission',
+                                        blank=True, help_text='Specific permissions for this user.',
+                                        verbose_name='user permissions')),
             ],
             options={
                 'abstract': False,
@@ -46,7 +56,10 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('key', models.CharField(max_length=1024, db_index=True)),
-                ('datatype', models.CharField(default=b'none', max_length=10, db_index=True, choices=[(b'float', b'float'), (b'int', b'int'), (b'txt', b'txt'), (b'bool', b'bool'), (b'date', b'date'), (b'json', b'json'), (b'dict', b'dict'), (b'list', b'list'), (b'none', b'none')])),
+                ('datatype', models.CharField(default=b'none', max_length=10, db_index=True,
+                                              choices=[(b'float', b'float'), (b'int', b'int'), (b'txt', b'txt'),
+                                                       (b'bool', b'bool'), (b'date', b'date'), (b'json', b'json'),
+                                                       (b'dict', b'dict'), (b'list', b'list'), (b'none', b'none')])),
                 ('tval', models.TextField(default=b'', blank=True)),
                 ('fval', models.FloatField(default=None, null=True)),
                 ('ival', models.IntegerField(default=None, null=True)),
@@ -75,7 +88,16 @@ class Migration(migrations.Migration):
             name='DbCalcState',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
-                ('state', models.CharField(db_index=True, max_length=25, choices=[(b'UNDETERMINED', b'UNDETERMINED'), (b'NOTFOUND', b'NOTFOUND'), (b'RETRIEVALFAILED', b'RETRIEVALFAILED'), (b'COMPUTED', b'COMPUTED'), (b'RETRIEVING', b'RETRIEVING'), (b'WITHSCHEDULER', b'WITHSCHEDULER'), (b'SUBMISSIONFAILED', b'SUBMISSIONFAILED'), (b'PARSING', b'PARSING'), (b'FAILED', b'FAILED'), (b'FINISHED', b'FINISHED'), (b'TOSUBMIT', b'TOSUBMIT'), (b'SUBMITTING', b'SUBMITTING'), (b'IMPORTED', b'IMPORTED'), (b'NEW', b'NEW'), (b'PARSINGFAILED', b'PARSINGFAILED')])),
+                ('state', models.CharField(db_index=True, max_length=25,
+                                           choices=[(b'UNDETERMINED', b'UNDETERMINED'), (b'NOTFOUND', b'NOTFOUND'),
+                                                    (b'RETRIEVALFAILED', b'RETRIEVALFAILED'),
+                                                    (b'COMPUTED', b'COMPUTED'), (b'RETRIEVING', b'RETRIEVING'),
+                                                    (b'WITHSCHEDULER', b'WITHSCHEDULER'),
+                                                    (b'SUBMISSIONFAILED', b'SUBMISSIONFAILED'),
+                                                    (b'PARSING', b'PARSING'), (b'FAILED', b'FAILED'),
+                                                    (b'FINISHED', b'FINISHED'), (b'TOSUBMIT', b'TOSUBMIT'),
+                                                    (b'SUBMITTING', b'SUBMITTING'), (b'IMPORTED', b'IMPORTED'),
+                                                    (b'NEW', b'NEW'), (b'PARSINGFAILED', b'PARSINGFAILED')])),
                 ('time', models.DateTimeField(default=django.utils.timezone.now, editable=False)),
             ],
             options={
@@ -118,7 +140,10 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('key', models.CharField(max_length=1024, db_index=True)),
-                ('datatype', models.CharField(default=b'none', max_length=10, db_index=True, choices=[(b'float', b'float'), (b'int', b'int'), (b'txt', b'txt'), (b'bool', b'bool'), (b'date', b'date'), (b'json', b'json'), (b'dict', b'dict'), (b'list', b'list'), (b'none', b'none')])),
+                ('datatype', models.CharField(default=b'none', max_length=10, db_index=True,
+                                              choices=[(b'float', b'float'), (b'int', b'int'), (b'txt', b'txt'),
+                                                       (b'bool', b'bool'), (b'date', b'date'), (b'json', b'json'),
+                                                       (b'dict', b'dict'), (b'list', b'list'), (b'none', b'none')])),
                 ('tval', models.TextField(default=b'', blank=True)),
                 ('fval', models.FloatField(default=None, null=True)),
                 ('ival', models.IntegerField(default=None, null=True)),
@@ -219,7 +244,10 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('key', models.CharField(max_length=1024, db_index=True)),
-                ('datatype', models.CharField(default=b'none', max_length=10, db_index=True, choices=[(b'float', b'float'), (b'int', b'int'), (b'txt', b'txt'), (b'bool', b'bool'), (b'date', b'date'), (b'json', b'json'), (b'dict', b'dict'), (b'list', b'list'), (b'none', b'none')])),
+                ('datatype', models.CharField(default=b'none', max_length=10, db_index=True,
+                                              choices=[(b'float', b'float'), (b'int', b'int'), (b'txt', b'txt'),
+                                                       (b'bool', b'bool'), (b'date', b'date'), (b'json', b'json'),
+                                                       (b'dict', b'dict'), (b'list', b'list'), (b'none', b'none')])),
                 ('tval', models.TextField(default=b'', blank=True)),
                 ('fval', models.FloatField(default=None, null=True)),
                 ('ival', models.IntegerField(default=None, null=True)),
@@ -244,7 +272,10 @@ class Migration(migrations.Migration):
                 ('description', models.TextField(blank=True)),
                 ('nodeversion', models.IntegerField(default=1, editable=False)),
                 ('lastsyncedversion', models.IntegerField(default=0, editable=False)),
-                ('state', models.CharField(default=b'INITIALIZED', max_length=255, choices=[(b'CREATED', b'CREATED'), (b'FINISHED', b'FINISHED'), (b'RUNNING', b'RUNNING'), (b'SLEEP', b'SLEEP'), (b'ERROR', b'ERROR'), (b'INITIALIZED', b'INITIALIZED')])),
+                ('state', models.CharField(default=b'INITIALIZED', max_length=255,
+                                           choices=[(b'CREATED', b'CREATED'), (b'FINISHED', b'FINISHED'),
+                                                    (b'RUNNING', b'RUNNING'), (b'SLEEP', b'SLEEP'),
+                                                    (b'ERROR', b'ERROR'), (b'INITIALIZED', b'INITIALIZED')])),
                 ('report', models.TextField(blank=True)),
                 ('module', models.TextField()),
                 ('module_class', models.TextField()),
@@ -279,7 +310,10 @@ class Migration(migrations.Migration):
                 ('name', models.CharField(max_length=255)),
                 ('time', models.DateTimeField(default=django.utils.timezone.now, editable=False)),
                 ('nextcall', models.CharField(default=b'none', max_length=255)),
-                ('state', models.CharField(default=b'CREATED', max_length=255, choices=[(b'CREATED', b'CREATED'), (b'FINISHED', b'FINISHED'), (b'RUNNING', b'RUNNING'), (b'SLEEP', b'SLEEP'), (b'ERROR', b'ERROR'), (b'INITIALIZED', b'INITIALIZED')])),
+                ('state', models.CharField(default=b'CREATED', max_length=255,
+                                           choices=[(b'CREATED', b'CREATED'), (b'FINISHED', b'FINISHED'),
+                                                    (b'RUNNING', b'RUNNING'), (b'SLEEP', b'SLEEP'),
+                                                    (b'ERROR', b'ERROR'), (b'INITIALIZED', b'INITIALIZED')])),
                 ('calculations', models.ManyToManyField(related_name='workflow_step', to='db.DbNode')),
                 ('parent', models.ForeignKey(related_name='steps', to='db.DbWorkflow')),
                 ('sub_workflows', models.ManyToManyField(related_name='parent_workflow_step', to='db.DbWorkflow')),
@@ -310,7 +344,8 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='dbnode',
             name='dbcomputer',
-            field=models.ForeignKey(related_name='dbnodes', on_delete=django.db.models.deletion.PROTECT, to='db.DbComputer', null=True),
+            field=models.ForeignKey(related_name='dbnodes', on_delete=django.db.models.deletion.PROTECT,
+                                    to='db.DbComputer', null=True),
             preserve_default=True,
         ),
         migrations.AddField(
@@ -322,13 +357,15 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='dbnode',
             name='user',
-            field=models.ForeignKey(related_name='dbnodes', on_delete=django.db.models.deletion.PROTECT, to=settings.AUTH_USER_MODEL),
+            field=models.ForeignKey(related_name='dbnodes', on_delete=django.db.models.deletion.PROTECT,
+                                    to=settings.AUTH_USER_MODEL),
             preserve_default=True,
         ),
         migrations.AddField(
             model_name='dblink',
             name='input',
-            field=models.ForeignKey(related_name='output_links', on_delete=django.db.models.deletion.PROTECT, to='db.DbNode'),
+            field=models.ForeignKey(related_name='output_links', on_delete=django.db.models.deletion.PROTECT,
+                                    to='db.DbNode'),
             preserve_default=True,
         ),
         migrations.AddField(

@@ -8,11 +8,13 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi"
 
+
 class CifsplitprimitiveParser(BaseCodtoolsParser):
     """
     Specific parser for the output of cif_split_primitive script.
     """
-    def __init__(self,calc):
+
+    def __init__(self, calc):
         """
         Initialize the instance of CifsplitprimitiveParser
         """
@@ -38,7 +40,7 @@ class CifsplitprimitiveParser(BaseCodtoolsParser):
             content = [x.strip('\n') for x in content]
             self._check_failed(content)
             for filename in content:
-                path = os.path.join( out_folder.get_abs_path('.'), filename )
+                path = os.path.join(out_folder.get_abs_path('.'), filename)
                 output_nodes.append(('cif', CifData(file=path)))
 
         if output_path is not None:
@@ -46,7 +48,7 @@ class CifsplitprimitiveParser(BaseCodtoolsParser):
                 content = f.readlines()
             content = [x.strip('\n') for x in content]
             output_nodes.append(('messages',
-                                  ParameterData(dict={'output_messages':
-                                                      content})))
+                                 ParameterData(dict={'output_messages':
+                                                         content})))
 
         return output_nodes

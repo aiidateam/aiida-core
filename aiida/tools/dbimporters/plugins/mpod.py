@@ -8,6 +8,7 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi"
 
+
 class MpodDbImporter(DbImporter):
     """
     Database importer for Material Properties Open Database.
@@ -17,20 +18,20 @@ class MpodDbImporter(DbImporter):
         """
         Returns part of HTTP GET query for querying string fields.
         """
-        if not isinstance( values, basestring ) and not isinstance( values, int ):
+        if not isinstance(values, basestring) and not isinstance(values, int):
             raise ValueError("incorrect value for keyword '" + alias + \
                              "' -- only strings and integers are accepted")
         return "{}={}".format(key, values)
 
-    _keywords = { 'phase_name': [ 'phase_name',  _str_clause ],
-                  'formula'   : [ 'formula',     _str_clause ],
-                  'element'   : [ 'element',     None ],
-                  'cod_id'    : [ 'cod_code',    _str_clause ],
-                  'authors'   : [ 'publ_author', _str_clause ] }
+    _keywords = {'phase_name': ['phase_name', _str_clause],
+                 'formula': ['formula', _str_clause],
+                 'element': ['element', None],
+                 'cod_id': ['cod_code', _str_clause],
+                 'authors': ['publ_author', _str_clause]}
 
     def __init__(self, **kwargs):
         self._query_url = "http://mpod.cimav.edu.mx/data/search/"
-        self.setup_db( **kwargs )
+        self.setup_db(**kwargs)
 
     def query_get(self, **kwargs):
         """
@@ -46,7 +47,7 @@ class MpodDbImporter(DbImporter):
         elements = []
         if 'element' in kwargs.keys():
             elements = kwargs.pop('element')
-        if not isinstance(elements,list):
+        if not isinstance(elements, list):
             elements = [elements]
 
         get_parts = []
@@ -61,14 +62,14 @@ class MpodDbImporter(DbImporter):
 
         if kwargs.keys():
             raise NotImplementedError("search keyword(s) '"
-                                      "', '".join( kwargs.keys() ) + "' "
-                                      "is(are) not implemented for MPOD")
+                                      "', '".join(kwargs.keys()) + "' "
+                                                                   "is(are) not implemented for MPOD")
 
         queries = []
         for e in elements:
             queries.append(self._query_url + '?' +
                            "&".join(get_parts +
-                                    [self._str_clause('formula','element',e)]))
+                                    [self._str_clause('formula', 'element', e)]))
         if not queries:
             queries.append(self._query_url + '?' + "&".join(get_parts))
 
@@ -84,19 +85,20 @@ class MpodDbImporter(DbImporter):
         """
         import urllib2
         import re
-        query_statements = self.query_get( **kwargs )
+
+        query_statements = self.query_get(**kwargs)
         results = None
         for query in query_statements:
             response = urllib2.urlopen(query).read()
-            this_results = re.findall("/datafiles/(\d+)\.mpod",response)
+            this_results = re.findall("/datafiles/(\d+)\.mpod", response)
             if results is None:
                 results = this_results
             else:
-                results = filter(set(results).__contains__,this_results)
+                results = filter(set(results).__contains__, this_results)
 
-        return MpodSearchResults( results )
+        return MpodSearchResults(results)
 
-    def setup_db(self,query_url=None,**kwargs):
+    def setup_db(self, query_url=None, **kwargs):
         """
         Changes the database connection details.
         """
@@ -106,8 +108,8 @@ class MpodDbImporter(DbImporter):
         if kwargs.keys():
             raise NotImplementedError( \
                 "unknown database connection parameter(s): '" + \
-                "', '".join( kwargs.keys() ) + \
-                "', available parameters: 'query_url'" )
+                "', '".join(kwargs.keys()) + \
+                "', available parameters: 'query_url'")
 
     def get_supported_keywords(self):
         """
@@ -116,6 +118,7 @@ class MpodDbImporter(DbImporter):
         :return: list of strings
         """
         return self._keywords.keys()
+
 
 class MpodSearchResults(DbSearchResults):
     """
@@ -146,6 +149,7 @@ class MpodSearchResults(DbSearchResults):
         :param result_dict: dictionary, describing an entry in the results.
         """
         return self._base_url + result_dict['id'] + ".mpod"
+
 
 class MpodEntry(DbEntry):
     """

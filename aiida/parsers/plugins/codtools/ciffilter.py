@@ -8,11 +8,13 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi"
 
+
 class CiffilterParser(BaseCodtoolsParser):
     """
     Parser for the output of filter scripts from cod-tools package.
     """
-    def __init__(self,calc):
+
+    def __init__(self, calc):
         """
         Initialize the instance of CiffilterParser
         """

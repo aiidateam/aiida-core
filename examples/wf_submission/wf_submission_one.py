@@ -8,27 +8,27 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Nicolas Mounet, Riccardo Sabatini"
 
-def launch_ws():
 
+def launch_ws():
     """
     To control the wf status use the command line
     
     verdi workflow list pk
     
     """
-        
+
     import aiida.orm.workflow as wf
     from aiida.workflows import wf_demo
     from aiida.common.datastructures import wf_states
-    
+
     params = {}
-    params['nmachine']=2
+    params['nmachine'] = 2
 
     w = wf_demo.WorkflowDemo()
     w.set_params(params)
     w.store()
     w.start()
-    
+
     w = wf_demo.BranchWorkflowDemo()
     w.set_params(params)
     w.start()

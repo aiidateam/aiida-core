@@ -10,6 +10,7 @@ __contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
 
 custom_validate_email = CustomEmailValidator()
 
+
 class CustomEmailField(m.EmailField):
     """
     Custom Email Field using the validation backported from Django 1.7 

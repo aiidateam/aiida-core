@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from aiida.common.exceptions import ValidationError,MissingPluginError
+from aiida.common.exceptions import ValidationError, MissingPluginError
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -10,7 +10,7 @@ current_autogroup = None
 
 VERDIAUTOGROUP_TYPE = 'autogroup.run'
 
-#TODO: make the Autogroup usable to the user, and not only to the verdi run
+# TODO: make the Autogroup usable to the user, and not only to the verdi run
 
 class Autogroup(object):
     """
@@ -24,27 +24,28 @@ class Autogroup(object):
     Otherwise, they are lists of strings like: calculation.quantumespresso.pw, data.array.kpoints, ...
     i.e.: a string identifying the base class, than the path to the class as in Calculation/Data -Factories 
     """
-    
-    def _validate(self,param,is_exact=True):
+
+    def _validate(self, param, is_exact=True):
         """
         Used internally to verify the sanity of exclude, include lists
         """
-        from aiida.orm import DataFactory,CalculationFactory
+        from aiida.orm import DataFactory, CalculationFactory
+
         for i in param:
             if not any([i.startswith('calculation'),
                         i.startswith('code'),
                         i.startswith('data'),
-                        i=='all',
-                        ]):
+                        i == 'all',
+            ]):
                 raise ValidationError("Module not recognized, allow prefixes "
                                       " are: calculation, code or data")
-        the_param = [i+'.' for i in param]
-        
-        factorydict = {'calculation':locals()['CalculationFactory'],
-                       'data':locals()['DataFactory']}
-        
+        the_param = [i + '.' for i in param]
+
+        factorydict = {'calculation': locals()['CalculationFactory'],
+                       'data': locals()['DataFactory']}
+
         for i in the_param:
-            base,module = i.split('.',1)
+            base, module = i.split('.', 1)
             if base == 'code':
                 if module:
                     raise ValidationError("Cannot have subclasses for codes")
@@ -57,7 +58,7 @@ class Autogroup(object):
                     except MissingPluginError:
                         raise ValidationError("Cannot find the class to be excluded")
         return the_param
-    
+
     def get_exclude(self):
         """
         Return the list of classes to exclude from autogrouping
@@ -66,7 +67,7 @@ class Autogroup(object):
             return self.exclude
         except AttributeError:
             return []
-    
+
     def get_exclude_with_subclasses(self):
         """
         Return the list of classes to exclude from autogrouping.
@@ -76,7 +77,7 @@ class Autogroup(object):
             return self.exclude_with_subclasses
         except AttributeError:
             return []
-    
+
     def get_include(self):
         """
         Return the list of classes to include in the autogrouping
@@ -85,7 +86,7 @@ class Autogroup(object):
             return self.include
         except AttributeError:
             return []
-        
+
     def get_include_with_subclasses(self):
         """
         Return the list of classes to include in the autogrouping.
@@ -95,7 +96,7 @@ class Autogroup(object):
             return self.include_with_subclasses
         except AttributeError:
             return []
-    
+
     def get_group_name(self):
         """
         Get the name of the group. 
@@ -105,12 +106,13 @@ class Autogroup(object):
             return self.group_name
         except AttributeError:
             import datetime
+
             now = datetime.datetime.now()
-            gname = "Verdi autogroup on "+ now.strftime("%Y-%m-%d %H:%M:%S") 
+            gname = "Verdi autogroup on " + now.strftime("%Y-%m-%d %H:%M:%S")
             self.set_group_name(gname)
             return self.group_name
-    
-    def set_exclude(self,exclude):
+
+    def set_exclude(self, exclude):
         """
         Return the list of classes to exclude from autogrouping.
         """
@@ -120,16 +122,16 @@ class Autogroup(object):
                 if 'all.' in the_exclude_classes:
                     raise ValidationError("Cannot exclude and include all classes")
         self.exclude = the_exclude_classes
-        
-    def set_exclude_with_subclasses(self,exclude):
+
+    def set_exclude_with_subclasses(self, exclude):
         """
         Set the list of classes to exclude from autogrouping.
         Will also exclude their derived subclasses
         """
-        the_exclude_classes = self._validate(exclude,is_exact=False)
+        the_exclude_classes = self._validate(exclude, is_exact=False)
         self.exclude_with_subclasses = the_exclude_classes
-        
-    def set_include(self,include):
+
+    def set_include(self, include):
         """
         Set the list of classes to include in the autogrouping.
         """
@@ -140,24 +142,24 @@ class Autogroup(object):
                     raise ValidationError("Cannot exclude and include all classes")
 
         self.include = the_include_classes
-    
-    def set_include_with_subclasses(self,include):
+
+    def set_include_with_subclasses(self, include):
         """
         Set the list of classes to include in the autogrouping.
         Will also include their derived subclasses.
         """
-        the_include_classes = self._validate(include,is_exact=False)
+        the_include_classes = self._validate(include, is_exact=False)
         self.include_with_subclasses = the_include_classes
-    
-    def set_group_name(self,gname):
+
+    def set_group_name(self, gname):
         """
         Set the name of the group to be created
         """
-        if not isinstance(gname,basestring):
+        if not isinstance(gname, basestring):
             raise ValidationError("group name must be a string")
         self.group_name = gname
-    
-    def is_to_be_grouped(self,the_class):
+
+    def is_to_be_grouped(self, the_class):
         """
         :return (bool): Returns True if the_class has to be included in the autogroup,
         according to which classes are specified in the include/exclude lists 
@@ -165,15 +167,15 @@ class Autogroup(object):
         include = self.get_include()
         include_ws = self.get_include_with_subclasses()
         if (('all.' in include) or
-            (the_class._plugin_type_string in include) or
-            any([ the_class._plugin_type_string.startswith(i) for i in include_ws ])
-            ):
+                (the_class._plugin_type_string in include) or
+                any([the_class._plugin_type_string.startswith(i) for i in include_ws])
+        ):
             exclude = self.get_exclude()
             exclude_ws = self.get_exclude_with_subclasses()
-            if ((not 'all.' in exclude) or 
-                (the_class._plugin_type_string in exclude) or
-                any([ the_class._plugin_type_string.startswith(i) for i in exclude_ws ])
-                ):
+            if ((not 'all.' in exclude) or
+                    (the_class._plugin_type_string in exclude) or
+                    any([the_class._plugin_type_string.startswith(i) for i in exclude_ws])
+            ):
                 return True
             else:
                 return False

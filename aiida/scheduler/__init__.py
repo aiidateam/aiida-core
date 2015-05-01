@@ -9,6 +9,7 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Marco Dorigo"
 
+
 def SchedulerFactory(module):
     """
     Used to load a suitable Scheduler subclass.
@@ -17,14 +18,17 @@ def SchedulerFactory(module):
     :return: the scheduler subclass contained in module 'module'
     """
     from aiida.common.pluginloader import BaseFactory
-    
+
     return BaseFactory(module, Scheduler, "aiida.scheduler.plugins")
+
 
 class SchedulerError(AiidaException):
     pass
 
+
 class SchedulerParsingError(SchedulerError):
     pass
+
 
 class Scheduler(object):
     """
@@ -45,17 +49,17 @@ class Scheduler(object):
     def __init__(self):
         self._transport = None
 
-    def set_transport(self,transport):
+    def set_transport(self, transport):
         """
         Set the transport to be used to query the machine or to submit scripts.
         This class assumes that the transport is open and active.
         """
-        self._transport = transport        
+        self._transport = transport
 
     @classmethod
     def get_valid_schedulers(cls):
         from aiida.common.pluginloader import existing_plugins
-        
+
         return existing_plugins(Scheduler, "aiida.scheduler.plugins")
 
     @classmethod
@@ -67,7 +71,7 @@ class Scheduler(object):
         docstring = self.__doc__
         if not docstring:
             return "No documentation available"
-            
+
         doclines = [i for i in docstring.splitlines() if i.strip()]
         if doclines:
             return doclines[0].strip()
@@ -91,6 +95,7 @@ class Scheduler(object):
             return self._logger
         except AttributeError:
             from aiida.common.exceptions import InternalError
+
             raise InternalError("No self._logger configured for {}!")
 
     @classmethod
@@ -119,17 +124,17 @@ class Scheduler(object):
         postpend_computer
         """
         # #TODO: understand if, in the future, we want to pass more
-        #        than one calculation, e.g. for job arrays.
+        # than one calculation, e.g. for job arrays.
         # #TODO: in the future: environment_variables [from calcinfo, possibly,
         #        and from scheduler_requirements e.g. for OpenMP? or maybe
         #        the openmp part is better managed in the scheduler_dependent
         #        part above since it will be machine-dependent]
 
         from aiida.common.exceptions import InternalError
-        
+
         if not isinstance(job_tmpl, JobTemplate):
             raise InternalError("job_tmpl should be of type JobTemplate")
-        
+
         empty_line = ""
 
         shebang = "#!/bin/bash"
@@ -138,7 +143,7 @@ class Scheduler(object):
         script_lines = []
         script_lines.append(shebang)
         script_lines.append(empty_line)
-        
+
         script_lines.append(self._get_submit_script_header(job_tmpl))
         script_lines.append(empty_line)
 
@@ -147,9 +152,9 @@ class Scheduler(object):
             script_lines.append(empty_line)
 
         script_lines.append(self._get_run_line(
-                job_tmpl.argv, job_tmpl.stdin_name,
-                job_tmpl.stdout_name, job_tmpl.stderr_name,
-                job_tmpl.join_files))
+            job_tmpl.argv, job_tmpl.stdin_name,
+            job_tmpl.stdout_name, job_tmpl.stderr_name,
+            job_tmpl.join_files))
         script_lines.append(empty_line)
 
         if job_tmpl.append_text:
@@ -157,7 +162,7 @@ class Scheduler(object):
             script_lines.append(empty_line)
 
         return "\n".join(script_lines)
-        
+
     def _get_submit_script_header(self, job_tmpl):
         """
         Return the submit script header, using the parameters from the
@@ -167,7 +172,7 @@ class Scheduler(object):
         """
         raise NotImplementedError
 
-    def _get_run_line(self, argv, stdin_name, stdout_name, 
+    def _get_run_line(self, argv, stdin_name, stdout_name,
                       stderr_name, join_files):
         """
         Return a string with the line to execute a specific code with
@@ -195,7 +200,7 @@ class Scheduler(object):
         for arg in argv:
             command_to_exec_list.append(escape_for_bash(arg))
         command_to_exec = " ".join(command_to_exec_list)
-        
+
         stdin_str = "< {}".format(
             escape_for_bash(stdin_name)) if stdin_name else ""
         stdout_str = "> {}".format(
@@ -205,15 +210,15 @@ class Scheduler(object):
         else:
             stderr_str = "2> {}".format(
                 escape_for_bash(stderr_name)) if stderr_name else ""
-            
-        output_string= ("{} {} {} {}".format(
-                       command_to_exec,
-                       stdin_str, stdout_str, stderr_str))
-                       
+
+        output_string = ("{} {} {} {}".format(
+            command_to_exec,
+            stdin_str, stdout_str, stderr_str))
+
         self.logger.debug('_get_run_line output: {}'.format(output_string))
         return output_string
-    
-    def _get_joblist_command(self,jobs=None,user=None):
+
+    def _get_joblist_command(self, jobs=None, user=None):
         """
         Return the qstat (or equivalent) command to run with the required
         command-line parameters to get the most complete description possible;
@@ -233,7 +238,7 @@ class Scheduler(object):
         """
         raise NotImplementedError
 
-    def _get_detailed_jobinfo_command(self,jobid):
+    def _get_detailed_jobinfo_command(self, jobid):
         """
         Return the command to run to get the detailed information on a job.
         This is typically called after the job has finished, to retrieve
@@ -252,8 +257,8 @@ class Scheduler(object):
         At the moment, the output text is just retrieved
         and stored for logging purposes, but no parsing is performed.
         """
-        #TODO: Parsing?
-        
+        # TODO: Parsing?
+
         command = self._get_detailed_jobinfo_command(jobid=jobid)
         retval, stdout, stderr = self.transport.exec_command_wait(
             command)
@@ -278,7 +283,7 @@ stderr:
         each with at least its default params implemented.
         """
         raise NotImplementedError
-        
+
     def getJobs(self, jobs=None, user=None, as_dict=False):
         """
         Get the list of jobs and return it.
@@ -295,8 +300,8 @@ stderr:
         comments in _get_joblist_command.
         """
         retval, stdout, stderr = self.transport.exec_command_wait(
-            self._get_joblist_command(jobs=jobs,user=user))
-        
+            self._get_joblist_command(jobs=jobs, user=user))
+
         joblist = self._parse_joblist_output(retval, stdout, stderr)
         if as_dict:
             jobdict = {j.job_id: j for j in joblist}
@@ -316,7 +321,7 @@ stderr:
                                  "transport for the scheduler first.")
         else:
             return self._transport
-        
+
     def _get_submit_command(self, submit_script):
         """
         Return the string to execute to submit a given script.
@@ -328,7 +333,7 @@ stderr:
         :return: the string to execute to submit a given script.
         """
         raise NotImplementedError
-        
+
     def _parse_submit_output(self, retval, stdout, stderr):
         """
         Parse the output of the submit command, as returned by executing the
@@ -339,7 +344,7 @@ stderr:
         :return: a string with the JobID.
         """
         raise NotImplementedError
-        
+
     def submit_from_script(self, working_directory, submit_script):
         """
         Goes in the working directory and submits the submit_script.
@@ -354,7 +359,7 @@ stderr:
         retval, stdout, stderr = self.transport.exec_command_wait(
             self._get_submit_command(escape_for_bash(submit_script)))
         return self._parse_submit_output(retval, stdout, stderr)
-        
+
     def kill(self, jobid):
         """
         Kill a remote job, and try to parse the output message of the scheduler

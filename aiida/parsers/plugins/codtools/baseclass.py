@@ -9,11 +9,13 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi"
 
+
 class BaseCodtoolsParser(Parser):
     """
     Base class for parsers for cod-tools package scripts.
     """
-    def __init__(self,calc):
+
+    def __init__(self, calc):
         """
         Initialize the instance of BaseCodtoolsParser
         """
@@ -21,22 +23,23 @@ class BaseCodtoolsParser(Parser):
         self._check_calc_compatibility(calc)
         super(BaseCodtoolsParser, self).__init__(calc)
 
-    def _check_calc_compatibility(self,calc):
+    def _check_calc_compatibility(self, calc):
         from aiida.common.exceptions import ParsingError
-        if not isinstance(calc,self._supported_calculation_class):
-            raise ParsingError("Input calc must be a {}".format(
-                               self._supported_calculation_class.__name__))
 
-    def parse_with_retrieved(self,retrieved):
+        if not isinstance(calc, self._supported_calculation_class):
+            raise ParsingError("Input calc must be a {}".format(
+                self._supported_calculation_class.__name__))
+
+    def parse_with_retrieved(self, retrieved):
         """
         Receives in input a dictionary of retrieved nodes.
         Does all the logic here.
-        """       
+        """
         from aiida.common.exceptions import InvalidOperation
         import os
 
         output_path = None
-        error_path  = None
+        error_path = None
         try:
             output_path, error_path = self._fetch_output_files(retrieved)
         except InvalidOperation:
@@ -72,25 +75,25 @@ class BaseCodtoolsParser(Parser):
         state = self._calc.get_state()
         if state != calc_states.PARSING:
             raise InvalidOperation("Calculation not in {} state"
-                                   .format(calc_states.PARSING) )
+                                   .format(calc_states.PARSING))
 
         # Check that the retrieved folder is there 
         try:
             out_folder = retrieved[self._calc._get_linkname_retrieved()]
         except KeyError:
-            raise IOError("No retrieved folder found")        
+            raise IOError("No retrieved folder found")
 
         list_of_files = out_folder.get_folder_list()
 
         output_path = None
-        error_path  = None
+        error_path = None
 
         if self._calc._DEFAULT_OUTPUT_FILE in list_of_files:
-            output_path = os.path.join( out_folder.get_abs_path('.'),
-                                        self._calc._DEFAULT_OUTPUT_FILE )
+            output_path = os.path.join(out_folder.get_abs_path('.'),
+                                       self._calc._DEFAULT_OUTPUT_FILE)
         if self._calc._DEFAULT_ERROR_FILE in list_of_files:
-            error_path  = os.path.join( out_folder.get_abs_path('.'),
-                                        self._calc._DEFAULT_ERROR_FILE )
+            error_path = os.path.join(out_folder.get_abs_path('.'),
+                                      self._calc._DEFAULT_ERROR_FILE)
 
         return output_path, error_path
 
@@ -117,10 +120,10 @@ class BaseCodtoolsParser(Parser):
 
         output_nodes = []
         if cif is not None:
-            output_nodes.append(('cif',cif))
+            output_nodes.append(('cif', cif))
         output_nodes.append(('messages',
                              ParameterData(dict={'output_messages':
-                                                 messages})))
+                                                     messages})))
         return output_nodes
 
     def _check_failed(self, messages):
@@ -133,5 +136,5 @@ class BaseCodtoolsParser(Parser):
         import re
 
         for msg in messages:
-            if re.search('^(Can\'t locate|BEGIN failed)',msg):
+            if re.search('^(Can\'t locate|BEGIN failed)', msg):
                 raise PluginInternalError(" ".join(messages))

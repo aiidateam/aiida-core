@@ -7,6 +7,7 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
 
+
 class UniqueTest(unittest.TestCase):
     """
     Tests for the get_unique_filename function.
@@ -15,14 +16,14 @@ class UniqueTest(unittest.TestCase):
     def test_unique_1(self):
         filename = "different.txt"
         filename_list = ["file1.txt", "file2.txt"]
-        
+
         self.assertEqual(filename,
                          get_unique_filename(filename, filename_list))
 
     def test_unique_2(self):
         filename = "file1.txt"
         filename_list = ["file1.txt", "file2.txt"]
-        
+
         self.assertEqual("file1-1.txt",
                          get_unique_filename(filename, filename_list))
 
@@ -30,14 +31,14 @@ class UniqueTest(unittest.TestCase):
     def test_unique_3(self):
         filename = "file1.txt"
         filename_list = ["file1.txt", "file1-1.txt"]
-        
+
         self.assertEqual("file1-2.txt",
                          get_unique_filename(filename, filename_list))
 
     def test_unique_4(self):
         filename = "file1.txt"
         filename_list = ["file1.txt", "file1-2.txt"]
-        
+
         self.assertEqual("file1-1.txt",
                          get_unique_filename(filename, filename_list))
 

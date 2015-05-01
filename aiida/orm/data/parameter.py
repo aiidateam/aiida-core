@@ -6,6 +6,7 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
 
+
 class ParameterData(Data):
     """
     Pass as input in the init a dictionary, and it will get stored as internal
@@ -17,6 +18,7 @@ class ParameterData(Data):
     You can then change/delete/add more attributes before storing with the
     usual methods of aiida.orm.Node
     """
+
     def set_dict(self, dict):
         # I set the keys
         for k, v in dict.iteritems():
@@ -27,7 +29,7 @@ class ParameterData(Data):
         Return a dict with the parameters
         """
         return dict(self.iterattrs())
-    
+
     def keys(self):
         """
         Iterator of valid keys stored in the ParameterData object
@@ -37,8 +39,9 @@ class ParameterData(Data):
 
     def add_path(self, *args, **kwargs):
         from aiida.common.exceptions import ModificationNotAllowed
+
         raise ModificationNotAllowed("Cannot add files or directories to a ParameterData object")
 
-    #    def validate(self):
-    #        # There should be nothing specific to check
-    #        super(ParameterData,self).validate()
+        # def validate(self):
+        #        # There should be nothing specific to check
+        #        super(ParameterData,self).validate()

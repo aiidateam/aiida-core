@@ -9,23 +9,27 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi"
 
+
 class CoddepositionState(Enumerate):
     pass
 
+
 cod_deposition_states = CoddepositionState((
-        'SUCCESS',     # Structures are deposited/updated successfully
-        'DUPLICATE',   # Structures are found to be already in the database
-        'UNCHANGED',   # Structures are not updated (nothing to update)
-        'INPUTERROR',  # Other error caused by user's input
-        'SERVERERROR', # Internal server error
-        'UNKNOWN'      # Unknown state
-    ))
+    'SUCCESS',  # Structures are deposited/updated successfully
+    'DUPLICATE',  # Structures are found to be already in the database
+    'UNCHANGED',  # Structures are not updated (nothing to update)
+    'INPUTERROR',  # Other error caused by user's input
+    'SERVERERROR',  # Internal server error
+    'UNKNOWN'  # Unknown state
+))
+
 
 class CifcoddepositParser(CiffilterParser):
     """
     Specific parser for the output of cif_cod_deposit script.
     """
-    def __init__(self,calc):
+
+    def __init__(self, calc):
         """
         Initialize the instance of CiffilterParser
         """
@@ -46,7 +50,7 @@ class CifcoddepositParser(CiffilterParser):
             content = None
             with open(output_path) as f:
                 content = f.read()
-            status,message = CifcoddepositParser._deposit_result(content)
+            status, message = CifcoddepositParser._deposit_result(content)
             messages.extend(message.split("\n"))
 
         if error_path is not None:
@@ -58,18 +62,19 @@ class CifcoddepositParser(CiffilterParser):
         output_nodes = []
         output_nodes.append(('messages',
                              ParameterData(dict={'output_messages':
-                                                 messages,
+                                                     messages,
                                                  'status': status})))
         return output_nodes
 
     @classmethod
-    def _deposit_result(cls,output):
+    def _deposit_result(cls, output):
         import re
-        status  = cod_deposition_states.UNKNOWN
+
+        status = cod_deposition_states.UNKNOWN
         message = ''
 
-        output = re.sub('^[^:]*cif-deposit\.pl:\s+','',output)
-        output = re.sub('\n$','',output)
+        output = re.sub('^[^:]*cif-deposit\.pl:\s+', '', output)
+        output = re.sub('\n$', '', output)
 
         dep = re.search('^(structures .+ were successfully deposited '
                         'into .?COD)$', output)
@@ -80,8 +85,8 @@ class CifcoddepositParser(CiffilterParser):
         lgn = re.search('<p class="error"[^>]*>[^:]+: (.*)',
                         output, re.IGNORECASE)
 
-        if   dep is not None:
-            status  = cod_deposition_states.SUCCESS
+        if dep is not None:
+            status = cod_deposition_states.SUCCESS
             message = dep.group(1)
         elif dup is not None:
             status = cod_deposition_states.DUPLICATE
@@ -96,4 +101,4 @@ class CifcoddepositParser(CiffilterParser):
             status = cod_deposition_states.INPUTERROR
             message = output
 
-        return status,message
+        return status, message

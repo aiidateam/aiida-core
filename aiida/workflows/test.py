@@ -10,9 +10,11 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
 
+
 class WorkflowTestEmpty(Workflow):
     """
     Empty workflow, just for testing
-    """    
-    def __init__(self,**kwargs):        
+    """
+
+    def __init__(self, **kwargs):
         super(WorkflowTestEmpty, self).__init__(**kwargs)

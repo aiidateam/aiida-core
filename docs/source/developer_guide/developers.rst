@@ -14,6 +14,23 @@ And more generally, write verbose! Will you remember
 after a month why you had to write that check on that line? (Hint: no)
 Write comments!
 
+Pylint
+------
+You can check your code style and other important code errors by using Pylint.
+Once installed you can run Pylint from the root source directory on the code
+using the command::
+
+  pylint aiida
+
+The most important part is the summary under the ``Messages`` table near the
+end.
+
+Version number
+++++++++++++++
+
+The AiiDA version number is stored in both ``aiida/__init__.py`` and
+``setup.py``.  Make sure to update both when changing version number.
+
 Inline calculations
 +++++++++++++++++++
 If an operation is extremely fast to be run, this can be done directly in
@@ -30,9 +47,9 @@ to wrap suitably defined function, so that after their execution,
 a node representing their execution is stored in the DB, and suitable input
 and output nodes are also stored.
 
-.. note:: See the documentation of 
-    this function for further documentation of how it should be used, and
-    of the requirements for the wrapped function.
+.. note:: See the documentation of this function for further documentation of
+  how it should be used, and of the requirements for the wrapped function.
+
 
 Commits and GIT usage
 +++++++++++++++++++++
@@ -68,7 +85,7 @@ In particular:
 For a cheatsheet of git commands, see :doc:`here <git_cheatsheet>`.
 
 .. note:: Before committing, **always** run::
-  
+
     verdi devel tests
   
   to be sure that your modifications did not introduce any new bugs in existing
@@ -198,6 +215,7 @@ For each of the above types of tests, a different testing approach is followed
      ``False``::
      
        verdi devel setproperty tests.use_sqlite false
+
      
 3. These tests require an external engine to submit the calculations and then
    check the results at job completion. We use for this a continuous integration
@@ -218,3 +236,39 @@ run for *all* available plugins, to avoid to rewrite the same
 test code more than once and ensure that all plugins behave in the
 same way (e.g., to copy files, remove folders, etc.).
 
+Virtual environment
++++++++++++++++++++
+
+Sometimes it's useful to have a virtual environment that separates out the
+AiiDA dependencies from the rest of the system.  This is especially the case
+when testing AiiDA against library versions that are different from those
+installed on the system.
+
+First, install virtualenv using pip::
+
+  pip install virtualenv
+
+Basic usage
+-----------
+
+#. To create a virtual environment in folder ``venv``, while in the AiiDA
+   directory type::
+
+     virtualenv venv
+
+   This puts a copy of the Python executables and the pip library within the
+   ``venv`` folder hierarchy.
+
+#. Activate the environment with::
+
+     source venv/bin/activate
+
+   Your shell should now be prompt should now start with ``(venv)``.
+
+#. (optional) Install AiiDA::
+
+     pip install .
+
+#. Deactivate the virtual environment::
+
+     deactivate

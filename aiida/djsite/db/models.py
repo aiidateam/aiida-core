@@ -25,17 +25,20 @@ __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Nicolas Mounet, Riccardo 
 # version and the DB schema version are the same. (The DB schema version
 # is stored in the DbSetting table and the check is done in the 
 # load_dbenv() function).
-SCHEMA_VERSION="1.0.1"
+SCHEMA_VERSION = "1.0.1"
+
 
 class AiidaQuerySet(QuerySet):
     def iterator(self):
         for obj in super(AiidaQuerySet, self).iterator():
             yield obj.get_aiida_class()
 
+
 class AiidaObjectManager(m.Manager):
     def get_query_set(self):
         return AiidaQuerySet(self.model, using=self._db)
-   
+
+
 class DbUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
         """
@@ -49,11 +52,11 @@ class DbUserManager(BaseUserManager):
         user = self.model(email=email,
                           is_staff=False, is_active=True, is_superuser=False,
                           last_login=now, date_joined=now, **extra_fields)
-    
+
         user.set_password(password)
         user.save(using=self._db)
         return user
-    
+
     def create_superuser(self, email, password, **extra_fields):
         u = self.create_user(email, password, **extra_fields)
         u.is_staff = True
@@ -74,16 +77,16 @@ class DbUser(AbstractBaseUser, PermissionsMixin):
     institution = m.CharField(max_length=254, blank=True)
 
     is_staff = m.BooleanField(default=False,
-        help_text='Designates whether the user can log into this admin '
-                    'site.')
+                              help_text='Designates whether the user can log into this admin '
+                                        'site.')
     is_active = m.BooleanField(default=True,
-        help_text='Designates whether this user should be treated as '
-                    'active. Unselect this instead of deleting accounts.')
-    date_joined = m.DateTimeField(default=timezone.now)  
-    
+                               help_text='Designates whether this user should be treated as '
+                                         'active. Unselect this instead of deleting accounts.')
+    date_joined = m.DateTimeField(default=timezone.now)
+
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['first_name', 'last_name', 'institution']
-    
+
     objects = DbUserManager()
 
     def get_full_name(self):
@@ -91,16 +94,16 @@ class DbUser(AbstractBaseUser, PermissionsMixin):
             return "{} {} ({})".format(self.first_name, self.last_name,
                                        self.email)
         elif self.first_name:
-            return "{} ({})".format(self.first_name, self.email)            
+            return "{} ({})".format(self.first_name, self.email)
         elif self.last_name:
             return "{} ({})".format(self.last_name, self.email)
         else:
             return "{}".format(self.email)
-    
+
     def get_short_name(self):
         return self.email
-    
-            
+
+
 @python_2_unicode_compatible
 class DbNode(m.Model):
     """
@@ -139,7 +142,7 @@ class DbNode(m.Model):
     # type (type__startswith="calculation.") and avoid problems with classes
     # starting with the same string
     # max_length required for index by MySql
-    type = m.CharField(max_length=255,db_index=True) 
+    type = m.CharField(max_length=255, db_index=True)
     label = m.CharField(max_length=255, db_index=True, blank=True)
     description = m.TextField(blank=True)
     # creation time
@@ -151,11 +154,11 @@ class DbNode(m.Model):
 
     # Direct links
     outputs = m.ManyToManyField('self', symmetrical=False,
-                                related_name='inputs', through='DbLink')  
+                                related_name='inputs', through='DbLink')
     # Transitive closure
     children = m.ManyToManyField('self', symmetrical=False,
                                  related_name='parents', through='DbPath')
-    
+
     # Used only if dbnode is a calculation, or remotedata
     # Avoid that computers can be deleted if at least a node exists pointing
     # to it.
@@ -164,7 +167,7 @@ class DbNode(m.Model):
 
     # Index that is incremented every time a modification is done on itself or on attributes.
     # Managed by the aiida.orm.Node class. Do not modify
-    nodeversion = m.IntegerField(default=1,editable=False)
+    nodeversion = m.IntegerField(default=1, editable=False)
 
     # For the API: whether this node 
     public = m.BooleanField(default=False)
@@ -172,8 +175,8 @@ class DbNode(m.Model):
     objects = m.Manager()
     # Return aiida Node instances or their subclasses instead of DbNode instances
     aiidaobjects = AiidaObjectManager()
-        
-    
+
+
     def get_aiida_class(self):
         """
         Return the corresponding aiida instance of class aiida.orm.Node or a
@@ -188,13 +191,13 @@ class DbNode(m.Model):
             pluginclassname = from_type_to_pluginclassname(self.type)
         except DbContentError:
             raise DbContentError("The type name of node with pk= {} is "
-                                "not valid: '{}'".format(self.pk, self.type))
+                                 "not valid: '{}'".format(self.pk, self.type))
 
         try:
             PluginClass = load_plugin(Node, 'aiida.orm', pluginclassname)
         except MissingPluginError:
             aiidalogger.error("Unable to find plugin for type '{}' (node= {}), "
-                "will use base Node class".format(self.type,self.pk))
+                              "will use base Node class".format(self.type, self.pk))
             PluginClass = Node
 
         return PluginClass(dbnode=self)
@@ -217,7 +220,7 @@ class DbNode(m.Model):
         if not thistype.endswith("."):
             return invalid_result
         else:
-            thistype = thistype[:-1] # Strip final dot
+            thistype = thistype[:-1]  # Strip final dot
             return thistype.rpartition('.')[2]
 
     @property
@@ -242,6 +245,7 @@ class DbNode(m.Model):
         else:
             return "{} node [{}]".format(simplename, self.pk)
 
+
 @python_2_unicode_compatible
 class DbLink(m.Model):
     '''
@@ -250,11 +254,11 @@ class DbLink(m.Model):
     '''
     # If I delete an output, delete also the link; if I delete an input, stop
     # NOTE: this will in most cases render a DbNode.objects.filter(...).delete()
-    #    call unusable because some nodes will be inputs; Nodes will have to 
+    # call unusable because some nodes will be inputs; Nodes will have to
     #    be deleted in the proper order (or links will need to be deleted first)
-    input = m.ForeignKey('DbNode',related_name='output_links',
+    input = m.ForeignKey('DbNode', related_name='output_links',
                          on_delete=m.PROTECT)
-    output = m.ForeignKey('DbNode',related_name='input_links',
+    output = m.ForeignKey('DbNode', related_name='input_links',
                           on_delete=m.CASCADE)
     #label for data input for calculation
     label = m.CharField(max_length=255, db_index=True, blank=False)
@@ -269,31 +273,31 @@ class DbLink(m.Model):
         # allowed to have the same name. For calculations, it is the
         # rensponsibility of the output plugin to avoid to have many
         # times the same name.
-        unique_together = (("input",  "output"),
+        unique_together = (("input", "output"),
                            ("output", "label"),
-                           )
-        
+        )
+
     def __str__(self):
         return "{} ({}) --> {} ({})".format(
             self.input.get_simple_name(invalid_result="Unknown node"),
             self.input.pk,
             self.output.get_simple_name(invalid_result="Unknown node"),
-            self.output.pk,)
-            
+            self.output.pk, )
+
 
 @python_2_unicode_compatible
 class DbPath(m.Model):
     """
     Transitive closure table for all dbnode paths.
     """
-    parent = m.ForeignKey('DbNode',related_name='child_paths',editable=False)
-    child = m.ForeignKey('DbNode',related_name='parent_paths',editable=False)
+    parent = m.ForeignKey('DbNode', related_name='child_paths', editable=False)
+    child = m.ForeignKey('DbNode', related_name='parent_paths', editable=False)
     depth = m.IntegerField(editable=False)
 
     # Used to delete or to expand the path
-    entry_edge_id = m.IntegerField(null=True,editable=False)
-    direct_edge_id = m.IntegerField(null=True,editable=False)
-    exit_edge_id = m.IntegerField(null=True,editable=False)
+    entry_edge_id = m.IntegerField(null=True, editable=False)
+    direct_edge_id = m.IntegerField(null=True, editable=False)
+    exit_edge_id = m.IntegerField(null=True, editable=False)
 
     def __str__(self):
         return "{} ({}) ==[{}]==>> {} ({})".format(
@@ -301,8 +305,8 @@ class DbPath(m.Model):
             self.parent.pk,
             self.depth,
             self.child.get_simple_name(invalid_result="Unknown node"),
-            self.child.pk,)
-            
+            self.child.pk, )
+
     def expand(self):
         """
         Method to expand a DbPath (recursive function), i.e., to get a list
@@ -310,19 +314,19 @@ class DbPath(m.Model):
         
         :return: list of DbNode objects representing the expanded DbPath
         """
-        
+
         if self.depth == 0:
-            return [self.parent,self.child]
+            return [self.parent, self.child]
         else:
-            path_entry  = []
+            path_entry = []
             path_direct = DbPath.objects.get(id=self.direct_edge_id).expand()
-            path_exit   = []
+            path_exit = []
             # we prevent DbNode repetitions
             if self.entry_edge_id != self.direct_edge_id:
                 path_entry = DbPath.objects.get(id=self.entry_edge_id).expand()[:-1]
             if self.exit_edge_id != self.direct_edge_id:
-                path_exit  = DbPath.objects.get(id=self.exit_edge_id).expand()[1:]
-            
+                path_exit = DbPath.objects.get(id=self.exit_edge_id).expand()[1:]
+
             return path_entry + path_direct + path_exit
 
 
@@ -338,12 +342,14 @@ attrdatatype_choice = (
     ('none', 'none'))
 
 from aiida.common.exceptions import AiidaException
+
+
 class DeserializationException(AiidaException):
     pass
 
 
-def _deserialize_attribute(mainitem, subitems, sep, original_class=None, 
-                           original_pk=None,lesserrors=False):
+def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
+                           original_pk=None, lesserrors=False):
     """
     Deserialize a single attribute. 
     
@@ -389,34 +395,34 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
     if mainitem['datatype'] == 'none':
         if subitems:
             raise DeserializationException("'{}' is of a base type, "
-                "but has subitems!".format(mainitem.key))
+                                           "but has subitems!".format(mainitem.key))
         return None
     elif mainitem['datatype'] == 'bool':
         if subitems:
             raise DeserializationException("'{}' is of a base type, "
-                "but has subitems!".format(mainitem.key))
+                                           "but has subitems!".format(mainitem.key))
         return mainitem['bval']
     elif mainitem['datatype'] == 'int':
         if subitems:
             raise DeserializationException("'{}' is of a base type, "
-                "but has subitems!".format(mainitem.key))
+                                           "but has subitems!".format(mainitem.key))
         return mainitem['ival']
     elif mainitem['datatype'] == 'float':
         if subitems:
             raise DeserializationException("'{}' is of a base type, "
-                "but has subitems!".format(mainitem.key))
+                                           "but has subitems!".format(mainitem.key))
         return mainitem['fval']
     elif mainitem['datatype'] == 'txt':
         if subitems:
             raise DeserializationException("'{}' is of a base type, "
-                "but has subitems!".format(mainitem.key))
+                                           "but has subitems!".format(mainitem.key))
         return mainitem['tval']
     elif mainitem['datatype'] == 'date':
         if subitems:
             raise DeserializationException("'{}' is of a base type, "
-                "but has subitems!".format(mainitem.key))
+                                           "but has subitems!".format(mainitem.key))
         if is_naive(mainitem['dval']):
-            return make_aware(mainitem['dval'],get_current_timezone())
+            return make_aware(mainitem['dval'], get_current_timezone())
         else:
             return mainitem['dval']
         return mainitem['dval']
@@ -425,11 +431,11 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
         # deepness 1, i.e. if I have subitems '0', '1' and '1.c' I 
         # store only '0' and '1'
         firstlevelsubdict = {k: v for k, v in subitems.iteritems()
-                               if sep not in k}
+                             if sep not in k}
 
         # For checking, I verify the expected values
         expected_set = set(["{:d}".format(i)
-               for i in range(mainitem['ival'])])
+                            for i in range(mainitem['ival'])])
         received_set = set(firstlevelsubdict.keys())
         # If there are more entries than expected, but all expected
         # ones are there, I just issue an error but I do not stop.
@@ -446,15 +452,15 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
                 sourcestr = "the data passed"
             else:
                 sourcestr = original_class.__name__
-                
+
             raise DeserializationException("Wrong list elements stored in {} for "
-                                 "{}key='{}' ({} vs {})".format(
-                                 sourcestr, 
-                                 subspecifier_string,
-                                 mainitem['key'], expected_set, received_set))
+                                           "{}key='{}' ({} vs {})".format(
+                sourcestr,
+                subspecifier_string,
+                mainitem['key'], expected_set, received_set))
         if expected_set != received_set:
             if (original_class is not None and
-                original_class._subspecifier_field_name is not None):
+                        original_class._subspecifier_field_name is not None):
                 subspecifier_string = "{}={} and ".format(
                     original_class._subspecifier_field_name,
                     original_pk)
@@ -467,25 +473,25 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
 
             msg = ("Wrong list elements stored in {} for "
                    "{}key='{}' ({} vs {})".format(
-                      sourcestr, 
-                      subspecifier_string,
-                      mainitem['key'], expected_set, received_set))
+                sourcestr,
+                subspecifier_string,
+                mainitem['key'], expected_set, received_set))
             if lesserrors:
                 aiidalogger.error(msg)
             else:
                 raise DeserializationException(msg)
-        
+
         # I get the values in memory as a dictionary
         tempdict = {}
         for firstsubk, firstsubv in firstlevelsubdict.iteritems():
             # I call recursively the same function to get subitems
-            newsubitems={k[len(firstsubk)+len(sep):]: v 
-                         for k, v in subitems.iteritems()
-                         if k.startswith(firstsubk+sep)}
+            newsubitems = {k[len(firstsubk) + len(sep):]: v
+                           for k, v in subitems.iteritems()
+                           if k.startswith(firstsubk + sep)}
             tempdict[firstsubk] = _deserialize_attribute(mainitem=firstsubv,
-                subitems=newsubitems, sep=sep, original_class=original_class,
-                original_pk=original_pk)
-                
+                                                         subitems=newsubitems, sep=sep, original_class=original_class,
+                                                         original_pk=original_pk)
+
         # And then I put them in a list
         retlist = [tempdict["{:d}".format(i)] for i in range(mainitem['ival'])]
         return retlist
@@ -494,11 +500,11 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
         # deepness 1, i.e. if I have subitems '0', '1' and '1.c' I 
         # store only '0' and '1'
         firstlevelsubdict = {k: v for k, v in subitems.iteritems()
-                               if sep not in k}
+                             if sep not in k}
 
         if len(firstlevelsubdict) != mainitem['ival']:
             if (original_class is not None and
-                original_class._subspecifier_field_name is not None):
+                        original_class._subspecifier_field_name is not None):
                 subspecifier_string = "{}={} and ".format(
                     original_class._subspecifier_field_name,
                     original_pk)
@@ -510,11 +516,11 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
                 sourcestr = original_class.__name__
 
             msg = ("Wrong dict length stored in {} for "
-                              "{}key='{}' ({} vs {})".format(
-                                sourcestr,
-                                subspecifier_string,
-                                mainitem['key'], len(firstlevelsubdict),
-                                mainitem['ival']))
+                   "{}key='{}' ({} vs {})".format(
+                sourcestr,
+                subspecifier_string,
+                mainitem['key'], len(firstlevelsubdict),
+                mainitem['ival']))
             if lesserrors:
                 aiidalogger.error(msg)
             else:
@@ -524,13 +530,13 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
         tempdict = {}
         for firstsubk, firstsubv in firstlevelsubdict.iteritems():
             # I call recursively the same function to get subitems
-            newsubitems={k[len(firstsubk)+len(sep):]: v 
-                         for k, v in subitems.iteritems()
-                         if k.startswith(firstsubk+sep)}
+            newsubitems = {k[len(firstsubk) + len(sep):]: v
+                           for k, v in subitems.iteritems()
+                           if k.startswith(firstsubk + sep)}
             tempdict[firstsubk] = _deserialize_attribute(mainitem=firstsubv,
-                subitems=newsubitems, sep=sep, original_class=original_class,
-                original_pk=original_pk)
-            
+                                                         subitems=newsubitems, sep=sep, original_class=original_class,
+                                                         original_pk=original_pk)
+
         return tempdict
     elif mainitem['datatype'] == 'json':
         try:
@@ -539,7 +545,8 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
             raise DeserializationException("Error in the content of the json field")
     else:
         raise DeserializationException("The type field '{}' is not recognized".format(
-                mainitem['datatype']))        
+            mainitem['datatype']))
+
 
 def deserialize_attributes(data, sep, original_class=None, original_pk=None):
     """
@@ -572,7 +579,7 @@ def deserialize_attributes(data, sep, original_class=None, original_pk=None):
       it will return ``{"a": [2, "yy"]}``
     """
     from collections import defaultdict
-    
+
     # I group results by zero-level entity
     found_mainitems = {}
     found_subitems = defaultdict(dict)
@@ -580,29 +587,30 @@ def deserialize_attributes(data, sep, original_class=None, original_pk=None):
         prefix, thissep, postfix = mainkey.partition(sep)
         if thissep:
             found_subitems[prefix][postfix] = {k: v for k, v
-                in descriptiondict.iteritems() if k != "key"}
+                                               in descriptiondict.iteritems() if k != "key"}
         else:
             mainitem = descriptiondict.copy()
             mainitem['key'] = prefix
             found_mainitems[prefix] = mainitem
-    
+
     # There can be mainitems without subitems, but there should not be subitems
     # without mainitmes.
     lone_subitems = set(found_subitems.keys()) - set(found_mainitems.keys())
     if lone_subitems:
         raise DeserializationException("Missing base keys for the following "
-            "items: {}".format(",".join(lone_subitems)))
-        
+                                       "items: {}".format(",".join(lone_subitems)))
+
     # For each zero-level entity, I call the _deserialize_attribute function
     retval = {}
     for k, v in found_mainitems.iteritems():
         # Note: found_subitems[k] will return an empty dictionary it the
         # key does not exist, as it is a defaultdict
         retval[k] = _deserialize_attribute(mainitem=v,
-           subitems=found_subitems[k], sep=sep, original_class=original_class,
-           original_pk=original_pk) 
-    
-    return retval    
+                                           subitems=found_subitems[k], sep=sep, original_class=original_class,
+                                           original_pk=original_pk)
+
+    return retval
+
 
 class DbMultipleValueAttributeBaseClass(m.Model):
     """
@@ -610,13 +618,14 @@ class DbMultipleValueAttributeBaseClass(m.Model):
     different data types (without any association to a Node).
     """
     from aiida.djsite.utils import long_field_length
-    key = m.CharField(max_length=long_field_length(),db_index=True,blank=False)
-    datatype = m.CharField(max_length=10, 
-                           default='none', 
+
+    key = m.CharField(max_length=long_field_length(), db_index=True, blank=False)
+    datatype = m.CharField(max_length=10,
+                           default='none',
                            choices=attrdatatype_choice, db_index=True)
-    tval = m.TextField( default='', blank=True)
-    fval = m.FloatField( default=None, null=True)
-    ival = m.IntegerField( default=None, null=True)
+    tval = m.TextField(default='', blank=True)
+    fval = m.FloatField(default=None, null=True)
+    ival = m.IntegerField(default=None, null=True)
     bval = m.NullBooleanField(default=None, null=True)
     dval = m.DateTimeField(default=None, null=True)
 
@@ -642,8 +651,8 @@ class DbMultipleValueAttributeBaseClass(m.Model):
             return {}
         else:
             return {self._subspecifier_field_name:
-                    getattr(self, self._subspecifier_field_name)}
-    
+                        getattr(self, self._subspecifier_field_name)}
+
     @property
     def subspecifier_pk(self):
         """
@@ -665,20 +674,20 @@ class DbMultipleValueAttributeBaseClass(m.Model):
         :raise ValidationError: if the key is not valid
         """
         from aiida.common.exceptions import ValidationError
-        
-        if not isinstance(key,basestring):
+
+        if not isinstance(key, basestring):
             raise ValidationError("The key must be a string.")
         if not key:
             raise ValidationError("The key cannot be an empty string.")
         if cls._sep in key:
             raise ValidationError("The separator symbol '{}' cannot be present "
-                "in the key of a {}.".format(
+                                  "in the key of a {}.".format(
                 cls._sep, cls.__name__))
 
     @classmethod
-    def set_value(cls,key, value, with_transaction=True,
-                      subspecifier_value=None, other_attribs={},
-                      stop_if_existing=False):
+    def set_value(cls, key, value, with_transaction=True,
+                  subspecifier_value=None, other_attribs={},
+                  stop_if_existing=False):
         """
         Set a new value in the DB, possibly associated to the given subspecifier.
         
@@ -709,24 +718,24 @@ class DbMultipleValueAttributeBaseClass(m.Model):
            only when the transaction is committed.          
         """
         from django.db import transaction
-        
+
         cls.validate_key(key)
-        
+
         try:
             if with_transaction:
                 sid = transaction.savepoint()
-                                
-            #create_value returns a list of nodes to store
+
+            # create_value returns a list of nodes to store
             to_store = cls.create_value(key, value,
-                    subspecifier_value=subspecifier_value,
-                    other_attribs=other_attribs)
-            
+                                        subspecifier_value=subspecifier_value,
+                                        other_attribs=other_attribs)
+
             if to_store:
                 if not stop_if_existing:
                     # Delete the olf values if stop_if_existing is False,
                     # otherwise don't delete them and hope they don't
                     # exist. If they exist, I'll get an UniquenessError
-                    
+
                     ## NOTE! Be careful in case the extra/attribute to
                     ## store is not a simple attribute but a list or dict:
                     ## like this, it should be ok because if we are 
@@ -736,25 +745,25 @@ class DbMultipleValueAttributeBaseClass(m.Model):
                     ## so in general it is good to recursively clean 
                     ## all sub-items.
                     cls.del_value(key,
-                        subspecifier_value=subspecifier_value)
+                                  subspecifier_value=subspecifier_value)
                 cls.objects.bulk_create(to_store)
-            
+
             if with_transaction:
                 transaction.savepoint_commit(sid)
-        except BaseException as e: # All exceptions including CTRL+C, ...
+        except BaseException as e:  # All exceptions including CTRL+C, ...
             from django.db.utils import IntegrityError
             from aiida.common.exceptions import UniquenessError
-            
+
             if with_transaction:
                 transaction.savepoint_rollback(sid)
             if isinstance(e, IntegrityError) and stop_if_existing:
                 raise UniquenessError("Impossible to create the required "
-                    "entry "
-                    "in table '{}', "
-                    "another entry already exists and the creation would "
-                    "violate an uniqueness constraint.\nFurther details: "
-                    "{}".format(
-                        cls.__name__, e.message))
+                                      "entry "
+                                      "in table '{}', "
+                                      "another entry already exists and the creation would "
+                                      "violate an uniqueness constraint.\nFurther details: "
+                                      "{}".format(
+                    cls.__name__, e.message))
             raise
 
     @classmethod
@@ -784,9 +793,9 @@ class DbMultipleValueAttributeBaseClass(m.Model):
           bulk_create() call).
         """
         import json
-        import datetime 
+        import datetime
         from django.utils.timezone import is_naive, make_aware, get_current_timezone
-    
+
         if cls._subspecifier_field_name is None:
             if subspecifier_value is not None:
                 raise ValueError("You cannot specify a subspecifier value for "
@@ -797,23 +806,23 @@ class DbMultipleValueAttributeBaseClass(m.Model):
             if subspecifier_value is None:
                 raise ValueError("You also have to specify a subspecifier value "
                                  "for class {} (the {})".format(cls.__name__,
-                                    cls._subspecifier_field_name))
+                                                                cls._subspecifier_field_name))
             further_params = other_attribs.copy()
             further_params.update({cls._subspecifier_field_name:
-                               subspecifier_value})
-            new_entry = cls(key=key,**further_params)
-        
+                                       subspecifier_value})
+            new_entry = cls(key=key, **further_params)
+
         list_to_return = [new_entry]
-        
+
         if value is None:
             new_entry.datatype = 'none'
             new_entry.bval = None
             new_entry.tval = ''
             new_entry.ival = None
             new_entry.fval = None
-            new_entry.dval = None            
-            
-        elif isinstance(value,bool):
+            new_entry.dval = None
+
+        elif isinstance(value, bool):
             new_entry.datatype = 'bool'
             new_entry.bval = value
             new_entry.tval = ''
@@ -821,7 +830,7 @@ class DbMultipleValueAttributeBaseClass(m.Model):
             new_entry.fval = None
             new_entry.dval = None
 
-        elif isinstance(value,(int,long)):
+        elif isinstance(value, (int, long)):
             new_entry.datatype = 'int'
             new_entry.ival = value
             new_entry.tval = ''
@@ -829,7 +838,7 @@ class DbMultipleValueAttributeBaseClass(m.Model):
             new_entry.fval = None
             new_entry.dval = None
 
-        elif isinstance(value,float):
+        elif isinstance(value, float):
             new_entry.datatype = 'float'
             new_entry.fval = value
             new_entry.tval = ''
@@ -837,7 +846,7 @@ class DbMultipleValueAttributeBaseClass(m.Model):
             new_entry.bval = None
             new_entry.dval = None
 
-        elif isinstance(value,basestring):
+        elif isinstance(value, basestring):
             new_entry.datatype = 'txt'
             new_entry.tval = value
             new_entry.bval = None
@@ -845,11 +854,11 @@ class DbMultipleValueAttributeBaseClass(m.Model):
             new_entry.fval = None
             new_entry.dval = None
 
-        elif isinstance(value,datetime.datetime):
+        elif isinstance(value, datetime.datetime):
 
             # current timezone is taken from the settings file of django
             if is_naive(value):
-                value_to_set = make_aware(value,get_current_timezone())
+                value_to_set = make_aware(value, get_current_timezone())
             else:
                 value_to_set = value
 
@@ -863,57 +872,57 @@ class DbMultipleValueAttributeBaseClass(m.Model):
             new_entry.fval = None
 
         elif isinstance(value, (list, tuple)):
-                            
+
             new_entry.datatype = 'list'
             new_entry.dval = None
             new_entry.tval = ''
             new_entry.bval = None
             new_entry.ival = len(value)
             new_entry.fval = None
-            
-            for i, subv in enumerate(value):                           
+
+            for i, subv in enumerate(value):
                 # I do not need get_or_create here, because
                 # above I deleted all children (and I
                 # expect no concurrency)
-                #NOTE: I do not pass other_attribs
+                # NOTE: I do not pass other_attribs
                 list_to_return.extend(cls.create_value(
-                     key=("{}{}{:d}".format(key,cls._sep, i)),
-                     value=subv,
-                     subspecifier_value=subspecifier_value))
-        
+                    key=("{}{}{:d}".format(key, cls._sep, i)),
+                    value=subv,
+                    subspecifier_value=subspecifier_value))
+
         elif isinstance(value, dict):
-                            
+
             new_entry.datatype = 'dict'
             new_entry.dval = None
             new_entry.tval = ''
             new_entry.bval = None
             new_entry.ival = len(value)
             new_entry.fval = None
-            
+
             for subk, subv in value.iteritems():
                 cls.validate_key(subk)
-                                        
+
                 # I do not need get_or_create here, because
                 # above I deleted all children (and I
                 # expect no concurrency)
-                #NOTE: I do not pass other_attribs
+                # NOTE: I do not pass other_attribs
                 list_to_return.extend(cls.create_value(
-                     key="{}{}{}".format(key, cls._sep, subk),
-                     value=subv,
-                     subspecifier_value=subspecifier_value))
+                    key="{}{}{}".format(key, cls._sep, subk),
+                    value=subv,
+                    subspecifier_value=subspecifier_value))
         else:
             try:
                 jsondata = json.dumps(value)
             except TypeError:
                 raise ValueError("Unable to store the value: it must be "
-                    "either a basic datatype, or json-serializable")
-            
+                                 "either a basic datatype, or json-serializable")
+
             new_entry.datatype = 'json'
             new_entry.tval = jsondata
             new_entry.bval = None
             new_entry.ival = None
             new_entry.fval = None
-        
+
         return list_to_return
 
 
@@ -941,92 +950,92 @@ class DbMultipleValueAttributeBaseClass(m.Model):
         :raise: ValueError if value is not of a base datatype (string, integer,
             float, bool, None, or date)
         """
-        import datetime 
+        import datetime
         from django.utils.timezone import (
             is_naive, make_aware, get_current_timezone)
 
         if value is None:
             return {'datatype': 'none'}
-        elif isinstance(value,bool):
+        elif isinstance(value, bool):
             return {'datatype': 'bool', 'bval': value}
-        elif isinstance(value,(int,long)):
+        elif isinstance(value, (int, long)):
             return {'datatype': 'int', 'ival': value}
-        elif isinstance(value,float):
+        elif isinstance(value, float):
             return {'datatype': 'float', 'fval': value}
-        elif isinstance(value,basestring):
+        elif isinstance(value, basestring):
             return {'datatype': 'txt', 'tval': value}
-        elif isinstance(value,datetime.datetime):    
+        elif isinstance(value, datetime.datetime):
             # current timezone is taken from the settings file of django
             if is_naive(value):
-                value_to_set = make_aware(value,get_current_timezone())
+                value_to_set = make_aware(value, get_current_timezone())
             else:
                 value_to_set = value
             return {'datatype': 'date', 'dval': value_to_set}
         elif isinstance(value, list):
             raise ValueError("Lists are not supported for getting the "
-                "query_dict")
+                             "query_dict")
         elif isinstance(value, dict):
             raise ValueError("Dicts are not supported for getting the "
-              "query_dict")
+                             "query_dict")
         else:
             raise ValueError("Unsupported type for getting the "
-                "query_dict, it is {}".format(str(type(value))))
-    
+                             "query_dict, it is {}".format(str(type(value))))
+
     def getvalue(self):
         """
         This can be called on a given row and will get the corresponding value,
         casting it correctly.
-        """ 
-        try:  
-            if self.datatype == 'list' or self.datatype=='dict':
+        """
+        try:
+            if self.datatype == 'list' or self.datatype == 'dict':
                 prefix = "{}{}".format(self.key, self._sep)
                 prefix_len = len(prefix)
                 dballsubvalues = self.__class__.objects.filter(
                     key__startswith=prefix,
-                    **self.subspecifiers_dict).values_list('key', 
-                        'datatype', 'tval', 'fval',
-                        'ival', 'bval', 'dval')
+                    **self.subspecifiers_dict).values_list('key',
+                                                           'datatype', 'tval', 'fval',
+                                                           'ival', 'bval', 'dval')
                 # Strip the FULL prefix and replace it with the simple
                 # "attr" prefix
                 data = {"attr.{}".format(_[0][prefix_len:]): {
-                        "datatype": _[1], 
-                        "tval": _[2],
-                        "fval": _[3], 
-                        "ival": _[4], 
-                        "bval": _[5], 
-                        "dval": _[6],                     
-                         } for _ in dballsubvalues
-                        }
-                        #for _ in dballsubvalues}
+                    "datatype": _[1],
+                    "tval": _[2],
+                    "fval": _[3],
+                    "ival": _[4],
+                    "bval": _[5],
+                    "dval": _[6],
+                } for _ in dballsubvalues
+                }
+                # for _ in dballsubvalues}
                 # Append also the item itself
                 data["attr"] = {
                     # Replace the key (which may contain the separator) with the
                     # simple "attr" key. In any case I do not need to return it!
                     "key": "attr",
-                    "datatype": self.datatype, 
+                    "datatype": self.datatype,
                     "tval": self.tval,
-                    "fval": self.fval, 
-                    "ival": self.ival, 
-                    "bval": self.bval, 
+                    "fval": self.fval,
+                    "ival": self.ival,
+                    "bval": self.bval,
                     "dval": self.dval}
                 return deserialize_attributes(data, sep=self._sep,
-                    original_class=self.__class__,
-                    original_pk=self.subspecifier_pk)['attr']
+                                              original_class=self.__class__,
+                                              original_pk=self.subspecifier_pk)['attr']
             else:
                 data = {"attr": {
                     # Replace the key (which may contain the separator) with the
                     # simple "attr" key. In any case I do not need to return it!
                     "key": "attr",
-                    "datatype": self.datatype, 
+                    "datatype": self.datatype,
                     "tval": self.tval,
-                    "fval": self.fval, 
-                    "ival": self.ival, 
-                    "bval": self.bval, 
+                    "fval": self.fval,
+                    "ival": self.ival,
+                    "bval": self.bval,
                     "dval": self.dval}}
-                    
+
                 return deserialize_attributes(data, sep=self._sep,
-                    original_class=self.__class__,
-                    original_pk=self.subspecifier_pk)['attr']
+                                              original_class=self.__class__,
+                                              original_pk=self.subspecifier_pk)['attr']
         except DeserializationException as e:
             exc = DbContentError(e.message)
             exc.original_exception = e
@@ -1049,7 +1058,7 @@ class DbMultipleValueAttributeBaseClass(m.Model):
           that define it (e.g. DbAttribute and DbExtra)
         """
         from django.db.models import Q
-        
+
         if cls._subspecifier_field_name is None:
             if subspecifier_value is not None:
                 raise ValueError("You cannot specify a subspecifier value for "
@@ -1060,18 +1069,19 @@ class DbMultipleValueAttributeBaseClass(m.Model):
             if subspecifier_value is None:
                 raise ValueError("You also have to specify a subspecifier value "
                                  "for class {} (the {})".format(cls.__name__,
-                                    cls._subspecifier_field_name))
+                                                                cls._subspecifier_field_name))
             subspecifiers_dict = {cls._subspecifier_field_name:
-                    subspecifier_value}
-        
+                                      subspecifier_value}
+
         query = Q(key__startswith="{parentkey}{sep}".format(
             parentkey=key, sep=cls._sep),
-            **subspecifiers_dict)
-        
+                  **subspecifiers_dict)
+
         if not only_children:
             query.add(Q(key=key, **subspecifiers_dict), Q.OR)
-            
+
         cls.objects.filter(query).delete()
+
 
 @python_2_unicode_compatible
 class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
@@ -1090,15 +1100,15 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
     # 'dbattributes' and for 'dbextra' will be 'dbextras'
     # Moreover, automatically destroy attributes and extras if the parent
     # node is deleted
-    dbnode = m.ForeignKey('DbNode', related_name='%(class)ss', on_delete=m.CASCADE) 
+    dbnode = m.ForeignKey('DbNode', related_name='%(class)ss', on_delete=m.CASCADE)
     # max_length is required by MySql to have indexes and unique constraints
-    
+
     _subspecifier_field_name = 'dbnode'
-    
+
     class Meta:
         unique_together = (("dbnode", "key"))
         abstract = True
-    
+
     @classmethod
     def list_all_node_elements(cls, dbnode):
         """
@@ -1121,12 +1131,12 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
         :return: the value stored in the Db table, correctly converted 
             to the right type.
         :raise AttributeError: if no key is found for the given dbnode
-        """        
+        """
         try:
             attr = cls.objects.get(dbnode=dbnode, key=key)
         except ObjectDoesNotExist:
             raise AttributeError("{} with key {} for node {} not found "
-                "in db".format(cls.__name__, key, dbnode.pk))
+                                 "in db".format(cls.__name__, key, dbnode.pk))
         return attr.getvalue()
 
     @classmethod
@@ -1137,23 +1147,23 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
         :return: a dictionary where each key is a level-0 attribute
             stored in the Db table, correctly converted 
             to the right type.
-        """  
-        dballsubvalues = cls.objects.filter(dbnode=dbnode).values_list('key', 
-                'datatype', 'tval', 'fval',
-                'ival', 'bval', 'dval')
-        
+        """
+        dballsubvalues = cls.objects.filter(dbnode=dbnode).values_list('key',
+                                                                       'datatype', 'tval', 'fval',
+                                                                       'ival', 'bval', 'dval')
+
         data = {_[0]: {
-                "datatype": _[1], 
-                "tval": _[2],
-                "fval": _[3], 
-                "ival": _[4], 
-                "bval": _[5], 
-                "dval": _[6],                     
-                 } for _ in dballsubvalues
-                }
+            "datatype": _[1],
+            "tval": _[2],
+            "fval": _[3],
+            "ival": _[4],
+            "bval": _[5],
+            "dval": _[6],
+        } for _ in dballsubvalues
+        }
         try:
             return deserialize_attributes(data, sep=cls._sep,
-                original_class=cls,original_pk=dbnode.pk)
+                                          original_class=cls, original_pk=dbnode.pk)
         except DeserializationException as e:
             exc = DbContentError(e.message)
             exc.original_exception = e
@@ -1163,47 +1173,47 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
     def reset_values_for_node(cls, dbnode, attributes, with_transaction=True,
                               return_not_store=False):
         from django.db import transaction
-        
-        #cls.validate_key(key)
-        
+
+        # cls.validate_key(key)
+
         nodes_to_store = []
-        
+
         try:
             if with_transaction:
                 sid = transaction.savepoint()
-            
-            if isinstance(dbnode, (int,long)):
+
+            if isinstance(dbnode, (int, long)):
                 dbnode_node = DbNode(id=dbnode)
             else:
                 dbnode_node = dbnode
-                        
+
             #create_value returns a list of nodes to store
             for k, v in attributes.iteritems():
                 nodes_to_store.extend(
                     cls.create_value(k, v,
-                        subspecifier_value=dbnode_node,
-                        ))
-            
+                                     subspecifier_value=dbnode_node,
+                    ))
+
             if return_not_store:
                 return nodes_to_store
             else:
                 # Reset. For set, use also a filter for key__in=attributes.keys()
                 cls.objects.filter(dbnode=dbnode_node).delete()
-    
+
                 if nodes_to_store:
                     cls.objects.bulk_create(nodes_to_store)
-            
+
             if with_transaction:
                 transaction.savepoint_commit(sid)
         except:
             if with_transaction:
                 transaction.savepoint_rollback(sid)
             raise
-    
-    
+
+
     @classmethod
     def set_value_for_node(cls, dbnode, key, value, with_transaction=True,
-        stop_if_existing=False):
+                           stop_if_existing=False):
         """
         This is the raw-level method that accesses the DB. No checks are done
         to prevent the user from (re)setting a valid key. 
@@ -1234,15 +1244,15 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
         :raise ValueError: if the key contains the separator symbol used 
             internally to unpack dictionaries and lists (defined in cls._sep).
         """
-        if isinstance(dbnode, (int,long)):
+        if isinstance(dbnode, (int, long)):
             dbnode_node = DbNode(id=dbnode)
         else:
             dbnode_node = dbnode
 
         cls.set_value(key, value, with_transaction=with_transaction,
-                           subspecifier_value=dbnode_node,
-                           stop_if_existing=stop_if_existing)
-            
+                      subspecifier_value=dbnode_node,
+                      stop_if_existing=stop_if_existing)
+
     @classmethod
     def del_value_for_node(cls, dbnode, key):
         """
@@ -1253,9 +1263,9 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
           
         :param dbnode: the dbnode for which you want to delete the key.
         :param key: the key to delete. 
-        """ 
+        """
         cls.del_value(key, subspecifier_value=dbnode)
-    
+
     @classmethod
     def has_key(cls, dbnode, key):
         """
@@ -1263,13 +1273,14 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
         False otherwise.
         """
         return bool(cls.objects.filter(dbnode=dbnode, key=key))
-    
+
     def __str__(self):
         return "[{} ({})].{} ({})".format(
             self.dbnode.get_simple_name(invalid_result="Unknown node"),
             self.dbnode.pk,
             self.key,
-            self.datatype,)
+            self.datatype, )
+
 
 @python_2_unicode_compatible
 class DbSetting(DbMultipleValueAttributeBaseClass):
@@ -1280,9 +1291,10 @@ class DbSetting(DbMultipleValueAttributeBaseClass):
     description = m.TextField(blank=True)
     # Modification time of this attribute
     time = m.DateTimeField(auto_now=True, editable=False)
-    
+
     def __str__(self):
-        return "'{}'={}".format(self.key, self.getvalue())    
+        return "'{}'={}".format(self.key, self.getvalue())
+
 
 class DbAttribute(DbAttributeBaseClass):
     """
@@ -1290,6 +1302,7 @@ class DbAttribute(DbAttributeBaseClass):
     node. Therefore, their modification corrupts the data.
     """
     pass
+
 
 class DbExtra(DbAttributeBaseClass):
     """
@@ -1315,12 +1328,13 @@ class DbCalcState(m.Model):
     dbnode = m.ForeignKey(DbNode, on_delete=m.CASCADE,
                           related_name='dbstates')
     state = m.CharField(max_length=25,
-                        choices= tuple((_,_) for _ in calc_states),
+                        choices=tuple((_, _) for _ in calc_states),
                         db_index=True)
     time = m.DateTimeField(default=timezone.now, editable=False)
 
     class Meta:
         unique_together = (("dbnode", "state"))
+
 
 @python_2_unicode_compatible
 class DbGroup(m.Model):
@@ -1357,6 +1371,7 @@ class DbGroup(m.Model):
         else:
             return '<DbGroup [user-defined] "{}">'.format(self.name)
 
+
 @python_2_unicode_compatible
 class DbComputer(m.Model):
     """
@@ -1390,9 +1405,9 @@ class DbComputer(m.Model):
         * ... (further limits per user etc.)
 
     """
-    #TODO: understand if we want that this becomes simply another type of dbnode.
+    # TODO: understand if we want that this becomes simply another type of dbnode.
 
-    uuid = UUIDField(auto=True,version=AIIDANODES_UUID_VERSION)
+    uuid = UUIDField(auto=True, version=AIIDANODES_UUID_VERSION)
     name = m.CharField(max_length=255, unique=True, blank=False)
     hostname = m.CharField(max_length=255)
     description = m.TextField(blank=True)
@@ -1400,11 +1415,11 @@ class DbComputer(m.Model):
     # TODO: next three fields should not be blank...
     transport_type = m.CharField(max_length=255)
     scheduler_type = m.CharField(max_length=255)
-    transport_params = m.TextField(default="{}") # Will store a json
-    metadata = m.TextField(default="{}") # Will store a json
+    transport_params = m.TextField(default="{}")  # Will store a json
+    metadata = m.TextField(default="{}")  # Will store a json
 
     @classmethod
-    def get_dbcomputer(cls,computer):
+    def get_dbcomputer(cls, computer):
         """
         Return a DbComputer from its name (or from another Computer or DbComputer instance)
         """
@@ -1417,7 +1432,7 @@ class DbComputer(m.Model):
                 dbcomputer = DbComputer.objects.get(name=computer)
             except ObjectDoesNotExist:
                 raise NotExistent("No computer found in the table of computers with "
-                                 "the given name '{}'".format(computer))
+                                  "the given name '{}'".format(computer))
             except MultipleObjectsReturned:
                 raise DbContentError("There is more than one computer with name '{}', "
                                      "pass a Django Computer instance".format(computer))
@@ -1425,7 +1440,7 @@ class DbComputer(m.Model):
             if computer.pk is None:
                 raise ValueError("The computer instance you are passing has not been stored yet")
             dbcomputer = computer
-        elif isinstance(computer,Computer):
+        elif isinstance(computer, Computer):
             if computer.dbcomputer.pk is None:
                 raise ValueError("The computer instance you are passing has not been stored yet")
             dbcomputer = computer.dbcomputer
@@ -1435,6 +1450,7 @@ class DbComputer(m.Model):
 
     def get_workdir(self):
         import json
+
         try:
             metadata = json.loads(self.metadata)
         except ValueError:
@@ -1442,7 +1458,7 @@ class DbComputer(m.Model):
                 "Error while reading metadata for DbComputer {} ({})".format(
                     self.name, self.hostname))
 
-        try:        
+        try:
             return metadata['workdir']
         except KeyError:
             raise ConfigurationError('No workdir found for DbComputer {} '.format(
@@ -1455,7 +1471,7 @@ class DbComputer(m.Model):
             return "{} ({}) [DISABLED]".format(self.name, self.hostname)
 
 
-#class RunningJob(m.Model):
+# class RunningJob(m.Model):
 #    calc = m.OneToOneField(DbNode,related_name='jobinfo') # OneToOneField implicitly sets unique=True
 #    calc_state = m.CharField(max_length=64)
 #    job_id = m.TextField(blank=True)
@@ -1472,13 +1488,13 @@ class DbAuthInfo(m.Model):
     # Delete the DbAuthInfo if either the user or the computer are removed
     aiidauser = m.ForeignKey(AUTH_USER_MODEL, on_delete=m.CASCADE)
     dbcomputer = m.ForeignKey(DbComputer, on_delete=m.CASCADE)
-    auth_params = m.TextField(default='{}') # Will store a json; contains mainly the remoteuser
-                                            # and the private_key
+    auth_params = m.TextField(default='{}')  # Will store a json; contains mainly the remoteuser
+    # and the private_key
 
     # The keys defined in the metadata of the DbAuthInfo will override the 
     # keys with the same name defined in the DbComputer (using a dict.update()
     # call of python).
-    metadata = m.TextField(default="{}") # Will store a json
+    metadata = m.TextField(default="{}")  # Will store a json
     # Whether this computer is enabled (user-level enabling feature)
     enabled = m.BooleanField(default=True)
 
@@ -1487,6 +1503,7 @@ class DbAuthInfo(m.Model):
 
     def get_auth_params(self):
         import json
+
         try:
             return json.loads(self.auth_params)
         except ValueError:
@@ -1494,21 +1511,22 @@ class DbAuthInfo(m.Model):
                 "Error while reading auth_params for authinfo, aiidauser={}, computer={}".format(
                     self.aiidauser.email, self.dbcomputer.hostname))
 
-    def set_auth_params(self,auth_params):
+    def set_auth_params(self, auth_params):
         import json
-        
+
         # Raises ValueError if data is not JSON-serializable
         self.auth_params = json.dumps(auth_params)
 
     def get_workdir(self):
         import json
+
         try:
             metadata = json.loads(self.metadata)
         except ValueError:
             raise DbContentError(
                 "Error while reading metadata for authinfo, aiidauser={}, computer={}".format(
                     self.aiidauser.email, self.dbcomputer.hostname))
-        
+
         try:
             return metadata['workdir']
         except KeyError:
@@ -1519,7 +1537,7 @@ class DbAuthInfo(m.Model):
         """
         Given a computer and an aiida user (as entries of the DB) return a configured
         transport to connect to the computer.
-        """    
+        """
         from aiida.transport import TransportFactory
         from aiida.orm import Computer
 
@@ -1531,7 +1549,7 @@ class DbAuthInfo(m.Model):
 
         params = dict(Computer(dbcomputer=self.dbcomputer).get_transport_params().items() +
                       self.get_auth_params().items())
-        return ThisTransport(machine=self.dbcomputer.hostname,**params)
+        return ThisTransport(machine=self.dbcomputer.hostname, **params)
 
     def __str__(self):
         if self.enabled:
@@ -1542,9 +1560,9 @@ class DbAuthInfo(m.Model):
 
 @python_2_unicode_compatible
 class DbComment(m.Model):
-    uuid = UUIDField(auto=True,version=AIIDANODES_UUID_VERSION)
+    uuid = UUIDField(auto=True, version=AIIDANODES_UUID_VERSION)
     # Delete comments if the node is removed
-    dbnode = m.ForeignKey(DbNode,related_name='dbcomments', on_delete=m.CASCADE)
+    dbnode = m.ForeignKey(DbNode, related_name='dbcomments', on_delete=m.CASCADE)
     ctime = m.DateTimeField(default=timezone.now, editable=False)
     mtime = m.DateTimeField(auto_now=True, editable=False)
     # Delete the comments of a deleted user (TODO: check if this is a good policy)
@@ -1553,10 +1571,10 @@ class DbComment(m.Model):
 
     def __str__(self):
         return "DbComment for [{} {}] on {}".format(self.dbnode.get_simple_name(),
-            self.dbnode.pk, timezone.localtime(self.ctime).strftime("%Y-%m-%d"))
+                                                    self.dbnode.pk, timezone.localtime(self.ctime).strftime("%Y-%m-%d"))
 
 
-@python_2_unicode_compatible                                       
+@python_2_unicode_compatible
 class DbLog(m.Model):
     # Creation time
     time = m.DateTimeField(default=timezone.now, editable=False)
@@ -1565,16 +1583,16 @@ class DbLog(m.Model):
     # A string to know what is the referred object (e.g. a Calculation,
     # or other)
     objname = m.CharField(max_length=255, blank=True, db_index=True)
-    objpk   = m.IntegerField(db_index=True, null=True) # It is not a ForeignKey
-                                            # because it may be in different
-                                            # tables
+    objpk = m.IntegerField(db_index=True, null=True)  # It is not a ForeignKey
+    # because it may be in different
+    # tables
     message = m.TextField(blank=True)
-    metadata = m.TextField(default="{}") # Will store a json
+    metadata = m.TextField(default="{}")  # Will store a json
 
     def __str__(self):
         return "[Log: {} for {} {}] {}".format(self.levelname,
-            self.objname, self.objpk, self.message)
-    
+                                               self.objname, self.objpk, self.message)
+
     @classmethod
     def add_from_logrecord(cls, record):
         """
@@ -1582,14 +1600,14 @@ class DbLog(m.Model):
         logging facility). No exceptions are managed here.
         """
         import json
-    
+
         objpk = record.__dict__.get('objpk', None)
         objname = record.__dict__.get('objname', None)
-    
+
         # Filter: Do not store in DB if no objpk and objname is given 
         if objpk is None or objname is None:
             return
-    
+
         new_entry = cls(loggername=record.name,
                         levelname=record.levelname,
                         objname=objname,
@@ -1597,65 +1615,66 @@ class DbLog(m.Model):
                         message=record.getMessage(),
                         metadata=json.dumps(record.__dict__))
         new_entry.save()
-        
+
 
 class DbLock(m.Model):
-    
-    key        = m.CharField(max_length=255, primary_key=True)
-    creation   = m.DateTimeField(default=timezone.now, editable=False)
-    timeout    = m.IntegerField(editable=False)
-    owner      = m.CharField(max_length=255, blank=False)
-    
-    
+    key = m.CharField(max_length=255, primary_key=True)
+    creation = m.DateTimeField(default=timezone.now, editable=False)
+    timeout = m.IntegerField(editable=False)
+    owner = m.CharField(max_length=255, blank=False)
+
+
 @python_2_unicode_compatible
 class DbWorkflow(m.Model):
     from aiida.common.datastructures import wf_states, wf_data_types
-    uuid         = UUIDField(auto=True,version=AIIDANODES_UUID_VERSION)
-    ctime        = m.DateTimeField(default=timezone.now, editable=False)
-    mtime        = m.DateTimeField(auto_now=True, editable=False)    
-    user         = m.ForeignKey(AUTH_USER_MODEL, on_delete=m.PROTECT)
+
+    uuid = UUIDField(auto=True, version=AIIDANODES_UUID_VERSION)
+    ctime = m.DateTimeField(default=timezone.now, editable=False)
+    mtime = m.DateTimeField(auto_now=True, editable=False)
+    user = m.ForeignKey(AUTH_USER_MODEL, on_delete=m.PROTECT)
     label = m.CharField(max_length=255, db_index=True, blank=True)
     description = m.TextField(blank=True)
     # still to implement, similarly to the DbNode class
-    nodeversion = m.IntegerField(default=1,editable=False)
+    nodeversion = m.IntegerField(default=1, editable=False)
     # to be implemented similarly to the DbNode class
-    lastsyncedversion = m.IntegerField(default=0,editable=False)
-    state        = m.CharField(max_length=255, choices=zip(list(wf_states), list(wf_states)), default=wf_states.INITIALIZED)
-    report       = m.TextField(blank=True)
+    lastsyncedversion = m.IntegerField(default=0, editable=False)
+    state = m.CharField(max_length=255, choices=zip(list(wf_states), list(wf_states)), default=wf_states.INITIALIZED)
+    report = m.TextField(blank=True)
     # File variables, script is the complete dump of the workflow python script
-    module       = m.TextField(blank=False)
+    module = m.TextField(blank=False)
     module_class = m.TextField(blank=False)
-    script_path  = m.TextField(blank=False)
-    script_md5   = m.CharField(max_length=255, blank=False)
-        
+    script_path = m.TextField(blank=False)
+    script_md5 = m.CharField(max_length=255, blank=False)
+
     objects = m.Manager()
     # Return aiida Node instances or their subclasses instead of DbNode instances
     aiidaobjects = AiidaObjectManager()
-    
+
     def get_aiida_class(self):
         """
         Return the corresponding aiida instance of class aiida.worflow
         """
         from aiida.orm.workflow import Workflow
+
         return Workflow.get_subclass_from_uuid(self.uuid)
-    
+
     def set_state(self, _state):
         self.state = _state;
         self.save()
-    
+
     def set_script_md5(self, _md5):
-        
+
         self.script_md5 = _md5
         self.save()
-        
+
     def add_data(self, dict, d_type):
         try:
             for k in dict.keys():
-                p, create = self.data.get_or_create(name = k, data_type=d_type)
+                p, create = self.data.get_or_create(name=k, data_type=d_type)
                 p.set_value(dict[k])
         except Exception as e:
             raise
-    
+
     def get_data(self, d_type):
         try:
             dict = {}
@@ -1664,93 +1683,100 @@ class DbWorkflow(m.Model):
             return dict
         except Exception as e:
             raise
-    
+
     def add_parameters(self, dict, force=False):
         from aiida.common.datastructures import wf_states, wf_data_types
-        
+
         if not self.state == wf_states.INITIALIZED and not force:
             raise ValueError("Cannot add initial parameters to an already initialized workflow")
-        
+
         self.add_data(dict, wf_data_types.PARAMETER)
-        
+
     def add_parameter(self, name, value):
-        self.add_parameters({name:value})
-        
+        self.add_parameters({name: value})
+
     def get_parameters(self):
         from aiida.common.datastructures import wf_data_types
+
         return self.get_data(wf_data_types.PARAMETER)
-    
+
     def get_parameter(self, name):
         res = self.get_parameters()
         if name in res:
             return res[name]
         else:
             raise ValueError("Error retrieving results: {0}".format(name))
-        
+
     def add_results(self, dict):
         from aiida.common.datastructures import wf_data_types
+
         self.add_data(dict, wf_data_types.RESULT)
-        
-    def add_result(self, name, value):        
-        self.add_results({name:value})
-        
+
+    def add_result(self, name, value):
+        self.add_results({name: value})
+
     def get_results(self):
         from aiida.common.datastructures import wf_data_types
+
         return self.get_data(wf_data_types.RESULT)
-    
+
     def get_result(self, name):
         res = self.get_results()
         if name in res:
             return res[name]
         else:
             raise ValueError("Error retrieving results: {0}".format(name))
-    
+
     def add_attributes(self, dict):
         from aiida.common.datastructures import wf_data_types
+
         self.add_data(dict, wf_data_types.ATTRIBUTE)
-        
+
     def add_attribute(self, name, value):
-        self.add_attributes({name:value})
-        
+        self.add_attributes({name: value})
+
     def get_attributes(self):
         from aiida.common.datastructures import wf_data_types
+
         return self.get_data(wf_data_types.ATTRIBUTE)
-    
+
     def get_attribute(self, name):
         res = self.get_attributes()
         if name in res:
             return res[name]
         else:
             raise ValueError("Error retrieving results: {0}".format(name))
-    
-    def clear_report(self):        
+
+    def clear_report(self):
         self.report = None
         self.save()
-    
+
     def append_to_report(self, _text):
         from django.utils.timezone import utc
         import datetime
-        
+
         now = datetime.datetime.utcnow().replace(tzinfo=utc)
-        self.report += str(now)+"] "+_text+"\n";
+        self.report += str(now) + "] " + _text + "\n";
         self.save()
-            
+
     def get_calculations(self):
         from aiida.orm import JobCalculation
+
         return JobCalculation.query(workflow_step=self.steps)
-    
+
     def get_sub_workflows(self):
         return DbWorkflow.objects.filter(parent_workflow_step=self.steps.all())
-    
+
     def is_subworkflow(self):
         """
         Return True if this is a subworkflow, False if it is a root workflow,
         launched by the user.
         """
-        return len(self.parent_workflow_step.all())>0
-        
+        return len(self.parent_workflow_step.all()) > 0
+
     def finish(self):
         from aiida.common.datastructures import wf_states
+
         self.state = wf_states.FINISHED
 
     def __str__(self):
@@ -1765,49 +1791,49 @@ class DbWorkflow(m.Model):
 @python_2_unicode_compatible
 class DbWorkflowData(m.Model):
     from aiida.common.datastructures import wf_data_types, wf_data_value_types
-    
-    parent       = m.ForeignKey(DbWorkflow, related_name='data')
-    name         = m.CharField(max_length=255, blank=False)
-    time         = m.DateTimeField(default=timezone.now, editable=False)
-    data_type    = m.CharField(max_length=255,
-                               blank=False, default=wf_data_types.PARAMETER)
-    value_type   = m.CharField(max_length=255,blank=False,
-                               default=wf_data_value_types.NONE)
-    json_value   = m.TextField(blank=True)
-    aiida_obj    = m.ForeignKey(DbNode, blank=True, null=True)
-    
+
+    parent = m.ForeignKey(DbWorkflow, related_name='data')
+    name = m.CharField(max_length=255, blank=False)
+    time = m.DateTimeField(default=timezone.now, editable=False)
+    data_type = m.CharField(max_length=255,
+                            blank=False, default=wf_data_types.PARAMETER)
+    value_type = m.CharField(max_length=255, blank=False,
+                             default=wf_data_value_types.NONE)
+    json_value = m.TextField(blank=True)
+    aiida_obj = m.ForeignKey(DbNode, blank=True, null=True)
+
     class Meta:
         unique_together = (("parent", "name", "data_type"))
-        
+
     def set_value(self, arg):
         import inspect
         from aiida.orm.node import Node
         from aiida.common.datastructures import wf_data_value_types
         import json
-        
+
         try:
             if isinstance(arg, Node) or issubclass(arg.__class__, Node):
                 if arg.pk is None:
                     raise ValueError("Cannot add an unstored node as an attribute of a Workflow!")
-                self.aiida_obj  = arg.dbnode
+                self.aiida_obj = arg.dbnode
                 self.value_type = wf_data_value_types.AIIDA
                 self.save()
             else:
                 self.json_value = json.dumps(arg)
                 self.value_type = wf_data_value_types.JSON
-                self.save() 
+                self.save()
         except:
             raise ValueError("Cannot set the parameter {}".format(self.name))
-        
+
     def get_value(self):
         import json
         from aiida.common.datastructures import wf_data_value_types
-        
-        if self.value_type==wf_data_value_types.JSON:
+
+        if self.value_type == wf_data_value_types.JSON:
             return json.loads(self.json_value)
-        elif self.value_type==wf_data_value_types.AIIDA:
+        elif self.value_type == wf_data_value_types.AIIDA:
             return self.aiida_obj.get_aiida_class()
-        elif self.value_type==wf_data_value_types.NONE:
+        elif self.value_type == wf_data_value_types.NONE:
             return None
         else:
             raise ValueError("Cannot rebuild the parameter {}".format(self.name))
@@ -1820,81 +1846,86 @@ class DbWorkflowData(m.Model):
 @python_2_unicode_compatible
 class DbWorkflowStep(m.Model):
     from aiida.common.datastructures import wf_states, wf_default_call
-    
-    parent        = m.ForeignKey(DbWorkflow, related_name='steps')
-    name          = m.CharField(max_length=255, blank=False)
-    user          = m.ForeignKey(AUTH_USER_MODEL, on_delete=m.PROTECT)
-    time          = m.DateTimeField(default=timezone.now, editable=False)
-    nextcall      = m.CharField(max_length=255, blank=False, 
-                                default=wf_default_call)
-    calculations  = m.ManyToManyField(DbNode, symmetrical=False, 
-                                      related_name="workflow_step")
-    sub_workflows = m.ManyToManyField(DbWorkflow, symmetrical=False, 
+
+    parent = m.ForeignKey(DbWorkflow, related_name='steps')
+    name = m.CharField(max_length=255, blank=False)
+    user = m.ForeignKey(AUTH_USER_MODEL, on_delete=m.PROTECT)
+    time = m.DateTimeField(default=timezone.now, editable=False)
+    nextcall = m.CharField(max_length=255, blank=False,
+                           default=wf_default_call)
+    calculations = m.ManyToManyField(DbNode, symmetrical=False,
+                                     related_name="workflow_step")
+    sub_workflows = m.ManyToManyField(DbWorkflow, symmetrical=False,
                                       related_name="parent_workflow_step")
-    state        = m.CharField(max_length=255, 
-                               choices=zip(list(wf_states), list(wf_states)), 
-                               default=wf_states.CREATED)
-    
+    state = m.CharField(max_length=255,
+                        choices=zip(list(wf_states), list(wf_states)),
+                        default=wf_states.CREATED)
+
     class Meta:
         unique_together = (("parent", "name"))
-    
+
     def add_calculation(self, step_calculation):
         from aiida.orm import JobCalculation
 
         if (not isinstance(step_calculation, JobCalculation)):
-            raise ValueError("Cannot add a non-Calculation object to a workflow step")          
+            raise ValueError("Cannot add a non-Calculation object to a workflow step")
 
         try:
             self.calculations.add(step_calculation)
         except:
-            raise ValueError("Error adding calculation to step")                      
+            raise ValueError("Error adding calculation to step")
 
     def get_calculations(self, state=None):
         from aiida.orm import JobCalculation
-        if (state==None):
+
+        if (state == None):
             return JobCalculation.query(workflow_step=self)
         else:
             return JobCalculation.query(workflow_step=self).filter(
-                dbattributes__key="state",dbattributes__tval=state)
-    
+                dbattributes__key="state", dbattributes__tval=state)
+
     def remove_calculations(self):
         self.calculations.all().delete()
-    
+
     def add_sub_workflow(self, sub_wf):
         from aiida.orm.workflow import Workflow
-        if (not issubclass(sub_wf.__class__,Workflow) and not isinstance(sub_wf, Workflow)):
-            raise ValueError("Cannot add a workflow not of type Workflow")                        
+
+        if (not issubclass(sub_wf.__class__, Workflow) and not isinstance(sub_wf, Workflow)):
+            raise ValueError("Cannot add a workflow not of type Workflow")
         try:
             self.sub_workflows.add(sub_wf.dbworkflowinstance)
         except:
-            raise ValueError("Error adding calculation to step")                      
- 
+            raise ValueError("Error adding calculation to step")
+
     def get_sub_workflows(self):
         return self.sub_workflows(manager='aiidaobjects').all()
-        
+
     def remove_sub_workflows(self):
         self.sub_workflows.all().delete()
-    
+
     def is_finished(self):
         from aiida.common.datastructures import wf_states
-        return self.state==wf_states.FINISHED
-        
+
+        return self.state == wf_states.FINISHED
+
     def set_nextcall(self, _nextcall):
         self.nextcall = _nextcall
         self.save()
-        
+
     def set_state(self, _state):
         self.state = _state;
         self.save()
-        
+
     def reinitialize(self):
         from aiida.common.datastructures import wf_states
+
         self.set_state(wf_states.INITIALIZED)
 
     def finish(self):
         from aiida.common.datastructures import wf_states
+
         self.set_state(wf_states.FINISHED)
 
     def __str__(self):
         return "Step {} for workflow {} [{}]".format(self.name,
-            self.parent.module_class, self.parent.pk)
+                                                     self.parent.module_class, self.parent.pk)

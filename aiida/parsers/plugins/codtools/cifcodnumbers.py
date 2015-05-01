@@ -8,11 +8,13 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi"
 
+
 class CifcodnumbersParser(BaseCodtoolsParser):
     """
     Specific parser for the output of cif_cod_numbers script.
     """
-    def __init__(self,calc):
+
+    def __init__(self, calc):
         """
         Initialize the instance of CifcodnumbersParser
         """
@@ -34,7 +36,7 @@ class CifcodnumbersParser(BaseCodtoolsParser):
                 content = f.readlines()
             lines = [x.strip('\n') for x in content]
             for line in lines:
-                fields = re.split('\s+',line)
+                fields = re.split('\s+', line)
                 count = None
                 try:
                     count = int(fields[2])
@@ -43,8 +45,8 @@ class CifcodnumbersParser(BaseCodtoolsParser):
                 if count:
                     duplicates.append({
                         'formula': fields[0],
-                        'codid'  : fields[1],
-                        'count'  : count,
+                        'codid': fields[1],
+                        'count': count,
                     })
 
         errors = []
@@ -58,5 +60,5 @@ class CifcodnumbersParser(BaseCodtoolsParser):
         output_nodes = []
         output_nodes.append(('output',
                              ParameterData(dict={'duplicates': duplicates,
-                                                 'errors'    : errors})))
+                                                 'errors': errors})))
         return output_nodes

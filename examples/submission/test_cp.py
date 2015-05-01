@@ -51,7 +51,7 @@ alat = 4.  # angstrom
 cell = [[alat, 0., 0., ],
         [0., alat, 0., ],
         [0., 0., alat, ],
-       ]
+]
 s = StructureData(cell=cell)
 s.append_atom(position=(0., 0., 0.), symbols=['Ba'])
 s.append_atom(position=(alat / 2., alat / 2., alat / 2.), symbols=['Ti'])
@@ -83,33 +83,32 @@ if auto_pseudos:
         sys.exit(1)
 
 parameters = ParameterData(dict={
-            'CONTROL': {
-                'calculation': 'cp',
-                'restart_mode': 'from_scratch',
-                'wf_collect': False,
-                'iprint': 1,
-                'isave': 100,
-                'dt': 3.,
-                'max_seconds': 25 * 60,
-                'nstep': 10,
-                },
-            'SYSTEM': {
-                'ecutwfc': 30.,
-                'ecutrho': 240.,
-                'nr1b': 24,
-                'nr2b': 24,
-                'nr3b': 24,
-                },
-            'ELECTRONS': {
-                'electron_damping': 1.e-1,
-                'electron_dynamics': 'damp',
-                'emass': 400.,
-                'emass_cutoff': 3.,
-                },
-            'IONS': {
-                'ion_dynamics': 'none',
-            }})
-
+    'CONTROL': {
+        'calculation': 'cp',
+        'restart_mode': 'from_scratch',
+        'wf_collect': False,
+        'iprint': 1,
+        'isave': 100,
+        'dt': 3.,
+        'max_seconds': 25 * 60,
+        'nstep': 10,
+    },
+    'SYSTEM': {
+        'ecutwfc': 30.,
+        'ecutrho': 240.,
+        'nr1b': 24,
+        'nr2b': 24,
+        'nr3b': 24,
+    },
+    'ELECTRONS': {
+        'electron_damping': 1.e-1,
+        'electron_dynamics': 'damp',
+        'emass': 400.,
+        'emass_cutoff': 3.,
+    },
+    'IONS': {
+        'ion_dynamics': 'none',
+    }})
 
 calc = code.new_calc()
 calc.label = "Test QE cp.x"
@@ -132,9 +131,9 @@ if auto_pseudos:
         raise
 else:
     raw_pseudos = [
-       ("Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF", 'Ba', 'pbesol'),
-       ("Ti.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF", 'Ti', 'pbesol'),
-       ("O.pbesol-n-rrkjus_psl.0.1-tested-pslib030.UPF", 'O', 'pbesol')]
+        ("Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF", 'Ba', 'pbesol'),
+        ("Ti.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF", 'Ti', 'pbesol'),
+        ("O.pbesol-n-rrkjus_psl.0.1-tested-pslib030.UPF", 'O', 'pbesol')]
 
     pseudos_to_use = {}
     for fname, elem, pot_type in raw_pseudos:
@@ -162,7 +161,7 @@ if submit_test:
     print "Submit file in {}".format(os.path.join(
         os.path.relpath(subfolder.abspath),
         script_filename
-        ))
+    ))
 else:
     calc.store_all()
     print "created calculation; calc=Calculation(uuid='{}') # ID={}".format(

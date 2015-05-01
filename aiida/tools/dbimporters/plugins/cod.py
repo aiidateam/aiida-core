@@ -8,6 +8,7 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi"
 
+
 class CodDbImporter(DbImporter):
     """
     Database importer for Crystallography Open Database.
@@ -18,11 +19,11 @@ class CodDbImporter(DbImporter):
         Returns SQL query predicate for querying integer fields.
         """
         for e in values:
-            if not isinstance( e, int ) and not isinstance( e, basestring ):
+            if not isinstance(e, int) and not isinstance(e, basestring):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and strings are accepted")
-        return key + " IN (" + ", ".join( map( lambda i: str( int( i ) ),
-                                               values ) ) + ")"
+        return key + " IN (" + ", ".join(map(lambda i: str(int(i)),
+                                             values)) + ")"
 
     def _str_exact_clause(self, key, alias, values):
         """
@@ -30,10 +31,10 @@ class CodDbImporter(DbImporter):
         """
         clause_parts = []
         for e in values:
-            if not isinstance( e, int ) and not isinstance( e, basestring ):
+            if not isinstance(e, int) and not isinstance(e, basestring):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and strings are accepted")
-            if isinstance( e, int ):
+            if isinstance(e, int):
                 e = str(e)
             clause_parts.append("'" + e + "'")
         return key + " IN (" + ", ".join(clause_parts) + ")"
@@ -43,13 +44,13 @@ class CodDbImporter(DbImporter):
         Returns SQL query predicate for querying formula fields.
         """
         for e in values:
-            if not isinstance( e, str ):
+            if not isinstance(e, str):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only strings are accepted")
-        return self._str_exact_clause( key, \
-                                       alias, \
-                                       map( lambda f: "- " + str(f) + " -", \
-                                            values ) )
+        return self._str_exact_clause(key, \
+                                      alias, \
+                                      map(lambda f: "- " + str(f) + " -", \
+                                          values))
 
     def _str_fuzzy_clause(self, key, alias, values):
         """
@@ -57,10 +58,10 @@ class CodDbImporter(DbImporter):
         """
         clause_parts = []
         for e in values:
-            if not isinstance( e, int ) and not isinstance( e, basestring ):
+            if not isinstance(e, int) and not isinstance(e, basestring):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and strings are accepted")
-            if isinstance( e, int ):
+            if isinstance(e, int):
                 e = str(e)
             clause_parts.append(key + " LIKE '%" + e + "%'")
         return " OR ".join(clause_parts)
@@ -71,7 +72,7 @@ class CodDbImporter(DbImporter):
         """
         clause_parts = []
         for e in values:
-            if not isinstance( e, basestring ):
+            if not isinstance(e, basestring):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only strings are accepted")
             clause_parts.append("formula REGEXP ' " + e + "[0-9 ]'")
@@ -82,20 +83,20 @@ class CodDbImporter(DbImporter):
         Returns SQL query predicate for querying double-valued fields.
         """
         for e in values:
-            if not isinstance( e, int ) and not isinstance( e, float ):
+            if not isinstance(e, int) and not isinstance(e, float):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and floats are accepted")
-        return " OR ".join( map( lambda d: key + \
-                                           " BETWEEN " + \
-                                           str( d - precision ) + " AND " + \
-                                           str( d + precision ), \
-                                 values ) )
+        return " OR ".join(map(lambda d: key + \
+                                         " BETWEEN " + \
+                                         str(d - precision) + " AND " + \
+                                         str(d + precision), \
+                               values))
 
-    length_precision      = 0.001
-    angle_precision       = 0.001
-    volume_precision      = 0.001
+    length_precision = 0.001
+    angle_precision = 0.001
+    volume_precision = 0.001
     temperature_precision = 0.001
-    pressure_precision    = 1
+    pressure_precision = 1
 
     def _length_clause(self, key, alias, values):
         """
@@ -127,46 +128,46 @@ class CodDbImporter(DbImporter):
         """
         return self._double_clause(key, alias, values, self.pressure_precision)
 
-    _keywords = { 'id'                : [ 'file',          _int_clause ],
-                  'element'           : [ 'element',       _composition_clause ],
-                  'number_of_elements': [ 'nel',           _int_clause ],
-                  'mineral_name'      : [ 'mineral',       _str_fuzzy_clause ],
-                  'chemical_name'     : [ 'chemname',      _str_fuzzy_clause ],
-                  'formula'           : [ 'formula',       _formula_clause ],
-                  'volume'            : [ 'vol',           _volume_clause ],
-                  'spacegroup'        : [ 'sg',            _str_exact_clause ],
-                  'spacegroup_hall'   : [ 'sgHall',        _str_exact_clause ],
-                  'a'                 : [ 'a',             _length_clause ],
-                  'b'                 : [ 'b',             _length_clause ],
-                  'c'                 : [ 'c',             _length_clause ],
-                  'alpha'             : [ 'alpha',         _angle_clause ],
-                  'beta'              : [ 'beta',          _angle_clause ],
-                  'gamma'             : [ 'gamma',         _angle_clause ],
-                  'z'                 : [ 'Z',             _int_clause ],
-                  'measurement_temp'  : [ 'celltemp',      _temperature_clause ],
-                  'diffraction_temp'  : [ 'diffrtemp',     _temperature_clause ],
-                  'measurement_pressure':
-                                        [ 'cellpressure',  _pressure_clause ],
-                  'diffraction_pressure':
-                                        [ 'diffrpressure', _pressure_clause ],
-                  'authors'           : [ 'authors',       _str_fuzzy_clause ],
-                  'journal'           : [ 'journal',       _str_fuzzy_clause ],
-                  'title'             : [ 'title',         _str_fuzzy_clause ],
-                  'year'              : [ 'year',          _int_clause ],
-                  'journal_volume'    : [ 'volume',        _int_clause ],
-                  'journal_issue'     : [ 'issue',         _str_exact_clause ],
-                  'first_page'        : [ 'firstpage',     _str_exact_clause ],
-                  'last_page'         : [ 'lastpage',      _str_exact_clause ],
-                  'doi'               : [ 'doi',           _str_exact_clause ] }
+    _keywords = {'id': ['file', _int_clause],
+                 'element': ['element', _composition_clause],
+                 'number_of_elements': ['nel', _int_clause],
+                 'mineral_name': ['mineral', _str_fuzzy_clause],
+                 'chemical_name': ['chemname', _str_fuzzy_clause],
+                 'formula': ['formula', _formula_clause],
+                 'volume': ['vol', _volume_clause],
+                 'spacegroup': ['sg', _str_exact_clause],
+                 'spacegroup_hall': ['sgHall', _str_exact_clause],
+                 'a': ['a', _length_clause],
+                 'b': ['b', _length_clause],
+                 'c': ['c', _length_clause],
+                 'alpha': ['alpha', _angle_clause],
+                 'beta': ['beta', _angle_clause],
+                 'gamma': ['gamma', _angle_clause],
+                 'z': ['Z', _int_clause],
+                 'measurement_temp': ['celltemp', _temperature_clause],
+                 'diffraction_temp': ['diffrtemp', _temperature_clause],
+                 'measurement_pressure':
+                     ['cellpressure', _pressure_clause],
+                 'diffraction_pressure':
+                     ['diffrpressure', _pressure_clause],
+                 'authors': ['authors', _str_fuzzy_clause],
+                 'journal': ['journal', _str_fuzzy_clause],
+                 'title': ['title', _str_fuzzy_clause],
+                 'year': ['year', _int_clause],
+                 'journal_volume': ['volume', _int_clause],
+                 'journal_issue': ['issue', _str_exact_clause],
+                 'first_page': ['firstpage', _str_exact_clause],
+                 'last_page': ['lastpage', _str_exact_clause],
+                 'doi': ['doi', _str_exact_clause]}
 
     def __init__(self, **kwargs):
-        self._db     = None
+        self._db = None
         self._cursor = None
-        self._db_parameters = { 'host':   'www.crystallography.net',
-                                'user':   'cod_reader',
-                                'passwd': '',
-                                'db':     'cod' }
-        self.setup_db( **kwargs )
+        self._db_parameters = {'host': 'www.crystallography.net',
+                               'user': 'cod_reader',
+                               'passwd': '',
+                               'db': 'cod'}
+        self.setup_db(**kwargs)
 
     def query_sql(self, **kwargs):
         """
@@ -175,25 +176,25 @@ class CodDbImporter(DbImporter):
 
         :return: string containing a SQL statement.
         """
-        sql_parts = [ "(status IS NULL OR status != 'retracted')" ]
+        sql_parts = ["(status IS NULL OR status != 'retracted')"]
         for key in self._keywords.keys():
             if key in kwargs.keys():
                 values = kwargs.pop(key)
-                if not isinstance( values, list ):
-                    values = [ values ]
+                if not isinstance(values, list):
+                    values = [values]
                 sql_parts.append( \
-                    "(" + self._keywords[key][1]( self, \
-                                                  self._keywords[key][0], \
-                                                  key, \
-                                                  values ) + \
-                    ")" )
-        if len( kwargs.keys() ) > 0:
+                    "(" + self._keywords[key][1](self, \
+                                                 self._keywords[key][0], \
+                                                 key, \
+                                                 values) + \
+                    ")")
+        if len(kwargs.keys()) > 0:
             raise NotImplementedError( \
                 "search keyword(s) '" + \
-                "', '".join( kwargs.keys() ) + "' " + \
-                "is(are) not implemented for COD" )
+                "', '".join(kwargs.keys()) + "' " + \
+                "is(are) not implemented for COD")
         return "SELECT file, svnrevision FROM data WHERE " + \
-               " AND ".join( sql_parts )
+               " AND ".join(sql_parts)
 
     def query(self, **kwargs):
         """
@@ -203,19 +204,19 @@ class CodDbImporter(DbImporter):
         :return: an instance of
             :py:class:`aiida.tools.dbimporters.plugins.cod.CodSearchResults`.
         """
-        query_statement = self.query_sql( **kwargs )
+        query_statement = self.query_sql(**kwargs)
         self._connect_db()
         results = []
         try:
-            self._cursor.execute( query_statement )
+            self._cursor.execute(query_statement)
             self._db.commit()
             for row in self._cursor.fetchall():
-                results.append({ 'id'         : str(row[0]),
-                                 'svnrevision': str(row[1]) })
+                results.append({'id': str(row[0]),
+                                'svnrevision': str(row[1])})
         finally:
             self._disconnect_db()
 
-        return CodSearchResults( results )
+        return CodSearchResults(results)
 
     def setup_db(self, **kwargs):
         """
@@ -224,12 +225,12 @@ class CodDbImporter(DbImporter):
         for key in self._db_parameters.keys():
             if key in kwargs.keys():
                 self._db_parameters[key] = kwargs.pop(key)
-        if len( kwargs.keys() ) > 0:
+        if len(kwargs.keys()) > 0:
             raise NotImplementedError( \
                 "unknown database connection parameter(s): '" + \
-                "', '".join( kwargs.keys() ) + \
+                "', '".join(kwargs.keys()) + \
                 "', available parameters: '" + \
-                "', '".join( self._db_parameters.keys() ) + "'" )
+                "', '".join(self._db_parameters.keys()) + "'")
 
     def get_supported_keywords(self):
         """
@@ -245,10 +246,10 @@ class CodDbImporter(DbImporter):
         """
         import MySQLdb
 
-        self._db = MySQLdb.connect( host =   self._db_parameters['host'],
-                                    user =   self._db_parameters['user'],
-                                    passwd = self._db_parameters['passwd'],
-                                    db =     self._db_parameters['db'] )
+        self._db = MySQLdb.connect(host=self._db_parameters['host'],
+                                   user=self._db_parameters['user'],
+                                   passwd=self._db_parameters['passwd'],
+                                   db=self._db_parameters['db'])
         self._cursor = self._db.cursor()
 
     def _disconnect_db(self):
@@ -256,6 +257,7 @@ class CodDbImporter(DbImporter):
         Closes connection to the MySQL database.
         """
         self._db.close()
+
 
 class CodSearchResults(DbSearchResults):
     """
@@ -279,7 +281,7 @@ class CodSearchResults(DbSearchResults):
         """
         source_dict = {'db_id': result_dict['id']}
         if 'svnrevision' in result_dict and \
-           result_dict['svnrevision'] is not None:
+                        result_dict['svnrevision'] is not None:
             source_dict['db_version'] = result_dict['svnrevision']
         return source_dict
 
@@ -291,22 +293,23 @@ class CodSearchResults(DbSearchResults):
         """
         url = self._base_url + result_dict['id'] + ".cif"
         if 'svnrevision' in result_dict and \
-           result_dict['svnrevision'] is not None:
-            return "{}@{}".format(url,result_dict['svnrevision'])
+                        result_dict['svnrevision'] is not None:
+            return "{}@{}".format(url, result_dict['svnrevision'])
         else:
             return url
+
 
 class CodEntry(DbEntry):
     """
     Represents an entry from COD.
     """
 
-    def __init__(self,url,db_source='Crystallography Open Database',
-                 db_url='http://www.crystallography.net',**kwargs):
+    def __init__(self, url, db_source='Crystallography Open Database',
+                 db_url='http://www.crystallography.net', **kwargs):
         """
         Creates an instance of
         :py:class:`aiida.tools.dbimporters.plugins.cod.CodEntry`, related
         to the supplied URL.
         """
-        super(CodEntry, self).__init__(db_source=db_source,db_url=db_url,
-                                       url=url,**kwargs)
+        super(CodEntry, self).__init__(db_source=db_source, db_url=db_url,
+                                       url=url, **kwargs)

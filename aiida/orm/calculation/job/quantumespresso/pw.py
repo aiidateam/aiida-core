@@ -3,7 +3,7 @@
 Plugin to create a Quantum Espresso pw.x file.
 """
 # TODO: COPY OUTDIR FROM PREVIOUS CALCULATION! Should be an input node of type
-#      RemoteData (or maybe subclass it?).
+# RemoteData (or maybe subclass it?).
 # TODO: tests!
 # TODO: DOC + implementation of SETTINGS
 # TODO: preexec, postexec
@@ -26,7 +26,8 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
 
-class PwCalculation(BasePwCpInputGenerator, JobCalculation):   
+
+class PwCalculation(BasePwCpInputGenerator, JobCalculation):
     """
     Main DFT code (PWscf, pw.x) of the Quantum ESPRESSO distribution.
     For more information, refer to http://www.quantum-espresso.org/
@@ -37,35 +38,35 @@ class PwCalculation(BasePwCpInputGenerator, JobCalculation):
     def _init_internal_params(self):
         super(PwCalculation, self)._init_internal_params()
 
-        self._DATAFILE_XML = os.path.join(BasePwCpInputGenerator._OUTPUT_SUBFOLDER, 
-                               '{}.save'.format(BasePwCpInputGenerator._PREFIX), 
-                               BasePwCpInputGenerator._DATAFILE_XML_BASENAME)
-    
+        self._DATAFILE_XML = os.path.join(BasePwCpInputGenerator._OUTPUT_SUBFOLDER,
+                                          '{}.save'.format(BasePwCpInputGenerator._PREFIX),
+                                          BasePwCpInputGenerator._DATAFILE_XML_BASENAME)
+
         # Default PW output parser provided by AiiDA
         self._default_parser = 'quantumespresso.basicpw'
-            
+
         self._automatic_namelists = {
-            'scf':   ['CONTROL', 'SYSTEM', 'ELECTRONS'],
-            'nscf':  ['CONTROL', 'SYSTEM', 'ELECTRONS'],
+            'scf': ['CONTROL', 'SYSTEM', 'ELECTRONS'],
+            'nscf': ['CONTROL', 'SYSTEM', 'ELECTRONS'],
             'bands': ['CONTROL', 'SYSTEM', 'ELECTRONS'],
             'relax': ['CONTROL', 'SYSTEM', 'ELECTRONS', 'IONS'],
-            'md':    ['CONTROL', 'SYSTEM', 'ELECTRONS', 'IONS'],
-            'vc-md':    ['CONTROL', 'SYSTEM', 'ELECTRONS', 'IONS', 'CELL'],
+            'md': ['CONTROL', 'SYSTEM', 'ELECTRONS', 'IONS'],
+            'vc-md': ['CONTROL', 'SYSTEM', 'ELECTRONS', 'IONS', 'CELL'],
             'vc-relax': ['CONTROL', 'SYSTEM', 'ELECTRONS', 'IONS', 'CELL'],
-            }
-    
+        }
+
         # Keywords that cannot be set
-        self._blocked_keywords = [('CONTROL', 'pseudo_dir'), # set later
-             ('CONTROL', 'outdir'),  # set later
-             ('CONTROL', 'prefix'),  # set later
-             ('SYSTEM', 'ibrav'),  # set later
-             ('SYSTEM', 'celldm'),
-             ('SYSTEM', 'nat'),  # set later
-             ('SYSTEM', 'ntyp'),  # set later
-             ('SYSTEM', 'a'), ('SYSTEM', 'b'), ('SYSTEM', 'c'),
-             ('SYSTEM', 'cosab'), ('SYSTEM', 'cosac'), ('SYSTEM', 'cosbc'),
+        self._blocked_keywords = [('CONTROL', 'pseudo_dir'),  # set later
+                                  ('CONTROL', 'outdir'),  # set later
+                                  ('CONTROL', 'prefix'),  # set later
+                                  ('SYSTEM', 'ibrav'),  # set later
+                                  ('SYSTEM', 'celldm'),
+                                  ('SYSTEM', 'nat'),  # set later
+                                  ('SYSTEM', 'ntyp'),  # set later
+                                  ('SYSTEM', 'a'), ('SYSTEM', 'b'), ('SYSTEM', 'c'),
+                                  ('SYSTEM', 'cosab'), ('SYSTEM', 'cosac'), ('SYSTEM', 'cosbc'),
         ]
-        
+
         self._use_kpoints = True
 
         # Default input and output files
@@ -79,13 +80,13 @@ class PwCalculation(BasePwCpInputGenerator, JobCalculation):
         """
         retdict = JobCalculation._use_methods
         retdict.update(BasePwCpInputGenerator._baseclass_use_methods)
-        
+
         retdict['kpoints'] = {
-               'valid_types': KpointsData,
-               'additional_parameter': None,
-               'linkname': 'kpoints',
-               'docstring': "Use the node defining the kpoint sampling to use",
-               }
-        
+            'valid_types': KpointsData,
+            'additional_parameter': None,
+            'linkname': 'kpoints',
+            'docstring': "Use the node defining the kpoint sampling to use",
+        }
+
         return retdict
    

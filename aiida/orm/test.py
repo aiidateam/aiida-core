@@ -10,6 +10,7 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
 
+
 class myNodeWithFields(Node):
     # State can be updated even after storing
     _updatable_attributes = ('state',) 

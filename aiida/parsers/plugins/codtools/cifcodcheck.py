@@ -8,11 +8,13 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi"
 
+
 class CifcodcheckParser(BaseCodtoolsParser):
     """
     Specific parser for the output of cif_cod_check script.
     """
-    def __init__(self,calc):
+
+    def __init__(self, calc):
         """
         Initialize the instance of CifcodcheckParser
         """
@@ -33,7 +35,7 @@ class CifcodcheckParser(BaseCodtoolsParser):
             with open(output_path) as f:
                 content = f.readlines()
             lines = [x.strip('\n') for x in content]
-            if re.search( ' OK$', lines[0] ) is not None:
+            if re.search(' OK$', lines[0]) is not None:
                 lines.pop(0)
             messages.extend(lines)
 
@@ -47,5 +49,5 @@ class CifcodcheckParser(BaseCodtoolsParser):
         output_nodes = []
         output_nodes.append(('messages',
                              ParameterData(dict={'output_messages':
-                                                 messages})))
+                                                     messages})))
         return output_nodes

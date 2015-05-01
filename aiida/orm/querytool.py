@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
-import sys,os
+import sys, os
 from aiida.orm import Code, DataFactory, Group, Calculation
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
+
 
 class QueryTool(object):
     """
@@ -30,6 +31,7 @@ class QueryTool(object):
         specified data type (e.g., __gt only with numbers and dates, ...)
       * probably many other things...
     """
+
     def __init__(self):
         self._class_string = None
         self._group_queries = []
@@ -49,7 +51,8 @@ class QueryTool(object):
         from aiida.orm import Node
         # We are changing the query, clear the cache
         if not issubclass(the_class, Node):
-            raise TypeError("You can only call this method on subclasses of Node, you are passing instead".format(the_class.__name__))
+            raise TypeError("You can only call this method on subclasses of Node, you are passing instead".format(
+                the_class.__name__))
         self._queryobject = None
         self._class_string = the_class._query_type_string
 
@@ -70,8 +73,8 @@ class QueryTool(object):
         """
         from django.db.models import Q
 
-#        # We are changing the query, clear the cache
-#        self._queryobject = None
+        # # We are changing the query, clear the cache
+        #        self._queryobject = None
 
         if isinstance(group, basestring):
             # BE CAREFUL! WE ALL TAKING ALL GROUPS,
@@ -82,7 +85,7 @@ class QueryTool(object):
                 self._group_queries.append(Q(dbgroups__name=group))
         else:
             raise NotImplementedError("Still to implement passing a real group rather than its name")
-    
+
     def limit_pks(self, pk_list):
         """
         Limit the query to a given list of pks.
@@ -90,6 +93,7 @@ class QueryTool(object):
         :param pk_list: the list of pks you want to limit your query to.
         """
         from django.db.models import Q
+
         self._pks_in = [int(_) for _ in pk_list]
 
     def _get_query_object(self):
@@ -124,7 +128,7 @@ class QueryTool(object):
                     linkedres = models.DbNode.objects.filter(
                         dbattributes__in=attr_qobj, **classinfo)
                     res = res.filter(**{
-                        "{}{}__in".format(relationlink, reldata['relation']): 
+                        "{}{}__in".format(relationlink, reldata['relation']):
                             linkedres,
                         "{}__label".format(relationlink): reldata['linkname']})
                 else:
@@ -141,14 +145,14 @@ class QueryTool(object):
                     linkedres = models.DbNode.objects.filter(
                         dbextras__in=extra_qobj)
                     res = res.filter(**{
-                        "{}{}__in".format(relationlink, reldata['relation']): 
+                        "{}{}__in".format(relationlink, reldata['relation']):
                             linkedres,
                         "{}__label".format(relationlink): reldata['linkname']})
                 else:
                     res = res.filter(dbextras__in=extra_qobj)
 
             self._queryobject = res.distinct()
-            
+
         return self._queryobject
 
     def get_attributes(self):
@@ -156,6 +160,7 @@ class QueryTool(object):
         Get the raw values of all the attributes of the queried nodes.
         """
         from aiida.djsite.db import models
+
         res = self._get_query_object()
         attrs = models.DbAttribute.objects.filter(
             dbnode__in=res).filter(key__in=self._attrs.keys()).values(
@@ -169,6 +174,7 @@ class QueryTool(object):
         of the queried nodes.
         """
         from aiida.djsite.db import models
+
         res = self._get_query_object()
         extras = models.DbExtra.objects.filter(
             dbnode__in=res).filter(key__in=self._extras.keys()).values(
@@ -182,13 +188,14 @@ class QueryTool(object):
         of the queried nodes.
         """
         from aiida.djsite.db import models
+
         res = self._get_query_object()
         attrs = models.DbAttribute.objects.filter(
             dbnode__in=res).filter(key__in=self._attrs.keys()).values(
             'dbnode__pk', 'key', 'tval', 'dval',
             'ival', 'bval', 'fval', 'datatype')
         return attrs
-    
+
     def run_query(self, with_data=False):
         """
         Run the query using the filters that have been pre-set on this
@@ -197,23 +204,23 @@ class QueryTool(object):
         if with_data:
             attrs = self.create_attrs_dict()
             extras = self.create_extras_dict()
-            
+
         for r in self._get_query_object():
             if with_data:
                 yield r.get_aiida_class(), {'attrs': attrs.get(r.pk, {}),
                                             'extras': extras.get(r.pk, {})}
             else:
                 yield r.get_aiida_class()
-        
-#This can be useful, but risky
-#.prefetch_related('dbextras').prefetch_related('dbattributes'):
-#
-#            # Do we really want to do this?
-#        for r in res.distinct():
-#            yield r.get_aiida_class(), {
-#                'extras': self._create_extra_dict(r.dbextras.all()),
-#                'attrs': self._create_attr_dict(r.dbattributes.all())}
-        #return res.distinct()
+
+                # This can be useful, but risky
+            #.prefetch_related('dbextras').prefetch_related('dbattributes'):
+            #
+            #            # Do we really want to do this?
+            #        for r in res.distinct():
+            #            yield r.get_aiida_class(), {
+            #                'extras': self._create_extra_dict(r.dbextras.all()),
+            #                'attrs': self._create_attr_dict(r.dbattributes.all())}
+            #return res.distinct()
 
     def create_extras_dict(self):
         """
@@ -224,11 +231,11 @@ class QueryTool(object):
 
         # TODO: implement lists and dicts
         field = {'txt': 'tval', 'float': 'fval', 'bool': 'bval',
-                 'int': 'ival', 'date': 'dval', 'none': lambda x: None} 
+                 'int': 'ival', 'date': 'dval', 'none': lambda x: None}
         relevant_extras = self._extras.keys()
 
         extrasdict = defaultdict(dict)
-        
+
         for e in self._get_extras_raw():
             f = field[e['datatype']]
             if callable(f):
@@ -244,14 +251,14 @@ class QueryTool(object):
         attributes associated to the queried nodes.
         """
         from collections import defaultdict
- 
+
         # TODO: implement lists and dicts
         field = {'txt': 'tval', 'float': 'fval', 'bool': 'bval',
-                 'int': 'ival', 'date': 'dval', 'none': lambda x: None} 
+                 'int': 'ival', 'date': 'dval', 'none': lambda x: None}
         relevant_attrs = self._attrs.keys()
 
         attrsdict = defaultdict(dict)
-        
+
         for e in self._get_attrs_raw():
             f = field[e['datatype']]
             if callable(f):
@@ -295,7 +302,7 @@ class QueryTool(object):
                                 negate=negate,
                                 querieslist=self._attr_queries,
                                 attrdict=self._attrs,
-                                relnode=relnode,relnodeclass=relnodeclass)
+                                relnode=relnode, relnodeclass=relnodeclass)
 
     def add_extra_filter(self, key, filtername, value, negate=False, relnode=None, relnodeclass=None):
         """
@@ -330,10 +337,10 @@ class QueryTool(object):
                                 negate=negate,
                                 querieslist=self._extra_queries,
                                 attrdict=self._extras,
-                                relnode=relnode,relnodeclass=relnodeclass)
+                                relnode=relnode, relnodeclass=relnodeclass)
 
     def _add_filter(self, key, filtername, value, negate,
-                    dbtable, querieslist, attrdict, relnode,relnodeclass):
+                    dbtable, querieslist, attrdict, relnode, relnodeclass):
         """
         Internal method to apply a filter either on Extras or Attributes,
         to avoid to repeat the same code in a DRY spirit.
@@ -341,7 +348,7 @@ class QueryTool(object):
         from django.utils.timezone import is_naive, make_aware, get_current_timezone
         from django.db.models import Q
         from aiida.orm import Node
-        
+
         valid_filters = {
             '': '',
             None: '',
@@ -364,7 +371,7 @@ class QueryTool(object):
             'gte': '__gte',
             'ge': '__gte',
             '>=': '__gte',
-            }
+        }
 
         querylist = []
         querydict = {}
@@ -374,39 +381,39 @@ class QueryTool(object):
             internalfilter = valid_filters[filtername]
         except KeyError:
             raise ValueError("Filter '{}' is not a supported filter".format(
-                    filtername))
+                filtername))
 
         if value is None:
             querydict['datatype'] = 'none'
-        elif isinstance(value,bool):
+        elif isinstance(value, bool):
             querydict['datatype'] = 'bool'
             if negate:
                 querylist.append(~Q(**{
-                            'bval{}'.format(internalfilter): value}))
+                    'bval{}'.format(internalfilter): value}))
             else:
                 querydict['bval{}'.format(internalfilter)] = value
-        elif isinstance(value,(int,long)):
+        elif isinstance(value, (int, long)):
             querydict['datatype'] = 'int'
             querydict['ival{}'.format(internalfilter)] = value
-        elif isinstance(value,float):
+        elif isinstance(value, float):
             querydict['datatype'] = 'float'
             querydict['fval{}'.format(internalfilter)] = value
-        elif isinstance(value,basestring):
+        elif isinstance(value, basestring):
             querydict['datatype'] = 'txt'
             if negate:
                 querylist.append(~Q(**{
-                            'tval{}'.format(internalfilter): value}))
+                    'tval{}'.format(internalfilter): value}))
             else:
                 querydict['tval{}'.format(internalfilter)] = value
-        elif isinstance(value,datetime.datetime):
+        elif isinstance(value, datetime.datetime):
             # current timezone is taken from the settings file of django
             if is_naive(value):
-                value_aware = make_aware(value,get_current_timezone())
+                value_aware = make_aware(value, get_current_timezone())
             else:
                 value_aware = value
             querydict['datatype'] = 'date'
             querydict['dval{}'.format(internalfilter)] = value_aware
-        #elif isinstance(value, list):
+        # elif isinstance(value, list):
         #                    
         #    new_entry.datatype = 'list'
         #    new_entry.ival = length
@@ -415,12 +422,12 @@ class QueryTool(object):
         #    new_entry.ival = len(value)
         else:
             raise TypeError("Only basic datatypes are supported in queries!")
-        
+
         reldata = {}
         if relnode is not None:
             if (relnodeclass is not None and
-                not isinstance(relnodeclass, Node) and
-                not issubclass(relnodeclass, Node)):
+                    not isinstance(relnodeclass, Node) and
+                    not issubclass(relnodeclass, Node)):
                 raise TypeError("relnodeclass must be an AiiDA node")
             if relnodeclass is None:
                 reldata['nodeclass'] = None
@@ -443,9 +450,9 @@ class QueryTool(object):
         # We are changing the query, clear the cache
         self._queryobject = None
         querieslist.append((dbtable.objects.filter(
-                *querylist, **querydict), reldata))
+            *querylist, **querydict), reldata))
         if reldata:
             pass
         else:
-            attrdict[key] =  reldata
+            attrdict[key] = reldata
 

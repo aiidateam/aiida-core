@@ -19,7 +19,6 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
 
-
 RE_FLAGS = re.M | re.X | re.I
 
 
@@ -200,7 +199,7 @@ class PwInputFile(object):
         self.k_points = parse_k_points(self.input_txt)
         # Parse the ATOMIC_SPECIES card.
         self.atomic_species = parse_atomic_species(self.input_txt)
-        
+
     def get_structuredata(self):
         """
         Return a StructureData object based on the data in the input file.
@@ -225,7 +224,7 @@ class PwInputFile(object):
                 'CELL_PARAMETERS not found while parsing the input file. This '
                 'card is needed for AiiDa.'
             )
-    
+
         # Figure out the factor needed to convert the lattice vectors
         # to Angstroms.
         # TODO: ***ASK GEORGE IF I SHOULD MULTIPLY OR DIVIDE BY ALAT***
@@ -258,10 +257,10 @@ class PwInputFile(object):
             raise ParsingError(
                 "Unable to determine the units of the lattice vectors."
             )
-    
+
         # Get the lattice vectors and convert them to units of Angstroms.
         cell = np.array(self.cell_parameters['cell']) * cell_conv_factor
-    
+
         # Get the positions and convert them to [x, y, z] Angstrom vectors.
         pos_units = self.atomic_positions['units']
         positions = np.array(self.atomic_positions['positions'])
@@ -278,14 +277,14 @@ class PwInputFile(object):
             raise ParsingError(
                 'Unable to determine to convert positions to [x y z] Angstrom.'
             )
-    
+
         # Get the atom names corresponding to positions.
         names = self.atomic_positions['names']
-    
+
         # Create a dictionary that maps an atom name to it's mass.
         mass_dict = dict(zip(self.atomic_species['names'],
                              self.atomic_species['masses']))
-    
+
         # Use the names to figure out the atomic symbols.
         symbols = []
         for name in names:
@@ -297,7 +296,7 @@ class PwInputFile(object):
                     'label, {}, in the input file.'.format(name))
             # Choose the longest match, since, for example, S and Si match Si.
             symbols.append(max(candiates, key=lambda x: len(x)))
-    
+
         # Now that we have the names and their corresponding symbol and mass, as
         # well as the positions and cell in units of Angstroms, we create the
         # StructureData object.
@@ -307,7 +306,7 @@ class PwInputFile(object):
             structuredata.append_atom(name=name, symbols=symbol,
                                       position=position, mass=mass)
         return structuredata
-    
+
     def get_kpointsdata(self):
         """
         Return a KpointsData object based on the data in the input file.
@@ -339,10 +338,10 @@ class PwInputFile(object):
         elif self.k_points['type'] == 'tpiba':  # cartesian; units of 2*pi/alat
             alat = np.linalg.norm(structuredata.cell[0])  # alat in Angstrom
             kpointsdata.set_kpoints(
-                np.array(self.k_points['points'])*(2.*np.pi/alat),
+                np.array(self.k_points['points']) * (2. * np.pi / alat),
                 weights=self.k_points['weights'],
                 cartesian=True
-            )           
+            )
         elif self.k_points['type'] == 'automatic':
             kpointsdata.set_kpoints_mesh(self.k_points['points'],
                                          offset=self.k_points['offset'])
@@ -353,7 +352,7 @@ class PwInputFile(object):
                 'Support for creating KpointsData from input units of {} is'
                 'not yet implemented'.format(self.k_points['type'])
             )
-        
+
         return kpointsdata
 
 
@@ -585,7 +584,7 @@ def parse_atomic_positions(txt):
     for match in atomic_positions_re.finditer(blockstr):
         names.append(match.group('name'))
         positions.append(map(fortfloat, match.group('x', 'y', 'z')))
-        fixed_coords.append(3*[False])  # False <--> not fixed (the default)
+        fixed_coords.append(3 * [False])  # False <--> not fixed (the default)
     # Next, try using the re for lines with force modifications.
     for match in atomic_positions_constraints_re.finditer(blockstr):
         names.append(match.group('name'))

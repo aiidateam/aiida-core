@@ -5,10 +5,12 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Nicolas Mounet"
 
+
 class Group(object):
     """
     An AiiDA ORM implementation of group of nodes.
     """
+
     def __init__(self, **kwargs):
         """
         Create a new group. Either pass a dbgroup parameter, to reload 
@@ -25,11 +27,11 @@ class Group(object):
         """
         from aiida.djsite.utils import get_automatic_user
         from aiida.djsite.db.models import DbGroup
-        
+
         dbgroup = kwargs.pop('dbgroup', None)
-                
+
         if dbgroup is not None:
-            if isinstance(dbgroup, (int,long)):
+            if isinstance(dbgroup, (int, long)):
                 dbgroup = DbGroup.objects.get(pk=dbgroup)
             if not isinstance(dbgroup, DbGroup):
                 raise TypeError("dbgroup is not a DbGroup instance, it is "
@@ -37,13 +39,13 @@ class Group(object):
             if kwargs:
                 raise ValueError("If you pass a dbgroups, you cannot pass any "
                                  "further parameter")
-            
+
             self._dbgroup = dbgroup
-        else: 
-            name = kwargs.pop('name', None)           
+        else:
+            name = kwargs.pop('name', None)
             if name is None:
                 raise ValueError("You have to specify a group name")
-            group_type = kwargs.pop('type_string', "") # By default, an user group
+            group_type = kwargs.pop('type_string', "")  # By default, an user group
             user = kwargs.pop('user', get_automatic_user())
             description = kwargs.pop('description', "")
             self._dbgroup = DbGroup(name=name, description=description,
@@ -51,24 +53,24 @@ class Group(object):
             if kwargs:
                 raise ValueError("Too many parameters passed to Group, the "
                                  "unknown parameters are: {}".format(
-                                    ", ".join(kwargs.keys())))
-            
+                    ", ".join(kwargs.keys())))
+
     @property
-    def name(self):        
+    def name(self):
         """
         :return: the name of the group as a string
         """
         return self.dbgroup.name
 
     @property
-    def description(self):        
+    def description(self):
         """
         :return: the description of the group as a string
         """
         return self.dbgroup.description
 
     @description.setter
-    def description(self, value):        
+    def description(self, value):
         """
         :return: the description of the group as a string
         """
@@ -80,7 +82,7 @@ class Group(object):
 
 
     @property
-    def type_string(self):        
+    def type_string(self):
         """
         :return: the string defining the type of the group
         """
@@ -115,9 +117,9 @@ class Group(object):
         :return: a string with the uuid
         """
         return unicode(self.dbgroup.uuid)
-    
+
     @classmethod
-    def get_or_create(cls,*args,**kwargs):
+    def get_or_create(cls, *args, **kwargs):
         """
         Try to retrieve a group from the DB with the given arguments; 
         create (and store) a new group if such a group was not present yet.
@@ -126,13 +128,14 @@ class Group(object):
           in any case already stored) and created is a boolean saying 
         """
         from aiida.common.exceptions import UniquenessError
+
         try:
             # Try to create and store a new class
             return (cls(*args, **kwargs).store(), True)
         except UniquenessError:
             group = cls.get(*args, **kwargs)
             return (group, False)
-    
+
     def __int__(self):
         """
         Convert the class to an integer. This is needed to allow querying
@@ -156,10 +159,10 @@ class Group(object):
 
     def store(self):
         from django.db import transaction, IntegrityError
-        
+
         from aiida.common.exceptions import (
             ModificationNotAllowed, UniquenessError)
-        
+
         if self._is_stored:
             raise ModificationNotAllowed("Cannot restore a group that was "
                                          "already stored")
@@ -175,7 +178,7 @@ class Group(object):
 
         # To allow to do directly g = Group(...).store()
         return self
-        
+
     def add_nodes(self, nodes):
         """
         Add a node or a set of nodes to the group.
@@ -188,7 +191,7 @@ class Group(object):
           a list of Nodes or DbNodes to add.
         """
         import collections
-        
+
         from aiida.common.exceptions import ModificationNotAllowed
         from aiida.djsite.db.models import DbNode
         from aiida.orm import Node
@@ -196,7 +199,7 @@ class Group(object):
         if not self._is_stored:
             raise ModificationNotAllowed("Cannot add nodes to a group before "
                                          "storing")
-        
+
         # First convert to a list
         if isinstance(nodes, (Node, DbNode)):
             nodes = [nodes]
@@ -206,7 +209,7 @@ class Group(object):
             raise TypeError("Invalid type passed as the 'nodes' parameter to "
                             "add_nodes, can only be a Node, DbNode, or a list "
                             "of such objects, it is instead {}".format(
-                                str(type(nodes))))
+                str(type(nodes))))
 
         list_pk = []
         for node in nodes:
@@ -214,14 +217,14 @@ class Group(object):
                 raise TypeError("Invalid type of one of the elements passed "
                                 "to add_nodes, it should be either a Node or "
                                 "a DbNode, it is instead {}".format(
-                                    str(type(node))))
+                    str(type(node))))
             if node.pk is None:
                 raise ValueError("At least one of the provided nodes is "
                                  "unstored, stopping...")
             list_pk.append(node.pk)
 
         self.dbgroup.dbnodes.add(*list_pk)
-    
+
     @property
     def nodes(self):
         """
@@ -229,31 +232,31 @@ class Group(object):
         the respective AiiDA subclasses of Node, and also allows to ask for 
         the number of nodes in the group using len().
         """
-    
+
         class iterator(object):
             def __init__(self, dbnodes):
                 self.dbnodes = dbnodes
                 self.generator = self._genfunction()
-                
+
             def _genfunction(self):
                 for n in self.dbnodes:
                     yield n.get_aiida_class()
-                
+
             def __iter__(self):
                 return self
-            
+
             def __len__(self):
                 return self.dbnodes.count()
-            
+
             # For future python-3 compatibility
             def __next__(self):
                 return self.next()
-            
+
             def next(self):
                 return next(self.generator)
-                
+
         return iterator(self.dbgroup.dbnodes.all())
-    
+
     def remove_nodes(self, nodes):
         """
         Remove a node or a set of nodes to the group.
@@ -266,7 +269,7 @@ class Group(object):
           a list of Nodes or DbNodes to add.
         """
         import collections
-        
+
         from aiida.djsite.db.models import DbNode
         from aiida.orm import Node
         from aiida.common.exceptions import ModificationNotAllowed
@@ -274,7 +277,7 @@ class Group(object):
         if not self._is_stored:
             raise ModificationNotAllowed("Cannot remove nodes from a group "
                                          "before storing")
-        
+
         # First convert to a list
         if isinstance(nodes, (Node, DbNode)):
             nodes = [nodes]
@@ -284,15 +287,15 @@ class Group(object):
             raise TypeError("Invalid type passed as the 'nodes' parameter to "
                             "remove_nodes, can only be a Node, DbNode, or a "
                             "list of such objects, it is instead {}".format(
-                                str(type(nodes))))
-            
+                str(type(nodes))))
+
         list_pk = []
         for node in nodes:
             if not isinstance(node, (Node, DbNode)):
                 raise TypeError("Invalid type of one of the elements passed "
                                 "to add_nodes, it should be either a Node or "
                                 "a DbNode, it is instead {}".format(
-                                    str(type(node))))
+                    str(type(node))))
             if node.pk is None:
                 raise ValueError("At least one of the provided nodes is "
                                  "unstored, stopping...")
@@ -300,7 +303,7 @@ class Group(object):
 
         self.dbgroup.dbnodes.remove(*list_pk)
 
-    
+
     @classmethod
     def query(cls, name=None, type_string="", uuid=None, nodes=None, user=None,
               node_attributes=None, past_days=None):
@@ -337,9 +340,9 @@ class Group(object):
              element 'Ba' and one node for element 'Ti'.
         """
         import collections
-        
+
         from django.db.models import Q
-        
+
         from aiida.djsite.db.models import DbGroup, DbNode, DbAttribute
         from aiida.orm import Node
 
@@ -353,23 +356,23 @@ class Group(object):
 
         if uuid is not None:
             queryobject &= Q(uuid=uuid)
-        
+
         if past_days is not None:
             queryobject &= Q(time__gte=past_days)
-        
+
         if nodes is not None:
             pk_list = []
-            
+
             if not isinstance(nodes, collections.Iterable):
                 nodes = [nodes]
-                
+
             for node in nodes:
                 if not isinstance(node, (Node, DbNode)):
                     raise TypeError("At least one of the elements passed as "
                                     "nodes for the query on Group is neither "
                                     "a Node nor a DbNode")
                 pk_list.append(node.pk)
-            
+
             queryobject &= Q(dbnodes__in=pk_list)
 
         if user is not None:
@@ -377,16 +380,16 @@ class Group(object):
                 queryobject &= Q(user__email=user)
             else:
                 queryobject &= Q(user=user)
-    
+
         groups_pk = set(DbGroup.objects.filter(queryobject).values_list(
             'pk', flat=True))
-    
+
         if node_attributes is not None:
             for k, vlist in node_attributes.iteritems():
                 if isinstance(vlist, basestring) or not isinstance(
-                    vlist, collections.Iterable):
+                        vlist, collections.Iterable):
                     vlist = [vlist]
-                                    
+
                 for v in vlist:
                     # This will be a dictionary of the type
                     # {'datatype': 'txt', 'tval': 'xxx') for instance, if
@@ -394,9 +397,9 @@ class Group(object):
                     base_query_dict = DbAttribute.get_query_dict(v)
                     # prepend to the key the right django string to SQL-join
                     # on the right table
-                    query_dict = {'dbnodes__dbattributes__{}'.format(k2): v2 
+                    query_dict = {'dbnodes__dbattributes__{}'.format(k2): v2
                                   for k2, v2 in base_query_dict.iteritems()}
-                    
+
                     # I narrow down the list of groups.
                     # I had to do it in this way, with multiple DB hits and
                     # not a single, complicated query because in SQLite
@@ -406,20 +409,20 @@ class Group(object):
                     groups_pk = groups_pk.intersection(DbGroup.objects.filter(
                         pk__in=groups_pk, dbnodes__dbattributes__key=k,
                         **query_dict).values_list('pk', flat=True))
-    
+
         retlist = []
         # Return sorted by pk
         for dbgroup in sorted(groups_pk):
             retlist.append(cls(dbgroup=dbgroup))
-            
+
         return retlist
-    
+
     @classmethod
     def get(cls, *args, **kwargs):
         from aiida.common.exceptions import NotExistent, MultipleObjectsError
-        
+
         queryresults = cls.query(*args, **kwargs)
-        
+
         if len(queryresults) == 1:
             return queryresults[0]
         elif len(queryresults) == 0:
@@ -427,23 +430,23 @@ class Group(object):
         else:
             raise MultipleObjectsError("More than one Group found -- "
                                        "I found {}".format(len(queryresults)))
-    
+
     def is_user_defined(self):
         """
         :return: True if the group is user defined, False otherwise
         """
         return not self.type_string
-    
+
     def delete(self):
         """
         Delete the group from the DB
         """
         if self.pk is not None:
             self.dbgroup.delete()
-    
+
     def __repr__(self):
         return '<{}: {}>'.format(self.__class__.__name__, str(self))
-    
+
     def __str__(self):
         if self.type_string:
             return '"{}" [type {}], of user {}'.format(

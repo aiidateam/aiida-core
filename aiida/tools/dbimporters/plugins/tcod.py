@@ -8,18 +8,19 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi"
 
+
 class TcodDbImporter(CodDbImporter):
     """
     Database importer for Theoretical Crystallography Open Database.
     """
 
     def __init__(self, **kwargs):
-        super(TcodDbImporter,self).__init__(**kwargs)
-        self._db_parameters = { 'host':   'www.crystallography.net',
-                                'user':   'cod_reader',
-                                'passwd': '',
-                                'db':     'tcod' }
-        self.setup_db( **kwargs )
+        super(TcodDbImporter, self).__init__(**kwargs)
+        self._db_parameters = {'host': 'www.crystallography.net',
+                               'user': 'cod_reader',
+                               'passwd': '',
+                               'db': 'tcod'}
+        self.setup_db(**kwargs)
 
     def query(self, **kwargs):
         """
@@ -29,19 +30,19 @@ class TcodDbImporter(CodDbImporter):
         :return: an instance of
             :py:class:`aiida.tools.dbimporters.plugins.tcod.TcodSearchResults`.
         """
-        query_statement = self.query_sql( **kwargs )
+        query_statement = self.query_sql(**kwargs)
         self._connect_db()
         results = []
         try:
-            self._cursor.execute( query_statement )
+            self._cursor.execute(query_statement)
             self._db.commit()
             for row in self._cursor.fetchall():
-                results.append({ 'id'         : str(row[0]),
-                                 'svnrevision': str(row[1]) })
+                results.append({'id': str(row[0]),
+                                'svnrevision': str(row[1])})
         finally:
             self._disconnect_db()
 
-        return TcodSearchResults( results )
+        return TcodSearchResults(results)
 
 
 class TcodSearchResults(CodSearchResults):
@@ -54,14 +55,15 @@ class TcodSearchResults(CodSearchResults):
         super(TcodSearchResults, self).__init__(results)
         self._return_class = TcodEntry
 
+
 class TcodEntry(CodEntry):
     """
     Represents an entry from TCOD.
     """
 
-    def __init__(self,url,
+    def __init__(self, url,
                  db_source='Theoretical Crystallography Open Database',
-                 db_url='http://www.crystallography.net/tcod',**kwargs):
+                 db_url='http://www.crystallography.net/tcod', **kwargs):
         """
         Creates an instance of
         :py:class:`aiida.tools.dbimporters.plugins.tcod.TcodEntry`, related

@@ -7,6 +7,7 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Andrius Merkys"
 
+
 class CifsplitprimitiveCalculation(CiffilterCalculation):
     """
     Specific input plugin for cif_split_primitive from cod-tools package.
@@ -19,15 +20,16 @@ class CifsplitprimitiveCalculation(CiffilterCalculation):
 
         self._SPLIT_DIR = 'split'
 
-    def _prepare_for_submission(self,tempfolder,inputdict):
+    def _prepare_for_submission(self, tempfolder, inputdict):
         import os
+
         calcinfo = super(CifsplitprimitiveCalculation,
-                         self)._prepare_for_submission(tempfolder,inputdict)
+                         self)._prepare_for_submission(tempfolder, inputdict)
 
         split_dir = tempfolder.get_abs_path(self._SPLIT_DIR)
         os.mkdir(split_dir)
 
-        calcinfo.cmdline_params.extend([ '--output-dir', self._SPLIT_DIR ])
+        calcinfo.cmdline_params.extend(['--output-dir', self._SPLIT_DIR])
         calcinfo.retrieve_list.append(self._SPLIT_DIR)
 
         return calcinfo

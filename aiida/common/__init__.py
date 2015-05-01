@@ -8,6 +8,6 @@ __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
 
 aiidalogger = logging.getLogger("aiida")
-#aiidalogger.addHandler(logging.StreamHandler(sys.stderr))
+# aiidalogger.addHandler(logging.StreamHandler(sys.stderr))
 #FORMAT = '[%(name)s@%(levelname)s] %(message)s'
 #logging.basicConfig(format=FORMAT)

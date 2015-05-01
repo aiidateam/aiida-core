@@ -9,32 +9,35 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Riccardo Sabatini"
 
+
 class CalcState(Enumerate):
     pass
 
+
 _sorted_datastates = (
-        'NOTFOUND', # not found in the DB
-        'NEW', # just created
-        'TOSUBMIT', # used by the executionmanager to submit new calculations scheduled to be submitted
-        'SUBMITTING', # being submitted to cluster
-        'WITHSCHEDULER', # on the scheduler (on any unfinished status:
-                         # QUEUED, QUEUED_HELD, SUSPENDED, RUNNING)
-        'COMPUTED',   # Calculation finished on scheduler, not yet retrieved
-                      # (both DONE and FAILED)
-        'RETRIEVING', # while retrieving data
-        'PARSING', # while parsing data
-        'UNDETERMINED',
-        'FINISHED',  # Final state of the calculation: data retrieved and eventually parsed
-        'SUBMISSIONFAILED', # error occurred during submission phase
-        'RETRIEVALFAILED', # error occurred during retrieval phase
-        'PARSINGFAILED', # error occurred during parsing phase due to a problem in the parse
-        'FAILED', # The parser recognized the calculation as failed
-        'IMPORTED', # The calculation was imported from another DB
-        )
+    'NOTFOUND',  # not found in the DB
+    'NEW',  # just created
+    'TOSUBMIT',  # used by the executionmanager to submit new calculations scheduled to be submitted
+    'SUBMITTING',  # being submitted to cluster
+    'WITHSCHEDULER',  # on the scheduler (on any unfinished status:
+    # QUEUED, QUEUED_HELD, SUSPENDED, RUNNING)
+    'COMPUTED',  # Calculation finished on scheduler, not yet retrieved
+    # (both DONE and FAILED)
+    'RETRIEVING',  # while retrieving data
+    'PARSING',  # while parsing data
+    'UNDETERMINED',
+    'FINISHED',  # Final state of the calculation: data retrieved and eventually parsed
+    'SUBMISSIONFAILED',  # error occurred during submission phase
+    'RETRIEVALFAILED',  # error occurred during retrieval phase
+    'PARSINGFAILED',  # error occurred during parsing phase due to a problem in the parse
+    'FAILED',  # The parser recognized the calculation as failed
+    'IMPORTED',  # The calculation was imported from another DB
+)
 
 # The order of states is not random: is the order of precedence.
 # However, this is never used at the moment in the code.
 calc_states = CalcState(_sorted_datastates)
+
 
 def sort_states(list_states):
     """
@@ -52,11 +55,11 @@ def sort_states(list_states):
     :raise ValueError: if any of the given states is not a valid state.
     """
     datastates_order_dict = {state: idx for idx, state in enumerate(
-            _sorted_datastates)}
+        _sorted_datastates)}
 
     try:
         list_to_sort = [(datastates_order_dict[st], st)
-                        for st in list_states]        
+                        for st in list_states]
     except KeyError as e:
         raise ValueError("At least one of the provided states is not "
                          "valid ({})".format(e.message))
@@ -65,6 +68,7 @@ def sort_states(list_states):
     list_to_sort.sort()
 
     return [_[1] for _ in list_to_sort[::-1]]
+
 
 class CalcInfo(DefaultFieldsAttributeDict):
     """
@@ -80,27 +84,27 @@ class CalcInfo(DefaultFieldsAttributeDict):
       (see, for instance, 'queue_name').
     """
     _default_fields = (
-        'job_environment', # TODO UNDERSTAND THIS!
+        'job_environment',  # TODO UNDERSTAND THIS!
         'email',
         'email_on_started',
         'email_on_terminated',
         'uuid',
-        'prepend_text', 
-        'append_text',  
+        'prepend_text',
+        'append_text',
         'cmdline_params',  # as a list of strings
         'stdin_name',
         'stdout_name',
         'stderr_name',
         'join_files',
-        #'queue_name', This is not used in CalcInfo, it is automatically set from
-                       # calculation attributes to JobInfo
+        # 'queue_name', This is not used in CalcInfo, it is automatically set from
+        # calculation attributes to JobInfo
         'num_machines',
         'num_mpiprocs_per_machine',
         'priority',
         'max_wallclock_seconds',
         'max_memory_kb',
         'rerunnable',
-        'retrieve_list', # a list of files or patterns to retrieve, with two  
+        'retrieve_list',  # a list of files or patterns to retrieve, with two
         # possible formats: [ 'remotepath',  # just the name of the file to retrieve. Will be put in '.' of the repositorym with name os.path.split(item)[1]
         #                     ['remotepath','localpath',depth]  ]
         # second format will copy the remotepath file/folder to localpath.
@@ -110,52 +114,58 @@ class CalcInfo(DefaultFieldsAttributeDict):
         # where filename takes remotepath.split() and joins the last #depth elements  
         # use the second option if you are using file patterns (*,[0-9],...) 
         # ALL PATHS ARE RELATIVE! 
-        'local_copy_list', # a list of length-two tuples with (localabspath, relativedestpath)
-        'remote_copy_list', # a list of length-three tuples with (remotemachinename, remoteabspath, relativedestpath)
-        'remote_symlink_list', # a list of length-three tuples with (remotemachinename, remoteabspath, relativedestpath)
-        'retrieve_singlefile_list', # a list of files, that will be retrieved 
-                            # from cluster and saved in SinglefileData nodes
-                            # in the following format:
-                            # ["linkname_from calc to singlefile","subclass of singlefile","filename"]
-                            # filename remote = filename local
-        )
+        'local_copy_list',  # a list of length-two tuples with (localabspath, relativedestpath)
+        'remote_copy_list',  # a list of length-three tuples with (remotemachinename, remoteabspath, relativedestpath)
+        'remote_symlink_list',
+        # a list of length-three tuples with (remotemachinename, remoteabspath, relativedestpath)
+        'retrieve_singlefile_list',  # a list of files, that will be retrieved
+        # from cluster and saved in SinglefileData nodes
+        # in the following format:
+        # ["linkname_from calc to singlefile","subclass of singlefile","filename"]
+        # filename remote = filename local
+    )
 
 
 class WorkflowState(Enumerate):
     pass
 
+
 wf_states = WorkflowState((
-        'CREATED',
-        'INITIALIZED',
-        'RUNNING',
-        'FINISHED',
-        'SLEEP',
-        'ERROR'
-        ))
+    'CREATED',
+    'INITIALIZED',
+    'RUNNING',
+    'FINISHED',
+    'SLEEP',
+    'ERROR'
+))
+
 
 class WorkflowDataType(Enumerate):
     pass
 
+
 wf_data_types = WorkflowDataType((
-        'PARAMETER',
-        'RESULT',
-        'ATTRIBUTE',
-        ))
+    'PARAMETER',
+    'RESULT',
+    'ATTRIBUTE',
+))
+
 
 class WorkflowDataValueType(Enumerate):
     pass
 
+
 wf_data_value_types = WorkflowDataValueType((
-        'NONE',
-        'JSON',
-        'AIIDA',
-        ))
+    'NONE',
+    'JSON',
+    'AIIDA',
+))
 
 wf_start_call = "start"
 wf_exit_call = "exit"
 wf_default_call = "none"
 
-#TODO Improve/implement this!
+# TODO Improve/implement this!
 #class DynResourcesInfo(AttributeDict):
 #    """
 #    This object will contain a list of 'dynamical' resources to be 

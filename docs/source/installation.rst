@@ -85,12 +85,7 @@ of packages to install- or ``yum`` in RedHat/Fedora).
 For Ubuntu, you can install the above packages using (tested on Ubuntu 12.04,
 names may change in different releases)::
 
-      sudo apt-get install git
-      sudo apt-get install python-pip
-      sudo apt-get install ipython
-      sudo apt-get install python2.7-dev
-      sudo apt-get install libsqlite3-dev
-      sudo apt-get install postgresql-server-dev-9.1
+      sudo apt-get install git python-pip ipython python2.7-dev libsqlite3-dev postgresql-server-dev-9.1
 
 .. note:: For the latter line, please use the same version (in the
   example above is 9.1) of the

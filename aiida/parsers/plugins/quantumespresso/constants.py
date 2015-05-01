@@ -23,4 +23,4 @@ from aiida.common.constants import (
     ry_si,
     ry_to_ev,
     timeau_to_sec,
-    )
+)

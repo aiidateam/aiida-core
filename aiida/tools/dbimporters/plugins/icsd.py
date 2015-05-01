@@ -7,8 +7,10 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Nicolas Mounet, Philippe Schwaller"
 
+
 class IcsdImporterExp(Exception):
     pass
+
 
 class CifFileErrorExp(IcsdImporterExp):
     """
@@ -16,11 +18,13 @@ class CifFileErrorExp(IcsdImporterExp):
     """
     pass
 
+
 class NoResultsWebExp(IcsdImporterExp):
     """
     Raised when a webpage query returns no results.
     """
     pass
+
 
 class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
     """
@@ -72,74 +76,73 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         :return: SQL query predicate
         """
         for e in values:
-            if not isinstance( e, int ) and not isinstance( e, str ):
+            if not isinstance(e, int) and not isinstance(e, str):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and strings are accepted")
-        return key + " IN (" + ", ".join( map( lambda i: str( int( i ) ),
-                                               values ) ) + ")"
+        return key + " IN (" + ", ".join(map(lambda i: str(int(i)),
+                                             values)) + ")"
 
     def _str_exact_clause(self, key, alias, values):
         """
         Return SQL query predicate for querying string fields.
         """
         for e in values:
-            if not isinstance( e, int ) and not isinstance( e, str ):
+            if not isinstance(e, int) and not isinstance(e, str):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and strings are accepted")
         return key + \
-               " IN (" + ", ".join( map( lambda f: "'" + str(f) + "'", \
-                                         values ) ) + ")"
+               " IN (" + ", ".join(map(lambda f: "'" + str(f) + "'", \
+                                       values)) + ")"
+
     def _formula_clause(self, key, alias, values):
         """
         Return SQL query predicate for querying formula fields.
         """
         for e in values:
-            if not isinstance( e, str ):
+            if not isinstance(e, str):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only strings are accepted")
-        return self.str_exact_clause( key, \
-                                      alias, \
-                                      map( lambda f: "- " + str(f) + " -", \
-                                           values ) )
+        return self.str_exact_clause(key, \
+                                     alias, \
+                                     map(lambda f: "- " + str(f) + " -", \
+                                         values))
 
     def _str_fuzzy_clause(self, key, alias, values):
         """
         Return SQL query predicate for fuzzy querying of string fields.
         """
         for e in values:
-            if not isinstance( e, int ) and not isinstance( e, str ):
+            if not isinstance(e, int) and not isinstance(e, str):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and strings are accepted")
-        return " OR ".join( map( lambda s: key + \
-                                           " LIKE '%" + str(s) + "%'", values ) )
+        return " OR ".join(map(lambda s: key + \
+                                         " LIKE '%" + str(s) + "%'", values))
 
     def _composition_clause(self, key, alias, values):
         """
         Return SQL query predicate for querying elements in formula fields.
         """
         for e in values:
-            if not isinstance( e, str ):
+            if not isinstance(e, str):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only strings are accepted")
-        return " AND ".join( map( lambda e: "STRUCT_FORM REGEXP ' " + \
-                                            e + "[0-9 ]'", \
-                                  values ) )
+        return " AND ".join(map(lambda e: "STRUCT_FORM REGEXP ' " + \
+                                          e + "[0-9 ]'", \
+                                values))
 
     def _double_clause(self, key, alias, values, precision):
         """
         Return SQL query predicate for querying double-valued fields.
         """
         for e in values:
-            if not isinstance( e, int ) and not isinstance( e, float ):
+            if not isinstance(e, int) and not isinstance(e, float):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and floats are accepted")
-        return " OR ".join( map( lambda d: key + \
-                                           " BETWEEN " + \
-                                           str( d - precision ) + " AND " + \
-                                           str( d + precision ), \
-                                 values ) )
-
-
+        return " OR ".join(map(lambda d: key + \
+                                         " BETWEEN " + \
+                                         str(d - precision) + " AND " + \
+                                         str(d + precision), \
+                               values))
 
 
     def _crystal_system_clause(self, key, alias, values):
@@ -147,30 +150,30 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         Return SQL query predicate for querying crystal_system.
         """
         valid_systems = {
-        "cubic": "CU",
-        "hexagonal": "HE",
-        "monoclinic": "MO",
-        "orthorhombic": "OR",
-        "tetragonal": "TE",
-        "trigonal": "TG",
-        "triclinic": "TC"
-        } #from icsd accepted crystal systems
+            "cubic": "CU",
+            "hexagonal": "HE",
+            "monoclinic": "MO",
+            "orthorhombic": "OR",
+            "tetragonal": "TE",
+            "trigonal": "TG",
+            "triclinic": "TC"
+        }  # from icsd accepted crystal systems
 
         for e in values:
-            if not isinstance( e, int ) and not isinstance( e, str ):
+            if not isinstance(e, int) and not isinstance(e, str):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only strings are accepted")
         return key + \
-               " IN (" + ", ".join( map( lambda f: "'" + valid_systems[f.lower()] + "'", \
-                                         values ) ) + ")"
+               " IN (" + ", ".join(map(lambda f: "'" + valid_systems[f.lower()] + "'", \
+                                       values)) + ")"
 
 
-    length_precision      = 0.001
-    angle_precision       = 0.001
-    volume_precision      = 0.001
+    length_precision = 0.001
+    angle_precision = 0.001
+    volume_precision = 0.001
     temperature_precision = 0.001
-    density_precision     = 0.001
-    pressure_precision    = 1
+    density_precision = 0.001
+    pressure_precision = 1
 
     def _length_clause(self, key, alias, values):
         """
@@ -210,34 +213,34 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
 
 
     # mysql database - query parameter (alias) : [mysql keyword (key), function to call]
-    keywords_db = {'id'             : [ 'COLL_CODE',          _int_clause ],
-                 'element'           : [ 'STRUCT_FORM;',       _composition_clause ],
-                 'number_of_elements': [ 'EL_COUNT',           _int_clause ],
-                 'chemical_name'     : [ 'CHEM_NAME',      _str_fuzzy_clause ],
-                 'formula'           : [ 'SUM_FORM',       _formula_clause ],
-                 'volume'            : [ 'C_VOL',           _volume_clause ],
-                 'spacegroup'        : [ 'SGR',            _str_exact_clause ],
-                 'a'                 : [ 'A_LEN',             _length_clause ],
-                 'b'                 : [ 'B_LEN',             _length_clause ],
-                 'c'                 : [ 'C_LEN',             _length_clause ],
-                 'alpha'             : [ 'ALPHA',         _angle_clause ],
-                 'beta'              : [ 'BETA',          _angle_clause ],
-                 'gamma'             : [ 'GAMMA',         _angle_clause ],
-                 'density'           : [ 'DENSITY_CALC',  _density_clause],
-                 'wyckoff'           : ['WYCK', _str_exact_clause],
-                 'molar_mass'        : ['MOL_MASS', _density_clause],
-                 'pdf_num'           : ['PDF_NUM', _str_exact_clause],
-                 'z'                 : [ 'Z',             _int_clause ],
-                 'measurement_temp'  : [ 'TEMPERATURE',      _temperature_clause ],
-                 'authors'           : [ 'AUTHORS_TEXT',       _str_fuzzy_clause ],
-                 'journal'           : [ 'journal',       _str_fuzzy_clause ],
-                 'title'             : [ 'AU_TITLE',         _str_fuzzy_clause ],
-                 'year'              : [ 'MPY',          _int_clause ],
-                 'crystal_system'    : ['CRYST_SYS_CODE', _crystal_system_clause],
-                 }
+    keywords_db = {'id': ['COLL_CODE', _int_clause],
+                   'element': ['STRUCT_FORM;', _composition_clause],
+                   'number_of_elements': ['EL_COUNT', _int_clause],
+                   'chemical_name': ['CHEM_NAME', _str_fuzzy_clause],
+                   'formula': ['SUM_FORM', _formula_clause],
+                   'volume': ['C_VOL', _volume_clause],
+                   'spacegroup': ['SGR', _str_exact_clause],
+                   'a': ['A_LEN', _length_clause],
+                   'b': ['B_LEN', _length_clause],
+                   'c': ['C_LEN', _length_clause],
+                   'alpha': ['ALPHA', _angle_clause],
+                   'beta': ['BETA', _angle_clause],
+                   'gamma': ['GAMMA', _angle_clause],
+                   'density': ['DENSITY_CALC', _density_clause],
+                   'wyckoff': ['WYCK', _str_exact_clause],
+                   'molar_mass': ['MOL_MASS', _density_clause],
+                   'pdf_num': ['PDF_NUM', _str_exact_clause],
+                   'z': ['Z', _int_clause],
+                   'measurement_temp': ['TEMPERATURE', _temperature_clause],
+                   'authors': ['AUTHORS_TEXT', _str_fuzzy_clause],
+                   'journal': ['journal', _str_fuzzy_clause],
+                   'title': ['AU_TITLE', _str_fuzzy_clause],
+                   'year': ['MPY', _int_clause],
+                   'crystal_system': ['CRYST_SYS_CODE', _crystal_system_clause],
+    }
 
     # for the web query
-    def _parse_all(k,v):
+    def _parse_all(k, v):
         """
         Convert numbers, strings, lists into strings.
         :param k: query parameter
@@ -252,7 +255,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
             retval = v
         return retval
 
-    def _parse_number(k,v):
+    def _parse_number(k, v):
         """
         Convert int into string.
         :param k: query parameter
@@ -261,11 +264,11 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         """
         if type(v) is int:
             retval = str(v)
-        elif type (v) is str:
+        elif type(v) is str:
             retval = v
         return retval
 
-    def _parse_mineral(k,v):
+    def _parse_mineral(k, v):
         """
         Convert mineral_name and chemical_name into right format.
         :param k: query parameter
@@ -273,12 +276,12 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         :return retval: string
         """
         if k == "mineral_name":
-            retval = "M="+ v
+            retval = "M=" + v
         elif k == "chemical_name":
             retval = "C=" + v
         return retval
 
-    def _parse_volume(k,v):
+    def _parse_volume(k, v):
         """
         Convert volume, cell parameter and angle queries into right format.
         :param k: query parameter
@@ -300,7 +303,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         elif k == "gamma":
             return "ga=" + v
 
-    def _parse_system(k,v):
+    def _parse_system(k, v):
         """
         Return crystal system in the right format.
         :param k: query parameter
@@ -308,56 +311,55 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         :return retval: string
         """
         valid_systems = {
-        "cubic": "CU",
-        "hexagonal": "HE",
-        "monoclinic": "MO",
-        "orthorhombic": "OR",
-        "tetragonal": "TE",
-        "trigonal": "TG",
-        "triclinic": "TC"
+            "cubic": "CU",
+            "hexagonal": "HE",
+            "monoclinic": "MO",
+            "orthorhombic": "OR",
+            "tetragonal": "TE",
+            "trigonal": "TG",
+            "triclinic": "TC"
         }
 
         return valid_systems[v.lower()]
 
     # keywords accepted for the web page query
-    keywords = { "id"                : ("authors", _parse_all),
-                 "authors"           : ("authors", _parse_all),
-                 "element"           : ("elements", _parse_all),
-                 "number_of_elements": ("elementc", _parse_all),
-                 "mineral_name"      : ("mineral", _parse_mineral),
-                 "chemical_name"     : ("mineral", _parse_mineral),
-                 "formula"           : ("formula", _parse_all),
-                 "volume"            : ("volume", _parse_volume),
-                 "a"                 : ("volume", _parse_volume),
-                 "b"                 : ("volume", _parse_volume),
-                 "c"                 : ("volume", _parse_volume),
-                 "alpha"             : ("volume", _parse_volume),
-                 "beta"              : ("volume", _parse_volume),
-                 "gamma"             : ("volume", _parse_volume),
-                 "spacegroup"        : ("spaceg", _parse_all),
-                 "journal"           : ("journal", _parse_all),
-                 "title"             : ("title", _parse_all),
-                 "year"              : ("year", _parse_all),
-                 "crystal_system"    : ("system", _parse_system),
-                 }
-
+    keywords = {"id": ("authors", _parse_all),
+                "authors": ("authors", _parse_all),
+                "element": ("elements", _parse_all),
+                "number_of_elements": ("elementc", _parse_all),
+                "mineral_name": ("mineral", _parse_mineral),
+                "chemical_name": ("mineral", _parse_mineral),
+                "formula": ("formula", _parse_all),
+                "volume": ("volume", _parse_volume),
+                "a": ("volume", _parse_volume),
+                "b": ("volume", _parse_volume),
+                "c": ("volume", _parse_volume),
+                "alpha": ("volume", _parse_volume),
+                "beta": ("volume", _parse_volume),
+                "gamma": ("volume", _parse_volume),
+                "spacegroup": ("spaceg", _parse_all),
+                "journal": ("journal", _parse_all),
+                "title": ("title", _parse_all),
+                "year": ("year", _parse_all),
+                "crystal_system": ("system", _parse_system),
+    }
 
 
     def __init__(self, **kwargs):
 
 
-        self.db_parameters = { "server":   "",
-                               "urladd": "index.php?",
-                               "querydb": True,
-                               "dl_db": "icsd",
+        self.db_parameters = {"server": "",
+                              "urladd": "index.php?",
+                              "querydb": True,
+                              "dl_db": "icsd",
 
-                               "host":   "",
-                               "user":   "dba",
-                               "passwd": "sql",
-                               "db":     "icsd",
-                               "port": "3306",
-                            }
-        self.setup_db( **kwargs )
+                              "host": "",
+                              "user": "dba",
+                              "passwd": "sql",
+                              "db": "icsd",
+                              "port": "3306",
+        }
+        self.setup_db(**kwargs)
 
     def query(self, **kwargs):
         """
@@ -370,7 +372,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         if self.db_parameters["querydb"]:
             return self._query_sql_db(**kwargs)
         else:
-            return self._queryweb( **kwargs)
+            return self._queryweb(**kwargs)
 
     def _query_sql_db(self, **kwargs):
         """
@@ -380,23 +382,24 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         :return: IcsdSearchResults
         """
 
-        sql_where_query = [] #second part of sql query
+        sql_where_query = []  # second part of sql query
 
         for k, v in kwargs.iteritems():
-                if not isinstance( v, list ):
-                    v = [ v ]
-                sql_where_query.append( \
-                    "(" + self.keywords_db[k][1]( self, \
-                                                 self.keywords_db[k][0], \
-                                                 k, \
-                                                 v ) + \
-                    ")" )
-        if "crystal_system" in kwargs.keys(): # to query another table than the main one, add LEFT JOIN in front of WHERE
-            sql_query = "LEFT JOIN space_group ON space_group.sgr=icsd.sgr LEFT JOIN space_group_number ON space_group_number.sgr_num=space_group.sgr_num " +  "WHERE" + " AND ".join(sql_where_query)
+            if not isinstance(v, list):
+                v = [v]
+            sql_where_query.append( \
+                "(" + self.keywords_db[k][1](self, \
+                                             self.keywords_db[k][0], \
+                                             k, \
+                                             v) + \
+                ")")
+        if "crystal_system" in kwargs.keys():  # to query another table than the main one, add LEFT JOIN in front of WHERE
+            sql_query = "LEFT JOIN space_group ON space_group.sgr=icsd.sgr LEFT JOIN space_group_number ON space_group_number.sgr_num=space_group.sgr_num " + "WHERE" + " AND ".join(
+                sql_where_query)
         else:
-            sql_query =  "WHERE" + " AND ".join(sql_where_query)
+            sql_query = "WHERE" + " AND ".join(sql_where_query)
 
-        return IcsdSearchResults(query = sql_query, db_parameters= self.db_parameters)
+        return IcsdSearchResults(query=sql_query, db_parameters=self.db_parameters)
 
 
     def _queryweb(self, **kwargs):
@@ -411,19 +414,19 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
 
         self.actual_args = {
             "action": "Search",
-            "nb_rows" : "100", #max is 100
-            "order_by" : "yearDesc",
-            "authors" : "",
-            "volume" : "",
-            "mineral" : ""
+            "nb_rows": "100",  # max is 100
+            "order_by": "yearDesc",
+            "authors": "",
+            "volume": "",
+            "mineral": ""
         }
 
         for k, v in kwargs.iteritems():
             try:
                 realname = self.keywords[k][0]
-                newv = self.keywords[k][1](k,v)
+                newv = self.keywords[k][1](k, v)
                 # Because different keys correspond to the same search field.
-                if realname in  ["authors","volume","mineral"]:
+                if realname in ["authors", "volume", "mineral"]:
                     self.actual_args[realname] = self.actual_args[realname] + newv + " "
                 else:
                     self.actual_args[realname] = newv
@@ -433,7 +436,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         url_values = urllib.urlencode(self.actual_args)
         query_url = self.db_parameters["urladd"] + url_values
 
-        return IcsdSearchResults(query = query_url, db_parameters= self.db_parameters)
+        return IcsdSearchResults(query=query_url, db_parameters=self.db_parameters)
 
     def setup_db(self, **kwargs):
         """
@@ -470,9 +473,9 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
 
     def __init__(self, query, db_parameters):
 
-        self.db         = None
-        self.cursor     = None
-        self.db_parameters= db_parameters
+        self.db = None
+        self.cursor = None
+        self.db_parameters = db_parameters
         self.query = query
         self.number_of_results = None
         self.results = []
@@ -491,7 +494,7 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
         """
         if self.number_of_results > self.position:
             self.position = self.position + 1
-            return self.at( self.position - 1 )
+            return self.at(self.position - 1)
         else:
             self.position = 0
             raise StopIteration()
@@ -502,20 +505,23 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
         """
 
         if position < 0 or position >= self.number_of_results:
-            raise IndexError( "index out of bounds" )
+            raise IndexError("index out of bounds")
         while position + 1 >= len(self.results) and len(self.results) < self.number_of_results:
             self.page = self.page + 1
             self.query_page()
 
         if position not in self.entries:
             if self.db_parameters["querydb"]:
-                self.entries[position] = IcsdEntry( self.db_parameters["server"]+ self.db_parameters["dl_db"] + self.cif_url.format(self.results[position]), \
-                              db_source = self.db_name, db_id = self.results[position], extras = {'cif_nr' : self.cif_numbers[position]} )
+                self.entries[position] = IcsdEntry(
+                    self.db_parameters["server"] + self.db_parameters["dl_db"] + self.cif_url.format(
+                        self.results[position]), \
+                    db_source=self.db_name, db_id=self.results[position], extras={'cif_nr': self.cif_numbers[position]})
             else:
-                 self.entries[position] = IcsdEntry( self.db_parameters["server"]+ self.db_parameters["dl_db"] + self.cif_url.format(self.results[position]), \
-                              db_source = self.db_name, db_id = self.results[position] )
+                self.entries[position] = IcsdEntry(
+                    self.db_parameters["server"] + self.db_parameters["dl_db"] + self.cif_url.format(
+                        self.results[position]), \
+                    db_source=self.db_name, db_id=self.results[position])
         return self.entries[position]
-
 
 
     def query_page(self):
@@ -529,20 +535,19 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
         if self.db_parameters["querydb"]:
 
             self._connect_db()
-            query_statement = self.sql_select_query+ self.sql_from_query + self.query + " LIMIT " + str((self.page-1)*100) + ", 100"
+            query_statement = self.sql_select_query + self.sql_from_query + self.query + " LIMIT " + str(
+                (self.page - 1) * 100) + ", 100"
 
-            self.cursor.execute( query_statement )
+            self.cursor.execute(query_statement)
             self.db.commit()
 
             for row in self.cursor.fetchall():
-                self.results.append( str( row[0] ) )
-                self.cif_numbers.append( str(row[1]))
-
+                self.results.append(str(row[0]))
+                self.cif_numbers.append(str(row[1]))
 
             if self.number_of_results is None:
-                self.cursor.execute( "SELECT FOUND_ROWS()")
-                self.number_of_results =  int(self.cursor.fetchone()[0])
-
+                self.cursor.execute("SELECT FOUND_ROWS()")
+                self.number_of_results = int(self.cursor.fetchone()[0])
 
             self._disconnect_db()
 
@@ -552,7 +557,9 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
             from bs4 import BeautifulSoup
             import re
 
-            self.html = urllib2.urlopen(self.db_parameters["server"] + self.db_parameters["db"] +"/"+ self.query.format(str(self.page))).read()
+            self.html = urllib2.urlopen(
+                self.db_parameters["server"] + self.db_parameters["db"] + "/" + self.query.format(
+                    str(self.page))).read()
 
             self.soup = BeautifulSoup(self.html)
 
@@ -571,12 +578,13 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
         Connect to the MySQL database for performing searches.
         """
         import MySQLdb
-        self.db = MySQLdb.connect( host =   self.db_parameters['host'],
-                                   user =   self.db_parameters['user'],
-                                   passwd = self.db_parameters['passwd'],
-                                   db =     self.db_parameters['db'],
-                                   port = int(self.db_parameters['port'])
-                                   )
+
+        self.db = MySQLdb.connect(host=self.db_parameters['host'],
+                                  user=self.db_parameters['user'],
+                                  passwd=self.db_parameters['passwd'],
+                                  db=self.db_parameters['db'],
+                                  port=int(self.db_parameters['port'])
+        )
         self.cursor = self.db.cursor()
 
     def _disconnect_db(self):
@@ -597,12 +605,12 @@ class IcsdEntry(aiida.tools.dbimporters.baseclasses.DbEntry):
         """
         super(IcsdEntry, self).__init__(**kwargs)
         self.source = {
-            'db_source' : 'Icsd',
-            'db_url'    : None, # Server ?
-            'db_id'     : None,
+            'db_source': 'Icsd',
+            'db_url': None,  # Server ?
+            'db_id': None,
             'db_version': None,
-            'url'       : url,
-            'extras'     : {'cif_nr'   : None},
+            'url': url,
+            'extras': {'cif_nr': None},
         }
         self.cif_nr = None
         if 'db_source' in kwargs.keys():
@@ -621,7 +629,8 @@ class IcsdEntry(aiida.tools.dbimporters.baseclasses.DbEntry):
         """
         if self._cif is None:
             import urllib2
-            self._cif = urllib2.urlopen( self.source["url"] ).read()
+
+            self._cif = urllib2.urlopen(self.source["url"]).read()
         return self._cif
 
     def get_cif_node(self):
@@ -632,6 +641,7 @@ class IcsdEntry(aiida.tools.dbimporters.baseclasses.DbEntry):
         """
         from aiida.orm.data.cif import CifData
         import tempfile
+
         with tempfile.NamedTemporaryFile() as f:
             f.write(self.get_corrected_cif())
             f.flush()
@@ -652,8 +662,8 @@ class IcsdEntry(aiida.tools.dbimporters.baseclasses.DbEntry):
         """
         import ase.io.cif
         import StringIO
-        return ase.io.cif.read_cif( StringIO.StringIO( self.get_corrected_cif() ) )
 
+        return ase.io.cif.read_cif(StringIO.StringIO(self.get_corrected_cif()))
 
 
     def get_aiida_structure(self):
@@ -661,10 +671,10 @@ class IcsdEntry(aiida.tools.dbimporters.baseclasses.DbEntry):
         :return: AiiDA structure corresponding to the CIF file.
         """
         from aiida.orm import DataFactory
+
         S = DataFactory("structure")
         aiida_structure = S(ase=self.get_ase_structure())
         return aiida_structure
-
 
 
 def correct_cif(cif):
@@ -677,7 +687,7 @@ def correct_cif(cif):
     :param cif: A string containing the content of the CIF file.
     :return: a string containing the corrected CIF file.
     """
-    #Do more checks to be sure it's working in everycase -> no _publ_author_name, several lines, correct input
+    # Do more checks to be sure it's working in everycase -> no _publ_author_name, several lines, correct input
     lines = cif.split('\n')
 
     try:
@@ -687,7 +697,7 @@ def correct_cif(cif):
     else:
         inc = 1
         while True:
-            words = lines[author_index+inc].split()
+            words = lines[author_index + inc].split()
             #in case loop is finished -> return cif lines.
             #use regular expressions ?
             if len(words) == 0 or words[0] == "loop_" or words[0][0] == '_':
@@ -696,6 +706,6 @@ def correct_cif(cif):
                 # if quotes are already there, check next line
                 inc = inc + 1
             else:
-                lines[author_index+inc] = "'" + lines[author_index+inc] + "'"
+                lines[author_index + inc] = "'" + lines[author_index + inc] + "'"
                 inc = inc + 1
 

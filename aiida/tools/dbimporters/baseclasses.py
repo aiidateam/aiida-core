@@ -7,6 +7,7 @@ __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Nicolas M
 
 from aiida.orm.calculation.inline import optional_inline
 
+
 @optional_inline
 def _get_cif_inline(parameters=None):
     """
@@ -17,7 +18,7 @@ def _get_cif_inline(parameters=None):
     import tempfile
 
     cif = parameters.get_dict().pop('cif')
-    source = parameters.get_dict().pop('source',{})
+    source = parameters.get_dict().pop('source', {})
 
     with tempfile.NamedTemporaryFile() as f:
         f.write(cif)
@@ -25,6 +26,7 @@ def _get_cif_inline(parameters=None):
         if 'source_md5' not in source.keys() or source['source_md5'] is None:
             source['source_md5'] = md5_file(f.name)
         return {'cif': CifData(file=f.name, source=source)}
+
 
 class DbImporter(object):
     """
@@ -92,6 +94,7 @@ class DbImporter(object):
         """
         raise NotImplementedError("not implemented in base class")
 
+
 class DbSearchResults(object):
     """
     Base class for database results.
@@ -101,7 +104,7 @@ class DbSearchResults(object):
     ``__getitem__``.
     """
 
-    def __init__(self,results):
+    def __init__(self, results):
         self._results = results
         self._entries = {}
 
@@ -110,7 +113,7 @@ class DbSearchResults(object):
         Iterator for search results
         """
 
-        def __init__(self,results,increment=1):
+        def __init__(self, results, increment=1):
             self._results = results
             self._position = 0
             self._increment = increment
@@ -134,7 +137,7 @@ class DbSearchResults(object):
     def __len__(self):
         return len(self.results)
 
-    def __getitem__(self,key):
+    def __getitem__(self, key):
         return self.at(key)
 
     def fetch_all(self):
@@ -165,12 +168,12 @@ class DbSearchResults(object):
 
         :raise IndexError: if ``position`` is out of bounds.
         """
-        if position < 0 | position >= len( self._results ):
-            raise IndexError( "index out of bounds" )
+        if position < 0 | position >= len(self._results):
+            raise IndexError("index out of bounds")
         if position not in self._entries:
             source_dict = self._get_source_dict(self._results[position])
-            url         = self._get_url(self._results[position])
-            self._entries[position] = self._return_class(url,**source_dict)
+            url = self._get_url(self._results[position])
+            self._entries[position] = self._return_class(url, **source_dict)
         return self._entries[position]
 
     def _get_source_dict(self, result_dict):
@@ -190,13 +193,14 @@ class DbSearchResults(object):
         """
         raise NotImplementedError("not implemented in base class")
 
+
 class DbEntry(object):
     """
     Represents an entry from the structure database (COD, ICSD, ...).
     """
 
-    def __init__(self,db_source=None,db_url=None,db_id=None,
-                 db_version=None,extras={},url=None):
+    def __init__(self, db_source=None, db_url=None, db_id=None,
+                 db_version=None, extras={}, url=None):
         """
         Sets the basic parameters for the database entry:
 
@@ -209,22 +213,22 @@ class DbEntry(object):
         :param url: URL of the structure (should be permanent)
         """
         self.source = {
-            'db_source' : db_source,
-            'db_url'    : db_url,
-            'db_id'     : db_id,
+            'db_source': db_source,
+            'db_url': db_url,
+            'db_id': db_id,
             'db_version': db_version,
-            'extras'    : extras,
-            'url'       : url,
+            'extras': extras,
+            'url': url,
             'source_md5': None,
         }
         self._cif = None
 
     def __repr__(self):
         return "{}({})".format(self.__class__.__name__,
-                               ",".join(["{}={}".format(k,'"{}"'.format(v)
-                                         if issubclass(v.__class__,basestring)
-                                         else v)
-                                        for k,v in self.source.iteritems()]))
+                               ",".join(["{}={}".format(k, '"{}"'.format(v)
+                               if issubclass(v.__class__, basestring)
+                               else v)
+                                         for k, v in self.source.iteritems()]))
 
     @property
     def cif(self):
@@ -233,7 +237,8 @@ class DbEntry(object):
         """
         if self._cif is None:
             import urllib2
-            self._cif = urllib2.urlopen( self.source['url'] ).read()
+
+            self._cif = urllib2.urlopen(self.source['url']).read()
         return self._cif
 
     def get_raw_cif(self):
@@ -253,18 +258,20 @@ class DbEntry(object):
         """
         import ase.io.cif
         import StringIO
-        return ase.io.cif.read_cif( StringIO.StringIO( self.cif ) )
 
-    def get_cif_node(self,store=False):
+        return ase.io.cif.read_cif(StringIO.StringIO(self.cif))
+
+    def get_cif_node(self, store=False):
         """
         Creates a CIF node, that can be used in AiiDA workflow.
 
         :return: :py:class:`aiida.orm.data.cif.CifData` object
         """
         from aiida.orm.data.parameter import ParameterData
-        import baseclasses # This same module
+        import baseclasses  # This same module
+
         pd = ParameterData(dict={'cif': self.cif, 'source': self.source})
-        ret_dict = _get_cif_inline(parameters=pd,store=store)
+        ret_dict = _get_cif_inline(parameters=pd, store=store)
         return ret_dict['cif']
 
     def get_aiida_structure(self):

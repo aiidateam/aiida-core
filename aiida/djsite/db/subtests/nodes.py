@@ -7,16 +7,18 @@ from django.utils import unittest
 from aiida.orm import Node
 from aiida.common.exceptions import ModificationNotAllowed, UniquenessError
 from aiida.djsite.db.testbase import AiidaTestCase
-        
+
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi"
 
+
 class TestTransitiveNoLoops(AiidaTestCase):
     """
     Test the creation of the transitive closure table
     """
+
     def test_loop_not_allowed(self):
         n1 = Node().store()
         n2 = Node().store()
@@ -26,18 +28,20 @@ class TestTransitiveNoLoops(AiidaTestCase):
         n2._add_link_from(n1)
         n3._add_link_from(n2)
         n4._add_link_from(n3)
-        
-        with self.assertRaises(ValueError): # This would generate a loop
+
+        with self.assertRaises(ValueError):  # This would generate a loop
             n1._add_link_from(n4)
+
 
 class TestTransitiveClosureDeletion(AiidaTestCase):
     """
     Test the creation of the transitive closure table
     """
+
     def test_creation_and_deletion(self):
-        from aiida.djsite.db.models import DbLink # Direct links
-        from aiida.djsite.db.models import DbPath # The transitive closure table
-        
+        from aiida.djsite.db.models import DbLink  # Direct links
+        from aiida.djsite.db.models import DbPath  # The transitive closure table
+
         n1 = Node().store()
         n2 = Node().store()
         n3 = Node().store()
@@ -45,7 +49,7 @@ class TestTransitiveClosureDeletion(AiidaTestCase):
         n5 = Node().store()
         n6 = Node().store()
         n7 = Node().store()
-        n8 = Node().store()        
+        n8 = Node().store()
         n9 = Node().store()
 
         # I create a strange graph, inserting links in a order
@@ -57,37 +61,36 @@ class TestTransitiveClosureDeletion(AiidaTestCase):
         n5._add_link_from(n4)
         n4._add_link_from(n2)
 
-        
         n7._add_link_from(n6)
         n8._add_link_from(n7)
 
         # Yet, no links from 1 to 8
         self.assertEquals(
-            len(DbPath.objects.filter(parent=n1,child=n8).distinct()),0)
+            len(DbPath.objects.filter(parent=n1, child=n8).distinct()), 0)
 
         n6._add_link_from(n5)
         # Yet, now 2 links from 1 to 8
         self.assertEquals(
-            len(DbPath.objects.filter(parent=n1,child=n8).distinct()),2)
+            len(DbPath.objects.filter(parent=n1, child=n8).distinct()), 2)
 
         n7._add_link_from(n9)
         # Still two links...
         self.assertEquals(
-            len(DbPath.objects.filter(parent=n1,child=n8).distinct()),2)
+            len(DbPath.objects.filter(parent=n1, child=n8).distinct()), 2)
 
         n9._add_link_from(n6)
         # And now there should be 4 nodes
         self.assertEquals(
-            len(DbPath.objects.filter(parent=n1,child=n8).distinct()),4)
-        
+            len(DbPath.objects.filter(parent=n1, child=n8).distinct()), 4)
+
         ### I start deleting now
 
         # I cut one branch below: I should loose 2 links
         DbLink.objects.filter(input=n6, output=n9).delete()
         self.assertEquals(
-            len(DbPath.objects.filter(parent=n1,child=n8).distinct()),2)
+            len(DbPath.objects.filter(parent=n1, child=n8).distinct()), 2)
 
-        #print "\n".join([str((i.pk, i.input.pk, i.output.pk))
+        # print "\n".join([str((i.pk, i.input.pk, i.output.pk))
         #                 for i in DbLink.objects.filter()])
         #print "\n".join([str((i.pk, i.parent.pk, i.child.pk, i.depth,
         #                      i.entry_edge_id, i.direct_edge_id,
@@ -101,53 +104,55 @@ class TestTransitiveClosureDeletion(AiidaTestCase):
         #                      i.entry_edge_id, i.direct_edge_id,
         #                      i.exit_edge_id)) for i in DbPath.objects.filter()])
         self.assertEquals(
-            len(DbPath.objects.filter(parent=n1,child=n8).distinct()),1)
-        
+            len(DbPath.objects.filter(parent=n1, child=n8).distinct()), 1)
+
         # Another cut should delete all links
         DbLink.objects.filter(input=n3, output=n5).delete()
         self.assertEquals(
-            len(DbPath.objects.filter(parent=n1,child=n8).distinct()),0)
+            len(DbPath.objects.filter(parent=n1, child=n8).distinct()), 0)
 
         # But I did not delete everything! For instance, I can check
         # the following links
         self.assertEquals(
-            len(DbPath.objects.filter(parent=n4,child=n8).distinct()),1)
+            len(DbPath.objects.filter(parent=n4, child=n8).distinct()), 1)
         self.assertEquals(
-            len(DbPath.objects.filter(parent=n5,child=n7).distinct()),1)
+            len(DbPath.objects.filter(parent=n5, child=n7).distinct()), 1)
 
         # Finally, I reconnect in a different way the two graphs and 
         # check that 1 and 8 are again connected
         n4._add_link_from(n3)
         self.assertEquals(
-            len(DbPath.objects.filter(parent=n1,child=n8).distinct()),1)          
+            len(DbPath.objects.filter(parent=n1, child=n8).distinct()), 1)
+
 
 class TestQueryWithAiidaObjects(AiidaTestCase):
     """
     Test if queries work properly also with aiida.orm.Node classes instead of
     aiida.djsite.db.models.DbNode objects.
     """
+
     def test_with_subclasses(self):
         from aiida.orm import JobCalculation, CalculationFactory, Data, DataFactory
-        
+
         extra_name = self.__class__.__name__ + "/test_with_subclasses"
         calc_params = {
             'computer': self.computer,
             'resources': {'num_machines': 1,
-            'num_mpiprocs_per_machine': 1}
-            }
-        
+                          'num_mpiprocs_per_machine': 1}
+        }
+
         TemplateReplacerCalc = CalculationFactory('simpleplugins.templatereplacer')
         ParameterData = DataFactory('parameter')
-        
+
         a1 = JobCalculation(**calc_params).store()
         # To query only these nodes later
         a1.set_extra(extra_name, True)
         a2 = TemplateReplacerCalc(**calc_params).store()
         # To query only these nodes later
         a2.set_extra(extra_name, True)
-        a3 = Data().store()        
+        a3 = Data().store()
         a3.set_extra(extra_name, True)
-        a4 = ParameterData(dict={'a':'b'}).store()        
+        a4 = ParameterData(dict={'a': 'b'}).store()
         a4.set_extra(extra_name, True)
         a5 = Node().store()
         a5.set_extra(extra_name, True)
@@ -163,34 +168,34 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
         # a3, a4, a5 should not be found because they are not JobCalculations.
         # a6, a7 should not be found because they have not the attribute set.
         self.assertEquals(set([i.pk for i in results]),
-                          set([a1.pk, a2.pk]))        
-        
+                          set([a1.pk, a2.pk]))
+
         # Same query, but by the generic Node class
         results = list(Node.query(dbextras__key=extra_name))
         self.assertEquals(set([i.pk for i in results]),
                           set([a1.pk, a2.pk, a3.pk, a4.pk, a5.pk]))
-        
+
         # Same query, but by the Data class
         results = list(Data.query(dbextras__key=extra_name))
         self.assertEquals(set([i.pk for i in results]),
                           set([a3.pk, a4.pk]))
-        
+
         # Same query, but by the ParameterData subclass
         results = list(ParameterData.query(dbextras__key=extra_name))
         self.assertEquals(set([i.pk for i in results]),
                           set([a4.pk]))
-        
+
         # Same query, but by the TemplateReplacerCalc subclass
         results = list(TemplateReplacerCalc.query(dbextras__key=extra_name))
         self.assertEquals(set([i.pk for i in results]),
                           set([a2.pk]))
 
-    
+
     def test_get_inputs_and_outputs(self):
         a1 = Node().store()
-        a2 = Node().store()        
+        a2 = Node().store()
         a3 = Node().store()
-        a4 = Node().store()        
+        a4 = Node().store()
 
         a2._add_link_from(a1)
         a3._add_link_from(a2)
@@ -217,20 +222,21 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
                           set([a2.uuid, a3.uuid]))
         self.assertEquals(set([n.uuid for n in a4.get_outputs()]),
                           set([]))
-        
+
     def test_links_and_queries(self):
         from aiida.djsite.db.models import DbNode, DbLink
-        a  = Node()
+
+        a = Node()
         a._set_attr('myvalue', 123)
         a.store()
-        
+
         a2 = Node().store()
-        
+
         a3 = Node()
         a3._set_attr('myvalue', 145)
         a3.store()
-        
-        a4 = Node().store()        
+
+        a4 = Node().store()
 
         a2._add_link_from(a)
         a3._add_link_from(a2)
@@ -240,23 +246,23 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
         b = Node.query(pk=a2)
         self.assertEquals(len(b), 1)
         # It is a aiida.orm.Node instance
-        self.assertTrue(isinstance(b[0],Node))
+        self.assertTrue(isinstance(b[0], Node))
         self.assertEquals(b[0].uuid, a2.uuid)
-        
+
         going_out_from_a2 = Node.query(inputs__in=b)
         # Two nodes going out from a2
         self.assertEquals(len(going_out_from_a2), 2)
-        self.assertTrue(isinstance(going_out_from_a2[0],Node))
-        self.assertTrue(isinstance(going_out_from_a2[1],Node))
+        self.assertTrue(isinstance(going_out_from_a2[0], Node))
+        self.assertTrue(isinstance(going_out_from_a2[1], Node))
         uuid_set = set([going_out_from_a2[0].uuid, going_out_from_a2[1].uuid])
 
         # I check that I can query also directly the django DbNode
         # class passing a aiida.orm.Node entity
-        
+
         going_out_from_a2_db = DbNode.objects.filter(inputs__in=b)
         self.assertEquals(len(going_out_from_a2_db), 2)
-        self.assertTrue(isinstance(going_out_from_a2_db[0],DbNode))
-        self.assertTrue(isinstance(going_out_from_a2_db[1],DbNode))
+        self.assertTrue(isinstance(going_out_from_a2_db[0], DbNode))
+        self.assertTrue(isinstance(going_out_from_a2_db[1], DbNode))
         uuid_set_db = set([going_out_from_a2_db[0].uuid,
                            going_out_from_a2_db[1].uuid])
 
@@ -267,18 +273,18 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
         # This time I don't use the __in filter, but I still pass a Node instance
         going_out_from_a2_bis = Node.query(inputs=b[0])
         self.assertEquals(len(going_out_from_a2_bis), 2)
-        self.assertTrue(isinstance(going_out_from_a2_bis[0],Node))
-        self.assertTrue(isinstance(going_out_from_a2_bis[1],Node))
+        self.assertTrue(isinstance(going_out_from_a2_bis[0], Node))
+        self.assertTrue(isinstance(going_out_from_a2_bis[1], Node))
 
         # Query for links starting from b[0]==a2 using again the Node class
         output_links_b = DbLink.objects.filter(input=b[0])
         self.assertEquals(len(output_links_b), 2)
-        self.assertTrue(isinstance(output_links_b[0],DbLink))
-        self.assertTrue(isinstance(output_links_b[1],DbLink))
+        self.assertTrue(isinstance(output_links_b[0], DbLink))
+        self.assertTrue(isinstance(output_links_b[1], DbLink))
         uuid_set_db_link = set([output_links_b[0].output.uuid,
                                 output_links_b[1].output.uuid])
-        self.assertEquals(uuid_set, uuid_set_db_link)        
-        
+        self.assertEquals(uuid_set, uuid_set_db_link)
+
 
         # Query for related fields using django syntax
         # Note that being myvalue an attribute, it is internally stored starting
@@ -287,8 +293,8 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
                                                 dbattributes__ival=145)
         # should be entry a3
         self.assertEquals(len(nodes_with_given_attribute), 1)
-        self.assertTrue(isinstance(nodes_with_given_attribute[0],Node))
-        self.assertEquals(nodes_with_given_attribute[0].uuid,a3.uuid)
+        self.assertTrue(isinstance(nodes_with_given_attribute[0], Node))
+        self.assertEquals(nodes_with_given_attribute[0].uuid, a3.uuid)
 
 
 class TestNodeBasic(AiidaTestCase):
@@ -302,7 +308,7 @@ class TestNodeBasic(AiidaTestCase):
     stringval = "aaaa"
     # A recursive dictionary
     dictval = {'num': 3, 'something': 'else', 'emptydict': {},
-               'recursive': {'a': 1, 'b': True, 'c': 1.2, 'd': [1,2,None], 
+               'recursive': {'a': 1, 'b': True, 'c': 1.2, 'd': [1, 2, None],
                              'e': {'z': 'z', 'x': None, 'xx': {}, 'yy': []}}}
     listval = [1, "s", True, None]
     emptydict = {}
@@ -321,12 +327,12 @@ class TestNodeBasic(AiidaTestCase):
         a._set_attr('k9', None)
 
         # Now I check if I can retrieve them, before the storage
-        self.assertEquals(self.boolval,   a.get_attr('k1'))
-        self.assertEquals(self.intval,    a.get_attr('k2'))
-        self.assertEquals(self.floatval,  a.get_attr('k3'))
+        self.assertEquals(self.boolval, a.get_attr('k1'))
+        self.assertEquals(self.intval, a.get_attr('k2'))
+        self.assertEquals(self.floatval, a.get_attr('k3'))
         self.assertEquals(self.stringval, a.get_attr('k4'))
-        self.assertEquals(self.dictval,   a.get_attr('k5'))
-        self.assertEquals(self.listval,   a.get_attr('k6'))
+        self.assertEquals(self.dictval, a.get_attr('k5'))
+        self.assertEquals(self.listval, a.get_attr('k6'))
         self.assertEquals(self.emptydict, a.get_attr('k7'))
         self.assertEquals(self.emptylist, a.get_attr('k8'))
         self.assertIsNone(a.get_attr('k9'))
@@ -363,35 +369,36 @@ class TestNodeBasic(AiidaTestCase):
         This test routine is disabled for the time being; I will re-enable
         when I have time to implement the check of the length of the 'key'.
         """
+
         def test_very_deep_attributes(self):
             """
             Test attributes where the total length of the key, including the
             separators, would be longer than the field length in the DB.
             """
             from aiida.djsite.db import models
-            
+
             n = Node()
-            
+
             semi_long_string = "abcdefghijklmnopqrstuvwxyz"
             value = "some value"
-            
+
             attribute = {semi_long_string: value}
             key_len = len(semi_long_string)
-            
+
             max_len = models.DbAttribute._meta.get_field_by_name('key')[0].max_length
-            
+
             while key_len < 2 * max_len:
                 # Create a deep, recursive attribute
                 attribute = {semi_long_string: attribute}
                 key_len += len(semi_long_string) + len(models.DbAttribute._sep)
-            
+
             n._set_attr(semi_long_string, attribute)
-            
+
             n.store()
-            
+
             all_keys = models.DbAttribute.objects.filter(
                 dbnode=n.dbnode).values_list('key', flat=True)
-            
+
             print max(len(i) for i in all_keys)
 
     def test_datetime_attribute(self):
@@ -416,12 +423,12 @@ class TestNodeBasic(AiidaTestCase):
         date_to_compare = date_to_compare.replace(microsecond=0)
         retrieved = retrieved.replace(microsecond=0)
 
-        self.assertEquals(date_to_compare,retrieved)
+        self.assertEquals(date_to_compare, retrieved)
 
 
     def test_attributes_on_copy(self):
         import copy
-        
+
         a = Node()
         attrs_to_set = {
             'none': None,
@@ -433,9 +440,9 @@ class TestNodeBasic(AiidaTestCase):
             'list': self.listval,
             'emptydict': {},
             'emptylist': [],
-            }
+        }
 
-        for k,v in attrs_to_set.iteritems():
+        for k, v in attrs_to_set.iteritems():
             a._set_attr(k, v)
 
         a.store()
@@ -445,10 +452,10 @@ class TestNodeBasic(AiidaTestCase):
             'bool': 'some non-boolean value',
             'some_other_name': 987}
 
-        for k,v in extras_to_set.iteritems():
-            a.set_extra(k, v)    
+        for k, v in extras_to_set.iteritems():
+            a.set_extra(k, v)
 
-        # I make a copy
+            # I make a copy
         b = a.copy()
         # I modify an attribute and add a new one; I mirror it in the dictionary
         # for later checking
@@ -459,11 +466,11 @@ class TestNodeBasic(AiidaTestCase):
         b_expected_attributes['new'] = 'cvb'
 
         # I check before storing that the attributes are ok
-        self.assertEquals({k: v for k,v in b.iterattrs()},
+        self.assertEquals({k: v for k, v in b.iterattrs()},
                           b_expected_attributes)
         # Note that during copy, I do not copy the extras!
-        self.assertEquals({k: v for k,v in b.iterextras()}, {})
-        
+        self.assertEquals({k: v for k, v in b.iterextras()}, {})
+
         # I store now
         b.store()
         # and I finally add a extras
@@ -472,13 +479,13 @@ class TestNodeBasic(AiidaTestCase):
 
         # Now I check for the attributes
         # First I check that nothing has changed 
-        self.assertEquals({k: v for k,v in a.iterattrs()}, attrs_to_set)
-        self.assertEquals({k: v for k,v in a.iterextras()}, extras_to_set)
+        self.assertEquals({k: v for k, v in a.iterattrs()}, attrs_to_set)
+        self.assertEquals({k: v for k, v in a.iterextras()}, extras_to_set)
 
         # I check then on the 'b' copy
-        self.assertEquals({k: v for k,v in b.iterattrs()},
+        self.assertEquals({k: v for k, v in b.iterattrs()},
                           b_expected_attributes)
-        self.assertEquals({k: v for k,v in b.iterextras()},
+        self.assertEquals({k: v for k, v in b.iterextras()},
                           b_expected_extras)
 
     def test_files(self):
@@ -492,10 +499,10 @@ class TestNodeBasic(AiidaTestCase):
         with tempfile.NamedTemporaryFile() as f:
             f.write(file_content)
             f.flush()
-            a.add_path(f.name,'file1.txt')
-            a.add_path(f.name,'file2.txt')
+            a.add_path(f.name, 'file1.txt')
+            a.add_path(f.name, 'file2.txt')
 
-        self.assertEquals(set(a.get_folder_list()),set(['file1.txt','file2.txt']))
+        self.assertEquals(set(a.get_folder_list()), set(['file1.txt', 'file2.txt']))
         with open(a.get_abs_path('file1.txt')) as f:
             self.assertEquals(f.read(), file_content)
         with open(a.get_abs_path('file2.txt')) as f:
@@ -505,7 +512,7 @@ class TestNodeBasic(AiidaTestCase):
         self.assertNotEquals(a.uuid, b.uuid)
 
         # Check that the content is there
-        self.assertEquals(set(b.get_folder_list()),set(['file1.txt','file2.txt']))
+        self.assertEquals(set(b.get_folder_list()), set(['file1.txt', 'file2.txt']))
         with open(b.get_abs_path('file1.txt')) as f:
             self.assertEquals(f.read(), file_content)
         with open(b.get_abs_path('file2.txt')) as f:
@@ -515,17 +522,17 @@ class TestNodeBasic(AiidaTestCase):
         with tempfile.NamedTemporaryFile() as f:
             f.write(file_content_different)
             f.flush()
-            b.add_path(f.name,'file2.txt')       
-            b.add_path(f.name,'file3.txt')
+            b.add_path(f.name, 'file2.txt')
+            b.add_path(f.name, 'file3.txt')
 
         # I check the new content, and that the old one has not changed
-        self.assertEquals(set(a.get_folder_list()),set(['file1.txt','file2.txt']))
+        self.assertEquals(set(a.get_folder_list()), set(['file1.txt', 'file2.txt']))
         with open(a.get_abs_path('file1.txt')) as f:
             self.assertEquals(f.read(), file_content)
         with open(a.get_abs_path('file2.txt')) as f:
             self.assertEquals(f.read(), file_content)
         self.assertEquals(set(b.get_folder_list()),
-                          set(['file1.txt','file2.txt','file3.txt']))
+                          set(['file1.txt', 'file2.txt', 'file3.txt']))
         with open(b.get_abs_path('file1.txt')) as f:
             self.assertEquals(f.read(), file_content)
         with open(b.get_abs_path('file2.txt')) as f:
@@ -543,17 +550,17 @@ class TestNodeBasic(AiidaTestCase):
         with tempfile.NamedTemporaryFile() as f:
             f.write(file_content_different)
             f.flush()
-            c.add_path(f.name,'file1.txt')       
-            c.add_path(f.name,'file4.txt')
+            c.add_path(f.name, 'file1.txt')
+            c.add_path(f.name, 'file4.txt')
 
-        self.assertEquals(set(a.get_folder_list()),set(['file1.txt','file2.txt']))
+        self.assertEquals(set(a.get_folder_list()), set(['file1.txt', 'file2.txt']))
         with open(a.get_abs_path('file1.txt')) as f:
             self.assertEquals(f.read(), file_content)
         with open(a.get_abs_path('file2.txt')) as f:
             self.assertEquals(f.read(), file_content)
 
         self.assertEquals(set(c.get_folder_list()),
-                          set(['file1.txt','file2.txt','file4.txt']))
+                          set(['file1.txt', 'file2.txt', 'file4.txt']))
         with open(c.get_abs_path('file1.txt')) as f:
             self.assertEquals(f.read(), file_content_different)
         with open(c.get_abs_path('file2.txt')) as f:
@@ -567,48 +574,48 @@ class TestNodeBasic(AiidaTestCase):
         Similar as test_files, but I manipulate a tree of folders
         """
         import tempfile
-        import os,shutil
-        import random,string
-        
+        import os, shutil
+        import random, string
+
         a = Node()
 
         # Since Node uses the same method of Folder(),
         # for this test I create a test folder by hand
         # For any non-test usage, use SandboxFolder()!
 
-        directory = os.path.realpath( os.path.join('/','tmp','tmp_try') )
-        while os.path.exists( os.path.join(directory) ):
+        directory = os.path.realpath(os.path.join('/', 'tmp', 'tmp_try'))
+        while os.path.exists(os.path.join(directory)):
             # I append a random letter/number until it is unique
             directory += random.choice(
                 string.ascii_uppercase + string.digits)
-        
+
         # create a folder structure to copy around
-        tree_1 = os.path.join(directory,'tree_1')
+        tree_1 = os.path.join(directory, 'tree_1')
         os.makedirs(tree_1)
         file_content = 'some text ABCDE'
         file_content_different = 'other values 12345'
-        with open(os.path.join(tree_1,'file1.txt'),'w') as f:
+        with open(os.path.join(tree_1, 'file1.txt'), 'w') as f:
             f.write(file_content)
-        os.mkdir( os.path.join(tree_1,'dir1') )
-        os.mkdir( os.path.join(tree_1,'dir1','dir2') )
-        with open(os.path.join(tree_1,'dir1','file2.txt'),'w') as f:
+        os.mkdir(os.path.join(tree_1, 'dir1'))
+        os.mkdir(os.path.join(tree_1, 'dir1', 'dir2'))
+        with open(os.path.join(tree_1, 'dir1', 'file2.txt'), 'w') as f:
             f.write(file_content)
-        os.mkdir( os.path.join(tree_1,'dir1','dir2','dir3') )
+        os.mkdir(os.path.join(tree_1, 'dir1', 'dir2', 'dir3'))
 
         # add the tree to the node
-        
-        a.add_path(tree_1,'tree_1')
+
+        a.add_path(tree_1, 'tree_1')
 
         # verify if the node has the structure I expect
-        self.assertEquals(set(a.get_folder_list()),set(['tree_1']))
-        self.assertEquals( set( a.get_folder_list('tree_1') ),
-                           set(['file1.txt','dir1']) )
-        self.assertEquals( set( a.get_folder_list(os.path.join('tree_1','dir1'))),
-                           set(['dir2','file2.txt']) )
-        with open(a.get_abs_path( os.path.join('tree_1','file1.txt') )) as f:
+        self.assertEquals(set(a.get_folder_list()), set(['tree_1']))
+        self.assertEquals(set(a.get_folder_list('tree_1')),
+                          set(['file1.txt', 'dir1']))
+        self.assertEquals(set(a.get_folder_list(os.path.join('tree_1', 'dir1'))),
+                          set(['dir2', 'file2.txt']))
+        with open(a.get_abs_path(os.path.join('tree_1', 'file1.txt'))) as f:
             self.assertEquals(f.read(), file_content)
         with open(a.get_abs_path(
-                    os.path.join('tree_1','dir1','file2.txt') )) as f:
+                os.path.join('tree_1', 'dir1', 'file2.txt'))) as f:
             self.assertEquals(f.read(), file_content)
 
         # try to exit from the folder
@@ -620,54 +627,54 @@ class TestNodeBasic(AiidaTestCase):
         self.assertNotEquals(a.uuid, b.uuid)
 
         # Check that the content is there
-        self.assertEquals(set(b.get_folder_list('.')),set(['tree_1']))
-        self.assertEquals( set(b.get_folder_list('tree_1')),
-                           set(['file1.txt','dir1']) )
-        self.assertEquals( set(b.get_folder_list(os.path.join('tree_1','dir1'))),
-                           set(['dir2','file2.txt']) )
-        with open(b.get_abs_path( os.path.join('tree_1','file1.txt') )) as f:
+        self.assertEquals(set(b.get_folder_list('.')), set(['tree_1']))
+        self.assertEquals(set(b.get_folder_list('tree_1')),
+                          set(['file1.txt', 'dir1']))
+        self.assertEquals(set(b.get_folder_list(os.path.join('tree_1', 'dir1'))),
+                          set(['dir2', 'file2.txt']))
+        with open(b.get_abs_path(os.path.join('tree_1', 'file1.txt'))) as f:
             self.assertEquals(f.read(), file_content)
         with open(b.get_abs_path(os.path.join(
-                    'tree_1','dir1','file2.txt'))) as f:
+                'tree_1', 'dir1', 'file2.txt'))) as f:
             self.assertEquals(f.read(), file_content)
 
         # I overwrite a file and create a new one in the copy only
-        dir3 = os.path.join(directory,'dir3')
-        os.mkdir( dir3 )
+        dir3 = os.path.join(directory, 'dir3')
+        os.mkdir(dir3)
 
-        b.add_path( dir3 , os.path.join('tree_1','dir3') )
+        b.add_path(dir3, os.path.join('tree_1', 'dir3'))
         # no absolute path here
         with self.assertRaises(ValueError):
-            b.add_path( 'dir3' , os.path.join('tree_1','dir3') )
-        
+            b.add_path('dir3', os.path.join('tree_1', 'dir3'))
+
         with tempfile.NamedTemporaryFile() as f:
             f.write(file_content_different)
             f.flush()
-            b.add_path(f.name,'file3.txt')
+            b.add_path(f.name, 'file3.txt')
 
         # I check the new content, and that the old one has not changed
         # old
-        self.assertEquals(set(a.get_folder_list('.')),set(['tree_1']))
-        self.assertEquals( set( a.get_folder_list('tree_1') ),
-                           set(['file1.txt','dir1']) )
-        self.assertEquals( set( a.get_folder_list(os.path.join('tree_1','dir1'))),
-                           set(['dir2','file2.txt']) )
-        with open(a.get_abs_path( os.path.join('tree_1','file1.txt') )) as f:
+        self.assertEquals(set(a.get_folder_list('.')), set(['tree_1']))
+        self.assertEquals(set(a.get_folder_list('tree_1')),
+                          set(['file1.txt', 'dir1']))
+        self.assertEquals(set(a.get_folder_list(os.path.join('tree_1', 'dir1'))),
+                          set(['dir2', 'file2.txt']))
+        with open(a.get_abs_path(os.path.join('tree_1', 'file1.txt'))) as f:
             self.assertEquals(f.read(), file_content)
-        with open(a.get_abs_path( os.path.join(
-                'tree_1','dir1','file2.txt') )) as f:
+        with open(a.get_abs_path(os.path.join(
+                'tree_1', 'dir1', 'file2.txt'))) as f:
             self.assertEquals(f.read(), file_content)
-        #new
+        # new
         self.assertEquals(set(b.get_folder_list('.')),
-                          set(['tree_1','file3.txt']))
-        self.assertEquals( set( b.get_folder_list('tree_1') ),
-                           set(['file1.txt','dir1','dir3']) )
-        self.assertEquals( set( b.get_folder_list(os.path.join('tree_1','dir1'))),
-                           set(['dir2','file2.txt']) )
-        with open(b.get_abs_path( os.path.join('tree_1','file1.txt') )) as f:
+                          set(['tree_1', 'file3.txt']))
+        self.assertEquals(set(b.get_folder_list('tree_1')),
+                          set(['file1.txt', 'dir1', 'dir3']))
+        self.assertEquals(set(b.get_folder_list(os.path.join('tree_1', 'dir1'))),
+                          set(['dir2', 'file2.txt']))
+        with open(b.get_abs_path(os.path.join('tree_1', 'file1.txt'))) as f:
             self.assertEquals(f.read(), file_content)
-        with open(b.get_abs_path( os.path.join(
-                'tree_1','dir1','file2.txt') )) as f:
+        with open(b.get_abs_path(os.path.join(
+                'tree_1', 'dir1', 'file2.txt'))) as f:
             self.assertEquals(f.read(), file_content)
 
         # This should in principle change the location of the files,
@@ -681,32 +688,32 @@ class TestNodeBasic(AiidaTestCase):
         with tempfile.NamedTemporaryFile() as f:
             f.write(file_content_different)
             f.flush()
-            c.add_path( f.name , os.path.join('tree_1','file1.txt') )
-            c.add_path( f.name , os.path.join('tree_1','dir1','file4.txt') )
-        c.remove_path( os.path.join('tree_1','dir1','dir2') )
+            c.add_path(f.name, os.path.join('tree_1', 'file1.txt'))
+            c.add_path(f.name, os.path.join('tree_1', 'dir1', 'file4.txt'))
+        c.remove_path(os.path.join('tree_1', 'dir1', 'dir2'))
 
         # check old
-        self.assertEquals(set(a.get_folder_list('.')),set(['tree_1']))
-        self.assertEquals( set( a.get_folder_list('tree_1') ),
-                           set(['file1.txt','dir1']) )
-        self.assertEquals( set(a.get_folder_list( os.path.join('tree_1','dir1'))),
-                           set(['dir2','file2.txt']) )
-        with open(a.get_abs_path( os.path.join('tree_1','file1.txt') )) as f:
+        self.assertEquals(set(a.get_folder_list('.')), set(['tree_1']))
+        self.assertEquals(set(a.get_folder_list('tree_1')),
+                          set(['file1.txt', 'dir1']))
+        self.assertEquals(set(a.get_folder_list(os.path.join('tree_1', 'dir1'))),
+                          set(['dir2', 'file2.txt']))
+        with open(a.get_abs_path(os.path.join('tree_1', 'file1.txt'))) as f:
             self.assertEquals(f.read(), file_content)
-        with open(a.get_abs_path( os.path.join(
-                'tree_1','dir1','file2.txt') )) as f:
+        with open(a.get_abs_path(os.path.join(
+                'tree_1', 'dir1', 'file2.txt'))) as f:
             self.assertEquals(f.read(), file_content)
 
         # check new
-        self.assertEquals( set( c.get_folder_list('.')),set(['tree_1']))
-        self.assertEquals( set( c.get_folder_list('tree_1') ),
-                           set(['file1.txt','dir1']) )
-        self.assertEquals( set( c.get_folder_list(os.path.join('tree_1','dir1'))),
-                           set(['file2.txt','file4.txt']) )
-        with open(c.get_abs_path( os.path.join('tree_1','file1.txt') )) as f:
+        self.assertEquals(set(c.get_folder_list('.')), set(['tree_1']))
+        self.assertEquals(set(c.get_folder_list('tree_1')),
+                          set(['file1.txt', 'dir1']))
+        self.assertEquals(set(c.get_folder_list(os.path.join('tree_1', 'dir1'))),
+                          set(['file2.txt', 'file4.txt']))
+        with open(c.get_abs_path(os.path.join('tree_1', 'file1.txt'))) as f:
             self.assertEquals(f.read(), file_content_different)
-        with open(c.get_abs_path( os.path.join(
-                'tree_1','dir1','file2.txt') )) as f:
+        with open(c.get_abs_path(os.path.join(
+                'tree_1', 'dir1', 'file2.txt'))) as f:
             self.assertEquals(f.read(), file_content)
 
         # garbage cleaning
@@ -727,19 +734,19 @@ class TestNodeBasic(AiidaTestCase):
 
         # Now I check if I can retrieve them, before the storage
         self.assertIsNone(a.get_attr('none'))
-        self.assertEquals(self.boolval,   a.get_attr('bool'))
-        self.assertEquals(self.intval,    a.get_attr('integer'))
-        self.assertEquals(self.floatval,  a.get_attr('float'))
+        self.assertEquals(self.boolval, a.get_attr('bool'))
+        self.assertEquals(self.intval, a.get_attr('integer'))
+        self.assertEquals(self.floatval, a.get_attr('float'))
         self.assertEquals(self.stringval, a.get_attr('string'))
-        self.assertEquals(self.dictval,   a.get_attr('dict'))
-        self.assertEquals(self.listval,   a.get_attr('list'))
+        self.assertEquals(self.dictval, a.get_attr('dict'))
+        self.assertEquals(self.listval, a.get_attr('list'))
 
         # And now I try to edit/delete the keys; I should not be able to do it
         # after saving. I try only for a couple of attributes
-        with self.assertRaises(ModificationNotAllowed):                
+        with self.assertRaises(ModificationNotAllowed):
             a._del_attr('bool')
-        with self.assertRaises(ModificationNotAllowed):                
-            a._set_attr('integer',13)
+        with self.assertRaises(ModificationNotAllowed):
+            a._set_attr('integer', 13)
 
 
     def test_attr_with_reload(self):
@@ -756,26 +763,25 @@ class TestNodeBasic(AiidaTestCase):
 
         b = Node.get_subclass_from_uuid(a.uuid)
         self.assertIsNone(a.get_attr('none'))
-        self.assertEquals(self.boolval,   b.get_attr('bool'))
-        self.assertEquals(self.intval,    b.get_attr('integer'))
-        self.assertEquals(self.floatval,  b.get_attr('float'))
+        self.assertEquals(self.boolval, b.get_attr('bool'))
+        self.assertEquals(self.intval, b.get_attr('integer'))
+        self.assertEquals(self.floatval, b.get_attr('float'))
         self.assertEquals(self.stringval, b.get_attr('string'))
-        self.assertEquals(self.dictval,   b.get_attr('dict'))
-        self.assertEquals(self.listval,   b.get_attr('list'))
+        self.assertEquals(self.dictval, b.get_attr('dict'))
+        self.assertEquals(self.listval, b.get_attr('list'))
 
         # Reload directly
         b = Node(dbnode=a.dbnode)
         self.assertIsNone(a.get_attr('none'))
-        self.assertEquals(self.boolval,   b.get_attr('bool'))
-        self.assertEquals(self.intval,    b.get_attr('integer'))
-        self.assertEquals(self.floatval,  b.get_attr('float'))
+        self.assertEquals(self.boolval, b.get_attr('bool'))
+        self.assertEquals(self.intval, b.get_attr('integer'))
+        self.assertEquals(self.floatval, b.get_attr('float'))
         self.assertEquals(self.stringval, b.get_attr('string'))
-        self.assertEquals(self.dictval,   b.get_attr('dict'))
-        self.assertEquals(self.listval,   b.get_attr('list'))
+        self.assertEquals(self.dictval, b.get_attr('dict'))
+        self.assertEquals(self.listval, b.get_attr('list'))
 
-
-        with self.assertRaises(ModificationNotAllowed):                
-            a._set_attr('i',12)
+        with self.assertRaises(ModificationNotAllowed):
+            a._set_attr('i', 12)
 
     def test_attrs_and_extras_wrong_keyname(self):
         """
@@ -783,17 +789,18 @@ class TestNodeBasic(AiidaTestCase):
         """
         from aiida.djsite.db.models import DbAttributeBaseClass
         from aiida.common.exceptions import ValidationError
+
         separator = DbAttributeBaseClass._sep
-        
+
         a = Node()
 
         with self.assertRaises(ValidationError):
             # I did not store, I cannot modify
-            a._set_attr('name'+separator, 'blablabla')
-        
+            a._set_attr('name' + separator, 'blablabla')
+
         with self.assertRaises(ValidationError):
             # I did not store, I cannot modify
-            a.set_extra('bool'+separator, 'blablabla')
+            a.set_extra('bool' + separator, 'blablabla')
 
     def test_attr_and_extras(self):
         a = Node()
@@ -816,7 +823,7 @@ class TestNodeBasic(AiidaTestCase):
         # and I check that there is no name clash
         self.assertEquals(self.boolval, a.get_attr('bool'))
         self.assertEquals(a_string, a.get_extra('bool'))
-        
+
     def test_attr_and_extras_multikey(self):
         """
         Multiple nodes with the same key. This should not be a problem
@@ -825,24 +832,24 @@ class TestNodeBasic(AiidaTestCase):
         """
         n1 = Node().store()
         n2 = Node().store()
-        
+
         n1.set_extra('samename', 1)
         # No problem, they are two different nodes
         n2.set_extra('samename', 1)
-        
+
     def test_settings(self):
         """
         Test the settings table (similar to Attributes, but without the key.
         """
         from aiida.djsite.db import models
         from django.db import IntegrityError, transaction
-        
-        models.DbSetting.set_value(key='pippo', value=[1,2,3]) 
-        
+
+        models.DbSetting.set_value(key='pippo', value=[1, 2, 3])
+
         s1 = models.DbSetting.objects.get(key='pippo')
-        
-        self.assertEqual(s1.getvalue(), [1,2,3])
-        
+
+        self.assertEqual(s1.getvalue(), [1, 2, 3])
+
         s2 = models.DbSetting(key='pippo')
 
         sid = transaction.savepoint()
@@ -850,33 +857,33 @@ class TestNodeBasic(AiidaTestCase):
             # same name...
             s2.save()
         transaction.savepoint_rollback(sid)
-        
+
         # Should replace pippo
-        models.DbSetting.set_value(key='pippo', value="a") 
+        models.DbSetting.set_value(key='pippo', value="a")
         s1 = models.DbSetting.objects.get(key='pippo')
-        
+
         self.assertEqual(s1.getvalue(), "a")
-    
+
     def test_settings_methods(self):
         from aiida.common.globalsettings import (
             get_global_setting_description, get_global_setting,
             set_global_setting, del_global_setting)
-        
+
         set_global_setting(key="aaa", value={'b': 'c'}, description="pippo")
-        
+
         self.assertEqual(get_global_setting('aaa'), {'b': 'c'})
         self.assertEqual(get_global_setting_description('aaa'), "pippo")
         self.assertEqual(get_global_setting('aaa.b'), 'c')
         self.assertEqual(get_global_setting_description('aaa.b'), "")
-    
+
         del_global_setting('aaa')
-        
+
         with self.assertRaises(KeyError):
             get_global_setting('aaa.b')
 
         with self.assertRaises(KeyError):
             get_global_setting('aaa')
-        
+
     def test_attr_listing(self):
         """
         Checks that the list of attributes and extras is ok.
@@ -890,9 +897,9 @@ class TestNodeBasic(AiidaTestCase):
             'string': self.stringval,
             'dict': self.dictval,
             'list': self.listval,
-            }
+        }
 
-        for k,v in attrs_to_set.iteritems():
+        for k, v in attrs_to_set.iteritems():
             a._set_attr(k, v)
 
         a.store()
@@ -902,8 +909,8 @@ class TestNodeBasic(AiidaTestCase):
             'bool': 'some non-boolean value',
             'some_other_name': 987}
 
-        for k,v in extras_to_set.iteritems():
-            a.set_extra(k, v)        
+        for k, v in extras_to_set.iteritems():
+            a.set_extra(k, v)
 
         self.assertEquals(set(a.attrs()),
                           set(attrs_to_set.keys()))
@@ -922,7 +929,7 @@ class TestNodeBasic(AiidaTestCase):
         Checks the versioning.
         """
         from aiida.orm.test import myNodeWithFields
-        
+
         # Has 'state' as updatable attribute
         a = myNodeWithFields()
         attrs_to_set = {
@@ -933,18 +940,18 @@ class TestNodeBasic(AiidaTestCase):
             'dict': self.dictval,
             'list': self.listval,
             'state': 267,
-            }
+        }
 
-        for k,v in attrs_to_set.iteritems():
+        for k, v in attrs_to_set.iteritems():
             a._set_attr(k, v)
-            
+
         # Check before storing
-        self.assertEquals(267,a.get_attr('state'))
+        self.assertEquals(267, a.get_attr('state'))
 
         a.store()
 
         # Check after storing
-        self.assertEquals(267,a.get_attr('state'))        
+        self.assertEquals(267, a.get_attr('state'))
 
         # Even if I stored many attributes, this should stay at 1
         self.assertEquals(a.dbnode.nodeversion, 1)
@@ -973,18 +980,17 @@ class TestNodeBasic(AiidaTestCase):
         a.description = 'test description'
         self.assertEquals(a.dbnode.nodeversion, 5)
 
-
         b = a.copy()
         # updatable attributes are not copied
         with self.assertRaises(AttributeError):
             b.get_attr('state')
-            
+
     def test_delete_updatable_attributes(self):
         """
         Checks the versioning.
         """
         from aiida.orm.test import myNodeWithFields
-        
+
         # Has 'state' as updatable attribute
         a = myNodeWithFields()
         attrs_to_set = {
@@ -994,19 +1000,19 @@ class TestNodeBasic(AiidaTestCase):
             'string': self.stringval,
             'dict': self.dictval,
             'list': self.listval,
-            'state': 267, # updatable
-            }
+            'state': 267,  # updatable
+        }
 
-        for k,v in attrs_to_set.iteritems():
+        for k, v in attrs_to_set.iteritems():
             a._set_attr(k, v)
-            
+
         # Check before storing
-        self.assertEquals(267,a.get_attr('state'))
+        self.assertEquals(267, a.get_attr('state'))
 
         a.store()
 
         # Check after storing
-        self.assertEquals(267,a.get_attr('state'))        
+        self.assertEquals(267, a.get_attr('state'))
 
         # Even if I stored many attributes, this should stay at 1
         self.assertEquals(a.dbnode.nodeversion, 1)
@@ -1027,7 +1033,7 @@ class TestNodeBasic(AiidaTestCase):
         Checks the ability of deleting extras, also when they are dictionaries
         or lists.
         """
-        
+
         a = Node().store()
         extras_to_set = {
             'bool': self.boolval,
@@ -1036,14 +1042,14 @@ class TestNodeBasic(AiidaTestCase):
             'string': self.stringval,
             'dict': self.dictval,
             'list': self.listval,
-            'further': 267, 
-            }
+            'further': 267,
+        }
 
-        for k,v in extras_to_set.iteritems():
+        for k, v in extras_to_set.iteritems():
             a.set_extra(k, v)
-            
+
         self.assertEquals({k: v for k, v in a.iterextras()}, extras_to_set)
-        
+
         # I pregenerate it, it cannot change during iteration
         list_keys = list(extras_to_set.keys())
         for k in list_keys:
@@ -1052,15 +1058,15 @@ class TestNodeBasic(AiidaTestCase):
             a.del_extra(k)
             del extras_to_set[k]
             self.assertEquals({k: v for k, v in a.iterextras()}, extras_to_set)
-            
-            
+
+
     def test_replace_extras(self):
         """
         Checks the ability of replacing extras, removing the subkeys also when
         these are dictionaries or lists.
         """
         from aiida.djsite.db.models import DbExtra
-        
+
         a = Node().store()
         extras_to_set = {
             'bool': True,
@@ -1068,52 +1074,52 @@ class TestNodeBasic(AiidaTestCase):
             'float': 26.2,
             'string': "a string",
             'dict': {"a": "b",
-                     "sublist": [1,2,3],
+                     "sublist": [1, 2, 3],
                      "subdict": {
-                        "c": "d"}},
-            'list': [1,True,"ggg",{'h': 'j'},[9,8,7]],
-            }
-        
+                         "c": "d"}},
+            'list': [1, True, "ggg", {'h': 'j'}, [9, 8, 7]],
+        }
+
         # I redefine the keys with more complicated data, and
         # changing the data type too
         new_extras = {
-              'bool': 12,
-              'integer': [2,[3],'a'],
-              'float': {'n': 'm', 'x': [1,'r', {}]},
-              'string': True,
-              'dict': 'text',
-              'list': 66.3,
-            }
+            'bool': 12,
+            'integer': [2, [3], 'a'],
+            'float': {'n': 'm', 'x': [1, 'r', {}]},
+            'string': True,
+            'dict': 'text',
+            'list': 66.3,
+        }
 
-        for k,v in extras_to_set.iteritems():
+        for k, v in extras_to_set.iteritems():
             a.set_extra(k, v)
-            
+
         self.assertEquals({k: v for k, v in a.iterextras()}, extras_to_set)
-        
-        for k,v in new_extras.iteritems():
+
+        for k, v in new_extras.iteritems():
             # I delete one by one the keys and check if the operation is
             # performed correctly
-            a.set_extra(k,v)
-        
+            a.set_extra(k, v)
+
         # I update extras_to_set with the new entries, and do the comparison
         # again
         extras_to_set.update(new_extras)
         self.assertEquals({k: v for k, v in a.iterextras()}, extras_to_set)
-        
+
         # Check (manually) that, when replacing lsit and dict with objects
         # that have no deepness, no junk is left in the DB (i.e., no
         # 'dict.a', 'list.3.h', ...
         self.assertEquals(len(DbExtra.objects.filter(
-            dbnode=a, key__startswith=('list'+DbExtra._sep))),0)
+            dbnode=a, key__startswith=('list' + DbExtra._sep))), 0)
         self.assertEquals(len(DbExtra.objects.filter(
-            dbnode=a, key__startswith=('dict'+DbExtra._sep))),0)
+            dbnode=a, key__startswith=('dict' + DbExtra._sep))), 0)
 
     def test_versioning_lowlevel(self):
         """
         Checks the versioning.
         """
         from aiida.orm.test import myNodeWithFields
-        
+
         a = myNodeWithFields()
         a.store()
 
@@ -1136,7 +1142,6 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEquals(a._dbnode.nodeversion, 6)
 
 
-
     def test_comments(self):
         # This is the best way to compare dates with the stored ones, instead of
         # directly loading datetime.datetime.now(), or you can get a
@@ -1147,26 +1152,26 @@ class TestNodeBasic(AiidaTestCase):
 
         a = Node()
         with self.assertRaises(ModificationNotAllowed):
-            a.add_comment('text',user=get_automatic_user())
-        self.assertEquals(a.get_comments(),[])
+            a.add_comment('text', user=get_automatic_user())
+        self.assertEquals(a.get_comments(), [])
         a.store()
         before = timezone.now()
-        time.sleep(1) # I wait 1 second because MySql time precision is 1 sec
-        a.add_comment('text',user=get_automatic_user())
-        a.add_comment('text2',user=get_automatic_user())
+        time.sleep(1)  # I wait 1 second because MySql time precision is 1 sec
+        a.add_comment('text', user=get_automatic_user())
+        a.add_comment('text2', user=get_automatic_user())
         time.sleep(1)
         after = timezone.now()
 
         comments = a.get_comments()
-        
+
         times = [i['mtime'] for i in comments]
         for time in times:
             self.assertTrue(time > before)
-            self.assertTrue(time < after )
+            self.assertTrue(time < after)
 
         self.assertEquals([(i['user__email'], i['content']) for i in comments],
                           [(self.user.email, 'text'),
-                           (self.user.email, 'text2'),])
+                           (self.user.email, 'text2'), ])
 
 
     def test_load_nodes(self):
@@ -1175,18 +1180,19 @@ class TestNodeBasic(AiidaTestCase):
         """
         from aiida.orm import load_node
         from aiida.common.exceptions import NotExistent
+
         a = Node()
         a.store()
 
-        self.assertEquals(a.pk,load_node(node_id=a.pk).pk)
-        self.assertEquals(a.pk,load_node(node_id=a.uuid).pk)
-        self.assertEquals(a.pk,load_node(pk=a.pk).pk)
-        self.assertEquals(a.pk,load_node(uuid=a.uuid).pk)
+        self.assertEquals(a.pk, load_node(node_id=a.pk).pk)
+        self.assertEquals(a.pk, load_node(node_id=a.uuid).pk)
+        self.assertEquals(a.pk, load_node(pk=a.pk).pk)
+        self.assertEquals(a.pk, load_node(uuid=a.uuid).pk)
 
         with self.assertRaises(ValueError):
-            load_node(node_id=a.pk,pk=a.pk)
+            load_node(node_id=a.pk, pk=a.pk)
         with self.assertRaises(ValueError):
-            load_node(pk=a.pk,uuid=a.uuid)
+            load_node(pk=a.pk, uuid=a.uuid)
         with self.assertRaises(ValueError):
             load_node(pk=a.uuid)
         with self.assertRaises(NotExistent):
@@ -1194,9 +1200,8 @@ class TestNodeBasic(AiidaTestCase):
         with self.assertRaises(ValueError):
             load_node()
 
-        
-class TestSubNodesAndLinks(AiidaTestCase):
 
+class TestSubNodesAndLinks(AiidaTestCase):
     def test_cachelink(self):
         """
         Test the proper functionality of the links cache, with different
@@ -1207,55 +1212,55 @@ class TestSubNodesAndLinks(AiidaTestCase):
         n3 = Node().store()
         n4 = Node().store()
         endnode = Node()
-        
+
         # Nothing stored
         endnode._add_link_from(n1, "N1")
         # Try also reverse storage
         endnode._add_link_from(n2, "N2")
-        
+
         self.assertEqual(endnode.get_inputs(only_in_db=True), [])
         self.assertEqual(set([(i[0], i[1].uuid)
-                              for i in endnode.get_inputs(also_labels=True)]), 
+                              for i in endnode.get_inputs(also_labels=True)]),
                          set([("N1", n1.uuid), ("N2", n2.uuid)]))
 
         # Endnode not stored yet, n3 and n4 already stored        
         endnode._add_link_from(n3, "N3")
         # Try also reverse storage
         endnode._add_link_from(n4, "N4")
-        
+
         self.assertEqual(endnode.get_inputs(only_in_db=True), [])
         self.assertEqual(set([(i[0], i[1].uuid)
-                              for i in endnode.get_inputs(also_labels=True)]), 
+                              for i in endnode.get_inputs(also_labels=True)]),
                          set([("N1", n1.uuid), ("N2", n2.uuid),
-                              ("N3", n3.uuid), ("N4", n4.uuid)]))        
+                              ("N3", n3.uuid), ("N4", n4.uuid)]))
 
         # Some parent nodes are not stored yet
         with self.assertRaises(ModificationNotAllowed):
             endnode.store()
-            
+
         self.assertEqual(set([(i[0], i[1].uuid)
                               for i in endnode.get_inputs(only_in_db=True,
-                                                          also_labels=True)]), 
+                                                          also_labels=True)]),
                          set())
         self.assertEqual(set([(i[0], i[1].uuid)
-                              for i in endnode.get_inputs(also_labels=True)]), 
+                              for i in endnode.get_inputs(also_labels=True)]),
                          set([("N1", n1.uuid), ("N2", n2.uuid),
-                              ("N3", n3.uuid), ("N4", n4.uuid)]))        
-        
+                              ("N3", n3.uuid), ("N4", n4.uuid)]))
+
         # This will also store n1 and n2!
         endnode.store_all()
-        
+
         self.assertEqual(set([(i[0], i[1].uuid)
                               for i in endnode.get_inputs(only_in_db=True,
-                                                          also_labels=True)]), 
+                                                          also_labels=True)]),
                          set([("N1", n1.uuid), ("N2", n2.uuid),
                               ("N3", n3.uuid), ("N4", n4.uuid)]))
         self.assertEqual(set([(i[0], i[1].uuid)
-                              for i in endnode.get_inputs(also_labels=True)]), 
+                              for i in endnode.get_inputs(also_labels=True)]),
                          set([("N1", n1.uuid), ("N2", n2.uuid),
-                              ("N3", n3.uuid), ("N4", n4.uuid)]))        
-        
-    
+                              ("N3", n3.uuid), ("N4", n4.uuid)]))
+
+
     def test_store_with_unstored_parents(self):
         """
         I want to check that if parents are unstored I cannot store
@@ -1263,12 +1268,12 @@ class TestSubNodesAndLinks(AiidaTestCase):
         n1 = Node()
         n2 = Node().store()
         endnode = Node()
-        
+
         endnode._add_link_from(n1, "N1")
         endnode._add_link_from(n2, "N2")
 
         self.assertEqual(endnode.get_inputs(only_in_db=True), [])
-        
+
         # Some parent nodes are not stored yet
         with self.assertRaises(ModificationNotAllowed):
             endnode.store()
@@ -1278,55 +1283,54 @@ class TestSubNodesAndLinks(AiidaTestCase):
         n1.store()
         # Now I can store
         endnode.store()
-        
+
         self.assertEqual(set([(i[0], i[1].uuid)
                               for i in endnode.get_inputs(only_in_db=True,
-                                                          also_labels=True)]), 
-                         set([("N1", n1.uuid), ("N2", n2.uuid)]))        
+                                                          also_labels=True)]),
+                         set([("N1", n1.uuid), ("N2", n2.uuid)]))
         self.assertEqual(set([(i[0], i[1].uuid)
-                              for i in endnode.get_inputs(also_labels=True)]), 
-                         set([("N1", n1.uuid), ("N2", n2.uuid)]))        
+                              for i in endnode.get_inputs(also_labels=True)]),
+                         set([("N1", n1.uuid), ("N2", n2.uuid)]))
 
-            
-    
+
     def test_storeall_with_unstored_grandparents(self):
         """
         I want to check that if grandparents are unstored I cannot store_all
-        """    
+        """
         n1 = Node()
         n2 = Node()
         endnode = Node()
-        
+
         n2._add_link_from(n1, "N1")
         endnode._add_link_from(n2, "N2")
 
         # Grandparents are unstored
         with self.assertRaises(ModificationNotAllowed):
             endnode.store_all()
-            
+
         n1.store()
         # Now it should work
         endnode.store_all()
-        
+
         # Check the parents...
         self.assertEqual(set([(i[0], i[1].uuid)
-                              for i in n2.get_inputs(also_labels=True)]), 
-                         set([("N1", n1.uuid)]))        
+                              for i in n2.get_inputs(also_labels=True)]),
+                         set([("N1", n1.uuid)]))
         self.assertEqual(set([(i[0], i[1].uuid)
-                              for i in endnode.get_inputs(also_labels=True)]), 
-                         set([("N2", n2.uuid)]))        
-    
+                              for i in endnode.get_inputs(also_labels=True)]),
+                         set([("N2", n2.uuid)]))
+
     def test_use_code(self):
         from aiida.orm import JobCalculation, Code
 
         computer = self.computer
-        
-        code = Code(remote_computer_exec=(computer, '/bin/true'))#.store()
-        
+
+        code = Code(remote_computer_exec=(computer, '/bin/true'))  # .store()
+
         unstoredcalc = JobCalculation(computer=computer,
-                                   resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1})
+                                      resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1})
         calc = JobCalculation(computer=computer,
-                           resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1}).store()
+                              resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1}).store()
 
         # calc is not stored, and also code is not 
         unstoredcalc.use_code(code)
@@ -1338,13 +1342,13 @@ class TestSubNodesAndLinks(AiidaTestCase):
         self.assertEqual(unstoredcalc.get_code().uuid, code.uuid)
 
         # calc is not stored, but code is
-        code.store()        
+        code.store()
 
         self.assertEqual(calc.get_code().uuid, code.uuid)
         self.assertEqual(unstoredcalc.get_code().uuid, code.uuid)
 
         unstoredcalc.store()
-        
+
         self.assertEqual(calc.get_code().uuid, code.uuid)
         self.assertEqual(unstoredcalc.get_code().uuid, code.uuid)
 
@@ -1358,14 +1362,14 @@ class TestSubNodesAndLinks(AiidaTestCase):
         n3._add_link_from(n1, label='label1')
         # This should be allowed since it is an output label with the same name
         n4._add_link_from(n3, label='label1')
-        
+
         # An input link with that name already exists
         with self.assertRaises(UniquenessError):
             n3._add_link_from(n2, label='label1')
 
         # instead, for outputs, I can have multiple times the same label
         # (think to the case where n3 is a StructureData, and both n4 and n5
-        #  are calculations that use as label 'input_cell')
+        # are calculations that use as label 'input_cell')
         n5._add_link_from(n3, label='label1')
 
     def test_links_label_autogenerator(self):
@@ -1380,7 +1384,6 @@ class TestSubNodesAndLinks(AiidaTestCase):
         n9 = Node().store()
         n10 = Node().store()
 
-
         n10._add_link_from(n1)
         # Label should be automatically generated
         n10._add_link_from(n2)
@@ -1391,28 +1394,28 @@ class TestSubNodesAndLinks(AiidaTestCase):
         n10._add_link_from(n7)
         n10._add_link_from(n8)
         n10._add_link_from(n9)
-  
+
     def test_link_replace(self):
         n1 = Node().store()
         n2 = Node().store()
         n3 = Node().store()
-        
-        n3._add_link_from(n1,label='the_label')
+
+        n3._add_link_from(n1, label='the_label')
         with self.assertRaises(UniquenessError):
             # A link with the same name already exists
-            n3._add_link_from(n1,label='the_label')
-        
+            n3._add_link_from(n1, label='the_label')
+
         # I can replace the link and check that it was replaced
         n3._replace_link_from(n2, label='the_label')
         the_parent = dict(n3.get_inputs(also_labels=True))['the_label']
         self.assertEquals(n2.uuid, the_parent.uuid)
-        
+
         # _replace_link_from should work also if there is no previous link 
-        n2 ._replace_link_from(n1, label='the_label_2')
+        n2._replace_link_from(n1, label='the_label_2')
         the_parent = dict(n2.get_inputs(also_labels=True))['the_label_2']
         self.assertEquals(n1.uuid, the_parent.uuid)
-       
-    def test_link_with_unstored(self): 
+
+    def test_link_with_unstored(self):
         """
         It is possible to store links between nodes even if they are unstored;
         these links are cached. However, if working in the cache, an explicit
@@ -1426,7 +1429,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         # No link names provided
         with self.assertRaises(ModificationNotAllowed):
             n4._add_link_from(n1)
-        
+
         # Caching the links
         n2._add_link_from(n1, label='l1')
         n3._add_link_from(n2, label='l2')
@@ -1439,29 +1442,29 @@ class TestSubNodesAndLinks(AiidaTestCase):
         # Twice the link to the same node
         with self.assertRaises(UniquenessError):
             n3._add_link_from(n2, label='l4')
-        
+
         # Same error also in _replace_link_from
         with self.assertRaises(UniquenessError):
             n3._replace_link_from(n2, label='l4')
 
         n2_in_links = [(l, n.uuid) for l, n in n2.get_inputs_dict().iteritems()]
         self.assertEquals(sorted(n2_in_links), sorted([('l1', n1.uuid),
-                                                       ]))        
+        ]))
         n3_in_links = [(l, n.uuid) for l, n in n3.get_inputs_dict().iteritems()]
         self.assertEquals(sorted(n3_in_links), sorted([('l2', n2.uuid),
                                                        ('l3', n1.uuid),
-                                                       ]))        
-                
+        ]))
+
         n2.store_all()
         n3.store_all()
-    
+
         n1_out_links = [(l, n.pk) for l, n in n1.get_outputs(also_labels=True)]
         self.assertEquals(sorted(n1_out_links), sorted([('l1', n2.pk),
                                                         ('l3', n3.pk),
-                                                        ]))
+        ]))
         n2_out_links = [(l, n.pk) for l, n in n2.get_outputs(also_labels=True)]
         self.assertEquals(sorted(n2_out_links), sorted([('l2', n3.pk)]))
-    
+
     def test_valid_links(self):
         import tempfile
 
@@ -1476,28 +1479,28 @@ class TestSubNodesAndLinks(AiidaTestCase):
         with tempfile.NamedTemporaryFile() as f:
             d2 = SinglefileData(file=f.name).store()
 
-        code = Code(remote_computer_exec=(self.computer,'/bin/true')).store()
+        code = Code(remote_computer_exec=(self.computer, '/bin/true')).store()
 
         unsavedcomputer = Computer(name='localhost2', hostname='localhost')
 
         with self.assertRaises(ValueError):
             # I need to save the localhost entry first
             _ = JobCalculation(computer=unsavedcomputer,
-                            resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1}).store()
+                               resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1}).store()
 
         # I check both with a string or with an object
         calc = JobCalculation(computer=self.computer,
-                           resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1}).store()
+                              resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1}).store()
         calc2 = JobCalculation(computer='localhost',
-                            resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1}).store()
+                               resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1}).store()
         with self.assertRaises(TypeError):
             # I don't want to call it with things that are neither
             # strings nor Computer instances
             _ = JobCalculation(computer=1,
-                            resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1}).store()
-        
+                               resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1}).store()
+
         calc._add_link_from(d1)
-        calc._add_link_from(d2,label='some_label')
+        calc._add_link_from(d2, label='some_label')
         calc.use_code(code)
 
         # Cannot link to itself
@@ -1521,15 +1524,15 @@ class TestSubNodesAndLinks(AiidaTestCase):
             calc._add_link_from(calc2)
 
         calc_a = JobCalculation(computer=self.computer,
-                             resources={'num_machines':1,'num_mpiprocs_per_machine':1}).store()
+                                resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1}).store()
         calc_b = JobCalculation(computer=self.computer,
-                             resources={'num_machines':1,'num_mpiprocs_per_machine':1}).store()
+                                resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1}).store()
 
         data_node = Data().store()
 
         # I do a trick to set it to a state that allows writing
-        calc_a._set_state(calc_states.RETRIEVING) 
-        calc_b._set_state(calc_states.RETRIEVING) 
+        calc_a._set_state(calc_states.RETRIEVING)
+        calc_b._set_state(calc_states.RETRIEVING)
 
         data_node._add_link_from(calc_a)
         # A data cannot have two input calculations
@@ -1548,17 +1551,16 @@ class TestSubNodesAndLinks(AiidaTestCase):
         # Cannot (re)set the code if the calculation is not in status NEW
         with self.assertRaises(ModificationNotAllowed):
             calc_a.use_code(code)
-        
 
         calculation_inputs = calc.get_inputs()
-        inputs_type_data = [i for i in calculation_inputs if isinstance(i,Data)]
-        inputs_type_code = [i for i in calculation_inputs if isinstance(i,Code)]
+        inputs_type_data = [i for i in calculation_inputs if isinstance(i, Data)]
+        inputs_type_code = [i for i in calculation_inputs if isinstance(i, Code)]
 
         # This calculation has three inputs (2 data and one code)
         self.assertEquals(len(calculation_inputs), 3)
         self.assertEquals(len(inputs_type_data), 2)
         self.assertEquals(len(inputs_type_code), 1)
-        
+
     def test_check_single_calc_source(self):
         """
         Each data node can only have one input calculation
@@ -1567,19 +1569,19 @@ class TestSubNodesAndLinks(AiidaTestCase):
         from aiida.common.datastructures import calc_states
 
         d1 = Data().store()
-        
+
         calc = JobCalculation(computer=self.computer,
-                           resources={'num_machines':1,'num_mpiprocs_per_machine':1}).store()
+                              resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1}).store()
         calc2 = JobCalculation(computer=self.computer,
-                            resources={'num_machines':1,'num_mpiprocs_per_machine':1}).store()
+                               resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1}).store()
 
         # I cannot, calc it is in state NEW
         with self.assertRaises(ModificationNotAllowed):
             d1._add_link_from(calc)
 
         # I do a trick to set it to a state that allows setting the link
-        calc._set_state(calc_states.RETRIEVING) 
-        calc2._set_state(calc_states.RETRIEVING) 
+        calc._set_state(calc_states.RETRIEVING)
+        calc2._set_state(calc_states.RETRIEVING)
 
         d1._add_link_from(calc)
 

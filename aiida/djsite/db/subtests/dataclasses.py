@@ -1169,11 +1169,11 @@ class TestStructureData(AiidaTestCase):
         self.assertEquals(c._prepare_cif(),
                           """#\#CIF1.1
 ##########################################################################
-#               Crystallographic Information Format file
+#               Crystallographic Information Format file 
 #               Produced by PyCifRW module
-#
+# 
 #  This is a CIF file.  CIF has been adopted by the International
-#  Union of Crystallography as the standard for data archiving and
+#  Union of Crystallography as the standard for data archiving and 
 #  transmission.
 #
 #  For information on this file format, follow the CIF links at
@@ -1190,7 +1190,7 @@ loop_
    Ba1  0.0  0.0  0.0  Ba
    Ba2  0.25  0.25  0.25  Ba
    Ti1  0.5  0.5  0.5  Ti
-
+ 
 _cell_angle_alpha                       90.0
 _cell_angle_beta                        90.0
 _cell_angle_gamma                       90.0
@@ -1200,7 +1200,7 @@ _cell_length_c                          2.0
 loop_
   _symmetry_equiv_pos_as_xyz
    'x, y, z'
-
+ 
 _symmetry_Int_Tables_number             1
 _symmetry_space_group_name_H-M          'P 1'
 _symmetry_space_group_name_Hall         'P 1'

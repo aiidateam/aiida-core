@@ -514,6 +514,22 @@ def _collect_tags(node,calc,parameters=None,
             tags['_tcod_content_encoding_layer_id'].append(i+1)
             tags['_tcod_content_encoding_layer_type'].append(layers[i])
 
+    # Describing Brillouin zone (if used)
+
+    if calc is not None:
+        from aiida.orm.data.array.kpoints import KpointsData
+        kpoints_list = calc.get_inputs(KpointsData)
+        # TODO: stop if more than one KpointsData is used?
+        if len(kpoints_list) == 1:
+            kpoints = kpoints_list[0]
+            density, shift = kpoints.get_kpoints_mesh()
+            tags['_dft_BZ_integration_grid_dens_X'] = density[0]
+            tags['_dft_BZ_integration_grid_dens_Y'] = density[1]
+            tags['_dft_BZ_integration_grid_dens_Z'] = density[2]
+            tags['_dft_BZ_integration_grid_shift_X'] = shift[0]
+            tags['_dft_BZ_integration_grid_shift_Y'] = shift[1]
+            tags['_dft_BZ_integration_grid_shift_Z'] = shift[2]
+
     # Collecting code-specific data
 
     from aiida.common.pluginloader import BaseFactory, existing_plugins

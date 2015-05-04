@@ -76,7 +76,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         :return: SQL query predicate
         """
         for e in values:
-            if not isinstance(e, int) and not isinstance(e, str):
+            if not isinstance(e, (int, long)) and not isinstance(e, basestring):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and strings are accepted")
         return key + " IN (" + ", ".join(map(lambda i: str(int(i)),
@@ -87,7 +87,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         Return SQL query predicate for querying string fields.
         """
         for e in values:
-            if not isinstance(e, int) and not isinstance(e, str):
+            if not isinstance(e, (int, long)) and not isinstance(e, basestring):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and strings are accepted")
         return key + \
@@ -99,7 +99,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         Return SQL query predicate for querying formula fields.
         """
         for e in values:
-            if not isinstance(e, str):
+            if not isinstance(e, basestring):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only strings are accepted")
         return self.str_exact_clause(key, \
@@ -112,7 +112,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         Return SQL query predicate for fuzzy querying of string fields.
         """
         for e in values:
-            if not isinstance(e, int) and not isinstance(e, str):
+            if not isinstance(e, (int, long)) and not isinstance(e, basestring):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and strings are accepted")
         return " OR ".join(map(lambda s: key + \
@@ -123,7 +123,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         Return SQL query predicate for querying elements in formula fields.
         """
         for e in values:
-            if not isinstance(e, str):
+            if not isinstance(e, basestring):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only strings are accepted")
         return " AND ".join(map(lambda e: "STRUCT_FORM REGEXP ' " + \
@@ -135,7 +135,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         Return SQL query predicate for querying double-valued fields.
         """
         for e in values:
-            if not isinstance(e, int) and not isinstance(e, float):
+            if not isinstance(e, (int, long)) and not isinstance(e, float):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only integers and floats are accepted")
         return " OR ".join(map(lambda d: key + \
@@ -160,7 +160,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         }  # from icsd accepted crystal systems
 
         for e in values:
-            if not isinstance(e, int) and not isinstance(e, str):
+            if not isinstance(e, (int, long)) and not isinstance(e, basestring):
                 raise ValueError("incorrect value for keyword '" + alias + \
                                  "' -- only strings are accepted")
         return key + \
@@ -643,7 +643,7 @@ class IcsdEntry(aiida.tools.dbimporters.baseclasses.DbEntry):
         import tempfile
 
         with tempfile.NamedTemporaryFile() as f:
-            f.write(self.get_corrected_cif())
+            f.write(self.cif)
             f.flush()
             return CifData(file=f.name, source=self.source)
 

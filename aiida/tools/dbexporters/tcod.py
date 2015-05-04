@@ -85,7 +85,8 @@ def cif_encode_contents(content,gzip=False,gzip_threshold=1024):
     elif float(len(re.findall('[^\x09\x0A\x0D\x20-\x7E]',content)))/len(content) > 0.25:
         # contents are assumed to be binary
         method = 'base64'
-    elif re.search('^\s*data_',content) is not None:
+    elif re.search('^\s*data_',content) is not None or \
+         re.search('\n\s*data_',content) is not None:
         # contents have CIF datablock header-like lines, that may be
         # dangerous when parsed with primitive parsers
         method = 'base64'

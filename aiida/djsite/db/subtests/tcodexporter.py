@@ -56,6 +56,8 @@ class TestTcodDbExporter(AiidaTestCase):
         self.assertEquals(cif_encode_contents(
             "".join("a" for i in range(0,2049)))[1],
             'quoted-printable')
+        self.assertEquals(cif_encode_contents('datatest')[1],None)
+        self.assertEquals(cif_encode_contents('data_test')[1],'base64')
 
     def test_collect_files(self):
         """

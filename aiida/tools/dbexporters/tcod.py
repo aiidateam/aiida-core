@@ -599,9 +599,11 @@ def add_metadata_inline(what,node=None,parameters=None,args=None):
     # Unpacking the kwargs from ParameterData
     kwargs = {}
     additional_tags = {}
+    datablock_names = None
     if args:
         kwargs = args.get_dict()
         additional_tags = kwargs.pop('additional_tags',{})
+        datablock_names = kwargs.pop('datablock_names',None)
 
     tags = _collect_tags(what,calc,parameters=parameters,**kwargs)
     loops.update(tcod_loops)
@@ -614,7 +616,7 @@ def add_metadata_inline(what,node=None,parameters=None,args=None):
                                  "start with underscores".format(k))
             datablock[k] = v
 
-    values = pycifrw_from_cif(datablocks,loops)
+    values = pycifrw_from_cif(datablocks,loops,names=datablock_names)
     cif = CifData(values=values)
 
     return {'cif': cif}
@@ -736,7 +738,7 @@ def export_cifnode(what,parameters=None,trajectory_index=None,store=False,
 def deposit(what,type,author_name=None,author_email=None,url=None,
             title=None,username=None,password=False,user_email=None,
             code_label=default_options['code'],computer_name=None,
-            **kwargs):
+            replace=None,message=None,**kwargs):
     """
     Launches a
     :py:class:`aiida.orm.calculation.job.JobCalculation`
@@ -773,11 +775,25 @@ def deposit(what,type,author_name=None,author_email=None,url=None,
                          "one of the following: 'published', "
                          "'prepublication' or 'personal'".format(type))
 
+    if replace:
+        if str(int(replace)) != replace or int(replace) < 10000000 \
+            or int(replace) > 99999999:
+            raise ValueError("ID of the replaced structure ({}) does not "
+                             "seem to be valid TCOD ID: must be in "
+                             "range [10000000,99999999]".format(replace))
+    elif message:
+        raise ValueError("Message is given while the structure is not "
+                         "redeposited -- log message is relevant to "
+                         "redeposition only")
+
     kwargs['additional_tags'] = {}
     if title:
         kwargs['additional_tags']['_publ_section_title'] = title
     if author_name:
         kwargs['additional_tags']['_publ_author_name'] = author_name
+    if replace:
+        kwargs['additional_tags']['_cod_database_code'] = replace
+        kwargs['datablock_names'] = [replace]
 
     cif = export_cifnode(what,store=True,**kwargs)
 
@@ -807,6 +823,10 @@ def deposit(what,type,author_name=None,author_email=None,url=None,
         parameters['author_email'] = author_email
     if url:
         parameters['url'] = url
+    if replace:
+        parameters['replace'] = True
+    if message:
+        parameters['log-message'] = str(message)
     pd = ParameterData(dict=parameters)
 
     calc.use_cif(cif)
@@ -856,6 +876,12 @@ def deposition_cmdline_parameters(parser,expclass="Data"):
                         help="Name of the computer to be used for "
                              "deposition. Default computer is used if "
                              "not specified.")
+    parser.add_argument('--replace', type=str, dest='replace',
+                        help="ID of the structure to be redeposited "
+                             "(replaced), if any.")
+    parser.add_argument('-m', '--message', type=str, dest='message',
+                        help="Description of the change (relevant for "
+                             "redepositions only.")
 
 def translate_calculation_specific_values(parameters,translator,**kwargs):
     """

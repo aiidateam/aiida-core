@@ -1203,7 +1203,7 @@ class TestStructureData(AiidaTestCase):
         self.assertEquals(b.cell.tolist(),[[10,0,0],[0,10,0],[0,0,10]])
         self.assertEquals(b.get_scaled_positions().tolist(),
                           [[0.5,0.5,0.5],[0,0,0]])
-        self.assertEquals(sym,{'hall': 'P 3* -2', 'hm': 'R3m', 'tables': 160})
+        self.assertEquals(sym,{'hall': '-P 4 2 3', 'hm': 'Pm-3m', 'tables': 221})
 
         a = ase.Atoms(cell=[[10,0,0],[-10,10,0],[0,0,10]])
         a.append(ase.Atom('C',[0,0,0]))
@@ -1213,7 +1213,7 @@ class TestStructureData(AiidaTestCase):
         self.assertEquals(b.cell.tolist(),[[10,0,0],[0,10,0],[0,0,10]])
         self.assertEquals(b.get_scaled_positions().tolist(),
                           [[0,0,0],[0.5,0.5,0.5]])
-        self.assertEquals(sym,{'hall': 'P 3* -2', 'hm': 'R3m', 'tables': 160})
+        self.assertEquals(sym,{'hall': '-P 4 2 3', 'hm': 'Pm-3m', 'tables': 221})
 
         a = ase.Atoms(cell=[[12.132,0,0],[0,6.0606,0],[0,0,8.0956]])
         a.append(ase.Atom('Ba',[1.5334848,1.3999986,2.00042276]))
@@ -1229,6 +1229,22 @@ class TestStructureData(AiidaTestCase):
         b,sym = ase_refine_cell(a)
         self.assertEquals(b.get_chemical_symbols(),['C','O'])
         self.assertEquals(sym,{'hall': '-P 4 2', 'hm': 'P4/mmm', 'tables': 123})
+
+        # Generated from COD entry 1507756
+        # (http://www.crystallography.net/cod/1507756.cif@87343)
+        from ase.lattice.spacegroup import crystal
+        a = crystal(['Ba','Ti','O','O'],
+                    [
+                      [0,0,0],
+                      [0.5,0.5,0.482],
+                      [0.5,0.5,0.016],
+                      [0.5,0,0.515]
+                    ],
+                    cell=[3.9999,3.9999,4.0170],
+                    spacegroup=99)
+        b,sym = ase_refine_cell(a)
+        self.assertEquals(b.get_chemical_symbols(),['Ba','Ti','O','O'])
+        self.assertEquals(sym,{'hall': 'P 4 -2', 'hm': 'P4mm', 'tables': 99})
 
     def test_get_formula(self):
         """

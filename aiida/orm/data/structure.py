@@ -602,10 +602,10 @@ def ase_refine_cell(aseatoms,**kwargs):
     """
     from pyspglib.spglib import refine_cell,get_symmetry_dataset
     from ase.atoms import Atoms
-    from ase.lattice.spacegroup import crystal
     cell,positions,numbers = refine_cell(aseatoms,**kwargs)
 
-    refined_atoms = Atoms(numbers,positions,cell=cell)
+    refined_atoms = Atoms(numbers,scaled_positions=positions,cell=cell,
+                          pbc=True)
 
     sym_dataset = get_symmetry_dataset(refined_atoms,**kwargs)
 
@@ -614,9 +614,10 @@ def ase_refine_cell(aseatoms,**kwargs):
 
     for i in set(sym_dataset['equivalent_atoms']):
         unique_numbers.append(refined_atoms.numbers[i])
-        unique_positions.append(refined_atoms.positions[i])
+        unique_positions.append(refined_atoms.get_scaled_positions()[i])
 
-    unique_atoms = crystal(unique_numbers,unique_positions,cell=cell)
+    unique_atoms = Atoms(unique_numbers,scaled_positions=unique_positions,
+                         cell=cell,pbc=True)
 
     return unique_atoms,{'hm'    : sym_dataset['international'],
                          'hall'  : sym_dataset['hall'],

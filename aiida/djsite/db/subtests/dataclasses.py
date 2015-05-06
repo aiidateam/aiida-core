@@ -507,7 +507,7 @@ _publ_section_title                     'Test CIF'
         ret_dict = refine_inline(a)
         b = ret_dict['cif']
         self.assertEqual(b.values.keys(),['test'])
-        self.assertEqual(b.values['test']['_chemical_formula_sum'],'C O')
+        self.assertEqual(b.values['test']['_chemical_formula_sum'],'C O2')
 
         with tempfile.NamedTemporaryFile() as f:
             f.write('''

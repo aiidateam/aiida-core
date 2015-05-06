@@ -418,8 +418,10 @@ def refine_inline(node):
     cif.values[name]['_symmetry_space_group_name_H-M']  = symmetry['hm']
     cif.values[name]['_symmetry_space_group_name_Hall'] = symmetry['hall']
     cif.values[name]['_symmetry_Int_Tables_number']     = symmetry['tables']
+
+    # Summary formula has to be calculated from non-reduced set of atoms.
     cif.values[name]['_chemical_formula_sum'] = \
-        StructureData(ase=refined_atoms).get_formula(mode='hill',separator=' ')
+        StructureData(ase=original_atoms).get_formula(mode='hill',separator=' ')
 
     if '_cell_formula_units_Z' in node.values[name].keys():
         old_Z = node.values[name]['_cell_formula_units_Z']

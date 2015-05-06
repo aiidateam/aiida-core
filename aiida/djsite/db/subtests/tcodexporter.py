@@ -318,8 +318,8 @@ class TestTcodDbExporter(AiidaTestCase):
         a.set_chemical_symbols(['Ba','Ti','O','O','O'])
         val = export_values(StructureData(ase=a),reduce_symmetry=True,store=True)['0']
         self.assertEqual(val['_atom_site_label'],['Ba1','Ti1','O1'])
-        self.assertEqual(val['_symmetry_space_group_name_H-M'],'R3m')
-        self.assertEqual(val['_symmetry_space_group_name_Hall'],'P 3* -2')
+        self.assertEqual(val['_symmetry_space_group_name_H-M'],'Pm-3m')
+        self.assertEqual(val['_symmetry_space_group_name_Hall'],'-P 4 2 3')
 
     def test_cmdline_parameters(self):
         """

@@ -24,6 +24,23 @@ ase_loops = {
     ]
 }
 
+symmetry_tags = [
+    '_symmetry_equiv_pos_site_id',
+    '_symmetry_equiv_pos_as_xyz',
+
+    '_symmetry_Int_Tables_number',
+    '_symmetry_space_group_name_H-M',
+    '_symmetry_space_group_name_Hall',
+
+    '_space_group_symop_id',
+    '_space_group_symop_operation_xyz',
+    '_space_group_symop_sg_id',
+
+    '_space_group_id',
+    '_space_group_IT_number',
+    '_space_group_name_H-M_alt',
+    '_space_group_name_Hall',
+]
 
 def has_pycifrw():
     """
@@ -393,6 +410,10 @@ def refine_inline(node):
 
     cif = CifData(ase=refined_atoms)
     cif.values.dictionary[name] = cif.values.dictionary.pop(str(0))
+
+    # Remove all existing symmetry tags before overwriting:
+    for tag in symmetry_tags:
+        cif.values[name].RemoveCifItem(tag)
 
     cif.values[name]['_symmetry_space_group_name_H-M']  = symmetry['hm']
     cif.values[name]['_symmetry_space_group_name_Hall'] = symmetry['hall']

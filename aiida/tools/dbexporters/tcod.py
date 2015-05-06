@@ -23,7 +23,7 @@ tcod_loops = {
     '_tcod_computation': [
         '_tcod_computation_step',
         '_tcod_computation_command',
-        '_tcod_computation_uuid',
+        '_tcod_computation_reference_uuid',
         '_tcod_computation_environment',
         '_tcod_computation_stdout',
         '_tcod_computation_stderr',
@@ -388,7 +388,7 @@ def _collect_tags(node,calc,parameters=None,
         tags['_tcod_computation_step'].append(sn)
         tags['_tcod_computation_command'].append(
             'cd {}; ./{}'.format(sn,aiida_executable_name))
-        tags['_tcod_computation_uuid'].append(step['uuid'])
+        tags['_tcod_computation_reference_uuid'].append(step['uuid'])
         if 'env' in step:
             tags['_tcod_computation_environment'].append(
                 "\n".join(["%s=%s" % (key,step['env'][key]) for key in step['env']]))

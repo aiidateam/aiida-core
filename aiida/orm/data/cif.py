@@ -338,21 +338,27 @@ def cif_from_ase(ase, full_occupancies=False, add_fake_biso=False):
     return datablocks
 
 
-def pycifrw_from_cif(datablocks, loops=dict()):
+def pycifrw_from_cif(datablocks, loops=dict(), names=None):
     """
     Constructs PyCifRW's CifFile from an array of CIF datablocks.
 
     :param datablocks: an array of CIF datablocks
     :param loops: optional list of lists of CIF tag loops.
+    :param names: optional list of datablock names
     :return: CifFile
     """
     import CifFile
 
     cif = CifFile.CifFile()
-    nr = 0
-    for values in datablocks:
-        name = str(nr)
-        nr = nr + 1
+    if names and len(names) < len(datablocks):
+        raise ValueError("Not enough names supplied for "
+                         "datablocks: {} (names) < "
+                         "{} (datablocks)".format(len(names),
+                                                  len(datablocks)))
+    for i,values in enumerate(datablocks):
+        name = str(i)
+        if names:
+            name = names[i]
         cif.NewBlock(name)
         datablock = cif[name]
         for loopname in loops.keys():

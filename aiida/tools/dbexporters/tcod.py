@@ -523,9 +523,9 @@ def _collect_tags(node,calc,parameters=None,
         if len(kpoints_list) == 1:
             kpoints = kpoints_list[0]
             density, shift = kpoints.get_kpoints_mesh()
-            tags['_dft_BZ_integration_grid_dens_X'] = density[0]
-            tags['_dft_BZ_integration_grid_dens_Y'] = density[1]
-            tags['_dft_BZ_integration_grid_dens_Z'] = density[2]
+            tags['_dft_BZ_integration_grid_X'] = density[0]
+            tags['_dft_BZ_integration_grid_Y'] = density[1]
+            tags['_dft_BZ_integration_grid_Z'] = density[2]
             tags['_dft_BZ_integration_grid_shift_X'] = shift[0]
             tags['_dft_BZ_integration_grid_shift_Y'] = shift[1]
             tags['_dft_BZ_integration_grid_shift_Z'] = shift[2]

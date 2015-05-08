@@ -12,6 +12,24 @@ class BaseTcodtranslator(object):
     _plugin_type_string = None
 
     @classmethod
+    def get_software_package(cls,parameters,**kwargs):
+        """
+        Returns the package or program name that was used to produce
+        the structure. Only package or program name should be used,
+        e.g. 'VASP', 'psi3', 'Abinit', etc.
+        """
+        raise NotImplementedError("not implemented in base class")
+
+    @classmethod
+    def get_software_package_version(cls,parameters,**kwargs):
+        """
+        Returns software package version used to compute and produce
+        the computed structure file. Only version designator should be
+        used, e.g. '3.4.0', '2.1rc3'.
+        """
+        raise NotImplementedError("not implemented in base class")
+
+    @classmethod
     def get_total_energy(cls,parameters,**kwargs):
         """
         Returns the total energy in eV.

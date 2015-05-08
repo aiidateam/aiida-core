@@ -14,6 +14,15 @@ class PwTcodtranslator(BaseTcodtranslator):
     _plugin_type_string = "quantumespresso.pw.PwCalculation"
 
     @classmethod
+    def get_software_package(cls,parameters,**kwargs):
+        """
+        Returns the package or program name that was used to produce
+        the structure. Only package or program name should be used,
+        e.g. 'VASP', 'psi3', 'Abinit', etc.
+        """
+        return 'Quantum ESPRESSO'
+
+    @classmethod
     def _get_pw_energy_value(cls,parameters,energy_type,**kwargs):
         """
         Returns the energy of defined type in eV.

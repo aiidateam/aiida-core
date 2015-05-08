@@ -14,6 +14,15 @@ class CpTcodtranslator(BaseTcodtranslator):
     _plugin_type_string = "quantumespresso.cp.CpCalculation"
 
     @classmethod
+    def get_software_package(cls,parameters,**kwargs):
+        """
+        Returns the package or program name that was used to produce
+        the structure. Only package or program name should be used,
+        e.g. 'VASP', 'psi3', 'Abinit', etc.
+        """
+        return 'Quantum ESPRESSO'
+
+    @classmethod
     def get_number_of_electrons(cls,parameters,**kwargs):
         """
         Returns the number of electrons.

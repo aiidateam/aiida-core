@@ -222,11 +222,14 @@ class TestTcodDbExporter(AiidaTestCase):
 
         pd = ParameterData(dict={})
         res = translate_calculation_specific_values(pd,PWT)
-        self.assertEquals(res,{})
+        self.assertEquals(res,{'_tcod_software_package':
+                               'Quantum ESPRESSO'})
 
         pd = ParameterData(dict={'number_of_electrons': 10})
         res = translate_calculation_specific_values(pd,PWT)
-        self.assertEquals(res,{'_dft_cell_valence_electrons': 10})
+        self.assertEquals(res,{'_dft_cell_valence_electrons': 10,
+                               '_tcod_software_package':
+                               'Quantum ESPRESSO'})
 
         pd = ParameterData(dict={'energy_xc': 5})
         with self.assertRaises(ValueError):
@@ -257,6 +260,7 @@ class TestTcodDbExporter(AiidaTestCase):
             '_dft_ewald_energy'      : energies['energy_ewald'],
             '_dft_hartree_energy'    : energies['energy_hartree'],
             '_dft_fermi_energy'      : energies['fermi_energy'],
+            '_tcod_software_package' : 'Quantum ESPRESSO'
         })
         dct = energies
         dct['number_of_electrons'] = 10
@@ -264,7 +268,9 @@ class TestTcodDbExporter(AiidaTestCase):
             dct["{}_units".format(key)] = 'eV'
         pd = ParameterData(dict=dct)
         res = translate_calculation_specific_values(pd,CPT)
-        self.assertEquals(res,{'_dft_cell_valence_electrons': 10})
+        self.assertEquals(res,{'_dft_cell_valence_electrons': 10,
+                               '_tcod_software_package':
+                               'Quantum ESPRESSO'})
 
     @unittest.skipIf(not has_ase() or not has_pycifrw(),
                      "Unable to import ase or pycifrw")

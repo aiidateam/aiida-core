@@ -86,17 +86,25 @@ class BaseTcodtranslator(object):
         raise NotImplementedError("not implemented in base class")
 
     @classmethod
-    def get_atom_basisset(cls,parameters,**kwargs):
+    def get_atom_type_symbol(cls,parameters,**kwargs):
         """
-        Returns a list of basisset names. The order must be the same as
-        of get_atom_basisset_type().
+        Returns a list of atom types. Each atom site MUST occur only
+        once in this list. List MUST be sorted.
         """
         raise NotImplementedError("not implemented in base class")
 
     @classmethod
-    def get_atom_basisset_type(cls,parameters,**kwargs):
+    def get_atom_type_valence_configuration(cls,parameters,**kwargs):
         """
-        Returns a list of atom types. The order must be the same as
-        of get_atom_basisset().
+        Returns valence configuration of each atom type. The list order
+        MUST be the same as of get_atom_type_symbol().
+        """
+        raise NotImplementedError("not implemented in base class")
+
+    @classmethod
+    def get_atom_type_basisset(cls,parameters,**kwargs):
+        """
+        Returns a list of basisset names for each atom type. The list
+        order MUST be the same as of get_atom_type_symbol().
         """
         raise NotImplementedError("not implemented in base class")

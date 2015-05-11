@@ -39,10 +39,12 @@ tcod_loops = {
         '_audit_conform_dict_version',
     ],
     '_dft_atom_basisset': [
+        '_atom_type_symbol',
         '_dft_atom_basisset',
         '_dft_atom_basisset_type',
         '_dft_atom_basisset_energy_conv',
         '_dft_atom_basisset_citation_id',
+        '_dft_atom_type_valence_configuration',
     ]
 }
 
@@ -907,18 +909,19 @@ def translate_calculation_specific_values(parameters,translator,**kwargs):
                          "must be derived from {} class".format(translator.__class__,
                                                                 BaseTcodtranslator.__class__))
     translation_map = {
-        '_tcod_software_package'          : 'get_software_package',
-        '_tcod_software_package_version'  : 'get_software_package_version',
-        '_tcod_total_energy'              : 'get_total_energy',
-        '_dft_1e_energy'                  : 'get_one_electron_energy',
-        '_dft_correlation_energy'         : 'get_exchange_correlation_energy',
-        '_dft_ewald_energy'               : 'get_ewald_energy',
-        '_dft_hartree_energy'             : 'get_hartree_energy',
-        '_dft_fermi_energy'               : 'get_fermi_energy',
-        '_dft_cell_valence_electrons'     : 'get_number_of_electrons',
-        '_tcod_computation_wallclock_time': 'get_computation_wallclock_time',
-        '_dft_atom_basisset'              : 'get_atom_basisset',
-        '_dft_atom_basisset_type'         : 'get_atom_basisset_type',
+        '_tcod_software_package'              : 'get_software_package',
+        '_tcod_software_package_version'      : 'get_software_package_version',
+        '_tcod_total_energy'                  : 'get_total_energy',
+        '_dft_1e_energy'                      : 'get_one_electron_energy',
+        '_dft_correlation_energy'             : 'get_exchange_correlation_energy',
+        '_dft_ewald_energy'                   : 'get_ewald_energy',
+        '_dft_hartree_energy'                 : 'get_hartree_energy',
+        '_dft_fermi_energy'                   : 'get_fermi_energy',
+        '_dft_cell_valence_electrons'         : 'get_number_of_electrons',
+        '_tcod_computation_wallclock_time'    : 'get_computation_wallclock_time',
+        '_atom_type_symbol'                   : 'get_atom_type_symbol',
+        '_dft_atom_type_valence_configuration': 'get_atom_type_valence_configuration',
+        '_dft_atom_basisset'                  : 'get_atom_basisset',
     }
     tags = dict()
     for tag,function in translation_map.iteritems():

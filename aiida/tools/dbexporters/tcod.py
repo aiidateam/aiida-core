@@ -921,7 +921,7 @@ def translate_calculation_specific_values(parameters,translator,**kwargs):
         '_tcod_computation_wallclock_time'    : 'get_computation_wallclock_time',
         '_atom_type_symbol'                   : 'get_atom_type_symbol',
         '_dft_atom_type_valence_configuration': 'get_atom_type_valence_configuration',
-        '_dft_atom_basisset'                  : 'get_atom_basisset',
+        '_dft_atom_basisset'                  : 'get_atom_type_basisset',
     }
     tags = dict()
     for tag,function in translation_map.iteritems():

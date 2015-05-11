@@ -305,9 +305,10 @@ class TestTcodDbExporter(AiidaTestCase):
         })
         res = translate_calculation_specific_values(pd,NPT)
         self.assertEquals(res,{
-            '_tcod_software_package' : 'NWChem',
-            '_dft_atom_basisset'     : ['6-31g', '6-31g'],
-            '_dft_atom_basisset_type': ['H', 'O'],
+            '_tcod_software_package'              : 'NWChem',
+            '_atom_type_symbol'                   : ['H', 'O'],
+            '_dft_atom_basisset'                  : ['6-31g', '6-31g'],
+            '_dft_atom_type_valence_configuration': ['2s', '3s2p'],
         })
 
     @unittest.skipIf(not has_ase() or not has_pycifrw(),

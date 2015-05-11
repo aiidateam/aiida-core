@@ -22,24 +22,36 @@ class NwcpymatgenTcodtranslator(BaseTcodtranslator):
         return 'NWChem'
 
     @classmethod
-    def get_atom_basisset(cls,parameters,**kwargs):
+    def get_atom_type_symbol(cls,parameters,**kwargs):
         """
-        Returns a list of basisset names. The order must be the same as
-        of get_atom_basisset_type().
-        """
-        dictionary = parameters.get_dict()
-        if 'basis_set' not in dictionary.keys():
-            return None
-        return [dictionary['basis_set'][x]['description']
-                for x in cls.get_atom_basisset_type(parameters,**kwargs)]
-
-    @classmethod
-    def get_atom_basisset_type(cls,parameters,**kwargs):
-        """
-        Returns a list of atom types. The order must be the same as
-        of get_atom_basisset().
+        Returns a list of atom types. Each atom site MUST occur only
+        once in this list. List MUST be sorted.
         """
         dictionary = parameters.get_dict()
         if 'basis_set' not in dictionary.keys():
             return None
         return sorted(dictionary['basis_set'].keys())
+
+    @classmethod
+    def get_atom_type_basisset(cls,parameters,**kwargs):
+        """
+        Returns a list of basisset names for each atom type. The list
+        order MUST be the same as of get_atom_type_symbol().
+        """
+        dictionary = parameters.get_dict()
+        if 'basis_set' not in dictionary.keys():
+            return None
+        return [dictionary['basis_set'][x]['description']
+                for x in cls.get_atom_type_symbol(parameters,**kwargs)]
+
+    @classmethod
+    def get_atom_type_valence_configuration(cls,parameters,**kwargs):
+        """
+        Returns valence configuration of each atom type. The list order
+        MUST be the same as of get_atom_type_symbol().
+        """
+        dictionary = parameters.get_dict()
+        if 'basis_set' not in dictionary.keys():
+            return None
+        return [dictionary['basis_set'][x]['types']
+                for x in cls.get_atom_type_symbol(parameters,**kwargs)]

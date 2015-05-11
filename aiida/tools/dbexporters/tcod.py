@@ -37,6 +37,12 @@ tcod_loops = {
         '_audit_conform_dict_location',
         '_audit_conform_dict_name',
         '_audit_conform_dict_version',
+    ],
+    '_dft_atom_basisset': [
+        '_dft_atom_basisset',
+        '_dft_atom_basisset_type',
+        '_dft_atom_basisset_energy_conv',
+        '_dft_atom_basisset_citation_id',
     ]
 }
 
@@ -911,6 +917,8 @@ def translate_calculation_specific_values(parameters,translator,**kwargs):
         '_dft_fermi_energy'               : 'get_fermi_energy',
         '_dft_cell_valence_electrons'     : 'get_number_of_electrons',
         '_tcod_computation_wallclock_time': 'get_computation_wallclock_time',
+        '_dft_atom_basisset'              : 'get_atom_basisset',
+        '_dft_atom_basisset_type'         : 'get_atom_basisset_type',
     }
     tags = dict()
     for tag,function in translation_map.iteritems():

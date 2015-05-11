@@ -272,6 +272,44 @@ class TestTcodDbExporter(AiidaTestCase):
                                '_tcod_software_package':
                                'Quantum ESPRESSO'})
 
+    def test_nwcpymatgen_translation(self):
+        from aiida.tools.dbexporters.tcod \
+             import translate_calculation_specific_values
+        from aiida.tools.dbexporters.tcod_plugins.nwcpymatgen \
+             import NwcpymatgenTcodtranslator as NPT
+        from aiida.orm.data.parameter import ParameterData
+
+        pd = ParameterData(dict={
+          "basis_set": {
+            "H": {
+              "description": "6-31g",
+              "functions": "2",
+              "shells": "2",
+              "types": "2s"
+            },
+            "O": {
+              "description": "6-31g",
+              "functions": "9",
+              "shells": "5",
+              "types": "3s2p"
+            }
+          },
+          "corrections": {},
+          "energies": [
+            -2057.99011937535
+          ],
+          "errors": [],
+          "frequencies": None,
+          "has_error": False,
+          "job_type": "NWChem SCF Module"
+        })
+        res = translate_calculation_specific_values(pd,NPT)
+        self.assertEquals(res,{
+            '_tcod_software_package' : 'NWChem',
+            '_dft_atom_basisset'     : ['6-31g', '6-31g'],
+            '_dft_atom_basisset_type': ['H', 'O'],
+        })
+
     @unittest.skipIf(not has_ase() or not has_pycifrw(),
                      "Unable to import ase or pycifrw")
     def test_inline_export(self):

@@ -20,3 +20,26 @@ class NwcpymatgenTcodtranslator(BaseTcodtranslator):
         e.g. 'VASP', 'psi3', 'Abinit', etc.
         """
         return 'NWChem'
+
+    @classmethod
+    def get_atom_basisset(cls,parameters,**kwargs):
+        """
+        Returns a list of basisset names. The order must be the same as
+        of get_atom_basisset_type().
+        """
+        dictionary = parameters.get_dict()
+        if 'basis_set' not in dictionary.keys():
+            return None
+        return [dictionary['basis_set'][x]['description']
+                for x in cls.get_atom_basisset_type(parameters,**kwargs)]
+
+    @classmethod
+    def get_atom_basisset_type(cls,parameters,**kwargs):
+        """
+        Returns a list of atom types. The order must be the same as
+        of get_atom_basisset().
+        """
+        dictionary = parameters.get_dict()
+        if 'basis_set' not in dictionary.keys():
+            return None
+        return sorted(dictionary['basis_set'].keys())

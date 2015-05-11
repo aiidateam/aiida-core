@@ -17,6 +17,7 @@ __contributors__ = "Andrea Cepellotti, Andrius Merkys, Eric Hontz, Giovanni Pizz
 db_test_list = {
     'generic': 'aiida.djsite.db.subtests.generic',
     'nodes': 'aiida.djsite.db.subtests.nodes',
+    'nwchem': 'aiida.djsite.db.subtests.nwchem',
     'dataclasses': 'aiida.djsite.db.subtests.dataclasses',
     'qepw': 'aiida.djsite.db.subtests.quantumespressopw',
     'codtools': 'aiida.djsite.db.subtests.codtools',

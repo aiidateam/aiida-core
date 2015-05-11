@@ -1,0 +1,10 @@
+{
+  "output": {
+    "energies": {
+      "value": [ -2057.99011937535 ],
+      "comparison": "AlmostEqual"
+    }
+  },
+  "job_info": {
+  }
+}

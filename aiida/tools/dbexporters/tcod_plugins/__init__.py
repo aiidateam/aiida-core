@@ -6,13 +6,13 @@ __version__ = "0.4.1"
 
 class BaseTcodtranslator(object):
     """
-    Base translator from calculation-specific output parameters to TCOD CIF
-    dictionary tags.
+    Base translator from calculation-specific input and output parameters
+    to TCOD CIF dictionary tags.
     """
     _plugin_type_string = None
 
     @classmethod
-    def get_software_package(cls,parameters,**kwargs):
+    def get_software_package(cls,calc,**kwargs):
         """
         Returns the package or program name that was used to produce
         the structure. Only package or program name should be used,
@@ -21,7 +21,7 @@ class BaseTcodtranslator(object):
         raise NotImplementedError("not implemented in base class")
 
     @classmethod
-    def get_software_package_version(cls,parameters,**kwargs):
+    def get_software_package_version(cls,calc,**kwargs):
         """
         Returns software package version used to compute and produce
         the computed structure file. Only version designator should be
@@ -30,63 +30,63 @@ class BaseTcodtranslator(object):
         raise NotImplementedError("not implemented in base class")
 
     @classmethod
-    def get_total_energy(cls,parameters,**kwargs):
+    def get_total_energy(cls,calc,**kwargs):
         """
         Returns the total energy in eV.
         """
         raise NotImplementedError("not implemented in base class")
 
     @classmethod
-    def get_one_electron_energy(cls,parameters,**kwargs):
+    def get_one_electron_energy(cls,calc,**kwargs):
         """
         Returns one electron energy in eV.
         """
         raise NotImplementedError("not implemented in base class")
 
     @classmethod
-    def get_exchange_correlation_energy(cls,parameters,**kwargs):
+    def get_exchange_correlation_energy(cls,calc,**kwargs):
         """
         Returns exchange correlation (XC) energy in eV.
         """
         raise NotImplementedError("not implemented in base class")
 
     @classmethod
-    def get_ewald_energy(cls,parameters,**kwargs):
+    def get_ewald_energy(cls,calc,**kwargs):
         """
         Returns Ewald energy in eV.
         """
         raise NotImplementedError("not implemented in base class")
 
     @classmethod
-    def get_hartree_energy(cls,parameters,**kwargs):
+    def get_hartree_energy(cls,calc,**kwargs):
         """
         Returns Hartree energy in eV.
         """
         raise NotImplementedError("not implemented in base class")
 
     @classmethod
-    def get_fermi_energy(cls,parameters,**kwargs):
+    def get_fermi_energy(cls,calc,**kwargs):
         """
         Returns Fermi energy in eV.
         """
         raise NotImplementedError("not implemented in base class")
 
     @classmethod
-    def get_number_of_electrons(cls,parameters,**kwargs):
+    def get_number_of_electrons(cls,calc,**kwargs):
         """
         Returns the number of electrons.
         """
         raise NotImplementedError("not implemented in base class")
 
     @classmethod
-    def get_computation_wallclock_time(cls,parameters,**kwargs):
+    def get_computation_wallclock_time(cls,calc,**kwargs):
         """
         Returns the computation wallclock time in seconds.
         """
         raise NotImplementedError("not implemented in base class")
 
     @classmethod
-    def get_atom_type_symbol(cls,parameters,**kwargs):
+    def get_atom_type_symbol(cls,calc,**kwargs):
         """
         Returns a list of atom types. Each atom site MUST occur only
         once in this list. List MUST be sorted.
@@ -94,7 +94,7 @@ class BaseTcodtranslator(object):
         raise NotImplementedError("not implemented in base class")
 
     @classmethod
-    def get_atom_type_valence_configuration(cls,parameters,**kwargs):
+    def get_atom_type_valence_configuration(cls,calc,**kwargs):
         """
         Returns valence configuration of each atom type. The list order
         MUST be the same as of get_atom_type_symbol().
@@ -102,7 +102,7 @@ class BaseTcodtranslator(object):
         raise NotImplementedError("not implemented in base class")
 
     @classmethod
-    def get_atom_type_basisset(cls,parameters,**kwargs):
+    def get_atom_type_basisset(cls,calc,**kwargs):
         """
         Returns a list of basisset names for each atom type. The list
         order MUST be the same as of get_atom_type_symbol().

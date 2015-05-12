@@ -11,6 +11,17 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi"
 
+class FakeObject(object):
+
+    def __init__(self,dictionary):
+        self._dictionary = dictionary
+
+    def __getattr__(self,name):
+        if isinstance(self._dictionary[name],dict):
+            return FakeObject(self._dictionary[name])
+        else:
+            return self._dictionary[name]
+
 class TestTcodDbExporter(AiidaTestCase):
     """
     Tests for TcodDbExporter class.
@@ -219,26 +230,41 @@ class TestTcodDbExporter(AiidaTestCase):
         from aiida.tools.dbexporters.tcod_plugins.cp \
              import CpTcodtranslator as CPT
         from aiida.orm.data.parameter import ParameterData
+        from tcodexporter import FakeObject
 
-        pd = ParameterData(dict={})
-        res = translate_calculation_specific_values(pd,PWT)
+        calc = FakeObject({
+            "out": { "output_parameters": ParameterData(dict={}) }
+        })
+        res = translate_calculation_specific_values(calc,PWT)
         self.assertEquals(res,{'_tcod_software_package':
                                'Quantum ESPRESSO'})
 
-        pd = ParameterData(dict={'number_of_electrons': 10})
-        res = translate_calculation_specific_values(pd,PWT)
+        calc = FakeObject({
+            "out": { "output_parameters": ParameterData(dict={
+                'number_of_electrons': 10,
+            }) }
+        })
+        res = translate_calculation_specific_values(calc,PWT)
         self.assertEquals(res,{'_dft_cell_valence_electrons': 10,
                                '_tcod_software_package':
                                'Quantum ESPRESSO'})
 
-        pd = ParameterData(dict={'energy_xc': 5})
+        calc = FakeObject({
+            "out": { "output_parameters": ParameterData(dict={
+                'energy_xc': 5,
+            }) }
+        })
         with self.assertRaises(ValueError):
-            translate_calculation_specific_values(pd,PWT)
+            translate_calculation_specific_values(calc,PWT)
 
-        pd = ParameterData(dict={'energy_xc'      : 5,
-                                 'energy_xc_units': 'meV'})
+        calc = FakeObject({
+            "out": { "output_parameters": ParameterData(dict={
+                'energy_xc': 5,
+                'energy_xc_units': 'meV'
+            }) }
+        })
         with self.assertRaises(ValueError):
-            translate_calculation_specific_values(pd,PWT)
+            translate_calculation_specific_values(calc,PWT)
 
         energies = {
             'energy'             : -3701.7004199449257,
@@ -251,8 +277,10 @@ class TestTcodDbExporter(AiidaTestCase):
         dct = energies
         for key in energies.keys():
             dct["{}_units".format(key)] = 'eV'
-        pd = ParameterData(dict=dct)
-        res = translate_calculation_specific_values(pd,PWT)
+        calc = FakeObject({
+            "out": { "output_parameters": ParameterData(dict=dct) }
+        })
+        res = translate_calculation_specific_values(calc,PWT)
         self.assertEquals(res,{
             '_tcod_total_energy'     : energies['energy'],
             '_dft_1e_energy'         : energies['energy_one_electron'],
@@ -266,8 +294,10 @@ class TestTcodDbExporter(AiidaTestCase):
         dct['number_of_electrons'] = 10
         for key in energies.keys():
             dct["{}_units".format(key)] = 'eV'
-        pd = ParameterData(dict=dct)
-        res = translate_calculation_specific_values(pd,CPT)
+        calc = FakeObject({
+            "out": { "output_parameters": ParameterData(dict=dct) }
+        })
+        res = translate_calculation_specific_values(calc,CPT)
         self.assertEquals(res,{'_dft_cell_valence_electrons': 10,
                                '_tcod_software_package':
                                'Quantum ESPRESSO'})

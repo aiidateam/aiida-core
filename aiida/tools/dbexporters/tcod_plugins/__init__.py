@@ -108,3 +108,30 @@ class BaseTcodtranslator(object):
         order MUST be the same as of get_atom_type_symbol().
         """
         raise NotImplementedError("not implemented in base class")
+
+    @classmethod
+    def get_atom_site_residual_force_Cartesian_x(cls,calc,**kwargs):
+        """
+        Returns a list of x components for Cartesian coordinates of
+        residual force for atom. The list order MUST be the same as in
+        the resulting structure.
+        """
+        raise NotImplementedError("not implemented in base class")
+
+    @classmethod
+    def get_atom_site_residual_force_Cartesian_y(cls,calc,**kwargs):
+        """
+        Returns a list of y components for Cartesian coordinates of
+        residual force for atom. The list order MUST be the same as in
+        the resulting structure.
+        """
+        raise NotImplementedError("not implemented in base class")
+
+    @classmethod
+    def get_atom_site_residual_force_Cartesian_z(cls,calc,**kwargs):
+        """
+        Returns a list of z components for Cartesian coordinates of
+        residual force for atom. The list order MUST be the same as in
+        the resulting structure.
+        """
+        raise NotImplementedError("not implemented in base class")

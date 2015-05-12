@@ -40,6 +40,18 @@ class PwTcodtranslator(BaseTcodtranslator):
                              "yet".format(energy_type,
                                           parameters.get_attr(energy_type + '_units')))
         return parameters.get_attr(energy_type)
+
+    @classmethod
+    def _get_atom_site_residual_force_Cartesian(cls,calc,index,**kwargs):
+        """
+        Returns an array with residual force components along the Cartesian
+        axes.
+        """
+        try:
+            array = calc.out.output_array
+            return [x[index] for x in array.get_array('forces').tolist()]
+        except KeyError:
+            return None
         
     @classmethod
     def get_total_energy(cls,calc,**kwargs):
@@ -102,3 +114,30 @@ class PwTcodtranslator(BaseTcodtranslator):
         if 'wall_time_seconds' not in parameters.attrs():
             return None
         return parameters.get_attr('wall_time_seconds')
+
+    @classmethod
+    def get_atom_site_residual_force_Cartesian_x(cls,calc,**kwargs):
+        """
+        Returns a list of x components for Cartesian coordinates of
+        residual force for atom. The list order MUST be the same as in
+        the resulting structure.
+        """
+        return cls._get_atom_site_residual_force_Cartesian(calc,0)
+
+    @classmethod
+    def get_atom_site_residual_force_Cartesian_y(cls,calc,**kwargs):
+        """
+        Returns a list of y components for Cartesian coordinates of
+        residual force for atom. The list order MUST be the same as in
+        the resulting structure.
+        """
+        return cls._get_atom_site_residual_force_Cartesian(calc,1)
+
+    @classmethod
+    def get_atom_site_residual_force_Cartesian_z(cls,calc,**kwargs):
+        """
+        Returns a list of z components for Cartesian coordinates of
+        residual force for atom. The list order MUST be the same as in
+        the resulting structure.
+        """
+        return cls._get_atom_site_residual_force_Cartesian(calc,2)

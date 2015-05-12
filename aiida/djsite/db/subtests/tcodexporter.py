@@ -229,8 +229,10 @@ class TestTcodDbExporter(AiidaTestCase):
              import PwTcodtranslator as PWT
         from aiida.tools.dbexporters.tcod_plugins.cp \
              import CpTcodtranslator as CPT
+        from aiida.orm.data.array import ArrayData
         from aiida.orm.data.parameter import ParameterData
         from tcodexporter import FakeObject
+        import numpy
 
         calc = FakeObject({
             "out": { "output_parameters": ParameterData(dict={}) }
@@ -301,6 +303,21 @@ class TestTcodDbExporter(AiidaTestCase):
         self.assertEquals(res,{'_dft_cell_valence_electrons': 10,
                                '_tcod_software_package':
                                'Quantum ESPRESSO'})
+
+        ad = ArrayData()
+        ad.set_array("forces", numpy.array([[1,2,3], [4,5,6]]))
+        calc = FakeObject({
+            "out": { "output_parameters": ParameterData(dict={}),
+                     "output_array": ad }
+        })
+        res = translate_calculation_specific_values(calc,PWT)
+        self.assertEquals(res,{
+            '_tcod_software_package': 'Quantum ESPRESSO',
+            '_tcod_atom_site_resid_force_Cartn_x': [1,4],
+            '_tcod_atom_site_resid_force_Cartn_y': [2,5],
+            '_tcod_atom_site_resid_force_Cartn_z': [3,6],
+        })
+
 
     @unittest.skipIf(not has_ase() or not has_pycifrw(),
                      "Unable to import ase or pycifrw")

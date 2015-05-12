@@ -8,12 +8,13 @@ from aiida.tools.dbexporters.tcod_plugins import BaseTcodtranslator
 
 class NwcpymatgenTcodtranslator(BaseTcodtranslator):
     """
-    NWChem's output parameter translator to TCOD CIF dictionary tags.
+    NWChem's input and output parameter translator to TCOD CIF dictionary
+    tags.
     """
     _plugin_type_string = "nwchem.nwcpymatgen.NwcpymatgenCalculation"
 
     @classmethod
-    def get_software_package(cls,parameters,**kwargs):
+    def get_software_package(cls,calc,**kwargs):
         """
         Returns the package or program name that was used to produce
         the structure. Only package or program name should be used,
@@ -22,36 +23,39 @@ class NwcpymatgenTcodtranslator(BaseTcodtranslator):
         return 'NWChem'
 
     @classmethod
-    def get_atom_type_symbol(cls,parameters,**kwargs):
+    def get_atom_type_symbol(cls,calc,**kwargs):
         """
         Returns a list of atom types. Each atom site MUST occur only
         once in this list. List MUST be sorted.
         """
+        parameters = calc.out.output
         dictionary = parameters.get_dict()
         if 'basis_set' not in dictionary.keys():
             return None
         return sorted(dictionary['basis_set'].keys())
 
     @classmethod
-    def get_atom_type_basisset(cls,parameters,**kwargs):
+    def get_atom_type_basisset(cls,calc,**kwargs):
         """
         Returns a list of basisset names for each atom type. The list
         order MUST be the same as of get_atom_type_symbol().
         """
+        parameters = calc.out.output
         dictionary = parameters.get_dict()
         if 'basis_set' not in dictionary.keys():
             return None
         return [dictionary['basis_set'][x]['description']
-                for x in cls.get_atom_type_symbol(parameters,**kwargs)]
+                for x in cls.get_atom_type_symbol(calc,**kwargs)]
 
     @classmethod
-    def get_atom_type_valence_configuration(cls,parameters,**kwargs):
+    def get_atom_type_valence_configuration(cls,calc,**kwargs):
         """
         Returns valence configuration of each atom type. The list order
         MUST be the same as of get_atom_type_symbol().
         """
+        parameters = calc.out.output
         dictionary = parameters.get_dict()
         if 'basis_set' not in dictionary.keys():
             return None
         return [dictionary['basis_set'][x]['types']
-                for x in cls.get_atom_type_symbol(parameters,**kwargs)]
+                for x in cls.get_atom_type_symbol(calc,**kwargs)]

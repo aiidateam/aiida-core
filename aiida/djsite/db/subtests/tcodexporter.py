@@ -308,32 +308,36 @@ class TestTcodDbExporter(AiidaTestCase):
         from aiida.tools.dbexporters.tcod_plugins.nwcpymatgen \
              import NwcpymatgenTcodtranslator as NPT
         from aiida.orm.data.parameter import ParameterData
+        from tcodexporter import FakeObject
 
-        pd = ParameterData(dict={
-          "basis_set": {
-            "H": {
-              "description": "6-31g",
-              "functions": "2",
-              "shells": "2",
-              "types": "2s"
-            },
-            "O": {
-              "description": "6-31g",
-              "functions": "9",
-              "shells": "5",
-              "types": "3s2p"
-            }
-          },
-          "corrections": {},
-          "energies": [
-            -2057.99011937535
-          ],
-          "errors": [],
-          "frequencies": None,
-          "has_error": False,
-          "job_type": "NWChem SCF Module"
-        })
-        res = translate_calculation_specific_values(pd,NPT)
+        calc = FakeObject({
+            "out": { "output":
+                ParameterData(dict={
+                  "basis_set": {
+                    "H": {
+                      "description": "6-31g",
+                      "functions": "2",
+                      "shells": "2",
+                      "types": "2s"
+                    },
+                    "O": {
+                      "description": "6-31g",
+                      "functions": "9",
+                      "shells": "5",
+                      "types": "3s2p"
+                    }
+                  },
+                  "corrections": {},
+                  "energies": [
+                    -2057.99011937535
+                  ],
+                  "errors": [],
+                  "frequencies": None,
+                  "has_error": False,
+                  "job_type": "NWChem SCF Module"
+                })
+        }})
+        res = translate_calculation_specific_values(calc,NPT)
         self.assertEquals(res,{
             '_tcod_software_package'              : 'NWChem',
             '_atom_type_symbol'                   : ['H', 'O'],

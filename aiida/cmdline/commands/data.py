@@ -33,6 +33,7 @@ class Data(VerdiCommandRouter):
             'cif': _Cif,
             'trajectory': _Trajectory,
             'parameter': _Parameter,
+            'array': _Array,
             'label': _Label,
             'description': _Description,
         }
@@ -1232,4 +1233,34 @@ class _Parameter(VerdiCommandWithSubcommands, Visualizable):
 
         for node in node_list:
             the_dict = node.get_dict()
+            print_dictionary(the_dict, 'json+date')
+
+
+class _Array(VerdiCommandWithSubcommands, Visualizable):
+    """
+    View and manipulate Array data classes.
+    """
+
+    def __init__(self):
+        """
+        A dictionary with valid commands and functions to be called.
+        """
+        from aiida.orm.data.array import ArrayData
+
+        self.dataclass = ArrayData
+        self._default_show_format = 'json_date'
+        self.valid_subcommands = {
+            'show': (self.show, self.complete_none),
+        }
+
+    def _show_json_date(self, exec_name, node_list):
+        """
+        Show contents of ArrayData nodes.
+        """
+        from aiida.cmdline import print_dictionary
+
+        for node in node_list:
+            the_dict = {}
+            for arrayname in node.arraynames():
+                the_dict[arrayname] = node.get_array(arrayname).tolist()
             print_dictionary(the_dict, 'json+date')

@@ -305,7 +305,7 @@ class TestTcodDbExporter(AiidaTestCase):
                                'Quantum ESPRESSO'})
 
         ad = ArrayData()
-        ad.set_array("forces", numpy.array([[1,2,3], [4,5,6]]))
+        ad.set_array("forces", numpy.array([[[1,2,3], [4,5,6]]]))
         calc = FakeObject({
             "out": { "output_parameters": ParameterData(dict={}),
                      "output_array": ad }

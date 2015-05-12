@@ -49,7 +49,7 @@ class PwTcodtranslator(BaseTcodtranslator):
         """
         try:
             array = calc.out.output_array
-            return [x[index] for x in array.get_array('forces').tolist()]
+            return [x[index] for x in array.get_array('forces').tolist()[-1]]
         except KeyError:
             return None
         

@@ -8,13 +8,13 @@ from aiida.tools.dbexporters.tcod_plugins import BaseTcodtranslator
 
 class PwTcodtranslator(BaseTcodtranslator):
     """
-    Quantum ESPRESSO's PW-specific output parameter translator to TCOD
-    CIF dictionary tags.
+    Quantum ESPRESSO's PW-specific input and output parameter translator
+    to TCOD CIF dictionary tags.
     """
     _plugin_type_string = "quantumespresso.pw.PwCalculation"
 
     @classmethod
-    def get_software_package(cls,parameters,**kwargs):
+    def get_software_package(cls,calc,**kwargs):
         """
         Returns the package or program name that was used to produce
         the structure. Only package or program name should be used,
@@ -23,10 +23,11 @@ class PwTcodtranslator(BaseTcodtranslator):
         return 'Quantum ESPRESSO'
 
     @classmethod
-    def _get_pw_energy_value(cls,parameters,energy_type,**kwargs):
+    def _get_pw_energy_value(cls,calc,energy_type,**kwargs):
         """
         Returns the energy of defined type in eV.
         """
+        parameters = calc.out.output_parameters
         if energy_type not in parameters.attrs():
             return None
         if energy_type + '_units' not in parameters.attrs():
@@ -41,61 +42,63 @@ class PwTcodtranslator(BaseTcodtranslator):
         return parameters.get_attr(energy_type)
         
     @classmethod
-    def get_total_energy(cls,parameters,**kwargs):
+    def get_total_energy(cls,calc,**kwargs):
         """
         Returns the total energy in eV.
         """
-        return cls._get_pw_energy_value(parameters,'energy')
+        return cls._get_pw_energy_value(calc,'energy')
 
     @classmethod
-    def get_one_electron_energy(cls,parameters,**kwargs):
+    def get_one_electron_energy(cls,calc,**kwargs):
         """
         Returns one electron energy in eV.
         """
-        return cls._get_pw_energy_value(parameters,'energy_one_electron')
+        return cls._get_pw_energy_value(calc,'energy_one_electron')
 
     @classmethod
-    def get_exchange_correlation_energy(cls,parameters,**kwargs):
+    def get_exchange_correlation_energy(cls,calc,**kwargs):
         """
         Returns exchange correlation (XC) energy in eV.
         """
-        return cls._get_pw_energy_value(parameters,'energy_xc')
+        return cls._get_pw_energy_value(calc,'energy_xc')
 
     @classmethod
-    def get_ewald_energy(cls,parameters,**kwargs):
+    def get_ewald_energy(cls,calc,**kwargs):
         """
         Returns Ewald energy in eV.
         """
-        return cls._get_pw_energy_value(parameters,'energy_ewald')
+        return cls._get_pw_energy_value(calc,'energy_ewald')
 
     @classmethod
-    def get_hartree_energy(cls,parameters,**kwargs):
+    def get_hartree_energy(cls,calc,**kwargs):
         """
         Returns Hartree energy in eV.
         """
-        return cls._get_pw_energy_value(parameters,'energy_hartree')
+        return cls._get_pw_energy_value(calc,'energy_hartree')
 
     @classmethod
-    def get_fermi_energy(cls,parameters,**kwargs):
+    def get_fermi_energy(cls,calc,**kwargs):
         """
         Returns Fermi energy in eV.
         """
-        return cls._get_pw_energy_value(parameters,'fermi_energy')
+        return cls._get_pw_energy_value(calc,'fermi_energy')
 
     @classmethod
-    def get_number_of_electrons(cls,parameters,**kwargs):
+    def get_number_of_electrons(cls,calc,**kwargs):
         """
         Returns the number of electrons.
         """
+        parameters = calc.out.output_parameters
         if 'number_of_electrons' not in parameters.attrs():
             return None
         return parameters.get_attr('number_of_electrons')
 
     @classmethod
-    def get_computation_wallclock_time(cls,parameters,**kwargs):
+    def get_computation_wallclock_time(cls,calc,**kwargs):
         """
         Returns the computation wallclock time in seconds.
         """
+        parameters = calc.out.output_parameters
         if 'wall_time_seconds' not in parameters.attrs():
             return None
         return parameters.get_attr('wall_time_seconds')

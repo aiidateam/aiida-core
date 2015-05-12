@@ -546,7 +546,7 @@ def _collect_tags(node,calc,parameters=None,
     plugin_path = "aiida.tools.dbexporters.tcod_plugins"
     plugins = list()
 
-    if calc is not None and parameters is not None:
+    if calc is not None:
         for plugin in existing_plugins(BaseTcodtranslator,plugin_path):
             cls = BaseFactory(plugin,BaseTcodtranslator,plugin_path)
             if calc._plugin_type_string.endswith(cls._plugin_type_string + '.'):
@@ -560,7 +560,7 @@ def _collect_tags(node,calc,parameters=None,
 
     if len(plugins) == 1:
         plugin = plugins[0]
-        translated_tags = translate_calculation_specific_values(parameters,
+        translated_tags = translate_calculation_specific_values(calc,
                                                                 plugin)
         tags.update(translated_tags)
 
@@ -891,14 +891,14 @@ def deposition_cmdline_parameters(parser,expclass="Data"):
                         help="Description of the change (relevant for "
                              "redepositions only.")
 
-def translate_calculation_specific_values(parameters,translator,**kwargs):
+def translate_calculation_specific_values(calc,translator,**kwargs):
     """
     Translates calculation-specific values from
-    :py:class:`aiida.orm.data.parameter.ParameterData` object to
+    :py:class:`aiida.orm.calculation.job.JobCalculation` subclass to
     appropriate TCOD CIF tags.
 
-    :param parameters: a :py:class:`aiida.orm.data.parameter.ParameterData`
-        instance
+    :param calc: an instance of
+        :py:class:`aiida.orm.calculation.job.JobCalculation` subclass.
     :param translator: class, derived from
         :py:class:`aiida.tools.dbexporters.tcod_plugins.BaseTcodtranslator`.
     :raises ValueError: if **translator** is not derived from proper class.
@@ -927,7 +927,7 @@ def translate_calculation_specific_values(parameters,translator,**kwargs):
     for tag,function in translation_map.iteritems():
         value = None
         try:
-            value = getattr(translator,function)(parameters,**kwargs)
+            value = getattr(translator,function)(calc,**kwargs)
         except NotImplementedError as e:
             pass
         if value is not None:

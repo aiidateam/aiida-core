@@ -60,14 +60,20 @@ class Command(NoArgsCommand):
         # load default modules
         for app_mod, model_name, alias in default_modules_list:
             user_ns[alias] = getattr(__import__(app_mod, {}, {}, model_name), model_name)
+        
         # load custom modules
-        custom_modules_list = [[str(_) for _ in p.rpartition('.')[0::2]]
-                                for p in get_property('verdishell.modules', 
-                                                      default="").split(':')
-                                if p.rpartition('.')[1]=='.']
+        custom_modules_list = [(str(e[0]),str(e[2])) for e in
+                               [p.rpartition('.') for p in get_property(
+                                    'verdishell.modules',default="").split(':')]
+                               if e[1]=='.']
+
         for app_mod, model_name in custom_modules_list:
-            user_ns[model_name] = getattr(__import__(app_mod, {}, {}, model_name),
-                                          model_name)
+            try:
+                user_ns[model_name] = getattr(__import__(app_mod, {}, {}, model_name),
+                                              model_name)
+            except AttributeError:
+                # if the module does not exist, we ignore it
+                pass
 
         return user_ns
 

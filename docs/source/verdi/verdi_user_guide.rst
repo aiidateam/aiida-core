@@ -282,11 +282,8 @@ Currently in ongoing development.
 
 Runs a Python interactive interpreter. 
 Tries to use IPython or bpython, if one of them is available.
-Loads on start a good part of the AiiDA infrastructure.
-
-.. note:: It is possible to customize the shell by adding modules to be loaded 
-	automatically, thanks to the ``verdi devel setproperty verdishell.modules`` command. 
-	See :doc:`here<properties>` for more information.
+Loads on start a good part of the AiiDA infrastructure (see :doc:`here<properties>`
+for information on how to customize it).
 
 .. _user:
 

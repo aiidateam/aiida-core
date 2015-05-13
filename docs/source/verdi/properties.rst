@@ -19,9 +19,9 @@ Properties are configuration options that are stored in the ``config.json`` file
 
 For instance, modules to be loaded automatically in the ``verdi shell`` can be
 added by putting their paths (separated by colons ``:``) in the property
-``verdishell.modules``, e.g. by typing::
+``verdishell.modules``, e.g. by typing something like::
 
     verdi devel setproperty verdishell.modules aiida.common.exceptions.NotExistent:aiida.orm.autogroup.Autogroup
 	
-More information can be found in source code: see the
-:download:`setup.py<../../../aiida/common/setup.py>` file.
+More information can be found in the source code: see
+:download:`setup.py<../../../aiida/common/setup.py>`.

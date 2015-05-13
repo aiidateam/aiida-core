@@ -54,9 +54,20 @@ class Command(NoArgsCommand):
     requires_system_checks = False
 
     def get_start_namespace(self):
+        """Load all default and custom modules"""
+        from aiida.common.setup import get_property
         user_ns = {}
+        # load default modules
         for app_mod, model_name, alias in default_modules_list:
             user_ns[alias] = getattr(__import__(app_mod, {}, {}, model_name), model_name)
+        # load custom modules
+        custom_modules_list = [[str(_) for _ in p.rpartition('.')[0::2]]
+                                for p in get_property('verdishell.modules', 
+                                                      default="").split(':')
+                                if p.rpartition('.')[1]=='.']
+        for app_mod, model_name in custom_modules_list:
+            user_ns[model_name] = getattr(__import__(app_mod, {}, {}, model_name),
+                                          model_name)
 
         return user_ns
 

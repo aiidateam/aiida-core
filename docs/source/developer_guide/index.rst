@@ -6,6 +6,7 @@ Developer's guide
 
    developers
    devel_tutorial/code_plugin
+   workflows   
    
    data_cmdline
    git_cheatsheet

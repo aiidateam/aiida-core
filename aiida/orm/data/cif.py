@@ -367,7 +367,7 @@ class CifData(SinglefileData):
     """
     Wrapper for Crystallographic Interchange File (CIF)
 
-    :note: the file (physical) is held as the authoritative source of
+    .. note:: the file (physical) is held as the authoritative source of
         information, so all conversions are done through the physical file:
         when setting ``ase`` or ``values``, a physical CIF file is generated
         first, the values are updated from the physical CIF file.
@@ -378,8 +378,8 @@ class CifData(SinglefileData):
         """
         Return a list of all CIF files that match a given MD5 hash.
         
-        :note: the hash has to be stored in a ``_md5`` attribute, otherwise
-            the CIF file will not be found.
+        .. note:: the hash has to be stored in a ``_md5`` attribute,
+            otherwise the CIF file will not be found.
         """
         queryset = cls.query(dbattributes__key='md5', dbattributes__tval=md5)
         return list(queryset)
@@ -453,7 +453,7 @@ class CifData(SinglefileData):
         """
         ASE object, representing the CIF.
 
-        :note: requires ASE module.
+        .. note:: requires ASE module.
         """
         if self._ase is None:
             self._ase = self.get_ase()
@@ -465,7 +465,7 @@ class CifData(SinglefileData):
         from the property ``ase`` by the possibility to pass the keyworded
         arguments (kwargs) to ase.io.cif.read_cif().
 
-        :note: requires ASE module.
+        .. note:: requires ASE module.
         """
         if not kwargs and self._ase:
             return self.ase
@@ -487,7 +487,7 @@ class CifData(SinglefileData):
         """
         PyCifRW structure, representing the CIF datablocks.
 
-        :note: requires PyCifRW module.
+        .. note:: requires PyCifRW module.
         """
         if self._values is None:
             import CifFile

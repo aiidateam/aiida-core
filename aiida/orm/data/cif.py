@@ -226,6 +226,37 @@ def decode_textfield(content,method):
 
     return content
 
+def symop_string_from_symop_matrix_tr(matrix, tr=[0, 0, 0], eps=0):
+    """
+    Construct a CIF representation of symmetry operator plus translation.
+    See International Tables for Crystallography Vol. A. (2002) for
+    definition.
+
+    :param matrix: 3x3 matrix, representing the symmetry operator
+    :param tr: translation vector of length 3 (default [0, 0, 0])
+    :param eps: epsilon parameter for fuzzy comparison x == 0
+    :return: CIF representation of symmetry operator
+    """
+    import re
+    axes = [ "x", "y", "z" ]
+    parts = ["", "", ""]
+    for i in range(0, 3):
+        for j in range(0, 3):
+            sign = None
+            if matrix[i][j] > eps:
+                sign = "+"
+            elif matrix[i][j] < -eps:
+                sign = "-"
+            if sign:
+                parts[i] = format("{}{}{}".format(parts[i],sign,axes[j]))
+        if tr[i] < -eps or tr[i] > eps:
+            sign = "+"
+            if tr[i] < -eps:
+                sign = "-"
+            parts[i] = format("{}{}{}".format(parts[i],sign,abs(tr[i])))
+        parts[i] = re.sub('^\+', '', parts[i])
+    return ",".join(parts)
+
 @optional_inline
 def _get_aiida_structure_ase_inline(cif=None, parameters=None):
     """

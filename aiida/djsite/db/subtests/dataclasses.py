@@ -475,6 +475,21 @@ _publ_section_title                     'Test CIF'
         c = CifData(ase=b.ase)
         self.assertEquals(b._prepare_cif(), c._prepare_cif())
 
+    def test_symop_string_from_symop_matrix_tr(self):
+        from aiida.orm.data.cif import symop_string_from_symop_matrix_tr
+
+        self.assertEquals(
+            symop_string_from_symop_matrix_tr(
+                [[1, 0, 0], [0, 1, 0], [0, 0, 1]]),"x,y,z")
+
+        self.assertEquals(
+            symop_string_from_symop_matrix_tr(
+                [[1, 0, 0], [0, -1, 0], [0, 1, 1]]),"x,-y,y+z")
+
+        self.assertEquals(
+            symop_string_from_symop_matrix_tr(
+                [[-1, 0, 0], [0, 1, 0], [0, 0, 1]],[1,-1,0]),"-x+1,y-1,z")
+
 
 
     @unittest.skipIf(not has_ase() or not has_pycifrw(),

@@ -630,7 +630,7 @@ def _get_cif_ase_inline(struct=None, parameters=None):
     """
     Creates :py:class:`aiida.orm.data.cif.CifData` using ASE.
 
-    :note: requires ASE module.
+    .. note:: requires ASE module.
     """
     from aiida.orm.data.cif import CifData
 

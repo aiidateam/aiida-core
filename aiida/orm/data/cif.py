@@ -424,7 +424,7 @@ def refine_inline(node):
     :param node: a :py:class:`aiida.orm.data.cif.CifData` instance.
     :return: dict with :py:class:`aiida.orm.data.cif.CifData`
 
-    :note: can be used as inline calculation.
+    .. note:: can be used as inline calculation.
     """
     from aiida.orm.data.structure import StructureData,ase_refine_cell
 

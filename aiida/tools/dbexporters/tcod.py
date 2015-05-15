@@ -72,7 +72,7 @@ default_options = {
     'exclude_external_contents': False,
     'gzip': False,
     'gzip_threshold': 1024,
-    'reduce_symmetry': False,
+    'reduce_symmetry': True,
 }
 
 def cif_encode_contents(content,gzip=False,gzip_threshold=1024):
@@ -306,13 +306,13 @@ def extend_with_cmdline_parameters(parser,expclass="Data"):
     parser.add_argument('--reduce-symmetry', action='store_true',
                         default=None,
                         dest='reduce_symmetry',
-                        help='Perform symmetry reduction.')
+                        help="Perform symmetry reduction. "
+                             "Default option.")
     parser.add_argument('--no-reduce-symmetry',
                         '--dont-reduce-symmetry',
                         action='store_false',
                         dest='reduce_symmetry',
-                        help="Do not perform symmetry reduction. "
-                             "Default option.")
+                        help="Do not perform symmetry reduction.")
     parser.add_argument('--parameter-data', type=int, default=None,
                         help="ID of the ParameterData to be exported "
                              "alongside the {} instance. "
@@ -327,26 +327,26 @@ def extend_with_cmdline_parameters(parser,expclass="Data"):
     parser.add_argument('--dump-aiida-database', action='store_true',
                         default=None,
                         dest='dump_aiida_database',
-                        help="Export AiiDA database to the CIF file. " +
+                        help="Export AiiDA database to the CIF file. "
                              "Default option.")
     parser.add_argument('--no-dump-aiida-database',
                         '--dont-dump-aiida-database',
                         default=None,
                         action='store_false',
                         dest='dump_aiida_database',
-                        help="Do not export AiiDA database to the CIF " +
+                        help="Do not export AiiDA database to the CIF "
                              "file.")
     parser.add_argument('--exclude-external-contents', action='store_true',
                         default=None,
                         dest='exclude_external_contents',
-                        help="Do not save contents for external " +
-                             "resources if URIs are provided. " +
+                        help="Do not save contents for external "
+                             "resources if URIs are provided. "
                              "Default option.")
     parser.add_argument('--no-exclude-external-contents',
                         '--dont-exclude-external-contents',
                         action='store_false',
                         dest='exclude_external_contents',
-                        help="Save contents for external resources " +
+                        help="Save contents for external resources "
                              "even if URIs are provided.")
     parser.add_argument('--gzip', action='store_true', dest='gzip',
                         default=None,
@@ -355,8 +355,8 @@ def extend_with_cmdline_parameters(parser,expclass="Data"):
                         dest='gzip',
                         help="Do not gzip any files. Default option.")
     parser.add_argument('--gzip-threshold', type=int, default=None,
-                        help="Specify the minimum size of exported " +
-                             "file which should be gzipped. " +
+                        help="Specify the minimum size of exported "
+                             "file which should be gzipped. "
                              "Default {}.".format(default_options['gzip_threshold']))
 
 def _collect_tags(node,calc,parameters=None,

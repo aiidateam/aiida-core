@@ -496,7 +496,6 @@ class TestTcodDbExporter(AiidaTestCase):
             '_cell_angle_alpha',
             '_cell_angle_beta',
             '_cell_angle_gamma',
-            '_cell_formula_units_Z',
             '_cell_length_a',
             '_cell_length_b',
             '_cell_length_c',

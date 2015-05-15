@@ -226,6 +226,37 @@ def decode_textfield(content,method):
 
     return content
 
+def symop_string_from_symop_matrix_tr(matrix, tr=[0, 0, 0], eps=0):
+    """
+    Construct a CIF representation of symmetry operator plus translation.
+    See International Tables for Crystallography Vol. A. (2002) for
+    definition.
+
+    :param matrix: 3x3 matrix, representing the symmetry operator
+    :param tr: translation vector of length 3 (default [0, 0, 0])
+    :param eps: epsilon parameter for fuzzy comparison x == 0
+    :return: CIF representation of symmetry operator
+    """
+    import re
+    axes = [ "x", "y", "z" ]
+    parts = ["", "", ""]
+    for i in range(0, 3):
+        for j in range(0, 3):
+            sign = None
+            if matrix[i][j] > eps:
+                sign = "+"
+            elif matrix[i][j] < -eps:
+                sign = "-"
+            if sign:
+                parts[i] = format("{}{}{}".format(parts[i],sign,axes[j]))
+        if tr[i] < -eps or tr[i] > eps:
+            sign = "+"
+            if tr[i] < -eps:
+                sign = "-"
+            parts[i] = format("{}{}{}".format(parts[i],sign,abs(tr[i])))
+        parts[i] = re.sub('^\+', '', parts[i])
+    return ",".join(parts)
+
 @optional_inline
 def _get_aiida_structure_ase_inline(cif=None, parameters=None):
     """
@@ -393,7 +424,7 @@ def refine_inline(node):
     :param node: a :py:class:`aiida.orm.data.cif.CifData` instance.
     :return: dict with :py:class:`aiida.orm.data.cif.CifData`
 
-    :note: can be used as inline calculation.
+    .. note:: can be used as inline calculation.
     """
     from aiida.orm.data.structure import StructureData,ase_refine_cell
 
@@ -421,9 +452,13 @@ def refine_inline(node):
     for tag in symmetry_tags:
         cif.values[name].RemoveCifItem(tag)
 
-    cif.values[name]['_symmetry_space_group_name_H-M']  = symmetry['hm']
-    cif.values[name]['_symmetry_space_group_name_Hall'] = symmetry['hall']
-    cif.values[name]['_symmetry_Int_Tables_number']     = symmetry['tables']
+    cif.values[name]['_symmetry_space_group_name_H-M']   = symmetry['hm']
+    cif.values[name]['_symmetry_space_group_name_Hall']  = symmetry['hall']
+    cif.values[name]['_symmetry_Int_Tables_number']      = symmetry['tables']
+    cif.values[name]['_symmetry_equiv_pos_as_xyz'] = \
+        [ symop_string_from_symop_matrix_tr(symmetry['rotations'][i],
+                                            symmetry['translations'][i])
+          for i in range(0,len(symmetry['rotations'])) ]
 
     # Summary formula has to be calculated from non-reduced set of atoms.
     cif.values[name]['_chemical_formula_sum'] = \
@@ -441,7 +476,7 @@ class CifData(SinglefileData):
     """
     Wrapper for Crystallographic Interchange File (CIF)
 
-    :note: the file (physical) is held as the authoritative source of
+    .. note:: the file (physical) is held as the authoritative source of
         information, so all conversions are done through the physical file:
         when setting ``ase`` or ``values``, a physical CIF file is generated
         first, the values are updated from the physical CIF file.
@@ -452,8 +487,8 @@ class CifData(SinglefileData):
         """
         Return a list of all CIF files that match a given MD5 hash.
         
-        :note: the hash has to be stored in a ``_md5`` attribute, otherwise
-            the CIF file will not be found.
+        .. note:: the hash has to be stored in a ``_md5`` attribute,
+            otherwise the CIF file will not be found.
         """
         queryset = cls.query(dbattributes__key='md5', dbattributes__tval=md5)
         return list(queryset)
@@ -527,7 +562,7 @@ class CifData(SinglefileData):
         """
         ASE object, representing the CIF.
 
-        :note: requires ASE module.
+        .. note:: requires ASE module.
         """
         if self._ase is None:
             self._ase = self.get_ase()
@@ -539,7 +574,7 @@ class CifData(SinglefileData):
         from the property ``ase`` by the possibility to pass the keyworded
         arguments (kwargs) to ase.io.cif.read_cif().
 
-        :note: requires ASE module.
+        .. note:: requires ASE module.
         """
         if not kwargs and self._ase:
             return self.ase
@@ -561,7 +596,7 @@ class CifData(SinglefileData):
         """
         PyCifRW structure, representing the CIF datablocks.
 
-        :note: requires PyCifRW module.
+        .. note:: requires PyCifRW module.
         """
         if self._values is None:
             import CifFile

@@ -475,6 +475,21 @@ _publ_section_title                     'Test CIF'
         c = CifData(ase=b.ase)
         self.assertEquals(b._prepare_cif(), c._prepare_cif())
 
+    def test_symop_string_from_symop_matrix_tr(self):
+        from aiida.orm.data.cif import symop_string_from_symop_matrix_tr
+
+        self.assertEquals(
+            symop_string_from_symop_matrix_tr(
+                [[1, 0, 0], [0, 1, 0], [0, 0, 1]]),"x,y,z")
+
+        self.assertEquals(
+            symop_string_from_symop_matrix_tr(
+                [[1, 0, 0], [0, -1, 0], [0, 1, 1]]),"x,-y,y+z")
+
+        self.assertEquals(
+            symop_string_from_symop_matrix_tr(
+                [[-1, 0, 0], [0, 1, 0], [0, 0, 1]],[1,-1,0]),"-x+1,y-1,z")
+
 
 
     @unittest.skipIf(not has_ase() or not has_pycifrw(),
@@ -508,6 +523,23 @@ _publ_section_title                     'Test CIF'
         b = ret_dict['cif']
         self.assertEqual(b.values.keys(),['test'])
         self.assertEqual(b.values['test']['_chemical_formula_sum'],'C O2')
+        self.assertEqual(b.values['test']['_symmetry_equiv_pos_as_xyz'],[
+            'x,y,z',
+            '-x,-y,-z',
+            '-y,x,z',
+            'y,-x,-z',
+            '-x,-y,z',
+            'x,y,-z',
+            'y,-x,z',
+            '-y,x,-z',
+            'x,-y,-z',
+            '-x,y,z',
+            '-y,-x,-z',
+            'y,x,z',
+            '-x,y,-z',
+            'x,-y,z',
+            'y,x,-z',
+            '-y,-x,z'])
 
         with tempfile.NamedTemporaryFile() as f:
             f.write('''
@@ -1182,6 +1214,8 @@ class TestStructureData(AiidaTestCase):
         a.append(ase.Atom('C',[0,0,0]))
         a.append(ase.Atom('C',[5,0,0]))
         b,sym = ase_refine_cell(a)
+        sym.pop('rotations')
+        sym.pop('translations')
         self.assertEquals(b.get_chemical_symbols(),['C'])
         self.assertEquals(b.cell.tolist(),[[10,0,0],[0,10,0],[0,0,5]])
         self.assertEquals(sym,{'hall': '-P 4 2', 'hm': 'P4/mmm', 'tables': 123})
@@ -1190,6 +1224,8 @@ class TestStructureData(AiidaTestCase):
         a.append(ase.Atom('C',[0,0,0]))
         a.append(ase.Atom('C',[5,math.sqrt(75),0]))
         b,sym = ase_refine_cell(a)
+        sym.pop('rotations')
+        sym.pop('translations')
         self.assertEquals(b.get_chemical_symbols(),['C'])
         self.assertEquals(numpy.round(b.cell,2).tolist(),
                           [[10,0,0],[-5,8.66,0],[0,0,10]])
@@ -1199,6 +1235,8 @@ class TestStructureData(AiidaTestCase):
         a.append(ase.Atom('C',[5,5,5]))
         a.append(ase.Atom('F',[0,0,0]))
         b,sym = ase_refine_cell(a)
+        sym.pop('rotations')
+        sym.pop('translations')
         self.assertEquals(b.get_chemical_symbols(),['C','F'])
         self.assertEquals(b.cell.tolist(),[[10,0,0],[0,10,0],[0,0,10]])
         self.assertEquals(b.get_scaled_positions().tolist(),
@@ -1209,6 +1247,8 @@ class TestStructureData(AiidaTestCase):
         a.append(ase.Atom('C',[0,0,0]))
         a.append(ase.Atom('F',[5,5,5]))
         b,sym = ase_refine_cell(a)
+        sym.pop('rotations')
+        sym.pop('translations')
         self.assertEquals(b.get_chemical_symbols(),['C','F'])
         self.assertEquals(b.cell.tolist(),[[10,0,0],[0,10,0],[0,0,10]])
         self.assertEquals(b.get_scaled_positions().tolist(),
@@ -1218,6 +1258,8 @@ class TestStructureData(AiidaTestCase):
         a = ase.Atoms(cell=[[12.132,0,0],[0,6.0606,0],[0,0,8.0956]])
         a.append(ase.Atom('Ba',[1.5334848,1.3999986,2.00042276]))
         b,sym = ase_refine_cell(a)
+        sym.pop('rotations')
+        sym.pop('translations')
         self.assertEquals(b.cell.tolist(),[[12.132,0,0],[0,6.0606,0],[0,0,8.0956]])
         self.assertEquals(b.get_scaled_positions().tolist(),
                           [[0,0,0]])
@@ -1227,6 +1269,8 @@ class TestStructureData(AiidaTestCase):
         a.append(ase.Atom('O',[2.5,5,5]))
         a.append(ase.Atom('O',[7.5,5,5]))
         b,sym = ase_refine_cell(a)
+        sym.pop('rotations')
+        sym.pop('translations')
         self.assertEquals(b.get_chemical_symbols(),['C','O'])
         self.assertEquals(sym,{'hall': '-P 4 2', 'hm': 'P4/mmm', 'tables': 123})
 
@@ -1243,6 +1287,8 @@ class TestStructureData(AiidaTestCase):
                     cell=[3.9999,3.9999,4.0170],
                     spacegroup=99)
         b,sym = ase_refine_cell(a)
+        sym.pop('rotations')
+        sym.pop('translations')
         self.assertEquals(b.get_chemical_symbols(),['Ba','Ti','O','O'])
         self.assertEquals(sym,{'hall': 'P 4 -2', 'hm': 'P4mm', 'tables': 99})
 

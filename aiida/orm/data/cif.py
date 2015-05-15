@@ -452,9 +452,13 @@ def refine_inline(node):
     for tag in symmetry_tags:
         cif.values[name].RemoveCifItem(tag)
 
-    cif.values[name]['_symmetry_space_group_name_H-M']  = symmetry['hm']
-    cif.values[name]['_symmetry_space_group_name_Hall'] = symmetry['hall']
-    cif.values[name]['_symmetry_Int_Tables_number']     = symmetry['tables']
+    cif.values[name]['_symmetry_space_group_name_H-M']   = symmetry['hm']
+    cif.values[name]['_symmetry_space_group_name_Hall']  = symmetry['hall']
+    cif.values[name]['_symmetry_Int_Tables_number']      = symmetry['tables']
+    cif.values[name]['_symmetry_equiv_pos_as_xyz'] = \
+        [ symop_string_from_symop_matrix_tr(symmetry['rotations'][i],
+                                            symmetry['translations'][i])
+          for i in range(0,len(symmetry['rotations'])) ]
 
     # Summary formula has to be calculated from non-reduced set of atoms.
     cif.values[name]['_chemical_formula_sum'] = \

@@ -523,6 +523,23 @@ _publ_section_title                     'Test CIF'
         b = ret_dict['cif']
         self.assertEqual(b.values.keys(),['test'])
         self.assertEqual(b.values['test']['_chemical_formula_sum'],'C O2')
+        self.assertEqual(b.values['test']['_symmetry_equiv_pos_as_xyz'],[
+            'x,y,z',
+            '-x,-y,-z',
+            '-y,x,z',
+            'y,-x,-z',
+            '-x,-y,z',
+            'x,y,-z',
+            'y,-x,z',
+            '-y,x,-z',
+            'x,-y,-z',
+            '-x,y,z',
+            '-y,-x,-z',
+            'y,x,z',
+            '-x,y,-z',
+            'x,-y,z',
+            'y,x,-z',
+            '-y,-x,z'])
 
         with tempfile.NamedTemporaryFile() as f:
             f.write('''

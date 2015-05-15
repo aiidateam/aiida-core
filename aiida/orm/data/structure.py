@@ -619,9 +619,11 @@ def ase_refine_cell(aseatoms,**kwargs):
     unique_atoms = Atoms(unique_numbers,scaled_positions=unique_positions,
                          cell=cell,pbc=True)
 
-    return unique_atoms,{'hm'    : sym_dataset['international'],
-                         'hall'  : sym_dataset['hall'],
-                         'tables': sym_dataset['number']}
+    return unique_atoms,{'hm': sym_dataset['international'],
+                         'hall': sym_dataset['hall'],
+                         'tables': sym_dataset['number'],
+                         'rotations': sym_dataset['rotations'],
+                         'translations':sym_dataset['translations']}
 
 @optional_inline
 def _get_cif_ase_inline(struct=None, parameters=None):

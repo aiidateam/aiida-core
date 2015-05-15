@@ -616,6 +616,16 @@ class _NoDefaultValue(object):
 # 4. The default value, if no setting is found
 # 5. A list of valid values, or None if no such list makes sense
 _property_table = {
+    "verdishell.modules": (
+        "modules_for_verdi_shell",
+        "string",
+        "Additional modules/functions/classes to be automaticaly loaded in the "
+        "verdi shell (but not in the runaiida environment); it should be a "
+        "string with the full paths for each module,"
+        " function or class, separated by colons, e.g. "
+        "'aiida.djsite.db.models:aiida.orm.querytool.Querytool'",
+        "",
+        None),
     "tests.use_sqlite": (
         "use_inmemory_sqlite_for_tests",
         "bool",

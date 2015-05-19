@@ -61,7 +61,7 @@ conforming_dictionaries = [
     },
     {
         'name': 'cif_dft.dic',
-        'version': '0.004',
+        'version': '0.005',
         'url': 'http://www.crystallography.net/tcod/cif/dictionaries/cif_dft.dic'
     }
 ]

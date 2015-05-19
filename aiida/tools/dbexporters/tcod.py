@@ -761,6 +761,8 @@ def deposit(what,type,author_name=None,author_email=None,url=None,
         instance.
     :raises ValueError: if any of the required parameters are not given.
     """
+    from aiida.common.setup import get_property
+
     if not what:
         raise ValueError("Node to be deposited is not supplied")
     if not type:
@@ -768,9 +770,13 @@ def deposit(what,type,author_name=None,author_email=None,url=None,
                          "one of the following: 'published', "
                          "'prepublication' or 'personal'")
     if not username:
-        raise ValueError("Depositor username is not supplied")
+        username = get_property('tcod.depositor_username')
+        if not username:
+            raise ValueError("Depositor username is not supplied")
     if not password:
-        raise ValueError("Depositor password is not supplied")
+        password = get_property('tcod.depositor_password')
+        if not password:
+            raise ValueError("Depositor password is not supplied")
     if not user_email:
         raise ValueError("Depositor email is not supplied")
 

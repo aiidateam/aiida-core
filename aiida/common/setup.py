@@ -703,6 +703,24 @@ _property_table = {
         "string",
         "Password for TCOD deposition",
         None,
+        None),
+    "tcod.depositor_email": (
+        "tcod_depositor_email",
+        "string",
+        "E-mail address for TCOD deposition",
+        None,
+        None),
+    "tcod.depositor_author_name": (
+        "tcod_depositor_author_name",
+        "string",
+        "Author name for TCOD depositions",
+        None,
+        None),
+    "tcod.depositor_author_email": (
+        "tcod_depositor_author_name",
+        "string",
+        "E-mail address for TCOD depositions",
+        None,
         None)
 
 }

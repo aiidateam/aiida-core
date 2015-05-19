@@ -523,6 +523,14 @@ class BasePwCpInputGenerator(object):
                      self._restart_copy_to
                     ))
 
+        # here we may create an aiida.EXIT file
+        create_exit_file = settings_dict.pop('ONLY_INITIALIZATION',False)
+        if create_exit_file:
+            exit_filename = tempfolder.get_abs_path(
+                             '{}.EXIT'.format(self._PREFIX))
+            with open(exit_filename,'w') as f:
+                f.write('\n')
+
         calcinfo = CalcInfo()
 
         calcinfo.uuid = self.uuid

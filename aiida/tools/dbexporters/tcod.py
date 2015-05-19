@@ -778,15 +778,21 @@ def deposit(what,type,author_name=None,author_email=None,url=None,
         if not password:
             raise ValueError("Depositor password is not supplied")
     if not user_email:
-        raise ValueError("Depositor email is not supplied")
+        user_email = get_property('tcod.depositor_email')
+        if not user_email:
+            raise ValueError("Depositor email is not supplied")
 
     if type == 'published':
         pass
     elif type in ['prepublication','personal']:
         if not author_name:
-            raise ValueError("Author name is not supplied")
+            author_name = get_property('tcod.depositor_author_name')
+            if not author_name:
+                raise ValueError("Author name is not supplied")
         if not author_email:
-            raise ValueError("Author email is not supplied")
+            author_email = get_property('tcod.depositor_author_email')
+            if not author_email:
+                raise ValueError("Author email is not supplied")
         if not title:
             raise ValueError("Publication title is not supplied")
     else:

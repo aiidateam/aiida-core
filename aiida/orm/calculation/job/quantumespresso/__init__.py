@@ -732,7 +732,12 @@ class BasePwCpInputGenerator(object):
 
         # set the new links
         c2.use_parameters(inp_dict)
-        c2.use_structure(calc_inp['structure'])
+        # use OUTPUT structure if available, otherwise use the input one
+        try:
+            c2.use_structure(self.out.output_structure)
+        except AttributeError:
+            c2.use_structure(calc_inp['structure'])
+
         if self._use_kpoints:
             c2.use_kpoints(calc_inp['kpoints'])
         c2.use_code(calc_inp['code'])

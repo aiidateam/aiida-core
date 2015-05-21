@@ -310,6 +310,7 @@ def extend_with_cmdline_parameters(parser,expclass="Data"):
                              "Default option.")
     parser.add_argument('--no-reduce-symmetry',
                         '--dont-reduce-symmetry',
+                        default=None,
                         action='store_false',
                         dest='reduce_symmetry',
                         help="Do not perform symmetry reduction.")
@@ -344,6 +345,7 @@ def extend_with_cmdline_parameters(parser,expclass="Data"):
                              "Default option.")
     parser.add_argument('--no-exclude-external-contents',
                         '--dont-exclude-external-contents',
+                        default=None,
                         action='store_false',
                         dest='exclude_external_contents',
                         help="Save contents for external resources "
@@ -352,9 +354,11 @@ def extend_with_cmdline_parameters(parser,expclass="Data"):
                         default=None,
                         help="Gzip large files.")
     parser.add_argument('--no-gzip', '--dont-gzip', action='store_false',
+                        default=None,
                         dest='gzip',
                         help="Do not gzip any files. Default option.")
-    parser.add_argument('--gzip-threshold', type=int, default=None,
+    parser.add_argument('--gzip-threshold', type=int,
+                        default=None,
                         help="Specify the minimum size of exported "
                              "file which should be gzipped. "
                              "Default {}.".format(default_options['gzip_threshold']))

@@ -489,6 +489,11 @@ class Depositable(object):
         database = parsed_args.pop('database')
         data_id = parsed_args.pop('data_id')
 
+        # Removing the keys, whose values are None
+        for key in parsed_args.keys():
+            if parsed_args[key] is None:
+                parsed_args.pop(key)
+
         if database is None:
             print "Default database is not defined, please specify.\n" + \
                   "Valid databases are:"

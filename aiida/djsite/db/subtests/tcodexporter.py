@@ -313,9 +313,12 @@ class TestTcodDbExporter(AiidaTestCase):
         res = translate_calculation_specific_values(calc,PWT)
         self.assertEquals(res,{
             '_tcod_software_package': 'Quantum ESPRESSO',
-            '_tcod_atom_site_resid_force_Cartn_x': [1,4],
-            '_tcod_atom_site_resid_force_Cartn_y': [2,5],
-            '_tcod_atom_site_resid_force_Cartn_z': [3,6],
+            ## Residual forces are no longer produced, as they should
+            ## be in the same CIF loop with coordinates -- to be
+            ## implemented later, since it's not yet clear how.
+            # '_tcod_atom_site_resid_force_Cartn_x': [1,4],
+            # '_tcod_atom_site_resid_force_Cartn_y': [2,5],
+            # '_tcod_atom_site_resid_force_Cartn_z': [3,6],
         })
 
 

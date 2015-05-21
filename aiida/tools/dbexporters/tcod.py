@@ -939,9 +939,9 @@ def translate_calculation_specific_values(calc,translator,**kwargs):
         '_atom_type_symbol'                   : 'get_atom_type_symbol',
         '_dft_atom_type_valence_configuration': 'get_atom_type_valence_configuration',
         '_dft_atom_basisset'                  : 'get_atom_type_basisset',
-        '_tcod_atom_site_resid_force_Cartn_x' : 'get_atom_site_residual_force_Cartesian_x',
-        '_tcod_atom_site_resid_force_Cartn_y' : 'get_atom_site_residual_force_Cartesian_y',
-        '_tcod_atom_site_resid_force_Cartn_z' : 'get_atom_site_residual_force_Cartesian_z',
+#       '_tcod_atom_site_resid_force_Cartn_x' : 'get_atom_site_residual_force_Cartesian_x',
+#       '_tcod_atom_site_resid_force_Cartn_y' : 'get_atom_site_residual_force_Cartesian_y',
+#       '_tcod_atom_site_resid_force_Cartn_z' : 'get_atom_site_residual_force_Cartesian_z',
     }
     tags = dict()
     for tag,function in translation_map.iteritems():

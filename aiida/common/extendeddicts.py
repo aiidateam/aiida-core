@@ -17,20 +17,22 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
 
+
 class Enumerate(frozenset):
-    def __getattr__(self,name):
+    def __getattr__(self, name):
         if name in self:
             return name
         raise AttributeError("No attribute '{}' in Enumerate '{}'".format(
-                name, self.__class__.__name__))
+            name, self.__class__.__name__))
 
     def __setattr__(self, name, value):
         raise AttributeError("Cannot set attribute in Enumerate '{}'".format(
-                self.__class__.__name__))
+            self.__class__.__name__))
 
     def __delattr__(self, name):
         raise AttributeError("Cannot delete attribute in Enumerate '{}'".format(
-                self.__class__.__name__))
+            self.__class__.__name__))
+
 
 class AttributeDict(dict):
     """
@@ -43,6 +45,7 @@ class AttributeDict(dict):
     while the usual KeyError if the key does not exist and the dictionary syntax is
     used.
     """
+
     def __init__(self, init={}):
         """
         Possibly set the initial values of the dictionary from an external dictionary
@@ -96,20 +99,22 @@ class AttributeDict(dict):
         Support deepcopy.
         """
         from copy import deepcopy
+
         retval = deepcopy(dict(self))
         return self.__class__(retval)
 
-    def __getstate__(self): 
+    def __getstate__(self):
         """
         Needed for pickling this class.
         """
-        return self.__dict__.copy() 
+        return self.__dict__.copy()
 
-    def __setstate__(self,dict): 
+    def __setstate__(self, dict):
         """
         Needed for pickling this class.
         """
-        self.__dict__.update(dict) 
+        self.__dict__.update(dict)
+
 
 class FixedFieldsAttributeDict(AttributeDict):
     """
@@ -123,7 +128,8 @@ class FixedFieldsAttributeDict(AttributeDict):
             _valid_fields = ('a','b','c')
     """
     _valid_fields = tuple()
-    def __init__(self,init={}):
+
+    def __init__(self, init={}):
         for key in init:
             if key not in self._valid_fields:
                 errmsg = "'{}' is not a valid key for object '{}'".format(
@@ -139,17 +145,17 @@ class FixedFieldsAttributeDict(AttributeDict):
             errmsg = "'{}' is not a valid key for object '{}'".format(
                 item, self.__class__.__name__)
             raise ValueError(errmsg)
-        super(FixedFieldsAttributeDict,self).__setitem__(item, value)
+        super(FixedFieldsAttributeDict, self).__setitem__(item, value)
 
     def __setattr__(self, attr, value):
         """
         Overridden to allow direct access to fields with underscore.
         """
         if attr.startswith('_'):
-            object.__setattr__(self,attr,value)
+            object.__setattr__(self, attr, value)
         else:
-            super(FixedFieldsAttributeDict,self).__setattr__(attr,value)
-            
+            super(FixedFieldsAttributeDict, self).__setattr__(attr, value)
+
     @classmethod
     def get_valid_fields(cls):
         """
@@ -220,7 +226,7 @@ class DefaultFieldsAttributeDict(AttributeDict):
         for key in self.get_default_fields():
             # I get the attribute starting with validate_ and containing the name of the key
             # I set a dummy function if there is no validate_KEY function defined
-            validator = getattr(self,'validate_{}'.format(key), lambda value: None)
+            validator = getattr(self, 'validate_{}'.format(key), lambda value: None)
             if callable(validator):
                 try:
                     validator(self[key])
@@ -233,17 +239,17 @@ class DefaultFieldsAttributeDict(AttributeDict):
         Overridden to allow direct access to fields with underscore.
         """
         if attr.startswith('_'):
-            object.__setattr__(self,attr,value)
+            object.__setattr__(self, attr, value)
         else:
-            super(DefaultFieldsAttributeDict,self).__setattr__(attr,value)
-    
-    def __getitem__(self,key):
+            super(DefaultFieldsAttributeDict, self).__setattr__(attr, value)
+
+    def __getitem__(self, key):
         """
         Return None instead of raising an exception if the key does not exist
         but is in the list of default fields.
         """
         try:
-            return super(DefaultFieldsAttributeDict,self).__getitem__(key)
+            return super(DefaultFieldsAttributeDict, self).__getitem__(key)
         except KeyError:
             if key in self._default_fields:
                 return None
@@ -256,13 +262,13 @@ class DefaultFieldsAttributeDict(AttributeDict):
         Return the list of default fields, either defined in the instance or not.
         """
         return list(cls._default_fields)
-    
+
     def defaultkeys(self):
         """
         Return the default keys defined in the instance.
         """
         return [_ for _ in self.keys() if _ in self._default_fields]
-        
+
     def extrakeys(self):
         """
         Return the extra keys defined in the instance.

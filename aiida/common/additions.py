@@ -13,6 +13,7 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
 
+
 class CustomEmailValidator(object):
     """
     Backported from Django 1.7 to allow xxx@localhost emails.
@@ -20,12 +21,12 @@ class CustomEmailValidator(object):
     To remove once we migrate to django 1.7.
     """
     import re
-    
+
     message = 'Enter a valid email address.'
     code = 'invalid'
     user_regex = re.compile(
-        r"(^[-!#$%&'*+/=?^_`{}|~0-9A-Z]+(\.[-!#$%&'*+/=?^_`{}|~0-9A-Z]+)*$" # dot-atom
-        r'|^"([\001-\010\013\014\016-\037!#-\[\]-\177]|\\[\001-\011\013\014\016-\177])*"$)', # quoted-string
+        r"(^[-!#$%&'*+/=?^_`{}|~0-9A-Z]+(\.[-!#$%&'*+/=?^_`{}|~0-9A-Z]+)*$"  # dot-atom
+        r'|^"([\001-\010\013\014\016-\037!#-\[\]-\177]|\\[\001-\011\013\014\016-\177])*"$)',  # quoted-string
         re.IGNORECASE)
     domain_regex = re.compile(
         r'(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}|[A-Z0-9-]{2,})$',
@@ -47,7 +48,7 @@ class CustomEmailValidator(object):
     def __call__(self, value):
         from django.core.exceptions import ValidationError
         from django.utils.encoding import force_text
-        
+
         value = force_text(value)
 
         if not value or '@' not in value:
@@ -71,6 +72,7 @@ class CustomEmailValidator(object):
 
     def validate_domain_part(self, domain_part):
         from django.core.exceptions import ValidationError
+
         if self.domain_regex.match(domain_part):
             return True
 
@@ -85,7 +87,9 @@ class CustomEmailValidator(object):
         return False
 
     def __eq__(self, other):
-        return isinstance(other, CustomEmailValidator) and (self.domain_whitelist == other.domain_whitelist) and (self.message == other.message) and (self.code == other.code)
+        return isinstance(other, CustomEmailValidator) and (self.domain_whitelist == other.domain_whitelist) and (
+        self.message == other.message) and (self.code == other.code)
+
 
 import re
 from django.core.validators import RegexValidator
@@ -93,17 +97,18 @@ from django.core.validators import RegexValidator
 ipv4_re = re.compile(r'^(25[0-5]|2[0-4]\d|[0-1]?\d?\d)(\.(25[0-5]|2[0-4]\d|[0-1]?\d?\d)){3}$')
 validate_ipv4_address = RegexValidator(ipv4_re, 'Enter a valid IPv4 address.', 'invalid')
 
+
 def validate_ipv6_address(value):
     from django.utils.ipv6 import is_valid_ipv6_address
     from django.core.exceptions import ValidationError
-    
+
     if not is_valid_ipv6_address(value):
         raise ValidationError('Enter a valid IPv6 address.', code='invalid')
 
 
 def validate_ipv46_address(value):
     from django.core.exceptions import ValidationError
-    
+
     try:
         validate_ipv4_address(value)
     except ValidationError:

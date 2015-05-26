@@ -103,7 +103,7 @@ become the UNIX ``postgres`` user, typing as root::
 
   su - postgres
   
-(or equivalently type ``sudo su - postgres``, according on your distribution).
+(or equivalently type ``sudo su - postgres``, depending on your distribution).
 
 Then type the following command to enter in the PostgreSQL shell in the
 modality to create users::
@@ -158,6 +158,10 @@ you should use the following parameters::
   AiiDA Database password: the_aiida_password
 
 .. note:: Do not forget to backup your database (instructions :ref:`here<backup_postgresql>`).
+
+.. note:: If you want to move the physical location of the data files 
+  on your hard drive AFTER it has been created and filled, look at the 
+  instructions :ref:`here<move_postgresql>`.
 
 MySQL
 -----
@@ -283,7 +287,7 @@ password each time you use the script. It should look like (:download:`.pgpass<p
 where ``YOUR_DATABASE_PASSWORD`` is the password you set up for the database.
 
 .. note:: Do not forget to put this file in ~/ and to name it ``.pgpass``.
-   Remember also to give it the right permissions (read and write): ``chmod u+rw .pgpass``.
+   Remember also to give it the right permissions (read and write): ``chmod u=rw .pgpass``.
 
 To dump the database in a file automatically everyday, you can add the following script 
 :download:`backup-aiidadb-USERNAME<backup-aiidadb-USERNAME>` in ``/etc/cron.daily/``, which will
@@ -325,3 +329,84 @@ phase. Once that you have created your empty database with the same
 names of the backuped one, type the following command:: 
 
     psql -h localhost -U aiida -d aiidadb -f aiidadb-backup.psql
+
+How to move the physical location of a database
++++++++++++++++++++++++++++++++++++++++++++++++
+
+It might happen that you need to move the physical location of the database
+files on your hard-drive (for instance, due to the lack of space in the
+partition where it is located). Below we explain how to do it.
+
+.. _move_postgresql:
+
+PostgreSQL move
+---------------
+
+First, make sure you have a backup of the full database (see instructions
+:ref:`here<backup_postgresql>`), and that the AiiDA daemon is not running.
+Then, become the UNIX ``postgres`` user, typing as root::
+
+  su - postgres
+  
+(or, equivalently, type ``sudo su - postgres``, depending on your distribution).
+
+Stop the postgres database daemon::
+
+  service postgresql stop
+  
+Then enter the postgres shell::
+
+  psql
+
+and look for the current location of the data directory::
+
+  SHOW data_directory;
+
+Typically you should get something like ``/var/lib/postgresql/9.1/main``.
+Then exit the shell with ``\q``, go to this directory and copy all the
+files to the new directory::
+
+  cp -a SOURCE_DIRECTORY DESTINATION_DIRECTORY
+
+where ``SOURCE_DIRECTORY`` is the directory you got from the
+``SHOW data_directory;`` command, and ``DESTINATION_DIRECTORY`` is the new
+directory for the database files.
+
+Make sure the permissions, owner and group are the same in the old and new directory
+(including all levels above the ``DESTINATION_DIRECTORY``). The owner and group
+should be both ``postgres``, at the notable exception of some symbolic links in
+``server.crt`` and ``server.key``.
+
+.. note :: If the permissions of these links need to be changed, use the ``-h``
+  option of ``chown`` to avoid changing the permissions of the destination of the
+  links. In case you have changed the permission of the links destination by
+  mistake, they should typically be (beware that this might depend on your 
+  actual distribution!)::
+
+    -rw-r--r-- 1 root root 989 Mar  1  2012 /etc/ssl/certs/ssl-cert-snakeoil.pem
+    -rw-r----- 1 root ssl-cert 1704 Mar  1  2012 /etc/ssl/private/ssl-cert-snakeoil.key
+    
+Then you can change the postgres configuration file, that should typically
+be located here::
+
+   /etc/postgresql/9.1/main/postgresql.conf
+
+Make a backup version of this file, then look for the line defining 
+``data_directory`` and replace it with the new data directory path::
+
+   data_directory = 'NEW_DATA_DIRECTORY'
+
+Then start again the database daemon::
+
+  service postgresql start
+
+You can check that the data directory has indeed changed::
+
+  psql
+  SHOW data_directory;
+  \q
+
+Before removing definitely the previous location of the database files, 
+first rename it and test AiiDA with the new database location (e.g. do simple
+queries like ``verdi code list`` or create a node and store it). If 
+everything went fine, you can delete the old database location.

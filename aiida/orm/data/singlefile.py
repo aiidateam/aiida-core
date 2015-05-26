@@ -24,6 +24,7 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
 
+
 class SinglefileData(Data):
     """
     Pass as input a file parameter with the (absolute) path of a file 
@@ -33,6 +34,7 @@ class SinglefileData(Data):
     Internally must have a single file, and stores as internal attribute
     the filename in the 'filename' attribute.
     """
+
     @property
     def filename(self):
         """
@@ -44,7 +46,7 @@ class SinglefileData(Data):
         """
         Return the absolute path to the file in the repository
         """
-        return os.path.join(self._get_folder_pathsubfolder.abspath,self.filename)
+        return os.path.join(self._get_folder_pathsubfolder.abspath, self.filename)
 
     def set_file(self, filename):
         """
@@ -60,7 +62,7 @@ class SinglefileData(Data):
         """
         self.remove_path(filename)
 
-    def add_path(self,src_abs,dst_filename=None):
+    def add_path(self, src_abs, dst_filename=None):
         """
         Add a single file
         """
@@ -85,16 +87,16 @@ class SinglefileData(Data):
             # filename is not there: no problem, it simply means I don't have
             # to delete it
             pass
-            
-        super(SinglefileData,self).add_path(src_abs,final_filename)
+
+        super(SinglefileData, self).add_path(src_abs, final_filename)
 
         for delete_me in old_file_list:
             self.remove_path(delete_me)
 
         self._set_attr('filename', final_filename)
 
-    def remove_path(self,filename):
-        if filename == self.get_attr('filename',None):
+    def remove_path(self, filename):
+        if filename == self.get_attr('filename', None):
             try:
                 self._del_attr('filename')
             except AttributeError:
@@ -104,8 +106,8 @@ class SinglefileData(Data):
     def _validate(self):
         from aiida.common.exceptions import ValidationError
 
-        super(SinglefileData,self)._validate()
-        
+        super(SinglefileData, self)._validate()
+
         try:
             filename = self.filename
         except AttributeError:
@@ -113,8 +115,8 @@ class SinglefileData(Data):
 
         if [filename] != self.get_folder_list():
             raise ValidationError("The list of files in the folder does not "
-                "match the 'filename' attribute. "
-                "_filename='{}', content: {}".format(
-                    filename, self.get_folder_list()))
+                                  "match the 'filename' attribute. "
+                                  "_filename='{}', content: {}".format(
+                filename, self.get_folder_list()))
         
     

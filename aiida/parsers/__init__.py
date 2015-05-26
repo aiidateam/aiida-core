@@ -6,10 +6,11 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
 
+
 def ParserFactory(module):
     """
     Return a suitable Parser subclass.
     """
     from aiida.common.pluginloader import BaseFactory
-    
+
     return BaseFactory(module, Parser, "aiida.parsers.plugins")

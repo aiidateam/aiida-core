@@ -24,6 +24,7 @@ ase_loops = {
     ]
 }
 
+
 def has_pycifrw():
     """
     :return: True if the PyCifRW module can be imported, False otherwise.
@@ -34,7 +35,8 @@ def has_pycifrw():
         return False
     return True
 
-def encode_textfield_base64(content,foldwidth=76):
+
+def encode_textfield_base64(content, foldwidth=76):
     """
     Encodes the contents for CIF textfield in Base64.
 
@@ -43,10 +45,12 @@ def encode_textfield_base64(content,foldwidth=76):
     :return: encoded string
     """
     import base64
+
     content = base64.standard_b64encode(content)
-    content = "\n".join(list(content[i:i+foldwidth]
-                             for i in range(0,len(content),foldwidth)))
+    content = "\n".join(list(content[i:i + foldwidth]
+                             for i in range(0, len(content), foldwidth)))
     return content
+
 
 def decode_textfield_base64(content):
     """
@@ -56,7 +60,9 @@ def decode_textfield_base64(content):
     :return: decoded string
     """
     import base64
+
     return base64.standard_b64decode(content)
+
 
 def encode_textfield_quoted_printable(content):
     """
@@ -67,9 +73,11 @@ def encode_textfield_quoted_printable(content):
     """
     import re
     import quopri
+
     content = quopri.encodestring(content)
+
     def match2qp(m):
-        prefix  = ''
+        prefix = ''
         postfix = ''
         if 'prefix' in m.groupdict().keys():
             prefix = m.group('prefix')
@@ -78,12 +86,14 @@ def encode_textfield_quoted_printable(content):
         h = hex(ord(m.group('chr')))[2:].upper()
         if len(h) == 1:
             h = "0{}".format(h)
-        return "{}={}{}".format(prefix,h,postfix)
-    content = re.sub('^(?P<chr>;)',match2qp,content)
-    content = re.sub('(?P<chr>\t)',match2qp,content)
-    content = re.sub('(?P<prefix>\n)(?P<chr>;)',match2qp,content)
-    content = re.sub('^(?P<chr>[\.\?])$',match2qp,content)
+        return "{}={}{}".format(prefix, h, postfix)
+
+    content = re.sub('^(?P<chr>;)', match2qp, content)
+    content = re.sub('(?P<chr>\t)', match2qp, content)
+    content = re.sub('(?P<prefix>\n)(?P<chr>;)', match2qp, content)
+    content = re.sub('^(?P<chr>[\.\?])$', match2qp, content)
     return content
+
 
 def decode_textfield_quoted_printable(content):
     """
@@ -93,7 +103,9 @@ def decode_textfield_quoted_printable(content):
     :return: decoded string
     """
     import quopri
+
     return quopri.decodestring(content)
+
 
 def encode_textfield_ncr(content):
     """
@@ -103,6 +115,7 @@ def encode_textfield_ncr(content):
     :return: encoded string
     """
     import re
+
     def match2ncr(m):
         prefix = ''
         postfix = ''
@@ -111,12 +124,14 @@ def encode_textfield_ncr(content):
         if 'postfix' in m.groupdict().keys():
             postfix = m.group('postfix')
         return prefix + '&#' + str(ord(m.group('chr'))) + ';' + postfix
-    content = re.sub('(?P<chr>[&\t])',match2ncr,content)
-    content = re.sub('(?P<chr>[^\x09\x0A\x0D\x20-\x7E])',match2ncr,content)
-    content = re.sub('^(?P<chr>;)',match2ncr,content)
-    content = re.sub('(?P<prefix>\n)(?P<chr>;)',match2ncr,content)
-    content = re.sub('^(?P<chr>[\.\?])$',match2ncr,content)
+
+    content = re.sub('(?P<chr>[&\t])', match2ncr, content)
+    content = re.sub('(?P<chr>[^\x09\x0A\x0D\x20-\x7E])', match2ncr, content)
+    content = re.sub('^(?P<chr>;)', match2ncr, content)
+    content = re.sub('(?P<prefix>\n)(?P<chr>;)', match2ncr, content)
+    content = re.sub('^(?P<chr>[\.\?])$', match2ncr, content)
     return content
+
 
 def decode_textfield_ncr(content):
     """
@@ -126,11 +141,14 @@ def decode_textfield_ncr(content):
     :return: decoded string
     """
     import re
+
     def match2str(m):
         return chr(int(m.group(1)))
-    return re.sub('&#(\d+);',match2str,content)
 
-def encode_textfield_gzip_base64(content,**kwargs):
+    return re.sub('&#(\d+);', match2str, content)
+
+
+def encode_textfield_gzip_base64(content, **kwargs):
     """
     Gzips the given string and encodes it in Base64.
 
@@ -138,7 +156,9 @@ def encode_textfield_gzip_base64(content,**kwargs):
     :return: encoded string
     """
     from aiida.common.utils import gzip_string
-    return encode_textfield_base64(gzip_string(content),**kwargs)
+
+    return encode_textfield_base64(gzip_string(content), **kwargs)
+
 
 def decode_textfield_gzip_base64(content):
     """
@@ -149,22 +169,77 @@ def decode_textfield_gzip_base64(content):
     :return: decoded string
     """
     from aiida.common.utils import gunzip_string
+
     return gunzip_string(decode_textfield_base64(content))
 
+
+def symop_string_from_symop_matrix_tr(matrix, tr=[0, 0, 0], eps=0):
+    """
+    Construct a CIF representation of symmetry operator plus translation.
+    See International Tables for Crystallography Vol. A. (2002) for
+    definition.
+
+    :param matrix: 3x3 matrix, representing the symmetry operator
+    :param tr: translation vector of length 3 (default [0, 0, 0])
+    :param eps: epsilon parameter for fuzzy comparison x == 0
+    :return: CIF representation of symmetry operator
+    """
+    import re
+    axes = [ "x", "y", "z" ]
+    parts = ["", "", ""]
+    for i in range(0, 3):
+        for j in range(0, 3):
+            sign = None
+            if matrix[i][j] > eps:
+                sign = "+"
+            elif matrix[i][j] < -eps:
+                sign = "-"
+            if sign:
+                parts[i] = format("{}{}{}".format(parts[i],sign,axes[j]))
+        if tr[i] < -eps or tr[i] > eps:
+            sign = "+"
+            if tr[i] < -eps:
+                sign = "-"
+            parts[i] = format("{}{}{}".format(parts[i],sign,abs(tr[i])))
+        parts[i] = re.sub('^\+', '', parts[i])
+    return ",".join(parts)
+
 @optional_inline
-def _get_aiida_structure_ase_inline(cif=None,parameters=None):
+def _get_aiida_structure_ase_inline(cif=None, parameters=None):
     """
     Creates :py:class:`aiida.orm.data.structure.StructureData` using ASE.
 
-    :note: requires ASE module.
+    .. note:: unable to correctly import structures of alloys.
+    .. note:: requires ASE module.
     """
     from aiida.orm.data.structure import StructureData
+
     kwargs = {}
     if parameters is not None:
         kwargs = parameters.get_dict()
     return {'structure': StructureData(ase=cif.get_ase(**kwargs))}
 
-def cif_from_ase(ase,full_occupancies=False,add_fake_biso=False):
+
+@optional_inline
+def _get_aiida_structure_pymatgen_inline(cif=None, parameters=None):
+    """
+    Creates :py:class:`aiida.orm.data.structure.StructureData` using
+    pymatgen.
+
+    .. note:: requires pymatgen module.
+    """
+    from pymatgen.io.cifio import CifParser
+    from aiida.orm.data.structure import StructureData
+
+    kwargs = {}
+    if parameters is not None:
+        kwargs = parameters.get_dict()
+    parser = CifParser(cif.get_file_abs_path())
+    struct = parser.get_structures(**kwargs)[0]
+    return {'structure': StructureData(pymatgen_structure=struct)}
+
+
+def cif_from_ase(ase, full_occupancies=False, add_fake_biso=False):
     """
     Construct a CIF datablock from the ASE structure. The code is taken
     from
@@ -189,9 +264,9 @@ def cif_from_ase(ase,full_occupancies=False,add_fake_biso=False):
         a = norm(cell[0])
         b = norm(cell[1])
         c = norm(cell[2])
-        alpha = arccos(dot(cell[1], cell[2])/(b*c))*180./pi
-        beta = arccos(dot(cell[0], cell[2])/(a*c))*180./pi
-        gamma = arccos(dot(cell[0], cell[1])/(a*b))*180./pi
+        alpha = arccos(dot(cell[1], cell[2]) / (b * c)) * 180. / pi
+        beta = arccos(dot(cell[0], cell[2]) / (a * c)) * 180. / pi
+        gamma = arccos(dot(cell[0], cell[1]) / (a * b)) * 180. / pi
 
         datablock['_cell_length_a'] = str(a)
         datablock['_cell_length_b'] = str(b)
@@ -240,29 +315,37 @@ def cif_from_ase(ase,full_occupancies=False,add_fake_biso=False):
         datablocks.append(datablock)
     return datablocks
 
-def pycifrw_from_cif(datablocks,loops=dict()):
+
+def pycifrw_from_cif(datablocks, loops=dict(), names=None):
     """
     Constructs PyCifRW's CifFile from an array of CIF datablocks.
 
     :param datablocks: an array of CIF datablocks
     :param loops: optional list of lists of CIF tag loops.
+    :param names: optional list of datablock names
     :return: CifFile
     """
     import CifFile
+
     cif = CifFile.CifFile()
-    nr = 0
-    for values in datablocks:
-        name = str(nr)
-        nr = nr + 1
+    if names and len(names) < len(datablocks):
+        raise ValueError("Not enough names supplied for "
+                         "datablocks: {} (names) < "
+                         "{} (datablocks)".format(len(names),
+                                                  len(datablocks)))
+    for i,values in enumerate(datablocks):
+        name = str(i)
+        if names:
+            name = names[i]
         cif.NewBlock(name)
         datablock = cif[name]
         for loopname in loops.keys():
-            loopdata = ([[]],[[]])
+            loopdata = ([[]], [[]])
             row_size = None
             for tag in loops[loopname]:
                 if tag in values:
                     tag_values = values.pop(tag)
-                    if not isinstance(tag_values,list):
+                    if not isinstance(tag_values, list):
                         tag_values = [tag_values]
                     if row_size is None:
                         row_size = len(tag_values)
@@ -279,11 +362,12 @@ def pycifrw_from_cif(datablocks,loops=dict()):
             datablock[tag] = values[tag]
     return cif
 
+
 class CifData(SinglefileData):
     """
     Wrapper for Crystallographic Interchange File (CIF)
 
-    :note: the file (physical) is held as the authoritative source of
+    .. note:: the file (physical) is held as the authoritative source of
         information, so all conversions are done through the physical file:
         when setting ``ase`` or ``values``, a physical CIF file is generated
         first, the values are updated from the physical CIF file.
@@ -294,14 +378,14 @@ class CifData(SinglefileData):
         """
         Return a list of all CIF files that match a given MD5 hash.
         
-        :note: the hash has to be stored in a ``_md5`` attribute, otherwise
-            the CIF file will not be found.
+        .. note:: the hash has to be stored in a ``_md5`` attribute,
+            otherwise the CIF file will not be found.
         """
         queryset = cls.query(dbattributes__key='md5', dbattributes__tval=md5)
         return list(queryset)
 
     @classmethod
-    def get_or_create(cls,filename,use_first = False,store_cif=True):
+    def get_or_create(cls, filename, use_first=False, store_cif=True):
         """
         Pass the same parameter of the init; if a file with the same md5
         is found, that CifData is returned. 
@@ -319,11 +403,11 @@ class CifData(SinglefileData):
         import aiida.common.utils
         import os
         from aiida.common.exceptions import ParsingError
-        
+
         if not os.path.abspath(filename):
-            raise ValueError( "filename must be an absolute path" )
+            raise ValueError("filename must be an absolute path")
         md5 = aiida.common.utils.md5_file(filename)
-        
+
         cifs = cls.from_md5(md5)
         if len(cifs) == 0:
             if store_cif:
@@ -337,14 +421,14 @@ class CifData(SinglefileData):
                 if use_first:
                     return (cifs[0], False)
                 else:
-                    raise ValueError( "More than one copy of a CIF file "
-                                      "with the same MD5 has been found in "
-                                      "the DB. pks={}".format(
-                                      ",".join([str(i.pk) for i in cifs])))
-            else:        
+                    raise ValueError("More than one copy of a CIF file "
+                                     "with the same MD5 has been found in "
+                                     "the DB. pks={}".format(
+                        ",".join([str(i.pk) for i in cifs])))
+            else:
                 return (cifs[0], False)
 
-    def _get_aiida_structure(self,converter='ase',store=False,**kwargs):
+    def _get_aiida_structure(self, converter='ase', store=False, **kwargs):
         """
         Creates :py:class:`aiida.orm.data.structure.StructureData`.
 
@@ -354,12 +438,12 @@ class CifData(SinglefileData):
         :return: :py:class:`aiida.orm.data.structure.StructureData` node.
         """
         from aiida.orm.data.parameter import ParameterData
-        import cif # This same module
+        import cif  # This same module
 
         param = ParameterData(dict=kwargs)
         try:
-            conv_f = getattr(cif,'_get_aiida_structure_{}_inline'.format(converter))
-            ret_dict = conv_f(cif=self,parameters=param,store=store)
+            conv_f = getattr(cif, '_get_aiida_structure_{}_inline'.format(converter))
+            ret_dict = conv_f(cif=self, parameters=param, store=store)
             return ret_dict['structure']
         except AttributeError:
             raise ValueError("No such converter '{}' available".format(converter))
@@ -369,7 +453,7 @@ class CifData(SinglefileData):
         """
         ASE object, representing the CIF.
 
-        :note: requires ASE module.
+        .. note:: requires ASE module.
         """
         if self._ase is None:
             self._ase = self.get_ase()
@@ -381,20 +465,21 @@ class CifData(SinglefileData):
         from the property ``ase`` by the possibility to pass the keyworded
         arguments (kwargs) to ase.io.cif.read_cif().
 
-        :note: requires ASE module.
+        .. note:: requires ASE module.
         """
         if not kwargs and self._ase:
             return self.ase
         else:
             from ase.io.cif import read_cif
-            return read_cif(self.get_file_abs_path(),**kwargs)
 
-    def set_ase(self,aseatoms):
+            return read_cif(self.get_file_abs_path(), **kwargs)
+
+    def set_ase(self, aseatoms):
         cif = cif_from_ase(aseatoms)
-        self.values = pycifrw_from_cif(cif,loops=ase_loops)
+        self.values = pycifrw_from_cif(cif, loops=ase_loops)
 
     @ase.setter
-    def ase(self,aseatoms):
+    def ase(self, aseatoms):
         self.set_ase(aseatoms)
 
     @property
@@ -402,23 +487,25 @@ class CifData(SinglefileData):
         """
         PyCifRW structure, representing the CIF datablocks.
 
-        :note: requires PyCifRW module.
+        .. note:: requires PyCifRW module.
         """
         if self._values is None:
             import CifFile
-            self._values = CifFile.ReadCif( self.get_file_abs_path() )
+
+            self._values = CifFile.ReadCif(self.get_file_abs_path())
         return self._values
 
-    def set_values(self,values):
+    def set_values(self, values):
         import CifFile
         import tempfile
+
         with tempfile.NamedTemporaryFile() as f:
             f.write(values.WriteOut())
             f.flush()
             self.set_file(f.name)
 
     @values.setter
-    def values(self,values):
+    def values(self, values):
         self.set_values(values)
 
     def __init__(self, **kwargs):
@@ -432,7 +519,7 @@ class CifData(SinglefileData):
                                  'extras',
                                  'url',
                                  'source_md5']
-        super(CifData,self).__init__(**kwargs)
+        super(CifData, self).__init__(**kwargs)
         self._values = None
         self._ase = None
 
@@ -448,9 +535,9 @@ class CifData(SinglefileData):
         Set the file. If the source is set and the MD5 checksum of new file
         is different from the source, the source has to be deleted.
         """
-        super(CifData,self).set_file(filename)
+        super(CifData, self).set_file(filename)
         md5sum = self.generate_md5()
-        if self.get_attr('source_md5','') and self.get_attr('source_md5') != md5sum:
+        if self.get_attr('source_md5', '') and self.get_attr('source_md5') != md5sum:
             for key in self._db_source_attrs:
                 try:
                     self._del_attr(key)
@@ -481,7 +568,7 @@ class CifData(SinglefileData):
         unknown_keys = []
         for k in source.keys():
             if k in self._db_source_attrs:
-                self._set_attr(k,source[k])
+                self._set_attr(k, source[k])
             else:
                 unknown_keys.append(k)
         if unknown_keys:
@@ -515,7 +602,7 @@ class CifData(SinglefileData):
         """
         import aiida.common.utils
         from aiida.common.exceptions import ValidationError
-        
+
         abspath = self.get_file_abs_path()
         if not abspath:
             raise ValidationError("No valid CIF was passed!")
@@ -526,17 +613,18 @@ class CifData(SinglefileData):
         """
         Write the given CIF file to a string of format CIF.
         """
-        if self._values: # if values have been changed
+        if self._values:  # if values have been changed
             self.values = self._values
         with open(self.get_file_abs_path()) as f:
             return f.read()
-        
+
     def _validate(self):
         """
         Validate the structure.
         """
         from aiida.common.exceptions import ValidationError
-        super(CifData,self)._validate()
+
+        super(CifData, self)._validate()
 
         try:
             attr_md5 = self.get_attr('md5')
@@ -546,4 +634,4 @@ class CifData(SinglefileData):
         if attr_md5 != md5:
             raise ValidationError("Attribute 'md5' says '{}' but '{}' was "
                                   "parsed instead.".format(
-                    attr_md5, md5))
+                attr_md5, md5))

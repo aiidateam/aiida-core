@@ -39,6 +39,10 @@ automatically import the following modules/classes::
 so that you do not need to perform these useful imports every time you
 start the shell.
 
+.. note:: It is possible to customize the shell by adding modules to be loaded 
+	automatically, thanks to the ``verdi devel setproperty verdishell.modules`` command. 
+	See :doc:`here<../verdi/properties>` for more information.
+
 
 
 

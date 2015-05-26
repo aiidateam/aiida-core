@@ -5,14 +5,16 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Riccardo Sabatini"
 
+
 class AiidaException(Exception):
     """
-    Base class for all aiida exceptions.
+    Base class for all AiiDA exceptions.
     
     Each module will have its own subclass, inherited from this
     (e.g. ExecManagerException, TransportException, ...)
     """
     pass
+
 
 class NotExistent(AiidaException):
     """
@@ -20,19 +22,22 @@ class NotExistent(AiidaException):
     """
     pass
 
+
 class MultipleObjectsError(AiidaException):
     """
     Raised when more than one entity is found in the DB, but only one was
-    excepted.
+    expected.
     """
     pass
-    
+
+
 class RemoteOperationError(AiidaException):
     """
     Raised when an error in a remote operation occurs, as in a failed kill() 
     of a scheduler job.
     """
     pass
+
 
 class ContentNotExistent(NotExistent):
     """
@@ -41,11 +46,13 @@ class ContentNotExistent(NotExistent):
     """
     pass
 
+
 class FailedError(AiidaException):
     """
     Raised when accessing a calculation that is in the FAILED status
     """
     pass
+
 
 class ModificationNotAllowed(AiidaException):
     """
@@ -54,6 +61,7 @@ class ModificationNotAllowed(AiidaException):
     """
     pass
 
+
 class UniquenessError(AiidaException):
     """
     Raised when the user tries to violate a uniqueness constraint (on the 
@@ -61,11 +69,13 @@ class UniquenessError(AiidaException):
     """
     pass
 
+
 class MissingPluginError(AiidaException):
     """
     Raised when the user tries to use a plugin that is not available or does not exist.
     """
     pass
+
 
 class InvalidOperation(AiidaException):
     """
@@ -75,11 +85,13 @@ class InvalidOperation(AiidaException):
     """
     pass
 
+
 class ParsingError(AiidaException):
     """
     Generic error raised when there is a parsing error
     """
     pass
+
 
 class InternalError(AiidaException):
     """
@@ -87,12 +99,14 @@ class InternalError(AiidaException):
     """
     pass
 
+
 class PluginInternalError(InternalError):
     """
     Error raised when there is an internal error which is due to a plugin
-    and not to the aiida infrastructure.
+    and not to the AiiDA infrastructure.
     """
     pass
+
 
 class ValidationError(AiidaException):
     """
@@ -101,11 +115,13 @@ class ValidationError(AiidaException):
     """
     pass
 
+
 class ConfigurationError(AiidaException):
     """
     Error raised when there is a configuration error in AiiDA.
     """
     pass
+
 
 class DbContentError(AiidaException):
     """
@@ -115,6 +131,7 @@ class DbContentError(AiidaException):
     """
     pass
 
+
 class AuthenticationError(AiidaException):
     """
     Raised when a user tries to access a resource for which it is
@@ -123,12 +140,14 @@ class AuthenticationError(AiidaException):
     """
     pass
 
+
 class InputValidationError(ValidationError):
     """
     The input data for a calculation did not validate (e.g., missing
     required input data, wrong data, ...)
     """
     pass
+
 
 class WorkflowInputValidationError(ValidationError):
     """
@@ -144,12 +163,14 @@ class FeatureNotAvailable(AiidaException):
     """
     pass
 
+
 class FeatureDisabled(AiidaException):
     """
-    Raised when a feature is requested, but the used chose to disabled it
-    (e.g., for submissions on disabled computers).
+    Raised when a feature is requested, but the user has chosen to disable
+    it (e.g., for submissions on disabled computers).
     """
     pass
+
 
 class LockPresent(AiidaException):
     """

@@ -1,32 +1,34 @@
 # -*- coding: utf-8 -*-
-"""
-Plugin to parse outputs from the scripts from cod-tools package.
-This plugin is in the development stage. Andrius Merkys, 2014-10-29
-"""
-from aiida.parsers.plugins.codtools.ciffilter import CiffilterParser
+
+from aiida.parsers.plugins.codtools.baseclass import BaseCodtoolsParser
 from aiida.orm.calculation.job.codtools.cifsplitprimitive import CifsplitprimitiveCalculation
-from aiida.orm.data.cif import CifData
-from aiida.orm.data.parameter import ParameterData
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi"
 
-class CifsplitprimitiveParser(CiffilterParser):
+
+class CifsplitprimitiveParser(BaseCodtoolsParser):
     """
     Specific parser for the output of cif_split_primitive script.
     """
-    def _check_calc_compatibility(self,calc):
-        from aiida.common.exceptions import ParsingError
-        if not isinstance(calc,CifsplitprimitiveCalculation):
-            raise ParsingError("Input calc must be a CifsplitprimitiveCalculation")
+
+    def __init__(self, calc):
+        """
+        Initialize the instance of CifsplitprimitiveParser
+        """
+        # Check for valid input:
+        self._supported_calculation_class = CifsplitprimitiveCalculation
+        super(CifsplitprimitiveParser, self).__init__(calc)
 
     def _get_output_nodes(self, output_path, error_path):
         """
         Extracts output nodes from the standard output and standard error
         files.
         """
+        from aiida.orm.data.cif import CifData
+        from aiida.orm.data.parameter import ParameterData
         import os
 
         out_folder = self._calc.get_retrieved_node()
@@ -36,8 +38,9 @@ class CifsplitprimitiveParser(CiffilterParser):
             with open(error_path) as f:
                 content = f.readlines()
             content = [x.strip('\n') for x in content]
+            self._check_failed(content)
             for filename in content:
-                path = os.path.join( out_folder.get_abs_path('.'), filename )
+                path = os.path.join(out_folder.get_abs_path('.'), filename)
                 output_nodes.append(('cif', CifData(file=path)))
 
         if output_path is not None:
@@ -45,7 +48,7 @@ class CifsplitprimitiveParser(CiffilterParser):
                 content = f.readlines()
             content = [x.strip('\n') for x in content]
             output_nodes.append(('messages',
-                                  ParameterData(dict={'output_messages':
-                                                      content})))
+                                 ParameterData(dict={'output_messages':
+                                                         content})))
 
         return output_nodes

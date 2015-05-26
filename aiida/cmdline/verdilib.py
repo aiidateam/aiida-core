@@ -235,7 +235,7 @@ class Install(VerdiCommand):
         import readline
         from aiida import load_dbenv
         from aiida.common.setup import (create_base_dirs, create_configuration,
-                                        set_default_profile)
+                                        set_default_profile, DEFAULT_UMASK)
 
         cmdline_args = list(args)
 
@@ -271,8 +271,14 @@ class Install(VerdiCommand):
         else:
             print "Executing now a migrate command..."
             # For the moment, the verdi install works only for the default 
-            # profile, so we don't chose it, but in the future one should
-            pass_to_django_manage([execname, 'migrate'])
+            # profile, so we don't chose it, but in the future one should.
+            # Setting os.umask here since sqlite database gets created in
+            # this step.
+            old_umask = os.umask(DEFAULT_UMASK)
+            try:
+                pass_to_django_manage([execname, 'migrate'])
+            finally:
+                os.umask(old_umask)
 
         # I create here the default user
         print "Loading new environment..."

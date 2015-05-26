@@ -27,6 +27,9 @@ DEFAULT_USER_CONFIG_FIELD = 'default_user_email'
 # This is the default process used by load_dbenv when no process is specified
 DEFAULT_PROCESS = 'verdi'
 
+# The default umask for file creation under AIIDA_CONFIG_FOLDER
+DEFAULT_UMASK = 0077
+
 
 def backup_config():
     """
@@ -37,7 +40,11 @@ def backup_config():
     aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
     conf_file = os.path.join(aiida_dir, CONFIG_FNAME)
     if (os.path.isfile(conf_file)):
-        shutil.copy(conf_file, conf_file + "~")
+        old_umask = os.umask(DEFAULT_UMASK)
+        try:
+            shutil.copy(conf_file, conf_file + "~")
+        finally:
+            os.umask(old_umask)
 
 
 def get_config():
@@ -67,8 +74,12 @@ def store_config(confs):
 
     aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
     conf_file = os.path.join(aiida_dir, CONFIG_FNAME)
-    with open(conf_file, "w") as json_file:
-        json.dump(confs, json_file)
+    old_umask = os.umask(DEFAULT_UMASK)
+    try:
+        with open(conf_file, "w") as json_file:
+            json.dump(confs, json_file)
+    finally:
+        os.umask(old_umask)
 
 
 def install_daemon_files(aiida_dir, daemon_dir, log_dir, local_user):
@@ -127,11 +138,15 @@ startsecs=10
 stopwaitsecs = 30
 process_name=%(process_num)s
 """
-    with open(os.path.join(aiida_dir, daemon_dir, DAEMON_CONF_FILE), "w") as f:
-        f.write(daemon_conf.format(daemon_dir=daemon_dir, log_dir=log_dir,
-                                   local_user=local_user,
-                                   aiida_module_dir=os.path.split(os.path.abspath(
-                                       aiida.__file__))[0]))
+    old_umask = os.umask(DEFAULT_UMASK)
+    try:
+        with open(os.path.join(aiida_dir, daemon_dir, DAEMON_CONF_FILE), "w") as f:
+            f.write(daemon_conf.format(daemon_dir=daemon_dir, log_dir=log_dir,
+                                       local_user=local_user,
+                                       aiida_module_dir=os.path.split(os.path.abspath(
+                                           aiida.__file__))[0]))
+    finally:
+        os.umask(old_umask)
 
 
 def generate_random_secret_key():
@@ -166,8 +181,12 @@ def try_create_secret_key():
             if f.read().strip():
                 return
 
-    with open(secret_key_full_name, 'w') as f:
-        f.write(generate_random_secret_key())
+    old_umask = os.umask(DEFAULT_UMASK)
+    try:
+        with open(secret_key_full_name, 'w') as f:
+            f.write(generate_random_secret_key())
+    finally:
+        os.umask(old_umask)
 
 
 def create_htaccess_file():
@@ -187,13 +206,17 @@ def create_htaccess_file():
     if os.path.exists(htaccess_full_name):
         return
 
-    with open(htaccess_full_name, 'w') as f:
-        f.write(
-            """#### No one should read this folder!
-            ## Please double check, though, that your Apache configuration honors
-            ## the .htaccess files.
-            deny from all
-            """)
+    old_umask = os.umask(DEFAULT_UMASK)
+    try:
+        with open(htaccess_full_name, 'w') as f:
+            f.write(
+                """#### No one should read this folder!
+                ## Please double check, though, that your Apache configuration honors
+                ## the .htaccess files.
+                deny from all
+                """)
+    finally:
+        os.umask(old_umask)
 
 
 def get_secret_key():
@@ -301,15 +324,18 @@ def create_base_dirs():
     aiida_log_dir = os.path.join(aiida_dir, LOG_DIR)
     local_user = getpass.getuser()
 
-    if (not os.path.isdir(aiida_dir)):
-        os.makedirs(aiida_dir)
-    os.chmod(aiida_dir, 0700)
+    old_umask = os.umask(DEFAULT_UMASK)
+    try:
+        if (not os.path.isdir(aiida_dir)):
+            os.makedirs(aiida_dir)
 
-    if (not os.path.isdir(aiida_daemon_dir)):
-        os.makedirs(aiida_daemon_dir)
+        if (not os.path.isdir(aiida_daemon_dir)):
+            os.makedirs(aiida_daemon_dir)
 
-    if (not os.path.isdir(aiida_log_dir)):
-        os.makedirs(aiida_log_dir)
+        if (not os.path.isdir(aiida_log_dir)):
+            os.makedirs(aiida_log_dir)
+    finally:
+        os.umask(old_umask)
 
     # Install daemon files 
     install_daemon_files(aiida_dir, aiida_daemon_dir, aiida_log_dir, local_user)
@@ -580,7 +606,12 @@ def create_configuration(profile='default'):
         if not os.path.isabs(new_repo_path):
             raise ValueError("You must specify an absolute path")
         if (not os.path.isdir(new_repo_path)):
-            os.makedirs(new_repo_path)
+            old_umask = os.umask(DEFAULT_UMASK)
+            try:
+                os.makedirs(new_repo_path)
+            finally:
+                os.umask(old_umask)
+
         this_new_confs['AIIDADB_REPOSITORY_URI'] = 'file://' + new_repo_path
 
         confs['profiles'][profile] = this_new_confs

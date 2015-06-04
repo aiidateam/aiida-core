@@ -51,7 +51,11 @@ def output_test(pk, outfolder):
 
 def read_test(outfolder):
     """
-    Read a test folder created by output_test
+    Read a test folder created by output_test.
+
+    .. note:: This method should only be called in the testing
+        environment, because it's importing data in the current
+        database.
     """
     import os
     import json

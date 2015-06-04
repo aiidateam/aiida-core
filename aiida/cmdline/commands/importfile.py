@@ -180,10 +180,7 @@ def import_file(infile,format='tar',ignore_unknown_nodes=False,
     nodes_export_subfolder = 'nodes'
 
     # The returned dictionary with new and existing nodes and links
-    ret_dict = {
-        'nodes': { 'new': [], 'existing': [] },
-        'links': { 'new': [] },
-    }
+    ret_dict = {}
 
     ################
     # EXTRACT DATA #
@@ -357,8 +354,10 @@ def import_file(infile,format='tar',ignore_unknown_nodes=False,
                     unique_id = entry_data[unique_identifier]
                     existing_entry_id = foreign_ids_reverse_mappings[model_name][unique_id]
                     # TODO COMPARE, AND COMPARE ATTRIBUTES
-                    ret_dict['nodes']['existing'].append((import_entry_id,
-                                                          existing_entry_id))
+                    if model_name not in ret_dict:
+                        ret_dict[model_name] = { 'new': [], 'existing': [] }
+                    ret_dict[model_name]['existing'].append((import_entry_id,
+                                                             existing_entry_id))
                     if not silent:
                         print "existing %s: %s (%s->%s)" % (model_name, unique_id,
                                                             import_entry_id,
@@ -430,8 +429,10 @@ def import_file(infile,format='tar',ignore_unknown_nodes=False,
                 for unique_id, new_pk in just_saved.iteritems():
                     import_entry_id = import_entry_ids[unique_id]
                     foreign_ids_reverse_mappings[model_name][unique_id] = new_pk
-                    ret_dict['nodes']['new'].append((import_entry_id,
-                                                     new_pk))
+                    if model_name not in ret_dict:
+                        ret_dict[model_name] = { 'new': [], 'existing': [] }
+                    ret_dict[model_name]['new'].append((import_entry_id,
+                                                        new_pk))
 
                     if not silent:
                         print "NEW %s: %s (%s->%s)" % (model_name, unique_id,
@@ -515,7 +516,9 @@ def import_file(infile,format='tar',ignore_unknown_nodes=False,
                         # New link    
                         links_to_store.append(models.DbLink(
                             input_id=in_id, output_id=out_id, label=link['label']))
-                        ret_dict['links']['new'].append((in_id,out_id))
+                        if 'aiida.djsite.db.models.DbLink' not in ret_dict:
+                            ret_dict['aiida.djsite.db.models.DbLink'] = { 'new': [] }
+                        ret_dict['aiida.djsite.db.models.DbLink']['new'].append((in_id,out_id))
     
             # Store new links
             if links_to_store:

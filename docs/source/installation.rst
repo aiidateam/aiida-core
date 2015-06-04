@@ -107,9 +107,9 @@ Download the code using git in a directory of your choice (``~/git/aiida`` in
 this tutorial), using the
 following command::
 
-    git clone https://USERNAME@bitbucket.org/aiida_team/aiida.git ~/git/aiida
+    git clone https://USERNAME@bitbucket.org/aiida_team/aiida_core.git
 
-(or use ``git@bitbucket.org:aiida_team/aiida.git`` if you are downloading
+(or use ``git@bitbucket.org:aiida_team/aiida_core.git`` if you are downloading
 through SSH; note that this requires your ssh key to be added on the
 Bitbucket account.)
 

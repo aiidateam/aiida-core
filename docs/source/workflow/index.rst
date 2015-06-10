@@ -677,7 +677,7 @@ phonon vibrational frequncies for some XTiO3 materials, namely Ba, Sr and Pb.
             
             calc.use_parameters(ph_parameters)
             calc.use_code(code)
-            calc.set_parent_calc(pw_calc)
+            calc.use_parent_calculation(pw_calc)
             
             return calc
         

@@ -425,40 +425,54 @@ def get_formula(symbol_list, mode='hill', separator=""):
     :param mode: a string to specify how to generate the formula, can
         assume one of the following values:
         
-        * 'hill' (default): use Hill notation, i.e. alphabetical order with C and H 
+        * 'hill' (default): count the number of atoms of each species,
+          then use Hill notation, i.e. alphabetical order with C and H 
           first if one or several C atom(s) is (are) present, e.g. 
           ``['C','H','H','H','O','C','H','H','H']`` will return ``'C2H6O'`` 
           ``['S','O','O','H','O','H','O']``  will return ``'H2O4S'``
           From E. A. Hill, J. Am. Chem. Soc., 22 (8), pp 478–494 (1900)
             
-        * 'compact1': will try to group as much as possible parts of the formula
+        * 'hill_compact': same as hill but the number of atoms for each
+          species is divided by the greatest common divisor of all of them, e.g.
+          ``['C','H','H','H','O','C','H','H','H','O','O','O']`` 
+          will return ``'CH3O2'``
+            
+        * 'reduce': group repeated symbols e.g.
+          ``['Ba', 'Ti', 'O', 'O', 'O', 'Ba', 'Ti', 'O', 'O', 'O',
+          'Ba', 'Ti', 'Ti', 'O', 'O', 'O']`` will return ``'BaTiO3BaTiO3BaTi2O3'``
+        
+        * 'group': will try to group as much as possible parts of the formula
           e.g. 
           ``['Ba', 'Ti', 'O', 'O', 'O', 'Ba', 'Ti', 'O', 'O', 'O',
           'Ba', 'Ti', 'Ti', 'O', 'O', 'O']`` will return ``'(BaTiO3)2BaTi2O3'``
         
-        * 'reduce': simply group repeated symbols e.g.
-          ``['Ba', 'Ti', 'O', 'O', 'O', 'Ba', 'Ti', 'O', 'O', 'O',
-          'Ba', 'Ti', 'Ti', 'O', 'O', 'O']`` will return ``'BaTiO3BaTiO3BaTi2O3'``
-        
-        * 'allreduce': same as hill without the re-ordering (take the 
+        * 'count': same as hill (i.e. one just counts the number
+          of atoms of each species) without the re-ordering (take the 
           order of the atomic sites), e.g.
-          ``['Ba', 'Ti', 'O', 'O', 'O']`` will return ``'BaTiO3'``
+          ``['Ba', 'Ti', 'O', 'O', 'O','Ba', 'Ti', 'O', 'O', 'O']`` 
+          will return ``'Ba2Ti2O6'``
+
+        * 'count_compact': same as count but the number of atoms 
+          for each species is divided by the greatest common divisor of 
+          all of them, e.g.
+          ``['Ba', 'Ti', 'O', 'O', 'O','Ba', 'Ti', 'O', 'O', 'O']`` 
+          will return ``'BaTiO3'``
 
     :param separator: a string used to concatenate symbols. Default empty.
         
     :return: a string with the formula
     
-    .. note:: in modes compact1, reduce and allreduce, the initial order in
-        which the atoms were appended by the user is used to group symbols by
-        multiplicity
+    .. note:: in modes reduce, group, count and count_compact, the 
+        initial order in which the atoms were appended by the user is 
+        used to group and/or order the symbols in the formula
     """
 
-    if mode == 'compact1':
+    if mode == 'group':
         return get_formula_compact1(symbol_list, separator=separator)
 
-    # for hill and allreduce cases, simply count the occurences of each 
+    # for hill and count cases, simply count the occurences of each 
     # chemical symbol (with some re-ordering in hill) 
-    elif mode == 'hill':
+    elif mode in ['hill', 'hill_compact']:
         symbol_set = set(symbol_list)
         first_symbols = []
         if 'C' in symbol_set:
@@ -473,7 +487,7 @@ def get_formula(symbol_list, mode='hill', separator=""):
         the_symbol_list = [[symbol_list.count(elem), elem]
                            for elem in ordered_symbol_set]
 
-    elif mode == 'allreduce':
+    elif mode in ['count', 'count_compact']:
         ordered_symbol_indexes = sorted([symbol_list.index(elem)
                                          for elem in set(symbol_list)])
         ordered_symbol_set = [symbol_list[i] for i in ordered_symbol_indexes]
@@ -484,7 +498,28 @@ def get_formula(symbol_list, mode='hill', separator=""):
         the_symbol_list = group_symbols(symbol_list)
 
     else:
-        raise ValueError('Mode should be compact1, hill, reduce or allreduce')
+        raise ValueError('Mode should be hill, hill_compact, group, '
+                          'reduce, count or count_compact')
+                          
+    if mode in ['hill_compact', 'count_compact']:
+        
+        def gcd_list(int_list):
+            """
+            Recursive function to get the greatest common divisor of
+            a list of integers
+            """
+            from fractions import gcd
+            if len(int_list)==1:
+                return int_list[0]
+            elif len(int_list)==2:
+                return gcd(int_list[0],int_list[1])
+            else:
+                the_int_list=l[2:]
+                the_int_list.append(gcd(int_list[0],int_list[1]))
+                return gcd_list(the_int_list)
+        
+        the_gcd = gcd_list([e[0] for e in the_symbol_list])
+        the_symbol_list = [[e[0]/the_gcd,e[1]] for e in the_symbol_list]
 
     return get_formula_from_symbol_list(the_symbol_list, separator=separator)
 
@@ -771,31 +806,49 @@ class StructureData(Data):
         """
         Return a string with the chemical formula.
 
-        :param mode:
-            'hill' (default): Hill notation (alphabetical order, with C and H first if 
-                a C atom is present), e.g. 
-                ``['C','H','H','H','O','C','H','H','H']`` will return ``'C2H6O'`` 
-                ``['S','O','O','H','O','H','O']``  will return ``'H2O4S'``
-                From E. A. Hill, J. Am. Chem. Soc., 22 (8), pp 478–494 (1900)
+        :param mode: a string to specify how to generate the formula, can
+            assume one of the following values:
+            
+            * 'hill' (default): count the number of atoms of each species,
+              then use Hill notation, i.e. alphabetical order with C and H 
+              first if one or several C atom(s) is (are) present, e.g. 
+              ``['C','H','H','H','O','C','H','H','H']`` will return ``'C2H6O'`` 
+              ``['S','O','O','H','O','H','O']``  will return ``'H2O4S'``
+              From E. A. Hill, J. Am. Chem. Soc., 22 (8), pp 478–494 (1900)
                 
-            'compact1': will try to group as much as possible parts of the formula
-                e.g. 
-                ``['Ba', 'Ti', 'O', 'O', 'O', 'Ba', 'Ti', 'O', 'O', 'O',
-                'Ba', 'Ti', 'Ti', 'O', 'O', 'O']`` will return ``'(BaTiO3)2BaTi2O3'``
+            * 'hill_compact': same as hill but the number of atoms for each
+              species is divided by the greatest common divisor of all of them, e.g.
+              ``['C','H','H','H','O','C','H','H','H','O','O','O']`` 
+              will return ``'CH3O2'``
+                
+            * 'reduce': group repeated symbols e.g.
+              ``['Ba', 'Ti', 'O', 'O', 'O', 'Ba', 'Ti', 'O', 'O', 'O',
+              'Ba', 'Ti', 'Ti', 'O', 'O', 'O']`` will return ``'BaTiO3BaTiO3BaTi2O3'``
             
-            'reduce': simply group repeated symbols e.g.
-                ``['Ba', 'Ti', 'O', 'O', 'O', 'Ba', 'Ti', 'O', 'O', 'O',
-                'Ba', 'Ti', 'Ti', 'O', 'O', 'O']`` will return ``'BaTiO3BaTiO3BaTi2O3'``
+            * 'group': will try to group as much as possible parts of the formula
+              e.g. 
+              ``['Ba', 'Ti', 'O', 'O', 'O', 'Ba', 'Ti', 'O', 'O', 'O',
+              'Ba', 'Ti', 'Ti', 'O', 'O', 'O']`` will return ``'(BaTiO3)2BaTi2O3'``
             
-            'allreduce': same as hill without the re-ordering (take the 
-                order of the atomic sites), e.g.
-                ``['Ba', 'Ti', 'O', 'O', 'O']`` will return ``'BaTiO3'``
+            * 'count': same as hill (i.e. one just counts the number
+              of atoms of each species) without the re-ordering (take the 
+              order of the atomic sites), e.g.
+              ``['Ba', 'Ti', 'O', 'O', 'O','Ba', 'Ti', 'O', 'O', 'O']`` 
+              will return ``'Ba2Ti2O6'``
+
+            * 'count_compact': same as count but the number of atoms 
+              for each species is divided by the greatest common divisor of 
+              all of them, e.g.
+              ``['Ba', 'Ti', 'O', 'O', 'O','Ba', 'Ti', 'O', 'O', 'O']`` 
+              will return ``'BaTiO3'``
+
+        :param separator: a string used to concatenate symbols. Default empty.
             
         :return: a string with the formula
-    
-        .. note:: in modes compact1, reduce and allreduce, the initial order in
-            which the atoms were appended by the user is used to group symbols by
-            multiplicity
+        
+        .. note:: in modes reduce, group, count and count_compact, the 
+            initial order in which the atoms were appended by the user is 
+            used to group and/or order the symbols in the formula
         """
 
         symbol_list = [self.get_kind(s.kind_name).get_symbols_string()

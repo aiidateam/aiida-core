@@ -1147,13 +1147,16 @@ class TestStructureData(AiidaTestCase):
                           'C Ba O3 Ti')
         self.assertEquals(get_formula(['H'] * 6 + ['C'] * 6),
                           'C6H6')
+        self.assertEquals(get_formula(['H'] * 6 + ['C'] * 6, 
+                                      mode="hill_compact"),
+                          'CH')
         self.assertEquals(get_formula((['Ba', 'Ti'] + ['O'] * 3) * 2 + \
                                       ['Ba'] + ['Ti'] * 2 + ['O'] * 3,
-                                      mode="compact1"),
+                                      mode="group"),
                           '(BaTiO3)2BaTi2O3')
         self.assertEquals(get_formula((['Ba', 'Ti'] + ['O'] * 3) * 2 + \
                                       ['Ba'] + ['Ti'] * 2 + ['O'] * 3,
-                                      mode="compact1", separator=" "),
+                                      mode="group", separator=" "),
                           '(Ba Ti O3)2 Ba Ti2 O3')
         self.assertEquals(get_formula((['Ba', 'Ti'] + ['O'] * 3) * 2 + \
                                       ['Ba'] + ['Ti'] * 2 + ['O'] * 3,
@@ -1163,6 +1166,12 @@ class TestStructureData(AiidaTestCase):
                                       ['Ba'] + ['Ti'] * 2 + ['O'] * 3,
                                       mode="reduce", separator=", "),
                           'Ba, Ti, O3, Ba, Ti, O3, Ba, Ti2, O3')
+        self.assertEquals(get_formula((['Ba', 'Ti'] + ['O'] * 3) * 2,
+                                      mode="count"),
+                          'Ba2Ti2O6')
+        self.assertEquals(get_formula((['Ba', 'Ti'] + ['O'] * 3) * 2,
+                                      mode="count_compact"),
+                          'BaTiO3')
 
     def test_get_cif(self):
         """

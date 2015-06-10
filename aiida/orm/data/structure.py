@@ -293,7 +293,7 @@ def get_formula_from_symbol_list(_list, separator=""):
     return separator.join(list_str)
 
 
-def get_formula_compact1(symbol_list, separator=""):
+def get_formula_group(symbol_list, separator=""):
     """
     Return a string with the chemical formula from a list of chemical symbols.
     The formula is written in a compact" way, i.e. trying to group as much as
@@ -468,7 +468,7 @@ def get_formula(symbol_list, mode='hill', separator=""):
     """
 
     if mode == 'group':
-        return get_formula_compact1(symbol_list, separator=separator)
+        return get_formula_group(symbol_list, separator=separator)
 
     # for hill and count cases, simply count the occurences of each 
     # chemical symbol (with some re-ordering in hill) 
@@ -514,7 +514,7 @@ def get_formula(symbol_list, mode='hill', separator=""):
             elif len(int_list)==2:
                 return gcd(int_list[0],int_list[1])
             else:
-                the_int_list=l[2:]
+                the_int_list=int_list[2:]
                 the_int_list.append(gcd(int_list[0],int_list[1]))
                 return gcd_list(the_int_list)
         

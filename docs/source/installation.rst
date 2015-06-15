@@ -443,13 +443,15 @@ For the manipulation of `Crystallographic Information Framework (CIF) files`_,
 following dependencies are required to be installed:
 
 * `PyCifRW`_
+* `pymatgen`_
 * `jmol`_
 * `Atomic Simulation Environment (ASE)`_
 * :doc:`cod-tools<plugins/codtools/index>`
 
-First two can be installed from the default repositories::
+First three can be installed from the default repositories::
 
     sudo pip install pycifrw==3.6.2.1
+    sudo pip install pymatgen==3.0.13
     sudo apt-get install jmol
 
 ASE has to be installed from source::
@@ -466,6 +468,7 @@ For the setting up of cod-tools please refer to
 :ref:`installation of cod-tools<codtools_installation>`.
 
 .. _Crystallographic Information Framework (CIF) files: http://www.iucr.org/resources/cif
+.. _pymatgen: http://pymatgen.org
 .. _Atomic Simulation Environment (ASE): https://wiki.fysik.dtu.dk/ase/
 .. _PyCifRW: https://pypi.python.org/pypi/PyCifRW/3.6.2
 .. _jmol: http://jmol.sourceforge.net

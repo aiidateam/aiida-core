@@ -107,6 +107,16 @@ def has_pymatgen():
     return True
 
 
+def get_pymatgen_version():
+    """
+    :return: string with pymatgen version, None if can not import.
+    """
+    if not has_pymatgen():
+        return None
+    import pymatgen
+    return pymatgen.__version__
+
+
 def calc_cell_volume(cell):
     """
     Calculates the volume of a cell given the three lattice vectors.

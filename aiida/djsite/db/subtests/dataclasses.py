@@ -1520,9 +1520,12 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
     """
     Tests the creation of StructureData from a pymatgen Structure object.
     """
-    from aiida.orm.data.structure import has_pymatgen
+    from distutils.version import StrictVersion
+    from aiida.orm.data.structure import has_pymatgen,get_pymatgen_version
 
-    @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
+    @unittest.skipIf(not has_pymatgen() or
+                     StrictVersion(get_pymatgen_version()) <
+                     StrictVersion('3.0.13'), "Unable to import pymatgen")
     def test_1(self):
         """
         Test's imput is derived from COD entry 9011963, processed with

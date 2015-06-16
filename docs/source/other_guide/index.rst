@@ -4,6 +4,8 @@ Other guide resources
 .. toctree::
    :maxdepth: 3
 
-   ../setup/aiida_multiuser
+   cookbook
    ../troubleshooting/index
+   ../setup/aiida_multiuser
    ../website/web.rst
+

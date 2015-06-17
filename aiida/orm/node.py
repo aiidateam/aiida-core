@@ -1106,7 +1106,7 @@ class Node(object):
         
         :param str key: key name
         :raise: AttributeError: if key starts with underscore
-        :raise: ModificationNotAllowed: if the node has already been stored
+        :raise: ModificationNotAllowed: if the node is not stored yet
         """
         from aiida.djsite.db.models import DbExtra
 

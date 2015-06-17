@@ -33,6 +33,7 @@ class Data(VerdiCommandRouter):
             'cif': _Cif,
             'trajectory': _Trajectory,
             'parameter': _Parameter,
+            'array': _Array,
             'label': _Label,
             'description': _Description,
         }
@@ -731,8 +732,9 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable):
                             help="Print all bandsdatas from structures "
                                  "containing only the selected elements")
         parser.add_argument('-f', '--formulamode', type=str, default='hill',
-                            help="Formula printing mode (hill, reduce, allreduce"
-                                 " or compact1) (if None, does not print the formula)",
+                            help="Formula printing mode (hill, hill_compact,"
+                                 " reduce, group, count, or count_compact)"
+                                 " (if None, does not print the formula)",
                             action='store')
         parser.add_argument('-p', '--past-days', metavar='N',
                             help="Add a filter to show only bandsdatas created in the past N days",
@@ -908,8 +910,9 @@ class _Structure(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable
                             help="If set, structures do not contain different "
                                  "elements (to be used with -e option)")
         parser.add_argument('-f', '--formulamode', type=str, default='hill',
-                            help="Formula printing mode (hill, reduce, allreduce"
-                                 " or compact1) (if None, does not print the formula)",
+                            help="Formula printing mode (hill, hill_compact,"
+                                 " reduce, group, count, or count_compact)"
+                                 " (if None, does not print the formula)",
                             action='store')
         parser.add_argument('-p', '--past-days', metavar='N',
                             help="Add a filter to show only structures created in the past N days",
@@ -1232,4 +1235,34 @@ class _Parameter(VerdiCommandWithSubcommands, Visualizable):
 
         for node in node_list:
             the_dict = node.get_dict()
+            print_dictionary(the_dict, 'json+date')
+
+
+class _Array(VerdiCommandWithSubcommands, Visualizable):
+    """
+    View and manipulate Array data classes.
+    """
+
+    def __init__(self):
+        """
+        A dictionary with valid commands and functions to be called.
+        """
+        from aiida.orm.data.array import ArrayData
+
+        self.dataclass = ArrayData
+        self._default_show_format = 'json_date'
+        self.valid_subcommands = {
+            'show': (self.show, self.complete_none),
+        }
+
+    def _show_json_date(self, exec_name, node_list):
+        """
+        Show contents of ArrayData nodes.
+        """
+        from aiida.cmdline import print_dictionary
+
+        for node in node_list:
+            the_dict = {}
+            for arrayname in node.arraynames():
+                the_dict[arrayname] = node.get_array(arrayname).tolist()
             print_dictionary(the_dict, 'json+date')

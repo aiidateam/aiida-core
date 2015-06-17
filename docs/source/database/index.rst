@@ -162,6 +162,11 @@ you should use the following parameters::
 .. note:: If you want to move the physical location of the data files 
   on your hard drive AFTER it has been created and filled, look at the 
   instructions :ref:`here<move_postgresql>`.
+  
+.. note:: Due to the presence of a bug, PostgreSQL could refuse to restart after a crash. 
+  If this happens you should follow the instructions written `here`_.
+  
+.. _here: https://wiki.postgresql.org/wiki/May_2015_Fsync_Permissions_Bug/
 
 MySQL
 -----

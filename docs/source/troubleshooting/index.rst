@@ -75,3 +75,35 @@ Connection problems
     correctly inserted using the ``ssh-keygen -F FULLHOSTNAME`` command
     as described above. Now, the error messsage should not appear anymore.
     
+Increasing the debug level
+==========================
+
+By default, the logging level of AiiDA is minimal to avoid filling logfiles.
+Only warnings and errors are logged (to the
+``~/.aiida/daemon/log/aiida_daemon.log`` file), while info and debug
+messages are discarded.
+
+If you are experiencing a problem, you can change the default minimum logging
+level of AiiDA messages (and celery messages -- celery is the library that we
+use to manage the daemon process) using, on the command line, the two
+following commands::
+
+  verdi devel setproperty logging.celery_loglevel DEBUG
+  verdi devel setproperty logging.aiida_loglevel DEBUG
+
+After rebooting the daemon (``verdi daemon restart``), the number of messages
+logged will increase significantly and may help in understanding
+the source of the problem. 
+
+.. note:: In the command above, you can use a different level than ``DEBUG``.
+  The list of the levels and their order is the same of the `standard python
+  logging module <https://docs.python.org/2/library/logging.html#logging-levels>`_.
+
+.. note:: When the problem is solved, we suggest to bring back the default
+  logging level, using the two commands::
+
+    verdi devel delproperty logging.celery_loglevel
+    verdi devel delproperty logging.aiida_loglevel
+
+  to avoid to fill the logfiles.
+

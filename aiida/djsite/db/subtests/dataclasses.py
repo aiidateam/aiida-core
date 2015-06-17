@@ -471,6 +471,21 @@ _publ_section_title                     'Test CIF'
         c = CifData(ase=b.ase)
         self.assertEquals(b._prepare_cif(), c._prepare_cif())
 
+    def test_symop_string_from_symop_matrix_tr(self):
+        from aiida.orm.data.cif import symop_string_from_symop_matrix_tr
+
+        self.assertEquals(
+            symop_string_from_symop_matrix_tr(
+                [[1, 0, 0], [0, 1, 0], [0, 0, 1]]),"x,y,z")
+
+        self.assertEquals(
+            symop_string_from_symop_matrix_tr(
+                [[1, 0, 0], [0, -1, 0], [0, 1, 1]]),"x,-y,y+z")
+
+        self.assertEquals(
+            symop_string_from_symop_matrix_tr(
+                [[-1, 0, 0], [0, 1, 0], [0, 0, 1]],[1,-1,0]),"-x+1,y-1,z")
+
 
 class TestKindValidSymbols(AiidaTestCase):
     """
@@ -1132,13 +1147,16 @@ class TestStructureData(AiidaTestCase):
                           'C Ba O3 Ti')
         self.assertEquals(get_formula(['H'] * 6 + ['C'] * 6),
                           'C6H6')
+        self.assertEquals(get_formula(['H'] * 6 + ['C'] * 6, 
+                                      mode="hill_compact"),
+                          'CH')
         self.assertEquals(get_formula((['Ba', 'Ti'] + ['O'] * 3) * 2 + \
                                       ['Ba'] + ['Ti'] * 2 + ['O'] * 3,
-                                      mode="compact1"),
+                                      mode="group"),
                           '(BaTiO3)2BaTi2O3')
         self.assertEquals(get_formula((['Ba', 'Ti'] + ['O'] * 3) * 2 + \
                                       ['Ba'] + ['Ti'] * 2 + ['O'] * 3,
-                                      mode="compact1", separator=" "),
+                                      mode="group", separator=" "),
                           '(Ba Ti O3)2 Ba Ti2 O3')
         self.assertEquals(get_formula((['Ba', 'Ti'] + ['O'] * 3) * 2 + \
                                       ['Ba'] + ['Ti'] * 2 + ['O'] * 3,
@@ -1148,6 +1166,12 @@ class TestStructureData(AiidaTestCase):
                                       ['Ba'] + ['Ti'] * 2 + ['O'] * 3,
                                       mode="reduce", separator=", "),
                           'Ba, Ti, O3, Ba, Ti, O3, Ba, Ti2, O3')
+        self.assertEquals(get_formula((['Ba', 'Ti'] + ['O'] * 3) * 2,
+                                      mode="count"),
+                          'Ba2Ti2O6')
+        self.assertEquals(get_formula((['Ba', 'Ti'] + ['O'] * 3) * 2,
+                                      mode="count_compact"),
+                          'BaTiO3')
 
     def test_get_cif(self):
         """
@@ -1496,9 +1520,12 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
     """
     Tests the creation of StructureData from a pymatgen Structure object.
     """
-    from aiida.orm.data.structure import has_pymatgen
+    from distutils.version import StrictVersion
+    from aiida.orm.data.structure import has_pymatgen,get_pymatgen_version
 
-    @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
+    @unittest.skipIf(not has_pymatgen() or
+                     StrictVersion(get_pymatgen_version()) <
+                     StrictVersion('3.0.13'), "Unable to import pymatgen")
     def test_1(self):
         """
         Test's imput is derived from COD entry 9011963, processed with

@@ -173,6 +173,37 @@ def decode_textfield_gzip_base64(content):
     return gunzip_string(decode_textfield_base64(content))
 
 
+def symop_string_from_symop_matrix_tr(matrix, tr=[0, 0, 0], eps=0):
+    """
+    Construct a CIF representation of symmetry operator plus translation.
+    See International Tables for Crystallography Vol. A. (2002) for
+    definition.
+
+    :param matrix: 3x3 matrix, representing the symmetry operator
+    :param tr: translation vector of length 3 (default [0, 0, 0])
+    :param eps: epsilon parameter for fuzzy comparison x == 0
+    :return: CIF representation of symmetry operator
+    """
+    import re
+    axes = [ "x", "y", "z" ]
+    parts = ["", "", ""]
+    for i in range(0, 3):
+        for j in range(0, 3):
+            sign = None
+            if matrix[i][j] > eps:
+                sign = "+"
+            elif matrix[i][j] < -eps:
+                sign = "-"
+            if sign:
+                parts[i] = format("{}{}{}".format(parts[i],sign,axes[j]))
+        if tr[i] < -eps or tr[i] > eps:
+            sign = "+"
+            if tr[i] < -eps:
+                sign = "-"
+            parts[i] = format("{}{}{}".format(parts[i],sign,abs(tr[i])))
+        parts[i] = re.sub('^\+', '', parts[i])
+    return ",".join(parts)
+
 @optional_inline
 def _get_aiida_structure_ase_inline(cif=None, parameters=None):
     """
@@ -336,7 +367,7 @@ class CifData(SinglefileData):
     """
     Wrapper for Crystallographic Interchange File (CIF)
 
-    :note: the file (physical) is held as the authoritative source of
+    .. note:: the file (physical) is held as the authoritative source of
         information, so all conversions are done through the physical file:
         when setting ``ase`` or ``values``, a physical CIF file is generated
         first, the values are updated from the physical CIF file.
@@ -347,8 +378,8 @@ class CifData(SinglefileData):
         """
         Return a list of all CIF files that match a given MD5 hash.
         
-        :note: the hash has to be stored in a ``_md5`` attribute, otherwise
-            the CIF file will not be found.
+        .. note:: the hash has to be stored in a ``_md5`` attribute,
+            otherwise the CIF file will not be found.
         """
         queryset = cls.query(dbattributes__key='md5', dbattributes__tval=md5)
         return list(queryset)
@@ -422,7 +453,7 @@ class CifData(SinglefileData):
         """
         ASE object, representing the CIF.
 
-        :note: requires ASE module.
+        .. note:: requires ASE module.
         """
         if self._ase is None:
             self._ase = self.get_ase()
@@ -434,7 +465,7 @@ class CifData(SinglefileData):
         from the property ``ase`` by the possibility to pass the keyworded
         arguments (kwargs) to ase.io.cif.read_cif().
 
-        :note: requires ASE module.
+        .. note:: requires ASE module.
         """
         if not kwargs and self._ase:
             return self.ase
@@ -456,7 +487,7 @@ class CifData(SinglefileData):
         """
         PyCifRW structure, representing the CIF datablocks.
 
-        :note: requires PyCifRW module.
+        .. note:: requires PyCifRW module.
         """
         if self._values is None:
             import CifFile

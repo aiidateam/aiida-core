@@ -1589,6 +1589,41 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
             i.pop('abc')
         self.assertEquals(dict1, dict2)
 
+    def test_2(self):
+        """
+        Input source: http://pymatgen.org/_static/Molecule.html
+        """
+        from aiida.orm.data.structure import StructureData
+        from pymatgen.io.smartio import read_mol
+
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(suffix=".xyz") as f:
+            f.write("""5
+                H4 C1
+                C 0.000000 0.000000 0.000000
+                H 0.000000 0.000000 1.089000
+                H 1.026719 0.000000 -0.363000
+                H -0.513360 -0.889165 -0.363000
+                H -0.513360 0.889165 -0.363000""")
+            f.flush()
+            pymatgen_mol = read_mol(f.name)
+
+        struct = StructureData(pymatgen_molecule=pymatgen_mol)
+        self.assertEquals(struct.get_site_kindnames(),
+                          ['H', 'H', 'H', 'H', 'C'])
+        self.assertEquals(struct.pbc, (False, False, False))
+        self.assertEquals([round(x, 2) for x in list(struct.sites[0].position)],
+                          [5.77, 5.89, 6.81])
+        self.assertEquals([round(x, 2) for x in list(struct.sites[1].position)],
+                          [6.8, 5.89, 5.36])
+        self.assertEquals([round(x, 2) for x in list(struct.sites[2].position)],
+                          [5.26, 5.0, 5.36])
+        self.assertEquals([round(x, 2) for x in list(struct.sites[3].position)],
+                          [5.26, 6.78, 5.36])
+        self.assertEquals([round(x, 2) for x in list(struct.sites[4].position)],
+                          [5.77, 5.89, 5.73])
+
 
 class TestArrayData(AiidaTestCase):
     """

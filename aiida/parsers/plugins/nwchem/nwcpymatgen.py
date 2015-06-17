@@ -37,10 +37,13 @@ class NwcpymatgenParser(BasenwcParser):
         ret_dict = []
         nwo = NwOutput(output_path)
         for out in nwo.data:
-            # molecules are discarded, as they can not be converted to
-            # StructureData due to lack of lattice parameters
-            out.pop('molecules',None)
+            molecules = out.pop('molecules',None)
             structures = out.pop('structures',None)
+            if molecules:
+                structlist = [StructureData(pymatgen_molecule=m)
+                              for m in molecules]
+                ret_dict.append(('trajectory',
+                                 TrajectoryData(structurelist=structlist)))
             if structures:
                 structlist = [StructureData(pymatgen_structure=s)
                               for s in structures]

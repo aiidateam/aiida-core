@@ -12,7 +12,7 @@ class NwcpymatgenParser(BasenwcParser):
     """
     Parser for the output of NWChem, using pymatgen.
     """
-    def __init__(self,calc):
+    def __init__(self, calc):
         """
         Initialize the instance of NwcpymatgenParser
         """
@@ -20,9 +20,9 @@ class NwcpymatgenParser(BasenwcParser):
         self._check_calc_compatibility(calc)
         super(NwcpymatgenParser, self).__init__(calc)
 
-    def _check_calc_compatibility(self,calc):
+    def _check_calc_compatibility(self, calc):
         from aiida.common.exceptions import ParsingError
-        if not isinstance(calc,NwcpymatgenCalculation):
+        if not isinstance(calc, NwcpymatgenCalculation):
             raise ParsingError("Input calc must be a NwcpymatgenCalculation")
 
     def _get_output_nodes(self, output_path, error_path):
@@ -37,16 +37,19 @@ class NwcpymatgenParser(BasenwcParser):
         ret_dict = []
         nwo = NwOutput(output_path)
         for out in nwo.data:
-            # molecules are discarded, as they can not be converted to
-            # StructureData due to lack of lattice parameters
-            out.pop('molecules',None)
-            structures = out.pop('structures',None)
+            molecules = out.pop('molecules', None)
+            structures = out.pop('structures', None)
+            if molecules:
+                structlist = [StructureData(pymatgen_molecule=m)
+                              for m in molecules]
+                ret_dict.append(('trajectory',
+                                 TrajectoryData(structurelist=structlist)))
             if structures:
                 structlist = [StructureData(pymatgen_structure=s)
                               for s in structures]
                 ret_dict.append(('trajectory',
                                  TrajectoryData(structurelist=structlist)))
-            ret_dict.append(('output',ParameterData(dict=out)))
-        ret_dict.append(('job_info',ParameterData(dict=nwo.job_info)))
+            ret_dict.append(('output', ParameterData(dict=out)))
+        ret_dict.append(('job_info', ParameterData(dict=nwo.job_info)))
         
         return ret_dict

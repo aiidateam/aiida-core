@@ -51,7 +51,11 @@ def output_test(pk, outfolder):
 
 def read_test(outfolder):
     """
-    Read a test folder created by output_test
+    Read a test folder created by output_test.
+
+    .. note:: This method should only be called in the testing
+        environment, because it's importing data in the current
+        database.
     """
     import os
     import json
@@ -64,15 +68,8 @@ def read_test(outfolder):
                            ignore_unknown_nodes=True,silent=True)
 
     calc = None
-    for _,pk in imported['nodes']['new']:
-        # TODO: For some reason, some entries, present in
-        # imported['nodes']['new'] (observed to be DbComputers sometimes)
-        # tend to be missing after the import. This requires further
-        # investigation, but for this time and for this purpose I skip them.
-        try:
-            c = load_node(pk)
-        except NotExistent:
-            continue
+    for _,pk in imported['aiida.djsite.db.models.DbNode']['new']:
+        c = load_node(pk)
         if issubclass(c.__class__,JobCalculation):
             calc = c
             break

@@ -5,7 +5,7 @@ Please follow the convention "test_plugin_name_details" where plugin_name is the
 You can create a valid folder using
 from aiida.djsite.db.subtests.parsers import output_test
 output_test(PK, FOLDER)
-where PK is the PK of the calculation that you want to export, and FOLDER is the output folder.
+where PK is the PK of the calculation that you want to export, and FOLDER is the output folder. FOLDER name must match the following regular expression: test_[a-zA-Z0-9_]*
 You can then edit the folder removing the input nodes that are not needed. Remove both the folder and the corresonding entry from the _aiida_linkdata.json json file!
 
 The above is sufficient to just check if the parser does not fail on the given calculation.
@@ -20,15 +20,15 @@ JSON file inside the folder.
   {
     "output_parameters": {
       "energy": {
-  	"comparison": "almostEqual",
-  	"value": -3699.26590536037
+        "comparison": "AlmostEqual",
+        "value": -3699.26590536037
       },
       "energy_units": {
-  	"comparison": "Equal",
-  	"value": "eV"
+        "comparison": "Equal",
+        "value": "eV"
       }
     }, 
-    "output_kpoints": {
+    "output_array": {
     }
   }
 

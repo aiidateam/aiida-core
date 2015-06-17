@@ -717,7 +717,7 @@ _property_table = {
         None,
         None),
     "tcod.depositor_author_email": (
-        "tcod_depositor_author_name",
+        "tcod_depositor_author_email",
         "string",
         "E-mail address for TCOD depositions",
         None,

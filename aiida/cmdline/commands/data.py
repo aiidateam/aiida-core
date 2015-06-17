@@ -489,6 +489,11 @@ class Depositable(object):
         database = parsed_args.pop('database')
         data_id = parsed_args.pop('data_id')
 
+        # Removing the keys, whose values are None
+        for key in parsed_args.keys():
+            if parsed_args[key] is None:
+                parsed_args.pop(key)
+
         if database is None:
             print "Default database is not defined, please specify.\n" + \
                   "Valid databases are:"
@@ -834,8 +839,9 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable):
                             help="Print all bandsdatas from structures "
                                  "containing only the selected elements")
         parser.add_argument('-f', '--formulamode', type=str, default='hill',
-                            help="Formula printing mode (hill, reduce, allreduce"
-                                 " or compact1) (if None, does not print the formula)",
+                            help="Formula printing mode (hill, hill_compact,"
+                                 " reduce, group, count, or count_compact)"
+                                 " (if None, does not print the formula)",
                             action='store')
         parser.add_argument('-p', '--past-days', metavar='N',
                             help="Add a filter to show only bandsdatas created in the past N days",
@@ -1017,8 +1023,9 @@ class _Structure(VerdiCommandWithSubcommands,
                             help="If set, structures do not contain different "
                                  "elements (to be used with -e option)")
         parser.add_argument('-f', '--formulamode', type=str, default='hill',
-                            help="Formula printing mode (hill, reduce, allreduce"
-                                 " or compact1) (if None, does not print the formula)",
+                            help="Formula printing mode (hill, hill_compact,"
+                                 " reduce, group, count, or count_compact)"
+                                 " (if None, does not print the formula)",
                             action='store')
         parser.add_argument('-p', '--past-days', metavar='N',
                             help="Add a filter to show only structures created in the past N days",

@@ -679,8 +679,8 @@ class BasePwCpInputGenerator(object):
 
         self.use_parent_folder(remotedata)
 
-    def create_restart(self, force_restart=False,
-                       parent_folder_symlink=None):
+    def create_restart(self, force_restart=False, parent_folder_symlink=None,
+                       use_output_structure=False):
         """
         Function to restart a calculation that was not completed before 
         (like max walltime reached...) i.e. not to restart a really FAILED calculation.
@@ -691,6 +691,14 @@ class BasePwCpInputGenerator(object):
         
         :param bool force_restart: restart also if parent is not in FINISHED 
         state (e.g. FAILED, IMPORTED, etc.). Default=False.
+        :param bool parent_folder_symlink: if True, symlinks are used
+        instead of hard copies of the files. Default given by 
+        self._default_symlink_usage.
+        :param bool use_output_structure: if True, the output structure
+        of the restarted calculation is used if available, rather than its
+        input structure. Useful for nscf or bands calculations, but it
+        SHOULD NOT be used for the restart of a relaxation run.
+        Default=False.
         """
         from aiida.common.datastructures import calc_states
 
@@ -732,7 +740,15 @@ class BasePwCpInputGenerator(object):
 
         # set the new links
         c2.use_parameters(inp_dict)
-        c2.use_structure(calc_inp['structure'])
+        if use_output_structure:
+            # use OUTPUT structure if available
+            try:
+                c2.use_structure(self.out.output_structure)
+            except AttributeError:
+                c2.use_structure(calc_inp['structure'])
+        else:
+            c2.use_structure(calc_inp['structure'])
+
         if self._use_kpoints:
             c2.use_kpoints(calc_inp['kpoints'])
         c2.use_code(calc_inp['code'])

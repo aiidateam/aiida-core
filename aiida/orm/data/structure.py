@@ -912,7 +912,8 @@ class StructureData(Data):
         Get the pymatgen Structure object.
         Requires to be able to import pymatgen.
 
-        :return: a pymatgen object corresponding to this StructureData object.
+        :return: a pymatgen Structure object corresponding to this
+          StructureData object.
         """
         from pymatgen.core.structure import Structure
 

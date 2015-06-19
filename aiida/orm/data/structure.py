@@ -689,6 +689,9 @@ class StructureData(Data):
         """
         Load the structure from a pymatgen Molecule object.
 
+        :param margin: the margin to be added in all directions of the
+            bounding box of the molecule.
+
         .. note:: Requires the pymatgen module.
         """
         box = [ max([x.coords.tolist()[0] for x in mol.sites]) -

@@ -912,14 +912,16 @@ class StructureData(Data):
         Get the pymatgen Structure object.
         Requires to be able to import pymatgen.
 
-        :return: a pymatgen object corresponding to this StructureData object.
+        :return: a pymatgen Structure object corresponding to this
+          StructureData object.
         """
         from pymatgen.core.structure import Structure
 
-        species = [{self.get_kind(x.kind_name).symbols[i]:
-                        self.get_kind(x.kind_name).weights[i]
-                    for i in range(0, len(self.get_kind(x.kind_name).symbols))}
-                   for x in self.sites]
+        species = []
+        for s in self.sites:
+            k = self.get_kind(s.kind_name)
+            species.append({s: w for s, w in zip(k.symbols, k.weights)})
+
         positions = [list(x.position) for x in self.sites]
         return Structure(self.cell, species, positions,
                          coords_are_cartesian=True)

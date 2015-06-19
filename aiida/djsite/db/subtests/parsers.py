@@ -14,13 +14,18 @@ __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Andrius Merkys"
 
 
-def output_test(pk, outfolder):
+def output_test(pk, outfolder, skip_uuids_from_inputs=[]):
     """
     This is the function that should be used to create a new test from an
     existing calculation.
     
     It is possible to simplify the file removing unwanted nodes. 
     
+    :param pk: PK of Calculation, used for test
+    :param outfolder: folder to place the test files
+    :param skip_uuids_from_inputs: a list of UUIDs of input nodes to be
+        skipped
+
     .. todo:: create a test case to test the generation of GIT placeholders
         for empty folders (.gitignore with comments)
     """
@@ -34,9 +39,13 @@ def output_test(pk, outfolder):
         raise ValueError("Out folder '{}' already exists".format(outfolder))
 
     c = JobCalculation.get_subclass_from_pk(pk)
+    inputs = []
+    for node in c.get_inputs():
+        if node.uuid not in skip_uuids_from_inputs:
+            inputs.append(node.dbnode)
+
     folder = Folder(outfolder)
-    export_tree([c.dbnode] + [x.dbnode for x in c.get_inputs()],
-                folder=folder, also_parents=False)
+    export_tree([c.dbnode] + inputs, folder=folder, also_parents=False)
 
     # Create an empty checks file
     with open(os.path.join(outfolder, '_aiida_checks.json'), 'w') as f:

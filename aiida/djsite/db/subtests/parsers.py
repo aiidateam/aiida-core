@@ -35,7 +35,8 @@ def output_test(pk, outfolder):
 
     c = JobCalculation.get_subclass_from_pk(pk)
     folder = Folder(outfolder)
-    export_tree([c.dbnode],folder=folder)
+    export_tree([c.dbnode] + [x.dbnode for x in c.get_inputs()],
+                folder=folder, also_parents=False)
 
     # Create an empty checks file
     with open(os.path.join(outfolder, '_aiida_checks.json'), 'w') as f:

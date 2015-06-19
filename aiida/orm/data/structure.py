@@ -685,6 +685,20 @@ class StructureData(Data):
         else:
             raise TypeError("The value is not an ase.Atoms object")
 
+    def set_pymatgen(self, obj, **kwargs):
+        """
+        Load the structure from a pymatgen object.
+
+        .. note:: Requires the pymatgen module.
+        """
+        typestr = type(obj).__name__
+        try:
+            func = getattr(self, "set_pymatgen_{}".format(typestr.lower()))
+        except AttributeError:
+            raise AttributeError("Converter for '{}' to AiiDA structure "
+                                 "does not exist".format(typestr))
+        func(obj, **kwargs)
+
     def set_pymatgen_molecule(self, mol, margin=5):
         """
         Load the structure from a pymatgen Molecule object.

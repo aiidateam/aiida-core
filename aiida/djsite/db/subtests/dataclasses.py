@@ -1565,14 +1565,18 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
             f.flush()
             pymatgen_struct = read_structure(f.name)
 
-        struct = StructureData(pymatgen_structure=pymatgen_struct)
-        self.assertEquals(struct.get_site_kindnames(),
-                          ['Bi', 'Bi', 'SeTe', 'SeTe', 'SeTe'])
-        self.assertEquals([x.symbols for x in struct.kinds],
-                          [('Bi',), ('Se', 'Te')])
-        self.assertEquals([x.weights for x in struct.kinds],
-                          [(1.0,), (0.33333, 0.66667)])
+        structs_to_test = [StructureData(pymatgen=pymatgen_struct),
+                           StructureData(pymatgen_structure=pymatgen_struct)]
 
+        for struct in structs_to_test:
+            self.assertEquals(struct.get_site_kindnames(),
+                              ['Bi', 'Bi', 'SeTe', 'SeTe', 'SeTe'])
+            self.assertEquals([x.symbols for x in struct.kinds],
+                              [('Bi',), ('Se', 'Te')])
+            self.assertEquals([x.weights for x in struct.kinds],
+                              [(1.0,), (0.33333, 0.66667)])
+
+        struct = StructureData(pymatgen_structure=pymatgen_struct)
 
         # Testing pymatgen Structure -> StructureData -> pymatgen Structure
         # roundtrip.
@@ -1609,20 +1613,21 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
             f.flush()
             pymatgen_mol = read_mol(f.name)
 
-        struct = StructureData(pymatgen_molecule=pymatgen_mol)
-        self.assertEquals(struct.get_site_kindnames(),
-                          ['H', 'H', 'H', 'H', 'C'])
-        self.assertEquals(struct.pbc, (False, False, False))
-        self.assertEquals([round(x, 2) for x in list(struct.sites[0].position)],
-                          [5.77, 5.89, 6.81])
-        self.assertEquals([round(x, 2) for x in list(struct.sites[1].position)],
-                          [6.8, 5.89, 5.36])
-        self.assertEquals([round(x, 2) for x in list(struct.sites[2].position)],
-                          [5.26, 5.0, 5.36])
-        self.assertEquals([round(x, 2) for x in list(struct.sites[3].position)],
-                          [5.26, 6.78, 5.36])
-        self.assertEquals([round(x, 2) for x in list(struct.sites[4].position)],
-                          [5.77, 5.89, 5.73])
+        for struct in [StructureData(pymatgen=pymatgen_mol),
+                       StructureData(pymatgen_molecule=pymatgen_mol)]:
+            self.assertEquals(struct.get_site_kindnames(),
+                              ['H', 'H', 'H', 'H', 'C'])
+            self.assertEquals(struct.pbc, (False, False, False))
+            self.assertEquals([round(x, 2) for x in list(struct.sites[0].position)],
+                              [5.77, 5.89, 6.81])
+            self.assertEquals([round(x, 2) for x in list(struct.sites[1].position)],
+                              [6.8, 5.89, 5.36])
+            self.assertEquals([round(x, 2) for x in list(struct.sites[2].position)],
+                              [5.26, 5.0, 5.36])
+            self.assertEquals([round(x, 2) for x in list(struct.sites[3].position)],
+                              [5.26, 6.78, 5.36])
+            self.assertEquals([round(x, 2) for x in list(struct.sites[4].position)],
+                              [5.77, 5.89, 5.73])
 
 
 class TestArrayData(AiidaTestCase):

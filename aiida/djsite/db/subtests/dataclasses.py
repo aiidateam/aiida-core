@@ -1591,8 +1591,6 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
         for i in dict2['sites']:
             i['abc'] = [round(j, 2) for j in i['abc']]
 
-        self.maxDiff = None
-
         self.assertEquals(dict1, dict2)
 
     @unittest.skipIf(not has_pymatgen() or
@@ -1648,7 +1646,7 @@ class TestPymatgenFromStructureData(AiidaTestCase):
                      StrictVersion('3.0.13'), "Unable to import pymatgen")
     def test_1(self):
         """
-        Testing the check of periodic boundary conditions.
+        Test the check of periodic boundary conditions.
         """
         from aiida.orm.data.structure import StructureData
 
@@ -1666,7 +1664,7 @@ class TestPymatgenFromStructureData(AiidaTestCase):
                      StrictVersion(get_pymatgen_version()) <
                      StrictVersion('3.0.13'),
                      "Unable to import ase or pymatgen")
-    def test_conversion_of_types_2(self):
+    def test_2(self):
         from aiida.orm.data.structure import StructureData
         import ase
 
@@ -1692,6 +1690,32 @@ class TestPymatgenFromStructureData(AiidaTestCase):
                            [0.1, 0.1, 0.1],
                            [0.2, 0.2, 0.2],
                            [0.3, 0.3, 0.3]])
+
+    def test_3(self):
+        """
+        Test the conversion of StructureData to pymatgen's Molecule.
+        """
+        from aiida.orm.data.structure import StructureData
+        import ase
+
+        aseatoms = ase.Atoms('Si4', cell=(10, 10, 10),
+                             pbc=(True, True, True))
+        aseatoms.set_scaled_positions(
+            ((0.0, 0.0, 0.0),
+             (0.1, 0.1, 0.1),
+             (0.2, 0.2, 0.2),
+             (0.3, 0.3, 0.3),
+            )
+        )
+
+        a_struct = StructureData(ase=aseatoms)
+        p_mol = a_struct.get_pymatgen_molecule()
+
+        self.assertEquals([x['xyz'] for x in p_mol.to_dict['sites']],
+                          [[0.0, 0.0, 0.0],
+                           [1.0, 1.0, 1.0],
+                           [2.0, 2.0, 2.0],
+                           [3.0, 3.0, 3.0]])
 
 
 class TestArrayData(AiidaTestCase):

@@ -949,6 +949,24 @@ class StructureData(Data):
         return Structure(self.cell, species, positions,
                          coords_are_cartesian=True)
 
+    def get_pymatgen_molecule(self):
+        """
+        Get the pymatgen Molecule object.
+        Requires to be able to import pymatgen.
+
+        :return: a pymatgen Molecule object corresponding to this
+          StructureData object.
+        """
+        from pymatgen.core.structure import Molecule
+
+        species = []
+        for s in self.sites:
+            k = self.get_kind(s.kind_name)
+            species.append({s: w for s, w in zip(k.symbols, k.weights)})
+
+        positions = [list(x.position) for x in self.sites]
+        return Molecule(species, positions)
+
     def append_kind(self, kind):
         """
         Append a kind to the StructureData. It makes a copy of the kind.

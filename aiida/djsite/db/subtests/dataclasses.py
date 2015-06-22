@@ -1518,7 +1518,8 @@ class TestStructureDataFromAse(AiidaTestCase):
 
 class TestStructureDataFromPymatgen(AiidaTestCase):
     """
-    Tests the creation of StructureData from a pymatgen Structure object.
+    Tests the creation of StructureData from a pymatgen Structure and
+    Molecule objects.
     """
     from distutils.version import StrictVersion
     from aiida.orm.data.structure import has_pymatgen,get_pymatgen_version
@@ -1633,10 +1634,19 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
             self.assertEquals([round(x, 2) for x in list(struct.sites[4].position)],
                               [5.77, 5.89, 5.73])
 
+
+class TestPymatgenFromStructureData(AiidaTestCase):
+    """
+    Tests the creation of pymatgen Structure and Molecule objects from
+    StructureData.
+    """
+    from distutils.version import StrictVersion
+    from aiida.orm.data.structure import has_ase,has_pymatgen,get_pymatgen_version
+
     @unittest.skipIf(not has_pymatgen() or
                      StrictVersion(get_pymatgen_version()) <
                      StrictVersion('3.0.13'), "Unable to import pymatgen")
-    def test_3(self):
+    def test_1(self):
         """
         Testing the check of periodic boundary conditions.
         """
@@ -1650,6 +1660,38 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
         struct.pbc = [True, True, False]
         with self.assertRaises(ValueError):
             pmg_struct = struct.get_pymatgen_structure()
+
+    @unittest.skipIf(not has_ase() or
+                     not has_pymatgen() or
+                     StrictVersion(get_pymatgen_version()) <
+                     StrictVersion('3.0.13'),
+                     "Unable to import ase or pymatgen")
+    def test_conversion_of_types_2(self):
+        from aiida.orm.data.structure import StructureData
+        import ase
+
+        aseatoms = ase.Atoms('Si4', cell=(1., 2., 3.),
+                             pbc=(True, True, True))
+        aseatoms.set_scaled_positions(
+            ((0.0, 0.0, 0.0),
+             (0.1, 0.1, 0.1),
+             (0.2, 0.2, 0.2),
+             (0.3, 0.3, 0.3),
+            )
+        )
+
+        a_struct = StructureData(ase=aseatoms)
+        p_struct = a_struct.get_pymatgen_structure()
+
+        coord_array = [x['abc'] for x in p_struct.to_dict['sites']]
+        for i in range(len(coord_array)):
+            coord_array[i] = [round(x, 2) for x in coord_array[i]]
+
+        self.assertEquals(coord_array,
+                          [[0.0, 0.0, 0.0],
+                           [0.1, 0.1, 0.1],
+                           [0.2, 0.2, 0.2],
+                           [0.3, 0.3, 0.3]])
 
 
 class TestArrayData(AiidaTestCase):

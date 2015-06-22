@@ -495,7 +495,12 @@ class Export(VerdiCommand):
         parser.add_argument('-n', '--nodes', nargs='+', type=int, metavar="PK",
                             help="Export the given nodes")
         parser.add_argument('-g', '--groups', nargs='+', metavar="GROUPNAME",
-                            help="Export all nodes in the given user-defined groups",
+                            help="Export all nodes in the given group(s). "
+                                 "By default, only user-defined groups are "
+                                 "exported; add ':type_str' after "
+                                 "the group name to export a group of "
+                                 "type  'type_str' (e.g. 'data.upf', 'import',"
+                                 " etc.)",
                             type=str)
         parser.add_argument('-P', '--no-parents',
                             dest='no_parents', action='store_true',

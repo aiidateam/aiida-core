@@ -1,0 +1,37 @@
+&CONTROL
+  calculation = 'scf'
+  outdir = './out/'
+  prefix = 'aiida'
+  pseudo_dir = './pseudo/'
+  restart_mode = 'from_scratch'
+  tprnfor = .true.
+  tstress = .true.
+  verbosity = 'high'
+  wf_collect = .true.
+/
+&SYSTEM
+  ecutrho =   3.2000000000d+02
+  ecutwfc =   4.0000000000d+01
+  ibrav = 0
+  nat = 5
+  ntyp = 3
+/
+&ELECTRONS
+  conv_thr =   1.0000000000d-10
+/
+ATOMIC_SPECIES
+Ba     137.327 Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF
+O      15.9994 O.pbesol-n-rrkjus_psl.0.1-tested-pslib030.UPF
+Ti     47.867 Ti.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF
+ATOMIC_POSITIONS angstrom
+Ba           0.0000000000       0.0000000000       0.0000000000 
+Ti           2.0000000000       2.0000000000       2.0000000000 
+O            2.0000000000       2.0000000000       0.0000000000 
+O            2.0000000000       0.0000000000       2.0000000000 
+O            0.0000000000       2.0000000000       2.0000000000 
+K_POINTS automatic
+2 2 2 0 0 0
+CELL_PARAMETERS angstrom
+      4.0000000000       0.0000000000       0.0000000000
+      0.0000000000       4.0000000000       0.0000000000
+      0.0000000000       0.0000000000       4.0000000000

@@ -224,6 +224,10 @@ WorkflowDemo presented before, located in the ``wf_demo.py`` file in the clean A
   >> params = {"a":[1,2,3]}
   >> wf = WorkflowDemo(params=params)
   >> wf.start()
+
+.. note:: If you want to write the above script in a file, remember to run it
+  with ``verdi run`` and not simply with python, or otherwise to use the other
+  techniques described :doc:`here <../examples/scripting>`.
   
 In these four lines we loaded the class, we created some fictitious parameter and 
 we initialized the workflow. Finally we launched with the 

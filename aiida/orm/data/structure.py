@@ -107,6 +107,16 @@ def has_pymatgen():
     return True
 
 
+def get_pymatgen_version():
+    """
+    :return: string with pymatgen version, None if can not import.
+    """
+    if not has_pymatgen():
+        return None
+    import pymatgen
+    return pymatgen.__version__
+
+
 def calc_cell_volume(cell):
     """
     Calculates the volume of a cell given the three lattice vectors.
@@ -675,6 +685,38 @@ class StructureData(Data):
         else:
             raise TypeError("The value is not an ase.Atoms object")
 
+    def set_pymatgen(self, obj, **kwargs):
+        """
+        Load the structure from a pymatgen object.
+
+        .. note:: Requires the pymatgen module.
+        """
+        typestr = type(obj).__name__
+        try:
+            func = getattr(self, "set_pymatgen_{}".format(typestr.lower()))
+        except AttributeError:
+            raise AttributeError("Converter for '{}' to AiiDA structure "
+                                 "does not exist".format(typestr))
+        func(obj, **kwargs)
+
+    def set_pymatgen_molecule(self, mol, margin=5):
+        """
+        Load the structure from a pymatgen Molecule object.
+
+        :param margin: the margin to be added in all directions of the
+            bounding box of the molecule.
+
+        .. note:: Requires the pymatgen module.
+        """
+        box = [ max([x.coords.tolist()[0] for x in mol.sites]) -
+                min([x.coords.tolist()[0] for x in mol.sites]) + 2*margin,
+                max([x.coords.tolist()[1] for x in mol.sites]) -
+                min([x.coords.tolist()[1] for x in mol.sites]) + 2*margin,
+                max([x.coords.tolist()[2] for x in mol.sites]) -
+                min([x.coords.tolist()[2] for x in mol.sites]) + 2*margin ]
+        self.set_pymatgen_structure(mol.get_boxed_structure(*box))
+        self.pbc = [False, False, False]
+
     def set_pymatgen_structure(self, struct):
         """
         Load the structure from a pymatgen Structure object.
@@ -882,22 +924,63 @@ class StructureData(Data):
         """
         return self._get_object_ase()
 
+    def get_pymatgen(self):
+        """
+        Get pymatgen object. Returns Structure for structures with
+        periodic boundary conditions (in three dimensions) and Molecule
+        otherwise.
+
+        .. note:: Requires the pymatgen module.
+        """
+        if self.pbc == (True, True, True):
+            return self.get_pymatgen_structure()
+        else:
+            return self.get_pymatgen_molecule()
+
     def get_pymatgen_structure(self):
         """
         Get the pymatgen Structure object.
-        Requires to be able to import pymatgen.
 
-        :return: a pymatgen object corresponding to this StructureData object.
+        .. note:: Requires the pymatgen module.
+
+        :return: a pymatgen Structure object corresponding to this
+          StructureData object.
+        :raise ValueError: if periodic boundary conditions does not hold
+          in at least one dimension of real space.
         """
         from pymatgen.core.structure import Structure
 
-        species = [{self.get_kind(x.kind_name).symbols[i]:
-                        self.get_kind(x.kind_name).weights[i]
-                    for i in range(0, len(self.get_kind(x.kind_name).symbols))}
-                   for x in self.sites]
+        if self.pbc != (True, True, True):
+            raise ValueError("Periodic boundary conditions must apply in "
+                             "all three dimensions of real space")
+
+        species = []
+        for s in self.sites:
+            k = self.get_kind(s.kind_name)
+            species.append({s: w for s, w in zip(k.symbols, k.weights)})
+
         positions = [list(x.position) for x in self.sites]
         return Structure(self.cell, species, positions,
                          coords_are_cartesian=True)
+
+    def get_pymatgen_molecule(self):
+        """
+        Get the pymatgen Molecule object.
+
+        .. note:: Requires the pymatgen module.
+
+        :return: a pymatgen Molecule object corresponding to this
+          StructureData object.
+        """
+        from pymatgen.core.structure import Molecule
+
+        species = []
+        for s in self.sites:
+            k = self.get_kind(s.kind_name)
+            species.append({s: w for s, w in zip(k.symbols, k.weights)})
+
+        positions = [list(x.position) for x in self.sites]
+        return Molecule(species, positions)
 
     def append_kind(self, kind):
         """

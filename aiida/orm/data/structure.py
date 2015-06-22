@@ -924,10 +924,24 @@ class StructureData(Data):
         """
         return self._get_object_ase()
 
+    def get_pymatgen(self):
+        """
+        Get pymatgen object. Returns Structure for structures with
+        periodic boundary conditions (in three dimensions) and Molecule
+        otherwise.
+
+        .. note:: Requires the pymatgen module.
+        """
+        if self.pbc == (True, True, True):
+            return self.get_pymatgen_structure()
+        else:
+            return self.get_pymatgen_molecule()
+
     def get_pymatgen_structure(self):
         """
         Get the pymatgen Structure object.
-        Requires to be able to import pymatgen.
+
+        .. note:: Requires the pymatgen module.
 
         :return: a pymatgen Structure object corresponding to this
           StructureData object.
@@ -952,7 +966,8 @@ class StructureData(Data):
     def get_pymatgen_molecule(self):
         """
         Get the pymatgen Molecule object.
-        Requires to be able to import pymatgen.
+
+        .. note:: Requires the pymatgen module.
 
         :return: a pymatgen Molecule object corresponding to this
           StructureData object.

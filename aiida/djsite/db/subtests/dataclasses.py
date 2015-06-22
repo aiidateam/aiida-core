@@ -1594,6 +1594,9 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
 
         self.assertEquals(dict1, dict2)
 
+    @unittest.skipIf(not has_pymatgen() or
+                     StrictVersion(get_pymatgen_version()) <
+                     StrictVersion('3.0.13'), "Unable to import pymatgen")
     def test_2(self):
         """
         Input source: http://pymatgen.org/_static/Molecule.html
@@ -1630,6 +1633,9 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
             self.assertEquals([round(x, 2) for x in list(struct.sites[4].position)],
                               [5.77, 5.89, 5.73])
 
+    @unittest.skipIf(not has_pymatgen() or
+                     StrictVersion(get_pymatgen_version()) <
+                     StrictVersion('3.0.13'), "Unable to import pymatgen")
     def test_3(self):
         """
         Testing the check of periodic boundary conditions.

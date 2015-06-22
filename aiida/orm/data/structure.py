@@ -931,8 +931,14 @@ class StructureData(Data):
 
         :return: a pymatgen Structure object corresponding to this
           StructureData object.
+        :raise ValueError: if periodic boundary conditions does not hold
+          in at least one dimension of real space.
         """
         from pymatgen.core.structure import Structure
+
+        if self.pbc != (True, True, True):
+            raise ValueError("Periodic boundary conditions must apply in "
+                             "all three dimensions of real space")
 
         species = []
         for s in self.sites:

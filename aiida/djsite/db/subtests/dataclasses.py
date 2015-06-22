@@ -1629,6 +1629,21 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
             self.assertEquals([round(x, 2) for x in list(struct.sites[4].position)],
                               [5.77, 5.89, 5.73])
 
+    def test_3(self):
+        """
+        Testing the check of periodic boundary conditions.
+        """
+        from aiida.orm.data.structure import StructureData
+
+        struct = StructureData()
+
+        struct.pbc = [True, True, True]
+        pmg_struct = struct.get_pymatgen_structure()
+
+        struct.pbc = [True, True, False]
+        with self.assertRaises(ValueError):
+            pmg_struct = struct.get_pymatgen_structure()
+
 
 class TestArrayData(AiidaTestCase):
     """

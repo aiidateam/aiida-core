@@ -1585,12 +1585,13 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
         dict1 = pymatgen_struct.to_dict
         dict2 = pymatgen_struct_roundtrip.to_dict
 
-        # Removing site coordinates in order to prevent rounding errors
-        # from causing test failures.
         for i in dict1['sites']:
-            i.pop('abc')
+            i['abc'] = [round(j, 2) for j in i['abc']]
         for i in dict2['sites']:
-            i.pop('abc')
+            i['abc'] = [round(j, 2) for j in i['abc']]
+
+        self.maxDiff = None
+
         self.assertEquals(dict1, dict2)
 
     def test_2(self):

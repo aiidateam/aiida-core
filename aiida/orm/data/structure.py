@@ -689,7 +689,8 @@ class StructureData(Data):
         """
         Load the structure from a pymatgen object.
 
-        .. note:: Requires the pymatgen module.
+        .. note:: Requires the pymatgen module (version >= 3.0.13, usage
+            of earlier versions may cause errors).
         """
         typestr = type(obj).__name__
         try:
@@ -706,7 +707,8 @@ class StructureData(Data):
         :param margin: the margin to be added in all directions of the
             bounding box of the molecule.
 
-        .. note:: Requires the pymatgen module.
+        .. note:: Requires the pymatgen module (version >= 3.0.13, usage
+            of earlier versions may cause errors).
         """
         box = [ max([x.coords.tolist()[0] for x in mol.sites]) -
                 min([x.coords.tolist()[0] for x in mol.sites]) + 2*margin,
@@ -721,7 +723,8 @@ class StructureData(Data):
         """
         Load the structure from a pymatgen Structure object.
 
-        .. note:: Requires the pymatgen module.
+        .. note:: Requires the pymatgen module (version >= 3.0.13, usage
+            of earlier versions may cause errors).
         """
         self.cell = struct.lattice.matrix.tolist()
         self.pbc = [True, True, True]  # setting defaults, not sure if this
@@ -930,7 +933,8 @@ class StructureData(Data):
         periodic boundary conditions (in three dimensions) and Molecule
         otherwise.
 
-        .. note:: Requires the pymatgen module.
+        .. note:: Requires the pymatgen module (version >= 3.0.13, usage
+            of earlier versions may cause errors).
         """
         if self.pbc == (True, True, True):
             return self.get_pymatgen_structure()
@@ -941,7 +945,8 @@ class StructureData(Data):
         """
         Get the pymatgen Structure object.
 
-        .. note:: Requires the pymatgen module.
+        .. note:: Requires the pymatgen module (version >= 3.0.13, usage
+            of earlier versions may cause errors).
 
         :return: a pymatgen Structure object corresponding to this
           StructureData object.
@@ -967,7 +972,8 @@ class StructureData(Data):
         """
         Get the pymatgen Molecule object.
 
-        .. note:: Requires the pymatgen module.
+        .. note:: Requires the pymatgen module (version >= 3.0.13, usage
+            of earlier versions may cause errors).
 
         :return: a pymatgen Molecule object corresponding to this
           StructureData object.

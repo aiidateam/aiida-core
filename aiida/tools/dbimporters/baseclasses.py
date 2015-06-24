@@ -217,8 +217,10 @@ class DbEntry(object):
         """
         if self._cif is None:
             import urllib2
+            from hashlib import md5
 
             self._cif = urllib2.urlopen(self.source['url']).read()
+            self.source['source_md5'] = md5(self._cif).hexdigest()
         return self._cif
 
     def get_raw_cif(self):
@@ -256,9 +258,6 @@ class DbEntry(object):
         with tempfile.NamedTemporaryFile() as f:
             f.write(self.cif)
             f.flush()
-            if 'source_md5' not in self.source.keys() or \
-              self.source['source_md5'] is None:
-                self.source['source_md5'] = md5_file(f.name)
             cifnode = CifData(file=f.name, source=self.source)
 
         # Maintaining backwards-compatibility. Parameter 'store' should

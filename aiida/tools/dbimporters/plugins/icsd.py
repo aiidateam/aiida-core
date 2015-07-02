@@ -30,6 +30,8 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
     """
     Importer for the Inorganic Crystal Structure Database, short ICSD, provided by
     FIZ Karlsruhe. It allows to run queries and analyse all the results.
+    See the :ref:`DbImporter documentation and
+    tutorial page <ICSD_importer_guide>` for more information.
 
     :param server: Server URL, the web page of the database. It is
         required in order to have access to the full database.
@@ -57,9 +59,10 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         a SSH tunnel to the host using::
 
             ssh -L 3306:localhost:3306 username@hostname.com
-
-        See the :ref:`DbImporter documentation and
-        tutorial page <ICSD_importer_guide>` for more information.
+        or (if e.g. you get an URLError with Errno 111 (Connection refused)
+        upon querying)::
+        
+            ssh -L 3306:localhost:3306 -L 8010:localhost:80 username@hostname.com
     :param user: mysql database username (default: dba)
     :param passwd: mysql database password (default: sql)
     :param db: name of the database (default: icsd)
@@ -625,11 +628,13 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
 class IcsdEntry(aiida.tools.dbimporters.baseclasses.DbEntry):
     """
     Represent an entry from Icsd.
-    :note: before July 2nd 2015, source['db_id'] contained icsd.IDNUM (internal
-            icsd id number) and source['extras']['cif_nr'] the cif number 
-            (icsd.COLL_CODE).
-            after July 2nd 2015, source['db_id'] has been replaced by the cif 
-            number and source['extras']['idnum'] is icsd.IDNUM
+    
+    :note:
+      - Before July 2nd 2015, source['db_id'] contained icsd.IDNUM (internal
+        icsd id number) and source['extras']['cif_nr'] the cif number 
+        (icsd.COLL_CODE).
+      - After July 2nd 2015, source['db_id'] has been replaced by the cif 
+        number and source['extras']['idnum'] is icsd.IDNUM .
     """
 
     def __init__(self, url, **kwargs):

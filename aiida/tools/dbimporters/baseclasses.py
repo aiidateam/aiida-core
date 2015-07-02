@@ -8,26 +8,6 @@ __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Nicolas M
 from aiida.orm.calculation.inline import optional_inline
 
 
-@optional_inline
-def _get_cif_inline(parameters=None):
-    """
-    Wraps CIF file in :py:class:`aiida.orm.data.cif.CifData` instance.
-    """
-    from aiida.common.utils import md5_file
-    from aiida.orm.data.cif import CifData
-    import tempfile
-
-    cif = parameters.get_dict().pop('cif')
-    source = parameters.get_dict().pop('source', {})
-
-    with tempfile.NamedTemporaryFile() as f:
-        f.write(cif)
-        f.flush()
-        if 'source_md5' not in source.keys() or source['source_md5'] is None:
-            source['source_md5'] = md5_file(f.name)
-        return {'cif': CifData(file=f.name, source=source)}
-
-
 class DbImporter(object):
     """
     Base class for database importers.
@@ -237,8 +217,10 @@ class DbEntry(object):
         """
         if self._cif is None:
             import urllib2
+            from hashlib import md5
 
             self._cif = urllib2.urlopen(self.source['url']).read()
+            self.source['source_md5'] = md5(self._cif).hexdigest()
         return self._cif
 
     def get_raw_cif(self):
@@ -267,12 +249,23 @@ class DbEntry(object):
 
         :return: :py:class:`aiida.orm.data.cif.CifData` object
         """
-        from aiida.orm.data.parameter import ParameterData
-        import baseclasses  # This same module
+        from aiida.common.utils import md5_file
+        from aiida.orm.data.cif import CifData
+        import tempfile
 
-        pd = ParameterData(dict={'cif': self.cif, 'source': self.source})
-        ret_dict = _get_cif_inline(parameters=pd, store=store)
-        return ret_dict['cif']
+        cifnode = None
+
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(self.cif)
+            f.flush()
+            cifnode = CifData(file=f.name, source=self.source)
+
+        # Maintaining backwards-compatibility. Parameter 'store' should
+        # be removed in the future, as the new node can be stored later.
+        if store:
+            cifnode.store()
+
+        return cifnode
 
     def get_aiida_structure(self):
         """

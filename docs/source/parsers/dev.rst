@@ -11,7 +11,3 @@ Quantum ESPRESSO parsers
 .. automodule:: aiida.parsers.plugins.quantumespresso
    :members:
 
-Projwfc parser
---------------
-.. automodule:: aiida.parsers.plugins.quantumespresso.projwfc
-   :members:

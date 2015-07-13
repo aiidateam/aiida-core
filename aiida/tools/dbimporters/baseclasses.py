@@ -223,6 +223,15 @@ class DbEntry(object):
             self.source['source_md5'] = md5(self._cif).hexdigest()
         return self._cif
 
+    @cif.setter
+    def cif(self, cif):
+        """
+        Sets raw contents of a CIF file as string.
+        """
+        from hashlib import md5
+        self._cif = cif
+        self.source['source_md5'] = md5(self._cif).hexdigest()
+
     def get_raw_cif(self):
         """
         Returns raw contents of a CIF file as string.

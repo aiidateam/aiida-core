@@ -639,12 +639,18 @@ class Code(VerdiCommandWithSubcommands):
                                dbattributes__datatype='txt',
                                dbattributes__tval=plugin_filter)
         if not reveal_filter:  # by default show calculations that are not hidden
-            # or that do not have a hidden method
-            django_filter &= (Q(dbattributes__key='hidden',
+                               # or that do not have a hidden method
+            django_filter1 = ~Q(dbattributes__key='hidden')
+            django_filter2 = Q(dbattributes__key='hidden',
                                 dbattributes__datatype='bool',
-                                dbattributes__bval=False) |
-                              ~Q(dbattributes__key='hidden') )
-
+                                dbattributes__bval=False)
+            # The filters have to be joined in this order; the opposite order
+            # gives a different result (in filter 1, if passed after filter 2,
+            # it would also add the requirement that the dbattributes__id is the
+            # same of the previous query
+            django_reveal_filter = django_filter1 | django_filter2
+            django_filter &= django_reveal_filter
+        
         existing_codes = self.get_code_data(django_filter)
 
         print "# List of configured codes:"

@@ -1,3 +1,5 @@
+.. _git-cheatsheet:
+
 GIT cheatsheet
 ==============
 

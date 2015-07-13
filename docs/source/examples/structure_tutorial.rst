@@ -242,3 +242,32 @@ symbol in order to get the species name::
   it is possible that exporting a AiiDA structure
   to ASE and then importing it again will not perfectly preserve the kinds and
   kind names.
+
+Conversion to/from pymatgen
+---------------------------
+
+.. note:: converters seem to interface best with the version 3.0.13 of
+  pymatgen, whereas earlier versions may cause errors.
+
+AiiDA structure can be converted to pymatgen ``Molecule`` and
+``Structure`` objects by using, accordingly,
+:py:class:`~aiida.orm.data.structure.StructureData.get_pymatgen_molecule`
+and
+:py:class:`~aiida.orm.data.structure.StructureData.get_pymatgen_structure`
+methods::
+
+    pymatgen_molecule  = aiida_structure.get_pymatgen_molecule()
+    pymatgen_structure = aiida_structure.get_pymatgen_structure()
+
+It is also possible to convert pymatgen ``Molecule`` and ``Structure``
+objects to AiiDA structure::
+
+    StructureData = DataFactory("structure")
+    from_mol      = StructureData(pymatgen_molecule=mol)
+    from_struct   = StructureData(pymatgen_structure=struct)
+
+Moreover, a generic converter is also possible::
+
+    StructureData = DataFactory("structure")
+    from_mol      = StructureData(pymatgen=mol)
+    from_struct   = StructureData(pymatgen=struct)

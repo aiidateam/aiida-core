@@ -30,6 +30,8 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
     """
     Importer for the Inorganic Crystal Structure Database, short ICSD, provided by
     FIZ Karlsruhe. It allows to run queries and analyse all the results.
+    See the :ref:`DbImporter documentation and
+    tutorial page <ICSD_importer_guide>` for more information.
 
     :param server: Server URL, the web page of the database. It is
         required in order to have access to the full database.
@@ -57,14 +59,36 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         a SSH tunnel to the host using::
 
             ssh -L 3306:localhost:3306 username@hostname.com
-
-        See the :ref:`DbImporter documentation and
-        tutorial page <ICSD_importer_guide>` for more information.
+        or (if e.g. you get an URLError with Errno 111 (Connection refused)
+        upon querying)::
+        
+            ssh -L 3306:localhost:3306 -L 8010:localhost:80 username@hostname.com
     :param user: mysql database username (default: dba)
     :param passwd: mysql database password (default: sql)
     :param db: name of the database (default: icsd)
     :param port: Port to access the mysql database (default: 3306)
     """
+
+    length_precision = 0.001
+    angle_precision = 0.001
+    volume_precision = 0.001
+    temperature_precision = 0.001
+    density_precision = 0.001
+    pressure_precision = 1
+
+    def __init__(self, **kwargs):
+
+        self.db_parameters = {"server": "",
+                              "urladd": "index.php?",
+                              "querydb": True,
+                              "dl_db": "icsd",
+                              "host": "",
+                              "user": "dba",
+                              "passwd": "sql",
+                              "db": "icsd",
+                              "port": "3306",
+        }
+        self.setup_db(**kwargs)
 
     # for mysql db query
     def _int_clause(self, key, alias, values):
@@ -167,14 +191,6 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
                " IN (" + ", ".join(map(lambda f: "'" + valid_systems[f.lower()] + "'", \
                                        values)) + ")"
 
-
-    length_precision = 0.001
-    angle_precision = 0.001
-    volume_precision = 0.001
-    temperature_precision = 0.001
-    density_precision = 0.001
-    pressure_precision = 1
-
     def _length_clause(self, key, alias, values):
         """
         Return SQL query predicate for querying lattice vector lengths.
@@ -210,34 +226,6 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         Return SQL query predicate for querying pressure.
         """
         return self.double_clause(key, alias, values, self.pressure_precision)
-
-
-    # mysql database - query parameter (alias) : [mysql keyword (key), function to call]
-    keywords_db = {'id': ['COLL_CODE', _int_clause],
-                   'element': ['STRUCT_FORM;', _composition_clause],
-                   'number_of_elements': ['EL_COUNT', _int_clause],
-                   'chemical_name': ['CHEM_NAME', _str_fuzzy_clause],
-                   'formula': ['SUM_FORM', _formula_clause],
-                   'volume': ['C_VOL', _volume_clause],
-                   'spacegroup': ['SGR', _str_exact_clause],
-                   'a': ['A_LEN', _length_clause],
-                   'b': ['B_LEN', _length_clause],
-                   'c': ['C_LEN', _length_clause],
-                   'alpha': ['ALPHA', _angle_clause],
-                   'beta': ['BETA', _angle_clause],
-                   'gamma': ['GAMMA', _angle_clause],
-                   'density': ['DENSITY_CALC', _density_clause],
-                   'wyckoff': ['WYCK', _str_exact_clause],
-                   'molar_mass': ['MOL_MASS', _density_clause],
-                   'pdf_num': ['PDF_NUM', _str_exact_clause],
-                   'z': ['Z', _int_clause],
-                   'measurement_temp': ['TEMPERATURE', _temperature_clause],
-                   'authors': ['AUTHORS_TEXT', _str_fuzzy_clause],
-                   'journal': ['journal', _str_fuzzy_clause],
-                   'title': ['AU_TITLE', _str_fuzzy_clause],
-                   'year': ['MPY', _int_clause],
-                   'crystal_system': ['CRYST_SYS_CODE', _crystal_system_clause],
-    }
 
     # for the web query
     def _parse_all(k, v):
@@ -322,6 +310,32 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
 
         return valid_systems[v.lower()]
 
+    # mysql database - query parameter (alias) : [mysql keyword (key), function to call]
+    keywords_db = {'id': ['COLL_CODE', _int_clause],
+                   'element': ['STRUCT_FORM;', _composition_clause],
+                   'number_of_elements': ['EL_COUNT', _int_clause],
+                   'chemical_name': ['CHEM_NAME', _str_fuzzy_clause],
+                   'formula': ['SUM_FORM', _formula_clause],
+                   'volume': ['C_VOL', _volume_clause],
+                   'spacegroup': ['SGR', _str_exact_clause],
+                   'a': ['A_LEN', _length_clause],
+                   'b': ['B_LEN', _length_clause],
+                   'c': ['C_LEN', _length_clause],
+                   'alpha': ['ALPHA', _angle_clause],
+                   'beta': ['BETA', _angle_clause],
+                   'gamma': ['GAMMA', _angle_clause],
+                   'density': ['DENSITY_CALC', _density_clause],
+                   'wyckoff': ['WYCK', _str_exact_clause],
+                   'molar_mass': ['MOL_MASS', _density_clause],
+                   'pdf_num': ['PDF_NUM', _str_exact_clause],
+                   'z': ['Z', _int_clause],
+                   'measurement_temp': ['TEMPERATURE', _temperature_clause],
+                   'authors': ['AUTHORS_TEXT', _str_fuzzy_clause],
+                   'journal': ['journal', _str_fuzzy_clause],
+                   'title': ['AU_TITLE', _str_fuzzy_clause],
+                   'year': ['MPY', _int_clause],
+                   'crystal_system': ['CRYST_SYS_CODE', _crystal_system_clause],
+    }
     # keywords accepted for the web page query
     keywords = {"id": ("authors", _parse_all),
                 "authors": ("authors", _parse_all),
@@ -343,24 +357,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
                 "year": ("year", _parse_all),
                 "crystal_system": ("system", _parse_system),
     }
-
-
-    def __init__(self, **kwargs):
-
-
-        self.db_parameters = {"server": "",
-                              "urladd": "index.php?",
-                              "querydb": True,
-                              "dl_db": "icsd",
-
-                              "host": "",
-                              "user": "dba",
-                              "passwd": "sql",
-                              "db": "icsd",
-                              "port": "3306",
-        }
-        self.setup_db(**kwargs)
-
+    
     def query(self, **kwargs):
         """
         Depending on the db_parameters, the mysql database or the web page are queried.
@@ -387,15 +384,14 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         for k, v in kwargs.iteritems():
             if not isinstance(v, list):
                 v = [v]
-            sql_where_query.append( \
-                "(" + self.keywords_db[k][1](self, \
-                                             self.keywords_db[k][0], \
-                                             k, \
-                                             v) + \
-                ")")
+            sql_where_query.append("({})".format(self.keywords_db[k][1](self, 
+                                                        self.keywords_db[k][0], 
+                                                        k, v)))
         if "crystal_system" in kwargs.keys():  # to query another table than the main one, add LEFT JOIN in front of WHERE
-            sql_query = "LEFT JOIN space_group ON space_group.sgr=icsd.sgr LEFT JOIN space_group_number ON space_group_number.sgr_num=space_group.sgr_num " + "WHERE" + " AND ".join(
-                sql_where_query)
+            sql_query = "LEFT JOIN space_group ON space_group.sgr=icsd.sgr LEFT "\
+                        "JOIN space_group_number ON "\
+                        "space_group_number.sgr_num=space_group.sgr_num "\
+                        + "WHERE" + " AND ".join(sql_where_query)
         else:
             sql_query = "WHERE" + " AND ".join(sql_where_query)
 
@@ -483,9 +479,12 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
         self.entries = {}
         self.page = 1
         self.position = 0
+        self.db_version = None
         self.sql_select_query = "SELECT SQL_CALC_FOUND_ROWS icsd.IDNUM, icsd.COLL_CODE, icsd.STRUCT_FORM "
         self.sql_from_query = "FROM icsd "
-
+        
+        if self.db_parameters["querydb"]:
+            self.query_db_version()
         self.query_page()
 
     def next(self):
@@ -512,32 +511,63 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
 
         if position not in self.entries:
             if self.db_parameters["querydb"]:
-                self.entries[position] = IcsdEntry(
-                    self.db_parameters["server"] + self.db_parameters["dl_db"] + self.cif_url.format(
-                        self.results[position]), \
-                    db_source=self.db_name, db_id=self.results[position], extras={'cif_nr': self.cif_numbers[position]})
+                self.entries[position] = IcsdEntry(self.db_parameters["server"] + 
+                        self.db_parameters["dl_db"] + self.cif_url.format(
+                        self.results[position]),
+                    db_source=self.db_name, db_id=self.cif_numbers[position], 
+                    db_version = self.db_version, 
+                    extras={'idnum': self.results[position]})
             else:
-                self.entries[position] = IcsdEntry(
-                    self.db_parameters["server"] + self.db_parameters["dl_db"] + self.cif_url.format(
-                        self.results[position]), \
-                    db_source=self.db_name, db_id=self.results[position])
+                self.entries[position] = IcsdEntry(self.db_parameters["server"] + 
+                        self.db_parameters["dl_db"] + self.cif_url.format(
+                        self.results[position]),
+                    db_source=self.db_name, extras={'idnum': self.results[position]})
         return self.entries[position]
 
 
+    def query_db_version(self):
+        """
+        Query the version of the icsd database (last row of RELEASE_TAGS).
+        """
+        results = []
+        if self.db_parameters["querydb"]:
+
+            sql_select_query = "SELECT RELEASE_TAG "
+            sql_from_query = "FROM icsd.icsd_database_information "
+
+            self._connect_db()
+            query_statement = "{}{}".format(sql_select_query, sql_from_query)
+            self.cursor.execute(query_statement)
+            self.db.commit()
+
+            for row in self.cursor.fetchall():
+                results.append(str(row[0]))
+
+            self._disconnect_db()
+            try:
+                self.db_version = results[-1]
+            except IndexError:
+                raise IcsdImporterExp("Database version not found")
+
+        else:
+            raise NotImplementedError("Cannot query the database version with "
+                                      "a web query.")
+        
     def query_page(self):
         """
         Query the mysql or web page database, depending on the db_parameters.
         Store the number_of_results, cif file number and the corresponding icsd number.
 
         :note: Icsd uses its own number system, different from the CIF
-          file numbers.
+                file numbers.
         """
         if self.db_parameters["querydb"]:
 
             self._connect_db()
-            query_statement = self.sql_select_query + self.sql_from_query + self.query + " LIMIT " + str(
-                (self.page - 1) * 100) + ", 100"
-
+            query_statement = "{}{}{} LIMIT {}, 100".format(self.sql_select_query,
+                                                            self.sql_from_query,
+                                                            self.query,
+                                                            (self.page-1)*100)
             self.cursor.execute(query_statement)
             self.db.commit()
 
@@ -557,16 +587,17 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
             from bs4 import BeautifulSoup
             import re
 
-            self.html = urllib2.urlopen(
-                self.db_parameters["server"] + self.db_parameters["db"] + "/" + self.query.format(
-                    str(self.page))).read()
+            self.html = urllib2.urlopen(self.db_parameters["server"] + 
+                                        self.db_parameters["db"] + "/" + 
+                                        self.query.format(str(self.page))).read()
 
             self.soup = BeautifulSoup(self.html)
 
             try:
 
                 if self.number_of_results is None:
-                    self.number_of_results = int(re.findall(r'\d+', str(self.soup.find_all("i")[-1]))[0])
+                    self.number_of_results = int(re.findall(r'\d+',
+                                                    str(self.soup.find_all("i")[-1]))[0])
             except IndexError:
                 raise NoResultsWebExp
 
@@ -597,6 +628,13 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
 class IcsdEntry(aiida.tools.dbimporters.baseclasses.DbEntry):
     """
     Represent an entry from Icsd.
+    
+    :note:
+      - Before July 2nd 2015, source['db_id'] contained icsd.IDNUM (internal
+        icsd id number) and source['extras']['cif_nr'] the cif number 
+        (icsd.COLL_CODE).
+      - After July 2nd 2015, source['db_id'] has been replaced by the cif 
+        number and source['extras']['idnum'] is icsd.IDNUM .
     """
 
     def __init__(self, url, **kwargs):
@@ -605,21 +643,13 @@ class IcsdEntry(aiida.tools.dbimporters.baseclasses.DbEntry):
         """
         super(IcsdEntry, self).__init__(**kwargs)
         self.source = {
-            'db_source': 'Icsd',
+            'db_source': kwargs.get('db_source','Icsd'),
             'db_url': None,  # Server ?
-            'db_id': None,
-            'db_version': None,
+            'db_id': kwargs.get('db_id',None),
+            'db_version': kwargs.get('db_version',None),
             'url': url,
-            'extras': {'cif_nr': None},
+            'extras': {'idnum': kwargs.get('extras',{}).get('idnum',None)},
         }
-        self.cif_nr = None
-        if 'db_source' in kwargs.keys():
-            self.source["db_source"] = kwargs['db_source']
-        if 'db_id' in kwargs.keys():
-            self.source["db_id"] = kwargs['db_id']
-        if 'extras' in kwargs.keys() and 'cif_nr' in kwargs['extras']:
-            self.source['extras']["cif_nr"] = kwargs['extras']['cif_nr']
-
         self._cif = None
 
     @property
@@ -687,7 +717,8 @@ def correct_cif(cif):
     :param cif: A string containing the content of the CIF file.
     :return: a string containing the corrected CIF file.
     """
-    # Do more checks to be sure it's working in everycase -> no _publ_author_name, several lines, correct input
+    # Do more checks to be sure it's working in everycase 
+    # -> no _publ_author_name, several lines, correct input
     lines = cif.split('\n')
 
     try:
@@ -702,7 +733,8 @@ def correct_cif(cif):
             #use regular expressions ?
             if len(words) == 0 or words[0] == "loop_" or words[0][0] == '_':
                 return '\n'.join(lines)
-            elif (words[0][0] == "'" and words[-1][-1] == "'") or (words[0][0] == '"' and words[-1][-1] == '"'):
+            elif ((words[0][0] == "'" and words[-1][-1] == "'")
+                  or (words[0][0] == '"' and words[-1][-1] == '"')):
                 # if quotes are already there, check next line
                 inc = inc + 1
             else:

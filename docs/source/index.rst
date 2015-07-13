@@ -52,8 +52,8 @@ Modules provided with aiida
 +++++++++++++++++++++++++++
 
 .. toctree::
-   :maxdepth: 3
-   
+   :maxdepth: 4
+
    module_guide/index
 
 Indices and tables

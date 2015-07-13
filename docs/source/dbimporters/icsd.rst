@@ -43,7 +43,12 @@ The following parameters are required only for the mysql query:
 
         ssh -L 3306:localhost:3306 username@icsddbhostname.com
 
-      Therefore the database can then be accessed using "127.0.0.1" as host::
+      If you get an URLError with Errno 111 (Connection refused) when
+      you query the database, try to use instead::
+        
+        ssh -L 3306:localhost:3306 -L 8010:localhost:80 username@icsddbhostname.com
+        
+      The database can then be accessed using "127.0.0.1" as host::
 
         host = "127.0.0.1"
 
@@ -104,7 +109,6 @@ Full example
 
 Here is a full example how the icsd importer can be used::
 
-
     import aiida.tools.dbimporters.plugins.icsd
 
     cif_nr_list = [
@@ -116,15 +120,11 @@ Here is a full example how the icsd importer can be used::
     ]
 
     importer = aiida.tools.dbimporters.plugins.icsd.IcsdDbImporter(server="http://ICSDSERVER.com/",
-    host= "127.0.0.1")
-
+        host= "127.0.0.1")
     query_results = importer.query(id=cif_nr_list)
-
     for result in query_results:
-        print result.source['extras']["cif_nr"]
-
+        print result.source['db_id']
         aiida_structure = result.get_aiida_structure()
-
         #do something with the structure
 
 
@@ -137,6 +137,12 @@ If the database is not hosted by your local machine,
 use the local port tunneling provided by ssh, as follows::
 
     ssh -L 3306:localhost:3306 username@icsddbhostname.com
+
+.. note:: If you get an URLError with Errno 111 (Connection refused) when
+  you query the database, try to use instead::
+        
+    ssh -L 3306:localhost:3306 -L 8010:localhost:80 username@icsddbhostname.com
+
 
 .. note:: You need an account on the host machine.
 .. note:: There are plenty of explanations online explaining

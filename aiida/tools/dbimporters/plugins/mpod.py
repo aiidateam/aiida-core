@@ -96,7 +96,7 @@ class MpodDbImporter(DbImporter):
             else:
                 results = filter(set(results).__contains__, this_results)
 
-        return MpodSearchResults(results)
+        return MpodSearchResults([{"id": x} for x in results])
 
     def setup_db(self, query_url=None, **kwargs):
         """

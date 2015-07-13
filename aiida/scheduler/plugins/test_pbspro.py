@@ -328,6 +328,420 @@ Job Id: 74165.mycluster
 
 """
 
+## This contains in the 10-th job unexpected newlines
+## in the sched_hint field. Still, it should parse correctly.
+text_qstat_f_to_test_with_unexpected_newlines = """Job Id: 549159
+    Job_Name = somejob
+    Job_Owner = user_549159
+    job_state = H
+    queue = ShortQ
+    server = service1
+    Account_Name = account_549159
+    Checkpoint = u
+    ctime = Sun Jun 21 07:09:41 2015
+    depend = afterok:549158.service1.head.cb3.ichec.ie@service1.cb3.ichec.ie
+    Error_Path = host.domain:/some/path/to/sth/ASSP
+	-1R-p/more/down/the/path/ASSP
+	-1R.e549159
+    Hold_Types = s
+    Join_Path = oe
+    Keep_Files = n
+    Mail_Points = bea
+    Mail_Users = usermail@domain1
+    mtime = Sun Jun 21 07:09:41 2015
+    Output_Path = host.domain:/some/path/to/sth/GL
+	more/down/the/path/ASS
+	P-1R.o549159
+    Priority = 0
+    qtime = Sun Jun 21 07:09:41 2015
+    Rerunable = False
+    Resource_List.nodect = 4
+    Resource_List.nodes = 4:ppn=24
+    Resource_List.walltime = 09:00:00
+    euser = user_549159
+    egroup = users
+    queue_type = E
+    submit_args = -W depend=afterok:549158 somejob.pbs
+    fault_tolerant = False
+    job_radix = 0
+    submit_host = host.domain1
+
+Job Id: 555716
+    Job_Name = ini_J2
+    Job_Owner = somebody@host.domain
+    resources_used.cput = 500:13:39
+    resources_used.energy_used = 0
+    resources_used.mem = 20716400kb
+    resources_used.vmem = 23534576kb
+    resources_used.walltime = 41:45:13
+    job_state = R
+    queue = ProdQ
+    server = service1
+    Account_Name = dias01
+    Checkpoint = u
+    ctime = Fri Jun 26 14:04:56 2015
+    Error_Path = host:/down/the/path/test
+	_valg.out
+    exec_host = r2i4n13/0-23+r1i2n12/0-23+r1i2n11/0-23+r1i1n15/0-23
+    Hold_Types = n
+    Join_Path = oe
+    Keep_Files = n
+    Mail_Points = bea
+    Mail_Users = usermail@mail.domain
+    mtime = Sun Jun 28 23:20:51 2015
+    Output_Path = host:/down/the/path/tes
+	t_valg.out
+    Priority = 0
+    qtime = Fri Jun 26 14:04:56 2015
+    Rerunable = False
+    Resource_List.nodect = 4
+    Resource_List.nodes = 4:ppn=24
+    Resource_List.walltime = 70:00:00
+    session_id = 21190
+    euser = somebody
+    egroup = users
+    queue_type = E
+    etime = Fri Jun 26 14:04:56 2015
+    submit_args = runmem_CB_E
+    start_time = Sun Jun 28 23:20:51 2015
+    Walltime.Remaining = 101627
+    start_count = 1
+    fault_tolerant = False
+    job_radix = 0
+    submit_host = host.domain
+
+Job Id: 556491
+    Job_Name = somejob010
+    Job_Owner = user_556491
+    resources_used.cput = 1850:10:45
+    resources_used.energy_used = 0
+    resources_used.mem = 50392860kb
+    resources_used.vmem = 77507412kb
+    resources_used.walltime = 78:21:43
+    job_state = R
+    queue = LongQ
+    server = service1
+    Account_Name = some432472
+    Checkpoint = u
+    ctime = Sat Jun 27 10:44:32 2015
+    Error_Path = host:/down/teh/path/ATc
+	T/somejob010.e556491
+    exec_host = r3i1n2/0-23
+    Hold_Types = n
+    Join_Path = n
+    Keep_Files = n
+    Mail_Points = ea
+    Mail_Users = user@mail
+    mtime = Sat Jun 27 10:45:06 2015
+    Output_Path = host;/down/the/path/AT
+	cT/somejob-010.o556491
+    Priority = 0
+    qtime = Sat Jun 27 10:44:32 2015
+    Rerunable = False
+    Resource_List.nodect = 1
+    Resource_List.nodes = 1:ppn=24
+    Resource_List.walltime = 144:00:00
+    session_id = 28668
+    euser = user_556491
+    egroup = users
+    queue_type = E
+    etime = Sat Jun 27 10:44:32 2015
+    submit_args = scriptname.pbs
+    start_time = Sat Jun 27 10:45:06 2015
+    Walltime.Remaining = 236282
+    start_count = 1
+    fault_tolerant = False
+    job_radix = 0
+    submit_host = host.domain
+
+Job Id: 546437
+    Job_Name = job_546437
+    Job_Owner = user_546437
+    resources_used.cput = 146:03:05
+    resources_used.energy_used = 0
+    resources_used.mem = 4199416kb
+    resources_used.vmem = 10804052kb
+    resources_used.walltime = 06:12:22
+    job_state = C
+    queue = ShortQ
+    server = server.service.546437
+    Account_Name = account_546437
+    Checkpoint = u
+    ctime = Thu Jun 18 16:10:46 2015
+    depend = beforeok:546438@service1
+    Error_Path = server.domain:/path/to/error/file
+	-1R-p/more/down/the/path/GLP
+	-1R.e546437
+    exec_host = r2i7n16/0-23+r2i6n14/0-23+r2i6n1/0-23+r1i7n8/0-23
+    Hold_Types = n
+    Join_Path = oe
+    Keep_Files = n
+    Mail_Points = bea
+    Mail_Users = usermail_546437@domain.546437
+    mtime = Thu Jun 18 22:36:03 2015
+    Output_Path = server.domain:/path/to/output/file
+	something2/more/down/the/path/GL
+	P-1R.o546437
+    Priority = 0
+    qtime = Thu Jun 18 16:10:46 2015
+    Rerunable = False
+    Resource_List.nodect = 4
+    Resource_List.nodes = 4:ppn=24
+    Resource_List.walltime = 08:00:00
+    session_id = 7054
+    euser = user_546437
+    egroup = group_546437
+    queue_type = E
+    etime = Thu Jun 18 16:10:46 2015
+    exit_status = 271
+    submit_args = args_546437.ext
+    start_time = Thu Jun 18 16:23:35 2015
+    start_count = 1
+    fault_tolerant = False
+    job_radix = 0
+    submit_host = host_546437.domain
+
+Job Id: 547637
+    Job_Name = job_546437
+    Job_Owner = user_546437
+    job_state = Q
+    queue = ShortQ
+    server = server.service.546437
+    Account_Name = account_546437
+    Checkpoint = u
+    ctime = Fri Jun 19 14:00:43 2015
+    Error_Path = server.domain:/path/to/error/file
+	
+    Hold_Types = n
+    Join_Path = oe
+    Keep_Files = n
+    Mail_Points = bea
+    Mail_Users = usermail_546437@domain.546437
+    mtime = Fri Jun 19 14:00:43 2015
+    Output_Path = server.domain:/path/to/output/file
+	7
+    Priority = 0
+    qtime = Fri Jun 19 14:00:43 2015
+    Rerunable = False
+    Resource_List.nodect = 1
+    Resource_List.nodes = 1:ppn=24
+    Resource_List.walltime = 24:00:00
+    euser = user_546437
+    egroup = group_546437
+    queue_type = E
+    etime = Fri Jun 19 14:00:43 2015
+    submit_args = args_546437.ext
+    fault_tolerant = False
+    job_radix = 0
+    submit_host = host_546437.domain
+
+Job Id: 547683
+    Job_Name = job_547683
+    Job_Owner = user_547683
+    job_state = Q
+    queue = ShortQ
+    server = server.service.547683
+    Account_Name = account_547683
+    Checkpoint = u
+    ctime = Fri Jun 19 14:58:08 2015
+    Error_Path = server.domain:/path/to/error/file
+	83
+    Hold_Types = n
+    Join_Path = oe
+    Keep_Files = n
+    Mail_Points = ea
+    Mail_Users = usermail_547683@domain.547683
+    mtime = Fri Jun 19 14:58:08 2015
+    Output_Path = server.domain:/path/to/output/file
+	683
+    Priority = 0
+    qtime = Fri Jun 19 14:58:08 2015
+    Rerunable = False
+    Resource_List.nodect = 1
+    Resource_List.nodes = 1:ppn=24
+    Resource_List.walltime = 23:30:00
+    euser = user_547683
+    egroup = group_547683
+    queue_type = E
+    etime = Fri Jun 19 14:58:08 2015
+    submit_args = args_547683.ext
+    fault_tolerant = False
+    job_radix = 0
+    submit_host = host_547683.domain
+
+Job Id: 549004
+    Job_Name = job_549004
+    Job_Owner = user_549004
+    job_state = Q
+    queue = ProdQ
+    server = server.service.549004
+    Account_Name = account_549004
+    Checkpoint = u
+    ctime = Sat Jun 20 21:25:20 2015
+    Error_Path = server.domain:/path/to/error/file
+	_something1_202.e549004
+    Hold_Types = n
+    Join_Path = oe
+    Keep_Files = n
+    Mail_Points = bea
+    mtime = Sat Jun 20 21:25:20 2015
+    Output_Path = server.domain:/path/to/output/file
+	w_something1_202.o549004
+    Priority = 0
+    qtime = Sat Jun 20 21:25:20 2015
+    Rerunable = False
+    Resource_List.nodect = 1
+    Resource_List.nodes = 1:ppn=24
+    Resource_List.walltime = 48:00:00
+    euser = user_549004
+    egroup = group_549004
+    queue_type = E
+    etime = Sat Jun 20 21:25:20 2015
+    submit_args = args_549004ext
+    fault_tolerant = False
+    job_radix = 0
+    submit_host = host_549004.domain
+
+Job Id: 549005
+    Job_Name = job_549004
+    Job_Owner = user_549004
+    job_state = Q
+    queue = ProdQ
+    server = server.service.549004
+    Account_Name = account_549004
+    Checkpoint = u
+    ctime = Sat Jun 20 21:25:24 2015
+    Error_Path = server.domain:/path/to/error/file
+	_something1_102.e549005
+    Hold_Types = n
+    Join_Path = oe
+    Keep_Files = n
+    Mail_Points = bea
+    mtime = Sat Jun 20 21:25:24 2015
+    Output_Path = server.domain:/path/to/output/file
+	w_something1_102.o549005
+    Priority = 0
+    qtime = Sat Jun 20 21:25:24 2015
+    Rerunable = False
+    Resource_List.nodect = 1
+    Resource_List.nodes = 1:ppn=24
+    Resource_List.walltime = 48:00:00
+    euser = user_549004
+    egroup = group_549004
+    queue_type = E
+    etime = Sat Jun 20 21:25:24 2015
+    submit_args = args_549004.ext
+    fault_tolerant = False
+    job_radix = 0
+    submit_host = host_549004.domain
+
+Job Id: 549008
+    Job_Name = job_549008
+    Job_Owner = user_549008
+    job_state = Q
+    queue = ProdQ
+    server = server.service.549008
+    Account_Name = account_549008
+    Checkpoint = u
+    ctime = Sat Jun 20 21:25:39 2015
+    Error_Path = server.domain:/path/to/error/file
+	something1_102.e549008
+    Hold_Types = n
+    Join_Path = oe
+    Keep_Files = n
+    Mail_Points = bea
+    mtime = Sat Jun 20 21:25:39 2015
+    Output_Path = server.domain:/path/to/output/file
+	_something1_102.o549008
+    Priority = 0
+    qtime = Sat Jun 20 21:25:39 2015
+    Rerunable = False
+    Resource_List.nodect = 1
+    Resource_List.nodes = 1:ppn=24
+    Resource_List.walltime = 48:00:00
+    euser = user_549008
+    egroup = group_549008
+    queue_type = E
+    etime = Sat Jun 20 21:25:39 2015
+    submit_args = args_549008.ext
+    fault_tolerant = False
+    job_radix = 0
+    submit_host = host_549008.domain
+
+Job Id: 543984
+    Job_Name = job_543984
+    Job_Owner = user_543984
+    resources_used.cput = 641:36:16
+    resources_used.energy_used = 0
+    resources_used.mem = 3815752kb
+    resources_used.vmem = 12122136kb
+    resources_used.walltime = 35:47:31
+    job_state = C
+    queue = ProdQ
+    server = server.service.543984
+    Account_Name = account_543984
+    Checkpoint = u
+    ctime = Wed Jun 17 09:16:05 2015
+    depend = beforeany:545943@service1
+    Error_Path = server.domain:/path/to/error/file
+	P_Mp=318.,NVF=1e5,tau=0.10,ddZ,AD,1T,iFlr,xyz.e543984
+    exec_host = r2i7n17/0-23+r2i0n11/0-23+r2i6n17/0-23+r2i0n5/0-23+r2i7n1/0-23
+	+r2i5n8/0-23+r2i4n11/0-23+r2i4n8/0-23+r2i2n8/0-23+r2i0n2/0-23+r2i3n16/
+	0-23+r2i3n2/0-23+r2i1n2/0-23+r2i4n3/0-23+r2i1n15/0-23+r2i1n9/0-23+r2i2
+	n2/0-23+r2i3n8/0-23+r2i3n5/0-23+r2i1n11/0-23+r2i0n16/0-23+r2i2n5/0-23+
+	r2i1n3/0-23+r2i0n17/0-23+r2i0n8/0-23+r1i3n0/0-23+r1i7n7/0-23+r1i6n1/0-
+	23+r1i7n3/0-23+r1i7n5/0-23+r1i6n17/0-23+r1i7n4/0-23
+    Hold_Types = n
+    Join_Path = n
+    Keep_Files = n
+    Mail_Points = n
+    Mail_Users = usermail_543984@domain.543984
+    mtime = Thu Jun 18 22:36:12 2015
+    Output_Path = server.domain:/path/to/output/file
+	EP_Mp=318.,NVF=1e5,tau=0.10,ddZ,AD,1T,iFlr,xyz.o543984
+    Priority = 0
+    qtime = Wed Jun 17 09:16:05 2015
+    Rerunable = False
+    Resource_List.nodect = 32
+    Resource_List.nodes = 32:ppn=24
+    Resource_List.walltime = 71:59:59
+    session_id = 47630
+    euser = user_543984
+    egroup = group_543984
+    queue_type = E
+    sched_hint = Post job file processing error; job 543984 on host r2i7n17
+
+U
+	nable to copy file 543984.OU to /some/path/on/the/cluster/MHD
+	something_Mp=318.,NVF=1e5,tau=0.10,ddZ,AD,1T,iFlr,xyz.o543984,
+	 error 1
+*** error from copy
+/bin/cp: cannot stat `543984.OU': No suc
+	h file or directory
+*** end error output
+
+Unable to copy file 543984.E
+	R to /some/path/on/the/cluster/something_Mp=318.,
+	NVF=1e5,tau=0.10,ddZ,AD,1T,iFlr,xyz.e543984,
+	 error 1
+*** error from copy
+/bin/cp: cannot stat `543984.ER': No suc
+	h file or directory
+*** end error output
+    etime = Wed Jun 17 09:16:05 2015
+    exit_status = 271
+    submit_args = args_XX.ext
+	xyz -l nodes=32:ppn=24,walltime=71:59:59 -v RESUME=true,SMP=24,
+	NND=32,
+	NOPFS=false -d /some/path/ /some/other/pa
+	th/NIx/que/runN.sth
+    start_time = Wed Jun 17 10:48:24 2015
+    start_count = 1
+    fault_tolerant = False
+    job_radix = 0
+    submit_host = host_XX.domain
+"""
+
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
@@ -378,6 +792,61 @@ class TestParserQstat(unittest.TestCase):
         self.assertEquals(set(running_users), set(parsed_running_users))
 
         running_jobs = ['69301.mycluster', '74164.mycluster']
+        parsed_running_jobs = [j.job_id for j in job_list if j.job_state \
+                               and j.job_state == job_states.RUNNING]
+        self.assertEquals(set(running_jobs), set(parsed_running_jobs))
+
+        for j in job_list:
+            if j.allocated_machines:
+                num_machines = 0
+                num_cpus = 0
+                for n in j.allocated_machines:
+                    num_machines += 1
+                    num_cpus += n.num_cpus
+
+                self.assertTrue(j.num_machines == num_machines)
+                self.assertTrue(j.num_cpus == num_cpus)
+                # TODO : parse the env_vars
+
+    def test_parse_with_unexpected_newlines(self):
+        """
+        Test whether _parse_joblist can parse the qstat -f output
+        also when there are unexpected newlines
+        """
+        s = PbsproScheduler()
+
+        retval = 0
+        stdout = text_qstat_f_to_test_with_unexpected_newlines
+        stderr = ''
+
+        job_list = s._parse_joblist_output(retval, stdout, stderr)
+
+        # The parameters are hard coded in the text to parse
+        job_on_cluster = 10
+        job_parsed = len(job_list)
+        self.assertEquals(job_parsed, job_on_cluster)
+
+        job_running = 2
+        job_running_parsed = len([j for j in job_list if j.job_state \
+                                  and j.job_state == job_states.RUNNING])
+        self.assertEquals(job_running, job_running_parsed)
+
+        job_held = 1
+        job_held_parsed = len([j for j in job_list if j.job_state \
+                               and j.job_state == job_states.QUEUED_HELD])
+        self.assertEquals(job_held, job_held_parsed)
+
+        job_queued = 5
+        job_queued_parsed = len([j for j in job_list if j.job_state \
+                                 and j.job_state == job_states.QUEUED])
+        self.assertEquals(job_queued, job_queued_parsed)
+
+        running_users = ['somebody', 'user_556491']
+        parsed_running_users = [j.job_owner for j in job_list if j.job_state \
+                                and j.job_state == job_states.RUNNING]
+        self.assertEquals(set(running_users), set(parsed_running_users))
+
+        running_jobs = ['555716', '556491']
         parsed_running_jobs = [j.job_id for j in job_list if j.job_state \
                                and j.job_state == job_states.RUNNING]
         self.assertEquals(set(running_jobs), set(parsed_running_jobs))

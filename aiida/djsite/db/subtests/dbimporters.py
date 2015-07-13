@@ -127,7 +127,7 @@ class TestCodDbImporter(AiidaTestCase):
         from aiida.orm.data.cif import CifData
 
         entry = CodEntry("http://www.crystallography.net/cod/1000000.cif")
-        entry._cif = "data_test _publ_section_title 'Test structure'"
+        entry.cif = "data_test _publ_section_title 'Test structure'"
 
         cif = entry.get_cif_node()
         self.assertEquals(isinstance(cif, CifData), True)

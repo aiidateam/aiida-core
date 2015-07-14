@@ -58,6 +58,12 @@ class Data(Node):
 
         self._set_attr('source', source)
 
+    def set_source(self, source):
+        """
+        Sets the dictionary describing the source of Data object.
+        """
+        self.source = source
+
     def _add_link_from(self, src, label=None):
         from aiida.orm.calculation import Calculation
 

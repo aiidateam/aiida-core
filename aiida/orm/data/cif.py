@@ -548,41 +548,6 @@ class CifData(SinglefileData):
         self._ase = None
         self._set_attr('formulae', self.get_formulae())
 
-    @property
-    def source(self):
-        """
-        A dictionary representing the source of a CIF.
-        """
-        source_dict = {}
-        for k in self._db_source_attrs:
-            source_dict[k] = self.get_attr(k, "")
-        return source_dict
-
-    @source.setter
-    def source(self, source):
-        """
-        Set the file source descriptions.
-        :raises ValueError: if unknown data source attribute is found in
-            supplied dictionary.
-        """
-        unknown_keys = []
-        for k in source.keys():
-            if k in self._db_source_attrs:
-                self._set_attr(k, source[k])
-            else:
-                unknown_keys.append(k)
-        if unknown_keys:
-            raise ValueError("Unknown data source attribute(s) " +
-                             ", ".join(unknown_keys) +
-                             ": only " + ", ".join(self._db_source_attrs) +
-                             " are supported")
-
-    def set_source(self, source):
-        """
-        Set the file source descriptions.
-        """
-        self.source = source
-
     def get_formulae(self, mode='sum'):
         """
         Get the formula.

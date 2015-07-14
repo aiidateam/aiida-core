@@ -24,6 +24,34 @@ method. This is done independently in order to allow cross-validation of plugins
 class Data(Node):
     _updatable_attributes = tuple()
 
+    _source_attributes = ['db_name', 'db_uri', 'uri', 'id', 'version',
+                          'extras', 'source_md5', 'description', 'license']
+
+    @property
+    def source(self):
+        """
+        :return: dictionary describing the source of Data object.
+        """
+        return self.get_attr('source', None)
+
+    @source.setter
+    def source(self, source):
+        """
+        Sets the dictionary describing the source of Data object.
+
+        :raise AttributeError: if dictionary contains unknown field.
+        :raise ValueError: if supplied source description is not a
+            dictionary.
+        """
+        if not isinstance(source, dict):
+            raise ValueError("Source must be supplied as a dictionary")
+        unknown_attrs = list(set(source.keys()) - set(self._source_attributes))
+        if unknown_attrs:
+            raise AttributeError("Unknown source parameters: "
+                                 "{}".format(", ".join(unknown_attrs)))
+
+        self._set_attr('source', source)
+
     def _add_link_from(self, src, label=None):
         from aiida.orm.calculation import Calculation
 

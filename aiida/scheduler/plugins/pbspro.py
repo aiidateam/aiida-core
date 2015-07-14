@@ -13,7 +13,7 @@ from aiida.scheduler.datastructures import (
 # This maps PbsPro status letters to our own status list
 
 ## List of states from the man page of qstat
-# B  Array job has at least one subjob running.
+#B  Array job has at least one subjob running.
 #E  Job is exiting after having run.
 #F  Job is finished.
 #H  Job is held.
@@ -25,6 +25,19 @@ from aiida.scheduler.datastructures import (
 #U  Cycle-harvesting job is suspended due to  keyboard  activity.
 #W  Job is waiting for its submitter-assigned start time to be reached.
 #X  Subjob has completed execution or has been deleted.
+
+## These are instead the states from PBS/Torque v.2.4.16 (from Ubuntu)
+#C -  Job is completed after having run [different from above, but not clashing]
+#E -  Job is exiting after having run. [same as above]
+#H -  Job is held. [same as above]
+#Q -  job is queued, eligible to run or routed. [same as above]
+#R -  job is running. [same as above]
+#T -  job is being moved to new location. [same as above]
+#W -  job is waiting for its execution time 
+#     (-a option) to be reached. [similar to above]
+#S -  (Unicos only) job is suspend. [as above]
+
+
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -40,10 +53,12 @@ _map_status_pbspro = {
     'Q': job_states.QUEUED,
     'R': job_states.RUNNING,
     'S': job_states.SUSPENDED,
-    #    'T': job_states., # TODO: what to do here?
+    'T': job_states.QUEUED, # We assume that from the AiiDA point of view 
+                            # it is still queued
     'U': job_states.SUSPENDED,
     'W': job_states.QUEUED,
     'X': job_states.DONE,
+    'C': job_states.DONE, # This is the completed state of PBS/Torque
 }
 
 
@@ -332,7 +347,9 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
             if l.startswith('Job Id:'):
                 jobdata_raw.append(
                     {'id': l.split(':', 1)[1].strip(),
-                     'lines': []})
+                     'lines': [], 'warning_lines_idx': []})
+                     # warning_lines_idx: lines that do not start either with
+                     # tab or space
             else:
                 if l.strip():
                     # This is a non-empty line, therefore it is an attribute
@@ -359,9 +376,16 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
                                     "starts with a TAB! ({})".format(line_num, l))
                             jobdata_raw[-1]['lines'][-1] += l[1:]
                         else:
-                            raise SchedulerParsingError(
-                                "Wrong starting character at line {}! ({})"
-                                "".format(line_num, l))
+                            #raise SchedulerParsingError(
+                            #    "Wrong starting character at line {}! ({})"
+                            #    "".format(line_num, l))
+                            ## For some reasons, the output of 'comment' and 
+                            ## 'Variable_List', for instance, can have 
+                            ## newlines if they are included... # I do a
+                            ## workaround
+                            jobdata_raw[-1]['lines'][-1] += "\n{}".format(l)
+                            jobdata_raw[-1]['warning_lines_idx'].append(
+                                len(jobdata_raw[-1]['lines'])-1)
 
         # Create dictionary and parse specific fields
         job_list = []
@@ -383,6 +407,26 @@ class PbsproScheduler(aiida.scheduler.Scheduler):
             raw_data = {i.split('=', 1)[0].strip().lower():
                             i.split('=', 1)[1].lstrip()
                         for i in job['lines'] if '=' in i}
+
+            ## I ignore the errors for the time being - this seems to be
+            ## a problem if there are \n in the content of some variables?
+            ## I consider this a workaround...
+            #for line_with_warning in set(job['warning_lines_idx']):
+            #    if job['lines'][line_with_warning].split(
+            #        '=',1)[0].strip().lower() != "comment":
+            #        raise SchedulerParsingError(
+            #            "Wrong starting character in one of the lines "
+            #            "of job {}, and it's not a comment! ({})"
+            #            "".format(this_job.job_id,
+            #                      job['lines'][line_with_warning]))
+
+            problematic_fields = []
+            for line_with_warning in set(job['warning_lines_idx']):
+                problematic_fields.append(job['lines'][line_with_warning].split(
+                    '=',1)[0].strip().lower())
+            if problematic_fields:
+                # These are the fields that contain unexpected newlines
+                raw_data['warning_fields_with_newlines'] = problematic_fields
 
             # I believe that exit_status and terminating_signal cannot be
             # retrieved from the qstat -f output.

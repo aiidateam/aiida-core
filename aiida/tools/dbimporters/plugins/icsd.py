@@ -630,25 +630,27 @@ class IcsdEntry(aiida.tools.dbimporters.baseclasses.DbEntry):
     Represent an entry from Icsd.
     
     :note:
-      - Before July 2nd 2015, source['db_id'] contained icsd.IDNUM (internal
+      - Before July 2nd 2015, source['id'] contained icsd.IDNUM (internal
         icsd id number) and source['extras']['cif_nr'] the cif number 
         (icsd.COLL_CODE).
-      - After July 2nd 2015, source['db_id'] has been replaced by the cif 
+      - After July 2nd 2015, source['id'] has been replaced by the cif 
         number and source['extras']['idnum'] is icsd.IDNUM .
     """
+    _license = 'ICSD'
 
-    def __init__(self, url, **kwargs):
+    def __init__(self, uri, **kwargs):
         """
-        Create an instance of IcsdEntry, related to the supplied URL.
+        Create an instance of IcsdEntry, related to the supplied URI.
         """
         super(IcsdEntry, self).__init__(**kwargs)
         self.source = {
-            'db_source': kwargs.get('db_source','Icsd'),
-            'db_url': None,  # Server ?
-            'db_id': kwargs.get('db_id',None),
-            'db_version': kwargs.get('db_version',None),
-            'url': url,
+            'db_name': kwargs.get('db_name','Icsd'),
+            'db_uri': None,  # Server ?
+            'id': kwargs.get('id',None),
+            'version': kwargs.get('version',None),
+            'uri': uri,
             'extras': {'idnum': kwargs.get('extras',{}).get('idnum',None)},
+            'license': self._license,
         }
         self._cif = None
 
@@ -660,7 +662,7 @@ class IcsdEntry(aiida.tools.dbimporters.baseclasses.DbEntry):
         if self._cif is None:
             import urllib2
 
-            self._cif = urllib2.urlopen(self.source["url"]).read()
+            self._cif = urllib2.urlopen(self.source["uri"]).read()
         return self._cif
 
     def get_cif_node(self):

@@ -178,28 +178,30 @@ class DbEntry(object):
     """
     Represents an entry from the structure database (COD, ICSD, ...).
     """
+    _license = None
 
-    def __init__(self, db_source=None, db_url=None, db_id=None,
-                 db_version=None, extras={}, url=None):
+    def __init__(self, db_name=None, db_uri=None, id=None,
+                 version=None, extras={}, uri=None):
         """
         Sets the basic parameters for the database entry:
 
-        :param db_source: name of the source database
-        :param db_url: URL of the source database
-        :param db_id: structure identifyer in the database
-        :param db_version: version of the database
+        :param db_name: name of the source database
+        :param db_uri: URI of the source database
+        :param id: structure identifyer in the database
+        :param version: version of the database
         :param extras: a dictionary with some extra parameters
             (e.g. database ID number)
-        :param url: URL of the structure (should be permanent)
+        :param uri: URI of the structure (should be permanent)
         """
         self.source = {
-            'db_source': db_source,
-            'db_url': db_url,
-            'db_id': db_id,
-            'db_version': db_version,
+            'db_name': db_name,
+            'db_uri': db_uri,
+            'id': id,
+            'version': version,
             'extras': extras,
-            'url': url,
+            'uri': uri,
             'source_md5': None,
+            'license': self._license,
         }
         self._cif = None
 
@@ -219,7 +221,7 @@ class DbEntry(object):
             import urllib2
             from hashlib import md5
 
-            self._cif = urllib2.urlopen(self.source['url']).read()
+            self._cif = urllib2.urlopen(self.source['uri']).read()
             self.source['source_md5'] = md5(self._cif).hexdigest()
         return self._cif
 

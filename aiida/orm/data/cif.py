@@ -621,13 +621,14 @@ class CifData(SinglefileData):
         """
         Initialises an instance of CifData.
         """
-        self._db_source_attrs = ['db_source',
-                                 'db_url',
-                                 'db_id',
-                                 'db_version',
+        self._db_source_attrs = ['db_name',
+                                 'db_uri',
+                                 'id',
+                                 'version',
                                  'extras',
-                                 'url',
-                                 'source_md5']
+                                 'uri',
+                                 'source_md5',
+                                 'license']
         super(CifData, self).__init__(**kwargs)
         self._values = None
         self._ase = None

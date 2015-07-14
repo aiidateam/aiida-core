@@ -106,14 +106,14 @@ class TestCodDbImporter(AiidaTestCase):
                                     {'id': '2000000', 'svnrevision': '1234'}])
         self.assertEquals(len(results), 3)
         self.assertEquals(str(results.at(1)),
-                          'CodEntry(db_version="1234",db_id="1000001",'
-                          'url="http://www.crystallography.net/cod/1000001.cif@1234",'
-                          'db_url="http://www.crystallography.net",extras={},'
-                          'db_source="Crystallography Open Database",'
-                          'source_md5=None)')
-        self.assertEquals(results.at(1).source['url'], \
+                          'CodEntry(license="CC0",'
+                          'db_name="Crystallography Open Database",version="1234",'
+                          'uri="http://www.crystallography.net/cod/1000001.cif@1234",'
+                          'source_md5=None,db_uri="http://www.crystallography.net",'
+                          'id="1000001",extras={})')
+        self.assertEquals(results.at(1).source['uri'], \
                           "http://www.crystallography.net/cod/1000001.cif@1234")
-        self.assertEquals([x.source['url'] for x in results],
+        self.assertEquals([x.source['uri'] for x in results],
                           ["http://www.crystallography.net/cod/1000000.cif",
                            "http://www.crystallography.net/cod/1000001.cif@1234",
                            "http://www.crystallography.net/cod/2000000.cif@1234"])
@@ -134,13 +134,14 @@ class TestCodDbImporter(AiidaTestCase):
         self.assertEquals(cif.get_attr('md5'),
                           '070711e8e99108aade31d20cd5c94c48')
         self.assertEquals(cif.source, {
-            'db_source': 'Crystallography Open Database',
-            'db_url': 'http://www.crystallography.net',
-            'db_id': None,
-            'db_version': None,
+            'db_name': 'Crystallography Open Database',
+            'db_uri': 'http://www.crystallography.net',
+            'id': None,
+            'version': None,
             'extras': {},
             'source_md5': '070711e8e99108aade31d20cd5c94c48',
-            'url': 'http://www.crystallography.net/cod/1000000.cif'
+            'uri': 'http://www.crystallography.net/cod/1000000.cif',
+            'license': 'CC0',
         })
 
 
@@ -160,14 +161,15 @@ class TestTcodDbImporter(AiidaTestCase):
                                      {'id': '20000000', 'svnrevision': '1234'}])
         self.assertEquals(len(results), 3)
         self.assertEquals(str(results.at(1)),
-                          'TcodEntry(db_version="1234",db_id="10000001",'
-                          'url="http://www.crystallography.net/tcod/10000001.cif@1234",'
-                          'db_url="http://www.crystallography.net/tcod",extras={},'
-                          'db_source="Theoretical Crystallography Open Database",'
-                          'source_md5=None)')
-        self.assertEquals(results.at(1).source['url'], \
+                          'TcodEntry(license="CC0",'
+                          'db_name="Theoretical Crystallography Open Database",'
+                          'version="1234",'
+                          'uri="http://www.crystallography.net/tcod/10000001.cif@1234",'
+                          'source_md5=None,db_uri="http://www.crystallography.net/tcod",'
+                          'id="10000001",extras={})')
+        self.assertEquals(results.at(1).source['uri'], \
                           "http://www.crystallography.net/tcod/10000001.cif@1234")
-        self.assertEquals([x.source['url'] for x in results],
+        self.assertEquals([x.source['uri'] for x in results],
                           ["http://www.crystallography.net/tcod/10000000.cif",
                            "http://www.crystallography.net/tcod/10000001.cif@1234",
                            "http://www.crystallography.net/tcod/20000000.cif@1234"])
@@ -187,12 +189,13 @@ class TestPcodDbImporter(AiidaTestCase):
         results = PcodSearchResults([{'id': '12345678'}])
         self.assertEquals(len(results), 1)
         self.assertEquals(str(results.at(0)),
-                          'PcodEntry(db_version=None,db_id="12345678",'
-                          'url="http://www.crystallography.net/pcod/cif/1/123/12345678.cif",'
-                          'db_url="http://www.crystallography.net/pcod",extras={},'
-                          'db_source="Predicted Crystallography Open Database",'
-                          'source_md5=None)')
-        self.assertEquals([x.source['url'] for x in results],
+                          'PcodEntry(license="CC0",'
+                          'db_name="Predicted Crystallography Open Database",'
+                          'version=None,'
+                          'uri="http://www.crystallography.net/pcod/cif/1/123/12345678.cif",'
+                          'source_md5=None,db_uri="http://www.crystallography.net/pcod",'
+                          'id="12345678",extras={})')
+        self.assertEquals([x.source['uri'] for x in results],
                           ["http://www.crystallography.net/pcod/cif/1/123/12345678.cif"])
 
 
@@ -210,10 +213,11 @@ class TestMpodDbImporter(AiidaTestCase):
         results = MpodSearchResults([{'id': '1234567'}])
         self.assertEquals(len(results), 1)
         self.assertEquals(str(results.at(0)),
-                          'MpodEntry(db_version=None,db_id="1234567",'
-                          'url="http://mpod.cimav.edu.mx/datafiles/1234567.mpod",'
-                          'db_url="http://mpod.cimav.edu.mx",extras={},'
-                          'db_source="Material Properties Open Database",'
-                          'source_md5=None)')
-        self.assertEquals([x.source['url'] for x in results],
+                          'MpodEntry(license=None,'
+                          'db_name="Material Properties Open Database",'
+                          'version=None,'
+                          'uri="http://mpod.cimav.edu.mx/datafiles/1234567.mpod",'
+                          'source_md5=None,db_uri="http://mpod.cimav.edu.mx",'
+                          'id="1234567",extras={})')
+        self.assertEquals([x.source['uri'] for x in results],
                           ["http://mpod.cimav.edu.mx/datafiles/1234567.mpod"])

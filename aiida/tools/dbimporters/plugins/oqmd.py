@@ -111,7 +111,7 @@ class OqmdSearchResults(DbSearchResults):
 
         :param result_dict: dictionary, describing an entry in the results.
         """
-        return {'db_id': result_dict['id']}
+        return {'id': result_dict['id']}
 
     def _get_url(self, result_dict):
         """
@@ -127,13 +127,13 @@ class OqmdEntry(DbEntry):
     Represents an entry from OQMD.
     """
 
-    def __init__(self, url, **kwargs):
+    def __init__(self, uri, **kwargs):
         """
         Creates an instance of
         :py:class:`aiida.tools.dbimporters.plugins.oqmd.OqmdEntry`, related
-        to the supplied URL.
+        to the supplied URI.
         """
-        super(OqmdEntry, self).__init__(db_source='Open Quantum Materials Database',
-                                        db_url='http://oqmd.org',
-                                        url=url,
+        super(OqmdEntry, self).__init__(db_name='Open Quantum Materials Database',
+                                        db_uri='http://oqmd.org',
+                                        uri=uri,
                                         **kwargs)

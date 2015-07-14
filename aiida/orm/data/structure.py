@@ -1549,7 +1549,7 @@ class StructureData(Data):
 
     def _get_object_phonopyatoms(self):
         """
-        Converts StructureData() in PhonopyAtoms()
+        Converts StructureData() to PhonopyAtoms()
         :return: a PhonopyAtoms object
         """
         from phonopy.structure.atoms import Atoms as PhonopyAtoms
@@ -1563,8 +1563,8 @@ class StructureData(Data):
         
     def _get_object_ase(self):
         """
-        Converts StructureData() in PhonopyAtoms()
-        :return: a PhonopyAtoms object
+        Converts StructureData() to ase.Atoms()
+        :return: an ase.Atoms object
         """
         import ase
 

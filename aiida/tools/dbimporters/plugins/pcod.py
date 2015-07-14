@@ -136,15 +136,15 @@ class PcodEntry(CodEntry):
     Represents an entry from PCOD.
     """
 
-    def __init__(self, url,
-                 db_source='Predicted Crystallography Open Database',
-                 db_url='http://www.crystallography.net/pcod', **kwargs):
+    def __init__(self, uri,
+                 db_name='Predicted Crystallography Open Database',
+                 db_uri='http://www.crystallography.net/pcod', **kwargs):
         """
         Creates an instance of
         :py:class:`aiida.tools.dbimporters.plugins.pcod.PcodEntry`, related
-        to the supplied URL.
+        to the supplied URI.
         """
-        super(PcodEntry, self).__init__(db_source=db_source,
-                                        db_url=db_url,
-                                        url=url,
+        super(PcodEntry, self).__init__(db_name=db_name,
+                                        db_uri=db_uri,
+                                        uri=uri,
                                         **kwargs)

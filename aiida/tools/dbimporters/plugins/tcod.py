@@ -61,15 +61,15 @@ class TcodEntry(CodEntry):
     Represents an entry from TCOD.
     """
 
-    def __init__(self, url,
-                 db_source='Theoretical Crystallography Open Database',
-                 db_url='http://www.crystallography.net/tcod', **kwargs):
+    def __init__(self, uri,
+                 db_name='Theoretical Crystallography Open Database',
+                 db_uri='http://www.crystallography.net/tcod', **kwargs):
         """
         Creates an instance of
         :py:class:`aiida.tools.dbimporters.plugins.tcod.TcodEntry`, related
-        to the supplied URL.
+        to the supplied URI.
         """
-        super(TcodEntry, self).__init__(db_source=db_source,
-                                        db_url=db_url,
-                                        url=url,
+        super(TcodEntry, self).__init__(db_name=db_name,
+                                        db_uri=db_uri,
+                                        uri=uri,
                                         **kwargs)

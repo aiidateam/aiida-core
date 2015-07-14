@@ -60,6 +60,7 @@ class TcodEntry(CodEntry):
     """
     Represents an entry from TCOD.
     """
+    _license = 'CC0'
 
     def __init__(self, uri,
                  db_name='Theoretical Crystallography Open Database',

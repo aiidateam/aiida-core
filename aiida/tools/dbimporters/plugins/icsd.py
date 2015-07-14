@@ -636,6 +636,7 @@ class IcsdEntry(aiida.tools.dbimporters.baseclasses.DbEntry):
       - After July 2nd 2015, source['id'] has been replaced by the cif 
         number and source['extras']['idnum'] is icsd.IDNUM .
     """
+    _license = 'ICSD'
 
     def __init__(self, uri, **kwargs):
         """
@@ -649,6 +650,7 @@ class IcsdEntry(aiida.tools.dbimporters.baseclasses.DbEntry):
             'version': kwargs.get('version',None),
             'uri': uri,
             'extras': {'idnum': kwargs.get('extras',{}).get('idnum',None)},
+            'license': self._license,
         }
         self._cif = None
 

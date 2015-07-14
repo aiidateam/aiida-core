@@ -303,6 +303,7 @@ class CodEntry(DbEntry):
     """
     Represents an entry from COD.
     """
+    _license = 'CC0'
 
     def __init__(self, uri, db_name='Crystallography Open Database',
                  db_uri='http://www.crystallography.net', **kwargs):

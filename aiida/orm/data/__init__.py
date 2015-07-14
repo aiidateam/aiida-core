@@ -50,6 +50,12 @@ class Data(Node):
             raise AttributeError("Unknown source parameters: "
                                  "{}".format(", ".join(unknown_attrs)))
 
+        if source.get('license', "").startswith('CC-BY') and \
+           source.get('description', None) is None:
+            raise ValueError("License of the object ({}) requires "
+                             "attribution, while none is given in the "
+                             "description".format(source['license']))
+
         self._set_attr('source', source)
 
     def _add_link_from(self, src, label=None):

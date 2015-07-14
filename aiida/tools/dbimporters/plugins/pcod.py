@@ -135,6 +135,7 @@ class PcodEntry(CodEntry):
     """
     Represents an entry from PCOD.
     """
+    _license = 'CC0'
 
     def __init__(self, uri,
                  db_name='Predicted Crystallography Open Database',

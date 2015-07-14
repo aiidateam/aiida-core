@@ -178,6 +178,7 @@ class DbEntry(object):
     """
     Represents an entry from the structure database (COD, ICSD, ...).
     """
+    _license = None
 
     def __init__(self, db_name=None, db_uri=None, id=None,
                  version=None, extras={}, uri=None):
@@ -200,6 +201,7 @@ class DbEntry(object):
             'extras': extras,
             'uri': uri,
             'source_md5': None,
+            'license': self._license,
         }
         self._cif = None
 

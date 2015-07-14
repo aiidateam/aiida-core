@@ -151,6 +151,7 @@ class TestCifData(AiidaTestCase):
             'extras': '',
             'uri': '',
             'source_md5': '',
+            'license': '',
         })
 
         with open(a.get_abs_path(basename)) as f:

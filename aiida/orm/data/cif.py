@@ -518,7 +518,8 @@ class CifData(SinglefileData):
                                  'version',
                                  'extras',
                                  'uri',
-                                 'source_md5']
+                                 'source_md5',
+                                 'license']
         super(CifData, self).__init__(**kwargs)
         self._values = None
         self._ase = None

@@ -512,13 +512,6 @@ class CifData(SinglefileData):
         """
         Initialises an instance of CifData.
         """
-        self._db_source_attrs = ['db_name',
-                                 'db_uri',
-                                 'id',
-                                 'version',
-                                 'extras',
-                                 'uri',
-                                 'source_md5']
         super(CifData, self).__init__(**kwargs)
         self._values = None
         self._ase = None
@@ -537,12 +530,10 @@ class CifData(SinglefileData):
         """
         super(CifData, self).set_file(filename)
         md5sum = self.generate_md5()
-        if self.get_attr('source_md5', '') and self.get_attr('source_md5') != md5sum:
-            for key in self._db_source_attrs:
-                try:
-                    self._del_attr(key)
-                except AttributeError:
-                    pass
+        if isinstance(self.source, dict) and \
+          self.source.get('source_md5', None) is not None and \
+          self.source['source_md5'] != md5sum:
+            self.source = {}
         self._set_attr('md5', md5sum)
         self._values = None
         self._ase = None

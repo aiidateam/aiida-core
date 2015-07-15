@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from aiida.tools.dbimporters.baseclasses \
-    import DbImporter, DbSearchResults, DbEntry
+    import DbImporter, DbSearchResults, UpfEntry
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -140,7 +140,7 @@ class NnincSearchResults(DbSearchResults):
         return self._base_url + result_dict['id'] + ".UPF"
 
 
-class NnincEntry(DbEntry):
+class NnincEntry(UpfEntry):
     """
     Represents an entry from NNIN/C Pseudopotential Virtual Vault.
     """

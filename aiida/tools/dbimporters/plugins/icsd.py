@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
-import aiida.tools.dbimporters.baseclasses
+from aiida.tools.dbimporters.baseclasses \
+    import DbImporter, DbSearchResults, CifEntry
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -26,7 +27,7 @@ class NoResultsWebExp(IcsdImporterExp):
     pass
 
 
-class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
+class IcsdDbImporter(DbImporter):
     """
     Importer for the Inorganic Crystal Structure Database, short ICSD, provided by
     FIZ Karlsruhe. It allows to run queries and analyse all the results.
@@ -456,7 +457,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
             return self.keywords.keys()
 
 
-class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
+class IcsdSearchResults(DbSearchResults):
     """
     Result manager for the query performed on ICSD.
 
@@ -625,7 +626,7 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
         self.db.close()
 
 
-class IcsdEntry(aiida.tools.dbimporters.baseclasses.DbEntry):
+class IcsdEntry(CifEntry):
     """
     Represent an entry from Icsd.
     

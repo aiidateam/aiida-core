@@ -90,6 +90,11 @@ ArrayData subclasses
 --------------------
 The following are Data classes inheriting from ArrayData.
 
+KpointsData
+..............
+.. automodule:: aiida.orm.data.array.kpoints
+   :members:
+
 TrajectoryData
 ..............
 .. automodule:: aiida.orm.data.array.trajectory

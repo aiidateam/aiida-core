@@ -326,4 +326,22 @@ class UpfEntry(DbEntry):
 
         :return: :py:class:`aiida.orm.data.upf.UpfData` object
         """
-        raise NotImplementedError("not implemented yet")
+        from aiida.common.utils import md5_file
+        from aiida.orm.data.upf import UpfData
+        import tempfile
+
+        upfnode = None
+
+        # Prefixing with an ID in order to start file name with the name
+        # of the described element.
+        with tempfile.NamedTemporaryFile(prefix=self.source['id']) as f:
+            f.write(self.contents)
+            f.flush()
+            upfnode = UpfData(file=f.name, source=self.source)
+
+        # Maintaining backwards-compatibility. Parameter 'store' should
+        # be removed in the future, as the new node can be stored later.
+        if store:
+            upfnode.store()
+
+        return upfnode

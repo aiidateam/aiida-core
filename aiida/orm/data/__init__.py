@@ -50,7 +50,8 @@ class Data(Node):
             raise AttributeError("Unknown source parameters: "
                                  "{}".format(", ".join(unknown_attrs)))
 
-        if source.get('license', "").startswith('CC-BY') and \
+        if source.get('license', None) and \
+           source['license'].startswith('CC-BY') and \
            source.get('description', None) is None:
             raise ValueError("License of the object ({}) requires "
                              "attribution, while none is given in the "

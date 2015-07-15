@@ -104,7 +104,7 @@ class Data(Node):
         """
         Convert the AiiDA StructureData into another python object
         
-        :param objectformat: Specify the output format
+        :param object_format: Specify the output format
         """
         if object_format is None:
             raise ValueError("object_format must be provided")

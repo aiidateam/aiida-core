@@ -574,6 +574,22 @@ class CifData(SinglefileData):
         with open(self.get_file_abs_path()) as f:
             return f.read()
 
+    def _get_object_ase(self):
+        """
+        Converts CifData to ase.Atoms
+
+        :return: an ase.Atoms object
+        """
+        return self.ase
+
+    def _get_object_pycifrw(self):
+        """
+        Converts CifData to PyCIFRW.CifFile
+
+        :return: a PyCIFRW.CifFile object
+        """
+        return self.values
+
     def _validate(self):
         """
         Validate the structure.

@@ -964,7 +964,6 @@ class StructureData(Data):
         """
         return [this_site.kind_name for this_site in self.sites]
 
-
     def get_ase(self):
         """
         Get the ASE object.
@@ -986,10 +985,7 @@ class StructureData(Data):
         .. note:: Requires the pymatgen module (version >= 3.0.13, usage
             of earlier versions may cause errors).
         """
-        if self.pbc == (True, True, True):
-            return self.get_pymatgen_structure()
-        else:
-            return self.get_pymatgen_molecule()
+        return self._get_object_pymatgen()
 
     def get_pymatgen_structure(self):
         """
@@ -1003,20 +999,7 @@ class StructureData(Data):
         :raise ValueError: if periodic boundary conditions does not hold
           in at least one dimension of real space.
         """
-        from pymatgen.core.structure import Structure
-
-        if self.pbc != (True, True, True):
-            raise ValueError("Periodic boundary conditions must apply in "
-                             "all three dimensions of real space")
-
-        species = []
-        for s in self.sites:
-            k = self.get_kind(s.kind_name)
-            species.append({s: w for s, w in zip(k.symbols, k.weights)})
-
-        positions = [list(x.position) for x in self.sites]
-        return Structure(self.cell, species, positions,
-                         coords_are_cartesian=True)
+        return self._get_object_pymatgen_structure()
 
     def get_pymatgen_molecule(self):
         """
@@ -1028,15 +1011,7 @@ class StructureData(Data):
         :return: a pymatgen Molecule object corresponding to this
           StructureData object.
         """
-        from pymatgen.core.structure import Molecule
-
-        species = []
-        for s in self.sites:
-            k = self.get_kind(s.kind_name)
-            species.append({s: w for s, w in zip(k.symbols, k.weights)})
-
-        positions = [list(x.position) for x in self.sites]
-        return Molecule(species, positions)
+        return self._get_object_pymatgen_molecule()
 
     def append_kind(self, kind):
         """
@@ -1549,7 +1524,8 @@ class StructureData(Data):
 
     def _get_object_phonopyatoms(self):
         """
-        Converts StructureData() to PhonopyAtoms()
+        Converts StructureData to PhonopyAtoms
+
         :return: a PhonopyAtoms object
         """
         from phonopy.structure.atoms import Atoms as PhonopyAtoms
@@ -1563,7 +1539,8 @@ class StructureData(Data):
         
     def _get_object_ase(self):
         """
-        Converts StructureData() to ase.Atoms()
+        Converts StructureData to ase.Atoms
+
         :return: an ase.Atoms object
         """
         import ase
@@ -1574,6 +1551,68 @@ class StructureData(Data):
         for site in self.sites:
             asecell.append(site.get_ase(kinds=_kinds))
         return asecell
+
+    def _get_object_pymatgen(self):
+        """
+        Converts StructureData to pymatgen object
+
+        :return: a pymatgen Structure for structures with periodic boundary
+            conditions (in three dimensions) and Molecule otherwise
+
+        .. note:: Requires the pymatgen module (version >= 3.0.13, usage
+            of earlier versions may cause errors).
+        """
+        if self.pbc == (True, True, True):
+            return self._get_object_pymatgen_structure()
+        else:
+            return self._get_object_pymatgen_molecule()
+
+    def _get_object_pymatgen_structure(self):
+        """
+        Converts StructureData to pymatgen Structure object
+
+        :return: a pymatgen Structure object corresponding to this
+            StructureData object
+        :raise ValueError: if periodic boundary conditions does not hold
+            in at least one dimension of real space
+
+        .. note:: Requires the pymatgen module (version >= 3.0.13, usage
+            of earlier versions may cause errors)
+        """
+        from pymatgen.core.structure import Structure
+
+        if self.pbc != (True, True, True):
+            raise ValueError("Periodic boundary conditions must apply in "
+                             "all three dimensions of real space")
+
+        species = []
+        for s in self.sites:
+            k = self.get_kind(s.kind_name)
+            species.append({s: w for s, w in zip(k.symbols, k.weights)})
+
+        positions = [list(x.position) for x in self.sites]
+        return Structure(self.cell, species, positions,
+                         coords_are_cartesian=True)
+
+    def _get_object_pymatgen_molecule(self):
+        """
+        Converts StructureData to pymatgen Molecule object
+
+        :return: a pymatgen Molecule object corresponding to this
+          StructureData object.
+
+        .. note:: Requires the pymatgen module (version >= 3.0.13, usage
+            of earlier versions may cause errors)
+        """
+        from pymatgen.core.structure import Molecule
+
+        species = []
+        for s in self.sites:
+            k = self.get_kind(s.kind_name)
+            species.append({s: w for s, w in zip(k.symbols, k.weights)})
+
+        positions = [list(x.position) for x in self.sites]
+        return Molecule(species, positions)
 
 
 class Kind(object):

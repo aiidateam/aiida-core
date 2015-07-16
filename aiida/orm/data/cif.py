@@ -735,6 +735,22 @@ class CifData(SinglefileData):
         from aiida.tools.dbexporters.tcod import export_cif
         return export_cif(self,**kwargs)
         
+    def _get_object_ase(self):
+        """
+        Converts CifData to ase.Atoms
+
+        :return: an ase.Atoms object
+        """
+        return self.ase
+
+    def _get_object_pycifrw(self):
+        """
+        Converts CifData to PyCIFRW.CifFile
+
+        :return: a PyCIFRW.CifFile object
+        """
+        return self.values
+
     def _validate(self):
         """
         Validate the structure.

@@ -443,12 +443,19 @@ def _collect_tags(node,calc,parameters=None,
 
     if dump_aiida_database and node._is_stored:
         import json
+        from aiida.common.exceptions import LicensingException
         from aiida.common.folders import SandboxFolder
         from aiida.cmdline.commands.exportfile import export_tree
         from aiida.orm.data.cif import encode_textfield_base64
 
         with SandboxFolder() as folder:
-            export_tree( [node.dbnode], folder=folder, silent=True)
+            try:
+                export_tree([node.dbnode], folder=folder, silent=True,
+                            allowed_licenses=['CC0'],
+                            exclude_forbidden_licenses=False)
+            except LicensingException as e:
+                raise LicensingException(e.message + \
+                                         ". Only CC0 license is accepted.")
             files = _collect_files(folder.abspath)
             with open(folder.get_abs_path('data.json')) as f:
                 data = json.loads(f.read())

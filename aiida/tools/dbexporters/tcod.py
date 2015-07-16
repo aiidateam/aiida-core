@@ -456,6 +456,7 @@ def _collect_tags(node,calc,parameters=None,
             except LicensingException as e:
                 raise LicensingException(e.message + \
                                          ". Only CC0 license is accepted.")
+
             files = _collect_files(folder.abspath)
             with open(folder.get_abs_path('data.json')) as f:
                 data = json.loads(f.read())

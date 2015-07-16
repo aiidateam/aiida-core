@@ -285,7 +285,8 @@ def export_tree(what, folder = None, also_parents = True,
                       in entries_ids_to_add.iteritems()}
 
     # Check the licenses of exported data
-    # TODO: use standard django
+    # TODO: use standard django constructions or QueryTool, since current
+    # implementation is far from optimal.
     if allowed_licenses is not None:
         for k, v in entries_ids_to_add.iteritems():
             for pk in v:

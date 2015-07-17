@@ -131,7 +131,8 @@ class TestCifData(AiidaTestCase):
                                 'db_name': 'COD',
                                 'id': '0000001'})
 
-        with self.assertRaises(AttributeError):
+        # Key 'db_kind' is not allowed in source description:
+        with self.assertRaises(KeyError):
             a.source = {'db_kind': 'small molecule'}
 
         the_uuid = a.uuid
@@ -2311,5 +2312,8 @@ class TestData(AiidaTestCase):
         data.store()
 
         data = Data(source={'license': 'CC-BY-SA'})
+        # CC-BY* type licenses must be accompanied by attribution, given
+        # in 'description' key of source dictionary. This is enforced in
+        # Data._validate(), thus the ValidationError.
         with self.assertRaises(ValidationError):
             data.store()

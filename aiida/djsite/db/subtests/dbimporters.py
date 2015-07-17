@@ -248,5 +248,9 @@ class TestNnincDbImporter(AiidaTestCase):
 
         entry.source = {'id': 'O.pbesol-n-rrkjus_psl.0.1-tested-pslib030.UPF'}
 
+        # get_upf_node() will name pseudopotential file after source['id'],
+        # thus UpfData parser will complain about the mismatch of chemical
+        # element, mentioned in file name, and the one described in the
+        # pseudopotential file.
         with self.assertRaises(ParsingError):
             upfnode = entry.get_upf_node()

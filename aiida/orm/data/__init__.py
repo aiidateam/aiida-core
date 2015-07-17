@@ -179,6 +179,11 @@ class Data(Node):
     def _validate(self):
         """
         Perform validation of the Data object.
+
+        .. note:: validation of data source checks license and requires
+            attribution to be provided in field 'description' of source in
+            the case of any CC-BY* license. If such requirement is too
+            strict, one can remove/comment it out.
         """
         from aiida.common.exceptions import ValidationError
 

@@ -220,9 +220,13 @@ def export_tree(what, folder = None, also_parents = True,
     :param also_parents: if True, also all the parents are stored (from th
       DbPath transitive closure table)
     :param also_calc_outputs: if True, any output of a calculation is also exported
-    :param allowed_licenses: a list of licenses that can be exported,
-      all other licenses are excluded (with exclude_forbidden_licenses
-      = True) or LicensingException is raised otherwise
+    :param allowed_licenses: a list or a function. If a list, then checks
+      whether all licenses of Data nodes are in the list. If a function,
+      then calls function for licenses of Data nodes expecting True if
+      license is allowed, False otherwise.
+    :param exclude_forbidden_licenses: if True, skips exporting of Data
+      nodes with forbidden licenses. IF False, raises LicensingException
+      if any Data node with forbidden license exists.
     :param silent: suppress debug prints
     :raises LicensingException: if any node is licensed under forbidden
       license and exclude_forbidden_licenses = False
@@ -288,12 +292,23 @@ def export_tree(what, folder = None, also_parents = True,
     # TODO: use standard django constructions or QueryTool, since current
     # implementation is far from optimal.
     if allowed_licenses is not None:
+        from inspect import isfunction
         for k, v in entries_ids_to_add.iteritems():
             for pk in v:
                 node = load_node(int(pk))
-                if isinstance(node, Data) and node.source and \
-                  node.source.get('license', None) and \
-                  node.source['license'] not in allowed_licenses:
+                try:
+                    if isinstance(node, Data) and node.source and \
+                      node.source.get('license', None):
+                        if isfunction(allowed_licenses):
+                            try:
+                                if not allowed_licenses(node.source['license']):
+                                    raise LicensingException
+                            except Exception as e:
+                                raise LicensingException
+                        else:
+                            if node.source['license'] not in allowed_licenses:
+                                raise LicensingException
+                except LicensingException:
                     if exclude_forbidden_licenses:
                         entries_ids_to_add[k].remove(pk)
                     else:

@@ -171,3 +171,19 @@ class TestPort(AiidaTestCase):
         with self.assertRaises(LicensingException):
             export_tree([sd.dbnode], folder=folder, silent=True,
                         allowed_licenses=['CC0'])
+
+        def cc_filter(license):
+            return license.startswith('CC')
+
+        def crashing_filter(license):
+            raise NotImplementedError("not implemented yet")
+
+        folder = SandboxFolder()
+        with self.assertRaises(LicensingException):
+            export_tree([sd.dbnode], folder=folder, silent=True,
+                        allowed_licenses=cc_filter)
+
+        folder = SandboxFolder()
+        with self.assertRaises(LicensingException):
+            export_tree([sd.dbnode], folder=folder, silent=True,
+                        allowed_licenses=crashing_filter)

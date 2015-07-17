@@ -732,7 +732,7 @@ def parse_pw_text_output(data, xml_data=None, structure_data=None, input_dict=No
                         trajectory_data[key].append(value)
                         parsed_data[key + units_suffix] = default_energy_units
                 except Exception:
-                    parsed_data['warnings'] = 'Error while parsing the energy'
+                    parsed_data['warnings'].append('Error while parsing the energy')
 
             elif 'the Fermi energy is' in line:
                 try:
@@ -743,7 +743,7 @@ def parse_pw_text_output(data, xml_data=None, structure_data=None, input_dict=No
                         trajectory_data['fermi_energy'] = [value]
                     parsed_data['fermi_energy' + units_suffix] = default_energy_units
                 except Exception:
-                    parsed_data['warnings'] = 'Error while parsing Fermi energy from the output file.'
+                    parsed_data['warnings'].append('Error while parsing Fermi energy from the output file.')
 
             elif 'Forces acting on atoms (Ry/au):' in line:
                 try:

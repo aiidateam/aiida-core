@@ -96,7 +96,7 @@ class MpodDbImporter(DbImporter):
             else:
                 results = filter(set(results).__contains__, this_results)
 
-        return MpodSearchResults(results)
+        return MpodSearchResults([{"id": x} for x in results])
 
     def setup_db(self, query_url=None, **kwargs):
         """
@@ -140,7 +140,7 @@ class MpodSearchResults(DbSearchResults):
 
         :param result_dict: dictionary, describing an entry in the results.
         """
-        return {'db_id': result_dict['id']}
+        return {'id': result_dict['id']}
 
     def _get_url(self, result_dict):
         """
@@ -156,13 +156,13 @@ class MpodEntry(DbEntry):
     Represents an entry from MPOD.
     """
 
-    def __init__(self, url, **kwargs):
+    def __init__(self, uri, **kwargs):
         """
         Creates an instance of
         :py:class:`aiida.tools.dbimporters.plugins.mpod.MpodEntry`, related
-        to the supplied URL.
+        to the supplied URI.
         """
-        super(MpodEntry, self).__init__(db_source='Material Properties Open Database',
-                                        db_url='http://mpod.cimav.edu.mx',
-                                        url=url,
+        super(MpodEntry, self).__init__(db_name='Material Properties Open Database',
+                                        db_uri='http://mpod.cimav.edu.mx',
+                                        uri=uri,
                                         **kwargs)

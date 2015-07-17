@@ -8,26 +8,6 @@ __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Nicolas M
 from aiida.orm.calculation.inline import optional_inline
 
 
-@optional_inline
-def _get_cif_inline(parameters=None):
-    """
-    Wraps CIF file in :py:class:`aiida.orm.data.cif.CifData` instance.
-    """
-    from aiida.common.utils import md5_file
-    from aiida.orm.data.cif import CifData
-    import tempfile
-
-    cif = parameters.get_dict().pop('cif')
-    source = parameters.get_dict().pop('source', {})
-
-    with tempfile.NamedTemporaryFile() as f:
-        f.write(cif)
-        f.flush()
-        if 'source_md5' not in source.keys() or source['source_md5'] is None:
-            source['source_md5'] = md5_file(f.name)
-        return {'cif': CifData(file=f.name, source=source)}
-
-
 class DbImporter(object):
     """
     Base class for database importers.
@@ -198,28 +178,30 @@ class DbEntry(object):
     """
     Represents an entry from the structure database (COD, ICSD, ...).
     """
+    _license = None
 
-    def __init__(self, db_source=None, db_url=None, db_id=None,
-                 db_version=None, extras={}, url=None):
+    def __init__(self, db_name=None, db_uri=None, id=None,
+                 version=None, extras={}, uri=None):
         """
         Sets the basic parameters for the database entry:
 
-        :param db_source: name of the source database
-        :param db_url: URL of the source database
-        :param db_id: structure identifyer in the database
-        :param db_version: version of the database
+        :param db_name: name of the source database
+        :param db_uri: URI of the source database
+        :param id: structure identifyer in the database
+        :param version: version of the database
         :param extras: a dictionary with some extra parameters
             (e.g. database ID number)
-        :param url: URL of the structure (should be permanent)
+        :param uri: URI of the structure (should be permanent)
         """
         self.source = {
-            'db_source': db_source,
-            'db_url': db_url,
-            'db_id': db_id,
-            'db_version': db_version,
+            'db_name': db_name,
+            'db_uri': db_uri,
+            'id': id,
+            'version': version,
             'extras': extras,
-            'url': url,
+            'uri': uri,
             'source_md5': None,
+            'license': self._license,
         }
         self._cif = None
 
@@ -237,9 +219,20 @@ class DbEntry(object):
         """
         if self._cif is None:
             import urllib2
+            from hashlib import md5
 
-            self._cif = urllib2.urlopen(self.source['url']).read()
+            self._cif = urllib2.urlopen(self.source['uri']).read()
+            self.source['source_md5'] = md5(self._cif).hexdigest()
         return self._cif
+
+    @cif.setter
+    def cif(self, cif):
+        """
+        Sets raw contents of a CIF file as string.
+        """
+        from hashlib import md5
+        self._cif = cif
+        self.source['source_md5'] = md5(self._cif).hexdigest()
 
     def get_raw_cif(self):
         """
@@ -267,12 +260,23 @@ class DbEntry(object):
 
         :return: :py:class:`aiida.orm.data.cif.CifData` object
         """
-        from aiida.orm.data.parameter import ParameterData
-        import baseclasses  # This same module
+        from aiida.common.utils import md5_file
+        from aiida.orm.data.cif import CifData
+        import tempfile
 
-        pd = ParameterData(dict={'cif': self.cif, 'source': self.source})
-        ret_dict = _get_cif_inline(parameters=pd, store=store)
-        return ret_dict['cif']
+        cifnode = None
+
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(self.cif)
+            f.flush()
+            cifnode = CifData(file=f.name, source=self.source)
+
+        # Maintaining backwards-compatibility. Parameter 'store' should
+        # be removed in the future, as the new node can be stored later.
+        if store:
+            cifnode.store()
+
+        return cifnode
 
     def get_aiida_structure(self):
         """

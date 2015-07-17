@@ -512,13 +512,14 @@ class CifData(SinglefileData):
         """
         Initialises an instance of CifData.
         """
-        self._db_source_attrs = ['db_source',
-                                 'db_url',
-                                 'db_id',
-                                 'db_version',
+        self._db_source_attrs = ['db_name',
+                                 'db_uri',
+                                 'id',
+                                 'version',
                                  'extras',
-                                 'url',
-                                 'source_md5']
+                                 'uri',
+                                 'source_md5',
+                                 'license']
         super(CifData, self).__init__(**kwargs)
         self._values = None
         self._ase = None
@@ -617,6 +618,22 @@ class CifData(SinglefileData):
             self.values = self._values
         with open(self.get_file_abs_path()) as f:
             return f.read()
+
+    def _get_object_ase(self):
+        """
+        Converts CifData to ase.Atoms
+
+        :return: an ase.Atoms object
+        """
+        return self.ase
+
+    def _get_object_pycifrw(self):
+        """
+        Converts CifData to PyCIFRW.CifFile
+
+        :return: a PyCIFRW.CifFile object
+        """
+        return self.values
 
     def _validate(self):
         """

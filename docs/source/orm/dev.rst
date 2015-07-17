@@ -2,7 +2,7 @@ ORM documentation: generic aiida.orm
 ====================================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
 This section describes the aiida/django object-relational mapping.
 
@@ -86,17 +86,19 @@ ArrayData
 .. automodule:: aiida.orm.data.array
    :members:
 
-TrajectoryData
-++++++++++++++
-.. automodule:: aiida.orm.data.array.trajectory
+ArrayData subclasses
+--------------------
+The following are Data classes inheriting from ArrayData.
+
+KpointsData
+...........
+.. automodule:: aiida.orm.data.array.kpoints
    :members:
 
-
-
-
-
-
-
+TrajectoryData
+..............
+.. automodule:: aiida.orm.data.array.trajectory
+   :members:
 
 
 

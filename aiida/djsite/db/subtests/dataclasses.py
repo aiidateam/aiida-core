@@ -126,10 +126,10 @@ class TestCifData(AiidaTestCase):
             f.write(file_content)
             f.flush()
             a = CifData(file=filename,
-                        source={'db_version': '1234'})
+                        source={'version': '1234'})
 
-        a.source = {'db_source': 'COD',
-                    'db_id': '0000001'}
+        a.source = {'db_name': 'COD',
+                    'id': '0000001'}
 
         with self.assertRaises(ValueError):
             a.source = {'db_kind': 'small molecule'}
@@ -144,13 +144,14 @@ class TestCifData(AiidaTestCase):
         a.store()
 
         self.assertEquals(a.source, {
-            'db_source': 'COD',
-            'db_url': '',
-            'db_id': '0000001',
-            'db_version': '1234',
+            'db_name': 'COD',
+            'db_uri': '',
+            'id': '0000001',
+            'version': '1234',
             'extras': '',
-            'url': '',
+            'uri': '',
             'source_md5': '',
+            'license': '',
         })
 
         with open(a.get_abs_path(basename)) as f:
@@ -1147,13 +1148,16 @@ class TestStructureData(AiidaTestCase):
                           'C Ba O3 Ti')
         self.assertEquals(get_formula(['H'] * 6 + ['C'] * 6),
                           'C6H6')
+        self.assertEquals(get_formula(['H'] * 6 + ['C'] * 6, 
+                                      mode="hill_compact"),
+                          'CH')
         self.assertEquals(get_formula((['Ba', 'Ti'] + ['O'] * 3) * 2 + \
                                       ['Ba'] + ['Ti'] * 2 + ['O'] * 3,
-                                      mode="compact1"),
+                                      mode="group"),
                           '(BaTiO3)2BaTi2O3')
         self.assertEquals(get_formula((['Ba', 'Ti'] + ['O'] * 3) * 2 + \
                                       ['Ba'] + ['Ti'] * 2 + ['O'] * 3,
-                                      mode="compact1", separator=" "),
+                                      mode="group", separator=" "),
                           '(Ba Ti O3)2 Ba Ti2 O3')
         self.assertEquals(get_formula((['Ba', 'Ti'] + ['O'] * 3) * 2 + \
                                       ['Ba'] + ['Ti'] * 2 + ['O'] * 3,
@@ -1163,6 +1167,12 @@ class TestStructureData(AiidaTestCase):
                                       ['Ba'] + ['Ti'] * 2 + ['O'] * 3,
                                       mode="reduce", separator=", "),
                           'Ba, Ti, O3, Ba, Ti, O3, Ba, Ti2, O3')
+        self.assertEquals(get_formula((['Ba', 'Ti'] + ['O'] * 3) * 2,
+                                      mode="count"),
+                          'Ba2Ti2O6')
+        self.assertEquals(get_formula((['Ba', 'Ti'] + ['O'] * 3) * 2,
+                                      mode="count_compact"),
+                          'BaTiO3')
 
     def test_get_cif(self):
         """
@@ -1509,11 +1519,15 @@ class TestStructureDataFromAse(AiidaTestCase):
 
 class TestStructureDataFromPymatgen(AiidaTestCase):
     """
-    Tests the creation of StructureData from a pymatgen Structure object.
+    Tests the creation of StructureData from a pymatgen Structure and
+    Molecule objects.
     """
-    from aiida.orm.data.structure import has_pymatgen
+    from distutils.version import StrictVersion
+    from aiida.orm.data.structure import has_pymatgen,get_pymatgen_version
 
-    @unittest.skipIf(not has_pymatgen(), "Unable to import pymatgen")
+    @unittest.skipIf(not has_pymatgen() or
+                     StrictVersion(get_pymatgen_version()) <
+                     StrictVersion('3.0.13'), "Unable to import pymatgen")
     def test_1(self):
         """
         Test's imput is derived from COD entry 9011963, processed with
@@ -1553,14 +1567,18 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
             f.flush()
             pymatgen_struct = read_structure(f.name)
 
-        struct = StructureData(pymatgen_structure=pymatgen_struct)
-        self.assertEquals(struct.get_site_kindnames(),
-                          ['Bi', 'Bi', 'SeTe', 'SeTe', 'SeTe'])
-        self.assertEquals([x.symbols for x in struct.kinds],
-                          [('Bi',), ('Se', 'Te')])
-        self.assertEquals([x.weights for x in struct.kinds],
-                          [(1.0,), (0.33333, 0.66667)])
+        structs_to_test = [StructureData(pymatgen=pymatgen_struct),
+                           StructureData(pymatgen_structure=pymatgen_struct)]
 
+        for struct in structs_to_test:
+            self.assertEquals(struct.get_site_kindnames(),
+                              ['Bi', 'Bi', 'SeTe', 'SeTe', 'SeTe'])
+            self.assertEquals([x.symbols for x in struct.kinds],
+                              [('Bi',), ('Se', 'Te')])
+            self.assertEquals([x.weights for x in struct.kinds],
+                              [(1.0,), (0.33333, 0.66667)])
+
+        struct = StructureData(pymatgen_structure=pymatgen_struct)
 
         # Testing pymatgen Structure -> StructureData -> pymatgen Structure
         # roundtrip.
@@ -1569,13 +1587,136 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
         dict1 = pymatgen_struct.to_dict
         dict2 = pymatgen_struct_roundtrip.to_dict
 
-        # Removing site coordinates in order to prevent rounding errors
-        # from causing test failures.
         for i in dict1['sites']:
-            i.pop('abc')
+            i['abc'] = [round(j, 2) for j in i['abc']]
         for i in dict2['sites']:
-            i.pop('abc')
+            i['abc'] = [round(j, 2) for j in i['abc']]
+
         self.assertEquals(dict1, dict2)
+
+    @unittest.skipIf(not has_pymatgen() or
+                     StrictVersion(get_pymatgen_version()) <
+                     StrictVersion('3.0.13'), "Unable to import pymatgen")
+    def test_2(self):
+        """
+        Input source: http://pymatgen.org/_static/Molecule.html
+        """
+        from aiida.orm.data.structure import StructureData
+        from pymatgen.io.smartio import read_mol
+
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(suffix=".xyz") as f:
+            f.write("""5
+                H4 C1
+                C 0.000000 0.000000 0.000000
+                H 0.000000 0.000000 1.089000
+                H 1.026719 0.000000 -0.363000
+                H -0.513360 -0.889165 -0.363000
+                H -0.513360 0.889165 -0.363000""")
+            f.flush()
+            pymatgen_mol = read_mol(f.name)
+
+        for struct in [StructureData(pymatgen=pymatgen_mol),
+                       StructureData(pymatgen_molecule=pymatgen_mol)]:
+            self.assertEquals(struct.get_site_kindnames(),
+                              ['H', 'H', 'H', 'H', 'C'])
+            self.assertEquals(struct.pbc, (False, False, False))
+            self.assertEquals([round(x, 2) for x in list(struct.sites[0].position)],
+                              [5.77, 5.89, 6.81])
+            self.assertEquals([round(x, 2) for x in list(struct.sites[1].position)],
+                              [6.8, 5.89, 5.36])
+            self.assertEquals([round(x, 2) for x in list(struct.sites[2].position)],
+                              [5.26, 5.0, 5.36])
+            self.assertEquals([round(x, 2) for x in list(struct.sites[3].position)],
+                              [5.26, 6.78, 5.36])
+            self.assertEquals([round(x, 2) for x in list(struct.sites[4].position)],
+                              [5.77, 5.89, 5.73])
+
+
+class TestPymatgenFromStructureData(AiidaTestCase):
+    """
+    Tests the creation of pymatgen Structure and Molecule objects from
+    StructureData.
+    """
+    from distutils.version import StrictVersion
+    from aiida.orm.data.structure import has_ase,has_pymatgen,get_pymatgen_version
+
+    @unittest.skipIf(not has_pymatgen() or
+                     StrictVersion(get_pymatgen_version()) <
+                     StrictVersion('3.0.13'), "Unable to import pymatgen")
+    def test_1(self):
+        """
+        Test the check of periodic boundary conditions.
+        """
+        from aiida.orm.data.structure import StructureData
+
+        struct = StructureData()
+
+        struct.pbc = [True, True, True]
+        pmg_struct = struct.get_pymatgen_structure()
+
+        struct.pbc = [True, True, False]
+        with self.assertRaises(ValueError):
+            pmg_struct = struct.get_pymatgen_structure()
+
+    @unittest.skipIf(not has_ase() or
+                     not has_pymatgen() or
+                     StrictVersion(get_pymatgen_version()) <
+                     StrictVersion('3.0.13'),
+                     "Unable to import ase or pymatgen")
+    def test_2(self):
+        from aiida.orm.data.structure import StructureData
+        import ase
+
+        aseatoms = ase.Atoms('Si4', cell=(1., 2., 3.),
+                             pbc=(True, True, True))
+        aseatoms.set_scaled_positions(
+            ((0.0, 0.0, 0.0),
+             (0.1, 0.1, 0.1),
+             (0.2, 0.2, 0.2),
+             (0.3, 0.3, 0.3),
+            )
+        )
+
+        a_struct = StructureData(ase=aseatoms)
+        p_struct = a_struct.get_pymatgen_structure()
+
+        coord_array = [x['abc'] for x in p_struct.to_dict['sites']]
+        for i in range(len(coord_array)):
+            coord_array[i] = [round(x, 2) for x in coord_array[i]]
+
+        self.assertEquals(coord_array,
+                          [[0.0, 0.0, 0.0],
+                           [0.1, 0.1, 0.1],
+                           [0.2, 0.2, 0.2],
+                           [0.3, 0.3, 0.3]])
+
+    def test_3(self):
+        """
+        Test the conversion of StructureData to pymatgen's Molecule.
+        """
+        from aiida.orm.data.structure import StructureData
+        import ase
+
+        aseatoms = ase.Atoms('Si4', cell=(10, 10, 10),
+                             pbc=(True, True, True))
+        aseatoms.set_scaled_positions(
+            ((0.0, 0.0, 0.0),
+             (0.1, 0.1, 0.1),
+             (0.2, 0.2, 0.2),
+             (0.3, 0.3, 0.3),
+            )
+        )
+
+        a_struct = StructureData(ase=aseatoms)
+        p_mol = a_struct.get_pymatgen_molecule()
+
+        self.assertEquals([x['xyz'] for x in p_mol.to_dict['sites']],
+                          [[0.0, 0.0, 0.0],
+                           [1.0, 1.0, 1.0],
+                           [2.0, 2.0, 2.0],
+                           [3.0, 3.0, 3.0]])
 
 
 class TestArrayData(AiidaTestCase):

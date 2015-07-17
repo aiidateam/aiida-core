@@ -125,7 +125,7 @@ and load the object that represent *the* QE-PWscf calculation with ID #6::
 Now that we loaded the parent calculation, we can set the phonon calc to
 inherit the right information from it::
     
-    calc.set_parent_calc( parentcalc )
+    calc.use_parent_calculation( parentcalc )
 
 Note that in our database schema relations between two calculation
 objects are prohibited. The link between the two is indirect and is
@@ -188,7 +188,7 @@ the code, and the proper scheduler info.
 
     calc.use_parameters(parameters)
     calc.use_code(code)
-    calc.set_parent_calc(parentcalc)
+    calc.use_parent_calculation(parentcalc)
 
     calc.store_all()
     print "created calculation with PK={}".format(calc.pk)

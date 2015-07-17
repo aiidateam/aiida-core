@@ -107,6 +107,16 @@ def has_pymatgen():
     return True
 
 
+def get_pymatgen_version():
+    """
+    :return: string with pymatgen version, None if can not import.
+    """
+    if not has_pymatgen():
+        return None
+    import pymatgen
+    return pymatgen.__version__
+
+
 def calc_cell_volume(cell):
     """
     Calculates the volume of a cell given the three lattice vectors.
@@ -293,7 +303,7 @@ def get_formula_from_symbol_list(_list, separator=""):
     return separator.join(list_str)
 
 
-def get_formula_compact1(symbol_list, separator=""):
+def get_formula_group(symbol_list, separator=""):
     """
     Return a string with the chemical formula from a list of chemical symbols.
     The formula is written in a compact" way, i.e. trying to group as much as
@@ -425,40 +435,54 @@ def get_formula(symbol_list, mode='hill', separator=""):
     :param mode: a string to specify how to generate the formula, can
         assume one of the following values:
         
-        * 'hill' (default): use Hill notation, i.e. alphabetical order with C and H 
+        * 'hill' (default): count the number of atoms of each species,
+          then use Hill notation, i.e. alphabetical order with C and H 
           first if one or several C atom(s) is (are) present, e.g. 
           ``['C','H','H','H','O','C','H','H','H']`` will return ``'C2H6O'`` 
           ``['S','O','O','H','O','H','O']``  will return ``'H2O4S'``
           From E. A. Hill, J. Am. Chem. Soc., 22 (8), pp 478–494 (1900)
             
-        * 'compact1': will try to group as much as possible parts of the formula
+        * 'hill_compact': same as hill but the number of atoms for each
+          species is divided by the greatest common divisor of all of them, e.g.
+          ``['C','H','H','H','O','C','H','H','H','O','O','O']`` 
+          will return ``'CH3O2'``
+            
+        * 'reduce': group repeated symbols e.g.
+          ``['Ba', 'Ti', 'O', 'O', 'O', 'Ba', 'Ti', 'O', 'O', 'O',
+          'Ba', 'Ti', 'Ti', 'O', 'O', 'O']`` will return ``'BaTiO3BaTiO3BaTi2O3'``
+        
+        * 'group': will try to group as much as possible parts of the formula
           e.g. 
           ``['Ba', 'Ti', 'O', 'O', 'O', 'Ba', 'Ti', 'O', 'O', 'O',
           'Ba', 'Ti', 'Ti', 'O', 'O', 'O']`` will return ``'(BaTiO3)2BaTi2O3'``
         
-        * 'reduce': simply group repeated symbols e.g.
-          ``['Ba', 'Ti', 'O', 'O', 'O', 'Ba', 'Ti', 'O', 'O', 'O',
-          'Ba', 'Ti', 'Ti', 'O', 'O', 'O']`` will return ``'BaTiO3BaTiO3BaTi2O3'``
-        
-        * 'allreduce': same as hill without the re-ordering (take the 
+        * 'count': same as hill (i.e. one just counts the number
+          of atoms of each species) without the re-ordering (take the 
           order of the atomic sites), e.g.
-          ``['Ba', 'Ti', 'O', 'O', 'O']`` will return ``'BaTiO3'``
+          ``['Ba', 'Ti', 'O', 'O', 'O','Ba', 'Ti', 'O', 'O', 'O']`` 
+          will return ``'Ba2Ti2O6'``
+
+        * 'count_compact': same as count but the number of atoms 
+          for each species is divided by the greatest common divisor of 
+          all of them, e.g.
+          ``['Ba', 'Ti', 'O', 'O', 'O','Ba', 'Ti', 'O', 'O', 'O']`` 
+          will return ``'BaTiO3'``
 
     :param separator: a string used to concatenate symbols. Default empty.
         
     :return: a string with the formula
     
-    .. note:: in modes compact1, reduce and allreduce, the initial order in
-        which the atoms were appended by the user is used to group symbols by
-        multiplicity
+    .. note:: in modes reduce, group, count and count_compact, the 
+        initial order in which the atoms were appended by the user is 
+        used to group and/or order the symbols in the formula
     """
 
-    if mode == 'compact1':
-        return get_formula_compact1(symbol_list, separator=separator)
+    if mode == 'group':
+        return get_formula_group(symbol_list, separator=separator)
 
-    # for hill and allreduce cases, simply count the occurences of each 
+    # for hill and count cases, simply count the occurences of each 
     # chemical symbol (with some re-ordering in hill) 
-    elif mode == 'hill':
+    elif mode in ['hill', 'hill_compact']:
         symbol_set = set(symbol_list)
         first_symbols = []
         if 'C' in symbol_set:
@@ -473,7 +497,7 @@ def get_formula(symbol_list, mode='hill', separator=""):
         the_symbol_list = [[symbol_list.count(elem), elem]
                            for elem in ordered_symbol_set]
 
-    elif mode == 'allreduce':
+    elif mode in ['count', 'count_compact']:
         ordered_symbol_indexes = sorted([symbol_list.index(elem)
                                          for elem in set(symbol_list)])
         ordered_symbol_set = [symbol_list[i] for i in ordered_symbol_indexes]
@@ -484,7 +508,28 @@ def get_formula(symbol_list, mode='hill', separator=""):
         the_symbol_list = group_symbols(symbol_list)
 
     else:
-        raise ValueError('Mode should be compact1, hill, reduce or allreduce')
+        raise ValueError('Mode should be hill, hill_compact, group, '
+                          'reduce, count or count_compact')
+                          
+    if mode in ['hill_compact', 'count_compact']:
+        
+        def gcd_list(int_list):
+            """
+            Recursive function to get the greatest common divisor of
+            a list of integers
+            """
+            from fractions import gcd
+            if len(int_list)==1:
+                return int_list[0]
+            elif len(int_list)==2:
+                return gcd(int_list[0],int_list[1])
+            else:
+                the_int_list=int_list[2:]
+                the_int_list.append(gcd(int_list[0],int_list[1]))
+                return gcd_list(the_int_list)
+        
+        the_gcd = gcd_list([e[0] for e in the_symbol_list])
+        the_symbol_list = [[e[0]/the_gcd,e[1]] for e in the_symbol_list]
 
     return get_formula_from_symbol_list(the_symbol_list, separator=separator)
 
@@ -640,11 +685,46 @@ class StructureData(Data):
         else:
             raise TypeError("The value is not an ase.Atoms object")
 
+    def set_pymatgen(self, obj, **kwargs):
+        """
+        Load the structure from a pymatgen object.
+
+        .. note:: Requires the pymatgen module (version >= 3.0.13, usage
+            of earlier versions may cause errors).
+        """
+        typestr = type(obj).__name__
+        try:
+            func = getattr(self, "set_pymatgen_{}".format(typestr.lower()))
+        except AttributeError:
+            raise AttributeError("Converter for '{}' to AiiDA structure "
+                                 "does not exist".format(typestr))
+        func(obj, **kwargs)
+
+    def set_pymatgen_molecule(self, mol, margin=5):
+        """
+        Load the structure from a pymatgen Molecule object.
+
+        :param margin: the margin to be added in all directions of the
+            bounding box of the molecule.
+
+        .. note:: Requires the pymatgen module (version >= 3.0.13, usage
+            of earlier versions may cause errors).
+        """
+        box = [ max([x.coords.tolist()[0] for x in mol.sites]) -
+                min([x.coords.tolist()[0] for x in mol.sites]) + 2*margin,
+                max([x.coords.tolist()[1] for x in mol.sites]) -
+                min([x.coords.tolist()[1] for x in mol.sites]) + 2*margin,
+                max([x.coords.tolist()[2] for x in mol.sites]) -
+                min([x.coords.tolist()[2] for x in mol.sites]) + 2*margin ]
+        self.set_pymatgen_structure(mol.get_boxed_structure(*box))
+        self.pbc = [False, False, False]
+
     def set_pymatgen_structure(self, struct):
         """
         Load the structure from a pymatgen Structure object.
 
-        .. note:: Requires the pymatgen module.
+        .. note:: Requires the pymatgen module (version >= 3.0.13, usage
+            of earlier versions may cause errors).
         """
         self.cell = struct.lattice.matrix.tolist()
         self.pbc = [True, True, True]  # setting defaults, not sure if this
@@ -771,31 +851,49 @@ class StructureData(Data):
         """
         Return a string with the chemical formula.
 
-        :param mode:
-            'hill' (default): Hill notation (alphabetical order, with C and H first if 
-                a C atom is present), e.g. 
-                ``['C','H','H','H','O','C','H','H','H']`` will return ``'C2H6O'`` 
-                ``['S','O','O','H','O','H','O']``  will return ``'H2O4S'``
-                From E. A. Hill, J. Am. Chem. Soc., 22 (8), pp 478–494 (1900)
+        :param mode: a string to specify how to generate the formula, can
+            assume one of the following values:
+            
+            * 'hill' (default): count the number of atoms of each species,
+              then use Hill notation, i.e. alphabetical order with C and H 
+              first if one or several C atom(s) is (are) present, e.g. 
+              ``['C','H','H','H','O','C','H','H','H']`` will return ``'C2H6O'`` 
+              ``['S','O','O','H','O','H','O']``  will return ``'H2O4S'``
+              From E. A. Hill, J. Am. Chem. Soc., 22 (8), pp 478–494 (1900)
                 
-            'compact1': will try to group as much as possible parts of the formula
-                e.g. 
-                ``['Ba', 'Ti', 'O', 'O', 'O', 'Ba', 'Ti', 'O', 'O', 'O',
-                'Ba', 'Ti', 'Ti', 'O', 'O', 'O']`` will return ``'(BaTiO3)2BaTi2O3'``
+            * 'hill_compact': same as hill but the number of atoms for each
+              species is divided by the greatest common divisor of all of them, e.g.
+              ``['C','H','H','H','O','C','H','H','H','O','O','O']`` 
+              will return ``'CH3O2'``
+                
+            * 'reduce': group repeated symbols e.g.
+              ``['Ba', 'Ti', 'O', 'O', 'O', 'Ba', 'Ti', 'O', 'O', 'O',
+              'Ba', 'Ti', 'Ti', 'O', 'O', 'O']`` will return ``'BaTiO3BaTiO3BaTi2O3'``
             
-            'reduce': simply group repeated symbols e.g.
-                ``['Ba', 'Ti', 'O', 'O', 'O', 'Ba', 'Ti', 'O', 'O', 'O',
-                'Ba', 'Ti', 'Ti', 'O', 'O', 'O']`` will return ``'BaTiO3BaTiO3BaTi2O3'``
+            * 'group': will try to group as much as possible parts of the formula
+              e.g. 
+              ``['Ba', 'Ti', 'O', 'O', 'O', 'Ba', 'Ti', 'O', 'O', 'O',
+              'Ba', 'Ti', 'Ti', 'O', 'O', 'O']`` will return ``'(BaTiO3)2BaTi2O3'``
             
-            'allreduce': same as hill without the re-ordering (take the 
-                order of the atomic sites), e.g.
-                ``['Ba', 'Ti', 'O', 'O', 'O']`` will return ``'BaTiO3'``
+            * 'count': same as hill (i.e. one just counts the number
+              of atoms of each species) without the re-ordering (take the 
+              order of the atomic sites), e.g.
+              ``['Ba', 'Ti', 'O', 'O', 'O','Ba', 'Ti', 'O', 'O', 'O']`` 
+              will return ``'Ba2Ti2O6'``
+
+            * 'count_compact': same as count but the number of atoms 
+              for each species is divided by the greatest common divisor of 
+              all of them, e.g.
+              ``['Ba', 'Ti', 'O', 'O', 'O','Ba', 'Ti', 'O', 'O', 'O']`` 
+              will return ``'BaTiO3'``
+
+        :param separator: a string used to concatenate symbols. Default empty.
             
         :return: a string with the formula
-    
-        .. note:: in modes compact1, reduce and allreduce, the initial order in
-            which the atoms were appended by the user is used to group symbols by
-            multiplicity
+        
+        .. note:: in modes reduce, group, count and count_compact, the 
+            initial order in which the atoms were appended by the user is 
+            used to group and/or order the symbols in the formula
         """
 
         symbol_list = [self.get_kind(s.kind_name).get_symbols_string()
@@ -816,7 +914,6 @@ class StructureData(Data):
         """
         return [this_site.kind_name for this_site in self.sites]
 
-
     def get_ase(self):
         """
         Get the ASE object.
@@ -829,22 +926,42 @@ class StructureData(Data):
         """
         return self._get_object_ase()
 
+    def get_pymatgen(self):
+        """
+        Get pymatgen object. Returns Structure for structures with
+        periodic boundary conditions (in three dimensions) and Molecule
+        otherwise.
+
+        .. note:: Requires the pymatgen module (version >= 3.0.13, usage
+            of earlier versions may cause errors).
+        """
+        return self._get_object_pymatgen()
+
     def get_pymatgen_structure(self):
         """
         Get the pymatgen Structure object.
-        Requires to be able to import pymatgen.
 
-        :return: a pymatgen object corresponding to this StructureData object.
+        .. note:: Requires the pymatgen module (version >= 3.0.13, usage
+            of earlier versions may cause errors).
+
+        :return: a pymatgen Structure object corresponding to this
+          StructureData object.
+        :raise ValueError: if periodic boundary conditions does not hold
+          in at least one dimension of real space.
         """
-        from pymatgen.core.structure import Structure
+        return self._get_object_pymatgen_structure()
 
-        species = [{self.get_kind(x.kind_name).symbols[i]:
-                        self.get_kind(x.kind_name).weights[i]
-                    for i in range(0, len(self.get_kind(x.kind_name).symbols))}
-                   for x in self.sites]
-        positions = [list(x.position) for x in self.sites]
-        return Structure(self.cell, species, positions,
-                         coords_are_cartesian=True)
+    def get_pymatgen_molecule(self):
+        """
+        Get the pymatgen Molecule object.
+
+        .. note:: Requires the pymatgen module (version >= 3.0.13, usage
+            of earlier versions may cause errors).
+
+        :return: a pymatgen Molecule object corresponding to this
+          StructureData object.
+        """
+        return self._get_object_pymatgen_molecule()
 
     def append_kind(self, kind):
         """
@@ -1357,7 +1474,8 @@ class StructureData(Data):
 
     def _get_object_phonopyatoms(self):
         """
-        Converts StructureData() in PhonopyAtoms()
+        Converts StructureData to PhonopyAtoms
+
         :return: a PhonopyAtoms object
         """
         from phonopy.structure.atoms import Atoms as PhonopyAtoms
@@ -1371,8 +1489,9 @@ class StructureData(Data):
         
     def _get_object_ase(self):
         """
-        Converts StructureData() in PhonopyAtoms()
-        :return: a PhonopyAtoms object
+        Converts StructureData to ase.Atoms
+
+        :return: an ase.Atoms object
         """
         import ase
 
@@ -1382,6 +1501,68 @@ class StructureData(Data):
         for site in self.sites:
             asecell.append(site.get_ase(kinds=_kinds))
         return asecell
+
+    def _get_object_pymatgen(self):
+        """
+        Converts StructureData to pymatgen object
+
+        :return: a pymatgen Structure for structures with periodic boundary
+            conditions (in three dimensions) and Molecule otherwise
+
+        .. note:: Requires the pymatgen module (version >= 3.0.13, usage
+            of earlier versions may cause errors).
+        """
+        if self.pbc == (True, True, True):
+            return self._get_object_pymatgen_structure()
+        else:
+            return self._get_object_pymatgen_molecule()
+
+    def _get_object_pymatgen_structure(self):
+        """
+        Converts StructureData to pymatgen Structure object
+
+        :return: a pymatgen Structure object corresponding to this
+            StructureData object
+        :raise ValueError: if periodic boundary conditions does not hold
+            in at least one dimension of real space
+
+        .. note:: Requires the pymatgen module (version >= 3.0.13, usage
+            of earlier versions may cause errors)
+        """
+        from pymatgen.core.structure import Structure
+
+        if self.pbc != (True, True, True):
+            raise ValueError("Periodic boundary conditions must apply in "
+                             "all three dimensions of real space")
+
+        species = []
+        for s in self.sites:
+            k = self.get_kind(s.kind_name)
+            species.append({s: w for s, w in zip(k.symbols, k.weights)})
+
+        positions = [list(x.position) for x in self.sites]
+        return Structure(self.cell, species, positions,
+                         coords_are_cartesian=True)
+
+    def _get_object_pymatgen_molecule(self):
+        """
+        Converts StructureData to pymatgen Molecule object
+
+        :return: a pymatgen Molecule object corresponding to this
+          StructureData object.
+
+        .. note:: Requires the pymatgen module (version >= 3.0.13, usage
+            of earlier versions may cause errors)
+        """
+        from pymatgen.core.structure import Molecule
+
+        species = []
+        for s in self.sites:
+            k = self.get_kind(s.kind_name)
+            species.append({s: w for s, w in zip(k.symbols, k.weights)})
+
+        positions = [list(x.position) for x in self.sites]
+        return Molecule(species, positions)
 
 
 class Kind(object):

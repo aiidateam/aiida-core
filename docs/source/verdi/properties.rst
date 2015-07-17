@@ -1,6 +1,5 @@
-##########
 Properties
-##########
+++++++++++
 
 Properties are configuration options that are stored in the ``config.json`` file 
 (within the ``.aiida`` directory). They can be accessed and modified thanks to 

@@ -11,5 +11,4 @@ Developer's guide
    data_cmdline
    git_cheatsheet
    sphinx_cheatsheet
-      ../verdi/properties
-   
+   ../verdi/properties

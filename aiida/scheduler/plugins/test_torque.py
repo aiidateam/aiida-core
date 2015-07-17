@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from aiida.scheduler.plugins.pbspro import *
+from aiida.scheduler.plugins.torque import *
 from aiida.scheduler.datastructures import job_states
 import unittest
 # import logging
@@ -759,7 +759,7 @@ class TestParserQstat(unittest.TestCase):
         """
         Test whether _parse_joblist can parse the qstat -f output
         """
-        s = PbsproScheduler()
+        s = TorqueScheduler()
 
         retval = 0
         stdout = text_qstat_f_to_test
@@ -814,7 +814,7 @@ class TestParserQstat(unittest.TestCase):
         Test whether _parse_joblist can parse the qstat -f output
         also when there are unexpected newlines
         """
-        s = PbsproScheduler()
+        s = TorqueScheduler()
 
         retval = 0
         stdout = text_qstat_f_to_test_with_unexpected_newlines
@@ -864,42 +864,13 @@ class TestParserQstat(unittest.TestCase):
                 self.assertTrue(j.num_cpus == num_cpus)
                 # TODO : parse the env_vars
 
-
-# TODO: WHEN WE USE THE CORRECT ERROR MANAGEMENT, REIMPLEMENT THIS TEST
-#        def test_parse_with_error_retval(self):
-#            """
-#            The qstat -f command has received a retval != 0
-#            """
-#            s = PbsproScheduler()            
-#            retval = 1
-#            stdout = text_qstat_f_to_test
-#            stderr = ''
-#            # Disable logging to avoid excessive output during test
-#            logging.disable(logging.ERROR)
-#            with self.assertRaises(SchedulerError):
-#                job_list = s._parse_joblist_output(retval, stdout, stderr)
-#            # Reset logging level
-#            logging.disable(logging.NOTSET)
-
-#        def test_parse_with_error_stderr(self):
-#            """
-#            The qstat -f command has received a stderr
-#            """
-#            s = PbsproScheduler()            
-#            retval = 0
-#            stdout = text_qstat_f_to_test
-#            stderr = 'A non empty error message'
-#            # TODO : catch the logging error
-#            job_list = s._parse_joblist_output(retval, stdout, stderr)
-#            #            print s._logger._log, dir(s._logger._log),'!!!!'
-
 class TestSubmitScript(unittest.TestCase):
     def test_submit_script(self):
         """
         """
         from aiida.scheduler.datastructures import JobTemplate
 
-        s = PbsproScheduler()
+        s = TorqueScheduler()
 
         job_tmpl = JobTemplate()
         job_tmpl.argv = ["mpirun", "-np", "23", "pw.x", "-npool", "1"]
@@ -912,8 +883,7 @@ class TestSubmitScript(unittest.TestCase):
 
         self.assertTrue('#PBS -r n' in submit_script_text)
         self.assertTrue(submit_script_text.startswith('#!/bin/bash'))
-        self.assertTrue('#PBS -l walltime=24:00:00' in submit_script_text)
-        self.assertTrue('#PBS -l select=1' in submit_script_text)
+        self.assertTrue('#PBS -l nodes=1:ppn=1,walltime=24:00:00' 
+                        in submit_script_text)
         self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1'" + \
                         " < 'aiida.in'" in submit_script_text)
-

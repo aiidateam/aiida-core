@@ -47,6 +47,9 @@ class Data(Node):
             object's source.
         * **license**: a string with a type of license.
 
+        .. note:: some limitations for setting the data source exist, see
+            :py:meth:`._validate`.
+
         :return: dictionary describing the source of Data object.
         """
         return self.get_attr('source', None)
@@ -56,7 +59,7 @@ class Data(Node):
         """
         Sets the dictionary describing the source of Data object.
 
-        :raise AttributeError: if dictionary contains unknown field.
+        :raise KeyError: if dictionary contains unknown field.
         :raise ValueError: if supplied source description is not a
             dictionary.
         """
@@ -64,7 +67,7 @@ class Data(Node):
             raise ValueError("Source must be supplied as a dictionary")
         unknown_attrs = list(set(source.keys()) - set(self._source_attributes))
         if unknown_attrs:
-            raise AttributeError("Unknown source parameters: "
+            raise KeyError("Unknown source parameters: "
                                  "{}".format(", ".join(unknown_attrs)))
 
         self._set_attr('source', source)

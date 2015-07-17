@@ -22,6 +22,9 @@ method. This is done independently in order to allow cross-validation of plugins
 
 
 class Data(Node):
+    """
+    This class is base class for all data objects.
+    """
     _updatable_attributes = tuple()
 
     _source_attributes = ['db_name', 'db_uri', 'uri', 'id', 'version',
@@ -30,6 +33,20 @@ class Data(Node):
     @property
     def source(self):
         """
+        Gets the dictionary describing the source of Data object. Possible
+        fields:
+
+        * **db_name**: name of the source database.
+        * **db_uri**: URI of the source database.
+        * **uri**: URI of the object's source. Should be a permanent link.
+        * **id**: object's source identifier in the source database.
+        * **version**: version of the object's source.
+        * **extras**: a dictionary with other fields for source description.
+        * **source_md5**: MD5 checksum of object's source.
+        * **description**: human-readable free form description of the
+            object's source.
+        * **license**: a string with a type of license.
+
         :return: dictionary describing the source of Data object.
         """
         return self.get_attr('source', None)

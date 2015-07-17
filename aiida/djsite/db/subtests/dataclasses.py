@@ -5,7 +5,8 @@ Tests for specific subclasses of Data
 from django.utils import unittest
 
 from aiida.orm import Node
-from aiida.common.exceptions import ModificationNotAllowed, UniquenessError
+from aiida.common.exceptions import \
+    ModificationNotAllowed, UniquenessError, ValidationError
 from aiida.djsite.db.testbase import AiidaTestCase
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
@@ -2294,3 +2295,21 @@ class TestKpointsData(AiidaTestCase):
         klist = k.get_kpoints(cartesian=True)
         self.assertTrue(numpy.allclose(klist, input_klist, atol=1e-16))
 
+
+class TestData(AiidaTestCase):
+    """
+    Tests generic Data class.
+    """
+
+    def test_license_validation(self):
+        """
+        Test the validation of source licenses.
+        """
+        from aiida.orm.data import Data
+
+        data = Data(source={'license': 'CC0'})
+        data.store()
+
+        data = Data(source={'license': 'CC-BY-SA'})
+        with self.assertRaises(ValidationError):
+            data.store()

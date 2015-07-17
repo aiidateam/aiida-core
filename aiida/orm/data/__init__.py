@@ -50,13 +50,6 @@ class Data(Node):
             raise AttributeError("Unknown source parameters: "
                                  "{}".format(", ".join(unknown_attrs)))
 
-        if source.get('license', None) and \
-           source['license'].startswith('CC-BY') and \
-           source.get('description', None) is None:
-            raise ValueError("License of the object ({}) requires "
-                             "attribution, while none is given in the "
-                             "description".format(source['license']))
-
         self._set_attr('source', source)
 
     def set_source(self, source):
@@ -182,3 +175,19 @@ class Data(Node):
         valid_formats = {k: getattr(self, exporter_prefix + k)
                          for k in valid_format_names}
         return valid_formats
+
+    def _validate(self):
+        """
+        Perform validation of the Data object.
+        """
+        from aiida.common.exceptions import ValidationError
+
+        super(Data, self)._validate()
+
+        if self.source is not None and \
+           self.source.get('license', None) and \
+           self.source['license'].startswith('CC-BY') and \
+           self.source.get('description', None) is None:
+            raise ValidationError("License of the object ({}) requires "
+                                  "attribution, while none is given in the "
+                                  "description".format(self.source['license']))

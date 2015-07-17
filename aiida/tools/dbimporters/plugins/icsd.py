@@ -43,7 +43,6 @@ class IcsdDbImporter(DbImporter):
 
     :param urladd: part of URL which is added between query and and the server URL
         (default: ``index.php?``). only needed for web page query
-
     :param querydb: boolean, decides whether the mysql database is queried
         (default: True).
         If False, the query results are obtained through the web page
@@ -54,16 +53,17 @@ class IcsdDbImporter(DbImporter):
         This parameter allows the user to switch to the demo database
         for testing purposes, if the access rights to the full database
         are not granted.
-
     :param host: MySQL database host. If the MySQL database is hosted on
         a different machine, use  "127.0.0.1" as host, and open
         a SSH tunnel to the host using::
 
             ssh -L 3306:localhost:3306 username@hostname.com
+
         or (if e.g. you get an URLError with Errno 111 (Connection refused)
         upon querying)::
         
             ssh -L 3306:localhost:3306 -L 8010:localhost:80 username@hostname.com
+
     :param user: mysql database username (default: dba)
     :param passwd: mysql database password (default: sql)
     :param db: name of the database (default: icsd)

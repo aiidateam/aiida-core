@@ -22,6 +22,9 @@ method. This is done independently in order to allow cross-validation of plugins
 
 
 class Data(Node):
+    """
+    This class is base class for all data objects.
+    """
     _updatable_attributes = tuple()
 
     _source_attributes = ['db_name', 'db_uri', 'uri', 'id', 'version',
@@ -30,6 +33,20 @@ class Data(Node):
     @property
     def source(self):
         """
+        Gets the dictionary describing the source of Data object. Possible
+        fields:
+
+        * **db_name**: name of the source database.
+        * **db_uri**: URI of the source database.
+        * **uri**: URI of the object's source. Should be a permanent link.
+        * **id**: object's source identifier in the source database.
+        * **version**: version of the object's source.
+        * **extras**: a dictionary with other fields for source description.
+        * **source_md5**: MD5 checksum of object's source.
+        * **description**: human-readable free form description of the
+            object's source.
+        * **license**: a string with a type of license.
+
         :return: dictionary describing the source of Data object.
         """
         return self.get_attr('source', None)
@@ -49,13 +66,6 @@ class Data(Node):
         if unknown_attrs:
             raise AttributeError("Unknown source parameters: "
                                  "{}".format(", ".join(unknown_attrs)))
-
-        if source.get('license', None) and \
-           source['license'].startswith('CC-BY') and \
-           source.get('description', None) is None:
-            raise ValueError("License of the object ({}) requires "
-                             "attribution, while none is given in the "
-                             "description".format(source['license']))
 
         self._set_attr('source', source)
 
@@ -182,3 +192,24 @@ class Data(Node):
         valid_formats = {k: getattr(self, exporter_prefix + k)
                          for k in valid_format_names}
         return valid_formats
+
+    def _validate(self):
+        """
+        Perform validation of the Data object.
+
+        .. note:: validation of data source checks license and requires
+            attribution to be provided in field 'description' of source in
+            the case of any CC-BY* license. If such requirement is too
+            strict, one can remove/comment it out.
+        """
+        from aiida.common.exceptions import ValidationError
+
+        super(Data, self)._validate()
+
+        if self.source is not None and \
+           self.source.get('license', None) and \
+           self.source['license'].startswith('CC-BY') and \
+           self.source.get('description', None) is None:
+            raise ValidationError("License of the object ({}) requires "
+                                  "attribution, while none is given in the "
+                                  "description".format(self.source['license']))

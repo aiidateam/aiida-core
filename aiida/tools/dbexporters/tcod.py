@@ -464,8 +464,9 @@ def _collect_tags(node,calc,parameters=None,
             if exclude_external_contents:
                 for pk in data['node_attributes']:
                     n = data['node_attributes'][pk]
-                    if 'md5' in n.keys() and 'url' in n.keys():
-                        md5_to_url[n['md5']] = n['url']
+                    if 'md5' in n.keys() and 'source' in n.keys() and \
+                      'uri' in n['source'].keys():
+                        md5_to_url[n['md5']] = n['source']['uri']
 
             for f in files:
                 f['name'] = os.path.join('aiida',f['name'])

@@ -176,32 +176,34 @@ class DbSearchResults(object):
 
 class DbEntry(object):
     """
-    Represents an entry from the structure database (COD, ICSD, ...).
+    Represents an entry from external database.
     """
+    _license = None
 
-    def __init__(self, db_source=None, db_url=None, db_id=None,
-                 db_version=None, extras={}, url=None):
+    def __init__(self, db_name=None, db_uri=None, id=None,
+                 version=None, extras={}, uri=None):
         """
         Sets the basic parameters for the database entry:
 
-        :param db_source: name of the source database
-        :param db_url: URL of the source database
-        :param db_id: structure identifyer in the database
-        :param db_version: version of the database
+        :param db_name: name of the source database
+        :param db_uri: URI of the source database
+        :param id: structure identifyer in the database
+        :param version: version of the database
         :param extras: a dictionary with some extra parameters
             (e.g. database ID number)
-        :param url: URL of the structure (should be permanent)
+        :param uri: URI of the structure (should be permanent)
         """
         self.source = {
-            'db_source': db_source,
-            'db_url': db_url,
-            'db_id': db_id,
-            'db_version': db_version,
+            'db_name': db_name,
+            'db_uri': db_uri,
+            'id': id,
+            'version': version,
             'extras': extras,
-            'url': url,
+            'uri': uri,
             'source_md5': None,
+            'license': self._license,
         }
-        self._cif = None
+        self._contents = None
 
     def __repr__(self):
         return "{}({})".format(self.__class__.__name__,
@@ -211,26 +213,46 @@ class DbEntry(object):
                                          for k, v in self.source.iteritems()]))
 
     @property
+    def contents(self):
+        """
+        Returns raw contents of a file as string.
+        """
+        if self._contents is None:
+            import urllib2
+            from hashlib import md5
+
+            self._contents = urllib2.urlopen(self.source['uri']).read()
+            self.source['source_md5'] = md5(self._contents).hexdigest()
+        return self._contents
+
+    @contents.setter
+    def contents(self, contents):
+        """
+        Sets raw contents of a file as string.
+        """
+        from hashlib import md5
+        self._contents = contents
+        self.source['source_md5'] = md5(self._contents).hexdigest()
+
+
+class CifEntry(DbEntry):
+    """
+    Represents an entry from the structure database (COD, ICSD, ...).
+    """
+
+    @property
     def cif(self):
         """
         Returns raw contents of a CIF file as string.
         """
-        if self._cif is None:
-            import urllib2
-            from hashlib import md5
-
-            self._cif = urllib2.urlopen(self.source['url']).read()
-            self.source['source_md5'] = md5(self._cif).hexdigest()
-        return self._cif
+        return self.contents
 
     @cif.setter
     def cif(self, cif):
         """
         Sets raw contents of a CIF file as string.
         """
-        from hashlib import md5
-        self._cif = cif
-        self.source['source_md5'] = md5(self._cif).hexdigest()
+        self.contents = cif
 
     def get_raw_cif(self):
         """
@@ -291,3 +313,35 @@ class DbEntry(object):
         :return: list of lists
         """
         raise NotImplementedError("not implemented in base class")
+
+
+class UpfEntry(DbEntry):
+    """
+    Represents an entry from the pseudopotential database.
+    """
+
+    def get_upf_node(self, store=False):
+        """
+        Creates an UPF node, that can be used in AiiDA workflow.
+
+        :return: :py:class:`aiida.orm.data.upf.UpfData` object
+        """
+        from aiida.common.utils import md5_file
+        from aiida.orm.data.upf import UpfData
+        import tempfile
+
+        upfnode = None
+
+        # Prefixing with an ID in order to start file name with the name
+        # of the described element.
+        with tempfile.NamedTemporaryFile(prefix=self.source['id']) as f:
+            f.write(self.contents)
+            f.flush()
+            upfnode = UpfData(file=f.name, source=self.source)
+
+        # Maintaining backwards-compatibility. Parameter 'store' should
+        # be removed in the future, as the new node can be stored later.
+        if store:
+            upfnode.store()
+
+        return upfnode

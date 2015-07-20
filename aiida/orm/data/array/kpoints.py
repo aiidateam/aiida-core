@@ -250,12 +250,12 @@ class KpointsData(ArrayData):
         Brillouin zone. This excludes the possibility of set/get kpoints
         
         :param mesh: a list of three integers, representing the size of the 
-                 kpoint mesh along b1,b2,b3.
+            kpoint mesh along b1,b2,b3.
         :param (optional) offset: a list of three floats between 0 and 1.
-                [0.,0.,0.] is Gamma centered mesh
-                [0.5,0.5,0.5] is half shifted
-                [1.,1.,1.] by periodicity should be equivalent to [0.,0.,0.]
-                Default = [0.,0.,0.].
+            [0.,0.,0.] is Gamma centered mesh
+            [0.5,0.5,0.5] is half shifted
+            [1.,1.,1.] by periodicity should be equivalent to [0.,0.,0.]
+            Default = [0.,0.,0.].
         """
         from aiida.common.exceptions import ModificationNotAllowed
         # validate
@@ -362,28 +362,31 @@ class KpointsData(ArrayData):
         ModificationNotAllowed
         
         :param kpoints: a list of kpoints, each kpoint being a list of one, two
-                or three coordinates, depending on self.pbc: if structure is 1D
-                (only one True in self.pbc) one allows singletons or scalars for
-                each k-point, if it's 2D it can be a length-2 list, and in all
-                cases it can be a length-3 list 
-                Examples: [[0.,0.,0.],[0.1,0.1,0.1],...] for 1D, 2D or 3D
-                          [[0.,0.],[0.1,0.1,],...] for 1D or 2D
-                          [[0.],[0.1],...] for 1D
-                          [0., 0.1, ...] for 1D (list of scalars)
-                For 0D (all pbc are False), the list can be any of the above
-                or empty - then only Gamma point is set.
-                The value of k for the non-periodic dimension(s) is set by 
-                fill_values
+            or three coordinates, depending on self.pbc: if structure is 1D
+            (only one True in self.pbc) one allows singletons or scalars for
+            each k-point, if it's 2D it can be a length-2 list, and in all
+            cases it can be a length-3 list.
+            Examples:
+
+                * [[0.,0.,0.],[0.1,0.1,0.1],...] for 1D, 2D or 3D
+                * [[0.,0.],[0.1,0.1,],...] for 1D or 2D
+                * [[0.],[0.1],...] for 1D
+                * [0., 0.1, ...] for 1D (list of scalars)
+
+            For 0D (all pbc are False), the list can be any of the above
+            or empty - then only Gamma point is set.
+            The value of k for the non-periodic dimension(s) is set by 
+            fill_values
         :param cartesian: if True, the coordinates given in input are treated 
-                as in cartesian units. If False, the coordinates are crystal,
-                i.e. in units of b1,b2,b3. Default = False
+            as in cartesian units. If False, the coordinates are crystal,
+            i.e. in units of b1,b2,b3. Default = False
         :param labels: optional, the list of labels to be set for some of the 
-                kpoints. See labels for more info
+            kpoints. See labels for more info
         :param weights: optional, a list of floats with the weight associated
-                to the kpoint list
+            to the kpoint list
         :param fill_values: scalar to be set to all
-        non-periodic dimensions (indicated by False in self.pbc), or list of
-        values for each of the non-periodic dimensions.
+            non-periodic dimensions (indicated by False in self.pbc), or list of
+            values for each of the non-periodic dimensions.
         """
         from aiida.common.exceptions import ModificationNotAllowed
 

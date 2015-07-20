@@ -593,10 +593,7 @@ class BasePwCpInputGenerator(object):
     @classmethod
     def _get_linkname_pseudo_prefix(cls):
         """
-        The prefix for the name of the link used for the pseudo for kind 'kind'
-        
-        :param kind: a string for the atomic kind for which we want
-          to get the link name
+        The prefix for the name of the link used for each pseudo before the kind name
         """
         return "pseudo_"
 

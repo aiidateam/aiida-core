@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from aiida.tools.dbimporters.baseclasses \
-    import DbImporter, DbSearchResults, DbEntry
+    import DbImporter, DbSearchResults, CifEntry
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -279,10 +279,10 @@ class CodSearchResults(DbSearchResults):
 
         :param result_dict: dictionary, describing an entry in the results.
         """
-        source_dict = {'db_id': result_dict['id']}
+        source_dict = {'id': result_dict['id']}
         if 'svnrevision' in result_dict and \
                         result_dict['svnrevision'] is not None:
-            source_dict['db_version'] = result_dict['svnrevision']
+            source_dict['version'] = result_dict['svnrevision']
         return source_dict
 
     def _get_url(self, result_dict):
@@ -299,17 +299,18 @@ class CodSearchResults(DbSearchResults):
             return url
 
 
-class CodEntry(DbEntry):
+class CodEntry(CifEntry):
     """
     Represents an entry from COD.
     """
+    _license = 'CC0'
 
-    def __init__(self, url, db_source='Crystallography Open Database',
-                 db_url='http://www.crystallography.net', **kwargs):
+    def __init__(self, uri, db_name='Crystallography Open Database',
+                 db_uri='http://www.crystallography.net', **kwargs):
         """
         Creates an instance of
         :py:class:`aiida.tools.dbimporters.plugins.cod.CodEntry`, related
-        to the supplied URL.
+        to the supplied URI.
         """
-        super(CodEntry, self).__init__(db_source=db_source, db_url=db_url,
-                                       url=url, **kwargs)
+        super(CodEntry, self).__init__(db_name=db_name, db_uri=db_uri,
+                                       uri=uri, **kwargs)

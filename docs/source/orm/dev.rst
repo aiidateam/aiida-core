@@ -42,6 +42,7 @@ ORM documentation: Data
 =======================
 
 .. automodule:: aiida.orm.data
+   :members:
 
 .. _my-ref-to-structure:
 
@@ -89,6 +90,11 @@ ArrayData
 ArrayData subclasses
 --------------------
 The following are Data classes inheriting from ArrayData.
+
+KpointsData
+...........
+.. automodule:: aiida.orm.data.array.kpoints
+   :members:
 
 TrajectoryData
 ..............

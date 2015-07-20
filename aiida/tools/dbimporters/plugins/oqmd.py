@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from aiida.tools.dbimporters.baseclasses \
-    import DbImporter, DbSearchResults, DbEntry
+    import DbImporter, DbSearchResults, CifEntry
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -111,7 +111,7 @@ class OqmdSearchResults(DbSearchResults):
 
         :param result_dict: dictionary, describing an entry in the results.
         """
-        return {'db_id': result_dict['id']}
+        return {'id': result_dict['id']}
 
     def _get_url(self, result_dict):
         """
@@ -122,18 +122,18 @@ class OqmdSearchResults(DbSearchResults):
         return self._base_url + result_dict['id']
 
 
-class OqmdEntry(DbEntry):
+class OqmdEntry(CifEntry):
     """
     Represents an entry from OQMD.
     """
 
-    def __init__(self, url, **kwargs):
+    def __init__(self, uri, **kwargs):
         """
         Creates an instance of
         :py:class:`aiida.tools.dbimporters.plugins.oqmd.OqmdEntry`, related
-        to the supplied URL.
+        to the supplied URI.
         """
-        super(OqmdEntry, self).__init__(db_source='Open Quantum Materials Database',
-                                        db_url='http://oqmd.org',
-                                        url=url,
+        super(OqmdEntry, self).__init__(db_name='Open Quantum Materials Database',
+                                        db_uri='http://oqmd.org',
+                                        uri=uri,
                                         **kwargs)

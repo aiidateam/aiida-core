@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
-import aiida.tools.dbimporters.baseclasses
+from aiida.tools.dbimporters.baseclasses \
+    import DbImporter, DbSearchResults, CifEntry
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -26,7 +27,7 @@ class NoResultsWebExp(IcsdImporterExp):
     pass
 
 
-class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
+class IcsdDbImporter(DbImporter):
     """
     Importer for the Inorganic Crystal Structure Database, short ICSD, provided by
     FIZ Karlsruhe. It allows to run queries and analyse all the results.
@@ -42,7 +43,6 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
 
     :param urladd: part of URL which is added between query and and the server URL
         (default: ``index.php?``). only needed for web page query
-
     :param querydb: boolean, decides whether the mysql database is queried
         (default: True).
         If False, the query results are obtained through the web page
@@ -53,16 +53,17 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
         This parameter allows the user to switch to the demo database
         for testing purposes, if the access rights to the full database
         are not granted.
-
     :param host: MySQL database host. If the MySQL database is hosted on
         a different machine, use  "127.0.0.1" as host, and open
         a SSH tunnel to the host using::
 
             ssh -L 3306:localhost:3306 username@hostname.com
+
         or (if e.g. you get an URLError with Errno 111 (Connection refused)
         upon querying)::
         
             ssh -L 3306:localhost:3306 -L 8010:localhost:80 username@hostname.com
+
     :param user: mysql database username (default: dba)
     :param passwd: mysql database password (default: sql)
     :param db: name of the database (default: icsd)
@@ -456,7 +457,7 @@ class IcsdDbImporter(aiida.tools.dbimporters.baseclasses.DbImporter):
             return self.keywords.keys()
 
 
-class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
+class IcsdSearchResults(DbSearchResults):
     """
     Result manager for the query performed on ICSD.
 
@@ -625,30 +626,32 @@ class IcsdSearchResults(aiida.tools.dbimporters.baseclasses.DbSearchResults):
         self.db.close()
 
 
-class IcsdEntry(aiida.tools.dbimporters.baseclasses.DbEntry):
+class IcsdEntry(CifEntry):
     """
     Represent an entry from Icsd.
     
     :note:
-      - Before July 2nd 2015, source['db_id'] contained icsd.IDNUM (internal
+      - Before July 2nd 2015, source['id'] contained icsd.IDNUM (internal
         icsd id number) and source['extras']['cif_nr'] the cif number 
         (icsd.COLL_CODE).
-      - After July 2nd 2015, source['db_id'] has been replaced by the cif 
+      - After July 2nd 2015, source['id'] has been replaced by the cif 
         number and source['extras']['idnum'] is icsd.IDNUM .
     """
+    _license = 'ICSD'
 
-    def __init__(self, url, **kwargs):
+    def __init__(self, uri, **kwargs):
         """
-        Create an instance of IcsdEntry, related to the supplied URL.
+        Create an instance of IcsdEntry, related to the supplied URI.
         """
         super(IcsdEntry, self).__init__(**kwargs)
         self.source = {
-            'db_source': kwargs.get('db_source','Icsd'),
-            'db_url': None,  # Server ?
-            'db_id': kwargs.get('db_id',None),
-            'db_version': kwargs.get('db_version',None),
-            'url': url,
+            'db_name': kwargs.get('db_name','Icsd'),
+            'db_uri': None,  # Server ?
+            'id': kwargs.get('id',None),
+            'version': kwargs.get('version',None),
+            'uri': uri,
             'extras': {'idnum': kwargs.get('extras',{}).get('idnum',None)},
+            'license': self._license,
         }
         self._cif = None
 
@@ -660,7 +663,7 @@ class IcsdEntry(aiida.tools.dbimporters.baseclasses.DbEntry):
         if self._cif is None:
             import urllib2
 
-            self._cif = urllib2.urlopen(self.source["url"]).read()
+            self._cif = urllib2.urlopen(self.source["uri"]).read()
         return self._cif
 
     def get_cif_node(self):

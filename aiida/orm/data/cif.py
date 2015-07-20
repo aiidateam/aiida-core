@@ -512,13 +512,6 @@ class CifData(SinglefileData):
         """
         Initialises an instance of CifData.
         """
-        self._db_source_attrs = ['db_source',
-                                 'db_url',
-                                 'db_id',
-                                 'db_version',
-                                 'extras',
-                                 'url',
-                                 'source_md5']
         super(CifData, self).__init__(**kwargs)
         self._values = None
         self._ase = None
@@ -537,51 +530,14 @@ class CifData(SinglefileData):
         """
         super(CifData, self).set_file(filename)
         md5sum = self.generate_md5()
-        if self.get_attr('source_md5', '') and self.get_attr('source_md5') != md5sum:
-            for key in self._db_source_attrs:
-                try:
-                    self._del_attr(key)
-                except AttributeError:
-                    pass
+        if isinstance(self.source, dict) and \
+          self.source.get('source_md5', None) is not None and \
+          self.source['source_md5'] != md5sum:
+            self.source = {}
         self._set_attr('md5', md5sum)
         self._values = None
         self._ase = None
         self._set_attr('formulae', self.get_formulae())
-
-    @property
-    def source(self):
-        """
-        A dictionary representing the source of a CIF.
-        """
-        source_dict = {}
-        for k in self._db_source_attrs:
-            source_dict[k] = self.get_attr(k, "")
-        return source_dict
-
-    @source.setter
-    def source(self, source):
-        """
-        Set the file source descriptions.
-        :raises ValueError: if unknown data source attribute is found in
-            supplied dictionary.
-        """
-        unknown_keys = []
-        for k in source.keys():
-            if k in self._db_source_attrs:
-                self._set_attr(k, source[k])
-            else:
-                unknown_keys.append(k)
-        if unknown_keys:
-            raise ValueError("Unknown data source attribute(s) " +
-                             ", ".join(unknown_keys) +
-                             ": only " + ", ".join(self._db_source_attrs) +
-                             " are supported")
-
-    def set_source(self, source):
-        """
-        Set the file source descriptions.
-        """
-        self.source = source
 
     def get_formulae(self, mode='sum'):
         """
@@ -617,6 +573,22 @@ class CifData(SinglefileData):
             self.values = self._values
         with open(self.get_file_abs_path()) as f:
             return f.read()
+
+    def _get_object_ase(self):
+        """
+        Converts CifData to ase.Atoms
+
+        :return: an ase.Atoms object
+        """
+        return self.ase
+
+    def _get_object_pycifrw(self):
+        """
+        Converts CifData to PyCIFRW.CifFile
+
+        :return: a PyCIFRW.CifFile object
+        """
+        return self.values
 
     def _validate(self):
         """

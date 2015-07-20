@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from aiida.tools.dbimporters.baseclasses \
-    import DbImporter, DbSearchResults, DbEntry
+    import DbImporter, DbSearchResults, CifEntry
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -140,7 +140,7 @@ class MpodSearchResults(DbSearchResults):
 
         :param result_dict: dictionary, describing an entry in the results.
         """
-        return {'db_id': result_dict['id']}
+        return {'id': result_dict['id']}
 
     def _get_url(self, result_dict):
         """
@@ -151,18 +151,18 @@ class MpodSearchResults(DbSearchResults):
         return self._base_url + result_dict['id'] + ".mpod"
 
 
-class MpodEntry(DbEntry):
+class MpodEntry(CifEntry):
     """
     Represents an entry from MPOD.
     """
 
-    def __init__(self, url, **kwargs):
+    def __init__(self, uri, **kwargs):
         """
         Creates an instance of
         :py:class:`aiida.tools.dbimporters.plugins.mpod.MpodEntry`, related
-        to the supplied URL.
+        to the supplied URI.
         """
-        super(MpodEntry, self).__init__(db_source='Material Properties Open Database',
-                                        db_url='http://mpod.cimav.edu.mx',
-                                        url=url,
+        super(MpodEntry, self).__init__(db_name='Material Properties Open Database',
+                                        db_uri='http://mpod.cimav.edu.mx',
+                                        uri=uri,
                                         **kwargs)

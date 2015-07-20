@@ -6,6 +6,7 @@ Developer's guide
 
    developers
    devel_tutorial/code_plugin
+   parsertests
    workflows   
    
    data_cmdline

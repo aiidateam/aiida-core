@@ -232,15 +232,22 @@ class TestNnincDbImporter(AiidaTestCase):
         """
         Tests the creation of NnincEntry from NnincSearchResults.
         """
+        import os
+
         from aiida.tools.dbimporters.plugins.nninc import NnincSearchResults
         from aiida.common.exceptions import ParsingError
+        import aiida
 
         upf = 'Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030'
 
         results = NnincSearchResults([{'id': upf}])
         entry = results.at(0)
+        print aiida.__file__
 
-        with open("examples/testdata/qepseudos/{}.UPF".format(upf), 'r') as f:
+        with open(os.path.join(
+                os.path.split(aiida.__file__)[0], os.pardir,
+                "examples", "testdata", "qepseudos", "{}.UPF".format(upf))
+                , 'r') as f:
             entry._contents = f.read()
 
         upfnode = entry.get_upf_node()

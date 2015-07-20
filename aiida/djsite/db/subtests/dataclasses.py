@@ -1846,6 +1846,11 @@ class TestPymatgenFromStructureData(AiidaTestCase):
                            [0.2, 0.2, 0.2],
                            [0.3, 0.3, 0.3]])
 
+    @unittest.skipIf(not has_ase() or
+                     not has_pymatgen() or
+                     StrictVersion(get_pymatgen_version()) <
+                     StrictVersion('3.0.13'),
+                     "Unable to import ase or pymatgen")
     def test_3(self):
         """
         Test the conversion of StructureData to pymatgen's Molecule.

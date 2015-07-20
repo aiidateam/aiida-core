@@ -1,9 +1,11 @@
 {
   "output": {
-    "energies": {
-      "value": [ -2057.99011937535 ],
-      "comparison": "AlmostEqual"
-    }
+    "energies": [
+      {
+        "comparison": "AlmostEqual",
+        "value": [ -2057.99011937535 ]
+      }
+    ]
   },
   "trajectory": {
   },

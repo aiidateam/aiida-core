@@ -207,7 +207,8 @@ def get_all_fields_info():
     return all_fields_info, unique_identifiers
 
 def export_tree(what, folder = None, also_parents = True,
-                also_calc_outputs = True, silent = False):
+                also_calc_outputs = True, allowed_licenses = None,
+                exclude_forbidden_licenses = False, silent = False):
     """
     Export the DB entries passed in the 'what' list to a file tree.
     
@@ -219,7 +220,16 @@ def export_tree(what, folder = None, also_parents = True,
     :param also_parents: if True, also all the parents are stored (from th
       DbPath transitive closure table)
     :param also_calc_outputs: if True, any output of a calculation is also exported
+    :param allowed_licenses: a list or a function. If a list, then checks
+      whether all licenses of Data nodes are in the list. If a function,
+      then calls function for licenses of Data nodes expecting True if
+      license is allowed, False otherwise.
+    :param exclude_forbidden_licenses: if True, skips exporting of Data
+      nodes with forbidden licenses. IF False, raises LicensingException
+      if any Data node with forbidden license exists.
     :param silent: suppress debug prints
+    :raises LicensingException: if any node is licensed under forbidden
+      license and exclude_forbidden_licenses = False
     """
     import json
     import os
@@ -230,7 +240,9 @@ def export_tree(what, folder = None, also_parents = True,
 
     import aiida
     from aiida.djsite.db import models
-    from aiida.orm import Node, Calculation
+    from aiida.orm import Node, Calculation, load_node
+    from aiida.orm.data import Data
+    from aiida.common.exceptions import LicensingException
     from aiida.common.folders import SandboxFolder
 
     EXPORT_VERSION = '0.1'
@@ -276,6 +288,35 @@ def export_tree(what, folder = None, also_parents = True,
     entries_to_add = {k: [Q(id__in=v)] for k, v
                       in entries_ids_to_add.iteritems()}
 
+    # Check the licenses of exported data
+    # TODO: use standard django constructions or QueryTool, since current
+    # implementation is far from optimal.
+    if allowed_licenses is not None:
+        from inspect import isfunction
+        for k, v in entries_ids_to_add.iteritems():
+            for pk in v:
+                node = load_node(int(pk))
+                try:
+                    if isinstance(node, Data) and node.source and \
+                      node.source.get('license', None):
+                        if isfunction(allowed_licenses):
+                            try:
+                                if not allowed_licenses(node.source['license']):
+                                    raise LicensingException
+                            except Exception as e:
+                                raise LicensingException
+                        else:
+                            if node.source['license'] not in allowed_licenses:
+                                raise LicensingException
+                except LicensingException:
+                    if exclude_forbidden_licenses:
+                        entries_ids_to_add[k].remove(pk)
+                    else:
+                        raise LicensingException("Node {} is licensed "
+                                                 "under {} license, which "
+                                                 "is not in the list of "
+                                                 "allowed licenses".format(
+                                                  node, node.source['license']))
 
     ############################################################
     ##### Start automatic recursive export data generation #####

@@ -14,7 +14,7 @@ import aiida
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
+__contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi"
 
 
 class TestPort(AiidaTestCase):
@@ -140,3 +140,50 @@ class TestPort(AiidaTestCase):
             import_file(filename, silent=True)
 
         import_file(filename, ignore_unknown_nodes=True, silent=True)
+
+    def test_4(self):
+        """
+        Test control of licenses.
+        """
+        from aiida.cmdline.commands.exportfile import export_tree
+        from aiida.common.exceptions import LicensingException
+        from aiida.common.folders import SandboxFolder
+
+        StructureData = DataFactory('structure')
+        sd = StructureData()
+        sd.source = {'license': 'GPL'}
+        sd.store()
+
+        folder = SandboxFolder()
+        export_tree([sd.dbnode], folder=folder, silent=True,
+                    allowed_licenses=['GPL'])
+        # Folder should contain two files of metadata + nodes/
+        self.assertEquals(len(folder.get_content_list()), 3)
+
+        folder = SandboxFolder()
+        export_tree([sd.dbnode], folder=folder, silent=True,
+                    allowed_licenses=['CC0'],
+                    exclude_forbidden_licenses=True)
+        # Folder should be empty, as nothing will be exported
+        self.assertEquals(len(folder.get_content_list()), 0)
+
+        folder = SandboxFolder()
+        with self.assertRaises(LicensingException):
+            export_tree([sd.dbnode], folder=folder, silent=True,
+                        allowed_licenses=['CC0'])
+
+        def cc_filter(license):
+            return license.startswith('CC')
+
+        def crashing_filter(license):
+            raise NotImplementedError("not implemented yet")
+
+        folder = SandboxFolder()
+        with self.assertRaises(LicensingException):
+            export_tree([sd.dbnode], folder=folder, silent=True,
+                        allowed_licenses=cc_filter)
+
+        folder = SandboxFolder()
+        with self.assertRaises(LicensingException):
+            export_tree([sd.dbnode], folder=folder, silent=True,
+                        allowed_licenses=crashing_filter)

@@ -6,10 +6,10 @@ Developer's guide
 
    developers
    devel_tutorial/code_plugin
+   parsertests
    workflows   
    
    data_cmdline
    git_cheatsheet
    sphinx_cheatsheet
-      ../verdi/properties
-   
+   ../verdi/properties

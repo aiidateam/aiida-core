@@ -70,6 +70,12 @@ Inputs
   If specified, the scratch folder coming from a previous QE calculation is 
   copied in the scratch of the new calculation.
 
+* **vdw_table**, class :py:class:`SinglefileData <aiida.orm.data.singlefile.SinglefileData>` (optional)
+  If specified, it should be a file for the van der Waals kernel table.
+  The file is copied in the pseudo subfolder, without changing its name, and
+  without any check, so it is your responsibility to select the correct file
+  that you want to use.
+
 Outputs
 -------
 .. note:: The `output_parameters` has more parsed values in the EPFL version and `output_bands` is parsed only in the EPFL version.

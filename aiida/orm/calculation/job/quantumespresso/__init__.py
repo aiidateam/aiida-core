@@ -11,6 +11,7 @@ from aiida.orm.data.structure import StructureData
 from aiida.orm.data.parameter import ParameterData
 from aiida.orm.data.array.kpoints import KpointsData
 from aiida.orm.data.upf import UpfData
+from aiida.orm.data.singlefile import SinglefileData
 from aiida.orm.data.remote import RemoteData
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
@@ -127,6 +128,15 @@ class BasePwCpInputGenerator(object):
                               "list of strings if more than one kind uses the "
                               "same pseudo"),
             },
+            "vdw_table": {
+                'valid_types': SinglefileData,
+                'additional_parameter': None,
+                'linkname': 'vdw_table',
+                'docstring': ("Use a Van der Waals kernel table. It should be "
+                              "a SinglefileData, with the table provided "
+                              "(note that the filename is not checked but it "
+                              "should be the name expected by QE."),
+            },
         }
 
 
@@ -201,8 +211,14 @@ class BasePwCpInputGenerator(object):
         parent_calc_folder = inputdict.pop(self.get_linkname('parent_folder'), None)
         if parent_calc_folder is not None:
             if not isinstance(parent_calc_folder, RemoteData):
-                raise InputValidationError("parent_calc_folder, if specified,"
+                raise InputValidationError("parent_calc_folder, if specified, "
                                            "must be of type RemoteData")
+
+        vdw_table = inputdict.pop(self.get_linkname('vdw_table'), None)
+        if vdw_table is not None:
+            if not isinstance(vdw_table, SinglefileData):
+                raise InputValidationError("vdw_table, if specified, "
+                                           "must be of type SinglefileData")
 
         # Here, there should be no more parameters...
         if inputdict:
@@ -312,6 +328,18 @@ class BasePwCpInputGenerator(object):
             kind_names.append(kind.name)
             atomic_species_card_list.append("{} {} {}\n".format(
                 kind.name.ljust(6), kind.mass, filename))
+
+        # If present, add also the Van der Waals table to the pseudo dir
+        # Note that the name of the table is not checked but should be the 
+        # one expected by QE.
+        if vdw_table:
+            local_copy_list.append(
+                (
+                vdw_table.get_file_abs_path(),
+                os.path.join(self._PSEUDO_SUBFOLDER,
+                    os.path.split(vdw_table.get_file_abs_path())[1])
+                )
+                )
 
         # I join the lines, but I resort them using the alphabetical order of
         # species, given by the kind_names list. I also store the mapping_species
@@ -593,10 +621,7 @@ class BasePwCpInputGenerator(object):
     @classmethod
     def _get_linkname_pseudo_prefix(cls):
         """
-        The prefix for the name of the link used for the pseudo for kind 'kind'
-        
-        :param kind: a string for the atomic kind for which we want
-          to get the link name
+        The prefix for the name of the link used for each pseudo before the kind name
         """
         return "pseudo_"
 

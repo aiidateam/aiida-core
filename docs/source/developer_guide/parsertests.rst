@@ -15,7 +15,7 @@ The naming convention for folders is the following:
 
 * it should contain only digits, letters and underscores, otherwise the
   folder will be ignored when running ``verdi devel tests db.parsers``;
-* the folder name should start with "test_";
+* the folder name should start with ``test_``;
 * the name should be followed by the parser plugin name, as returned
   by calculation.get_parser_name(), and with dots replaced with underscores;
 * it should be followed by an underscore;
@@ -35,7 +35,7 @@ the following function::
   from aiida.djsite.db.subtests.parsers import output_test
 
 and then run it with the correct parameters. The documentation of the function
-can be found :py:func:`here<aiida.djsite.db.subtests.parsers.output_test`.
+can be found :py:func:`here <aiida.djsite.db.subtests.parsers.output_test>`.
 
 An example call could be::
 

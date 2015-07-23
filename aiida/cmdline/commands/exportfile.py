@@ -231,6 +231,7 @@ def export_tree(what, folder, also_parents = True,
     import aiida
     from aiida.djsite.db import models
     from aiida.orm import Node, Calculation
+    from aiida.common.folders import RepositoryFolder
 
     EXPORT_VERSION = '0.1'
     
@@ -430,11 +431,11 @@ def export_tree(what, folder, also_parents = True,
     if silent is not True:
         print "STORING FILES..."
 
-    for pk in all_nodes_pk:
-        # Maybe we do not need to get the subclass, if it is too slow?
-        node = Node.get_subclass_from_pk(pk)
-
-        sharded_uuid = export_shard_uuid(node.uuid)
+    # Large speed increase by not getting the node itself and looping in memory
+    # in python, but just getting the uuid
+    for uuid in models.DbNode.objects.filter(pk__in=all_nodes_pk).values_list(
+        'uuid', flat=True):
+        sharded_uuid = export_shard_uuid(uuid)
 
         # Important to set create=False, otherwise creates
         # twice a subfolder. Maybe this is a bug of insert_path??
@@ -444,7 +445,8 @@ def export_tree(what, folder, also_parents = True,
             reset_limit=True)
         # In this way, I copy the content of the folder, and not the folder
         # itself
-        thisnodefolder.insert_path(src=node._repository_folder.abspath,
+        thisnodefolder.insert_path(src=RepositoryFolder(
+            section=Node._section_name, uuid=uuid).abspath,
                                    dest_name='.')
 
 class MyWritingZipFile(object):

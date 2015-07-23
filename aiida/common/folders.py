@@ -276,6 +276,12 @@ class Folder(object):
 
         return dest_abs_path
 
+    def open(self, name, mode='r'):
+        """
+        Open a file in the current folder and return the corresponding
+        file object.
+        """
+        return open(self.get_abs_path(name), mode)
 
     @property
     def abspath(self):

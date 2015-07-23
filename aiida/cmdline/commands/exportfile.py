@@ -206,7 +206,7 @@ def get_all_fields_info():
 
     return all_fields_info, unique_identifiers
 
-def export_tree(what, folder = None, also_parents = True,
+def export_tree(what, folder, also_parents = True,
                 also_calc_outputs = True, allowed_licenses = None,
                 exclude_forbidden_licenses = False, silent = False):
     """
@@ -327,14 +327,25 @@ def export_tree(what, folder = None, also_parents = True,
     while entries_to_add:
         new_entries_to_add = {}
         for model_name, querysets in entries_to_add.iteritems():
+            if not silent:
+                print "  - Model: {}".format(model_name)
             Model = get_object_from_string(model_name)
 
-            # I do a filter with an 'OR' (|) operator between all the possible
-            # queries. querysets, if present, should always have at least one
-            # element, so for the time being I do not check if it is an empty
-            # list (TODO: check, otherwise I add the whole DB I believe).
-            dbentries = Model.objects.filter(
-                reduce(operator.or_, querysets)).distinct()
+            ## Before I was doing this. But it is VERY slow! E.g. 
+            ## To get the user owning 44 nodes or 1 group was taking
+            ## 26 seconds, while it was taking only 0.1 seconds if the two
+            ## queries were run independently!
+            ## I think this was doing the wrong type of UNION
+            #dbentries = Model.objects.filter(
+            #    reduce(operator.or_, querysets)).distinct()
+            ## Now I instead create the list of UUIDs and do a set() instead
+            ## of .distinct(); then I get the final results with a further
+            ## query.
+            db_ids = set()
+            for queryset in querysets:
+                db_ids.update(Model.objects.filter(queryset).values_list(
+                    'id', flat=True))
+            dbentries = Model.objects.filter(id__in=db_ids)
             entryvalues = dbentries.values(
                 'id', *all_fields_info[model_name].keys()
             )
@@ -439,7 +450,7 @@ def export_tree(what, folder = None, also_parents = True,
     if not silent:
         print "STORING DATA..."
     
-    with open(folder.get_abs_path('data.json'), 'w') as f:
+    with folder.open('data.json', 'w') as f:
         json.dump({
                 'node_attributes': node_attributes,
                 'node_attributes_conversion': node_attributes_conversion,
@@ -455,7 +466,7 @@ def export_tree(what, folder = None, also_parents = True,
         'unique_identifiers': unique_identifiers,
         }
 
-    with open(folder.get_abs_path('metadata.json'), 'w') as f:
+    with folder.open('metadata.json', 'w') as f:
         json.dump(metadata, f)
 
     if silent is not True:
@@ -478,6 +489,161 @@ def export_tree(what, folder = None, also_parents = True,
         thisnodefolder.insert_path(src=node._repository_folder.abspath,
                                    dest_name='.')
 
+class MyWritingZipFile(object):
+    def __init__(self, zipfile, fname):
+        
+        self._zipfile = zipfile
+        self._fname = fname
+        self._buffer = None
+        
+    def open(self):
+        import StringIO
+        
+        if self._buffer is not None:
+            raise IOError("Cannot open again!")
+        self._buffer = StringIO.StringIO()
+
+    def write(self, data):
+        self._buffer.write(data)
+
+    def close(self):
+        self._buffer.seek(0)
+        self._zipfile.writestr(self._fname, self._buffer.read())
+        self._buffer = None
+        
+    def __enter__(self):
+        self.open()
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.close()
+        
+class ZipFolder(object):
+    """
+    To improve: if zipfile is closed, do something
+    (e.g. add explicit open method, rename open to openfile,
+    set _zipfile to None, ...)
+    """
+    def __init__(self, zipfolder_or_fname, mode=None, subfolder='.', 
+                  use_compression=True):
+        """
+        :param zipfolder_or_fname: either another ZipFolder instance,
+          of which you want to get a subfolder, or a filename to create.
+        :param mode: the file mode; see the zipfile.ZipFile docs for valid
+          strings. Note: can be specified only if zipfolder_or_fname is a
+          string (the filename to generate)
+        :param subfolder: the subfolder that specified the "current working
+          directory" in the zip file. If zipfolder_or_fname is a ZipFolder,
+          subfolder is a relative path from zipfolder_or_fname.subfolder
+        :param use_compression: either True, to compress files in the Zip, or
+          False if you just want to pack them together without compressing.
+          It is ignored if zipfolder_or_fname is a ZipFolder isntance.  
+        """
+        import zipfile
+        import os
+        
+        if isinstance(zipfolder_or_fname, basestring):
+            the_mode = mode
+            if the_mode is None:
+                the_mode = "r"
+            if use_compression:
+                compression = zipfile.ZIP_DEFLATED
+            else:
+                compression = zipfile.ZIP_STORED
+            self._zipfile = zipfile.ZipFile(zipfolder_or_fname, mode=the_mode,
+                                            compression=compression)
+            self._pwd = subfolder
+        else:
+            if mode is not None:
+                raise ValueError("Cannot specify 'mode' when passing a ZipFolder")
+            self._zipfile = zipfolder_or_fname._zipfile
+            self._pwd = os.path.join(zipfolder_or_fname.pwd, subfolder)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.close()    
+            
+    def close(self):
+        self._zipfile.close()
+            
+    @property
+    def pwd(self):
+        return self._pwd
+
+    def open(self, fname, mode='r'):
+        if mode == 'w':
+            return MyWritingZipFile(
+                zipfile=self._zipfile, fname=self._get_internal_path(fname))
+        else:
+            return self._zipfile.open(self._get_internal_path(fname), mode)
+
+    def _get_internal_path(self, filename):
+        import os
+        return os.path.normpath(os.path.join(self.pwd, filename))
+        
+    def get_subfolder(self, subfolder, create=False, reset_limit=False):
+        # reset_limit: ignored
+        # create: ignored, for the time being
+        subfolder = ZipFolder(self, subfolder=subfolder)
+        return subfolder
+
+    def insert_path(self, src, dest_name=None, overwrite=True):
+        import os
+
+        if dest_name is None:
+            base_filename = unicode(os.path.basename(src))
+        else:
+            base_filename = unicode(dest_name)
+
+        base_filename = self._get_internal_path(base_filename)
+        
+        if not isinstance(src, unicode):
+            src = unicode(src)
+
+        if not os.path.isabs(src):
+            raise ValueError("src must be an absolute path in insert_file")
+
+        if not overwrite:
+            try:
+                self._zipfile.getinfo(filename)
+                exists = True
+            except KeyError:
+                exists = False
+            if exists:
+                raise IOError("destination already exists: {}".format(
+                        filename))
+
+        #print src, filename
+        if os.path.isdir(src):
+            for dirpath, dirnames, filenames in os.walk(src):
+                relpath = os.path.relpath(dirpath, src)
+                for fn in dirnames + filenames:
+                    real_src = os.path.join(dirpath,fn)
+                    real_dest = os.path.join(base_filename,relpath,fn)
+                    self._zipfile.write(real_src,
+                                        real_dest)
+        else:
+            self._zipfile.write(src, base_filename)
+        
+        
+        
+def export_zip(what, outfile = 'testzip', overwrite = False,
+              silent = False, use_compression = True, **kwargs):
+    import os
+
+    if not overwrite and os.path.exists(outfile):
+        raise IOError("The output file '{}' already "
+                      "exists".format(outfile))
+
+    import time
+    t = time.time()
+    with ZipFolder(outfile, mode='w', use_compression = use_compression) as folder:
+        export_tree(what, folder=folder, silent=silent, **kwargs)
+    if not silent:
+        print "File written in {:10.3g} s.".format(time.time() - t)
+        
 def export(what, outfile = 'export_data.aiida.tar.gz', overwrite = False,
            silent = False, **kwargs):
     """
@@ -499,6 +665,8 @@ def export(what, outfile = 'export_data.aiida.tar.gz', overwrite = False,
     """
     import os
     import tarfile
+    import time
+    
     from aiida.common.folders import SandboxFolder
 
     if not overwrite and os.path.exists(outfile):
@@ -506,8 +674,10 @@ def export(what, outfile = 'export_data.aiida.tar.gz', overwrite = False,
                       "exists".format(outfile))
 
     folder = SandboxFolder()
+    t1 = time.time()
     export_tree(what, folder=folder, silent=silent, **kwargs)
-
+    t2 = time.time()
+    
     if not silent:
         print "COMPRESSING..."
 
@@ -517,13 +687,20 @@ def export(what, outfile = 'export_data.aiida.tar.gz', overwrite = False,
     #   hardlink in the AiiDA repository; therefore, do not store symlinks
     #   or hardlinks, but store the actual destinations.
     #   This also simplifies the checks on import.
+    t3 = time.time()
     with tarfile.open(outfile, "w:gz", format=tarfile.PAX_FORMAT,
                       dereference=True) as tar:
         tar.add(folder.abspath, arcname="")
 
         #        import shutil
         #        shutil.make_archive(outfile, 'zip', folder.abspath)#, base_dir='aiida')
+    t4 = time.time()
 
+    if not silent:
+        filecr_time = t2-t1
+        filecomp_time = t4-t3
+        print "Exported in {:6.2g}s, compressed in {:6.2g}s, total: {:6.2g}s.".format(filecr_time, filecomp_time, filecr_time + filecomp_time)
+        
     if not silent:
         print "DONE."
 
@@ -573,6 +750,17 @@ class Export(VerdiCommand):
                             dest='overwrite', action='store_true',
                             help="Overwrite the output file, if it exists")
         parser.set_defaults(overwrite=False)
+
+        zipsubgroup = parser.add_mutually_exclusive_group()
+        zipsubgroup.add_argument('-z', '--zipfile-compressed',
+                            dest='zipfilec', action='store_true',
+                            help="Store as zip file (experimental, should be faster")
+        zipsubgroup.add_argument('-Z', '--zipfile-uncompressed',
+                            dest='zipfileu', action='store_true',
+                            help="Store as uncompressed zip file (experimental, should be faster")
+        parser.set_defaults(zipfilec=False)
+        parser.set_defaults(zipfileu=False)
+
         parser.add_argument('output_file', type=str,
                             help='The output file name for the export file')
 
@@ -639,14 +827,22 @@ class Export(VerdiCommand):
         # TODO: Export of groups not implemented yet!
         what_list = node_list + computer_list + groups_list
 
+        export_function = export
+        additional_kwargs = {}
+        if parsed_args.zipfileu:
+            export_function = export_zip
+            additional_kwargs.update({"use_compression": False})
+        elif parsed_args.zipfilec:
+            export_function = export_zip
+            additional_kwargs.update({"use_compression": True})
         try:
-            export(what=what_list,
+            export_function(what=what_list,
                    also_parents=not parsed_args.no_parents,
                    also_calc_outputs=not parsed_args.no_calc_outputs,
                    outfile=parsed_args.output_file,
-                   overwrite=parsed_args.overwrite)
+                   overwrite=parsed_args.overwrite,**additional_kwargs)
         except IOError as e:
-            print >> sys.stderr, e.message
+            print >> sys.stderr, "IOError: {}".format(e.message)
             sys.exit(1)
 
     def complete(self, subargs_idx, subargs):

@@ -20,9 +20,40 @@ class ParameterData(Data):
     """
 
     def set_dict(self, dict):
-        # I set the keys
+        """
+        Replace the current dictionary with another one.
+        
+        :param dict: The dictionary to set.
+        """
+        import copy
+        from aiida.common.exceptions import ModificationNotAllowed
+        
+        old_dict = copy.deepcopy(self.get_dict())
+        
+        try:
+            # Delete existing attributes
+            self._del_all_attrs()
+            # I set the keys
+            self.update_dict(dict)
+        except ModificationNotAllowed:
+            # I reraise here to avoid to go in the generic 'except' below,
+            # that would raise again the same exception
+            raise
+        except:
+            # Try to restore the old data
+            self._del_all_attrs()
+            self.update_dict(old_dict)
+            raise
+
+    def update_dict(self, dict):
+        """
+        Update the current dictionary with the keys provided in the dictionary.
+        
+        :param dict: a dictionary with the keys to substitute. It works like
+          dict.update(), adding new keys and overwriting existing keys.        
+        """
         for k, v in dict.iteritems():
-            self._set_attr(k, v)
+            self._set_attr(k, v)        
 
     def get_dict(self):
         """
@@ -45,3 +76,17 @@ class ParameterData(Data):
         # def validate(self):
         #        # There should be nothing specific to check
         #        super(ParameterData,self).validate()
+
+    @property
+    def dict(self):
+        """
+        To be used to get direct access to the underlying dictionary with the
+        syntax node.dict.key or node.dict['key'].
+        
+        :return: an instance of the AttributeResultManager.
+        """
+        from aiida.orm.node import AttributeManager
+        
+        return AttributeManager(self)
+
+

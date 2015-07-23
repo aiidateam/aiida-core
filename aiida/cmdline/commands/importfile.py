@@ -73,10 +73,50 @@ def deserialize_field(k, v, fields_info, import_unique_ids_mappings,
                     foreign_ids_reverse_mappings[requires][unique_id])
         else:
             return ("{}_id".format(k), None)
+
+def extract_zip(infile,folder,nodes_export_subfolder="nodes",silent=False):
+    """
+    Extract the nodes to be imported from a zip file.
+
+    :param infile: file path
+    :param folder: a SandboxFolder, used to extract the file tree
+    :param nodes_export_subfolder: name of the subfolder for AiiDA nodes
+    :param silent: suppress debug print
+    """
+    import os
+    import zipfile
+
+    if not silent:
+        print "READING DATA AND METADATA..."
+
+    try:
+        with zipfile.ZipFile(infile, "r") as zip:
+
+            zip.extract(path=folder.abspath,
+                   member='metadata.json')
+            zip.extract(path=folder.abspath,
+                   member='data.json')
+
+            if not silent:
+                print "EXTRACTING NODE DATA..."
+
+            for membername in zip.namelist():
+                # Check that we are only exporting nodes within
+                # the subfolder!
+                # TODO: better check such that there are no .. in the
+                # path; use probably the folder limit checks
+                if not membername.startswith(nodes_export_subfolder+os.sep):
+                    continue
+                zip.extract(path=folder.abspath,
+                            member=membername)
+    except zipfile.BadZipfile:
+        raise ValueError("The input file format for import is not valid (not"
+                         " a zip file)")
+
             
 def extract_tar(infile,folder,nodes_export_subfolder="nodes",silent=False):
     """
-    Extract the nodes to be imported from a gzipped tar file.
+    Extract the nodes to be imported from a (possibly zipped) tar file.
 
     :param infile: file path
     :param folder: a SandboxFolder, used to extract the file tree
@@ -90,7 +130,7 @@ def extract_tar(infile,folder,nodes_export_subfolder="nodes",silent=False):
         print "READING DATA AND METADATA..."
 
     try:
-        with tarfile.open(infile, "r:gz", format=tarfile.PAX_FORMAT) as tar:
+        with tarfile.open(infile, "r:*", format=tarfile.PAX_FORMAT) as tar:
 
             tar.extract(path=folder.abspath,
                    member=tar.getmember('metadata.json'))
@@ -147,19 +187,20 @@ def extract_tree(infile,folder,silent=False):
 
     os.path.walk(infile,add_files,{'folder': folder,'root': infile})
 
-def import_file(infile,format='tar',ignore_unknown_nodes=False,
+def import_data(in_path,ignore_unknown_nodes=False,
                 silent=False):
     """
     Import exported AiiDA environment to the AiiDA database.
+    If the 'in_path' is a folder, calls export_tree; otherwise, tries to
+    detect the compression format (zip, tar.gz, tar.bz2, ...) and calls the 
+    correct function.
 
-    :param infile: an importable file with packed AiiDA environment
-    :param format: format of carrier file. Currently supported formats are:
-      * tar - a gzipped tar archive
-      * tree - a plain filesystem tree
+    :param in_path: the path to a file or folder that can be imported in AiiDA
     """
     import json
     import os
     import tarfile
+    import zipfile
     from itertools import chain
 
     from django.db import transaction
@@ -187,14 +228,19 @@ def import_file(infile,format='tar',ignore_unknown_nodes=False,
     ################
     # The sandbox has to remain open until the end
     with SandboxFolder() as folder:
-        if format == 'tar':
-            extract_tar(infile,folder,silent=silent,
-                        nodes_export_subfolder=nodes_export_subfolder)
-        elif format == 'tree':
-            extract_tree(infile,folder,silent=silent)
+        if os.path.isdir(in_path):
+            extract_tree(in_path,folder,silent=silent)
         else:
-            raise ValueError("Unable to import file of format '{}' into "
-                             "AiiDA".format(format))
+            if tarfile.is_tarfile(in_path):
+                extract_tar(in_path,folder,silent=silent,
+                            nodes_export_subfolder=nodes_export_subfolder)
+            elif zipfile.is_zipfile(in_path):
+                extract_zip(in_path,folder,silent=silent,
+                            nodes_export_subfolder=nodes_export_subfolder)
+            else:
+                raise ValueError("Unable to detect the input file format, it "
+                                 "is neither a (possibly compressed) tar file, "
+                                 "nor a zip file.")
 
         try:
             with open(folder.get_abs_path('metadata.json')) as f:
@@ -204,7 +250,7 @@ def import_file(infile,format='tar',ignore_unknown_nodes=False,
                 data = json.load(f)
         except IOError as e:
             raise ValueError("Unable to find the file {} in the import "
-                             "file".format(e.filename))
+                             "file or folder".format(e.filename))
     
         ######################
         # PRELIMINARY CHECKS #
@@ -664,10 +710,6 @@ class Import(VerdiCommand):
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
             description='Import data in the DB.')
-        parser.add_argument('-f', '--format', type=str, default='tar',
-                            help="Type of the imported file. Currently "
-                                 "accepted types are 'tar' and "
-                                 "'tree', 'tar' is the default value")
         parser.add_argument('-w', '--webpage', nargs='+', type=str,
                             dest='webpages', metavar='URL',
                             help="Download all URLs in the given HTTP web "
@@ -715,7 +757,7 @@ class Import(VerdiCommand):
         for filename in files:
             try:
                 print "**** Importing file {}".format(filename)
-                import_file(filename,format=parsed_args.format)
+                import_data(filename)
             except Exception:
                 traceback.print_exc()
 
@@ -739,7 +781,7 @@ class Import(VerdiCommand):
                         response, download_file_name)
 
                     print " `-> File downloaded. Importing it..."
-                    import_file(temp_download_folder.get_abs_path(
+                    import_data(temp_download_folder.get_abs_path(
                         download_file_name))
             except Exception:
                 traceback.print_exc()

@@ -285,14 +285,25 @@ def export_tree(what, folder, also_parents = True,
     while entries_to_add:
         new_entries_to_add = {}
         for model_name, querysets in entries_to_add.iteritems():
+            if not silent:
+                print "  - Model: {}".format(model_name)
             Model = get_object_from_string(model_name)
 
-            # I do a filter with an 'OR' (|) operator between all the possible
-            # queries. querysets, if present, should always have at least one
-            # element, so for the time being I do not check if it is an empty
-            # list (TODO: check, otherwise I add the whole DB I believe).
-            dbentries = Model.objects.filter(
-                reduce(operator.or_, querysets)).distinct()
+            ## Before I was doing this. But it is VERY slow! E.g. 
+            ## To get the user owning 44 nodes or 1 group was taking
+            ## 26 seconds, while it was taking only 0.1 seconds if the two
+            ## queries were run independently!
+            ## I think this was doing the wrong type of UNION
+            #dbentries = Model.objects.filter(
+            #    reduce(operator.or_, querysets)).distinct()
+            ## Now I instead create the list of UUIDs and do a set() instead
+            ## of .distinct(); then I get the final results with a further
+            ## query.
+            db_ids = set()
+            for queryset in querysets:
+                db_ids.update(Model.objects.filter(queryset).values_list(
+                    'id', flat=True))
+            dbentries = Model.objects.filter(id__in=db_ids)
             entryvalues = dbentries.values(
                 'id', *all_fields_info[model_name].keys()
             )
@@ -471,7 +482,21 @@ class ZipFolder(object):
     (e.g. add explicit open method, rename open to openfile,
     set _zipfile to None, ...)
     """
-    def __init__(self, zipfolder_or_fname, mode=None, subfolder='.'):
+    def __init__(self, zipfolder_or_fname, mode=None, subfolder='.', 
+                  use_compression=True):
+        """
+        :param zipfolder_or_fname: either another ZipFolder instance,
+          of which you want to get a subfolder, or a filename to create.
+        :param mode: the file mode; see the zipfile.ZipFile docs for valid
+          strings. Note: can be specified only if zipfolder_or_fname is a
+          string (the filename to generate)
+        :param subfolder: the subfolder that specified the "current working
+          directory" in the zip file. If zipfolder_or_fname is a ZipFolder,
+          subfolder is a relative path from zipfolder_or_fname.subfolder
+        :param use_compression: either True, to compress files in the Zip, or
+          False if you just want to pack them together without compressing.
+          It is ignored if zipfolder_or_fname is a ZipFolder isntance.  
+        """
         import zipfile
         import os
         
@@ -479,8 +504,12 @@ class ZipFolder(object):
             the_mode = mode
             if the_mode is None:
                 the_mode = "r"
+            if use_compression:
+                compression = zipfile.ZIP_DEFLATED
+            else:
+                compression = zipfile.ZIP_STORED
             self._zipfile = zipfile.ZipFile(zipfolder_or_fname, mode=the_mode,
-                                            compression=zipfile.ZIP_DEFLATED)
+                                            compression=compression)
             self._pwd = subfolder
         else:
             if mode is not None:
@@ -559,7 +588,7 @@ class ZipFolder(object):
         
         
 def export_zip(what, outfile = 'testzip', overwrite = False,
-              silent = False, **kwargs):
+              silent = False, use_compression = True, **kwargs):
     import os
 
     if not overwrite and os.path.exists(outfile):
@@ -568,7 +597,7 @@ def export_zip(what, outfile = 'testzip', overwrite = False,
 
     import time
     t = time.time()
-    with ZipFolder(outfile, mode='w') as folder:
+    with ZipFolder(outfile, mode='w', use_compression = use_compression) as folder:
         export_tree(what, folder=folder, silent=silent, **kwargs)
     if not silent:
         print "File written in {:10.3g} s.".format(time.time() - t)
@@ -679,10 +708,16 @@ class Export(VerdiCommand):
                             dest='overwrite', action='store_true',
                             help="Overwrite the output file, if it exists")
         parser.set_defaults(overwrite=False)
-        parser.add_argument('-z', '--zipfile',
-                            dest='zipfile', action='store_true',
+
+        zipsubgroup = parser.add_mutually_exclusive_group()
+        zipsubgroup.add_argument('-z', '--zipfile-compressed',
+                            dest='zipfilec', action='store_true',
                             help="Store as zip file (experimental, should be faster")
-        parser.set_defaults(zipfile=False)
+        zipsubgroup.add_argument('-Z', '--zipfile-uncompressed',
+                            dest='zipfileu', action='store_true',
+                            help="Store as uncompressed zip file (experimental, should be faster")
+        parser.set_defaults(zipfilec=False)
+        parser.set_defaults(zipfileu=False)
 
         parser.add_argument('output_file', type=str,
                             help='The output file name for the export file')
@@ -751,14 +786,19 @@ class Export(VerdiCommand):
         what_list = node_list + computer_list + groups_list
 
         export_function = export
-        if parsed_args.zipfile:
+        additional_kwargs = {}
+        if parsed_args.zipfileu:
             export_function = export_zip
+            additional_kwargs.update({"use_compression": False})
+        elif parsed_args.zipfilec:
+            export_function = export_zip
+            additional_kwargs.update({"use_compression": True})
         try:
             export_function(what=what_list,
                    also_parents=not parsed_args.no_parents,
                    also_calc_outputs=not parsed_args.no_calc_outputs,
                    outfile=parsed_args.output_file,
-                   overwrite=parsed_args.overwrite)
+                   overwrite=parsed_args.overwrite,**additional_kwargs)
         except IOError as e:
             print >> sys.stderr, "IOError: {}".format(e.message)
             sys.exit(1)

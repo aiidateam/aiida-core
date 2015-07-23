@@ -13,6 +13,10 @@ class FoldersTest(unittest.TestCase):
     """
 
     def test_unicode(self):
+        """
+        Check that there are no exceptions raised when 
+        using unicode folders.
+        """
         from aiida.common.folders import Folder
         import os, tempfile
 
@@ -29,3 +33,12 @@ class FoldersTest(unittest.TestCase):
         fd = Folder(os.path.join(tmpsource, u"šaltinis"))
         fd.insert_path(tmpsource, "destination")
         fd.insert_path(tmpdest, u"kitas-šaltinis")
+
+
+    def test_get_abs_path_without_limit(self):
+        from aiida.common.folders import Folder
+
+        fd = Folder('/tmp')
+        # Should not raise any exception
+        self.assertEquals(fd.get_abs_path('test_file.txt'),
+                          '/tmp/test_file.txt')

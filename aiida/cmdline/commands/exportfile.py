@@ -233,6 +233,10 @@ def export_tree(what, folder, also_parents = True,
     from aiida.orm import Node, Calculation
     from aiida.common.folders import RepositoryFolder
 
+    if not silent:
+        print "STARTING EXPORT..."
+
+
     EXPORT_VERSION = '0.1'
     
     all_fields_info, unique_identifiers = get_all_fields_info()
@@ -395,9 +399,6 @@ def export_tree(what, folder, also_parents = True,
         print "STORING GROUP ELEMENTS..."
     groups_uuid = {g.uuid: list(g.dbnodes.values_list('uuid', flat=True))
                    for g in groups_entries}
-
-    if not silent:
-        print groups_uuid
 
     ######################################
     # Now I store
@@ -766,7 +767,7 @@ class Export(VerdiCommand):
                 node_pk_list += group.dbgroup.dbnodes.values_list('pk', flat=True)
                 groups_list.append(group.dbgroup)
         node_pk_list = set(node_pk_list)
-
+        
         node_list = list(
             models.DbNode.objects.filter(pk__in=node_pk_list))
         missing_nodes = node_pk_list.difference(_.pk for _ in node_list)
@@ -784,7 +785,6 @@ class Export(VerdiCommand):
         else:
             computer_list = []
 
-        # TODO: Export of groups not implemented yet!
         what_list = node_list + computer_list + groups_list
 
         export_function = export

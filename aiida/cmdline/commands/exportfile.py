@@ -682,7 +682,6 @@ class Export(VerdiCommand):
         from aiida.orm import Group
         from aiida.common.exceptions import NotExistent
         from aiida.djsite.db import models
-        from aiida.cmdline.commands.group import get_group_type_mapping
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -692,12 +691,7 @@ class Export(VerdiCommand):
         parser.add_argument('-n', '--nodes', nargs='+', type=int, metavar="PK",
                             help="Export the given nodes")
         parser.add_argument('-g', '--groups', nargs='+', metavar="GROUPNAME",
-                            help="Export all nodes in the given group(s). "
-                                 "By default, only user-defined groups are "
-                                 "exported; add ':type_str' after "
-                                 "the group name to export a group of "
-                                 "type  'type_str' (e.g. 'data.upf', 'import',"
-                                 " etc.)",
+                            help="Export all nodes in the given group(s).",
                             type=str)
         parser.add_argument('-P', '--no-parents',
                             dest='no_parents', action='store_true',
@@ -736,33 +730,10 @@ class Export(VerdiCommand):
 
         if parsed_args.groups is not None:
             for group_name in parsed_args.groups:
-                name, sep, typestr = group_name.rpartition(':')
-                if not sep:
-                    name = typestr
-                    typestr = ""
-                if typestr:
-                    try:
-                        internal_type_string = get_group_type_mapping()[typestr]
-                    except KeyError:
-                        print >> sys.stderr, "Invalid group type '{}'. Valid group types are:".format(typestr)
-                        print >> sys.stderr, ",".join(sorted(
-                            get_group_type_mapping().keys()))
-                        sys.exit(1)
-                else:
-                    internal_type_string = ""
-
                 try:
-                    group = Group.get(name=name,
-                                      type_string=internal_type_string)
-                except NotExistent:
-                    if typestr:
-                        print >> sys.stderr, (
-                            "No group of type '{}' with name '{}' "
-                            "found. Stopping.".format(typestr, name))
-                    else:
-                        print >> sys.stderr, (
-                            "No user-defined group with name '{}' "
-                            "found. Stopping.".format(name))
+                    group = Group.get_from_string(group_name)
+                except (ValueError, NotExistent) as e:
+                    print >> sys.stderr, e.message
                     sys.exit(1)
                 node_pk_list += group.dbgroup.dbnodes.values_list('pk', flat=True)
                 groups_list.append(group.dbgroup)

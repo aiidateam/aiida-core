@@ -178,12 +178,16 @@ class Calculation(VerdiCommandWithSubcommands):
         if parsed_args.all_states:
             parsed_args.states = None
 
-        print C._list_calculations(states=parsed_args.states,
-                                   past_days=parsed_args.past_days,
-                                   pks=parsed_args.pks,
-                                   all_users=parsed_args.all_users,
-                                   group=parsed_args.group,
-                                   relative_ctime=parsed_args.relative_ctime)
+        try:
+            print C._list_calculations(states=parsed_args.states,
+                                       past_days=parsed_args.past_days,
+                                       pks=parsed_args.pks,
+                                       all_users=parsed_args.all_users,
+                                       group=parsed_args.group,
+                                       relative_ctime=parsed_args.relative_ctime)
+        except Exception as e:
+            print >> sys.stderr, "Error ({}): {}".format(e.__class__.__name__,
+                                                         e.message)
 
     def calculation_res(self, *args):
         """

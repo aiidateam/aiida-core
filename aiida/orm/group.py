@@ -5,6 +5,23 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Nicolas Mounet"
 
+def get_group_type_mapping():
+    """
+    Return a dictionary with ``{short_name: proper_long_name_in_DB}`` format,
+    where ``short_name`` is the name to use on the command line, while 
+    ``proper_long_name_in_DB`` is the string stored in the ``type`` field of the
+    DbGroup table.
+    
+    It is defined as a function so that the import statements are confined
+    inside here.
+    """
+    from aiida.orm.data.upf import UPFGROUP_TYPE
+    from aiida.cmdline.commands.importfile import IMPORTGROUP_TYPE
+    from aiida.orm.autogroup import VERDIAUTOGROUP_TYPE
+
+    return {'data.upf': UPFGROUP_TYPE,
+            'import': IMPORTGROUP_TYPE,
+            'autogroup.run': VERDIAUTOGROUP_TYPE}
 
 class Group(object):
     """
@@ -430,6 +447,53 @@ class Group(object):
         else:
             raise MultipleObjectsError("More than one Group found -- "
                                        "I found {}".format(len(queryresults)))
+
+
+    @classmethod
+    def get_from_string(cls, string):
+        """
+        Get a group from a string.
+        If only the name is provided, without colons,
+        only user-defined groups are searched;
+        add ':type_str' after the group name to choose also
+        the type of the group equal to 'type_str' 
+        (e.g. 'data.upf', 'import', etc.)
+        
+        :raise ValueError: if the group type does not exist.
+        :raise NotExistent: if the group is not found.
+        """
+        from aiida.common.exceptions import NotExistent
+
+        name, sep, typestr = string.rpartition(':')
+        if not sep:
+            name = typestr
+            typestr = ""
+        if typestr:
+            try:
+                internal_type_string = get_group_type_mapping()[typestr]
+            except KeyError:
+                msg = ("Invalid group type '{}'. Valid group types are: "
+                       "{}".format(typestr, ",".join(sorted(
+                                get_group_type_mapping().keys()))))
+                raise ValueError(msg)
+        else:
+            internal_type_string = ""
+
+        try:
+            group = cls.get(name=name,
+                              type_string=internal_type_string)
+            return group
+        except NotExistent:
+            if typestr:
+                msg = (
+                    "No group of type '{}' with name '{}' "
+                    "found.".format(typestr, name))
+            else:
+                msg = (
+                    "No user-defined group with name '{}' "
+                    "found.".format(name))
+            raise NotExistent(msg)
+
 
     def is_user_defined(self):
         """

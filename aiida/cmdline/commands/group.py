@@ -10,24 +10,6 @@ __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
 
 
-def get_group_type_mapping():
-    """
-    Return a dictionary with ``{short_name: proper_long_name_in_DB}`` format,
-    where ``short_name`` is the name to use on the command line, while 
-    ``proper_long_name_in_DB`` is the string stored in the ``type`` field of the
-    DbGroup table.
-    
-    It is defined as a function so that the import statements are confined
-    inside here.
-    """
-    from aiida.orm.data.upf import UPFGROUP_TYPE
-    from aiida.cmdline.commands.importfile import IMPORTGROUP_TYPE
-    from aiida.orm.autogroup import VERDIAUTOGROUP_TYPE
-
-    return {'data.upf': UPFGROUP_TYPE,
-            'import': IMPORTGROUP_TYPE,
-            'autogroup.run': VERDIAUTOGROUP_TYPE}
-
 
 class Group(VerdiCommandWithSubcommands):
     """
@@ -50,6 +32,8 @@ class Group(VerdiCommandWithSubcommands):
         Print a list of groups in the DB. 
         """
         load_dbenv()
+
+        from aiida.orm.group import get_group_type_mapping
         from aiida.common.datastructures import calc_states
         from aiida.djsite.utils import get_automatic_user
         import datetime

@@ -919,7 +919,9 @@ class StructureData(Data):
         Get the ASE object.
         Requires to be able to import ase.
 
-        :return: an ASE object corresponding to this StructureData object. 
+        :return: an ASE object corresponding to this
+          :py:class:`StructureData <aiida.orm.data.structure.StructureData>`
+          object.
 
         .. note:: If any site is an alloy or has vacancies, a ValueError
             is raised (from the site.get_ase() routine).
@@ -945,7 +947,8 @@ class StructureData(Data):
             of earlier versions may cause errors).
 
         :return: a pymatgen Structure object corresponding to this
-          StructureData object.
+          :py:class:`StructureData <aiida.orm.data.structure.StructureData>`
+          object.
         :raise ValueError: if periodic boundary conditions do not hold
           in at least one dimension of real space.
         """
@@ -959,13 +962,16 @@ class StructureData(Data):
             of earlier versions may cause errors).
 
         :return: a pymatgen Molecule object corresponding to this
-          StructureData object.
+          :py:class:`StructureData <aiida.orm.data.structure.StructureData>`
+          object.
         """
         return self._get_object_pymatgen_molecule()
 
     def append_kind(self, kind):
         """
-        Append a kind to the StructureData. It makes a copy of the kind.
+        Append a kind to the
+        :py:class:`StructureData <aiida.orm.data.structure.StructureData>`.
+        It makes a copy of the kind.
         
         :param kind: the site to append, must be a Kind object.
         """
@@ -988,7 +994,9 @@ class StructureData(Data):
 
     def append_site(self, site):
         """
-        Append a site to the StructureData. It makes a copy of the site.
+        Append a site to the
+        :py:class:`StructureData <aiida.orm.data.structure.StructureData>`.
+        It makes a copy of the site.
         
         :param site: the site to append. It must be a Site object.
         """
@@ -1489,7 +1497,9 @@ class StructureData(Data):
         
     def _get_object_ase(self):
         """
-        Converts StructureData to ase.Atoms
+        Converts
+        :py:class:`StructureData <aiida.orm.data.structure.StructureData>`
+        to ase.Atoms
 
         :return: an ase.Atoms object
         """
@@ -1504,7 +1514,9 @@ class StructureData(Data):
 
     def _get_object_pymatgen(self):
         """
-        Converts StructureData to pymatgen object
+        Converts
+        :py:class:`StructureData <aiida.orm.data.structure.StructureData>`
+        to pymatgen object
 
         :return: a pymatgen Structure for structures with periodic boundary
             conditions (in three dimensions) and Molecule otherwise
@@ -1519,12 +1531,15 @@ class StructureData(Data):
 
     def _get_object_pymatgen_structure(self):
         """
-        Converts StructureData to pymatgen Structure object
+        Converts
+        :py:class:`StructureData <aiida.orm.data.structure.StructureData>`
+        to pymatgen Structure object
 
         :return: a pymatgen Structure object corresponding to this
-            StructureData object
+          :py:class:`StructureData <aiida.orm.data.structure.StructureData>`
+          object
         :raise ValueError: if periodic boundary conditions does not hold
-            in at least one dimension of real space
+          in at least one dimension of real space
 
         .. note:: Requires the pymatgen module (version >= 3.0.13, usage
             of earlier versions may cause errors)
@@ -1546,10 +1561,13 @@ class StructureData(Data):
 
     def _get_object_pymatgen_molecule(self):
         """
-        Converts StructureData to pymatgen Molecule object
+        Converts
+        :py:class:`StructureData <aiida.orm.data.structure.StructureData>`
+        to pymatgen Molecule object
 
         :return: a pymatgen Molecule object corresponding to this
-          StructureData object.
+          :py:class:`StructureData <aiida.orm.data.structure.StructureData>`
+          object.
 
         .. note:: Requires the pymatgen module (version >= 3.0.13, usage
             of earlier versions may cause errors)

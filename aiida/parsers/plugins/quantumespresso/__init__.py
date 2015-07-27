@@ -30,7 +30,7 @@ def convert_qe2aiida_structure(output_dict, input_structure=None):
     # If I don't have any help, I will set up the cell as it is in QE
     if not input_structure:
 
-        s = StructureData(cell=cell_dict['lattice_parameters'])
+        s = StructureData(cell=cell_dict['lattice_vectors'])
         for atom in cell_dict['atoms']:
             s.append_atom(position=tuple(atom[1]), symbols=[atom[0]])
 

@@ -259,6 +259,14 @@ methods::
     pymatgen_molecule  = aiida_structure.get_pymatgen_molecule()
     pymatgen_structure = aiida_structure.get_pymatgen_structure()
 
+A single method
+:py:class:`~aiida.orm.data.structure.StructureData.get_pymatgen` can be
+used for both tasks: converting periodic structures (periodic boundary
+conditions are met in all three directions) to pymatgen ``Structure`` and
+other structures to pymatgen ``Molecule``::
+
+    pymatgen_object = aiida_structure.get_pymatgen()
+
 It is also possible to convert pymatgen ``Molecule`` and ``Structure``
 objects to AiiDA structure::
 

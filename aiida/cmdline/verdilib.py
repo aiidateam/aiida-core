@@ -18,9 +18,10 @@ import getpass
 import contextlib
 
 import aiida
-from aiida.common.exceptions import ConfigurationError
+from aiida.common.exceptions import ConfigurationError, ProfileConfigurationError
 from aiida.cmdline.baseclass import VerdiCommand, VerdiCommandRouter
 from aiida.cmdline import pass_to_django_manage
+from aiida.djsite.settings import settings_profile
 
 ## Import here from other files; once imported, it will be found and
 ## used as a command-line parameter
@@ -487,9 +488,16 @@ def get_command_suggestion(command):
                                         for i in similar_cmds])
 
 
+def print_usage(execname):
+    print >> sys.stderr, ("Usage: {} [--profile=PROFILENAME|-p PROFILENAME] "
+                          "COMMAND [<args>]".format(execname))
+    print >> sys.stderr, ""
+    print >> sys.stderr, get_listparams()
+    print >> sys.stderr, "See '{} help' for more help.".format(execname)
+
 def exec_from_cmdline(argv):
     """
-    The main function to be called. Pass as paramater the sys.argv.
+    The main function to be called. Pass as parameter the sys.argv.
     """
     ### This piece of code takes care of creating a list of valid
     ### commands and of their docstrings for dynamic management of
@@ -541,21 +549,56 @@ def exec_from_cmdline(argv):
 
     execname = os.path.basename(argv[0])
 
+    ############ Parse the profile #########################
+    profile = None # Use default profile if nothing is specified
+    command_position = 1 # If there is no profile option
     try:
-        command = argv[1]
+        profile_switch = argv[1]
     except IndexError:
-        print >> sys.stderr, "Usage: {} COMMAND [<args>]".format(execname)
-        print >> sys.stderr, ""
-        print >> sys.stderr, get_listparams()
-        print >> sys.stderr, "See '{} help' for more help.".format(execname)
+        print_usage(execname)
+        sys.exit(1)
+    long_profile_prefix = '--profile='
+    if profile_switch == '-p':
+        try:
+            profile = argv[2]
+        except IndexError:
+            print_usage(execname)
+            sys.exit(1)            
+        command_position = 3
+    elif profile_switch.startswith(long_profile_prefix):
+        profile = profile_switch[len(long_profile_prefix):]
+        command_position = 2
+    else:
+        # No profile switch, continue using argv[1] as the command name
+        pass
+    
+    # We now set the internal variable, if needed
+    if profile is not None:
+        settings_profile.AIIDADB_PROFILE = profile
+    # I set the process to verdi
+    settings_profile.CURRENT_AIIDADB_PROCESS = "verdi"
+
+    # Finally, we parse the commands and their options    
+    try:
+        command = argv[command_position]
+    except IndexError:
+        print_usage(execname)
         sys.exit(1)
 
-    if command in list_commands:
-        CommandClass = list_commands[command]()
-        CommandClass.run(*argv[2:])
-    else:
-        print >> sys.stderr, ("{}: '{}' is not a valid command. "
-                              "See '{} help' for more help.".format(execname, command, execname))
-        get_command_suggestion(command)
+    try:
+        if command in list_commands:
+            CommandClass = list_commands[command]()
+            CommandClass.run(*argv[command_position + 1:])
+        else:
+            print >> sys.stderr, ("{}: '{}' is not a valid command. "
+                                  "See '{} help' for more help.".format(
+                                      execname, command, execname))
+            get_command_suggestion(command)
+            sys.exit(1)
+    except ProfileConfigurationError as e:
+        print >> sys.stderr, "The profile specified is not valid!"
+        print >> sys.stderr, e.message
         sys.exit(1)
+        
     
+        

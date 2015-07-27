@@ -351,10 +351,11 @@ def set_default_profile(process, profile):
     Set a default db profile to be used by a process (default for verdi, 
     default for daemon, ...)
     """
-    from aiida.common.exceptions import ConfigurationError
+    from aiida.common.exceptions import ProfileConfigurationError
 
     if profile not in get_profiles_list():
-        raise ConfigurationError('Profile {} has not been configured'.format(profile))
+        raise ProfileConfigurationError(
+            'Profile {} has not been configured'.format(profile))
     confs = get_config()
 
     try:
@@ -395,14 +396,22 @@ def get_profiles_list():
         return ConfigurationError("Please run the setup")
 
 
-def get_profile_config(profile, conf_dict=None):
+def get_profile_config(profile, conf_dict=None, set_test_location=True):
     """
     Return the profile specific configurations
+    
+    :param conf_dict: if passed, use the provided dictionary rather than reading
+        it from file.
+    :param set_test_location: if True, sets a new folder for storing repository
+        files during testing (to avoid to replace/overwrite the real repository)
+        Set to False for calls where the folder should not be changed (i.e., if
+        you only want to get the profile
     """
     import sys
     import tempfile
 
-    from aiida.common.exceptions import ConfigurationError
+    from aiida.common.exceptions import (
+        ConfigurationError, ProfileConfigurationError)
 
     if conf_dict is None:
         confs = get_config()
@@ -430,12 +439,12 @@ def get_profile_config(profile, conf_dict=None):
     try:
         profile_info = confs['profiles'][profile]
     except KeyError:
-        raise ConfigurationError("No {}profile configuration found for {}, "
-                                 "allowed values are: {}.".format(test_string,
-                                                                  profile,
-                                                                  ", ".join(get_profiles_list())))
+        raise ProfileConfigurationError(
+            "No {}profile configuration found for {}, "
+            "allowed values are: {}.".format(test_string, profile,
+                                             ", ".join(get_profiles_list())))
 
-    if is_test:
+    if is_test and set_test_location:
         # Change the repository and print a message
         ###################################################################
         # IMPORTANT! Choose a different repository location, otherwise 

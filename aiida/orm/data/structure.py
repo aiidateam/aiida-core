@@ -946,7 +946,7 @@ class StructureData(Data):
 
         :return: a pymatgen Structure object corresponding to this
           StructureData object.
-        :raise ValueError: if periodic boundary conditions does not hold
+        :raise ValueError: if periodic boundary conditions do not hold
           in at least one dimension of real space.
         """
         return self._get_object_pymatgen_structure()

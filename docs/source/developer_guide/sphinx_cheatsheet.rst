@@ -147,6 +147,11 @@ Automodules Example
 
 .. automodule:: aiida.common.datastructures
    :members:
+   :noindex:
+
+.. note:: A `:noindex:` directive was added to avoid duplicate object
+          description for this example. Do not put the keyword in a real
+          documentation.
 
 How To Format Docstrings
 ------------------------

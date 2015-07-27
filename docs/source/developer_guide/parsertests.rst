@@ -3,7 +3,7 @@ Automated parser tests
 
 AiiDA testing facility can check for the proper functionality of parsers
 automatically. To facilitate the creation of new tests, we
-provide a simple tool to to create a new parser test from a calculation
+provide a simple tool to create a new parser test from a calculation
 that you already run in your AiiDA database, described below.
 
 Test folders
@@ -80,7 +80,7 @@ JSON file inside the folder. The syntax is the following:
 * each key of the subdictionary is an attribute to check for.
   The value is a list of dictionaries, one for each test to perform
   on the given value; multiple tests are therefore possible.
-  The dictionary should have at least have one keys:
+  The dictionary should have at least have one key:
   "comparison", a string to specifies the type of comparison.
   The other keys depend on the type of comparison, and typically
   there is at least a "value" key, the value to compare with. An example::

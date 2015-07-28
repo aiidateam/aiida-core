@@ -112,7 +112,7 @@ Running tests
 -------------
 
 Finally, in order to run all tests contained in the folder ``aiida/djsite/db/subtests/parser_tests``
-one can use the following ``verdi`` command
+one can use the following ``verdi`` command::
 
   verdi devel tests db.parsers
   

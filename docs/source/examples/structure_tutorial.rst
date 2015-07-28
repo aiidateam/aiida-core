@@ -246,9 +246,6 @@ symbol in order to get the species name::
 Conversion to/from pymatgen
 ---------------------------
 
-.. note:: converters seem to interface best with the version 3.0.13 of
-  pymatgen, whereas earlier versions may cause errors.
-
 AiiDA structure can be converted to pymatgen ``Molecule`` and
 ``Structure`` objects by using, accordingly,
 :py:class:`~aiida.orm.data.structure.StructureData.get_pymatgen_molecule`
@@ -268,14 +265,18 @@ other structures to pymatgen ``Molecule``::
     pymatgen_object = aiida_structure.get_pymatgen()
 
 It is also possible to convert pymatgen ``Molecule`` and ``Structure``
-objects to AiiDA structure::
+objects to AiiDA structures::
 
     StructureData = DataFactory("structure")
     from_mol      = StructureData(pymatgen_molecule=mol)
     from_struct   = StructureData(pymatgen_structure=struct)
 
-Moreover, a generic converter is also possible::
+Also in this case, a generic converter is provided::
 
     StructureData = DataFactory("structure")
     from_mol      = StructureData(pymatgen=mol)
     from_struct   = StructureData(pymatgen=struct)
+
+.. note:: Converters work with version 3.0.13 or later of
+  pymatgen. Earlier versions may cause errors.
+

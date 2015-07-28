@@ -22,6 +22,7 @@ Currently supported codes are:
 * PH: Phonons from density functional perturbation theory
 * Q2R: Fourier transform the dynamical matrices in the real space
 * Matdyn: Fourier transform the dynamical matrices in the real space
+* NEB: Energy barriers and reaction pathways using the Nudged Elastic Band (NEB) method
 
 Moreover, support for further codes can be implemented adapting the **namelist** plugin.
 
@@ -36,4 +37,4 @@ Plugins
    ph
    matdyn
    q2r
-
+   neb

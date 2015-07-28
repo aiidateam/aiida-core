@@ -221,3 +221,43 @@ class TestMpodDbImporter(AiidaTestCase):
                           'id="1234567",extras={})')
         self.assertEquals([x.source['uri'] for x in results],
                           ["http://mpod.cimav.edu.mx/datafiles/1234567.mpod"])
+
+
+class TestNnincDbImporter(AiidaTestCase):
+    """
+    Test the UpfEntry class.
+    """
+
+    def test_upfentry_creation(self):
+        """
+        Tests the creation of NnincEntry from NnincSearchResults.
+        """
+        import os
+
+        from aiida.tools.dbimporters.plugins.nninc import NnincSearchResults
+        from aiida.common.exceptions import ParsingError
+        import aiida
+
+        upf = 'Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030'
+
+        results = NnincSearchResults([{'id': upf}])
+        entry = results.at(0)
+        print aiida.__file__
+
+        with open(os.path.join(
+                os.path.split(aiida.__file__)[0], os.pardir,
+                "examples", "testdata", "qepseudos", "{}.UPF".format(upf))
+                , 'r') as f:
+            entry._contents = f.read()
+
+        upfnode = entry.get_upf_node()
+        self.assertEquals(upfnode.element, 'Ba')
+
+        entry.source = {'id': 'O.pbesol-n-rrkjus_psl.0.1-tested-pslib030.UPF'}
+
+        # get_upf_node() will name pseudopotential file after source['id'],
+        # thus UpfData parser will complain about the mismatch of chemical
+        # element, mentioned in file name, and the one described in the
+        # pseudopotential file.
+        with self.assertRaises(ParsingError):
+            upfnode = entry.get_upf_node()

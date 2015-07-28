@@ -22,7 +22,61 @@ method. This is done independently in order to allow cross-validation of plugins
 
 
 class Data(Node):
+    """
+    This class is base class for all data objects.
+    """
     _updatable_attributes = tuple()
+
+    _source_attributes = ['db_name', 'db_uri', 'uri', 'id', 'version',
+                          'extras', 'source_md5', 'description', 'license']
+
+    @property
+    def source(self):
+        """
+        Gets the dictionary describing the source of Data object. Possible
+        fields:
+
+        * **db_name**: name of the source database.
+        * **db_uri**: URI of the source database.
+        * **uri**: URI of the object's source. Should be a permanent link.
+        * **id**: object's source identifier in the source database.
+        * **version**: version of the object's source.
+        * **extras**: a dictionary with other fields for source description.
+        * **source_md5**: MD5 checksum of object's source.
+        * **description**: human-readable free form description of the
+            object's source.
+        * **license**: a string with a type of license.
+
+        .. note:: some limitations for setting the data source exist, see
+            :py:meth:`._validate`.
+
+        :return: dictionary describing the source of Data object.
+        """
+        return self.get_attr('source', None)
+
+    @source.setter
+    def source(self, source):
+        """
+        Sets the dictionary describing the source of Data object.
+
+        :raise KeyError: if dictionary contains unknown field.
+        :raise ValueError: if supplied source description is not a
+            dictionary.
+        """
+        if not isinstance(source, dict):
+            raise ValueError("Source must be supplied as a dictionary")
+        unknown_attrs = list(set(source.keys()) - set(self._source_attributes))
+        if unknown_attrs:
+            raise KeyError("Unknown source parameters: "
+                                 "{}".format(", ".join(unknown_attrs)))
+
+        self._set_attr('source', source)
+
+    def set_source(self, source):
+        """
+        Sets the dictionary describing the source of Data object.
+        """
+        self.source = source
 
     def _add_link_from(self, src, label=None):
         from aiida.orm.calculation import Calculation
@@ -141,3 +195,24 @@ class Data(Node):
         valid_formats = {k: getattr(self, exporter_prefix + k)
                          for k in valid_format_names}
         return valid_formats
+
+    def _validate(self):
+        """
+        Perform validation of the Data object.
+
+        .. note:: validation of data source checks license and requires
+            attribution to be provided in field 'description' of source in
+            the case of any CC-BY* license. If such requirement is too
+            strict, one can remove/comment it out.
+        """
+        from aiida.common.exceptions import ValidationError
+
+        super(Data, self)._validate()
+
+        if self.source is not None and \
+           self.source.get('license', None) and \
+           self.source['license'].startswith('CC-BY') and \
+           self.source.get('description', None) is None:
+            raise ValidationError("License of the object ({}) requires "
+                                  "attribution, while none is given in the "
+                                  "description".format(self.source['license']))

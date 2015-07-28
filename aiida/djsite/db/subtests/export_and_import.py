@@ -20,7 +20,7 @@ __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi"
 class TestPort(AiidaTestCase):
     def test_1(self):
         from aiida.cmdline.commands.exportfile import export
-        from aiida.cmdline.commands.importfile import import_file
+        from aiida.cmdline.commands.importfile import import_data
         from aiida.orm.computer import delete_computer
         from aiida.orm.node import Node
 
@@ -55,7 +55,7 @@ class TestPort(AiidaTestCase):
         # NOTE: it is better to load new nodes by uuid, rather than assuming 
         # that they will have the first 3 pks. In fact, a recommended policy in 
         # databases is that pk always increment, even if you've deleted elements
-        import_file(filename, silent=True)
+        import_data(filename, silent=True)
         for uuid in attrs.keys():
             node = Node.get_subclass_from_uuid(uuid)
             for k in node.attrs():
@@ -66,7 +66,7 @@ class TestPort(AiidaTestCase):
         Test the check for the export format version.
         """
         from aiida.cmdline.commands.exportfile import export
-        from aiida.cmdline.commands.importfile import import_file
+        from aiida.cmdline.commands.importfile import import_data
         import json
         import tarfile
         from tarfile import TarInfo
@@ -96,14 +96,14 @@ class TestPort(AiidaTestCase):
         self.setUpClass()
 
         with self.assertRaises(ValueError):
-            import_file(filename, silent=True)
+            import_data(filename, silent=True)
 
     def test_3(self):
         """
         Test importing of nodes, that have links to unknown nodes.
         """
         from aiida.cmdline.commands.exportfile import export
-        from aiida.cmdline.commands.importfile import import_file
+        from aiida.cmdline.commands.importfile import import_data
         import json
         import tarfile
         from tarfile import TarInfo
@@ -137,6 +137,6 @@ class TestPort(AiidaTestCase):
         self.setUpClass()
 
         with self.assertRaises(ValueError):
-            import_file(filename, silent=True)
+            import_data(filename, silent=True)
 
-        import_file(filename, ignore_unknown_nodes=True, silent=True)
+        import_data(filename, ignore_unknown_nodes=True, silent=True)

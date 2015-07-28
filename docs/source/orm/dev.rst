@@ -42,6 +42,7 @@ ORM documentation: Data
 =======================
 
 .. automodule:: aiida.orm.data
+   :members:
 
 .. _my-ref-to-structure:
 

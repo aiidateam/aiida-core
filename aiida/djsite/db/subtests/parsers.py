@@ -14,7 +14,43 @@ __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Andrius Merkys"
 
 
-def output_test(pk, outfolder, skip_uuids_from_inputs=[]):
+### Here comparisons are defined #####################################
+### Each comparison has to be a function with name
+### _comparison_COMPARISONNAME
+### and accepting three parameters:
+### - testclass: the testing class, with the proper AssertXXX methods
+### - the dbdata value, i.e. the value parsed by the test
+### - comparisondata, the values specified by the user for comparison;
+###   they typically contain a 'value', and possibly other keys for
+###   more advanced keys
+def _comparison_AlmostEqual(testclass, dbdata, comparisondata):
+    """
+    Compare two numbers (or a list of numbers) to check that
+    they are all almost equal (within a default precision of 7 digits)
+    """
+    value = comparisondata['value']
+    if isinstance(dbdata, (list,tuple)) and isinstance(value, (list,tuple)):
+        testclass.assertEqual(len(dbdata), len(value))
+        for i in range(0, len(dbdata)):
+            testclass.assertAlmostEqual(dbdata[i], value[i])
+    else:
+        testclass.assertAlmostEqual(dbdata, value)
+
+def _comparison_Equal(testclass, dbdata, comparisondata):
+    """
+    Compare two objects to see if they are equal
+    """
+    testclass.assertEqual(len(dbdata), len(comparisondata['value']))
+
+def _comparison_LengthEqual(testclass, dbdata, comparisondata):
+    """
+    Check if the length of the object is equal to the value specified
+    """
+    testclass.assertEqual(len(dbdata), comparisondata['value'])
+    
+### End of comparison definition #####################################
+    
+def output_test(pk, testname, skip_uuids_from_inputs=[]):
     """
     This is the function that should be used to create a new test from an
     existing calculation.
@@ -22,30 +58,49 @@ def output_test(pk, outfolder, skip_uuids_from_inputs=[]):
     It is possible to simplify the file removing unwanted nodes. 
     
     :param pk: PK of Calculation, used for test
-    :param outfolder: folder to place the test files
+    :param testname: the name of this test, used to create a new folder.
+        The folder name will be of the form test_PLUGIN_TESTNAME,
+        with PLUGIN substituted by the plugin name, with dots replaced by
+        underscores. Testname can contain only digits, letters and underscores.
     :param skip_uuids_from_inputs: a list of UUIDs of input nodes to be
         skipped
-
-    .. todo:: create a test case to test the generation of GIT placeholders
-        for empty folders (.gitignore with comments)
     """
+    import os
+    import json
+    import string
+
     from aiida.orm import JobCalculation
     from aiida.common.folders import Folder
     from aiida.cmdline.commands.exportfile import export_tree
-    import os
-    import json
+    
+    c = JobCalculation.get_subclass_from_pk(pk)
+    outfolder = "test_{}_{}".format(
+        c.get_parser_name().replace('.', '_'),
+        testname)
 
+    if not is_valid_folder_name(outfolder):
+        raise ValueError("The testname is invalid; it can contain only "
+                         "letters, digits or underscores")
+
+        
     if os.path.exists(outfolder):
         raise ValueError("Out folder '{}' already exists".format(outfolder))
 
-    c = JobCalculation.get_subclass_from_pk(pk)
     inputs = []
     for node in c.get_inputs():
         if node.uuid not in skip_uuids_from_inputs:
             inputs.append(node.dbnode)
 
     folder = Folder(outfolder)
-    export_tree([c.dbnode] + inputs, folder=folder, also_parents=False)
+    to_export = [c.dbnode] + inputs
+    try:
+        to_export.append(c.out.retrieved.dbnode)
+    except AttributeError:
+        raise ValueError("No output retrieved node; without it, we cannot "
+                         "test the parser!")
+    export_tree(to_export, folder=folder,
+                also_parents=False,
+                also_calc_outputs=False)
 
     # Create an empty checks file
     with open(os.path.join(outfolder, '_aiida_checks.json'), 'w') as f:
@@ -72,9 +127,9 @@ def read_test(outfolder):
 
     from aiida.orm import JobCalculation,load_node
     from aiida.common.exceptions import NotExistent
-    from aiida.cmdline.commands.importfile import import_file
+    from aiida.cmdline.commands.importfile import import_data
 
-    imported = import_file(outfolder,format='tree',
+    imported = import_data(outfolder,
                            ignore_unknown_nodes=True,silent=True)
 
     calc = None
@@ -128,7 +183,8 @@ class TestParsers(AiidaTestCase):
 
     @classmethod
     def return_base_test(cls, folder):
-
+        from inspect import isfunction
+        
         def base_test(self):
             calc, retrieved_nodes, tests = read_test(folder)
             Parser = calc.get_parserclass()
@@ -158,40 +214,41 @@ class TestParsers(AiidaTestCase):
                                                  "parsed node '{}'".format(attr_test,
                                                                            test_node_name))
                         # Test data from the JSON
-                        attr_test_data = tests[test_node_name][attr_test]
-                        try:
-                            comparison = attr_test_data['comparison']
-                            value = attr_test_data['value']
-                        except TypeError:
-                            raise ValueError("Malformed '{}' field in '{}' in "
-                                             "the test file".format(attr_test, test_node_name))
-                        except KeyError as e:
-                            raise ValueError("Missing '{}' in the '{}' field "
-                                             "in '{}' in "
-                                             "the test file".format(e.message,
-                                                                    attr_test, test_node_name))
-                        if comparison == "AlmostEqual":
-                            if isinstance(dbdata, list) and isinstance(value, list):
-                                self.assertEqual(len(dbdata), len(value),
-                                                 msg="Failed test for {}->{}".format(
-                                                     test_node_name, attr_test))
-                                for i in range(0, len(dbdata)):
-                                    self.assertAlmostEqual(dbdata[i], value[i],
-                                                           msg="Failed test for {}->{}".format(
-                                                               test_node_name, attr_test))
-                            else:
-                                self.assertAlmostEqual(dbdata, value,
-                                                       msg="Failed test for {}->{}".format(
-                                                           test_node_name, attr_test))
-                        elif comparison == "Equal":
-                            self.assertEqual(dbdata, value,
-                                             msg="Failed test for {}->{}".format(
-                                                 test_node_name, attr_test))
-                        else:
-                            raise ValueError("Unsupported'{}' comparison in "
-                                             "the '{}' field in '{}' in "
-                                             "the test file".format(comparison,
-                                                                    attr_test, test_node_name))
+                        attr_test_listtests = tests[test_node_name][attr_test]
+                        for test_number, attr_test_data in enumerate(attr_test_listtests, start=1):
+                            try:
+                                comparison = attr_test_data.pop('comparison')
+                            except KeyError as e:
+                                raise ValueError("Missing '{}' in the '{}' field "
+                                                 "in '{}' in "
+                                                 "the test file".format(e.message,
+                                                                        attr_test, test_node_name))
+
+                            try:
+                                comparison_test = globals()["_comparison_{}".format(comparison)]
+                            except KeyError:
+                                raise ValueError("Unsupported '{}' comparison in "
+                                                 "the '{}' field in '{}' in "
+                                                 "the test file".format(comparison,
+                                                      attr_test, test_node_name))
+
+                            if not isfunction(comparison_test):
+                                raise TypeError("Internal error: the variable _comparison_{} is not a "
+                                                "function!".format(comparison))
+                            
+                            try:
+                                comparison_test(testclass=self, dbdata=dbdata, comparisondata=attr_test_data)
+                            except Exception as e:
+                                # I change both the message and the 'args'
+                                # (apparently, args[0] is used by str(e))
+                                # Probably, a 'better' way should be found to do this!
+                                e.message = "Failed test #{} for {}->{}: {}".format(
+                                       test_number, test_node_name, attr_test, e.message)
+                                if e.args:
+                                    e.args = tuple(["Failed test #{} for {}->{}: {}".format(
+                                       test_number, test_node_name, attr_test, e.args[0])]
+                                       + list(e.args[1:]))
+                                raise e
 
         return base_test
 

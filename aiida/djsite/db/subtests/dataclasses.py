@@ -5,7 +5,8 @@ Tests for specific subclasses of Data
 from django.utils import unittest
 
 from aiida.orm import Node
-from aiida.common.exceptions import ModificationNotAllowed, UniquenessError
+from aiida.common.exceptions import \
+    ModificationNotAllowed, UniquenessError, ValidationError
 from aiida.djsite.db.testbase import AiidaTestCase
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
@@ -126,12 +127,12 @@ class TestCifData(AiidaTestCase):
             f.write(file_content)
             f.flush()
             a = CifData(file=filename,
-                        source={'version': '1234'})
+                        source={'version': '1234',
+                                'db_name': 'COD',
+                                'id': '0000001'})
 
-        a.source = {'db_name': 'COD',
-                    'id': '0000001'}
-
-        with self.assertRaises(ValueError):
+        # Key 'db_kind' is not allowed in source description:
+        with self.assertRaises(KeyError):
             a.source = {'db_kind': 'small molecule'}
 
         the_uuid = a.uuid
@@ -145,13 +146,8 @@ class TestCifData(AiidaTestCase):
 
         self.assertEquals(a.source, {
             'db_name': 'COD',
-            'db_uri': '',
             'id': '0000001',
             'version': '1234',
-            'extras': '',
-            'uri': '',
-            'source_md5': '',
-            'license': '',
         })
 
         with open(a.get_abs_path(basename)) as f:
@@ -1692,6 +1688,11 @@ class TestPymatgenFromStructureData(AiidaTestCase):
                            [0.2, 0.2, 0.2],
                            [0.3, 0.3, 0.3]])
 
+    @unittest.skipIf(not has_ase() or
+                     not has_pymatgen() or
+                     StrictVersion(get_pymatgen_version()) <
+                     StrictVersion('3.0.13'),
+                     "Unable to import ase or pymatgen")
     def test_3(self):
         """
         Test the conversion of StructureData to pymatgen's Molecule.
@@ -2300,3 +2301,24 @@ class TestKpointsData(AiidaTestCase):
         klist = k.get_kpoints(cartesian=True)
         self.assertTrue(numpy.allclose(klist, input_klist, atol=1e-16))
 
+
+class TestData(AiidaTestCase):
+    """
+    Tests generic Data class.
+    """
+
+    def test_license_validation(self):
+        """
+        Test the validation of source licenses.
+        """
+        from aiida.orm.data import Data
+
+        data = Data(source={'license': 'CC0'})
+        data.store()
+
+        data = Data(source={'license': 'CC-BY-SA'})
+        # CC-BY* type licenses must be accompanied by attribution, given
+        # in 'description' key of source dictionary. This is enforced in
+        # Data._validate(), thus the ValidationError.
+        with self.assertRaises(ValidationError):
+            data.store()

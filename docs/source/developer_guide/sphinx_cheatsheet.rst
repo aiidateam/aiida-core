@@ -59,7 +59,7 @@ Bullet Points and Lists
 
 * Bullet points can be added
 * Just like this
- * With sub-bullets like this
+  * With sub-bullets like this
 
 #. While numerical bullets
 #. Can be added
@@ -97,7 +97,7 @@ Here is an example of a reference to something on the same page, :ref:`self-refe
 
 .. note:: References within the same document need a reference label, see `.. _self-reference:`
           used in this section for an example. *Hidden in formatted page, can only be seen in the
-          input text.
+          input text.*
 
 Cross Reference Classes and Methods
 ===================================
@@ -147,6 +147,11 @@ Automodules Example
 
 .. automodule:: aiida.common.datastructures
    :members:
+   :noindex:
+
+.. note:: A `:noindex:` directive was added to avoid duplicate object
+          description for this example. Do not put the keyword in a real
+          documentation.
 
 How To Format Docstrings
 ------------------------

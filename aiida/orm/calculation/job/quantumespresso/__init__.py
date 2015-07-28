@@ -11,6 +11,7 @@ from aiida.orm.data.structure import StructureData
 from aiida.orm.data.parameter import ParameterData
 from aiida.orm.data.array.kpoints import KpointsData
 from aiida.orm.data.upf import UpfData
+from aiida.orm.data.singlefile import SinglefileData
 from aiida.orm.data.remote import RemoteData
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
@@ -127,6 +128,15 @@ class BasePwCpInputGenerator(object):
                               "list of strings if more than one kind uses the "
                               "same pseudo"),
             },
+            "vdw_table": {
+                'valid_types': SinglefileData,
+                'additional_parameter': None,
+                'linkname': 'vdw_table',
+                'docstring': ("Use a Van der Waals kernel table. It should be "
+                              "a SinglefileData, with the table provided "
+                              "(note that the filename is not checked but it "
+                              "should be the name expected by QE."),
+            },
         }
 
 
@@ -201,8 +211,14 @@ class BasePwCpInputGenerator(object):
         parent_calc_folder = inputdict.pop(self.get_linkname('parent_folder'), None)
         if parent_calc_folder is not None:
             if not isinstance(parent_calc_folder, RemoteData):
-                raise InputValidationError("parent_calc_folder, if specified,"
+                raise InputValidationError("parent_calc_folder, if specified, "
                                            "must be of type RemoteData")
+
+        vdw_table = inputdict.pop(self.get_linkname('vdw_table'), None)
+        if vdw_table is not None:
+            if not isinstance(vdw_table, SinglefileData):
+                raise InputValidationError("vdw_table, if specified, "
+                                           "must be of type SinglefileData")
 
         # Here, there should be no more parameters...
         if inputdict:
@@ -312,6 +328,18 @@ class BasePwCpInputGenerator(object):
             kind_names.append(kind.name)
             atomic_species_card_list.append("{} {} {}\n".format(
                 kind.name.ljust(6), kind.mass, filename))
+
+        # If present, add also the Van der Waals table to the pseudo dir
+        # Note that the name of the table is not checked but should be the 
+        # one expected by QE.
+        if vdw_table:
+            local_copy_list.append(
+                (
+                vdw_table.get_file_abs_path(),
+                os.path.join(self._PSEUDO_SUBFOLDER,
+                    os.path.split(vdw_table.get_file_abs_path())[1])
+                )
+                )
 
         # I join the lines, but I resort them using the alphabetical order of
         # species, given by the kind_names list. I also store the mapping_species
@@ -702,20 +730,18 @@ class BasePwCpInputGenerator(object):
         # Check the calculation's state using ``from_attribute=True`` to
         # correctly handle IMPORTED calculations.
         if self.get_state(from_attribute=True) != calc_states.FINISHED:
-            #if self.get_state() != calc_states.FINISHED:
-            if force_restart:
-                pass
-            else:
-                raise InputValidationError("Calculation to be restarted must be "
-                                           "in the {} state. Otherwise, use the force_restart "
-                                           "flag".format(calc_states.FINISHED))
+            if not force_restart:
+                raise InputValidationError(
+                    "Calculation to be restarted must be "
+                    "in the {} state. Otherwise, use the force_restart "
+                    "flag".format(calc_states.FINISHED))
 
         if parent_folder_symlink is None:
             parent_folder_symlink = self._default_symlink_usage
 
         calc_inp = self.get_inputs_dict()
 
-        old_inp_dict = calc_inp['parameters'].get_dict()
+        old_inp_dict = calc_inp[self.get_linkname('parameters')].get_dict()
         # add the restart flag
         old_inp_dict['CONTROL']['restart_mode'] = 'restart'
         inp_dict = ParameterData(dict=old_inp_dict)
@@ -742,15 +768,16 @@ class BasePwCpInputGenerator(object):
             try:
                 c2.use_structure(self.out.output_structure)
             except AttributeError:
-                c2.use_structure(calc_inp['structure'])
+                c2.use_structure(calc_inp[self.get_linkname('structure')])
         else:
-            c2.use_structure(calc_inp['structure'])
+            c2.use_structure(calc_inp[self.get_linkname('structure')])
 
         if self._use_kpoints:
-            c2.use_kpoints(calc_inp['kpoints'])
-        c2.use_code(calc_inp['code'])
+            c2.use_kpoints(calc_inp[self.get_linkname('kpoints')])
+        c2.use_code(calc_inp[self.get_linkname('code')])
         try:
-            old_settings_dict = calc_inp['settings'].get_dict()
+            old_settings_dict = calc_inp[self.get_linkname('settings')
+                                         ].get_dict()
         except KeyError:
             old_settings_dict = {}
         if parent_folder_symlink is not None:
@@ -765,6 +792,15 @@ class BasePwCpInputGenerator(object):
         for linkname, input_node in self.get_inputs_dict().iteritems():
             if isinstance(input_node, UpfData):
                 c2._add_link_from(input_node, label=linkname)
+
+        # Add also the vdw table, if the parent had one
+        try:
+            old_vdw_table = calc_inp[self.get_linkname('vdw_table')]
+        except KeyError:
+            # No VdW table
+            pass
+        else:
+            c2.use_vdw_table(old_vdw_table)
 
         return c2
 

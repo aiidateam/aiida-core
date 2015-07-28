@@ -246,8 +246,8 @@ symbol in order to get the species name::
 Conversion to/from pymatgen
 ---------------------------
 
-AiiDA structure can be converted to pymatgen ``Molecule`` and
-``Structure`` objects by using, accordingly,
+AiiDA structure can be converted to pymatgen's `Molecule`_ and
+`Structure`_ objects by using, accordingly,
 :py:class:`~aiida.orm.data.structure.StructureData.get_pymatgen_molecule`
 and
 :py:class:`~aiida.orm.data.structure.StructureData.get_pymatgen_structure`
@@ -259,12 +259,12 @@ methods::
 A single method
 :py:class:`~aiida.orm.data.structure.StructureData.get_pymatgen` can be
 used for both tasks: converting periodic structures (periodic boundary
-conditions are met in all three directions) to pymatgen ``Structure`` and
-other structures to pymatgen ``Molecule``::
+conditions are met in all three directions) to pymatgen's Structure and
+other structures to pymatgen's Molecule::
 
     pymatgen_object = aiida_structure.get_pymatgen()
 
-It is also possible to convert pymatgen ``Molecule`` and ``Structure``
+It is also possible to convert pymatgen's Molecule and Structure
 objects to AiiDA structures::
 
     StructureData = DataFactory("structure")
@@ -280,3 +280,5 @@ Also in this case, a generic converter is provided::
 .. note:: Converters work with version 3.0.13 or later of
   pymatgen. Earlier versions may cause errors.
 
+.. _Molecule:  http://pymatgen.org/pymatgen.core.html#pymatgen.core.structure.Molecule
+.. _Structure: http://pymatgen.org/pymatgen.core.html#pymatgen.core.structure.Structure

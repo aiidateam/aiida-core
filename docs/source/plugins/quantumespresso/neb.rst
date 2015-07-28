@@ -80,10 +80,10 @@ Inputs
        Example: ["-npool","4"] will produce `neb.x -input_images 2 -npool 4 > aiida.out`
     *  **'ADDITIONAL_RETRIEVE_LIST'**: list of strings. Specify additional files to be retrieved.
        By default, the following files are already retrieved:
-         *  NEB output file
-         *  PATH output file containing the information on structures and gradients of each image at last iteration 
-         *  The calculated and interpolated energy profile as a function of the reaction coordinate (`.dat` and `.int`  files)
-         *  The PW output and xml file for each image 
+       *  NEB output file
+       *  PATH output file containing the information on structures and gradients of each image at last iteration
+       *  The calculated and interpolated energy profile as a function of the reaction coordinate (`.dat` and `.int`  files)
+       *  The PW output and xml file for each image
     *  **'ALL_ITERATIONS'**: boolean. If true the energies and forces for each image at each intermediate 
        iteration are also parsed and stored in the output node ``iteration_array`` (default: False)
     

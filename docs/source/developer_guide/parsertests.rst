@@ -108,3 +108,12 @@ The list of valid comparisons is hardcoded inside the
 ``aiida.djsite.db.subtests.parsers`` module;
 if you need new comparison types, add them directly to the module.
 
+Running tests
+-------------
+
+Finally, in order to run all tests contained in the folder ``aiida/djsite/db/subtests/parser_tests``
+one can use the following ``verdi`` command::
+
+  verdi devel tests db.parsers
+  
+If no fail message appears it means that the test was successful. 

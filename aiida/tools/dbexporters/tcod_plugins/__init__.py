@@ -135,3 +135,18 @@ class BaseTcodtranslator(object):
         the resulting structure.
         """
         raise NotImplementedError("not implemented in base class")
+
+    @classmethod
+    def get_integration_smearing_method(cls,calc,**kwargs):
+        """
+        Returns the smearing method name as string.
+        """
+        raise NotImplementedError("not implemented in base class")
+
+    @classmethod
+    def get_integration_smearing_method_other(cls,calc,**kwargs):
+        """
+        Returns the smearing method name as string if the name is different
+        from specified in cif_dft.dic.
+        """
+        raise NotImplementedError("not implemented in base class")

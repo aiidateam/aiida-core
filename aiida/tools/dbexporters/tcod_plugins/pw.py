@@ -13,6 +13,21 @@ class PwTcodtranslator(BaseTcodtranslator):
     """
     _plugin_type_string = "quantumespresso.pw.PwCalculation"
 
+    _smearing_aliases = {
+        'gaussian': 'Gaussian',
+        'gauss': 'Gaussian',
+        'methfessel-paxton': 'Methfessel-Paxton',
+        'm-p': 'Methfessel-Paxton',
+        'mp': 'Methfessel-Paxton',
+        'marzari-vanderbilt': 'Marzari-Vanderbilt',
+        'cold': 'Marzari-Vanderbilt',
+        'm-v': 'Marzari-Vanderbilt',
+        'mv': 'Marzari-Vanderbilt',
+        'fermi-dirac': 'Marzari-Vanderbilt',
+        'f-d': 'Marzari-Vanderbilt',
+        'fd': 'Marzari-Vanderbilt',
+    }
+
     @classmethod
     def get_software_package(cls,calc,**kwargs):
         """
@@ -52,6 +67,22 @@ class PwTcodtranslator(BaseTcodtranslator):
             return [x[index] for x in array.get_array('forces').tolist()[-1]]
         except KeyError:
             return None
+
+    @classmethod
+    def _get_raw_integration_smearing_method(cls,calc,**kwargs):
+        """
+        Returns the smearing method name as string, as specified in the
+        input parameters (if specified). If not specified, string with
+        default value 'gaussian' is returned, as specified in
+        http://www.quantum-espresso.org/wp-content/uploads/Doc/INPUT_PW.html
+        """
+        parameters = calc.inp.parameters
+        smearing = 'gaussian'
+        try:
+            smearing = parameters.get_dict()['SYSTEM']['smearing']
+        except KeyError:
+            pass
+        return smearing
         
     @classmethod
     def get_total_energy(cls,calc,**kwargs):
@@ -141,3 +172,26 @@ class PwTcodtranslator(BaseTcodtranslator):
         the resulting structure.
         """
         return cls._get_atom_site_residual_force_Cartesian(calc,2)
+
+    @classmethod
+    def get_integration_smearing_method(cls,calc,**kwargs):
+        """
+        Returns the smearing method name as string.
+        """
+        smearing = cls._get_raw_integration_smearing_method(calc,**kwargs)
+        if smearing in cls._smearing_aliases:
+            return cls._smearing_aliases[smearing]
+        else:
+            return 'other'
+
+    @classmethod
+    def get_integration_smearing_method_other(cls,calc,**kwargs):
+        """
+        Returns the smearing method name as string if the name is different
+        from specified in cif_dft.dic.
+        """
+        smearing = cls._get_raw_integration_smearing_method(calc,**kwargs)
+        if smearing in cls._smearing_aliases:
+            return None
+        else:
+            return smearing

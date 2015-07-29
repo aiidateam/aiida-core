@@ -107,7 +107,7 @@ class TrajectoryData(ArrayData):
                       should be a valid chemical symbol, but actually any unique
                       string works and can be used as the name of the atomic kind
                       (see also the :py:meth:`.step_to_structure()` method). 
-        :param positions: float array with dimension :math:`s \times 3 \times 3`,
+        :param positions: float array with dimension :math:`s \times n \times 3`,
                       where ``s`` is the
                       length of the ``steps`` array and ``n`` is the length
                       of the ``symbols`` array. Units are angstrom.

@@ -26,7 +26,7 @@ Inputs
   Example::
     
       {"CONTROL":{"calculation":"scf"},
-       "ELECTRONS":{"ecutwfc":"30","ecutrho":"100"},
+       "ELECTRONS":{"ecutwfc":30.,"ecutrho":100.},
       }
   
   See the QE documentation for the full list of variables and their meaning. 

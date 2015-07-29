@@ -230,18 +230,35 @@ class TestTcodDbExporter(AiidaTestCase):
         from aiida.tools.dbexporters.tcod_plugins.cp \
              import CpTcodtranslator as CPT
         from aiida.orm.data.array import ArrayData
+        from aiida.orm.data.array.kpoints import KpointsData
         from aiida.orm.data.parameter import ParameterData
         from tcodexporter import FakeObject
         import numpy
 
+        kpoints = KpointsData()
+        kpoints.set_kpoints_mesh([2,3,4], offset=[0.25, 0.5, 0.75])
+
         calc = FakeObject({
+            "inp": { "parameters": ParameterData(dict={}),
+                     "kpoints": kpoints },
             "out": { "output_parameters": ParameterData(dict={}) }
         })
         res = translate_calculation_specific_values(calc,PWT)
-        self.assertEquals(res,{'_tcod_software_package':
-                               'Quantum ESPRESSO'})
+        self.assertEquals(res,{
+            '_integration_grid_X': 2,
+            '_integration_grid_Y': 3,
+            '_integration_grid_Z': 4,
+            '_integration_grid_shift_X': 0.25,
+            '_integration_grid_shift_Y': 0.5,
+            '_integration_grid_shift_Z': 0.75,
+            '_tcod_software_package': 'Quantum ESPRESSO',
+            '_dft_BZ_integration_smearing_method': 'Gaussian',
+        })
 
         calc = FakeObject({
+            "inp": { "parameters": ParameterData(dict={
+                'SYSTEM': {}
+            }) },
             "out": { "output_parameters": ParameterData(dict={
                 'number_of_electrons': 10,
             }) }
@@ -249,9 +266,12 @@ class TestTcodDbExporter(AiidaTestCase):
         res = translate_calculation_specific_values(calc,PWT)
         self.assertEquals(res,{'_dft_cell_valence_electrons': 10,
                                '_tcod_software_package':
-                               'Quantum ESPRESSO'})
+                               'Quantum ESPRESSO',
+                               '_dft_BZ_integration_smearing_method':
+                               'Gaussian'})
 
         calc = FakeObject({
+            "inp": { "parameters": ParameterData(dict={}) },
             "out": { "output_parameters": ParameterData(dict={
                 'energy_xc': 5,
             }) }
@@ -260,6 +280,7 @@ class TestTcodDbExporter(AiidaTestCase):
             translate_calculation_specific_values(calc,PWT)
 
         calc = FakeObject({
+            "inp": { "parameters": ParameterData(dict={}) },
             "out": { "output_parameters": ParameterData(dict={
                 'energy_xc': 5,
                 'energy_xc_units': 'meV'
@@ -280,6 +301,9 @@ class TestTcodDbExporter(AiidaTestCase):
         for key in energies.keys():
             dct["{}_units".format(key)] = 'eV'
         calc = FakeObject({
+            "inp": { "parameters": ParameterData(dict={
+                'SYSTEM': { 'smearing': 'mp' }
+            }) },
             "out": { "output_parameters": ParameterData(dict=dct) }
         })
         res = translate_calculation_specific_values(calc,PWT)
@@ -290,13 +314,18 @@ class TestTcodDbExporter(AiidaTestCase):
             '_dft_ewald_energy'      : energies['energy_ewald'],
             '_dft_hartree_energy'    : energies['energy_hartree'],
             '_dft_fermi_energy'      : energies['fermi_energy'],
-            '_tcod_software_package' : 'Quantum ESPRESSO'
+            '_tcod_software_package' : 'Quantum ESPRESSO',
+            '_dft_BZ_integration_smearing_method': 'Methfessel-Paxton',
+            '_dft_BZ_integration_MP_order': 1,
         })
         dct = energies
         dct['number_of_electrons'] = 10
         for key in energies.keys():
             dct["{}_units".format(key)] = 'eV'
         calc = FakeObject({
+            "inp": { "parameters": ParameterData(dict={
+                'SYSTEM': { 'smearing': 'unknown-method' }
+            }) },
             "out": { "output_parameters": ParameterData(dict=dct) }
         })
         res = translate_calculation_specific_values(calc,CPT)
@@ -307,12 +336,17 @@ class TestTcodDbExporter(AiidaTestCase):
         ad = ArrayData()
         ad.set_array("forces", numpy.array([[[1,2,3], [4,5,6]]]))
         calc = FakeObject({
+            "inp": { "parameters": ParameterData(dict={
+                'SYSTEM': { 'smearing': 'unknown-method' }
+            }) },
             "out": { "output_parameters": ParameterData(dict={}),
                      "output_array": ad }
         })
         res = translate_calculation_specific_values(calc,PWT)
         self.assertEquals(res,{
             '_tcod_software_package': 'Quantum ESPRESSO',
+            '_dft_BZ_integration_smearing_method': 'other',
+            '_dft_BZ_integration_smearing_method_other': 'unknown-method',
             ## Residual forces are no longer produced, as they should
             ## be in the same CIF loop with coordinates -- to be
             ## implemented later, since it's not yet clear how.

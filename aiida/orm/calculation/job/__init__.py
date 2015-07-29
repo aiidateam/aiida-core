@@ -825,20 +825,25 @@ class JobCalculation(Calculation):
     def _list_calculations(cls, states=None, past_days=None, group=None,
                            all_users=False, pks=[], relative_ctime=True):
         """
-        This function return a string with a description of the AiiDA calculations.
+        Return a string with a description of the AiiDA calculations.
 
         .. todo:: does not support the query for the IMPORTED state (since it
           checks the state in the Attributes, not in the DbCalcState table).
           Decide which is the correct logi and implement the correct query.
         
         :param states: a list of string with states. If set, print only the 
-            calculations in the states "states", otherwise shows all. Default = None.
-        :param past_days: If specified, show only calculations that were created in
-            the given number of past days.
+            calculations in the states "states", otherwise shows all. 
+            Default = None.
+        :param past_days: If specified, show only calculations that were 
+            created in the given number of past days.
         :param group: If specified, show only calculations belonging to a
             user-defined group with the given name.
-        :param pks: if specified, must be a list of integers, and only calculations
-            within that list are shown. Otherwise, all calculations are shown.
+            Can use colons to separate the group name from the type,
+            as specified in :py:meth:`aiida.orm.group.Group.get_from_string`
+            method.
+        :param pks: if specified, must be a list of integers, and only 
+            calculations within that list are shown. Otherwise, all
+            calculations are shown.
             If specified, sets state to None and ignores the 
             value of the ``past_days`` option.")
         :param relative_ctime: if true, prints the creation time relative from now.
@@ -864,6 +869,10 @@ class JobCalculation(Calculation):
         from aiida.djsite.db.tasks import get_last_daemon_timestamp
         from aiida.common.utils import str_timedelta
         from aiida.orm.node import from_type_to_pluginclassname
+        from aiida.orm import Group
+        from aiida.common.exceptions import NotExistent
+
+        warnings_list = []
 
         now = timezone.now()
 
@@ -871,6 +880,10 @@ class JobCalculation(Calculation):
             q_object = Q(pk__in=pks)
         else:
             q_object = Q()
+
+            if group is not None:
+                g_pk = Group.get_from_string(group).pk
+                q_object.add(Q(dbgroups__pk=g_pk), Q.AND)
 
             if not all_users:
                 q_object.add(Q(user=get_automatic_user()), Q.AND)
@@ -882,9 +895,6 @@ class JobCalculation(Calculation):
                 now = timezone.now()
                 n_days_ago = now - datetime.timedelta(days=past_days)
                 q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
-
-            if group is not None:
-                q_object.add(Q(dbgroups__name=group, dbgroups__type=""), Q.AND)
 
         calc_list_pk = list(cls.query(q_object).distinct().values_list('pk', flat=True))
 
@@ -1024,6 +1034,7 @@ class JobCalculation(Calculation):
             for row in str_matrix:
                 res_str_list.append(fmt_string.format(*[str(i) for i in row]))
 
+            res_str_list += ["# {}".format(_) for _ in warnings_list]
             return "\n".join(res_str_list)
 
     @classmethod

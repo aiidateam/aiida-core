@@ -56,12 +56,12 @@ tcod_loops = {
 conforming_dictionaries = [
     {
         'name': 'cif_tcod.dic',
-        'version': '0.004',
+        'version': '0.008',
         'url': 'http://www.crystallography.net/tcod/cif/dictionaries/cif_tcod.dic'
     },
     {
         'name': 'cif_dft.dic',
-        'version': '0.005',
+        'version': '0.006',
         'url': 'http://www.crystallography.net/tcod/cif/dictionaries/cif_dft.dic'
     }
 ]
@@ -464,8 +464,9 @@ def _collect_tags(node,calc,parameters=None,
             if exclude_external_contents:
                 for pk in data['node_attributes']:
                     n = data['node_attributes'][pk]
-                    if 'md5' in n.keys() and 'url' in n.keys():
-                        md5_to_url[n['md5']] = n['url']
+                    if 'md5' in n.keys() and 'source' in n.keys() and \
+                      'uri' in n['source'].keys():
+                        md5_to_url[n['md5']] = n['source']['uri']
 
             for f in files:
                 f['name'] = os.path.join('aiida',f['name'])
@@ -938,22 +939,37 @@ def translate_calculation_specific_values(calc,translator,**kwargs):
                          "must be derived from {} class".format(translator.__class__,
                                                                 BaseTcodtranslator.__class__))
     translation_map = {
-        '_tcod_software_package'              : 'get_software_package',
-        '_tcod_software_package_version'      : 'get_software_package_version',
-        '_tcod_total_energy'                  : 'get_total_energy',
-        '_dft_1e_energy'                      : 'get_one_electron_energy',
-        '_dft_correlation_energy'             : 'get_exchange_correlation_energy',
-        '_dft_ewald_energy'                   : 'get_ewald_energy',
-        '_dft_hartree_energy'                 : 'get_hartree_energy',
-        '_dft_fermi_energy'                   : 'get_fermi_energy',
-        '_dft_cell_valence_electrons'         : 'get_number_of_electrons',
-        '_tcod_computation_wallclock_time'    : 'get_computation_wallclock_time',
-        '_atom_type_symbol'                   : 'get_atom_type_symbol',
+        '_tcod_software_package': 'get_software_package',
+        '_tcod_software_package_version': 'get_software_package_version',
+        '_tcod_total_energy': 'get_total_energy',
+        '_dft_1e_energy': 'get_one_electron_energy',
+        '_dft_correlation_energy': 'get_exchange_correlation_energy',
+        '_dft_ewald_energy': 'get_ewald_energy',
+        '_dft_hartree_energy': 'get_hartree_energy',
+        '_dft_fermi_energy': 'get_fermi_energy',
+        '_dft_cell_valence_electrons': 'get_number_of_electrons',
+        '_tcod_computation_wallclock_time': 'get_computation_wallclock_time',
+        '_atom_type_symbol': 'get_atom_type_symbol',
         '_dft_atom_type_valence_configuration': 'get_atom_type_valence_configuration',
-        '_dft_atom_basisset'                  : 'get_atom_type_basisset',
-#       '_tcod_atom_site_resid_force_Cartn_x' : 'get_atom_site_residual_force_Cartesian_x',
-#       '_tcod_atom_site_resid_force_Cartn_y' : 'get_atom_site_residual_force_Cartesian_y',
-#       '_tcod_atom_site_resid_force_Cartn_z' : 'get_atom_site_residual_force_Cartesian_z',
+        '_dft_atom_basisset': 'get_atom_type_basisset',
+        '_dft_BZ_integration_smearing_method': 'get_integration_smearing_method',
+        '_dft_BZ_integration_smearing_method_other': 'get_integration_smearing_method_other',
+        '_dft_BZ_integration_MP_order': 'get_integration_Methfessel_Paxton_order',
+
+        '_integration_grid_X': 'get_BZ_integration_grid_X',
+        '_integration_grid_Y': 'get_BZ_integration_grid_Y',
+        '_integration_grid_Z': 'get_BZ_integration_grid_Z',
+
+        '_integration_grid_shift_X': 'get_BZ_integration_grid_shift_X',
+        '_integration_grid_shift_Y': 'get_BZ_integration_grid_shift_Y',
+        '_integration_grid_shift_Z': 'get_BZ_integration_grid_shift_Z',
+
+        ## Residual forces are no longer produced, as they should
+        ## be in the same CIF loop with coordinates -- to be
+        ## implemented later, since it's not yet clear how.
+        # '_tcod_atom_site_resid_force_Cartn_x': 'get_atom_site_residual_force_Cartesian_x',
+        # '_tcod_atom_site_resid_force_Cartn_y': 'get_atom_site_residual_force_Cartesian_y',
+        # '_tcod_atom_site_resid_force_Cartn_z': 'get_atom_site_residual_force_Cartesian_z',
     }
     tags = dict()
     for tag,function in translation_map.iteritems():

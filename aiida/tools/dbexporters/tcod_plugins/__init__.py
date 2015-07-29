@@ -30,6 +30,14 @@ class BaseTcodtranslator(object):
         raise NotImplementedError("not implemented in base class")
 
     @classmethod
+    def get_software_package_compilation_timestamp(cls,calc,**kwargs):
+        """
+        Returns the timestamp of package/program compilation in ISO 8601
+        format.
+        """
+        raise NotImplementedError("not implemented in base class")
+
+    @classmethod
     def get_total_energy(cls,calc,**kwargs):
         """
         Returns the total energy in eV.

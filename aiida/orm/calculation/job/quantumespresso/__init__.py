@@ -730,20 +730,18 @@ class BasePwCpInputGenerator(object):
         # Check the calculation's state using ``from_attribute=True`` to
         # correctly handle IMPORTED calculations.
         if self.get_state(from_attribute=True) != calc_states.FINISHED:
-            #if self.get_state() != calc_states.FINISHED:
-            if force_restart:
-                pass
-            else:
-                raise InputValidationError("Calculation to be restarted must be "
-                                           "in the {} state. Otherwise, use the force_restart "
-                                           "flag".format(calc_states.FINISHED))
+            if not force_restart:
+                raise InputValidationError(
+                    "Calculation to be restarted must be "
+                    "in the {} state. Otherwise, use the force_restart "
+                    "flag".format(calc_states.FINISHED))
 
         if parent_folder_symlink is None:
             parent_folder_symlink = self._default_symlink_usage
 
         calc_inp = self.get_inputs_dict()
 
-        old_inp_dict = calc_inp['parameters'].get_dict()
+        old_inp_dict = calc_inp[self.get_linkname('parameters')].get_dict()
         # add the restart flag
         old_inp_dict['CONTROL']['restart_mode'] = 'restart'
         inp_dict = ParameterData(dict=old_inp_dict)
@@ -770,15 +768,16 @@ class BasePwCpInputGenerator(object):
             try:
                 c2.use_structure(self.out.output_structure)
             except AttributeError:
-                c2.use_structure(calc_inp['structure'])
+                c2.use_structure(calc_inp[self.get_linkname('structure')])
         else:
-            c2.use_structure(calc_inp['structure'])
+            c2.use_structure(calc_inp[self.get_linkname('structure')])
 
         if self._use_kpoints:
-            c2.use_kpoints(calc_inp['kpoints'])
-        c2.use_code(calc_inp['code'])
+            c2.use_kpoints(calc_inp[self.get_linkname('kpoints')])
+        c2.use_code(calc_inp[self.get_linkname('code')])
         try:
-            old_settings_dict = calc_inp['settings'].get_dict()
+            old_settings_dict = calc_inp[self.get_linkname('settings')
+                                         ].get_dict()
         except KeyError:
             old_settings_dict = {}
         if parent_folder_symlink is not None:
@@ -793,6 +792,15 @@ class BasePwCpInputGenerator(object):
         for linkname, input_node in self.get_inputs_dict().iteritems():
             if isinstance(input_node, UpfData):
                 c2._add_link_from(input_node, label=linkname)
+
+        # Add also the vdw table, if the parent had one
+        try:
+            old_vdw_table = calc_inp[self.get_linkname('vdw_table')]
+        except KeyError:
+            # No VdW table
+            pass
+        else:
+            c2.use_vdw_table(old_vdw_table)
 
         return c2
 

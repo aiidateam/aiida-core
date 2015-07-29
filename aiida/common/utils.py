@@ -29,7 +29,8 @@ class classproperty(object):
 def get_new_uuid():
     """
     Return a new UUID (typically to be used for new nodes).
-    It uses the version of </
+    It uses the UUID version specified in 
+    aiida.djsite.settings.settings_profile.AIIDANODES_UUID_VERSION
     """
     from aiida.djsite.settings.settings_profile import (
         AIIDANODES_UUID_VERSION)
@@ -47,28 +48,35 @@ def get_new_uuid():
     the_uuid = uuid.uuid4()
     return force_unicode(the_uuid)
 
+# To speed up the process (os.path.abspath calls are slow)
+_repository_folder_cache = {}
 
 def get_repository_folder(subfolder=None):
     """
     Return the top folder of the local repository.
     """
     try:
-        from aiida.djsite.settings.settings import REPOSITORY_PATH
-
-        if not os.path.isdir(REPOSITORY_PATH):
-            raise ImportError
-    except ImportError:
-        raise ConfigurationError(
-            "The REPOSITORY_PATH variable is not set correctly.")
-    if subfolder is None:
-        return os.path.abspath(REPOSITORY_PATH)
-    elif subfolder == "sandbox":
-        return os.path.abspath(os.path.join(REPOSITORY_PATH, 'sandbox'))
-    elif subfolder == "repository":
-        return os.path.abspath(os.path.join(REPOSITORY_PATH, 'repository'))
-    else:
-        raise ValueError("Invalid 'subfolder' passed to "
-                         "get_repository_folder: {}".format(subfolder))
+        return _repository_folder_cache[subfolder]
+    except KeyError:
+        try:
+            from aiida.djsite.settings.settings import REPOSITORY_PATH
+            
+            if not os.path.isdir(REPOSITORY_PATH):
+                raise ImportError
+        except ImportError:
+            raise ConfigurationError(
+                "The REPOSITORY_PATH variable is not set correctly.")
+        if subfolder is None:
+            retval = os.path.abspath(REPOSITORY_PATH)
+        elif subfolder == "sandbox":
+            retval = os.path.abspath(os.path.join(REPOSITORY_PATH, 'sandbox'))
+        elif subfolder == "repository":
+            retval = os.path.abspath(os.path.join(REPOSITORY_PATH, 'repository'))
+        else:
+            raise ValueError("Invalid 'subfolder' passed to "
+                             "get_repository_folder: {}".format(subfolder))
+        _repository_folder_cache[subfolder] = retval
+        return retval
 
 
 def escape_for_bash(str_to_escape):

@@ -942,6 +942,7 @@ def translate_calculation_specific_values(calc,translator,**kwargs):
         '_tcod_software_package': 'get_software_package',
         '_tcod_software_package_version': 'get_software_package_version',
         '_tcod_software_package_compilation_date': 'get_software_package_compilation_timestamp',
+        '_tcod_software_executable_path': 'get_software_executable_path',
 
         '_tcod_total_energy': 'get_total_energy',
         '_dft_1e_energy': 'get_one_electron_energy',

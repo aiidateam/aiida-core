@@ -38,6 +38,20 @@ class BaseTcodtranslator(object):
         raise NotImplementedError("not implemented in base class")
 
     @classmethod
+    def get_software_executable_path(cls,calc,**kwargs):
+        """
+        Returns the file-system path to the executable that was run for
+        this computation.
+        """
+        try:
+            code = calc.inp.code
+            if not code.is_local():
+                return code.get_attr('remote_exec_path')
+        except Exception:
+            return None
+        return None
+
+    @classmethod
     def get_total_energy(cls,calc,**kwargs):
         """
         Returns the total energy in eV.

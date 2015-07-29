@@ -305,6 +305,7 @@ class TestTcodDbExporter(AiidaTestCase):
             '_dft_fermi_energy'      : energies['fermi_energy'],
             '_tcod_software_package' : 'Quantum ESPRESSO',
             '_dft_BZ_integration_smearing_method': 'Methfessel-Paxton',
+            '_dft_BZ_integration_MP_order': 1,
         })
         dct = energies
         dct['number_of_electrons'] = 10

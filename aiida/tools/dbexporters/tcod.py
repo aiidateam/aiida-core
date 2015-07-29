@@ -954,6 +954,7 @@ def translate_calculation_specific_values(calc,translator,**kwargs):
         '_dft_atom_basisset': 'get_atom_type_basisset',
         '_dft_BZ_integration_smearing_method': 'get_integration_smearing_method',
         '_dft_BZ_integration_smearing_method_other': 'get_integration_smearing_method_other',
+        '_dft_BZ_integration_MP_order': 'get_integration_Methfessel_Paxton_order',
 
         ## Residual forces are no longer produced, as they should
         ## be in the same CIF loop with coordinates -- to be

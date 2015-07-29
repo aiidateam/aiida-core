@@ -150,3 +150,10 @@ class BaseTcodtranslator(object):
         from specified in cif_dft.dic.
         """
         raise NotImplementedError("not implemented in base class")
+
+    @classmethod
+    def get_integration_Methfessel_Paxton_order(cls,calc,**kwargs):
+        """
+        Returns the order of Methfessel-Paxton approximation if used.
+        """
+        raise NotImplementedError("not implemented in base class")

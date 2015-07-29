@@ -195,3 +195,14 @@ class PwTcodtranslator(BaseTcodtranslator):
             return None
         else:
             return smearing
+
+    @classmethod
+    def get_integration_Methfessel_Paxton_order(cls,calc,**kwargs):
+        """
+        Returns the order of Methfessel-Paxton approximation if used.
+        """
+        if cls.get_integration_smearing_method(calc,**kwargs) == \
+           'Methfessel-Paxton':
+            return 1
+        else:
+            return None

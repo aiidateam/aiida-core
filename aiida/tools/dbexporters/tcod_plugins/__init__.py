@@ -137,6 +137,54 @@ class BaseTcodtranslator(object):
         raise NotImplementedError("not implemented in base class")
 
     @classmethod
+    def get_BZ_integration_grid_X(cls,calc,**kwargs):
+        """
+        Returns a number of points in the Brillouin zone along reciprocal
+        lattice vector X.
+        """
+        raise NotImplementedError("not implemented in base class")
+
+    @classmethod
+    def get_BZ_integration_grid_Y(cls,calc,**kwargs):
+        """
+        Returns a number of points in the Brillouin zone along reciprocal
+        lattice vector Y.
+        """
+        raise NotImplementedError("not implemented in base class")
+
+    @classmethod
+    def get_BZ_integration_grid_Z(cls,calc,**kwargs):
+        """
+        Returns a number of points in the Brillouin zone along reciprocal
+        lattice vector Z.
+        """
+        raise NotImplementedError("not implemented in base class")
+
+    @classmethod
+    def get_BZ_integration_grid_shift_X(cls,calc,**kwargs):
+        """
+        Returns the shift of the Brillouin zone points along reciprocal
+        lattice vector X.
+        """
+        raise NotImplementedError("not implemented in base class")
+
+    @classmethod
+    def get_BZ_integration_grid_shift_Y(cls,calc,**kwargs):
+        """
+        Returns the shift of the Brillouin zone points along reciprocal
+        lattice vector Y.
+        """
+        raise NotImplementedError("not implemented in base class")
+
+    @classmethod
+    def get_BZ_integration_grid_shift_Z(cls,calc,**kwargs):
+        """
+        Returns the shift of the Brillouin zone points along reciprocal
+        lattice vector Z.
+        """
+        raise NotImplementedError("not implemented in base class")
+
+    @classmethod
     def get_integration_smearing_method(cls,calc,**kwargs):
         """
         Returns the smearing method name as string.

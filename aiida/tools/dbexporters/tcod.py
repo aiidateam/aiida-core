@@ -956,6 +956,14 @@ def translate_calculation_specific_values(calc,translator,**kwargs):
         '_dft_BZ_integration_smearing_method_other': 'get_integration_smearing_method_other',
         '_dft_BZ_integration_MP_order': 'get_integration_Methfessel_Paxton_order',
 
+        '_integration_grid_X': 'get_BZ_integration_grid_X',
+        '_integration_grid_Y': 'get_BZ_integration_grid_Y',
+        '_integration_grid_Z': 'get_BZ_integration_grid_Z',
+
+        '_integration_grid_shift_X': 'get_BZ_integration_grid_shift_X',
+        '_integration_grid_shift_Y': 'get_BZ_integration_grid_shift_Y',
+        '_integration_grid_shift_Z': 'get_BZ_integration_grid_shift_Z',
+
         ## Residual forces are no longer produced, as they should
         ## be in the same CIF loop with coordinates -- to be
         ## implemented later, since it's not yet clear how.

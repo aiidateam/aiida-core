@@ -69,6 +69,34 @@ class PwTcodtranslator(BaseTcodtranslator):
             return None
 
     @classmethod
+    def _get_BZ_integration_grid(cls,calc,**kwargs):
+        """
+        Returns an array with Brillouin zone point counts along each
+        vector of reciprocal lattice.
+        """
+        try:
+            array,_ = calc.inp.kpoints.get_kpoints_mesh()
+            return array
+        except AttributeError:
+            return None
+        except KeyError:
+            return None
+
+    @classmethod
+    def _get_BZ_integration_grid_shift(cls,calc,**kwargs):
+        """
+        Returns an array with Brillouin zone point shifts along each
+        vector of reciprocal lattice.
+        """
+        try:
+            _,array = calc.inp.kpoints.get_kpoints_mesh()
+            return array
+        except AttributeError:
+            return None
+        except KeyError:
+            return None
+
+    @classmethod
     def _get_raw_integration_smearing_method(cls,calc,**kwargs):
         """
         Returns the smearing method name as string, as specified in the
@@ -172,6 +200,78 @@ class PwTcodtranslator(BaseTcodtranslator):
         the resulting structure.
         """
         return cls._get_atom_site_residual_force_Cartesian(calc,2)
+
+    @classmethod
+    def get_BZ_integration_grid_X(cls,calc,**kwargs):
+        """
+        Returns a number of points in the Brillouin zone along reciprocal
+        lattice vector X.
+        """
+        array = cls._get_BZ_integration_grid(calc,**kwargs)
+        if array is not None:
+            return array[0]
+        else:
+            return None
+
+    @classmethod
+    def get_BZ_integration_grid_Y(cls,calc,**kwargs):
+        """
+        Returns a number of points in the Brillouin zone along reciprocal
+        lattice vector Y.
+        """
+        array = cls._get_BZ_integration_grid(calc,**kwargs)
+        if array is not None:
+            return array[1]
+        else:
+            return None
+
+    @classmethod
+    def get_BZ_integration_grid_Z(cls,calc,**kwargs):
+        """
+        Returns a number of points in the Brillouin zone along reciprocal
+        lattice vector Z.
+        """
+        array = cls._get_BZ_integration_grid(calc,**kwargs)
+        if array is not None:
+            return array[2]
+        else:
+            return None
+
+    @classmethod
+    def get_BZ_integration_grid_shift_X(cls,calc,**kwargs):
+        """
+        Returns the shift of the Brillouin zone points along reciprocal
+        lattice vector X.
+        """
+        array = cls._get_BZ_integration_grid_shift(calc,**kwargs)
+        if array is not None:
+            return array[0]
+        else:
+            return None
+
+    @classmethod
+    def get_BZ_integration_grid_shift_Y(cls,calc,**kwargs):
+        """
+        Returns the shift of the Brillouin zone points along reciprocal
+        lattice vector Y.
+        """
+        array = cls._get_BZ_integration_grid_shift(calc,**kwargs)
+        if array is not None:
+            return array[1]
+        else:
+            return None
+
+    @classmethod
+    def get_BZ_integration_grid_shift_Z(cls,calc,**kwargs):
+        """
+        Returns the shift of the Brillouin zone points along reciprocal
+        lattice vector Z.
+        """
+        array = cls._get_BZ_integration_grid_shift(calc,**kwargs)
+        if array is not None:
+            return array[2]
+        else:
+            return None
 
     @classmethod
     def get_integration_smearing_method(cls,calc,**kwargs):

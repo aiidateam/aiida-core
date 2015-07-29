@@ -230,19 +230,30 @@ class TestTcodDbExporter(AiidaTestCase):
         from aiida.tools.dbexporters.tcod_plugins.cp \
              import CpTcodtranslator as CPT
         from aiida.orm.data.array import ArrayData
+        from aiida.orm.data.array.kpoints import KpointsData
         from aiida.orm.data.parameter import ParameterData
         from tcodexporter import FakeObject
         import numpy
 
+        kpoints = KpointsData()
+        kpoints.set_kpoints_mesh([2,3,4], offset=[0.25, 0.5, 0.75])
+
         calc = FakeObject({
-            "inp": { "parameters": ParameterData(dict={}) },
+            "inp": { "parameters": ParameterData(dict={}),
+                     "kpoints": kpoints },
             "out": { "output_parameters": ParameterData(dict={}) }
         })
         res = translate_calculation_specific_values(calc,PWT)
-        self.assertEquals(res,{'_tcod_software_package':
-                               'Quantum ESPRESSO',
-                               '_dft_BZ_integration_smearing_method':
-                               'Gaussian'})
+        self.assertEquals(res,{
+            '_integration_grid_X': 2,
+            '_integration_grid_Y': 3,
+            '_integration_grid_Z': 4,
+            '_integration_grid_shift_X': 0.25,
+            '_integration_grid_shift_Y': 0.5,
+            '_integration_grid_shift_Z': 0.75,
+            '_tcod_software_package': 'Quantum ESPRESSO',
+            '_dft_BZ_integration_smearing_method': 'Gaussian',
+        })
 
         calc = FakeObject({
             "inp": { "parameters": ParameterData(dict={

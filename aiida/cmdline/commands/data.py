@@ -1105,12 +1105,14 @@ class _Cif(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable, Impo
                 pass
             except TypeError:
                 pass
-            source_url = '?'
+            source_uri = '?'
             try:
-                source_url = obj.get_attr('url')
+                source_uri = obj.get_attr('source')['uri']
             except AttributeError:
                 pass
-            entry_list.append([str(obj.pk), formulae, source_url])
+            except KeyError:
+                pass
+            entry_list.append([str(obj.pk), formulae, source_uri])
         return entry_list
 
     def get_column_names(self):
@@ -1120,7 +1122,7 @@ class _Cif(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable, Impo
         :note: neither the number nor correspondence of column names and
             actual columns in the output from the query() are checked.
         """
-        return ["ID", "formulae", "source_url"]
+        return ["ID", "formulae", "source_uri"]
 
     def _export_cif(self, node):
         """

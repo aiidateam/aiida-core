@@ -25,7 +25,9 @@ class NwcpymatgenTcodtranslator(BaseTcodtranslator):
     @classmethod
     def get_software_package_version(cls,calc,**kwargs):
         """
-        Returns the package or program version.
+        Returns software package version used to compute and produce
+        the computed structure file. Only version designator should be
+        used, e.g. '3.4.0', '2.1rc3'.
         """
         try:
             return calc.out.job_info.get_dict()['nwchem branch']

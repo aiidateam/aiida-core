@@ -229,18 +229,22 @@ class TestTcodDbExporter(AiidaTestCase):
              import PwTcodtranslator as PWT
         from aiida.tools.dbexporters.tcod_plugins.cp \
              import CpTcodtranslator as CPT
+        from aiida.orm.code import Code
         from aiida.orm.data.array import ArrayData
         from aiida.orm.data.array.kpoints import KpointsData
         from aiida.orm.data.parameter import ParameterData
         from tcodexporter import FakeObject
         import numpy
 
+        code = Code()
+        code._set_attr('remote_exec_path', '/test')
+
         kpoints = KpointsData()
         kpoints.set_kpoints_mesh([2,3,4], offset=[0.25, 0.5, 0.75])
 
         calc = FakeObject({
             "inp": { "parameters": ParameterData(dict={}),
-                     "kpoints": kpoints },
+                     "kpoints": kpoints, "code": code },
             "out": { "output_parameters": ParameterData(dict={}) }
         })
         res = translate_calculation_specific_values(calc,PWT)
@@ -252,6 +256,7 @@ class TestTcodDbExporter(AiidaTestCase):
             '_integration_grid_shift_Y': 0.5,
             '_integration_grid_shift_Z': 0.75,
             '_tcod_software_package': 'Quantum ESPRESSO',
+            '_tcod_software_executable_path': '/test',
             '_dft_BZ_integration_smearing_method': 'Gaussian',
         })
 

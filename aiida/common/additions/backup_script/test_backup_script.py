@@ -50,124 +50,124 @@ class UnitTests(unittest.TestCase):
         load_dbenv()
         import backup
         
-        self._backup_inst = \
+        self._backup_setup_inst = \
             backup.Backup("", 2)
 
     def tearDown(self):
-        self._backup_inst = None
+        self._backup_setup_inst = None
 
 
     def test_loading_basic_params_from_file(self):
         """
-        This method tests the correct loading of the basic _backup_inst
+        This method tests the correct loading of the basic _backup_setup_inst
         parameters from a JSON string.
         """
         backup_variables = json.loads(self._json_test_input_1)
-        self._backup_inst._read_backup_info_from_dict(backup_variables)
+        self._backup_setup_inst._read_backup_info_from_dict(backup_variables)
          
         self.assertEqual(
-            self._backup_inst._oldest_object_backedup,
+            self._backup_setup_inst._oldest_object_backedup,
             parse("2014-07-18 13:54:53.688484+00:00"),
-            "Last _backup_inst start date is not parsed correctly")
+            "Last _backup_setup_inst start date is not parsed correctly")
 
-        # The destination directory of the _backup_inst
+        # The destination directory of the _backup_setup_inst
         self.assertEqual(
-            self._backup_inst._backup_dir,
+            self._backup_setup_inst._backup_dir,
             "/scratch/spyros/backupScriptDestGio",
-            "_backup_inst destination directory not parsed correctly")
+            "_backup_setup_inst destination directory not parsed correctly")
         
         self.assertEqual(
-            self._backup_inst._backup_length_threshold,
+            self._backup_setup_inst._backup_length_threshold,
             datetime.timedelta(hours=2),
-            "_backup_inst length threshold not parsed correctly")
+            "_backup_setup_inst length threshold not parsed correctly")
         
         self.assertEqual(
-            self._backup_inst._periodicity,
+            self._backup_setup_inst._periodicity,
             2,
-            "_backup_inst periodicity not parsed correctly")
+            "_backup_setup_inst periodicity not parsed correctly")
         
 
     def testLoadingBackupTimeParamsFromFile1(self):
         """
-        This method tests that the _backup_inst limits are correctly
+        This method tests that the _backup_setup_inst limits are correctly
         loaded from the JSON string and are correctly set.
         
-        In the parsed JSON string, no _backup_inst end limits are set
+        In the parsed JSON string, no _backup_setup_inst end limits are set
         """
         backup_variables = json.loads(self._json_test_input_2)
-        self._backup_inst._read_backup_info_from_dict(backup_variables)
+        self._backup_setup_inst._read_backup_info_from_dict(backup_variables)
         
         self.assertEqual(
-            self._backup_inst._days_to_backup,
+            self._backup_setup_inst._days_to_backup,
             None,
             "daysToBackup should be None/null but it is not")
         
         self.assertEqual(
-            self._backup_inst._end_date_of_backup,
+            self._backup_setup_inst._end_date_of_backup,
             None,
             "endDateOfBackup should be None/null but it is not")
         
         self.assertEqual(
-            self._backup_inst._internal_end_date_of_backup,
+            self._backup_setup_inst._internal_end_date_of_backup,
             None,
             "internalEndDateOfBackup should be None/null but it is not")
 
         
     def testLoadingBackupTimeParamsFromFile2(self):
         """
-        This method tests that the _backup_inst limits are correctly
+        This method tests that the _backup_setup_inst limits are correctly
         loaded from the JSON string and are correctly set.
         
         In the parsed JSON string, only the daysToBackup limit is set.
         """
         backup_variables = json.loads(self._json_test_input_3)
-        self._backup_inst._read_backup_info_from_dict(backup_variables)
+        self._backup_setup_inst._read_backup_info_from_dict(backup_variables)
 
         self.assertEqual(
-            self._backup_inst._days_to_backup,
+            self._backup_setup_inst._days_to_backup,
             2,
             "daysToBackup should be 2 but it is not")
         
         self.assertEqual(
-            self._backup_inst._end_date_of_backup,
+            self._backup_setup_inst._end_date_of_backup,
             None,
             "endDateOfBackup should be None/null but it is not")
         
         self.assertEqual(
-            self._backup_inst._internal_end_date_of_backup,
+            self._backup_setup_inst._internal_end_date_of_backup,
             parse("2014-07-20 13:54:53.688484+00:00"),
             "internalEndDateOfBackup is not the expected one")
 
 
     def testLoadingBackupTimeParamsFromFile3(self):
         """
-        This method tests that the _backup_inst limits are correctly
+        This method tests that the _backup_setup_inst limits are correctly
         loaded from the JSON string and are correctly set.
         
         In the parsed JSON string, only the endDateOfBackup limit is set.
         """
         backup_variables = json.loads(self._json_test_input_4)
-        self._backup_inst._read_backup_info_from_dict(backup_variables)
+        self._backup_setup_inst._read_backup_info_from_dict(backup_variables)
 
         self.assertEqual(
-            self._backup_inst._days_to_backup,
+            self._backup_setup_inst._days_to_backup,
             None,
             "daysToBackup should be None/null but it is not")
         
         self.assertEqual(
-            self._backup_inst._end_date_of_backup,
+            self._backup_setup_inst._end_date_of_backup,
             parse("2014-07-22 14:54:53.688484+00:00"),
             "endDateOfBackup should be None/null but it is not")
         
         self.assertEqual(
-            self._backup_inst._internal_end_date_of_backup,
+            self._backup_setup_inst._internal_end_date_of_backup,
             parse("2014-07-22 14:54:53.688484+00:00"),
             "internalEndDateOfBackup is not the expected one")
 
 
     def testLoadingBackupTimeParamsFromFile4(self):
         """
-        This method tests that the _backup_inst limits are correctly
+        This method tests that the _backup_setup_inst limits are correctly
         loaded from the JSON string and are correctly set.
         
         In the parsed JSON string, the endDateOfBackup & daysToBackuplimit
@@ -179,7 +179,7 @@ class UnitTests(unittest.TestCase):
         # An exception should be raised because endDateOfBackup
         # & daysToBackuplimit have been defined in the same time.  
         with self.assertRaises(BackupError):
-            self._backup_inst._read_backup_info_from_dict(backup_variables)
+            self._backup_setup_inst._read_backup_info_from_dict(backup_variables)
 
 
     def test_full_deserialization_serialization(self):
@@ -212,27 +212,26 @@ class UnitTests(unittest.TestCase):
         paths are normalized as expected.
         """
         backup_variables = json.loads(self._json_test_input_6)
-        self._backup_inst._read_backup_info_from_dict(backup_variables)
+        self._backup_setup_inst._read_backup_info_from_dict(backup_variables)
 
-        self.assertIsNotNone(self._backup_inst._oldest_object_backedup.tzinfo,
+        self.assertIsNotNone(self._backup_setup_inst._oldest_object_backedup.tzinfo,
               "Timezone info should not be none (timestamp: {})."
-              .format(self._backup_inst._oldest_object_backedup))
+              .format(self._backup_setup_inst._oldest_object_backedup))
 
-        self.assertIsNotNone(self._backup_inst._end_date_of_backup.tzinfo,
+        self.assertIsNotNone(self._backup_setup_inst._end_date_of_backup.tzinfo,
               "Timezone info should not be none (timestamp: {})."
-              .format(self._backup_inst._end_date_of_backup))
+              .format(self._backup_setup_inst._end_date_of_backup))
 
-        self.assertIsNotNone(self._backup_inst._internal_end_date_of_backup.tzinfo,
+        self.assertIsNotNone(self._backup_setup_inst._internal_end_date_of_backup.tzinfo,
               "Timezone info should not be none (timestamp: {})."
-              .format(self._backup_inst._internal_end_date_of_backup))
+              .format(self._backup_setup_inst._internal_end_date_of_backup))
 
-        # The destination directory of the _backup_inst
+        # The destination directory of the _backup_setup_inst
         self.assertEqual(
-            self._backup_inst._backup_dir,
+            self._backup_setup_inst._backup_dir,
             "/scratch/spyros/backup",
-            "_backup_inst destination directory is not normalized as expected.")
+            "_backup_setup_inst destination directory is not normalized as expected.")
 
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'Test.testName']
     unittest.main()

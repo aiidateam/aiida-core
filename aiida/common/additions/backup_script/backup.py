@@ -17,12 +17,22 @@ from aiida.djsite.db.models import DbWorkflow
 
 from aiida.common.folders import RepositoryFolder
 
+
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Spyros Zoupanos"
 
+
 class Backup(object):
+    """
+    This class handles the backup of the AiiDA repository that is referenced
+    by the current AiiDA database. The backup will start from the
+    given backup timestamp (*oldest_object_backedup*) or the date of the
+    oldest node/workflow object found and it will periodically backup
+    (in periods of *periodicity* days) until the ending date of the backup
+    specified by *end_date_of_backup* or *days_to_backup*.
+    """
 
     # Keys in the dictionary loaded by the JSON file
     _oldest_object_backedup_key = "oldest_object_backedup"
@@ -287,6 +297,7 @@ class Backup(object):
 
     def _backup_needed_files(self, query_sets):
         from aiida.djsite.settings.settings import REPOSITORY_PATH
+        repository_path = os.path.normpath(REPOSITORY_PATH)
         
         parent_dir_set = Set()
         copy_counter = 0
@@ -304,33 +315,36 @@ class Backup(object):
             for item in query_set.iterator():
                 source_dir = None
                 if type(item) == DbWorkflow:
-                    source_dir = RepositoryFolder(
+                    source_dir = os.path.normpath(RepositoryFolder(
                                     section=Workflow._section_name,
-                                    uuid=item.uuid).abspath
+                                    uuid=item.uuid).abspath)
                 elif type(item) == DbNode:
-                    source_dir = RepositoryFolder(
+                    source_dir = os.path.normpath(RepositoryFolder(
                                     section=Node._section_name,
-                                    uuid=item.uuid).abspath
+                                    uuid=item.uuid).abspath)
                 else:
                     #raise exception
                     self._logger.error(
                         "Unexpected item type to backup: {}".format(type(item)))
                     raise BackupError(
                         "Unexpected item type to backup: {}".format(type(item)))
-                    
-                relative_dir = source_dir[len(REPOSITORY_PATH):]
+
+                # Get the relative directory without the / which
+                # separates the repository_path from the relative_dir.
+                relative_dir = source_dir[(len(repository_path)+1):]
                 destination_dir = os.path.join(self._backup_dir, relative_dir)
                 
                 # Remove the destination directory if it already exists
                 if os.path.exists(destination_dir):
                     shutil.rmtree(destination_dir)
-                
+
                 # Copy the needed directory
                 try:
                     shutil.copytree(source_dir, destination_dir, True, None)
                 except EnvironmentError as envEr:
                     self._logger.warning(
-                        "Problem copying directory {}".format(source_dir) +
+                        "Problem copying directory {} " .format(source_dir) +
+                        "to {}. ".format(destination_dir) +
                         "More information: {} (Error no: {})".format(
                                                              envEr.strerror,
                                                              envEr.errno))
@@ -364,11 +378,13 @@ class Backup(object):
         perm_counter = 0
         for tempRelPath in parent_dir_set:
             try:
-                shutil.copystat(REPOSITORY_PATH + tempRelPath,
-                                self._backup_dir + tempRelPath)
+                shutil.copystat(os.path.join(repository_path, tempRelPath),
+                                os.path.join(self._backup_dir, tempRelPath))
             except OSError as osEr:
-                self._logger.warning("Problem setting permissions to directory "
-                                 + self._backup_dir + tempRelPath)
+                self._logger.warning(
+                         "Problem setting permissions to directory " +
+                         "{}. ".format(os.path.join(self._backup_dir,
+                                                        tempRelPath)))
                 self._logger.warning("More information:" +  
                                     " {} (Error no: {})".format(osEr.strerror,
                                                                 osEr.errno))
@@ -412,11 +428,3 @@ class BackupError(Exception):
         self.value = value
     def __str__(self):
         return repr(self.value)
-
-
-#if __name__ == '__main__':
-#    Backup(_backup_info_filepath="/home/szoupanos/workspace/BackupScript/src/backupInfo.json",
-#           _oldest_object_backedup_key="_oldest_object_backedup", 
-#           "_backup_dir", "_days_to_backup",
-#           "_end_date_of_backup", "_periodicity", "_backup_length_threshold", 2).run()
-

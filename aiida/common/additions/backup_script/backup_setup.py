@@ -6,18 +6,23 @@ import datetime
 import json
 import stat
 
-# Import needed for Django initialization
-from aiida.djsite.utils import load_dbenv
-
 from aiida.common.setup import AIIDA_CONFIG_FOLDER
-load_dbenv()
 from backup import Backup
 from dateutil.parser import parse
 from os.path import expanduser
-from __builtin__ import int
+from aiida.djsite.utils import load_dbenv
 
+# Needed initialization for Django
+load_dbenv()
 
 class BackupSetup(object):
+    """
+    This class setups the main backup script related information & files like:
+    -    the backup parameter file. It also allows the user to set it up by
+         answering questions.
+    -    the backup folders.
+    -    the script that initiates the backup.
+    """
     
     def __init__(self):
         # The backup directory names
@@ -38,7 +43,7 @@ class BackupSetup(object):
         # The logger of the backup script
         self._logger = logging.getLogger("aiida_backup_setup")
 
-    
+
     def query_yes_no(self, question, default="yes"):
         """Ask a yes/no question via raw_input() and return their answer.
     
@@ -61,19 +66,14 @@ class BackupSetup(object):
             raise ValueError("invalid default answer: '%s'" % default)
     
         while True:
-            sys.stdout.write(question + prompt)
-            choice = raw_input().lower()
+            choice = raw_input(question + prompt).lower()
             if default is not None and choice == "":
-                if default == "":
-                    return None
-                else:
-                    return valid[default]
+                return valid[default]
             elif choice in valid:
                 return valid[choice]
             else:
                 sys.stdout.write("Please respond with 'yes' or 'no' "
                                  "(or 'y' or 'n').\n")
-
 
     def query_string(self, question, default):
         if default is None or not default:
@@ -82,10 +82,9 @@ class BackupSetup(object):
             prompt = " [{}]".format(default)
         
         while True:
-            sys.stdout.write(question + prompt)
-            reply = raw_input()
-            if default is not None and reply == "":
-                if default == "":
+            reply = raw_input(question + prompt)
+            if default is not None and not reply:
+                if not default:
                     return None
                 else:
                     return default
@@ -256,7 +255,8 @@ e.g. "backup_dir": "/scratch/spyros/backupScriptDestGio/"
         # The template backup configuration file
         template_conf_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                      self._backup_info_tmpl_filename)
-        # Copy the configuration file to the backup folder
+
+        # Copy the sample configuration file to the backup folder
         try:
             shutil.copy(template_conf_path, conf_backup_folder_abs)
         except Exception:
@@ -269,7 +269,6 @@ e.g. "backup_dir": "/scratch/spyros/backupScriptDestGio/"
                              "see the configuration parameters " +
                              "explanation?", default="yes") == True:
             self.print_info()
-
 
         # Construct the path to the backup configuration file
         final_conf_filepath = os.path.join(conf_backup_folder_abs,
@@ -291,6 +290,11 @@ e.g. "backup_dir": "/scratch/spyros/backupScriptDestGio/"
              "found in {} to ".format(conf_backup_folder_abs) +
              "{} and ".format(self._backup_info_filename) +
              "change the backup parameters accordingly.\n")
+            sys.stdout.write(
+             "Please adapt the startup script accordingly to point to the " +
+             "correct backup configuration file. For the moment, it points " +
+             "to {}\n".format(os.path.join(conf_backup_folder_abs,
+                                          self._backup_info_filename)))
 
         # The contents of the startup script
         script_content = \
@@ -326,8 +330,6 @@ backup_inst.run()
             raise
 
 if __name__ == '__main__':
-    print os.path.dirname(os.path.abspath(__file__))
-    print os.path.abspath("backup_info.json.tmpl")
     BackupSetup().run()
     
     

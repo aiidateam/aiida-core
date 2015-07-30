@@ -18,7 +18,8 @@ import getpass
 import contextlib
 
 import aiida
-from aiida.common.exceptions import ConfigurationError, ProfileConfigurationError
+from aiida.common.exceptions import (
+    AiidaException, ConfigurationError, ProfileConfigurationError)
 from aiida.cmdline.baseclass import VerdiCommand, VerdiCommandRouter
 from aiida.cmdline import pass_to_django_manage
 from aiida.djsite.settings import settings_profile
@@ -44,6 +45,67 @@ __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE 
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Nicolas Mounet, Riccardo Sabatini"
+
+
+class ProfileParsingException(AiidaException):
+    """
+    Exception raised when parsing the profile command line option, if only
+    -p is provided, and no profile is specified
+    """
+    def __init__(self, *args, **kwargs):
+        self.minus_p_provided=kwargs.pop('minus_p_provided', False)
+        
+        super(ProfileParsingException, self).__init__(*args, **kwargs)
+
+def parse_profile(argv,merge_equal=False):
+    """
+    Parse the argv to see if a profile has been specified, return it with the
+    command position shift (index where the commands start)
+    
+    :param merge_equal: if True, merge things like
+    ('verdi', '--profile', '=', 'x', 'y') to ('verdi', '--profile=x', 'y')
+    but then return the correct index for the original array.
+    
+    Raise ProfileParsingException if there is only 'verdi' specified, or
+    if only 'verdi -p' (in these cases, one has respectively 
+    exception.minus_p_provided equal to False or True)
+    """
+    if merge_equal:
+        if len(argv) >= 3:
+            if argv[1] == '--profile' and argv[2] == '=':
+                internal_argv = [argv[0], "".join(argv[1:4])] + list(argv[4:])
+                shift = 2
+            else:
+                internal_argv = list(argv)
+                shift = 0
+        else:
+            internal_argv = list(argv)
+            shift = 0            
+    else:
+        internal_argv = list(argv)
+        shift = 0
+        
+    profile = None # Use default profile if nothing is specified
+    command_position = 1 # If there is no profile option
+    try:
+        profile_switch = internal_argv[1]
+    except IndexError:
+        raise ProfileParsingException(minus_p_provided=False)
+    long_profile_prefix = '--profile='
+    if profile_switch == '-p':
+        try:
+            profile = internal_argv[2]
+        except IndexError:
+            raise ProfileParsingException(minus_p_provided=True)
+        command_position = 3
+    elif profile_switch.startswith(long_profile_prefix):
+        profile = profile_switch[len(long_profile_prefix):]
+        command_position = 2
+    else:
+        # No profile switch, continue using argv[1] as the command name
+        pass
+
+    return profile, command_position + shift
 
 
 @contextlib.contextmanager
@@ -153,7 +215,16 @@ class Completion(VerdiCommand):
         except ValueError:
             return
 
-        if cword == 1:
+        try:
+            profile, command_position = parse_profile(args[1:],merge_equal=True)
+        except ProfileParsingException as e:
+            cword_offset = 0
+        else:
+            cword_offset = command_position - 1
+        
+        
+                
+        if cword == 1 + cword_offset:
             print " ".join(sorted(short_doc.keys()))
             return
         else:
@@ -162,14 +233,15 @@ class Completion(VerdiCommand):
                 # args[1] is the executable (verdi)
                 # args[2] is the command for verdi
                 # args[3:] are the following subargs
-                command = args[2]
+                command = args[2+cword_offset]
             except IndexError:
                 return
             try:
                 CommandClass = list_commands[command]
             except KeyError:
                 return
-            CommandClass().complete(subargs_idx=cword - 2, subargs=args[3:])
+            CommandClass().complete(subargs_idx=cword - 2 - cword_offset, 
+                                    subargs=args[3 + cword_offset:])
 
 
 class ListParams(VerdiCommand):
@@ -548,29 +620,12 @@ def exec_from_cmdline(argv):
         long_doc[k] = os.linesep.join(lines[first_idx + 1:])
 
     execname = os.path.basename(argv[0])
-
-    ############ Parse the profile #########################
-    profile = None # Use default profile if nothing is specified
-    command_position = 1 # If there is no profile option
+   
     try:
-        profile_switch = argv[1]
-    except IndexError:
+        profile, command_position = parse_profile(argv)
+    except ProfileParsingException as e:
         print_usage(execname)
         sys.exit(1)
-    long_profile_prefix = '--profile='
-    if profile_switch == '-p':
-        try:
-            profile = argv[2]
-        except IndexError:
-            print_usage(execname)
-            sys.exit(1)            
-        command_position = 3
-    elif profile_switch.startswith(long_profile_prefix):
-        profile = profile_switch[len(long_profile_prefix):]
-        command_position = 2
-    else:
-        # No profile switch, continue using argv[1] as the command name
-        pass
     
     # We now set the internal variable, if needed
     if profile is not None:

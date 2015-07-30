@@ -30,7 +30,7 @@ class UnitTests(unittest.TestCase):
     def test_query_yes_no(self):
         """
         This method tests the query_yes_no method behaves as expected. To
-        perform this, a lambda function is used to simulate the user input. 
+        perform this, a lambda function is used to simulate the user input.
         """
         # Check the yes
         backup_setup.raw_input = lambda _: "y"
@@ -46,7 +46,7 @@ class UnitTests(unittest.TestCase):
         backup_setup.raw_input = lambda _: "n"
         self.assertFalse(self._backup_setup_inst.query_yes_no("", "yes"))
         
-        # Check the empty default value that should 
+        # Check the empty default value that should
         # lead to an error
         with self.assertRaises(ValueError):
             self._backup_setup_inst.query_yes_no("", "")
@@ -56,7 +56,7 @@ class UnitTests(unittest.TestCase):
         # it is answered properly
         self.seq = -1
         answers  = ["", "", "", "yes"]
-        backup_setup.raw_input = lambda _: answers[self.array_counter()] 
+        backup_setup.raw_input = lambda _: answers[self.array_counter()]
         self.assertTrue(self._backup_setup_inst.query_yes_no("", None))
         self.assertEqual(self.seq, len(answers) - 1)
         
@@ -80,19 +80,19 @@ class UnitTests(unittest.TestCase):
         
         # If no answer is given then the default answer should be returned
         backup_setup.raw_input = lambda _: ""
-        self.assertEqual(self._backup_setup_inst.query_string("", "Def_answer"), 
+        self.assertEqual(self._backup_setup_inst.query_string("", "Def_answer"),
                                 "Def_answer")
         
         # The answer should be returned when the an answer is given by
         # the user
         backup_setup.raw_input = lambda _: "Usr_answer"
-        self.assertEqual(self._backup_setup_inst.query_string("", "Def_answer"), 
+        self.assertEqual(self._backup_setup_inst.query_string("", "Def_answer"),
                                 "Usr_answer")
         
         
     def test_ask_backup_question(self):
         """
-        This method checks that the combined use of query_string and 
+        This method checks that the combined use of query_string and
         query_yes_no by the ask_backup_question is done as expected.
         """
         
@@ -103,7 +103,7 @@ class UnitTests(unittest.TestCase):
         # - the final expected answer
         self.seq = -1
         answers  = ["", "3fd43", "1", "yes"]
-        backup_setup.raw_input = lambda _: answers[self.array_counter()] 
+        backup_setup.raw_input = lambda _: answers[self.array_counter()]
         self.assertEqual(
              self._backup_setup_inst.ask_backup_question("", int, False),
              int(answers[2]))
@@ -148,8 +148,8 @@ class UnitTests(unittest.TestCase):
         
         # Checking parsing of backup variables with all the answers given
         self.seq = -1
-        answers  = ["2013-07-28 20:48:53.197537+02:00", "y", 
-                    "2", "y", "2015-07-28 20:48:53.197537+02:00", "y", 
+        answers  = ["2013-07-28 20:48:53.197537+02:00", "y",
+                    "2", "y", "2015-07-28 20:48:53.197537+02:00", "y",
                     "3", "y", "4", "y"]
         backup_setup.raw_input = lambda _: answers[self.array_counter()]
         bk_vars = self._backup_setup_inst.construct_backup_variables("")
@@ -160,16 +160,5 @@ class UnitTests(unittest.TestCase):
         self.assertEqual(bk_vars[Backup._periodicity_key], 3)
         self.assertEqual(bk_vars[Backup._backup_length_threshold_key], 4)
         
-    
-    def test_spyros(self):
-        bs = backup_setup.BackupSetup()
-        bla = [1,2,3]
-#         backup_setup.raw_input = lambda x = 0: "y "if x == 0 else x += 1; "y"
-        backup_setup.raw_input = lambda _: bla[self.array_counter()] 
-        reply = bs.spyros()
-        
-        
-        
-
 if __name__ == '__main__':
     unittest.main()

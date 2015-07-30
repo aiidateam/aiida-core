@@ -177,7 +177,7 @@ class UnitTests(unittest.TestCase):
         
         backup_variables = json.loads(self._json_test_input_5)
         # An exception should be raised because endDateOfBackup
-        # & daysToBackuplimit have been defined in the same time.  
+        # & daysToBackuplimit have been defined in the same time.
         with self.assertRaises(BackupError):
             self._backup_setup_inst._read_backup_info_from_dict(backup_variables)
 

@@ -385,7 +385,7 @@ class Backup(object):
                          "Problem setting permissions to directory " +
                          "{}. ".format(os.path.join(self._backup_dir,
                                                         tempRelPath)))
-                self._logger.warning("More information:" +  
+                self._logger.warning("More information:" +
                                     " {} (Error no: {})".format(osEr.strerror,
                                                                 osEr.errno))
                 #raise osEr

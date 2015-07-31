@@ -429,7 +429,7 @@ class CifData(SinglefileData):
             else:
                 return (cifs[0], False)
 
-    def _get_aiida_structure(self, converter='ase', store=False, **kwargs):
+    def _get_aiida_structure(self, converter='pymatgen', store=False, **kwargs):
         """
         Creates :py:class:`aiida.orm.data.structure.StructureData`.
 

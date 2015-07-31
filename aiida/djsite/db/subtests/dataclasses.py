@@ -235,20 +235,20 @@ class TestCifData(AiidaTestCase):
 
         with tempfile.NamedTemporaryFile() as f:
             f.write('''
-                data_test
-                _cell_length_a    10
-                _cell_length_b    10
-                _cell_length_c    10
-                _cell_angle_alpha 90
-                _cell_angle_beta  90
-                _cell_angle_gamma 90
-                loop_
-                _atom_site_label
-                _atom_site_fract_x
-                _atom_site_fract_y
-                _atom_site_fract_z
-                C 0 0 0
-                O 0.5 0.5 0.5
+data_test
+_cell_length_a    10
+_cell_length_b    10
+_cell_length_c    10
+_cell_angle_alpha 90
+_cell_angle_beta  90
+_cell_angle_gamma 90
+loop_
+_atom_site_label
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+C 0 0 0
+O 0.5 0.5 0.5
             ''')
             f.flush()
             a = CifData(file=f.name)

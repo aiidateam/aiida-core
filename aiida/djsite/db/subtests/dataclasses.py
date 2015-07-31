@@ -355,15 +355,14 @@ Te2 0.00000 0.00000 0.79030 0.01912
             c = CifData(file=f.name)
 
         ase = c._get_aiida_structure(converter='pymatgen',
-                                     primitive=False).get_ase()
+                                     primitive_cell=False).get_ase()
         self.assertEquals(ase.get_number_of_atoms(), 15)
 
-        # For pymatgen, primitive cell is default
         ase = c._get_aiida_structure(converter='pymatgen').get_ase()
-        self.assertEquals(ase.get_number_of_atoms(), 5)
+        self.assertEquals(ase.get_number_of_atoms(), 15)
 
         ase = c._get_aiida_structure(converter='pymatgen',
-                                     primitive=True).get_ase()
+                                     primitive_cell=True).get_ase()
         self.assertEquals(ase.get_number_of_atoms(), 5)
 
     def test_contents_encoding(self):

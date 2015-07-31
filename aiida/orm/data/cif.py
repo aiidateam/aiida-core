@@ -234,6 +234,7 @@ def _get_aiida_structure_pymatgen_inline(cif=None, parameters=None):
     kwargs = {}
     if parameters is not None:
         kwargs = parameters.get_dict()
+    kwargs['primitive'] = kwargs.pop('primitive_cell', False)
     parser = CifParser(cif.get_file_abs_path())
     struct = parser.get_structures(**kwargs)[0]
     return {'structure': StructureData(pymatgen_structure=struct)}
@@ -433,8 +434,10 @@ class CifData(SinglefileData):
         Creates :py:class:`aiida.orm.data.structure.StructureData`.
 
         :param converter: specify the converter. Default 'ase'.
-        :param store: If True, intermediate calculation gets stored in the
+        :param store: if True, intermediate calculation gets stored in the
             AiiDA database for record. Default False.
+        :param primitive_cell: if True, primitive cell is returned,
+            conventional cell if False. Default False.
         :return: :py:class:`aiida.orm.data.structure.StructureData` node.
         """
         from aiida.orm.data.parameter import ParameterData

@@ -50,4 +50,4 @@ class CifcodcheckParser(BaseCodtoolsParser):
         output_nodes.append(('messages',
                              ParameterData(dict={'output_messages':
                                                      messages})))
-        return output_nodes
+        return True, output_nodes

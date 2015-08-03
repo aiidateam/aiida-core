@@ -180,7 +180,7 @@ def extract_cif(infile,folder,nodes_export_subfolder="nodes",
     import CifFile
     from aiida.common.exceptions import ValidationError
     from aiida.common.utils import md5_file,sha1_file
-    from aiida.tools.dbexporters.tcod import cif_decode_contents
+    from aiida.orm.data.cif import decode_textfield
 
     values = CifFile.ReadCif(infile)
     values = values[values.keys()[0]] # taking the first datablock in CIF
@@ -202,7 +202,7 @@ def extract_cif(infile,folder,nodes_export_subfolder="nodes",
         encoding = values['_tcod_file_content_encoding'][i]
         if encoding == '.':
             encoding = None
-        contents = cif_decode_contents(contents,encoding)
+        contents = decode_textfield(contents,encoding)
         if os.path.dirname(dest_path) != '':
             folder.get_subfolder(os.path.dirname(dest_path)+os.sep,create=True)
         with open(folder.get_abs_path(dest_path),'w') as f:
@@ -296,7 +296,7 @@ def import_data(in_path,ignore_unknown_nodes=False,
                 extract_zip(in_path,folder,silent=silent,
                             nodes_export_subfolder=nodes_export_subfolder)
             elif os.path.isfile(in_path):
-                extract_cif(infile,folder,silent=silent,
+                extract_cif(in_path,folder,silent=silent,
                             nodes_export_subfolder=nodes_export_subfolder)
             else:
                 raise ValueError("Unable to detect the input file format, it "

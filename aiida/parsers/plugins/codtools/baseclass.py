@@ -53,12 +53,10 @@ class BaseCodtoolsParser(Parser):
             return False, ()
 
         try:
-            output_nodes = self._get_output_nodes(output_path, error_path)
+            return self._get_output_nodes(output_path, error_path)
         except PluginInternalError as e:
             self.logger.error("Internal plugin error: {}".format(e.message))
             return False, ()
-
-        return True, output_nodes
 
     def _fetch_output_files(self, retrieved):
         """
@@ -119,12 +117,17 @@ class BaseCodtoolsParser(Parser):
             self._check_failed(messages)
 
         output_nodes = []
+        success = True
         if cif is not None:
             output_nodes.append(('cif', cif))
+        else:
+            success = False
+
         output_nodes.append(('messages',
                              ParameterData(dict={'output_messages':
                                                      messages})))
-        return output_nodes
+
+        return success, output_nodes
 
     def _check_failed(self, messages):
         """

@@ -287,6 +287,7 @@ def _get_aiida_structure_pymatgen_inline(cif=None, parameters=None):
     kwargs = {}
     if parameters is not None:
         kwargs = parameters.get_dict()
+    kwargs['primitive'] = kwargs.pop('primitive_cell', False)
     parser = CifParser(cif.get_file_abs_path())
     struct = parser.get_structures(**kwargs)[0]
     return {'structure': StructureData(pymatgen_structure=struct)}
@@ -481,6 +482,8 @@ class CifData(SinglefileData):
         when setting ``ase`` or ``values``, a physical CIF file is generated
         first, the values are updated from the physical CIF file.
     """
+    _set_incompatibilities = [("ase", "file"), ("ase", "values"),
+                              ("file", "values")]
 
     @classmethod
     def from_md5(cls, md5):
@@ -542,8 +545,10 @@ class CifData(SinglefileData):
         Creates :py:class:`aiida.orm.data.structure.StructureData`.
 
         :param converter: specify the converter. Default 'ase'.
-        :param store: If True, intermediate calculation gets stored in the
+        :param store: if True, intermediate calculation gets stored in the
             AiiDA database for record. Default False.
+        :param primitive_cell: if True, primitive cell is returned,
+            conventional cell if False. Default False.
         :return: :py:class:`aiida.orm.data.structure.StructureData` node.
         """
         from aiida.orm.data.parameter import ParameterData
@@ -580,12 +585,15 @@ class CifData(SinglefileData):
             return self.ase
         else:
             from ase.io.cif import read_cif
-
             return read_cif(self.get_file_abs_path(), **kwargs)
 
     def set_ase(self, aseatoms):
+        import tempfile
         cif = cif_from_ase(aseatoms)
-        self.values = pycifrw_from_cif(cif, loops=ase_loops)
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(pycifrw_from_cif(cif, loops=ase_loops).WriteOut())
+            f.flush()
+            self.set_file(f.name)
 
     @ase.setter
     def ase(self, aseatoms):
@@ -600,14 +608,11 @@ class CifData(SinglefileData):
         """
         if self._values is None:
             import CifFile
-
             self._values = CifFile.ReadCif(self.get_file_abs_path())
         return self._values
 
     def set_values(self, values):
-        import CifFile
         import tempfile
-
         with tempfile.NamedTemporaryFile() as f:
             f.write(values.WriteOut())
             f.flush()
@@ -647,6 +652,7 @@ class CifData(SinglefileData):
         self._values = None
         self._ase = None
         self._set_attr('formulae', self.get_formulae())
+        self._set_attr('spacegroup_numbers', self.get_spacegroup_numbers())
 
     def get_formulae(self, mode='sum'):
         """
@@ -660,6 +666,51 @@ class CifData(SinglefileData):
                 formula = self.values[datablock][formula_tag]
             formulae.append(formula)
         return formulae
+
+    def get_spacegroup_numbers(self):
+        """
+        Get the spacegroup international number.
+        """
+        spg_tags = ["_space_group.it_number", "_space_group_it_number",
+                    "_symmetry_int_tables_number"]
+        spacegroup_numbers = []
+        for datablock in self.values.keys():
+            spacegroup_number = None
+            correct_tags = [tag for tag in spg_tags
+                            if tag in self.values[datablock].keys()]
+            if correct_tags:
+                try:
+                    spacegroup_number = int(self.values[datablock][correct_tags[0]])
+                except ValueError:
+                    pass
+            spacegroup_numbers.append(spacegroup_number)
+        return spacegroup_numbers
+
+    def has_partial_occupancies(self):
+        """
+        Check if there are float values in the atom occupancies.
+        :return: True if there are partial occupancies, False
+        otherwise.
+        """
+        # precision
+        epsilon = 1e-6
+        tag = "_atom_site_occupancy"
+        partial_occupancies = False
+        for datablock in self.values.keys():
+            if tag in self.values[datablock].keys():
+                for site in self.values[datablock][tag]:
+                    # find the float number in the string
+                    bracket = site.find('(')
+                    if bracket == -1:
+                        # no bracket found
+                        if abs(float(site)-1) > epsilon:
+                            partial_occupancies = True
+                    else:
+                        # bracket, cut string 
+                        if abs(float(site[0:bracket])-1)> epsilon:
+                            partial_occupancies = True
+
+        return partial_occupancies
 
     def generate_md5(self):
         """

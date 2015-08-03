@@ -252,7 +252,7 @@ class TestCodtools(AiidaTestCase):
             ef.flush()
 
         parser = CifcellcontentsParser(CifcellcontentsCalculation())
-        output_nodes = parser._get_output_nodes(stdout_file, stderr_file)
+        _,output_nodes = parser._get_output_nodes(stdout_file, stderr_file)
         self.assertEquals(output_nodes[0][1].get_dict(), {
             'formulae': {
                 '4000003': 'C24 H17 F5 Fe',
@@ -404,3 +404,39 @@ cif_cod_check: - data_4000001: _publ_section_title is undefined"""
                 calc.submit_test()
 
             calc.set_resources({key: 1})
+
+    def test_status_assertion(self):
+        from aiida.orm.calculation.job.codtools.ciffilter \
+            import CiffilterCalculation
+        from aiida.orm.calculation.job.codtools.cifcellcontents \
+            import CifcellcontentsCalculation
+        from aiida.parsers.plugins.codtools.ciffilter import CiffilterParser
+        from aiida.parsers.plugins.codtools.cifcellcontents \
+            import CifcellcontentsParser
+        from tempfile import NamedTemporaryFile
+
+        nonempty = NamedTemporaryFile()
+        nonempty.write('data_test _tag value')
+        nonempty.flush()
+
+        empty = NamedTemporaryFile()
+        empty.write('')
+        empty.flush()
+
+        calc = CiffilterCalculation()
+        parser = CiffilterParser(calc)
+
+        status, nodes = parser._get_output_nodes(nonempty.name, empty.name)
+        self.assertEquals(status, True)
+
+        status, nodes = parser._get_output_nodes(empty.name, nonempty.name)
+        self.assertEquals(status, False)
+
+        calc = CifcellcontentsCalculation()
+        parser = CifcellcontentsParser(calc)
+
+        status, nodes = parser._get_output_nodes(nonempty.name, empty.name)
+        self.assertEquals(status, True)
+
+        status, nodes = parser._get_output_nodes(empty.name, nonempty.name)
+        self.assertEquals(status, False)

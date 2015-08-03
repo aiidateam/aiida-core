@@ -774,7 +774,6 @@ class Import(VerdiCommand):
         parser.add_argument('-f', '--format', type=str, default='tar',
                             help="Type of the imported file. Currently "
                                  "accepted types are 'tar', 'cif' and "
-                                 "accepted types are 'tar' and "
                                  "'tree', 'tar' is the default value")
         parser.add_argument('-w', '--webpage', nargs='+', type=str,
                             dest='webpages', metavar='URL',

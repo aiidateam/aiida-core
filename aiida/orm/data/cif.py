@@ -541,6 +541,7 @@ class CifData(SinglefileData):
         self._values = None
         self._ase = None
         self._set_attr('formulae', self.get_formulae())
+        self._set_attr('spacegroup_numbers', self.get_spacegroup_numbers())
 
     def get_formulae(self, mode='sum'):
         """
@@ -554,6 +555,51 @@ class CifData(SinglefileData):
                 formula = self.values[datablock][formula_tag]
             formulae.append(formula)
         return formulae
+
+    def get_spacegroup_numbers(self):
+        """
+        Get the spacegroup international number.
+        """
+        spg_tags = ["_space_group.it_number", "_space_group_it_number",
+                    "_symmetry_int_tables_number"]
+        spacegroup_numbers = []
+        for datablock in self.values.keys():
+            spacegroup_number = None
+            correct_tags = [tag for tag in spg_tags
+                            if tag in self.values[datablock].keys()]
+            if correct_tags:
+                try:
+                    spacegroup_number = int(self.values[datablock][correct_tags[0]])
+                except ValueError:
+                    pass
+            spacegroup_numbers.append(spacegroup_number)
+        return spacegroup_numbers
+
+    def has_partial_occupancies(self):
+        """
+        Check if there are float values in the atom occupancies.
+        :return: True if there are partial occupancies, False
+        otherwise.
+        """
+        # precision
+        epsilon = 1e-6
+        tag = "_atom_site_occupancy"
+        partial_occupancies = False
+        for datablock in self.values.keys():
+            if tag in self.values[datablock].keys():
+                for site in self.values[datablock][tag]:
+                    # find the float number in the string
+                    bracket = site.find('(')
+                    if bracket == -1:
+                        # no bracket found
+                        if abs(float(site)-1) > epsilon:
+                            partial_occupancies = True
+                    else:
+                        # bracket, cut string 
+                        if abs(float(site[0:bracket])-1)> epsilon:
+                            partial_occupancies = True
+
+        return partial_occupancies
 
     def generate_md5(self):
         """

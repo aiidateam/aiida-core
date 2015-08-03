@@ -262,18 +262,21 @@ class TestTcodDbExporter(AiidaTestCase):
 
         calc = FakeObject({
             "inp": { "parameters": ParameterData(dict={
-                'SYSTEM': {}
+                'SYSTEM': { 'ecutwfc': 40 }
             }) },
             "out": { "output_parameters": ParameterData(dict={
                 'number_of_electrons': 10,
             }) }
         })
         res = translate_calculation_specific_values(calc,PWT)
-        self.assertEquals(res,{'_dft_cell_valence_electrons': 10,
-                               '_tcod_software_package':
-                               'Quantum ESPRESSO',
-                               '_dft_BZ_integration_smearing_method':
-                               'Gaussian'})
+        self.assertEquals(res,{
+            '_dft_cell_valence_electrons': 10,
+            '_tcod_software_package': 'Quantum ESPRESSO',
+            '_dft_BZ_integration_smearing_method': 'Gaussian',
+            '_dft_kinetic_energy_cutoff_EEX': 2176.910676048,
+            '_dft_kinetic_energy_cutoff_charge_density': 2176.910676048,
+            '_dft_kinetic_energy_cutoff_wavefunctions': 544.227669012,
+        })
 
         calc = FakeObject({
             "inp": { "parameters": ParameterData(dict={}) },

@@ -236,8 +236,11 @@ def _get_aiida_structure_pymatgen_inline(cif=None, parameters=None):
         kwargs = parameters.get_dict()
     kwargs['primitive'] = kwargs.pop('primitive_cell', False)
     parser = CifParser(cif.get_file_abs_path())
-    struct = parser.get_structures(**kwargs)[0]
-    return {'structure': StructureData(pymatgen_structure=struct)}
+    try:
+        struct = parser.get_structures(**kwargs)[0]
+        return {'structure': StructureData(pymatgen_structure=struct)}
+    except IndexError:
+        raise ValueError("pymatgen failed to provide a structure from the cif file")
 
 
 def cif_from_ase(ase, full_occupancies=False, add_fake_biso=False):

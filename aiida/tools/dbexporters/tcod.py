@@ -61,7 +61,7 @@ conforming_dictionaries = [
     },
     {
         'name': 'cif_dft.dic',
-        'version': '0.006',
+        'version': '0.008',
         'url': 'http://www.crystallography.net/tcod/cif/dictionaries/cif_dft.dic'
     }
 ]
@@ -950,11 +950,13 @@ def translate_calculation_specific_values(calc,translator,**kwargs):
         '_dft_ewald_energy': 'get_ewald_energy',
         '_dft_hartree_energy': 'get_hartree_energy',
         '_dft_fermi_energy': 'get_fermi_energy',
+
         '_dft_cell_valence_electrons': 'get_number_of_electrons',
         '_tcod_computation_wallclock_time': 'get_computation_wallclock_time',
         '_atom_type_symbol': 'get_atom_type_symbol',
         '_dft_atom_type_valence_configuration': 'get_atom_type_valence_configuration',
         '_dft_atom_basisset': 'get_atom_type_basisset',
+
         '_dft_BZ_integration_smearing_method': 'get_integration_smearing_method',
         '_dft_BZ_integration_smearing_method_other': 'get_integration_smearing_method_other',
         '_dft_BZ_integration_MP_order': 'get_integration_Methfessel_Paxton_order',
@@ -966,6 +968,10 @@ def translate_calculation_specific_values(calc,translator,**kwargs):
         '_integration_grid_shift_X': 'get_BZ_integration_grid_shift_X',
         '_integration_grid_shift_Y': 'get_BZ_integration_grid_shift_Y',
         '_integration_grid_shift_Z': 'get_BZ_integration_grid_shift_Z',
+
+        '_dft_kinetic_energy_cutoff_wavefunctions': 'get_kinetic_energy_cutoff_wavefunctions',
+        '_dft_kinetic_energy_cutoff_charge_density': 'get_kinetic_energy_cutoff_charge_density',
+        '_dft_kinetic_energy_cutoff_EEX': 'get_kinetic_energy_cutoff_EEX',
 
         ## Residual forces are no longer produced, as they should
         ## be in the same CIF loop with coordinates -- to be

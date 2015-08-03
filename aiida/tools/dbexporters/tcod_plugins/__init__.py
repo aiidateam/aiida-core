@@ -227,3 +227,25 @@ class BaseTcodtranslator(object):
         Returns the order of Methfessel-Paxton approximation if used.
         """
         raise NotImplementedError("not implemented in base class")
+
+    @classmethod
+    def get_kinetic_energy_cutoff_wavefunctions(cls,calc,**kwargs):
+        """
+        Returns kinetic energy cutoff for wavefunctions in eV.
+        """
+        raise NotImplementedError("not implemented in base class")
+
+    @classmethod
+    def get_kinetic_energy_cutoff_charge_density(cls,calc,**kwargs):
+        """
+        Returns kinetic energy cutoff for charge density in eV.
+        """
+        raise NotImplementedError("not implemented in base class")
+
+    @classmethod
+    def get_kinetic_energy_cutoff_EEX(cls,calc,**kwargs):
+        """
+        Returns kinetic energy cutoff for exact exchange (EEX)
+        operator in eV.
+        """
+        raise NotImplementedError("not implemented in base class")

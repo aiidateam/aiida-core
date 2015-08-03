@@ -308,8 +308,6 @@ class CodeInputValidationClass(object):
         from aiida.orm import Computer as AiidaOrmComputer
         from aiida.common.exceptions import ValidationError, NotExistent
 
-        load_dbenv()
-
         try:
             computer = AiidaOrmComputer.get(string)
         except NotExistent:
@@ -528,6 +526,7 @@ class Code(VerdiCommandWithSubcommands):
         """
         A dictionary with valid commands and functions to be called.
         """
+        load_dbenv()
         self.valid_subcommands = {
             'list': (self.code_list, self.complete_none),
             'show': (self.code_show, self.complete_code_names_and_pks),
@@ -565,7 +564,6 @@ class Code(VerdiCommandWithSubcommands):
                             help="The pk of the codes to hide",
         )
         parsed_args = parser.parse_args(args)
-        load_dbenv()
         for pk in parsed_args.pks:
             code = Code.get_subclass_from_pk(pk)
             code._hide()
@@ -585,7 +583,6 @@ class Code(VerdiCommandWithSubcommands):
                             help="The pk of the codes to reveal",
         )
         parsed_args = parser.parse_args(args)
-        load_dbenv()
         for pk in parsed_args.pks:
             code = Code.get_subclass_from_pk(pk)
             code._reveal()
@@ -625,7 +622,7 @@ class Code(VerdiCommandWithSubcommands):
         all_users = parsed_args.all_users
         show_owner = parsed_args.show_owner
         reveal_filter = parsed_args.all_codes
-        load_dbenv()
+        
         from django.db.models import Q
         from aiida.djsite.utils import get_automatic_user
 
@@ -675,7 +672,6 @@ class Code(VerdiCommandWithSubcommands):
         :param django_filter: a django query object (e.g. obtained
           with Q()) to filter the results on the AiidaOrmCode class.
         """
-        load_dbenv()
         from aiida.orm import Code as AiidaOrmCode
         from django.db.models import Q
 
@@ -698,7 +694,6 @@ class Code(VerdiCommandWithSubcommands):
         from aiida.orm import Code as AiidaOrmCode
         from aiida.common.exceptions import NotExistent, MultipleObjectsError
 
-        load_dbenv()
         try:
             return AiidaOrmCode.get_from_string(code_id)
         except (NotExistent, MultipleObjectsError) as e:
@@ -709,7 +704,6 @@ class Code(VerdiCommandWithSubcommands):
         """
         Show information on a given code
         """
-        load_dbenv()
         if len(args) != 1:
             print >> sys.stderr, ("after 'code show' there should be one "
                                   "argument only, being the code id.")
@@ -720,8 +714,6 @@ class Code(VerdiCommandWithSubcommands):
 
     def code_setup(self, *args):
         from aiida.common.exceptions import ValidationError
-
-        load_dbenv()
 
         if len(args) != 0:
             print >> sys.stderr, ("after 'code setup' there cannot be any "
@@ -747,8 +739,6 @@ class Code(VerdiCommandWithSubcommands):
         import argparse
         from aiida.orm.code import Code
         from aiida.common.exceptions import NotExistent
-
-        load_dbenv()
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),

@@ -306,3 +306,57 @@ class PwTcodtranslator(BaseTcodtranslator):
             return 1
         else:
             return None
+
+    @classmethod
+    def get_kinetic_energy_cutoff_wavefunctions(cls,calc,**kwargs):
+        """
+        Returns kinetic energy cutoff for wavefunctions in eV.
+        """
+        from aiida.common.constants import ry_to_ev
+        parameters = calc.inp.parameters
+        ecutwfc = None
+        try:
+            ecutwfc = parameters.get_dict()['SYSTEM']['ecutwfc']
+        except KeyError:
+            pass
+        if ecutwfc is None:
+            return None
+        else:
+            return ecutwfc * ry_to_ev
+
+    @classmethod
+    def get_kinetic_energy_cutoff_charge_density(cls,calc,**kwargs):
+        """
+        Returns kinetic energy cutoff for charge density in eV.
+
+        .. note :: by default returns 4 * ecutwfc, as indicated in
+            http://www.quantum-espresso.org/wp-content/uploads/Doc/INPUT_PW.html
+        """
+        from aiida.common.constants import ry_to_ev
+        parameters = calc.inp.parameters
+        try:
+            return parameters.get_dict()['SYSTEM']['ecutrho'] * ry_to_ev
+        except KeyError:
+            pass
+        ecutwfc = cls.get_kinetic_energy_cutoff_wavefunctions(calc)
+        if ecutwfc is None:
+            return None
+        else:
+            return 4 * ecutwfc
+
+    @classmethod
+    def get_kinetic_energy_cutoff_EEX(cls,calc,**kwargs):
+        """
+        Returns kinetic energy cutoff for exact exchange (EEX)
+        operator in eV.
+
+        .. note :: by default returns ecutrho, as indicated in
+            http://www.quantum-espresso.org/wp-content/uploads/Doc/INPUT_PW.html
+        """
+        from aiida.common.constants import ry_to_ev
+        parameters = calc.inp.parameters
+        try:
+            return parameters.get_dict()['SYSTEM']['ecutfock'] * ry_to_ev
+        except KeyError:
+            pass
+        return cls.get_kinetic_energy_cutoff_charge_density(calc)

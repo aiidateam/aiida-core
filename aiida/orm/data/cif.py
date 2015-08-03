@@ -373,6 +373,8 @@ class CifData(SinglefileData):
         when setting ``ase`` or ``values``, a physical CIF file is generated
         first, the values are updated from the physical CIF file.
     """
+    _set_incompatibilities = [("ase", "file"), ("ase", "values"),
+                              ("file", "values")]
 
     @classmethod
     def from_md5(cls, md5):

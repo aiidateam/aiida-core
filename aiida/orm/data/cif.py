@@ -476,12 +476,15 @@ class CifData(SinglefileData):
             return self.ase
         else:
             from ase.io.cif import read_cif
-
             return read_cif(self.get_file_abs_path(), **kwargs)
 
     def set_ase(self, aseatoms):
+        import tempfile
         cif = cif_from_ase(aseatoms)
-        self.values = pycifrw_from_cif(cif, loops=ase_loops)
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(pycifrw_from_cif(cif, loops=ase_loops).WriteOut())
+            f.flush()
+            self.set_file(f.name)
 
     @ase.setter
     def ase(self, aseatoms):
@@ -496,14 +499,11 @@ class CifData(SinglefileData):
         """
         if self._values is None:
             import CifFile
-
             self._values = CifFile.ReadCif(self.get_file_abs_path())
         return self._values
 
     def set_values(self, values):
-        import CifFile
         import tempfile
-
         with tempfile.NamedTemporaryFile() as f:
             f.write(values.WriteOut())
             f.flush()

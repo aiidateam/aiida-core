@@ -476,6 +476,27 @@ def refine_inline(node):
 
     return {'cif': cif}
 
+def parse_formula(formula):
+    """
+    Parses the Hill formulae, written with spaces for separators.
+    """
+    import re
+
+    contents = {}
+    for part in re.split('\s+', formula):
+        m = re.match('(\D+)([\.\d]+)?', part)
+        specie = m.group(1)
+        quantity = m.group(2)
+        if quantity is None:
+            quantity = 1
+        else:
+            if re.match('^\d+$', quantity):
+                quantity = int(quantity)
+            else:
+                quantity = float(quantity)
+        contents[specie] = quantity
+    return contents
+
 class CifData(SinglefileData):
     """
     Wrapper for Crystallographic Interchange File (CIF)

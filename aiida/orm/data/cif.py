@@ -627,6 +627,20 @@ class CifData(SinglefileData):
 
         return partial_occupancies
 
+    def has_attached_hydrogens(self):
+        """
+        Check if there are hydrogens without coordinates, specified
+        as attached to the atoms of the structure.
+        :return: True if there are attached hydrogens, False otherwise.
+        """
+        tag = '_atom_site_attached_hydrogens'
+        for datablock in self.values.keys():
+            if tag in self.values[datablock].keys():
+                for value in self.values[datablock][tag]:
+                    if value != '.' and value != '?' and value != '0':
+                        return True
+        return False
+
     def generate_md5(self):
         """
         Generate MD5 hash of the file's contents on-the-fly.

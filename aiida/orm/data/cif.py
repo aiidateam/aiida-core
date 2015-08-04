@@ -644,7 +644,9 @@ class CifData(SinglefileData):
         """
         Write the given CIF file to a string of format CIF.
         """
-        if self._values:  # if values have been changed
+        # If values have been changed and node is not stored,
+        # the file is updated.
+        if self._values and not self._is_stored:
             self.values = self._values
         with open(self.get_file_abs_path()) as f:
             return f.read()

@@ -540,6 +540,25 @@ _publ_section_title                     'Test CIF'
             symop_string_from_symop_matrix_tr(
                 [[-1, 0, 0], [0, 1, 0], [0, 0, 1]],[1,-1,0]),"-x+1,y-1,z")
 
+    def test_parse_formula(self):
+        from aiida.orm.data.cif import parse_formula
+
+        self.assertEqual(parse_formula("C H"),
+                         {'C': 1, 'H': 1})
+
+        self.assertEqual(parse_formula("C5 H1"),
+                         {'C': 5, 'H': 1})
+
+        self.assertEqual(parse_formula("Ca5 Ho"),
+                         {'Ca': 5, 'Ho': 1})
+
+        self.assertEqual(parse_formula("H0.5 O"),
+                         {'H': 0.5, 'O': 1})
+
+        # Invalid literal for float()
+        with self.assertRaises(ValueError):
+            parse_formula("H0.5.2 O")
+
 
 class TestKindValidSymbols(AiidaTestCase):
     """

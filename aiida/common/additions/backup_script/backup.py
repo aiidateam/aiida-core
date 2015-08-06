@@ -270,11 +270,11 @@ class Backup(object):
         # adapt the end accordingly
         now_timestamp = datetime.datetime.now(dtimezone.get_current_timezone())
         if backup_end_for_this_round > now_timestamp:
-            backup_end_for_this_round = now_timestamp
             self._logger.info(
                 "We can not backup until {}. ".format(backup_end_for_this_round) +
                 "We will backup until now ({}).".format(now_timestamp))
-             
+            backup_end_for_this_round = now_timestamp
+
         # Check if the backup length is below the backup length threshold
         if backup_end_for_this_round - start_of_backup < \
                     self._backup_length_threshold:

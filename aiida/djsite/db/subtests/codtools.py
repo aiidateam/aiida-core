@@ -405,6 +405,7 @@ cif_cod_check: - data_4000001: _publ_section_title is undefined"""
 
             calc.set_resources({key: 1})
 
+    @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_status_assertion(self):
         from aiida.orm.calculation.job.codtools.ciffilter \
             import CiffilterCalculation

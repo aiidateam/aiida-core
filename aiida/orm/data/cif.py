@@ -419,6 +419,7 @@ def pycifrw_from_cif(datablocks, loops=dict(), names=None):
             datablock[tag] = values[tag]
     return cif
 
+
 @optional_inline
 def refine_inline(node):
     """
@@ -476,6 +477,7 @@ def refine_inline(node):
 
     return {'cif': cif}
 
+
 def parse_formula(formula):
     """
     Parses the Hill formulae, written with spaces for separators.
@@ -496,6 +498,7 @@ def parse_formula(formula):
                 quantity = float(quantity)
         contents[specie] = quantity
     return contents
+
 
 class CifData(SinglefileData):
     """
@@ -736,6 +739,20 @@ class CifData(SinglefileData):
 
         return partial_occupancies
 
+    def has_attached_hydrogens(self):
+        """
+        Check if there are hydrogens without coordinates, specified
+        as attached to the atoms of the structure.
+        :return: True if there are attached hydrogens, False otherwise.
+        """
+        tag = '_atom_site_attached_hydrogens'
+        for datablock in self.values.keys():
+            if tag in self.values[datablock].keys():
+                for value in self.values[datablock][tag]:
+                    if value != '.' and value != '?' and value != '0':
+                        return True
+        return False
+
     def generate_md5(self):
         """
         Generate MD5 hash of the file's contents on-the-fly.
@@ -753,7 +770,9 @@ class CifData(SinglefileData):
         """
         Write the given CIF file to a string of format CIF.
         """
-        if self._values:  # if values have been changed
+        # If values have been changed and node is not stored,
+        # the file is updated.
+        if self._values and not self._is_stored:
             self.values = self._values
         with open(self.get_file_abs_path()) as f:
             return f.read()

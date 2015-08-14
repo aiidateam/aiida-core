@@ -19,7 +19,7 @@ The naming convention for folders is the following:
 * the name should be followed by the parser plugin name, as returned
   by calculation.get_parser_name(), and with dots replaced with underscores;
 * it should be followed by an underscore;
-* finally it should be followed by a string that explains what it is tested.
+* finally it should be followed by a string that explains what is tested.
 
 For instance, a valid name is ``test_quantumespresso_pw_vanderwaals``.
 Note that the naming scheme is only a convention, and that the parser to
@@ -35,7 +35,7 @@ the following function::
   from aiida.djsite.db.subtests.parsers import output_test
 
 and then run it with the correct parameters. The documentation of the function
-can be found :py:func:`here <aiida.djsite.db.subtests.parsers.output_test>`.
+can be found :py:func:`here<aiida.djsite.db.subtests.parsers.output_test>`.
 
 An example call could be::
 
@@ -56,12 +56,13 @@ where:
 * the (optional) ``skip_uuids_from_inputs`` is a list of UUIDs of input nodes that
   will *not* be exported.
 
-The script will create a new folder, containing the exported content of the calculation, its direct inputs (except those listed in the
+The script will create a new folder, containing the exported content of the calculation, 
+its direct inputs (except those listed in the
 ``skip_uuids_from_inputs`` list), and the output ``retrieved`` node.
 The format of the exported data is the same of the export files of
 AiiDA, but the folder is not zipped.
 
-.. note:: The ``skip_uuids_from_inputs`` parametere is typically
+.. note:: The ``skip_uuids_from_inputs`` parameter is typically
 	  useful for input nodes containing large files that are not
 	  needed for parsing and would just create a large test; a
 	  typical example is given by pseudopotential input nodes for

@@ -7,7 +7,7 @@ to scale well defined chains of calculations on any number of input structures, 
 
 Instead of offering a limited number of automatization schemes, crafted for some specific functions (equation of states,
 phonons, etc...) in AiiDA a complete workflow engine is present, where the user can script in principle any possible
-interaction with all the AiiDA components, from the submission engine to the materials databases connections. In AiiDA a
+interaction with all the AiiDA components, from the submission engine to the materials databases connections. In AiiDA
 a workflow is a python script executed by a daemon, containing several user defined functions called steps. In each step
 all the AiiDA functions are available and calculations and launched and retrieved, as well as other sub-workflows.
 
@@ -150,7 +150,7 @@ line by line, discussing the most important methods and discovering along the wa
 
 **lines 8-12** Superclass definition, a workflow **MUST** extend the ``Workflow`` class from the ``aiida.orm.workflow``. This is a fundamental 
 requirement, since the subclassing is the way AiiDA understand if a class inside the file is an AiiDA workflow or a simple utility class. Note that 
-for back-compatibility with python 2.7 also the explicit initialization of line 12 is necessary to make things works correctly.
+for back-compatibility with python 2.7 also the explicit initialization of line 12 is necessary to make things work correctly.
 
 **lines 14-28** Once the class is defined a user can add as many methods as he wishes, to generate calculations or to download structures 
 or to compute new ones starting form a query in previous AiiDA calculations present in the DB. In the script above the method ``generate_calc`` 

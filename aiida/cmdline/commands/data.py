@@ -950,6 +950,7 @@ class _Structure(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable
                     sys.exit(1)
                 else:
                     raise
+                
     def _show_ase(self,exec_name,structure_list):
         """
         Plugin to show the structure with the ASE visualizer
@@ -959,7 +960,8 @@ class _Structure(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable
             for structure in structure_list:
                 view(structure.get_ase()) 
         except ImportError:
-            raise
+            raise 
+    
     def _show_vmd(self, exec_name, structure_list):
         """
         Plugin for vmd

@@ -102,6 +102,7 @@ class Listable(object):
         q_object = Q(user=get_automatic_user())
 
         self.query_past_days(q_object, args)
+        self.query_group(q_object, args)
 
         object_list = self.dataclass.query(q_object).distinct().order_by('ctime')
 
@@ -111,6 +112,9 @@ class Listable(object):
         return entry_list
 
     def query_past_days(self, q_object, args):
+        """
+        Select data nodes by age.
+        """
         from django.utils import timezone
         from django.db.models import Q
         import datetime
@@ -118,6 +122,16 @@ class Listable(object):
             now = timezone.now()
             n_days_ago = now - datetime.timedelta(days=args.past_days)
             q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
+
+    def query_group(self, q_object, args):
+        """
+        Select data nodes by group.
+        """
+        from django.db.models import Q
+        if args.group_name is not None:
+            q_object.add(Q(dbgroups__name__in=args.group_name), Q.AND)
+        if args.group_pk is not None:
+            q_object.add(Q(dbgroups__pk__in=args.group_pk), Q.AND)
 
     def append_list_cmdline_arguments(self, parser):
         """
@@ -128,6 +142,12 @@ class Listable(object):
         """
         parser.add_argument('-p', '--past-days', metavar='N',
                             help="add a filter to show only objects created in the past N days",
+                            type=int, action='store')
+        parser.add_argument('-g', '--group-name', metavar='N', nargs="+",
+                            help="add a filter to show only objects belonging to groups",
+                            type=str, action='store')
+        parser.add_argument('-G', '--group-pk', metavar='N', nargs="+",
+                            help="add a filter to show only objects belonging to groups",
                             type=int, action='store')
 
     def get_column_names(self):
@@ -616,6 +636,7 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable):
         q_object = Q(user=get_automatic_user())
 
         self.query_past_days(q_object, args)
+        self.query_group(q_object, args)
 
         bands_list = BandsData.query(q_object).distinct().order_by('ctime')
 
@@ -826,6 +847,7 @@ class _Structure(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable
         q_object = Q(user=get_automatic_user())
 
         self.query_past_days(q_object, args)
+        self.query_group(q_object, args)
 
         if args.element is not None:
             q1 = models.DbAttribute.objects.filter(key__startswith='kinds.',
@@ -1091,6 +1113,7 @@ class _Cif(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable, Impo
         q_object = Q(user=get_automatic_user())
 
         self.query_past_days(q_object, args)
+        self.query_group(q_object, args)
 
         object_list = self.dataclass.query(q_object).distinct().order_by('ctime')
 

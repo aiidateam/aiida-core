@@ -823,7 +823,8 @@ class JobCalculation(Calculation):
 
     @classmethod
     def _list_calculations(cls, states=None, past_days=None, group=None,
-                           all_users=False, pks=[], relative_ctime=True):
+                           group_pk=None, all_users=False, pks=[],
+                           relative_ctime=True):
         """
         Return a string with a description of the AiiDA calculations.
 
@@ -841,6 +842,8 @@ class JobCalculation(Calculation):
             Can use colons to separate the group name from the type,
             as specified in :py:meth:`aiida.orm.group.Group.get_from_string`
             method.
+        :param group_pk: If specified, show only calculations belonging to a
+            user-defined group with the given PK.
         :param pks: if specified, must be a list of integers, and only 
             calculations within that list are shown. Otherwise, all
             calculations are shown.
@@ -884,6 +887,9 @@ class JobCalculation(Calculation):
             if group is not None:
                 g_pk = Group.get_from_string(group).pk
                 q_object.add(Q(dbgroups__pk=g_pk), Q.AND)
+
+            if group_pk is not None:
+                q_object.add(Q(dbgroups__pk=group_pk), Q.AND)
 
             if not all_users:
                 q_object.add(Q(user=get_automatic_user()), Q.AND)

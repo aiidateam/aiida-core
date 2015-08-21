@@ -95,19 +95,13 @@ class Listable(object):
             Each row describes a single hit.
         """
         load_dbenv()
-        import datetime
         from aiida.orm import DataFactory
         from django.db.models import Q
-        from django.utils import timezone
         from aiida.djsite.utils import get_automatic_user
 
-        now = timezone.now()
         q_object = Q(user=get_automatic_user())
 
-        if args.past_days is not None:
-            now = timezone.now()
-            n_days_ago = now - datetime.timedelta(days=args.past_days)
-            q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
+        self.query_past_days(q_object, args)
 
         object_list = self.dataclass.query(q_object).distinct().order_by('ctime')
 
@@ -115,6 +109,15 @@ class Listable(object):
         for obj in object_list:
             entry_list.append([str(obj.pk)])
         return entry_list
+
+    def query_past_days(self, q_object, args):
+        from django.utils import timezone
+        from django.db.models import Q
+        import datetime
+        if args.past_days is not None:
+            now = timezone.now()
+            n_days_ago = now - datetime.timedelta(days=args.past_days)
+            q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
 
     def append_list_cmdline_arguments(self, parser):
         """
@@ -593,11 +596,9 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable):
             Each row describes a single hit.
         """
         load_dbenv()
-        import datetime
         from collections import defaultdict
         from aiida.orm import DataFactory
         from django.db.models import Q
-        from django.utils import timezone
         from aiida.djsite.utils import get_automatic_user
         from aiida.common.utils import grouper
         from aiida.orm.data.structure import (get_formula, get_symbols_string,
@@ -610,14 +611,11 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable):
 
         StructureData = DataFactory('structure')
         BandsData = DataFactory('array.bands')
-        now = timezone.now()
 
         # First, I run a query to get all BandsData of the past N days
         q_object = Q(user=get_automatic_user())
-        if args.past_days is not None:
-            now = timezone.now()
-            n_days_ago = now - datetime.timedelta(days=args.past_days)
-            q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
+
+        self.query_past_days(q_object, args)
 
         bands_list = BandsData.query(q_object).distinct().order_by('ctime')
 
@@ -813,11 +811,9 @@ class _Structure(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable
         Perform the query
         """
         load_dbenv()
-        import datetime
         from collections import defaultdict
         from aiida.orm import DataFactory
         from django.db.models import Q
-        from django.utils import timezone
         from aiida.djsite.utils import get_automatic_user
         from aiida.common.utils import grouper
         from aiida.orm.data.structure import (get_formula, get_symbols_string,
@@ -827,13 +823,10 @@ class _Structure(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable
         query_group_size = 100  # we group the attribute query in chunks of this size
 
         StructureData = DataFactory('structure')
-        now = timezone.now()
         q_object = Q(user=get_automatic_user())
 
-        if args.past_days is not None:
-            now = timezone.now()
-            n_days_ago = now - datetime.timedelta(days=args.past_days)
-            q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
+        self.query_past_days(q_object, args)
+
         if args.element is not None:
             q1 = models.DbAttribute.objects.filter(key__startswith='kinds.',
                                                    key__contains='.symbols.',
@@ -1091,19 +1084,13 @@ class _Cif(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable, Impo
             Each row describes a single hit.
         """
         load_dbenv()
-        import datetime
         from aiida.orm import DataFactory
         from django.db.models import Q
-        from django.utils import timezone
         from aiida.djsite.utils import get_automatic_user
 
-        now = timezone.now()
         q_object = Q(user=get_automatic_user())
 
-        if args.past_days is not None:
-            now = timezone.now()
-            n_days_ago = now - datetime.timedelta(days=args.past_days)
-            q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
+        self.query_past_days(q_object, args)
 
         object_list = self.dataclass.query(q_object).distinct().order_by('ctime')
 

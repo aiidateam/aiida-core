@@ -658,7 +658,17 @@ class StructureData(Data):
     boundary conditions (whether they are periodic or not) and other
     related useful information.
     """
-    _set_incompatibilities = [("ase", "cell"), ("ase", "pbc")]
+    _set_incompatibilities = [("ase", "cell"), ("ase", "pbc"),
+                              ("ase", "pymatgen"), ("ase", "pymatgen_molecule"),
+                              ("ase", "pymatgen_structure"),
+                              ("cell", "pymatgen"),
+                              ("cell", "pymatgen_molecule"),
+                              ("cell", "pymatgen_structure"),
+                              ("pbc", "pymatgen"), ("pbc", "pymatgen_molecule"),
+                              ("pbc", "pymatgen_structure"),
+                              ("pymatgen", "pymatgen_molecule"),
+                              ("pymatgen", "pymatgen_structure"),
+                              ("pymatgen_molecule", "pymatgen_structure")]
 
     @property
     def _set_defaults(self):

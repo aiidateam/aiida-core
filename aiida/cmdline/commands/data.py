@@ -95,19 +95,14 @@ class Listable(object):
             Each row describes a single hit.
         """
         load_dbenv()
-        import datetime
         from aiida.orm import DataFactory
         from django.db.models import Q
-        from django.utils import timezone
         from aiida.djsite.utils import get_automatic_user
 
-        now = timezone.now()
         q_object = Q(user=get_automatic_user())
 
-        if args.past_days is not None:
-            now = timezone.now()
-            n_days_ago = now - datetime.timedelta(days=args.past_days)
-            q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
+        self.query_past_days(q_object, args)
+        self.query_group(q_object, args)
 
         object_list = self.dataclass.query(q_object).distinct().order_by('ctime')
 
@@ -115,6 +110,28 @@ class Listable(object):
         for obj in object_list:
             entry_list.append([str(obj.pk)])
         return entry_list
+
+    def query_past_days(self, q_object, args):
+        """
+        Select data nodes by age.
+        """
+        from django.utils import timezone
+        from django.db.models import Q
+        import datetime
+        if args.past_days is not None:
+            now = timezone.now()
+            n_days_ago = now - datetime.timedelta(days=args.past_days)
+            q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
+
+    def query_group(self, q_object, args):
+        """
+        Select data nodes by group.
+        """
+        from django.db.models import Q
+        if args.group_name is not None:
+            q_object.add(Q(dbgroups__name__in=args.group_name), Q.AND)
+        if args.group_pk is not None:
+            q_object.add(Q(dbgroups__pk__in=args.group_pk), Q.AND)
 
     def append_list_cmdline_arguments(self, parser):
         """
@@ -125,6 +142,12 @@ class Listable(object):
         """
         parser.add_argument('-p', '--past-days', metavar='N',
                             help="add a filter to show only objects created in the past N days",
+                            type=int, action='store')
+        parser.add_argument('-g', '--group-name', metavar='N', nargs="+", default=None,
+                            help="add a filter to show only objects belonging to groups",
+                            type=str, action='store')
+        parser.add_argument('-G', '--group-pk', metavar='N', nargs="+", default=None,
+                            help="add a filter to show only objects belonging to groups",
                             type=int, action='store')
 
     def get_column_names(self):
@@ -593,11 +616,9 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable):
             Each row describes a single hit.
         """
         load_dbenv()
-        import datetime
         from collections import defaultdict
         from aiida.orm import DataFactory
         from django.db.models import Q
-        from django.utils import timezone
         from aiida.djsite.utils import get_automatic_user
         from aiida.common.utils import grouper
         from aiida.orm.data.structure import (get_formula, get_symbols_string,
@@ -610,14 +631,12 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable):
 
         StructureData = DataFactory('structure')
         BandsData = DataFactory('array.bands')
-        now = timezone.now()
 
         # First, I run a query to get all BandsData of the past N days
         q_object = Q(user=get_automatic_user())
-        if args.past_days is not None:
-            now = timezone.now()
-            n_days_ago = now - datetime.timedelta(days=args.past_days)
-            q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
+
+        self.query_past_days(q_object, args)
+        self.query_group(q_object, args)
 
         bands_list = BandsData.query(q_object).distinct().order_by('ctime')
 
@@ -731,13 +750,20 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable):
         parser.add_argument('-eo', '--element-only', nargs='+', type=str, default=None,
                             help="Print all bandsdatas from structures "
                                  "containing only the selected elements")
-        parser.add_argument('-f', '--formulamode', type=str, default='hill',
+        parser.add_argument('-f', '--formulamode', metavar='FORMULA_MODE',
+                            type=str, default='hill',
                             help="Formula printing mode (hill, hill_compact,"
                                  " reduce, group, count, or count_compact)"
                                  " (if None, does not print the formula)",
                             action='store')
         parser.add_argument('-p', '--past-days', metavar='N',
                             help="Add a filter to show only bandsdatas created in the past N days",
+                            type=int, action='store')
+        parser.add_argument('-g', '--group-name', metavar='N', nargs="+", default=None,
+                            help="add a filter to show only objects belonging to groups",
+                            type=str, action='store')
+        parser.add_argument('-G', '--group-pk', metavar='N', nargs="+", default=None,
+                            help="add a filter to show only objects belonging to groups",
                             type=int, action='store')
 
     def get_column_names(self):
@@ -813,11 +839,9 @@ class _Structure(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable
         Perform the query
         """
         load_dbenv()
-        import datetime
         from collections import defaultdict
         from aiida.orm import DataFactory
         from django.db.models import Q
-        from django.utils import timezone
         from aiida.djsite.utils import get_automatic_user
         from aiida.common.utils import grouper
         from aiida.orm.data.structure import (get_formula, get_symbols_string,
@@ -827,13 +851,11 @@ class _Structure(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable
         query_group_size = 100  # we group the attribute query in chunks of this size
 
         StructureData = DataFactory('structure')
-        now = timezone.now()
         q_object = Q(user=get_automatic_user())
 
-        if args.past_days is not None:
-            now = timezone.now()
-            n_days_ago = now - datetime.timedelta(days=args.past_days)
-            q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
+        self.query_past_days(q_object, args)
+        self.query_group(q_object, args)
+
         if args.element is not None:
             q1 = models.DbAttribute.objects.filter(key__startswith='kinds.',
                                                    key__contains='.symbols.',
@@ -909,13 +931,20 @@ class _Structure(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable
         parser.add_argument('-eo', '--elementonly', action='store_true',
                             help="If set, structures do not contain different "
                                  "elements (to be used with -e option)")
-        parser.add_argument('-f', '--formulamode', type=str, default='hill',
+        parser.add_argument('-f', '--formulamode', metavar='FORMULA_MODE',
+                            type=str, default='hill',
                             help="Formula printing mode (hill, hill_compact,"
                                  " reduce, group, count, or count_compact)"
                                  " (if None, does not print the formula)",
                             action='store')
         parser.add_argument('-p', '--past-days', metavar='N',
                             help="Add a filter to show only structures created in the past N days",
+                            type=int, action='store')
+        parser.add_argument('-g', '--group-name', metavar='N', nargs="+", default=None,
+                            help="add a filter to show only objects belonging to groups",
+                            type=str, action='store')
+        parser.add_argument('-G', '--group-pk', metavar='N', nargs="+", default=None,
+                            help="add a filter to show only objects belonging to groups",
                             type=int, action='store')
 
     def get_column_names(self):
@@ -950,7 +979,18 @@ class _Structure(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable
                     sys.exit(1)
                 else:
                     raise
-
+                
+    def _show_ase(self,exec_name,structure_list):
+        """
+        Plugin to show the structure with the ASE visualizer
+        """
+        try:
+            from ase.visualize import view
+            for structure in structure_list:
+                view(structure.get_ase()) 
+        except ImportError:
+            raise 
+    
     def _show_vmd(self, exec_name, structure_list):
         """
         Plugin for vmd
@@ -1080,19 +1120,14 @@ class _Cif(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable, Impo
             Each row describes a single hit.
         """
         load_dbenv()
-        import datetime
         from aiida.orm import DataFactory
         from django.db.models import Q
-        from django.utils import timezone
         from aiida.djsite.utils import get_automatic_user
 
-        now = timezone.now()
         q_object = Q(user=get_automatic_user())
 
-        if args.past_days is not None:
-            now = timezone.now()
-            n_days_ago = now - datetime.timedelta(days=args.past_days)
-            q_object.add(Q(ctime__gte=n_days_ago), Q.AND)
+        self.query_past_days(q_object, args)
+        self.query_group(q_object, args)
 
         object_list = self.dataclass.query(q_object).distinct().order_by('ctime')
 

@@ -540,6 +540,82 @@ _publ_section_title                     'Test CIF'
             symop_string_from_symop_matrix_tr(
                 [[-1, 0, 0], [0, 1, 0], [0, 0, 1]],[1,-1,0]),"-x+1,y-1,z")
 
+    def test_parse_formula(self):
+        from aiida.orm.data.cif import parse_formula
+
+        self.assertEqual(parse_formula("C H"),
+                         {'C': 1, 'H': 1})
+
+        self.assertEqual(parse_formula("C5 H1"),
+                         {'C': 5, 'H': 1})
+
+        self.assertEqual(parse_formula("Ca5 Ho"),
+                         {'Ca': 5, 'Ho': 1})
+
+        self.assertEqual(parse_formula("H0.5 O"),
+                         {'H': 0.5, 'O': 1})
+
+        self.assertEqual(parse_formula("C0 O0"),
+                         {'C': 0, 'O': 0})
+
+        # Invalid literal for float()
+        with self.assertRaises(ValueError):
+            parse_formula("H0.5.2 O")
+
+    @unittest.skipIf(not has_ase() or not has_pycifrw(),
+                     "Unable to import ase or pycifrw")
+    def test_attached_hydrogens(self):
+        import tempfile
+        from aiida.orm.data.cif import CifData
+
+        with tempfile.NamedTemporaryFile() as f:
+            f.write('''
+                data_test
+                _cell_length_a    10
+                _cell_length_b    10
+                _cell_length_c    10
+                _cell_angle_alpha 90
+                _cell_angle_beta  90
+                _cell_angle_gamma 90
+                loop_
+                _atom_site_label
+                _atom_site_fract_x
+                _atom_site_fract_y
+                _atom_site_fract_z
+                _atom_site_attached_hydrogens
+                C 0 0 0 ?
+                O 0.5 0.5 0.5 .
+                H 0.75 0.75 0.75 0
+            ''')
+            f.flush()
+            a = CifData(file=f.name)
+
+        self.assertEqual(a.has_attached_hydrogens(), False)
+
+        with tempfile.NamedTemporaryFile() as f:
+            f.write('''
+                data_test
+                _cell_length_a    10
+                _cell_length_b    10
+                _cell_length_c    10
+                _cell_angle_alpha 90
+                _cell_angle_beta  90
+                _cell_angle_gamma 90
+                loop_
+                _atom_site_label
+                _atom_site_fract_x
+                _atom_site_fract_y
+                _atom_site_fract_z
+                _atom_site_attached_hydrogens
+                C 0 0 0 ?
+                O 0.5 0.5 0.5 1
+                H 0.75 0.75 0.75 0
+            ''')
+            f.flush()
+            a = CifData(file=f.name)
+
+        self.assertEqual(a.has_attached_hydrogens(), True)
+
 
 class TestKindValidSymbols(AiidaTestCase):
     """

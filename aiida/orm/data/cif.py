@@ -236,8 +236,11 @@ def _get_aiida_structure_pymatgen_inline(cif=None, parameters=None):
         kwargs = parameters.get_dict()
     kwargs['primitive'] = kwargs.pop('primitive_cell', False)
     parser = CifParser(cif.get_file_abs_path())
-    struct = parser.get_structures(**kwargs)[0]
-    return {'structure': StructureData(pymatgen_structure=struct)}
+    try:
+        struct = parser.get_structures(**kwargs)[0]
+        return {'structure': StructureData(pymatgen_structure=struct)}
+    except IndexError:
+        raise ValueError("pymatgen failed to provide a structure from the cif file")
 
 
 def cif_from_ase(ase, full_occupancies=False, add_fake_biso=False):
@@ -362,6 +365,27 @@ def pycifrw_from_cif(datablocks, loops=dict(), names=None):
         for tag in sorted(values.keys()):
             datablock[tag] = values[tag]
     return cif
+
+def parse_formula(formula):
+    """
+    Parses the Hill formulae, written with spaces for separators.
+    """
+    import re
+
+    contents = {}
+    for part in re.split('\s+', formula):
+        m = re.match('(\D+)([\.\d]+)?', part)
+        specie = m.group(1)
+        quantity = m.group(2)
+        if quantity is None:
+            quantity = 1
+        else:
+            if re.match('^\d+$', quantity):
+                quantity = int(quantity)
+            else:
+                quantity = float(quantity)
+        contents[specie] = quantity
+    return contents
 
 
 class CifData(SinglefileData):
@@ -603,6 +627,20 @@ class CifData(SinglefileData):
 
         return partial_occupancies
 
+    def has_attached_hydrogens(self):
+        """
+        Check if there are hydrogens without coordinates, specified
+        as attached to the atoms of the structure.
+        :return: True if there are attached hydrogens, False otherwise.
+        """
+        tag = '_atom_site_attached_hydrogens'
+        for datablock in self.values.keys():
+            if tag in self.values[datablock].keys():
+                for value in self.values[datablock][tag]:
+                    if value != '.' and value != '?' and value != '0':
+                        return True
+        return False
+
     def generate_md5(self):
         """
         Generate MD5 hash of the file's contents on-the-fly.
@@ -620,7 +658,9 @@ class CifData(SinglefileData):
         """
         Write the given CIF file to a string of format CIF.
         """
-        if self._values:  # if values have been changed
+        # If values have been changed and node is not stored,
+        # the file is updated.
+        if self._values and not self._is_stored:
             self.values = self._values
         with open(self.get_file_abs_path()) as f:
             return f.read()

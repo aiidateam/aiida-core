@@ -322,8 +322,8 @@ class Group(object):
 
 
     @classmethod
-    def query(cls, name=None, type_string="", uuid=None, nodes=None, user=None,
-              node_attributes=None, past_days=None):
+    def query(cls, name=None, type_string="", pk = None, uuid=None, nodes=None,
+              user=None, node_attributes=None, past_days=None):
         """
         Query for groups. 
         :note:  By default, query for user-defined groups only (type_string=="").
@@ -334,7 +334,8 @@ class Group(object):
         :param name: the name of the group
         :param dbnodes: a node, list of nodes, or of pks (alternatively, you 
           can also pass a DbNode or list of DbNodes)
-        :param uuid: the uuid of the node
+        :param pk: the pk of the group
+        :param uuid: the uuid of the group
         :param type_string: the string for the type of node; by default, look
           only for user-defined groups (see note above).
         :param user: by default, query for groups of all users; if specified,
@@ -370,6 +371,9 @@ class Group(object):
 
         if type_string is not None:
             queryobject &= Q(type=type_string)
+
+        if pk is not None:
+            queryobject &= Q(pk=pk)
 
         if uuid is not None:
             queryobject &= Q(uuid=uuid)

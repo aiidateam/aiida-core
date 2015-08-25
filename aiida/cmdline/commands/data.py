@@ -143,10 +143,10 @@ class Listable(object):
         parser.add_argument('-p', '--past-days', metavar='N',
                             help="add a filter to show only objects created in the past N days",
                             type=int, action='store')
-        parser.add_argument('-g', '--group-name', metavar='N', nargs="+",
+        parser.add_argument('-g', '--group-name', metavar='N', nargs="+", default=None,
                             help="add a filter to show only objects belonging to groups",
                             type=str, action='store')
-        parser.add_argument('-G', '--group-pk', metavar='N', nargs="+",
+        parser.add_argument('-G', '--group-pk', metavar='N', nargs="+", default=None,
                             help="add a filter to show only objects belonging to groups",
                             type=int, action='store')
 
@@ -750,13 +750,20 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable):
         parser.add_argument('-eo', '--element-only', nargs='+', type=str, default=None,
                             help="Print all bandsdatas from structures "
                                  "containing only the selected elements")
-        parser.add_argument('-f', '--formulamode', type=str, default='hill',
+        parser.add_argument('-f', '--formulamode', metavar='FORMULA_MODE',
+                            type=str, default='hill',
                             help="Formula printing mode (hill, hill_compact,"
                                  " reduce, group, count, or count_compact)"
                                  " (if None, does not print the formula)",
                             action='store')
         parser.add_argument('-p', '--past-days', metavar='N',
                             help="Add a filter to show only bandsdatas created in the past N days",
+                            type=int, action='store')
+        parser.add_argument('-g', '--group-name', metavar='N', nargs="+", default=None,
+                            help="add a filter to show only objects belonging to groups",
+                            type=str, action='store')
+        parser.add_argument('-G', '--group-pk', metavar='N', nargs="+", default=None,
+                            help="add a filter to show only objects belonging to groups",
                             type=int, action='store')
 
     def get_column_names(self):
@@ -924,13 +931,20 @@ class _Structure(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable
         parser.add_argument('-eo', '--elementonly', action='store_true',
                             help="If set, structures do not contain different "
                                  "elements (to be used with -e option)")
-        parser.add_argument('-f', '--formulamode', type=str, default='hill',
+        parser.add_argument('-f', '--formulamode', metavar='FORMULA_MODE',
+                            type=str, default='hill',
                             help="Formula printing mode (hill, hill_compact,"
                                  " reduce, group, count, or count_compact)"
                                  " (if None, does not print the formula)",
                             action='store')
         parser.add_argument('-p', '--past-days', metavar='N',
                             help="Add a filter to show only structures created in the past N days",
+                            type=int, action='store')
+        parser.add_argument('-g', '--group-name', metavar='N', nargs="+", default=None,
+                            help="add a filter to show only objects belonging to groups",
+                            type=str, action='store')
+        parser.add_argument('-G', '--group-pk', metavar='N', nargs="+", default=None,
+                            help="add a filter to show only objects belonging to groups",
                             type=int, action='store')
 
     def get_column_names(self):

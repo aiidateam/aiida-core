@@ -323,7 +323,7 @@ class Group(object):
 
     @classmethod
     def query(cls, name=None, type_string="", pk = None, uuid=None, nodes=None,
-              user=None, node_attributes=None, past_days=None):
+              user=None, node_attributes=None, past_days=None, **kwargs):
         """
         Query for groups. 
         :note:  By default, query for user-defined groups only (type_string=="").
@@ -351,6 +351,7 @@ class Group(object):
           If it is a list or iterable, that the condition is checked so that
           there should be at least a node in the group with key=k and
           value=each of the values of the iterable.
+        :param kwargs: any other filter to be passed to DbGroup.objects.filter
 
           Example: if ``node_attributes = {'elements': ['Ba', 'Ti'],
              'md5sum': 'xxx'}``, it will find groups that contain the node
@@ -402,7 +403,7 @@ class Group(object):
             else:
                 queryobject &= Q(user=user)
 
-        groups_pk = set(DbGroup.objects.filter(queryobject).values_list(
+        groups_pk = set(DbGroup.objects.filter(queryobject,**kwargs).values_list(
             'pk', flat=True))
 
         if node_attributes is not None:

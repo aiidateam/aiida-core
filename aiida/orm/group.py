@@ -332,8 +332,8 @@ class Group(object):
           string as the type_string argument.
         
         :param name: the name of the group
-        :param dbnodes: a node, list of nodes, or of pks (alternatively, you 
-          can also pass a DbNode or list of DbNodes)
+        :param nodes: a node or list of nodes that belongs to the group (alternatively,  
+          you can also pass a DbNode or list of DbNodes)
         :param pk: the pk of the group
         :param uuid: the uuid of the group
         :param type_string: the string for the type of node; by default, look

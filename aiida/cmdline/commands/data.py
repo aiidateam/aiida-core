@@ -1231,6 +1231,12 @@ class _Trajectory(VerdiCommandWithSubcommands, Listable, Visualizable, Exportabl
                                  "supplied, all steps are exported.",
                             type=int, action='store')
 
+    def _export_xsf(self, node, **kwargs):
+        """
+        Exporter to XSF.
+        """
+        print node._exportstring('xsf', **kwargs)
+        
     def _export_cif(self, node, **kwargs):
         """
         Exporter to CIF.

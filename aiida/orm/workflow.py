@@ -983,20 +983,25 @@ class Workflow(object):
             raise WorkflowUnkillable("Cannot kill a workflow in {} or {} state"
                                      "".format(wf_states.FINISHED, wf_states.ERROR))
     
-    def get_all_calcs(self,calc_class=JobCalculation,calc_state=None):
+    def get_all_calcs(self,calc_class=JobCalculation,calc_state=None,depth=16):
         """
         Get all calculations connected with this workflow and all its subworflow.
-        The list of calculations can be restricted to a given calculation type
+        The list of calculations can be restricted to a given calculation type and state
         :param calc_class: the calculation class to which the calculations should belong (default: JobCalculation)
         :param calc_state: a specific state to filter the calculations to retrieve
+        :param depth: the maximum depth level the recursion on sub-workflows will
+                  try to reach (0 means we stay at the step level and don't go
+                  into sub-workflows, 1 means we go down to one step level of 
+                  the sub-workflows, etc.)
         :return: a list of JobCalculation objects
         """
         
         all_calcs = []
         for st in self.get_steps():
             all_calcs += [ c for c in st.get_calculations(state=calc_state) if isinstance(c,calc_class)]
-            for subw in st.get_sub_workflows():
-                    all_calcs += subw.get_all_calcs()
+            if depth>0:
+                for subw in st.get_sub_workflows():
+                    all_calcs += subw.get_all_calcs(calc_state=calc_state,calc_class=calc_class,depth=depth-1)
         return all_calcs
         
     def sleep(self):

@@ -10,6 +10,7 @@ from aiida.common.datastructures import wf_states, wf_exit_call
 
 from aiida.djsite.utils import get_automatic_user
 from aiida.common import aiidalogger
+from aiida.orm.calculation.job import JobCalculation
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -981,7 +982,23 @@ class Workflow(object):
         else:
             raise WorkflowUnkillable("Cannot kill a workflow in {} or {} state"
                                      "".format(wf_states.FINISHED, wf_states.ERROR))
-
+    
+    def get_all_calcs(self,calc_class=JobCalculation,calc_state=None):
+        """
+        Get all calculations connected with this workflow and all its subworflow.
+        The list of calculations can be restricted to a given calculation type
+        :param calc_class: the calculation class to which the calculations should belong (default: JobCalculation)
+        :param calc_state: a specific state to filter the calculations to retrieve
+        :return: a list of JobCalculation objects
+        """
+        
+        all_calcs = []
+        for st in self.get_steps():
+            all_calcs += [ c for c in st.get_calculations(state=calc_state) if isinstance(c,calc_class)]
+            for subw in st.get_sub_workflows():
+                    all_calcs += subw.get_all_calcs()
+        return all_calcs
+        
     def sleep(self):
         """
         Changes the workflow state to SLEEP, only possible to call from a Workflow step decorated method.

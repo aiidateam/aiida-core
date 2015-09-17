@@ -985,7 +985,7 @@ class Workflow(object):
     
     def get_all_calcs(self,calc_class=JobCalculation,calc_state=None,depth=16):
         """
-        Get all calculations connected with this workflow and all its subworflow.
+        Get all calculations connected with this workflow and all its subworflows up to a given depth.
         The list of calculations can be restricted to a given calculation type and state
         :param calc_class: the calculation class to which the calculations should belong (default: JobCalculation)
         :param calc_state: a specific state to filter the calculations to retrieve

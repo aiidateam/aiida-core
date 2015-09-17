@@ -1684,8 +1684,13 @@ class Kind(object):
                                  "any other parameter.")
 
             try:
+                import numpy
                 self.set_symbols_and_weights([aseatom.symbol], [1.])
-                self.mass = aseatom.mass
+                # ASE sets mass to numpy.nan for unstable species
+                if not numpy.isnan(aseatom.mass):
+                    self.mass = aseatom.mass
+                else:
+                    self.reset_mass()
             except AttributeError:
                 raise ValueError("Error using the aseatom object. Are you sure "
                                  "it is a ase.atom.Atom object? [Introspection says it is "

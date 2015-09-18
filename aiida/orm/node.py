@@ -951,6 +951,16 @@ class Node(object):
                 raise ModificationNotAllowed("Cannot delete an attribute after "
                                              "saving a node")
 
+    def _del_all_attrs(self):
+        """
+        Delete all attributes associated to this node.
+
+        :raise ModificationNotAllowed: if the Node was already stored.
+        """
+        # I have to convert the attrs in a list, because the list will change
+        # while deleting elements
+        for attr_name in list(self.attrs()):
+            self._del_attr(attr_name)
 
     def get_attr(self, key, *args):
         """
@@ -1860,3 +1870,60 @@ class NodeInputManager(object):
         except KeyError:
             raise KeyError("Node {} does not have an input with link {}"
                            .format(self._node.pk, name))
+
+class AttributeManager(object):
+    """
+    An object used internally to return the attributes as a dictionary.
+    
+    :note: Important! It cannot be used to change variables, just to read
+      them. To change values (of unstored nodes), use the proper Node methods.
+    """
+
+    def __init__(self, node):
+        """
+        :param node: the node object.
+        """
+        # Possibly add checks here
+        self._node = node
+
+    def __dir__(self):
+        """
+        Allow to list the keys of the dictionary
+        """
+        return sorted(self._node.attrs())
+
+    def __iter__(self):
+        """
+        Return the keys as an iterator
+        """
+        for k in self._node.attrs():
+            yield k
+
+    def _get_dict(self):
+        """
+        Return the internal dictionary
+        """
+        return dict(self._node.iterattrs())
+
+    def __getattr__(self, name):
+        """
+        Interface to get to dictionary values, using the key as an attribute.
+        
+        :note: it works only for attributes that only contain letters, numbers
+          and underscores, and do not start with a number.
+        
+        :param name: name of the key whose value is required.
+        """
+        return self._node.get_attr(name)
+
+    def __getitem__(self, name):
+        """
+        Interface to get to dictionary values as a dictionary.
+        
+        :param name: name of the key whose value is required.
+        """
+        try:
+            return self._node.get_attr(name)
+        except AttributeError as e:
+            raise KeyError(e.message)
+

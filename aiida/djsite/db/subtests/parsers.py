@@ -127,9 +127,9 @@ def read_test(outfolder):
 
     from aiida.orm import JobCalculation,load_node
     from aiida.common.exceptions import NotExistent
-    from aiida.cmdline.commands.importfile import import_file
+    from aiida.cmdline.commands.importfile import import_data
 
-    imported = import_file(outfolder,format='tree',
+    imported = import_data(outfolder,
                            ignore_unknown_nodes=True,silent=True)
 
     calc = None

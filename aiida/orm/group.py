@@ -5,6 +5,23 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Nicolas Mounet"
 
+def get_group_type_mapping():
+    """
+    Return a dictionary with ``{short_name: proper_long_name_in_DB}`` format,
+    where ``short_name`` is the name to use on the command line, while 
+    ``proper_long_name_in_DB`` is the string stored in the ``type`` field of the
+    DbGroup table.
+    
+    It is defined as a function so that the import statements are confined
+    inside here.
+    """
+    from aiida.orm.data.upf import UPFGROUP_TYPE
+    from aiida.cmdline.commands.importfile import IMPORTGROUP_TYPE
+    from aiida.orm.autogroup import VERDIAUTOGROUP_TYPE
+
+    return {'data.upf': UPFGROUP_TYPE,
+            'import': IMPORTGROUP_TYPE,
+            'autogroup.run': VERDIAUTOGROUP_TYPE}
 
 class Group(object):
     """
@@ -305,8 +322,8 @@ class Group(object):
 
 
     @classmethod
-    def query(cls, name=None, type_string="", uuid=None, nodes=None, user=None,
-              node_attributes=None, past_days=None):
+    def query(cls, name=None, type_string="", pk = None, uuid=None, nodes=None,
+              user=None, node_attributes=None, past_days=None, **kwargs):
         """
         Query for groups. 
         :note:  By default, query for user-defined groups only (type_string=="").
@@ -315,9 +332,10 @@ class Group(object):
           string as the type_string argument.
         
         :param name: the name of the group
-        :param dbnodes: a node, list of nodes, or of pks (alternatively, you 
-          can also pass a DbNode or list of DbNodes)
-        :param uuid: the uuid of the node
+        :param nodes: a node or list of nodes that belongs to the group (alternatively,  
+          you can also pass a DbNode or list of DbNodes)
+        :param pk: the pk of the group
+        :param uuid: the uuid of the group
         :param type_string: the string for the type of node; by default, look
           only for user-defined groups (see note above).
         :param user: by default, query for groups of all users; if specified,
@@ -333,6 +351,7 @@ class Group(object):
           If it is a list or iterable, that the condition is checked so that
           there should be at least a node in the group with key=k and
           value=each of the values of the iterable.
+        :param kwargs: any other filter to be passed to DbGroup.objects.filter
 
           Example: if ``node_attributes = {'elements': ['Ba', 'Ti'],
              'md5sum': 'xxx'}``, it will find groups that contain the node
@@ -353,6 +372,9 @@ class Group(object):
 
         if type_string is not None:
             queryobject &= Q(type=type_string)
+
+        if pk is not None:
+            queryobject &= Q(pk=pk)
 
         if uuid is not None:
             queryobject &= Q(uuid=uuid)
@@ -381,7 +403,7 @@ class Group(object):
             else:
                 queryobject &= Q(user=user)
 
-        groups_pk = set(DbGroup.objects.filter(queryobject).values_list(
+        groups_pk = set(DbGroup.objects.filter(queryobject,**kwargs).values_list(
             'pk', flat=True))
 
         if node_attributes is not None:
@@ -430,6 +452,53 @@ class Group(object):
         else:
             raise MultipleObjectsError("More than one Group found -- "
                                        "I found {}".format(len(queryresults)))
+
+
+    @classmethod
+    def get_from_string(cls, string):
+        """
+        Get a group from a string.
+        If only the name is provided, without colons,
+        only user-defined groups are searched;
+        add ':type_str' after the group name to choose also
+        the type of the group equal to 'type_str' 
+        (e.g. 'data.upf', 'import', etc.)
+        
+        :raise ValueError: if the group type does not exist.
+        :raise NotExistent: if the group is not found.
+        """
+        from aiida.common.exceptions import NotExistent
+
+        name, sep, typestr = string.rpartition(':')
+        if not sep:
+            name = typestr
+            typestr = ""
+        if typestr:
+            try:
+                internal_type_string = get_group_type_mapping()[typestr]
+            except KeyError:
+                msg = ("Invalid group type '{}'. Valid group types are: "
+                       "{}".format(typestr, ",".join(sorted(
+                                get_group_type_mapping().keys()))))
+                raise ValueError(msg)
+        else:
+            internal_type_string = ""
+
+        try:
+            group = cls.get(name=name,
+                              type_string=internal_type_string)
+            return group
+        except NotExistent:
+            if typestr:
+                msg = (
+                    "No group of type '{}' with name '{}' "
+                    "found.".format(typestr, name))
+            else:
+                msg = (
+                    "No user-defined group with name '{}' "
+                    "found.".format(name))
+            raise NotExistent(msg)
+
 
     def is_user_defined(self):
         """

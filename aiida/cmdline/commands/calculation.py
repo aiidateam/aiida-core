@@ -151,9 +151,12 @@ class Calculation(VerdiCommandWithSubcommands):
         parser.add_argument('-p', '--past-days', metavar='N',
                             help="add a filter to show only calculations created in the past N days",
                             action='store', type=int)
-        parser.add_argument('-g', '--group', metavar='GROUPNAME',
+        parser.add_argument('-g', '--group', '--group-name', metavar='GROUPNAME',
                             help="add a filter to show only calculations within a given group",
                             action='store', type=str)
+        parser.add_argument('-G', '--group-pk', metavar='GROUPPK',
+                            help="add a filter to show only calculations within a given group",
+                            action='store', type=int)
         parser.add_argument('pks', type=int, nargs='*',
                             help="a list of calculations to show. If empty, all running calculations are shown. If non-empty, ignores the -p and -r options.")
         parser.add_argument('-a', '--all-states',
@@ -178,12 +181,17 @@ class Calculation(VerdiCommandWithSubcommands):
         if parsed_args.all_states:
             parsed_args.states = None
 
-        print C._list_calculations(states=parsed_args.states,
-                                   past_days=parsed_args.past_days,
-                                   pks=parsed_args.pks,
-                                   all_users=parsed_args.all_users,
-                                   group=parsed_args.group,
-                                   relative_ctime=parsed_args.relative_ctime)
+        try:
+            print C._list_calculations(states=parsed_args.states,
+                                       past_days=parsed_args.past_days,
+                                       pks=parsed_args.pks,
+                                       all_users=parsed_args.all_users,
+                                       group=parsed_args.group,
+                                       group_pk=parsed_args.group_pk,
+                                       relative_ctime=parsed_args.relative_ctime)
+        except Exception as e:
+            print >> sys.stderr, "Error ({}): {}".format(e.__class__.__name__,
+                                                         e.message)
 
     def calculation_res(self, *args):
         """

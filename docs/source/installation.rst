@@ -85,7 +85,7 @@ of packages to install- or ``yum`` in RedHat/Fedora).
 For Ubuntu, you can install the above packages using (tested on Ubuntu 12.04,
 names may change in different releases)::
 
-      sudo apt-get install git python-pip ipython python2.7-dev libsqlite3-dev postgresql-server-dev-9.1
+      sudo apt-get install git python-pip ipython python2.7-dev
 
 .. note:: For the latter line, please use the same version (in the
   example above is 9.1) of the
@@ -134,6 +134,19 @@ Then, install the python dependencies is as simple as this::
 ``requirements.txt`` file; the ``--user`` option allows to install
 the packages as a normal user, without the need of using ``sudo`` or
 becoming root). Check that every package is installed correctly.
+
+There are some additional dependencies need to be installed if you are 
+using PostgreSQL or MySql as backend database. No additional dependency 
+is required for SQLite.
+
+For PostgreSQL::
+
+  pip install psycopg2==2.6
+
+For MySQL::
+
+  pip install MySQL-python==1.2.5
+
 
 .. note:: This step should work seamlessly, but there are a number of reasons
   for which problems may occur. Often googling for the error message helps in
@@ -457,8 +470,7 @@ First three can be installed from the default repositories::
 ASE has to be installed from source::
 
     curl https://wiki.fysik.dtu.dk/ase-files/python-ase-3.8.1.3440.tar.gz > python-ase-3.8.1.3440.tar.gz
-    gunzip python-ase-3.8.1.3440.tar.gz
-    tar -xvf python-ase-3.8.1.3440.tar
+    tar -zxvf python-ase-3.8.1.3440.tar.gz
     cd python-ase-3.8.1.3440
     setup.py build
     setup.py install

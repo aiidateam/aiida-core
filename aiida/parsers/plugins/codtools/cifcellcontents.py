@@ -52,4 +52,9 @@ class CifcellcontentsParser(BaseCodtoolsParser):
         output_nodes.append(('messages',
                              ParameterData(dict={'output_messages':
                                                      messages})))
-        return output_nodes
+
+        success = True
+        if len(formulae.keys()) == 0:
+            success = False
+
+        return success, output_nodes

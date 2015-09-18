@@ -59,10 +59,7 @@ class TemplatereplacerCalculation(JobCalculation):
         """
         This is the routine to be called when you want to create
         the input files and related stuff with a plugin.
-        
-        This is the routine to be called when you want to create
-        the input files and related stuff with a plugin.
-        
+               
         :param tempfolder: a aiida.common.folders.Folder subclass where
                            the plugin should put all its files.
         :param inputdict: a dictionary with the input nodes, as they would

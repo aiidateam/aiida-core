@@ -96,10 +96,12 @@ class QueryTool(object):
 
         self._pks_in = [int(_) for _ in pk_list]
 
-    def _get_query_object(self):
+    def _get_query_object(self, order_by=None):
         """
         Internal method that returns the Django query object that 
         has been generated.
+
+        :param order_by: If specified, is a string to order by.
         """
         from aiida.djsite.db import models
 
@@ -153,6 +155,9 @@ class QueryTool(object):
 
             self._queryobject = res.distinct()
 
+        if order_by is not None:
+            self._queryobject = self._queryobject.order_by(order_by)
+
         return self._queryobject
 
     def get_attributes(self):
@@ -196,16 +201,18 @@ class QueryTool(object):
             'ival', 'bval', 'fval', 'datatype')
         return attrs
 
-    def run_query(self, with_data=False):
+    def run_query(self, with_data=False, order_by=None):
         """
         Run the query using the filters that have been pre-set on this
         class, and return a generator of the obtained Node (sub)classes.
+
+        :param order_by: if specified, order by the given field
         """
         if with_data:
             attrs = self.create_attrs_dict()
             extras = self.create_extras_dict()
 
-        for r in self._get_query_object():
+        for r in self._get_query_object(order_by=order_by):
             if with_data:
                 yield r.get_aiida_class(), {'attrs': attrs.get(r.pk, {}),
                                             'extras': extras.get(r.pk, {})}

@@ -3,7 +3,7 @@ Automated parser tests
 
 AiiDA testing facility can check for the proper functionality of parsers
 automatically. To facilitate the creation of new tests, we
-provide a simple tool to to create a new parser test from a calculation
+provide a simple tool to create a new parser test from a calculation
 that you already run in your AiiDA database, described below.
 
 Test folders
@@ -15,11 +15,11 @@ The naming convention for folders is the following:
 
 * it should contain only digits, letters and underscores, otherwise the
   folder will be ignored when running ``verdi devel tests db.parsers``;
-* the folder name should start with "test_";
+* the folder name should start with ``test_``;
 * the name should be followed by the parser plugin name, as returned
   by calculation.get_parser_name(), and with dots replaced with underscores;
 * it should be followed by an underscore;
-* finally it should be followed by a string that explains what it is tested.
+* finally it should be followed by a string that explains what is tested.
 
 For instance, a valid name is ``test_quantumespresso_pw_vanderwaals``.
 Note that the naming scheme is only a convention, and that the parser to
@@ -35,7 +35,7 @@ the following function::
   from aiida.djsite.db.subtests.parsers import output_test
 
 and then run it with the correct parameters. The documentation of the function
-can be found :py:func:`here<aiida.djsite.db.subtests.parsers.output_test`.
+can be found :py:func:`here<aiida.djsite.db.subtests.parsers.output_test>`.
 
 An example call could be::
 
@@ -56,12 +56,13 @@ where:
 * the (optional) ``skip_uuids_from_inputs`` is a list of UUIDs of input nodes that
   will *not* be exported.
 
-The script will create a new folder, containing the exported content of the calculation, its direct inputs (except those listed in the
+The script will create a new folder, containing the exported content of the calculation, 
+its direct inputs (except those listed in the
 ``skip_uuids_from_inputs`` list), and the output ``retrieved`` node.
 The format of the exported data is the same of the export files of
 AiiDA, but the folder is not zipped.
 
-.. note:: The ``skip_uuids_from_inputs`` parametere is typically
+.. note:: The ``skip_uuids_from_inputs`` parameter is typically
 	  useful for input nodes containing large files that are not
 	  needed for parsing and would just create a large test; a
 	  typical example is given by pseudopotential input nodes for
@@ -80,7 +81,7 @@ JSON file inside the folder. The syntax is the following:
 * each key of the subdictionary is an attribute to check for.
   The value is a list of dictionaries, one for each test to perform
   on the given value; multiple tests are therefore possible.
-  The dictionary should have at least have one keys:
+  The dictionary should have at least have one key:
   "comparison", a string to specifies the type of comparison.
   The other keys depend on the type of comparison, and typically
   there is at least a "value" key, the value to compare with. An example::
@@ -108,3 +109,12 @@ The list of valid comparisons is hardcoded inside the
 ``aiida.djsite.db.subtests.parsers`` module;
 if you need new comparison types, add them directly to the module.
 
+Running tests
+-------------
+
+Finally, in order to run all tests contained in the folder ``aiida/djsite/db/subtests/parser_tests``
+one can use the following ``verdi`` command::
+
+  verdi devel tests db.parsers
+  
+If no fail message appears it means that the test was successful. 

@@ -61,4 +61,4 @@ class CifcodnumbersParser(BaseCodtoolsParser):
         output_nodes.append(('output',
                              ParameterData(dict={'duplicates': duplicates,
                                                  'errors': errors})))
-        return output_nodes
+        return True, output_nodes

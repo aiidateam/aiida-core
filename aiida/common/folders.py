@@ -30,18 +30,27 @@ class Folder(object):
         a/b, check if this is wanted or if we want to put trailing slashes.
         (or if we want to use os.path.relpath and check for a string starting
         with os.pardir?)
+    
+    .. todo::
+        rethink whether the folder_limit option is still useful. If not, remove
+        it alltogether (it was a nice feature, but unfortunately all the calls
+        to os.path.abspath or normpath are quite slow).
     """
 
     def __init__(self, abspath, folder_limit=None):
         abspath = os.path.abspath(abspath)
         if folder_limit is None:
             folder_limit = abspath
-        folder_limit = os.path.abspath(folder_limit)
+        else:
+            folder_limit = os.path.abspath(folder_limit)
 
-        # check that it is a subfolder
-        if not os.path.commonprefix([abspath, folder_limit]) == folder_limit:
-            raise ValueError("The absolute path for this folder is not within the folder_limit. "
-                             "abspath={}, folder_limit={}.".format(abspath, folder_limit))
+            # check that it is a subfolder
+            if not os.path.commonprefix([abspath,
+                                         folder_limit]) == folder_limit:
+                raise ValueError(
+                    "The absolute path for this folder is not within the "
+                    "folder_limit. abspath={}, folder_limit={}.".format(
+                        abspath, folder_limit))
 
         self._abspath = abspath
         self._folder_limit = folder_limit
@@ -276,6 +285,12 @@ class Folder(object):
 
         return dest_abs_path
 
+    def open(self, name, mode='r'):
+        """
+        Open a file in the current folder and return the corresponding
+        file object.
+        """
+        return open(self.get_abs_path(name), mode)
 
     @property
     def abspath(self):
@@ -450,7 +465,8 @@ class RepositoryFolder(Folder):
         """
         if section not in _valid_sections:
             retstr = ("Repository section '{}' not allowed. "
-                      "Valid sections are: {}".format(section, ",".join(_valid_sections)))
+                "Valid sections are: {}".format(
+                    section, ",".join(_valid_sections)))
             raise ValueError(retstr)
         self._section = section
         self._uuid = uuid
@@ -462,16 +478,20 @@ class RepositoryFolder(Folder):
         # Note that a similar sharding should probably has to be done
         # independently for calculations sent to remote computers in the
         # execmanager.
-        entity_dir = os.path.abspath(os.path.join(
+        # Note: I don't do any os.path.abspath (that internally calls
+        # normpath, that may be slow): this is done abywat by the super
+        # class.
+        entity_dir = os.path.join(
             get_repository_folder('repository'), unicode(section),
-            unicode(uuid)[:2], unicode(uuid)[2:4], unicode(uuid)[4:]))
-        dest = os.path.abspath(os.path.join(entity_dir, unicode(subfolder)))
+            unicode(uuid)[:2], unicode(uuid)[2:4], unicode(uuid)[4:])
+        dest = os.path.join(entity_dir, unicode(subfolder))
 
         # Internal variable of this class 
         self._subfolder = subfolder
 
         # This will also do checks on the folder limits
-        super(RepositoryFolder, self).__init__(abspath=dest, folder_limit=entity_dir)
+        super(RepositoryFolder, self).__init__(
+            abspath=dest, folder_limit=entity_dir)
 
     @property
     def section(self):
@@ -503,8 +523,4 @@ class RepositoryFolder(Folder):
 
         # NOTE! The get_subfolder method will return a Folder object, and not a RepositoryFolder object
 
-
-if __name__ == "__main__":
-    # .. todo:: implement tests here
-    pass
 

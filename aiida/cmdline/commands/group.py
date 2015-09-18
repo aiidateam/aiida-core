@@ -10,24 +10,6 @@ __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
 
 
-def get_group_type_mapping():
-    """
-    Return a dictionary with ``{short_name: proper_long_name_in_DB}`` format,
-    where ``short_name`` is the name to use on the command line, while 
-    ``proper_long_name_in_DB`` is the string stored in the ``type`` field of the
-    DbGroup table.
-    
-    It is defined as a function so that the import statements are confined
-    inside here.
-    """
-    from aiida.orm.data.upf import UPFGROUP_TYPE
-    from aiida.cmdline.commands.importfile import IMPORTGROUP_TYPE
-    from aiida.orm.autogroup import VERDIAUTOGROUP_TYPE
-
-    return {'data.upf': UPFGROUP_TYPE,
-            'import': IMPORTGROUP_TYPE,
-            'autogroup.run': VERDIAUTOGROUP_TYPE}
-
 
 class Group(VerdiCommandWithSubcommands):
     """
@@ -50,6 +32,8 @@ class Group(VerdiCommandWithSubcommands):
         Print a list of groups in the DB. 
         """
         load_dbenv()
+
+        from aiida.orm.group import get_group_type_mapping
         from aiida.common.datastructures import calc_states
         from aiida.djsite.utils import get_automatic_user
         import datetime
@@ -77,6 +61,15 @@ class Group(VerdiCommandWithSubcommands):
         parser.add_argument('-p', '--past-days', metavar='N',
                             help="add a filter to show only groups created in the past N days",
                             action='store', type=int)
+        parser.add_argument('-s', '--startswith', metavar='STRING', default=None,
+                            help="add a filter to show only groups for which the name begins with STRING",
+                            action='store', type=str)
+        parser.add_argument('-e', '--endswith', metavar='STRING', default=None,
+                            help="add a filter to show only groups for which the name ends with STRING",
+                            action='store', type=str)
+        parser.add_argument('-c', '--contains', metavar='STRING', default=None,
+                            help="add a filter to show only groups for which the name contains STRING",
+                            action='store', type=str)
         parser.set_defaults(all_users=False)
         parser.set_defaults(with_description=False)
 
@@ -109,50 +102,66 @@ class Group(VerdiCommandWithSubcommands):
         else:
             n_days_ago = None
 
-        groups = G.query(user=user, type_string=type_string, past_days=n_days_ago)
+        name_filter_dict = dict([('name__{}'.format(name_filter), getattr(parsed_args,name_filter))
+                                 for name_filter in ['startswith','endswith','contains']
+                                 if getattr(parsed_args,name_filter) is not None])
+        
+        groups = G.query(user=user, type_string=type_string, past_days=n_days_ago,
+                         **name_filter_dict)
 
         # nice formatting
         # gather all info
 
+        pks = []
         users = []
         names = []
         nodes = []
         for group in groups:
+            pks.append(str(group.pk))
             names.append(group.name)
             nodes.append(len(group.nodes))
             users.append(group.user.email.strip())
 
         # get the max length
+        max_pks_len = max([len(i) for i in pks]) if pks else 4
         max_names_len = max([len(i) for i in names]) if names else 4
         max_nodes_len = max([len(str(i)) for i in nodes]) if nodes else 4
         max_users_len = max([len(i) for i in users]) if users else 4
 
-        tolerated_name_length = 80 - 8 - max_nodes_len - max_users_len - 1
+        tolerated_name_length = (80 - 11 - max_nodes_len - 
+                                 max_users_len - max_pks_len - 1)
+
+        #print max_names_len, tolerated_name_length
+
 
         if parsed_args.with_description:
-            print "# Format: GroupName | NumNodes | User | Description"
+            print "# Format: PK | GroupName | NumNodes | User | Description"
 
             descriptions = [g.description for g in groups]
-            fmt_string = "* {:<" + str(max_names_len) + "} | "
+            fmt_string = "* {:<" + str(max_pks_len) + "} | "
+            fmt_string += "{:<" + str(max_names_len) + "} | "
             fmt_string += "{:" + str(max_nodes_len) + "d} | "
             fmt_string += "{:" + str(max_users_len) + "s} | {}"
-            for nam, nod, usr, desc in zip(names, nodes, users, descriptions):
-                print fmt_string.format(nam, nod, usr, desc)
+            for pk, nam, nod, usr, desc in zip(
+                pks, names, nodes, users, descriptions):
+                print fmt_string.format(pk, nam, nod, usr, desc)
 
         else:
-            print "# Format: GroupName | NumNodes | User"
+            print "# Format: PK | GroupName | NumNodes | User"
 
-            first_fmt_string = "* {:<" + str(tolerated_name_length) + "} | "
+            first_fmt_string = "* {:<" + str(max_pks_len) + "} | "
+            first_fmt_string += "{:<" + str(tolerated_name_length) + "} | "
             first_fmt_string += "{:" + str(max_nodes_len) + "d} | "
             first_fmt_string += "{:" + str(max_users_len) + "s}"
 
-            extra_fmt_string = "  {:<" + str(tolerated_name_length) + "} | "
+            extra_fmt_string = "  " + " " * max_pks_len  + " | "
+            extra_fmt_string += "{:<" + str(tolerated_name_length) + "} | "
             extra_fmt_string += " " * max_nodes_len + " | "
             extra_fmt_string += " " * max_users_len
 
-            for nam, nod, usr in zip(names, nodes, users):
+            for pk, nam, nod, usr in zip(pks, names, nodes, users):
                 the_nams = [nam[i:i + tolerated_name_length] for i in range(0, len(nam), tolerated_name_length)]
-                print first_fmt_string.format(the_nams[0], nod, usr)
+                print first_fmt_string.format(pk, the_nams[0], nod, usr)
                 for i in the_nams[1:]:
                     print extra_fmt_string.format(i)
                     

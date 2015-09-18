@@ -34,11 +34,14 @@ class CifsplitprimitiveParser(BaseCodtoolsParser):
         out_folder = self._calc.get_retrieved_node()
 
         output_nodes = []
+        success = False
         if error_path is not None:
             with open(error_path) as f:
                 content = f.readlines()
             content = [x.strip('\n') for x in content]
             self._check_failed(content)
+            if len(content) > 0:
+                success = True
             for filename in content:
                 path = os.path.join(out_folder.get_abs_path('.'), filename)
                 output_nodes.append(('cif', CifData(file=path)))
@@ -51,4 +54,4 @@ class CifsplitprimitiveParser(BaseCodtoolsParser):
                                  ParameterData(dict={'output_messages':
                                                          content})))
 
-        return output_nodes
+        return success, output_nodes

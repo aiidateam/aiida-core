@@ -19,6 +19,7 @@ class SumParser(Parser):
         """
         Initialize the instance of SumParser
         """
+	super(SumParser, self).__init__(calculation)
         # check for valid input
         if not isinstance(calculation,SumCalculation):
             raise OutputParsingError("Input must calc must be a SumCalculation")

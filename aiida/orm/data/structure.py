@@ -658,7 +658,17 @@ class StructureData(Data):
     boundary conditions (whether they are periodic or not) and other
     related useful information.
     """
-    _set_incompatibilities = [("ase", "cell"), ("ase", "pbc")]
+    _set_incompatibilities = [("ase", "cell"), ("ase", "pbc"),
+                              ("ase", "pymatgen"), ("ase", "pymatgen_molecule"),
+                              ("ase", "pymatgen_structure"),
+                              ("cell", "pymatgen"),
+                              ("cell", "pymatgen_molecule"),
+                              ("cell", "pymatgen_structure"),
+                              ("pbc", "pymatgen"), ("pbc", "pymatgen_molecule"),
+                              ("pbc", "pymatgen_structure"),
+                              ("pymatgen", "pymatgen_molecule"),
+                              ("pymatgen", "pymatgen_structure"),
+                              ("pymatgen_molecule", "pymatgen_structure")]
 
     @property
     def _set_defaults(self):
@@ -919,7 +929,9 @@ class StructureData(Data):
         Get the ASE object.
         Requires to be able to import ase.
 
-        :return: an ASE object corresponding to this StructureData object. 
+        :return: an ASE object corresponding to this
+          :py:class:`StructureData <aiida.orm.data.structure.StructureData>`
+          object.
 
         .. note:: If any site is an alloy or has vacancies, a ValueError
             is raised (from the site.get_ase() routine).
@@ -945,8 +957,9 @@ class StructureData(Data):
             of earlier versions may cause errors).
 
         :return: a pymatgen Structure object corresponding to this
-          StructureData object.
-        :raise ValueError: if periodic boundary conditions does not hold
+          :py:class:`StructureData <aiida.orm.data.structure.StructureData>`
+          object.
+        :raise ValueError: if periodic boundary conditions do not hold
           in at least one dimension of real space.
         """
         return self._get_object_pymatgen_structure()
@@ -959,13 +972,16 @@ class StructureData(Data):
             of earlier versions may cause errors).
 
         :return: a pymatgen Molecule object corresponding to this
-          StructureData object.
+          :py:class:`StructureData <aiida.orm.data.structure.StructureData>`
+          object.
         """
         return self._get_object_pymatgen_molecule()
 
     def append_kind(self, kind):
         """
-        Append a kind to the StructureData. It makes a copy of the kind.
+        Append a kind to the
+        :py:class:`StructureData <aiida.orm.data.structure.StructureData>`.
+        It makes a copy of the kind.
         
         :param kind: the site to append, must be a Kind object.
         """
@@ -988,7 +1004,9 @@ class StructureData(Data):
 
     def append_site(self, site):
         """
-        Append a site to the StructureData. It makes a copy of the site.
+        Append a site to the
+        :py:class:`StructureData <aiida.orm.data.structure.StructureData>`.
+        It makes a copy of the site.
         
         :param site: the site to append. It must be a Site object.
         """
@@ -1467,10 +1485,10 @@ class StructureData(Data):
         param = ParameterData(dict=kwargs)
         try:
             conv_f = getattr(structure, '_get_cif_{}_inline'.format(converter))
-            ret_dict = conv_f(struct=self, parameters=param, store=store)
-            return ret_dict['cif']
         except AttributeError:
             raise ValueError("No such converter '{}' available".format(converter))
+        ret_dict = conv_f(struct=self, parameters=param, store=store)
+        return ret_dict['cif']
 
     def _get_object_phonopyatoms(self):
         """
@@ -1489,7 +1507,9 @@ class StructureData(Data):
         
     def _get_object_ase(self):
         """
-        Converts StructureData to ase.Atoms
+        Converts
+        :py:class:`StructureData <aiida.orm.data.structure.StructureData>`
+        to ase.Atoms
 
         :return: an ase.Atoms object
         """
@@ -1504,7 +1524,9 @@ class StructureData(Data):
 
     def _get_object_pymatgen(self):
         """
-        Converts StructureData to pymatgen object
+        Converts
+        :py:class:`StructureData <aiida.orm.data.structure.StructureData>`
+        to pymatgen object
 
         :return: a pymatgen Structure for structures with periodic boundary
             conditions (in three dimensions) and Molecule otherwise
@@ -1519,12 +1541,15 @@ class StructureData(Data):
 
     def _get_object_pymatgen_structure(self):
         """
-        Converts StructureData to pymatgen Structure object
+        Converts
+        :py:class:`StructureData <aiida.orm.data.structure.StructureData>`
+        to pymatgen Structure object
 
         :return: a pymatgen Structure object corresponding to this
-            StructureData object
+          :py:class:`StructureData <aiida.orm.data.structure.StructureData>`
+          object
         :raise ValueError: if periodic boundary conditions does not hold
-            in at least one dimension of real space
+          in at least one dimension of real space
 
         .. note:: Requires the pymatgen module (version >= 3.0.13, usage
             of earlier versions may cause errors)
@@ -1546,10 +1571,13 @@ class StructureData(Data):
 
     def _get_object_pymatgen_molecule(self):
         """
-        Converts StructureData to pymatgen Molecule object
+        Converts
+        :py:class:`StructureData <aiida.orm.data.structure.StructureData>`
+        to pymatgen Molecule object
 
         :return: a pymatgen Molecule object corresponding to this
-          StructureData object.
+          :py:class:`StructureData <aiida.orm.data.structure.StructureData>`
+          object.
 
         .. note:: Requires the pymatgen module (version >= 3.0.13, usage
             of earlier versions may cause errors)
@@ -1656,8 +1684,13 @@ class Kind(object):
                                  "any other parameter.")
 
             try:
+                import numpy
                 self.set_symbols_and_weights([aseatom.symbol], [1.])
-                self.mass = aseatom.mass
+                # ASE sets mass to numpy.nan for unstable species
+                if not numpy.isnan(aseatom.mass):
+                    self.mass = aseatom.mass
+                else:
+                    self.reset_mass()
             except AttributeError:
                 raise ValueError("Error using the aseatom object. Are you sure "
                                  "it is a ase.atom.Atom object? [Introspection says it is "

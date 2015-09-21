@@ -1256,6 +1256,37 @@ class _Trajectory(VerdiCommandWithSubcommands, Listable, Visualizable, Exportabl
                             help="ID of the trajectory step. If none is "
                                  "supplied, all steps are exported.",
                             type=int, action='store')
+        
+    def _show_xcrysden(self, exec_name, trajectory_list, **kwargs):
+        """
+        Plugin for xcrysden
+        """
+        import tempfile, subprocess
+
+
+        if len(trajectory_list) > 1:
+            raise MultipleObjectsError("Visualization of multiple trajectories "
+                                       "is not implemented")
+        trajectory = trajectory_list[0]
+
+        with tempfile.NamedTemporaryFile(suffix='.xsf') as f:
+            f.write(trajectory._exportstring('xsf', **kwargs))
+            f.flush()
+
+            try:
+                subprocess.check_output([exec_name, '--xsf',f.name])
+            except subprocess.CalledProcessError:
+                # The program died: just print a message
+                print "Note: the call to {} ended with an error.".format(
+                       exec_name)
+            except OSError as e:
+                if e.errno == 2:
+                    print ("No executable '{}' found. Add to the path, "
+                           "or try with an absolute path.".format(
+                                                           exec_name))
+                    sys.exit(1)
+                else:
+                    raise
 
     def _export_xsf(self, node, **kwargs):
         """

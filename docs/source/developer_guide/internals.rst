@@ -5,9 +5,8 @@ AiiDA internals
 Node
 ++++
 
-The :py:class:`~aiida.orm.node.Node` class is the basic class that represents all the possible objects at the AiiDA world. More precisely it is inherited by many classes including (among others) the :py:class:`~aiida.orm.calculation.Calculation` class (representing computations converting data into a different form), the :py:class:`~aiida.orm.code.Code` representing a collection of files and one executable and the :py:class:`~aiida.orm.data.Data` class which represents data that can be input or output of calculations.
+The :py:class:`~aiida.orm.node.Node` class is the basic class that represents all the possible objects at the AiiDA world. More precisely it is inherited by many classes including (among others) the :py:class:`~aiida.orm.calculation.Calculation` class, representing computations that convert data into a different form, the :py:class:`~aiida.orm.code.Code` class representing executables and file collections that are used by calculations and the :py:class:`~aiida.orm.data.Data` class which represents data that can be input or output of calculations.
 
-.. note:: (Question): What is the difference between a Code and a Calculation?
 
 Methods & properties
 ********************
@@ -37,23 +36,23 @@ General purpose methods
 
 - :py:meth:`~aiida.orm.node.Node._is_stored` informs whether a node is already stored to the database.
 
-- :py:meth:`~aiida.orm.node.Node.query` queries the database by filtering for the results for similar nodes (if the used object is of a subclass of :py:class:`~aiida.orm.node.Node`) or with no filtering if it is a :py:class:`~aiida.orm.node.Node` class. Note that for this check _plugin_type_string should be properly set.
+- :py:meth:`~aiida.orm.node.Node.query` queries the database by filtering for the results for similar nodes (if the used object is a subclass of :py:class:`~aiida.orm.node.Node`) or with no filtering if it is a :py:class:`~aiida.orm.node.Node` class. Note that for this check ``_plugin_type_string`` should be properly set.
 
 - :py:meth:`~aiida.orm.node.Node.computer` returns the computer associated to this node.
 
 - :py:meth:`~aiida.orm.node.Node._validate` does a validation check for the node. This is important for :py:class:`~aiida.orm.node.Node` subclasses where various attributes should be checked for consistency before storing.
 
-- :py:meth:`~aiida.orm.node.Node.get_user`: the user that created the node.
+- :py:meth:`~aiida.orm.node.Node.get_user` returns the user that created the node.
 
 - :py:meth:`~aiida.orm.node.Node._increment_version_number_db`: increment the version number of the node on the DB. This happens when adding an ``attribute`` or an ``extra`` to the node. This method should not be called by the users.
 
-- :py:meth:`~aiida.orm.node.Node.copy`: returns a not stored copy of the node with new UUID that can be edited directly.
+- :py:meth:`~aiida.orm.node.Node.copy` returns a not stored copy of the node with new UUID that can be edited directly.
 
-- :py:meth:`~aiida.orm.node.Node.uuid`: returns the universally unique identifier (UUID) of the node.
+- :py:meth:`~aiida.orm.node.Node.uuid` returns the universally unique identifier (UUID) of the node.
 
-- :py:meth:`~aiida.orm.node.Node.pk`: returns the principal key (ID) of the node.
+- :py:meth:`~aiida.orm.node.Node.pk` returns the principal key (ID) of the node.
 
-- :py:meth:`~aiida.orm.node.Node.dbnode`: returns the corresponding Django object.
+- :py:meth:`~aiida.orm.node.Node.dbnode` returns the corresponding Django object.
 
 - :py:meth:`~aiida.orm.node.Node.get_computer` & :py:meth:`~aiida.orm.node.Node.set_computer` get and set the computer to be used & is associated to the node.
 
@@ -64,9 +63,9 @@ The :py:class:`~aiida.orm.node.Node` can be annotated with labels, description a
 
 *Label management:*
 
-- :py:meth:`~aiida.orm.node.Node.label`: get the label of the node. The setter method can be used for the update of the label.
+- :py:meth:`~aiida.orm.node.Node.label` returns the label of the node. The setter method can be used for the update of the label.
 
-- :py:meth:`~aiida.orm.node.Node._update_db_label_field`: update the label in the database. This is used by the setter method of the label.
+- :py:meth:`~aiida.orm.node.Node._update_db_label_field` updates the label in the database. This is used by the setter method of the label.
 
 *Description management:*
 
@@ -76,17 +75,15 @@ The :py:class:`~aiida.orm.node.Node` can be annotated with labels, description a
 
 *Comment management:*
 
-- :py:meth:`~aiida.orm.node.Node.add_comment`: adding a comment.
+- :py:meth:`~aiida.orm.node.Node.add_comment` adds a comment.
 
-- :py:meth:`~aiida.orm.node.Node.get_comments`: get a sorted list of the comments.
+- :py:meth:`~aiida.orm.node.Node.get_comments` returns a sorted list of the comments.
 
-- :py:meth:`~aiida.orm.node.Node._get_dbcomments`: similar to :py:meth:`~aiida.orm.node.Node.get_comments`, just the sorting changes.
+- :py:meth:`~aiida.orm.node.Node._get_dbcomments` is similar to :py:meth:`~aiida.orm.node.Node.get_comments`, just the sorting changes.
 
-.. note:: (Question): Is the :py:meth:`~aiida.orm.node.Node._get_dbcomments` necessary & well written. I don't see somewhere to be used and its code is very similar to :py:meth:`~aiida.orm.node.Node.get_comments`.
+- :py:meth:`~aiida.orm.node.Node._update_comment` updates the node comment. It can be done by ``verdi comment update``.
 
-- :py:meth:`~aiida.orm.node.Node._update_comment`: Update the node comment. It can be done by ``verdi comment update``.
-
-- :py:meth:`~aiida.orm.node.Node._remove_comment`: Remove the node comment. It can be done by ``verdi comment remove``.
+- :py:meth:`~aiida.orm.node.Node._remove_comment` removes the node comment. It can be done by ``verdi comment remove``.
 
 
 
@@ -239,7 +236,7 @@ Attributes related methods
 ==========================
 Each :py:meth:`~aiida.orm.node.Node` object can have attributes which are properties that characterize the node. Such properties can be the energy, the atom symbols or the lattice vectors. The following methods can be used for the management of the attributes.
 
-- :py:meth:`~aiida.orm.node.Node._set_attr` adds a new attribute to the node. The key of the attribute is the property name name (e.g. ``energy``, ``lattice_vectors`` etc) and the value of the attribute is the value of that property.
+- :py:meth:`~aiida.orm.node.Node._set_attr` adds a new attribute to the node. The key of the attribute is the property name (e.g. ``energy``, ``lattice_vectors`` etc) and the value of the attribute is the value of that property.
 
 - :py:meth:`~aiida.orm.node.Node._del_attr` & :py:meth:`~aiida.orm.node.Node._del_all_attrs` delete a specific or all attributes.
 
@@ -294,15 +291,23 @@ Store & deletion
 
 - :py:meth:`~aiida.orm.node.Node.store` method checks that the ``node`` data is valid, then check if ``node``'s parents are stored, then moves the contents of the temporary folder to the repository folder and in the end, it stores in the database the information that are in the cache. The latter happens with a database transaction. In case this transaction fails, then the data transfered to the repository folder are moved back to the temporary folder.
 
-.. note:: (Question): What kind of grouping does autogroup do in :py:meth:`~aiida.orm.node.Node.store` method since the ``node`` data is already stored at the end of this method?
-
 - :py:meth:`~aiida.orm.node.Node.__del__` deletes temporary folder and it should be called when an in-memory object is deleted.
- 
-.. note:: (Question): Who uses :py:meth:`~aiida.orm.node.Node.__del__`?
+
  
 DbNode
 ++++++
-To be added later
+
+The :py:class:`~aiida.djsite.db.models.DbNode` is the Django class that corresponds to the :py:class:`~aiida.orm.node.Node` class allowing to store and retrieve the needed information from and to the database. Other classes extending the :py:class:`~aiida.orm.node.Node` class, like :py:class:`~aiida.orm.data.Data`, :py:class:`~aiida.orm.calculation.Calculation` and :py:class:`~aiida.orm.code.Code` use the :py:class:`~aiida.djsite.db.models.DbNode` code too to interact with the database.  The main methods are:
+
+- :py:meth:`~aiida.djsite.db.models.DbNode.get_aiida_class` which returns the corresponding AiiDA class instance.
+
+- :py:meth:`~aiida.djsite.db.models.DbNode.get_simple_name` which returns a string with the type of the class (by stripping the path before the class name).
+
+- :py:meth:`~aiida.djsite.db.models.DbNode.attributes` which returns the all the attributes of the specific node as a dictionary.
+
+- :py:meth:`~aiida.djsite.db.models.DbNode.extras` which returns all the extras of the specific node as a dictionary.
+
+
 
 Folders
 +++++++

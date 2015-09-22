@@ -17,7 +17,7 @@ AiiDA is a sophisticated framework designed from scratch to be a flexible and sc
 
 The software is available at http://www.aiida.net.
 
-This is the documenation of the AiiDA framework. For the first setup, configuration and
+This is the documentation of the AiiDA framework. For the first setup, configuration and
 usage, refer to the :doc:`user's guide<user_guide/index>` below.
 
 If, instead, you plan to add new plugins, or you simply want to understand

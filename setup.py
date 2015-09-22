@@ -13,12 +13,14 @@ setup(
     # Abstract dependencies.  Concrete versions are listed in
     # requirements.txt
     # See https://caremad.io/2013/07/setup-vs-requirement/ for an explanation
-    # of the difference
+    # of the difference and
+    # http://blog.miguelgrinberg.com/post/the-package-dependency-blues
+    # for a useful dicussion
     install_requires=[
         'django', 'django_extensions', 'pytz', 'django-celery',
         'celery', 'kombu', 'billiard', 'amqp', 'anyjson', 'six', 'supervisor',
-        'meld3', 'psycopg2', 'pysqlite', 'paramiko', 'ecdsa', 'pycrypto',
-        'numpy', 'django-tastypie', 'python-dateutil', 'python-mimeparse',
+        'meld3', 'paramiko', 'ecdsa', 'pycrypto', 'numpy', 'django-tastypie',
+        'python-dateutil', 'python-mimeparse',
         ],
     packages=find_packages(),
     scripts=[os.path.join("bin", f) for f in os.listdir("bin")

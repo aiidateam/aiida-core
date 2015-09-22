@@ -111,7 +111,8 @@ class TestCifData(AiidaTestCase):
     Tests for CifData class.
     """
     from aiida.orm.data.cif import has_pycifrw
-    from aiida.orm.data.structure import has_ase
+    from aiida.orm.data.structure import has_ase,has_pymatgen,get_pymatgen_version
+    from distutils.version import StrictVersion
 
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_reload_cifdata(self):
@@ -234,20 +235,20 @@ class TestCifData(AiidaTestCase):
 
         with tempfile.NamedTemporaryFile() as f:
             f.write('''
-                data_test
-                _cell_length_a    10
-                _cell_length_b    10
-                _cell_length_c    10
-                _cell_angle_alpha 90
-                _cell_angle_beta  90
-                _cell_angle_gamma 90
-                loop_
-                _atom_site_label
-                _atom_site_fract_x
-                _atom_site_fract_y
-                _atom_site_fract_z
-                C 0 0 0
-                O 0.5 0.5 0.5
+data_test
+_cell_length_a    10
+_cell_length_b    10
+_cell_length_c    10
+_cell_angle_alpha 90
+_cell_angle_beta  90
+_cell_angle_gamma 90
+loop_
+_atom_site_label
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+C 0 0 0
+O 0.5 0.5 0.5
             ''')
             f.flush()
             a = CifData(file=f.name)
@@ -261,7 +262,7 @@ class TestCifData(AiidaTestCase):
 
     @unittest.skipIf(not has_ase() or not has_pycifrw(),
                      "Unable to import ase or pycifrw")
-    def test_ase_primitive_and_conventional_cells(self):
+    def test_ase_primitive_and_conventional_cells_ase(self):
         """
         Checking the number of atoms per primitive/conventional cell
         returned by ASE ase.io.cif.read_cif() method. Test input is
@@ -299,13 +300,69 @@ class TestCifData(AiidaTestCase):
             f.flush()
             c = CifData(file=f.name)
 
-        ase = c._get_aiida_structure(primitive_cell=False).get_ase()
+        ase = c._get_aiida_structure(converter='ase',
+                                     primitive_cell=False).get_ase()
         self.assertEquals(ase.get_number_of_atoms(), 15)
 
-        ase = c._get_aiida_structure().get_ase()
+        ase = c._get_aiida_structure(converter='ase').get_ase()
         self.assertEquals(ase.get_number_of_atoms(), 15)
 
-        ase = c._get_aiida_structure(primitive_cell=True).get_ase()
+        ase = c._get_aiida_structure(converter='ase',
+                                     primitive_cell=True).get_ase()
+        self.assertEquals(ase.get_number_of_atoms(), 5)
+
+    @unittest.skipIf(not has_ase() or not has_pycifrw() or
+                     not has_pymatgen() or
+                     StrictVersion(get_pymatgen_version()) <
+                     StrictVersion('3.0.13'), "Unable to import pymatgen"
+                     "Unable to import ase, pycifrw or pymatgen")
+    def test_ase_primitive_and_conventional_cells_pymatgen(self):
+        """
+        Checking the number of atoms per primitive/conventional cell
+        returned by ASE ase.io.cif.read_cif() method. Test input is
+        adapted from http://www.crystallography.net/cod/9012064.cif@120115
+        """
+        import os
+        import tempfile
+        import ase
+
+        from aiida.orm.data.cif import CifData
+        from aiida.orm.data.structure import StructureData
+
+        with tempfile.NamedTemporaryFile() as f:
+            f.write('''
+data_9012064
+_space_group_IT_number           166
+_symmetry_space_group_name_H-M   'R -3 m :H'
+_cell_angle_alpha                90
+_cell_angle_beta                 90
+_cell_angle_gamma                120
+_cell_length_a                   4.395
+_cell_length_b                   4.395
+_cell_length_c                   30.440
+_cod_database_code               9012064
+loop_
+_atom_site_label
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+_atom_site_U_iso_or_equiv
+Bi 0.00000 0.00000 0.40046 0.02330
+Te1 0.00000 0.00000 0.00000 0.01748
+Te2 0.00000 0.00000 0.79030 0.01912
+            ''')
+            f.flush()
+            c = CifData(file=f.name)
+
+        ase = c._get_aiida_structure(converter='pymatgen',
+                                     primitive_cell=False).get_ase()
+        self.assertEquals(ase.get_number_of_atoms(), 15)
+
+        ase = c._get_aiida_structure(converter='pymatgen').get_ase()
+        self.assertEquals(ase.get_number_of_atoms(), 15)
+
+        ase = c._get_aiida_structure(converter='pymatgen',
+                                     primitive_cell=True).get_ase()
         self.assertEquals(ase.get_number_of_atoms(), 5)
 
     def test_contents_encoding(self):
@@ -482,6 +539,82 @@ _publ_section_title                     'Test CIF'
         self.assertEquals(
             symop_string_from_symop_matrix_tr(
                 [[-1, 0, 0], [0, 1, 0], [0, 0, 1]],[1,-1,0]),"-x+1,y-1,z")
+
+    def test_parse_formula(self):
+        from aiida.orm.data.cif import parse_formula
+
+        self.assertEqual(parse_formula("C H"),
+                         {'C': 1, 'H': 1})
+
+        self.assertEqual(parse_formula("C5 H1"),
+                         {'C': 5, 'H': 1})
+
+        self.assertEqual(parse_formula("Ca5 Ho"),
+                         {'Ca': 5, 'Ho': 1})
+
+        self.assertEqual(parse_formula("H0.5 O"),
+                         {'H': 0.5, 'O': 1})
+
+        self.assertEqual(parse_formula("C0 O0"),
+                         {'C': 0, 'O': 0})
+
+        # Invalid literal for float()
+        with self.assertRaises(ValueError):
+            parse_formula("H0.5.2 O")
+
+    @unittest.skipIf(not has_ase() or not has_pycifrw(),
+                     "Unable to import ase or pycifrw")
+    def test_attached_hydrogens(self):
+        import tempfile
+        from aiida.orm.data.cif import CifData
+
+        with tempfile.NamedTemporaryFile() as f:
+            f.write('''
+                data_test
+                _cell_length_a    10
+                _cell_length_b    10
+                _cell_length_c    10
+                _cell_angle_alpha 90
+                _cell_angle_beta  90
+                _cell_angle_gamma 90
+                loop_
+                _atom_site_label
+                _atom_site_fract_x
+                _atom_site_fract_y
+                _atom_site_fract_z
+                _atom_site_attached_hydrogens
+                C 0 0 0 ?
+                O 0.5 0.5 0.5 .
+                H 0.75 0.75 0.75 0
+            ''')
+            f.flush()
+            a = CifData(file=f.name)
+
+        self.assertEqual(a.has_attached_hydrogens(), False)
+
+        with tempfile.NamedTemporaryFile() as f:
+            f.write('''
+                data_test
+                _cell_length_a    10
+                _cell_length_b    10
+                _cell_length_c    10
+                _cell_angle_alpha 90
+                _cell_angle_beta  90
+                _cell_angle_gamma 90
+                loop_
+                _atom_site_label
+                _atom_site_fract_x
+                _atom_site_fract_y
+                _atom_site_fract_z
+                _atom_site_attached_hydrogens
+                C 0 0 0 ?
+                O 0.5 0.5 0.5 1
+                H 0.75 0.75 0.75 0
+            ''')
+            f.flush()
+            a = CifData(file=f.name)
+
+        self.assertEqual(a.has_attached_hydrogens(), True)
 
 
 class TestKindValidSymbols(AiidaTestCase):

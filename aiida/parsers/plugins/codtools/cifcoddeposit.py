@@ -64,7 +64,11 @@ class CifcoddepositParser(CiffilterParser):
                              ParameterData(dict={'output_messages':
                                                      messages,
                                                  'status': status})))
-        return output_nodes
+
+        if status == cod_deposition_states.SUCCESS:
+            return True, output_nodes
+        else:
+            return False, output_nodes
 
     @classmethod
     def _deposit_result(cls, output):

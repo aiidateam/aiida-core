@@ -658,7 +658,17 @@ class StructureData(Data):
     boundary conditions (whether they are periodic or not) and other
     related useful information.
     """
-    _set_incompatibilities = [("ase", "cell"), ("ase", "pbc")]
+    _set_incompatibilities = [("ase", "cell"), ("ase", "pbc"),
+                              ("ase", "pymatgen"), ("ase", "pymatgen_molecule"),
+                              ("ase", "pymatgen_structure"),
+                              ("cell", "pymatgen"),
+                              ("cell", "pymatgen_molecule"),
+                              ("cell", "pymatgen_structure"),
+                              ("pbc", "pymatgen"), ("pbc", "pymatgen_molecule"),
+                              ("pbc", "pymatgen_structure"),
+                              ("pymatgen", "pymatgen_molecule"),
+                              ("pymatgen", "pymatgen_structure"),
+                              ("pymatgen_molecule", "pymatgen_structure")]
 
     @property
     def _set_defaults(self):
@@ -1475,10 +1485,10 @@ class StructureData(Data):
         param = ParameterData(dict=kwargs)
         try:
             conv_f = getattr(structure, '_get_cif_{}_inline'.format(converter))
-            ret_dict = conv_f(struct=self, parameters=param, store=store)
-            return ret_dict['cif']
         except AttributeError:
             raise ValueError("No such converter '{}' available".format(converter))
+        ret_dict = conv_f(struct=self, parameters=param, store=store)
+        return ret_dict['cif']
 
     def _get_object_phonopyatoms(self):
         """
@@ -1674,8 +1684,13 @@ class Kind(object):
                                  "any other parameter.")
 
             try:
+                import numpy
                 self.set_symbols_and_weights([aseatom.symbol], [1.])
-                self.mass = aseatom.mass
+                # ASE sets mass to numpy.nan for unstable species
+                if not numpy.isnan(aseatom.mass):
+                    self.mass = aseatom.mass
+                else:
+                    self.reset_mass()
             except AttributeError:
                 raise ValueError("Error using the aseatom object. Are you sure "
                                  "it is a ase.atom.Atom object? [Introspection says it is "

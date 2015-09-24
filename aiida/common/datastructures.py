@@ -123,6 +123,8 @@ class CalcInfo(DefaultFieldsAttributeDict):
         # in the following format:
         # ["linkname_from calc to singlefile","subclass of singlefile","filename"]
         # filename remote = filename local
+        'code_info',  # a list of dictionaries used to pass the info of the execution of a code.
+        'code_order', # a string used to specify the order in which multi codes can be executed  
     )
 
 

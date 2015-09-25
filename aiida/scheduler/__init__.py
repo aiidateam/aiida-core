@@ -151,10 +151,12 @@ class Scheduler(object):
             script_lines.append(job_tmpl.prepend_text)
             script_lines.append(empty_line)
 
-        script_lines.append(self._get_run_line(
-            job_tmpl.argv, job_tmpl.stdin_name,
-            job_tmpl.stdout_name, job_tmpl.stderr_name,
-            job_tmpl.join_files))
+#        script_lines.append(self._get_run_line(
+#            job_tmpl.argv, job_tmpl.stdin_name,
+#            job_tmpl.stdout_name, job_tmpl.stderr_name,
+#            job_tmpl.join_files))
+        script_lines.append(self._get_run_line(job_tmpl.codes_info, 
+                                               job_tmpl.codes_order))
         script_lines.append(empty_line)
 
         if job_tmpl.append_text:
@@ -172,8 +174,7 @@ class Scheduler(object):
         """
         raise NotImplementedError
 
-    def _get_run_line(self, argv, stdin_name, stdout_name,
-                      stderr_name, join_files):
+    def _get_run_line(self, codes_info, codes_order):
         """
         Return a string with the line to execute a specific code with
         specific arguments.
@@ -196,27 +197,39 @@ class Scheduler(object):
         Return a string with the following format:
         [executable] [args] {[ < stdin ]} {[ < stdout ]} {[2>&1 | 2> stderr]}
         """
-        command_to_exec_list = []
-        for arg in argv:
-            command_to_exec_list.append(escape_for_bash(arg))
-        command_to_exec = " ".join(command_to_exec_list)
+        list_of_runlines = []
+        
+        for code_info in codes_info:
+            command_to_exec_list = []
+            for arg in code_info.cmdline_params:
+                command_to_exec_list.append(escape_for_bash(arg))
+            command_to_exec = " ".join(command_to_exec_list)
+    
+            stdin_str = "< {}".format(
+                escape_for_bash(code_info.stdin_name)) if code_info.stdin_name else ""
+            stdout_str = "> {}".format(
+                escape_for_bash(code_info.stdout_name)) if code_info.stdout_name else ""
+            
+            join_files = code_info.join_files
+            if join_files:
+                stderr_str = "2>&1"
+            else:
+                stderr_str = "2> {}".format(
+                    escape_for_bash(code_info.stderr_name)) if code_info.stderr_name else ""
+    
+            output_string = ("{} {} {} {}".format(
+                command_to_exec,
+                stdin_str, stdout_str, stderr_str))
 
-        stdin_str = "< {}".format(
-            escape_for_bash(stdin_name)) if stdin_name else ""
-        stdout_str = "> {}".format(
-            escape_for_bash(stdout_name)) if stdout_name else ""
-        if join_files:
-            stderr_str = "2>&1"
+            list_of_runlines.append(output_string)
+
+        self.logger.debug('_get_run_line output: {}'.format(list_of_runlines))
+        if codes_order == code_order_values.PARALLEL:
+            return " &\n\n".join(list_of_runlines)
+        elif codes_order == code_order_values.SERIAL:
+            return "\n\n".join(list_of_runlines)
         else:
-            stderr_str = "2> {}".format(
-                escape_for_bash(stderr_name)) if stderr_name else ""
-
-        output_string = ("{} {} {} {}".format(
-            command_to_exec,
-            stdin_str, stdout_str, stderr_str))
-
-        self.logger.debug('_get_run_line output: {}'.format(output_string))
-        return output_string
+            raise NotImplementedError('Unrecognized codes order')
 
     def _get_joblist_command(self, jobs=None, user=None):
         """

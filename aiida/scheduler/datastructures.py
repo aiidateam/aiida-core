@@ -364,12 +364,14 @@ class JobTemplate(DefaultFieldsAttributeDict):
         'custom_scheduler_commands',
         'prepend_text',
         'append_text',
-        'argv',
-        'stdin_name',
-        'stdout_name',
-        'stderr_name',
-        'join_files',
         'import_sys_environment',
+#        'stderr_name', # this 5 5keys have been moved to codes_info
+#        'join_files',
+#        'argv',
+#        'stdin_name',
+#        'stdout_name',        
+        'codes_order',
+        'codes_info',
     )
 
 

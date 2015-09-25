@@ -497,8 +497,7 @@ def submit_calc(calc, authinfo, transport=None):
                 code.pk, calc.pk, computer.name))
 
         with SandboxFolder() as folder:
-            calcinfo, script_filename = calc._presubmit(folder,
-                                                        use_unstored_links=False)
+            calcinfo, script_filename = calc._presubmit(folder)
 
             # After this call, no modifications to the folder should be done
             calc._store_raw_input_folder(folder.abspath)

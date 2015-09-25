@@ -91,11 +91,11 @@ class CalcInfo(DefaultFieldsAttributeDict):
         'uuid',
         'prepend_text',
         'append_text',
-        'cmdline_params',  # as a list of strings
-        'stdin_name',
-        'stdout_name',
-        'stderr_name',
-        'join_files',
+#        'cmdline_params',  # as a list of strings
+#        'stdin_name',
+#        'stdout_name',
+#        'stderr_name',
+#        'join_files',
         # 'queue_name', This is not used in CalcInfo, it is automatically set from
         # calculation attributes to JobInfo
         'num_machines',
@@ -123,9 +123,26 @@ class CalcInfo(DefaultFieldsAttributeDict):
         # in the following format:
         # ["linkname_from calc to singlefile","subclass of singlefile","filename"]
         # filename remote = filename local
-        'code_info',  # a list of dictionaries used to pass the info of the execution of a code.
-        'code_order', # a string used to specify the order in which multi codes can be executed  
+        'codes_info',  # a list of dictionaries used to pass the info of the execution of a code.
+        'codes_order', # a string used to specify the order in which multi codes can be executed  
     )
+
+
+class CodesOrder(Enumerate):
+    pass
+
+
+code_order_values = CodesOrder(('PARALLEL', 
+                                'SERIAL'))
+
+
+class CodeInfo(DefaultFieldsAttributeDict):
+    _default_fields = ('cmdline_params',  # as a list of strings
+                       'stdin_name',
+                       'stdout_name',
+                       'stderr_name',
+                       'join_files',
+                       )
 
 
 class WorkflowState(Enumerate):

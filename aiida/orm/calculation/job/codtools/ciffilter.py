@@ -3,7 +3,7 @@
 from aiida.orm.calculation.job import JobCalculation
 from aiida.orm.data.cif import CifData
 from aiida.orm.data.parameter import ParameterData
-from aiida.common.datastructures import CalcInfo
+from aiida.common.datastructures import CalcInfo, CodeInfo
 from aiida.common.exceptions import InputValidationError
 from aiida.common.utils import classproperty
 
@@ -93,6 +93,10 @@ class CiffilterCalculation(JobCalculation):
         if not isinstance(parameters, ParameterData):
             raise InputValidationError("parameters is not of type ParameterData")
 
+        code = inputdict.pop(self.get_linkname('code'), None)
+        if code is None:
+            raise InputValidationError("Code not found in input")
+
         self._validate_resources(**self.get_resources())
 
         input_filename = tempfolder.get_abs_path(self._DEFAULT_INPUT_FILE)
@@ -105,14 +109,18 @@ class CiffilterCalculation(JobCalculation):
         calcinfo = CalcInfo()
         calcinfo.uuid = self.uuid
         # The command line parameters should be generated from 'parameters'
-        calcinfo.cmdline_params = commandline_params
         calcinfo.local_copy_list = []
         calcinfo.remote_copy_list = []
-        calcinfo.stdin_name = self._DEFAULT_INPUT_FILE
-        calcinfo.stdout_name = self._DEFAULT_OUTPUT_FILE
-        calcinfo.stderr_name = self._DEFAULT_ERROR_FILE
         calcinfo.retrieve_list = [self._DEFAULT_OUTPUT_FILE,
                                   self._DEFAULT_ERROR_FILE]
         calcinfo.retrieve_singlefile_list = []
 
+        codeinfo = CodeInfo()
+        codeinfo.cmdline_params = commandline_params
+        codeinfo.stdin_name = self._DEFAULT_INPUT_FILE
+        codeinfo.stdout_name = self._DEFAULT_OUTPUT_FILE
+        codeinfo.stderr_name = self._DEFAULT_ERROR_FILE
+        codeinfo.code_pk = code.pk
+        calcinfo.codes_info = [codeinfo]
+        
         return calcinfo

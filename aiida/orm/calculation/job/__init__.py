@@ -1414,12 +1414,31 @@ class JobCalculation(Calculation):
 #         job_tmpl.stdout_name = calcinfo.stdout_name
         
         # set the codes_info
+        if not isinstance(calcinfo.codes_info,(list,tuple)):
+            raise PluginInternalError("codes_info passed to CalcInfo must be a "
+                                      "list of CalcInfo objects")
         
         codes_info = []
         for code_info in calcinfo.codes_info:
+            
+            if not isinstance(code_info,CodeInfo):
+                raise PluginInternalError("Invalid codes_info, must be a list "
+                                          "of CodeInfo objects")
+            
+            if code_info.code_pk is None:
+                raise PluginInternalError("CalcInfo should have "
+                                          "the information of the code "
+                                          "to be launched")
             this_code = Code.get_subclass_from_pk(code_info.code_pk)
             
             this_withmpi = code_info.withmpi    # to decide better how to set the default
+            if this_withmpi is None:
+                if len(calcinfo.codes_info)>1:
+                    raise PluginInternalError("For more than one code, it is "
+                                              "necessary to set withmpi in "
+                                              "codes_info")
+                else:
+                    this_withmpi = self.get_withmpi()
 
             if this_withmpi:
                 this_argv = (mpi_args + extra_mpirun_params +

@@ -370,7 +370,7 @@ class JobTemplate(DefaultFieldsAttributeDict):
 #        'argv',
 #        'stdin_name',
 #        'stdout_name',        
-        'codes_order',
+        'codes_run_mode',
         'codes_info',
     )
 

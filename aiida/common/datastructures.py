@@ -124,16 +124,16 @@ class CalcInfo(DefaultFieldsAttributeDict):
         # ["linkname_from calc to singlefile","subclass of singlefile","filename"]
         # filename remote = filename local
         'codes_info',  # a list of dictionaries used to pass the info of the execution of a code.
-        'codes_order', # a string used to specify the order in which multi codes can be executed  
+        'codes_run_mode', # a string used to specify the order in which multi codes can be executed  
     )
 
 
-class CodesOrder(Enumerate):
+class CodeRunmode(Enumerate):
     pass
 
 
-code_order_values = CodesOrder(('PARALLEL', 
-                                'SERIAL'))
+code_run_modes = CodeRunmode(('PARALLEL', 
+                              'SERIAL'))
 
 
 class CodeInfo(DefaultFieldsAttributeDict):
@@ -142,6 +142,7 @@ class CodeInfo(DefaultFieldsAttributeDict):
                        'stdout_name',
                        'stderr_name',
                        'join_files',
+                       'withmpi',
                        )
 
 

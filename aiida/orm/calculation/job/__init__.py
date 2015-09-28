@@ -1308,7 +1308,7 @@ class JobCalculation(Calculation):
         from aiida.common.utils import validate_list_of_string_tuples
         from aiida.orm import Computer
         from aiida.orm import DataFactory
-        from aiida.common.datastructures import CodeInfo
+        from aiida.common.datastructures import CodeInfo, code_run_modes
 
         computer = self.get_computer()
 
@@ -1398,7 +1398,6 @@ class JobCalculation(Calculation):
         mpi_args = [arg.format(**subst_dict) for arg in
                     computer.get_mpirun_command()]
         extra_mpirun_params = self.get_mpirun_extra_params() # this is to be understood how to modify
-        raise NotImplementedError
         
         ########################################################################
 #         if self.get_withmpi():
@@ -1412,6 +1411,8 @@ class JobCalculation(Calculation):
 #                 calcinfo.cmdline_params is not None else [])
 #         job_tmpl.stdin_name = calcinfo.stdin_name
 #         job_tmpl.stdout_name = calcinfo.stdout_name
+        
+        # set the codes_info
         
         codes_info = []
         for code_info in calcinfo.codes_info:
@@ -1443,6 +1444,16 @@ class JobCalculation(Calculation):
             codes_info.append( c )
         job_tmpl.codes_info = codes_info
         
+        # set the codes execution mode
+        
+        if len(codes)>1:
+            try:
+                job_tmpl.codes_run_mode = calcinfo.codes_run_mode
+            except KeyError:
+                raise PluginInternalError("Need to set the order of the code "
+                                          "execution (parallel or serial?)")
+        else:  
+            job_tmpl.codes_run_mode = code_run_modes.SERIAL
         ########################################################################
 
         custom_sched_commands = self.get_custom_scheduler_commands()

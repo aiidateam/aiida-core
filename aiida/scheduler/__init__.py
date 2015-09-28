@@ -156,7 +156,7 @@ class Scheduler(object):
 #            job_tmpl.stdout_name, job_tmpl.stderr_name,
 #            job_tmpl.join_files))
         script_lines.append(self._get_run_line(job_tmpl.codes_info, 
-                                               job_tmpl.codes_order))
+                                               job_tmpl.codes_run_mode))
         script_lines.append(empty_line)
 
         if job_tmpl.append_text:
@@ -174,7 +174,7 @@ class Scheduler(object):
         """
         raise NotImplementedError
 
-    def _get_run_line(self, codes_info, codes_order):
+    def _get_run_line(self, codes_info, codes_run_mode):
         """
         Return a string with the line to execute a specific code with
         specific arguments.
@@ -197,6 +197,8 @@ class Scheduler(object):
         Return a string with the following format:
         [executable] [args] {[ < stdin ]} {[ < stdout ]} {[2>&1 | 2> stderr]}
         """
+        from aiida.common.datastructures import code_run_modes
+        
         list_of_runlines = []
         
         for code_info in codes_info:
@@ -224,12 +226,13 @@ class Scheduler(object):
             list_of_runlines.append(output_string)
 
         self.logger.debug('_get_run_line output: {}'.format(list_of_runlines))
-        if codes_order == code_order_values.PARALLEL:
+        if codes_run_mode == code_run_modes.PARALLEL:
+            list_of_runlines.append('wait\n')
             return " &\n\n".join(list_of_runlines)
-        elif codes_order == code_order_values.SERIAL:
+        elif codes_run_mode == code_run_modes.SERIAL:
             return "\n\n".join(list_of_runlines)
         else:
-            raise NotImplementedError('Unrecognized codes order')
+            raise NotImplementedError('Unrecognized code run mode')
 
     def _get_joblist_command(self, jobs=None, user=None):
         """

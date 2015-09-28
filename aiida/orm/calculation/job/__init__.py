@@ -1309,6 +1309,7 @@ class JobCalculation(Calculation):
         from aiida.orm import Computer
         from aiida.orm import DataFactory
         from aiida.common.datastructures import CodeInfo, code_run_modes
+        from aiida.orm.code import Code 
 
         computer = self.get_computer()
 
@@ -1432,6 +1433,7 @@ class JobCalculation(Calculation):
             this_stdin_name = code_info.stdin_name
             this_stdout_name = code_info.stdout_name
             this_stderr_name = code_info.stderr_name
+            this_join_files = code_info.join_files
             
             c = CodeInfo()
             c.stdin_name = this_stdin_name
@@ -1624,7 +1626,7 @@ class JobCalculation(Calculation):
             t.chdir(subfolder.abspath)
 
             calcinfo, script_filename = self._presubmit(
-                subfolder, use_unstored_links=True)
+                subfolder)
 
             code = self.get_code()
 

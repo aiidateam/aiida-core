@@ -143,6 +143,7 @@ class CodeInfo(DefaultFieldsAttributeDict):
                        'stderr_name',
                        'join_files',
                        'withmpi',
+                       'code_pk'
                        )
 
 

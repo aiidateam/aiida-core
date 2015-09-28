@@ -1416,8 +1416,7 @@ class JobCalculation(Calculation):
         
         codes_info = []
         for code_info in calcinfo.codes_info:
-            this_code_name = code_info.codename
-            this_code = Code.get_from_string(this_code_name)
+            this_code = Code.get_subclass_from_pk(code_info.code_pk)
             
             this_withmpi = code_info.withmpi    # to decide better how to set the default
 

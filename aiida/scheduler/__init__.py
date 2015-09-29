@@ -151,10 +151,6 @@ class Scheduler(object):
             script_lines.append(job_tmpl.prepend_text)
             script_lines.append(empty_line)
 
-#        script_lines.append(self._get_run_line(
-#            job_tmpl.argv, job_tmpl.stdin_name,
-#            job_tmpl.stdout_name, job_tmpl.stderr_name,
-#            job_tmpl.join_files))
         script_lines.append(self._get_run_line(job_tmpl.codes_info, 
                                                job_tmpl.codes_run_mode))
         script_lines.append(empty_line)
@@ -179,7 +175,14 @@ class Scheduler(object):
         Return a string with the line to execute a specific code with
         specific arguments.
         
-        Args:  
+        :parameter codes_info: a list of aiida.common.datastructures.CodeInfo
+          objects. Each contains the information needed to run the code. I.e.
+          cmdline_params, stdin_name, stdout_name, stderr_name, join_files.
+          See the documentation of JobTemplate and CodeInfo 
+        :parameter codes_run_mode: contains the information on how to launch the
+          multiple codes. As described in aiida.common.datastructures.code_run_modes
+            
+            
             argv: an array with the executable and the command line arguments.
               The first argument is the executable. This should contain
               everything, including the mpirun command etc.

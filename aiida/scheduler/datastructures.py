@@ -321,23 +321,36 @@ class JobTemplate(DefaultFieldsAttributeDict):
         supported by the plugin
       * ``prepend_text``: a (possibly multi-line) string to be inserted 
         in the scheduler script before the main execution line
-      * ``argv``: a list of strings with the command line arguments
-        of the program to run. This is the main program to be executed.
-        NOTE: The first one is the executable name.
-        For MPI runs, this will probably be "mpirun" or a similar program; 
-        this has to be chosen at a upper level.
-      * ``stdin_name``: the (relative) file name to be used as stdin for the 
-        program specified with argv.
-      * ``stdout_name``: the (relative) file name to be used as stdout for the 
-        program specified with argv.
-      * ``stderr_name``: the (relative) file name to be used as stderr for the 
-        program specified with argv.
-      * ``join_files``: if True, stderr is redirected on the same file specified
-        for stdout.
       * ``append_text``: a (possibly multi-line) string to be inserted 
         in the scheduler script after the main execution line
       * ``import_sys_environment``: import the system environment variables
-
+      * ``codes_info``: a list of aiida.common.datastructures.CalcInfo objects.
+        Each contains the information necessary to run a single code. At the 
+        moment, it can contain:
+        
+        * ``cmdline_parameters``: a list of strings with the command line arguments
+          of the program to run. This is the main program to be executed.
+          NOTE: The first one is the executable name.
+          For MPI runs, this will probably be "mpirun" or a similar program; 
+          this has to be chosen at a upper level.
+        * ``stdin_name``: the (relative) file name to be used as stdin for the 
+          program specified with argv.
+        * ``stdout_name``: the (relative) file name to be used as stdout for the 
+          program specified with argv.
+        * ``stderr_name``: the (relative) file name to be used as stderr for the 
+          program specified with argv.
+        * ``join_files``: if True, stderr is redirected on the same file 
+          specified for stdout.
+          
+      * ``codes_run_mode``: sets the run_mode with which the (multiple) codes 
+        have to be executed. For example, parallel execution::
+        
+          mpirun -np 8 a.x &
+          mpirun -np 8 b.x &
+          wait
+        
+        The serial execution would be without the &'s.
+        Values are given by aiida.common.datastructures.code_run_modes.
     """
     # #TODO: validation key? also call the validate function in the proper
     #        place then.

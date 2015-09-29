@@ -219,11 +219,13 @@ There are two arguments:
    cluster.
 
 2. ``inputdict``: contains all the input data nodes as a dictionary, in the
-same format that is returned by the ``get_inputdata_dict()`` method,
+same format that is returned by the ``get_inputs_dict()`` method,
 i.e. a linkname as key, and the object as value.
 
-.. note:: inputdict should contain all input ``Data`` nodes, but *not* the code.
-  (this is what the ``get_inputdata_dict()`` method does, by the way).
+.. versionchanged:: 0.5
+  inputdict should contain all input ``Data`` nodes, *and* the code.
+  (this is what the ``get_inputs_dict()`` method returns, by the way).
+  In older versions, the code is not present.
 
 In general, you simply want to do::
 
@@ -303,56 +305,86 @@ How does the method ``_prepare_for_submission`` work in practice?
         calcinfo = CalcInfo()
 
         calcinfo.uuid = self.uuid
-        calcinfo.cmdline_params = settings_dict.pop('CMDLINE', [])
         calcinfo.local_copy_list = local_copy_list
         calcinfo.remote_copy_list = remote_copy_list
-	    ### Modify here and put a name for standard input/output files
-        calcinfo.stdin_name = self.INPUT_FILE_NAME
-        calcinfo.stdout_name = self.OUTPUT_FILE_NAME
-        ###        
+        
         calcinfo.retrieve_list = []
         ### Modify here !
         calcinfo.retrieve_list.append('Every file/folder you want to store back locally')
         ### Modify here!
         calcinfo.retrieve_singlefile_list = []
-	
+        
+        ### Modify here and put a name for standard input/output files
+        codeinfo = CodeInfo()
+        codeinfo.cmdline_params = settings_dict.pop('CMDLINE', [])
+        codeinfo.stdin_name = self.INPUT_FILE_NAME
+        codeinfo.stdout_name = self.OUTPUT_FILE_NAME
+        codeinfo.withmpi = self.get_withmpi()
+        codeinfo.code_pk = code.pk
+
+        calcinfo.codes_info = [codeinfo]
+
         return calcinfo
 
-   There are a couple of things to be set.
+   There are a couple of things to be set on calcinfo.
 
-   1. stdin_name: the name of the standard input.
-
-   2. stdin_name: the name of the standard output.
-
-   3. cmdline_params: like parallelization flags, that will be used when
-      running the code.
-
-   4. retrieve_list: a list of relative file pathnames, that will be copied
+   1. ``retrieve_list``: a list of relative file pathnames, that will be copied
       from the cluster to the aiida server, after the calculation has run on
       cluster.
       Note that all the file names you need to modify are not absolute path 
       names (you don't know the name of the folder where it will be created) but 
       rather the path relative to the scratch folder.
 
-   5. local_copy_list: a list of length-two-tuples: (localabspath,
+   2. ``local_copy_list``: a list of length-two-tuples: (localabspath,
       relativedestpath). Files to be copied from the aiida server to the cluster.
 
-   6. remote_copy_list: a list of tuples: (remotemachinename, remoteabspath,
+   3. ``remote_copy_list``: a list of tuples: (remotemachinename, remoteabspath,
       relativedestpath). Files/folders to be copied from a remote source to a
       remote destination, sitting both on the same machine.
 
-   7. retrieve_singlefile_list: a list of triplets, in the form
+   4. ``retrieve_singlefile_list``: a list of triplets, in the form
       ``["linkname_from calc to singlefile","subclass of
       singlefile","filename"]``. If this is specified, at the end of the
       calculation it will be created a SinglefileData-like object in the
       Database, children of the calculation, if of course the file is found
       on the cluster.
 
+   5. codes_info: a list of informations that needs to be passed on the command 
+      line to the code, passed in the form of a list of CalcInfo objects (see later).
+      Every element in this list corresponds to a call to a code that will be 
+      executed in the *same* scheduling job.
+      This can be useful if a code needs to execute a short preprocessing. For 
+      long preprocessings, consider to develop a separate plugin.
+   
+   6. ``codes_run_mode``: a string, only necessary if you want to run more than one code
+      in the same scheduling job. Determines the order in which the multiple 
+      codes are run (i.e. sequentially or all at the same time.
+      It assumes one of the values of aiida.common.datastructures.code_run_modes,
+      like code_run_modes.PARALLEL or code_run_modes.SERIAL
+
+   A CodeInfo object, as said before, describes how a code has to be executed.
+   The list of CodeInfo objects passed to calcinfo will determined the ordered
+   execution of one (or more) calls to executables.
+   The attributes that can be set to CodeInfo are:
+
+   1. ``stdin_name``: the name of the standard input.
+
+   2. ``stdin_name``: the name of the standard output.
+
+   3. ``cmdline_params``: like parallelization flags, that will be used when
+      running the code.
+
+   4. ``stderr_name``: the name of the error output.
+
+   5. ``withmpi``: whether the code has to be called with mpi or not.
+   6. ``code_pk``: the pk of the code associated to the CodeInfo instance.
+   
+   
    If you need to change other settings to make the plugin work, you
    likely need to add more information to the calcinfo than what we
    showed here.
-   For the full definition of ``CalcInfo()``, refer to the source
-   ``aiida.common.datastructures``.
+   For the full definition of ``CalcInfo()`` and ``CodeInfo()``, refer to the 
+   source ``aiida.common.datastructures``.
 
 
 That's what is needed to write an input plugin.

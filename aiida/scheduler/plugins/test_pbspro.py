@@ -898,15 +898,19 @@ class TestSubmitScript(unittest.TestCase):
         """
         """
         from aiida.scheduler.datastructures import JobTemplate
+        from aiida.common.datastructures import CodeInfo, code_run_modes
 
         s = PbsproScheduler()
 
         job_tmpl = JobTemplate()
-        job_tmpl.argv = ["mpirun", "-np", "23", "pw.x", "-npool", "1"]
-        job_tmpl.stdin_name = 'aiida.in'
         job_tmpl.job_resource = s.create_job_resource(num_machines=1, num_mpiprocs_per_machine=1)
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.max_wallclock_seconds = 24 * 3600
+        code_info = CodeInfo()
+        code_info.cmdline_params = ["mpirun", "-np", "23", "pw.x", "-npool", "1"]
+        code_info.stdin_name = 'aiida.in'
+        job_tmpl.codes_info = [code_info]
+        job_tmpl.codes_run_mode = code_run_modes.SERIAL
 
         submit_script_text = s.get_submit_script(job_tmpl)
 

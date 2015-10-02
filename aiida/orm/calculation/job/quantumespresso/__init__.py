@@ -585,7 +585,7 @@ class BasePwCpInputGenerator(object):
                                    + ["-in", self._INPUT_FILE_NAME])
         #calcinfo.stdin_name = self._INPUT_FILE_NAME
         codeinfo.stdout_name = self._OUTPUT_FILE_NAME
-        codeinfo.code_pk = code.pk
+        codeinfo.code_uuid = code.uuid
         calcinfo.codes_info = [codeinfo]
         
         calcinfo.local_copy_list = local_copy_list

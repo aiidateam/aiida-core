@@ -490,7 +490,7 @@ def submit_calc(calc, authinfo, transport=None):
                                                         use_unstored_links=False)
 
             codes_info = calcinfo.codes_info
-            input_codes = [ Code.get_subclass_from_pk(_.code_pk) for _ in codes_info ]
+            input_codes = [ Code.get_subclass_from_uuid(_.code_uuid) for _ in codes_info ]
 
             for code in input_codes:
                 if not code.can_run_on(computer):

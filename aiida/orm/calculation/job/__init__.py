@@ -1441,11 +1441,11 @@ class JobCalculation(Calculation):
                 raise PluginInternalError("Invalid codes_info, must be a list "
                                           "of CodeInfo objects")
             
-            if code_info.code_pk is None:
+            if code_info.code_uuid is None:
                 raise PluginInternalError("CalcInfo should have "
                                           "the information of the code "
                                           "to be launched")
-            this_code = Code.get_subclass_from_pk(code_info.code_pk)
+            this_code = Code.get_subclass_from_uuid(code_info.code_uuid)
             
             this_withmpi = code_info.withmpi    # to decide better how to set the default
             if this_withmpi is None:
@@ -1470,14 +1470,10 @@ class JobCalculation(Calculation):
             this_stderr_name = code_info.stderr_name
             this_join_files = code_info.join_files
             
-            c = CodeInfo()
-            c.stdin_name = this_stdin_name
-            c.stdout_name = this_stdout_name
-            c.stderr_name = this_stderr_name
-            c.cmdline_params = this_argv
-            c.join_files = this_join_files
-            
-            codes_info.append( c )
+            # overwrite the old cmdline_params and add codename and mpirun stuff
+            code_info.cmdline_params = this_argv
+
+            codes_info.append( code_info )
         job_tmpl.codes_info = codes_info
         
         # set the codes execution mode

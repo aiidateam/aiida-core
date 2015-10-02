@@ -165,7 +165,7 @@ class TemplatereplacerCalculation(JobCalculation):
         if output_file_name:
             codeinfo.stdout_name = output_file_name
             calcinfo.retrieve_list.append(output_file_name)
-        codeinfo.code_pk = code.pk
+        codeinfo.code_uuid = code.uuid
         calcinfo.codes_info = [codeinfo]
 
         return calcinfo

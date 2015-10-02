@@ -92,7 +92,7 @@ class CifcoddepositCalculation(CiffilterCalculation):
         codeinfo.stdin_name = self._DEFAULT_INPUT_FILE
         codeinfo.stdout_name = self._DEFAULT_OUTPUT_FILE
         codeinfo.stderr_name = self._DEFAULT_ERROR_FILE
-        codeinfo.code_pk = code.pk
+        codeinfo.code_uuid = code.uuid
         calcinfo.codes_info = [codeinfo]
 
         return calcinfo

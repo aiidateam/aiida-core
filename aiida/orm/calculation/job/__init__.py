@@ -1398,7 +1398,7 @@ class JobCalculation(Calculation):
             subst_dict[k] = v
         mpi_args = [arg.format(**subst_dict) for arg in
                     computer.get_mpirun_command()]
-        extra_mpirun_params = self.get_mpirun_extra_params() # this is to be understood how to modify
+        extra_mpirun_params = self.get_mpirun_extra_params() # this is the same for all codes in the same calc
         
         ########################################################################
 #         if self.get_withmpi():

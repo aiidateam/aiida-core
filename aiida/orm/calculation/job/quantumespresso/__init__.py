@@ -578,7 +578,7 @@ class BasePwCpInputGenerator(object):
         calcinfo.cmdline_params = (list(cmdline_params)
                                    + ["-in", self._INPUT_FILE_NAME])
         #calcinfo.stdin_name = self._INPUT_FILE_NAME
-        calcinfo.stdout_name = self._OUTPUT_FILE_NAME
+        #calcinfo.stdout_name = self._OUTPUT_FILE_NAME
 
         codeinfo = CodeInfo()
         codeinfo.cmdline_params = (list(cmdline_params)

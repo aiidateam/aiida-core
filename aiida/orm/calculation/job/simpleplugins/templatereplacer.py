@@ -155,11 +155,11 @@ class TemplatereplacerCalculation(JobCalculation):
         calcinfo.retrieve_list = []
 
         calcinfo.uuid = self.uuid
-        calcinfo.cmdline_params = cmdline_params
         calcinfo.local_copy_list = local_copy_list
         calcinfo.remote_copy_list = remote_copy_list
 
         codeinfo = CodeInfo()
+        codeinfo.cmdline_params = cmdline_params
         if input_through_stdin is not None:
             codeinfo.stdin_name = input_file_name
         if output_file_name:

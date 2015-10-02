@@ -1109,7 +1109,7 @@ class JobCalculation(Calculation):
             inputdict: A dictionary where
                 each key is an input link name and each value an AiiDA
                 node, as it would be returned by the
-                self.get_inputdata_dict() method (without the Code!).
+                self.get_inputs_dict() method (with the Code!).
                 The advantage of having this explicitly passed is that this
                 allows to choose outside which nodes to use, and whether to
                 use also unstored nodes, e.g. in a test_submit phase.
@@ -1326,9 +1326,9 @@ class JobCalculation(Calculation):
         computer = self.get_computer()
 
         if use_unstored_links:
-            inputdict = self.get_inputdata_dict(only_in_db=False)
+            inputdict = self.get_inputs_dict(only_in_db=False)
         else:
-            inputdict = self.get_inputdata_dict(only_in_db=True)
+            inputdict = self.get_inputs_dict(only_in_db=True)
 
         codes = [ _ for _ in inputdict.itervalues() if isinstance(_,Code) ]
 

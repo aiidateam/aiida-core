@@ -229,7 +229,7 @@ i.e. a linkname as key, and the object as value.
 
 In general, you simply want to do::
 
-      inputdict = self.get_inputdata_dict()
+      inputdict = self.get_inputs_dict()
 
 right before calling ``_prepare_for_submission``.
 The reason for having this explicitly passed is that the plugin does not have

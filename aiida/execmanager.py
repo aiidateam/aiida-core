@@ -486,7 +486,8 @@ def submit_calc(calc, authinfo, transport=None):
         computer = calc.get_computer()
 
         with SandboxFolder() as folder:
-            calcinfo, script_filename = calc._presubmit(folder)
+            calcinfo, script_filename = calc._presubmit(folder,
+                                                        use_unstored_links=False)
 
             codes_info = calcinfo.codes_info
             input_codes = [ Code.get_subclass_from_pk(_.code_pk) for _ in codes_info ]

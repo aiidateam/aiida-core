@@ -1297,7 +1297,19 @@ class JobCalculation(Calculation):
                                 "(it was {})".format(self.pk, calc_states.WITHSCHEDULER))
 
 
-    def _presubmit(self, folder):
+    def _presubmit(self, folder, use_unstored_links=False):
+        """
+        Prepares the calculation folder with all inputs, ready to be copied to the cluster 
+        :param folder: a SandboxFolder, empty in input, that will be filled with
+          calculation input files and the scheduling script.  
+        :param use_unstored_links: if set to True, it will the presubmit will 
+          try to launch the calculation using also unstored nodes linked to the 
+          Calculation only in the cache.
+          
+        :return calcinfo: the CalcInfo object containing the information
+          needed by the daemon to handle operations.
+        :return script_filename: the name of the job scheduler script
+        """
         import os
         import StringIO
         import json
@@ -1313,7 +1325,11 @@ class JobCalculation(Calculation):
 
         computer = self.get_computer()
 
-        inputdict = self.get_inputs_dict()
+        if use_unstored_links:
+            inputdict = self.get_inputdata_dict(only_in_db=False)
+        else:
+            inputdict = self.get_inputdata_dict(only_in_db=True)
+
         codes = [ _ for _ in inputdict.itervalues() if isinstance(_,Code) ]
 
         calcinfo = self._prepare_for_submission(folder, inputdict)
@@ -1645,7 +1661,7 @@ class JobCalculation(Calculation):
             t.chdir(subfolder.abspath)
 
             calcinfo, script_filename = self._presubmit(
-                subfolder)
+                subfolder, use_unstored_links=True)
 
             code = self.get_code()
 

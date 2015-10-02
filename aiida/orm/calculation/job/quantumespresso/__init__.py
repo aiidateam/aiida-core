@@ -410,6 +410,13 @@ class BasePwCpInputGenerator(object):
             try:
                 mesh, offset = kpoints.get_kpoints_mesh()
                 has_mesh = True
+                force_kpoints_list = settings_dict.pop('FORCE_KPOINTS_LIST', False)
+                if force_kpoints_list:
+                    kpoints_list = kpoints.get_kpoints_mesh(print_list=True)
+                    num_kpoints = len(kpoints_list)
+                    has_mesh = False
+                    weights = [1.] * num_kpoints
+
             except AttributeError:
 
                 try:

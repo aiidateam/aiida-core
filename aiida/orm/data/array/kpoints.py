@@ -284,17 +284,30 @@ class KpointsData(ArrayData):
         self._set_attr('mesh', the_mesh)
         self._set_attr('offset', the_offset)
 
-    def get_kpoints_mesh(self):
+    def get_kpoints_mesh(self, print_list=False):
         """
         Get the mesh of kpoints.
-        
+
+        :param print_list: default=False. If True, prints the mesh of kpoints as a list
+
         :raise AttributeError: if no mesh has been set
-        :return mesh,offset: a list of 3 integers and a list of three 
+        :return mesh,offset: (if print_list=False) a list of 3 integers and a list of three
                 floats 0<x<1, representing the mesh and the offset of kpoints
+        :return kpoints: (if print_list = True) an explicit list of kpoints coordinates,
+                similar to what returned by get_kpoints()
         """
         mesh = self.get_attr('mesh')
         offset = self.get_attr('offset')
-        return mesh, offset
+        if not print_list:
+            return mesh, offset
+        else:
+            kpoints = numpy.mgrid[0:mesh[0], 0:mesh[1], 0:mesh[2]]
+            kpoints = kpoints.reshape(3,-1).T
+            offset_kpoints = kpoints + numpy.array(offset)
+            offset_kpoints[:,0] /= mesh[0]
+            offset_kpoints[:,1] /= mesh[1]
+            offset_kpoints[:,2] /= mesh[2]
+            return offset_kpoints
 
     @property
     def _dimension(self):

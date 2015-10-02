@@ -988,11 +988,14 @@ class Workflow(object):
         Get all calculations connected with this workflow and all its subworflows up to a given depth.
         The list of calculations can be restricted to a given calculation type and state
         :param calc_class: the calculation class to which the calculations should belong (default: JobCalculation)
+        
         :param calc_state: a specific state to filter the calculations to retrieve
+        
         :param depth: the maximum depth level the recursion on sub-workflows will
-                  try to reach (0 means we stay at the step level and don't go
-                  into sub-workflows, 1 means we go down to one step level of 
-                  the sub-workflows, etc.)
+          try to reach (0 means we stay at the step level and don't go
+          into sub-workflows, 1 means we go down to one step level of 
+          the sub-workflows, etc.)
+          
         :return: a list of JobCalculation objects
         """
         

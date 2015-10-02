@@ -4,7 +4,7 @@ Parser warnings policy
 Below are simple rules giving the best practice for the usage of the keys 
 ``warnings`` and ``parser_warnings`` in the output parameters of a calculation.
 
-warnings
+Warnings
 --------
 
 These should be devoted to
@@ -38,4 +38,4 @@ For Quantum-ESPRESSO (PW), examples are
 
   * ``Skipping the parsing of the xml file.``
   * ``Error while parsing for energy terms.``
-  etc.
+  * etc.

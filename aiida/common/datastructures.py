@@ -157,18 +157,21 @@ class CodeInfo(DefaultFieldsAttributeDict):
       
         code.x < stdin_name
       
-      (it is not possible to substitute/remove the <, for that use cmdline_params)
       If no stdin_name is specified, the string "< stdin_name" will not be 
       passed to the code.
+      Note: it is not possible to substitute/remove the '<' if stdin_name is specified;
+      if that is needed, avoid stdin_name and use instead the cmdline_params to 
+      specify a suitable syntax. 
     * ``stdout_name``: (optional) the name of the standard output file. Note, it is 
       only possible to pass output to stdout_name with the syntax::
       
-        code.x > stdout_name
+        code.x ... > stdout_name
       
-      (it is not possible to remove the >, for that use cmdline_params, and it 
-      is not possible to use a >>)
       If no stdout_name is specified, the string "> stdout_name" will not be 
       passed to the code.
+      Note: it is not possible to substitute/remove the '>' if stdout_name is specified;
+      if that is needed, avoid stdout_name and use instead the cmdline_params to 
+      specify a suitable syntax. 
     * ``stderr_name``: (optional) a string, the name of the error file of the code.
     * ``join_files``: (optional) if True, redirects the error to the output file.
       If join_files=True, the code will be called as::
@@ -177,7 +180,7 @@ class CodeInfo(DefaultFieldsAttributeDict):
       
       otherwise, if join_files=False and stderr is passed::
       
-        code.x ... > stdout_name 2> {}
+        code.x ... > stdout_name 2> stderr_name
 
     * ``withmpi``: if True, executes the code with mpirun (or another MPI installed
       on the remote computer)

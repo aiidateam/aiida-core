@@ -203,28 +203,6 @@ def decode_textfield_gzip_base64(content):
 
     return gunzip_string(decode_textfield_base64(content))
 
-def decode_textfield(content,method):
-    """
-    Decodes the contents of encoded CIF textfield.
-
-    :param content: the content to be decoded
-    :param method: method, which was used for encoding the contents
-        (None, 'base64', 'ncr', 'quoted-printable', 'gzip+base64')
-    :return: decoded content
-    :raises ValueError: if the encoding method is unknown
-    """
-    if method == 'base64':
-        content = decode_textfield_base64(content)
-    elif method == 'quoted-printable':
-        content = decode_textfield_quoted_printable(content)
-    elif method == 'ncr':
-        content = decode_textfield_ncr(content)
-    elif method == 'gzip+base64':
-        content = decode_textfield_gzip_base64(content)
-    elif method is not None:
-        raise ValueError("Unknown content encoding: '{}'".format(method))
-
-    return content
 
 def decode_textfield(content,method):
     """
@@ -280,6 +258,7 @@ def symop_string_from_symop_matrix_tr(matrix, tr=[0, 0, 0], eps=0):
             parts[i] = format("{}{}{}".format(parts[i],sign,abs(tr[i])))
         parts[i] = re.sub('^\+', '', parts[i])
     return ",".join(parts)
+
 
 @optional_inline
 def _get_aiida_structure_ase_inline(cif=None, parameters=None):

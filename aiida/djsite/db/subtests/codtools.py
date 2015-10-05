@@ -34,71 +34,23 @@ class TestCodtools(AiidaTestCase):
 
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_1(self):
-        file_content = "data_test _cell_length_a 10(1)"
-        with tempfile.NamedTemporaryFile() as f:
-            f.write(file_content)
-            f.flush()
-            cif = CifData(file=f.name)
+        stdout_messages = ["data_test _cell_length_a 10(1)"]
+        stderr_messages = []
 
-        p = ParameterData(dict={
-            'start-data-block-number': '1234567',
-            'extra-tag-list': ['cod.lst', 'tcod.lst'],
-            'reformat-spacegroup': True,
-            's': True,
-        })
-
-        c = CiffilterCalculation(computer=self.computer,
-                                 resources={
-                                     'num_machines': 1,
-                                     'num_mpiprocs_per_machine': 1}
-        )
         f = SandboxFolder()
+        stdout_file = "{}/{}".format(f.abspath, "aiida.out")
+        stderr_file = "{}/{}".format(f.abspath, "aiida.err")
 
-        with self.assertRaises(InputValidationError):
-            c._prepare_for_submission(f, c.get_inputdata_dict())
+        with open(stdout_file, 'w') as of:
+            of.write("\n".join(stdout_messages))
+            of.flush()
 
-        with self.assertRaises(TypeError):
-            c.use_cif(None)
+        with open(stderr_file, 'w') as ef:
+            ef.write("\n".join(stderr_messages))
+            ef.flush()
 
-        c.use_cif(cif)
-
-        calc = c._prepare_for_submission(f, c.get_inputdata_dict())
-        self.assertEquals(calc['cmdline_params'], [])
-
-        with self.assertRaises(TypeError):
-            c.use_parameters(None)
-
-        c.use_parameters(p)
-
-        calc = c._prepare_for_submission(f, c.get_inputdata_dict())
-
-        self.assertEquals(calc['cmdline_params'],
-                          ['--extra-tag-list', 'cod.lst',
-                           '--extra-tag-list', 'tcod.lst',
-                           '-s', '--reformat-spacegroup',
-                           '--start-data-block-number', '1234567'])
-
-        self.assertEquals(calc['stdout_name'], c._DEFAULT_OUTPUT_FILE)
-        self.assertEquals(calc['stderr_name'], c._DEFAULT_ERROR_FILE)
-
-        with open("{}/{}".format(f.abspath, calc['stdin_name'])) as i:
-            self.assertEquals(i.read(), file_content)
-
-        c.store_all()
-        c._set_state(calc_states.PARSING)
-
-        fd = FolderData()
-        fd.store()
-
-        fd._add_link_from(c, label="retrieved")
-
-        with open("{}/{}".format(fd._get_folder_pathsubfolder.abspath,
-                                 calc['stdout_name']), 'w') as o:
-            o.write(file_content)
-            o.flush()
-
-        parser = CiffilterParser(c)
-        success, nodes = parser.parse_from_calc()
+        parser = CiffilterParser(CiffilterCalculation())
+        success, nodes = parser._get_output_nodes(stdout_file, stderr_file)
 
         self.assertEquals(success, True)
         self.assertEquals(len(nodes), 2)

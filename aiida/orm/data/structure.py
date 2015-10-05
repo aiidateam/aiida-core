@@ -95,15 +95,6 @@ def has_ase():
         return False
     return True
 
-def has_pyspglib():
-    """
-    :return: True if the pyspglib module can be imported, False otherwise.
-    """
-    try:
-        import pyspglib
-    except ImportError:
-        return False
-    return True
 
 def has_pymatgen():
     """

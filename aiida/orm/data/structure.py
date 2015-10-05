@@ -126,6 +126,17 @@ def get_pymatgen_version():
     return pymatgen.__version__
 
 
+def has_pyspglib():
+    """
+    :return: True if the pyspglib module can be imported, False otherwise.
+    """
+    try:
+        import pyspglib
+    except ImportError:
+        return False
+    return True
+
+
 def calc_cell_volume(cell):
     """
     Calculates the volume of a cell given the three lattice vectors.

@@ -37,7 +37,7 @@ TODO: catch exceptions
 """
 from aiida.orm.calculation.job import JobCalculation
 from aiida.common.exceptions import InputValidationError
-from aiida.common.datastructures import CalcInfo
+from aiida.common.datastructures import CalcInfo, CodeInfo
 
 # TODO: write a 'input_type_checker' routine to automatically check the existence
 # and type of inputs + default values etc.
@@ -63,7 +63,7 @@ class TemplatereplacerCalculation(JobCalculation):
         :param tempfolder: a aiida.common.folders.Folder subclass where
                            the plugin should put all its files.
         :param inputdict: a dictionary with the input nodes, as they would
-                be returned by get_inputdata_dict (without the Code!)
+                be returned by get_inputs_dict (with the Code!)
         """
         import StringIO
 
@@ -125,6 +125,10 @@ class TemplatereplacerCalculation(JobCalculation):
                                            "it must be either a SinglefileData or a RemoteData; it is instead of type {}".format(
                     link_name, fileobj.__class__.__name__))
 
+        code = inputdict.pop('code', None)
+        if code is None:
+            raise InputValidationError("No code in input")        
+
         if len(inputdict) > 0:
             raise InputValidationError("The input nodes with the following labels could not be "
                                        "used by the templatereplacer plugin: {}".format(
@@ -151,20 +155,17 @@ class TemplatereplacerCalculation(JobCalculation):
         calcinfo.retrieve_list = []
 
         calcinfo.uuid = self.uuid
-        calcinfo.cmdline_params = cmdline_params
         calcinfo.local_copy_list = local_copy_list
         calcinfo.remote_copy_list = remote_copy_list
-        if input_through_stdin is not None:
-            calcinfo.stdin_name = input_file_name
-        if output_file_name:
-            calcinfo.stdout_name = output_file_name
-            calcinfo.retrieve_list.append(output_file_name)
 
-        # TODO: implement
-        # 'job_environment',
-        #        'prepend_text',
-        #        'append_text', 
-        #        'stderr_name',
-        #        'join_files',
+        codeinfo = CodeInfo()
+        codeinfo.cmdline_params = cmdline_params
+        if input_through_stdin is not None:
+            codeinfo.stdin_name = input_file_name
+        if output_file_name:
+            codeinfo.stdout_name = output_file_name
+            calcinfo.retrieve_list.append(output_file_name)
+        codeinfo.code_uuid = code.uuid
+        calcinfo.codes_info = [codeinfo]
 
         return calcinfo

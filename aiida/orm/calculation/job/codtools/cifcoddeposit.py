@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from aiida.orm.calculation.job.codtools.ciffilter import CiffilterCalculation
-from aiida.common.datastructures import CalcInfo
+from aiida.common.datastructures import CalcInfo, CodeInfo
 from aiida.common.exceptions import InputValidationError
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
@@ -52,6 +52,10 @@ class CifcoddepositCalculation(CiffilterCalculation):
         if not isinstance(parameters, ParameterData):
             raise InputValidationError("parameters is not of type ParameterData")
 
+        code = inputdict.pop(self.get_linkname('code'), None)
+        if code is None:
+            raise InputValidationError("No code found in input")
+
         parameters_dict = parameters.get_dict()
 
         deposit_file_rel = "deposit.cif"
@@ -77,14 +81,18 @@ class CifcoddepositCalculation(CiffilterCalculation):
         calcinfo = CalcInfo()
         calcinfo.uuid = self.uuid
         # The command line parameters should be generated from 'parameters'
-        calcinfo.cmdline_params = commandline_params
         calcinfo.local_copy_list = []
         calcinfo.remote_copy_list = []
-        calcinfo.stdin_name = self._DEFAULT_INPUT_FILE
-        calcinfo.stdout_name = self._DEFAULT_OUTPUT_FILE
-        calcinfo.stderr_name = self._DEFAULT_ERROR_FILE
         calcinfo.retrieve_list = [self._DEFAULT_OUTPUT_FILE,
                                   self._DEFAULT_ERROR_FILE]
         calcinfo.retrieve_singlefile_list = []
+
+        codeinfo = CodeInfo()
+        codeinfo.cmdline_params = commandline_params
+        codeinfo.stdin_name = self._DEFAULT_INPUT_FILE
+        codeinfo.stdout_name = self._DEFAULT_OUTPUT_FILE
+        codeinfo.stderr_name = self._DEFAULT_ERROR_FILE
+        codeinfo.code_uuid = code.uuid
+        calcinfo.codes_info = [codeinfo]
 
         return calcinfo

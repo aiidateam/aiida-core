@@ -13,6 +13,7 @@ from aiida.orm.data.array.kpoints import KpointsData
 from aiida.orm.data.upf import UpfData
 from aiida.orm.data.singlefile import SinglefileData
 from aiida.orm.data.remote import RemoteData
+from aiida.common.datastructures import CodeInfo
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -220,6 +221,11 @@ class BasePwCpInputGenerator(object):
                 raise InputValidationError("vdw_table, if specified, "
                                            "must be of type SinglefileData")
 
+        try:
+            code = inputdict.pop(self.get_linkname('code'))
+        except KeyError:
+            raise InputValidationError("No code specified for this calculation")
+        
         # Here, there should be no more parameters...
         if inputdict:
             raise InputValidationError("The following input data nodes are "
@@ -410,6 +416,13 @@ class BasePwCpInputGenerator(object):
             try:
                 mesh, offset = kpoints.get_kpoints_mesh()
                 has_mesh = True
+                force_kpoints_list = settings_dict.pop('FORCE_KPOINTS_LIST', False)
+                if force_kpoints_list:
+                    kpoints_list = kpoints.get_kpoints_mesh(print_list=True)
+                    num_kpoints = len(kpoints_list)
+                    has_mesh = False
+                    weights = [1.] * num_kpoints
+
             except AttributeError:
 
                 try:
@@ -571,10 +584,19 @@ class BasePwCpInputGenerator(object):
         # simply uses < calcinfo.stin_name
         calcinfo.cmdline_params = (list(cmdline_params)
                                    + ["-in", self._INPUT_FILE_NAME])
+        #calcinfo.stdin_name = self._INPUT_FILE_NAME
+        #calcinfo.stdout_name = self._OUTPUT_FILE_NAME
+
+        codeinfo = CodeInfo()
+        codeinfo.cmdline_params = (list(cmdline_params)
+                                   + ["-in", self._INPUT_FILE_NAME])
+        #calcinfo.stdin_name = self._INPUT_FILE_NAME
+        codeinfo.stdout_name = self._OUTPUT_FILE_NAME
+        codeinfo.code_uuid = code.uuid
+        calcinfo.codes_info = [codeinfo]
+        
         calcinfo.local_copy_list = local_copy_list
         calcinfo.remote_copy_list = remote_copy_list
-        #calcinfo.stdin_name = self._INPUT_FILE_NAME
-        calcinfo.stdout_name = self._OUTPUT_FILE_NAME
         calcinfo.remote_symlink_list = remote_symlink_list
 
         # Retrieve by default the output file and the xml file

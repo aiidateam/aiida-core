@@ -39,6 +39,24 @@ class CodDbImporter(DbImporter):
             clause_parts.append("'" + e + "'")
         return key + " IN (" + ", ".join(clause_parts) + ")"
 
+    def _str_exact_or_none_clause(self, key, alias, values):
+        """
+        Returns SQL query predicate for querying string fields, allowing
+        to use Python's "None" in addition.
+        """
+        if None in values:
+            values_now = []
+            for e in values:
+                if e is not None:
+                    values_now.append(e)
+            if len(values_now):
+                clause = self._str_exact_clause(key, alias, values_now)
+                return "{} OR {} IS NULL".format(clause, key)
+            else:
+                return "{} IS NULL".format(key)
+        else:
+            return self._str_exact_clause(key, alias, values)
+
     def _formula_clause(self, key, alias, values):
         """
         Returns SQL query predicate for querying formula fields.
@@ -158,7 +176,8 @@ class CodDbImporter(DbImporter):
                  'journal_issue': ['issue', _str_exact_clause],
                  'first_page': ['firstpage', _str_exact_clause],
                  'last_page': ['lastpage', _str_exact_clause],
-                 'doi': ['doi', _str_exact_clause]}
+                 'doi': ['doi', _str_exact_clause],
+                 'determination_method': ['method', _str_exact_or_none_clause]}
 
     def __init__(self, **kwargs):
         self._db = None

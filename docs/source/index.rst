@@ -17,7 +17,14 @@ AiiDA is a sophisticated framework designed from scratch to be a flexible and sc
 
 The software is available at http://www.aiida.net.
 
-This is the documenation of the AiiDA framework. For the first setup, configuration and
+If you use AiiDA for your research, please cite the following work:
+  
+.. highlights:: Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari,
+  and Boris Kozinsky, *AiiDA: automated interactive infrastructure and database 
+  for computational science*, Comp. Mat. Sci 111, 218-230 (2016);
+  http://dx.doi.org/10.1016/j.commatsci.2015.09.013; http://www.aiida.net.
+
+This is the documentation of the AiiDA framework. For the first setup, configuration and
 usage, refer to the :doc:`user's guide<user_guide/index>` below.
 
 If, instead, you plan to add new plugins, or you simply want to understand

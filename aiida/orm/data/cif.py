@@ -38,7 +38,8 @@ def has_pycifrw():
 
 def encode_textfield_base64(content, foldwidth=76):
     """
-    Encodes the contents for CIF textfield in Base64.
+    Encodes the contents for CIF textfield in Base64 using standard Python
+    implementation (``base64.standard_b64encode()``).
 
     :param content: a string with contents
     :param foldwidth: maximum width of line (default is 76)
@@ -54,7 +55,8 @@ def encode_textfield_base64(content, foldwidth=76):
 
 def decode_textfield_base64(content):
     """
-    Decodes the contents for CIF textfield from Base64.
+    Decodes the contents for CIF textfield from Base64 using standard
+    Python implementation (``base64.standard_b64decode()``)
 
     :param content: a string with contents
     :return: decoded string
@@ -67,6 +69,12 @@ def decode_textfield_base64(content):
 def encode_textfield_quoted_printable(content):
     """
     Encodes the contents for CIF textfield in quoted-printable encoding.
+    In addition to non-ASCII characters, that are encoded by Python
+    function ``quopri.encodestring()``, following characters are encoded:
+
+        * '``;``', if encountered on the beginning of the line;
+        * '``\\t``'
+        * '``.``' and '``?``', if comprise the entire textfield.
 
     :param content: a string with contents
     :return: encoded string
@@ -110,6 +118,12 @@ def decode_textfield_quoted_printable(content):
 def encode_textfield_ncr(content):
     """
     Encodes the contents for CIF textfield in Numeric Character Reference.
+    Encoded characters:
+
+        * ``\\x09``, ``\\x0A``, ``\\x0D``, ``\\x20``--``\\x7E``;
+        * '``;``', if encountered on the beginning of the line;
+        * '``\\t``'
+        * '``.``' and '``?``', if comprise the entire textfield.
 
     :param content: a string with contents
     :return: encoded string
@@ -171,6 +185,30 @@ def decode_textfield_gzip_base64(content):
     from aiida.common.utils import gunzip_string
 
     return gunzip_string(decode_textfield_base64(content))
+
+
+def decode_textfield(content,method):
+    """
+    Decodes the contents of encoded CIF textfield.
+
+    :param content: the content to be decoded
+    :param method: method, which was used for encoding the contents
+        (None, 'base64', 'ncr', 'quoted-printable', 'gzip+base64')
+    :return: decoded content
+    :raises ValueError: if the encoding method is unknown
+    """
+    if method == 'base64':
+        content = decode_textfield_base64(content)
+    elif method == 'quoted-printable':
+        content = decode_textfield_quoted_printable(content)
+    elif method == 'ncr':
+        content = decode_textfield_ncr(content)
+    elif method == 'gzip+base64':
+        content = decode_textfield_gzip_base64(content)
+    elif method is not None:
+        raise ValueError("Unknown content encoding: '{}'".format(method))
+
+    return content
 
 
 def symop_string_from_symop_matrix_tr(matrix, tr=[0, 0, 0], eps=0):

@@ -742,14 +742,14 @@ class Node(object):
         """
         return True
 
-    def get_inputs_dict(self):
+    def get_inputs_dict(self, only_in_db=False):
         """
         Return a dictionary where the key is the label of the input link, and
         the value is the input node.
         
         :return: a dictionary {label:object}
         """
-        return dict(self.get_inputs(also_labels=True))
+        return dict(self.get_inputs(also_labels=True, only_in_db=only_in_db))
 
     def get_outputs_dict(self):
         """

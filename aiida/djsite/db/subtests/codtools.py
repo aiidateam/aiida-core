@@ -4,13 +4,23 @@ Tests for the codtools input plugins.
 """
 import os
 import tempfile
+import aiida
 
 from aiida.djsite.db.testbase import AiidaTestCase
 from aiida.common.folders import SandboxFolder
-from aiida.orm import CalculationFactory
-from aiida.orm import DataFactory
+from aiida.orm import CalculationFactory, DataFactory
+from aiida.orm.data.cif import CifData
+from aiida.orm.data.folder import FolderData
+from aiida.orm.data.parameter import ParameterData
+from aiida.common.datastructures import calc_states
+from aiida.common.exceptions import FeatureNotAvailable, InputValidationError
+from aiida.orm.calculation.job.codtools.cifcellcontents import CifcellcontentsCalculation
+from aiida.orm.calculation.job.codtools.cifcodcheck import CifcodcheckCalculation
+from aiida.orm.calculation.job.codtools.ciffilter import CiffilterCalculation
+from aiida.parsers.plugins.codtools.cifcellcontents import CifcellcontentsParser
+from aiida.parsers.plugins.codtools.cifcodcheck import CifcodcheckParser
 from aiida.parsers.plugins.codtools.ciffilter import CiffilterParser
-import aiida
+
 from django.utils import unittest
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
@@ -24,14 +34,6 @@ class TestCodtools(AiidaTestCase):
 
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_1(self):
-        from aiida.common.exceptions import InputValidationError
-        from aiida.common.datastructures import calc_states
-
-        CifData = DataFactory('cif')
-        FolderData = DataFactory('folder')
-        ParameterData = DataFactory('parameter')
-        CiffilterCalculation = CalculationFactory('codtools.ciffilter')
-
         file_content = "data_test _cell_length_a 10(1)"
         with tempfile.NamedTemporaryFile() as f:
             f.write(file_content)
@@ -109,14 +111,6 @@ class TestCodtools(AiidaTestCase):
 
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_2(self):
-        from aiida.common.exceptions import InputValidationError
-        from aiida.common.datastructures import calc_states
-
-        CifData = DataFactory('cif')
-        FolderData = DataFactory('folder')
-        ParameterData = DataFactory('parameter')
-        CiffilterCalculation = CalculationFactory('codtools.ciffilter')
-
         file_content = "data_test _cell_length_a 10(1)"
         errors = "first line\nlast line"
         with tempfile.NamedTemporaryFile() as f:
@@ -165,15 +159,6 @@ class TestCodtools(AiidaTestCase):
         self.assertEquals(isinstance(nodes[1][1], ParameterData), True)
 
     def test_3(self):
-        from aiida.parsers.plugins.codtools.cifcodcheck import CifcodcheckParser
-        from aiida.common.exceptions import InputValidationError
-        from aiida.common.datastructures import calc_states
-
-        CifData = DataFactory('cif')
-        FolderData = DataFactory('folder')
-        ParameterData = DataFactory('parameter')
-        CifcodcheckCalculation = CalculationFactory('codtools.cifcodcheck')
-
         stdout_messages = ["NOTE, symmetry operator '-x,-y,-z' is missing"]
         stderr_messages = ["ERROR, tag '_refine_ls_shift/esd_max' value '0.25' is > 0.2."]
 
@@ -202,8 +187,6 @@ class TestCodtools(AiidaTestCase):
 
     def test_4(self):
         from aiida.parsers.plugins.codtools.cifcellcontents import CifcellcontentsParser
-
-        CifcellcontentsCalculation = CalculationFactory('codtools.cifcellcontents')
 
         stdout = '''4000000	C26 H26 Fe
 4000001	C24 H17 F5 Fe
@@ -316,8 +299,6 @@ cif_cod_check: - data_4000001: _publ_section_title is undefined"""
         from aiida.parsers.plugins.codtools.cifcellcontents import CifcellcontentsParser
         from aiida.common.exceptions import PluginInternalError
 
-        CifcellcontentsCalculation = CalculationFactory('codtools.cifcellcontents')
-
         stdout = "4000000	C26 H26 Fe\n"
 
         stderr_1 = "Can't locate CIFSymmetryGenerator.pm in @INC (@INC contains: .) at cif_molecule line 61."
@@ -363,11 +344,6 @@ cif_cod_check: - data_4000001: _publ_section_title is undefined"""
                            '--start-data-block-number', '1234567'])
 
     def test_resource_validation(self):
-        from aiida.orm.calculation.job.codtools.ciffilter \
-            import CiffilterCalculation
-        from aiida.orm.data.cif import CifData
-        from aiida.common.exceptions import FeatureNotAvailable
-
         calc = CiffilterCalculation()
         calc.use_cif(CifData())
 
@@ -385,20 +361,11 @@ cif_cod_check: - data_4000001: _publ_section_title is undefined"""
 
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_status_assertion(self):
-        from aiida.orm.calculation.job.codtools.ciffilter \
-            import CiffilterCalculation
-        from aiida.orm.calculation.job.codtools.cifcellcontents \
-            import CifcellcontentsCalculation
-        from aiida.parsers.plugins.codtools.ciffilter import CiffilterParser
-        from aiida.parsers.plugins.codtools.cifcellcontents \
-            import CifcellcontentsParser
-        from tempfile import NamedTemporaryFile
-
-        nonempty = NamedTemporaryFile()
+        nonempty = tempfile.NamedTemporaryFile()
         nonempty.write('data_test _tag value')
         nonempty.flush()
 
-        empty = NamedTemporaryFile()
+        empty = tempfile.NamedTemporaryFile()
         empty.write('')
         empty.flush()
 

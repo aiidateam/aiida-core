@@ -16,7 +16,13 @@ __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Andrius Merkys"
 
 class BasicCalculation(JobCalculation):
     """
-    Generic input plugin for nwchem.
+    Basic input plugin for NWChem. Creates input from StructureData and
+    parameters:
+
+    * basis: dictionary of format ``{ 'atom species': 'basis set name' }``;
+    * task: NWChem task (*scf* by default);
+    * add_cell: add *system crystal* block with lattice parameters,
+        True by default.
     """
     def _init_internal_params(self):
         super(BasicCalculation, self)._init_internal_params()

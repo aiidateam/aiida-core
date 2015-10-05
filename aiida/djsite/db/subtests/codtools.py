@@ -111,43 +111,23 @@ class TestCodtools(AiidaTestCase):
 
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_2(self):
-        file_content = "data_test _cell_length_a 10(1)"
-        errors = "first line\nlast line"
-        with tempfile.NamedTemporaryFile() as f:
-            f.write(file_content)
-            f.flush()
-            cif = CifData(file=f.name)
+        stdout_messages = ["data_test _cell_length_a 10(1)"]
+        stderr_messages = ["first line", "last line"]
 
-        c = CiffilterCalculation(computer=self.computer,
-                                 resources={
-                                     'num_machines': 1,
-                                     'num_mpiprocs_per_machine': 1}
-        )
         f = SandboxFolder()
+        stdout_file = "{}/{}".format(f.abspath, "aiida.out")
+        stderr_file = "{}/{}".format(f.abspath, "aiida.err")
 
-        c.use_cif(cif)
+        with open(stdout_file, 'w') as of:
+            of.write("\n".join(stdout_messages))
+            of.flush()
 
-        calc = c._prepare_for_submission(f, c.get_inputdata_dict())
-        c.store_all()
-        c._set_state(calc_states.PARSING)
+        with open(stderr_file, 'w') as ef:
+            ef.write("\n".join(stderr_messages))
+            ef.flush()
 
-        fd = FolderData()
-        fd.store()
-
-        fd._add_link_from(c, label="retrieved")
-
-        with open("{}/{}".format(fd._get_folder_pathsubfolder.abspath,
-                                 calc['stdout_name']), 'w') as o:
-            o.write(file_content)
-            o.flush()
-
-        with open("{}/{}".format(fd._get_folder_pathsubfolder.abspath,
-                                 calc['stderr_name']), 'w') as o:
-            o.write(errors)
-            o.flush()
-
-        parser = CiffilterParser(c)
-        success, nodes = parser.parse_from_calc()
+        parser = CiffilterParser(CiffilterCalculation())
+        success, nodes = parser._get_output_nodes(stdout_file, stderr_file)
 
         self.assertEquals(success, True)
         self.assertEquals(len(nodes), 2)

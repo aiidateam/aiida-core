@@ -584,10 +584,10 @@ class CifData(SinglefileData):
         param = ParameterData(dict=kwargs)
         try:
             conv_f = getattr(cif, '_get_aiida_structure_{}_inline'.format(converter))
-            ret_dict = conv_f(cif=self, parameters=param, store=store)
-            return ret_dict['structure']
         except AttributeError:
             raise ValueError("No such converter '{}' available".format(converter))
+        ret_dict = conv_f(cif=self, parameters=param, store=store)
+        return ret_dict['structure']
 
     @property
     def ase(self):

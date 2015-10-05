@@ -72,6 +72,10 @@ installed (the ``.h`` C header files). Refer to the
 
 SQLite
 ------
+To use SQLite as backend, please install::
+
+  sudo apt-get install libsqlite3-dev
+
 SQLite requires almost no configuration. In the ``verdi install`` phase,
 just type ``sqlite`` when the ``Database engine`` is required,
 and then provide an absolute path
@@ -90,6 +94,7 @@ PostgreSQL
   To install PostgreSQL under Ubuntu, you can do::
 
     sudo apt-get install postgresql-9.1
+    sudo apt-get install postgresql-server-dev-9.1
     sudo apt-get install postgresql-client-9.1
 
   On Mac OS X, you can download binary packages to install PostgreSQL 
@@ -175,7 +180,10 @@ create a new ``aiida`` user and a new ``aiidadb`` table.
 
 We assume here that you already installed MySQL on your computer and that 
 you know your MySQL root password (there are many tutorials online that explain
-how to do it, depending on your operating system and distribution).
+how to do it, depending on your operating system and distribution). To install
+mysql-client, you can do::
+
+  sudo apt-get install libmysqlclient-dev
 
 After MySQL is installed, connect to it as the MySQL root account to create
 a new account. This can be done typing in the shell::
@@ -368,6 +376,11 @@ and look for the current location of the data directory::
   SHOW data_directory;
 
 Typically you should get something like ``/var/lib/postgresql/9.1/main``.
+
+.. note :: If you are experiencing memory problems and cannot enter the postgres
+	shell, you can look directly into the file ``/etc/postgresql/9.1/main/postgresql.conf``
+	and check out the line defining the variable ``data_directory``.
+
 Then exit the shell with ``\q``, go to this directory and copy all the
 files to the new directory::
 

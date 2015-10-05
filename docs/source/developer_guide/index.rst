@@ -5,7 +5,9 @@ Developer's guide
    :maxdepth: 3
 
    developers
+   internals
    devel_tutorial/code_plugin
+   devel_tutorial/parser_warnings_policy
    parsertests
    workflows   
    

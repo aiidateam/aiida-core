@@ -74,15 +74,14 @@ class CalcInfo(DefaultFieldsAttributeDict):
     """
     This object will store the data returned by the calculation plugin and to be
     passed to the ExecManager 
-    
-    # TODO:
-    * dynresources_info
-    
-    :todo: probably some of the fields below are not used anymore inside
-      calcinfo, but are rather directly set from calculation attributes to
-      the JobInfo to be passed to the ExecManager
-      (see, for instance, 'queue_name').
     """
+    # Note: some of the variables might have never been used in AiiDA
+    #       one might want to clean all this stuff in a future revision 
+    # Note: probably some of the fields below are not used anymore inside
+    #       calcinfo, but are rather directly set from calculation attributes to
+    #       the JobInfo to be passed to the ExecManager
+    #       (see, for instance, 'queue_name').
+    
     _default_fields = (
         'job_environment',  # TODO UNDERSTAND THIS!
         'email',
@@ -91,11 +90,11 @@ class CalcInfo(DefaultFieldsAttributeDict):
         'uuid',
         'prepend_text',
         'append_text',
-        'cmdline_params',  # as a list of strings
-        'stdin_name',
-        'stdout_name',
-        'stderr_name',
-        'join_files',
+#        'cmdline_params',  # as a list of strings. These 5 variables are now in CalcInfo
+#        'stdin_name',
+#        'stdout_name',
+#        'stderr_name',
+#        'join_files',
         # 'queue_name', This is not used in CalcInfo, it is automatically set from
         # calculation attributes to JobInfo
         'num_machines',
@@ -123,7 +122,78 @@ class CalcInfo(DefaultFieldsAttributeDict):
         # in the following format:
         # ["linkname_from calc to singlefile","subclass of singlefile","filename"]
         # filename remote = filename local
+        'codes_info',  # a list of dictionaries used to pass the info of the execution of a code.
+        'codes_run_mode', # a string used to specify the order in which multi codes can be executed  
     )
+
+
+class CodeRunmode(Enumerate):
+    pass
+
+# these are the possible ways to execute more than one code in the same scheduling job
+# if parallel, the codes will be executed as something like:
+#   code1.x &
+#   code2.x &
+#   wait
+# if serial, it will be:
+#   code1.x
+#   code2.x
+code_run_modes = CodeRunmode(('PARALLEL', 
+                              'SERIAL'))
+
+
+class CodeInfo(DefaultFieldsAttributeDict):
+    """
+    This attribute-dictionary contains the information needed to execute a code.
+    Possible attributes are:
+    
+    * ``cmdline_params``: a list of strings, containing parameters to be written on 
+      the command line right after the call to the code, as for example::
+        
+        code.x cmdline_params[0] cmdline_params[1] ... < stdin > stdout
+      
+    * ``stdin_name``: (optional) the name of the standard input file. Note, it is 
+      only possible to use the stdin with the syntax::
+      
+        code.x < stdin_name
+      
+      If no stdin_name is specified, the string "< stdin_name" will not be 
+      passed to the code.
+      Note: it is not possible to substitute/remove the '<' if stdin_name is specified;
+      if that is needed, avoid stdin_name and use instead the cmdline_params to 
+      specify a suitable syntax. 
+    * ``stdout_name``: (optional) the name of the standard output file. Note, it is 
+      only possible to pass output to stdout_name with the syntax::
+      
+        code.x ... > stdout_name
+      
+      If no stdout_name is specified, the string "> stdout_name" will not be 
+      passed to the code.
+      Note: it is not possible to substitute/remove the '>' if stdout_name is specified;
+      if that is needed, avoid stdout_name and use instead the cmdline_params to 
+      specify a suitable syntax. 
+    * ``stderr_name``: (optional) a string, the name of the error file of the code.
+    * ``join_files``: (optional) if True, redirects the error to the output file.
+      If join_files=True, the code will be called as::
+      
+        code.x ... > stdout_name 2>&1
+      
+      otherwise, if join_files=False and stderr is passed::
+      
+        code.x ... > stdout_name 2> stderr_name
+
+    * ``withmpi``: if True, executes the code with mpirun (or another MPI installed
+      on the remote computer)
+    * ``code_pk``: the pk of the code associated to the CodeInfo
+    """
+    _default_fields = ('cmdline_params',  # as a list of strings
+                       'stdin_name',
+                       'stdout_name',
+                       'stderr_name',
+                       'join_files',
+                       'withmpi',
+                       'code_pk'
+                       )
 
 
 class WorkflowState(Enumerate):

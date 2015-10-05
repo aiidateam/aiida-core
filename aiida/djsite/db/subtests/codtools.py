@@ -164,7 +164,6 @@ class TestCodtools(AiidaTestCase):
         self.assertEquals(nodes[1][0], 'messages')
         self.assertEquals(isinstance(nodes[1][1], ParameterData), True)
 
-    @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_3(self):
         from aiida.parsers.plugins.codtools.cifcodcheck import CifcodcheckParser
         from aiida.common.exceptions import InputValidationError
@@ -175,45 +174,24 @@ class TestCodtools(AiidaTestCase):
         ParameterData = DataFactory('parameter')
         CifcodcheckCalculation = CalculationFactory('codtools.cifcodcheck')
 
-        file_content = "data_test _cell_length_a 10(1)"
-        errors = "first line\nlast line"
-        with tempfile.NamedTemporaryFile() as f:
-            f.write(file_content)
-            f.flush()
-            cif = CifData(file=f.name)
-        c = CifcodcheckCalculation(computer=self.computer,
-                                   resources={
-                                       'num_machines': 1,
-                                       'num_mpiprocs_per_machine': 1}
-        )
-        f = SandboxFolder()
-
-        c.use_cif(cif)
-
-        calc = c._prepare_for_submission(f, c.get_inputdata_dict())
-        c.store_all()
-        c._set_state(calc_states.PARSING)
-
-        fd = FolderData()
-        fd.store()
-
-        fd._add_link_from(c, label="retrieved")
-
         stdout_messages = ["NOTE, symmetry operator '-x,-y,-z' is missing"]
-        with open("{}/{}".format(fd._get_folder_pathsubfolder.abspath,
-                                 calc['stdout_name']), 'w') as o:
-            o.write("aiida.in: OK\n")
-            o.write("\n".join(stdout_messages))
-            o.flush()
-
         stderr_messages = ["ERROR, tag '_refine_ls_shift/esd_max' value '0.25' is > 0.2."]
-        with open("{}/{}".format(fd._get_folder_pathsubfolder.abspath,
-                                 calc['stderr_name']), 'w') as o:
-            o.write("\n".join(stderr_messages))
-            o.flush()
 
-        parser = CifcodcheckParser(c)
-        success, nodes = parser.parse_from_calc()
+        f = SandboxFolder()
+        stdout_file = "{}/{}".format(f.abspath, "aiida.out")
+        stderr_file = "{}/{}".format(f.abspath, "aiida.err")
+
+        with open(stdout_file, 'w') as of:
+            of.write("aiida.in: OK\n")
+            of.write("\n".join(stdout_messages))
+            of.flush()
+
+        with open(stderr_file, 'w') as ef:
+            ef.write("\n".join(stderr_messages))
+            ef.flush()
+
+        parser = CifcodcheckParser(CifcodcheckCalculation())
+        success, nodes = parser._get_output_nodes(stdout_file, stderr_file)
 
         self.assertEquals(success, True)
         self.assertEquals(len(nodes), 1)
@@ -252,7 +230,7 @@ class TestCodtools(AiidaTestCase):
             ef.flush()
 
         parser = CifcellcontentsParser(CifcellcontentsCalculation())
-        _,output_nodes = parser._get_output_nodes(stdout_file, stderr_file)
+        _, output_nodes = parser._get_output_nodes(stdout_file, stderr_file)
         self.assertEquals(output_nodes[0][1].get_dict(), {
             'formulae': {
                 '4000003': 'C24 H17 F5 Fe',

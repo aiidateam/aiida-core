@@ -401,7 +401,7 @@ cif_cod_check: - data_4000001: _publ_section_title is undefined"""
             # Inner modification of resource parameters:
             calc._set_attr('jobresource_params', {key: 2})
             with self.assertRaises(FeatureNotAvailable):
-                calc.submit_test()
+                calc._validate_resources(**calc.get_resources())
 
             calc.set_resources({key: 1})
 

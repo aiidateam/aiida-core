@@ -5,7 +5,7 @@ import shutil
 from aiida.orm.calculation.job import JobCalculation
 from aiida.orm.data.parameter import ParameterData
 from aiida.orm.data.structure import StructureData
-from aiida.common.datastructures import CalcInfo
+from aiida.common.datastructures import CalcInfo, CodeInfo
 from aiida.common.exceptions import InputValidationError
 from aiida.common.utils import classproperty
 
@@ -92,11 +92,15 @@ class NwcpymatgenCalculation(JobCalculation):
         if not isinstance(parameters, ParameterData):
             raise InputValidationError("parameters is not of type ParameterData")
 
-        struct = None
         if 'structure' in inputdict:
             struct = inputdict.pop(self.get_linkname('structure'))
             if not isinstance(struct, StructureData):
                 raise InputValidationError("structure is not of type StructureData")
+
+        try:
+            code = inputdict.pop(self.get_linkname('code'))
+        except KeyError:
+            raise InputValidationError("no code is specified for this calculation")
 
         input_filename = tempfolder.get_abs_path(self._DEFAULT_INPUT_FILE)
         with open(input_filename,'w') as f:
@@ -107,13 +111,17 @@ class NwcpymatgenCalculation(JobCalculation):
 
         calcinfo = CalcInfo()
         calcinfo.uuid = self.uuid
-        calcinfo.cmdline_params = commandline_params
         calcinfo.local_copy_list = []
         calcinfo.remote_copy_list = []
-        calcinfo.stdout_name = self._DEFAULT_OUTPUT_FILE
-        calcinfo.stderr_name = self._DEFAULT_ERROR_FILE
         calcinfo.retrieve_list = [self._DEFAULT_OUTPUT_FILE,
                                   self._DEFAULT_ERROR_FILE]
         calcinfo.retrieve_singlefile_list = []
+
+        codeinfo = CodeInfo()
+        codeinfo.cmdline_params = commandline_params
+        codeinfo.stdout_name = self._DEFAULT_OUTPUT_FILE
+        codeinfo.stderr_name = self._DEFAULT_ERROR_FILE
+        codeinfo.code_uuid = code.uuid
+        calcinfo.codes_info = [codeinfo]
 
         return calcinfo

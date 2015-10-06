@@ -5,7 +5,7 @@ import shutil
 from aiida.orm.calculation.job import JobCalculation
 from aiida.orm.data.parameter import ParameterData
 from aiida.orm.data.structure import StructureData
-from aiida.common.datastructures import CalcInfo
+from aiida.common.datastructures import CalcInfo, CodeInfo
 from aiida.common.exceptions import InputValidationError
 from aiida.common.utils import classproperty
 
@@ -59,12 +59,18 @@ class BasicCalculation(JobCalculation):
 
     def _prepare_for_submission(self,tempfolder,inputdict):
         import numpy as np
+
         try:
             struct = inputdict.pop(self.get_linkname('structure'))
         except KeyError:
             raise InputValidationError("no structure is specified for this calculation")
         if not isinstance(struct, StructureData):
             raise InputValidationError("struct is not of type StructureData")
+
+        try:
+            code = inputdict.pop(self.get_linkname('code'))
+        except KeyError:
+            raise InputValidationError("no code is specified for this calculation")
 
         atoms = struct.get_ase()
 
@@ -122,13 +128,17 @@ class BasicCalculation(JobCalculation):
 
         calcinfo = CalcInfo()
         calcinfo.uuid = self.uuid
-        calcinfo.cmdline_params = commandline_params
         calcinfo.local_copy_list = []
         calcinfo.remote_copy_list = []
-        calcinfo.stdout_name = self._DEFAULT_OUTPUT_FILE
-        calcinfo.stderr_name = self._DEFAULT_ERROR_FILE
         calcinfo.retrieve_list = [self._DEFAULT_OUTPUT_FILE,
                                   self._DEFAULT_ERROR_FILE]
         calcinfo.retrieve_singlefile_list = []
+
+        codeinfo = CodeInfo()
+        codeinfo.cmdline_params = commandline_params
+        codeinfo.stdout_name = self._DEFAULT_OUTPUT_FILE
+        codeinfo.stderr_name = self._DEFAULT_ERROR_FILE
+        codeinfo.code_uuid = code.uuid
+        calcinfo.codes_info = [codeinfo]
 
         return calcinfo

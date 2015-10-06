@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
-from aiida.orm import Node
+import os
+
+from aiida.new_orm.impl import Node, Calculation
+from aiida.new_orm.utils import CalculationFactory
+
+from aiida.common.exceptions import (ValidationError, MissingPluginError)
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -7,7 +12,7 @@ __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Nicolas Mounet"
 
 
-class Code(Node):
+class AbstractCode(Node):
     """
     A code entity.
     It can either be 'local', or 'remote'.
@@ -61,7 +66,6 @@ class Code(Node):
         :todo: decide whether to check if the Code must be a local executable
              to be able to call this function.
         """
-        import os
 
         if isinstance(files, basestring):
             files = [files]
@@ -96,33 +100,7 @@ class Code(Node):
           you may want to pass the additional parameters to filter the codes,
           or relabel the codes.
         """
-        from aiida.common.exceptions import NotExistent, MultipleObjectsError
-        from django.db.models import Q
-
-        q_obj = Q(label=label)
-        if computername is not None:
-            q_obj &= Q(dbcomputer__name=computername)
-        if useremail is not None:
-            q_obj &= Q(user__email=useremail)
-        queryresults = cls.query(q_obj)
-
-        valid_codes = list(queryresults)
-        if len(valid_codes) == 1:
-            return valid_codes[0]
-        else:
-            otherstr = ""
-            if computername is not None:
-                otherstr += " on computer '{}'".format(computername)
-            if useremail is not None:
-                otherstr += " of user '{}'".format(useremail)
-            if len(valid_codes) == 0:
-                errstr = "No code in the DB with name '{}'{}".format(label, otherstr)
-                raise NotExistent(errstr)
-            elif len(valid_codes) > 1:
-                errstr = ("More than one code in the DB with name "
-                          "'{}'{}, please rename at least one of "
-                          "them".format(label, otherstr))
-                raise MultipleObjectsError
+        raise NotImplementedError
 
     @classmethod
     def get_from_string(cls, code_string):
@@ -146,41 +124,12 @@ class Code(Node):
         :raise MultipleObjectsError: if the string cannot identify uniquely
             a code
         """
-        from aiida.common.exceptions import NotExistent, MultipleObjectsError
-
-        try:
-            code_int = int(code_string)
-            try:
-                return cls.get_subclass_from_pk(code_int)
-            except NotExistent:
-                raise ValueError()  # Jump to the following section
-                # to check if a code with the given
-                # label exists.
-            except MultipleObjectsError:
-                raise MultipleObjectsError("More than one code in the DB "
-                                           "with pk='{}'!".format(code_string))
-        except ValueError:
-            # Before dying, try to see if the user passed a (unique) label.
-            # split with the leftmost '@' symbol (i.e. code names cannot
-            # contain '@' symbols, computer names can)
-            codename, sep, computername = code_string.partition('@')
-            if sep:
-                codes = cls.query(label=codename, dbcomputer__name=computername)
-            else:
-                codes = cls.query(label=codename)
-
-            if len(codes) == 0:
-                raise NotExistent("'{}' is not a valid code "
-                                  "ID or label.".format(code_string))
-            elif len(codes) > 1:
-                retstr = ("There are multiple codes with label '{}', having IDs: "
-                          "".format(code_string))
-                retstr += ", ".join(sorted([str(c.pk) for c in codes])) + ".\n"
-                retstr += ("Relabel them (using their ID), or refer to them "
-                           "with their ID.")
-                raise MultipleObjectsError(retstr)
-            else:
-                return codes[0]
+        # TODO SP: rework the query ?
+        # if sep:
+        #     codes = cls.query(label=codename, dbcomputer__name=computername)
+        # else:
+        #     codes = cls.query(label=codename)
+        raise NotImplementedError
 
     @classmethod
     def list_for_plugin(cls, plugin, labels=True):
@@ -193,21 +142,11 @@ class Code(Node):
         :return: a list of string, with the code names if labels is True,
           otherwise a list of integers with the code PKs.
         """
-        from aiida.common.exceptions import NotExistent, MultipleObjectsError
-
-        valid_codes = list(cls.query(
-            dbattributes__key="input_plugin",
-            dbattributes__tval=plugin))
-
-        if labels:
-            return [c.label for c in valid_codes]
-        else:
-            return [c.pk for c in valid_codes]
+        raise NotImplementedError
 
     def _validate(self):
-        from aiida.common.exceptions import ValidationError
 
-        super(Code, self)._validate()
+        super(AbstractCode, self)._validate()
 
         if self.is_local() is None:
             raise ValidationError("You did not set whether the code is local "
@@ -239,12 +178,11 @@ class Code(Node):
 
         An output of a code can only be a calculation
         """
-        from aiida.orm import Calculation
 
         if not isinstance(dest, Calculation):
             raise ValueError("The output of a code node can only be a calculation")
 
-        return super(Code, self)._can_link_as_output(dest)
+        return super(AbstractCode, self)._can_link_as_output(dest)
 
     def set_prepend_text(self, code):
         """
@@ -313,31 +251,7 @@ class Code(Node):
               remote_exec_path is the absolute path of the main executable on
               remote computer.
         """
-        import os
-        from aiida.orm import Computer
-        from aiida.djsite.db.models import DbComputer
-
-        if (not isinstance(remote_computer_exec, (list, tuple))
-            or len(remote_computer_exec) != 2):
-            raise ValueError("remote_computer_exec must be a list or tuple "
-                             "of length 2, with machine and executable "
-                             "name")
-
-        computer, remote_exec_path = tuple(remote_computer_exec)
-
-        if not os.path.isabs(remote_exec_path):
-            raise ValueError("exec_path must be an absolute path (on the remote machine)")
-
-        remote_dbcomputer = computer
-        if isinstance(remote_dbcomputer, Computer):
-            remote_dbcomputer = remote_dbcomputer.dbcomputer
-        if not (isinstance(remote_dbcomputer, DbComputer)):
-            raise TypeError("computer must be either a Computer or DbComputer object")
-
-        self._set_remote()
-
-        self.dbnode.dbcomputer = remote_dbcomputer
-        self._set_attr('remote_exec_path', remote_exec_path)
+        raise NotImplementedError
 
     def get_remote_exec_path(self):
         if self.is_local():
@@ -345,8 +259,6 @@ class Code(Node):
         return self.get_attr('remote_exec_path', "")
 
     def get_remote_computer(self):
-        from aiida.orm import Computer
-
         if self.is_local():
             raise ValueError("The code is local")
 
@@ -360,12 +272,7 @@ class Code(Node):
 
         It also deletes the flags related to the local case (if any)
         """
-        self._set_attr('is_local', True)
-        self.dbnode.dbcomputer = None
-        try:
-            self._del_attr('remote_exec_path')
-        except AttributeError:
-            pass
+        raise NotImplementedError
 
     def _set_remote(self):
         """
@@ -397,20 +304,7 @@ class Code(Node):
 
         TODO: add filters to mask the remote machines on which a local code can run.
         """
-        from aiida.orm import Computer
-        from aiida.djsite.db.models import DbComputer
-
-        if self.is_local():
-            return True
-        else:
-            dbcomputer = computer
-            if isinstance(dbcomputer, Computer):
-                dbcomputer = dbcomputer.dbcomputer
-            if not isinstance(dbcomputer, DbComputer):
-                raise ValueError("computer must be either a Computer or DbComputer object")
-            dbcomputer = DbComputer.get_dbcomputer(computer)
-            return (dbcomputer.pk ==
-                    self.get_remote_computer().dbcomputer.pk)
+        raise NotImplementedError
 
     def get_execname(self):
         """
@@ -436,9 +330,6 @@ class Code(Node):
         :raise MissingPluginError: if the specified plugin does not exist.
         :raise ValueError: if no plugin was specified.
         """
-        from aiida.orm import CalculationFactory
-        from aiida.common.exceptions import MissingPluginError
-
         plugin_name = self.get_input_plugin_name()
         if plugin_name is None:
             raise ValueError("You did not specify an input plugin "
@@ -521,22 +412,8 @@ def delete_code(code):
     needed to set the internal state of the object after calling
     computer.delete().
     """
-    from django.db import transaction
-    from aiida.common.exceptions import InvalidOperation
+    # TODO SP: why not a simple `delete` method on the code ? is there any
+    # advantages to this ?
+    raise NotImplementedError
 
-    if not isinstance(code, Code):
-        raise TypeError("code must be an instance of "
-                        "aiida.orm.computer.Code")
-
-    existing_outputs = code.get_outputs()
-
-    if len(existing_outputs) != 0:
-        raise InvalidOperation("Unable to delete the requested code because it "
-                               "has {} output links".format(
-            len(existing_outputs)))
-    else:
-        repo_folder = code._repository_folder
-        with transaction.commit_on_success():
-            code.dbnode.delete()
-            repo_folder.erase()
 

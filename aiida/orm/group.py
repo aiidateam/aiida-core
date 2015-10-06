@@ -322,8 +322,8 @@ class Group(object):
 
 
     @classmethod
-    def query(cls, name=None, type_string="", uuid=None, nodes=None, user=None,
-              node_attributes=None, past_days=None):
+    def query(cls, name=None, type_string="", pk = None, uuid=None, nodes=None,
+              user=None, node_attributes=None, past_days=None, **kwargs):
         """
         Query for groups. 
         :note:  By default, query for user-defined groups only (type_string=="").
@@ -332,9 +332,10 @@ class Group(object):
           string as the type_string argument.
         
         :param name: the name of the group
-        :param dbnodes: a node, list of nodes, or of pks (alternatively, you 
-          can also pass a DbNode or list of DbNodes)
-        :param uuid: the uuid of the node
+        :param nodes: a node or list of nodes that belongs to the group (alternatively,  
+          you can also pass a DbNode or list of DbNodes)
+        :param pk: the pk of the group
+        :param uuid: the uuid of the group
         :param type_string: the string for the type of node; by default, look
           only for user-defined groups (see note above).
         :param user: by default, query for groups of all users; if specified,
@@ -350,6 +351,7 @@ class Group(object):
           If it is a list or iterable, that the condition is checked so that
           there should be at least a node in the group with key=k and
           value=each of the values of the iterable.
+        :param kwargs: any other filter to be passed to DbGroup.objects.filter
 
           Example: if ``node_attributes = {'elements': ['Ba', 'Ti'],
              'md5sum': 'xxx'}``, it will find groups that contain the node
@@ -370,6 +372,9 @@ class Group(object):
 
         if type_string is not None:
             queryobject &= Q(type=type_string)
+
+        if pk is not None:
+            queryobject &= Q(pk=pk)
 
         if uuid is not None:
             queryobject &= Q(uuid=uuid)
@@ -398,7 +403,7 @@ class Group(object):
             else:
                 queryobject &= Q(user=user)
 
-        groups_pk = set(DbGroup.objects.filter(queryobject).values_list(
+        groups_pk = set(DbGroup.objects.filter(queryobject,**kwargs).values_list(
             'pk', flat=True))
 
         if node_attributes is not None:

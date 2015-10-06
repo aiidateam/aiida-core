@@ -61,6 +61,15 @@ class Group(VerdiCommandWithSubcommands):
         parser.add_argument('-p', '--past-days', metavar='N',
                             help="add a filter to show only groups created in the past N days",
                             action='store', type=int)
+        parser.add_argument('-s', '--startswith', metavar='STRING', default=None,
+                            help="add a filter to show only groups for which the name begins with STRING",
+                            action='store', type=str)
+        parser.add_argument('-e', '--endswith', metavar='STRING', default=None,
+                            help="add a filter to show only groups for which the name ends with STRING",
+                            action='store', type=str)
+        parser.add_argument('-c', '--contains', metavar='STRING', default=None,
+                            help="add a filter to show only groups for which the name contains STRING",
+                            action='store', type=str)
         parser.set_defaults(all_users=False)
         parser.set_defaults(with_description=False)
 
@@ -93,7 +102,12 @@ class Group(VerdiCommandWithSubcommands):
         else:
             n_days_ago = None
 
-        groups = G.query(user=user, type_string=type_string, past_days=n_days_ago)
+        name_filter_dict = dict([('name__{}'.format(name_filter), getattr(parsed_args,name_filter))
+                                 for name_filter in ['startswith','endswith','contains']
+                                 if getattr(parsed_args,name_filter) is not None])
+        
+        groups = G.query(user=user, type_string=type_string, past_days=n_days_ago,
+                         **name_filter_dict)
 
         # nice formatting
         # gather all info
@@ -117,7 +131,7 @@ class Group(VerdiCommandWithSubcommands):
         tolerated_name_length = (80 - 11 - max_nodes_len - 
                                  max_users_len - max_pks_len - 1)
 
-        print max_names_len, tolerated_name_length
+        #print max_names_len, tolerated_name_length
 
 
         if parsed_args.with_description:

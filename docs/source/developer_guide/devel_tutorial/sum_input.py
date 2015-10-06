@@ -4,7 +4,7 @@ from aiida.orm import JobCalculation
 from aiida.orm.data.parameter import ParameterData 
 from aiida.common.utils import classproperty
 from aiida.common.exceptions import InputValidationError
-from aiida.common.datastructures import CalcInfo
+from aiida.common.datastructures import CalcInfo, CodeInfo
 import json
 
 __copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
@@ -50,7 +50,7 @@ class SumCalculation(JobCalculation):
         :param tempfolder: a aiida.common.folders.Folder subclass where
                            the plugin should put all its files.
         :param inputdict: a dictionary with the input nodes, as they would
-                be returned by get_inputdata_dict (without the Code!)
+                be returned by get_inputs_dict (with the Code!)
         """
         try:
             parameters = inputdict.pop(self.get_linkname('parameters'))
@@ -60,6 +60,11 @@ class SumCalculation(JobCalculation):
         if not isinstance(parameters, ParameterData):
             raise InputValidationError("parameters is not of type "
                                        "ParameterData")
+        try:
+            code = inputdict.pop(self.get_linkname('code'))
+        except KeyError:
+            raise InputValidationError("No code specified for this "
+                                       "calculation")
         if inputdict:
             raise ValidationError("Cannot add other nodes beside parameters")
         
@@ -80,9 +85,12 @@ class SumCalculation(JobCalculation):
         calcinfo.uuid = self.uuid
         calcinfo.local_copy_list = []
         calcinfo.remote_copy_list = []
-        calcinfo.cmdline_params = [self._INPUT_FILE_NAME,self._OUTPUT_FILE_NAME]
-        calcinfo.stdout_name = []
         calcinfo.retrieve_list = [self._OUTPUT_FILE_NAME]
+        
+        codeinfo = CodeInfo()
+        codeinfo.cmdline_params = [self._INPUT_FILE_NAME,self._OUTPUT_FILE_NAME]
+        codeinfo.code_pk = code.pk
+        calcinfo.codes_info = [codeinfo]
         
         return calcinfo
         

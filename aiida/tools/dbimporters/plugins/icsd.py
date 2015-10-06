@@ -515,14 +515,14 @@ class IcsdSearchResults(DbSearchResults):
                 self.entries[position] = IcsdEntry(self.db_parameters["server"] + 
                         self.db_parameters["dl_db"] + self.cif_url.format(
                         self.results[position]),
-                    db_source=self.db_name, db_id=self.cif_numbers[position], 
-                    db_version = self.db_version, 
+                    db_name=self.db_name, id=self.cif_numbers[position], 
+                    version = self.db_version, 
                     extras={'idnum': self.results[position]})
             else:
                 self.entries[position] = IcsdEntry(self.db_parameters["server"] + 
                         self.db_parameters["dl_db"] + self.cif_url.format(
                         self.results[position]),
-                    db_source=self.db_name, extras={'idnum': self.results[position]})
+                    db_name=self.db_name, extras={'idnum': self.results[position]})
         return self.entries[position]
 
 

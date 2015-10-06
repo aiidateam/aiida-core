@@ -823,7 +823,8 @@ class JobCalculation(Calculation):
 
     @classmethod
     def _list_calculations(cls, states=None, past_days=None, group=None,
-                           all_users=False, pks=[], relative_ctime=True):
+                           group_pk=None, all_users=False, pks=[],
+                           relative_ctime=True):
         """
         Return a string with a description of the AiiDA calculations.
 
@@ -841,6 +842,8 @@ class JobCalculation(Calculation):
             Can use colons to separate the group name from the type,
             as specified in :py:meth:`aiida.orm.group.Group.get_from_string`
             method.
+        :param group_pk: If specified, show only calculations belonging to a
+            user-defined group with the given PK.
         :param pks: if specified, must be a list of integers, and only 
             calculations within that list are shown. Otherwise, all
             calculations are shown.
@@ -884,6 +887,9 @@ class JobCalculation(Calculation):
             if group is not None:
                 g_pk = Group.get_from_string(group).pk
                 q_object.add(Q(dbgroups__pk=g_pk), Q.AND)
+
+            if group_pk is not None:
+                q_object.add(Q(dbgroups__pk=group_pk), Q.AND)
 
             if not all_users:
                 q_object.add(Q(user=get_automatic_user()), Q.AND)
@@ -1103,7 +1109,7 @@ class JobCalculation(Calculation):
             inputdict: A dictionary where
                 each key is an input link name and each value an AiiDA
                 node, as it would be returned by the
-                self.get_inputdata_dict() method (without the Code!).
+                self.get_inputs_dict() method (with the Code!).
                 The advantage of having this explicitly passed is that this
                 allows to choose outside which nodes to use, and whether to
                 use also unstored nodes, e.g. in a test_submit phase.
@@ -1292,6 +1298,18 @@ class JobCalculation(Calculation):
 
 
     def _presubmit(self, folder, use_unstored_links=False):
+        """
+        Prepares the calculation folder with all inputs, ready to be copied to the cluster 
+        :param folder: a SandboxFolder, empty in input, that will be filled with
+          calculation input files and the scheduling script.  
+        :param use_unstored_links: if set to True, it will the presubmit will 
+          try to launch the calculation using also unstored nodes linked to the 
+          Calculation only in the cache.
+          
+        :return calcinfo: the CalcInfo object containing the information
+          needed by the daemon to handle operations.
+        :return script_filename: the name of the job scheduler script
+        """
         import os
         import StringIO
         import json
@@ -1302,24 +1320,28 @@ class JobCalculation(Calculation):
         from aiida.common.utils import validate_list_of_string_tuples
         from aiida.orm import Computer
         from aiida.orm import DataFactory
+        from aiida.common.datastructures import CodeInfo, code_run_modes
+        from aiida.orm.code import Code 
 
         computer = self.get_computer()
 
-        code = self.get_code()
         if use_unstored_links:
-            inputdict = self.get_inputdata_dict(only_in_db=False)
+            inputdict = self.get_inputs_dict(only_in_db=False)
         else:
-            inputdict = self.get_inputdata_dict(only_in_db=False)
+            inputdict = self.get_inputs_dict(only_in_db=True)
+
+        codes = [ _ for _ in inputdict.itervalues() if isinstance(_,Code) ]
 
         calcinfo = self._prepare_for_submission(folder, inputdict)
         s = computer.get_scheduler()
 
-        if code.is_local():
-            if code.get_local_executable() in folder.get_content_list():
-                raise PluginInternalError(
-                    "The plugin created a file {} that is also "
-                    "the executable name!".format(
-                        code.get_local_executable()))
+        for code in codes:
+            if code.is_local():
+                if code.get_local_executable() in folder.get_content_list():
+                    raise PluginInternalError(
+                        "The plugin created a file {} that is also "
+                        "the executable name!".format(
+                            code.get_local_executable()))
 
         # I create the job template to pass to the scheduler
         job_tmpl = JobTemplate()
@@ -1392,21 +1414,79 @@ class JobCalculation(Calculation):
             subst_dict[k] = v
         mpi_args = [arg.format(**subst_dict) for arg in
                     computer.get_mpirun_command()]
-        extra_mpirun_params = self.get_mpirun_extra_params()
-        if self.get_withmpi():
-            job_tmpl.argv = (mpi_args + extra_mpirun_params +
-                             [code.get_execname()] +
-                             (calcinfo.cmdline_params if
-                              calcinfo.cmdline_params is not None else []))
-        else:
-            job_tmpl.argv = [code.get_execname()] + (
-                calcinfo.cmdline_params if
-                calcinfo.cmdline_params is not None else [])
+        extra_mpirun_params = self.get_mpirun_extra_params() # this is the same for all codes in the same calc
+        
+        ########################################################################
+#         if self.get_withmpi():
+#             job_tmpl.argv = (mpi_args + extra_mpirun_params +
+#                              [code.get_execname()] +
+#                              (calcinfo.cmdline_params if
+#                               calcinfo.cmdline_params is not None else []))
+#         else:
+#             job_tmpl.argv = [code.get_execname()] + (
+#                 calcinfo.cmdline_params if
+#                 calcinfo.cmdline_params is not None else [])
+#         job_tmpl.stdin_name = calcinfo.stdin_name
+#         job_tmpl.stdout_name = calcinfo.stdout_name
+        
+        # set the codes_info
+        if not isinstance(calcinfo.codes_info,(list,tuple)):
+            raise PluginInternalError("codes_info passed to CalcInfo must be a "
+                                      "list of CalcInfo objects")
+        
+        codes_info = []
+        for code_info in calcinfo.codes_info:
+            
+            if not isinstance(code_info,CodeInfo):
+                raise PluginInternalError("Invalid codes_info, must be a list "
+                                          "of CodeInfo objects")
+            
+            if code_info.code_uuid is None:
+                raise PluginInternalError("CalcInfo should have "
+                                          "the information of the code "
+                                          "to be launched")
+            this_code = Code.get_subclass_from_uuid(code_info.code_uuid)
+            
+            this_withmpi = code_info.withmpi    # to decide better how to set the default
+            if this_withmpi is None:
+                if len(calcinfo.codes_info)>1:
+                    raise PluginInternalError("For more than one code, it is "
+                                              "necessary to set withmpi in "
+                                              "codes_info")
+                else:
+                    this_withmpi = self.get_withmpi()
 
-        job_tmpl.stdin_name = calcinfo.stdin_name
-        job_tmpl.stdout_name = calcinfo.stdout_name
-        job_tmpl.stderr_name = calcinfo.stderr_name
-        job_tmpl.join_files = calcinfo.join_files
+            if this_withmpi:
+                this_argv = (mpi_args + extra_mpirun_params +
+                             [this_code.get_execname()] +
+                             (code_info.cmdline_params if
+                              code_info.cmdline_params is not None else []))
+            else:
+                this_argv = [this_code.get_execname()] + (code_info.cmdline_params if
+                                                          code_info.cmdline_params is not None else [])
+
+            this_stdin_name = code_info.stdin_name
+            this_stdout_name = code_info.stdout_name
+            this_stderr_name = code_info.stderr_name
+            this_join_files = code_info.join_files
+            
+            # overwrite the old cmdline_params and add codename and mpirun stuff
+            code_info.cmdline_params = this_argv
+
+            codes_info.append( code_info )
+        job_tmpl.codes_info = codes_info
+        
+        # set the codes execution mode
+        
+        if len(codes)>1:
+            try:
+                job_tmpl.codes_run_mode = calcinfo.codes_run_mode
+            except KeyError:
+                raise PluginInternalError("Need to set the order of the code "
+                                          "execution (parallel or serial?)")
+        else:  
+            job_tmpl.codes_run_mode = code_run_modes.SERIAL
+        ########################################################################
 
         custom_sched_commands = self.get_custom_scheduler_commands()
         if custom_sched_commands:

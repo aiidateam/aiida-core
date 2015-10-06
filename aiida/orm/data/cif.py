@@ -226,6 +226,30 @@ def decode_textfield(content,method):
 
     return content
 
+def decode_textfield(content,method):
+    """
+    Decodes the contents of encoded CIF textfield.
+
+    :param content: the content to be decoded
+    :param method: method, which was used for encoding the contents
+        (None, 'base64', 'ncr', 'quoted-printable', 'gzip+base64')
+    :return: decoded content
+    :raises ValueError: if the encoding method is unknown
+    """
+    if method == 'base64':
+        content = decode_textfield_base64(content)
+    elif method == 'quoted-printable':
+        content = decode_textfield_quoted_printable(content)
+    elif method == 'ncr':
+        content = decode_textfield_ncr(content)
+    elif method == 'gzip+base64':
+        content = decode_textfield_gzip_base64(content)
+    elif method is not None:
+        raise ValueError("Unknown content encoding: '{}'".format(method))
+
+    return content
+
+
 def symop_string_from_symop_matrix_tr(matrix, tr=[0, 0, 0], eps=0):
     """
     Construct a CIF representation of symmetry operator plus translation.
@@ -287,9 +311,13 @@ def _get_aiida_structure_pymatgen_inline(cif=None, parameters=None):
     kwargs = {}
     if parameters is not None:
         kwargs = parameters.get_dict()
+    kwargs['primitive'] = kwargs.pop('primitive_cell', False)
     parser = CifParser(cif.get_file_abs_path())
-    struct = parser.get_structures(**kwargs)[0]
-    return {'structure': StructureData(pymatgen_structure=struct)}
+    try:
+        struct = parser.get_structures(**kwargs)[0]
+        return {'structure': StructureData(pymatgen_structure=struct)}
+    except IndexError:
+        raise ValueError("pymatgen failed to provide a structure from the cif file")
 
 
 def cif_from_ase(ase, full_occupancies=False, add_fake_biso=False):
@@ -415,6 +443,7 @@ def pycifrw_from_cif(datablocks, loops=dict(), names=None):
             datablock[tag] = values[tag]
     return cif
 
+
 @optional_inline
 def refine_inline(node):
     """
@@ -472,6 +501,29 @@ def refine_inline(node):
 
     return {'cif': cif}
 
+
+def parse_formula(formula):
+    """
+    Parses the Hill formulae, written with spaces for separators.
+    """
+    import re
+
+    contents = {}
+    for part in re.split('\s+', formula):
+        m = re.match('(\D+)([\.\d]+)?', part)
+        specie = m.group(1)
+        quantity = m.group(2)
+        if quantity is None:
+            quantity = 1
+        else:
+            if re.match('^\d+$', quantity):
+                quantity = int(quantity)
+            else:
+                quantity = float(quantity)
+        contents[specie] = quantity
+    return contents
+
+
 class CifData(SinglefileData):
     """
     Wrapper for Crystallographic Interchange File (CIF)
@@ -481,6 +533,8 @@ class CifData(SinglefileData):
         when setting ``ase`` or ``values``, a physical CIF file is generated
         first, the values are updated from the physical CIF file.
     """
+    _set_incompatibilities = [("ase", "file"), ("ase", "values"),
+                              ("file", "values")]
 
     @classmethod
     def from_md5(cls, md5):
@@ -542,8 +596,10 @@ class CifData(SinglefileData):
         Creates :py:class:`aiida.orm.data.structure.StructureData`.
 
         :param converter: specify the converter. Default 'ase'.
-        :param store: If True, intermediate calculation gets stored in the
+        :param store: if True, intermediate calculation gets stored in the
             AiiDA database for record. Default False.
+        :param primitive_cell: if True, primitive cell is returned,
+            conventional cell if False. Default False.
         :return: :py:class:`aiida.orm.data.structure.StructureData` node.
         """
         from aiida.orm.data.parameter import ParameterData
@@ -552,10 +608,10 @@ class CifData(SinglefileData):
         param = ParameterData(dict=kwargs)
         try:
             conv_f = getattr(cif, '_get_aiida_structure_{}_inline'.format(converter))
-            ret_dict = conv_f(cif=self, parameters=param, store=store)
-            return ret_dict['structure']
         except AttributeError:
             raise ValueError("No such converter '{}' available".format(converter))
+        ret_dict = conv_f(cif=self, parameters=param, store=store)
+        return ret_dict['structure']
 
     @property
     def ase(self):
@@ -580,12 +636,15 @@ class CifData(SinglefileData):
             return self.ase
         else:
             from ase.io.cif import read_cif
-
             return read_cif(self.get_file_abs_path(), **kwargs)
 
     def set_ase(self, aseatoms):
+        import tempfile
         cif = cif_from_ase(aseatoms)
-        self.values = pycifrw_from_cif(cif, loops=ase_loops)
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(pycifrw_from_cif(cif, loops=ase_loops).WriteOut())
+            f.flush()
+            self.set_file(f.name)
 
     @ase.setter
     def ase(self, aseatoms):
@@ -600,14 +659,11 @@ class CifData(SinglefileData):
         """
         if self._values is None:
             import CifFile
-
             self._values = CifFile.ReadCif(self.get_file_abs_path())
         return self._values
 
     def set_values(self, values):
-        import CifFile
         import tempfile
-
         with tempfile.NamedTemporaryFile() as f:
             f.write(values.WriteOut())
             f.flush()
@@ -647,6 +703,7 @@ class CifData(SinglefileData):
         self._values = None
         self._ase = None
         self._set_attr('formulae', self.get_formulae())
+        self._set_attr('spacegroup_numbers', self.get_spacegroup_numbers())
 
     def get_formulae(self, mode='sum'):
         """
@@ -660,6 +717,65 @@ class CifData(SinglefileData):
                 formula = self.values[datablock][formula_tag]
             formulae.append(formula)
         return formulae
+
+    def get_spacegroup_numbers(self):
+        """
+        Get the spacegroup international number.
+        """
+        spg_tags = ["_space_group.it_number", "_space_group_it_number",
+                    "_symmetry_int_tables_number"]
+        spacegroup_numbers = []
+        for datablock in self.values.keys():
+            spacegroup_number = None
+            correct_tags = [tag for tag in spg_tags
+                            if tag in self.values[datablock].keys()]
+            if correct_tags:
+                try:
+                    spacegroup_number = int(self.values[datablock][correct_tags[0]])
+                except ValueError:
+                    pass
+            spacegroup_numbers.append(spacegroup_number)
+        return spacegroup_numbers
+
+    def has_partial_occupancies(self):
+        """
+        Check if there are float values in the atom occupancies.
+        :return: True if there are partial occupancies, False
+        otherwise.
+        """
+        # precision
+        epsilon = 1e-6
+        tag = "_atom_site_occupancy"
+        partial_occupancies = False
+        for datablock in self.values.keys():
+            if tag in self.values[datablock].keys():
+                for site in self.values[datablock][tag]:
+                    # find the float number in the string
+                    bracket = site.find('(')
+                    if bracket == -1:
+                        # no bracket found
+                        if abs(float(site)-1) > epsilon:
+                            partial_occupancies = True
+                    else:
+                        # bracket, cut string 
+                        if abs(float(site[0:bracket])-1)> epsilon:
+                            partial_occupancies = True
+
+        return partial_occupancies
+
+    def has_attached_hydrogens(self):
+        """
+        Check if there are hydrogens without coordinates, specified
+        as attached to the atoms of the structure.
+        :return: True if there are attached hydrogens, False otherwise.
+        """
+        tag = '_atom_site_attached_hydrogens'
+        for datablock in self.values.keys():
+            if tag in self.values[datablock].keys():
+                for value in self.values[datablock][tag]:
+                    if value != '.' and value != '?' and value != '0':
+                        return True
+        return False
 
     def generate_md5(self):
         """
@@ -678,7 +794,9 @@ class CifData(SinglefileData):
         """
         Write the given CIF file to a string of format CIF.
         """
-        if self._values:  # if values have been changed
+        # If values have been changed and node is not stored,
+        # the file is updated.
+        if self._values and not self._is_stored:
             self.values = self._values
         with open(self.get_file_abs_path()) as f:
             return f.read()

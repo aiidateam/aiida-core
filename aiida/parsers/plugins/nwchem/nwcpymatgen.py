@@ -50,6 +50,11 @@ class NwcpymatgenParser(BasenwcParser):
                 ret_dict.append(('trajectory',
                                  TrajectoryData(structurelist=structlist)))
             ret_dict.append(('output', ParameterData(dict=out)))
+
+        # Since ParameterData rewrites it's attributes (using _set_attr())
+        # with keys from the supplied dictionary, 'source' has to be moved
+        # to another key.
+        nwo.job_info['program_source'] = nwo.job_info.pop('source', None)
         ret_dict.append(('job_info', ParameterData(dict=nwo.job_info)))
         
         return ret_dict

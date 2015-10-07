@@ -75,7 +75,8 @@ default_options = {
     'reduce_symmetry': True,
 }
 
-def cif_encode_contents(content,gzip=False,gzip_threshold=1024):
+
+def cif_encode_contents(content, gzip=False, gzip_threshold=1024):
     """
     Encodes data for usage in CIF text field in a *best possible* way:
     binary data is encoded using Base64 encoding; text with non-ASCII
@@ -95,7 +96,7 @@ def cif_encode_contents(content,gzip=False,gzip_threshold=1024):
     elif gzip and len(content) >= gzip_threshold:
         # content is larger than some arbitrary value and should be gzipped
         method = 'gzip+base64'
-    elif float(len(re.findall('[^\x09\x0A\x0D\x20-\x7E]',content)))/len(content) > 0.25:
+    elif float(len(re.findall('[^\x09\x0A\x0D\x20-\x7E]', content)))/len(content) > 0.25:
         # contents are assumed to be binary
         method = 'base64'
     elif re.search('^\s*data_',content) is not None or \
@@ -106,13 +107,13 @@ def cif_encode_contents(content,gzip=False,gzip_threshold=1024):
     elif re.search('.{2048}.',content) is not None:
         # lines are too long
         method = 'quoted-printable'
-    elif len(re.findall('[^\x09\x0A\x0D\x20-\x7E]',content)) > 0:
+    elif len(re.findall('[^\x09\x0A\x0D\x20-\x7E]', content)) > 0:
         # contents have non-ASCII symbols
         method = 'quoted-printable'
-    elif re.search('^;',content) is not None or re.search('\n;',content) is not None:
+    elif re.search('^;', content) is not None or re.search('\n;', content) is not None:
         # content has lines starting with semicolon (';')
         method = 'quoted-printable'
-    elif re.search('\t',content) is not None:
+    elif re.search('\t', content) is not None:
         # content has TAB symbols, which may be lost during the
         # parsing of TCOD CIF file
         method = 'quoted-printable'
@@ -134,7 +135,8 @@ def cif_encode_contents(content,gzip=False,gzip_threshold=1024):
         from aiida.orm.data.cif import encode_textfield_gzip_base64
         content = encode_textfield_gzip_base64(content)
 
-    return content,method
+    return content, method
+
 
 def _get_calculation(node):
     """
@@ -159,7 +161,8 @@ def _get_calculation(node):
                                    "exporter does not know which one of "
                                    "them produced the node".format(node))
 
-def _assert_same_parents(a,b):
+
+def _assert_same_parents(a, b):
     """
     Checks whether two supplied nodes have the same immediate parent.
     Can be used to check whether two data nodes originate from the same
@@ -181,12 +184,13 @@ def _assert_same_parents(a,b):
         raise ValueError("Exported node and parameters must "
                          "originate from the same calculation")
 
+
 def _inline_to_standalone_script(calc):
     """
     Create executable bash script for execution of inline script.
     """
     input_dict = calc.get_inputs_dict()
-    args = ["{}=Node.get_subclass_from_uuid('{}')".format(x,input_dict[x].uuid)
+    args = ["{}=Node.get_subclass_from_uuid('{}')".format(x, input_dict[x].uuid)
             for x in input_dict.keys()]
     args_string = "\n    ,".join(sorted(args))
     return """#!/usr/bin/env runaiida
@@ -200,6 +204,7 @@ END
 """.format(calc.get_attr('source_file').encode('utf-8'),
            calc.get_attr('function_name','f'),
            args_string)
+
 
 def _collect_calculation_data(calc):
     """
@@ -224,10 +229,10 @@ def _collect_calculation_data(calc):
         'files': [],
     }
 
-    if isinstance(calc,JobCalculation):
+    if isinstance(calc, JobCalculation):
         retrieved_abspath = calc.get_retrieved_node().get_abs_path()
         files_in  = _collect_files(calc._raw_input_folder.abspath)
-        files_out = _collect_files(os.path.join(retrieved_abspath,'path'))
+        files_out = _collect_files(os.path.join(retrieved_abspath, 'path'))
         this_calc['env'] = calc.get_environment_variables()
         this_calc['stdout'] = calc.get_scheduler_output()
         this_calc['stderr'] = calc.get_scheduler_error()
@@ -259,7 +264,8 @@ def _collect_calculation_data(calc):
     calcs_now.append(this_calc)
     return calcs_now
 
-def _collect_files(base,path=''):
+
+def _collect_files(base, path=''):
     """
     Recursively collects files from the tree, starting at a given path.
     """
@@ -291,7 +297,8 @@ def _collect_files(base,path=''):
                 'type': 'file',
                 }]
 
-def extend_with_cmdline_parameters(parser,expclass="Data"):
+
+def extend_with_cmdline_parameters(parser, expclass="Data"):
     """
     Provides descriptions of command line options, that are used to control
     the process of exporting data to TCOD CIF files.
@@ -363,7 +370,8 @@ def extend_with_cmdline_parameters(parser,expclass="Data"):
                              "file which should be gzipped. "
                              "Default {}.".format(default_options['gzip_threshold']))
 
-def _collect_tags(node,calc,parameters=None,
+
+def _collect_tags(node, calc,parameters=None,
                   dump_aiida_database=default_options['dump_aiida_database'],
                   exclude_external_contents=default_options['exclude_external_contents'],
                   gzip=default_options['gzip'],
@@ -372,13 +380,13 @@ def _collect_tags(node,calc,parameters=None,
     Retrieve metadata from attached calculation and pseudopotentials
     and prepare it to be saved in TCOD CIF.
     """
-    import os,json
+    import os, json
     tags = { '_audit_creation_method': "AiiDA version {}".format(__version__) }
 
     # Recording the dictionaries (if any)
 
     if len(conforming_dictionaries):
-        for postfix in ['name','version','location']:
+        for postfix in ['name', 'version', 'location']:
             key = '_audit_conform_dict_{}'.format(postfix)
             if key not in tags:
                 tags[key] = []
@@ -430,11 +438,11 @@ def _collect_tags(node,calc,parameters=None,
         else:
             tags['_tcod_computation_stderr'].append('')
 
-        export_files.append( {'name': "{}{}".format(sn,os.sep),
+        export_files.append( {'name': "{}{}".format(sn, os.sep),
                               'type': 'folder'} )
 
         for f in step['files']:
-            f['name'] = os.path.join(str(sn),f['name'])
+            f['name'] = os.path.join(str(sn), f['name'])
         export_files.extend( step['files'] )
 
         sn = sn + 1
@@ -473,7 +481,7 @@ def _collect_tags(node,calc,parameters=None,
                 if f['type'] == 'file' and f['md5'] in md5_to_url.keys():
                     f['uri'] = md5_to_url[f['md5']]
 
-            export_files.extend( files )
+            export_files.extend(files)
 
     # Describing seen files in _tcod_file_* loop
 
@@ -535,7 +543,7 @@ def _collect_tags(node,calc,parameters=None,
             tags[tag] = []
     for encoding in encodings:
         layers = encoding.split('+')
-        for i in range(0,len(layers)):
+        for i in range(0, len(layers)):
             tags['_tcod_content_encoding_id'].append(encoding)
             tags['_tcod_content_encoding_layer_id'].append(i+1)
             tags['_tcod_content_encoding_layer_type'].append(layers[i])
@@ -565,8 +573,8 @@ def _collect_tags(node,calc,parameters=None,
     plugins = list()
 
     if calc is not None:
-        for plugin in existing_plugins(BaseTcodtranslator,plugin_path):
-            cls = BaseFactory(plugin,BaseTcodtranslator,plugin_path)
+        for plugin in existing_plugins(BaseTcodtranslator, plugin_path):
+            cls = BaseFactory(plugin, BaseTcodtranslator, plugin_path)
             if calc._plugin_type_string.endswith(cls._plugin_type_string + '.'):
                 plugins.append(cls)
 
@@ -584,8 +592,9 @@ def _collect_tags(node,calc,parameters=None,
 
     return tags
 
+
 @optional_inline
-def add_metadata_inline(what,node=None,parameters=None,args=None):
+def add_metadata_inline(what, node=None, parameters=None, args=None):
     """
     Add metadata of original exported node to the produced TCOD CIF.
 
@@ -631,7 +640,7 @@ def add_metadata_inline(what,node=None,parameters=None,args=None):
         additional_tags = kwargs.pop('additional_tags',{})
         datablock_names = kwargs.pop('datablock_names',None)
 
-    tags = _collect_tags(what,calc,parameters=parameters,**kwargs)
+    tags = _collect_tags(what, calc, parameters=parameters, **kwargs)
     loops.update(tcod_loops)
 
     for datablock in datablocks:
@@ -642,22 +651,24 @@ def add_metadata_inline(what,node=None,parameters=None,args=None):
                                  "start with underscores".format(k))
             datablock[k] = v
 
-    values = pycifrw_from_cif(datablocks,loops,names=datablock_names)
+    values = pycifrw_from_cif(datablocks, loops, names=datablock_names)
     cif = CifData(values=values)
 
     return {'cif': cif}
 
-def export_cif(what,**kwargs):
+
+def export_cif(what, **kwargs):
     """
     Exports given coordinate-containing \*Data node to string of CIF
     format.
 
     :return: string with contents of CIF file.
     """
-    cif = export_cifnode(what,**kwargs)
+    cif = export_cifnode(what, **kwargs)
     return cif._exportstring('cif')
 
-def export_values(what,**kwargs):
+
+def export_values(what, **kwargs):
     """
     Exports given coordinate-containing \*Data node to PyCIFRW CIF data
     structure.
@@ -669,7 +680,9 @@ def export_values(what,**kwargs):
     cif = export_cifnode(what,**kwargs)
     return cif.values
 
-def export_cifnode(what,parameters=None,trajectory_index=None,store=False,
+
+def export_cifnode(what, parameters=None, trajectory_index=None,
+                   store=False,
                    reduce_symmetry=default_options['reduce_symmetry'],
                    **kwargs):
     """
@@ -711,7 +724,7 @@ def export_cifnode(what,parameters=None,trajectory_index=None,store=False,
     calc = _get_calculation(what)
 
     if parameters is not None:
-        if not isinstance( parameters, ParameterData ):
+        if not isinstance(parameters, ParameterData):
             raise ValueError("Supplied parameters are not an "
                              "instance of ParameterData")
     elif calc is not None:
@@ -726,13 +739,13 @@ def export_cifnode(what,parameters=None,trajectory_index=None,store=False,
                                        "calling export_cif()".format(calc))
 
     if parameters is not None:
-        _assert_same_parents(what,parameters)
+        _assert_same_parents(what, parameters)
 
     node = what
 
     # Convert node to CifData (if required)
 
-    if not isinstance(node,CifData) and getattr(node,'_get_cif'):
+    if not isinstance(node, CifData) and getattr(node, '_get_cif'):
         function_args = { 'store': store }
         if trajectory_index is not None:
             function_args['index'] = trajectory_index
@@ -746,7 +759,7 @@ def export_cifnode(what,parameters=None,trajectory_index=None,store=False,
 
     if reduce_symmetry:
         from aiida.orm.data.cif import refine_inline
-        ret_dict = refine_inline(node=node,store=store)
+        ret_dict = refine_inline(node=node, store=store)
         node = ret_dict['cif']
 
     # Addition of the metadata
@@ -761,10 +774,11 @@ def export_cifnode(what,parameters=None,trajectory_index=None,store=False,
 
     return ret_dict['cif']
 
-def deposit(what,type,author_name=None,author_email=None,url=None,
-            title=None,username=None,password=False,user_email=None,
-            code_label=default_options['code'],computer_name=None,
-            replace=None,message=None,**kwargs):
+
+def deposit(what, type, author_name=None, author_email=None, url=None,
+            title=None, username=None, password=False, user_email=None,
+            code_label=default_options['code'], computer_name=None,
+            replace=None, message=None, **kwargs):
     """
     Launches a
     :py:class:`aiida.orm.calculation.job.JobCalculation`
@@ -833,7 +847,7 @@ def deposit(what,type,author_name=None,author_email=None,url=None,
         kwargs['additional_tags']['_cod_database_code'] = replace
         kwargs['datablock_names'] = [replace]
 
-    cif = export_cifnode(what,store=True,**kwargs)
+    cif = export_cifnode(what, store=True, **kwargs)
 
     from aiida.orm.code import Code
     from aiida.orm.computer import Computer
@@ -875,7 +889,8 @@ def deposit(what,type,author_name=None,author_email=None,url=None,
 
     return calc
 
-def deposition_cmdline_parameters(parser,expclass="Data"):
+
+def deposition_cmdline_parameters(parser, expclass="Data"):
     """
     Provides descriptions of command line options, that are used to control
     the process of deposition to TCOD.
@@ -921,7 +936,8 @@ def deposition_cmdline_parameters(parser,expclass="Data"):
                         help="Description of the change (relevant for "
                              "redepositions only.")
 
-def translate_calculation_specific_values(calc,translator,**kwargs):
+
+def translate_calculation_specific_values(calc, translator, **kwargs):
     """
     Translates calculation-specific values from
     :py:class:`aiida.orm.calculation.job.JobCalculation` subclass to
@@ -934,7 +950,7 @@ def translate_calculation_specific_values(calc,translator,**kwargs):
     :raises ValueError: if **translator** is not derived from proper class.
     """
     from aiida.tools.dbexporters.tcod_plugins import BaseTcodtranslator
-    if not issubclass(translator,BaseTcodtranslator):
+    if not issubclass(translator, BaseTcodtranslator):
         raise ValueError("supplied translator is of class {}, while it "
                          "must be derived from {} class".format(translator.__class__,
                                                                 BaseTcodtranslator.__class__))
@@ -981,10 +997,10 @@ def translate_calculation_specific_values(calc,translator,**kwargs):
         # '_tcod_atom_site_resid_force_Cartn_z': 'get_atom_site_residual_force_Cartesian_z',
     }
     tags = dict()
-    for tag,function in translation_map.iteritems():
+    for tag, function in translation_map.iteritems():
         value = None
         try:
-            value = getattr(translator,function)(calc,**kwargs)
+            value = getattr(translator, function)(calc, **kwargs)
         except NotImplementedError as e:
             pass
         if value is not None:

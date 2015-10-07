@@ -163,10 +163,13 @@ def extract_tar(infile,folder,nodes_export_subfolder="nodes",silent=False):
     except tarfile.ReadError:
         raise ValueError("The input file format for import is not valid (1)")
 
-def extract_cif(infile,folder,nodes_export_subfolder="nodes",
-                aiida_export_subfolder="aiida",silent=False):
+def extract_cif(infile, folder, nodes_export_subfolder="nodes",
+                aiida_export_subfolder="aiida", silent=False):
     """
-    Extract the nodes to be imported from a TCOD CIF file.
+    Extract the nodes to be imported from a TCOD CIF file. TCOD CIFs,
+    exported by AiiDA, may contain an importable subset of AiiDA database,
+    which can be imported. This function prepares SandboxFolder with files
+    required for import.
 
     :param infile: file path
     :param folder: a SandboxFolder, used to extract the file tree
@@ -179,7 +182,7 @@ def extract_cif(infile,folder,nodes_export_subfolder="nodes",
     import urllib2
     import CifFile
     from aiida.common.exceptions import ValidationError
-    from aiida.common.utils import md5_file,sha1_file
+    from aiida.common.utils import md5_file, sha1_file
     from aiida.orm.data.cif import decode_textfield
 
     values = CifFile.ReadCif(infile)
@@ -771,10 +774,6 @@ class Import(VerdiCommand):
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
             description='Import data in the DB.')
-        parser.add_argument('-f', '--format', type=str, default='tar',
-                            help="Type of the imported file. Currently "
-                                 "accepted types are 'tar', 'cif' and "
-                                 "'tree', 'tar' is the default value")
         parser.add_argument('-w', '--webpage', nargs='+', type=str,
                             dest='webpages', metavar='URL',
                             help="Download all URLs in the given HTTP web "

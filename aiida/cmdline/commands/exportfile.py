@@ -225,7 +225,7 @@ def export_tree(what, folder, also_parents = True,
       then calls function for licenses of Data nodes expecting True if
       license is allowed, False otherwise.
     :param exclude_forbidden_licenses: if True, skips exporting of Data
-      nodes with forbidden licenses. IF False, raises LicensingException
+      nodes with forbidden licenses. If False, raises LicensingException
       if any Data node with forbidden license exists.
     :param silent: suppress debug prints
     :raises LicensingException: if any node is licensed under forbidden
@@ -291,7 +291,7 @@ def export_tree(what, folder, also_parents = True,
     entries_to_add = {k: [Q(id__in=v)] for k, v
                       in entries_ids_to_add.iteritems()}
 
-    # Check the licenses of exported data
+    # Check the licenses of exported data.
     # TODO: use standard django constructions or QueryTool, since current
     # implementation is far from optimal.
     if allowed_licenses is not None:

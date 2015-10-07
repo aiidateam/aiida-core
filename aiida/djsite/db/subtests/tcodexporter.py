@@ -12,21 +12,27 @@ __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi"
 
 class FakeObject(object):
-
-    def __init__(self,dictionary):
+    """
+    A wrapper for dictionary, which can be used instead of object.
+    Example use case: fake Calculation object ``calc``, having keys
+    ``inp`` and ``out`` to access also fake NodeInputManager and
+    NodeOutputManager.
+    """
+    def __init__(self, dictionary):
         self._dictionary = dictionary
 
-    def __getattr__(self,name):
-        if isinstance(self._dictionary[name],dict):
+    def __getattr__(self, name):
+        if isinstance(self._dictionary[name], dict):
             return FakeObject(self._dictionary[name])
         else:
             return self._dictionary[name]
+
 
 class TestTcodDbExporter(AiidaTestCase):
     """
     Tests for TcodDbExporter class.
     """
-    from aiida.orm.data.structure import has_ase
+    from aiida.orm.data.structure import has_ase, has_pyspglib
     from aiida.orm.data.cif import has_pycifrw
 
     def test_contents_encoding(self):
@@ -67,8 +73,8 @@ class TestTcodDbExporter(AiidaTestCase):
         self.assertEquals(cif_encode_contents(
             "".join("a" for i in range(0,2049)))[1],
             'quoted-printable')
-        self.assertEquals(cif_encode_contents('datatest')[1],None)
-        self.assertEquals(cif_encode_contents('data_test')[1],'base64')
+        self.assertEquals(cif_encode_contents('datatest')[1], None)
+        self.assertEquals(cif_encode_contents('data_test')[1], 'base64')
 
     def test_collect_files(self):
         """
@@ -79,24 +85,24 @@ class TestTcodDbExporter(AiidaTestCase):
         import StringIO
 
         sf = SandboxFolder()
-        sf.get_subfolder('out',create=True)
-        sf.get_subfolder('pseudo',create=True)
-        sf.get_subfolder('save',create=True)
-        sf.get_subfolder('save/1',create=True)
-        sf.get_subfolder('save/2',create=True)
+        sf.get_subfolder('out', create=True)
+        sf.get_subfolder('pseudo', create=True)
+        sf.get_subfolder('save' ,create=True)
+        sf.get_subfolder('save/1', create=True)
+        sf.get_subfolder('save/2', create=True)
 
         f = StringIO.StringIO("test")
-        sf.create_file_from_filelike(f,'aiida.in')
+        sf.create_file_from_filelike(f, 'aiida.in')
         f = StringIO.StringIO("test")
-        sf.create_file_from_filelike(f,'aiida.out')
+        sf.create_file_from_filelike(f, 'aiida.out')
         f = StringIO.StringIO("test")
-        sf.create_file_from_filelike(f,'_aiidasubmit.sh')
+        sf.create_file_from_filelike(f, '_aiidasubmit.sh')
         f = StringIO.StringIO("test")
-        sf.create_file_from_filelike(f,'_.out')
+        sf.create_file_from_filelike(f, '_.out')
         f = StringIO.StringIO("test")
-        sf.create_file_from_filelike(f,'out/out')
+        sf.create_file_from_filelike(f, 'out/out')
         f = StringIO.StringIO("test")
-        sf.create_file_from_filelike(f,'save/1/log.log')
+        sf.create_file_from_filelike(f, 'save/1/log.log')
 
         md5  = '098f6bcd4621d373cade4e832627b4f6'
         sha1 = 'a94a8fe5ccb19ba61c4c0873d391e987982fbbd3'
@@ -122,7 +128,7 @@ class TestTcodDbExporter(AiidaTestCase):
 
     @unittest.skipIf(not has_ase(),"Unable to import ase")
     def test_cif_structure_roundtrip(self):
-        from aiida.tools.dbexporters.tcod import export_cif,export_values
+        from aiida.tools.dbexporters.tcod import export_cif, export_values
         from aiida.orm import Code
         from aiida.orm import JobCalculation
         from aiida.orm.data.cif import CifData
@@ -209,12 +215,12 @@ class TestTcodDbExporter(AiidaTestCase):
         pd.store()
 
         with self.assertRaises(ValueError):
-            export_cif(c,parameters=pd)
+            export_cif(c, parameters=pd)
 
         c._add_link_from(calc,"calc")
-        export_cif(c,parameters=pd)
+        export_cif(c, parameters=pd)
 
-        values = export_values(c,parameters=pd)
+        values = export_values(c, parameters=pd)
         values = values['0']
 
         self.assertEquals(values['_tcod_computation_environment'],
@@ -247,7 +253,7 @@ class TestTcodDbExporter(AiidaTestCase):
                      "kpoints": kpoints, "code": code },
             "out": { "output_parameters": ParameterData(dict={}) }
         })
-        res = translate_calculation_specific_values(calc,PWT)
+        res = translate_calculation_specific_values(calc, PWT)
         self.assertEquals(res,{
             '_integration_grid_X': 2,
             '_integration_grid_Y': 3,
@@ -285,7 +291,7 @@ class TestTcodDbExporter(AiidaTestCase):
             }) }
         })
         with self.assertRaises(ValueError):
-            translate_calculation_specific_values(calc,PWT)
+            translate_calculation_specific_values(calc, PWT)
 
         calc = FakeObject({
             "inp": { "parameters": ParameterData(dict={}) },
@@ -295,7 +301,7 @@ class TestTcodDbExporter(AiidaTestCase):
             }) }
         })
         with self.assertRaises(ValueError):
-            translate_calculation_specific_values(calc,PWT)
+            translate_calculation_specific_values(calc, PWT)
 
         energies = {
             'energy'             : -3701.7004199449257,
@@ -314,7 +320,7 @@ class TestTcodDbExporter(AiidaTestCase):
             }) },
             "out": { "output_parameters": ParameterData(dict=dct) }
         })
-        res = translate_calculation_specific_values(calc,PWT)
+        res = translate_calculation_specific_values(calc, PWT)
         self.assertEquals(res,{
             '_tcod_total_energy'     : energies['energy'],
             '_dft_1e_energy'         : energies['energy_one_electron'],
@@ -336,7 +342,7 @@ class TestTcodDbExporter(AiidaTestCase):
             }) },
             "out": { "output_parameters": ParameterData(dict=dct) }
         })
-        res = translate_calculation_specific_values(calc,CPT)
+        res = translate_calculation_specific_values(calc, CPT)
         self.assertEquals(res,{'_dft_cell_valence_electrons': 10,
                                '_tcod_software_package':
                                'Quantum ESPRESSO'})
@@ -350,7 +356,7 @@ class TestTcodDbExporter(AiidaTestCase):
             "out": { "output_parameters": ParameterData(dict={}),
                      "output_array": ad }
         })
-        res = translate_calculation_specific_values(calc,PWT)
+        res = translate_calculation_specific_values(calc, PWT)
         self.assertEquals(res,{
             '_tcod_software_package': 'Quantum ESPRESSO',
             '_dft_BZ_integration_smearing_method': 'other',
@@ -423,7 +429,7 @@ class TestTcodDbExporter(AiidaTestCase):
                   "verify": "yes",
                 })
         }})
-        res = translate_calculation_specific_values(calc,NPT)
+        res = translate_calculation_specific_values(calc, NPT)
         self.assertEquals(res,{
             '_tcod_software_package': 'NWChem',
             '_tcod_software_package_version': '6.3',
@@ -464,15 +470,16 @@ class TestTcodDbExporter(AiidaTestCase):
         val = export_values(s)
         script = val.first_block()['_tcod_file_contents'][1]
         function = '_get_aiida_structure_ase_inline'
-        self.assertNotEqual(script.find(function),script.rfind(function))
+        self.assertNotEqual(script.find(function), script.rfind(function))
 
-    @unittest.skipIf(not has_ase(),"Unable to import ase")
+    @unittest.skipIf(not has_ase() or not has_pyspglib,
+                     "Unable to import ase or pyspglib")
     def test_symmetry_reduction(self):
         from aiida.orm.data.structure import StructureData
         from aiida.tools.dbexporters.tcod import export_values
         from ase import Atoms
 
-        a = Atoms('BaTiO3',cell=(4.,4.,4.))
+        a = Atoms('BaTiO3', cell=(4.,4.,4.))
         a.set_scaled_positions(
             ((0.0,0.0,0.0),
              (0.5,0.5,0.5),
@@ -483,7 +490,7 @@ class TestTcodDbExporter(AiidaTestCase):
             )
 
         a.set_chemical_symbols(['Ba','Ti','O','O','O'])
-        val = export_values(StructureData(ase=a),reduce_symmetry=True,store=True)['0']
+        val = export_values(StructureData(ase=a), reduce_symmetry=True, store=True)['0']
         self.assertEqual(val['_atom_site_label'],['Ba1','Ti1','O1'])
         self.assertEqual(val['_symmetry_space_group_name_H-M'],'Pm-3m')
         self.assertEqual(val['_symmetry_space_group_name_Hall'],'-P 4 2 3')
@@ -506,7 +513,7 @@ class TestTcodDbExporter(AiidaTestCase):
             if options[key] is None:
                 options.pop(key)
 
-        self.assertEqual(options,{})
+        self.assertEqual(options, {})
 
         parser = argparse.ArgumentParser()
         deposition_cmdline_parameters(parser)
@@ -516,7 +523,7 @@ class TestTcodDbExporter(AiidaTestCase):
             if options[key] is None:
                 options.pop(key)
 
-        self.assertEqual(options,{})
+        self.assertEqual(options, {})
 
     @unittest.skipIf(not has_ase() or not has_pycifrw(),
                      "Unable to import ase or pycifrw")
@@ -546,7 +553,7 @@ class TestTcodDbExporter(AiidaTestCase):
         for i in range(0,2):
             struct = StructureData(cell=cells[i])
             for j,symbol in enumerate(symbols[i]):
-                struct.append_atom(symbols=symbol,position=positions[i][j])
+                struct.append_atom(symbols=symbol, position=positions[i][j])
             structurelist.append(struct)
 
         td = TrajectoryData(structurelist=structurelist)
@@ -593,33 +600,33 @@ class TestTcodDbExporter(AiidaTestCase):
         ]
 
         # Not stored and not to be stored:
-        v = export_values(td,trajectory_index=1)
-        self.assertEqual(sorted(v['0'].keys()),expected_tags)
+        v = export_values(td, trajectory_index=1)
+        self.assertEqual(sorted(v['0'].keys()), expected_tags)
 
         # Stored, but not expected to be stored:
         td = TrajectoryData(structurelist=structurelist)
         td.store()
-        v = export_values(td,trajectory_index=1)
+        v = export_values(td, trajectory_index=1)
         self.assertEqual(sorted(v['0'].keys()),
                          expected_tags+tcod_file_tags)
 
         # Not stored, but expected to be stored:
         td = TrajectoryData(structurelist=structurelist)
-        v = export_values(td,trajectory_index=1,store=True)
+        v = export_values(td, trajectory_index=1, store=True)
         self.assertEqual(sorted(v['0'].keys()),
                          expected_tags+tcod_file_tags)
 
         # Both stored and expected to be stored:
         td = TrajectoryData(structurelist=structurelist)
         td.store()
-        v = export_values(td,trajectory_index=1,store=True)
+        v = export_values(td, trajectory_index=1, store=True)
         self.assertEqual(sorted(v['0'].keys()),
                          expected_tags+tcod_file_tags)
 
         # Stored, but asked not to include DB dump:
         td = TrajectoryData(structurelist=structurelist)
         td.store()
-        v = export_values(td,trajectory_index=1,
+        v = export_values(td, trajectory_index=1,
                           dump_aiida_database=False)
         self.assertEqual(sorted(v['0'].keys()),
                          expected_tags)

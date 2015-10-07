@@ -111,7 +111,7 @@ class TestCifData(AiidaTestCase):
     Tests for CifData class.
     """
     from aiida.orm.data.cif import has_pycifrw
-    from aiida.orm.data.structure import has_ase,has_pymatgen,get_pymatgen_version
+    from aiida.orm.data.structure import has_ase,has_pymatgen,has_pyspglib,get_pymatgen_version
     from distutils.version import StrictVersion
 
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
@@ -621,11 +621,15 @@ _publ_section_title                     'Test CIF'
         self.assertEqual(a.has_attached_hydrogens(), True)
 
 
-
-    @unittest.skipIf(not has_ase() or not has_pycifrw(),
-                     "Unable to import ase or pycifrw")
+    @unittest.skipIf(not has_ase() or not has_pycifrw() or
+                     not has_pyspglib(),
+                     "Unable to import ase, pycifrw or pyspglib")
     def test_refine(self):
-        from aiida.orm.data.cif import CifData,refine_inline
+        """
+        Test case for refinement (space group determination) for a
+        CifData object.
+        """
+        from aiida.orm.data.cif import CifData, refine_inline
         import tempfile
 
         with tempfile.NamedTemporaryFile() as f:
@@ -1078,7 +1082,7 @@ class TestStructureData(AiidaTestCase):
     """
     Tests the creation of StructureData objects (cell and pbc).
     """
-    from aiida.orm.data.structure import has_ase,has_pyspglib
+    from aiida.orm.data.structure import has_ase, has_pyspglib
 
     def test_cell_ok_and_atoms(self):
         """

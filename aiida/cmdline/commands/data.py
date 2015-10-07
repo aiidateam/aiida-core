@@ -71,9 +71,6 @@ class Listable(object):
         parser.add_argument('--no-header', '-H',
                             help="do not print a header with column names.",
                             dest="header", action='store_false')
-        parser.add_argument('--all-users',
-                            help="list objects created by all users.",
-                            dest="all_users", action='store_true')
 
         args = list(args)
         parsed_args = parser.parse_args(args)
@@ -159,7 +156,6 @@ class Listable(object):
         parser.add_argument('-A', '--all-users', action='store_true', default=False,
                             help="show groups for all users, rather than only for the"
                                  "current user")
-
 
     def get_column_names(self):
         """

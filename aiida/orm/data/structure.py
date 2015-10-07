@@ -744,12 +744,13 @@ class StructureData(Data):
         """
         Load the structure from a pymatgen Structure object.
 
+        .. note:: periodic boundary conditions are set to True in all
+            three directions.
         .. note:: Requires the pymatgen module (version >= 3.0.13, usage
             of earlier versions may cause errors).
         """
         self.cell = struct.lattice.matrix.tolist()
-        self.pbc = [True, True, True]  # setting defaults, not sure if this
-        # is a correct way to do so
+        self.pbc = [True, True, True]
         self.clear_kinds()
         for site in struct.sites:
             self.append_atom(symbols=[x[0].symbol for x in site.items()],

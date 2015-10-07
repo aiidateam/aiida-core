@@ -638,7 +638,8 @@ def symop_fract_from_ortho(cell):
         [0, 0, sg / (c * D)],
     ])
 
-def ase_refine_cell(aseatoms,**kwargs):
+
+def ase_refine_cell(aseatoms, **kwargs):
     """
     Detect the symmetry of the structure, remove symmetric atoms and
     refine unit cell.
@@ -648,14 +649,14 @@ def ase_refine_cell(aseatoms,**kwargs):
     :return newase: refined cell with reduced set of atoms
     :return symmetry: a dictionary describing the symmetry space group
     """
-    from pyspglib.spglib import refine_cell,get_symmetry_dataset
+    from pyspglib.spglib import refine_cell, get_symmetry_dataset
     from ase.atoms import Atoms
-    cell,positions,numbers = refine_cell(aseatoms,**kwargs)
+    cell, positions, numbers = refine_cell(aseatoms, **kwargs)
 
-    refined_atoms = Atoms(numbers,scaled_positions=positions,cell=cell,
+    refined_atoms = Atoms(numbers, scaled_positions=positions, cell=cell,
                           pbc=True)
 
-    sym_dataset = get_symmetry_dataset(refined_atoms,**kwargs)
+    sym_dataset = get_symmetry_dataset(refined_atoms, **kwargs)
 
     unique_numbers = []
     unique_positions = []
@@ -664,14 +665,16 @@ def ase_refine_cell(aseatoms,**kwargs):
         unique_numbers.append(refined_atoms.numbers[i])
         unique_positions.append(refined_atoms.get_scaled_positions()[i])
 
-    unique_atoms = Atoms(unique_numbers,scaled_positions=unique_positions,
-                         cell=cell,pbc=True)
+    unique_atoms = Atoms(unique_numbers,
+                         scaled_positions=unique_positions,
+                         cell=cell, pbc=True)
 
     return unique_atoms,{'hm': sym_dataset['international'],
                          'hall': sym_dataset['hall'],
                          'tables': sym_dataset['number'],
                          'rotations': sym_dataset['rotations'],
                          'translations':sym_dataset['translations']}
+
 
 @optional_inline
 def _get_cif_ase_inline(struct=None, parameters=None):

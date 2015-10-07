@@ -126,7 +126,7 @@ class TestTcodDbExporter(AiidaTestCase):
              {'name': 'aiida.out', 'contents': 'test', 'md5': md5,
                       'sha1': sha1, 'type': 'file'}])
 
-    @unittest.skipIf(not has_ase(),"Unable to import ase")
+    @unittest.skipIf(not has_ase(), "Unable to import ase")
     def test_cif_structure_roundtrip(self):
         from aiida.tools.dbexporters.tcod import export_cif, export_values
         from aiida.orm import Code

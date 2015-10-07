@@ -305,7 +305,6 @@ class Install(VerdiCommand):
     """
 
     def run(self, *args):
-        import readline
         from aiida import load_dbenv
         from aiida.common.setup import (create_base_dirs, create_configuration,
                                         set_default_profile, DEFAULT_UMASK)

@@ -434,7 +434,7 @@ def refine_inline(node):
 
     .. note:: can be used as inline calculation.
     """
-    from aiida.orm.data.structure import StructureData,ase_refine_cell
+    from aiida.orm.data.structure import StructureData, ase_refine_cell
 
     if len(node.values.keys()) > 1:
         raise ValueError("CifData seems to contain more than one data "
@@ -451,7 +451,7 @@ def refine_inline(node):
 
     original_atoms = original_atoms[0]
 
-    refined_atoms,symmetry = ase_refine_cell(original_atoms)
+    refined_atoms, symmetry = ase_refine_cell(original_atoms)
 
     cif = CifData(ase=refined_atoms)
     cif.values.dictionary[name] = cif.values.dictionary.pop(str(0))
@@ -460,18 +460,21 @@ def refine_inline(node):
     for tag in symmetry_tags:
         cif.values[name].RemoveCifItem(tag)
 
-    cif.values[name]['_symmetry_space_group_name_H-M']   = symmetry['hm']
-    cif.values[name]['_symmetry_space_group_name_Hall']  = symmetry['hall']
-    cif.values[name]['_symmetry_Int_Tables_number']      = symmetry['tables']
+    cif.values[name]['_symmetry_space_group_name_H-M']  = symmetry['hm']
+    cif.values[name]['_symmetry_space_group_name_Hall'] = symmetry['hall']
+    cif.values[name]['_symmetry_Int_Tables_number']     = symmetry['tables']
     cif.values[name]['_symmetry_equiv_pos_as_xyz'] = \
         [ symop_string_from_symop_matrix_tr(symmetry['rotations'][i],
                                             symmetry['translations'][i])
-          for i in range(0,len(symmetry['rotations'])) ]
+          for i in range(0, len(symmetry['rotations'])) ]
 
     # Summary formula has to be calculated from non-reduced set of atoms.
     cif.values[name]['_chemical_formula_sum'] = \
-        StructureData(ase=original_atoms).get_formula(mode='hill',separator=' ')
+        StructureData(ase=original_atoms).get_formula(mode='hill',
+                                                      separator=' ')
 
+    # If the number of reduced atoms multiplies the number of non-reduced
+    # atoms, the new Z value can be calculated.
     if '_cell_formula_units_Z' in node.values[name].keys():
         old_Z = node.values[name]['_cell_formula_units_Z']
         if len(original_atoms) % len(refined_atoms):

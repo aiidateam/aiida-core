@@ -863,7 +863,7 @@ class JobCalculation(Calculation):
         from aiida.djsite.db.tasks import get_last_daemon_timestamp
         from aiida.common.utils import str_timedelta
         from aiida.orm.node import from_type_to_pluginclassname
-        from aiida.orm import Group
+        from aiida.orm.group import Group
         from aiida.common.exceptions import NotExistent
 
         warnings_list = []
@@ -1059,7 +1059,7 @@ class JobCalculation(Calculation):
         """
         # I assume that calc_states are strings. If this changes in the future,
         # update the filter below from dbattributes__tval to the correct field.
-        from aiida.orm import Computer
+        from aiida.orm.computer import Computer
 
         if state not in calc_states:
             cls.logger.warning("querying for calculation state='{}', but it "
@@ -1285,13 +1285,13 @@ class JobCalculation(Calculation):
 
     def _presubmit(self, folder, use_unstored_links=False):
         """
-        Prepares the calculation folder with all inputs, ready to be copied to the cluster 
+        Prepares the calculation folder with all inputs, ready to be copied to the cluster
         :param folder: a SandboxFolder, empty in input, that will be filled with
-          calculation input files and the scheduling script.  
-        :param use_unstored_links: if set to True, it will the presubmit will 
-          try to launch the calculation using also unstored nodes linked to the 
+          calculation input files and the scheduling script.
+        :param use_unstored_links: if set to True, it will the presubmit will
+          try to launch the calculation using also unstored nodes linked to the
           Calculation only in the cache.
-          
+
         :return calcinfo: the CalcInfo object containing the information
           needed by the daemon to handle operations.
         :return script_filename: the name of the job scheduler script
@@ -1304,10 +1304,10 @@ class JobCalculation(Calculation):
                                              PluginInternalError, ValidationError)
         from aiida.scheduler.datastructures import JobTemplate
         from aiida.common.utils import validate_list_of_string_tuples
-        from aiida.orm import Computer
+        from aiida.orm.computer import Computer
         from aiida.orm import DataFactory
         from aiida.common.datastructures import CodeInfo, code_run_modes
-        from aiida.orm.code import Code 
+        from aiida.orm.code import Code
 
         computer = self.get_computer()
 
@@ -1401,7 +1401,7 @@ class JobCalculation(Calculation):
         mpi_args = [arg.format(**subst_dict) for arg in
                     computer.get_mpirun_command()]
         extra_mpirun_params = self.get_mpirun_extra_params() # this is the same for all codes in the same calc
-        
+
         ########################################################################
 #         if self.get_withmpi():
 #             job_tmpl.argv = (mpi_args + extra_mpirun_params +
@@ -1414,25 +1414,25 @@ class JobCalculation(Calculation):
 #                 calcinfo.cmdline_params is not None else [])
 #         job_tmpl.stdin_name = calcinfo.stdin_name
 #         job_tmpl.stdout_name = calcinfo.stdout_name
-        
+
         # set the codes_info
         if not isinstance(calcinfo.codes_info,(list,tuple)):
             raise PluginInternalError("codes_info passed to CalcInfo must be a "
                                       "list of CalcInfo objects")
-        
+
         codes_info = []
         for code_info in calcinfo.codes_info:
-            
+
             if not isinstance(code_info,CodeInfo):
                 raise PluginInternalError("Invalid codes_info, must be a list "
                                           "of CodeInfo objects")
-            
+
             if code_info.code_uuid is None:
                 raise PluginInternalError("CalcInfo should have "
                                           "the information of the code "
                                           "to be launched")
             this_code = Code.get_subclass_from_uuid(code_info.code_uuid)
-            
+
             this_withmpi = code_info.withmpi    # to decide better how to set the default
             if this_withmpi is None:
                 if len(calcinfo.codes_info)>1:
@@ -1455,22 +1455,22 @@ class JobCalculation(Calculation):
             this_stdout_name = code_info.stdout_name
             this_stderr_name = code_info.stderr_name
             this_join_files = code_info.join_files
-            
+
             # overwrite the old cmdline_params and add codename and mpirun stuff
             code_info.cmdline_params = this_argv
 
             codes_info.append( code_info )
         job_tmpl.codes_info = codes_info
-        
+
         # set the codes execution mode
-        
+
         if len(codes)>1:
             try:
                 job_tmpl.codes_run_mode = calcinfo.codes_run_mode
             except KeyError:
                 raise PluginInternalError("Need to set the order of the code "
                                           "execution (parallel or serial?)")
-        else:  
+        else:
             job_tmpl.codes_run_mode = code_run_modes.SERIAL
         ########################################################################
 
@@ -1585,7 +1585,7 @@ class JobCalculation(Calculation):
         from django.utils import timezone
 
         from aiida.transport.plugins.local import LocalTransport
-        from aiida.orm import Computer
+        from aiida.orm.computer import Computer
         from aiida.common.folders import Folder
         from aiida.common.exceptions import NotExistent
 

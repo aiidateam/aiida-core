@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
-from aiida.orm import Node
-from aiida.common.datastructures import calc_states
-from aiida.common.exceptions import ModificationNotAllowed
+
+import collections
+
+from aiida.orm.node import Node
+
 from aiida.common.utils import classproperty
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
@@ -16,14 +18,14 @@ def _parse_single_arg(function_name, additional_parameter,
     Verifies that a single additional argument has been given (or no
     additional argument, if additional_parameter is None). Also
     verifies its name.
-    
+
     :param function_name: the name of the caller function, used for
         the output messages
     :param additional_parameter: None if no additional parameters
         should be passed, or a string with the name of the parameter
         if one additional parameter should be passed.
-    
-    :return: None, if additional_parameter is None, or the value of 
+
+    :return: None, if additional_parameter is None, or the value of
         the additional parameter
     :raise TypeError: on wrong number of inputs
     """
@@ -71,7 +73,7 @@ class Calculation(Node):
     """
     This class provides the definition of an "abstract" AiiDA calculation.
     A calculation in this sense is any computation that converts data into data.
-    
+
     You will typically use one of its subclasses, often a JobCalculation for
     calculations run via a scheduler.
     """
@@ -81,8 +83,8 @@ class Calculation(Node):
     def _use_methods(cls):
         """
         Return the list of valid input nodes that can be set using the
-        use_* method. 
-        
+        use_* method.
+
         For each key KEY of the return dictionary, the 'use_KEY' method is
         exposed.
         Each value must be a dictionary, defining the following keys:
@@ -96,12 +98,11 @@ class Calculation(Node):
           a string. The value of the additional parameter will be passed to the
           callable, and it should return a string.
         * docstring: a docstring for the function
-        
+
         .. note:: in subclasses, always extend the parent class, do not
           substitute it!
         """
-        from aiida.orm import Code
-
+        from aiida.orm.code import Code
         return {
             "code": {
                 'valid_types': Code,
@@ -116,10 +117,11 @@ class Calculation(Node):
         """
         Get the logger of the Calculation object, so that it also logs to the
         DB.
-        
+
         :return: LoggerAdapter object, that works like a logger, but also has
           the 'extra' embedded
         """
+        # TODO SP: abstract logger
         import logging
         from aiida.djsite.utils import get_dblogger_extra
 
@@ -135,9 +137,9 @@ class Calculation(Node):
 
     def __getattr__(self, name):
         """
-        Expand the methods with the use_* calls. Note that this method only 
+        Expand the methods with the use_* calls. Note that this method only
         gets called if 'name' is not already defined as a method. Returning
-        None will then automatically raise the standard AttributeError 
+        None will then automatically raise the standard AttributeError
         exception.
         """
 
@@ -150,8 +152,6 @@ class Calculation(Node):
             """
 
             def __init__(self, node, actual_name, data):
-                from aiida.common.exceptions import InternalError
-
                 self.node = node
                 self.actual_name = actual_name
                 self.data = data
@@ -162,8 +162,6 @@ class Calculation(Node):
                     pass
 
             def __call__(self, parent_node, *args, **kwargs):
-                import collections
-
                 # Not really needed, will be checked in get_linkname
                 # But I do anyway in order to raise an exception as soon as
                 # possible, with the most intuitive caller function name
@@ -172,7 +170,7 @@ class Calculation(Node):
                     additional_parameter=self.data['additional_parameter'],
                     args=args, kwargs=kwargs)
 
-                # Type check   
+                # Type check
                 if isinstance(self.data['valid_types'], collections.Iterable):
                     valid_types_string = ",".join([_.__name__ for _ in
                                                    self.data['valid_types']])
@@ -214,8 +212,6 @@ class Calculation(Node):
         If the use_NAME method requires a further parameter, pass that
         parameter as the second parameter.
         """
-        from aiida.common.exceptions import InternalError
-
         try:
             data = self._use_methods[link]
         except KeyError:
@@ -243,8 +239,7 @@ class Calculation(Node):
         :param dest: a Data object instance of the database
         :raise: ValueError if a link from self to dest is not allowed.
         """
-        from aiida.orm import Data
-
+        from aiida.orm.data import Data
         if not isinstance(dest, Data):
             raise ValueError(
                 "The output of a calculation node can only be a data node")
@@ -253,15 +248,14 @@ class Calculation(Node):
 
     def _add_link_from(self, src, label=None):
         '''
-        Add a link with a code as destination. 
-        
+        Add a link with a code as destination.
+
         You can use the parameters of the base Node class, in particular the
         label parameter to label the link.
-        
+
         :param src: a node of the database. It cannot be a Calculation object.
         :param str label: Name of the link. Default=None
         '''
-
         from aiida.orm.data import Data
         from aiida.orm.code import Code
 
@@ -273,12 +267,11 @@ class Calculation(Node):
 
     def _replace_link_from(self, src, label):
         '''
-        Replace a link. 
-        
-        :param src: a node of the database. It cannot be a Calculation object.
-        :param str label: Name of the link. 
-        '''
+        Replace a link.
 
+        :param src: a node of the database. It cannot be a Calculation object.
+        :param str label: Name of the link.
+        '''
         from aiida.orm.data import Data
         from aiida.orm.code import Code
 
@@ -293,8 +286,8 @@ class Calculation(Node):
         Return the code for this calculation, or None if the code
         was not set.
         """
-        from aiida.orm import Code
-
+        from aiida.orm.code import Code
         return dict(self.get_inputs(type=Code, also_labels=True)).get(
             self._use_methods['code']['linkname'], None)
-                        
+
+

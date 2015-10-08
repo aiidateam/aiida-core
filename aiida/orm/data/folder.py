@@ -40,8 +40,8 @@ class FolderData(Data):
     def get_file_content(self, path):
         """
         Return the content of a path stored inside the folder as a string.
-        
-        :raise NotExistent: if the path does not exist. 
+
+        :raise NotExistent: if the path does not exist.
         """
         from aiida.common.exceptions import NotExistent
 
@@ -52,4 +52,4 @@ class FolderData(Data):
         except (OSError, IOError):
             raise NotExistent("Error reading the file '{}' inside node with "
                               "pk= {}, it probably does not exist?".format(path, self.pk))
-        
+

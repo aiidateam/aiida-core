@@ -20,8 +20,7 @@ __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi"
 
 class TestPort(AiidaTestCase):
     def test_1(self):
-        from aiida.orm.computer import delete_computer
-        from aiida.orm.node import Node
+        from aiida.orm import delete_computer, Node
 
         StructureData = DataFactory('structure')
         sd = StructureData()
@@ -51,8 +50,8 @@ class TestPort(AiidaTestCase):
         self.setUpClass()
         delete_computer(self.computer)
 
-        # NOTE: it is better to load new nodes by uuid, rather than assuming 
-        # that they will have the first 3 pks. In fact, a recommended policy in 
+        # NOTE: it is better to load new nodes by uuid, rather than assuming
+        # that they will have the first 3 pks. In fact, a recommended policy in
         # databases is that pk always increment, even if you've deleted elements
         import_data(filename, silent=True)
         for uuid in attrs.keys():

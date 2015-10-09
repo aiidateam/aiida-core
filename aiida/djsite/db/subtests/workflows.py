@@ -4,7 +4,7 @@ Tests for workflows
 """
 from django.utils import unittest
 
-from aiida.orm import Workflow
+from aiida.orm.workflow import Workflow
 from aiida.djsite.db.testbase import AiidaTestCase
 from aiida.workflows.test import WorkflowTestEmpty
 

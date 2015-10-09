@@ -45,7 +45,7 @@ class AiidaTestCase(unittest.TestCase):
         from django.core.exceptions import ObjectDoesNotExist
 
         from aiida.djsite.db.models import DbUser
-        from aiida.orm import Computer
+        from aiida.orm.computer import Computer
         from aiida.djsite.utils import get_configured_user_email
 
         # I create the user only once:

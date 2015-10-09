@@ -60,7 +60,7 @@ class Command(NoArgsCommand):
         # load default modules
         for app_mod, model_name, alias in default_modules_list:
             user_ns[alias] = getattr(__import__(app_mod, {}, {}, model_name), model_name)
-        
+
         # load custom modules
         custom_modules_list = [(str(e[0]),str(e[2])) for e in
                                [p.rpartition('.') for p in get_property(

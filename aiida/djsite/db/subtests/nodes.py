@@ -4,7 +4,7 @@ Tests for nodes, attributes and links
 """
 from django.utils import unittest
 
-from aiida.orm import Node
+from aiida.orm.node import Node
 from aiida.common.exceptions import ModificationNotAllowed, UniquenessError
 from aiida.djsite.db.testbase import AiidaTestCase
 
@@ -118,7 +118,7 @@ class TestTransitiveClosureDeletion(AiidaTestCase):
         self.assertEquals(
             len(DbPath.objects.filter(parent=n5, child=n7).distinct()), 1)
 
-        # Finally, I reconnect in a different way the two graphs and 
+        # Finally, I reconnect in a different way the two graphs and
         # check that 1 and 8 are again connected
         n4._add_link_from(n3)
         self.assertEquals(
@@ -478,7 +478,7 @@ class TestNodeBasic(AiidaTestCase):
         b_expected_extras = {'meta': 'textofext'}
 
         # Now I check for the attributes
-        # First I check that nothing has changed 
+        # First I check that nothing has changed
         self.assertEquals({k: v for k, v in a.iterattrs()}, attrs_to_set)
         self.assertEquals({k: v for k, v in a.iterextras()}, extras_to_set)
 
@@ -827,7 +827,7 @@ class TestNodeBasic(AiidaTestCase):
     def test_attr_and_extras_multikey(self):
         """
         Multiple nodes with the same key. This should not be a problem
-        
+
         I test only extras because the two tables are formally identical
         """
         n1 = Node().store()
@@ -1223,7 +1223,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
                               for i in endnode.get_inputs(also_labels=True)]),
                          set([("N1", n1.uuid), ("N2", n2.uuid)]))
 
-        # Endnode not stored yet, n3 and n4 already stored        
+        # Endnode not stored yet, n3 and n4 already stored
         endnode._add_link_from(n3, "N3")
         # Try also reverse storage
         endnode._add_link_from(n4, "N4")
@@ -1321,7 +1321,8 @@ class TestSubNodesAndLinks(AiidaTestCase):
                          set([("N2", n2.uuid)]))
 
     def test_use_code(self):
-        from aiida.orm import JobCalculation, Code
+        from aiida.orm import JobCalculation
+        from aiida.orm.code import Code
 
         computer = self.computer
 
@@ -1332,7 +1333,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         calc = JobCalculation(computer=computer,
                               resources={'num_machines': 1, 'num_mpiprocs_per_machine': 1}).store()
 
-        # calc is not stored, and also code is not 
+        # calc is not stored, and also code is not
         unstoredcalc.use_code(code)
 
         # calc is stored, but code is not
@@ -1410,7 +1411,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         the_parent = dict(n3.get_inputs(also_labels=True))['the_label']
         self.assertEquals(n2.uuid, the_parent.uuid)
 
-        # _replace_link_from should work also if there is no previous link 
+        # _replace_link_from should work also if there is no previous link
         n2._replace_link_from(n1, label='the_label_2')
         the_parent = dict(n2.get_inputs(also_labels=True))['the_label_2']
         self.assertEquals(n1.uuid, the_parent.uuid)
@@ -1468,8 +1469,9 @@ class TestSubNodesAndLinks(AiidaTestCase):
     def test_valid_links(self):
         import tempfile
 
-        from aiida.orm import JobCalculation, Data, Code
-        from aiida.orm import Computer, DataFactory
+        from aiida.orm import JobCalculation, Data, DataFactory
+        from aiida.orm.code import Code
+        from aiida.orm.computer import Computer
         from aiida.common.datastructures import calc_states
 
         SinglefileData = DataFactory('singlefile')
@@ -1544,7 +1546,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         with self.assertRaises(ModificationNotAllowed):
             calc_a._add_link_from(newdata)
 
-        # Cannot replace input nodes if the calculation is not in status NEW    
+        # Cannot replace input nodes if the calculation is not in status NEW
         with self.assertRaises(ModificationNotAllowed):
             calc_a._replace_link_from(d2, label='some_label')
 

@@ -185,7 +185,8 @@ class DbNode(m.Model):
         Return the corresponding aiida instance of class aiida.orm.Node or a
         appropriate subclass.
         """
-        from aiida.orm.node import Node, from_type_to_pluginclassname
+        from aiida.orm.node import Node
+        from aiida.orm import from_type_to_pluginclassname
         from aiida.common.pluginloader import load_plugin
         from aiida.common import aiidalogger
 
@@ -1424,7 +1425,7 @@ class DbComputer(m.Model):
         """
         from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
         from aiida.common.exceptions import NotExistent
-        from aiida.orm import Computer
+        from aiida.orm.computer import Computer
 
         if isinstance(computer, basestring):
             try:
@@ -1538,7 +1539,7 @@ class DbAuthInfo(m.Model):
         transport to connect to the computer.
         """
         from aiida.transport import TransportFactory
-        from aiida.orm import Computer
+        from aiida.orm.computer import Computer
 
         try:
             ThisTransport = TransportFactory(self.dbcomputer.transport_type)

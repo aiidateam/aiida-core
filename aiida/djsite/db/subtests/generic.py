@@ -4,7 +4,7 @@ Generic tests that need the use of the DB
 """
 from django.utils import unittest
 
-from aiida.orm import Node
+from aiida.orm.node import Node
 from aiida.common.exceptions import ModificationNotAllowed, UniquenessError
 from aiida.djsite.db.testbase import AiidaTestCase
 
@@ -20,8 +20,8 @@ class TestComputer(AiidaTestCase):
     """
 
     def test_deletion(self):
-        from aiida.orm.computer import Computer, delete_computer
-        from aiida.orm import JobCalculation
+        from aiida.orm.computer import Computer
+        from aiida.orm import delete_computer, JobCalculation
         from aiida.common.exceptions import InvalidOperation
 
         newcomputer = Computer(name="testdeletioncomputer", hostname='localhost',
@@ -53,7 +53,7 @@ class TestCode(AiidaTestCase):
     def test_code_local(self):
         import tempfile
 
-        from aiida.orm import Code
+        from aiida.orm.code import Code
         from aiida.common.exceptions import ValidationError
 
         code = Code(local_executable='test.sh')
@@ -75,7 +75,8 @@ class TestCode(AiidaTestCase):
     def test_remote(self):
         import tempfile
 
-        from aiida.orm import Code, Computer
+        from aiida.orm.code import Code
+        from aiida.orm.computer import Computer
         from aiida.common.exceptions import ValidationError
 
         with self.assertRaises(ValueError):
@@ -160,7 +161,7 @@ class TestGroups(AiidaTestCase):
     """
 
     def test_creation(self):
-        from aiida.orm import Group
+        from aiida.orm.group import Group
 
         n = Node()
         stored_n = Node().store()
@@ -203,7 +204,7 @@ class TestGroups(AiidaTestCase):
         Test the update of the description both for stored and unstored
         groups.
         """
-        from aiida.orm import Group
+        from aiida.orm.group import Group
 
         n = Node().store()
 
@@ -242,7 +243,7 @@ class TestGroups(AiidaTestCase):
         """
         Test different ways of adding nodes
         """
-        from aiida.orm import Group
+        from aiida.orm.group import Group
 
         n1 = Node().store()
         n2 = Node().store()
@@ -282,7 +283,7 @@ class TestGroups(AiidaTestCase):
         """
         Test node removal
         """
-        from aiida.orm import Group
+        from aiida.orm.group import Group
         from aiida.common.exceptions import NotExistent
 
         n1 = Node().store()
@@ -340,7 +341,7 @@ class TestGroups(AiidaTestCase):
         g.delete()
 
     def test_creation_from_dbgroup(self):
-        from aiida.orm import Group
+        from aiida.orm.group import Group
 
         n = Node().store()
 
@@ -351,7 +352,7 @@ class TestGroups(AiidaTestCase):
         dbgroup = g.dbgroup
 
         with self.assertRaises(ValueError):
-            # Cannot pass more parameters, even if valid, if 
+            # Cannot pass more parameters, even if valid, if
             # dbgroup is specified
             Group(dbgroup=dbgroup, name="test")
 
@@ -364,7 +365,7 @@ class TestGroups(AiidaTestCase):
         g.delete()
 
     def test_name_desc(self):
-        from aiida.orm import Group
+        from aiida.orm.group import Group
 
         g = Group(name='testgroup2', description='some desc')
         self.assertEquals(g.name, 'testgroup2')
@@ -380,7 +381,7 @@ class TestGroups(AiidaTestCase):
         g.delete()
 
     def test_delete(self):
-        from aiida.orm import Group
+        from aiida.orm.group import Group
         from aiida.common.exceptions import NotExistent
 
         n = Node().store()
@@ -416,7 +417,7 @@ class TestGroups(AiidaTestCase):
         """
         Test if queries are working
         """
-        from aiida.orm import Group
+        from aiida.orm.group import Group
         from aiida.common.exceptions import NotExistent, MultipleObjectsError
         from aiida.djsite.db.models import DbUser
         from aiida.djsite.utils import get_automatic_user
@@ -450,7 +451,7 @@ class TestGroups(AiidaTestCase):
         self.assertEquals([_.pk for _ in res], [_.pk for _ in [g1]])
 
 
-        # I try to use 'get' with zero or multiple results 
+        # I try to use 'get' with zero or multiple results
         with self.assertRaises(NotExistent):
             Group.get(nodes=n4)
         with self.assertRaises(MultipleObjectsError):
@@ -506,5 +507,5 @@ class TestDbExtras(AiidaTestCase):
         self.assertEquals(n1.dbnode.extras, new_attrs)
         # Also check that other nodes were not damaged
         self.assertEquals(n2.dbnode.extras, {'pippo2': [3, 4, 'b']})
-        
-        
+
+

@@ -2621,6 +2621,8 @@ class TestData(AiidaTestCase):
     Tests generic Data class.
     """
 
+    @unittest.skipIf(True, "Validation for source is disabled due to "
+                           "Issue #9 (https://bitbucket.org/epfl_theos/aiida_epfl/issues/9)")
     def test_license_validation(self):
         """
         Test the validation of source licenses.

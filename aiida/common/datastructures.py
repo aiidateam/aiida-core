@@ -184,7 +184,7 @@ class CodeInfo(DefaultFieldsAttributeDict):
 
     * ``withmpi``: if True, executes the code with mpirun (or another MPI installed
       on the remote computer)
-    * ``code_pk``: the pk of the code associated to the CodeInfo
+    * ``code_uuid``: the uuid of the code associated to the CodeInfo
     """
     _default_fields = ('cmdline_params',  # as a list of strings
                        'stdin_name',
@@ -192,7 +192,7 @@ class CodeInfo(DefaultFieldsAttributeDict):
                        'stderr_name',
                        'join_files',
                        'withmpi',
-                       'code_pk'
+                       'code_uuid'
                        )
 
 

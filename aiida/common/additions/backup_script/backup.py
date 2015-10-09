@@ -7,8 +7,7 @@ import logging
 from dateutil.parser import parse
 from django.utils import timezone as dtimezone
 from pytz import timezone as ptimezone
-from sets import Set
- 
+
 from aiida.orm.node import Node
 from aiida.orm.workflow import Workflow
 
@@ -16,7 +15,6 @@ from aiida.djsite.db.models import DbNode
 from aiida.djsite.db.models import DbWorkflow
 
 from aiida.common.folders import RepositoryFolder
-
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -35,18 +33,17 @@ class Backup(object):
     """
 
     # Keys in the dictionary loaded by the JSON file
-    _oldest_object_backedup_key = "oldest_object_backedup"
+    _oldest_object_bk_key = "oldest_object_backedup"
     _backup_dir_key = "backup_dir"
     _days_to_backup_key = "days_to_backup"
     _end_date_of_backup_key = "end_date_of_backup"
     _periodicity_key = "periodicity"
     _backup_length_threshold_key = "backup_length_threshold"
 
-
     # Backup parameters that will be populated by the JSON file
     
     # Where did the last backup stop
-    _oldest_object_backedup = None
+    _oldest_object_bk = None
     # The destination directory of the backup
     _backup_dir = None
     
@@ -68,7 +65,8 @@ class Backup(object):
     _internal_end_date_of_backup = None
     
     _additional_back_time_mins = None
-    
+
+    _ignore_backup_dir_existence_check = False
     
     def __init__(self, backup_info_filepath, additional_back_time_mins):
         
@@ -78,8 +76,9 @@ class Backup(object):
         self._additional_back_time_mins = additional_back_time_mins
         
         # Configuring the logging
-        logging.basicConfig(level=logging.INFO,
-                format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
         
         # The logger of the backup script
         self._logger = logging.getLogger("aiida_backup")
@@ -96,12 +95,13 @@ class Backup(object):
             try:
                 backup_variables = json.load(backup_info_file)
             except ValueError:
-                self._logger.error("Could not parse file " + backup_info_file_name)
-                raise BackupError("Could not parse file " + backup_info_file_name)
+                self._logger.error("Could not parse file " +
+                                   backup_info_file_name)
+                raise BackupError("Could not parse file " +
+                                  backup_info_file_name)
         
         self._read_backup_info_from_dict(backup_variables)
         
-    
     def _read_backup_info_from_dict(self, backup_variables):
         """
         This method reads the backup information from the given dictionary and
@@ -112,13 +112,15 @@ class Backup(object):
         #
         # If the oldest backup date is not set, then find the oldest
         # creation timestamp and set it as the oldest backup date.
-        if backup_variables.get(self._oldest_object_backedup_key) == None:
+        if backup_variables.get(self._oldest_object_bk_key) is None:
             query_node_res = DbNode.objects.all().order_by('ctime')[:1]
             query_workflow_res = DbWorkflow.objects.all().order_by('ctime')[:1]
 
             if (not query_node_res) and (not query_workflow_res):
-                self._logger.error("The oldest modification date was not found.")
-                raise BackupError("The oldest modification date was not found.")
+                self._logger.error("The oldest modification date "
+                                   "was not found.")
+                raise BackupError("The oldest modification date "
+                                  "was not found.")
             
             oldest_timestamps = [] 
             if query_node_res:
@@ -126,24 +128,24 @@ class Backup(object):
             if query_workflow_res:
                 oldest_timestamps.append(query_workflow_res[0].ctime)
 
-            self._oldest_object_backedup = min(oldest_timestamps)
+            self._oldest_object_bk = min(oldest_timestamps)
             self._logger.info("Setting the oldest modification date to the "
-                         "creation date of the oldest object "
-                         "({})".format(self._oldest_object_backedup))   
+                              "creation date of the oldest object "
+                              "({})".format(self._oldest_object_bk))
         
         # If the oldest backup date is not None then try to parse it
         else:
             try:
-                self._oldest_object_backedup = \
-                    parse(backup_variables.get(self._oldest_object_backedup_key))
-                if self._oldest_object_backedup.tzinfo is None:
+                self._oldest_object_bk = parse(
+                    backup_variables.get(self._oldest_object_bk_key))
+                if self._oldest_object_bk.tzinfo is None:
                     curr_timezone = str(dtimezone.get_current_timezone())
-                    self._oldest_object_backedup = \
-                        ptimezone(str(curr_timezone)).localize(
-                                         self._oldest_object_backedup)
+                    self._oldest_object_bk = ptimezone(
+                        str(curr_timezone)).localize(self._oldest_object_bk)
                     self._logger.info("No timezone defined in the oldest "
-                        "modification date timestamp. Setting current " +
-                        "timezone ({}).".format(curr_timezone))
+                                      "modification date timestamp. Setting "
+                                      "current timezone ({})."
+                                      .format(curr_timezone))
             # If it is not parsable...
             except ValueError:
                 self._logger.error(
@@ -154,47 +156,49 @@ class Backup(object):
         # Setting the backup directory & normalizing it
         self._backup_dir = os.path.normpath(
                                 backup_variables.get(self._backup_dir_key))
-        if not os.path.isdir(self._backup_dir):
+        if (not self._ignore_backup_dir_existence_check and
+                not os.path.isdir(self._backup_dir)):
             self._logger.error("The given backup directory doesn't exist.")
-            raise BackupError("Only one backup end can be set (date or days"
-                              "from backup start.")
+            raise BackupError("The given backup directory doesn't exist.")
         
         # You can not set an end-of-backup date and end days from the backup
         # that you should stop.
-        if backup_variables.get(self._days_to_backup_key) != None \
-            and backup_variables.get(self._end_date_of_backup_key) != None:
+        if (backup_variables.get(self._days_to_backup_key) is not None and
+                backup_variables.get(
+                    self._end_date_of_backup_key) is not None):
             self._logger.error("Only one end of backup date can be set.")
-            raise BackupError("Only one backup end can be set (date or days"
-                              "from backup start.")
+            raise BackupError("Only one backup end can be set (date or "
+                              "days from backup start.")
         
         # Check if there is an end-of-backup date
-        elif backup_variables.get(self._end_date_of_backup_key) != None:
+        elif backup_variables.get(self._end_date_of_backup_key) is not None:
             try:
-                self._end_date_of_backup = \
-                        parse(backup_variables.get(self._end_date_of_backup_key))
+                self._end_date_of_backup = parse(backup_variables.get(
+                    self._end_date_of_backup_key))
 
                 if self._end_date_of_backup.tzinfo is None:
                     curr_timezone = str(dtimezone.get_current_timezone())
                     self._end_date_of_backup = \
                         ptimezone(str(curr_timezone)).localize(
                                          self._end_date_of_backup)
-                    self._logger.info("No timezone defined in the end "
-                        "date of backup timestamp. Setting current " +
-                        "timezone ({}).".format(curr_timezone))
+                    self._logger.info("No timezone defined in the end date of "
+                                      "backup timestamp. Setting current "
+                                      "timezone ({}).".format(curr_timezone))
 
                 self._internal_end_date_of_backup = self._end_date_of_backup 
             except ValueError:
                 self._logger.error("The end date of the backup could not be "
-                                  "parsed correctly")
+                                   "parsed correctly")
                 raise
         
         # Check if there is defined a days to backup
-        elif backup_variables.get(self._days_to_backup_key) != None:
+        elif backup_variables.get(self._days_to_backup_key) is not None:
             try:
-                self._days_to_backup = \
-                        int(backup_variables.get(self._days_to_backup_key))
-                self._internal_end_date_of_backup = self._oldest_object_backedup \
-                    + datetime.timedelta(days=self._days_to_backup)
+                self._days_to_backup = int(
+                    backup_variables.get(self._days_to_backup_key))
+                self._internal_end_date_of_backup = (
+                    self._oldest_object_bk +
+                    datetime.timedelta(days=self._days_to_backup))
             except ValueError:
                 self._logger.error("The days to backup should be an integer")
                 raise
@@ -202,38 +206,40 @@ class Backup(object):
         
         # Parse the backup periodicity.
         try:
-            self._periodicity = int(backup_variables.get(self._periodicity_key))
+            self._periodicity = int(backup_variables.get(
+                self._periodicity_key))
         except ValueError:
             self._logger.error("The backup _periodicity should be an integer")
             raise
         
-        # Parse the backup length.threshold
+        # Parse the backup length threshold
         try:
-            hoursThres = int(backup_variables.get(
+            hours_th= int(backup_variables.get(
                                            self._backup_length_threshold_key))
-            self._backup_length_threshold = datetime.timedelta(hours=hoursThres)
+            self._backup_length_threshold = datetime.timedelta(hours=hours_th)
         except ValueError:
-            self._logger.error("The backup length threshold should be an integer")
+            self._logger.error("The backup length threshold should be "
+                               "an integer")
             raise
-
 
     def _dictionarize_backup_info(self):
         """
         This dictionarises the backup information and returns the dictionary.
         """
-        backup_variables = {}
-        backup_variables[self._oldest_object_backedup_key] = \
-                                        str(self._oldest_object_backedup)
-        backup_variables[self._backup_dir_key] = self._backup_dir
-        backup_variables[self._days_to_backup_key] = self._days_to_backup
-        backup_variables[self._end_date_of_backup_key] = \
-            None if self._end_date_of_backup == None else str(self._end_date_of_backup)
-        backup_variables[self._periodicity_key] = self._periodicity
-        backup_variables[self._backup_length_threshold_key] = \
+        backup_variables = {
+            self._oldest_object_bk_key:
+                str(self._oldest_object_bk),
+            self._backup_dir_key: self._backup_dir,
+            self._days_to_backup_key: self._days_to_backup,
+            self._end_date_of_backup_key:
+                None if self._end_date_of_backup is None
+                else str(self._end_date_of_backup),
+            self._periodicity_key: self._periodicity,
+            self._backup_length_threshold_key:
                 int((self._backup_length_threshold.total_seconds() / 3600))
-        
-        return backup_variables   
+        }
 
+        return backup_variables
 
     def _store_backup_info(self, backup_info_file_name):
         """
@@ -245,7 +251,6 @@ class Backup(object):
         json.dump(backup_variables, backup_info_file)
         backup_info_file.close()
 
-
     def _find_files_to_backup(self):
         """
         Query the database for nodes that were created after the
@@ -253,53 +258,56 @@ class Backup(object):
         """
         # Go a bit further back to avoid any rounding problems. Set the
         # smallest timestamp to be backed up.
-        start_of_backup = self._oldest_object_backedup - \
-            datetime.timedelta(minutes=self._additional_back_time_mins)
+        start_of_backup = (self._oldest_object_bk -
+                           datetime.timedelta(
+                               minutes=self._additional_back_time_mins))
         
         # Find the end of backup for this round using the given _periodicity.
-        backup_end_for_this_round = self._oldest_object_backedup + \
-                                    datetime.timedelta(days=self._periodicity)
+        backup_end_for_this_round = (self._oldest_object_bk +
+                                     datetime.timedelta(
+                                         days=self._periodicity))
         
         # If the end of the backup is after the given end by the user,
         # adapt it accordingly
-        if self._internal_end_date_of_backup != None and \
-            backup_end_for_this_round > self._internal_end_date_of_backup:
+        if (self._internal_end_date_of_backup is not None and
+                backup_end_for_this_round > self._internal_end_date_of_backup):
             backup_end_for_this_round = self._internal_end_date_of_backup
-        
+
         # If the end of the backup is after then current time, 
         # adapt the end accordingly
         now_timestamp = datetime.datetime.now(dtimezone.get_current_timezone())
         if backup_end_for_this_round > now_timestamp:
             self._logger.info(
-                "We can not backup until {}. ".format(backup_end_for_this_round) +
+                "We can not backup until {}. ".format(
+                    backup_end_for_this_round) +
                 "We will backup until now ({}).".format(now_timestamp))
             backup_end_for_this_round = now_timestamp
 
         # Check if the backup length is below the backup length threshold
         if backup_end_for_this_round - start_of_backup < \
-                    self._backup_length_threshold:
+                self._backup_length_threshold:
             self._logger.info("Backup (timestamp) length is below "
-                        "the given threshold. Backup finished")
+                              "the given threshold. Backup finished")
             return None
 
         # Construct the queries & query sets     
-        querySets = []
-        querySets.append(DbNode.objects.filter(mtime__gte=start_of_backup,
-                                    mtime__lte=backup_end_for_this_round))
-        querySets.append(DbWorkflow.objects.filter(mtime__gte=start_of_backup,
-                                    mtime__lte=backup_end_for_this_round))
+        query_sets = [DbNode.objects.filter(
+                        mtime__gte=start_of_backup,
+                        mtime__lte=backup_end_for_this_round),
+                      DbWorkflow.objects.filter(
+                        mtime__gte=start_of_backup,
+                        mtime__lte=backup_end_for_this_round)]
         
         # Set the new start of the backup
-        self._oldest_object_backedup = backup_end_for_this_round
+        self._oldest_object_bk = backup_end_for_this_round
         
-        return querySets
+        return query_sets
     
-
     def _backup_needed_files(self, query_sets):
         from aiida.djsite.settings.settings import REPOSITORY_PATH
         repository_path = os.path.normpath(REPOSITORY_PATH)
         
-        parent_dir_set = Set()
+        parent_dir_set = set()
         copy_counter = 0
         
         dir_no_to_copy = 0
@@ -313,7 +321,6 @@ class Backup(object):
         
         for query_set in query_sets:
             for item in query_set.iterator():
-                source_dir = None
                 if type(item) == DbWorkflow:
                     source_dir = os.path.normpath(RepositoryFolder(
                                     section=Workflow._section_name,
@@ -323,11 +330,13 @@ class Backup(object):
                                     section=Node._section_name,
                                     uuid=item.uuid).abspath)
                 else:
-                    #raise exception
+                    # Raise exception
                     self._logger.error(
-                        "Unexpected item type to backup: {}".format(type(item)))
+                        "Unexpected item type to backup: {}"
+                        .format(type(item)))
                     raise BackupError(
-                        "Unexpected item type to backup: {}".format(type(item)))
+                        "Unexpected item type to backup: {}"
+                        .format(type(item)))
 
                 # Get the relative directory without the / which
                 # separates the repository_path from the relative_dir.
@@ -341,30 +350,31 @@ class Backup(object):
                 # Copy the needed directory
                 try:
                     shutil.copytree(source_dir, destination_dir, True, None)
-                except EnvironmentError as envEr:
+                except EnvironmentError as e:
                     self._logger.warning(
                         "Problem copying directory {} " .format(source_dir) +
                         "to {}. ".format(destination_dir) +
                         "More information: {} (Error no: {})".format(
-                                                             envEr.strerror,
-                                                             envEr.errno))
-                    #raise envEr
+                                                             e.strerror,
+                                                             e.errno))
+                    # Raise envEr
 
                 # Extract the needed parent directories
-                self._extract_parent_dirs(relative_dir, parent_dir_set)
+                Backup._extract_parent_dirs(relative_dir, parent_dir_set)
                 copy_counter += 1
                 
-                if self._logger.getEffectiveLevel() <= logging.INFO and \
-                    (datetime.datetime.now() - last_progress_print).seconds > 60 :
+                if (self._logger.getEffectiveLevel() <= logging.INFO and
+                        (datetime.datetime.now() -
+                         last_progress_print).seconds > 60):
                     last_progress_print = datetime.datetime.now()
-                    percent_progress = (copy_counter*100/dir_no_to_copy)
+                    percent_progress = (copy_counter*100 / dir_no_to_copy)
                     self._logger.info(
                          "Copied {} ".format(copy_counter) +
                          "directories [{}]".format(item.__class__.__name__,) +
                          " ({}/100)".format(percent_progress))
-                
-                if self._logger.getEffectiveLevel() <= logging.INFO and \
-                    percent_progress < (copy_counter*100/dir_no_to_copy):
+
+                if (self._logger.getEffectiveLevel() <= logging.INFO and
+                        percent_progress < (copy_counter*100/dir_no_to_copy)):
                     percent_progress = (copy_counter*100/dir_no_to_copy)
                     last_progress_print = datetime.datetime.now()
                     self._logger.info(
@@ -380,26 +390,26 @@ class Backup(object):
             try:
                 shutil.copystat(os.path.join(repository_path, tempRelPath),
                                 os.path.join(self._backup_dir, tempRelPath))
-            except OSError as osEr:
+            except OSError as e:
                 self._logger.warning(
                          "Problem setting permissions to directory " +
-                         "{}. ".format(os.path.join(self._backup_dir,
-                                                        tempRelPath)))
-                self._logger.warning("More information:" +
-                                    " {} (Error no: {})".format(osEr.strerror,
-                                                                osEr.errno))
-                #raise osEr
+                         "{}.".format(os.path.join(self._backup_dir,
+                                                   tempRelPath)))
+                self._logger.warning("More information: " +
+                                     "{} (Error no: {})".format(e.strerror,
+                                                                e.errno))
             perm_counter += 1
         
-        self._logger.info("Set correct permissions" + 
-                         "to {} directories.".format(perm_counter))
+        self._logger.info("Set correct permissions "
+                          "to {} directories.".format(perm_counter))
        
         self._logger.info("End of backup")
-        self._logger.info("Backed up objects with modification timestamp " +
-                     "less or equal to {}".format(self._oldest_object_backedup))
+        self._logger.info("Backed up objects with modification timestamp "
+                          "less or equal to {}".format(
+                                self._oldest_object_bk))
 
-
-    def _extract_parent_dirs(self, given_rel_dir, parent_dir_set):
+    @staticmethod
+    def _extract_parent_dirs(given_rel_dir, parent_dir_set):
         """
         This method extracts the parent directories of the givenDir
         and populates the parent_dir_set.
@@ -416,15 +426,17 @@ class Backup(object):
     def run(self):
         while True:
             self._read_backup_info_from_file(self._backup_info_filepath)
-            itemSetsToBackup = self._find_files_to_backup()
-            if itemSetsToBackup == None:
+            item_sets_to_backup = self._find_files_to_backup()
+            if item_sets_to_backup is None:
                 break
-            self._backup_needed_files(itemSetsToBackup)
+            self._backup_needed_files(item_sets_to_backup)
             self._store_backup_info(self._backup_info_filepath)
 
 
 class BackupError(Exception):
+
     def __init__(self, value):
         self.value = value
+
     def __str__(self):
         return repr(self.value)

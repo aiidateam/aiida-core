@@ -421,11 +421,11 @@ How to backup the repository
 Apart from the database backup, you should also backup the AiiDA repository.
 For small repositories, this can be easily done by a simple directory copy or,
 even better, with the use of the rsync which can copy only the differences.
-However, both the aforementioned approaches are not efficient in big
+However, both of the aforementioned approaches are not efficient in big
 repositories where even a partial recursive directory listing may take
-significant time, especially for filesystems where hitting a directory has
-a constant (and significant) latency time. 
-Therefore, we provide scripts for making efficient backups of the AiiDA repository.
+significant time, especially for filesystems where accessing a directory has
+a constant (and significant) latency time. Therefore, we provide scripts for 
+making efficient backups of the AiiDA repository.
 
 Before running the backup script, you will have to configure it. Therefore you
 should execute the ``backup_setup.py`` which is located under
@@ -439,12 +439,12 @@ This will ask a set of questions. More precisely, it will initially ask for:
    By default a folder named ``backup`` in your ``.aiida`` directory is
    proposed to be created.
 
- * The destination subfolder of the backup. This is the destination folder of the
+ * The destination folder of the backup. This is the destination folder of the
    files to be backed up. By default it is a folder inside the aforementioned
    ``backup`` folder (e.g. ``~/.aiida/backup/backup_dest``).
 
-.. note:: You should backup the repository on a different disk than the one in 
-  which you have the AiiDA repository! If you just use the same disk, you don't 
+.. note:: You should backup the repository on a different disk than the one in
+  which you have the AiiDA repository! If you just use the same disk, you don't
   have any security against the most common data loss cause: disk failure.
   The best option is to use a destination folder mounted over ssh (google for instance
   for "sshfs" for more info).
@@ -462,20 +462,15 @@ specified by ``end_date_of_backup`` or ``days_to_backup``
 
 The backup parameters to be set in the ``backup_info.json`` are:
 
- * ``backup_length_threshold`` (in hours): If the backup script reaches a point
-   that it has to backup for a period which is smaller that the given threshold,
-   it will stop. The starting point of each backup period is given by the
-   variables that will be set below (``oldest_object_backedup``, ``periodicity``,
-   ``end_date_of_backup and days_to_backup``). e.g. ``"backup_length_threshold": 1``
-
  * ``periodicity`` (in days): The backup runs periodically for a number of days
    defined in the periodicity variable. The purpose of this variable is to limit
    the backup to run only on a few number of days and therefore to limit the
    number of files that are backed up at every round. e.g. ``"periodicity": 2``
    Example: if you have files in the AiiDA repositories created in the past 30
    days, and periodicity is 15, the first run will backup the files of the first
-   15 days; a second run of the script will backup the next 15 days, completing 
-   the backup. Further runs will only backup newer files, if they are created.
+   15 days; a second run of the script will backup the next 15 days, completing
+   the backup (if it is run within the same day). Further runs will only backup
+   newer files, if they are created.
 
  * ``oldest_object_backedup`` (timestamp or null): This is the timestamp of the
    oldest object that was backed up. If you are not aware of this value or if it
@@ -493,12 +488,18 @@ The backup parameters to be set in the ``backup_info.json`` are:
    E.g. ``"end_date_of_backup": null`` or ``"end_date_of_backup": "2015-07-20 11:13:08.145804+02:00"``
 
 
- * ``days_to_backup``: If set, you specify how many days  you will backup from the starting date
+ * ``days_to_backup``: If set, you specify how many days you will backup from the starting date
    of your backup. If it set to ``null`` and also
    ``end_date_of_backup`` is set to ``null``, then the end date of the backup is set
    to the current date. You can not set ``days_to_backup`` & ``end_date_of_backup``
    at the same time (it will lead to an error). E.g. ``"days_to_backup": null``
    or ``"days_to_backup": 5``
+
+ * ``backup_length_threshold`` (in hours): The backup script runs in rounds and
+   on every round it backs-up a number of days that are controlled primarily by
+   ``periodicity`` and also by ``end_date_of_backup`` / ``days_to_backup``,
+   for the last backup round. The ``backup_length_threshold`` specifies the
+   lowest acceptable round length. This is important for the end of the backup.
 
  * ``backup_dir``: The destination directory of the backup. e.g.
    ``"backup_dir": "/scratch/aiida_user/backup_script_dest"``

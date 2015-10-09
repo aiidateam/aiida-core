@@ -10,22 +10,22 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Spyros Zoupanos"
 
+
 class UnitTests(unittest.TestCase):
 
     def setUp(self):
         self._backup_setup_inst = backup_setup.BackupSetup()
 
-        
     def tearDown(self):
         self._backup_setup_inst = None
 
     # The counter & the method that increments it and
     # returns its value. It is used in the tests
     seq = -1
+
     def array_counter(self):
         self.seq += 1
         return self.seq
-
 
     def test_query_yes_no(self):
         """
@@ -68,7 +68,6 @@ class UnitTests(unittest.TestCase):
         backup_setup.raw_input = lambda _: ""
         self.assertFalse(self._backup_setup_inst.query_yes_no("", "no"))
 
-    
     def test_query_string(self):
         """
         This method tests that the query_string method behaves as expected.
@@ -80,15 +79,16 @@ class UnitTests(unittest.TestCase):
         
         # If no answer is given then the default answer should be returned
         backup_setup.raw_input = lambda _: ""
-        self.assertEqual(self._backup_setup_inst.query_string("", "Def_answer"),
-                                "Def_answer")
+        self.assertEqual(
+            self._backup_setup_inst.query_string("", "Def_answer"),
+            "Def_answer")
         
         # The answer should be returned when the an answer is given by
         # the user
         backup_setup.raw_input = lambda _: "Usr_answer"
-        self.assertEqual(self._backup_setup_inst.query_string("", "Def_answer"),
-                                "Usr_answer")
-        
+        self.assertEqual(
+            self._backup_setup_inst.query_string("", "Def_answer"),
+            "Usr_answer")
         
     def test_ask_backup_question(self):
         """
@@ -102,7 +102,7 @@ class UnitTests(unittest.TestCase):
         # - an answer that can not be parsed based on the given type
         # - the final expected answer
         self.seq = -1
-        answers  = ["", "3fd43", "1", "yes"]
+        answers = ["", "3fd43", "1", "yes"]
         backup_setup.raw_input = lambda _: answers[self.array_counter()]
         self.assertEqual(
              self._backup_setup_inst.ask_backup_question("", int, False),
@@ -111,7 +111,7 @@ class UnitTests(unittest.TestCase):
         # Test that a question that asks for a date is working correctly.
         # The behavior is similar to the above test.
         self.seq = -1
-        answers  = ["", "3fd43", "2015-07-28 20:48:53.197537+02:00", "yes"]
+        answers = ["", "3fd43", "2015-07-28 20:48:53.197537+02:00", "yes"]
         backup_setup.raw_input = lambda _: answers[self.array_counter()]
         self.assertEqual(
              self._backup_setup_inst.ask_backup_question("",
@@ -121,7 +121,7 @@ class UnitTests(unittest.TestCase):
     
         # Check that None is not allowed as answer
         question = ""
-        answer  = ""
+        answer = ""
         backup_setup.raw_input = lambda x: answer if x == question else "y"
         self.assertEqual(
              self._backup_setup_inst.ask_backup_question(question, int, True),
@@ -136,11 +136,11 @@ class UnitTests(unittest.TestCase):
         
         # Checking parsing of backup variables with many empty answers
         self.seq = -1
-        answers  = ["", "y", "", "y", "", "y", "1", "y", "2", "y"]
+        answers = ["", "y", "", "y", "", "y", "1", "y", "2", "y"]
         backup_setup.raw_input = lambda _: answers[self.array_counter()]
         bk_vars = self._backup_setup_inst.construct_backup_variables("")
         # Check the parsed answers
-        self.assertIsNone(bk_vars[Backup._oldest_object_backedup_key])
+        self.assertIsNone(bk_vars[Backup._oldest_object_bk_key])
         self.assertIsNone(bk_vars[Backup._days_to_backup_key])
         self.assertIsNone(bk_vars[Backup._end_date_of_backup_key])
         self.assertEqual(bk_vars[Backup._periodicity_key], 1)
@@ -148,13 +148,13 @@ class UnitTests(unittest.TestCase):
         
         # Checking parsing of backup variables with all the answers given
         self.seq = -1
-        answers  = ["2013-07-28 20:48:53.197537+02:00", "y",
+        answers = ["2013-07-28 20:48:53.197537+02:00", "y",
                     "2", "y", "2015-07-28 20:48:53.197537+02:00", "y",
                     "3", "y", "4", "y"]
         backup_setup.raw_input = lambda _: answers[self.array_counter()]
         bk_vars = self._backup_setup_inst.construct_backup_variables("")
         # Check the parsed answers
-        self.assertEqual(bk_vars[Backup._oldest_object_backedup_key], answers[0])
+        self.assertEqual(bk_vars[Backup._oldest_object_bk_key], answers[0])
         self.assertEqual(bk_vars[Backup._days_to_backup_key], 2)
         self.assertEqual(bk_vars[Backup._end_date_of_backup_key], answers[4])
         self.assertEqual(bk_vars[Backup._periodicity_key], 3)

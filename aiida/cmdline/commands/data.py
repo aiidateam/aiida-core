@@ -464,8 +464,9 @@ class Depositable(object):
     """
     Provides shell completion for depositable data nodes.
 
-    Classes, inheriting Depositable, MUST NOT contain attributes, starting
-    with ``_deposit_``, which are not plugins for depositing.
+    .. note:: classes, inheriting Depositable, MUST NOT contain
+        attributes, starting with ``_deposit_``, which are not plugins for
+        depositing.
     """
     deposit_prefix = '_deposit_'
     deposit_parameters_postfix = '_parameters'
@@ -484,6 +485,8 @@ class Depositable(object):
     def deposit(self, *args):
         """
         Deposit the data node to a given database.
+
+        :param args: a namespace with parsed command line parameters.
         """
         # DEVELOPER NOTE: to add a new plugin, just add a _deposit_xxx() method.
         import argparse,os
@@ -553,6 +556,7 @@ class Depositable(object):
 
         calc = func(n,**parsed_args)
         print calc
+
 
 # Note: this class should not be exposed directly in the main module,
 # otherwise it becomes a command of 'verdi'. Instead, we want it to be a 

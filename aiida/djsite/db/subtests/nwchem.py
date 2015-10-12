@@ -7,7 +7,7 @@ import tempfile
 
 from aiida.djsite.db.testbase import AiidaTestCase
 from aiida.orm.calculation.job.nwchem.nwcpymatgen import _prepare_pymatgen_dict
-from aiida.orm.data.structure import has_ase,StructureData,has_pymatgen
+from aiida.orm.data.structure import has_ase, has_pymatgen, StructureData
 from aiida.orm.data.cif import has_pycifrw
 from django.utils import unittest
 

@@ -538,7 +538,8 @@ class CifData(SinglefileData):
             return self.ase
         else:
             from ase.io.cif import read_cif
-            return read_cif(self.get_file_abs_path(), **kwargs)
+            return read_cif(self._get_folder_pathsubfolder.open(self.filename),
+                            **kwargs)
 
     def set_ase(self, aseatoms):
         import tempfile

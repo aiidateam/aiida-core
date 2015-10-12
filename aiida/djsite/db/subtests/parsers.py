@@ -156,7 +156,7 @@ def read_test(outfolder):
     skip_test = False
     try:
         m = importlib.import_module(mod_path)
-        skip_test = m.__init__()
+        skip_test = m.skip_condition()
     except Exception:
         pass
 

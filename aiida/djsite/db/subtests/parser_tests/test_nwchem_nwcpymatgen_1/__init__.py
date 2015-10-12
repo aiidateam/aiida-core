@@ -5,6 +5,6 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
 
-def __init__():
+def skip_condition():
     from aiida.orm.data.structure import has_pymatgen
     return not has_pymatgen()

@@ -92,7 +92,7 @@ are called before parsing command line arguments, and are passed an
 ``argparse.ArgumentParser`` instance, to which command line argument
 descriptions can be appended using ``parser.add_argument()``. For example::
 
-    def _show_jmol_parameters(self,parser):
+    def _show_jmol_parameters(self, parser):
         """
         Describe command line parameters.
         """

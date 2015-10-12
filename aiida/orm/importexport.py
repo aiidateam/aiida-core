@@ -304,7 +304,7 @@ def import_data(in_path,ignore_unknown_nodes=False,
             elif zipfile.is_zipfile(in_path):
                 extract_zip(in_path,folder,silent=silent,
                             nodes_export_subfolder=nodes_export_subfolder)
-            elif os.path.isfile(in_path):
+            elif os.path.isfile(in_path) and in_path.endswith('.cif'):
                 extract_cif(in_path,folder,silent=silent,
                             nodes_export_subfolder=nodes_export_subfolder)
             else:

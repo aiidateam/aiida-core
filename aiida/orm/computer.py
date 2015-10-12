@@ -1,1 +1,1 @@
-from aiida.orm.impl import Computer
+from aiida.orm.implementation import Computer

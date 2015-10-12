@@ -2,10 +2,10 @@
 
 from collections import defaultdict
 
-from aiida.orm.abstract.querytool import AbstractQueryTool
+from aiida.orm.implementation.general.querytool import AbstractQueryTool
 
 from aiida.djsite.db import models
-from aiida.orm.impl.django.node import Node
+from aiida.orm.implementation.django.node import Node
 
 from django.db.models import Q
 from django.utils.timezone import is_naive, make_aware, get_current_timezone

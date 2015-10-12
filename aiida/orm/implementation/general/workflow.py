@@ -13,7 +13,7 @@ from aiida.common.datastructures import (wf_states, wf_exit_call,
 from aiida.common.utils import str_timedelta
 from aiida.common import aiidalogger
 
-from aiida.orm.calculation.job import JobCalculation
+from aiida.orm.implementation.calculation import JobCalculation
 
 # TODO SP: abstract get_automatic_user
 from aiida.djsite.utils import get_automatic_user

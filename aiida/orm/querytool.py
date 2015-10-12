@@ -1,1 +1,1 @@
-from aiida.orm.impl import QueryTool
+from aiida.orm.implementation import QueryTool

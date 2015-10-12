@@ -7,8 +7,8 @@ from django.db.models import F
 from django.core.exceptions import ObjectDoesNotExist
 
 
-from aiida.orm.abstract.node import AbstractNode
-from aiida.orm.impl.django.computer import Computer
+from aiida.orm.implementation.general.node import AbstractNode
+from aiida.orm.implementation.django.computer import Computer
 
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      NotExistent, UniquenessError)
@@ -138,7 +138,7 @@ class Node(AbstractNode):
             # If it is 'calculation.Calculation.', we want to filter
             # for things that start with 'calculation.' and so on
             plug_type = cls._plugin_type_string
-            if plug_type.startswith('impl.'):
+            if plug_type.startswith('implementation.'):
                 plug_type = '.'.join(plug_type.split('.')[2:])
             pre, sep, _ = plug_type[:-1].rpartition('.')
             superclass_string = "".join([pre, sep])

@@ -1,1 +1,1 @@
-from aiida.orm.impl import Lock
+from aiida.orm.implementation import Lock

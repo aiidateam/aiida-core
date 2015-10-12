@@ -1,1 +1,1 @@
-from aiida.orm.impl import Group
+from aiida.orm.implementation import Group

@@ -1,1 +1,1 @@
-from aiida.orm.impl import Code
+from aiida.orm.implementation import Code

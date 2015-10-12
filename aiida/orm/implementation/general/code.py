@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 
-from aiida.orm.impl import Node
+from aiida.orm.implementation import Node
 
 from aiida.common.exceptions import (ValidationError, MissingPluginError)
 

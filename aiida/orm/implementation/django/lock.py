@@ -2,7 +2,7 @@
 
 import time
 
-from aiida.orm.abstract.lock import AbstractLockManager, AbstractLock
+from aiida.orm.implementation.general.lock import AbstractLockManager, AbstractLock
 
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed, LockPresent)
 

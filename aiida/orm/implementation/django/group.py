@@ -1,13 +1,11 @@
-# -*- coding: utf-8 -*-
-
 import collections
 
-from aiida.orm.abstract.group import AbstractGroup
+from aiida.orm.implementation.general.group import AbstractGroup
 
 from aiida.common.exceptions import (ModificationNotAllowed, UniquenessError,
                                      NotExistent)
 
-from aiida.orm.impl.django.node import Node
+from aiida.orm.implementation.django.node import Node
 
 # TODO SP: abstract the user ?
 from aiida.djsite.utils import get_automatic_user

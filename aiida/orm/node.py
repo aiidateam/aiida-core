@@ -1,1 +1,1 @@
-from aiida.orm.impl import Node
+from aiida.orm.implementation import Node

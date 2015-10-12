@@ -57,10 +57,10 @@ class AbstractNode(object):
 
                 # We remove the impl.django, or impl.sqlalchemy part, to stay
                 # compatible with everything that rely on this hack.
-                # if newcls._plugin_type_string.startswith('impl.'):
-                #     newcls._plugin_type_string = \
-                #         '.'.join(newcls._plugin_type_string.split('.')[2:])
-                if newcls._plugin_type_string == 'impl.django.node.Node.':
+                if newcls._plugin_type_string.startswith('implementation.'):
+                    newcls._plugin_type_string = \
+                        '.'.join(newcls._plugin_type_string.split('.')[2:])
+                if newcls._plugin_type_string == 'node.Node.':
                     newcls._plugin_type_string = ''
                 newcls._query_type_string = "{}.".format(
                     attrs['__module__'][len(prefix):])

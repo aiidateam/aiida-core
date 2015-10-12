@@ -1,1 +1,1 @@
-from aiida.orm.impl import Workflow
+from aiida.orm.implementation import Workflow

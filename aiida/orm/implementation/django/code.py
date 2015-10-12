@@ -2,8 +2,8 @@
 
 import os
 
-from aiida.orm.abstract.code import AbstractCode
-from aiida.orm.impl import Computer
+from aiida.orm.implementation.general.code import AbstractCode
+from aiida.orm.implementation import Computer
 
 from aiida.common.exceptions import NotExistent, MultipleObjectsError, InvalidOperation
 

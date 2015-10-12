@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from aiida.orm.impl.django.computer import Computer
+from aiida.orm.implementation.django.computer import Computer
 
 from aiida.common.exceptions import InvalidOperation
 from django.db.models.deletion import ProtectedError

@@ -2,7 +2,7 @@
 
 import json
 
-from aiida.orm.abstract.computer import AbstractComputer
+from aiida.orm.implementation.general.computer import AbstractComputer
 
 from aiida.djsite.db.models import DbComputer, DbAuthInfo
 

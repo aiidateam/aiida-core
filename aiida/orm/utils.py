@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from aiida.orm.impl import Node
+from aiida.orm.implementation import Node
 
 from aiida.orm.data import Data
 
@@ -42,7 +42,7 @@ def WorkflowFactory(module):
     """
     Return a suitable Workflow subclass.
     """
-    from aiida.orm.impl import Workflow
+    from aiida.orm.implementation import Workflow
     return BaseFactory(module, Workflow, "aiida.workflows")
 
 
@@ -88,7 +88,7 @@ def load_workflow(wf_id=None, pk=None, uuid=None):
     :raises: ValueError if none or more than one of parameters is supplied
         or type of wf_id is neither string nor integer
     """
-    from aiida.orm.impl import Workflow
+    from aiida.orm.implementation import Workflow
     if int(wf_id is None) + int(pk is None) + int(uuid is None) == 3:
         raise ValueError("one of the parameters 'wf_id', 'pk' and 'uuid' "
                          "has to be supplied")

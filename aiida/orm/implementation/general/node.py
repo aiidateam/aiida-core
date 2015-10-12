@@ -5,8 +5,8 @@ import logging
 import collections
 
 
-from aiida.common.exceptions import (DbContentError, InternalError,
-                                     ModificationNotAllowed, UniquenessError)
+from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
+                                     UniquenessError)
 from aiida.common.folders import SandboxFolder
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
@@ -55,8 +55,9 @@ class AbstractNode(object):
                 newcls._plugin_type_string = "{}.{}.".format(
                     attrs['__module__'][len(prefix):], name)
 
-                # We remove the impl.django, or impl.sqlalchemy part, to stay
-                # compatible with everything that rely on this hack.
+                # Make sure the pugin implementation match the import name.
+                # If you have implementation.django.calculation.job, we remove
+                # the first part to only get calculation.job.
                 if newcls._plugin_type_string.startswith('implementation.'):
                     newcls._plugin_type_string = \
                         '.'.join(newcls._plugin_type_string.split('.')[2:])

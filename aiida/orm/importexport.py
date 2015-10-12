@@ -956,9 +956,9 @@ def get_all_fields_info():
     return all_fields_info, unique_identifiers
 
 
-def export_tree(what, folder, also_parents = True,
-                also_calc_outputs = True, allowed_licenses = None,
-                silent = False):
+def export_tree(what, folder, also_parents = True, also_calc_outputs=True,
+                allowed_licenses=None, forbidden_licenses=None,
+                silent=False):
     """
     Export the DB entries passed in the 'what' list to a file tree.
     
@@ -971,6 +971,10 @@ def export_tree(what, folder, also_parents = True,
       DbPath transitive closure table)
     :param also_calc_outputs: if True, any output of a calculation is also exported
     :param allowed_licenses: a list or a function. If a list, then checks
+      whether all licenses of Data nodes are in the list. If a function,
+      then calls function for licenses of Data nodes expecting True if
+      license is allowed, False otherwise.
+    :param forbidden_licenses: a list or a function. If a list, then checks
       whether all licenses of Data nodes are in the list. If a function,
       then calls function for licenses of Data nodes expecting True if
       license is allowed, False otherwise.
@@ -1039,29 +1043,47 @@ def export_tree(what, folder, also_parents = True,
                       in entries_ids_to_add.iteritems()}
 
     # Check the licenses of exported data.
-    if allowed_licenses is not None:
+    if allowed_licenses is not None or forbidden_licenses is not None:
         from inspect import isfunction
 
         node_licenses = list(aiida.djsite.db.models.DbNode.objects.filter(
             reduce(operator.and_, entries_to_add['aiida.djsite.db.models.DbNode']),
             dbattributes__key='source.license').values_list('pk', 'dbattributes__tval'))
         for pk, license in node_licenses:
-            try:
-                if isfunction(allowed_licenses):
-                    try:
-                        if not allowed_licenses(license):
+            if allowed_licenses is not None:
+                try:
+                    if isfunction(allowed_licenses):
+                        try:
+                            if not allowed_licenses(license):
+                                raise LicensingException
+                        except Exception as e:
                             raise LicensingException
-                    except Exception as e:
-                        raise LicensingException
-                else:
-                    if license not in allowed_licenses:
-                        raise LicensingException
-            except LicensingException:
-                raise LicensingException("Node {} is licensed "
-                                         "under {} license, which "
-                                         "is not in the list of "
-                                         "allowed licenses".format(
-                                          pk, license))
+                    else:
+                        if license not in allowed_licenses:
+                            raise LicensingException
+                except LicensingException:
+                    raise LicensingException("Node {} is licensed "
+                                             "under {} license, which "
+                                             "is not in the list of "
+                                             "allowed licenses".format(
+                                              pk, license))
+            if forbidden_licenses is not None:
+                try:
+                    if isfunction(forbidden_licenses):
+                        try:
+                            if forbidden_licenses(license):
+                                raise LicensingException
+                        except Exception as e:
+                            raise LicensingException
+                    else:
+                        if license in forbidden_licenses:
+                            raise LicensingException
+                except LicensingException:
+                    raise LicensingException("Node {} is licensed "
+                                             "under {} license, which "
+                                             "is in the list of "
+                                             "forbidden licenses".format(
+                                              pk, license))
 
     ############################################################
     ##### Start automatic recursive export data generation #####

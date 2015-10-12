@@ -156,13 +156,6 @@ class TestPort(AiidaTestCase):
         self.assertEquals(len(folder.get_content_list()), 3)
 
         folder = SandboxFolder()
-        export_tree([sd.dbnode], folder=folder, silent=True,
-                    allowed_licenses=['CC0'],
-                    exclude_forbidden_licenses=True)
-        # Folder should be empty, as nothing will be exported
-        self.assertEquals(len(folder.get_content_list()), 0)
-
-        folder = SandboxFolder()
         with self.assertRaises(LicensingException):
             export_tree([sd.dbnode], folder=folder, silent=True,
                         allowed_licenses=['CC0'])

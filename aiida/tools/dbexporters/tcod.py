@@ -453,7 +453,7 @@ def _collect_tags(node, calc,parameters=None,
         import json
         from aiida.common.exceptions import LicensingException
         from aiida.common.folders import SandboxFolder
-        from aiida.cmdline.commands.exportfile import export_tree
+        from aiida.orm.importexport import export_tree
         from aiida.orm.data.cif import encode_textfield_base64
 
         with SandboxFolder() as folder:

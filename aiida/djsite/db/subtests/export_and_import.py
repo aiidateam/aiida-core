@@ -2,14 +2,15 @@
 """
 Tests for the export and import routines.
 """
+import aiida
 import os
 import tempfile
 
-from aiida.djsite.db.testbase import AiidaTestCase
 from aiida.common.folders import SandboxFolder
+from aiida.djsite.db.testbase import AiidaTestCase
 from aiida.orm import DataFactory
 from aiida.orm.calculation.job import JobCalculation
-import aiida
+from aiida.orm.importexport import export, import_data
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -19,8 +20,6 @@ __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi"
 
 class TestPort(AiidaTestCase):
     def test_1(self):
-        from aiida.cmdline.commands.exportfile import export
-        from aiida.cmdline.commands.importfile import import_data
         from aiida.orm.computer import delete_computer
         from aiida.orm.node import Node
 
@@ -65,8 +64,6 @@ class TestPort(AiidaTestCase):
         """
         Test the check for the export format version.
         """
-        from aiida.cmdline.commands.exportfile import export
-        from aiida.cmdline.commands.importfile import import_data
         import json
         import tarfile
         from tarfile import TarInfo
@@ -102,8 +99,6 @@ class TestPort(AiidaTestCase):
         """
         Test importing of nodes, that have links to unknown nodes.
         """
-        from aiida.cmdline.commands.exportfile import export
-        from aiida.cmdline.commands.importfile import import_data
         import json
         import tarfile
         from tarfile import TarInfo
@@ -145,9 +140,9 @@ class TestPort(AiidaTestCase):
         """
         Test control of licenses.
         """
-        from aiida.cmdline.commands.exportfile import export_tree
         from aiida.common.exceptions import LicensingException
         from aiida.common.folders import SandboxFolder
+        from aiida.orm.importexport import export_tree
 
         StructureData = DataFactory('structure')
         sd = StructureData()

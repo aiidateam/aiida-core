@@ -7,7 +7,7 @@ import tempfile
 
 from aiida.djsite.db.testbase import AiidaTestCase
 from aiida.orm.calculation.job.nwchem.nwcpymatgen import _prepare_pymatgen_dict
-from aiida.orm.data.structure import has_ase,StructureData
+from aiida.orm.data.structure import has_ase, has_pymatgen, StructureData
 from aiida.orm.data.cif import has_pycifrw
 from django.utils import unittest
 
@@ -18,7 +18,8 @@ __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi"
 
 class TestNwchem(AiidaTestCase):
 
-    @unittest.skipIf(not has_ase(),"Unable to import ASE")
+    @unittest.skipIf((not has_ase()) or (not has_pymatgen()),
+                      "Unable to import ASE and pymatgen")
     def test_1(self):
         from ase import Atoms
 

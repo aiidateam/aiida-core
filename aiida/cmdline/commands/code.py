@@ -658,7 +658,7 @@ class Code(VerdiCommandWithSubcommands):
                     owner_string = " ({})".format(useremail)
                 else:
                     owner_string = ""
-                print "* Id {}: {}@{}{}".format(
+                print "* pk {} - {}@{}{}".format(
                     pk, label, computername, owner_string)
         else:
             print "# No codes found matching the specified criteria."

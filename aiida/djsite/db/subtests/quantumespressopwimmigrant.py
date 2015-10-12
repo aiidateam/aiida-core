@@ -74,8 +74,8 @@ class LocalTestCase(AiidaTestCase):
         authinfo.save()
 
         # Set up a code linked to cls.computer. The path is just a fake string.
-        cls.code = Code(remote_computer_exec=(cls.computer, '/x.x'))
-
+        cls.code = Code(remote_computer_exec=(cls.computer, '/x.x')).store()
+        
     def run_tests_on_calcs_with_prefixes(self, prefixes):
         """
         Test immigration, retrieval, and parsing of calcs for all prefixes.

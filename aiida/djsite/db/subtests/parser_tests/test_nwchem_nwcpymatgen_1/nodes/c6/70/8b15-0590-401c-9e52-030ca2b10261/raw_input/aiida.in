@@ -1,0 +1,14 @@
+geometry units angstroms
+ O 0 0 0
+ H 0 1.43042809 -1.10715266
+ H 0 -1.43042809 -1.10715266
+end
+
+title "scf "
+charge 0
+basis
+ H library "6-31g"
+ O library "6-31g"
+end
+
+task scf 

@@ -14,8 +14,8 @@ TODO: to test:
 import os
 
 from aiida.djsite.db.testbase import AiidaTestCase
-from aiida.orm import CalculationFactory
-from aiida.orm import DataFactory
+from aiida.orm import CalculationFactory, DataFactory
+from aiida.orm.code import Code
 from aiida.common.folders import SandboxFolder
 from aiida.common.exceptions import InputValidationError
 import aiida
@@ -42,6 +42,8 @@ class QETestCase(AiidaTestCase):
                 'num_machines': 1,
                 'num_mpiprocs_per_machine': 1}
         }
+        cls.code = Code(remote_computer_exec=(cls.computer, '/x.x')).store()
+
 
 
 class TestQEPWInputGeneration(QETestCase):
@@ -70,7 +72,6 @@ class TestQEPWInputGeneration(QETestCase):
         }
 
         c = QECalc(**self.calc_params).store()
-
         s = StructureData(cell=cell)
         s.append_atom(position=(0., 0., 0.), symbols=['Ba'])
         s.store()
@@ -112,24 +113,29 @@ class TestQEPWInputGeneration(QETestCase):
             with self.assertRaises(InputValidationError):
                 c._prepare_for_submission(f, inputdict)
             c.use_parameters(p)
-            inputdict = c.get_inputdata_dict()
+            inputdict = c.get_inputs_dict()
             with self.assertRaises(InputValidationError):
                 c._prepare_for_submission(f, inputdict)
             c.use_structure(s)
-            inputdict = c.get_inputdata_dict()
+            inputdict = c.get_inputs_dict()
             with self.assertRaises(InputValidationError):
                 c._prepare_for_submission(f, inputdict)
             c.use_kpoints(k)
-            inputdict = c.get_inputdata_dict()
+            inputdict = c.get_inputs_dict()
             with self.assertRaises(InputValidationError):
                 c._prepare_for_submission(f, inputdict)
             c.use_pseudo(pseudos['Ba'], 'Ba')
-            inputdict = c.get_inputdata_dict()
+            
+            inputdict = c.get_inputs_dict()
+            with self.assertRaises(InputValidationError):
+                c._prepare_for_submission(f, inputdict)
+            c.use_code(self.code)
+            inputdict = c.get_inputs_dict()
             c._prepare_for_submission(f, inputdict)
 
             # TODO: split this test in more than one
             c.use_pseudo(pseudos['Ti'], 'Ti')
-            inputdict = c.get_inputdata_dict()
+            inputdict = c.get_inputs_dict()
             # Too many pseudos
             with self.assertRaises(InputValidationError):
                 c._prepare_for_submission(f, inputdict)
@@ -176,7 +182,8 @@ class TestQEPWInputGeneration(QETestCase):
         }
 
         c = QECalc(**self.calc_params).store()
-
+        c.use_code(self.code)
+        
         p = ParameterData(dict=input_params).store()
 
         k = KpointsData()
@@ -212,7 +219,7 @@ class TestQEPWInputGeneration(QETestCase):
 
             # Same pseudo for two species
             c.use_pseudo(pseudos['Ba'], ['Ba1', 'Ba2'])
-            inputdict = c.get_inputdata_dict()
+            inputdict = c.get_inputs_dict()
             c._prepare_for_submission(f, inputdict)
 
             with open(os.path.join(f.abspath, 'aiida.in')) as infile:

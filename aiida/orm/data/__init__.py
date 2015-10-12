@@ -209,10 +209,13 @@ class Data(Node):
 
         super(Data, self)._validate()
 
-        if self.source is not None and \
-           self.source.get('license', None) and \
-           self.source['license'].startswith('CC-BY') and \
-           self.source.get('description', None) is None:
-            raise ValidationError("License of the object ({}) requires "
-                                  "attribution, while none is given in the "
-                                  "description".format(self.source['license']))
+        ## Validation of ``source`` is commented out due to Issue #9
+        ## (https://bitbucket.org/epfl_theos/aiida_epfl/issues/9/)
+        ##
+        ## if self.source is not None and \
+        ##    self.source.get('license', None) and \
+        ##    self.source['license'].startswith('CC-BY') and \
+        ##    self.source.get('description', None) is None:
+        ##     raise ValidationError("License of the object ({}) requires "
+        ##                           "attribution, while none is given in the "
+        ##                           "description".format(self.source['license']))

@@ -376,6 +376,11 @@ and look for the current location of the data directory::
   SHOW data_directory;
 
 Typically you should get something like ``/var/lib/postgresql/9.1/main``.
+
+.. note :: If you are experiencing memory problems and cannot enter the postgres
+	shell, you can look directly into the file ``/etc/postgresql/9.1/main/postgresql.conf``
+	and check out the line defining the variable ``data_directory``.
+
 Then exit the shell with ``\q``, go to this directory and copy all the
 files to the new directory::
 

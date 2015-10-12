@@ -123,6 +123,7 @@ def read_test(outfolder):
         database.
     """
     import os
+    import importlib
     import json
 
     from aiida.common.exceptions import NotExistent
@@ -149,7 +150,19 @@ def read_test(outfolder):
     except ValueError:
         raise ValueError("This test does provide a check file, but it cannot "
                          "be JSON-decoded!")
-    
+
+    mod_path = 'aiida.djsite.db.subtests.parser_tests.{}'.format(os.path.split(outfolder)[1])
+
+    skip_test = False
+    try:
+        m = importlib.import_module(mod_path)
+        skip_test = m.__init__()
+    except Exception:
+        pass
+
+    if skip_test:
+        raise SkipTestException
+
     return calc, {'retrieved': retrieved}, tests
 
 
@@ -186,7 +199,10 @@ class TestParsers(AiidaTestCase):
         from inspect import isfunction
         
         def base_test(self):
-            calc, retrieved_nodes, tests = read_test(folder)
+            try:
+                calc, retrieved_nodes, tests = read_test(folder)
+            except SkipTestException:
+                return None
             Parser = calc.get_parserclass()
             if Parser is None:
                 raise NotImplementedError
@@ -272,3 +288,7 @@ class TestParsers(AiidaTestCase):
                             newcls.return_base_test(absf))
 
             return newcls
+
+
+class SkipTestException(Exception):
+    pass

@@ -17,12 +17,12 @@ def is_dbenv_loaded():
 def load_dbenv(process=None, profile=None):
     """
     Load the database environment (Django) and perform some checks.
-    
-    :param process: the process that is calling this command ('verdi', or 
+
+    :param process: the process that is calling this command ('verdi', or
         'daemon')
     :param profile: the string with the profile to use. If not specified,
         use the default one specified in the AiiDA configuration file.
-    """   
+    """
     _load_dbenv_noschemacheck(process, profile)
     # Check schema version and the existence of the needed tables
     check_schema_version()
@@ -31,12 +31,12 @@ def load_dbenv(process=None, profile=None):
 def _load_dbenv_noschemacheck(process, profile):
     """
     Load the database environment (Django) WITHOUT CHECKING THE SCHEMA VERSION.
-    :param process: the process that is calling this command ('verdi', or 
+    :param process: the process that is calling this command ('verdi', or
         'daemon')
     :param profile: the string with the profile to use. If not specified,
         use the default one specified in the AiiDA configuration file.
-    
-    This should ONLY be used internally, inside load_dbenv, and for schema 
+
+    This should ONLY be used internally, inside load_dbenv, and for schema
     migrations. DO NOT USE OTHERWISE!
     """
     import os
@@ -53,23 +53,23 @@ def _load_dbenv_noschemacheck(process, profile):
     # settings_profile.CURRENT_AIIDADB_PROCESS should always be defined
     # by either verdi or the deamon
     if settings_profile.CURRENT_AIIDADB_PROCESS is None and process is None:
-        # This is for instance the case of a python script containing a 
+        # This is for instance the case of a python script containing a
         # 'load_dbenv()' command and run with python
-        
+
         settings_profile.CURRENT_AIIDADB_PROCESS = DEFAULT_PROCESS
-    elif (process is not None and 
+    elif (process is not None and
           process != settings_profile.CURRENT_AIIDADB_PROCESS):
         ## The user specified a process that is different from the current one
-        
-        # I re-set the process 
+
+        # I re-set the process
         settings_profile.CURRENT_AIIDADB_PROCESS = process
         # I also remove the old profile
         settings_profile.AIIDADB_PROFILE = None
-    
+
     if settings_profile.AIIDADB_PROFILE is not None:
         if profile is not None:
             raise ValueError("You are specifying a profile, but the "
-                "settings_profile.AIIDADB_PROFILE is already set")            
+                "settings_profile.AIIDADB_PROFILE is already set")
     else:
         if profile is not None:
             the_profile = profile
@@ -84,7 +84,7 @@ def _load_dbenv_noschemacheck(process, profile):
 def get_current_profile():
     """
     Return, as a string, the current profile being used.
-   
+
     Return None if load_dbenv has not been loaded yet.
     """
     from aiida.djsite.settings import settings_profile
@@ -115,24 +115,6 @@ class DBLogHandler(logging.Handler):
 
             traceback.print_exc()
 
-
-def get_dblogger_extra(obj):
-    """
-    Given an object (Node, Calculation, ...) return a dictionary to be passed
-    as extra to the aiidalogger in order to store the exception also in the DB.
-    If no such extra is passed, the exception is only logged on file.
-    """
-    from aiida.orm import Node
-
-    if isinstance(obj, Node):
-        if obj._plugin_type_string:
-            objname = "node." + obj._plugin_type_string
-        else:
-            objname = "node"
-    else:
-        objname = obj.__class__.__module__ + "." + obj.__class__.__name__
-    objpk = obj.pk
-    return {'objpk': objpk, 'objname': objname}
 
 
 def get_log_messages(obj):
@@ -306,7 +288,7 @@ def check_schema_version():
             "database (DbSetting table) is {}, stopping.\n"
             "To migrate to latest version, go to aiida/djsite and run:\n"
             "python manage.py --aiida-profile={} migrate".
-            format(code_schema_version, db_schema_version, 
+            format(code_schema_version, db_schema_version,
                    get_current_profile())
         )
 

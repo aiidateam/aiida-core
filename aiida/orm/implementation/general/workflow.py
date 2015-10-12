@@ -293,7 +293,7 @@ class AbstractWorkflow(object):
         """
         # TODO SP: abstract the logger
         import logging
-        from aiida.djsite.utils import get_dblogger_extra
+        from aiida.utils import get_dblogger_extra
 
         return logging.LoggerAdapter(logger=self._logger,
                                      extra=get_dblogger_extra(self))

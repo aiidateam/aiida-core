@@ -27,7 +27,7 @@ what is written in 'template' (see below).
       False if missing.
 
     * files_to_copy: if defined, a list of tuple pairs, with format ('link_name', 'dest_rel_path');\
-         for each tuple, an input link to this calculation is looked for, with link labeled 'link_label',\ 
+         for each tuple, an input link to this calculation is looked for, with link labeled 'link_label',\
          and with file type 'Singlefile', and the content is copied to a remote file named 'dest_rel_path'\
          Errors are raised in the input links are non-existent, or of the wrong type, or if there are \
          unused input files.
@@ -59,7 +59,7 @@ class TemplatereplacerCalculation(JobCalculation):
         """
         This is the routine to be called when you want to create
         the input files and related stuff with a plugin.
-               
+
         :param tempfolder: a aiida.common.folders.Folder subclass where
                            the plugin should put all its files.
         :param inputdict: a dictionary with the input nodes, as they would
@@ -127,7 +127,7 @@ class TemplatereplacerCalculation(JobCalculation):
 
         code = inputdict.pop('code', None)
         if code is None:
-            raise InputValidationError("No code in input")        
+            raise InputValidationError("No code in input")
 
         if len(inputdict) > 0:
             raise InputValidationError("The input nodes with the following labels could not be "

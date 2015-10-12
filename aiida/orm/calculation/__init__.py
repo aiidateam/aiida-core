@@ -121,9 +121,8 @@ class Calculation(Node):
         :return: LoggerAdapter object, that works like a logger, but also has
           the 'extra' embedded
         """
-        # TODO SP: abstract logger
         import logging
-        from aiida.djsite.utils import get_dblogger_extra
+        from aiida.utils import get_dblogger_extra
 
         return logging.LoggerAdapter(logger=self._logger,
                                      extra=get_dblogger_extra(self))

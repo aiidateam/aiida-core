@@ -701,7 +701,7 @@ class CifData(SinglefileData):
         # the file is updated.
         if self._values and not self._is_stored:
             self.values = self._values
-        with open(self.get_file_abs_path()) as f:
+        with self._get_folder_pathsubfolder.open(self.filename) as f:
             return f.read()
 
     def _get_object_ase(self):

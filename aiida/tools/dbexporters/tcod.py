@@ -200,7 +200,7 @@ def _inline_to_standalone_script(calc):
         created by the ``\*_inline`` function, are already stored.
     """
     input_dict = calc.get_inputs_dict()
-    args = ["{}=Node.get_subclass_from_uuid('{}')".format(x, input_dict[x].uuid)
+    args = ["{}=load_node('{}')".format(x, input_dict[x].uuid)
             for x in input_dict.keys()]
     args_string = ",\n    ".join(sorted(args))
     return """#!/usr/bin/env runaiida

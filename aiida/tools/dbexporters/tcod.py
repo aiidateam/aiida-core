@@ -194,13 +194,13 @@ def _inline_to_standalone_script(calc):
             for x in input_dict.keys()]
     args_string = "\n    ,".join(sorted(args))
     return """#!/usr/bin/env runaiida
+# -*- coding: utf-8 -*-
 {}
 
 for key,value in {}(
     {}
     ).iteritems():
     value.store()
-END
 """.format(calc.get_attr('source_file').encode('utf-8'),
            calc.get_attr('function_name','f'),
            args_string)

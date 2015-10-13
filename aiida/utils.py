@@ -1,4 +1,7 @@
+# -*- coding: utf-8 -*-
+
 from aiida.orm import Node
+
 
 def get_dblogger_extra(obj):
     """

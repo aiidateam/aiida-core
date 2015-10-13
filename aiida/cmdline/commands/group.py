@@ -14,7 +14,7 @@ __contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
 class Group(VerdiCommandWithSubcommands):
     """
     Setup and manage groups
-    
+
     There is a list of subcommands to perform specific operation on groups.
     """
 
@@ -117,7 +117,7 @@ class Group(VerdiCommandWithSubcommands):
         
     def group_list(self, *args):
         """
-        Print a list of groups in the DB. 
+        Print a list of groups in the DB.
         """
         load_dbenv()
 
@@ -128,7 +128,7 @@ class Group(VerdiCommandWithSubcommands):
         import argparse
         from aiida.orm import Group as G
         from django.db.models import Q
-        from django.utils import timezone
+        from aiida.utils import timezone
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -193,7 +193,7 @@ class Group(VerdiCommandWithSubcommands):
         name_filter_dict = dict([('name__{}'.format(name_filter), getattr(parsed_args,name_filter))
                                  for name_filter in ['startswith','endswith','contains']
                                  if getattr(parsed_args,name_filter) is not None])
-        
+
         groups = G.query(user=user, type_string=type_string, past_days=n_days_ago,
                          **name_filter_dict)
 
@@ -216,7 +216,7 @@ class Group(VerdiCommandWithSubcommands):
         max_nodes_len = max([len(str(i)) for i in nodes]) if nodes else 4
         max_users_len = max([len(i) for i in users]) if users else 4
 
-        tolerated_name_length = (80 - 11 - max_nodes_len - 
+        tolerated_name_length = (80 - 11 - max_nodes_len -
                                  max_users_len - max_pks_len - 1)
 
         #print max_names_len, tolerated_name_length
@@ -252,34 +252,34 @@ class Group(VerdiCommandWithSubcommands):
                 print first_fmt_string.format(pk, the_nams[0], nod, usr)
                 for i in the_nams[1:]:
                     print extra_fmt_string.format(i)
-                    
-                
-                
-                    
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -10,7 +10,7 @@ from aiida.djsite.db.models import DbLock
 
 from django.db import IntegrityError, transaction
 # TODO SP: to replace
-from django.utils import timezone
+from aiida.utils import timezone
 
 class LockManager(AbstractLockManager):
     def aquire(self, key, timeout=3600, owner="None"):

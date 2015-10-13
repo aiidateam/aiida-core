@@ -6,7 +6,7 @@ from django.contrib.auth.models import (
 from django.utils.encoding import python_2_unicode_compatible
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.query import QuerySet
-from django.utils import timezone
+from aiida.utils import timezone
 
 from aiida.common.exceptions import (
     ConfigurationError, DbContentError, MissingPluginError, InternalError)
@@ -389,7 +389,7 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
     :return: the deserialized value
     :raise DeserializationError: if an error occurs
     """
-    from django.utils.timezone import (
+    from aiida.utils.timezone import (
         is_naive, make_aware, get_current_timezone)
     import json
 
@@ -797,7 +797,7 @@ class DbMultipleValueAttributeBaseClass(m.Model):
         """
         import json
         import datetime
-        from django.utils.timezone import is_naive, make_aware, get_current_timezone
+        from aiida.utils.timezone import is_naive, make_aware, get_current_timezone
 
         if cls._subspecifier_field_name is None:
             if subspecifier_value is not None:
@@ -953,7 +953,7 @@ class DbMultipleValueAttributeBaseClass(m.Model):
             float, bool, None, or date)
         """
         import datetime
-        from django.utils.timezone import (
+        from aiida.utils.timezone import (
             is_naive, make_aware, get_current_timezone)
 
         if value is None:
@@ -1752,7 +1752,7 @@ class DbWorkflow(m.Model):
         self.save()
 
     def append_to_report(self, _text):
-        from django.utils.timezone import utc
+        from aiida.utils.timezone import utc
         import datetime
 
         now = datetime.datetime.utcnow().replace(tzinfo=utc)

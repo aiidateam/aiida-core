@@ -26,7 +26,7 @@ def is_daemon_user():
 class Daemon(VerdiCommandWithSubcommands):
     """
     Manage the AiiDA daemon
-    
+
     This command allows to interact with the AiiDA daemon.
     Valid subcommands are:
 
@@ -149,7 +149,7 @@ class Daemon(VerdiCommandWithSubcommands):
     def kill_daemon(self):
         """
         This is the actual call that kills the daemon.
-        
+
         There are some print statements inside, but no sys.exit, so it is
         safe to be called from other parts of the code.
         """
@@ -176,12 +176,12 @@ class Daemon(VerdiCommandWithSubcommands):
     def daemon_stop(self, *args, **kwargs):
         """
         Stop the daemon.
-        
+
         :param wait_for_death: If True, also verifies that the process was already
             killed. It attempts at most ``max_retries`` times, with ``sleep_between_retries``
             seconds between one attempt and the following one (both variables are
             for the time being hardcoded in the function).
-            
+
         :return: None if ``wait_for_death`` is False. True/False if the process was
             actually dead or after all the retries it was still alive.
         """
@@ -238,7 +238,7 @@ class Daemon(VerdiCommandWithSubcommands):
         import supervisor.supervisorctl
         import xmlrpclib
 
-        from django.utils import timezone
+        from aiida.utils import timezone
 
         from aiida.djsite.db.tasks import get_most_recent_daemon_timestamp
         from aiida.common.utils import str_timedelta
@@ -431,7 +431,7 @@ class Daemon(VerdiCommandWithSubcommands):
 
     def _clean_sock_files(self):
         """
-        Tries to remove the supervisord.pid and .sock files from the .aiida/daemon 
+        Tries to remove the supervisord.pid and .sock files from the .aiida/daemon
         subfolder. This is typically needed when the computer is restarted with
         the daemon still on.
         """
@@ -440,14 +440,14 @@ class Daemon(VerdiCommandWithSubcommands):
         try:
             os.remove(self._get_sock_full_path())
         except OSError as e:
-            # Ignore if errno = errno.ENOENT (2): no file found 
+            # Ignore if errno = errno.ENOENT (2): no file found
             if e.errno != errno.ENOENT:  # No such file
                 raise
 
         try:
             os.remove(self._get_pid_full_path())
         except OSError as e:
-            # Ignore if errno = errno.ENOENT (2): no file found 
+            # Ignore if errno = errno.ENOENT (2): no file found
             if e.errno != errno.ENOENT:  # No such file
-                raise 
-        
+                raise
+

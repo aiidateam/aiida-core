@@ -16,7 +16,7 @@ from aiida.djsite.utils import get_automatic_user
 
 from django.db import transaction, IntegrityError
 from django.db.models import Q
-from django.utils import timezone
+from aiida.utils import timezone
 
 
 def from_type_to_pluginclassname(typestr):

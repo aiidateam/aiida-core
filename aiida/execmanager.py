@@ -32,7 +32,7 @@ def update_running_calcs_status(authinfo):
     """
     from aiida.orm import JobCalculation, Computer
     from aiida.scheduler.datastructures import JobInfo
-    from aiida.utils import get_dblogger_extra
+    from aiida.utils.logger import get_dblogger_extra
 
     if not authinfo.enabled:
         return
@@ -275,7 +275,7 @@ def submit_jobs():
     """
     from aiida.orm import JobCalculation, Computer
     from aiida.djsite.db.models import DbComputer, DbUser
-    from aiida.utils import get_dblogger_extra
+    from aiida.utils.logger import get_dblogger_extra
 
 
     # I create a unique set of pairs (computer, aiidauser)
@@ -342,7 +342,7 @@ def submit_jobs_with_authinfo(authinfo):
     """
     from aiida.orm import JobCalculation, Computer
     from aiida.scheduler.datastructures import JobInfo
-    from aiida.utils import get_dblogger_extra
+    from aiida.utils.logger import get_dblogger_extra
 
     if not authinfo.enabled:
         return
@@ -384,7 +384,7 @@ def submit_jobs_with_authinfo(authinfo):
         # because any other exception is caught and skipped above
         except Exception as e:
             import traceback
-            from aiida.utils import get_dblogger_extra
+            from aiida.utils.logger import get_dblogger_extra
 
             for calc in calcs_to_inquire:
                 logger_extra = get_dblogger_extra(calc)
@@ -423,7 +423,7 @@ def submit_calc(calc, authinfo, transport=None):
     from aiida.common.exceptions import (
         FeatureDisabled, InputValidationError)
     from aiida.orm.data.remote import RemoteData
-    from aiida.utils import get_dblogger_extra
+    from aiida.utils.logger import get_dblogger_extra
 
     if not authinfo.enabled:
         return
@@ -658,7 +658,7 @@ def retrieve_computed_for_authinfo(authinfo):
     from aiida.orm import JobCalculation
     from aiida.common.folders import SandboxFolder
     from aiida.orm.data.folder import FolderData
-    from aiida.utils import get_dblogger_extra
+    from aiida.utils.logger import get_dblogger_extra
     from aiida.orm import DataFactory
     from aiida.orm.data.singlefile import SinglefileData
 

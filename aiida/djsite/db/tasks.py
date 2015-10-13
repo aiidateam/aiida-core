@@ -20,10 +20,10 @@ LOCK_EXPIRE = 60 * 1000  # Expire time for the retriever, in seconds; should
 
 def set_daemon_timestamp(task_name, when):
     """
-    Set in the DB the current time associated with the given task; 
+    Set in the DB the current time associated with the given task;
     this is used to store a timestamp to know when the daemon run for the last
     time.
-    
+
     :param task_name: the task for which we want to set the timestamp
       It has to be one of the keys of the
       ``aiida.djsite.settings.settings.djcelery_tasks`` dictionary.
@@ -31,7 +31,7 @@ def set_daemon_timestamp(task_name, when):
       'stop' (to call when the task ended)
     """
     from aiida.common.globalsettings import set_global_setting
-    from django.utils import timezone
+    from aiida.utils import timezone
 
     if when == 'start':
         verb = 'started'
@@ -55,9 +55,9 @@ def set_daemon_timestamp(task_name, when):
 
 def get_most_recent_daemon_timestamp():
     """
-    Try to detect any last timestamp left by the daemon, for instance 
+    Try to detect any last timestamp left by the daemon, for instance
     to get a hint on whether the daemon is running or not.
-    
+
     :return:  a datetime.datetime object with the most recent time.
       Return None if no information is found in the DB.
     """
@@ -84,13 +84,13 @@ def get_last_daemon_timestamp(task_name, when='stop'):
     """
     Return the last time stored in the DB that the daemon executed the given
     task.
-    
+
     :param task_name: the task for which we want the information.
       It has to be one of the keys of the
       ``aiida.djsite.settings.settings.djcelery_tasks`` dictionary.
     :param when: can either be 'start' (to know when the task started) or
       'stop' (to know when the task ended)
-      
+
     :return: a datetime.datetime object. Return None if no information is
       found in the DB.
     """
@@ -197,4 +197,4 @@ def workflow_stepper():
     set_daemon_timestamp(task_name='workflow', when='start')
     daemon_main_loop()
     set_daemon_timestamp(task_name='workflow', when='stop')
-    
+

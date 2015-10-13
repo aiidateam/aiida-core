@@ -8,7 +8,7 @@ from aiida.djsite.db import models
 from aiida.orm.implementation.django.node import Node
 
 from django.db.models import Q
-from django.utils.timezone import is_naive, make_aware, get_current_timezone
+from aiida.utils.timezone import is_naive, make_aware, get_current_timezone
 
 # TODO SP: currently this is a basic copy paste, later on we should include the
 # work done during the Big Data project.

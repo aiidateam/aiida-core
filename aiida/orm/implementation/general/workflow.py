@@ -21,7 +21,7 @@ from aiida.djsite.utils import get_automatic_user
 from aiida.djsite.db.models import DbWorkflow
 
 # TODO SP: abstract timezone
-from django.utils import timezone
+from aiida.utils import timezone
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -293,7 +293,7 @@ class AbstractWorkflow(object):
         """
         # TODO SP: abstract the logger
         import logging
-        from aiida.utils import get_dblogger_extra
+        from aiida.utils.logger import get_dblogger_extra
 
         return logging.LoggerAdapter(logger=self._logger,
                                      extra=get_dblogger_extra(self))

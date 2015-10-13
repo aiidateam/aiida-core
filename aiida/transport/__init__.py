@@ -159,7 +159,7 @@ class Transport(object):
         """
         try:
             import logging
-            from aiida.utils import get_dblogger_extra
+            from aiida.utils.logger import get_dblogger_extra
 
             if self._logger_extra is not None:
                 return logging.LoggerAdapter(logger=self._logger,

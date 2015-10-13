@@ -402,7 +402,7 @@ class TestNodeBasic(AiidaTestCase):
             print max(len(i) for i in all_keys)
 
     def test_datetime_attribute(self):
-        from django.utils.timezone import (
+        from aiida.utils.timezone import (
             get_current_timezone, is_naive, make_aware, now)
 
         a = Node()
@@ -1146,7 +1146,7 @@ class TestNodeBasic(AiidaTestCase):
         # This is the best way to compare dates with the stored ones, instead of
         # directly loading datetime.datetime.now(), or you can get a
         # "can't compare offset-naive and offset-aware datetimes" error
-        from django.utils import timezone
+        from aiida.utils import timezone
         from aiida.djsite.utils import get_automatic_user
         import time
 

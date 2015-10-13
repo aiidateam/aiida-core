@@ -16,7 +16,7 @@ __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Nicolas M
 class Calculation(VerdiCommandWithSubcommands):
     """
     Query and interact with calculations
-    
+
     Different subcommands allow to list the running calculations, show the
     content of the input/output files, see the logs, etc.
     """
@@ -65,7 +65,7 @@ class Calculation(VerdiCommandWithSubcommands):
     def calculation_gotocomputer(self, *args):
         """
         Open a shell to the calc folder on the cluster
-        
+
         This command opens a ssh connection to the scratch folder on the remote
         computer on which the calculation is being/has been executed.
         """
@@ -125,7 +125,7 @@ class Calculation(VerdiCommandWithSubcommands):
 
     def calculation_list(self, *args):
         """
-        Return a list of calculations on screen. 
+        Return a list of calculations on screen.
         """
         load_dbenv()
         from aiida.common.datastructures import calc_states
@@ -373,8 +373,8 @@ class Calculation(VerdiCommandWithSubcommands):
 
     def calculation_inputcat(self, *args):
         """
-        Show an input file of a calculation node. 
-        
+        Show an input file of a calculation node.
+
         It shows the files in the raw_input subdirectory.
         Use the -h option for more help on the command line options.
         """
@@ -433,8 +433,8 @@ class Calculation(VerdiCommandWithSubcommands):
 
     def calculation_inputls(self, *args):
         """
-        Show the list of input files of a calculation node. 
-        
+        Show the list of input files of a calculation node.
+
         It shows the files in the raw_input subdirectory.
         Use the -h option for more help on the command line options.
         """
@@ -476,8 +476,8 @@ class Calculation(VerdiCommandWithSubcommands):
 
     def calculation_outputls(self, *args):
         """
-        Show the list of output files of a calculation node. 
-        
+        Show the list of output files of a calculation node.
+
         It lists the files in the 'path' subdirectory of the output node
         of files retrieved by the parser. Therefore, this will not work
         before files are retrieved by the daemon.
@@ -529,8 +529,8 @@ class Calculation(VerdiCommandWithSubcommands):
 
     def calculation_outputcat(self, *args):
         """
-        Show an output file of a calculation node. 
-        
+        Show an output file of a calculation node.
+
         It shows the files in the 'path' subdirectory of the output node
         of files retrieved by the parser. Therefore, this will not work
         before files are retrieved by the daemon.
@@ -597,8 +597,8 @@ class Calculation(VerdiCommandWithSubcommands):
 
     def calculation_kill(self, *args):
         """
-        Kill a calculation. 
-        
+        Kill a calculation.
+
         Pass a list of calculation PKs to kill them.
         If you also pass the -f option, no confirmation will be asked.
         """
@@ -646,11 +646,11 @@ class Calculation(VerdiCommandWithSubcommands):
     def calculation_cleanworkdir(self, *args):
         """
         Clean all the content of all the output remote folders of calculations,
-        passed as a list of pks, or identified by modification time. 
-        
-        If a list of calculation PKs is not passed through -c option, one of 
-        the option -p or -u has to be specified (if both are given, a logical 
-        AND is done between the 2 - you clean out calculations modified AFTER 
+        passed as a list of pks, or identified by modification time.
+
+        If a list of calculation PKs is not passed through -c option, one of
+        the option -p or -u has to be specified (if both are given, a logical
+        AND is done between the 2 - you clean out calculations modified AFTER
         [-p option] days from now but BEFORE [-o option] days from now).
         If you also pass the -f option, no confirmation will be asked.
         """
@@ -681,7 +681,7 @@ class Calculation(VerdiCommandWithSubcommands):
         load_dbenv()
         import datetime
         from django.db.models import Q
-        from django.utils import timezone
+        from aiida.utils import timezone
         from aiida.cmdline import wait_for_confirmation
         from aiida.orm.calculation.job import JobCalculation
         from aiida.djsite.utils import get_automatic_user
@@ -776,8 +776,8 @@ class Calculation(VerdiCommandWithSubcommands):
 
             # now get the paths of remote folder
             # look in the DbAttribute table,
-            # for Attribute which have a key called remote_workdir, 
-            # and the dbnode_id referring to the given calcs            
+            # for Attribute which have a key called remote_workdir,
+            # and the dbnode_id referring to the given calcs
             dbattrs = models.DbAttribute.objects.filter(dbnode_id__in=this_calc_pks,
                                                         key='remote_workdir')
 
@@ -808,5 +808,5 @@ class Calculation(VerdiCommandWithSubcommands):
 
             print >> sys.stderr, "{} remote folder{} cleaned.".format(counter,
                                                                       "" if counter == 1 else "s")
-            
-            
+
+

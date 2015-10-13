@@ -203,7 +203,7 @@ def import_data(in_path,ignore_unknown_nodes=False,
     from itertools import chain
 
     from django.db import transaction
-    from django.utils import timezone
+    from aiida.utils import timezone
 
     from aiida.orm.node import Node
     from aiida.orm.group import Group

@@ -13,7 +13,7 @@ __contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Nicolas Mounet, Riccardo 
 class Workflow(VerdiCommandWithSubcommands):
     """
     Manage the AiiDA worflow manager
-    
+
     Valid subcommands are:
     * list: list the running workflows running and their state. Pass a -h
     |        option for further help on valid options.
@@ -48,7 +48,7 @@ class Workflow(VerdiCommandWithSubcommands):
         from aiida.djsite.utils import get_automatic_user
 
         from django.db.models import Q
-        from django.utils import timezone
+        from aiida.utils import timezone
         import datetime, argparse
 
         parser = argparse.ArgumentParser(
@@ -141,8 +141,8 @@ class Workflow(VerdiCommandWithSubcommands):
 
     def workflow_kill(self, *args):
         """
-        Kill a workflow. 
-        
+        Kill a workflow.
+
         Pass a list of workflow PKs to kill them.
         If you also pass the -f option, no confirmation will be asked.
         """
@@ -246,4 +246,4 @@ class Workflow(VerdiCommandWithSubcommands):
                 print "\n".join(["|   {}".format(_)
                                  for _ in log['message'].splitlines()])
 
-    
+

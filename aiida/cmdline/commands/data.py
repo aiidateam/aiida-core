@@ -16,7 +16,7 @@ __contributors__ = "Andrea Cepellotti, Andrius Merkys, Giovanni Pizzi, Nicolas M
 class Data(VerdiCommandRouter):
     """
     Setup and manage data specific types
-    
+
     There is a list of subcommands for managing specific types of data.
     For instance, 'data upf' manages pseudopotentials in the UPF format.
     """
@@ -124,7 +124,7 @@ class Listable(object):
         :param q_object: a query object
         :param args: a namespace with parsed command line parameters.
         """
-        from django.utils import timezone
+        from aiida.utils import timezone
         from django.db.models import Q
         import datetime
         if args.past_days is not None:
@@ -559,7 +559,7 @@ class Depositable(object):
 
 
 # Note: this class should not be exposed directly in the main module,
-# otherwise it becomes a command of 'verdi'. Instead, we want it to be a 
+# otherwise it becomes a command of 'verdi'. Instead, we want it to be a
 # subcommand of verdi data.
 class _Upf(VerdiCommandWithSubcommands, Importable):
     """
@@ -584,9 +584,9 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
     def uploadfamily(self, *args):
         """
         Upload a new pseudopotential family.
-        
+
         Returns the numbers of files found and the number of nodes uploaded.
-        
+
         Call without parameters to get some help.
         """
         import inspect
@@ -915,7 +915,7 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable):
 
     def _export_dat_blocks(self, node):
         """
-        Export a .dat file with one line per datapoint (kpt, energy), 
+        Export a .dat file with one line per datapoint (kpt, energy),
         with multiple bands separated in stanzas (i.e. having at least an empty
         newline inbetween).
         """
@@ -982,7 +982,7 @@ class _Structure(VerdiCommandWithSubcommands,
             'export': (self.export, self.complete_none),
             'deposit': (self.deposit, self.complete_none),
         }
-        
+
     def query(self, args):
         """
         Perform the query
@@ -1135,7 +1135,7 @@ class _Structure(VerdiCommandWithSubcommands,
                     sys.exit(1)
                 else:
                     raise
-                
+
     def _show_ase(self,exec_name,structure_list):
         """
         Plugin to show the structure with the ASE visualizer
@@ -1143,10 +1143,10 @@ class _Structure(VerdiCommandWithSubcommands,
         try:
             from ase.visualize import view
             for structure in structure_list:
-                view(structure.get_ase()) 
+                view(structure.get_ase())
         except ImportError:
-            raise 
-    
+            raise
+
     def _show_vmd(self, exec_name, structure_list):
         """
         Plugin for vmd
@@ -1472,7 +1472,7 @@ class _Trajectory(VerdiCommandWithSubcommands,
                             help="ID of the trajectory step. If none is "
                                  "supplied, all steps are exported.",
                             type=int, action='store')
-        
+
     def _show_xcrysden(self, exec_name, trajectory_list, **kwargs):
         """
         Plugin for xcrysden

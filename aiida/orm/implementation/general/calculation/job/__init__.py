@@ -717,7 +717,7 @@ class AbstractJobCalculation(Calculation):
     def _set_scheduler_state(self, state):
         # I don't do any test here on the possible valid values,
         # I just convert it to a string
-        from django.utils import timezone
+        from aiida.utils import timezone
 
         self._set_attr('scheduler_state', unicode(state))
         self._set_attr('scheduler_lastchecktime', timezone.now())
@@ -1352,7 +1352,7 @@ class AbstractJobCalculation(Calculation):
         """
         import os
         import errno
-        from django.utils import timezone
+        from aiida.utils import timezone
 
         from aiida.transport.plugins.local import LocalTransport
         from aiida.orm.computer import Computer

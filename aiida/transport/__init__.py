@@ -55,7 +55,7 @@ class Transport(object):
     Contains the set of minimal methods
     """
     # To be defined in the subclass
-    # See the ssh or local plugin to see the format 
+    # See the ssh or local plugin to see the format
     _valid_auth_params = None
 
     def __init__(self, *args, **kwargs):
@@ -106,7 +106,7 @@ class Transport(object):
         as 'extra' keyword. This is typically useful if you pass data
         obtained using get_dblogger_extra in aiida.djsite.utils, to automatically
         log also to the DbLog table.
-        
+
         :param logger_extra: data that you want to pass as extra to the
           self.logger. To write to DbLog, it should be created by the
           aiida.djsite.utils.get_dblogger_extra function. Pass None if you
@@ -159,7 +159,7 @@ class Transport(object):
         """
         try:
             import logging
-            from aiida.djsite.utils import get_dblogger_extra
+            from aiida.utils import get_dblogger_extra
 
             if self._logger_extra is not None:
                 return logging.LoggerAdapter(logger=self._logger,
@@ -172,7 +172,7 @@ class Transport(object):
     def chdir(self, path):
         """
         Change directory to 'path'
-        
+
         :param str path: path to change working directory into.
         :raises: IOError, if the requested path does not exist
         :rtype: string
@@ -199,9 +199,9 @@ class Transport(object):
 
     def chown(self, path, uid, gid):
         """
-        Change the owner (uid) and group (gid) of a file. 
-        As with python's os.chown function, you must pass both arguments, 
-        so if you only want to change one, use stat first to retrieve the 
+        Change the owner (uid) and group (gid) of a file.
+        As with python's os.chown function, you must pass both arguments,
+        so if you only want to change one, use stat first to retrieve the
         current owner and group.
 
         :param str path: path to the file to change the owner and group of
@@ -213,9 +213,9 @@ class Transport(object):
 
     def copy(self, remotesource, remotedestination, *args, **kwargs):
         """
-        Copy a file or a directory from remote source to remote destination 
+        Copy a file or a directory from remote source to remote destination
         (On the same remote machine)
-        
+
         :param str remotesource: path of the remote source directory / file
         :param str remotedestination: path of the remote destination directory / file
 
@@ -226,9 +226,9 @@ class Transport(object):
 
     def copyfile(self, remotesource, remotedestination, *args, **kwargs):
         """
-        Copy a file from remote source to remote destination 
+        Copy a file from remote source to remote destination
         (On the same remote machine)
-        
+
         :param str remotesource: path of the remote source directory / file
         :param str remotedestination: path of the remote destination directory / file
 
@@ -239,9 +239,9 @@ class Transport(object):
 
     def copytree(self, remotesource, remotedestination, *args, **kwargs):
         """
-        Copy a folder from remote source to remote destination 
+        Copy a folder from remote source to remote destination
         (On the same remote machine)
-        
+
         :param str remotesource: path of the remote source directory / file
         :param str remotedestination: path of the remote destination directory / file
 
@@ -259,7 +259,7 @@ class Transport(object):
 
         If possible, use the higher-level
         exec_command_wait function.
-        
+
         :param str command: execute the command given as a string
         :return: stdin, stdout, stderr and the session, when this exists \
                  (can be None).
@@ -285,7 +285,7 @@ class Transport(object):
         """
         Retrieve a file or folder from remote source to local destination
         dst must be an absolute path (src not necessarily)
-        
+
         :param remotepath: (str) remote_folder_path
         :param localpath: (str) local_folder_path
         """
@@ -296,7 +296,7 @@ class Transport(object):
         """
         Retrieve a file from remote source to local destination
         dst must be an absolute path (src not necessarily)
-        
+
         :param str remotepath: remote_folder_path
         :param str localpath: local_folder_path
         """
@@ -307,7 +307,7 @@ class Transport(object):
         """
         Retrieve a folder recursively from remote source to local destination
         dst must be an absolute path (src not necessarily)
-        
+
         :param str remotepath: remote_folder_path
         :param str localpath: local_folder_path
         """
@@ -326,10 +326,10 @@ class Transport(object):
     def get_attribute(self, path):
         """
         Return an object FixedFieldsAttributeDict for file in a given path,
-        as defined in aiida.common.extendeddicts 
+        as defined in aiida.common.extendeddicts
         Each attribute object consists in a dictionary with the following keys:
-        
-        * st_size: size of files, in bytes 
+
+        * st_size: size of files, in bytes
 
         * st_uid: user id of owner
 
@@ -381,10 +381,10 @@ class Transport(object):
 
     def listdir(self, path='.', pattern=None):
         """
-        Return a list of the names of the entries in the given path. 
-        The list is in arbitrary order. It does not include the special 
+        Return a list of the names of the entries in the given path.
+        The list is in arbitrary order. It does not include the special
         entries '.' and '..' even if they are present in the directory.
-        
+
         :param str path: path to list (default to '.')
         :param str pattern: if used, listdir returns a list of files matching
                             filters in Unix style. Unix only.
@@ -423,8 +423,8 @@ class Transport(object):
 
     def normalize(self, path='.'):
         """
-        Return the normalized path (on the server) of a given path. 
-        This can be used to quickly resolve symbolic links or determine 
+        Return the normalized path (on the server) of a given path.
+        This can be used to quickly resolve symbolic links or determine
         what the server is considering to be the "current folder".
 
         :param str path: path to be normalized
@@ -439,7 +439,7 @@ class Transport(object):
         Put a file or a directory from local src to remote dst.
         src must be an absolute path (dst not necessarily))
         Redirects to putfile and puttree.
-       
+
         :param str localpath: path to remote destination
         :param str remotepath: absolute path to local source
         """
@@ -450,7 +450,7 @@ class Transport(object):
         """
         Put a file from local src to remote dst.
         src must be an absolute path (dst not necessarily))
-        
+
         :param str localpath: path to remote file
         :param str remotepath: absolute path to local file
         """
@@ -461,7 +461,7 @@ class Transport(object):
         """
         Put a folder recursively from local src to remote dst.
         src must be an absolute path (dst not necessarily))
-        
+
         :param str localpath: path to remote folder
         :param str remotepath: absolute path to local folder
         """
@@ -470,7 +470,7 @@ class Transport(object):
 
     def remove(self, path):
         """
-        Remove the file at the given path. This only works on files; 
+        Remove the file at the given path. This only works on files;
         for removing folders (directories), use rmdir.
 
         :param str path: path to file to remove
@@ -528,9 +528,9 @@ class Transport(object):
 
     def symlink(self, remotesource, remotedestination):
         """
-        Create a symbolic link between the remote source and the remote 
+        Create a symbolic link between the remote source and the remote
         destination.
-        
+
         :param remotesource: remote source
         :param remotedestination: remote destination
         """
@@ -569,16 +569,16 @@ class Transport(object):
     # from the python module glob.
     def glob(self, pathname):
         """Return a list of paths matching a pathname pattern.
-        
+
         The pattern may contain simple shell-style wildcards a la fnmatch.
         """
         return list(self.iglob(pathname))
 
     def iglob(self, pathname):
         """Return an iterator which yields the paths matching a pathname pattern.
-    
+
         The pattern may contain simple shell-style wildcards a la fnmatch.
-    
+
         """
         if not self.has_magic(pathname):
             # if os.path.lexists(pathname): # ORIGINAL

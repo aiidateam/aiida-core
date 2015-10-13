@@ -14,9 +14,9 @@ __contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
 class Parser(object):
     """
     Base class for a parser object.
-    
-    Receives a Calculation object. This should be in the PARSING state. 
-    Raises ValueError otherwise 
+
+    Receives a Calculation object. This should be in the PARSING state.
+    Raises ValueError otherwise
     Looks for the attached parser_opts or input_settings nodes attached to the calculation.
     Get the child Folderdata, parse it and store the parsed data.
     """
@@ -40,7 +40,7 @@ class Parser(object):
         extras of the calculation
         """
         import logging
-        from aiida.djsite.utils import get_dblogger_extra
+        from aiida.utils import get_dblogger_extra
 
         return logging.LoggerAdapter(logger=self._logger,
                                      extra=get_dblogger_extra(self._calc))
@@ -56,7 +56,7 @@ class Parser(object):
         """
         Parses the datafolder, stores results.
         Main functionality of the class. If you only have one retrieved node,
-        you do not need to reimplement this. Implement only the 
+        you do not need to reimplement this. Implement only the
         parse_from_retrieved
         """
         # select the folder object
@@ -95,7 +95,7 @@ class Parser(object):
     def get_result_parameterdata_node(self):
         """
         Return the parameterdata node.
-        
+
         :raise UniquenessError: if the node is not unique
         :raise NotExistent: if the node does not exist
         """
@@ -121,13 +121,13 @@ class Parser(object):
         """
         Return an iterator of list of strings of valid result keys,
         that can be then passed to the get_result() method.
-        
+
         :note: the function returns an empty list if no output params node
           can be found (either because the parser did not create it, or because
           the calculation has not been parsed yet).
-        
+
         :raise UniquenessError: if more than one output node with the name
-          self._get_linkname_outparams() is found. 
+          self._get_linkname_outparams() is found.
         """
         from aiida.common.exceptions import NotExistent
 

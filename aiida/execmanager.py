@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 This file contains the main routines to submit, check and retrieve calculation
-results. These are general and contain only the main logic; where appropriate, 
-the routines make reference to the suitable plugins for all 
+results. These are general and contain only the main logic; where appropriate,
+the routines make reference to the suitable plugins for all
 plugin-specific operations.
 """
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
@@ -27,12 +27,12 @@ execlogger = aiidalogger.getChild('execmanager')
 
 def update_running_calcs_status(authinfo):
     """
-    Update the states of calculations in WITHSCHEDULER status belonging 
+    Update the states of calculations in WITHSCHEDULER status belonging
     to user and machine as defined in the 'dbauthinfo' table.
     """
     from aiida.orm import JobCalculation, Computer
     from aiida.scheduler.datastructures import JobInfo
-    from aiida.djsite.utils import get_dblogger_extra
+    from aiida.utils import get_dblogger_extra
 
     if not authinfo.enabled:
         return
@@ -108,7 +108,7 @@ def update_running_calcs_status(authinfo):
                                 # Someone already set it, just skip
                                 pass
 
-                        ## Do not set the WITHSCHEDULER state multiple times, 
+                        ## Do not set the WITHSCHEDULER state multiple times,
                         ## this would raise a ModificationNotAllowed
                         # else:
                         # c._set_state(calc_states.WITHSCHEDULER)
@@ -164,7 +164,7 @@ def update_running_calcs_status(authinfo):
                 finally:
                     # Set the state to COMPUTED as the very last thing
                     # of this routine; no further change should be done after
-                    # this, so that in general the retriever can just 
+                    # this, so that in general the retriever can just
                     # poll for this state, if we want to.
                     try:
                         c._set_state(calc_states.COMPUTED)
@@ -275,7 +275,7 @@ def submit_jobs():
     """
     from aiida.orm import JobCalculation, Computer
     from aiida.djsite.db.models import DbComputer, DbUser
-    from aiida.djsite.utils import get_dblogger_extra
+    from aiida.utils import get_dblogger_extra
 
 
     # I create a unique set of pairs (computer, aiidauser)
@@ -337,12 +337,12 @@ def submit_jobs():
 
 def submit_jobs_with_authinfo(authinfo):
     """
-    Submit jobs in TOSUBMIT status belonging 
+    Submit jobs in TOSUBMIT status belonging
     to user and machine as defined in the 'dbauthinfo' table.
     """
     from aiida.orm import JobCalculation, Computer
     from aiida.scheduler.datastructures import JobInfo
-    from aiida.djsite.utils import get_dblogger_extra
+    from aiida.utils import get_dblogger_extra
 
     if not authinfo.enabled:
         return
@@ -384,7 +384,7 @@ def submit_jobs_with_authinfo(authinfo):
         # because any other exception is caught and skipped above
         except Exception as e:
             import traceback
-            from aiida.djsite.utils import get_dblogger_extra
+            from aiida.utils import get_dblogger_extra
 
             for calc in calcs_to_inquire:
                 logger_extra = get_dblogger_extra(calc)
@@ -404,13 +404,13 @@ def submit_jobs_with_authinfo(authinfo):
 def submit_calc(calc, authinfo, transport=None):
     """
     Submit a calculation
-    
-    :note: if no transport is passed, a new transport is opened and then 
+
+    :note: if no transport is passed, a new transport is opened and then
         closed within this function. If you want to use an already opened
         transport, pass it as further parameter. In this case, the transport
         has to be already open, and must coincide with the transport of the
         the computer defined by the authinfo.
-    
+
     :param calc: the calculation to submit
         (an instance of the aiida.orm.JobCalculation class)
     :param authinfo: the authinfo for this calculation.
@@ -423,7 +423,7 @@ def submit_calc(calc, authinfo, transport=None):
     from aiida.common.exceptions import (
         FeatureDisabled, InputValidationError)
     from aiida.orm.data.remote import RemoteData
-    from aiida.djsite.utils import get_dblogger_extra
+    from aiida.utils import get_dblogger_extra
 
     if not authinfo.enabled:
         return
@@ -482,7 +482,7 @@ def submit_calc(calc, authinfo, transport=None):
                     raise InputValidationError("The selected code {} for calculation "
                                                "{} cannot run on computer {}".format(
                         code.pk, calc.pk, computer.name))
-            
+
             # After this call, no modifications to the folder should be done
             calc._store_raw_input_folder(folder.abspath)
 
@@ -619,7 +619,7 @@ def submit_calc(calc, authinfo, transport=None):
             job_id = s.submit_from_script(t.getcwd(), script_filename)
             calc._set_job_id(job_id)
             # This should always be possible, because we should be
-            # the only ones submitting this calculations, 
+            # the only ones submitting this calculations,
             # so I do not check the ModificationNotAllowed
             calc._set_state(calc_states.WITHSCHEDULER)
             ## I do not set the state to queued; in this way, if the
@@ -658,7 +658,7 @@ def retrieve_computed_for_authinfo(authinfo):
     from aiida.orm import JobCalculation
     from aiida.common.folders import SandboxFolder
     from aiida.orm.data.folder import FolderData
-    from aiida.djsite.utils import get_dblogger_extra
+    from aiida.utils import get_dblogger_extra
     from aiida.orm import DataFactory
     from aiida.orm.data.singlefile import SinglefileData
 
@@ -711,8 +711,8 @@ def retrieve_computed_for_authinfo(authinfo):
                     # First, retrieve the files of folderdata
                     with SandboxFolder() as folder:
                         for item in retrieve_list:
-                            # I have two possibilities: 
-                            # * item is a string 
+                            # I have two possibilities:
+                            # * item is a string
                             # * or is a list
                             # then I have other two possibilities:
                             # * there are file patterns
@@ -755,7 +755,7 @@ def retrieve_computed_for_authinfo(authinfo):
                                       os.path.join(folder.abspath, loc),
                                       ignore_nonexisting=True)
 
-                        # Here I retrieved everything; 
+                        # Here I retrieved everything;
                         # now I store them inside the calculation
                         retrieved_files.replace_with_folder(folder.abspath,
                                                             overwrite=True)
@@ -822,7 +822,7 @@ def retrieve_computed_for_authinfo(authinfo):
                             calc._set_state(calc_states.FINISHED)
                         except ModificationNotAllowed:
                             # I should have been the only one to set it, but
-                            # in order to avoid unuseful error messages, I 
+                            # in order to avoid unuseful error messages, I
                             # just ignore
                             pass
                     else:
@@ -830,7 +830,7 @@ def retrieve_computed_for_authinfo(authinfo):
                             calc._set_state(calc_states.FAILED)
                         except ModificationNotAllowed:
                             # I should have been the only one to set it, but
-                            # in order to avoid unuseful error messages, I 
+                            # in order to avoid unuseful error messages, I
                             # just ignore
                             pass
                         execlogger.error("[parsing of calc {}] "

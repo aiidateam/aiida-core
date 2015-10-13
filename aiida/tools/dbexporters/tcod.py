@@ -123,19 +123,190 @@ def cif_encode_contents(content, gzip=False, gzip_threshold=1024):
         method = None
 
     if method == 'base64':
-        from aiida.orm.data.cif import encode_textfield_base64
         content = encode_textfield_base64(content)
     elif method == 'quoted-printable':
-        from aiida.orm.data.cif import encode_textfield_quoted_printable
         content = encode_textfield_quoted_printable(content)
     elif method == 'ncr':
-        from aiida.orm.data.cif import encode_textfield_ncr
         content = encode_textfield_ncr(content)
     elif method == 'gzip+base64':
-        from aiida.orm.data.cif import encode_textfield_gzip_base64
         content = encode_textfield_gzip_base64(content)
 
     return content, method
+
+
+def encode_textfield_base64(content, foldwidth=76):
+    """
+    Encodes the contents for CIF textfield in Base64 using standard Python
+    implementation (``base64.standard_b64encode()``).
+
+    :param content: a string with contents
+    :param foldwidth: maximum width of line (default is 76)
+    :return: encoded string
+    """
+    import base64
+
+    content = base64.standard_b64encode(content)
+    content = "\n".join(list(content[i:i + foldwidth]
+                             for i in range(0, len(content), foldwidth)))
+    return content
+
+
+def decode_textfield_base64(content):
+    """
+    Decodes the contents for CIF textfield from Base64 using standard
+    Python implementation (``base64.standard_b64decode()``)
+
+    :param content: a string with contents
+    :return: decoded string
+    """
+    import base64
+
+    return base64.standard_b64decode(content)
+
+
+def encode_textfield_quoted_printable(content):
+    """
+    Encodes the contents for CIF textfield in quoted-printable encoding.
+    In addition to non-ASCII characters, that are encoded by Python
+    function ``quopri.encodestring()``, following characters are encoded:
+
+        * '``;``', if encountered on the beginning of the line;
+        * '``\\t``'
+        * '``.``' and '``?``', if comprise the entire textfield.
+
+    :param content: a string with contents
+    :return: encoded string
+    """
+    import re
+    import quopri
+
+    content = quopri.encodestring(content)
+
+    def match2qp(m):
+        prefix = ''
+        postfix = ''
+        if 'prefix' in m.groupdict().keys():
+            prefix = m.group('prefix')
+        if 'postfix' in m.groupdict().keys():
+            postfix = m.group('postfix')
+        h = hex(ord(m.group('chr')))[2:].upper()
+        if len(h) == 1:
+            h = "0{}".format(h)
+        return "{}={}{}".format(prefix, h, postfix)
+
+    content = re.sub('^(?P<chr>;)', match2qp, content)
+    content = re.sub('(?P<chr>\t)', match2qp, content)
+    content = re.sub('(?P<prefix>\n)(?P<chr>;)', match2qp, content)
+    content = re.sub('^(?P<chr>[\.\?])$', match2qp, content)
+    return content
+
+
+def decode_textfield_quoted_printable(content):
+    """
+    Decodes the contents for CIF textfield from quoted-printable encoding.
+
+    :param content: a string with contents
+    :return: decoded string
+    """
+    import quopri
+
+    return quopri.decodestring(content)
+
+
+def encode_textfield_ncr(content):
+    """
+    Encodes the contents for CIF textfield in Numeric Character Reference.
+    Encoded characters:
+
+        * ``\\x09``, ``\\x0A``, ``\\x0D``, ``\\x20``--``\\x7E``;
+        * '``;``', if encountered on the beginning of the line;
+        * '``\\t``'
+        * '``.``' and '``?``', if comprise the entire textfield.
+
+    :param content: a string with contents
+    :return: encoded string
+    """
+    import re
+
+    def match2ncr(m):
+        prefix = ''
+        postfix = ''
+        if 'prefix' in m.groupdict().keys():
+            prefix = m.group('prefix')
+        if 'postfix' in m.groupdict().keys():
+            postfix = m.group('postfix')
+        return prefix + '&#' + str(ord(m.group('chr'))) + ';' + postfix
+
+    content = re.sub('(?P<chr>[&\t])', match2ncr, content)
+    content = re.sub('(?P<chr>[^\x09\x0A\x0D\x20-\x7E])', match2ncr, content)
+    content = re.sub('^(?P<chr>;)', match2ncr, content)
+    content = re.sub('(?P<prefix>\n)(?P<chr>;)', match2ncr, content)
+    content = re.sub('^(?P<chr>[\.\?])$', match2ncr, content)
+    return content
+
+
+def decode_textfield_ncr(content):
+    """
+    Decodes the contents for CIF textfield from Numeric Character Reference.
+
+    :param content: a string with contents
+    :return: decoded string
+    """
+    import re
+
+    def match2str(m):
+        return chr(int(m.group(1)))
+
+    return re.sub('&#(\d+);', match2str, content)
+
+
+def encode_textfield_gzip_base64(content, **kwargs):
+    """
+    Gzips the given string and encodes it in Base64.
+
+    :param content: a string with contents
+    :return: encoded string
+    """
+    from aiida.common.utils import gzip_string
+
+    return encode_textfield_base64(gzip_string(content), **kwargs)
+
+
+def decode_textfield_gzip_base64(content):
+    """
+    Decodes the contents for CIF textfield from Base64 and decompresses
+    them with gzip.
+
+    :param content: a string with contents
+    :return: decoded string
+    """
+    from aiida.common.utils import gunzip_string
+
+    return gunzip_string(decode_textfield_base64(content))
+
+
+def decode_textfield(content,method):
+    """
+    Decodes the contents of encoded CIF textfield.
+
+    :param content: the content to be decoded
+    :param method: method, which was used for encoding the contents
+        (None, 'base64', 'ncr', 'quoted-printable', 'gzip+base64')
+    :return: decoded content
+    :raises ValueError: if the encoding method is unknown
+    """
+    if method == 'base64':
+        content = decode_textfield_base64(content)
+    elif method == 'quoted-printable':
+        content = decode_textfield_quoted_printable(content)
+    elif method == 'ncr':
+        content = decode_textfield_ncr(content)
+    elif method == 'gzip+base64':
+        content = decode_textfield_gzip_base64(content)
+    elif method is not None:
+        raise ValueError("Unknown content encoding: '{}'".format(method))
+
+    return content
 
 
 def _get_calculation(node):
@@ -464,7 +635,6 @@ def _collect_tags(node, calc,parameters=None,
         from aiida.common.exceptions import LicensingException
         from aiida.common.folders import SandboxFolder
         from aiida.orm.importexport import export_tree
-        from aiida.orm.data.cif import encode_textfield_base64
 
         with SandboxFolder() as folder:
             try:

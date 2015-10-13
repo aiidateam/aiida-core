@@ -630,3 +630,75 @@ class TestTcodDbExporter(AiidaTestCase):
                           dump_aiida_database=False)
         self.assertEqual(sorted(v['0'].keys()),
                          expected_tags)
+
+    def test_contents_encoding(self):
+        """
+        Testing the logic of choosing the encoding and the process of
+        encoding contents.
+        """
+        from aiida.tools.dbexporters.tcod import decode_textfield
+
+        def test_ncr(self, inp, out):
+            from aiida.tools.dbexporters.tcod import (encode_textfield_ncr,
+                                                      decode_textfield_ncr)
+            encoded = encode_textfield_ncr(inp)
+            decoded = decode_textfield_ncr(out)
+            decoded_universal = decode_textfield(out,'ncr')
+            self.assertEquals(encoded,out)
+            self.assertEquals(decoded,inp)
+            self.assertEquals(decoded_universal,inp)
+
+        def test_quoted_printable(self, inp, out):
+            from aiida.tools.dbexporters.tcod import (encode_textfield_quoted_printable,
+                                                      decode_textfield_quoted_printable)
+            encoded = encode_textfield_quoted_printable(inp)
+            decoded = decode_textfield_quoted_printable(out)
+            decoded_universal = decode_textfield(out,'quoted-printable')
+            self.assertEquals(encoded,out)
+            self.assertEquals(decoded,inp)
+            self.assertEquals(decoded_universal,inp)
+
+        def test_base64(self, inp, out):
+            from aiida.tools.dbexporters.tcod import (encode_textfield_base64,
+                                                      decode_textfield_base64)
+            encoded = encode_textfield_base64(inp)
+            decoded = decode_textfield_base64(out)
+            decoded_universal = decode_textfield(out,'base64')
+            self.assertEquals(encoded,out)
+            self.assertEquals(decoded,inp)
+            self.assertEquals(decoded_universal,inp)
+
+        def test_gzip_base64(self, text):
+            from aiida.tools.dbexporters.tcod import (encode_textfield_gzip_base64,
+                                                      decode_textfield_gzip_base64)
+            encoded = encode_textfield_gzip_base64(text)
+            decoded = decode_textfield_gzip_base64(encoded)
+            decoded_universal = decode_textfield(encoded,'gzip+base64')
+            self.assertEquals(text,decoded)
+            self.assertEquals(text,decoded_universal)
+
+        test_ncr(self,'.','&#46;')
+        test_ncr(self,'?','&#63;')
+        test_ncr(self,';\n','&#59;\n')
+        test_ncr(self,'line\n;line','line\n&#59;line')
+        test_ncr(self,'tabbed\ttext','tabbed&#9;text')
+        test_ncr(self,'angstrom Å','angstrom &#195;&#133;')
+        test_ncr(self,'<html>&#195;&#133;</html>',
+                      '<html>&#38;#195;&#38;#133;</html>')
+
+        test_quoted_printable(self,'.','=2E')
+        test_quoted_printable(self,'?','=3F')
+        test_quoted_printable(self,';\n','=3B\n')
+        test_quoted_printable(self,'line\n;line','line\n=3Bline')
+        test_quoted_printable(self,'tabbed\ttext','tabbed=09text')
+        test_quoted_printable(self,'angstrom Å','angstrom =C3=85')
+        test_quoted_printable(self,'line\rline\x00','line\rline=00')
+        # This one is particularly tricky: a long line is folded by the QP
+        # and the semicolon sign becomes the first character on a new line.
+        test_quoted_printable(self,
+                              "Å{};a".format("".join("a" for i in range(0, 69))),
+                              '=C3=85aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+                              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaa=\n=3Ba')
+
+        test_base64(self, 'angstrom ÅÅÅ', 'YW5nc3Ryb20gw4XDhcOF')
+        test_gzip_base64(self, 'angstrom ÅÅÅ')

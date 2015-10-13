@@ -135,7 +135,7 @@ Here follows a brief documentation of their action.
 
 * ``c.set_max_memory_kb``: require explicitely the memory to be allocated to the scheduler
   job.
-* ``c.set_append_text``: write a set of bash commands to be executed after the coll to the
+* ``c.set_append_text``: write a set of bash commands to be executed after the call to the
   executable. These commands are executed only for this instance of calculations. Look also
   at the computer and code append_text to write bash commands for any job run on that 
   computer or with that code.

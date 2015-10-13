@@ -117,6 +117,17 @@ def get_pymatgen_version():
     return pymatgen.__version__
 
 
+def has_pyspglib():
+    """
+    :return: True if the pyspglib module can be imported, False otherwise.
+    """
+    try:
+        import pyspglib
+    except ImportError:
+        return False
+    return True
+
+
 def calc_cell_volume(cell):
     """
     Calculates the volume of a cell given the three lattice vectors.
@@ -733,12 +744,13 @@ class StructureData(Data):
         """
         Load the structure from a pymatgen Structure object.
 
+        .. note:: periodic boundary conditions are set to True in all
+            three directions.
         .. note:: Requires the pymatgen module (version >= 3.0.13, usage
             of earlier versions may cause errors).
         """
         self.cell = struct.lattice.matrix.tolist()
-        self.pbc = [True, True, True]  # setting defaults, not sure if this
-        # is a correct way to do so
+        self.pbc = [True, True, True]
         self.clear_kinds()
         for site in struct.sites:
             self.append_atom(symbols=[x[0].symbol for x in site.items()],
@@ -1485,10 +1497,10 @@ class StructureData(Data):
         param = ParameterData(dict=kwargs)
         try:
             conv_f = getattr(structure, '_get_cif_{}_inline'.format(converter))
-            ret_dict = conv_f(struct=self, parameters=param, store=store)
-            return ret_dict['cif']
         except AttributeError:
             raise ValueError("No such converter '{}' available".format(converter))
+        ret_dict = conv_f(struct=self, parameters=param, store=store)
+        return ret_dict['cif']
 
     def _get_object_phonopyatoms(self):
         """
@@ -1684,8 +1696,13 @@ class Kind(object):
                                  "any other parameter.")
 
             try:
+                import numpy
                 self.set_symbols_and_weights([aseatom.symbol], [1.])
-                self.mass = aseatom.mass
+                # ASE sets mass to numpy.nan for unstable species
+                if not numpy.isnan(aseatom.mass):
+                    self.mass = aseatom.mass
+                else:
+                    self.reset_mass()
             except AttributeError:
                 raise ValueError("Error using the aseatom object. Are you sure "
                                  "it is a ase.atom.Atom object? [Introspection says it is "

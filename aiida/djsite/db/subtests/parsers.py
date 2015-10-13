@@ -69,9 +69,9 @@ def output_test(pk, testname, skip_uuids_from_inputs=[]):
     import json
     import string
 
-    from aiida.orm import JobCalculation
     from aiida.common.folders import Folder
-    from aiida.cmdline.commands.exportfile import export_tree
+    from aiida.orm import JobCalculation
+    from aiida.orm.importexport import export_tree
     
     c = JobCalculation.get_subclass_from_pk(pk)
     outfolder = "test_{}_{}".format(
@@ -125,12 +125,12 @@ def read_test(outfolder):
     import os
     import json
 
-    from aiida.orm import JobCalculation,load_node
     from aiida.common.exceptions import NotExistent
-    from aiida.cmdline.commands.importfile import import_data
+    from aiida.orm import JobCalculation, load_node
+    from aiida.orm.importexport import import_data
 
     imported = import_data(outfolder,
-                           ignore_unknown_nodes=True,silent=True)
+                           ignore_unknown_nodes=True, silent=True)
 
     calc = None
     for _,pk in imported['aiida.djsite.db.models.DbNode']['new']:

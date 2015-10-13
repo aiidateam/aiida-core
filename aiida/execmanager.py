@@ -483,23 +483,21 @@ def submit_calc(calc, authinfo, transport=None):
         s = Computer(dbcomputer=authinfo.dbcomputer).get_scheduler()
         s.set_transport(t)
 
-        input_codes = calc.get_inputs(type=Code)
-        if len(input_codes) != 1:
-            raise InputValidationError("JobCalculation {} must have "
-                                       "one and only one input code".format(calc.pk))
-        code = input_codes[0]
-
         computer = calc.get_computer()
-
-        if not code.can_run_on(computer):
-            raise InputValidationError("The selected code {} for calculation "
-                                       "{} cannot run on computer {}".format(
-                code.pk, calc.pk, computer.name))
 
         with SandboxFolder() as folder:
             calcinfo, script_filename = calc._presubmit(folder,
                                                         use_unstored_links=False)
 
+            codes_info = calcinfo.codes_info
+            input_codes = [ Code.get_subclass_from_uuid(_.code_uuid) for _ in codes_info ]
+
+            for code in input_codes:
+                if not code.can_run_on(computer):
+                    raise InputValidationError("The selected code {} for calculation "
+                                               "{} cannot run on computer {}".format(
+                        code.pk, calc.pk, computer.name))
+            
             # After this call, no modifications to the folder should be done
             calc._store_raw_input_folder(folder.abspath)
 
@@ -507,7 +505,6 @@ def submit_calc(calc, authinfo, transport=None):
             # method of JobCalculation. If major logic changes are done
             # here, make sure to update also the test_submit routine
             remote_user = t.whoami()
-            computer = calc.get_computer()
             # TODO Doc: {username} field
             # TODO: if something is changed here, fix also 'verdi computer test'
             remote_working_directory = authinfo.get_workdir().format(
@@ -554,11 +551,12 @@ def submit_calc(calc, authinfo, transport=None):
             # default files to be overwritten by the plugin itself.
             # Still, beware! The code file itself could be overwritten...
             # But I checked for this earlier.
-            if code.is_local():
-                # Note: this will possibly overwrite files
-                for f in code.get_folder_list():
-                    t.put(code.get_abs_path(f), f)
-                t.chmod(code.get_local_executable(), 0755)  # rwxr-xr-x
+            for code in input_codes:
+                if code.is_local():
+                    # Note: this will possibly overwrite files
+                    for f in code.get_folder_list():
+                        t.put(code.get_abs_path(f), f)
+                    t.chmod(code.get_local_executable(), 0755)  # rwxr-xr-x
 
             # copy all files, recursively with folders
             for f in folder.get_content_list():

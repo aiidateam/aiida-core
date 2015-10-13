@@ -378,6 +378,37 @@ class TrajectoryData(ArrayData):
 
         return struc
 
+    def _prepare_xsf(self,step=None):
+        """
+        Write the given trajectory to a string of format XSF (for XCrySDen). 
+        """
+        from aiida.common.constants import elements
+        _atomic_numbers = {data['symbol']: num for num, data in elements.iteritems()}
+        
+        steps = self.get_steps()
+        if step is not None:
+            steps = [step]
+        return_string = "ANIMSTEPS {}\nCRYSTAL\n".format(len(steps))
+        for idx, step in enumerate(steps):
+            return_string += "PRIMVEC {}\n".format(idx+1)
+            structure = self.step_to_structure(step)
+            sites = structure.sites
+            if structure.is_alloy() or structure.has_vacancies():
+                raise NotImplementedError("XSF for alloys or systems with "
+                                          "vacancies not implemented.")
+            for cell_vector in structure.cell:
+                return_string += " ".join(["%18.5f" % i for i in cell_vector])
+                return_string += "\n"
+            return_string += "PRIMCOORD {}\n".format(idx+1)
+            return_string += "%d 1\n" % len(sites)
+            for site in sites:
+                # I checked above that it is not an alloy, therefore I take the
+                # first symbol
+                return_string += "%s " % _atomic_numbers[
+                                                         structure.get_kind(site.kind_name).symbols[0]]
+                return_string += "%18.10f %18.10f %18.10f\n" % tuple(site.position)
+        return return_string
+
     def _prepare_cif(self, step=None):
         """
         Write the given trajectory to a string of format CIF.

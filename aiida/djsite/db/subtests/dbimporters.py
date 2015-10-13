@@ -32,10 +32,12 @@ class TestCodDbImporter(AiidaTestCase):
                            a=[10.0 / 3, 1],
                            alpha=[10.0 / 6, 0],
                            measurement_temp=[0, 10.5],
-                           measurement_pressure=[1000, 1001])
+                           measurement_pressure=[1000, 1001],
+                           determination_method=["single crystal", None])
         self.assertEquals(q, \
                           "SELECT file, svnrevision FROM data WHERE "
                           "(status IS NULL OR status != 'retracted') AND "
+                          "(method IN ('single crystal') OR method IS NULL) AND "
                           "(file IN (1000000, 3000000)) AND "
                           "(chemname LIKE '%caffeine%' OR "
                           "chemname LIKE '%serotonine%') AND "

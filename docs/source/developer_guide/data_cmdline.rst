@@ -30,16 +30,17 @@ commands is placed in ``_<Datatype>`` class inside
 
 are implemented in corresponding classes:
 
-* ``Listable``
-* ``Visualizable``
-* ``Importable``
-* ``Exportable``,
+* :py:class:`~aiida.cmdline.commands.data.Listable`
+* :py:class:`~aiida.cmdline.commands.data.Visualizable`
+* :py:class:`~aiida.cmdline.commands.data.Importable`
+* :py:class:`~aiida.cmdline.commands.data.Exportable`,
 
 which are inherited by ``_<Datatype>`` classes (multiple inheritance is
 possible). Actions ``show``, ``import`` and ``export`` can be extended with
 new format plugins simply by adding additional methods in ``_<Datatype>``
 (these are automatically detected). Action ``list`` can be extended by
-overriding default methods of the ``Listable``.
+overriding default methods of the
+:py:class:`~aiida.cmdline.commands.data.Listable`.
 
 Adding plugins for ``show``, ``import``, ``export`` and like
 ------------------------------------------------------------
@@ -57,7 +58,7 @@ As the ``--format`` option is optional, the default plugin can be specified
 by setting the value for ``_default_<action>_plugin`` in the inheriting class,
 for example::
 
-    class _Parameter(VerdiCommandWithSubcommands,Visualizable):
+    class _Parameter(VerdiCommandWithSubcommands, Visualizable):
         """
         View and manipulate Parameter data classes.
         """
@@ -73,7 +74,7 @@ for example::
                 'show': (self.show, self.complete_visualizers),
                 }
 
-        def _show_json_date(self,exec_name,node_list):
+        def _show_json_date(self, exec_name, node_list):
             """
             Show contents of ParameterData nodes.
             """
@@ -91,7 +92,7 @@ are called before parsing command line arguments, and are passed an
 ``argparse.ArgumentParser`` instance, to which command line argument
 descriptions can be appended using ``parser.add_argument()``. For example::
 
-    def _show_jmol_parameters(self,parser):
+    def _show_jmol_parameters(self, parser):
         """
         Describe command line parameters.
         """
@@ -111,17 +112,20 @@ Implementing ``list``
 ---------------------
 
 As listing of data nodes can be extended with filters, controllable using
-command line parameters, the code of ``Listable`` is split into a few
+command line parameters, the code of
+:py:class:`~aiida.cmdline.commands.data.Listable` is split into a few
 separate methods, that can be individually overridden:
 
-* ``list``:
+* :py:class:`~aiida.cmdline.commands.data.Listable.list`:
     the main method, parsing the command line arguments and printing the
     data node information to the standard output;
-* ``query``:
+* :py:class:`~aiida.cmdline.commands.data.Listable.query`:
     takes the parsed command line arguments and performs a query on the
     database, returns table of unformatted strings, representing the hits;
-* ``append_list_cmdline_arguments``
+* :py:class:`~aiida.cmdline.commands.data.Listable.append_list_cmdline_arguments`:
     informs the command line argument parser about additional, user-defined
-    parameters, used to control the ``query`` function;
-* ``get_column_names``
-    returns the names of columns to be printed by ``list`` method.
+    parameters, used to control the
+    :py:class:`~aiida.cmdline.commands.data.Listable.query` function;
+* :py:class:`~aiida.cmdline.commands.data.Listable.get_column_names`:
+    returns the names of columns to be printed by
+    :py:class:`~aiida.cmdline.commands.data.Listable.list` method.

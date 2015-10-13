@@ -43,14 +43,16 @@ class Listable(object):
     """
     Provides shell completion for listable data nodes.
 
-    Classes, inheriting Listable, MUST define value for property
-    ``dataclass`` (preferably in __init__), which has to point to correct
-    *Data class.
+    .. note:: classes, inheriting Listable, MUST define value for property
+        :py:class:`dataclass` (preferably in :py:class:`__init__`), which
+        has to point to correct \*Data class.
     """
 
     def list(self, *args):
         """
         List all instances of given data class.
+
+        :param args: a list of command line arguments.
         """
         import argparse
 
@@ -117,7 +119,10 @@ class Listable(object):
 
     def query_past_days(self, q_object, args):
         """
-        Select data nodes by age.
+        Subselect to filter data nodes by their age.
+
+        :param q_object: a query object
+        :param args: a namespace with parsed command line parameters.
         """
         from django.utils import timezone
         from django.db.models import Q
@@ -129,7 +134,10 @@ class Listable(object):
 
     def query_group(self, q_object, args):
         """
-        Select data nodes by group.
+        Subselect to filter data nodes by their group.
+
+        :param q_object: a query object
+        :param args: a namespace with parsed command line parameters.
         """
         from django.db.models import Q
         if args.group_name is not None:
@@ -161,8 +169,8 @@ class Listable(object):
         """
         Return the list with column names.
 
-        :note: neither the number nor correspondence of column names and
-            actual columns in the output from the query() are checked.
+        .. note:: neither the number nor correspondence of column names and
+            actual columns in the output from the :py:class:`query` are checked.
         """
         return ["ID"]
 
@@ -171,12 +179,13 @@ class Visualizable(object):
     """
     Provides shell completion for visualizable data nodes.
 
-    Classes, inheriting Visualizable, MUST NOT contain attributes, starting
-    with ``_show_``, which are not plugins for visualization.
+    .. note:: classes, inheriting Visualizable, MUST NOT contain
+        attributes, starting with ``_show_``, which are not plugins for
+        visualization.
 
     In order to specify a default visualization format, one has to override
-    ``_default_show_format`` property (preferably in __init__), setting it
-    to the name of default visualization tool.
+    :py:class:`_default_show_format` property (preferably in
+    :py:class:`__init__`), setting it to the name of default visualization tool.
     """
     show_prefix = '_show_'
     show_parameters_postfix = '_parameters'
@@ -280,8 +289,8 @@ class Exportable(object):
     """
     Provides shell completion for exportable data nodes.
 
-    Classes, inheriting Visualizable, MUST NOT contain attributes, starting
-    with ``_export_``, which are not plugins for exporting.
+    .. note:: classes, inheriting Exportable, MUST NOT contain attributes,
+        starting with ``_export_``, which are not plugins for exporting.
     """
     export_prefix = '_export_'
     export_parameters_postfix = '_parameters'
@@ -376,8 +385,8 @@ class Importable(object):
     """
     Provides shell completion for importable data nodes.
 
-    Classes, inheriting Importable, MUST NOT contain attributes, starting
-    with ``_import_``, which are not plugins for importing.
+    .. note:: classes, inheriting Importable, MUST NOT contain attributes,
+        starting with ``_import_``, which are not plugins for importing.
     """
     import_prefix = '_import_'
     import_parameters_postfix = '_parameters'

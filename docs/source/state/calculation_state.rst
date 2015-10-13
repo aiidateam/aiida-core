@@ -4,10 +4,12 @@ Calculations
 
 AiiDA calculations can be of two kinds:
 
-* **JobCalculation**: those who need to be run on a scheduler
+* :py:class:`JobCalculation <aiida.orm.calculation.job.JobCalculation>`:
+  those who need to be run on a scheduler
 
-* **InlineCalculation**: rapid executions that are executed by the daemon itself, on 
-  your local machine.
+* :py:class:`InlineCalculation <aiida.orm.calculation.inline.InlineCalculation>`:
+  rapid executions that are executed by the daemon itself, on your local
+  machine.
 
 In the following, we will refer to the JobCalculations as a Calculation for the sake of 
 simplicity, unless we explicitly say otherwise. In the same way, also the command 

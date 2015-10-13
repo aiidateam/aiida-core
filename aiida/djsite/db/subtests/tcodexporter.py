@@ -263,12 +263,11 @@ class TestTcodDbExporter(AiidaTestCase):
             '_integration_grid_shift_Z': 0.75,
             '_tcod_software_package': 'Quantum ESPRESSO',
             '_tcod_software_executable_path': '/test',
-            '_dft_BZ_integration_smearing_method': 'Gaussian',
         })
 
         calc = FakeObject({
             "inp": { "parameters": ParameterData(dict={
-                'SYSTEM': { 'ecutwfc': 40 }
+                'SYSTEM': { 'ecutwfc': 40, 'occupations': 'smearing' }
             }) },
             "out": { "output_parameters": ParameterData(dict={
                 'number_of_electrons': 10,

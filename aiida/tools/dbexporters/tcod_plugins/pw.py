@@ -100,16 +100,23 @@ class PwTcodtranslator(BaseTcodtranslator):
     def _get_raw_integration_smearing_method(cls,calc,**kwargs):
         """
         Returns the smearing method name as string, as specified in the
-        input parameters (if specified). If not specified, string with
-        default value 'gaussian' is returned, as specified in
+        input parameters (if specified). If not 'smearing' is not
+        specified, but 'occupations' == 'smearing', string with default
+        value 'gaussian' is returned, as specified in
         http://www.quantum-espresso.org/wp-content/uploads/Doc/INPUT_PW.html
         """
         parameters = calc.inp.parameters
-        smearing = 'gaussian'
+        smearing = None
         try:
             smearing = parameters.get_dict()['SYSTEM']['smearing']
         except KeyError:
             pass
+        if smearing is None:
+            try:
+                if parameters.get_dict()['SYSTEM']['occupations'] == 'smearing':
+                    smearing = 'gaussian'
+            except KeyError as e:
+                pass
         return smearing
         
     @classmethod
@@ -279,7 +286,9 @@ class PwTcodtranslator(BaseTcodtranslator):
         Returns the smearing method name as string.
         """
         smearing = cls._get_raw_integration_smearing_method(calc,**kwargs)
-        if smearing in cls._smearing_aliases:
+        if smearing is None:
+            return None
+        elif smearing in cls._smearing_aliases:
             return cls._smearing_aliases[smearing]
         else:
             return 'other'
@@ -291,7 +300,7 @@ class PwTcodtranslator(BaseTcodtranslator):
         from specified in cif_dft.dic.
         """
         smearing = cls._get_raw_integration_smearing_method(calc,**kwargs)
-        if smearing in cls._smearing_aliases:
+        if smearing is None or smearing in cls._smearing_aliases:
             return None
         else:
             return smearing

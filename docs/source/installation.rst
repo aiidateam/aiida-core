@@ -449,6 +449,8 @@ be found :doc:`here<setup/computerandcodes>`.
 Optional dependencies
 +++++++++++++++++++++
 
+.. _CIF_manipulation_dependencies:
+
 CIF manipulation
 ----------------
 

@@ -46,7 +46,7 @@ Where:
   writing, they were
   :py:class:`StructureData <aiida.orm.data.structure.StructureData>`,
   :py:class:`CifData <aiida.orm.data.cif.CifData>` and
-  :py:class:`TrajectoryData <aiida.orm.data.array.trajectory.TrajectoryData>`;
+  :py:class:`TrajectoryData <aiida.orm.data.array.trajectory.TrajectoryData>`);
 * ``TITLE`` -- the title of the publication, where the exported data
   is/will be published; in case of personal communication, the title
   should be chosen so as to reflect the exported dataset the best;
@@ -66,6 +66,23 @@ Where:
   of the workflow;
 * ``--dump-aiida-database``, ``--no-dump-aiida-database`` -- turn on/off
   addition of relevant AiiDA database dump (on by default).
+
+  .. warning:: be aware that TCOD is an **open** database, thus **no
+    copyright-protected data should be deposited** unless permission is
+    given by the owner of the rights.
+
+  .. note:: data, which is deposited as pre-publication material, **will
+    be kept private on TCOD server** and will not be disclosed to anyone
+    without depositor's permission.
+
+* ``--exclude-external-contents``, ``--no-exclude-external-contents`` --
+  exclude contents of initial input files, that contain
+  :py:class:`source <aiida.orm.data.Data.source>` property with
+  definitions on how to obtain the contents from external resources (on
+  by default);
+* ``--gzip``, `--no-gzip`` -- turn on/off gzip compression for large
+  files (off by default); ``--gzip-threshold`` sets the minimum file size
+  to be compressed.
 
 .. _Theoretical Crystallography Open Database: http://www.crystallography.net/tcod/
 .. _TCOD deposition type: http://wiki.crystallography.net/deposition_type/

@@ -14,7 +14,7 @@ Setup
 To be able to export data to TCOD, one has to
 :ref:`install dependencies for CIF manipulation <CIF_manipulation_dependencies>`
 as well as :ref:`cod-tools package <codtools_installation>`, and set up an
-AiiDA :py:class:`Code <aiida.orm.code.Code>` for *cif_cod_deposit* script
+AiiDA :py:class:`Code <aiida.orm.code.Code>` for ``cif_cod_deposit`` script
 from **cod-tools**.
 
 How to deposit a structure
@@ -83,6 +83,28 @@ Where:
 * ``--gzip``, `--no-gzip`` -- turn on/off gzip compression for large
   files (off by default); ``--gzip-threshold`` sets the minimum file size
   to be compressed.
+
+Other command line options correspond to the options of
+:doc:`cif_cod_deposit <../plugins/codtools/cifcoddeposit>` of the same
+name. To ease the use of TCOD exporter, one can define persistent
+parameters in :doc:`AiiDA properties <../verdi/properties>`. Corresponding
+command line parameters and AiiDA properties are presented in the table:
+
+======================  ===========================
+Command line parameter  AiiDA property
+======================  ===========================
+``--author-email``      tcod.depositor_author_email
+``--author-name``       tcod.depositor_author_name
+``--user-email``        tcod.depositor_email
+``--username``          tcod.depositor_password
+``--password``          tcod.depositor_username
+======================  ===========================
+
+.. note:: ``--password`` does not accept any value; instead, the option
+    will prompt the user to enter one's password in the terminal.
+
+.. note:: command line parameters can be used to override AiiDA
+    properties even if properties are set.
 
 .. _Theoretical Crystallography Open Database: http://www.crystallography.net/tcod/
 .. _TCOD deposition type: http://wiki.crystallography.net/deposition_type/

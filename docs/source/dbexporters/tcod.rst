@@ -106,6 +106,14 @@ Command line parameter  AiiDA property
 .. note:: command line parameters can be used to override AiiDA
     properties even if properties are set.
 
+Return values
++++++++++++++
+
+The deposition process, which is of
+:py:class:`JobCalculation <aiida.orm.calculation.job.JobCalculation>`
+type, returns the output of ``cif_cod_deposit``, wrapped in
+:py:class:`ParameterData <aiida.orm.data.parameter.ParameterData>`.
+
 .. _Theoretical Crystallography Open Database: http://www.crystallography.net/tcod/
 .. _TCOD deposition type: http://wiki.crystallography.net/deposition_type/
 .. _TCOD ID: http://wiki.crystallography.net/tcod_id/

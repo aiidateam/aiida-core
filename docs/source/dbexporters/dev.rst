@@ -17,12 +17,17 @@ Base class
 .. automodule:: aiida.tools.dbexporters.tcod_plugins
    :members:
 
-PW
-++
-.. automodule:: aiida.tools.dbexporters.tcod_plugins.pw
-   :members:
-
 CP
 ++
 .. automodule:: aiida.tools.dbexporters.tcod_plugins.cp
+   :members:
+
+NWChem (pymatgen-based)
++++++++++++++++++++++++
+.. automodule:: aiida.tools.dbexporters.tcod_plugins.nwcpymatgen
+   :members:
+
+PW
+++
+.. automodule:: aiida.tools.dbexporters.tcod_plugins.pw
    :members:

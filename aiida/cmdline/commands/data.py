@@ -572,6 +572,7 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
         """
         A dictionary with valid commands and functions to be called.
         """
+        load_dbenv()
         from aiida.orm.data.upf import UpfData
 
         self.dataclass = UpfData

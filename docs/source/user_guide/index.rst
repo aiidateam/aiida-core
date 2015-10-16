@@ -5,6 +5,7 @@ User's guide
    :maxdepth: 4
 
    ../database/index
+   ../backup/index
    ../installation
    ../setup/computerandcodes
    ../plugins/index

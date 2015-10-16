@@ -18,7 +18,7 @@ instructions to set this up for the SQLite, PostgreSQL and MySQL databases, unde
 SQLite backup
 -------------
 
-.. note:: perform the following operation after having set up AiiDA. Only then
+.. note:: Perform the following operation after having set up AiiDA. Only then
   the ``~/.aiida`` folder (and the files within) will be created.
 
 Simply make sure your database folder (typically /home/USERNAME/.aiida/ containing
@@ -30,7 +30,7 @@ your backup software (under Ubuntu, Backup -> check the "Folders" tab).
 PostgreSQL backup
 -----------------
 
-.. note:: perform the following operation after having set up AiiDA. Only then
+.. note:: Perform the following operation after having set up AiiDA. Only then
   the ``~/.aiida`` folder (and the files within) will be created.
 
 The database files are not put in the ``.aiida`` folder but in the system directories
@@ -86,6 +86,12 @@ Remember to give the script the right permissions::
 Finally make sure your database folder (``/home/USERNAME/.aiida/``) containing this dump file
 and the ``repository`` directory, is properly backed up by
 your backup software (under Ubuntu, Backup -> check the "Folders" tab).
+
+.. note:: If your database is very large (more than a few hundreds of thousands 
+  of nodes and workflows), a standard backup of your repository folder will be
+  very slow (up to days), thus slowing down your computer dramatically. To fix
+  this problem you can set up an incremental backup of your repository by following
+  the instructions :ref:`here<repository_backup>`.
 
 .. _backup_mysql:
 
@@ -197,11 +203,13 @@ first rename it and test AiiDA with the new database location (e.g. do simple
 queries like ``verdi code list`` or create a node and store it). If
 everything went fine, you can delete the old database location.
 
-How to backup the repository
-++++++++++++++++++++++++++++
+.. _repository_backup:
+
+How to set up an incremental backup for the repository
+++++++++++++++++++++++++++++++++++++++++++++++++++++++
 Apart from the database backup, you should also backup the AiiDA repository.
 For small repositories, this can be easily done by a simple directory copy or,
-even better, with the use of the rsync which can copy only the differences.
+even better, with the use of the rsync command which can copy only the differences.
 However, both of the aforementioned approaches are not efficient in big
 repositories where even a partial recursive directory listing may take
 significant time, especially for filesystems where accessing a directory has
@@ -222,12 +230,13 @@ This will ask a set of questions. More precisely, it will initially ask for:
 
  * The destination folder of the backup. This is the destination folder of the
    files to be backed up. By default it is a folder inside the aforementioned
-   ``backup`` folder (e.g. ``~/.aiida/backup/backup_dest``).
+   ``backup`` folder (e.g. ``/home/aiida_user/.aiida/backup/backup_dest``).
 
 .. note:: You should backup the repository on a different disk than the one in
   which you have the AiiDA repository! If you just use the same disk, you don't
   have any security against the most common data loss cause: disk failure.
-  The best option is to use a destination folder mounted over ssh.
+  The best option is to use a destination folder mounted over ssh. For this 
+  you need to install ``sshfs`` (under ubuntu: ``sudo apt-get install sshfs``).
 
   E.g. Imagine that you run your calculations on server_1 and you would like to
   take regular repository backups to server_2. Then, you could mount a server_2
@@ -235,6 +244,9 @@ This will ask a set of questions. More precisely, it will initially ask for:
 
   ``sshfs -o idmap=user -o rw backup_user@server_2:/home/backup_user/backup_destination_dir/``
   ``/home/aiida_user/remote_backup_dir/``
+  
+  You can put this line into your .bashrc (in your home directory) so that the 
+  remote directory is mounted automatically after a reboot. 
 
 
 A template backup configuration file (``backup_info.json.tmpl``) will be copied
@@ -290,8 +302,24 @@ The backup parameters to be set in the ``backup_info.json`` are:
    lowest acceptable round length. This is important for the end of the backup.
 
  * ``backup_dir``: The destination directory of the backup. e.g.
-   ``"backup_dir": "/scratch/aiida_user/backup_script_dest"``
+   ``"backup_dir": "/home/aiida_user/.aiida/backup/backup_dest"``
 
 To start the backup, run the ``start_backup.py`` script. Run as often as needed to complete a
 full backup, and then run it periodically (e.g. calling it from a cron script, for instance every
 day) to backup new changes.
+
+.. note:: You can set up a cron job using the following command::
+
+    sudo crontab -u aiida_user -e
+  
+  It will open an editor where you can add a line of the form::
+  
+    00 03 * * * /home/aiida_user/.aiida/backup/start_backup.py 2>&1 | mail -s "Incremental backup of the repository" aiida_user_email@domain.net
+
+  This will launch the backup of the database everyday at 3 AM, and send the output
+  (or any error message) to the email address of the user (provided the ``mail``
+  command -- from ``mailutils`` -- is configured appropriately).
+  
+Finally, do not forget to exclude the repository folder from the normal backup 
+of your home directory!
+ 

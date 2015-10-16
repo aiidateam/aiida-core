@@ -67,13 +67,13 @@ class Devel(VerdiCommandWithSubcommands):
     Provides a set of tools for developers. For instance, it allows to run
     the django tests for the db application and the unittests of
     the AiiDA modules.
-    
+
     If you want to limit the tests to a specific subset of modules,
-    pass them as parameters. 
-    
+    pass them as parameters.
+
     An invalid parameter will make the code print the list of all
     valid parameters.
-    
+
     Note: the test called 'db' will run all db.* tests.
     """
     base_allowed_test_folders = [
@@ -127,7 +127,7 @@ class Devel(VerdiCommandWithSubcommands):
     def run_describeproperties(self, *args):
         """
         List all valid properties that can be stored in the AiiDA config file.
-        
+
         Only properties listed in the ``_property_table`` of
         ``aida.common.setup`` can be used.
         """
@@ -159,9 +159,9 @@ class Devel(VerdiCommandWithSubcommands):
         under development.
         """
         from aiida.common.exceptions import AiidaException
+        load_dbenv()
         from aiida.orm import JobCalculation as OrmCalculation
 
-        load_dbenv()
 
         class InternalError(AiidaException):
             def __init__(self, real_exception, message):
@@ -441,7 +441,7 @@ class Devel(VerdiCommandWithSubcommands):
         """
         Define a global AiiDA property in the config file in .aiida.
 
-        Only properties in the _property_table of aiida.common.setup can 
+        Only properties in the _property_table of aiida.common.setup can
         be modified.
         """
         from aiida.common.setup import set_property
@@ -471,7 +471,7 @@ class Devel(VerdiCommandWithSubcommands):
             for arg in args:
                 if arg in self.allowed_test_folders:
                     dbtests = self.allowed_test_folders[arg]
-                    # Anything that has been added is a DB test                    
+                    # Anything that has been added is a DB test
                     if dbtests is not None:
                         do_db = True
                         for dbtest in dbtests:
@@ -513,7 +513,7 @@ class Devel(VerdiCommandWithSubcommands):
             ## Setup a sqlite3 DB for tests (WAY faster, since it remains in-memory
             ## and not on disk.
             # if you define such a variable to False, it will use the same backend
-            # that you have already configured also for tests. Otherwise, 
+            # that you have already configured also for tests. Otherwise,
             # Setup a sqlite3 DB for tests (WAY faster, since it remains in-memory)
 
             # The prefix is then checked inside get_profile_config and stripped
@@ -541,7 +541,7 @@ class Devel(VerdiCommandWithSubcommands):
         # I remove the one on which I am, so if I wrote all of it but
         # did not press space, it will get completed
         other_subargs = subargs[:subargs_idx] + subargs[subargs_idx + 1:]
-        # I create a list of the tests that are not already written on the 
+        # I create a list of the tests that are not already written on the
         # command line
         remaining_tests = (
             set(self.allowed_test_folders) - set(other_subargs))
@@ -714,7 +714,7 @@ class Devel(VerdiCommandWithSubcommands):
         ("<", "lt"),
         ("=", ""),
     ]
-    # TO ADD: startswith, istartswith, endswith, iendswith, ymdHMS, isnull, in, contains, 
+    # TO ADD: startswith, istartswith, endswith, iendswith, ymdHMS, isnull, in, contains,
 
     # TO ADD: support for other types
 
@@ -727,7 +727,7 @@ class Devel(VerdiCommandWithSubcommands):
         #        value = pieces[1]
 
         #import re
-        #sep_regex = "|".join([re.escape(k) for k in self.separators.keys()])        
+        #sep_regex = "|".join([re.escape(k) for k in self.separators.keys()])
         #regex = re.match(r'(.+)(' + sep_regex + r')(.+)',arg)
         #        key, sep, value = regex.groups()
 
@@ -755,7 +755,7 @@ class Devel(VerdiCommandWithSubcommands):
         django_query = DbNode.objects.filter()
 
         try:
-            # NOT SURE THIS IS THE RIGHT WAY OF MANAGING NEGATION FOR 
+            # NOT SURE THIS IS THE RIGHT WAY OF MANAGING NEGATION FOR
             # ATTRIBUTES!!
             queries = [(self.parse_arg(arg[1:] if arg.startswith('!') else arg), arg.startswith('!')) for arg in args]
         except ValueError as e:

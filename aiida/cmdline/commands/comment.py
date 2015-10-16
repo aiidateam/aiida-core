@@ -35,9 +35,9 @@ class Comment(VerdiCommandWithSubcommands):
         """
         import argparse
         from aiida.djsite.utils import get_automatic_user
-        from aiida.orm.node import Node as AiidaOrmNode
 
         load_dbenv()
+        from aiida.orm.node import Node as AiidaOrmNode
         user = get_automatic_user()
 
         parser = argparse.ArgumentParser(
@@ -79,9 +79,9 @@ class Comment(VerdiCommandWithSubcommands):
         """
         import argparse
         from aiida.djsite.utils import get_automatic_user
-        from aiida.orm.node import Node as AiidaOrmNode
 
         load_dbenv()
+        from aiida.orm.node import Node as AiidaOrmNode
         user = get_automatic_user()
 
         parser = argparse.ArgumentParser(
@@ -130,10 +130,10 @@ class Comment(VerdiCommandWithSubcommands):
         # Note: in fact, the user can still manually delete any comment
         import argparse
         from aiida.djsite.utils import get_automatic_user
-        from aiida.orm.node import Node as AiidaOrmNode
         from aiida.common.exceptions import ModificationNotAllowed
 
         load_dbenv()
+        from aiida.orm.node import Node as AiidaOrmNode
         user = get_automatic_user()
         from aiida.djsite.db.models import DbComment
 
@@ -195,9 +195,9 @@ class Comment(VerdiCommandWithSubcommands):
         """
         import argparse
         from aiida.djsite.utils import get_automatic_user
-        from aiida.orm.node import Node as AiidaOrmNode
 
         load_dbenv()
+        from aiida.orm.node import Node as AiidaOrmNode
         user = get_automatic_user()
 
         parser = argparse.ArgumentParser(
@@ -235,5 +235,5 @@ class Comment(VerdiCommandWithSubcommands):
 
         node = AiidaOrmNode.get_subclass_from_pk(parsed_args.pk)
         node._update_comment(the_comment, parsed_args.id, user)
-        
-        
+
+

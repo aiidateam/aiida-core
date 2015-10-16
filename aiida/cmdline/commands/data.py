@@ -594,7 +594,6 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
         import os.path
 
         from aiida.common.exceptions import NotExistent, ValidationError
-        from aiida.orm import Computer as AiidaOrmComputer
 
         if not len(args) == 3 and not len(args) == 4:
             print >> sys.stderr, ("After 'upf uploadfamily' there should be three "
@@ -620,7 +619,7 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
             sys.exit(1)
 
         load_dbenv()
-
+        from aiida.orm import Computer as AiidaOrmComputer
         import aiida.orm.data.upf as upf
 
         files_found, files_uploaded = upf.upload_upf_family(folder, group_name,
@@ -637,8 +636,6 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
         # key called element. As such, it is not well separated.
         import argparse
 
-        from aiida.orm.data.upf import UPFGROUP_TYPE
-
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
             description='List AiiDA upf families.')
@@ -654,7 +651,6 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
         parsed_args = parser.parse_args(args)
 
         load_dbenv()
-
         from aiida.orm import DataFactory
 
 

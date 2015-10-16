@@ -70,8 +70,6 @@ class Calculation(VerdiCommandWithSubcommands):
         computer on which the calculation is being/has been executed.
         """
         from aiida.common.exceptions import NotExistent
-        from aiida.orm import JobCalculation
-        from aiida.orm import Node as AiidaOrmNode
         from aiida import load_dbenv
 
         try:
@@ -88,6 +86,8 @@ class Calculation(VerdiCommandWithSubcommands):
 
         print "Loading environment..."
         load_dbenv()
+        from aiida.orm import JobCalculation
+        from aiida.orm import Node as AiidaOrmNode
 
         try:
             if is_pk:
@@ -197,7 +197,6 @@ class Calculation(VerdiCommandWithSubcommands):
         """
         Print all or somoe data from the "res" output node.
         """
-        from aiida.orm.calculation.job import JobCalculation as OrmCalculation
         from aiida.common.exceptions import NotExistent
         from aiida.cmdline import print_dictionary
 
@@ -217,6 +216,7 @@ class Calculation(VerdiCommandWithSubcommands):
         parsed_args = parser.parse_args(args)
 
         load_dbenv()
+        from aiida.orm.calculation.job import JobCalculation as OrmCalculation
 
         try:
             calc = OrmCalculation.get_subclass_from_pk(int(parsed_args.PK))
@@ -244,10 +244,10 @@ class Calculation(VerdiCommandWithSubcommands):
 
     def calculation_show(self, *args):
         from aiida.common.exceptions import NotExistent
-        from aiida.orm import JobCalculation as OrmCalculation
         from aiida.djsite.utils import get_log_messages
 
         load_dbenv()
+        from aiida.orm import JobCalculation as OrmCalculation
 
         for calc_pk in args:
             try:
@@ -278,11 +278,11 @@ class Calculation(VerdiCommandWithSubcommands):
 
     def calculation_logshow(self, *args):
         from aiida.common.exceptions import NotExistent
-        from aiida.orm import JobCalculation as OrmCalculation
         from aiida.djsite.utils import get_log_messages
         from aiida.common.datastructures import calc_states
 
         load_dbenv()
+        from aiida.orm import JobCalculation as OrmCalculation
 
         for calc_pk in args:
             try:
@@ -335,12 +335,12 @@ class Calculation(VerdiCommandWithSubcommands):
 
 
     def calculation_plugins(self, *args):
+        load_dbenv()
         from aiida.orm import CalculationFactory
         from aiida.orm.calculation.job import JobCalculation
         from aiida.common.pluginloader import existing_plugins
         from aiida.common.exceptions import MissingPluginError
 
-        load_dbenv()
 
         if args:
             for arg in args:

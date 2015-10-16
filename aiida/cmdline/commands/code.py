@@ -111,16 +111,16 @@ class CodeInputValidationClass(object):
     A class with information for the validation of input text of Codes
     """
     # It is a list of tuples. Each tuple has three elements:
-    # 1. an internal name (used to find the 
+    # 1. an internal name (used to find the
     # _set_internalname_string, and get_internalname_string methods)
     # 2. a short human-readable name
     # 3. A long human-readable description
-    # 4. True if it is a multi-line input, False otherwise  
+    # 4. True if it is a multi-line input, False otherwise
     # IMPORTANT!
-    # for each entry, remember to define the 
+    # for each entry, remember to define the
     # _set_internalname_string and get_internalname_string methods.
     # Moreover, the _set_internalname_string method should also immediately
-    # validate the value. 
+    # validate the value.
     _conf_attributes_relabel = [
         ("label",
          "Label",
@@ -305,8 +305,10 @@ class CodeInputValidationClass(object):
         """
         Set the computer starting from a string.
         """
-        from aiida.orm import Computer as AiidaOrmComputer
         from aiida.common.exceptions import ValidationError, NotExistent
+
+        load_dbenv()
+        from aiida.orm import Computer as AiidaOrmComputer
 
         try:
             computer = AiidaOrmComputer.get(string)
@@ -555,7 +557,6 @@ class Code(VerdiCommandWithSubcommands):
         Hide one or more codes from the verdi show command
         """
         import argparse
-        from aiida.orm.code import Code
 
         parser = argparse.ArgumentParser(prog=self.get_full_command_name(),
                                          description='Hide codes from the verdi show command.')
@@ -564,6 +565,9 @@ class Code(VerdiCommandWithSubcommands):
                             help="The pk of the codes to hide",
         )
         parsed_args = parser.parse_args(args)
+        load_dbenv()
+        from aiida.orm.code import Code
+
         for pk in parsed_args.pks:
             code = Code.get_subclass_from_pk(pk)
             code._hide()
@@ -573,7 +577,6 @@ class Code(VerdiCommandWithSubcommands):
         Reveal (if it was hidden before) one or more codes from the verdi show command
         """
         import argparse
-        from aiida.orm.code import Code
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -583,6 +586,9 @@ class Code(VerdiCommandWithSubcommands):
                             help="The pk of the codes to reveal",
         )
         parsed_args = parser.parse_args(args)
+        load_dbenv()
+        from aiida.orm.code import Code
+
         for pk in parsed_args.pks:
             code = Code.get_subclass_from_pk(pk)
             code._reveal()
@@ -622,7 +628,7 @@ class Code(VerdiCommandWithSubcommands):
         all_users = parsed_args.all_users
         show_owner = parsed_args.show_owner
         reveal_filter = parsed_args.all_codes
-        
+
         from django.db.models import Q
         from aiida.djsite.utils import get_automatic_user
 
@@ -647,7 +653,7 @@ class Code(VerdiCommandWithSubcommands):
             # same of the previous query
             django_reveal_filter = django_filter1 | django_filter2
             django_filter &= django_reveal_filter
-        
+
         existing_codes = self.get_code_data(django_filter)
 
         print "# List of configured codes:"
@@ -685,14 +691,16 @@ class Code(VerdiCommandWithSubcommands):
         """
         Get a Computer object with given identifier, that can either be
         the numeric ID (pk), or the label (if unique).
-        
+
         .. note:: If an string that can be converted to an integer is given,
             the numeric ID is verified first (therefore, is a code A with a
             label equal to the ID of another code B is present, code A cannot
             be referenced by label).
         """
-        from aiida.orm import Code as AiidaOrmCode
         from aiida.common.exceptions import NotExistent, MultipleObjectsError
+
+        load_dbenv()
+        from aiida.orm import Code as AiidaOrmCode
 
         try:
             return AiidaOrmCode.get_from_string(code_id)
@@ -737,8 +745,10 @@ class Code(VerdiCommandWithSubcommands):
 
     def code_rename(self, *args):
         import argparse
-        from aiida.orm.code import Code
         from aiida.common.exceptions import NotExistent
+
+        load_dbenv()
+        from aiida.orm.code import Code
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -876,7 +886,7 @@ class Code(VerdiCommandWithSubcommands):
     def code_delete(self, *args):
         """
         Delete a code
-        
+
         Does not delete the code if there are calculations that are using it
         (i.e., if there are output links)
         """

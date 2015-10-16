@@ -1,1 +1,1 @@
-from aiida.orm.implementation import Lock
+from aiida.orm.implementation import Lock, LockManager, LockPresent

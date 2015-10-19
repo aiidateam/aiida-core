@@ -25,8 +25,96 @@ class Group(VerdiCommandWithSubcommands):
         """
         self.valid_subcommands = {
             'list': (self.group_list, self.complete_none),
+            'show': (self.group_show, self.complete_none),
+            'description': (self.group_description, self.complete_none),
         }
+        
+    def group_show(self, *args):
+        """
+        Show information on a given group. Pass the PK as a parameter.
+        """
+        load_dbenv()
 
+        import argparse
+        from aiida.common.exceptions import NotExistent
+        from aiida.orm import Group as G
+        from aiida.common.utils import str_timedelta
+        from django.utils import timezone
+        from aiida.orm.node import from_type_to_pluginclassname
+        
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Information on a given AiiDA group.')
+        parser.add_argument('-r', '--raw',
+                            dest='raw', action='store_true',
+                            help="Show only a space-separated list of PKs of "
+                            "the calculations in the group")        
+        parser.add_argument('PK',type=int, help="The PK of the group to show")
+        parser.set_defaults(raw=False)
+
+        args = list(args)
+        parsed_args = parser.parse_args(args)
+
+        group_pk = parsed_args.PK
+        try:
+            group = G(dbgroup=group_pk)
+        except NotExistent as e:
+            print >> sys.stderr, "Error: {}.".format(e.message)
+            sys.exit(1)
+        
+        if parsed_args.raw:
+            print " ".join(str(_.pk) for _ in group.nodes)
+        else:
+            type_string = group.type_string
+            desc = group.description
+            now = timezone.now()
+
+            print "# Group name: {}".format(group.name)
+            print "# Group type: {}".format(type_string if type_string
+                                            else "<user-defined>")
+            print "# Group description: {}".format(desc if desc else
+                                                   "<no description>")
+            print "# Nodes:"
+            for n in group.nodes:
+                print "* {} - {} - {}".format(
+                    n.pk,
+                    from_type_to_pluginclassname(n.dbnode.type).rsplit(".", 1)[1],
+                    str_timedelta(now - n.ctime, short=True,
+                                  negative_to_zero=True))
+
+    def group_description(self, *args):
+        """
+        Edit the group description. 
+        """
+        load_dbenv()
+
+        import argparse
+        from aiida.orm import Group as G
+        from aiida.common.exceptions import NotExistent
+
+        parser = argparse.ArgumentParser(
+            prog=self.get_full_command_name(),
+            description='Change the description of a given group.')
+        parser.add_argument('PK',type=int, help="The PK of the group for which "
+                            "you want to edit the description")
+        parser.add_argument('description',type=str, 
+                            help="The new description. If not provided, "
+                            "just show the current description.")
+        
+        args = list(args)
+        parsed_args = parser.parse_args(args)
+
+        group_pk = parsed_args.PK
+        try:
+            group = G(dbgroup=group_pk)
+        except NotExistent as e:
+            print >> sys.stderr, "Error: {}.".format(e.message)
+            sys.exit(1)        
+
+        group.description = parsed_args.description
+        
+        
+        
     def group_list(self, *args):
         """
         Print a list of groups in the DB. 

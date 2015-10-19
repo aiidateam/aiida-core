@@ -9,8 +9,9 @@ Developer's guide
    devel_tutorial/code_plugin
    devel_tutorial/parser_warnings_policy
    parsertests
-   workflows   
-   
+   workflows
+   dev_workflow
+
    data_cmdline
    git_cheatsheet
    sphinx_cheatsheet

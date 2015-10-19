@@ -1,0 +1,381 @@
+###########################
+Developer Workflow tutorial
+###########################
+
+
+
+Creating new workflows
+++++++++++++++++++++++
+
+In this section we are going to write a very simple AiiDA workflow. Before starting this tutorial, we assume that you have successfully completed the ``Developer code plugin tutorial`` and have your input and output plugins ready to use with this tutorial.
+
+This tutorial creates a workflow for the addition of three numbers. Number could be an integer or a float value. All three numbers will be passed as parameters to the workflow in dictionary format (e.g. {"a": 1, "b": 2.2, "c":3}).
+
+To demonstrate workflow calculation, we will perform addition in two steps:
+
+1. Step 1: temp_value = a + b
+2. Step 2: sum = temp_value + c
+
+A workflow in AiiDA is a python script with several user defined functions called ``steps``. All AiiDA functions are available inside “steps” and calculations or sub-workflows can be launched and retrieved. The AiiDA daemon executes a workflow and handles all the operations starting from script loading, error handling and reporting, state monitoring and user interaction with the execution queue. The daemon works essentially as an infinite loop, iterating several simple operations:
+
+1. It checks the running step in all the active workflows, if there are new calculations attached to a step it submits them.
+2. It retrieves all the finished calculations. If one step of one workflow exists where all the calculations are correctly finished it reloads the workflow and executes the next step as indicated in the script.
+3. If a workflow's next step is the exit one, the workflow is terminated and the report is closed.
+
+The daemon must be running to allow the execution of workflows. Make sure to launch the daemon using the verdi script from your computer’s shell::
+
+  >> verdi daemon start
+
+Once the daemon is running we can focus on writing example workflow. As explained earlier, a workflow is essentially a python class, stored in a file accessible by AiiDA (in the same AiiDA path). By convention workflows are stored in .py files inside the ``aiida/workflows`` directory. Since the daemon is aware only of the classes present at the time of its launch, make sure you restart the daemon every time you add a new workflow. To restart a daemon, use following command::
+
+  >> verdi daemon restart
+
+Lets start to write a workflow step by step. First we have to import the packages
+required to write a new workflow:
+
+.. code-block:: python
+
+	from aiida.common import aiidalogger
+	from aiida.orm.workflow import Workflow
+	from aiida.orm import Code
+	from aiida.orm.data.parameter import ParameterData
+	from aiida.common.exceptions import InputValidationError
+
+In order to write a workflow, we must create a class by extending the Workflow class from ``aiida.orm.workflow``. This is a fundamental requirement, since the subclassing is the way AiiDA understand if a class inside the file is an AiiDA workflow or a simple utility class. In class, add init method and call super method to initialize the base workflow variables. Create a new file, which has the same name as the class you are creating (in this way, it will be possible to load it with ``WorkflowFactory``).
+
+.. code-block:: python
+
+	class AddnumbersWorkflow(Workflow):
+	    """
+	    This workflow takes 3 numbers as an input and gives
+	    its addition as an output.
+	    Workflow steps:
+	    passed parameters: a,b,c
+	    1st step: a + b = step1_result
+	    2nd step: step1_result + c = final_result
+	    """
+
+	    def __init__(self, **kwargs):
+		super(AddnumbersWorkflow, self).__init__(**kwargs)
+
+Once the class is defined a user can add methods to generate calculations, download structures or compute new structures starting form a query in previous AiiDA calculations present in the DB. Here we will add simple helper function to validate the input parameters which will be the dictionary with keys ``a``, ``b`` and ``c``. All dictionary values should be of type integer or float.
+
+.. code-block:: python
+
+	def validate_input(self):
+	    """
+	    Check if the passed parameters are of type int or float
+	    else raise exception
+	    """
+	    # get parameters passed to workflow when it was
+	    # initialised. These parameters can not be modified
+	    # during an execution
+	    params = self.get_parameters()
+
+	    for k in ['a','b','c']:
+	        try:
+	            # check if value is int or float
+	            if not (isinstance(params[k], int) or isinstance(params[k], float)):
+	                raise InputValidationError("Value of {} is not of type int or float".format(k))
+	        except KeyError:
+	            raise InputValidationError("Missing input key {}".format(k))
+
+	    # add in report
+	    self.append_to_report("Starting workflow with params: {0}".format(params))
+
+In the above method we have used append_to_report workflow method. Once the workflow is launched, the user interactions are limited to some events (stop, relaunch, list of the calculations). So most of the times it is very useful to have custom messages during the execution. Hence, workflow is equipped with a reporting facility ``self.append_to_report(string)``, where the user can fill with any text and can retrieve both live and at the end of the execution.
+
+Now we will add the method to launch the actual calculations. We have already done this as part of plugin exercise and hence not discussed in detail here.
+
+.. code-block:: python
+
+	def get_calculation_sum(self, a, b):
+            """
+            launch new calculation
+            :param a: number
+            :param b: number
+            :return: calculation object
+            """
+            # get code/executable file
+            codename = 'sum@theospc'
+            code = Code.get_from_string(codename)
+
+            # create new calculation
+            calc = code.new_calc()
+            calc.label = "Add numbers"
+            calc.description = "Workflow for adding two numbers"
+            calc.set_max_wallclock_seconds(30*60) # 30 min
+            calc.set_withmpi(False)
+            # Valid only for Slurm and PBS (using default values for the
+            # number_cpus_per_machine), change for SGE-like schedulers
+            calc.set_resources({"num_machines": 1})
+
+            # pass input to the calculation
+            parameters = ParameterData(dict={'x1': a,'x2':b,})
+            calc.use_parameters(parameters)
+
+            # store calculation in database
+            calc.store_all()
+            return calc
+
+Now we will write the first ``step`` which is one of the main components in the workflow. In the below example, the start method is decorated with ``Workflow.step`` making it a very unique kind of method, automatically stored in the database as a container of calculations and sub-workflows.
+
+.. code-block:: python
+
+	@Workflow.step
+        def start(self):
+            """
+            Addition for first two parameters passed to workflow
+            when it was initialised
+            """
+
+            try:
+                self.validate_input()
+            except InputValidationError:
+                self.next(self.exit)
+                return
+
+            # get first parameter passed to workflow when it was initialised.
+            a = self.get_parameter("a")
+            # get second parameter passed to workflow when it was initialised.
+            b = self.get_parameter("b")
+
+            # start first calculation
+            calc = self.get_calculation_sum(a, b)
+
+            # add in report
+            self.append_to_report("First step calculation is done..")
+
+            # attach calculation in workflow to access in next steps
+            self.attach_calculation(calc)
+
+            # go to next step
+            self.next(self.stage2)
+
+Several functions are available to the user when coding a workflow step, and in the above method we have used basic ones discussed below:
+
+``self.get_parameters()`` = with this method we can retrieve the parameters passed to the workflow when it was initialized. Parameters cannot be modified during an execution, while attributes can be added and removed.
+
+``self.attach_calculation(calc)`` = this is a key point in the workflow, and something possible only inside a step method. JobCalculations, generated in the methods or retrieved from other utility methods, are attached to the workflow’s step, launched and executed completely by the daemon, without the need of user interaction. Failures, re-launching and queue management are all handled by the daemon, and thousands of calculations can be attached. The daemon will poll the servers until all the step calculations will be finished, and only after that it will pass to the next step.
+
+``self.next(Workflow.step)`` = this is the final part of a step, where the user points the engine about what to do after all the calculations in the steps (on possible sub-workflows, as we’ll see later) are terminated. The argument of this function has to be a Workflow.step decorated method of the same workflow class, or in case this is the last step to be executed you can use the common method self.exit which is always present in each Workflow subclass.
+
+The above start step calls method ``validate_input()`` to validate the input parameters. When the workflow will be launched through the start method, the AiiDA daemon will load the workflow, execute the step, launch all the calculations and monitor their
+state.
+
+Now we will create a second step to retrieve the addition of first two numbers from the first step and then we will add the third input number. Once all the calculations in the start step will be finished, the daemon will load and execute the next step i.e.
+stage2 shown below:
+
+.. code-block:: python
+
+	@Workflow.step
+        def stage2(self):
+            """
+            Get result from first calculation and add third value passed
+            to workflow when it was initialised
+            """
+            # get third parameter passed to workflow when it was initialised.
+            c = self.get_parameter("c")
+            # get result from first calculation
+            start_calc = self.get_step_calculations(self.start)[0]
+
+            # add in report
+            self.append_to_report("Result of first step calculation is {}".format(
+                start_calc.out.output_data.get_dict()["sum"]))
+
+            # start second calculation
+            result_calc = self.get_calculation_sum(start_calc.out.output_data.get_dict()["sum"], c)
+
+            # add in report
+            self.append_to_report("Second step calculation is done..")
+
+            # attach calculation in workflow to access in next steps
+            self.attach_calculation(result_calc)
+
+            # go to next step
+            self.next(self.stage3)
+
+The new feature used in the above step is:
+
+``self.get_step_calculations(Workflow.step)`` = anywhere after the first step we may need to retrieve and analyze calculations executed in a previous steps. With this method we can have access to the list of calculations of a specific workflows step, passed as an argument.
+
+Now in the last step of the workflow we will retrieve the results from ``stage2`` and exit the workflow by calling ``self.next(self.exit)`` method:
+
+.. code-block:: python
+
+	@Workflow.step
+        def stage3(self):
+            """
+            Get the result from second calculation and add it as final
+            result of this workflow
+            """
+            # get result from second calculation
+            second_calc = self.get_step_calculations(self.stage2)[0]
+
+            # add in report
+            self.append_to_report("Result of second step calculation is {}".format(
+                second_calc.out.output_data.get_dict()["sum"]))
+
+            # add workflow result
+            self.add_result('value',second_calc.out.output_data.get_dict()["sum"])
+
+            # add in report
+            self.append_to_report("Added value in workflow result")
+
+            # Exit workflow
+            self.next(self.exit)
+
+The new features used in the above step are:
+
+``self.add_result()`` = When all the calculations are done it’s useful to tag some of them as results, using custom string to be later searched and retrieved. Similarly to the ``get_step_calculations``, this method works on the entire workflow and not on a single step.
+
+``self.next(self.exit)`` = This is the final part of each workflow, setting the exit. Every workflow inheritate a fictitious step called exit that can be set as a next to any step. As the names suggest, this implies the workflow execution to finish correctly.
+
+
+Running a workflow
++++++++++++++++++++
+
+
+After saving the workflow inside a python file (i.e. ``addnumbers.py`) located in the ``aiida/workflows`` directory, we can launch the workflow simply invoking the specific workflow class and executing the ``start()`` method inside the Verdi shell. It’s important
+to remember that all the AiiDA framework needs to be accessible for the workflow to be launched, and this can be achieved either with the verdi shell or by any other python environment that has previously loaded the AiiDA framework (see the developer manual for this).
+
+To launch the verdi shell execute ``verdi shell`` from the command line; once inside the shell we have to import the workflow class we want to launch (this command depends on the file location and the class name we decided). In this case we’ll launch the
+AddnumbersWorkflow presented before, located in the ``addnumbers.py`` file.
+
+In the shell we execute:
+
+.. code-block:: python
+
+	AddnumbersWorkflow = WorkflowFactory("addnumbers")
+	params = {"a":2, "b": 1.4, "c": 1}
+	wobject = AddnumbersWorkflow(params=params)
+	wobject.store()
+	wobject.start()
+
+In the above example we initialized the workflow with input parameters as a dictionary. We launched the workflow using ``start()`` method, a lazy command that in the background adds the workflow to the execution queue monitored by the verdi daemon. In the background the daemon will handle all the workflow process, stepping each method, launching and retrieving calculations and monitoring possible errors and problems.
+
+As the workflow is now managed by the daemon, to interact with it we need special methods. There are basically two ways to see how the workflows are running: by printing the workflow ``list`` or its ``report``.
+
+* **Workflow list**
+
+  From the command line we run::
+
+  >> verdi workflow list
+
+  This will list all the running workflows, showing the state of each step 
+  and each calculation (and, when present, each sub-workflow - see below). It
+  is the fastest way to have a snapshot of 
+  what your AiiDA workflow daemon is working on. An example output
+  right after the AddnumbersWorkflow submission should be:
+
+  .. code-block:: python
+  
+    + Workflow AddnumbersWorkflow (pk: 76) is RUNNING [0h:00m:14s ago]
+    |-* Step: start [->stage2] is RUNNING
+    | | Calculation ('Number sum', pk: 739) is TOSUBMIT
+    |
+
+  For each workflow is reported the ``pk`` number, a unique 
+  id identifying that specific execution of the workflow, something
+  necessary to retrieve it at any other time in the future (as explained in the
+  next point).
+  
+  .. note::
+    You can also print the ``list`` of any individual workflow from the verdi
+    shell (here in the shell where you defined your workflow as ``wobject``, see above)::
+  
+    >> import aiida.orm.workflow as wfs
+    >> print "\n".join(wfs.get_workflow_info(wobject._dbworkflowinstance))
+
+* **Workflow report** 
+
+  As explained, each workflow is equipped with a reporting facility the user can
+  use to log any important intermediate information, useful to debug the state 
+  or show some details. Moreover the report is also used by AiiDA as an error 
+  reporting tool: in case of errors encountered during the execution, the AiiDA 
+  daemon will copy the entire stack trace in the workflow report before
+  halting it's execution.
+  To access the report we need the specific ``pk`` of the workflow. From the 
+  command line we would run::
+  
+   >> verdi workflow report PK_NUMBER
+
+  while from the verdi shell the same operation requires to use the ``get_report()`` method::
+  
+   >> load_workflow(PK_NUMBER).get_report()
+   
+  In both variants, PK_NUMBER is the ``pk`` number of the workflow we want
+  the report of. The ``load_workflow`` function loads a Workflow instance from
+  its ``pk`` number, or from its ``uuid`` (given as a string).
+
+  Once launched, the workflows will be handled by the daemon until the final step 
+  or until some error occurs. In the last case, the workflow gets halted and the report 
+  can be checked to understand what happened.
+
+|
+* **Workflow result**
+
+  As explained, when all the calculations are done it’s useful to tag some of 
+  them as results, using custom string to be later searched and retrieved. This 
+  method works on the entire workflow and not on a single step.
+
+  To access the results we need the specific ``pk`` of the workflow. From the 
+  command line we would run::
+  
+   >> verdi workflow report PK_NUMBER
+
+  while from the verdi shell the same operation requires to use the ``get_report()`` method::
+  
+   >> load_workflow(PK_NUMBER).get_results()
+   
+  In both variants, PK_NUMBER is the ``pk`` number of the workflow we want
+  the report of. The ``load_workflow`` function loads a Workflow instance from
+  its ``pk`` number, or from its ``uuid`` (given as a string).
+
+|
+* **Killing a workflow** 
+
+  A user can also kill a workflow while it's running. This can be done with 
+  the following verdi command::
+
+     >> verdi workflow kill PK_NUMBER_1 PK_NUMBER_2 PK_NUMBER_N
+  
+  where several ``pk`` numbers can be given. A prompt will ask for a confirmation;
+  this can be avoided by using the ``-f`` option.
+  
+  An alternative way to kill an individual workflow is to use the ``kill`` method.
+  In the verdi shell type:: 
+
+     >> load_workflow(PK_NUMBER).kill()
+
+  or, equivalently::
+
+     >> Workflow.get_subclass_from_pk(PK_NUMBER).kill()
+
+
+Exercise
++++++++++
+
+In the exercise you have to write a workflow for the addition of FloatData data type using plugins developed in ``Developer code plugin tutorial`` exercise.
+
+For this workflow use:
+
+* Input parameters: 
+	params = {“w1”: {“a”: 2, “b”: 2.1, “c”: 1}, “w2”: {“a”: 2, “b”: 2.1, “c”: 4}}
+
+* start step: 
+        Use two sub workflows for the addition of three FloatData
+    	- Sub workflow with input w1 and calculate its sum (temp_result1)
+     	- Sub workflow with input w2 and calculate its sum (intermediate_result2)
+
+* stage2 step:
+	final_result = temp_result1 + temp_result2
+
+* stage3 step: 
+	Add results in workflow and exit the workflow.
+
+
+
+
+
+

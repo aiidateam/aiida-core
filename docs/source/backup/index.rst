@@ -245,8 +245,10 @@ This will ask a set of questions. More precisely, it will initially ask for:
   ``sshfs -o idmap=user -o rw backup_user@server_2:/home/backup_user/backup_destination_dir/``
   ``/home/aiida_user/remote_backup_dir/``
   
-  You can put this line into your .bashrc (in your home directory) so that the 
-  remote directory is mounted automatically after a reboot. 
+  You can put this line into the actions performed at start-up, so that the 
+  remote directory is mounted automatically after a reboot (but do not put it in 
+  your ``.bashrc`` file otherwise each time you open a new terminal, your 
+  computer will complain that the mount point is not empty...). 
 
 
 A template backup configuration file (``backup_info.json.tmpl``) will be copied

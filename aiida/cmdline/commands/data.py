@@ -704,7 +704,7 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
             print e
 
 
-class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable):
+class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable):
     """
     Manipulation on the bands
     """
@@ -719,6 +719,7 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable):
         self.valid_subcommands = {
             'show': (self.show, self.complete_none),
             'list': (self.list, self.complete_none),
+            'export': (self.export, self.complete_none),
         }
 
     def query(self, args):
@@ -897,9 +898,33 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable):
         """
         return ["ID", "formula", "ctime", "label"]
 
+    def _export_xmgrace(self, node):
+        """
+        Export a .agr file, to be visualized with the XMGrace plotting software.
+        """
+        agrtext = node._exportstring('agr')
+        print agrtext
+
+    def _export_dat_multicolumn(self, node):
+        """
+        Export a .dat file with one line per kpoint, with multiple energy values
+        on the same line separated by spaces.
+        """
+        agrtext = node._exportstring('dat_1')
+        print agrtext
+
+    def _export_dat_blocks(self, node):
+        """
+        Export a .dat file with one line per datapoint (kpt, energy), 
+        with multiple bands separated in stanzas (i.e. having at least an empty
+        newline inbetween).
+        """
+        agrtext = node._exportstring('dat_2')
+        print agrtext
+
     def _show_xmgrace(self, exec_name, list_bands):
         """
-        Plugin for xmgrace
+        Plugin for show the bands with the XMGrace plotting software.
         """
         import tempfile, subprocess, numpy
         from aiida.orm.data.array.bands import max_num_agr_colors

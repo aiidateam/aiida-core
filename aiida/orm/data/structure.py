@@ -117,6 +117,17 @@ def get_pymatgen_version():
     return pymatgen.__version__
 
 
+def has_pyspglib():
+    """
+    :return: True if the pyspglib module can be imported, False otherwise.
+    """
+    try:
+        import pyspglib
+    except ImportError:
+        return False
+    return True
+
+
 def calc_cell_volume(cell):
     """
     Calculates the volume of a cell given the three lattice vectors.
@@ -733,12 +744,13 @@ class StructureData(Data):
         """
         Load the structure from a pymatgen Structure object.
 
+        .. note:: periodic boundary conditions are set to True in all
+            three directions.
         .. note:: Requires the pymatgen module (version >= 3.0.13, usage
             of earlier versions may cause errors).
         """
         self.cell = struct.lattice.matrix.tolist()
-        self.pbc = [True, True, True]  # setting defaults, not sure if this
-        # is a correct way to do so
+        self.pbc = [True, True, True]
         self.clear_kinds()
         for site in struct.sites:
             self.append_atom(symbols=[x[0].symbol for x in site.items()],

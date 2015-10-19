@@ -1,0 +1,1 @@
+{"retrieve_list": ["aiida.out", "aiida.err", "_scheduler-stdout.txt", "_scheduler-stderr.txt"], "remote_copy_list": [], "local_copy_list": [], "stdout_name": "aiida.out", "stderr_name": "aiida.err", "cmdline_params": ["aiida.in"], "retrieve_singlefile_list": [], "uuid": "c6708b15-0590-401c-9e52-030ca2b10261"}

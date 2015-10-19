@@ -21,3 +21,9 @@ Daemon
 .. automodule:: aiida.cmdline.commands.daemon
    :special-members: __init__
    :members:
+
+Data
+++++
+.. automodule:: aiida.cmdline.commands.data
+   :special-members: __init__
+   :members:

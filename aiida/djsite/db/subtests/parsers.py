@@ -69,9 +69,9 @@ def output_test(pk, testname, skip_uuids_from_inputs=[]):
     import json
     import string
 
-    from aiida.orm import JobCalculation
     from aiida.common.folders import Folder
-    from aiida.cmdline.commands.exportfile import export_tree
+    from aiida.orm import JobCalculation
+    from aiida.orm.importexport import export_tree
     
     c = JobCalculation.get_subclass_from_pk(pk)
     outfolder = "test_{}_{}".format(
@@ -123,14 +123,15 @@ def read_test(outfolder):
         database.
     """
     import os
+    import importlib
     import json
 
-    from aiida.orm import JobCalculation,load_node
     from aiida.common.exceptions import NotExistent
-    from aiida.cmdline.commands.importfile import import_data
+    from aiida.orm import JobCalculation, load_node
+    from aiida.orm.importexport import import_data
 
     imported = import_data(outfolder,
-                           ignore_unknown_nodes=True,silent=True)
+                           ignore_unknown_nodes=True, silent=True)
 
     calc = None
     for _,pk in imported['aiida.djsite.db.models.DbNode']['new']:
@@ -149,7 +150,19 @@ def read_test(outfolder):
     except ValueError:
         raise ValueError("This test does provide a check file, but it cannot "
                          "be JSON-decoded!")
-    
+
+    mod_path = 'aiida.djsite.db.subtests.parser_tests.{}'.format(os.path.split(outfolder)[1])
+
+    skip_test = False
+    try:
+        m = importlib.import_module(mod_path)
+        skip_test = m.skip_condition()
+    except Exception:
+        pass
+
+    if skip_test:
+        raise SkipTestException
+
     return calc, {'retrieved': retrieved}, tests
 
 
@@ -186,7 +199,10 @@ class TestParsers(AiidaTestCase):
         from inspect import isfunction
         
         def base_test(self):
-            calc, retrieved_nodes, tests = read_test(folder)
+            try:
+                calc, retrieved_nodes, tests = read_test(folder)
+            except SkipTestException:
+                return None
             Parser = calc.get_parserclass()
             if Parser is None:
                 raise NotImplementedError
@@ -272,3 +288,7 @@ class TestParsers(AiidaTestCase):
                             newcls.return_base_test(absf))
 
             return newcls
+
+
+class SkipTestException(Exception):
+    pass

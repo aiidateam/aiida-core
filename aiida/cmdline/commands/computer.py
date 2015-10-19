@@ -153,6 +153,7 @@ class Computer(VerdiCommandWithSubcommands):
         """
         import argparse
 
+        load_dbenv()
         from aiida.orm.computer import Computer as AiiDAOrmComputer
         from aiida.djsite.utils import get_automatic_user
 

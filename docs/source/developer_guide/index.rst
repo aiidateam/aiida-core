@@ -11,6 +11,7 @@ Developer's guide
    parsertests
    workflows
    dev_workflow
+   dev_data_cmdline
 
    data_cmdline
    git_cheatsheet

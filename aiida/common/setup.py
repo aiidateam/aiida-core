@@ -346,7 +346,7 @@ def create_base_dirs():
     create_htaccess_file()
 
 
-def set_default_profile(process, profile):
+def set_default_profile(process, profile, force_rewrite = False):
     """
     Set a default db profile to be used by a process (default for verdi, 
     default for daemon, ...)
@@ -362,8 +362,12 @@ def set_default_profile(process, profile):
         confs['default_profiles']
     except KeyError:
         confs['default_profiles'] = {}
-
-    confs['default_profiles'][process] = profile
+        
+    if force_rewrite:
+        confs['default_profiles'][process] = profile
+    else:
+        confs['default_profiles'][process] = confs['default_profiles'].get(
+                                                                process,profile)
     backup_config()
     store_config(confs)
 

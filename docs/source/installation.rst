@@ -394,6 +394,15 @@ different from ``aiida@localhost``.
 If something fails, there is a high chance that you may have misconfigured
 the database. Double-check your settings before reporting an error.
 
+.. note:: The repository will contain the same number of folders
+  as the number of nodes plus the number of workflows. For very large databases,
+  some operations on the repository folder, such as rsync or scanning its content,
+  might be very slow, and if they are performed reguarly this will slow down 
+  the computer due to an intensive use of the hard drive. 
+  Check out our :ref:`tips<repo_troubleshooting>` in the 
+  troubeshooting section in case this happens.
+   
+
 Start the daemon
 -----------------
 If you configured your user account with your personal email (or if in

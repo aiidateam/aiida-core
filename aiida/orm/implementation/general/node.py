@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
+from abc import ABCMeta, abstractmethod
 
 import os
 import logging
 import collections
-
-
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      UniquenessError)
 from aiida.common.folders import SandboxFolder
@@ -34,14 +33,14 @@ class AbstractNode(object):
     the 'type' field.
     """
 
-    class __metaclass__(type):
+    class __metaclass__(ABCMeta):
         """
         Some python black magic to set correctly the logger also in subclasses.
         """
 
         def __new__(cls, name, bases, attrs):
 
-            newcls = type.__new__(cls, name, bases, attrs)
+            newcls = ABCMeta.__new__(cls, name, bases, attrs)
             newcls._logger = logging.getLogger(
                 '{:s}.{:s}'.format(attrs['__module__'], name))
 
@@ -100,6 +99,7 @@ class AbstractNode(object):
         return self._logger
 
     @classmethod
+    @abstractmethod
     def get_subclass_from_uuid(cls, uuid):
         """
         Get a node object from the uuid, with the proper subclass of Node.
@@ -110,9 +110,10 @@ class AbstractNode(object):
         :raise: NotExistent: if there is no entry of the desired
                              object kind with the given uuid.
         """
-        raise NotImplementedError
+        pass
 
     @classmethod
+    @abstractmethod
     def get_subclass_from_pk(cls, pk):
         """
         Get a node object from the pk, with the proper subclass of Node.
@@ -124,22 +125,25 @@ class AbstractNode(object):
         :raise: NotExistent: if there is no entry of the desired
                              object kind with the given pk.
         """
-        raise NotImplementedError
+        pass
 
     @property
+    @abstractmethod
     def ctime(self):
         """
         Return the creation time of the node.
         """
-        raise NotImplementedError
+        pass
 
     @property
+    @abstractmethod
     def mtime(self):
         """
         Return the modification time of the node.
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def __int__(self):
         """
         Convert the class to an integer. This is needed to allow querying
@@ -148,8 +152,9 @@ class AbstractNode(object):
 
         :return: the integer pk of the node or None if not stored.
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def __init__(self, **kwargs):
         """
         Initialize the object Node.
@@ -158,7 +163,7 @@ class AbstractNode(object):
           loaded from the database.
           (It is not possible to assign a uuid to a new Node.)
         """
-        raise NotImplementedError
+        pass
 
     @property
     def _is_stored(self):
@@ -195,6 +200,7 @@ class AbstractNode(object):
         return {}
 
     @classmethod
+    @abstractmethod
     def query(cls, *args, **kwargs):
         """
         Map to the aiidaobjects manager of the DbNode, that returns
@@ -206,9 +212,10 @@ class AbstractNode(object):
         #       In the future, fix it either to make a cache and to store the
         #       full dependency tree, or save also the path.
         """
-        raise NotImplementedError
+        pass
 
     @property
+    @abstractmethod
     def computer(self):
         """
         Get the Computer associated to this node, or None if no computer
@@ -216,7 +223,7 @@ class AbstractNode(object):
 
         :return: a computer object
         """
-        raise NotImplementedError
+        pass
 
     def _set_with_defaults(self, **kwargs):
         """
@@ -295,46 +302,52 @@ class AbstractNode(object):
 
 
     @property
+    @abstractmethod
     def label(self):
         """
         Get the label of the node.
 
         :return: a string.
         """
-        raise NotImplementedError
+        pass
 
     @label.setter
+    @abstractmethod
     def label(self, label):
         """
         Set the label of the node.
 
         :param label: a string
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def _update_db_label_field(self, field_value):
-        raise NotImplementedError
+        pass
 
     @property
+    @abstractmethod
     def description(self):
         """
         Get the description of the node.
 
         :return: a string
         """
-        raise NotImplementedError
+        pass
 
     @description.setter
+    @abstractmethod
     def description(self, desc):
         """
         Set the description of the node
 
         :param desc: a string
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def _update_db_description_field(self, field_value):
-        raise NotImplementedError
+        pass
 
     def _validate(self):
         """
@@ -351,13 +364,14 @@ class AbstractNode(object):
         """
         return True
 
+    @abstractmethod
     def get_user(self):
         """
         Get the user.
 
         :return: a Django DbUser model object
         """
-        raise NotImplementedError
+        pass
 
     def _has_cached_links(self):
         """
@@ -474,6 +488,7 @@ class AbstractNode(object):
         if not self._to_be_stored:
             self._remove_dblink_from(label)
 
+    @abstractmethod
     def _replace_dblink_from(self, src, label):
         """
         Replace an input link with the given label, or simply creates it
@@ -485,8 +500,9 @@ class AbstractNode(object):
         :param str src: the source object.
         :param str label: the label of the link from src to the current Node
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def _remove_dblink_from(self, label):
         """
         Remove from the DB the input link with the given label.
@@ -498,8 +514,9 @@ class AbstractNode(object):
 
         :param str label: the label of the link from src to the current Node
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def _add_dblink_from(self, src, label=None):
         """
         Add a link to the current node from the 'src' node.
@@ -512,7 +529,7 @@ class AbstractNode(object):
         :param str label: the name of the label to set the link from src.
                     Default = None.
         """
-        raise NotImplementedError
+        pass
 
     def _can_link_as_output(self, dest):
         """
@@ -580,6 +597,7 @@ class AbstractNode(object):
         return dict(self.get_inputs(type=Data, also_labels=True,
                                     only_in_db=only_in_db))
 
+    @abstractmethod
     def get_inputs(self, type=None, also_labels=False, only_in_db=False):
         """
         Return a list of nodes that enter (directly) in this node
@@ -594,8 +612,9 @@ class AbstractNode(object):
                 ignoring those that are in the local cache. Otherwise, return
                 all links.
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def get_outputs(self, type=None, also_labels=False):
         """
         Return a list of nodes that exit (directly) from this node
@@ -607,16 +626,18 @@ class AbstractNode(object):
                 following format: ('label', Node), with 'label' the link label,
                 and Node a Node instance or subclass
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def get_computer(self):
         """
         Get the computer associated to the node.
 
         :return: the Computer object or None.
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def set_computer(self, computer):
         """
         Set the computer to be used by the node.
@@ -628,8 +649,9 @@ class AbstractNode(object):
         """
         # TODO: probably this method should be in the base class, and
         #      check for the type
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def _set_attr(self, key, value):
         """
         Set a new attribute to the Node (in the DbAttribute table).
@@ -643,8 +665,9 @@ class AbstractNode(object):
         :raise ValidationError: if the key is not valid (e.g. it contains the
             separator symbol).
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def _del_attr(self, key):
         """
         Delete an attribute.
@@ -653,7 +676,7 @@ class AbstractNode(object):
         :raise AttributeError: if key does not exist.
         :raise ModificationNotAllowed: if the Node was already stored.
         """
-        raise NotImplementedError
+        pass
 
     def _del_all_attrs(self):
         """
@@ -666,6 +689,7 @@ class AbstractNode(object):
         for attr_name in list(self.attrs()):
             self._del_attr(attr_name)
 
+    @abstractmethod
     def get_attr(self, key, *args):
         """
         Get the attribute.
@@ -678,8 +702,9 @@ class AbstractNode(object):
         :raise IndexError: If no attribute is found and there is no default
         :raise ValueError: If more than two arguments are passed to get_attr
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def set_extra(self, key, value):
         """
         Immediately sets an extra of a calculation, in the DB!
@@ -689,8 +714,9 @@ class AbstractNode(object):
         :param string key: key name
         :param value: key value
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def set_extra_exclusive(self, key, value):
         """
         Immediately sets an extra of a calculation, in the DB!
@@ -704,7 +730,7 @@ class AbstractNode(object):
         :param value: key value
         :raise UniquenessError: if the extra already exists.
         """
-        raise NotImplementedError
+        pass
 
 
     def set_extras(self, the_dict):
@@ -722,6 +748,7 @@ class AbstractNode(object):
         except AttributeError:
             raise AttributeError("set_extras takes a dictionary as argument")
 
+    @abstractmethod
     def get_extra(self, key, *args):
         """
         Get the value of a extras, reading directly from the DB!
@@ -735,8 +762,9 @@ class AbstractNode(object):
 
         :raise ValueError: If more than two arguments are passed to get_extra
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def get_extras(self):
         """
         Get the value of extras, reading directly from the DB!
@@ -746,8 +774,9 @@ class AbstractNode(object):
         :return: the dictionary of extras ({} if no extras)
         """
 
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def del_extra(self, key):
         """
         Delete a extra, acting directly on the DB!
@@ -759,24 +788,27 @@ class AbstractNode(object):
         :raise: AttributeError: if key starts with underscore
         :raise: ModificationNotAllowed: if the node is not stored yet
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def extras(self):
         """
         Get the keys of the extras.
 
         :return: a list of strings
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def iterextras(self):
         """
         Iterator over the extras, returning tuples (key, value)
 
         :todo: verify that I am not creating a list internally
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def iterattrs(self, also_updatable=True):
         """
         Iterator over the attributes, returning tuples (key, value)
@@ -788,8 +820,9 @@ class AbstractNode(object):
         :param bool also_updatable: if False, does not iterate over
             attributes that are updatable
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def attrs(self):
         """
         Returns the keys of the attributes.
@@ -799,16 +832,18 @@ class AbstractNode(object):
         # Note: I "duplicate" the code from iterattrs, rather than
         # calling iterattrs from here, because iterattrs is slow on each call
         # since it has to call .getvalue(). To improve!
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def add_comment(self, content, user=None):
         """
         Add a new comment.
 
         :param content: string with comment
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def get_comments(self, pk=None):
         """
         Return a sorted list of comment values, one for each comment associated
@@ -819,8 +854,9 @@ class AbstractNode(object):
         :return: the list of comments, sorted by pk; each element of the
             list is a dictionary, containing (pk, email, ctime, mtime, content)
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def _get_dbcomments(self, pk=None):
         """
         Return a sorted list of DbComment associated with the Node.
@@ -828,20 +864,23 @@ class AbstractNode(object):
                    comment values with desired pks. (pk refers to DbComment.pk)
         :return: the list of DbComment, sorted by pk.
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def _update_comment(self, new_field, comment_pk, user):
         """
         Function called by verdi comment update
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def _remove_comment(self, comment_pk, user):
         """
         Function called by verdi comment remove
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def _increment_version_number_db(self):
         """
         This function increments the version number in the DB.
@@ -852,8 +891,9 @@ class AbstractNode(object):
             two different threads are adding/changing an attribute concurrently,
             the version number would be incremented only once.
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def copy(self):
         """
         Return a copy of the current object to work with, not stored yet.
@@ -866,24 +906,27 @@ class AbstractNode(object):
 
         :return: an object copy
         """
-        raise NotImplementedError
+        pass
 
     @property
+    @abstractmethod
     def uuid(self):
         """
         :return: a string with the uuid
         """
-        raise NotImplementedError
+        pass
 
     @property
+    @abstractmethod
     def pk(self):
         """
         :return: the principal key (the ID) as an integer, or None if the
            node was not stored yet
         """
-        raise NotImplementedError
+        pass
 
     @property
+    @abstractmethod
     def dbnode(self):
         """
         :return: the corresponding DbNode object.
@@ -892,7 +935,7 @@ class AbstractNode(object):
         # from aiida.backends.djsite.db.models import DbNode
         #        if not self._to_be_stored:
         #            self._dbnode = DbNode.objects.get(pk=self._dbnode.pk)
-        raise NotImplementedError
+        pass
 
     @property
     def _repository_folder(self):
@@ -1013,6 +1056,7 @@ class AbstractNode(object):
         return self.folder.get_subfolder(section,
                                          reset_limit=True).get_abs_path(path, check_existence=True)
 
+    @abstractmethod
     def store_all(self, with_transaction=True):
         """
         Store the node, together with all input links, if cached, and also the
@@ -1022,8 +1066,9 @@ class AbstractNode(object):
           is meant to be used ONLY if the outer calling function has already
           a transaction open!
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def _store_input_nodes(self):
         """
         Find all input nodes, and store them, checking that they do not
@@ -1032,8 +1077,9 @@ class AbstractNode(object):
         :note: this function stores all nodes without transactions; always
           call it from within a transaction!
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def _check_are_parents_stored(self):
         """
         Check if all parents are already stored, otherwise raise.
@@ -1042,9 +1088,9 @@ class AbstractNode(object):
           stored.
         """
         # Preliminary check to verify that inputs are stored already
-        raise NotImplementedError
+        pass
 
-
+    @abstractmethod
     def _store_cached_input_links(self, with_transaction=True):
         """
         Store all input links that are in the local cache, transferring them
@@ -1065,8 +1111,9 @@ class AbstractNode(object):
           is meant to be used ONLY if the outer calling function has already
           a transaction open!
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def store(self, with_transaction=True):
         """
         Store a new node in the DB, also saving its repository directory
@@ -1086,7 +1133,7 @@ class AbstractNode(object):
         """
         # TODO: This needs to be generalized, allowing for flexible methods
         # for storing data and its attributes.
-        raise NotImplementedError
+        pass
 
     def __del__(self):
         """
@@ -1120,22 +1167,24 @@ class AbstractNode(object):
         return NodeInputManager(self)
 
     @property
+    @abstractmethod
     def has_children(self):
         """
         Property to understand if children are attached to the node
         :return: a boolean
         """
         # use the transitive closure
-        raise NotImplementedError
+        pass
 
     @property
+    @abstractmethod
     def has_parents(self):
         """
         Property to understand if parents are attached to the node
         :return: a boolean
         """
         # use the transitive closure
-        raise NotImplementedError
+        pass
 
 
 # TODO SP: abstract this

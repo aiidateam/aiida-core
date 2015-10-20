@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from abc import abstractmethod, abstractproperty
 
 import logging
 import collections
@@ -149,22 +150,23 @@ class AbstractComputer(object):
         """
         return self.pk
 
-    @property
+    @abstractproperty
     def uuid(self):
         """
         Return the UUID in the DB.
         """
-        raise NotImplementedError
+        pass
 
-    @property
+    @abstractproperty
     def pk(self):
         """
         Return the principal key in the DB.
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def __init__(self, **kwargs):
-        raise NotImplementedError
+        pass
 
     def set(self, **kwargs):
 
@@ -180,30 +182,32 @@ class AbstractComputer(object):
             method(v)
 
     @classmethod
+    @abstractmethod
     def list_names(cls):
         """
         Return a list with all the names of the computers in the DB.
         """
-        raise NotImplementedError
+        pass
 
-    @property
+    @abstractproperty
     def full_text_info(self):
         """
         Return a (multiline) string with a human-readable detailed information
         on this computer.
         """
-        raise NotImplementedError
+        pass
 
-    @property
+    @abstractproperty
     def to_be_stored(self):
-        raise NotImplementedError
+        pass
 
     @classmethod
+    @abstractmethod
     def get(cls, computer):
         """
         Return a computer from its name (or from another Computer or DbComputer instance)
         """
-        raise NotImplementedError
+        pass
 
     @property
     def logger(self):
@@ -533,17 +537,18 @@ class AbstractComputer(object):
         # To be called AFTER the validation of the scheduler
         self._mpirun_command_validator(mpirun_cmd)
 
-
+    @abstractmethod
     def copy(self):
         """
         Return a copy of the current object to work with, not stored yet.
         """
-        raise NotImplementedError
+        pass
 
-    @property
+    @abstractproperty
     def dbcomputer(self):
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def store(self):
         """
         Store the computer in the DB.
@@ -551,23 +556,25 @@ class AbstractComputer(object):
         Differently from Nodes, a computer can be re-stored if its properties
         are to be changed (e.g. a new mpirun command, etc.)
         """
-        raise NotImplementedError
+        pass
 
-    @property
+    @abstractproperty
     def name(self):
-        raise NotImplementedError
+        pass
 
-    @property
+    @abstractproperty
     def description(self):
-        raise NotImplementedError
+        pass
 
-    @property
+    @abstractproperty
     def hostname(self):
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def _get_metadata(self):
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def _set_metadata(self, metadata_dict):
         """
         Set the metadata.
@@ -576,7 +583,7 @@ class AbstractComputer(object):
            data to the database! (The store method can be called multiple
            times, differently from AiiDA Node objects).
         """
-        raise NotImplementedError
+        pass
 
 
     def _del_property(self, k, raise_exception=True):
@@ -660,14 +667,17 @@ class AbstractComputer(object):
                 raise TypeError("def_cpus_per_machine must be an integer (or None)")
         self._set_property("default_mpiprocs_per_machine", def_cpus_per_machine)
 
+    @abstractmethod
     def get_transport_params(self):
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def set_transport_params(self, val):
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def get_workdir(self):
-        raise NotImplementedError
+        pass
 
     def set_workdir(self, val):
         # if self.to_be_stored:
@@ -677,27 +687,34 @@ class AbstractComputer(object):
         #else:
         #    raise ModificationNotAllowed("Cannot set a property after having stored the entry")
 
+    @abstractmethod
     def get_name(self):
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def set_name(self, val):
-        raise NotImplementedError
+        pass
 
     def get_hostname(self):
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def set_hostname(self, val):
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def get_description(self):
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def set_description(self, val):
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def is_enabled(self):
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def get_dbauthinfo(self, user):
         """
         Return the aiida.backends.djsite.db.models.DbAuthInfo instance for the
@@ -709,8 +726,9 @@ class AbstractComputer(object):
         :raise NotExistent: if the computer is not configured for the given
             user.
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def is_user_configured(self, user):
         """
         Return True if the computer is configured for the given user,
@@ -719,8 +737,9 @@ class AbstractComputer(object):
         :param user: a DbUser instance.
         :return: a boolean.
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def is_user_enabled(self, user):
         """
         Return True if the computer is enabled for the given user (looking only
@@ -731,23 +750,28 @@ class AbstractComputer(object):
         :param user: a DbUser instance.
         :return: a boolean.
         """
-        raise NotImplementedError
+        pass
 
 
+    @abstractmethod
     def set_enabled_state(self, enabled):
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def get_scheduler_type(self):
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def set_scheduler_type(self, val):
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def get_transport_type(self):
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def set_transport_type(self, val):
-        raise NotImplementedError
+        pass
 
     def get_transport_class(self):
         try:

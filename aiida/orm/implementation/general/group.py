@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from abc import ABCMeta, abstractmethod, abstractproperty
+
 from aiida.common.exceptions import UniquenessError, NotExistent, MultipleObjectsError
 
 from aiida.orm.data.upf import UPFGROUP_TYPE
@@ -31,6 +33,10 @@ class AbstractGroup(object):
     An AiiDA ORM implementation of group of nodes.
     """
 
+
+    __metaclass__ = ABCMeta
+
+    @abstractmethod
     def __init__(self, **kwargs):
         """
         Create a new group. Either pass a dbgroup parameter, to reload
@@ -45,66 +51,67 @@ class AbstractGroup(object):
         :param type_string: a string identifying the type of group (by default,
            an empty string, indicating an user-defined group.
         """
-        raise NotImplementedError
+        pass
 
-    @property
+    @abstractproperty
     def name(self):
         """
         :return: the name of the group as a string
         """
-        raise NotImplementedError
+        pass
 
-    @property
+    @abstractproperty
     def description(self):
         """
         :return: the description of the group as a string
         """
-        raise NotImplementedError
+        pass
 
     @description.setter
+    @abstractmethod
     def description(self, value):
         """
         :return: the description of the group as a string
         """
-        raise NotImplementedError
+        pass
 
 
-    @property
+    @abstractproperty
     def type_string(self):
         """
         :return: the string defining the type of the group
         """
-        raise NotImplementedError
+        pass
 
-    @property
+    @abstractproperty
     def user(self):
         """
         :return: a Django DbUser object, representing the user associated to
           this group.
         """
-        raise NotImplementedError
+        pass
 
-    @property
+    @abstractproperty
     def dbgroup(self):
         """
         :return: the corresponding Django DbGroup object.
         """
-        raise NotImplementedError
+        pass
 
-    @property
+    @abstractproperty
     def pk(self):
         """
         :return: the principal key (the ID) as an integer, or None if the
            node was not stored yet
         """
-        raise NotImplementedError
+        pass
 
-    @property
+    @abstractproperty
     def uuid(self):
         """
         :return: a string with the uuid
         """
-        raise NotImplementedError
+        pass
 
     @classmethod
     def get_or_create(cls, *args, **kwargs):
@@ -122,6 +129,7 @@ class AbstractGroup(object):
             group = cls.get(*args, **kwargs)
             return (group, False)
 
+    @abstractmethod
     def __int__(self):
         """
         Convert the class to an integer. This is needed to allow querying
@@ -130,19 +138,21 @@ class AbstractGroup(object):
 
         :return: the integer pk of the node or None if not stored.
         """
-        raise NotImplementedError
+        pass
 
-    @property
+    @abstractproperty
     def _is_stored(self):
         """
         :return: True if the respective DbNode has been already saved in the
           DB, False otherwise
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def store(self):
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def add_nodes(self, nodes):
         """
         Add a node or a set of nodes to the group.
@@ -154,17 +164,18 @@ class AbstractGroup(object):
         :param nodes: a Node or DbNode object to add to the group, or
           a list of Nodes or DbNodes to add.
         """
-        raise NotImplementedError
+        pass
 
-    @property
+    @abstractproperty
     def nodes(self):
         """
         Return a generator/iterator that iterates over all nodes and returns
         the respective AiiDA subclasses of Node, and also allows to ask for
         the number of nodes in the group using len().
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def remove_nodes(self, nodes):
         """
         Remove a node or a set of nodes to the group.
@@ -176,10 +187,11 @@ class AbstractGroup(object):
         :param nodes: a Node or DbNode object to add to the group, or
           a list of Nodes or DbNodes to add.
         """
-        raise NotImplementedError
+        pass
 
 
     @classmethod
+    @abstractmethod
     def query(cls, name=None, type_string="", pk = None, uuid=None, nodes=None,
               user=None, node_attributes=None, past_days=None, **kwargs):
         """
@@ -216,7 +228,7 @@ class AbstractGroup(object):
              with md5sum = 'xxx', and moreover contain at least one node for
              element 'Ba' and one node for element 'Ti'.
         """
-        raise NotImplementedError
+        pass
 
     @classmethod
     def get(cls, *args, **kwargs):
@@ -281,11 +293,12 @@ class AbstractGroup(object):
         """
         return not self.type_string
 
+    @abstractmethod
     def delete(self):
         """
         Delete the group from the DB
         """
-        raise NotImplementedError
+        pass
 
     def __repr__(self):
         return '<{}: {}>'.format(self.__class__.__name__, str(self))

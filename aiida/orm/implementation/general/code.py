@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 import os
 
+from abc import abstractmethod
+
 from aiida.orm.implementation import Node
 
 from aiida.common.exceptions import (ValidationError, MissingPluginError)
@@ -85,6 +87,7 @@ class AbstractCode(Node):
                                                              computer_str, self.pk, self.uuid)
 
     @classmethod
+    @abstractmethod
     def get(cls, label, computername=None, useremail=None):
         """
         Get a code from its label.
@@ -99,9 +102,10 @@ class AbstractCode(Node):
           you may want to pass the additional parameters to filter the codes,
           or relabel the codes.
         """
-        raise NotImplementedError
+        pass
 
     @classmethod
+    @abstractmethod
     def get_from_string(cls, code_string):
         """
         Get a Computer object with given identifier string, that can either be
@@ -128,9 +132,10 @@ class AbstractCode(Node):
         #     codes = cls.query(label=codename, dbcomputer__name=computername)
         # else:
         #     codes = cls.query(label=codename)
-        raise NotImplementedError
+        pass
 
     @classmethod
+    @abstractmethod
     def list_for_plugin(cls, plugin, labels=True):
         """
         Return a list of valid code strings for a given plugin.
@@ -141,7 +146,7 @@ class AbstractCode(Node):
         :return: a list of string, with the code names if labels is True,
           otherwise a list of integers with the code PKs.
         """
-        raise NotImplementedError
+        pass
 
     def _validate(self):
 
@@ -239,6 +244,7 @@ class AbstractCode(Node):
     def get_local_executable(self):
         return self.get_attr('local_executable', u"")
 
+    @abstractmethod
     def set_remote_computer_exec(self, remote_computer_exec):
         """
         Set the code as remote, and pass the computer on which it resides
@@ -251,7 +257,7 @@ class AbstractCode(Node):
               remote_exec_path is the absolute path of the main executable on
               remote computer.
         """
-        raise NotImplementedError
+        pass
 
     def get_remote_exec_path(self):
         if self.is_local():
@@ -264,6 +270,7 @@ class AbstractCode(Node):
 
         return self.computer
 
+    @abstractmethod
     def _set_local(self):
         """
         Set the code as a 'local' code, meaning that all the files belonging to the code
@@ -272,7 +279,7 @@ class AbstractCode(Node):
 
         It also deletes the flags related to the local case (if any)
         """
-        raise NotImplementedError
+        pass
 
     def _set_remote(self):
         """
@@ -295,6 +302,7 @@ class AbstractCode(Node):
         """
         return self.get_attr('is_local', None)
 
+    @abstractmethod
     def can_run_on(self, computer):
         """
         Return True if this code can run on the given computer, False otherwise.
@@ -304,7 +312,7 @@ class AbstractCode(Node):
 
         TODO: add filters to mask the remote machines on which a local code can run.
         """
-        raise NotImplementedError
+        pass
 
     def get_execname(self):
         """

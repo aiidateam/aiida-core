@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+
+from abc import abstractmethod
+
 from aiida.common.datastructures import calc_states
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.orm.calculation import Calculation
@@ -515,6 +518,7 @@ class AbstractJobCalculation(Calculation):
         return super(AbstractJobCalculation, self)._remove_link_from(label)
 
 
+    @abstractmethod
     def _set_state(self, state):
         """
         Set the state of the calculation.
@@ -531,8 +535,9 @@ class AbstractJobCalculation(Calculation):
           from ``aiida.common.datastructures.calc_states``.
         :raise: ModificationNotAllowed if the given state was already set.
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def get_state(self, from_attribute=False):
         """
         Get the state of the calculation.
@@ -551,7 +556,7 @@ class AbstractJobCalculation(Calculation):
           return None. If from_attribute is False and no entry is found in the
           DB, also return None.
         """
-        raise NotImplementedError
+        pass
 
     def _get_state_string(self):
         """
@@ -762,6 +767,7 @@ class AbstractJobCalculation(Calculation):
             return None
 
     @classmethod
+    @abstractmethod
     def _list_calculations(cls, states=None, past_days=None, group=None,
                            group_pk=None, all_users=False, pks=[],
                            relative_ctime=True):
@@ -796,7 +802,7 @@ class AbstractJobCalculation(Calculation):
 
         :return: a string with description of calculations.
         """
-        raise NotImplementedError
+        pass
 
     @classmethod
     def _get_all_with_state(cls, state, computer=None, user=None,

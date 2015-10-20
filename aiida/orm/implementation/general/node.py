@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta, abstractmethod, abstractproperty
 
 import os
 import logging
@@ -1166,8 +1166,7 @@ class AbstractNode(object):
         """
         return NodeInputManager(self)
 
-    @property
-    @abstractmethod
+    @abstractproperty
     def has_children(self):
         """
         Property to understand if children are attached to the node
@@ -1176,8 +1175,7 @@ class AbstractNode(object):
         # use the transitive closure
         pass
 
-    @property
-    @abstractmethod
+    @abstractproperty
     def has_parents(self):
         """
         Property to understand if parents are attached to the node

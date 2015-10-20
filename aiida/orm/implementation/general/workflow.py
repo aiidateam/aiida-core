@@ -4,9 +4,10 @@ import sys
 import traceback
 import inspect
 
-from aiida.common.exceptions import (InternalError, NotExistent,
-                                     AiidaException, InvalidOperation,
-                                     RemoteOperationError)
+from abc import abstractmethod, abstractproperty
+
+from aiida.common.exceptions import (InternalError, AiidaException,
+                                     InvalidOperation, RemoteOperationError)
 from aiida.common.datastructures import (wf_states, wf_exit_call,
                                          wf_default_call, calc_states)
 from aiida.common.utils import str_timedelta
@@ -75,6 +76,7 @@ class AbstractWorkflow(object):
     # The name of the subfolder in which to put the files/directories added with add_path
     _path_subfolder_name = 'path'
 
+    @abstractmethod
     def __init__(self, **kwargs):
         """
         Initializes the Workflow super class, store the instance in the DB and in case
@@ -91,7 +93,7 @@ class AbstractWorkflow(object):
         :raise: NotExistent: if there is no entry of the desired workflow kind with
                              the given uuid.
         """
-        raise NotImplementedError
+        pass
 
     def __repr__(self):
         return '<{}: {}>'.format(self.__class__.__name__, str(self))
@@ -103,79 +105,85 @@ class AbstractWorkflow(object):
             return "uuid: {} (pk: {})".format(self.uuid, self.pk)
 
 
-    @property
+    @abstractproperty
     def dbworkflowinstance(self):
         """
         Get the DbWorkflow object stored in the super class.
 
         :return: DbWorkflow object from the database
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def _get_dbworkflowinstance(self):
         # TODO SP: see decoupling.md for remark about that.
-        raise NotImplementedError
+        pass
 
-    @property
+    @abstractproperty
     def label(self):
         """
         Get the label of the workflow.
 
         :return: a string
         """
-        raise NotImplementedError
+        pass
 
     @label.setter
+    @abstractmethod
     def label(self, label):
         """
         Set the label of the workflow.
 
         :param label: a string
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def _update_db_label_field(self, field_value):
         """
         Safety method to store the label of the workflow
 
         :return: a string
         """
-        raise NotImplementedError
+        pass
 
-    @property
+    @abstractproperty
     def description(self):
         """
         Get the description of the workflow.
 
         :return: a string
         """
-        raise NotImplementedError
+        pass
 
     @description.setter
+    @abstractmethod
     def description(self, desc):
         """
         Set the description of the workflow
 
         :param desc: a string
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def _update_db_description_field(self, field_value):
         """
         Safety method to store the description of the workflow
 
         :return: a string
         """
-        raise NotImplementedError
+        pass
 
 
+    @abstractmethod
     def _increment_version_number_db(self):
         """
         This function increments the version number in the DB.
         This should be called every time you need to increment the version (e.g. on adding a
         extra or attribute).
         """
-        raise NotImplementedError
+        pass
 
     @property
     def repo_folder(self):
@@ -273,13 +281,14 @@ class AbstractWorkflow(object):
         return self.current_folder.get_subfolder(section, reset_limit=True).get_abs_path(path, check_existence=True)
 
     @classmethod
+    @abstractmethod
     def query(cls, *args, **kwargs):
         """
         Map to the aiidaobjects manager of the DbWorkflow, that returns
         Workflow objects instead of DbWorkflow entities.
 
         """
-        raise NotImplementedError
+        pass
 
     @property
     def logger(self):
@@ -297,70 +306,78 @@ class AbstractWorkflow(object):
         return logging.LoggerAdapter(logger=self._logger,
                                      extra=get_dblogger_extra(self))
 
+    @abstractmethod
     def store(self):
         """
         Stores the DbWorkflow object data in the database
         """
-        raise NotImplementedError
+        pass
 
-    @property
+    @abstractproperty
     def uuid(self):
         """
         Returns the DbWorkflow uuid
         """
-        raise NotImplementedError
+        pass
 
-    @property
+    @abstractproperty
     def pk(self):
         """
         Returns the DbWorkflow pk
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def info(self):
         """
         Returns an array with all the informations about the modules, file, class to locate
         the workflow source code
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def set_params(self, params, force=False):
         """
         Adds parameters to the Workflow that are both stored and used every time
         the workflow engine re-initialize the specific workflow to launch the new methods.
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def get_parameters(self):
         """
         Get the Workflow paramenters
         :return: a dictionary of storable objects
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def get_parameter(self, _name):
         """
         Get one Workflow paramenter
         :param name: a string with the parameters name to retrieve
         :return: a dictionary of storable objects
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def get_attributes(self):
         """
         Get the Workflow attributes
         :return: a dictionary of storable objects
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def get_attribute(self, _name):
         """
         Get one Workflow attribute
         :param name: a string with the attribute name to retrieve
         :return: a dictionary of storable objects
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def add_attributes(self, _params):
         """
         Add a set of attributes to the Workflow. If another attribute is present with the same name it will
@@ -368,8 +385,9 @@ class AbstractWorkflow(object):
         :param name: a string with the attribute name to store
         :param value: a storable object to store
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def add_attribute(self, _name, _value):
         """
         Add one attributes to the Workflow. If another attribute is present with the same name it will
@@ -377,23 +395,26 @@ class AbstractWorkflow(object):
         :param name: a string with the attribute name to store
         :param value: a storable object to store
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def get_results(self):
         """
         Get the Workflow results
         :return: a dictionary of storable objects
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def get_result(self, _name):
         """
         Get one Workflow result
         :param name: a string with the result name to retrieve
         :return: a dictionary of storable objects
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def add_results(self, _params):
         """
         Add a set of results to the Workflow. If another result is present with the same name it will
@@ -401,8 +422,9 @@ class AbstractWorkflow(object):
         :param name: a string with the result name to store
         :param value: a storable object to store
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def add_result(self, _name, _value):
         """
         Add one result to the Workflow. If another result is present with the same name it will
@@ -410,53 +432,61 @@ class AbstractWorkflow(object):
         :param name: a string with the result name to store
         :param value: a storable object to store
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def get_state(self):
         """
         Get the Workflow's state
         :return: a state from wf_states in aiida.common.datastructures
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def set_state(self, state):
         """
         Set the Workflow's state
         :param name: a state from wf_states in aiida.common.datastructures
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def is_new(self):
         """
         Returns True is the Workflow's state is CREATED
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def is_running(self):
         """
         Returns True is the Workflow's state is RUNNING
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def has_finished_ok(self):
         """
         Returns True is the Workflow's state is FINISHED
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def has_failed(self):
         """
         Returns True is the Workflow's state is ERROR
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def is_subworkflow(self):
         """
         Return True is this is a subworkflow (i.e., if it has a parent),
         False otherwise.
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def get_step(self, step_method):
 
         """
@@ -465,8 +495,9 @@ class AbstractWorkflow(object):
         :raise: ObjectDoesNotExist: if there is no step with the specific name.
         :return: a DbWorkflowStep object.
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def get_steps(self, state=None):
         """
         Retrieves all the steps from a specific workflow Workflow with the possibility to limit the list
@@ -474,7 +505,7 @@ class AbstractWorkflow(object):
         :param state: a state from wf_states in aiida.common.datastructures
         :return: a list of DbWorkflowStep objects.
         """
-        raise NotImplementedError
+        pass
 
     def has_step(self, step_method):
         """
@@ -828,6 +859,7 @@ class AbstractWorkflow(object):
 
         self.get_step(caller_method).set_state(wf_states.SLEEP)
 
+    @abstractmethod
     def get_report(self):
         """
         Return the Workflow report.
@@ -837,15 +869,17 @@ class AbstractWorkflow(object):
           This is not the case anymore.
         :return: a list of strings
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def clear_report(self):
         """
         Wipe the Workflow report. In case the workflow is a subworflow of any other Workflow this method
         calls the parent ``clear_report`` method.
         """
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def append_to_report(self, text):
         """
         Adds text to the Workflow report.
@@ -854,9 +888,10 @@ class AbstractWorkflow(object):
          calls the parent ``append_to_report`` method; now instead this is not the
          case anymore
         """
-        raise NotImplementedError
+        pass
 
     @classmethod
+    @abstractmethod
     def get_subclass_from_dbnode(cls, wf_db):
         """
         Loads the workflow object and reaoads the python script in memory with the importlib library, the
@@ -864,9 +899,10 @@ class AbstractWorkflow(object):
         :param wf_db: a specific DbWorkflowNode object representing the Workflow
         :return: a Workflow subclass from the specific source code
         """
-        raise NotImplementedError
+        pass
 
     @classmethod
+    @abstractmethod
     def get_subclass_from_pk(cls, pk):
         """
         Calls the ``get_subclass_from_dbnode`` selecting the DbWorkflowNode from
@@ -874,9 +910,10 @@ class AbstractWorkflow(object):
         :param pk: a primary key index for the DbWorkflowNode
         :return: a Workflow subclass from the specific source code
         """
-        raise NotImplementedError
+        pass
 
     @classmethod
+    @abstractmethod
     def get_subclass_from_uuid(cls, uuid):
         """
         Calls the ``get_subclass_from_dbnode`` selecting the DbWorkflowNode from
@@ -884,7 +921,7 @@ class AbstractWorkflow(object):
         :param uuid: a uuid for the DbWorkflowNode
         :return: a Workflow subclass from the specific source code
         """
-        raise NotImplementedError
+        pass
 
     def exit(self):
         """

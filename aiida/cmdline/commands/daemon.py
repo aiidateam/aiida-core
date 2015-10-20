@@ -15,7 +15,7 @@ def is_daemon_user():
     """
     Return True if the user is the current daemon user, False otherwise.
     """
-    from aiida.djsite.utils import get_daemon_user, get_configured_user_email
+    from aiida.backends.djsite.utils import get_daemon_user, get_configured_user_email
 
     daemon_user = get_daemon_user()
     this_user = get_configured_user_email()
@@ -111,7 +111,7 @@ class Daemon(VerdiCommandWithSubcommands):
                     self.get_full_command_name()))
             sys.exit(1)
 
-        from aiida.djsite.utils import get_daemon_user, get_configured_user_email
+        from aiida.backends.djsite.utils import get_daemon_user, get_configured_user_email
 
         daemon_user = get_daemon_user()
         this_user = get_configured_user_email()
@@ -240,7 +240,7 @@ class Daemon(VerdiCommandWithSubcommands):
 
         from aiida.utils import timezone
 
-        from aiida.djsite.db.tasks import get_most_recent_daemon_timestamp
+        from aiida.backends.djsite.db.tasks import get_most_recent_daemon_timestamp
         from aiida.common.utils import str_timedelta
 
         most_recent_timestamp = get_most_recent_daemon_timestamp()
@@ -327,7 +327,7 @@ class Daemon(VerdiCommandWithSubcommands):
                     self.get_full_command_name()))
             sys.exit(1)
 
-        from aiida.djsite.utils import get_daemon_user, get_configured_user_email
+        from aiida.backends.djsite.utils import get_daemon_user, get_configured_user_email
 
         daemon_user = get_daemon_user()
         this_user = get_configured_user_email()
@@ -367,12 +367,12 @@ class Daemon(VerdiCommandWithSubcommands):
 
         from django.core.exceptions import ObjectDoesNotExist
 
-        from aiida.djsite.db.models import DbUser
-        from aiida.djsite.utils import (
+        from aiida.backends.djsite.db.models import DbUser
+        from aiida.backends.djsite.utils import (
             get_configured_user_email,
             get_daemon_user, set_daemon_user)
 
-        from aiida.djsite.db.tasks import get_most_recent_daemon_timestamp
+        from aiida.backends.djsite.db.tasks import get_most_recent_daemon_timestamp
         from aiida.common.utils import str_timedelta
 
         old_daemon_user = get_daemon_user()

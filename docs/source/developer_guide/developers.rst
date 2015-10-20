@@ -202,10 +202,10 @@ For each of the above types of tests, a different testing approach is followed
 2. In this case, we use the `testing functionality of
    Django <https://docs.djangoproject.com/en/dev/topics/testing/>`_,
    adapted to run smoothly with AiiDA.
-
-   To create a new group of tests, create a new python file under
-   ``aiida.djsite.db.substests``, and instead of inheriting each class directly
-   from ``unittest``, inherit from ``aiida.djsite.db.testbase.AiidaTestCase``.
+   
+   To create a new group of tests, create a new python file under 
+   ``aiida.backends.djsite.db.substests``, and instead of inheriting each class directly
+   from ``unittest``, inherit from ``aiida.backends.djsite.db.testbase.AiidaTestCase``.
    In this way:
 
    a. The Django testing functionality is used, and a temporary database is used
@@ -224,9 +224,9 @@ For each of the above types of tests, a different testing approach is followed
      data. (In the codes there are some checks to avoid that these classes
      are run without the correct environment being prepared by ``verdi
      devel tests``.)
-
-   Once you create a new file in ``aiida.djsite.db.substests``, you have to
-   add a new entry to the ``db_test_list`` inside ``aiida.djsite.db.testbase``
+   
+   Once you create a new file in ``aiida.backends.djsite.db.substests``, you have to
+   add a new entry to the ``db_test_list`` inside ``aiida.backends.djsite.db.testbase``
    module in order for ``verdi devel tests`` to find it. In particular,
    the key should be the name that you want to use on the command line of
    ``verdi devel tests`` to run the test, and the value should be the full
@@ -237,13 +237,13 @@ For each of the above types of tests, a different testing approach is followed
 
      db_test_list = {
        ...
-       'newtests': 'aiida.djsite.db.subtests.mynewtestsmodule',
+       'newtests': 'aiida.backends.djsite.db.subtests.mynewtestsmodule',
        ...
      }
 
    you will be able to run all all tests inside
-   ``aiida.djsite.db.subtests.mynewtestsmodule`` with the command::
-
+   ``aiida.backends.djsite.db.subtests.mynewtestsmodule`` with the command::
+   
      verdi devel tests db.newtests
 
    .. note:: If in the list of parameters to ``verdi devel tests`` you add

@@ -1,22 +1,24 @@
 # -*- coding: utf-8 -*-
 import importlib
 
-from aiida.common.utils import md5_file
+from django.db.models import Q
+from django.core.exceptions import ObjectDoesNotExist
+
+from aiida.common.utils import md5_file, str_timedelta
 from aiida.common.folders import RepositoryFolder, SandboxFolder
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      NotExistent, ValidationError,
                                      AiidaException)
-from aiida.common.datastructures import wf_states, wf_exit_call
+from aiida.common.datastructures import wf_states, wf_exit_call, calc_states
 
 from aiida.orm.implementation.general.workflow import AbstractWorkflow
+from aiida.orm.implementation.django.calculation.job import JobCalculation
 
-from aiida.djsite.db.models import DbWorkflow
-from aiida.djsite.utils import get_automatic_user
-
-from django.db.models import Q
-from django.core.exceptions import ObjectDoesNotExist
+from aiida.backends.djsite.db.models import DbWorkflow
+from aiida.backends.djsite.utils import get_automatic_user
 
 from aiida.common import aiidalogger
+from aiida.utils import timezone
 logger = aiidalogger.getChild('Workflow')
 
 
@@ -123,7 +125,7 @@ class Workflow(AbstractWorkflow):
 
         :return: DbWorkflow object from the database
         """
-        from aiida.djsite.db.models import DbWorkflow
+        from aiida.backends.djsite.db.models import DbWorkflow
 
         if self._dbworkflowinstance.pk is None:
             return self._dbworkflowinstance
@@ -196,7 +198,7 @@ class Workflow(AbstractWorkflow):
         extra or attribute).
         """
         from django.db.models import F
-        from aiida.djsite.db.models import DbWorkflow
+        from aiida.backends.djsite.db.models import DbWorkflow
 
         # I increment the node number using a filter (this should be the right way of doing it;
         # dbnode.nodeversion  = F('nodeversion') + 1
@@ -218,7 +220,7 @@ class Workflow(AbstractWorkflow):
         Workflow objects instead of DbWorkflow entities.
 
         """
-        from aiida.djsite.db.models import DbWorkflow
+        from aiida.backends.djsite.db.models import DbWorkflow
 
         return DbWorkflow.aiidaobjects.filter(*args, **kwargs)
 

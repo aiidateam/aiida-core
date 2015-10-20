@@ -41,9 +41,6 @@ def deserialize_attributes(attributes_data, conversion_data):
 
 def deserialize_field(k, v, fields_info, import_unique_ids_mappings,
                       foreign_ids_reverse_mappings):
-    import datetime
-    import pytz
-
     try:
         field_info = fields_info[k]
     except KeyError:
@@ -209,7 +206,7 @@ def import_data(in_path,ignore_unknown_nodes=False,
     from aiida.orm.group import Group
     from aiida.common.exceptions import UniquenessError
     from aiida.common.folders import SandboxFolder, RepositoryFolder
-    from aiida.djsite.db import models
+    from aiida.backends.djsite.db import models
     from aiida.common.utils import get_class_string, get_object_from_string
     from aiida.common.datastructures import calc_states
 
@@ -562,9 +559,9 @@ def import_data(in_path,ignore_unknown_nodes=False,
                         # New link
                         links_to_store.append(models.DbLink(
                             input_id=in_id, output_id=out_id, label=link['label']))
-                        if 'aiida.djsite.db.models.DbLink' not in ret_dict:
-                            ret_dict['aiida.djsite.db.models.DbLink'] = { 'new': [] }
-                        ret_dict['aiida.djsite.db.models.DbLink']['new'].append((in_id,out_id))
+                        if 'aiida.backends.djsite.db.models.DbLink' not in ret_dict:
+                            ret_dict['aiida.backends.djsite.db.models.DbLink'] = { 'new': [] }
+                        ret_dict['aiida.backends.djsite.db.models.DbLink']['new'].append((in_id,out_id))
 
             # Store new links
             if links_to_store:

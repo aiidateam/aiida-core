@@ -247,7 +247,7 @@ class AbstractCode(Node):
         Args:
             remote_computer_exec: a tuple (computer, remote_exec_path), where
               computer is a aiida.orm.Computer or an
-              aiida.djsite.db.models.DbComputer object, and
+              aiida.backends.djsite.db.models.DbComputer object, and
               remote_exec_path is the absolute path of the main executable on
               remote computer.
         """

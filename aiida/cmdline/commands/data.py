@@ -97,9 +97,8 @@ class Listable(object):
             Each row describes a single hit.
         """
         load_dbenv()
-        from aiida.orm import DataFactory
         from django.db.models import Q
-        from aiida.djsite.utils import get_automatic_user
+        from aiida.backends.djsite.utils import get_automatic_user
 
         q_object = None
         if args.all_users is False:
@@ -311,7 +310,7 @@ class Exportable(object):
         Export the data node to a given format.
         """
         # DEVELOPER NOTE: to add a new plugin, just add a _export_xxx() method.
-        import argparse, os
+        import argparse
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -403,7 +402,7 @@ class Importable(object):
         return {k: getattr(self, self.import_prefix + k) for k in valid_formats}
 
     def importfile(self, *args):
-        import argparse, os, sys
+        import argparse, sys
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -590,11 +589,7 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
 
         Call without parameters to get some help.
         """
-        import inspect
-        import readline
         import os.path
-
-        from aiida.common.exceptions import NotExistent, ValidationError
 
         if not len(args) == 3 and not len(args) == 4:
             print >> sys.stderr, ("After 'upf uploadfamily' there should be three "
@@ -620,7 +615,6 @@ class _Upf(VerdiCommandWithSubcommands, Importable):
             sys.exit(1)
 
         load_dbenv()
-        from aiida.orm import Computer as AiidaOrmComputer
         import aiida.orm.data.upf as upf
 
         files_found, files_uploaded = upf.upload_upf_family(folder, group_name,
@@ -731,13 +725,11 @@ class _Bands(VerdiCommandWithSubcommands, Listable, Visualizable, Exportable):
         from collections import defaultdict
         from aiida.orm import DataFactory
         from django.db.models import Q
-        from aiida.djsite.utils import get_automatic_user
+        from aiida.backends.djsite.utils import get_automatic_user
         from aiida.common.utils import grouper
-        from aiida.orm.data.structure import (get_formula, get_symbols_string,
-                                              has_vacancies)
-        from aiida.djsite.db import models
-        from aiida.orm import Node
-        from aiida.djsite.db.models import DbPath
+        from aiida.orm.data.structure import (get_formula, get_symbols_string)
+        from aiida.backends.djsite.db import models
+        from aiida.backends.djsite.db.models import DbPath
 
         query_group_size = 100  # we group the attribute query in chunks of this size
 
@@ -988,11 +980,10 @@ class _Structure(VerdiCommandWithSubcommands,
         from collections import defaultdict
         from aiida.orm import DataFactory
         from django.db.models import Q
-        from aiida.djsite.utils import get_automatic_user
+        from aiida.backends.djsite.utils import get_automatic_user
         from aiida.common.utils import grouper
-        from aiida.orm.data.structure import (get_formula, get_symbols_string,
-                                              has_vacancies)
-        from aiida.djsite.db import models
+        from aiida.orm.data.structure import (get_formula, get_symbols_string)
+        from aiida.backends.djsite.db import models
 
         query_group_size = 100  # we group the attribute query in chunks of this size
 
@@ -1314,9 +1305,8 @@ class _Cif(VerdiCommandWithSubcommands,
             Each row describes a single hit.
         """
         load_dbenv()
-        from aiida.orm import DataFactory
         from django.db.models import Q
-        from aiida.djsite.utils import get_automatic_user
+        from aiida.backends.djsite.utils import get_automatic_user
 
         q_object = None
         if args.all_users is False:

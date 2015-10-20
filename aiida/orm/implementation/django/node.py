@@ -6,20 +6,17 @@ from django.db import IntegrityError, transaction
 from django.db.models import F
 from django.core.exceptions import ObjectDoesNotExist
 
-
 from aiida.orm.implementation.general.node import AbstractNode
 from aiida.orm.implementation.django.computer import Computer
-
 from aiida.common.exceptions import (InternalError, ModificationNotAllowed,
                                      NotExistent, UniquenessError)
 from aiida.common.utils import get_new_uuid
 from aiida.common.folders import RepositoryFolder
-
-from aiida.djsite.db.models import (DbNode, DbLink, DbPath, DbComputer,
+from aiida.backends.djsite.db.models import (DbNode, DbLink, DbPath, DbComputer,
                                     DbAttribute, DbExtra, DbComment
                                     )
 # TODO SP: handle get_automatic_user
-from aiida.djsite.utils import get_automatic_user
+from aiida.backends.djsite.utils import get_automatic_user
 
 
 class Node(AbstractNode):
@@ -601,7 +598,7 @@ class Node(AbstractNode):
     @property
     def dbnode(self):
         # I also update the internal _dbnode variable, if it was saved
-        # from aiida.djsite.db.models import DbNode
+        # from aiida.backends.djsite.db.models import DbNode
         #        if not self._to_be_stored:
         #            self._dbnode = DbNode.objects.get(pk=self._dbnode.pk)
         return self._dbnode
@@ -752,7 +749,7 @@ class Node(AbstractNode):
         from django.db import transaction
         from aiida.common.utils import EmptyContextManager
         from aiida.common.exceptions import ValidationError
-        from aiida.djsite.db.models import DbAttribute
+        from aiida.backends.djsite.db.models import DbAttribute
         import aiida.orm.autogroup
 
         if with_transaction:

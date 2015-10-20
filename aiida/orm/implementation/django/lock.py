@@ -2,13 +2,11 @@
 
 import time
 
-from aiida.orm.implementation.general.lock import AbstractLockManager, AbstractLock
-
-from aiida.common.exceptions import (InternalError, ModificationNotAllowed, LockPresent)
-
-from aiida.djsite.db.models import DbLock
-
 from django.db import IntegrityError, transaction
+
+from aiida.orm.implementation.general.lock import AbstractLockManager, AbstractLock
+from aiida.common.exceptions import (InternalError, ModificationNotAllowed, LockPresent)
+from aiida.backends.djsite.db.models import DbLock
 # TODO SP: to replace
 from aiida.utils import timezone
 

@@ -2,7 +2,6 @@
 import os
 import sys
 import traceback
-
 import inspect
 
 from aiida.common.exceptions import (InternalError, NotExistent,
@@ -12,13 +11,13 @@ from aiida.common.datastructures import (wf_states, wf_exit_call,
                                          wf_default_call, calc_states)
 from aiida.common.utils import str_timedelta
 from aiida.common import aiidalogger
-
 from aiida.orm.implementation.calculation import JobCalculation
 
+
 # TODO SP: abstract get_automatic_user
-from aiida.djsite.utils import get_automatic_user
+from aiida.backends.djsite.utils import get_automatic_user
 # TODO SP: abstract the dependence on DbWorkflow
-from aiida.djsite.db.models import DbWorkflow
+from aiida.backends.djsite.db.models import DbWorkflow
 
 # TODO SP: abstract timezone
 from aiida.utils import timezone
@@ -923,34 +922,6 @@ class AbstractWorkflow(object):
 #
 #         self.set_state(wf_states.RUNNING)
 
-
-def kill_from_pk(pk, verbose=False):
-    """
-    Kills a workflow without loading the class, useful when there was a problem
-    and the workflow definition module was changed/deleted (and the workflow
-    cannot be reloaded).
-
-    :param pk: the principal key (id) of the workflow to kill
-    :param verbose: True to print the pk of each subworkflow killed
-    """
-    try:
-        Workflow.query(pk=pk)[0].kill(verbose=verbose)
-    except IndexError:
-        raise NotExistent("No workflow with pk= {} found.".format(pk))
-
-
-def kill_from_uuid(uuid):
-    """
-    Kills a workflow without loading the class, useful when there was a problem
-    and the workflow definition module was changed/deleted (and the workflow
-    cannot be reloaded).
-
-    :param uuid: the UUID of the workflow to kill
-    """
-    try:
-        Workflow.query(uuid=uuid)[0].kill()
-    except IndexError:
-        raise NotExistent("No workflow with uuid={} found.".format(uuid))
 
 
 def kill_all():

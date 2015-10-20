@@ -14,7 +14,6 @@ short description, the following ones the long description.
 """
 import sys
 import os
-import getpass
 import contextlib
 
 import aiida
@@ -24,8 +23,11 @@ from aiida.cmdline.baseclass import VerdiCommand, VerdiCommandRouter
 from aiida.cmdline import pass_to_django_manage
 from aiida.djsite.settings import settings_profile
 
+
+
 ## Import here from other files; once imported, it will be found and
 ## used as a command-line parameter
+from aiida.cmdline.commands.user import User
 from aiida.cmdline.commands.calculation import Calculation
 from aiida.cmdline.commands.code import Code
 from aiida.cmdline.commands.computer import Computer
@@ -55,20 +57,20 @@ class ProfileParsingException(AiidaException):
     """
     def __init__(self, *args, **kwargs):
         self.minus_p_provided=kwargs.pop('minus_p_provided', False)
-        
+
         super(ProfileParsingException, self).__init__(*args, **kwargs)
 
 def parse_profile(argv,merge_equal=False):
     """
     Parse the argv to see if a profile has been specified, return it with the
     command position shift (index where the commands start)
-    
+
     :param merge_equal: if True, merge things like
       ('verdi', '--profile', '=', 'x', 'y') to ('verdi', '--profile=x', 'y')
       but then return the correct index for the original array.
-    
+
     :raise ProfileParsingException: if there is only 'verdi' specified, or
-      if only 'verdi -p' (in these cases, one has respectively 
+      if only 'verdi -p' (in these cases, one has respectively
       exception.minus_p_provided equal to False or True)
     """
     if merge_equal:
@@ -81,11 +83,11 @@ def parse_profile(argv,merge_equal=False):
                 shift = 0
         else:
             internal_argv = list(argv)
-            shift = 0            
+            shift = 0
     else:
         internal_argv = list(argv)
         shift = 0
-        
+
     profile = None # Use default profile if nothing is specified
     command_position = 1 # If there is no profile option
     try:
@@ -133,9 +135,9 @@ class CompletionCommand(VerdiCommand):
     """
     Return the bash completion function to put in ~/.bashrc
 
-    This command prints on screen the function to be inserted in 
+    This command prints on screen the function to be inserted in
     your .bashrc command. You can copy and paste the output, or simply
-    add 
+    add
     eval "`verdi completioncommand`"
     to your .bashrc, *AFTER* having added the aiida/bin directory to the path.
     """
@@ -153,7 +155,7 @@ class CompletionCommand(VerdiCommand):
 
         * If the completion command did not print anything, we use
           the default bash completion for filenames
-          
+
         * If instead the code prints something empty, thanks to the workaround
           above $OUTPUT is not empty, so we do go the the 'else' case
           and then, no substitution is suggested.
@@ -183,7 +185,7 @@ function _aiida_verdi_completion
         # Always add a space after each command
         for ((i=0; i < ${#COMPREPLY[@]}; i++)); do
             COMPREPLY[$i]="${COMPREPLY[$i]} "
-        done    
+        done
     fi
 }
 complete -o nospace -F _aiida_verdi_completion verdi
@@ -196,7 +198,7 @@ complete -o nospace -F _aiida_verdi_completion verdi
 
 class Completion(VerdiCommand):
     """
-    Manage bash completion 
+    Manage bash completion
 
     Return a list of available commands, separated by spaces.
     Calls the correct function of the command if the TAB has been
@@ -222,9 +224,9 @@ class Completion(VerdiCommand):
             cword_offset = 0
         else:
             cword_offset = command_position - 1
-        
-        
-                
+
+
+
         if cword == 1 + cword_offset:
             print " ".join(sorted(short_doc.keys()))
             return
@@ -241,7 +243,7 @@ class Completion(VerdiCommand):
                 CommandClass = list_commands[command]
             except KeyError:
                 return
-            CommandClass().complete(subargs_idx=cword - 2 - cword_offset, 
+            CommandClass().complete(subargs_idx=cword - 2 - cword_offset,
                                     subargs=args[3 + cword_offset:])
 
 
@@ -303,7 +305,7 @@ class Install(VerdiCommand):
     """
     Install/setup aiida for the current user
 
-    This command creates the ~/.aiida folder in the home directory 
+    This command creates the ~/.aiida folder in the home directory
     of the user, interactively asks for the database settings and
     the repository location, does a setup of the daemon and runs
     a migrate command to create/setup the database.
@@ -364,8 +366,8 @@ class Install(VerdiCommand):
             load_dbenv()
 
         from aiida.common.setup import DEFAULT_AIIDA_USER
-        from aiida.djsite.db import models
-        from aiida.djsite.utils import get_configured_user_email
+        from aiida.backends.djsite.db import models
+        from aiida.backends.djsite.utils import get_configured_user_email
 
         if not models.DbUser.objects.filter(email=DEFAULT_AIIDA_USER):
             print "Installing default AiiDA user..."
@@ -412,7 +414,7 @@ class Runserver(VerdiCommand):
     Run the AiiDA webserver on localhost
 
     This command runs the webserver on the default port. Further command line
-    options are passed to the Django manage runserver command 
+    options are passed to the Django manage runserver command
     """
 
     def run(self, *args):
@@ -430,7 +432,7 @@ class Run(VerdiCommand):
         load_dbenv()
         import argparse
         import aiida.cmdline
-        from aiida.djsite.db.management.commands.customshell import default_modules_list
+        from aiida.backends.djsite.db.management.commands.customshell import default_modules_list
         import aiida.orm.autogroup
         from aiida.orm.autogroup import Autogroup
 
@@ -535,7 +537,7 @@ class Run(VerdiCommand):
 def get_listparams():
     """
     Return a string with the list of parameters, to be printed
-    
+
     The advantage of this function is that the calling routine can
     choose to print it on stdout or stderr, depending on the needs.
     """
@@ -602,7 +604,7 @@ def exec_from_cmdline(argv):
                      and not v.__name__.startswith('_')
                      and not v._abstract}
 
-    # Retrieve the list of docstrings, managing correctly the 
+    # Retrieve the list of docstrings, managing correctly the
     # case of empty docstrings. Each value is a list of lines
     raw_docstrings = {k: (v.__doc__ if v.__doc__ else "").splitlines()
                       for k, v in list_commands.iteritems()}
@@ -625,20 +627,20 @@ def exec_from_cmdline(argv):
         long_doc[k] = os.linesep.join(lines[first_idx + 1:])
 
     execname = os.path.basename(argv[0])
-   
+
     try:
         profile, command_position = parse_profile(argv)
     except ProfileParsingException as e:
         print_usage(execname)
         sys.exit(1)
-    
+
     # We now set the internal variable, if needed
     if profile is not None:
         settings_profile.AIIDADB_PROFILE = profile
     # I set the process to verdi
     settings_profile.CURRENT_AIIDADB_PROCESS = "verdi"
 
-    # Finally, we parse the commands and their options    
+    # Finally, we parse the commands and their options
     try:
         command = argv[command_position]
     except IndexError:
@@ -659,6 +661,6 @@ def exec_from_cmdline(argv):
         print >> sys.stderr, "The profile specified is not valid!"
         print >> sys.stderr, e.message
         sys.exit(1)
-        
-    
-        
+
+
+

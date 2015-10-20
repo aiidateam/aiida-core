@@ -700,12 +700,12 @@ class AbstractComputer(object):
 
     def get_dbauthinfo(self, user):
         """
-        Return the aiida.djsite.db.models.DbAuthInfo instance for the
+        Return the aiida.backends.djsite.db.models.DbAuthInfo instance for the
         given user on this computer, if the computer
         is not configured for the given user.
 
         :param user: a DbUser instance.
-        :return: a aiida.djsite.db.models.DbAuthInfo instance
+        :return: a aiida.backends.djsite.db.models.DbAuthInfo instance
         :raise NotExistent: if the computer is not configured for the given
             user.
         """

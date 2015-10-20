@@ -6,6 +6,7 @@ import aiida
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida import load_dbenv
 from aiida.cmdline import pass_to_django_manage, execname
+from aiida.common.exceptions import InternalError
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -86,7 +87,7 @@ class Devel(VerdiCommandWithSubcommands):
     _dbprefix = _dbrawprefix + "."
 
     def __init__(self, *args, **kwargs):
-        from aiida.djsite.db.testbase import db_test_list
+        from aiida.backends.djsite.db.testbase import db_test_list
 
         super(Devel, self).__init__(*args, **kwargs)
 
@@ -382,7 +383,7 @@ class Devel(VerdiCommandWithSubcommands):
         load_dbenv()
         from django.db.models import Q
         from aiida.orm.node import Node
-        from aiida.djsite.utils import get_automatic_user
+        from aiida.backends.djsite.utils import get_automatic_user
 
         q_object = Q(user=get_automatic_user())
         q_object.add(Q(parents__isnull=True), Q.AND)
@@ -460,9 +461,8 @@ class Devel(VerdiCommandWithSubcommands):
 
     def run_tests(self, *args):
         import unittest
-        import tempfile
         from aiida.common.setup import get_property
-        from aiida.djsite.settings import settings_profile
+        from aiida.backends.djsite.settings import settings_profile
 
         db_test_list = []
         test_folders = []
@@ -550,7 +550,7 @@ class Devel(VerdiCommandWithSubcommands):
 
 
     def get_querydict_from_keyvalue(self, key, separator_filter, value):
-        from aiida.orm import (Node, Code, Data, Calculation,
+        from aiida.orm import (Code, Data, Calculation,
                                DataFactory, CalculationFactory)
         from aiida.common.exceptions import MissingPluginError
         import re
@@ -749,7 +749,7 @@ class Devel(VerdiCommandWithSubcommands):
     def run_query(self, *args):
         load_dbenv()
         from django.db.models import Q
-        from aiida.djsite.db.models import DbNode
+        from aiida.backends.djsite.db.models import DbNode
 
         # django_query = Q()
         django_query = DbNode.objects.filter()

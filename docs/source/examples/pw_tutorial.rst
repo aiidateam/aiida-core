@@ -371,7 +371,7 @@ the comments of each user.
 To set a comment, you need first to import the django user, and then
 write it with a dedicated method::
 
-  from aiida.djsite.utils import get_automatic_user
+  from aiida.backends.djsite.utils import get_automatic_user
   calc.add_comment("Some comment", user=get_automatic_user())
 
 The comments can be accessed with this function::

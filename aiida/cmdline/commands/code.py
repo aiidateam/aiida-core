@@ -630,7 +630,7 @@ class Code(VerdiCommandWithSubcommands):
         reveal_filter = parsed_args.all_codes
 
         from django.db.models import Q
-        from aiida.djsite.utils import get_automatic_user
+        from aiida.backends.djsite.utils import get_automatic_user
 
         django_filter = Q()
         if not all_users:
@@ -785,9 +785,8 @@ class Code(VerdiCommandWithSubcommands):
             code.pk, retrieved_old_name, retrieved_new_name)
 
     def code_update(self, *args):
-        import os, datetime
-        from aiida.djsite.utils import get_automatic_user
-        from aiida.common.exceptions import ModificationNotAllowed
+        import datetime
+        from aiida.backends.djsite.utils import get_automatic_user
 
         if len(args) != 1:
             print >> sys.stderr, ("after 'code update' there should be one "
@@ -876,7 +875,7 @@ class Code(VerdiCommandWithSubcommands):
                 print "[Enter] to continue, [Ctrl + C] to exit"
                 raw_input()
 
-                from aiida.djsite.db.models import DbAttribute
+                from aiida.backends.djsite.db.models import DbAttribute
 
                 DbAttribute.set_value_for_node(code.dbnode, 'remote_exec_path', set_params.remote_abs_path)
 

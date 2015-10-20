@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from aiida.orm import Node
 
 
 def get_dblogger_extra(obj):
@@ -9,6 +8,7 @@ def get_dblogger_extra(obj):
     as extra to the aiidalogger in order to store the exception also in the DB.
     If no such extra is passed, the exception is only logged on file.
     """
+    from aiida.orm import Node
 
     if isinstance(obj, Node):
         if obj._plugin_type_string:

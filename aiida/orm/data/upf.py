@@ -2,9 +2,10 @@
 """
 This module manages the UPF pseudopotentials in the local repository.
 """
+import re
+
 from aiida.orm.data.singlefile import SinglefileData
 from aiida.common.utils import classproperty
-import re
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -95,7 +96,7 @@ def upload_upf_family(folder, group_name, group_description,
     from aiida.common import aiidalogger
     from aiida.orm import Group
     from aiida.common.exceptions import UniquenessError, NotExistent
-    from aiida.djsite.utils import get_automatic_user
+    from aiida.backends.djsite.utils import get_automatic_user
 
     if not os.path.isdir(folder):
         raise ValueError("folder must be a directory")
@@ -302,7 +303,6 @@ class UpfData(SinglefileData):
         """
         import aiida.common.utils
         import os
-        from aiida.common.exceptions import ParsingError
 
         if not os.path.abspath(filename):
             raise ValueError("filename must be an absolute path")

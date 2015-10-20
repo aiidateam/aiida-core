@@ -2,15 +2,13 @@
 
 import json
 
-from aiida.orm.implementation.general.computer import AbstractComputer
-
-from aiida.djsite.db.models import DbComputer, DbAuthInfo
-
-from aiida.common.exceptions import (NotExistent, ConfigurationError,
-                                     InvalidOperation)
-
 from django.db import IntegrityError, transaction
 from django.core.exceptions import ObjectDoesNotExist
+
+from aiida.orm.implementation.general.computer import AbstractComputer
+from aiida.backends.djsite.db.models import DbComputer, DbAuthInfo
+from aiida.common.exceptions import (NotExistent, ConfigurationError,
+                                     InvalidOperation, DbContentError)
 
 
 class Computer(AbstractComputer):

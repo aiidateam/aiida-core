@@ -889,7 +889,7 @@ class AbstractNode(object):
         :return: the corresponding DbNode object.
         """
         # I also update the internal _dbnode variable, if it was saved
-        # from aiida.djsite.db.models import DbNode
+        # from aiida.backends.djsite.db.models import DbNode
         #        if not self._to_be_stored:
         #            self._dbnode = DbNode.objects.get(pk=self._dbnode.pk)
         raise NotImplementedError

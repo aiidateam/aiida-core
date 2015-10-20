@@ -25,7 +25,7 @@ class Export(VerdiCommand):
         import argparse
 
         from aiida.common.exceptions import NotExistent
-        from aiida.djsite.db import models
+        from aiida.backends.djsite.db import models
         from aiida.orm import Group
         from aiida.orm.importexport import export, export_zip
 
@@ -84,7 +84,7 @@ class Export(VerdiCommand):
                 node_pk_list += group.dbgroup.dbnodes.values_list('pk', flat=True)
                 groups_list.append(group.dbgroup)
         node_pk_list = set(node_pk_list)
-        
+
         node_list = list(
             models.DbNode.objects.filter(pk__in=node_pk_list))
         missing_nodes = node_pk_list.difference(_.pk for _ in node_list)

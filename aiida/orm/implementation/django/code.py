@@ -2,14 +2,12 @@
 
 import os
 
+from django.db import transaction
+
 from aiida.orm.implementation.general.code import AbstractCode
 from aiida.orm.implementation import Computer
-
 from aiida.common.exceptions import NotExistent, MultipleObjectsError, InvalidOperation
-
-from aiida.djsite.db.models import DbComputer
-
-from django.db import transaction
+from aiida.backends.djsite.db.models import DbComputer
 
 
 class Code(AbstractCode):
@@ -98,7 +96,7 @@ class Code(AbstractCode):
         Args:
             remote_computer_exec: a tuple (computer, remote_exec_path), where
               computer is a aiida.orm.Computer or an
-              aiida.djsite.db.models.DbComputer object, and
+              aiida.backends.djsite.db.models.DbComputer object, and
               remote_exec_path is the absolute path of the main executable on
               remote computer.
         """

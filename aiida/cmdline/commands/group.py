@@ -122,12 +122,10 @@ class Group(VerdiCommandWithSubcommands):
         load_dbenv()
 
         from aiida.orm.group import get_group_type_mapping
-        from aiida.common.datastructures import calc_states
-        from aiida.djsite.utils import get_automatic_user
+        from aiida.backends.djsite.utils import get_automatic_user
         import datetime
         import argparse
         from aiida.orm import Group as G
-        from django.db.models import Q
         from aiida.utils import timezone
 
         parser = argparse.ArgumentParser(

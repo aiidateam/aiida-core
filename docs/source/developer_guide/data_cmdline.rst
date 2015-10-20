@@ -8,7 +8,7 @@ chapter the ways to extend the AiiDA command line interface are described.
 
 To make a class/function loaded automatically while issuing ``verdi shell``,
 one has to register it in ``default_modules_list`` in
-``aiida.djsite.db.management.commands.customshell.py``.
+``aiida.backends.djsite.db.management.commands.customshell.py``.
 
 Adding a ``verdi`` command
 ++++++++++++++++++++++++++

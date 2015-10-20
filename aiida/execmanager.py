@@ -6,6 +6,7 @@ the routines make reference to the suitable plugins for all
 plugin-specific operations.
 """
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
+
 from aiida.common.datastructures import calc_states
 from aiida.scheduler.datastructures import job_states
 from aiida.common.exceptions import (
@@ -176,7 +177,7 @@ def update_running_calcs_status(authinfo):
 
 
 def get_authinfo(computer, aiidauser):
-    from aiida.djsite.db.models import DbComputer, DbAuthInfo
+    from aiida.backends.djsite.db.models import DbComputer, DbAuthInfo
 
     try:
         authinfo = DbAuthInfo.objects.get(
@@ -198,7 +199,7 @@ def get_authinfo(computer, aiidauser):
 
 def retrieve_jobs():
     from aiida.orm import JobCalculation, Computer
-    from aiida.djsite.db.models import DbComputer, DbUser
+    from aiida.backends.djsite.db.models import DbComputer, DbUser
 
     # I create a unique set of pairs (computer, aiidauser)
     computers_users_to_check = set(
@@ -236,7 +237,7 @@ def update_jobs():
     calls an update for each set of pairs (machine, aiidauser)
     """
     from aiida.orm import JobCalculation, Computer
-    from aiida.djsite.db.models import DbComputer, DbUser
+    from aiida.backends.djsite.db.models import DbComputer, DbUser
 
     # I create a unique set of pairs (computer, aiidauser)
     computers_users_to_check = set(
@@ -274,7 +275,7 @@ def submit_jobs():
     Submit all jobs in the TOSUBMIT state.
     """
     from aiida.orm import JobCalculation, Computer
-    from aiida.djsite.db.models import DbComputer, DbUser
+    from aiida.backends.djsite.db.models import DbComputer, DbUser
     from aiida.utils.logger import get_dblogger_extra
 
 
@@ -340,8 +341,7 @@ def submit_jobs_with_authinfo(authinfo):
     Submit jobs in TOSUBMIT status belonging
     to user and machine as defined in the 'dbauthinfo' table.
     """
-    from aiida.orm import JobCalculation, Computer
-    from aiida.scheduler.datastructures import JobInfo
+    from aiida.orm import JobCalculation
     from aiida.utils.logger import get_dblogger_extra
 
     if not authinfo.enabled:
@@ -418,10 +418,10 @@ def submit_calc(calc, authinfo, transport=None):
         are done on the consistency of the given transport with the transport
         of the computer defined in the authinfo.
     """
-    from aiida.orm import JobCalculation, Code, Computer
+    from aiida.orm import Code, Computer
     from aiida.common.folders import SandboxFolder
     from aiida.common.exceptions import (
-        FeatureDisabled, InputValidationError)
+        InputValidationError)
     from aiida.orm.data.remote import RemoteData
     from aiida.utils.logger import get_dblogger_extra
 
@@ -660,7 +660,6 @@ def retrieve_computed_for_authinfo(authinfo):
     from aiida.orm.data.folder import FolderData
     from aiida.utils.logger import get_dblogger_extra
     from aiida.orm import DataFactory
-    from aiida.orm.data.singlefile import SinglefileData
 
     import os
 

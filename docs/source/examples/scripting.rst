@@ -57,7 +57,7 @@ shell, you can also add (below the ``load_dbenv`` call) the following lines::
   
   from aiida.orm import Calculation, Code, Computer, Data, Node
   from aiida.orm import CalculationFactory, DataFactory
-  from aiida.djsite.db import models
+  from aiida.backends.djsite.db import models
   
 or simply import the only modules that you will need in the script.
 

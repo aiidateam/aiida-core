@@ -30,9 +30,9 @@ def get_new_uuid():
     """
     Return a new UUID (typically to be used for new nodes).
     It uses the UUID version specified in 
-    aiida.djsite.settings.settings_profile.AIIDANODES_UUID_VERSION
+    aiida.backends.djsite.settings.settings_profile.AIIDANODES_UUID_VERSION
     """
-    from aiida.djsite.settings.settings_profile import (
+    from aiida.backends.djsite.settings.settings import (
         AIIDANODES_UUID_VERSION)
     import uuid
 
@@ -59,7 +59,7 @@ def get_repository_folder(subfolder=None):
         return _repository_folder_cache[subfolder]
     except KeyError:
         try:
-            from aiida.djsite.settings.settings import REPOSITORY_PATH
+            from aiida.backends.djsite.settings.settings import REPOSITORY_PATH
             
             if not os.path.isdir(REPOSITORY_PATH):
                 raise ImportError

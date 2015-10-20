@@ -43,9 +43,9 @@ class Workflow(VerdiCommandWithSubcommands):
         load_dbenv()
 
         from aiida.orm.workflow import get_workflow_info
-        from aiida.djsite.db.models import DbWorkflow
+        from aiida.backends.djsite.db.models import DbWorkflow
         from aiida.common.datastructures import wf_states
-        from aiida.djsite.utils import get_automatic_user
+        from aiida.backends.djsite.utils import get_automatic_user
 
         from django.db.models import Q
         from aiida.utils import timezone
@@ -209,8 +209,7 @@ class Workflow(VerdiCommandWithSubcommands):
     def print_logshow(self, *args):
         from aiida.common.exceptions import NotExistent
         from aiida.orm.workflow import Workflow
-        from aiida.djsite.utils import get_log_messages
-        from aiida.common.datastructures import calc_states
+        from aiida.backends.djsite.utils import get_log_messages
         from aiida import load_dbenv
 
         load_dbenv()

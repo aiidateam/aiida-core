@@ -5,6 +5,7 @@ import aiida
 
 # The username (email) used by the default superuser, that should also run 
 # as the daemon
+from aiida.common.exceptions import ConfigurationError
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -676,7 +677,7 @@ _property_table = {
         "verdi shell (but not in the runaiida environment); it should be a "
         "string with the full paths for each module,"
         " function or class, separated by colons, e.g. "
-        "'aiida.djsite.db.models:aiida.orm.querytool.Querytool'",
+        "'aiida.backends.djsite.db.models:aiida.orm.querytool.Querytool'",
         "",
         None),
     "tests.use_sqlite": (

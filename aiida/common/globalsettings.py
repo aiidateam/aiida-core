@@ -15,7 +15,7 @@ def set_global_setting(key, value, description=None):
     Set a global setting in the DbSetting table (therefore, stored at the DB
     level).
     """
-    from aiida.djsite.db.models import DbSetting
+    from aiida.backends.djsite.db.models import DbSetting
 
     # Before storing, validate the key
     DbSetting.validate_key(key)
@@ -32,7 +32,7 @@ def del_global_setting(key):
     
     :raise KeyError: if the setting does not exist in the DB
     """
-    from aiida.djsite.db.models import DbSetting
+    from aiida.backends.djsite.db.models import DbSetting
     from django.core.exceptions import ObjectDoesNotExist
 
     try:
@@ -51,7 +51,7 @@ def get_global_setting(key):
     
     :raise KeyError: if the setting does not exist in the DB
     """
-    from aiida.djsite.db.models import DbSetting
+    from aiida.backends.djsite.db.models import DbSetting
     from django.core.exceptions import ObjectDoesNotExist
 
     try:
@@ -65,7 +65,7 @@ def get_global_setting_description(key):
     Return the description for the given setting variable, as stored in the
     DB, or raise a KeyError if the setting is not present in the DB.
     """
-    from aiida.djsite.db.models import DbSetting
+    from aiida.backends.djsite.db.models import DbSetting
     from django.core.exceptions import ObjectDoesNotExist
 
     try:

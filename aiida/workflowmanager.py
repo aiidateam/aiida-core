@@ -1,9 +1,5 @@
 # -*- coding: utf-8 -*-
-from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
-from django.contrib.auth.models import User
 
-from aiida.common.datastructures import calc_states
-from aiida.scheduler.datastructures import job_states
 from aiida.common import aiidalogger
 from aiida.common.datastructures import wf_states, wf_exit_call, wf_default_call
 
@@ -41,10 +37,9 @@ def execute_steps():
     the step is flagged in ERROR state and the stack is reported in the workflow report.
     """
 
-    from aiida.djsite.utils import get_automatic_user
-    from aiida.djsite.db.models import DbWorkflow
+    from aiida.backends.djsite.utils import get_automatic_user
     from aiida.orm.workflow import Workflow
-    from aiida.common.datastructures import calc_states, wf_states, wf_exit_call
+    from aiida.common.datastructures import wf_states
     from aiida.orm import JobCalculation
 
     logger.info("Querying the worflow DB")
@@ -175,7 +170,6 @@ def advance_workflow(w_superclass, step):
     """
 
     from aiida.orm.workflow import Workflow
-    import sys, os
 
     if step.nextcall == wf_exit_call:
         logger.info("[{0}] Step: {1} has an exit call".format(w_superclass.uuid, step.name))

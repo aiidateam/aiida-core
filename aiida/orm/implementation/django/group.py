@@ -8,8 +8,8 @@ from aiida.common.exceptions import (ModificationNotAllowed, UniquenessError,
 from aiida.orm.implementation.django.node import Node
 
 # TODO SP: abstract the user ?
-from aiida.djsite.utils import get_automatic_user
-from aiida.djsite.db.models import DbGroup, DbNode, DbAttribute
+from aiida.backends.djsite.utils import get_automatic_user
+from aiida.backends.djsite.db.models import DbGroup, DbNode, DbAttribute
 
 from django.db import transaction, IntegrityError
 from django.db.models import Q

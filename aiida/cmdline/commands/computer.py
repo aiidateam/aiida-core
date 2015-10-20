@@ -3,6 +3,7 @@ import sys
 
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida import load_dbenv
+from aiida.common.exceptions import ValidationError
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
@@ -155,7 +156,7 @@ class Computer(VerdiCommandWithSubcommands):
 
         load_dbenv()
         from aiida.orm.computer import Computer as AiiDAOrmComputer
-        from aiida.djsite.utils import get_automatic_user
+        from aiida.backends.djsite.utils import get_automatic_user
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -303,7 +304,7 @@ class Computer(VerdiCommandWithSubcommands):
         from aiida.common.exceptions import NotExistent
 
         load_dbenv()
-        from aiida.djsite.db.models import DbNode
+        from aiida.backends.djsite.db.models import DbNode
         from aiida.orm.computer import Computer
 
         parser = argparse.ArgumentParser(
@@ -362,7 +363,6 @@ class Computer(VerdiCommandWithSubcommands):
         """
         Setup a new or existing computer
         """
-        import inspect
         import readline
 
         if len(args) != 0:
@@ -466,9 +466,9 @@ class Computer(VerdiCommandWithSubcommands):
 
         from aiida.common.exceptions import (
             NotExistent, ValidationError)
-        from aiida.djsite.utils import (
+        from aiida.backends.djsite.utils import (
             get_automatic_user, get_configured_user_email)
-        from aiida.djsite.db.models import DbAuthInfo, DbUser
+        from aiida.backends.djsite.db.models import DbAuthInfo, DbUser
 
         import argparse
 
@@ -646,8 +646,8 @@ class Computer(VerdiCommandWithSubcommands):
         load_dbenv()
         from django.core.exceptions import ObjectDoesNotExist
         from aiida.common.exceptions import NotExistent
-        from aiida.djsite.db.models import DbUser
-        from aiida.djsite.utils import get_automatic_user
+        from aiida.backends.djsite.db.models import DbUser
+        from aiida.backends.djsite.utils import get_automatic_user
         from aiida.orm.computer import Computer as OrmComputer
 
         parser = argparse.ArgumentParser(
@@ -868,7 +868,7 @@ class Computer(VerdiCommandWithSubcommands):
 
         from django.core.exceptions import ObjectDoesNotExist
         from aiida.common.exceptions import NotExistent
-        from aiida.djsite.db.models import DbUser
+        from aiida.backends.djsite.db.models import DbUser
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),
@@ -939,7 +939,7 @@ class Computer(VerdiCommandWithSubcommands):
 
         from django.core.exceptions import ObjectDoesNotExist
         from aiida.common.exceptions import NotExistent
-        from aiida.djsite.db.models import DbUser
+        from aiida.backends.djsite.db.models import DbUser
 
         parser = argparse.ArgumentParser(
             prog=self.get_full_command_name(),

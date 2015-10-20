@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 import sys
 import os
-import subprocess
-from aiida import load_dbenv
 
+from aiida import load_dbenv
 from aiida.cmdline.baseclass import VerdiCommandWithSubcommands
 from aiida.cmdline.commands.node import _Label, _Description
 
@@ -244,7 +243,7 @@ class Calculation(VerdiCommandWithSubcommands):
 
     def calculation_show(self, *args):
         from aiida.common.exceptions import NotExistent
-        from aiida.djsite.utils import get_log_messages
+        from aiida.backends.djsite.utils import get_log_messages
 
         load_dbenv()
         from aiida.orm import JobCalculation as OrmCalculation
@@ -278,7 +277,7 @@ class Calculation(VerdiCommandWithSubcommands):
 
     def calculation_logshow(self, *args):
         from aiida.common.exceptions import NotExistent
-        from aiida.djsite.utils import get_log_messages
+        from aiida.backends.djsite.utils import get_log_messages
         from aiida.common.datastructures import calc_states
 
         load_dbenv()
@@ -684,9 +683,9 @@ class Calculation(VerdiCommandWithSubcommands):
         from aiida.utils import timezone
         from aiida.cmdline import wait_for_confirmation
         from aiida.orm.calculation.job import JobCalculation
-        from aiida.djsite.utils import get_automatic_user
+        from aiida.backends.djsite.utils import get_automatic_user
         from aiida.execmanager import get_authinfo
-        from aiida.djsite.db import models
+        from aiida.backends.djsite.db import models
         from aiida.common.datastructures import calc_states
         from aiida.orm import Computer
 

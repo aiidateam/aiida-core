@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
 
 from collections import defaultdict
-
-from aiida.orm.implementation.general.querytool import AbstractQueryTool
-
-from aiida.djsite.db import models
-from aiida.orm.implementation.django.node import Node
+import datetime
 
 from django.db.models import Q
+
+from aiida.orm.implementation.general.querytool import AbstractQueryTool
+from aiida.backends.djsite.db import models
+from aiida.orm.implementation.django.node import Node
 from aiida.utils.timezone import is_naive, make_aware, get_current_timezone
+
 
 # TODO SP: currently this is a basic copy paste, later on we should include the
 # work done during the Big Data project.

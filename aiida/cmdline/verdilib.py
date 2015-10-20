@@ -36,6 +36,7 @@ from aiida.cmdline.commands.exportfile import Export
 from aiida.cmdline.commands.group import Group
 from aiida.cmdline.commands.importfile import Import
 from aiida.cmdline.commands.node import Node
+from aiida.cmdline.commands.profile import Profile
 from aiida.cmdline.commands.user import User
 from aiida.cmdline.commands.workflow import Workflow
 from aiida.cmdline.commands.comment import Comment
@@ -269,6 +270,10 @@ class Help(VerdiCommand):
         except IndexError:
             print get_listparams()
             print ""
+            print ("Before each command you can specify the AiiDA profile to use,"
+                   " with 'verdi -p <profile> <command>' or "
+                   "'verdi --profile=<profile> <command>'")
+            print ""
             print ("Use '{} help <command>' for more information "
                    "on a specific command.".format(execname))
             sys.exit(1)
@@ -326,24 +331,24 @@ class Install(VerdiCommand):
 
         # create the directories to store the configuration files
         create_base_dirs()
-
+        profile = 'default' if settings_profile.AIIDADB_PROFILE is None \
+                            else settings_profile.AIIDADB_PROFILE
         # ask and store the configuration of the DB
         try:
-            create_configuration(profile='default')
+            create_configuration(profile=profile)
         except ValueError as e:
             print >> sys.stderr, "Error during configuration: {}".format(e.message)
             sys.exit(1)
 
         # set default DB profiles
-        set_default_profile('verdi', 'default')
-        set_default_profile('daemon', 'default')
+        set_default_profile('verdi', profile, force_rewrite=False)
+        set_default_profile('daemon', profile, force_rewrite=False)
 
         if only_user_config:
             print "Only user configuration requested, skipping the migrate command"
         else:
             print "Executing now a migrate command..."
-            # For the moment, the verdi install works only for the default 
-            # profile, so we don't chose it, but in the future one should.
+            # The correct profile is selected within load_dbenv.
             # Setting os.umask here since sqlite database gets created in
             # this step.
             old_umask = os.umask(DEFAULT_UMASK)
@@ -354,12 +359,13 @@ class Install(VerdiCommand):
 
         # I create here the default user
         print "Loading new environment..."
-        load_dbenv()
+        if only_user_config:
+            # db environment has not been loaded in this case
+            load_dbenv()
 
         from aiida.common.setup import DEFAULT_AIIDA_USER
         from aiida.djsite.db import models
         from aiida.djsite.utils import get_configured_user_email
-        from django.core.exceptions import ObjectDoesNotExist
 
         if not models.DbUser.objects.filter(email=DEFAULT_AIIDA_USER):
             print "Installing default AiiDA user..."

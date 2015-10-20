@@ -1,5 +1,5 @@
-Developer code plugin tutorial
-==============================
+Developer code plugin tutorial 2
+================================
 
 .. toctree::
    :maxdepth: 2

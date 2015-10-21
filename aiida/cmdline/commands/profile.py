@@ -38,16 +38,28 @@ class Profile(VerdiCommandWithSubcommands):
     def profile_setdefault(self, *args):
         from aiida.common.setup import set_default_profile
 
-        if len(args) != 1:
-            print >> sys.stderr, ("You have to pass (only) one parameter after "
-                                  "'profile setdefault', the name of")
-            print >> sys.stderr, "the profile to be set as the default."
+        valid_processes = ['verdi', 'daemon']
+        valid_processes_strlist = ", ".join("'{}'".format(pr) for pr in
+            valid_processes)
+
+        if len(args) != 2:
+            print >> sys.stderr, ("You have to pass (only) two parameters "
+                                  "after 'profile setdefault', the name of")
+            print >> sys.stderr, ("the process ({}) and the "
+                                  "profile to be set as the default.".format(
+                    valid_processes_strlist))
             sys.exit(1)
 
-        profile = args[0]        
+        process = args[0]
+        if process not in valid_processes:
+            print >> sys.stderr, ("'{}' is not a valid process. Choose it from "
+                                  "the following list: {}.".format(
+                    process, valid_processes_strlist))
+            sys.exit(1)
+            
+        profile = args[1]        
         # set default DB profiles
-        set_default_profile('verdi', profile, force_rewrite=True)
-        set_default_profile('daemon', profile, force_rewrite=True)
+        set_default_profile(process, profile, force_rewrite=True)
 
 
     def profile_list(self, *args):
@@ -57,6 +69,7 @@ class Profile(VerdiCommandWithSubcommands):
         current_profile = settings_profile.AIIDADB_PROFILE
         default_profile = get_default_profile(
                 settings_profile.CURRENT_AIIDADB_PROCESS)
+        default_daemon_profile = get_default_profile("daemon")
         if current_profile is None:
             current_profile = default_profile
 
@@ -93,6 +106,8 @@ class Profile(VerdiCommandWithSubcommands):
                 default_str = ' (DEFAULT)'
             else:
                 default_str = ''
+            if profile == default_daemon_profile:
+                default_str += ' (DAEMON PROFILE)'
 
             if use_colors:
                 start_color = "\x1b[{}m".format(color_id)

@@ -81,6 +81,18 @@ def _load_dbenv_noschemacheck(process, profile):
     os.environ['DJANGO_SETTINGS_MODULE'] = 'aiida.djsite.settings.settings'
     django.setup()
 
+def get_current_profile():
+    """
+    Return, as a string, the current profile being used.
+   
+    Return None if load_dbenv has not been loaded yet.
+    """
+    from aiida.djsite.settings import settings_profile
+
+    if is_dbenv_loaded():
+        return settings_profile.AIIDADB_PROFILE
+    else:
+        return None
 
 class DBLogHandler(logging.Handler):
     def emit(self, record):
@@ -293,7 +305,8 @@ def check_schema_version():
             "The code schema version is {}, but the version stored in the"
             "database (DbSetting table) is {}, stopping.\n"
             "To migrate to latest version, go to aiida/djsite and run:\n"
-            "python manage.py migrate".
-            format(code_schema_version, db_schema_version)
+            "python manage.py --aiida-profile={} migrate".
+            format(code_schema_version, db_schema_version, 
+                   get_current_profile())
         )
 

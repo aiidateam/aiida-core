@@ -41,7 +41,7 @@ is lost. In order to put a Calculation object inbetween, we define the
 :py:class:`InlineCalculation <aiida.orm.calculation.inline.InlineCalculation>`
 class, that is used as the class for these calculations that are run "in-line".
 
-We also provide a wrapper (that also works as a decorator of a function), 
+We also provide a wrapper (that also works as a decorator of a function),
 :py:func:`~aiida.orm.calculation.inline.make_inline`. This can be used
 to wrap suitably defined function, so that after their execution,
 a node representing their execution is stored in the DB, and suitable input
@@ -51,12 +51,56 @@ and output nodes are also stored.
   how it should be used, and of the requirements for the wrapped function.
 
 
+Database schema
++++++++++++++++
+
+The Django database schema can be found in :py:mod:`aiida.djsite.db.models`.
+
+If you need to change the database schema follow these steps:
+
+1. Make all the necessary changes to :py:mod:`aiida.djsite.db.models`
+2. Create a new migration file.  From ``aiida/djsite``, run::
+
+     python manage.py makemigrations
+
+   This will create the migration file in ``aiida/djsite/db/migrations`` whose
+   name begins with a number followed by some description.  If the description
+   is not appropriate then change to it to something better but retain the
+   number.
+
+3. Open the generated file and make the following changes::
+
+    from aiida.djsite.db.migrations import update_schema_version
+    ...
+    SCHEMA_VERSION = # choose an appropriate version number
+                     # (hint: higher than the last migration!)
+    ...
+    class Migration(migrations.Migration):
+      ...
+      operations = [
+        ..
+        update_schema_version(SCHEMA_VERSION)
+      ]
+
+5. Change the ``LATEST_MIGRATION`` variable in
+   ``aiida/djsite/db/migrations/__init__.py`` to the name of your migration
+   file::
+
+     LATEST_MIGRATION = '0003_my_db_update'
+
+   This let's AiiDA get the version number from your migration and check sure the
+   database and the code are in sync.
+6. Migrate your database to the new version, (again from ``aiida/djsite``),
+   run::
+
+     python manage.py migrate
+
 Commits and GIT usage
 +++++++++++++++++++++
 
 In order to have an efficient management of the project development, we chose
 to adopt the guidelines for the branching model described
-`here <http://nvie.com/posts/a-successful-git-branching-model/>`_. 
+`here <http://nvie.com/posts/a-successful-git-branching-model/>`_.
 In particular:
 
 * The main branch in which one should work is called ``develop``
@@ -87,10 +131,10 @@ For a cheatsheet of git commands, see :doc:`here <git_cheatsheet>`.
 .. note:: Before committing, **always** run::
 
     verdi devel tests
-  
+
   to be sure that your modifications did not introduce any new bugs in existing
-  code. Remember to do it even if you believe your modification to be small - 
-  the tests run pretty fast! 
+  code. Remember to do it even if you believe your modification to be small -
+  the tests run pretty fast!
 
 Tests
 +++++
@@ -100,9 +144,9 @@ Running the tests
 
 To run the tests, use the::
 
-  verdi devel tests 
-  
-command. You can add a list of tests after the 
+  verdi devel tests
+
+command. You can add a list of tests after the
 command to run only a selected portion of tests (e.g. while developing, if you
 discover that only a few tests fail). Use TAB completion to get the full list
 of tests. For instance, to run only the tests for transport and the generic
@@ -114,7 +158,7 @@ The test-first approach
 -----------------------
 
 Remember in best codes actually the `tests are written even before writing the
-actual code`_, because this helps in having a clear API. 
+actual code`_, because this helps in having a clear API.
 
 For any new feature that you add/modify, write a test for it! This is extremely
 important to have the project last and be as bug-proof as possible. Even more
@@ -149,38 +193,38 @@ For each of the above types of tests, a different testing approach is followed
    the `unittests module <https://docs.python.org/2/library/unittest.html>`_.
    Tests inside a selected number of AiiDA packages are automatically discovered
    when running ``verdi devel tests``. To make sure that your test is discovered,
-   verify that its parent module is listed in the 
+   verify that its parent module is listed in the
    ``base_allowed_test_folders`` property of the ``Devel`` class, inside
    ``aiida.cmdline.commands.devel``.
-   
+
    For an example of this type of tests, see, e.g.,
-   the ``aiida.common.test_utils`` module. 
+   the ``aiida.common.test_utils`` module.
 2. In this case, we use the `testing functionality of
    Django <https://docs.djangoproject.com/en/dev/topics/testing/>`_,
    adapted to run smoothly with AiiDA.
-   
-   To create a new group of tests, create a new python file under 
+
+   To create a new group of tests, create a new python file under
    ``aiida.djsite.db.substests``, and instead of inheriting each class directly
    from ``unittest``, inherit from ``aiida.djsite.db.testbase.AiidaTestCase``.
    In this way:
-   
+
    a. The Django testing functionality is used, and a temporary database is used
-   b. every time the class is created to run its tests, default data are 
+   b. every time the class is created to run its tests, default data are
       added to the database, that would otherwise be empty (in particular, a
       computer and a user; for more details, see the code of
       the ``AiidaTestCase.setUpClass()`` method).
    c. at the end of all tests of the class, the database is cleaned
       (nodes, links, ... are deleted) so that the temporary database
       is ready to run the tests of the following test classes.
-     
-   .. note:: it is *extremely important* that these tests are run from the 
+
+   .. note:: it is *extremely important* that these tests are run from the
      ``verdi devel tests`` command line interface. Not only this will ensure
      that a temporary database is used (via Django), but also that a temporary
      repository folder is used. Otherwise, you risk to corrupt your database
      data. (In the codes there are some checks to avoid that these classes
      are run without the correct environment being prepared by ``verdi
      devel tests``.)
-   
+
    Once you create a new file in ``aiida.djsite.db.substests``, you have to
    add a new entry to the ``db_test_list`` inside ``aiida.djsite.db.testbase``
    module in order for ``verdi devel tests`` to find it. In particular,
@@ -190,36 +234,36 @@ For each of the above types of tests, a different testing approach is followed
    the string ``db.`` is prepended to the name of each test involving the
    database.
    Therefore, if you add a line::
-   
+
      db_test_list = {
        ...
        'newtests': 'aiida.djsite.db.subtests.mynewtestsmodule',
        ...
      }
-   
+
    you will be able to run all all tests inside
    ``aiida.djsite.db.subtests.mynewtestsmodule`` with the command::
-   
+
      verdi devel tests db.newtests
-   
+
    .. note:: If in the list of parameters to ``verdi devel tests`` you add
      also a ``db`` parameter, then all database-related tests will be run, i.e.,
      all tests that start with ``db.`` (or, if you want, all tests in the
      ``db_test_list`` described above).
-   
+
    .. note:: By default, the test database is created using an in-memory SQLite
      database, which is much faster than creating from scratch a new test
      database with PostgreSQL or SQLite. However, if you want to test
      database-specific settings and you want to use the same type of database
      you are using with AiiDA, set the ``tests.use_sqlite`` global property to
      ``False``::
-     
+
        verdi devel setproperty tests.use_sqlite false
 
-     
+
 3. These tests require an external engine to submit the calculations and then
    check the results at job completion. We use for this a continuous integration
-   server, and the best approach is to write suitable workflows to run 
+   server, and the best approach is to write suitable workflows to run
    simulations and then verify the results at the end.
 
 Special tests
@@ -230,7 +274,7 @@ One case is represented by the tests for transport. In this case, you can define
 tests for a specific plugin as described above (e.g., see the
 ``aiida.transport.plugins.test_ssh`` and ``aiida.transport.plugins.test_local``
 tests). Moreover, there is a ``test_all_plugins`` module in the same folder.
-Inside this module, the discovery code is adapted so that each test method 
+Inside this module, the discovery code is adapted so that each test method
 defined in that file **and decorated with** ``@run_for_all_plugins`` is
 run for *all* available plugins, to avoid to rewrite the same
 test code more than once and ensure that all plugins behave in the

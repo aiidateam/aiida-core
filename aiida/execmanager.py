@@ -18,7 +18,9 @@ from aiida.common import aiidalogger
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Marco Dorigo, Marco Gibertini, Nicolas Mounet, Riccardo Sabatini"
+__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Marco Dorigo," \
+                   "Marco Gibertini, Nicolas Mounet, Riccardo Sabatini," \
+                   "Martin Uhrin"
 
 execlogger = aiidalogger.getChild('execmanager')
 
@@ -105,24 +107,11 @@ def update_running_calcs_status(authinfo):
                             except ModificationNotAllowed:
                                 # Someone already set it, just skip
                                 pass
-                        elif jobinfo.job_state == job_states.UNDETERMINED:
-                            # try:
-                            #    c._set_state(calc_states.UNDETERMINED)
-                            #except ModificationNotAllowed:
-                            #    # Someone already set it, just skip
-                            #    pass                            
-                            #execlogger.error("There is an undetermined calc "
-                            #                 "with pk {}".format(
-                            #    c.pk), extra=logger_extra)
-                            ## Do not do anything! If it changes back to a
-                            ## valid state, that the state ordering would not
-                            ## work, and moreover it risks to go back to a
-                            ## valid WITHSCHEDULER STATE.
-                            pass
+
                         ## Do not set the WITHSCHEDULER state multiple times, 
                         ## this would raise a ModificationNotAllowed
                         # else:
-                        #    c._set_state(calc_states.WITHSCHEDULER)
+                        # c._set_state(calc_states.WITHSCHEDULER)
 
                         c._set_scheduler_state(jobinfo.job_state)
 
@@ -368,15 +357,13 @@ def submit_jobs_with_authinfo(authinfo):
         computer=authinfo.dbcomputer,
         user=authinfo.aiidauser)
 
-    # I do it here so that the transport is opened only once per computer
-    t = authinfo.get_transport()
-
     # I avoid to open an ssh connection if there are
     # no calcs with state WITHSCHEDULER
     if len(calcs_to_inquire):
         # Open connection
         try:
-            with t:
+            # I do it here so that the transport is opened only once per computer
+            with authinfo.get_transport() as t:
                 for c in calcs_to_inquire:
                     logger_extra = get_dblogger_extra(c)
                     t._set_logger_extra(logger_extra)
@@ -392,9 +379,9 @@ def submit_jobs_with_authinfo(authinfo):
                             c.pk, e.__class__.__name__, e.message))
                         # I just proceed to the next calculation
                         continue
-        # Catch exceptions also at this lavel (this happens only if there is
+        # Catch exceptions also at this level (this happens only if there is
         # a problem opening the transport in the 'with t' statement,
-        # because any other exception is catched and skipped above
+        # because any other exception is caught and skipped above
         except Exception as e:
             import traceback
             from aiida.djsite.utils import get_dblogger_extra
@@ -459,16 +446,14 @@ def submit_calc(calc, authinfo, transport=None):
                          "test_submit() method, otherwise store all links"
                          "first".format(calc.pk))
 
-
     # Double check, in the case the calculation was 'killed' (and therefore
     # put in the 'FAILED' state) in the meantime
     # Do it as near as possible to the state change below (it would be
     # even better to do it with some sort of transaction)
     if calc.get_state() != calc_states.TOSUBMIT:
         raise ValueError("Can only submit calculations with state=TOSUBMIT! "
-                         "(state of calc {} is {} instead)".format(
-            calc.pk, calc.get_state()))
-
+                         "(state of calc {} is {} instead)".format(calc.pk,
+                                                                   calc.get_state()))
     # I start to submit the calculation: I set the state
     try:
         calc._set_state(calc_states.SUBMITTING)
@@ -640,7 +625,7 @@ def submit_calc(calc, authinfo, transport=None):
             ## I do not set the state to queued; in this way, if the
             ## daemon is down, the user sees '(unknown)' as last state
             ## and understands that the daemon is not running.
-            #if job_tmpl.submit_as_hold:
+            # if job_tmpl.submit_as_hold:
             #    calc._set_scheduler_state(job_states.QUEUED_HELD)
             #else:
             #    calc._set_scheduler_state(job_states.QUEUED)
@@ -659,9 +644,8 @@ def submit_calc(calc, authinfo, transport=None):
             pass
 
         execlogger.error("Submission of calc {} failed, check also the "
-                         "log file! Traceback: {}".format(
-            calc.pk,
-            traceback.format_exc()),
+                         "log file! Traceback: {}".format(calc.pk,
+                                                          traceback.format_exc()),
                          extra=logger_extra)
         raise
     finally:

@@ -12,6 +12,7 @@ Developer's guide
    workflows   
    
    data_cmdline
+   tcod_exporter
    git_cheatsheet
    sphinx_cheatsheet
    ../verdi/properties

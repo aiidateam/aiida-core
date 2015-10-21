@@ -713,7 +713,37 @@ _property_table = {
         "string",
         "Minimum level to log to the DbLog table",
         "WARNING",
-        ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"])
+        ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"]),
+    "tcod.depositor_username": (
+        "tcod_depositor_username",
+        "string",
+        "Username for TCOD deposition",
+        None,
+        None),
+    "tcod.depositor_password": (
+        "tcod_depositor_password",
+        "string",
+        "Password for TCOD deposition",
+        None,
+        None),
+    "tcod.depositor_email": (
+        "tcod_depositor_email",
+        "string",
+        "E-mail address for TCOD deposition",
+        None,
+        None),
+    "tcod.depositor_author_name": (
+        "tcod_depositor_author_name",
+        "string",
+        "Author name for TCOD depositions",
+        None,
+        None),
+    "tcod.depositor_author_email": (
+        "tcod_depositor_author_email",
+        "string",
+        "E-mail address for TCOD depositions",
+        None,
+        None)
 
 }
 

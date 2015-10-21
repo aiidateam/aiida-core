@@ -179,6 +179,8 @@ Manages database data objects.
 
     * **export**: export the node as a string of a specified format
 
+    * **deposit**: deposit the node to a remote database
+
   * **parameter**: handles the ParameterData objects
 
     * **show**: output the content of the python dictionary in different
@@ -196,6 +198,8 @@ Manages database data objects.
 
     * **export**: export the node as a string of a specified format
 
+    * **deposit**: deposit the node to a remote database
+
   * **trajectory**: handles the TrajectoryData objects
 
     * **list**: list currently saved nodes of TrajectoryData kind
@@ -204,6 +208,8 @@ Manages database data objects.
       the TrajectoryData
 
     * **export**: export the node as a string of a specified format
+
+    * **deposit**: deposit the node to a remote database
 
   * **label**: view / set the label of a data
 

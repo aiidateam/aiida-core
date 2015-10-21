@@ -41,7 +41,8 @@ class User(VerdiCommandWithSubcommands):
 
     def user_configure(self, *args):
         from aiida.djsite.settings import settings_profile
-        if not settings_profile.LOAD_DBENV_CALLED:
+        from aiida import is_dbenv_loaded
+        if not is_dbenv_loaded():
             load_dbenv()
 
         import readline

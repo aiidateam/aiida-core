@@ -6,6 +6,13 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
 
+def is_dbenv_loaded():
+    """
+    Return True of the dbenv was already loaded (with a call to load_dbenv),
+    False otherwise.
+    """
+    from aiida.djsite.settings import settings_profile
+    return settings_profile.LOAD_DBENV_CALLED
 
 def load_dbenv(process=None, profile=None):
     """

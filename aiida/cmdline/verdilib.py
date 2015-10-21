@@ -64,12 +64,12 @@ def parse_profile(argv,merge_equal=False):
     command position shift (index where the commands start)
     
     :param merge_equal: if True, merge things like
-    ('verdi', '--profile', '=', 'x', 'y') to ('verdi', '--profile=x', 'y')
-    but then return the correct index for the original array.
+      ('verdi', '--profile', '=', 'x', 'y') to ('verdi', '--profile=x', 'y')
+      but then return the correct index for the original array.
     
-    Raise ProfileParsingException if there is only 'verdi' specified, or
-    if only 'verdi -p' (in these cases, one has respectively 
-    exception.minus_p_provided equal to False or True)
+    :raise ProfileParsingException: if there is only 'verdi' specified, or
+      if only 'verdi -p' (in these cases, one has respectively 
+      exception.minus_p_provided equal to False or True)
     """
     if merge_equal:
         if len(argv) >= 3:

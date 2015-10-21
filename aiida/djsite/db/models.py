@@ -12,20 +12,24 @@ from aiida.common.exceptions import (
     ConfigurationError, DbContentError, MissingPluginError, InternalError)
 from aiida.djsite.settings.settings_profile import (
     AIIDANODES_UUID_VERSION, AUTH_USER_MODEL)
+import aiida.djsite.db.migrations as migrations
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Nicolas Mounet, Riccardo Sabatini"
+__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Nicolas Mounet," \
+                   "Riccardo Sabatini, Martin Uhrin"
 
 # This variable identifies the schema version of this file.
 # Every time you change the schema below in *ANY* way, REMEMBER TO CHANGE
-# the version here!
+# the version here in the migration file and update migrations/__init__.py.
+# See the documentation for how to do all this.
+#
 # The version is checked at code load time to verify that the code schema
 # version and the DB schema version are the same. (The DB schema version
-# is stored in the DbSetting table and the check is done in the 
+# is stored in the DbSetting table and the check is done in the
 # load_dbenv() function).
-SCHEMA_VERSION = "1.0.1"
+SCHEMA_VERSION = migrations.current_schema_version()
 
 
 class AiidaQuerySet(QuerySet):
@@ -110,11 +114,11 @@ class DbNode(m.Model):
     Generic node: data or calculation or code.
 
     Nodes can be linked (DbLink table)
-    Naming convention for Node relationships: A --> C --> B. 
+    Naming convention for Node relationships: A --> C --> B.
 
     * A is 'input' of C.
-    * C is 'output' of A. 
-    * A is 'parent' of B,C 
+    * C is 'output' of A.
+    * A is 'parent' of B,C
     * C,B are 'children' of A.
 
     :note: parents and children are stored in the DbPath table, the transitive
@@ -123,7 +127,7 @@ class DbNode(m.Model):
 
     Internal attributes, that define the node itself,
     are stored in the DbAttribute table; further user-defined attributes,
-    called 'extra', are stored in the DbExtra table (same schema and methods 
+    called 'extra', are stored in the DbExtra table (same schema and methods
     of the DbAttribute table, but the code does not rely on the content of the
     table, therefore the user can use it at his will to tag or annotate nodes.
 
@@ -169,13 +173,12 @@ class DbNode(m.Model):
     # Managed by the aiida.orm.Node class. Do not modify
     nodeversion = m.IntegerField(default=1, editable=False)
 
-    # For the API: whether this node 
+    # For the API: whether this node
     public = m.BooleanField(default=False)
 
     objects = m.Manager()
     # Return aiida Node instances or their subclasses instead of DbNode instances
     aiidaobjects = AiidaObjectManager()
-
 
     def get_aiida_class(self):
         """
@@ -185,7 +188,6 @@ class DbNode(m.Model):
         from aiida.orm.node import Node, from_type_to_pluginclassname
         from aiida.common.pluginloader import load_plugin
         from aiida.common import aiidalogger
-
 
         try:
             pluginclassname = from_type_to_pluginclassname(self.type)
@@ -205,11 +207,11 @@ class DbNode(m.Model):
     def get_simple_name(self, invalid_result=None):
         """
         Return a string with the last part of the type name.
-        
+
         If the type is empty, use 'Node'.
         If the type is invalid, return the content of the input variable
         ``invalid_result``.
-          
+
         :param invalid_result: The value to be returned if the node type is
             not recognized.
         """
@@ -260,7 +262,7 @@ class DbLink(m.Model):
                          on_delete=m.PROTECT)
     output = m.ForeignKey('DbNode', related_name='input_links',
                           on_delete=m.CASCADE)
-    #label for data input for calculation
+    # label for data input for calculation
     label = m.CharField(max_length=255, db_index=True, blank=False)
 
     class Meta:
@@ -275,7 +277,7 @@ class DbLink(m.Model):
         # times the same name.
         unique_together = (("input", "output"),
                            ("output", "label"),
-        )
+                           )
 
     def __str__(self):
         return "{} ({}) --> {} ({})".format(
@@ -310,8 +312,8 @@ class DbPath(m.Model):
     def expand(self):
         """
         Method to expand a DbPath (recursive function), i.e., to get a list
-        of all dbnodes that are traversed in the given path. 
-        
+        of all dbnodes that are traversed in the given path.
+
         :return: list of DbNode objects representing the expanded DbPath
         """
 
@@ -351,16 +353,16 @@ class DeserializationException(AiidaException):
 def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
                            original_pk=None, lesserrors=False):
     """
-    Deserialize a single attribute. 
-    
+    Deserialize a single attribute.
+
     :param mainitem: the main item (either the attribute itself for base
-      types (None, string, ...) or the main item for lists and dicts. 
+      types (None, string, ...) or the main item for lists and dicts.
       Must contain the 'key' key and also the following keys:
       datatype, tval, fval, ival, bval, dval.
       NOTE that a type check is not performed! tval is expected to be a string,
       dval a date, etc.
     :param subitems: must be a dictionary of dictionaries. In the top-level dictionary,
-      the key must be the key of the attribute, stripped of all prefixes 
+      the key must be the key of the attribute, stripped of all prefixes
       (i.e., if the mainitem has key 'a.b' and we pass subitems
         'a.b.0', 'a.b.1', 'a.b.1.c', their keys must be '0', '1', '1.c').
         It must be None if the value is not iterable (int, str,
@@ -428,7 +430,7 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
         return mainitem['dval']
     elif mainitem['datatype'] == 'list':
         # subitems contains all subitems, here I store only those of
-        # deepness 1, i.e. if I have subitems '0', '1' and '1.c' I 
+        # deepness 1, i.e. if I have subitems '0', '1' and '1.c' I
         # store only '0' and '1'
         firstlevelsubdict = {k: v for k, v in subitems.iteritems()
                              if sep not in k}
@@ -497,7 +499,7 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None,
         return retlist
     elif mainitem['datatype'] == 'dict':
         # subitems contains all subitems, here I store only those of
-        # deepness 1, i.e. if I have subitems '0', '1' and '1.c' I 
+        # deepness 1, i.e. if I have subitems '0', '1' and '1.c' I
         # store only '0' and '1'
         firstlevelsubdict = {k: v for k, v in subitems.iteritems()
                              if sep not in k}
@@ -552,9 +554,9 @@ def deserialize_attributes(data, sep, original_class=None, original_pk=None):
     """
     Deserialize the attributes from the format internally stored in the DB
     to the actual format (dictionaries, lists, integers, ...
-    
+
     :param data: must be a dictionary of dictionaries. In the top-level dictionary,
-      the key must be the key of the attribute. The value must be a dictionary 
+      the key must be the key of the attribute. The value must be a dictionary
       with the following keys: datatype, tval, fval, ival, bval, dval. Other
       keys are ignored.
       NOTE that a type check is not performed! tval is expected to be a string,
@@ -570,11 +572,11 @@ def deserialize_attributes(data, sep, original_class=None, original_pk=None):
       of DbMultipleValueAttributeBaseClass that has a dbnode associated to it,
       pass here the PK integer. This is used only in case the wrong number
       of elements is found in the raw data, to print a more meaningful message
-    
-    :return: a dictionary, where for each entry the corresponding value is 
+
+    :return: a dictionary, where for each entry the corresponding value is
       returned, deserialized back to lists, dictionaries, etc.
-      Example: if ``data = {'a': {'datatype': "list", "ival": 2, ...}, 
-      'a.0': {'datatype': "int", "ival": 2, ...}, 
+      Example: if ``data = {'a': {'datatype': "list", "ival": 2, ...},
+      'a.0': {'datatype': "int", "ival": 2, ...},
       'a.1': {'datatype': "txt", "tval":  "yy"}]``,
       it will return ``{"a": [2, "yy"]}``
     """
@@ -656,7 +658,7 @@ class DbMultipleValueAttributeBaseClass(m.Model):
     @property
     def subspecifier_pk(self):
         """
-        Return the subspecifier PK in the database (or None, if no 
+        Return the subspecifier PK in the database (or None, if no
         subspecifier should be used)
         """
         if self._subspecifier_field_name is None:
@@ -669,7 +671,7 @@ class DbMultipleValueAttributeBaseClass(m.Model):
         """
         Validate the key string to check if it is valid (e.g., if it does not
         contain the separator symbol.).
-        
+
         :return: None if the key is valid
         :raise ValidationError: if the key is not valid
         """
@@ -690,9 +692,9 @@ class DbMultipleValueAttributeBaseClass(m.Model):
                   stop_if_existing=False):
         """
         Set a new value in the DB, possibly associated to the given subspecifier.
-        
+
         :note: This method also stored directly in the DB.
-        
+
         :param key: a string with the key to create (must be a level-0
           attribute, that is it cannot contain the separator cls._sep).
         :param value: the value to store (a basic data type or a list or a dict)
@@ -708,14 +710,14 @@ class DbMultipleValueAttributeBaseClass(m.Model):
         :param other_attribs: a dictionary of other parameters, to store
           only on the level-zero attribute (e.g. for description in DbSetting).
         :param stop_if_existing: if True, it will stop with an
-           UniquenessError exception if the new entry would violate an 
+           UniquenessError exception if the new entry would violate an
            uniqueness constraint in the DB (same key, or same key+node,
-           depending on the specific subclass). Otherwise, it will 
-           first delete the old value, if existent. The use with True is 
+           depending on the specific subclass). Otherwise, it will
+           first delete the old value, if existent. The use with True is
            useful if you want to use a given attribute as a "locking" value,
            e.g. to avoid to perform an action twice on the same node.
            Note that, if you are using transactions, you may get the error
-           only when the transaction is committed.          
+           only when the transaction is committed.
         """
         from django.db import transaction
 
@@ -738,11 +740,11 @@ class DbMultipleValueAttributeBaseClass(m.Model):
 
                     ## NOTE! Be careful in case the extra/attribute to
                     ## store is not a simple attribute but a list or dict:
-                    ## like this, it should be ok because if we are 
+                    ## like this, it should be ok because if we are
                     ## overwriting an entry it will stop anyway to avoid
-                    ## to overwrite the main entry, but otherwise 
+                    ## to overwrite the main entry, but otherwise
                     ## there is the risk that trailing pieces remain
-                    ## so in general it is good to recursively clean 
+                    ## so in general it is good to recursively clean
                     ## all sub-items.
                     cls.del_value(key,
                                   subspecifier_value=subspecifier_value)
@@ -771,13 +773,13 @@ class DbMultipleValueAttributeBaseClass(m.Model):
                      other_attribs={}):
         """
         Create a new list of attributes, without storing them, associated
-        with the current key/value pair (and to the given subspecifier, 
+        with the current key/value pair (and to the given subspecifier,
         e.g. the DbNode for DbAttributes and DbExtras).
-        
-        :note: No hits are done on the DB, in particular no check is done 
+
+        :note: No hits are done on the DB, in particular no check is done
           on the existence of the given nodes.
-          
-        :param key: a string with the key to create (can contain the 
+
+        :param key: a string with the key to create (can contain the
           separator cls._sep if this is a sub-attribute: indeed, this
           function calls itself recursively)
         :param value: the value to store (a basic data type or a list or a dict)
@@ -787,8 +789,8 @@ class DbMultipleValueAttributeBaseClass(m.Model):
           that define it (e.g. DbAttribute and DbExtra)
         :param other_attribs: a dictionary of other parameters, to store
           only on the level-zero attribute (e.g. for description in DbSetting).
-        
-        :return: always a list of class instances; it is the user 
+
+        :return: always a list of class instances; it is the user
           responsibility to store such entries (typically with a Django
           bulk_create() call).
         """
@@ -925,28 +927,27 @@ class DbMultipleValueAttributeBaseClass(m.Model):
 
         return list_to_return
 
-
     @classmethod
     def get_query_dict(cls, value):
         """
         Return a dictionary that can be used in a django filter to query
         for a specific value. This takes care of checking the type of the
         input parameter 'value' and to convert it to the right query.
-        
-        :param value: The value that should be queried. Note: can only be 
+
+        :param value: The value that should be queried. Note: can only be
            base datatype, not a list or dict. For those, query directly for
            one of the sub-elements.
-        
+
         :todo: see if we want to give the possibility to query for the existence
            of a (possibly empty) dictionary or list, of for their length.
-        
-        :note: this will of course not find a data if this was stored in the 
+
+        :note: this will of course not find a data if this was stored in the
            DB as a serialized JSON.
-        
+
         :return: a dictionary to be used in the django .filter() method.
             For instance, if 'value' is a string, it will return the dictionary
             ``{'datatype': 'txt', 'tval': value}``.
-            
+
         :raise: ValueError if value is not of a base datatype (string, integer,
             float, bool, None, or date)
         """
@@ -1005,7 +1006,7 @@ class DbMultipleValueAttributeBaseClass(m.Model):
                     "bval": _[5],
                     "dval": _[6],
                 } for _ in dballsubvalues
-                }
+                        }
                 # for _ in dballsubvalues}
                 # Append also the item itself
                 data["attr"] = {
@@ -1045,12 +1046,12 @@ class DbMultipleValueAttributeBaseClass(m.Model):
     def del_value(cls, key, only_children=False, subspecifier_value=None):
         """
         Delete a value associated with the given key (if existing).
-        
+
         :note: No exceptions are raised if no entry is found.
-        
+
         :param key: the key to delete. Can contain the separator cls._sep if
           you want to delete a subkey.
-        :param only_children: if True, delete only children and not the 
+        :param only_children: if True, delete only children and not the
           entry itself.
         :param subspecifier_value: must be None if this class has no
           subspecifier set (e.g., the DbSetting class).
@@ -1075,7 +1076,7 @@ class DbMultipleValueAttributeBaseClass(m.Model):
 
         query = Q(key__startswith="{parentkey}{sep}".format(
             parentkey=key, sep=cls._sep),
-                  **subspecifiers_dict)
+            **subspecifiers_dict)
 
         if not only_children:
             query.add(Q(key=key, **subspecifiers_dict), Q.OR)
@@ -1088,11 +1089,11 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
     """
     Abstract base class for tables storing element-attribute-value data.
     Element is the dbnode; attribute is the key name.
-    Value is the specific value to store. 
-    
+    Value is the specific value to store.
+
     This table had different SQL columns to store different types of data, and
     a datatype field to know the actual datatype.
-    
+
     Moreover, this class unpacks dictionaries and lists when possible, so that
     it is possible to query inside recursive lists and dicts.
     """
@@ -1117,18 +1118,17 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
         """
         from django.db.models import Q
 
-        # This node, and does not contain the separator 
+        # This node, and does not contain the separator
         # (=> show only level-zero entries)
         query = Q(dbnode=dbnode) & ~Q(key__contains=cls._sep)
         return cls.objects.filter(query)
-
 
     @classmethod
     def get_value_for_node(cls, dbnode, key):
         """
         Get an attribute from the database for the given dbnode.
-        
-        :return: the value stored in the Db table, correctly converted 
+
+        :return: the value stored in the Db table, correctly converted
             to the right type.
         :raise AttributeError: if no key is found for the given dbnode
         """
@@ -1143,9 +1143,9 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
     def get_all_values_for_node(cls, dbnode):
         """
         Return a dictionary with all attributes for the given dbnode.
-        
+
         :return: a dictionary where each key is a level-0 attribute
-            stored in the Db table, correctly converted 
+            stored in the Db table, correctly converted
             to the right type.
         """
         dballsubvalues = cls.objects.filter(dbnode=dbnode).values_list('key',
@@ -1160,7 +1160,7 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
             "bval": _[5],
             "dval": _[6],
         } for _ in dballsubvalues
-        }
+                }
         try:
             return deserialize_attributes(data, sep=cls._sep,
                                           original_class=cls, original_pk=dbnode.pk)
@@ -1187,12 +1187,12 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
             else:
                 dbnode_node = dbnode
 
-            #create_value returns a list of nodes to store
+            # create_value returns a list of nodes to store
             for k, v in attributes.iteritems():
                 nodes_to_store.extend(
                     cls.create_value(k, v,
                                      subspecifier_value=dbnode_node,
-                    ))
+                                     ))
 
             if return_not_store:
                 return nodes_to_store
@@ -1210,20 +1210,19 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
                 transaction.savepoint_rollback(sid)
             raise
 
-
     @classmethod
     def set_value_for_node(cls, dbnode, key, value, with_transaction=True,
                            stop_if_existing=False):
         """
         This is the raw-level method that accesses the DB. No checks are done
-        to prevent the user from (re)setting a valid key. 
+        to prevent the user from (re)setting a valid key.
         To be used only internally.
 
         :todo: there may be some error on concurrent write;
            not checked in this unlucky case!
 
         :param dbnode: the dbnode for which the attribute should be stored;
-          in an integer is passed, this is used as the PK of the dbnode, 
+          in an integer is passed, this is used as the PK of the dbnode,
           without any further check (for speed reasons)
         :param key: the key of the attribute to store; must be a level-zero
           attribute (i.e., no separators in the key)
@@ -1234,14 +1233,14 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
            is performed.
         :param stop_if_existing: if True, it will stop with an
            UniquenessError exception if the key already exists
-           for the given node. Otherwise, it will 
-           first delete the old value, if existent. The use with True is 
+           for the given node. Otherwise, it will
+           first delete the old value, if existent. The use with True is
            useful if you want to use a given attribute as a "locking" value,
            e.g. to avoid to perform an action twice on the same node.
            Note that, if you are using transactions, you may get the error
            only when the transaction is committed.
-        
-        :raise ValueError: if the key contains the separator symbol used 
+
+        :raise ValueError: if the key contains the separator symbol used
             internally to unpack dictionaries and lists (defined in cls._sep).
         """
         if isinstance(dbnode, (int, long)):
@@ -1257,12 +1256,12 @@ class DbAttributeBaseClass(DbMultipleValueAttributeBaseClass):
     def del_value_for_node(cls, dbnode, key):
         """
         Delete an attribute from the database for the given dbnode.
-        
+
         :note: no exception is raised if no attribute with the given key is
           found in the DB.
-          
+
         :param dbnode: the dbnode for which you want to delete the key.
-        :param key: the key to delete. 
+        :param key: the key to delete.
         """
         cls.del_value(key, subspecifier_value=dbnode)
 
@@ -1319,8 +1318,8 @@ class DbExtra(DbAttributeBaseClass):
 class DbCalcState(m.Model):
     """
     Store the state of calculations.
-    
-    The advantage of a table (with uniqueness constraints) is that this 
+
+    The advantage of a table (with uniqueness constraints) is that this
     disallows entering twice in the same state (e.g., retrieving twice).
     """
     from aiida.common.datastructures import calc_states
@@ -1340,10 +1339,10 @@ class DbCalcState(m.Model):
 class DbGroup(m.Model):
     """
     A group of nodes.
-    
+
     Any group of nodes can be created, but some groups may have specific meaning
     if they satisfy specific rules (for instance, groups of UpdData objects are
-    pseudopotential families - if no two pseudos are included for the same 
+    pseudopotential families - if no two pseudos are included for the same
     atomic element).
     """
     uuid = UUIDField(auto=True, version=AIIDANODES_UUID_VERSION)
@@ -1477,7 +1476,7 @@ class DbComputer(m.Model):
 #    job_id = m.TextField(blank=True)
 #    scheduler_state = m.CharField(max_length=64,blank=True)
 #    # Will store a json of the last JobInfo got from the scheduler
-#    last_jobinfo = m.TextField(default='{}')  
+#    last_jobinfo = m.TextField(default='{}')
 
 @python_2_unicode_compatible
 class DbAuthInfo(m.Model):
@@ -1491,7 +1490,7 @@ class DbAuthInfo(m.Model):
     auth_params = m.TextField(default='{}')  # Will store a json; contains mainly the remoteuser
     # and the private_key
 
-    # The keys defined in the metadata of the DbAuthInfo will override the 
+    # The keys defined in the metadata of the DbAuthInfo will override the
     # keys with the same name defined in the DbComputer (using a dict.update()
     # call of python).
     metadata = m.TextField(default="{}")  # Will store a json
@@ -1604,7 +1603,7 @@ class DbLog(m.Model):
         objpk = record.__dict__.get('objpk', None)
         objname = record.__dict__.get('objname', None)
 
-        # Filter: Do not store in DB if no objpk and objname is given 
+        # Filter: Do not store in DB if no objpk and objname is given
         if objpk is None or objname is None:
             return
 

@@ -4,12 +4,16 @@ from aiida.orm import JobCalculation
 from aiida.orm.data.parameter import ParameterData 
 from aiida.common.utils import classproperty
 from aiida.common.exceptions import InputValidationError
+from aiida.common.exceptions import ValidationError
 from aiida.common.datastructures import CalcInfo, CodeInfo
 import json
 
-__copyright__ = u"Copyright (c), 2014, École Polytechnique Fédérale de Lausanne (EPFL), Switzerland, Laboratory of Theory and Simulation of Materials (THEOS). All rights reserved."
-__license__ = "Non-Commercial, End-User Software License Agreement, see LICENSE.txt file"
-__version__ = "0.2.1"
+__copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE " \
+                u"(Theory and Simulation of Materials (THEOS) and National Centre " \
+                u"for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), " \
+                u"Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
+__license__ = "MIT license, see LICENSE.txt file"
+__version__ = "0.4.1"
 
 class SumCalculation(JobCalculation):
     """
@@ -76,8 +80,8 @@ class SumCalculation(JobCalculation):
         
         # write all the input to a file
         input_filename = tempfolder.get_abs_path(self._INPUT_FILE_NAME)
-        with open(input_filename,'w') as infile:
-            json.dump(input_json,infile)
+        with open(input_filename, 'w') as infile:
+            json.dump(input_json, infile)
         
         # ============================ calcinfo ================================
         
@@ -89,8 +93,8 @@ class SumCalculation(JobCalculation):
         
         codeinfo = CodeInfo()
         codeinfo.cmdline_params = [self._INPUT_FILE_NAME,self._OUTPUT_FILE_NAME]
-        codeinfo.code_pk = code.pk
+        codeinfo.code_uuid = code.uuid
         calcinfo.codes_info = [codeinfo]
         
         return calcinfo
-        
+

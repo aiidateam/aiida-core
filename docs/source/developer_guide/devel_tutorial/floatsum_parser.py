@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 
-from aiida.orm.calculation.job.sum import SumCalculation
+from aiida.orm.calculation.job.floatsum import FloatsumCalculation
 from aiida.parsers.parser import Parser
 from aiida.parsers.exceptions import OutputParsingError
-from aiida.orm.data.parameter import ParameterData
-
+from aiida.orm.data.float import FloatData
 import json
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE " \
@@ -14,22 +13,20 @@ __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE 
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 
-
-class SumParser(Parser):
+class FloatsumParser(Parser):
     """
     This class is the implementation of the Parser class for Sum.
     """    
     _outarray_name = 'output_data'
     
-    def __init__(self, calculation):
+    def __init__(self,calculation):
         """
         Initialize the instance of SumParser
         """
-        # super(SumParser, self).__init__(calculation)
-        super(SumParser, self).__init__(Parser)
+        super(FloatsumParser, self).__init__(calculation)
         # check for valid input
-        if not isinstance(calculation,SumCalculation):
-            raise OutputParsingError("Input calc must be a SumCalculation")
+        if not isinstance(calculation, FloatsumCalculation):
+            raise OutputParsingError("Input must calc must be a FloatsumCalculation")
         self._calc = calculation
             
     def parse_with_retrieved(self, retrieved):
@@ -51,7 +48,7 @@ class SumParser(Parser):
         # check what is inside the folder
         list_of_files = out_folder.get_folder_list()
         # at least the stdout should exist
-        if self._calc._OUTPUT_FILE_NAME not in list_of_files:
+        if not self._calc._OUTPUT_FILE_NAME in list_of_files:
             successful = False
             self.logger.error("Output json not found")
             return successful,()
@@ -65,10 +62,11 @@ class SumParser(Parser):
             return successful,()
         
         # save the arrays
-        output_data = ParameterData(dict=out_dict)
-        link_name = 'output_data'
-        new_nodes_list = [(link_name, output_data)]
+        output_data = FloatData()
+        output_data.value = out_dict["sum"]
+        linkname = 'output_data'
+        new_nodes_list = [(linkname,output_data)]
         
-        return successful,new_nodes_list
+        return successful, new_nodes_list
 
 

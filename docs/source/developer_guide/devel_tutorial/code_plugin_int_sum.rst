@@ -70,7 +70,7 @@ name is given as a parameter::
 
 The result will be stored in JSON format in a file which name is also passed
 as parameter. The resulting file from the script will be handled by AiiDA. The
-code can be downloaded from here [[ADD FILE]].
+code can be downloaded from :download:`here <sum_calc.py>`.
 
 To install the above code, we should execute::
 
@@ -229,7 +229,8 @@ summation code::
             return calcinfo
 
 
-The above input plug-in can be downloaded from here [[SPECIFY THE DOWNLOAD PLUGIN]].
+The above input plug-in can be downloaded from here
+(:download:`here <sum_calc.py>`) and should be place at ``aiida/orm/calculation/job/sum.py``.
 
 In order the plugin to be discoverable, it is important to:
 
@@ -257,7 +258,7 @@ code snippet::
 
 This specific summation plugin, expects one input parameter which is of the
 type ``ParameterData``. The parameters is retrieved using the link name
- ``parameters`` specified above with the following line::
+``parameters`` specified above with the following line::
 
     parameters = inputdict.pop(self.get_linkname('parameters'))
 
@@ -273,7 +274,7 @@ in the ``parameters`` variable::
         json.dump(input_json, infile)
 
 Since the input file is ready, we can now create the calculation info and link the
-current calculation object to ot::
+current calculation object to it::
 
     calcinfo.uuid = self.uuid
 
@@ -393,7 +394,8 @@ pass the to the right code.
 When the code finishes its execution, AiiDA should retrieve the results that
 will also be in a file and store them back to the AiiDA ecosystem. This procedure
 is done by the `output plugin` which is also named as `parser` and it will be
-explained in the sequel.
+explained in the sequel. You can download the submission script from
+:download:`here <sum_submission.py>`.
 
 Output plugin
 -------------
@@ -501,6 +503,9 @@ in the database::
     new_nodes_list = [(link_name, output_data)]
 
     return successful,new_nodes_list
+
+The above `output plugin` can be downloaded from :download:`here <sum_parser.py>`
+and should be placed at ``aiida/parsers/plugins/sum.py``.
 
 Conclusion
 ----------

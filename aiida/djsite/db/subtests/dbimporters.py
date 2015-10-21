@@ -244,7 +244,6 @@ class TestNnincDbImporter(AiidaTestCase):
 
         results = NnincSearchResults([{'id': upf}])
         entry = results.at(0)
-        print aiida.__file__
 
         with open(os.path.join(
                 os.path.split(aiida.__file__)[0], os.pardir,

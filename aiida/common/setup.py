@@ -346,23 +346,37 @@ def create_base_dirs():
     create_htaccess_file()
 
 
-def set_default_profile(process, profile):
+def set_default_profile(process, profile, force_rewrite = False):
     """
     Set a default db profile to be used by a process (default for verdi, 
     default for daemon, ...)
+
+    :param process: A string identifying the process to modify (e.g. ``verdi``
+      or ``daemon``).
+    :param profile: A string specifying the profile that should be used
+      as default.
+    :param force_rewrite: if False, does not change the default profile
+      if this was already set. Otherwise, forces the default profile to be
+      the value specified as ``profile`` also if a default profile for the
+      given ``process`` was already set.
     """
-    from aiida.common.exceptions import ConfigurationError
+    from aiida.common.exceptions import ProfileConfigurationError
 
     if profile not in get_profiles_list():
-        raise ConfigurationError('Profile {} has not been configured'.format(profile))
+        raise ProfileConfigurationError(
+            'Profile {} has not been configured'.format(profile))
     confs = get_config()
 
     try:
         confs['default_profiles']
     except KeyError:
         confs['default_profiles'] = {}
-
-    confs['default_profiles'][process] = profile
+        
+    if force_rewrite:
+        confs['default_profiles'][process] = profile
+    else:
+        confs['default_profiles'][process] = confs['default_profiles'].get(
+                                                                process,profile)
     backup_config()
     store_config(confs)
 
@@ -395,14 +409,22 @@ def get_profiles_list():
         return ConfigurationError("Please run the setup")
 
 
-def get_profile_config(profile, conf_dict=None):
+def get_profile_config(profile, conf_dict=None, set_test_location=True):
     """
     Return the profile specific configurations
+    
+    :param conf_dict: if passed, use the provided dictionary rather than reading
+        it from file.
+    :param set_test_location: if True, sets a new folder for storing repository
+        files during testing (to avoid to replace/overwrite the real repository)
+        Set to False for calls where the folder should not be changed (i.e., if
+        you only want to get the profile
     """
     import sys
     import tempfile
 
-    from aiida.common.exceptions import ConfigurationError
+    from aiida.common.exceptions import (
+        ConfigurationError, ProfileConfigurationError)
 
     if conf_dict is None:
         confs = get_config()
@@ -430,12 +452,12 @@ def get_profile_config(profile, conf_dict=None):
     try:
         profile_info = confs['profiles'][profile]
     except KeyError:
-        raise ConfigurationError("No {}profile configuration found for {}, "
-                                 "allowed values are: {}.".format(test_string,
-                                                                  profile,
-                                                                  ", ".join(get_profiles_list())))
+        raise ProfileConfigurationError(
+            "No {}profile configuration found for {}, "
+            "allowed values are: {}.".format(test_string, profile,
+                                             ", ".join(get_profiles_list())))
 
-    if is_test:
+    if is_test and set_test_location:
         # Change the repository and print a message
         ###################################################################
         # IMPORTANT! Choose a different repository location, otherwise 

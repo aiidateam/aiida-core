@@ -40,14 +40,15 @@ class User(VerdiCommandWithSubcommands):
         return "\n".join(emails)
 
     def user_configure(self, *args):
-        load_dbenv()
+        from aiida.djsite.settings import settings_profile
+        from aiida import is_dbenv_loaded
+        if not is_dbenv_loaded():
+            load_dbenv()
 
         import readline
         import getpass
-
         from aiida.djsite.db import models
         from django.core.exceptions import ObjectDoesNotExist
-
 
         if len(args) != 1:
             print >> sys.stderr, ("You have to pass (only) one parameter after "

@@ -350,6 +350,15 @@ def set_default_profile(process, profile, force_rewrite = False):
     """
     Set a default db profile to be used by a process (default for verdi, 
     default for daemon, ...)
+
+    :param process: A string identifying the process to modify (e.g. ``verdi``
+      or ``daemon``).
+    :param profile: A string specifying the profile that should be used
+      as default.
+    :param force_rewrite: if False, does not change the default profile
+      if this was already set. Otherwise, forces the default profile to be
+      the value specified as ``profile`` also if a default profile for the
+      given ``process`` was already set.
     """
     from aiida.common.exceptions import ProfileConfigurationError
 

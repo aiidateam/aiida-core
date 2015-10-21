@@ -241,7 +241,15 @@ In order the plugin to be discoverable, it is important to:
 * name the class inside the plugin as plug_in_nameCalculation. For example, the
   class name of the summation input plugin is, as you see above, `SumCalculation`;
 
-* inherit from JobCalculation.
+* inherit from ``JobCalculation``. Otherwise the plugin will not work.
+
+By doing the above, your plugin will be able to be loaded with ``CalculationFactory``.
+
+.. note:: The base ``Calculation`` class should only be used as the abstract
+  base class. Any calculation that needs to run on a remote scheduler must
+  inherit from  :class:`~aiida.orm.calculation.job.JobCalculation`, that
+  contains all the methods to run on a remote scheduler, get the calculation
+  state, copy files remotely and retrieve them, ...
 
 The kind of parameters that the input plugin expect is defined by the following
 code snippet::

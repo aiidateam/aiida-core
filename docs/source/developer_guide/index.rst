@@ -6,8 +6,9 @@ Developer's guide
 
    developers
    internals
-   devel_tutorial/code_plugin_1
-   devel_tutorial/code_plugin_2
+   devel_tutorial/code_plugin_int_sum
+   devel_tutorial/code_plugin_float_sum
+   devel_tutorial/code_plugin_qe
    devel_tutorial/parser_warnings_policy
    parsertests
    workflows

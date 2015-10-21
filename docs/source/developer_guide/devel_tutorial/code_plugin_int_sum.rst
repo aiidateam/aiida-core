@@ -1,5 +1,5 @@
-Developer code plugin tutorial 1
-================================
+Developer code plugin tutorial  - Integer summation
+===================================================
 
 .. toctree::
    :maxdepth: 2
@@ -550,7 +550,7 @@ of the executed code which will be parsed by the `output plugin` \ `parser`
 that you have developed above::
 
     aiida_user@user_pc:/scratch/aiida_run/d7/4e/ac9b-6303-4ce7-a933-afdf31b874a2$ cat out.json
-    {"sum": 5}
+    {"sum": 4}
 
 It is also interesting, for your general understanding to have a look at how
 the code is launched. This is in the ``_aiidasubmit.sh`` and for a `PBS`

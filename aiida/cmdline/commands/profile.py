@@ -12,6 +12,7 @@ __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
 __contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
 
+valid_processes = ['verdi', 'daemon']
 
 class Profile(VerdiCommandWithSubcommands):
     """
@@ -26,19 +27,24 @@ class Profile(VerdiCommandWithSubcommands):
         A dictionary with valid commands and functions to be called.
         """
         self.valid_subcommands = {
-            'setdefault': (self.profile_setdefault, self.complete_profiles),
+            'setdefault': (self.profile_setdefault, 
+                           self.complete_processes_profiles),
             'list': (self.profile_list, self.complete_none),
         }
 
-    def complete_profiles(self, subargs_idx, subargs):
+    def complete_processes_profiles(self, subargs_idx, subargs):
         from aiida.common.setup import get_profiles_list
         
-        return "\n".join(get_profiles_list())
+        if subargs_idx == 1:
+            return "\n".join(get_profiles_list())
+        elif subargs_idx == 0:
+            return "\n".join(valid_processes)
+        else:
+            return ""
 
     def profile_setdefault(self, *args):
         from aiida.common.setup import set_default_profile
 
-        valid_processes = ['verdi', 'daemon']
         valid_processes_strlist = ", ".join("'{}'".format(pr) for pr in
             valid_processes)
 

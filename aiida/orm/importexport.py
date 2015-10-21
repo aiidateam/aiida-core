@@ -192,7 +192,70 @@ def extract_tree(infile, folder, silent=False):
     os.path.walk(infile,add_files,{'folder': folder,'root': infile})
 
 
-def import_data(in_path, ignore_unknown_nodes=False, silent=False):
+def extract_cif(infile, folder, nodes_export_subfolder="nodes",
+                aiida_export_subfolder="aiida", silent=False):
+    """
+    Extract the nodes to be imported from a TCOD CIF file. TCOD CIFs,
+    exported by AiiDA, may contain an importable subset of AiiDA database,
+    which can be imported. This function prepares SandboxFolder with files
+    required for import.
+
+    :param infile: file path
+    :param folder: a SandboxFolder, used to extract the file tree
+    :param nodes_export_subfolder: name of the subfolder for AiiDA nodes
+    :param aiida_export_subfolder: name of the subfolder for AiiDA data
+        inside the TCOD CIF internal file tree
+    :param silent: suppress debug print
+    """
+    import os
+    import urllib2
+    import CifFile
+    from aiida.common.exceptions import ValidationError
+    from aiida.common.utils import md5_file, sha1_file
+    from aiida.orm.data.cif import decode_textfield
+
+    values = CifFile.ReadCif(infile)
+    values = values[values.keys()[0]] # taking the first datablock in CIF
+
+    for i in range(0,len(values['_tcod_file_id'])-1):
+        name = values['_tcod_file_name'][i]
+        if not name.startswith(aiida_export_subfolder+os.sep):
+            continue
+        dest_path = os.path.relpath(name,aiida_export_subfolder)
+        if name.endswith(os.sep):
+            if not os.path.exists(folder.get_abs_path(dest_path)):
+                folder.get_subfolder(folder.get_abs_path(dest_path),create=True)
+            continue
+        contents = values['_tcod_file_contents'][i]
+        if contents == '?' or contents == '.':
+            uri = values['_tcod_file_uri'][i]
+            if uri is not None and uri != '?' and uri != '.':
+                contents = urllib2.urlopen(uri).read()
+        encoding = values['_tcod_file_content_encoding'][i]
+        if encoding == '.':
+            encoding = None
+        contents = decode_textfield(contents,encoding)
+        if os.path.dirname(dest_path) != '':
+            folder.get_subfolder(os.path.dirname(dest_path)+os.sep,create=True)
+        with open(folder.get_abs_path(dest_path),'w') as f:
+            f.write(contents)
+            f.flush()
+        md5  = values['_tcod_file_md5sum'][i]
+        if md5 is not None:
+            if md5_file(folder.get_abs_path(dest_path)) != md5:
+                raise ValidationError("MD5 sum for extracted file '{}' is "
+                                      "different from given in the CIF "
+                                      "file".format(dest_path))
+        sha1 = values['_tcod_file_sha1sum'][i]
+        if sha1 is not None:
+            if sha1_file(folder.get_abs_path(dest_path)) != sha1:
+                raise ValidationError("SHA1 sum for extracted file '{}' is "
+                                      "different from given in the CIF "
+                                      "file".format(dest_path))
+
+
+def import_data(in_path,ignore_unknown_nodes=False,
+                silent=False):
     """
     Import exported AiiDA environment to the AiiDA database.
     If the 'in_path' is a folder, calls export_tree; otherwise, tries to
@@ -240,6 +303,9 @@ def import_data(in_path, ignore_unknown_nodes=False, silent=False):
                             nodes_export_subfolder=nodes_export_subfolder)
             elif zipfile.is_zipfile(in_path):
                 extract_zip(in_path,folder,silent=silent,
+                            nodes_export_subfolder=nodes_export_subfolder)
+            elif os.path.isfile(in_path) and in_path.endswith('.cif'):
+                extract_cif(in_path,folder,silent=silent,
                             nodes_export_subfolder=nodes_export_subfolder)
             else:
                 raise ValueError("Unable to detect the input file format, it "
@@ -890,8 +956,9 @@ def get_all_fields_info():
     return all_fields_info, unique_identifiers
 
 
-def export_tree(what, folder, also_parents = True,
-                also_calc_outputs = True, silent = False):
+def export_tree(what, folder, also_parents = True, also_calc_outputs=True,
+                allowed_licenses=None, forbidden_licenses=None,
+                silent=False):
     """
     Export the DB entries passed in the 'what' list to a file tree.
     
@@ -903,7 +970,17 @@ def export_tree(what, folder, also_parents = True,
     :param also_parents: if True, also all the parents are stored (from th
       DbPath transitive closure table)
     :param also_calc_outputs: if True, any output of a calculation is also exported
+    :param allowed_licenses: a list or a function. If a list, then checks
+      whether all licenses of Data nodes are in the list. If a function,
+      then calls function for licenses of Data nodes expecting True if
+      license is allowed, False otherwise.
+    :param forbidden_licenses: a list or a function. If a list, then checks
+      whether all licenses of Data nodes are in the list. If a function,
+      then calls function for licenses of Data nodes expecting True if
+      license is allowed, False otherwise.
     :param silent: suppress debug prints
+    :raises LicensingException: if any node is licensed under forbidden
+      license
     """
     import json
     import os
@@ -914,12 +991,13 @@ def export_tree(what, folder, also_parents = True,
 
     import aiida
     from aiida.djsite.db import models
-    from aiida.orm import Node, Calculation
+    from aiida.orm import Node, Calculation, load_node
+    from aiida.orm.data import Data
+    from aiida.common.exceptions import LicensingException
     from aiida.common.folders import RepositoryFolder
 
     if not silent:
         print "STARTING EXPORT..."
-
 
     EXPORT_VERSION = '0.1'
     
@@ -964,6 +1042,48 @@ def export_tree(what, folder, also_parents = True,
     entries_to_add = {k: [Q(id__in=v)] for k, v
                       in entries_ids_to_add.iteritems()}
 
+    # Check the licenses of exported data.
+    if allowed_licenses is not None or forbidden_licenses is not None:
+        from inspect import isfunction
+
+        node_licenses = list(aiida.djsite.db.models.DbNode.objects.filter(
+            reduce(operator.and_, entries_to_add['aiida.djsite.db.models.DbNode']),
+            dbattributes__key='source.license').values_list('pk', 'dbattributes__tval'))
+        for pk, license in node_licenses:
+            if allowed_licenses is not None:
+                try:
+                    if isfunction(allowed_licenses):
+                        try:
+                            if not allowed_licenses(license):
+                                raise LicensingException
+                        except Exception as e:
+                            raise LicensingException
+                    else:
+                        if license not in allowed_licenses:
+                            raise LicensingException
+                except LicensingException:
+                    raise LicensingException("Node {} is licensed "
+                                             "under {} license, which "
+                                             "is not in the list of "
+                                             "allowed licenses".format(
+                                              pk, license))
+            if forbidden_licenses is not None:
+                try:
+                    if isfunction(forbidden_licenses):
+                        try:
+                            if forbidden_licenses(license):
+                                raise LicensingException
+                        except Exception as e:
+                            raise LicensingException
+                    else:
+                        if license in forbidden_licenses:
+                            raise LicensingException
+                except LicensingException:
+                    raise LicensingException("Node {} is licensed "
+                                             "under {} license, which "
+                                             "is in the list of "
+                                             "forbidden licenses".format(
+                                              pk, license))
 
     ############################################################
     ##### Start automatic recursive export data generation #####

@@ -24,6 +24,23 @@ ase_loops = {
     ]
 }
 
+symmetry_tags = [
+    '_symmetry_equiv_pos_site_id',
+    '_symmetry_equiv_pos_as_xyz',
+
+    '_symmetry_Int_Tables_number',
+    '_symmetry_space_group_name_H-M',
+    '_symmetry_space_group_name_Hall',
+
+    '_space_group_symop_id',
+    '_space_group_symop_operation_xyz',
+    '_space_group_symop_sg_id',
+
+    '_space_group_id',
+    '_space_group_IT_number',
+    '_space_group_name_H-M_alt',
+    '_space_group_name_Hall',
+]
 
 def has_pycifrw():
     """
@@ -34,181 +51,6 @@ def has_pycifrw():
     except ImportError:
         return False
     return True
-
-
-def encode_textfield_base64(content, foldwidth=76):
-    """
-    Encodes the contents for CIF textfield in Base64 using standard Python
-    implementation (``base64.standard_b64encode()``).
-
-    :param content: a string with contents
-    :param foldwidth: maximum width of line (default is 76)
-    :return: encoded string
-    """
-    import base64
-
-    content = base64.standard_b64encode(content)
-    content = "\n".join(list(content[i:i + foldwidth]
-                             for i in range(0, len(content), foldwidth)))
-    return content
-
-
-def decode_textfield_base64(content):
-    """
-    Decodes the contents for CIF textfield from Base64 using standard
-    Python implementation (``base64.standard_b64decode()``)
-
-    :param content: a string with contents
-    :return: decoded string
-    """
-    import base64
-
-    return base64.standard_b64decode(content)
-
-
-def encode_textfield_quoted_printable(content):
-    """
-    Encodes the contents for CIF textfield in quoted-printable encoding.
-    In addition to non-ASCII characters, that are encoded by Python
-    function ``quopri.encodestring()``, following characters are encoded:
-
-        * '``;``', if encountered on the beginning of the line;
-        * '``\\t``'
-        * '``.``' and '``?``', if comprise the entire textfield.
-
-    :param content: a string with contents
-    :return: encoded string
-    """
-    import re
-    import quopri
-
-    content = quopri.encodestring(content)
-
-    def match2qp(m):
-        prefix = ''
-        postfix = ''
-        if 'prefix' in m.groupdict().keys():
-            prefix = m.group('prefix')
-        if 'postfix' in m.groupdict().keys():
-            postfix = m.group('postfix')
-        h = hex(ord(m.group('chr')))[2:].upper()
-        if len(h) == 1:
-            h = "0{}".format(h)
-        return "{}={}{}".format(prefix, h, postfix)
-
-    content = re.sub('^(?P<chr>;)', match2qp, content)
-    content = re.sub('(?P<chr>\t)', match2qp, content)
-    content = re.sub('(?P<prefix>\n)(?P<chr>;)', match2qp, content)
-    content = re.sub('^(?P<chr>[\.\?])$', match2qp, content)
-    return content
-
-
-def decode_textfield_quoted_printable(content):
-    """
-    Decodes the contents for CIF textfield from quoted-printable encoding.
-
-    :param content: a string with contents
-    :return: decoded string
-    """
-    import quopri
-
-    return quopri.decodestring(content)
-
-
-def encode_textfield_ncr(content):
-    """
-    Encodes the contents for CIF textfield in Numeric Character Reference.
-    Encoded characters:
-
-        * ``\\x09``, ``\\x0A``, ``\\x0D``, ``\\x20``--``\\x7E``;
-        * '``;``', if encountered on the beginning of the line;
-        * '``\\t``'
-        * '``.``' and '``?``', if comprise the entire textfield.
-
-    :param content: a string with contents
-    :return: encoded string
-    """
-    import re
-
-    def match2ncr(m):
-        prefix = ''
-        postfix = ''
-        if 'prefix' in m.groupdict().keys():
-            prefix = m.group('prefix')
-        if 'postfix' in m.groupdict().keys():
-            postfix = m.group('postfix')
-        return prefix + '&#' + str(ord(m.group('chr'))) + ';' + postfix
-
-    content = re.sub('(?P<chr>[&\t])', match2ncr, content)
-    content = re.sub('(?P<chr>[^\x09\x0A\x0D\x20-\x7E])', match2ncr, content)
-    content = re.sub('^(?P<chr>;)', match2ncr, content)
-    content = re.sub('(?P<prefix>\n)(?P<chr>;)', match2ncr, content)
-    content = re.sub('^(?P<chr>[\.\?])$', match2ncr, content)
-    return content
-
-
-def decode_textfield_ncr(content):
-    """
-    Decodes the contents for CIF textfield from Numeric Character Reference.
-
-    :param content: a string with contents
-    :return: decoded string
-    """
-    import re
-
-    def match2str(m):
-        return chr(int(m.group(1)))
-
-    return re.sub('&#(\d+);', match2str, content)
-
-
-def encode_textfield_gzip_base64(content, **kwargs):
-    """
-    Gzips the given string and encodes it in Base64.
-
-    :param content: a string with contents
-    :return: encoded string
-    """
-    from aiida.common.utils import gzip_string
-
-    return encode_textfield_base64(gzip_string(content), **kwargs)
-
-
-def decode_textfield_gzip_base64(content):
-    """
-    Decodes the contents for CIF textfield from Base64 and decompresses
-    them with gzip.
-
-    :param content: a string with contents
-    :return: decoded string
-    """
-    from aiida.common.utils import gunzip_string
-
-    return gunzip_string(decode_textfield_base64(content))
-
-
-def decode_textfield(content,method):
-    """
-    Decodes the contents of encoded CIF textfield.
-
-    :param content: the content to be decoded
-    :param method: method, which was used for encoding the contents
-        (None, 'base64', 'ncr', 'quoted-printable', 'gzip+base64')
-    :return: decoded content
-    :raises ValueError: if the encoding method is unknown
-    """
-    if method == 'base64':
-        content = decode_textfield_base64(content)
-    elif method == 'quoted-printable':
-        content = decode_textfield_quoted_printable(content)
-    elif method == 'ncr':
-        content = decode_textfield_ncr(content)
-    elif method == 'gzip+base64':
-        content = decode_textfield_gzip_base64(content)
-    elif method is not None:
-        raise ValueError("Unknown content encoding: '{}'".format(method))
-
-    return content
 
 
 def symop_string_from_symop_matrix_tr(matrix, tr=[0, 0, 0], eps=0):
@@ -241,6 +83,7 @@ def symop_string_from_symop_matrix_tr(matrix, tr=[0, 0, 0], eps=0):
             parts[i] = format("{}{}{}".format(parts[i],sign,abs(tr[i])))
         parts[i] = re.sub('^\+', '', parts[i])
     return ",".join(parts)
+
 
 @optional_inline
 def _get_aiida_structure_ase_inline(cif=None, parameters=None):
@@ -403,6 +246,68 @@ def pycifrw_from_cif(datablocks, loops=dict(), names=None):
         for tag in sorted(values.keys()):
             datablock[tag] = values[tag]
     return cif
+
+
+@optional_inline
+def refine_inline(node):
+    """
+    Refine (reduce) the cell of :py:class:`aiida.orm.data.cif.CifData`,
+    find and remove symmetrically equivalent atoms.
+
+    :param node: a :py:class:`aiida.orm.data.cif.CifData` instance.
+    :return: dict with :py:class:`aiida.orm.data.cif.CifData`
+
+    .. note:: can be used as inline calculation.
+    """
+    from aiida.orm.data.structure import StructureData, ase_refine_cell
+
+    if len(node.values.keys()) > 1:
+        raise ValueError("CifData seems to contain more than one data "
+                         "block -- multiblock CIF files are not "
+                         "supported yet")
+
+    name = node.values.keys()[0]
+
+    original_atoms = node.get_ase(index=None)
+    if len(original_atoms) > 1:
+        raise ValueError("CifData seems to contain more than one crystal "
+                         "structure -- such refinement is not supported "
+                         "yet")
+
+    original_atoms = original_atoms[0]
+
+    refined_atoms, symmetry = ase_refine_cell(original_atoms)
+
+    cif = CifData(ase=refined_atoms)
+    cif.values.dictionary[name] = cif.values.dictionary.pop(str(0))
+
+    # Remove all existing symmetry tags before overwriting:
+    for tag in symmetry_tags:
+        cif.values[name].RemoveCifItem(tag)
+
+    cif.values[name]['_symmetry_space_group_name_H-M']  = symmetry['hm']
+    cif.values[name]['_symmetry_space_group_name_Hall'] = symmetry['hall']
+    cif.values[name]['_symmetry_Int_Tables_number']     = symmetry['tables']
+    cif.values[name]['_symmetry_equiv_pos_as_xyz'] = \
+        [ symop_string_from_symop_matrix_tr(symmetry['rotations'][i],
+                                            symmetry['translations'][i])
+          for i in range(0, len(symmetry['rotations'])) ]
+
+    # Summary formula has to be calculated from non-reduced set of atoms.
+    cif.values[name]['_chemical_formula_sum'] = \
+        StructureData(ase=original_atoms).get_formula(mode='hill',
+                                                      separator=' ')
+
+    # If the number of reduced atoms multiplies the number of non-reduced
+    # atoms, the new Z value can be calculated.
+    if '_cell_formula_units_Z' in node.values[name].keys():
+        old_Z = node.values[name]['_cell_formula_units_Z']
+        if len(original_atoms) % len(refined_atoms):
+            new_Z = old_Z * len(original_atoms) / len(refined_atoms)
+            cif.values[name]['_cell_formula_units_Z'] = new_Z
+
+    return {'cif': cif}
+
 
 def parse_formula(formula):
     """
@@ -704,6 +609,13 @@ class CifData(SinglefileData):
         with self._get_folder_pathsubfolder.open(self.filename) as f:
             return f.read()
 
+    def _prepare_tcod(self, **kwargs):
+        """
+        Write the given CIF to a string of format TCOD CIF.
+        """
+        from aiida.tools.dbexporters.tcod import export_cif
+        return export_cif(self,**kwargs)
+        
     def _get_object_ase(self):
         """
         Converts CifData to ase.Atoms

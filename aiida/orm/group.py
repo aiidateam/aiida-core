@@ -16,12 +16,12 @@ def get_group_type_mapping():
     inside here.
     """
     from aiida.orm.data.upf import UPFGROUP_TYPE
-    from aiida.cmdline.commands.importfile import IMPORTGROUP_TYPE
+    from aiida.orm.importexport import IMPORTGROUP_TYPE
     from aiida.orm.autogroup import VERDIAUTOGROUP_TYPE
 
-    return {'data.upf': UPFGROUP_TYPE,
-            'import': IMPORTGROUP_TYPE,
-            'autogroup.run': VERDIAUTOGROUP_TYPE}
+    return {UPFGROUP_TYPE: UPFGROUP_TYPE,
+            IMPORTGROUP_TYPE: IMPORTGROUP_TYPE,
+            VERDIAUTOGROUP_TYPE: VERDIAUTOGROUP_TYPE}
 
 class Group(object):
     """
@@ -44,12 +44,18 @@ class Group(object):
         """
         from aiida.djsite.utils import get_automatic_user
         from aiida.djsite.db.models import DbGroup
+        from django.core.exceptions import ObjectDoesNotExist
+        from aiida.common.exceptions import NotExistent
 
         dbgroup = kwargs.pop('dbgroup', None)
 
         if dbgroup is not None:
             if isinstance(dbgroup, (int, long)):
-                dbgroup = DbGroup.objects.get(pk=dbgroup)
+                try:
+                    dbgroup = DbGroup.objects.get(pk=dbgroup)
+                except ObjectDoesNotExist:
+                    raise NotExistent("Group with pk={} does not exist".format(
+                        dbgroup))
             if not isinstance(dbgroup, DbGroup):
                 raise TypeError("dbgroup is not a DbGroup instance, it is "
                                 "instead {}".format(str(type(dbgroup))))

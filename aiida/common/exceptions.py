@@ -122,6 +122,11 @@ class ConfigurationError(AiidaException):
     """
     pass
 
+class ProfileConfigurationError(ConfigurationError):
+    """
+    Configuration error raised when a wrong/inexistent profile is requested.
+    """
+    pass
 
 class DbContentError(AiidaException):
     """
@@ -175,5 +180,12 @@ class FeatureDisabled(AiidaException):
 class LockPresent(AiidaException):
     """
     Raised when a lock is requested, but cannot be acquired.
+    """
+    pass
+
+
+class LicensingException(AiidaException):
+    """
+    Raised when requirements for data licensing are not met.
     """
     pass

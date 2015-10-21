@@ -111,7 +111,7 @@ class TestCifData(AiidaTestCase):
     Tests for CifData class.
     """
     from aiida.orm.data.cif import has_pycifrw
-    from aiida.orm.data.structure import has_ase,has_pymatgen,get_pymatgen_version
+    from aiida.orm.data.structure import has_ase,has_pymatgen,has_pyspglib,get_pymatgen_version
     from distutils.version import StrictVersion
 
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
@@ -365,73 +365,6 @@ Te2 0.00000 0.00000 0.79030 0.01912
                                      primitive_cell=True).get_ase()
         self.assertEquals(ase.get_number_of_atoms(), 5)
 
-    def test_contents_encoding(self):
-        """
-        Testing the logic of choosing the encoding and the process of
-        encoding contents.
-        """
-
-        def test_ncr(self, inp, out):
-            from aiida.orm.data.cif import encode_textfield_ncr, \
-                decode_textfield_ncr
-
-            encoded = encode_textfield_ncr(inp)
-            decoded = decode_textfield_ncr(out)
-            self.assertEquals(encoded, out)
-            self.assertEquals(decoded, inp)
-
-        def test_quoted_printable(self, inp, out):
-            from aiida.orm.data.cif import encode_textfield_quoted_printable, \
-                decode_textfield_quoted_printable
-
-            encoded = encode_textfield_quoted_printable(inp)
-            decoded = decode_textfield_quoted_printable(out)
-            self.assertEquals(encoded, out)
-            self.assertEquals(decoded, inp)
-
-        def test_base64(self, inp, out):
-            from aiida.orm.data.cif import encode_textfield_base64, \
-                decode_textfield_base64
-
-            encoded = encode_textfield_base64(inp)
-            decoded = decode_textfield_base64(out)
-            self.assertEquals(encoded, out)
-            self.assertEquals(decoded, inp)
-
-        def test_gzip_base64(self, text):
-            from aiida.orm.data.cif import encode_textfield_gzip_base64, \
-                decode_textfield_gzip_base64
-
-            encoded = encode_textfield_gzip_base64(text)
-            decoded = decode_textfield_gzip_base64(encoded)
-            self.assertEquals(text, decoded)
-
-        test_ncr(self, '.', '&#46;')
-        test_ncr(self, '?', '&#63;')
-        test_ncr(self, ';\n', '&#59;\n')
-        test_ncr(self, 'line\n;line', 'line\n&#59;line')
-        test_ncr(self, 'tabbed\ttext', 'tabbed&#9;text')
-        test_ncr(self, 'angstrom Å', 'angstrom &#195;&#133;')
-        test_ncr(self, '<html>&#195;&#133;</html>',
-                 '<html>&#38;#195;&#38;#133;</html>')
-
-        test_quoted_printable(self, '.', '=2E')
-        test_quoted_printable(self, '?', '=3F')
-        test_quoted_printable(self, ';\n', '=3B\n')
-        test_quoted_printable(self, 'line\n;line', 'line\n=3Bline')
-        test_quoted_printable(self, 'tabbed\ttext', 'tabbed=09text')
-        test_quoted_printable(self, 'angstrom Å', 'angstrom =C3=85')
-        test_quoted_printable(self, 'line\rline\x00', 'line\rline=00')
-        # This one is particularly tricky: a long line is folded by the QP
-        # and the semicolon sign becomes the first character on a new line.
-        test_quoted_printable(self,
-                              "Å{};a".format("".join("a" for i in range(0, 69))),
-                              '=C3=85aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
-                              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaa=\n=3Ba')
-
-        test_base64(self, 'angstrom ÅÅÅ', 'YW5nc3Ryb20gw4XDhcOF')
-        test_gzip_base64(self, 'angstrom ÅÅÅ')
-
     @unittest.skipIf(not has_pycifrw(), "Unable to import PyCifRW")
     def test_pycifrw_from_datablocks(self):
         """
@@ -616,6 +549,90 @@ _publ_section_title                     'Test CIF'
 
         self.assertEqual(a.has_attached_hydrogens(), True)
 
+
+    @unittest.skipIf(not has_ase() or not has_pycifrw() or
+                     not has_pyspglib(),
+                     "Unable to import ase, pycifrw or pyspglib")
+    def test_refine(self):
+        """
+        Test case for refinement (space group determination) for a
+        CifData object.
+        """
+        from aiida.orm.data.cif import CifData, refine_inline
+        import tempfile
+
+        with tempfile.NamedTemporaryFile() as f:
+            f.write('''
+                data_test
+                _cell_length_a    10
+                _cell_length_b    10
+                _cell_length_c    10
+                _cell_angle_alpha 90
+                _cell_angle_beta  90
+                _cell_angle_gamma 90
+                loop_
+                _atom_site_label
+                _atom_site_fract_x
+                _atom_site_fract_y
+                _atom_site_fract_z
+                C 0.5 0.5 0.5
+                O 0.25 0.5 0.5
+                O 0.75 0.5 0.5
+            ''')
+            f.flush()
+            a = CifData(file=f.name)
+
+        ret_dict = refine_inline(a)
+        b = ret_dict['cif']
+        self.assertEqual(b.values.keys(),['test'])
+        self.assertEqual(b.values['test']['_chemical_formula_sum'],'C O2')
+        self.assertEqual(b.values['test']['_symmetry_equiv_pos_as_xyz'],[
+            'x,y,z',
+            '-x,-y,-z',
+            '-y,x,z',
+            'y,-x,-z',
+            '-x,-y,z',
+            'x,y,-z',
+            'y,-x,z',
+            '-y,x,-z',
+            'x,-y,-z',
+            '-x,y,z',
+            '-y,-x,-z',
+            'y,x,z',
+            '-x,y,-z',
+            'x,-y,z',
+            'y,x,-z',
+            '-y,-x,z'])
+
+        with tempfile.NamedTemporaryFile() as f:
+            f.write('''
+                data_a
+                data_b
+            ''')
+            f.flush()
+            c = CifData(file=f.name)
+
+        with self.assertRaises(ValueError):
+            ret_dict = refine_inline(c)
+
+    def test_parse_formula(self):
+        from aiida.orm.data.cif import parse_formula
+
+        self.assertEqual(parse_formula("C H"),
+                         {'C': 1, 'H': 1})
+
+        self.assertEqual(parse_formula("C5 H1"),
+                         {'C': 5, 'H': 1})
+
+        self.assertEqual(parse_formula("Ca5 Ho"),
+                         {'Ca': 5, 'Ho': 1})
+
+        self.assertEqual(parse_formula("H0.5 O"),
+                         {'H': 0.5, 'O': 1})
+
+        # Invalid literal for float()
+        with self.assertRaises(ValueError):
+            parse_formula("H0.5.2 O")
 
 class TestKindValidSymbols(AiidaTestCase):
     """
@@ -994,7 +1011,7 @@ class TestStructureData(AiidaTestCase):
     """
     Tests the creation of StructureData objects (cell and pbc).
     """
-    from aiida.orm.data.structure import has_ase
+    from aiida.orm.data.structure import has_ase, has_pyspglib
 
     def test_cell_ok_and_atoms(self):
         """
@@ -1263,6 +1280,99 @@ class TestStructureData(AiidaTestCase):
         a.append_atom(position=(0., 0., 0.), symbols=['O', 'H'], weights=[0.9, 0.1], mass=15.)
 
         self.assertEquals(a.get_symbols_set(), set(['Ba', 'Ti', 'O', 'H']))
+
+    @unittest.skipIf(not has_ase() or not has_pyspglib(),
+                     "Unable to import ase or pyspglib")
+    def test_kind_8(self):
+        """
+        Test the ase_refine_cell() function
+        """
+        from aiida.orm.data.structure import ase_refine_cell
+        import ase
+        import math
+        import numpy
+
+        a = ase.Atoms(cell=[10,10,10])
+        a.append(ase.Atom('C',[0,0,0]))
+        a.append(ase.Atom('C',[5,0,0]))
+        b,sym = ase_refine_cell(a)
+        sym.pop('rotations')
+        sym.pop('translations')
+        self.assertEquals(b.get_chemical_symbols(),['C'])
+        self.assertEquals(b.cell.tolist(),[[10,0,0],[0,10,0],[0,0,5]])
+        self.assertEquals(sym,{'hall': '-P 4 2', 'hm': 'P4/mmm', 'tables': 123})
+
+        a = ase.Atoms(cell=[10,2*math.sqrt(75),10])
+        a.append(ase.Atom('C',[0,0,0]))
+        a.append(ase.Atom('C',[5,math.sqrt(75),0]))
+        b,sym = ase_refine_cell(a)
+        sym.pop('rotations')
+        sym.pop('translations')
+        self.assertEquals(b.get_chemical_symbols(),['C'])
+        self.assertEquals(numpy.round(b.cell,2).tolist(),
+                          [[10,0,0],[-5,8.66,0],[0,0,10]])
+        self.assertEquals(sym,{'hall': '-P 6 2', 'hm': 'P6/mmm', 'tables': 191})
+
+        a = ase.Atoms(cell=[[10,0,0],[-10,10,0],[0,0,10]])
+        a.append(ase.Atom('C',[5,5,5]))
+        a.append(ase.Atom('F',[0,0,0]))
+        b,sym = ase_refine_cell(a)
+        sym.pop('rotations')
+        sym.pop('translations')
+        self.assertEquals(b.get_chemical_symbols(),['C','F'])
+        self.assertEquals(b.cell.tolist(),[[10,0,0],[0,10,0],[0,0,10]])
+        self.assertEquals(b.get_scaled_positions().tolist(),
+                          [[0.5,0.5,0.5],[0,0,0]])
+        self.assertEquals(sym,{'hall': '-P 4 2 3', 'hm': 'Pm-3m', 'tables': 221})
+
+        a = ase.Atoms(cell=[[10,0,0],[-10,10,0],[0,0,10]])
+        a.append(ase.Atom('C',[0,0,0]))
+        a.append(ase.Atom('F',[5,5,5]))
+        b,sym = ase_refine_cell(a)
+        sym.pop('rotations')
+        sym.pop('translations')
+        self.assertEquals(b.get_chemical_symbols(),['C','F'])
+        self.assertEquals(b.cell.tolist(),[[10,0,0],[0,10,0],[0,0,10]])
+        self.assertEquals(b.get_scaled_positions().tolist(),
+                          [[0,0,0],[0.5,0.5,0.5]])
+        self.assertEquals(sym,{'hall': '-P 4 2 3', 'hm': 'Pm-3m', 'tables': 221})
+
+        a = ase.Atoms(cell=[[12.132,0,0],[0,6.0606,0],[0,0,8.0956]])
+        a.append(ase.Atom('Ba',[1.5334848,1.3999986,2.00042276]))
+        b,sym = ase_refine_cell(a)
+        sym.pop('rotations')
+        sym.pop('translations')
+        self.assertEquals(b.cell.tolist(),[[12.132,0,0],[0,6.0606,0],[0,0,8.0956]])
+        self.assertEquals(b.get_scaled_positions().tolist(),
+                          [[0,0,0]])
+
+        a = ase.Atoms(cell=[10,10,10])
+        a.append(ase.Atom('C',[5,5,5]))
+        a.append(ase.Atom('O',[2.5,5,5]))
+        a.append(ase.Atom('O',[7.5,5,5]))
+        b,sym = ase_refine_cell(a)
+        sym.pop('rotations')
+        sym.pop('translations')
+        self.assertEquals(b.get_chemical_symbols(),['C','O'])
+        self.assertEquals(sym,{'hall': '-P 4 2', 'hm': 'P4/mmm', 'tables': 123})
+
+        # Generated from COD entry 1507756
+        # (http://www.crystallography.net/cod/1507756.cif@87343)
+        from ase.lattice.spacegroup import crystal
+        a = crystal(['Ba','Ti','O','O'],
+                    [
+                      [0,0,0],
+                      [0.5,0.5,0.482],
+                      [0.5,0.5,0.016],
+                      [0.5,0,0.515]
+                    ],
+                    cell=[3.9999,3.9999,4.0170],
+                    spacegroup=99)
+        b,sym = ase_refine_cell(a)
+        sym.pop('rotations')
+        sym.pop('translations')
+        self.assertEquals(b.get_chemical_symbols(),['Ba','Ti','O','O'])
+        self.assertEquals(sym,{'hall': 'P 4 -2', 'hm': 'P4mm', 'tables': 99})
 
     def test_get_formula(self):
         """

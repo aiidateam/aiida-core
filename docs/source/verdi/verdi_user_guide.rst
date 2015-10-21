@@ -19,14 +19,27 @@ list:
 * :ref:`export<export>`:              			export nodes and group of nodes
 * :ref:`group<group>`:               			setup and manage groups
 * :ref:`import<import>`:              			export nodes and group of nodes
-* :ref:`install<install>`:             			install/setup aiida for the current user
+* :ref:`install<install>`:             			install/setup aiida for the current user/create a new profile
 * :ref:`node<node>`:                			manage operations on AiiDA nodes
+* :ref:`profile<profile>`:                		list and manage AiiDA profiles
 * :ref:`run<run>`:                  			execute an AiiDA script
 * :ref:`runserver<runserver>`:           		run the AiiDA webserver on localhost
 * :ref:`shell<shell>`:               			run the interactive shell with the Django environment
 * :ref:`user<user>`:                			list and configure new AiiDA users.
 * :ref:`workflow<workflow>`:            		manage the AiiDA worflow manager
 
+
+Each command above can be preceded by the ``-p <profile>`` or ``--profile=<profile>``
+option, as in::
+  
+  verdi -p <profile> calculation list
+
+This allows to select a specific AiiDA profile, and therefore a specific database,
+on which the command is executed. Thus several databases can be handled and 
+accessed simultaneously by AiiDA. To install a new profile, use the 
+:ref:`install<install>` command.
+
+.. note:: This profile selection has no effect on the ``verdi daemon`` commands.
 
 Following below, a list with the subcommands available.
 
@@ -166,6 +179,8 @@ Manages database data objects.
 
     * **export**: export the node as a string of a specified format
 
+    * **deposit**: deposit the node to a remote database
+
   * **parameter**: handles the ParameterData objects
 
     * **show**: output the content of the python dictionary in different
@@ -183,6 +198,8 @@ Manages database data objects.
 
     * **export**: export the node as a string of a specified format
 
+    * **deposit**: deposit the node to a remote database
+
   * **trajectory**: handles the TrajectoryData objects
 
     * **list**: list currently saved nodes of TrajectoryData kind
@@ -191,6 +208,8 @@ Manages database data objects.
       the TrajectoryData
 
     * **export**: export the node as a string of a specified format
+
+    * **deposit**: deposit the node to a remote database
 
   * **label**: view / set the label of a data
 
@@ -245,6 +264,13 @@ Used in the installation to configure the database.
 If it finds an already installed database, it updates the tables migrating them 
 to the new schema.
 
+.. note:: One can also create a new profile with this command::
+
+    verdi -p <new_profile_name> install
+    
+  The install procedure then works as usual, and one can select there a new database.
+  See also the :ref:`profile<profile>` command.
+
 
 .. _node:
 
@@ -255,6 +281,18 @@ to the new schema.
 
   * **show**: Show basic node information (PK, UUID, class, inputs and
     outputs)
+
+
+.. _profile:
+
+``verdi profile``
++++++++++++++++++
+
+  * **list**: Show the list of currently available profiles, indicating which
+    one is the default one, and showing the current one with a ``>`` symbol
+
+  * **setdefault**: Set the default profile, i.e. the one to be used when no 
+    ``-p`` option is specified before the verdi command
 
 
 .. _run:

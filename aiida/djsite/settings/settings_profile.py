@@ -7,6 +7,7 @@ __contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
 
 AIIDADB_PROFILE = None
 CURRENT_AIIDADB_PROCESS = None
+LOAD_DBENV_CALLED = False # Set to True at the first call of load_dbenv
 
 # CUSTOM USER CLASS
 AUTH_USER_MODEL = 'db.DbUser'

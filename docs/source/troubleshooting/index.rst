@@ -9,7 +9,6 @@ Some tricks
   :maxdepth: 1
 
   ../setup/ssh_proxycommand
-  ../cmdline/scripting_and_shell
   
 
 Connection problems
@@ -106,4 +105,36 @@ the source of the problem.
     verdi devel delproperty logging.aiida_loglevel
 
   to avoid to fill the logfiles.
+  
+.. _repo_troubleshooting:
 
+Tips to ease the life of the hard drive (for large databases)
+=============================================================
+
+Those tips are useful when your database is very large, i.e. several hundreds of
+thousands of nodes and workflows or more. With such large databases the hard drive
+may be constantly working and the computer slowed down a lot. Below are some
+solutions to take care of the most typical reasons.
+
+Repository backup
+-----------------
+
+The backup of the repository takes an extensively long time if it is done through
+a standard rsync or backup software, since it contains as many folders as the number
+of nodes plus the number of workflows (and each folder can contain many files!).
+A solution is to use instead the incremental
+backup described in the :ref:`repository backup section<repository_backup>`.
+
+
+mlocate cron job
+----------------
+
+Under typical Linux distributions, there is a cron job (called 
+``updatedb.mlocate``) running every day to update a database of files and 
+folders -- this is to be used by the ``locate`` command. This might become 
+problematic since the repository contains many folders and 
+will be scanned everyday. The net effect is a hard drive almost constantly 
+working.
+
+To avoid this issue, edit as root the file ``/etc/updatedb.conf``
+and put in ``PRUNEPATHS`` the name of the repository folder.

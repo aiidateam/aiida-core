@@ -21,9 +21,16 @@ the database settings are not loaded by default and AiiDA does not know how to
 access the database.
 
 Moreover, by calling ``verdi shell``, you have the additional advantage that
-some classes and modules are automatically loaded, in particular at start-up 
-the following modules are loaded, as described
-:ref:`here <verdi_shell_description>`.
+some classes and modules are automatically loaded. In particular the following
+modules/classes are already loaded and available::
+  
+  from aiida.orm import (Node, Calculation, JobCalculation, Code, Data,
+      Computer, Group, DataFactory, CalculationFactory)
+  from aiida.djsite.db import models
+
+.. note:: It is possible to customize the shell by adding modules to be loaded 
+	automatically, thanks to the ``verdi devel setproperty verdishell.modules`` command. 
+	See :doc:`here<../verdi/properties>` for more information.
 
 A further advantage is that bash completion is enabled, allowing to press the 
 ``TAB`` key to see available submethods of a given object (see for instance
@@ -77,6 +84,19 @@ to fine-tune the autogrouping behavior;
 for more details, refer to the output of ``verdi run -h``.
 Note also that further command line parameters to ``verdi run`` are
 passed to the script as ``sys.argv``.
+
+.. note:: It is not possible to run multiple times the ``load_dbenv()``
+	  command. Since calling ``verdi run`` will automatically call
+	  the ``load_dbenv()`` command, you cannot run a script that
+	  contains this call (this is instead needed if you want to run
+	  the script simply via ``python scriptname.py``).
+	  If you want to allow for both options, use the following method
+	  to discover if the db environment was already loaded::
+
+	    from aiida import load_dbenv, is_dbenv_loaded
+	    
+	    if not is_dbenv_loaded():
+	        load_dbenv()
 
 Finally, we also defined a ``runaiida`` command, that simply will 
 pass all its parameters to ``verdi run``. The reason for this is that

@@ -394,6 +394,15 @@ different from ``aiida@localhost``.
 If something fails, there is a high chance that you may have misconfigured
 the database. Double-check your settings before reporting an error.
 
+.. note:: The repository will contain the same number of folders
+  as the number of nodes plus the number of workflows. For very large databases,
+  some operations on the repository folder, such as rsync or scanning its content,
+  might be very slow, and if they are performed reguarly this will slow down 
+  the computer due to an intensive use of the hard drive. 
+  Check out our :ref:`tips<repo_troubleshooting>` in the 
+  troubeshooting section in case this happens.
+   
+
 Start the daemon
 -----------------
 If you configured your user account with your personal email (or if in
@@ -449,6 +458,8 @@ be found :doc:`here<setup/computerandcodes>`.
 Optional dependencies
 +++++++++++++++++++++
 
+.. _CIF_manipulation_dependencies:
+
 CIF manipulation
 ----------------
 
@@ -457,14 +468,16 @@ following dependencies are required to be installed:
 
 * `PyCifRW`_
 * `pymatgen`_
+* `pyspglib`_
 * `jmol`_
 * `Atomic Simulation Environment (ASE)`_
 * :doc:`cod-tools<plugins/codtools/index>`
 
-First three can be installed from the default repositories::
+First four can be installed from the default repositories::
 
     sudo pip install pycifrw==3.6.2.1
     sudo pip install pymatgen==3.0.13
+    sudo pip install pyspglib
     sudo apt-get install jmol
 
 ASE has to be installed from source::
@@ -484,6 +497,7 @@ For the setting up of cod-tools please refer to
 .. _Atomic Simulation Environment (ASE): https://wiki.fysik.dtu.dk/ase/
 .. _PyCifRW: https://pypi.python.org/pypi/PyCifRW/3.6.2
 .. _jmol: http://jmol.sourceforge.net
+.. _pyspglib: http://spglib.sourceforge.net/pyspglibForASE/
 
 Further comments and troubleshooting
 ++++++++++++++++++++++++++++++++++++

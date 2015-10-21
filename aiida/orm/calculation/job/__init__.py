@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-from aiida.orm import Node
 from aiida.common.datastructures import calc_states
 from aiida.common.exceptions import ModificationNotAllowed
-from aiida.common.utils import classproperty
 from aiida.orm.calculation import Calculation
 
 # TODO: set the following as properties of the Calculation
-#        'email',
-#        'email_on_started',
-#        'email_on_terminated',
-#        'rerunnable',
-#        'resourceLimits',
+# 'email',
+# 'email_on_started',
+# 'email_on_terminated',
+# 'rerunnable',
+# 'resourceLimits',
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Nicolas Mounet"
+__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Nicolas Mounet," \
+                   "Martin Uhrin"
 
 _input_subfolder = 'raw_input'
 
@@ -31,7 +30,7 @@ class JobCalculation(Calculation):
         Define here internal parameters that should be defined
         right after the __init__. This function is actually called
         by the __init__.
-        
+
         :note: if you inherit this function, ALWAYS remember to
           call super()._init_internal_params() as the first thing
           in your inherited function.
@@ -65,7 +64,7 @@ class JobCalculation(Calculation):
         Return the default parameters to set.
         It is done as a property so that it can read the default parameters
         defined in _init_internal_params.
-        
+
         :note: It is a property because in this way, e.g. the
         parser_name is taken from the actual subclass of calculation,
         and not from the parent Calculation class
@@ -128,13 +127,12 @@ class JobCalculation(Calculation):
             raise ValidationError(
                 "withmpi property must be boolean! It in instead {}".format(str(type(self.get_withmpi()))))
 
-
     def _can_link_as_output(self, dest):
         """
-        An output of a JobCalculation can only be set 
+        An output of a JobCalculation can only be set
         when the calculation is in the SUBMITTING or RETRIEVING or
         PARSING state.
-        (during SUBMITTING, the execmanager adds a link to the remote folder; 
+        (during SUBMITTING, the execmanager adds a link to the remote folder;
         all other links are added while in the retrieving phase).
 
         :note: Further checks, such as that the output data type is 'Data',
@@ -182,7 +180,7 @@ class JobCalculation(Calculation):
     def _raw_input_folder(self):
         """
         Get the input folder object.
-        
+
         :return: the input folder object.
         :raise: NotExistent: if the raw folder hasn't been created yet
         """
@@ -197,7 +195,7 @@ class JobCalculation(Calculation):
     def set_queue_name(self, val):
         """
         Set the name of the queue on the remote computer.
-        
+
         :param str val: the queue name
         """
         if val is None:
@@ -207,17 +205,17 @@ class JobCalculation(Calculation):
 
     def set_import_sys_environment(self, val):
         """
-        If set to true, the submission script will load the system 
+        If set to true, the submission script will load the system
         environment variables.
-        
-        :param bool val: load the environment if True 
+
+        :param bool val: load the environment if True
         """
         self._set_attr('import_sys_environment', bool(val))
 
     def get_import_sys_environment(self):
         """
         To check if it's loading the system environment on the submission script.
-        
+
         :return: a boolean. If True the system environment will be load.
         """
         return self.get_attr('import_sys_environment', True)
@@ -225,10 +223,10 @@ class JobCalculation(Calculation):
     def set_environment_variables(self, env_vars_dict):
         """
         Set a dictionary of custom environment variables for this calculation.
-        
+
         Both keys and values must be strings.
-        
-        In the remote-computer submission script, it's going to export 
+
+        In the remote-computer submission script, it's going to export
         variables as ``export 'keys'='values'``
         """
         if not isinstance(env_vars_dict, dict):
@@ -246,8 +244,8 @@ class JobCalculation(Calculation):
     def get_environment_variables(self):
         """
         Return a dictionary of the environment variables that are set
-        for this calculation. 
-        
+        for this calculation.
+
         Return an empty dictionary if no special environment variables have
         to be set for this calculation.
         """
@@ -264,7 +262,7 @@ class JobCalculation(Calculation):
     def set_max_memory_kb(self, val):
         """
         Set the maximum memory (in KiloBytes) to be asked to the scheduler.
-        
+
         :param val: an integer. Default=None
         """
         self._set_attr('max_memory_kb', int(val))
@@ -272,7 +270,7 @@ class JobCalculation(Calculation):
     def get_max_memory_kb(self):
         """
         Get the memory (in KiloBytes) requested to the scheduler.
-        
+
         :return: an integer
         """
         return self.get_attr('max_memory_kb', None)
@@ -280,7 +278,7 @@ class JobCalculation(Calculation):
     def set_max_wallclock_seconds(self, val):
         """
         Set the wallclock in seconds asked to the scheduler.
-        
+
         :param val: An integer. Default=None
         """
         self._set_attr('max_wallclock_seconds', int(val))
@@ -288,7 +286,7 @@ class JobCalculation(Calculation):
     def get_max_wallclock_seconds(self):
         """
         Get the max wallclock time in seconds requested to the scheduler.
-        
+
         :return: an integer
         """
         return self.get_attr('max_wallclock_seconds', None)
@@ -310,7 +308,7 @@ class JobCalculation(Calculation):
     def set_withmpi(self, val):
         """
         Set the calculation to use mpi.
-        
+
         :param val: A boolean. Default=True
         """
         self._set_attr('withmpi', val)
@@ -318,7 +316,7 @@ class JobCalculation(Calculation):
     def get_withmpi(self):
         """
         Get whether the job is set with mpi execution.
-        
+
         :return: a boolean. Default=True.
         """
         return self.get_attr('withmpi', True)
@@ -326,10 +324,10 @@ class JobCalculation(Calculation):
     def get_resources(self, full=False):
         """
         Returns the dictionary of the job resources set.
-        
+
         :param full: if True, also add the default values, e.g.
             ``default_mpiprocs_per_machine``
-        
+
         :return: a dictionary
         """
         resources_dict = self.get_attr('jobresource_params', {})
@@ -345,7 +343,7 @@ class JobCalculation(Calculation):
     def get_queue_name(self):
         """
         Get the name of the queue on cluster.
-        
+
         :return: a string or None.
         """
         return self.get_attr('queue_name', None)
@@ -353,7 +351,7 @@ class JobCalculation(Calculation):
     def get_priority(self):
         """
         Get the priority, if set, of the job on the cluster.
-        
+
         :return: a string or None
         """
         return self.get_attr('priority', None)
@@ -371,9 +369,9 @@ class JobCalculation(Calculation):
         Set the calculation-specific prepend text,
         which is going to be prepended in the scheduler-job script, just before
         the code execution.
-        
+
         See also ``set_custom_scheduler_commands``
-        
+
         :param val: a (possibly multiline) string
         """
         self._set_attr("prepend_text", unicode(val))
@@ -391,7 +389,7 @@ class JobCalculation(Calculation):
         Set the calculation-specific append text,
         which is going to be appended in the scheduler-job script, just after
         the code execution.
-        
+
         :param val: a (possibly multiline) string
         """
         self._set_attr("append_text", unicode(val))
@@ -400,10 +398,10 @@ class JobCalculation(Calculation):
         """
         Set a (possibly multiline) string with the commands that the user
         wants to manually set for the scheduler.
-        
+
         The difference of this method with respect to the set_prepend_text
         is the position in the scheduler submission file where such text is
-        inserted: with this method, the string is inserted before any 
+        inserted: with this method, the string is inserted before any
         non-scheduler command.
         """
         self._set_attr("custom_scheduler_commands", unicode(val))
@@ -413,9 +411,9 @@ class JobCalculation(Calculation):
         Return a (possibly multiline) string with the commands that the user
         wants to manually set for the scheduler.
         See also the documentation of the corresponding
-        ``set_`` method. 
+        ``set_`` method.
 
-        :return: the custom scheduler command, or an empty string if no 
+        :return: the custom scheduler command, or an empty string if no
           custom command was defined.
         """
         return self.get_attr("custom_scheduler_commands", "")
@@ -423,10 +421,10 @@ class JobCalculation(Calculation):
     def get_mpirun_extra_params(self):
         """
         Return a list of strings, that are the extra params to pass to the
-        mpirun (or equivalent) command after the one provided in 
+        mpirun (or equivalent) command after the one provided in
         computer.mpirun_command.
         Example: mpirun -np 8 extra_params[0] extra_params[1] ... exec.x
-        
+
         Return an empty list if no parameters have been defined.
         """
         return self.get_attr("mpirun_extra_params", [])
@@ -434,10 +432,10 @@ class JobCalculation(Calculation):
     def set_mpirun_extra_params(self, extra_params):
         """
         Set the extra params to pass to the
-        mpirun (or equivalent) command after the one provided in 
+        mpirun (or equivalent) command after the one provided in
         computer.mpirun_command.
         Example: mpirun -np 8 extra_params[0] extra_params[1] ... exec.x
-        
+
         :param extra_params: must be a list of strings, one for each
             extra parameter
         """
@@ -464,10 +462,10 @@ class JobCalculation(Calculation):
         Add a link with a code as destination. Add the additional
         contraint that this is only possible if the calculation
         is in state NEW.
-        
+
         You can use the parameters of the base Node class, in particular the
         label parameter to label the link.
-        
+
         :param src: a node of the database. It cannot be a Calculation object.
         :param str label: Name of the link. Default=None
         '''
@@ -485,9 +483,9 @@ class JobCalculation(Calculation):
         '''
         Replace a link. Add the additional constratint that this is
         only possible if the calculation is in state NEW.
-        
+
         :param src: a node of the database. It cannot be a Calculation object.
-        :param str label: Name of the link. 
+        :param str label: Name of the link.
         '''
         valid_states = [calc_states.NEW]
 
@@ -502,8 +500,8 @@ class JobCalculation(Calculation):
     def _remove_link_from(self, label):
         '''
         Remove a link. Only possible if the calculation is in state NEW.
-        
-        :param str label: Name of the link to remove. 
+
+        :param str label: Name of the link to remove.
         '''
         valid_states = [calc_states.NEW]
 
@@ -515,19 +513,18 @@ class JobCalculation(Calculation):
 
         return super(JobCalculation, self)._remove_link_from(label)
 
-
     def _set_state(self, state):
         """
         Set the state of the calculation.
-        
+
         Set it in the DbCalcState to have also the uniqueness check.
         Moreover (except for the IMPORTED state) also store in the 'state'
         attribute, useful to know it also after importing, and for faster
         querying.
-        
+
         .. todo:: Add further checks to enforce that the states are set
            in order?
-        
+
         :param state: a string with the state. This must be a valid string,
           from ``aiida.common.datastructures.calc_states``.
         :raise: ModificationNotAllowed if the given state was already set.
@@ -541,23 +538,19 @@ class JobCalculation(Calculation):
             raise ModificationNotAllowed("Cannot set the calculation state "
                                          "before storing")
 
-        if state == calc_states.NOTFOUND:
-            raise ValueError(
-                "You cannot manually set a calculation in the '{}' "
-                "state".format(state))
-
         if state not in calc_states:
             raise ValueError(
                 "'{}' is not a valid calculation status".format(state))
 
         old_state = self.get_state()
-        state_sequence = [state, old_state]
+        if old_state:
+            state_sequence = [state, old_state]
 
-        # sort from new to old: if they are equal, then it is a valid
-        # advance in state (otherwise, we are going backwards...)
-        if sort_states(state_sequence) != state_sequence:
-            raise ModificationNotAllowed("Cannot change the state from {} "
-                                         "to {}".format(old_state, state))
+            # sort from new to old: if they are equal, then it is a valid
+            # advance in state (otherwise, we are going backwards...)
+            if sort_states(state_sequence) != state_sequence:
+                raise ModificationNotAllowed("Cannot change the state from {} "
+                                             "to {}".format(old_state, state))
 
         try:
             with transaction.commit_on_success():
@@ -574,23 +567,20 @@ class JobCalculation(Calculation):
     def get_state(self, from_attribute=False):
         """
         Get the state of the calculation.
-        
-        .. note:: this method returns the NOTFOUND state if no state
-          is found in the DB.
-        
+
         .. note:: the 'most recent' state is obtained using the logic in the
           ``aiida.common.datastructures.sort_states`` function.
-        
+
         .. todo:: Understand if the state returned when no state entry is found
           in the DB is the best choice.
-        
-        :param from_attribute: if set to True, read it from the attributes 
+
+        :param from_attribute: if set to True, read it from the attributes
           (the attribute is also set with set_state, unless the state is set
           to IMPORTED; in this way we can also see the state before storing).
-        
+
         :return: a string. If from_attribute is True and no attribute is found,
           return None. If from_attribute is False and no entry is found in the
-          DB, return the "NOTFOUND" state.
+          DB, also return None.
         """
         from aiida.djsite.db.models import DbCalcState
         from aiida.common.exceptions import DbContentError
@@ -605,7 +595,7 @@ class JobCalculation(Calculation):
                 this_calc_states = DbCalcState.objects.filter(
                     dbnode=self).values_list('state', flat=True)
                 if not this_calc_states:
-                    return calc_states.NOTFOUND
+                    return None
                 else:
                     try:
                         most_recent_state = sort_states(this_calc_states)[0]
@@ -617,7 +607,7 @@ class JobCalculation(Calculation):
 
     def _get_state_string(self):
         """
-        Return a string, that is correct also when the state is imported 
+        Return a string, that is correct also when the state is imported
         (in this case, the string will be in the format IMPORTED/ORIGSTATE
         where ORIGSTATE is the original state from the node attributes).
         """
@@ -630,21 +620,20 @@ class JobCalculation(Calculation):
         else:
             return state
 
-
     def _is_new(self):
         """
         Get whether the calculation is in the NEW status.
-        
+
         :return: a boolean
         """
-        return self.get_state() in [calc_states.NEW, calc_states.NOTFOUND]
+        return self.get_state() in [calc_states.NEW, None]
 
     def _is_running(self):
         """
         Get whether the calculation is in a running state,
-        i.e. one of TOSUBMIT, SUBMITTING, WITHSCHEDULER, 
+        i.e. one of TOSUBMIT, SUBMITTING, WITHSCHEDULER,
         COMPUTED, RETRIEVING or PARSING.
-        
+
         :return: a boolean
         """
         return self.get_state() in [
@@ -654,7 +643,7 @@ class JobCalculation(Calculation):
     def has_finished_ok(self):
         """
         Get whether the calculation is in the FINISHED status.
-        
+
         :return: a boolean
         """
         return self.get_state() in [calc_states.FINISHED]
@@ -662,12 +651,14 @@ class JobCalculation(Calculation):
     def has_failed(self):
         """
         Get whether the calculation is in a failed status,
-        i.e. UNDETERMINED, SUBMISSIONFAILED, RETRIEVALFAILED, PARSINGFAILED or FAILED.
-        
+        i.e. SUBMISSIONFAILED, RETRIEVALFAILED, PARSINGFAILED or FAILED.
+
         :return: a boolean
         """
-        return self.get_state() in [calc_states.UNDETERMINED, calc_states.SUBMISSIONFAILED,
-                                    calc_states.RETRIEVALFAILED, calc_states.PARSINGFAILED, calc_states.FAILED]
+        return self.get_state() in [calc_states.SUBMISSIONFAILED,
+                                    calc_states.RETRIEVALFAILED,
+                                    calc_states.PARSINGFAILED,
+                                    calc_states.FAILED]
 
     def _set_remote_workdir(self, remote_workdir):
         if self.get_state() != calc_states.SUBMITTING:
@@ -680,7 +671,7 @@ class JobCalculation(Calculation):
     def _get_remote_workdir(self):
         """
         Get the path to the remote (on cluster) scratch folder of the calculation.
-        
+
         :return: a string with the remote path
         """
         return self.get_attr('remote_workdir', None)
@@ -695,19 +686,19 @@ class JobCalculation(Calculation):
 
         # accept format of: [ 'remotename',
         #                     ['remotepath','localpath',0] ]
-        # where the last number is used to decide the localname, see CalcInfo or execmanager         
+        # where the last number is used to decide the localname, see CalcInfo or execmanager
 
         if not (isinstance(retrieve_list, (tuple, list))):
             raise ValueError("You should pass a list/tuple")
         for item in retrieve_list:
             if not isinstance(item, basestring):
-                if ( not (isinstance(item, (tuple, list))) or
-                             len(item) != 3):
+                if (not (isinstance(item, (tuple, list))) or
+                            len(item) != 3):
                     raise ValueError("You should pass a list containing either "
                                      "strings or lists/tuples")
-                if ( not (isinstance(item[0], basestring)) or
-                         not (isinstance(item[1], basestring)) or
-                         not (isinstance(item[2], int)) ):
+                if (not (isinstance(item[0], basestring)) or
+                        not (isinstance(item[1], basestring)) or
+                        not (isinstance(item[2], int))):
                     raise ValueError("You have to pass a list (or tuple) of "
                                      "lists, with remotepath(string), "
                                      "localpath(string) and depth (integer)")
@@ -718,14 +709,14 @@ class JobCalculation(Calculation):
         """
         Get the list of files/directories to be retrieved on the cluster.
         Their path is relative to the remote workdirectory path.
-        
+
         :return: a list of strings for file/directory names
         """
         return self.get_attr('retrieve_list', None)
 
     def _set_retrieve_singlefile_list(self, retrieve_singlefile_list):
         """
-        Set the list of information for the retrieval of singlefiles 
+        Set the list of information for the retrieval of singlefiles
         """
         if self.get_state() not in (calc_states.SUBMITTING,
                                     calc_states.NEW):
@@ -746,11 +737,11 @@ class JobCalculation(Calculation):
 
     def _get_retrieve_singlefile_list(self):
         """
-        Get the list of files to be retrieved from the cluster and stored as 
+        Get the list of files to be retrieved from the cluster and stored as
         SinglefileData's (or subclasses of it).
         Their path is relative to the remote workdirectory path.
-        
-        :return: a list of lists of strings for 1) linknames, 
+
+        :return: a list of lists of strings for 1) linknames,
                  2) Singlefile subclass name 3) file names
         """
         return self.get_attr('retrieve_singlefile_list', None)
@@ -769,7 +760,7 @@ class JobCalculation(Calculation):
     def get_job_id(self):
         """
         Get the scheduler job id of the calculation.
-        
+
         :return: a string
         """
         return self.get_attr('job_id', None)
@@ -785,7 +776,7 @@ class JobCalculation(Calculation):
     def get_scheduler_state(self):
         """
         Return the status of the calculation according to the cluster scheduler.
-        
+
         :return: a string.
         """
         return self.get_attr('scheduler_state', None)
@@ -794,7 +785,7 @@ class JobCalculation(Calculation):
         """
         Return the time of the last update of the scheduler state by the daemon,
         or None if it was never set.
-        
+
         :return: a datetime object.
         """
         return self.get_attr('scheduler_lastchecktime', None)
@@ -807,7 +798,7 @@ class JobCalculation(Calculation):
     def _get_last_jobinfo(self):
         """
         Get the last information asked to the scheduler about the status of the job.
-        
+
         :return: a JobInfo object (that closely resembles a dictionary) or None.
         """
         import pickle
@@ -831,11 +822,11 @@ class JobCalculation(Calculation):
         .. todo:: does not support the query for the IMPORTED state (since it
           checks the state in the Attributes, not in the DbCalcState table).
           Decide which is the correct logi and implement the correct query.
-        
-        :param states: a list of string with states. If set, print only the 
-            calculations in the states "states", otherwise shows all. 
+
+        :param states: a list of string with states. If set, print only the
+            calculations in the states "states", otherwise shows all.
             Default = None.
-        :param past_days: If specified, show only calculations that were 
+        :param past_days: If specified, show only calculations that were
             created in the given number of past days.
         :param group: If specified, show only calculations belonging to a
             user-defined group with the given name.
@@ -844,16 +835,16 @@ class JobCalculation(Calculation):
             method.
         :param group_pk: If specified, show only calculations belonging to a
             user-defined group with the given PK.
-        :param pks: if specified, must be a list of integers, and only 
+        :param pks: if specified, must be a list of integers, and only
             calculations within that list are shown. Otherwise, all
             calculations are shown.
-            If specified, sets state to None and ignores the 
+            If specified, sets state to None and ignores the
             value of the ``past_days`` option.")
         :param relative_ctime: if true, prints the creation time relative from now.
                                (like 2days ago). Default = True
         :param all_users: if True, list calculation belonging to all users.
                            Default = False
-        
+
         :return: a string with description of calculations.
         """
         # I assume that calc_states are strings. If this changes in the future,
@@ -914,7 +905,7 @@ class JobCalculation(Calculation):
         # I do the query now, so that the list of pks gets cached
         calc_list_data = list(
             calc_list.filter(
-                #dbcomputer__dbauthinfo__aiidauser=F('user')
+                # dbcomputer__dbauthinfo__aiidauser=F('user')
             ).distinct().order_by('ctime').values(
                 'pk', 'dbcomputer__name', 'ctime',
                 'type', 'dbcomputer__enabled',
@@ -950,13 +941,10 @@ class JobCalculation(Calculation):
                     str_timedelta(now - last_daemon_check, negative_to_zero=True),
                     timezone.localtime(last_daemon_check).strftime("at %H:%M:%S on %Y-%m-%d")))
 
-        disabled_ignorant_states = [calc_states.FINISHED,
-                                    calc_states.NOTFOUND,
-                                    calc_states.UNDETERMINED,
-                                    calc_states.SUBMISSIONFAILED,
-                                    calc_states.RETRIEVALFAILED,
-                                    calc_states.PARSINGFAILED,
-                                    calc_states.FAILED,
+        disabled_ignorant_states = [
+            None, calc_states.FINISHED, calc_states.SUBMISSIONFAILED,
+            calc_states.RETRIEVALFAILED, calc_states.PARSINGFAILED,
+            calc_states.FAILED
         ]
 
         if not calc_list:
@@ -1029,7 +1017,7 @@ class JobCalculation(Calculation):
                                    remote_state,
                                    remote_computer + "{}".format(enabled),
                                    calc_module
-                ])
+                                   ])
 
             # prepare a formatted text of minimal row length (to fit in terminals!)
             rows = []
@@ -1048,10 +1036,10 @@ class JobCalculation(Calculation):
                             only_computer_user_pairs=False):
         """
         Filter all calculations with a given state.
-        
+
         Issue a warning if the state is not in the list of valid states.
-        
-        :param string state: The state to be used to filter (should be a string among 
+
+        :param string state: The state to be used to filter (should be a string among
                 those defined in aiida.common.datastructures.calc_states)
         :param computer: a Django DbComputer entry, or a Computer object, of a
                 computer in the DbComputer table.
@@ -1059,7 +1047,7 @@ class JobCalculation(Calculation):
         :param user: a Django entry (or its pk) of a user in the DbUser table;
                 if present, the results are restricted to calculations of that
                 specific user
-        :param bool only_computer_user_pairs: if False (default) return a queryset 
+        :param bool only_computer_user_pairs: if False (default) return a queryset
                 where each element is a suitable instance of Node (it should
                 be an instance of Calculation, if everything goes right!)
                 If True, return only a list of tuples, where each tuple is
@@ -1097,12 +1085,11 @@ class JobCalculation(Calculation):
         else:
             return queryresults
 
-
     def _prepare_for_submission(self, tempfolder, inputdict):
         """
         This is the routine to be called when you want to create
         the input files and related stuff with a plugin.
-        
+
         Args:
             tempfolder: a aiida.common.folders.Folder subclass where
                 the plugin should put all its files.
@@ -1139,7 +1126,7 @@ class JobCalculation(Calculation):
     def submit(self):
         """
         Puts the calculation in the TOSUBMIT status.
-        
+
         Actual submission is performed by the daemon.
         """
         from aiida.common.exceptions import InvalidOperation
@@ -1156,18 +1143,18 @@ class JobCalculation(Calculation):
         """
         Set a string for the output parser
         Can be None if no output plugin is available or needed.
-        
-        :param parser: a string identifying the module of the parser. 
+
+        :param parser: a string identifying the module of the parser.
               Such module must be located within the folder 'aiida/parsers/plugins'
         """
         self._set_attr('parser', parser)
 
     def get_parser_name(self):
         """
-        Return a string locating the module that contains 
+        Return a string locating the module that contains
         the output parser of this calculation, that will be searched
         in the 'aiida/parsers/plugins' directory. None if no parser is needed/set.
-        
+
         :return: a string.
         """
         from aiida.parsers import ParserFactory
@@ -1178,7 +1165,7 @@ class JobCalculation(Calculation):
         """
         Return the output parser object for this calculation, or None
         if no parser is set.
-        
+
         :return: a Parser class.
         :raise: MissingPluginError from ParserFactory no plugin is found.
         """
@@ -1194,7 +1181,7 @@ class JobCalculation(Calculation):
     def _set_linkname_retrieved(self, linkname):
         """
         Set the linkname of the retrieved data folder object.
-        
+
         :param linkname: a string.
         """
         self._set_attr('linkname_retrieved', linkname)
@@ -1202,8 +1189,8 @@ class JobCalculation(Calculation):
     def _get_linkname_retrieved(self):
         """
         Get the linkname of the retrieved data folder object.
-        
-        :return: a string 
+
+        :return: a string
         """
         return self.get_attr('linkname_retrieved')
 
@@ -1213,7 +1200,7 @@ class JobCalculation(Calculation):
 
         :return: the retrieved data folder object, or None if no such output
             node is found.
-        
+
         :raise MultipleObjectsError: if more than one output node is found.
         """
         from aiida.common.exceptions import MultipleObjectsError
@@ -1245,18 +1232,18 @@ class JobCalculation(Calculation):
     def kill(self):
         """
         Kill a calculation on the cluster.
-        
+
         Can only be called if the calculation is in status WITHSCHEDULER.
-        
+
         The command tries to run the kill command as provided by the scheduler,
-        and raises an exception is something goes wrong. 
+        and raises an exception is something goes wrong.
         No changes of calculation status are done (they will be done later by
         the calculation manager).
-        
+
         .. todo: if the status is TOSUBMIT, check with some lock that it is not
             actually being submitted at the same time in another thread.
         """
-        #TODO: Check if we want to add a status "KILLED" or something similar.
+        # TODO: Check if we want to add a status "KILLED" or something similar.
         from aiida.common.exceptions import InvalidOperation, RemoteOperationError
 
         old_state = self.get_state()
@@ -1292,10 +1279,9 @@ class JobCalculation(Calculation):
                                        .format(self.pk, self.get_job_id()))
         else:
             # Do not set the state, but let the parser do its job
-            #self._set_state(calc_states.FAILED)
+            # self._set_state(calc_states.FAILED)
             self.logger.warning("Calculation {} killed by the user "
                                 "(it was {})".format(self.pk, calc_states.WITHSCHEDULER))
-
 
     def _presubmit(self, folder, use_unstored_links=False):
         """
@@ -1349,7 +1335,7 @@ class JobCalculation(Calculation):
         job_tmpl.submit_as_hold = False
         job_tmpl.rerunnable = False
         job_tmpl.job_environment = {}
-        #'email', 'email_on_started', 'email_on_terminated',
+        # 'email', 'email_on_started', 'email_on_terminated',
         job_tmpl.job_name = 'aiida-{}'.format(self.pk)
         job_tmpl.sched_output_path = self._SCHED_OUTPUT_FILE
         if self._SCHED_ERROR_FILE == self._SCHED_OUTPUT_FILE:
@@ -1385,10 +1371,10 @@ class JobCalculation(Calculation):
                     self.pk, FileSubclass.__name__))
         self._set_retrieve_singlefile_list(retrieve_singlefile_list)
 
-        # the if is done so that if the method returns None, this is 
+        # the if is done so that if the method returns None, this is
         # not added. This has two advantages:
         # - it does not add too many \n\n if most of the prepend_text are empty
-        # - most importantly, skips the cases in which one of the methods 
+        # - most importantly, skips the cases in which one of the methods
         #   would return None, in which case the join method would raise
         #   an exception
         job_tmpl.prepend_text = "\n\n".join(_ for _ in
@@ -1566,15 +1552,14 @@ class JobCalculation(Calculation):
 
         return calcinfo, script_filename
 
-
     @property
     def res(self):
         """
         To be used to get direct access to the parsed parameters.
-        
+
         :return: an instance of the CalculationResultManager.
-        
-        :note: a practical example on how it is meant to be used: let's say that there is a key 'energy' 
+
+        :note: a practical example on how it is meant to be used: let's say that there is a key 'energy'
           in the dictionary of the parsed results which contains a list of floats.
           The command `calc.res.energy` will return such a list.
         """
@@ -1583,15 +1568,15 @@ class JobCalculation(Calculation):
     def submit_test(self, folder=None, subfolder_name=None):
         """
         Test submission, creating the files in a local folder.
-        
+
         :note: this submit_test function does not require any node
             (neither the calculation nor the input links) to be stored yet.
-        
-        :param folder: A Folder object, within which each calculation files 
+
+        :param folder: A Folder object, within which each calculation files
             are created; if not passed, a subfolder 'submit_test' of the current
             folder is used.
         :param subfolder_name: the name of the subfolder to use for this
-            calculation (within Folder). If not passed, a unique string 
+            calculation (within Folder). If not passed, a unique string
             starting with the date and time in the format ``yymmdd-HHMMSS-``
             is used.
         """
@@ -1626,7 +1611,7 @@ class JobCalculation(Calculation):
                                           "{}-{:05d}".format(subfolder_basename,
                                                              counter))
             # This check just tried to avoid to try to create the folder
-            # (hoping that a test of existence is faster than a 
+            # (hoping that a test of existence is faster than a
             # test and failure in directory creation)
             # But it could be removed
             if os.path.exists(subfolder_path):
@@ -1641,7 +1626,7 @@ class JobCalculation(Calculation):
                     # The directory has been created in the meantime,
                     # retry with a new one...
                     continue
-                # Some other error: raise, so we avoid infinite loops 
+                # Some other error: raise, so we avoid infinite loops
                 # e.g. if we are in a folder in which we do not have write
                 # permissions
                 raise
@@ -1713,7 +1698,7 @@ class JobCalculation(Calculation):
         Return the output of the scheduler output (a string) if the calculation
         has finished, and output node is present, and the output of the
         scheduler was retrieved.
-        
+
         Return None otherwise.
         """
         from aiida.common.exceptions import NotExistent
@@ -1740,7 +1725,7 @@ class JobCalculation(Calculation):
         Return the output of the scheduler error (a string) if the calculation
         has finished, and output node is present, and the output of the
         scheduler was retrieved.
-        
+
         Return None otherwise.
         """
         from aiida.common.exceptions import NotExistent
@@ -1768,7 +1753,7 @@ class JobCalculation(Calculation):
 #     def files(self):
 #         """
 #         To be used to get direct access to the retrieved files.
-#         
+#
 #         :return: an instance of the CalculationFileManager.
 #         """
 #         return CalculationFileManager(self)
@@ -1776,8 +1761,8 @@ class JobCalculation(Calculation):
 
 class CalculationResultManager(object):
     """
-    An object used internally to interface the calculation object with the Parser 
-    and consequentially with the ParameterData object result. 
+    An object used internally to interface the calculation object with the Parser
+    and consequentially with the ParameterData object result.
     It shouldn't be used explicitely by a user.
     """
 
@@ -1826,7 +1811,7 @@ class CalculationResultManager(object):
     def __getattr__(self, name):
         """
         interface to get to the parser results as an attribute.
-        
+
         :param name: name of the attribute to be asked to the parser results.
         """
         try:
@@ -1838,7 +1823,7 @@ class CalculationResultManager(object):
     def __getitem__(self, name):
         """
         interface to get to the parser results as a dictionary.
-        
+
         :param name: name of the attribute to be asked to the parser results.
         """
         try:
@@ -1847,12 +1832,11 @@ class CalculationResultManager(object):
             raise KeyError("Parser '{}' did not provide a result '{}'"
                            .format(self._parser.__class__.__name__, name))
 
-
-# 
+#
 # class CalculationFileManager(object):
 #     """
-#     An object used internally to interface the calculation with the FolderData 
-#     object result. 
+#     An object used internally to interface the calculation with the FolderData
+#     object result.
 #     It shouldn't be used explicitely by a user, but accessed through calc.files.
 #     """
 #     def __init__(self, calc):
@@ -1861,7 +1845,7 @@ class CalculationResultManager(object):
 #         """
 #         # Possibly add checks here
 #         self._calc = calc
-#         
+#
 #     def _get_folder(self):
 #         from aiida.orm.data.folder import FolderData
 #         from aiida.common.exceptions import NotExistent, UniquenessError
@@ -1875,12 +1859,11 @@ class CalculationResultManager(object):
 #         else:
 #             raise UniquenessError("More than one output folder found")
 #         return folders[0]
-#     
+#
 #     def path(self,name='.'):
 #         folder = self._get_folder()
 #         return folder.get_abs_path(name)
-#     
+#
 #     def list(self,name='.'):
 #         folder = self._get_folder()
 #         return folder.get_folder_list(name)
-

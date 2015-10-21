@@ -1,16 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import os
 import sys
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA and Django Software Foundation and individual contributors. All rights reserved."
 __license__ = "MIT license, and Django license, see LICENSE.txt file"
 __version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi"
+__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Martin Uhrin"
 
 if __name__ == "__main__":
     from django.core.management import execute_from_command_line
-    from aiida.djsite.utils import load_dbenv
+    import aiida.djsite.utils as utils
 
     # Copy sys.argv
     actual_argv = sys.argv[:]
@@ -29,7 +28,9 @@ if __name__ == "__main__":
             # I remove the argument I just read
             actual_argv = [sys.argv[0]] + sys.argv[2:]
 
-    load_dbenv(process=process_name)
+    if actual_argv[1] == 'migrate':
+        utils._load_dbenv_noschemacheck(process=process_name)
+    else:
+        utils.load_dbenv(process=process_name)
 
     execute_from_command_line(actual_argv)
-

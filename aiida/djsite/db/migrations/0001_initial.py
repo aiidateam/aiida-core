@@ -7,10 +7,14 @@ import django.utils.timezone
 from django.conf import settings
 import django_extensions.db.fields
 
+from aiida.djsite.db.migrations import update_schema_version
+
 
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
+
+SCHEMA_VERSION = "1.0.1"
 
 
 class Migration(migrations.Migration):
@@ -446,4 +450,5 @@ class Migration(migrations.Migration):
             name='dbattribute',
             unique_together=set([('dbnode', 'key')]),
         ),
+        update_schema_version(SCHEMA_VERSION)
     ]

@@ -67,10 +67,7 @@ class AiidaTestCase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        import getpass
-        from django.core.exceptions import ObjectDoesNotExist
-        from aiida.djsite.db.models import DbComputer, DbUser
-        from aiida.djsite.utils import get_configured_user_email
+        from aiida.djsite.db.models import DbComputer
 
         # I first delete the workflows
         from aiida.djsite.db.models import DbWorkflow
@@ -102,3 +99,7 @@ class AiidaTestCase(unittest.TestCase):
         #    pass
 
         DbComputer.objects.all().delete()
+
+        from aiida.djsite.db.models import DbLog
+
+        DbLog.objects.all().delete()

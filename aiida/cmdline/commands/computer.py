@@ -279,6 +279,7 @@ class Computer(VerdiCommandWithSubcommands):
         """
         Show information on a given computer
         """
+        load_dbenv()
         from aiida.common.exceptions import NotExistent
 
         if len(args) != 1:
@@ -413,6 +414,7 @@ class Computer(VerdiCommandWithSubcommands):
         """
         Rename a computer
         """
+        load_dbenv()
         from aiida.common.exceptions import (
             NotExistent, UniquenessError, ValidationError)
 
@@ -602,6 +604,7 @@ class Computer(VerdiCommandWithSubcommands):
         Does not delete the computer if there are calculations that are using
         it.
         """
+        load_dbenv()
         from aiida.common.exceptions import (
             NotExistent, InvalidOperation)
         from aiida.orm.computer import delete_computer
@@ -1008,6 +1011,5 @@ class Computer(VerdiCommandWithSubcommands):
         """
         from aiida.orm import Computer as AiidaOrmComputer
 
-        load_dbenv()
         return AiidaOrmComputer.get(name)
     

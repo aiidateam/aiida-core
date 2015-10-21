@@ -9,7 +9,6 @@ Some tricks
   :maxdepth: 1
 
   ../setup/ssh_proxycommand
-  ../cmdline/scripting_and_shell
   
 
 Connection problems

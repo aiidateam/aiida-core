@@ -696,7 +696,7 @@ def install_tc(sender, **kwargs):
         transaction.commit_unless_managed()
 
     elif "postgresql" in settings.DATABASES['default']['ENGINE']:
-        print '== Postegres found, installing transitive closure engine =='
+        print '== Postgres found, installing transitive closure engine =='
 
         cursor.execute(get_pg_tc(links_table_name, links_table_input_field, links_table_output_field,
                                  closure_table_name, closure_table_parent_field, closure_table_child_field))

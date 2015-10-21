@@ -50,6 +50,9 @@ class Daemon(VerdiCommandWithSubcommands):
         start, stop, status and restart.
         """
         from aiida.common import setup
+        from aiida import load_dbenv
+
+        load_dbenv(process='daemon')
 
         self.valid_subcommands = {
             'start': (self.daemon_start, self.complete_none),
@@ -90,7 +93,6 @@ class Daemon(VerdiCommandWithSubcommands):
         Return the daemon pid, as read from the supervisord.pid file.
         Return None if no pid is found (or the pid is not valid).
         """
-
         if (os.path.isfile(self._get_pid_full_path())):
             try:
                 return int(open(self._get_pid_full_path(), 'r').read().strip())
@@ -103,9 +105,6 @@ class Daemon(VerdiCommandWithSubcommands):
         """
         Start the daemon
         """
-        from aiida import load_dbenv
-
-        load_dbenv(process='daemon')
         if args:
             print >> sys.stderr, (
                 "No arguments allowed for the '{}' command.".format(
@@ -228,9 +227,6 @@ class Daemon(VerdiCommandWithSubcommands):
         """
         Print the status of the daemon
         """
-        from aiida import load_dbenv
-
-        load_dbenv(process='daemon')
 
         if args:
             print >> sys.stderr, (
@@ -325,10 +321,6 @@ class Daemon(VerdiCommandWithSubcommands):
         Restart the daemon. Before restarting, wait for the daemon to really
         shut down.
         """
-        from aiida import load_dbenv
-
-        load_dbenv(process='daemon')
-
         if args:
             print >> sys.stderr, (
                 "No arguments allowed for the '{}' command.".format(
@@ -365,10 +357,6 @@ class Daemon(VerdiCommandWithSubcommands):
         """
         Configure the user that can run the daemon.
         """
-        from aiida import load_dbenv
-
-        load_dbenv(process='daemon')
-
         if args:
             print >> sys.stderr, (
                 "No arguments allowed for the '{}' command.".format(

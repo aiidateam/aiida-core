@@ -122,6 +122,11 @@ class ConfigurationError(AiidaException):
     """
     pass
 
+class ProfileConfigurationError(ConfigurationError):
+    """
+    Configuration error raised when a wrong/inexistent profile is requested.
+    """
+    pass
 
 class DbContentError(AiidaException):
     """

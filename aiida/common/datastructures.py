@@ -7,7 +7,8 @@ from aiida.common.extendeddicts import DefaultFieldsAttributeDict, Enumerate
 __copyright__ = u"Copyright (c), 2015, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved."
 __license__ = "MIT license, see LICENSE.txt file"
 __version__ = "0.4.1"
-__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Riccardo Sabatini"
+__contributors__ = "Andrea Cepellotti, Giovanni Pizzi, Riccardo Sabatini," \
+                   "Martin Uhrin"
 
 
 class CalcState(Enumerate):
@@ -15,7 +16,6 @@ class CalcState(Enumerate):
 
 
 _sorted_datastates = (
-    'NOTFOUND',  # not found in the DB
     'NEW',  # just created
     'TOSUBMIT',  # used by the executionmanager to submit new calculations scheduled to be submitted
     'SUBMITTING',  # being submitted to cluster
@@ -25,7 +25,6 @@ _sorted_datastates = (
     # (both DONE and FAILED)
     'RETRIEVING',  # while retrieving data
     'PARSING',  # while parsing data
-    'UNDETERMINED',
     'FINISHED',  # Final state of the calculation: data retrieved and eventually parsed
     'SUBMISSIONFAILED',  # error occurred during submission phase
     'RETRIEVALFAILED',  # error occurred during retrieval phase
@@ -44,12 +43,12 @@ def sort_states(list_states):
     Given a list of state names, return a sorted list of states (the first
     is the most recent) sorted according to their logical appearance in
     the DB (i.e., NEW before of SUBMITTING before of FINISHED).
-    
+
     .. note:: The order of the internal variable _sorted_datastates is
       used.
 
     :param list_states: a list (or tuple) of state strings.
-    
+
     :return: a sorted list of the given data states.
 
     :raise ValueError: if any of the given states is not a valid state.
@@ -73,15 +72,15 @@ def sort_states(list_states):
 class CalcInfo(DefaultFieldsAttributeDict):
     """
     This object will store the data returned by the calculation plugin and to be
-    passed to the ExecManager 
+    passed to the ExecManager
     """
     # Note: some of the variables might have never been used in AiiDA
-    #       one might want to clean all this stuff in a future revision 
+    #       one might want to clean all this stuff in a future revision
     # Note: probably some of the fields below are not used anymore inside
     #       calcinfo, but are rather directly set from calculation attributes to
     #       the JobInfo to be passed to the ExecManager
     #       (see, for instance, 'queue_name').
-    
+
     _default_fields = (
         'job_environment',  # TODO UNDERSTAND THIS!
         'email',
@@ -105,14 +104,14 @@ class CalcInfo(DefaultFieldsAttributeDict):
         'rerunnable',
         'retrieve_list',  # a list of files or patterns to retrieve, with two
         # possible formats: [ 'remotepath',  # just the name of the file to retrieve. Will be put in '.' of the repositorym with name os.path.split(item)[1]
-        #                     ['remotepath','localpath',depth]  ]
+        # ['remotepath','localpath',depth]  ]
         # second format will copy the remotepath file/folder to localpath.
         # if remotepath is a file/folder, localpath will be its local name
         # if remotepath has file patterns, localpath should only be '.'
         # depth is an integer to decide the localname: will be os.path.join(localpath, filename )
-        # where filename takes remotepath.split() and joins the last #depth elements  
-        # use the second option if you are using file patterns (*,[0-9],...) 
-        # ALL PATHS ARE RELATIVE! 
+        # where filename takes remotepath.split() and joins the last #depth elements
+        # use the second option if you are using file patterns (*,[0-9],...)
+        # ALL PATHS ARE RELATIVE!
         'local_copy_list',  # a list of length-two tuples with (localabspath, relativedestpath)
         'remote_copy_list',  # a list of length-three tuples with (remotemachinename, remoteabspath, relativedestpath)
         'remote_symlink_list',
@@ -123,7 +122,7 @@ class CalcInfo(DefaultFieldsAttributeDict):
         # ["linkname_from calc to singlefile","subclass of singlefile","filename"]
         # filename remote = filename local
         'codes_info',  # a list of dictionaries used to pass the info of the execution of a code.
-        'codes_run_mode', # a string used to specify the order in which multi codes can be executed  
+        'codes_run_mode', # a string used to specify the order in which multi codes can be executed
     )
 
 
@@ -138,7 +137,7 @@ class CodeRunmode(Enumerate):
 # if serial, it will be:
 #   code1.x
 #   code2.x
-code_run_modes = CodeRunmode(('PARALLEL', 
+code_run_modes = CodeRunmode(('PARALLEL',
                               'SERIAL'))
 
 
@@ -146,40 +145,40 @@ class CodeInfo(DefaultFieldsAttributeDict):
     """
     This attribute-dictionary contains the information needed to execute a code.
     Possible attributes are:
-    
-    * ``cmdline_params``: a list of strings, containing parameters to be written on 
+
+    * ``cmdline_params``: a list of strings, containing parameters to be written on
       the command line right after the call to the code, as for example::
-        
+
         code.x cmdline_params[0] cmdline_params[1] ... < stdin > stdout
-      
-    * ``stdin_name``: (optional) the name of the standard input file. Note, it is 
+
+    * ``stdin_name``: (optional) the name of the standard input file. Note, it is
       only possible to use the stdin with the syntax::
-      
+
         code.x < stdin_name
-      
-      If no stdin_name is specified, the string "< stdin_name" will not be 
+
+      If no stdin_name is specified, the string "< stdin_name" will not be
       passed to the code.
       Note: it is not possible to substitute/remove the '<' if stdin_name is specified;
-      if that is needed, avoid stdin_name and use instead the cmdline_params to 
-      specify a suitable syntax. 
-    * ``stdout_name``: (optional) the name of the standard output file. Note, it is 
+      if that is needed, avoid stdin_name and use instead the cmdline_params to
+      specify a suitable syntax.
+    * ``stdout_name``: (optional) the name of the standard output file. Note, it is
       only possible to pass output to stdout_name with the syntax::
-      
+
         code.x ... > stdout_name
-      
-      If no stdout_name is specified, the string "> stdout_name" will not be 
+
+      If no stdout_name is specified, the string "> stdout_name" will not be
       passed to the code.
       Note: it is not possible to substitute/remove the '>' if stdout_name is specified;
-      if that is needed, avoid stdout_name and use instead the cmdline_params to 
-      specify a suitable syntax. 
+      if that is needed, avoid stdout_name and use instead the cmdline_params to
+      specify a suitable syntax.
     * ``stderr_name``: (optional) a string, the name of the error file of the code.
     * ``join_files``: (optional) if True, redirects the error to the output file.
       If join_files=True, the code will be called as::
-      
+
         code.x ... > stdout_name 2>&1
-      
+
       otherwise, if join_files=False and stderr is passed::
-      
+
         code.x ... > stdout_name 2> stderr_name
 
     * ``withmpi``: if True, executes the code with mpirun (or another MPI installed
@@ -236,9 +235,9 @@ wf_exit_call = "exit"
 wf_default_call = "none"
 
 # TODO Improve/implement this!
-#class DynResourcesInfo(AttributeDict):
+# class DynResourcesInfo(AttributeDict):
 #    """
-#    This object will contain a list of 'dynamical' resources to be 
+#    This object will contain a list of 'dynamical' resources to be
 #    passed from the code plugin to the ExecManager, containing
 #    things like
 #    * resources in the permanent repository, that will be simply
@@ -247,4 +246,3 @@ wf_default_call = "none"
 #    * remote resources to be directly copied over only remotely
 #    """
 #    pass
-

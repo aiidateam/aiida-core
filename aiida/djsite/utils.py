@@ -24,7 +24,6 @@ def load_dbenv(process=None, profile=None):
 def _load_dbenv_noschemacheck(process, profile):
     """
     Load the database environment (Django) WITHOUT CHECKING THE SCHEMA VERSION.
-    
     :param process: the process that is calling this command ('verdi', or 
         'daemon')
     :param profile: the string with the profile to use. If not specified,
@@ -135,7 +134,7 @@ def get_log_messages(obj):
 
 def get_configured_user_email():
     """
-    Return the email (that is used as the username) configured during the 
+    Return the email (that is used as the username) configured during the
     first verdi install.
     """
     from aiida.common.exceptions import ConfigurationError
@@ -211,10 +210,10 @@ def long_field_length():
     Return the length of "long" fields.
     This is used, for instance, for the 'key' field of attributes.
     This returns 1024 typically, but it returns 255 if the backend is mysql.
-    
+
     :note: Call this function only AFTER having called load_dbenv!
     """
-    # One should not load directly settings because there are checks inside 
+    # One should not load directly settings because there are checks inside
     # for the current profile. However, this function is going to be called
     # only after having loaded load_dbenv, so there should be no problem
     from django.conf import settings
@@ -254,15 +253,15 @@ def check_schema_version():
     """
     Check if the version stored in the database is the same of the version
     of the code.
-    
+
     :note: if the DbSetting table does not exist, this function does not
       fail. The reason is to avoid to have problems before running the first
       migrate call.
-      
+
     :note: if no version is found, the version is set to the version of the
       code. This is useful to have the code automatically set the DB version
       at the first code execution.
-    
+
     :raise ConfigurationError: if the two schema versions do not match.
       Otherwise, just return.
     """
@@ -283,9 +282,11 @@ def check_schema_version():
         db_schema_version = get_db_schema_version()
 
     if code_schema_version != db_schema_version:
-        raise ConfigurationError("The code schema version is {}, but the "
-                                 "version stored in the database (DbSetting "
-                                 "table) is {}, I stop [migrate using tools in "
-                                 "aiida/djsite/aiida_migrations]".format(
-            code_schema_version, db_schema_version))
-    
+        raise ConfigurationError(
+            "The code schema version is {}, but the version stored in the"
+            "database (DbSetting table) is {}, stopping.\n"
+            "To migrate to latest version, go to aiida/djsite and run:\n"
+            "python manage.py migrate".
+            format(code_schema_version, db_schema_version)
+        )
+

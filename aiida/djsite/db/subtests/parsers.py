@@ -40,7 +40,7 @@ def _comparison_Equal(testclass, dbdata, comparisondata):
     """
     Compare two objects to see if they are equal
     """
-    testclass.assertEqual(len(dbdata), len(comparisondata['value']))
+    testclass.assertEqual(dbdata, comparisondata['value'])
 
 def _comparison_LengthEqual(testclass, dbdata, comparisondata):
     """

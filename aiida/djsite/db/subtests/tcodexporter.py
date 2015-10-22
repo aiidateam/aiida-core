@@ -108,23 +108,23 @@ class TestTcodDbExporter(AiidaTestCase):
         sha1 = 'a94a8fe5ccb19ba61c4c0873d391e987982fbbd3'
         self.assertEquals(
             _collect_files(sf.abspath),
-            [{'name': 'aiida.in', 'contents': 'test', 'md5': md5,
+            [{'name': '_.out', 'contents': 'test', 'md5': md5,
                       'sha1': sha1, 'type': 'file'},
-             {'name': 'save/', 'type': 'folder'},
-             {'name': 'save/1/', 'type': 'folder'},
-             {'name': 'save/1/log.log', 'contents': 'test', 'md5': md5,
+             {'name': '_aiidasubmit.sh', 'contents': 'test', 'md5': md5,
                       'sha1': sha1, 'type': 'file'},
-             {'name': 'save/2/', 'type': 'folder'},
-             {'name': '_.out', 'contents': 'test', 'md5': md5,
+             {'name': 'aiida.in', 'contents': 'test', 'md5': md5,
+                      'sha1': sha1, 'type': 'file'},
+             {'name': 'aiida.out', 'contents': 'test', 'md5': md5,
                       'sha1': sha1, 'type': 'file'},
              {'name': 'out/', 'type': 'folder'},
              {'name': 'out/out', 'contents': 'test', 'md5': md5,
                       'sha1': sha1, 'type': 'file'},
              {'name': 'pseudo/', 'type': 'folder'},
-             {'name': '_aiidasubmit.sh', 'contents': 'test', 'md5': md5,
+             {'name': 'save/', 'type': 'folder'},
+             {'name': 'save/1/', 'type': 'folder'},
+             {'name': 'save/1/log.log', 'contents': 'test', 'md5': md5,
                       'sha1': sha1, 'type': 'file'},
-             {'name': 'aiida.out', 'contents': 'test', 'md5': md5,
-                      'sha1': sha1, 'type': 'file'}])
+             {'name': 'save/2/', 'type': 'folder'}])
 
     @unittest.skipIf(not has_ase() or not has_pyspglib(),
                      "Unable to import ase or pyspglib")

@@ -3,7 +3,7 @@ import os
 
 import aiida
 
-# The username (email) used by the default superuser, that should also run 
+# The username (email) used by the default superuser, that should also run
 # as the daemon
 from aiida.common.exceptions import ConfigurationError
 
@@ -68,7 +68,7 @@ def get_config():
 def store_config(confs):
     """
     Given a configuration dictionary, stores it in the configuration file.
-    
+
     :param confs: the dictionary to store.
     """
     import json
@@ -93,13 +93,13 @@ file={daemon_dir}/supervisord.sock   ; (the path to the socket file)
 
 [supervisord]
 logfile={log_dir}/supervisord.log
-logfile_maxbytes=10MB 
-logfile_backups=2         
-loglevel=info                
+logfile_maxbytes=10MB
+logfile_backups=2
+loglevel=info
 pidfile={daemon_dir}/supervisord.pid
-nodaemon=false               
-minfds=1024                 
-minprocs=200                 
+nodaemon=false
+minfds=1024
+minprocs=200
 
 [rpcinterface:supervisor]
 supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
@@ -153,7 +153,7 @@ process_name=%(process_num)s
 def generate_random_secret_key():
     """
     Generate a random secret key to put in the django settings module.
-    
+
     This should be the same function used by Django in
     core/management/commands/startproject.
     """
@@ -169,7 +169,7 @@ def try_create_secret_key():
     """
     Creates a new secret key file, if this does not exist, otherwise do nothing
     (to avoid that the secret key is regenerated each time).
-    
+
     If you really want that the secret key is regenerated, delete the
     secret key file, and then call this function again.
     """
@@ -193,12 +193,12 @@ def try_create_secret_key():
 def create_htaccess_file():
     """
     Creates a suitable .htaccess file in the .aiida folder (if it does not
-    exist yet), that is important 
-    
+    exist yet), that is important
+
     .. note:: some default Apache configurations ignore the ``.htaccess``
-    files unless otherwise specified: read the documentation on 
+    files unless otherwise specified: read the documentation on
     how to setup properly your Apache server!
-    
+
     .. note:: if a ``.htaccess`` file already exists, this is not overwritten.
     """
     aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
@@ -223,7 +223,7 @@ def create_htaccess_file():
 def get_secret_key():
     """
     Return the secret key.
-    
+
     Raise ConfigurationError if the secret key cannot be found/read from the disk.
     """
     from aiida.common.exceptions import ConfigurationError
@@ -245,7 +245,7 @@ def get_secret_key():
 def ask_for_timezone(existing_timezone):
     """
     Interactively ask for the current timezone.
-    
+
     :param existing_timezone: the string for the already configured timezone,
       or None if there is no previous configuration.
     :return: a string with the timezone as chosen by the user.
@@ -264,7 +264,7 @@ def ask_for_timezone(existing_timezone):
     # If we are here, either there was no configuration, or the user asked to
     # change it.
 
-    # Try to get a set of valid timezones, as suggested in 
+    # Try to get a set of valid timezones, as suggested in
     # one of the answers of http://stackoverflow.com/questions/7669938
 
     # Get some information on the local TZ and the local offset, doing the
@@ -277,7 +277,7 @@ def ask_for_timezone(existing_timezone):
         local_offset = time.timezone
         localtz = time.tzname[0]
 
-    # convert to a datetime.timedelta object   
+    # convert to a datetime.timedelta object
     local_offset = datetime.timedelta(seconds=-local_offset)
 
     valid_zones = []
@@ -319,7 +319,7 @@ def create_base_dirs():
     """
     import getpass
 
-    # For the daemon, to be hard-coded when ok    
+    # For the daemon, to be hard-coded when ok
     aiida_dir = os.path.expanduser(AIIDA_CONFIG_FOLDER)
     aiida_daemon_dir = os.path.join(aiida_dir, DAEMON_SUBDIR)
     aiida_log_dir = os.path.join(aiida_dir, LOG_DIR)
@@ -338,7 +338,7 @@ def create_base_dirs():
     finally:
         os.umask(old_umask)
 
-    # Install daemon files 
+    # Install daemon files
     install_daemon_files(aiida_dir, aiida_daemon_dir, aiida_log_dir, local_user)
 
     # Create the secret key file, if needed
@@ -349,7 +349,7 @@ def create_base_dirs():
 
 def set_default_profile(process, profile, force_rewrite = False):
     """
-    Set a default db profile to be used by a process (default for verdi, 
+    Set a default db profile to be used by a process (default for verdi,
     default for daemon, ...)
 
     :param process: A string identifying the process to modify (e.g. ``verdi``
@@ -385,9 +385,9 @@ def set_default_profile(process, profile, force_rewrite = False):
 def get_default_profile(process):
     """
     Return the profile name to be used by process
-    
-    :return: None if no default profile is found, otherwise the name of the 
-      default profile for the given process 
+
+    :return: None if no default profile is found, otherwise the name of the
+      default profile for the given process
     """
     confs = get_config()
     try:
@@ -461,7 +461,7 @@ def get_profile_config(profile, conf_dict=None, set_test_location=True):
     if is_test and set_test_location:
         # Change the repository and print a message
         ###################################################################
-        # IMPORTANT! Choose a different repository location, otherwise 
+        # IMPORTANT! Choose a different repository location, otherwise
         # real data will be destroyed during tests!!
         # The location is automatically created with the tempfile module
         # Typically, under linux this is created under /tmp
@@ -580,6 +580,15 @@ def create_configuration(profile='default'):
                 this_existing_confs.get('AIIDADB_PASS', 'aiida_password')))
             this_new_confs['AIIDADB_PASS'] = raw_input('AiiDA Database password: ')
 
+            possibilities = ['django']
+            if len(possibilities) > 1:
+                this_new_confs['MIDDLEWARE'] = raw_input('Middleware (default: django): ')
+                if this_new_confs['MIDDLEWARE'] == '':
+                    this_new_confs['MIDDLEWARE'] = 'django'
+                if this_new_confs['MIDDLEWARE'] not in possibilities:
+                    raise ValueError('You need to chose a middleware in this list: {}.'
+                                    .format(', '.join(possibilities)))
+
         elif 'mysql' in this_new_confs['AIIDADB_ENGINE']:
             this_new_confs['AIIDADB_ENGINE'] = 'mysql'
 
@@ -616,7 +625,7 @@ def create_configuration(profile='default'):
                              "(valid choices are 'sqlite', 'mysql', 'postgres')")
 
         # This part for the time being is a bit oddly written
-        # it should change in the future to add the possibility of having a 
+        # it should change in the future to add the possibility of having a
         # remote repository. Atm, I act as only a local repo is possible
         existing_repo = this_existing_confs.get('AIIDADB_REPOSITORY_URI',
                                                 os.path.join(aiida_dir, "repository/"))
@@ -650,11 +659,11 @@ def create_configuration(profile='default'):
 # The value is a tuple, where:
 # - the first entry is a string used as the key in the
 # JSON config file
-# - the second is the expected data type for data 
+# - the second is the expected data type for data
 #   conversion if the property is passed as a string.
 #   For valid data type strings, see the implementation of set_property
 # - the third entry is the description of the field
-# - the fourth entry is the default value. Use _NoDefaultValue() if you want 
+# - the fourth entry is the default value. Use _NoDefaultValue() if you want
 #   an exception to be raised if no property is found.
 
 class _NoDefaultValue(object):
@@ -752,13 +761,13 @@ _property_table = {
 def exists_property(name):
     """
     Check if a property exists in the DB.
-    
+
     .. note:: this is useful if one wants explicitly to know if a property
       is defined just because it has a default value, or because it is
       explicitly defined in the config file.
-    
+
     :param name: the name of the property to check.
-    
+
     :raise ValueError: if the given name is not a valid property (as stored in
       the _property_table dictionary).
     """
@@ -783,7 +792,7 @@ def get_property(name, default=_NoDefaultValue()):
     :param name: the name of the property to get.
     :param default: if provided, this value is returned if no value is found
       in the database.
-    
+
     :raise ValueError: if the given name is not a valid property (as stored in
       the _property_table dictionary).
     :raise KeyError: if the given property is not found in the config file, and
@@ -815,7 +824,7 @@ def get_property(name, default=_NoDefaultValue()):
 def del_property(name):
     """
     Delete a property in the json file.
-    
+
     :param name: the name of the property to delete.
     :raise: KeyError if the key is not found in the configuration file.
     """
@@ -839,13 +848,13 @@ def del_property(name):
 def set_property(name, value):
     """
     Set a property in the json file.
-    
+
     :param name: The name of the property value to set.
     :param value: the value to set. If it is a string, it is possibly casted
       to the correct type according to the information in the _property_table
       dictionary.
-    
-    :raise ValueError: if the provided name is not among the set of valid 
+
+    :raise ValueError: if the provided name is not among the set of valid
       properties, or if the value provided as a string cannot be casted to the
       correct type.
     """
@@ -894,10 +903,10 @@ def parse_repository_uri(repository_uri):
     """
     This function validates the REPOSITORY_URI, that should be in the
     format protocol://address
-    
-    :note: At the moment, only the file protocol is supported. 
-    
-    :return: a tuple (protocol, address). 
+
+    :note: At the moment, only the file protocol is supported.
+
+    :return: a tuple (protocol, address).
     """
 
     protocol, _, address = repository_uri.partition('://')
